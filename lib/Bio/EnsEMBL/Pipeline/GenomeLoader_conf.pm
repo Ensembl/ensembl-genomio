@@ -42,10 +42,16 @@ sub pipeline_analyses {
       -logic_name => 'Start',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [{}],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'SpeciesFactory',
         'A->1' => 'Cleanup',
       },
+    },
+    {
+      -logic_name => 'Cleanup',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'normal',
       -meadow_type       => 'LSF',
     },
@@ -58,11 +64,116 @@ sub pipeline_analyses {
       },
       -rc_name    => 'normal',
       -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1->A' => ['CreateDB', 'GetData'],
+        'A->1' => 'LoadData',
+      },
     },
 
     {
-      -logic_name => 'Cleanup',
+      -logic_name => 'CreateDB',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+    },
+
+    {
+      -logic_name => 'GetData',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1' => 'CheckData',
+      },
+    },
+
+    {
+      -logic_name => 'CheckData',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+    },
+
+    {
+      -logic_name => 'LoadData',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1->A' => 'PrepareAssemblyData',
+        'A->1' => 'LoadMetadata',
+      },
+    },
+
+    {
+      -logic_name => 'PrepareAssemblyData',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1' => 'LoadAssemblyData',
+      },
+    },
+
+    {
+      -logic_name => 'LoadAssemblyData',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1' => 'SetupAssemblyMetadata',
+      },
+    },
+
+    {
+      -logic_name => 'SetupAssemblyMetadata',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+    },
+
+    {
+      -logic_name => 'LoadMetadata',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1->A' => 'FillMetadata',
+        'A->1' => 'ConstructRepeatLib',
+      },
+    },
+
+    {
+      -logic_name => 'FillMetadata',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1' => 'FillTaxonomy',
+      },
+    },
+
+    {
+      -logic_name => 'FillTaxonomy',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
+      -rc_name    => 'normal',
+      -meadow_type       => 'LSF',
+    },
+
+    {
+      -logic_name => 'ConstructRepeatLib',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -input_ids  => [],
       -rc_name    => 'normal',
       -meadow_type       => 'LSF',
     },
