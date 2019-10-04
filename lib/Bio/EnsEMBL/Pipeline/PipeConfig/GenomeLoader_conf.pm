@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Pipeline::GenomeLoader_conf;
+package Bio::EnsEMBL::Pipeline::PipeConfig::GenomeLoader_conf;
 
 use strict;
 use warnings;
