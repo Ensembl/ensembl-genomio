@@ -51,7 +51,7 @@ sub write_json {
     my $syns = $syna->get_synonyms( $slice->get_seq_region_id() );
     my $seq_region = {
       name => $slice->seq_region_name(),
-      coord_system_name => $slice->coord_system_name(),
+      coord_system_level => $slice->coord_system_name(),
       synonyms => [ map { $_->name } @$syns ],
     };
     push @seq_regions, $seq_region;

@@ -22,7 +22,11 @@
         },
         "coord_system_level" : {
           "type" : "string",
-          "enum" : ["chromosome", "non_ref_scaffold"]
+          "enum" : [
+            "chromosome",
+            "scaffold",
+            "non_ref_scaffold"
+            ]
         },
         "omit" : { "type" : "boolean", "decription" : "prevent loading/processing of the scaffold" },
         "circular" : { "type" : "boolean" },
