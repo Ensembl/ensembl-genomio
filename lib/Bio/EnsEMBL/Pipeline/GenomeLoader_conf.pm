@@ -26,6 +26,28 @@ sub default_options {
   return {
     %{ $self->SUPER::default_options() },
 
+    ##############################
+    # Config to be set by the user
+    # VB release id
+    release => undef,
+
+    # Ensembl version (deduced from the environment?)
+    version => undef,
+
+    # Meta configuration directory
+    meta_dir => undef,
+
+    # Working directory
+    pipeline_dir => undef,
+
+    # Server configuration (where the databases will be created)
+    db_host => undef,
+    db_port => undef,
+    db_user => undef,
+    db_pass => undef,
+    ##############################
+
+    # Basic pipeline configuration
     pipeline_name => 'genome_loader',
     email => $ENV{USER} . '@ebi.ac.uk',
 
@@ -38,18 +60,25 @@ sub pipeline_analyses {
 
   return
   [
+    # Starting point
+    # Create the tmp pipeline directory
     {
       -logic_name => 'Start',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [{}],
+      -parameters        => {
+        pipeline_dir => $self->o('pipeline_dir'),
+      },
       -rc_name    => 'normal',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '1->A' => 'SpeciesFactory',
+        '1->A' => 'SpeciesList',
         'A->1' => 'Cleanup',
       },
     },
+
     {
+      # Delete the temp working directory
       -logic_name => 'Cleanup',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'normal',
@@ -57,20 +86,31 @@ sub pipeline_analyses {
     },
 
     {
-      -logic_name        => 'SpeciesFactory',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      # Create a thread for each species and define its main parameters
+      # Reads all the json files in a meta directory and creates a thread for each valid one
+      # Also creates a separate tmp_dir = work_dir/#species#
+      # All parameters output become available to all downstream analyses
+      #
+      # Output:
+      # species =#genus#_#species_name#_#GCA#
+      # db =  #species#_core_#release#_#version#_#assembly#
+      # meta (extracted from the species metadata file)
+      # tmp_dir = #pipeline_dir#/#species#
+      -logic_name        => 'SpeciesList',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -parameters        => {
-        cmd => "ls",
+        meta_dir => $self->o('meta_dir'),
       },
       -rc_name    => 'normal',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => ['CreateDB', 'GetData'],
-        'A->1' => 'LoadData',
+        'A->1' => { 'LoadData' => INPUT_PLUS() },
       },
     },
 
     {
+      # Init the Ensembl core
       -logic_name => 'CreateDB',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
@@ -79,6 +119,16 @@ sub pipeline_analyses {
     },
 
     {
+      # Retrieve the sequences files
+      # TODO: expand how we should get the data:
+      #    cp from a local dir, from ftp?
+      #    Do we get the files path from the meta conf file?
+      #    How much can this be automated?
+      #
+      # Output:
+      # - fasta file (only one?)
+      # - AGP?;qa
+      #
       -logic_name => 'GetData',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
@@ -90,6 +140,10 @@ sub pipeline_analyses {
     },
 
     {
+      # Check and sanitize the sequences files
+      # - Unzip
+      # - Remove ambiguous IUPAC nucleotides
+      # - Check vs the list of seq_regions (should we get a separate list?)
       -logic_name => 'CheckData',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
@@ -98,6 +152,7 @@ sub pipeline_analyses {
     },
 
     {
+      # Head analysis for the loading of data
       -logic_name => 'LoadData',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
@@ -140,6 +195,7 @@ sub pipeline_analyses {
     },
 
     {
+      # Head analysis for the loading of the metadata
       -logic_name => 'LoadMetadata',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
