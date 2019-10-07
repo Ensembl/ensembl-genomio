@@ -52,8 +52,13 @@ sub write_json {
     my $seq_region = {
       name => $slice->seq_region_name(),
       coord_system_level => $slice->coord_system_name(),
-      synonyms => [ map { $_->name } @$syns ],
+      length => $slice->length(),
     };
+
+    # Additional metadata
+    $seq_region->{synonyms} = [ map { $_->name } @$syns ] if @$syns;
+    $seq_region->{circular} //= $slice->is_circular;
+
     push @seq_regions, $seq_region;
   }
 
