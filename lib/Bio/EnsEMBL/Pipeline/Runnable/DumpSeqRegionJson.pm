@@ -25,7 +25,9 @@ sub run {
   my ($self) = @_;
 
   print $self->param('species');
-  $self->write_json();
+  my $output = $self->write_json();
+
+  $self->dataflow_output_id({ "seq_region_json" => $output }, 2);
   return;
 }
 
@@ -78,7 +80,7 @@ sub write_json_file {
   print $json_file encode_json($data);
   close $json_file;
   $self->info("Write complete");
-  return;
+  return $json_file_path;
 }
 
 1;
