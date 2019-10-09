@@ -25,6 +25,7 @@
           "enum" : [
             "chromosome",
             "scaffold",
+            "supercontig",
             "non_ref_scaffold"
             ]
         },
