@@ -36,10 +36,11 @@ use Data::Dumper;
 use Bio::EnsEMBL::Hive::Version 2.4;
 use Bio::EnsEMBL::ApiVersion qw/software_version/;
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');  
-   
+use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
+
 sub default_options {
 	my ($self) = @_;
+
 	return {
        ## inherit other stuff from the base class
        %{ $self->SUPER::default_options() },
@@ -82,6 +83,10 @@ sub default_options {
        # Do/Don't process these logic names
        'process_logic_names' => [],
        'skip_logic_names'    => [],
+
+     ## Metadata parameters
+       'schema_dir' => $self->o('schema_dir'),
+       'seq_region_schema' => File::Spec->catfile($self->o('schema_dir'), "seq_region_schema.json"),
 	};
 }
 
@@ -280,15 +285,26 @@ sub pipeline_analyses {
 
     { -logic_name  => 'metadata_seq_region',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::DumpSeqRegionJson',
-      -parameters  => {
-
-       },
+      -flow_into  => { 2 => ['check_seq_region_json_schema'] },
       -can_be_empty    => 1,
       -max_retry_count => 1,
       -hive_capacity   => 20,
       -priority        => 5,
       -rc_name         => 'default',
     },
+
+     { -logic_name     => 'check_seq_region_json_schema',
+       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+       -parameters     => {
+         json_file => '#seq_region_json#',
+         json_schema => $self->o('seq_region_schema'),
+         cmd => 'jsonschema -i #json_file# #json_schema#',
+       },
+       -hive_capacity  => 10,
+       -batch_size     => 10,
+	     -rc_name        => 'default',
+     },
+
     ];
 }
 
