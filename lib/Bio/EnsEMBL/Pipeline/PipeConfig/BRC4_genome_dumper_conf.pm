@@ -160,7 +160,7 @@ sub pipeline_analyses {
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
        -hive_capacity  => -1,
        -rc_name 	   => 'default',
-       -flow_into      => {'1->A' => ['fasta_dna', 'fasta_pep', 'gff3'],
+       -flow_into      => {'1->A' => ['fasta', 'gff3', 'metadata'],
                            'A->1' => ['cleanup'],
                           }
      },
@@ -237,19 +237,12 @@ sub pipeline_analyses {
 
 
 ### FASTA (cdna, cds, dna, pep, ncrna)
-    { -logic_name  => 'fasta_pep',
-      -module      => 'Bio::EnsEMBL::Production::Pipeline::FASTA::DumpFile',
-      -parameters  => {
-            sequence_type_list  => $self->o('pep_sequence_type_list'),
-          	process_logic_names => $self->o('process_logic_names'),
-          	skip_logic_names    => $self->o('skip_logic_names'),
-       },
-      -can_be_empty    => 1,
-      -max_retry_count => 1,
-      -hive_capacity   => 20,
-      -priority        => 5,
+    { -logic_name  => 'fasta',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -flow_into  => ['fasta_dna', 'fasta_pep'],
       -rc_name         => 'default',
     },
+
     { -logic_name  => 'fasta_dna',
       -module      => 'Bio::EnsEMBL::Production::Pipeline::FASTA::DumpFile',
       -parameters  => {
@@ -264,6 +257,38 @@ sub pipeline_analyses {
       -rc_name         => 'default',
     },
 
+    { -logic_name  => 'fasta_pep',
+      -module      => 'Bio::EnsEMBL::Production::Pipeline::FASTA::DumpFile',
+      -parameters  => {
+            sequence_type_list  => $self->o('pep_sequence_type_list'),
+          	process_logic_names => $self->o('process_logic_names'),
+          	skip_logic_names    => $self->o('skip_logic_names'),
+       },
+      -can_be_empty    => 1,
+      -max_retry_count => 1,
+      -hive_capacity   => 20,
+      -priority        => 5,
+      -rc_name         => 'default',
+    },
+
+### METADATA
+    { -logic_name  => 'metadata',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -flow_into  => ['metadata_seq_region'],
+      -rc_name         => 'default',
+    },
+
+    { -logic_name  => 'metadata_seq_region',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::DumpSeqRegionJson',
+      -parameters  => {
+
+       },
+      -can_be_empty    => 1,
+      -max_retry_count => 1,
+      -hive_capacity   => 20,
+      -priority        => 5,
+      -rc_name         => 'default',
+    },
     ];
 }
 
