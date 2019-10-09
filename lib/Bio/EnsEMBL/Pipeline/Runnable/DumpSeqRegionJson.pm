@@ -59,7 +59,7 @@ sub write_json {
 
     # Additional metadata
     $seq_region->{synonyms} = [ map { $_->name } @$syns ] if @$syns;
-    $seq_region->{circular} //= $slice->is_circular;
+    $seq_region->{circular} = JSON::true if $slice->is_circular;
 
     push @seq_regions, $seq_region;
   }
