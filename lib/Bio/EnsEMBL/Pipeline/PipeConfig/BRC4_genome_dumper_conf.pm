@@ -228,8 +228,15 @@ sub pipeline_analyses {
        -parameters     => { cmd => 'mv #out_file#.sorted.gz #out_file#', },
        -hive_capacity  => 10,
        -rc_name        => 'default',
-       -flow_into      => 'validate_gff3',
+       -flow_into      => 'gff3_BRC4',
       },
+    
+    # TODO
+    { -logic_name  => 'gff3_BRC4',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name         => 'default',
+      -flow_into      => 'validate_gff3',
+    },
  
       {
      	-logic_name        => 'validate_gff3',
@@ -255,10 +262,16 @@ sub pipeline_analyses {
             process_logic_names => $self->o('process_logic_names'),
             skip_logic_names    => $self->o('skip_logic_names'),
        },
+      -flow_into  => { 1 => ['fasta_dna_BRC4'] },
       -can_be_empty    => 1,
       -max_retry_count => 1,
       -hive_capacity   => 20,
       -priority        => 5,
+      -rc_name         => 'default',
+    },
+    # TODO
+    { -logic_name  => 'fasta_dna_BRC4',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name         => 'default',
     },
 
@@ -269,10 +282,17 @@ sub pipeline_analyses {
           	process_logic_names => $self->o('process_logic_names'),
           	skip_logic_names    => $self->o('skip_logic_names'),
        },
+      -flow_into  => { 2 => ['fasta_pep_BRC4'] },
       -can_be_empty    => 1,
       -max_retry_count => 1,
       -hive_capacity   => 20,
       -priority        => 5,
+      -rc_name         => 'default',
+    },
+
+    # TODO
+    { -logic_name  => 'fasta_pep_BRC4',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name         => 'default',
     },
 
