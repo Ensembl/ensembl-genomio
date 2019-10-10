@@ -60,11 +60,17 @@ sub write_json {
     # Additional metadata
     # Synonyms? Array
     $seq_region->{synonyms} = [ map { $_->name } @$syns ] if @$syns;
+
     # Is circular? Boolean
     $seq_region->{circular} = JSON::true if $slice->is_circular;
-    # Alternate codon table? Integer
+
+    # alternate codon table? integer
     my ($codon_table) = @{$slice->get_all_Attributes('codon_table')};
     $seq_region->{codon_table} = int($codon_table->value()) if $codon_table;
+
+    # SO_term? string
+    my ($so_term) = @{$slice->get_all_Attributes('SO_term')};
+    $seq_region->{SO_term} = $so_term->value() if $so_term;
 
     push @seq_regions, $seq_region;
   }
