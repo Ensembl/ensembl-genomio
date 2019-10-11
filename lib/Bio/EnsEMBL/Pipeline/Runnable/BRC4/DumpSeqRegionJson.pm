@@ -84,7 +84,7 @@ sub write_json {
 sub write_json_file {
   my ($self, $sub_dir, $data) = @_;
   my $json_file_path =
-    $sub_dir . '/' . $self->production_name() . '.json';
+    $sub_dir . '/' . $self->production_name() . '_seq_region.json';
   $self->info("Writing to $json_file_path");
   open my $json_file, '>', $json_file_path or
     die "Could not open $json_file_path for writing";
