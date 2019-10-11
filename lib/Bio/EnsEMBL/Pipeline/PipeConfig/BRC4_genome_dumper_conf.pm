@@ -59,7 +59,7 @@ sub default_options {
 	   'run_all'     => 0,	
 
 	   ## gff3 & gtf parameter
-       'abinitio'        => 1,
+       'abinitio'        => 0,
        'gene' => 1,
 
        ## gff3 parameters
@@ -68,7 +68,7 @@ sub default_options {
        'gff3_validate'   => $self->o('gt_exe').' gff3validator',
 
        'feature_type'    => ['Gene', 'Transcript', 'SimpleFeature'], #'RepeatFeature'
-       'per_chromosome'  => 1,
+       'per_chromosome'  => 0,
        'include_scaffold'=> 1,
 	   'logic_name'      => [],
 	   'db_type'	     => 'core',
@@ -213,6 +213,13 @@ sub pipeline_analyses {
       -rc_name        => '32GB',
       -flow_into      => { '1'  => 'tidy_gff3' },
 	 },	
+
+   { -logic_name  => 'gff3_BRC4_filter',
+     -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::FilterGFF3',
+     -batch_size     => 10,
+     -rc_name        => 'default',
+     -flow_into      => 'tidy_gff3',
+   },
 
 ### GFF3:post-processing
      { -logic_name     => 'tidy_gff3',
