@@ -213,7 +213,7 @@ sub pipeline_analyses {
         },
        -hive_capacity  => 50,
        -rc_name 	   => 'default',
-       -flow_into      => { '-1' => 'gff3_highmem', '1'  => 'tidy_gff3' },
+       -flow_into      => { '-1' => 'gff3_highmem', '1'  => 'gff3_BRC4_filter' },
      },
 
 	 { -logic_name     => 'gff3_highmem',
