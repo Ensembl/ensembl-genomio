@@ -51,6 +51,7 @@ sub default_options {
        'pipeline_name' => "brc4_genome_dumper",
 	     'email'         => $self->o('ENV', 'USER').'@ebi.ac.uk',
        'output_dir'    => './output',
+       'tmp_dir'    => './tmp',
 
 	   ## 'job_factory' parameters
 	   'species'     => [], 
@@ -95,6 +96,7 @@ sub pipeline_create_commands {
     return [
       # inheriting database and hive tables' creation
       @{$self->SUPER::pipeline_create_commands},
+      'mkdir -p '.$self->o('tmp_dir'),
       'mkdir -p '.$self->o('output_dir'),
     ];
 }
@@ -124,7 +126,8 @@ sub pipeline_wide_parameters {
     return {
             %{$self->SUPER::pipeline_wide_parameters},  # here we inherit anything from the base class
 		    'pipeline_name' => $self->o('pipeline_name'), #This must be defined for the beekeeper to work properly
-            'base_path'     => $self->o('output_dir'),
+            'base_path'     => $self->o('tmp_dir'),
+            'output_dir'     => $self->o('output_dir'),
             'release'       => $self->o('release'),
     };
 }
@@ -146,6 +149,22 @@ sub pipeline_analyses {
     my ($self) = @_;
     
     return [
+    {  -logic_name => 'Start',
+       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+       -rc_name       => 'default',
+      -input_ids      => [ {} ],
+      -flow_into       => {
+                           '1->A' => 'Species_factory',
+                           'A->1' => 'Cleanup',
+                         },
+    },
+
+    {  -logic_name => 'Cleanup',
+       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+       -hive_capacity => 10,
+       -rc_name       => 'default'
+    },
+
 	 { -logic_name     => 'Species_factory',
        -module         => 'Bio::EnsEMBL::Production::Pipeline::Common::SpeciesFactory',
        -parameters     => {
@@ -154,29 +173,30 @@ sub pipeline_analyses {
                              division    => $self->o('division'),
                              run_all     => $self->o('run_all'),
                           },
-      -input_ids      => [ {} ],
 	    -hive_capacity   => -1,
       -rc_name 	       => 'default',
       -max_retry_count => 1,
       -flow_into       => {
                            '2->A' => 'backbone_job_pipeline',
-                           'A->2' => 'cleanup',
+                           'A->2' => 'manifest',
                          },
     },
-
+    { -logic_name  => 'manifest',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::Manifest',
+      -can_be_empty    => 1,
+      -max_retry_count => 1,
+      -hive_capacity   => 20,
+      -priority        => 5,
+      -rc_name         => 'default',
+    },
+ 	
      { -logic_name     => 'backbone_job_pipeline',
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
        -hive_capacity  => -1,
        -rc_name 	   => 'default',
-       -flow_into      => {'1' => ['fasta', 'gff3', 'metadata'],
-                          }
+       -flow_into      => {'1' => ['fasta', 'gff3', 'metadata'] }
      },
-    {  -logic_name => 'cleanup',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-       -hive_capacity => 10,
-       -rc_name       => 'default'
-    },
- 	
+
 ### GFF3
      { -logic_name     => 'gff3',
        -module         => 'Bio::EnsEMBL::Production::Pipeline::GFF3::DumpFile',
@@ -211,14 +231,14 @@ sub pipeline_analyses {
         },
 	    -hive_capacity  => 50,
       -rc_name        => '32GB',
-      -flow_into      => { '1'  => 'tidy_gff3' },
+      -flow_into      => { '1'  => 'gff3_BRC4_filter' },
 	 },	
 
    { -logic_name  => 'gff3_BRC4_filter',
      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::FilterGFF3',
      -batch_size     => 10,
      -rc_name        => 'default',
-     -flow_into      => 'tidy_gff3',
+     -flow_into      => { 2 =>'tidy_gff3' },
    },
 
 ### GFF3:post-processing
@@ -250,8 +270,11 @@ sub pipeline_analyses {
       {
      	-logic_name        => 'validate_gff3',
      	-module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-     	-parameters        => { cmd => $self->o('gff3_validate').' #out_file#', },
-      -flow_into  => { 1 => '?accu_name=gff3&accu_input_variable=out_file' },
+     	-parameters        => {
+        cmd => $self->o('gff3_validate').' #out_file#',
+        hash_key => "gff3",
+      },
+      -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=out_file' },
      	-hive_capacity => 10,
      	-batch_size        => 10,
      	-rc_name           => 'default',
@@ -267,7 +290,8 @@ sub pipeline_analyses {
     # 
     { -logic_name  => 'fasta_dna',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFastaDNA',
-      -flow_into  => { 2 => '?accu_name=fasta_dna&accu_input_variable=fasta_file' },
+      -parameters => { hash_key => "fasta_dna", },
+      -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=fasta_file' },
       -can_be_empty    => 1,
       -max_retry_count => 1,
       -hive_capacity   => 20,
@@ -277,7 +301,8 @@ sub pipeline_analyses {
 
     { -logic_name  => 'fasta_pep',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFastaPeptide',
-      -flow_into  => { 2 => '?accu_name=fasta_pep&accu_input_variable=fasta_file' },
+      -parameters => { hash_key => "fasta_pep", },
+      -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=fasta_file' },
       -can_be_empty    => 1,
       -max_retry_count => 1,
       -hive_capacity   => 20,
@@ -308,8 +333,9 @@ sub pipeline_analyses {
          json_file => '#seq_region_json#',
          json_schema => $self->o('seq_region_schema'),
          cmd => 'jsonschema -i #json_file# #json_schema#',
+         hash_key => "metadata_seq_region",
        },
-      -flow_into  => { 1 => '?accu_name=metadata_seq_region&accu_input_variable=seq_region_json' },
+      -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=seq_region_json' },
        -hive_capacity  => 10,
        -batch_size     => 10,
 	     -rc_name        => 'default',

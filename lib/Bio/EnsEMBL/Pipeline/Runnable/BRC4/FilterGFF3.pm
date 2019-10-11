@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Pipeline::Runnable::BRC4::GFF3Filter;
+package Bio::EnsEMBL::Pipeline::Runnable::BRC4::FilterGFF3;
 
 use strict;
 use warnings;
