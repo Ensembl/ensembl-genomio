@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Pipeline::Runnable::DumpSeqRegionJson;
+package Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpSeqRegionJson;
 
 use strict;
 use warnings;

@@ -286,7 +286,7 @@ sub pipeline_analyses {
     },
 
     { -logic_name  => 'metadata_seq_region',
-      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::DumpSeqRegionJson',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpSeqRegionJson',
       -flow_into  => { 2 => ['check_seq_region_json_schema'] },
       -can_be_empty    => 1,
       -max_retry_count => 1,
