@@ -34,6 +34,8 @@ sub run {
   print $json encode_json($manifest);
   close $json;
 
+  $self->dataflow_output_id({ "manifest" => $manifest_path }, 2);
+
   return;
 }
 
