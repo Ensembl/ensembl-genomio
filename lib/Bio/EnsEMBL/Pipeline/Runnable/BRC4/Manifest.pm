@@ -8,6 +8,7 @@ use JSON;
 use File::Path qw(make_path);
 use File::Spec::Functions qw(catdir catfile);
 use File::Copy qw(move);
+use File::Basename qw(basename);
 
 sub run {
   my ($self) = @_;
@@ -22,6 +23,7 @@ sub run {
   # First move all files to the species dir
   for my $name (keys %$manifest) {
     move($manifest->{$name}, $dir);
+    $manifest->{$name} = basename($manifest->{$name});
   }
 
   # Then create a manifest file
