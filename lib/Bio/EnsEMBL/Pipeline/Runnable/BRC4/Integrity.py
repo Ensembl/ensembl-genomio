@@ -1,11 +1,14 @@
 #!env python3
 
-#from BCBio import GFF
+from BCBio import GFF
 
 import eHive
 import json
 from Bio import SeqIO
 from os import path
+import gzip
+import io
+from math import floor
 
 class Integrity(eHive.BaseRunnable):
 
@@ -30,17 +33,31 @@ class Integrity(eHive.BaseRunnable):
             dna = {}
             pep = {}
             seq_regions = {}
+            seq_lengths = {}
+            gff3 = {}
 
+            if "gff3" in manifest:
+                gff = self.get_gff3(manifest["gff3"])
             if "fasta_dna" in manifest:
                 dna = self.get_fasta_lengths(manifest["fasta_dna"])
             if "fasta_pep" in manifest:
                 pep = self.get_fasta_lengths(manifest["fasta_pep"])
             if "metadata_seq_region" in manifest:
                 seq_regions = self.get_json(manifest["metadata_seq_region"])
+                seqr_lengths = {}
+                for seq in seq_regions:
+                    seq_lengths[seq["name"]] = seq["length"]
+
+            # Check gff3
+            if gff:
+                if pep:
+                    errors += self.check_lengths(pep, gff["pep"], "fasta peptide vs gff CDS", 2);
+                if seq_regions:
+                    errors += self.check_lengths(seq_lengths, gff["seq_region"], "seq_regions json vs gff seq_regions");
 
             # Check fasta dna and seq_region integrity
             if dna and seq_regions:
-                errors += self.check_dna_seq_regions(dna, seq_regions)
+                errors += self.check_lengths(dna, seq_lengths, "fasta dna vs seq_regions json", 0);
 
         if errors:
             raise Exception("Integrity test failed: " + str(errors))
@@ -55,43 +72,68 @@ class Integrity(eHive.BaseRunnable):
         with open(json_path) as json_file:
             return json.load(json_file)
 
-    def check_dna_seq_regions(self, dna, seqr):
+    def get_gff3(self, gff3_path):
 
-        seqr_lengths = {}
-        for seq in seqr:
-            seqr_lengths[seq["name"]] = seq["length"]
+        seqs = {};
+        genes = {};
+        peps = {};
 
-        common = []
-        diff = []
-        only_dna = []
-        only_seqr = []
-        for s in dna:
-            if s in seqr_lengths:
-                dlength = dna[s]
-                slength = seqr_lengths[s]
+        with io.TextIOWrapper(gzip.open(gff3_path, "r")) as gff3_handle:
+            gff = GFF.parse(gff3_handle)
+            for seq in gff:
+                seqs[seq.id] = len(seq.seq)
+                
+                for feat in seq.features:
+                    if feat.type == "gene":
+                        genes[feat.id] = abs(feat.location.end - feat.location.start)
+                        # Get CDS
+                        for feat2 in feat.sub_features:
+                            if feat2.type == "mRNA":
+                                length = {}
+                                for feat3 in feat2.sub_features:
+                                    if feat3.type == "CDS":
+                                        pep_id = feat3.id.replace("CDS:", "")
+                                        if pep_id not in length:
+                                            length[pep_id] = 0
+                                        length[pep_id] += abs(feat3.location.end - feat3.location.start)
+                                for pep_id in length:
+                                    peps[pep_id] = floor(length[pep_id] / 3)
 
-                if dlength == slength:
-                    common.append(s)
+        return { "seq_region": seqs, "gene": genes, "pep": peps }
+
+            
+    def check_lengths(self, list1, list2, name, allowed_diff = 0):
+        only1 = [];
+        only2 = [];
+        common = [];
+        diff = [];
+        diff_list = [];
+
+        for item_id in list1:
+            if item_id in list2:
+                if abs(list1[item_id] - list2[item_id]) <= allowed_diff:
+                    common.append(item_id)
                 else:
-                    diff.append(s)
-
+                    diff.append(item_id)
+                    diff_list.append("%s: %d vs %d" % (item_id, list1[item_id], list2[item_id]))
             else:
-                only_dna.append(s)
+                only1.append(item_id)
+        for item_id in list2:
+            if item_id not in common and item_id not in diff:
+                only2.append(item_id)
 
-        for s in seqr_lengths:
-            if s not in common and s not in diff:
-                only_seqr.append(s)
-        
         errors = []
         if common:
-            print("%d seq_regions in common between fasta dna and seq_region" % len(common))
+            print("%d common elements in %s" % (len(common), name))
         if diff:
-            errors.append("%d seq_regions are of different length between fasta dna and seq_region" % len(diff))
-        if only_dna:
-            errors.append("WARNING: %d seq_regions only found in fasta dna" % len(only_dna))
-#            print(only_dna)
-        if only_seqr:
-            errors.append("%d seq_regions only found in seq_region" % len(only_seqr))
+            errors.append("%d common elements with different length in %s (e.g. %s)" % (len(diff), name, diff_list[0]))
+        if only1:
+            errors.append("%d only in first list in %s (first: %s)" % (len(only1), name, only1[0]))
+        if only2:
+            errors.append("%d only in second list in %s (first: %s)" % (len(only2), name, only2[0]))
 
         return errors
+
+    def check_gff_seq_regions(gff, seqr):
+        return
 

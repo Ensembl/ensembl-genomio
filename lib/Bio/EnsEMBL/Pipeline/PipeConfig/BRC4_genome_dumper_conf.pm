@@ -261,15 +261,8 @@ sub pipeline_analyses {
        -parameters     => { cmd => 'mv #out_file#.sorted.gz #out_file#', },
        -hive_capacity  => 10,
        -rc_name        => 'default',
-       -flow_into      => 'gff3_BRC4',
+       -flow_into      => 'validate_BRC4',
       },
-    
-    # TODO
-    { -logic_name  => 'gff3_BRC4',
-      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name         => 'default',
-      -flow_into      => 'validate_gff3',
-    },
  
       {
      	-logic_name        => 'validate_gff3',
@@ -278,7 +271,6 @@ sub pipeline_analyses {
         cmd => $self->o('gff3_validate').' #out_file#',
         hash_key => "gff3",
       },
-      -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=out_file' },
      	-hive_capacity => 10,
      	-batch_size        => 10,
      	-rc_name           => 'default',
