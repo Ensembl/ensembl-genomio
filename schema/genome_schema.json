@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "$id": "https://.../.../meta/schemas/v0.0.0/genome_schema.json",
+  "description" : "JSON schema for exchanging meta information for genomes",
+
+  "definitions" : {
+    "genome_info" : {
+      "type": "object",
+      "properties": {
+        "taxonomy_id" : { "type" : "integer" },
+        "genus" : { "type" : "string" },
+        "species" : { "type" : "string" },
+        "strain" : { "type" : "string" },
+        "scientific_name" : { "type" : "string" },
+        "accession" : { "type" : "string", "description" : "Unique INSDC accession for the genome" },
+        "organella_accessions" : { "type" : "array", "items" : { "type" : "string"} },
+        "note" : { "type" : "string", "description" : "optional note" }
+      },
+      "required" : [
+        "taxonomy_id"
+      ]
+    }
+  },
+
+  "oneOf" : [
+  { "$ref" : "#/definitions/genome_info" }
+  ],
+
+    "examples": [
+    { "taxonomy_id": 180454 }
+      ]
+}
+
