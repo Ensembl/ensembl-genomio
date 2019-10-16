@@ -17,7 +17,7 @@ class Integrity(eHive.BaseRunnable):
         }
 
     def run(self):
-        manifest_path = self.param_required('manifest')
+        manifest_path = self.param_required("manifest")
         #print(manifest_path)
 
         errors = []
@@ -51,13 +51,15 @@ class Integrity(eHive.BaseRunnable):
             # Check gff3
             if gff:
                 if pep:
-                    errors += self.check_lengths(pep, gff["pep"], "fasta peptide vs gff CDS", 2);
+                    # We don't compare the peptide lengths because of seqedits
+                    errors += self.check_lengths(pep, gff["pep"], "fasta peptide vs gff CDS")
                 if seq_regions:
-                    errors += self.check_lengths(seq_lengths, gff["seq_region"], "seq_regions json vs gff seq_regions");
+                    errors += self.check_lengths(seq_lengths, gff["seq_region"], "seq_regions json vs gff seq_regions", 0)
 
             # Check fasta dna and seq_region integrity
             if dna and seq_regions:
-                errors += self.check_lengths(dna, seq_lengths, "fasta dna vs seq_regions json", 0);
+                # We don't tolerate any length difference
+                errors += self.check_lengths(dna, seq_lengths, "fasta dna vs seq_regions json", 0)
 
         if errors:
             raise Exception("Integrity test failed: " + str(errors))
@@ -102,7 +104,7 @@ class Integrity(eHive.BaseRunnable):
         return { "seq_region": seqs, "gene": genes, "pep": peps }
 
             
-    def check_lengths(self, list1, list2, name, allowed_diff = 0):
+    def check_lengths(self, list1, list2, name, allowed_diff = None):
         only1 = [];
         only2 = [];
         common = [];
@@ -111,11 +113,12 @@ class Integrity(eHive.BaseRunnable):
 
         for item_id in list1:
             if item_id in list2:
-                if abs(list1[item_id] - list2[item_id]) <= allowed_diff:
-                    common.append(item_id)
-                else:
+                # Check that the difference of length is within a threshold
+                if allowed_diff is not None and abs(list1[item_id] - list2[item_id]) > allowed_diff:
                     diff.append(item_id)
                     diff_list.append("%s: %d vs %d" % (item_id, list1[item_id], list2[item_id]))
+                else:
+                    common.append(item_id)
             else:
                 only1.append(item_id)
         for item_id in list2:
