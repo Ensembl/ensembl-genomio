@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "$id": "https://.../.../schema/v0.0.0/fann_schema.json",
+  "description" : "JSON schema for exchanging functional annotation information",
+
+  "definitions" : {
+    "alias_type" : {
+      "description" : "object for default synonym, aka display_name",
+      "oneOf" : [
+        { "type" : "string" },
+        { 
+          "type": "object",
+          "properties": {
+            "synonym" : { "type" : "string" },
+            "default" : { "type" : "boolean" }
+          },
+          "required": [ "synonym", "default" ]
+        }
+      ]
+    },
+    "c_pair_type" : {
+      "type" : "string",
+      "pattern" : "^[^;,]+:[^;,]+$"
+    },
+    "ontology_term_type" : {
+      "type" : "string",
+      "pattern" : "^(GO|SO):[^;,]+$"
+    },
+    "functional_annotation" : {
+      "type": "object",
+      "properties": {
+        "id" : { "type" : "string" },
+        "object_type" : {
+          "type" : "string",
+          "enum" : [
+            "gene",
+            "transcript",
+            "translation"
+          ]
+        },
+        "description" : { "type" : "string" },
+        "synonyms" : {
+          "description" : "List of synonyms, one synonym can have a 'default' property set.",
+          "oneOf" : [
+            { "$ref" : "#/definitions/alias_type" },
+            { "type": "array", "items" : { "$ref" : "#/definitions/alias_type" } }
+          ]
+        },
+        "xrefs" : {
+          "description" : "xrefs <src>:<id> pairs",
+          "oneOf" : [
+            { "$ref" : "#/definitions/c_pair_type" },
+            { "type": "array", "items" : { "$ref" : "#/definitions/c_pair_type" } }
+          ]
+        },
+        "ontology_terms" : {
+          "oneOf" : [
+            { "$ref" : "#/definitions/ontology_term_type" },
+            { "type": "array", "items" : { "$ref" : "#/definitions/ontology_term_type" } }
+          ]
+        },
+        "note" : { "type" : "string", "description" : "optional note" }
+      },
+      "required" : [
+        "id", "object_type"
+      ]
+    }
+  },
+
+  "oneOf" : [
+    { "$ref" : "#/definitions/functional_annotation" },
+    { "type": "array", "items" : { "$ref" : "#/definitions/functional_annotation" } }
+  ],
+
+  "examples": [
+    { "note": "bad_example" },
+    [ { "id" : "AGAP004707",
+        "object_type" : "gene",
+        "description": "voltage-gated sodium channel" ,
+        "synonyms" : [ { "synonym" : "para", "default" : true }, "kdr", "VSC" ],
+        "xrefs" : "EntrezGene:1278521",
+        "ontology_terms" : [ "GO:0005216", "SO:0000834" ]
+    } ]
+  ]
+}
