@@ -34,7 +34,7 @@ class Integrity(eHive.BaseRunnable):
             pep = {}
             seq_regions = {}
             seq_lengths = {}
-            gff3 = {}
+            gff = {}
 
             if "gff3" in manifest:
                 gff = self.get_gff3(manifest["gff3"])
