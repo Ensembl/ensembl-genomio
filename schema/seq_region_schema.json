@@ -1,24 +1,19 @@
 {
   "$schema": "http://json-schema.org/schema#",
-  "$id": "https://.../.../meta/schemas/v0.0.0/scaffolds_attribs_schema.json",
+  "$id": "https://.../.../schema/v0.0.0/scaffolds_attribs_schema.json",
   "description" : "JSON schema for exchanging meta information for scaffolds",
 
   "definitions" : {
     "seq_region_info" : {
       "type": "object",
       "properties": {
-        "version" : {
-          "type" : "string",
-          "enum" : [ "0.0.0" ],
-          "description" : "do we need it at all?"
-        },
         "name" : { "type" : "string" },
         "synonym" : {
           "oneOf" : [
-          { "type" : "string" },
-          { "type" : "array", "items" : { "type" : "string"} }
+            { "type" : "string" },
+            { "type" : "array", "items" : { "type" : "string"} }
           ],
-            "description" : "Personally I don't like having array and obj with the same name."
+          "description" : "Personally I don't like having array and obj with the same name."
         },
         "coord_system_level" : {
           "type" : "string",
@@ -26,8 +21,9 @@
             "chromosome",
             "scaffold",
             "supercontig",
-            "non_ref_scaffold"
-            ]
+            "non_ref_scaffold",
+            "contig"
+          ]
         },
         "omit" : { "type" : "boolean", "decription" : "prevent loading/processing of the scaffold" },
         "circular" : { "type" : "boolean" },
@@ -38,7 +34,21 @@
         },
         "note" : { "type" : "string", "description" : "optional note" },
         "non_ref" : { "type" : "boolean", "decription" : "clashes with non_ref_scaffold cs ?" },
-        "SO_term" : { "type" : "string", "description" : "Attribute to account for mitochondria, apicoplasts, etc." }
+        "location" : {
+          "type" : "string",
+          "description" : "SO_trem attribute to account for mitochondria, apicoplasts, etc.",
+          "enum" : [
+            "apicoplast_chromosome",
+            "chloroplast_chromosome",
+            "chromoplast_chromosome",
+            "cyanelle_chromosome",
+            "leucoplast_chromosome",
+            "macronuclear_chromosome",
+            "micronuclear_chromosome",
+            "mitochondrial_chromosome",
+            "nuclear_chromosome"
+          ]
+        }
       },
       "required" : [
         "name"
@@ -47,16 +57,15 @@
   },
 
   "oneOf" : [
-  { "$ref" : "#/definitions/seq_region_info" },
-  { "type": "array", "items" : { "$ref" : "#/definitions/seq_region_info" } }
+    { "$ref" : "#/definitions/seq_region_info" },
+    { "type": "array", "items" : { "$ref" : "#/definitions/seq_region_info" } }
   ],
 
-    "examples": [
-    { "version" : "0.0.0", "note": "bad_example" },
-    { "version" : "0.0.0", "name": "2", "note" : "bad but valid example" },
-    { "version" : "0.0.0", "name": "MT", "circular" : true, "codon_table" : 2, "SO_term": "mitochondrial_chromosome" },
-    { "version" : "0.0.0", "name" : "2", "synonym" : "2L" },
-    [ { "version" : "0.0.0", "name" : "2", "synonym" : [ "2L", "2R" ] } ]
-      ]
+  "examples": [
+    { "note": "bad_example" },
+    { "name": "2", "note" : "bad but valid example" },
+    { "name": "MT", "circular" : true, "codon_table" : 2, "location": "mitochondrial_chromosome" },
+    { "name" : "2", "synonym" : "2L" },
+    [ { "name" : "2", "synonym" : [ "2L", "2R" ] } ]
+  ]
 }
-
