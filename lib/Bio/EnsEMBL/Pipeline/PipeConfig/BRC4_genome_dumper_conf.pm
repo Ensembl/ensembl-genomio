@@ -53,6 +53,10 @@ sub default_options {
        'output_dir'    => './output',
        'tmp_dir'    => './tmp',
 
+       'do_fasta' => 1,
+       'do_gff' => 1,
+       'do_meta' => 1,
+
 	   ## 'job_factory' parameters
 	   'species'     => [], 
 	   'antispecies' => [],
@@ -129,6 +133,9 @@ sub pipeline_wide_parameters {
             'base_path'     => $self->o('tmp_dir'),
             'output_dir'     => $self->o('output_dir'),
             'release'       => $self->o('release'),
+            'do_fasta'      => $self->o('do_fasta'),
+            'do_gff'      => $self->o('do_gff'),
+            'do_meta'      => $self->o('do_meta'),
     };
 }
 
@@ -199,7 +206,11 @@ sub pipeline_analyses {
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
        -hive_capacity  => -1,
        -rc_name 	   => 'default',
-       -flow_into      => {'1' => ['fasta', 'gff3', 'metadata'] }
+       -flow_into      => {'1' => [
+           WHEN('#do_fasta#', 'fasta'),
+           WHEN('#do_gff#', 'gff3'),
+           WHEN('#do_meta#', 'metadata'),
+         ] }
      },
 
 ### GFF3
@@ -318,10 +329,7 @@ sub pipeline_analyses {
     { -logic_name  => 'metadata_seq_region',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpSeqRegionJson',
       -flow_into  => { 2 => ['check_seq_region_json_schema'] },
-      -can_be_empty    => 1,
-      -max_retry_count => 1,
-      -hive_capacity   => 20,
-      -priority        => 5,
+      -analysis_capacity   => 5,
       -rc_name         => 'default',
     },
 
@@ -333,12 +341,11 @@ sub pipeline_analyses {
          cmd => 'jsonschema -i #json_file# #json_schema#',
          hash_key => "metadata_seq_region",
        },
-      -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=seq_region_json' },
-       -hive_capacity  => 10,
-       -batch_size     => 10,
+       -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=seq_region_json' },
+       -analysis_capacity => 1,
+       -batch_size     => 50,
 	     -rc_name        => 'default',
      },
-
     ];
 }
 
