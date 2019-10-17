@@ -44,10 +44,31 @@ sub write_json {
   my $ga = Bio::EnsEMBL::Registry->get_adaptor(
     $self->production_name, "core", "gene" );
 
-  foreach my $gene (@{$ga->fetch_all()}) {
+  my @items;
+  push @items, @{$ga->fetch_all()};
+
+  foreach my $item (@items) {
+
+    my $type = '';
+    if (ref($item) =~ /Gene/) {
+      $type = 'gene';
+    } elsif (ref($item) =~ /Transcript/) {
+      $type = 'transcript';
+    } elsif (ref($item) =~ /Translation/) {
+      $type = 'translation';
+    }
+    my $syns = get_synonyms($item) // [];
+    my ($xrefs, $onto) = get_xrefs($item);
+    $xrefs //= [];
+    $onto  //= [];
+
     my $feat = {
-      id => $gene->stable_id,
-      object_type => 'gene',
+      id => $item->stable_id,
+      object_type => $type,
+      description => $item->description // '',
+      synonyms => $syns,
+      xrefs => $xrefs,
+      ontology_terms => $onto,
     };
 
     push @features, $feat;
@@ -70,6 +91,44 @@ sub write_json_file {
   close $json_file;
   $self->info("Write complete");
   return $json_file_path;
+}
+
+sub get_synonyms {
+  my ($gene) = @_;
+
+  my $disp = $gene->display_xref();
+  return if not $disp;
+
+  my $name = $disp->display_id;
+  my @syns;
+  push @syns, { synonym => $name, default => JSON::true } if $name;
+
+  for my $syn (@{ $disp->get_all_synonyms() }) {
+    push @syns, $syn;
+  }
+
+  return \@syns;
+}
+
+sub get_xrefs {
+  my ($gene) = @_;
+
+  my $entries = $gene->get_all_DBEntries();
+
+  my @xrefs;
+  my @onto;
+  ENTRY: for my $entry (@$entries) {
+    my $dbname = $entry->dbname;
+    my $id = $entry->display_id;
+    my $xref = "$dbname:$id";
+
+    if ($dbname =~ /[GS]O/) {
+      push @onto, $xref;
+    } else {
+      push @xrefs, $xref;
+    }
+  }
+  return \@xrefs, \@onto;
 }
 
 1;
