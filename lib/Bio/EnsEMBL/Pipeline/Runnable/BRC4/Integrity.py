@@ -99,7 +99,7 @@ class Integrity(eHive.BaseRunnable):
                                             length[pep_id] = 0
                                         length[pep_id] += abs(feat3.location.end - feat3.location.start)
                                 for pep_id in length:
-                                    peps[pep_id] = floor(length[pep_id] / 3)
+                                    peps[pep_id] = floor(length[pep_id] / 3) - 1
 
         return { "seq_region": seqs, "gene": genes, "pep": peps }
 
@@ -107,27 +107,37 @@ class Integrity(eHive.BaseRunnable):
     def check_lengths(self, list1, list2, name, allowed_diff = None):
         only1 = [];
         only2 = [];
+
         common = [];
         diff = [];
         diff_list = [];
+        diff1 = [];
+        diff1_list = [];
 
         for item_id in list1:
             if item_id in list2:
                 # Check that the difference of length is within a threshold
                 if allowed_diff is not None and abs(list1[item_id] - list2[item_id]) > allowed_diff:
-                    diff.append(item_id)
-                    diff_list.append("%s: %d vs %d" % (item_id, list1[item_id], list2[item_id]))
+                    # Special case: shorter by one, so assuming the stop codon is not included in the CDS (when it should be)
+                    if list1[item_id] - list2[item_id] == 1:
+                        diff1.append(item_id)
+                        diff1_list.append("%s: %d vs %d" % (item_id, list1[item_id], list2[item_id]))
+                    else:
+                        diff.append(item_id)
+                        diff_list.append("%s: %d vs %d" % (item_id, list1[item_id], list2[item_id]))
                 else:
                     common.append(item_id)
             else:
                 only1.append(item_id)
         for item_id in list2:
-            if item_id not in common and item_id not in diff:
+            if item_id not in common and item_id not in diff and item_id not in diff1:
                 only2.append(item_id)
 
         errors = []
         if common:
             print("%d common elements in %s" % (len(common), name))
+        if diff1:
+            errors.append("%d common elements with one shorter in %s (e.g. %s)" % (len(diff1), name, diff1_list[0]))
         if diff:
             errors.append("%d common elements with different length in %s (e.g. %s)" % (len(diff), name, diff_list[0]))
         if only1:
