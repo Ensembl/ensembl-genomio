@@ -92,6 +92,7 @@ sub default_options {
      ## Metadata parameters
        'schema_dir' => $self->o('schema_dir'),
        'seq_region_schema' => File::Spec->catfile($self->o('schema_dir'), "seq_region_schema.json"),
+       'functional_annotation_schema' => File::Spec->catfile($self->o('schema_dir'), "fann_schema.json"),
 	};
 }
 
@@ -322,7 +323,10 @@ sub pipeline_analyses {
 ### METADATA
     { -logic_name  => 'metadata',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -flow_into  => ['metadata_seq_region'],
+      -flow_into  => [
+        'metadata_seq_region',
+        'metadata_functional_annotation',
+      ],
       -rc_name         => 'default',
     },
 
@@ -342,6 +346,27 @@ sub pipeline_analyses {
          hash_key => "metadata_seq_region",
        },
        -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=seq_region_json' },
+       -analysis_capacity => 1,
+       -batch_size     => 50,
+	     -rc_name        => 'default',
+     },
+
+    { -logic_name  => 'metadata_functional_annotation',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFunctionalAnnotationJson',
+      -flow_into  => { 2 => ['check_functional_annotation_json_schema'] },
+      -analysis_capacity   => 5,
+      -rc_name         => 'default',
+    },
+
+     { -logic_name     => 'check_functional_annotation_json_schema',
+       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+       -parameters     => {
+         json_file => '#functional_annotation_json#',
+         json_schema => $self->o('functional_annotation_schema'),
+         cmd => 'jsonschema -i #json_file# #json_schema#',
+         hash_key => "metadata_functional_annotation",
+       },
+       -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=functional_annotation_json' },
        -analysis_capacity => 1,
        -batch_size     => 50,
 	     -rc_name        => 'default',
