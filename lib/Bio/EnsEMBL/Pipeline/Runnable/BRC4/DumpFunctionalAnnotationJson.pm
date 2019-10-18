@@ -43,9 +43,15 @@ sub write_json {
   my @features;
   my $ga = Bio::EnsEMBL::Registry->get_adaptor(
     $self->production_name, "core", "gene" );
+  my $ta = Bio::EnsEMBL::Registry->get_adaptor(
+    $self->production_name, "core", "transcript" );
+  my $pa = Bio::EnsEMBL::Registry->get_adaptor(
+    $self->production_name, "core", "translation" );
 
   my @items;
   push @items, @{$ga->fetch_all()};
+  push @items, @{$ta->fetch_all()};
+  push @items, @{$pa->fetch_all()};
 
   foreach my $item (@items) {
 
@@ -57,21 +63,26 @@ sub write_json {
     } elsif (ref($item) =~ /Translation/) {
       $type = 'translation';
     }
-    my $syns = get_synonyms($item) // [];
-    my ($xrefs, $onto) = get_xrefs($item);
-    $xrefs //= [];
-    $onto  //= [];
 
-    my $feat = {
+    # Basic metadata
+    my %feat = (
       id => $item->stable_id,
       object_type => $type,
-      description => $item->description // '',
-      synonyms => $syns,
-      xrefs => $xrefs,
-      ontology_terms => $onto,
-    };
+    );
+    
+    # Gene specific metadata
+    if ($type eq 'gene') {
+      my $syns = get_synonyms($item);
+      $feat{synonyms} = $syns if $syns and @$syns;
+      $feat{description} = $item->description if $item->description;
+    }
 
-    push @features, $feat;
+    # Xrefs (if any)
+    my ($xrefs, $onto) = get_xrefs($item);
+    $feat{xrefs} = $xrefs if $xrefs and @$xrefs;
+    $feat{ontology_terms} = $onto if $onto and @$onto;
+
+    push @features, \%feat;
   }
 
   $dba->dbc()->disconnect_if_idle();
@@ -120,11 +131,11 @@ sub get_xrefs {
   ENTRY: for my $entry (@$entries) {
     my $dbname = $entry->dbname;
     my $id = $entry->display_id;
-    my $xref = "$dbname:$id";
 
     if ($dbname =~ /[GS]O/) {
-      push @onto, $xref;
+      push @onto, $id;
     } else {
+      my $xref = "$dbname:$id";
       push @xrefs, $xref;
     }
   }
