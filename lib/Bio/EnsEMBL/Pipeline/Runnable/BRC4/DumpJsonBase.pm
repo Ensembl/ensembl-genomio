@@ -24,7 +24,11 @@ sub run {
   # Write data to json
   my $output_file = $self->write_json_file($data);
 
-  $self->dataflow_output_id({ "metadata_json" => $output_file }, 2);
+  $self->dataflow_output_id(
+    {
+      "metadata_json" => $output_file,
+      "metadata_type" => $metadata_name
+    }, 2);
   return;
 }
 
