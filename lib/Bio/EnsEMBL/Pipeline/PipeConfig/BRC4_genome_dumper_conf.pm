@@ -31,7 +31,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_dumper_conf;
 
 use strict;
 use warnings;
-use File::Spec;
+use File::Spec::Functions qw/catfile/;
 use Data::Dumper;
 use Bio::EnsEMBL::Hive::Version 2.4;
 use Bio::EnsEMBL::ApiVersion qw/software_version/;
@@ -92,9 +92,9 @@ sub default_options {
      ## Metadata parameters
        'schema_dir' => $self->o('schema_dir'),
        'schemas' => {
-         'seq_region' => File::Spec->catfile($self->o('schema_dir'), "seq_region_schema.json"),
-         'functional_annotation' => File::Spec->catfile($self->o('schema_dir'), "fann_schema.json"),
-         'genome' => File::Spec->catfile($self->o('schema_dir'), "genome_schema.json"),
+         'seq_region' => catfile($self->o('schema_dir'), "seq_region_schema.json"),
+         'functional_annotation' => catfile($self->o('schema_dir'), "functional_annotation_schema.json"),
+         'genome' => catfile($self->o('schema_dir'), "genome_schema.json"),
        },
 	};
 }
