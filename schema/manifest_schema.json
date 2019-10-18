@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "$id": "https://.../.../meta/schemas/v0.0.0/manifest_schema.json",
+  "description" : "JSON schema for a manifest of files",
+
+  "definitions" : {
+    "manifest_info" : {
+      "type": "object",
+      "properties": {
+        "gff3" : { "$ref" : "#/definitions/file_info" },
+        "fasta_dna" : { "$ref" : "#/definitions/file_info" },
+        "fasta_pep" : { "$ref" : "#/definitions/file_info" },
+        "metadata_seq_region" : { "$ref" : "#/definitions/file_info" },
+        "metadata_genome" : { "$ref" : "#/definitions/file_info" },
+        "metadata_functional_annotation" : { "$ref" : "#/definitions/file_info" }
+      }
+    },
+    "file_info" : {
+      "type" : "string"
+    }
+  },
+
+  "oneOf" : [
+    { "$ref" : "#/definitions/manifest_info" }
+  ],
+
+  "examples": [
+  {
+    "gff3" : { "file" : "filename.gff3", "md5sum" : "LOREMIPSUM1" },
+    "fasta_dna" : { "file" : "filename_dna.fa", "md5sum" : "LOREMIPSUM2" },
+    "fasta_pep" : { "file" : "filename_pep.fa", "md5sum" : "LOREMIPSUM2" },
+    "metadata_seq_region" : { "file" : "filename_pep.fa", "md5sum" : "LOREMIPSUM2" }
+  }
+  ]
+}
+
