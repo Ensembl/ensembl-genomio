@@ -4,21 +4,61 @@
   "description" : "JSON schema for exchanging meta information for genomes",
 
   "definitions" : {
-    "genome_info" : {
+    "species_info": {
       "type": "object",
       "properties": {
         "taxonomy_id" : { "type" : "integer" },
-        "genus" : { "type" : "string" },
-        "species" : { "type" : "string" },
-        "strain" : { "type" : "string" },
+        "production_name" : { "type" : "string" },
         "scientific_name" : { "type" : "string" },
+        "strain" : { "type" : "string" }
+      },
+      "required": [
+        "taxonomy_id"
+        ]
+    },
+    "assembly_info": {
+      "type": "object",
+      "properties": {
         "accession" : { "type" : "string", "description" : "Unique INSDC accession for the genome" },
-        "organella_accessions" : { "type" : "array", "items" : { "type" : "string"} },
-        "note" : { "type" : "string", "description" : "optional note" }
+        "date" : { "type" : "string" },
+        "name" : { "type" : "string" },
+        "version" : { "type" : "string" }
+      },
+      "required": [
+        "accession"
+        ]
+    },
+    "genebuild_info": {
+      "type": "object",
+      "properties": {
+        "version" : { "type" : "string" }
+      },
+      "required": [
+        "version"
+        ]
+    },
+    "provider_info": {
+      "type": "object",
+      "properties": {
+        "name" : { "type" : "string" },
+        "url" : { "type" : "string" }
+      },
+      "required": [
+        "name"
+        ]
+    },
+
+    "genome_info" : {
+      "type": "object",
+      "properties": {
+        "species" : { "$ref" : "#/definitions/species_info" },
+        "assembly" : { "$ref" : "#/definitions/assembly_info" },
+        "genebuild" : { "$ref" : "#/definitions/genebuild_info" },
+        "provider" : { "$ref" : "#/definitions/provider_info" }
       },
       "required" : [
-        "taxonomy_id"
-      ]
+        "species"
+        ]
     }
   },
 
@@ -28,6 +68,6 @@
 
     "examples": [
     { "taxonomy_id": 180454 }
-      ]
+  ]
 }
 
