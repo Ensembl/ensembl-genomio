@@ -95,6 +95,7 @@ sub default_options {
          'seq_region' => catfile($self->o('schema_dir'), "seq_region_schema.json"),
          'functional_annotation' => catfile($self->o('schema_dir'), "functional_annotation_schema.json"),
          'genome' => catfile($self->o('schema_dir'), "genome_schema.json"),
+         'manifest' => catfile($self->o('schema_dir'), "manifest_schema.json"),
        },
 	};
 }
@@ -197,8 +198,22 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::Manifest',
       -analysis_capacity   => 1,
       -rc_name         => 'default',
-      -flow_into       => { '2' => 'integrity' },
+      -flow_into       => { '2' => 'check_manifest' },
     },
+
+     { -logic_name     => 'check_manifest',
+       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+       -parameters     => {
+         json_file => '#manifest#',
+         metadata_type => 'manifest',
+         json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
+         cmd => 'jsonschema -i #json_file# #json_schema#',
+       },
+       -analysis_capacity => 1,
+       -batch_size     => 50,
+	     -rc_name        => 'default',
+      -flow_into       => { '1' => 'integrity' },
+     },
 
     { -logic_name  => 'integrity',
       -module      => 'Integrity',
