@@ -18,7 +18,6 @@ class Integrity(eHive.BaseRunnable):
 
     def run(self):
         manifest_path = self.param_required("manifest")
-        #print(manifest_path)
 
         errors = []
 
@@ -35,6 +34,7 @@ class Integrity(eHive.BaseRunnable):
             seq_regions = {}
             seq_lengths = {}
             gff = {}
+            func_ann = {}
 
             if "gff3" in manifest:
                 gff = self.get_gff3(manifest["gff3"])
@@ -47,14 +47,19 @@ class Integrity(eHive.BaseRunnable):
                 seqr_lengths = {}
                 for seq in seq_regions:
                     seq_lengths[seq["name"]] = seq["length"]
+            if "metadata_functional_annotation" in manifest:
+                func_ann = self.get_functional_annotation(manifest['metadata_functional_annotation'])
 
             # Check gff3
             if gff:
                 if pep:
                     # We don't compare the peptide lengths because of seqedits
-                    errors += self.check_lengths(pep, gff["pep"], "fasta peptide vs gff CDS")
+                    errors += self.check_lengths(pep, gff["translations"], "Fasta translations vs gff")
+                if func_ann:
+                    errors += self.check_lengths(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff")
+                    errors += self.check_lengths(func_ann["translations"], gff["translations"], "Translation ids metadata vs gff")
                 if seq_regions:
-                    errors += self.check_lengths(seq_lengths, gff["seq_region"], "seq_regions json vs gff seq_regions", 0)
+                    errors += self.check_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff", 0)
 
             # Check fasta dna and seq_region integrity
             if dna and seq_regions:
@@ -74,6 +79,22 @@ class Integrity(eHive.BaseRunnable):
         with open(json_path) as json_file:
             return json.load(json_file)
 
+    def get_functional_annotation(self, json_path):
+        with open(json_path) as json_file:
+            data = json.load(json_file)
+
+            # Get gene ids and translation ids
+            genes = {}
+            translations = {}
+
+            for item in data:
+                if item["object_type"] == "gene":
+                    genes[item["id"]] = 1
+                elif item["object_type"] == "translation":
+                    translations[item["id"]] = 1
+
+            return { "genes" : genes, "translations" : translations }
+
     def get_gff3(self, gff3_path):
 
         seqs = {};
@@ -86,14 +107,17 @@ class Integrity(eHive.BaseRunnable):
                 seqs[seq.id] = len(seq.seq)
                 
                 for feat in seq.features:
-                    if feat.type == "gene":
-                        genes[feat.id] = abs(feat.location.end - feat.location.start)
+                    if feat.type in ["gene", "ncRNA_gene"]:
+                        ### THIS SHOULD NOT HAVE TO BE DONE
+                        gene_id = feat.id.replace("gene:", "")
+                        genes[gene_id] = abs(feat.location.end - feat.location.start)
                         # Get CDS
                         for feat2 in feat.sub_features:
                             if feat2.type == "mRNA":
                                 length = {}
                                 for feat3 in feat2.sub_features:
                                     if feat3.type == "CDS":
+                                        ### THIS SHOULD NOT HAVE TO BE DONE
                                         pep_id = feat3.id.replace("CDS:", "")
                                         if pep_id not in length:
                                             length[pep_id] = 0
@@ -101,7 +125,7 @@ class Integrity(eHive.BaseRunnable):
                                 for pep_id in length:
                                     peps[pep_id] = floor(length[pep_id] / 3) - 1
 
-        return { "seq_region": seqs, "gene": genes, "pep": peps }
+        return { "seq_region": seqs, "genes": genes, "translations": peps }
 
             
     def check_lengths(self, list1, list2, name, allowed_diff = None):
@@ -146,7 +170,4 @@ class Integrity(eHive.BaseRunnable):
             errors.append("%d only in second list in %s (first: %s)" % (len(only2), name, only2[0]))
 
         return errors
-
-    def check_gff_seq_regions(gff, seqr):
-        return
 
