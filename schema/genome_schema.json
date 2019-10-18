@@ -22,7 +22,7 @@
         "accession" : { "type" : "string", "description" : "Unique INSDC accession for the genome" },
         "date" : { "type" : "string" },
         "name" : { "type" : "string" },
-        "version" : { "type" : "string" }
+        "version" : { "type" : "integer" }
       },
       "required": [
         "accession"
