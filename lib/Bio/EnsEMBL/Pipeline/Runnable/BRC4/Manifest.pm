@@ -9,6 +9,7 @@ use File::Path qw(make_path);
 use File::Spec::Functions qw(catdir catfile);
 use File::Copy qw(move);
 use File::Basename qw(basename);
+use Digest::MD5 qw(md5_hex);
 
 sub run {
   my ($self) = @_;
@@ -21,9 +22,20 @@ sub run {
   make_path($dir);
 
   # First move all files to the species dir
+  my %final_manifest;
   for my $name (keys %$manifest) {
+
     move($manifest->{$name}, $dir);
-    $manifest->{$name} = basename($manifest->{$name});
+    my $file = basename($manifest->{$name});
+
+    open my $fh, '<', catfile($dir, $file);
+    my $md5sum = Digest::MD5->new->addfile($fh)->hexdigest;
+    close $fh;
+
+    $final_manifest{$name} = {
+      file => $file,
+      md5sum => $md5sum,
+    };
   }
 
   # Then create a manifest file
@@ -31,7 +43,7 @@ sub run {
   
   open my $json, '>', $manifest_path or
     die "Could not open $manifest_path for writing";
-  print $json encode_json($manifest);
+  print $json encode_json(\%final_manifest);
   close $json;
 
   $self->dataflow_output_id({ "manifest" => $manifest_path }, 2);

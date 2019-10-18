@@ -16,7 +16,11 @@
       }
     },
     "file_info" : {
-      "type" : "string"
+      "type": "object",
+      "properties": {
+        "file" : {"type" : "string" },
+        "md5sum" : {"type" : "string" }
+      }
     }
   },
 

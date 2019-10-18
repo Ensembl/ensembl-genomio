@@ -25,8 +25,9 @@ class Integrity(eHive.BaseRunnable):
             manifest = json.load(manifest_file)
             
             # Use dir name from the manifest
-            for f in manifest:
-                manifest[f] = path.join(path.dirname(manifest_path), manifest[f])
+            for name in manifest:
+                file_name = manifest[name]["file"]
+                manifest[name] = path.join(path.dirname(manifest_path), file_name)
             
             # Get content
             dna = {}
