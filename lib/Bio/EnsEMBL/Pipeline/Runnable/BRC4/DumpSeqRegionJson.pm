@@ -4,39 +4,22 @@ use strict;
 use warnings;
 
 use JSON;
-use File::Path qw(make_path);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-use base ('Bio::EnsEMBL::Production::Pipeline::Common::Base');
-
-sub fetch_input {
-  my ($self) = @_;
-
-  $self->param( 'dba', $self->core_dba() );
-
-  return;
-}
+use base ('Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpJsonBase');
 
 sub param_defaults {
-  return {};
-}
-
-sub run {
   my ($self) = @_;
 
-  print $self->param('species');
-  my $output = $self->write_json();
-
-  $self->dataflow_output_id({ "seq_region_json" => $output }, 2);
-  return;
+  return {
+    %{$self->SUPER::param_defaults},
+    metadata_name => 'seq_region',
+  };
 }
 
-sub write_json {
+sub prepare_data {
   my ($self) = @_;
 
-  my $sub_dir = $self->create_dir('json');
-  $self->info(
-          "Processing " . $self->production_name() . " into $sub_dir" );
   my $dba = $self->core_dba();
 
   # Get seq_regions
@@ -78,20 +61,7 @@ sub write_json {
   $dba->dbc()->disconnect_if_idle();
 
   # Write data to json
-  $self->write_json_file($sub_dir, \@seq_regions);
-} ## end sub write_json
-
-sub write_json_file {
-  my ($self, $sub_dir, $data) = @_;
-  my $json_file_path =
-    $sub_dir . '/' . $self->production_name() . '_seq_region.json';
-  $self->info("Writing to $json_file_path");
-  open my $json_file, '>', $json_file_path or
-    die "Could not open $json_file_path for writing";
-  print $json_file encode_json($data);
-  close $json_file;
-  $self->info("Write complete");
-  return $json_file_path;
+  return \@seq_regions;
 }
 
 1;
