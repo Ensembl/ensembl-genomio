@@ -94,6 +94,7 @@ sub default_options {
        'schemas' => {
          'seq_region' => File::Spec->catfile($self->o('schema_dir'), "seq_region_schema.json"),
          'functional_annotation' => File::Spec->catfile($self->o('schema_dir'), "fann_schema.json"),
+         'genome' => File::Spec->catfile($self->o('schema_dir'), "genome_schema.json"),
        },
 	};
 }
@@ -329,6 +330,7 @@ sub pipeline_analyses {
       -flow_into  => [
         'seq_region',
         'functional_annotation',
+        'genome',
       ],
       -rc_name         => 'default',
     },
@@ -342,6 +344,13 @@ sub pipeline_analyses {
 
     { -logic_name  => 'functional_annotation',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFunctionalAnnotationJson',
+      -flow_into  => { 2 => ['check_json_schema'] },
+      -analysis_capacity   => 5,
+      -rc_name         => 'default',
+    },
+
+    { -logic_name  => 'genome',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpGenomeJson',
       -flow_into  => { 2 => ['check_json_schema'] },
       -analysis_capacity   => 5,
       -rc_name         => 'default',
