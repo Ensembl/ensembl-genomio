@@ -38,18 +38,24 @@ class Integrity(eHive.BaseRunnable):
             func_ann = {}
 
             if "gff3" in manifest:
+                print("Got a gff")
                 gff = self.get_gff3(manifest["gff3"])
             if "fasta_dna" in manifest:
+                print("Got a fasta dna")
                 dna = self.get_fasta_lengths(manifest["fasta_dna"])
             if "fasta_pep" in manifest:
+                print("Got a fasta pep")
                 pep = self.get_fasta_lengths(manifest["fasta_pep"])
-            if "metadata_seq_region" in manifest:
-                seq_regions = self.get_json(manifest["metadata_seq_region"])
+            if "seq_region" in manifest:
+                print("Got a seq_regions")
+                pep = self.get_fasta_lengths(manifest["fasta_pep"])
+                seq_regions = self.get_json(manifest["seq_region"])
                 seqr_lengths = {}
                 for seq in seq_regions:
                     seq_lengths[seq["name"]] = seq["length"]
-            if "metadata_functional_annotation" in manifest:
-                func_ann = self.get_functional_annotation(manifest['metadata_functional_annotation'])
+            if "functional_annotation" in manifest:
+                print("Got a func_anns")
+                func_ann = self.get_functional_annotation(manifest['functional_annotation'])
 
             # Check gff3
             if gff:
@@ -108,7 +114,7 @@ class Integrity(eHive.BaseRunnable):
                 seqs[seq.id] = len(seq.seq)
                 
                 for feat in seq.features:
-                    if feat.type in ["gene", "ncRNA_gene"]:
+                    if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
                         ### THIS SHOULD NOT HAVE TO BE DONE
                         gene_id = feat.id.replace("gene:", "")
                         genes[gene_id] = abs(feat.location.end - feat.location.start)
