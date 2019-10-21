@@ -59,6 +59,7 @@
             { "type": "array", "items" : { "$ref" : "#/definitions/ontology_term_type" } }
           ]
         },
+        "is_pseudogene" : { "type" : "boolean" },
         "note" : { "type" : "string", "description" : "optional note" }
       },
       "required" : [

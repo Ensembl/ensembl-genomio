@@ -58,6 +58,7 @@ sub prepare_data {
       my $syns = get_synonyms($item);
       $feat{synonyms} = $syns if $syns and @$syns;
       $feat{description} = $item->description if $item->description;
+      $feat{is_pseudogene} = JSON::true if $item->biotype eq 'pseudogene';
     }
 
     # Xrefs (if any)
