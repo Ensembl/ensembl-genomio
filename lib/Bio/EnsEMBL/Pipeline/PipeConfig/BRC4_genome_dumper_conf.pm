@@ -270,14 +270,25 @@ sub pipeline_analyses {
       -flow_into      => { '1'  => 'gff3_BRC4_filter' },
 	 },	
 
+### GFF3:post-processing
    { -logic_name  => 'gff3_BRC4_filter',
      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::FilterGFF3',
+     -batch_size     => 10,
+     -rc_name        => 'default',
+     -flow_into      => { 2 =>'gff3_BRC4_specifier' },
+   },
+
+   { -logic_name  => 'gff3_BRC4_specifier',
+     -module      => 'GFF3Specifier',
+     -language    => 'python3',
+     -parameters     => { 
+       gff3_file => '#out_file#',
+     },
      -batch_size     => 10,
      -rc_name        => 'default',
      -flow_into      => { 2 =>'postprocess_gff3' },
    },
 
-### GFF3:post-processing
    { -logic_name     => 'postprocess_gff3',
      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
      -parameters     => { 
