@@ -274,40 +274,23 @@ sub pipeline_analyses {
      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::FilterGFF3',
      -batch_size     => 10,
      -rc_name        => 'default',
-     -flow_into      => { 2 =>'tidy_gff3' },
+     -flow_into      => { 2 =>'postprocess_gff3' },
    },
 
 ### GFF3:post-processing
-     { -logic_name     => 'tidy_gff3',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-       -parameters     => {  cmd => $self->o('gff3_tidy').' -gzip -o #out_file#.sorted.gz #out_file#', },
-       -hive_capacity  => 10,
-       -batch_size     => 10,
-	     -rc_name        => 'default',
-       -flow_into      => 'move_gff3',
+   { -logic_name     => 'postprocess_gff3',
+     -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+     -parameters     => { 
+       cmd => $self->o('gff3_tidy').' -gzip -o #out_file#.sorted.gz #out_file# ; ' .
+       'mv #out_file#.sorted.gz #out_file# ; ' .
+       $self->o('gff3_validate').' #out_file#',
+       hash_key => "gff3",
      },
-
-     {
-       -logic_name     => 'move_gff3',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-       -parameters     => { cmd => 'mv #out_file#.sorted.gz #out_file#', },
-       -hive_capacity  => 10,
-       -rc_name        => 'default',
-       -flow_into      => 'validate_gff3',
-      },
- 
-      {
-     	-logic_name        => 'validate_gff3',
-     	-module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-     	-parameters        => {
-        cmd => $self->o('gff3_validate').' #out_file#',
-        hash_key => "gff3",
-      },
-     	-hive_capacity => 10,
-     	-batch_size        => 10,
-     	-rc_name           => 'default',
-      -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=out_file' },
-   	  },
+     -hive_capacity => 10,
+     -batch_size        => 10,
+     -rc_name           => 'default',
+     -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=out_file' },
+   },
 
 
 ### FASTA (cdna, cds, dna, pep, ncrna)
