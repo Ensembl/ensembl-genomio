@@ -2,7 +2,7 @@
 
 import eHive
 from Bio import SeqIO
-from os import path
+from os import path, rename
 import gzip
 import io
 from math import floor
@@ -31,8 +31,17 @@ class GFF3Specifier(eHive.BaseRunnable):
 
     def run(self):
         gff3_path = self.param_required("gff3_file")
+        new_gff3_path = self.get_gff3(gff3_path)
 
-        gff = self.get_gff3(gff3_path)
+        old_gff3_path = gff3_path + ".old"
+        if gff3_path.endswith(".gz"):
+            old_gff3_path += ".gz"
+
+        # Rename the files
+        rename(gff3_path, old_gff3_path)
+        rename(new_gff3_path, gff3_path)
+
+        self.dataflow({ "gff3_file" : gff3_path }, 2)
 
     def get_gff3(self, gff3_path):
 
@@ -86,12 +95,12 @@ class GFF3Specifier(eHive.BaseRunnable):
                         continue
 
                     # Special production-specific modification
-                    if key == "ID" and ":" in value:
+                    if key in ("ID", "Parent") and ":" in value:
                         (btype, real_value) = value.split(":")
                         if btype and real_value:
                             value = real_value
 
-                    attributes.append(key + ":" + value)
+                    attributes.append(key + "=" + value)
 
                 # Print back the line
                 new_attribs = ";".join(attributes)
