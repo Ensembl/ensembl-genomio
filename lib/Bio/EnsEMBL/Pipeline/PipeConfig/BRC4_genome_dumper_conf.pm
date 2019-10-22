@@ -282,24 +282,7 @@ sub pipeline_analyses {
       -max_retry_count => 1,
      -batch_size     => 10,
      -rc_name        => 'default',
-     -flow_into      => { 2 =>'gff3_tidy' },
-   },
-
-   # Sort the features
-   # The validation step also adds the complete list of seq_regions to the header
-   { -logic_name     => 'gff3_tidy',
-     -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-     -parameters     => { 
-       cmd => $self->o('gff3_tidy').' -gzip -o #out_file#.sorted.gz #out_file# ; ' .
-       'mv #out_file# #out_file#.unsorted.gff3.gz ; ' .
-       'mv #out_file#.sorted.gz #out_file# ; ' .
-       $self->o('gff3_validate').' #out_file#',
-     },
-      -max_retry_count => 1,
-     -analysis_capacity => 10,
-     -batch_size        => 10,
-     -rc_name           => 'default',
-     -flow_into      => { 1 =>'gff3_BRC4_specifier' },
+     -flow_into      => { 2 =>'gff3_BRC4_specifier' },
    },
 
    # BRC4 specifications alterations
@@ -314,12 +297,16 @@ sub pipeline_analyses {
      -rc_name        => 'default',
      -flow_into      => { 2 =>'gff3_validation' },
    },
-
-   # Second validation after specifications alterations
+   
+   # Sort the features
+   # The validation step also adds the complete list of seq_regions to the header
    { -logic_name     => 'gff3_validation',
      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
      -parameters     => { 
-       cmd => $self->o('gff3_validate').' #out_file#',
+       cmd => $self->o('gff3_tidy').' -gzip -o #out_file#.sorted.gz #out_file# ; ' .
+       'mv #out_file# #out_file#.unsorted.gff3.gz ; ' .
+       'mv #out_file#.sorted.gz #out_file# ; ' .
+       $self->o('gff3_validate').' #out_file#',
        hash_key => "gff3",
      },
       -max_retry_count => 1,
