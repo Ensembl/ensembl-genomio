@@ -65,7 +65,7 @@ class Integrity(eHive.BaseRunnable):
                     errors += self.check_lengths(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff")
                     errors += self.check_lengths(func_ann["translations"], gff["translations"], "Translation ids metadata vs gff")
                 if seq_regions:
-                    errors += self.check_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff", 0)
+                    errors += self.check_seq_region_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff")
 
             # Check fasta dna and seq_region integrity
             if dna and seq_regions:
@@ -177,3 +177,37 @@ class Integrity(eHive.BaseRunnable):
 
         return errors
 
+    def check_seq_region_lengths(self, seqrs, feats, name):
+        only_seqr = [];
+        only_feat = [];
+
+        common = [];
+        diff = [];
+        diff_list = [];
+
+        for seq_id in seqrs:
+            if seq_id in feats:
+                # Check that feature is within the seq_region length
+                if feats[seq_id] > seqrs[seq_id]:
+                    diff.append(seq_id)
+                    diff_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
+                else:
+                    common.append(seq_id)
+            else:
+                only_seqr.append(seq_id)
+        for seq_id in feats:
+            if seq_id not in common and seq_id not in diff:
+                only_feat.append(seq_id)
+
+        errors = []
+        if common:
+            print("%d common elements in %s" % (len(common), name))
+        if diff:
+            errors.append("%d common elements with higher length in %s (e.g. %s)" % (len(diff), name, diff_list[0]))
+        if only_seqr:
+            # Not an error!
+            print("%d only in seq_region list in %s (first: %s)" % (len(only_seqr), name, only_seqr[0]))
+        if only_feat:
+            errors.append("%d only in second list in %s (first: %s)" % (len(only_feat), name, only_feat[0]))
+
+        return errors
