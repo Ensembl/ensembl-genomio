@@ -16,6 +16,8 @@ class GFF3Specifier(eHive.BaseRunnable):
             "CDS",
             "three_prime_UTR",
             "five_prime_UTR",
+            "pseudogenic_transcript",
+            "pseudogene",
             ]
     allowed_attributes = [
             "ID",
