@@ -48,7 +48,6 @@ class Integrity(eHive.BaseRunnable):
                 pep = self.get_fasta_lengths(manifest["fasta_pep"])
             if "seq_region" in manifest:
                 print("Got a seq_regions")
-                pep = self.get_fasta_lengths(manifest["fasta_pep"])
                 seq_regions = self.get_json(manifest["seq_region"])
                 seqr_lengths = {}
                 for seq in seq_regions:
