@@ -293,6 +293,7 @@ sub pipeline_analyses {
      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
      -parameters     => { 
        cmd => $self->o('gff3_tidy').' -gzip -o #out_file#.sorted.gz #out_file# ; ' .
+       'mv #out_file# #out_file#.unsorted.gff3.gz ; ' .
        'mv #out_file#.sorted.gz #out_file# ; ' .
        $self->o('gff3_validate').' #out_file#',
        hash_key => "gff3",
