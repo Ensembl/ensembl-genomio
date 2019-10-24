@@ -114,8 +114,8 @@ class Integrity(eHive.BaseRunnable):
                 
                 for feat in seq.features:
                     if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
-                        ### THIS SHOULD NOT HAVE TO BE DONE
-                        gene_id = feat.id.replace("gene:", "")
+                        gene_id = feat.id
+                        # Store gene length
                         genes[gene_id] = abs(feat.location.end - feat.location.start)
                         # Get CDS
                         for feat2 in feat.sub_features:
@@ -123,8 +123,7 @@ class Integrity(eHive.BaseRunnable):
                                 length = {}
                                 for feat3 in feat2.sub_features:
                                     if feat3.type == "CDS":
-                                        ### THIS SHOULD NOT HAVE TO BE DONE
-                                        pep_id = feat3.id.replace("CDS:", "")
+                                        pep_id = feat3.id
                                         if pep_id not in length:
                                             length[pep_id] = 0
                                         length[pep_id] += abs(feat3.location.end - feat3.location.start)
