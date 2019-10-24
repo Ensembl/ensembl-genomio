@@ -7,7 +7,7 @@ use base ('Bio::EnsEMBL::Production::Pipeline::Common::Base');
 use JSON;
 use File::Path qw(make_path);
 use File::Spec::Functions qw(catdir catfile);
-use File::Copy qw(move);
+use File::Copy qw(cp);
 use File::Basename qw(basename);
 use Digest::MD5 qw(md5_hex);
 
@@ -25,7 +25,7 @@ sub run {
   my %final_manifest;
   for my $name (keys %$manifest) {
 
-    move($manifest->{$name}, $dir);
+    cp($manifest->{$name}, $dir);
     my $file = basename($manifest->{$name});
 
     open my $fh, '<', catfile($dir, $file);
