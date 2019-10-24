@@ -303,8 +303,9 @@ sub pipeline_analyses {
    { -logic_name     => 'gff3_validation',
      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
      -parameters     => {
-       cmd => $self->o('gff3_tidy').' -gzip -o #final_gff_file# #specifications_gff_file# ; ' .
-       $self->o('gff3_validate').' #final_gff_file#',
+       tidied_gff_file => "#specifications_gff_file#.tidy.gff3.gz",
+       cmd => $self->o('gff3_tidy').' -gzip -o #tidied_gff_file# #specifications_gff_file# && ' .
+       $self->o('gff3_validate').'-o #final_gff_file# #tidied_gff_file#',
        hash_key => "gff3",
      },
       -max_retry_count => 1,
