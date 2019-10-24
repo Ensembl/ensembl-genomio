@@ -81,7 +81,8 @@ sub default_options {
        'xrefs'           => 0,
 
        # GFF3 specifications
-       remove_features_prefix => 1,
+       # Ensembl compatibility
+       ensembl_mode => 0,
 
 	   ## fasta parameters
        # types to emit
@@ -145,7 +146,7 @@ sub pipeline_wide_parameters {
             'do_gff'      => $self->o('do_gff'),
             'do_meta'      => $self->o('do_meta'),
             'schemas'      => $self->o('schemas'),
-            'remove_features_prefix'      => $self->o('remove_features_prefix'),
+            #'remove_features_prefix'      => $self->o('remove_features_prefix'),
     };
 }
 
@@ -224,6 +225,9 @@ sub pipeline_analyses {
     { -logic_name  => 'integrity',
       -module      => 'Integrity',
       -language    => 'python3',
+      -parameters     => {
+        ensembl_mode => $self->o('ensembl_mode'),
+      },
       -analysis_capacity   => 5,
       -rc_name         => '8GB',
       -max_retry_count => 1,
@@ -295,7 +299,7 @@ sub pipeline_analyses {
      -language    => 'python3',
      -parameters     => {
        gff_file => '#filtered_gff_file#',
-       remove_features_prefix => $self->o('remove_features_prefix'),
+       remove_features_prefix => "#expr(not #ensembl_mode#)expr#",
      },
       -max_retry_count => 1,
      -batch_size     => 10,

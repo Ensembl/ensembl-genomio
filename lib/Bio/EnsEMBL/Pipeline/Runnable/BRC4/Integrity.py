@@ -14,6 +14,7 @@ class Integrity(eHive.BaseRunnable):
 
     def param_default(self):
         return {
+                ensembl_mode : False,
         }
 
     def run(self):
@@ -103,6 +104,7 @@ class Integrity(eHive.BaseRunnable):
 
     def get_gff3(self, gff3_path):
 
+        ensembl_mode = self.param("ensembl_mode")
         seqs = {};
         genes = {};
         peps = {};
@@ -115,6 +117,8 @@ class Integrity(eHive.BaseRunnable):
                 for feat in seq.features:
                     if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
                         gene_id = feat.id
+                        if ensembl_mode:
+                            gene_id = gene_id.replace("gene:", "")
                         # Store gene length
                         genes[gene_id] = abs(feat.location.end - feat.location.start)
                         # Get CDS
@@ -124,6 +128,8 @@ class Integrity(eHive.BaseRunnable):
                                 for feat3 in feat2.sub_features:
                                     if feat3.type == "CDS":
                                         pep_id = feat3.id
+                                        if ensembl_mode:
+                                            pep_id = pep_id.replace("CDS:", "")
                                         if pep_id not in length:
                                             length[pep_id] = 0
                                         length[pep_id] += abs(feat3.location.end - feat3.location.start)
