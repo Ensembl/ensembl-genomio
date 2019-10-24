@@ -289,8 +289,8 @@ sub pipeline_analyses {
    { -logic_name  => 'gff3_BRC4_specifier',
      -module      => 'GFF3Specifier',
      -language    => 'python3',
-     -parameters     => { 
-       gff3_file => '#out_file#',
+     -parameters     => {
+       gff_file => '#filtered_gff_file#',
      },
       -max_retry_count => 1,
      -batch_size     => 10,
@@ -302,18 +302,16 @@ sub pipeline_analyses {
    # The validation step also adds the complete list of seq_regions to the header
    { -logic_name     => 'gff3_validation',
      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-     -parameters     => { 
-       cmd => $self->o('gff3_tidy').' -gzip -o #out_file#.sorted.gz #out_file# ; ' .
-       'mv #out_file# #out_file#.unsorted.gff3.gz ; ' .
-       'mv #out_file#.sorted.gz #out_file# ; ' .
-       $self->o('gff3_validate').' #out_file#',
+     -parameters     => {
+       cmd => $self->o('gff3_tidy').' -gzip -o #final_gff_file# #specifications_gff_file# ; ' .
+       $self->o('gff3_validate').' #final_gff_file#',
        hash_key => "gff3",
      },
       -max_retry_count => 1,
      -analysis_capacity => 10,
      -batch_size        => 10,
      -rc_name           => 'default',
-     -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=out_file' },
+     -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=final_gff_file' },
    },
 
 

@@ -19,6 +19,13 @@ class GFF3Specifier(eHive.BaseRunnable):
             "pseudogenic_transcript",
             "pseudogene",
             ]
+    ignored_biotypes = [
+            "biological_region",
+            "supercontig",
+            "chromosome",
+            "scaffold",
+            "contig",
+    ]
     allowed_attributes = [
             "ID",
             "Parent",
@@ -32,22 +39,14 @@ class GFF3Specifier(eHive.BaseRunnable):
         }
 
     def run(self):
-        gff3_path = self.param_required("gff3_file")
+        gff3_path = self.param_required("gff_file")
         new_gff3_path = self.get_gff3(gff3_path)
 
-        old_gff3_path = gff3_path + ".old"
-        if gff3_path.endswith(".gz"):
-            old_gff3_path += ".gz"
-
-        # Rename the files
-        rename(gff3_path, old_gff3_path)
-        rename(new_gff3_path, gff3_path)
-
-        self.dataflow({ "gff3_file" : gff3_path }, 2)
+        self.dataflow({ "specifications_gff_file" : new_gff3_path }, 2)
 
     def get_gff3(self, gff3_path):
 
-        gff3_tmp_path = gff3_path + ".tmp"
+        gff3_tmp_path = gff3_path + ".specifications.gff3"
 
         if gff3_path.endswith(".gz"):
             gff3_tmp_path += ".gz"
@@ -64,7 +63,8 @@ class GFF3Specifier(eHive.BaseRunnable):
 
     def parse_gff3(self, gff3_handle, tmph):
 
-        skipped_biotypes = {}
+        skipped_known_biotypes = {}
+        skipped_unknown_biotypes = {}
         skipped_attributes = {}
         for line in gff3_handle:
             # Skip separator lines
@@ -80,9 +80,14 @@ class GFF3Specifier(eHive.BaseRunnable):
                 # Filter biotype
                 if self.allowed_biotypes and biotype not in self.allowed_biotypes:
                     if not (biotype.endswith("RNA") or biotype.endswith("RNA_gene")):
-                        if biotype not in skipped_biotypes:
-                            skipped_biotypes[biotype] = 0
-                        skipped_biotypes[biotype] += 1
+                        if biotype in self.ignored_biotypes:
+                            if biotype not in skipped_known_biotypes:
+                                skipped_known_biotypes[biotype] = 0
+                            skipped_known_biotypes[biotype] += 1
+                        else:
+                            if biotype not in skipped_unknown_biotypes:
+                                skipped_unknown_biotypes[biotype] = 0
+                            skipped_unknown_biotypes[biotype] += 1
                         continue
 
                 # Filter attributes
@@ -109,12 +114,19 @@ class GFF3Specifier(eHive.BaseRunnable):
                 new_line = "\t".join([chrom, source, biotype, start, end, col6, col7, col8, new_attribs]) + "\n"
                 tmph.write(new_line)
 
-        if skipped_biotypes:
-            print("Skipped biotypes:")
-            for bt in skipped_biotypes:
-                print("\t%s: %d" % (bt, skipped_biotypes[bt]))
+        # Print stats
         if skipped_attributes:
             print("Skipped attributes:")
             for at in skipped_attributes:
                 print("\t%s: %d" % (at, skipped_attributes[at]))
+
+        if skipped_known_biotypes:
+            print("Skipped known biotypes:")
+            for bt in skipped_known_biotypes:
+                print("\t%s: %d" % (bt, skipped_known_biotypes[bt]))
+        if skipped_unknown_biotypes:
+            print("Skipped unknown biotypes:")
+            for bt in skipped_unknown_biotypes:
+                print("\t%s: %d" % (bt, skipped_unknown_biotypes[bt]))
+            raise Exception("Encountered an unknown biotype: %s. You need to say if it should be kept or ignored" % bt)
 
