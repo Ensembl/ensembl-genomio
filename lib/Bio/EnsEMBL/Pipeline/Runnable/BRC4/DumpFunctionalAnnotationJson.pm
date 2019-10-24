@@ -105,7 +105,7 @@ sub get_xrefs {
     if ($dbname =~ /[GS]O/) {
       push @onto, $id;
     } else {
-      my $xref = "$dbname:$id";
+      my $xref = { dbname => $dbname, id => $id };
       push @xrefs, $xref;
     }
   }

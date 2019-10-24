@@ -18,9 +18,12 @@
         }
       ]
     },
-    "c_pair_type" : {
-      "type" : "string",
-      "pattern" : "^[^;,]+:[^;,]+$"
+    "xref_object" : {
+          "type" : "object",
+          "properties" : {
+            "dbname" : { "type" : "string" },
+            "id" : { "type" : "string" }
+          }
     },
     "ontology_term_type" : {
       "type" : "string",
@@ -47,10 +50,10 @@
           ]
         },
         "xrefs" : {
-          "description" : "xrefs <src>:<id> pairs",
+          "description" : "References to ids to external databases",
           "oneOf" : [
-            { "$ref" : "#/definitions/c_pair_type" },
-            { "type": "array", "items" : { "$ref" : "#/definitions/c_pair_type" } }
+            { "$ref" : "#/definitions/xref_object" },
+            { "type": "array", "items" : { "$ref" : "#/definitions/xref_object" } }
           ]
         },
         "ontology_terms" : {
