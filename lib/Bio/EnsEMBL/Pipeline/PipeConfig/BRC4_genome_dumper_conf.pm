@@ -80,6 +80,9 @@ sub default_options {
        'out_file_stem'   => undef,
        'xrefs'           => 0,
 
+       # GFF3 specifications
+       remove_features_prefix => 1,
+
 	   ## fasta parameters
        # types to emit
        'dna_sequence_type_list'  => ['dna'],
@@ -142,6 +145,7 @@ sub pipeline_wide_parameters {
             'do_gff'      => $self->o('do_gff'),
             'do_meta'      => $self->o('do_meta'),
             'schemas'      => $self->o('schemas'),
+            'remove_features_prefix'      => $self->o('remove_features_prefix'),
     };
 }
 
@@ -291,6 +295,7 @@ sub pipeline_analyses {
      -language    => 'python3',
      -parameters     => {
        gff_file => '#filtered_gff_file#',
+       remove_features_prefix => $self->o('remove_features_prefix'),
      },
       -max_retry_count => 1,
      -batch_size     => 10,
@@ -303,9 +308,8 @@ sub pipeline_analyses {
    { -logic_name     => 'gff3_validation',
      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
      -parameters     => {
-       tidied_gff_file => "#specifications_gff_file#.tidy.gff3.gz",
-       cmd => $self->o('gff3_tidy').' -gzip -o #tidied_gff_file# #specifications_gff_file# && ' .
-       $self->o('gff3_validate').'-o #final_gff_file# #tidied_gff_file#',
+       cmd => $self->o('gff3_tidy').' -gzip -o #final_gff_file# #specifications_gff_file# && ' .
+       $self->o('gff3_validate').' #final_gff_file#',
        hash_key => "gff3",
      },
       -max_retry_count => 1,
