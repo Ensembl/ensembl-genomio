@@ -102,7 +102,7 @@ sub get_xrefs {
     my $dbname = $entry->dbname;
     my $id = $entry->display_id;
 
-    if ($dbname =~ /[GS]O/) {
+    if ($dbname =~ /^[GS]O$/) {
       push @onto, $id;
     } else {
       my $xref = { dbname => $dbname, id => $id };
