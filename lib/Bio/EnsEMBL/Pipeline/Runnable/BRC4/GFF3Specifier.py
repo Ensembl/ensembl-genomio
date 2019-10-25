@@ -38,7 +38,7 @@ class GFF3Specifier(eHive.BaseRunnable):
         return {
             # Ensembl adds a prefix to features because different
             # types can use the same id in EG (gene and transcript)
-            remove_features_prefix : True
+            ensembl_mode : False
         }
 
     def run(self):
@@ -65,7 +65,10 @@ class GFF3Specifier(eHive.BaseRunnable):
         return gff3_tmp_path
 
     def parse_gff3(self, gff3_handle, tmph):
-        remove_prefix = self.param("remove_features_prefix")
+        remove_prefix = True
+        if self.param("ensembl_mode"):
+            remove_prefix = False
+
         skipped_known_biotypes = {}
         skipped_unknown_biotypes = {}
         skipped_attributes = {}
@@ -109,6 +112,7 @@ class GFF3Specifier(eHive.BaseRunnable):
                         (btype, real_value) = value.split(":")
                         if btype and real_value:
                             value = real_value
+
 
                     attributes.append(key + "=" + value)
 

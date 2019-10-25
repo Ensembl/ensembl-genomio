@@ -299,7 +299,7 @@ sub pipeline_analyses {
      -language    => 'python3',
      -parameters     => {
        gff_file => '#filtered_gff_file#',
-       remove_features_prefix => "#expr(not #ensembl_mode#)expr#",
+       ensembl_mode => $self->o("ensembl_mode"),
      },
       -max_retry_count => 1,
      -batch_size     => 10,
