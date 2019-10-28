@@ -37,7 +37,7 @@ sub param_defaults {
     'line_width'            => 80,
 
     # DNA params
-    'dump_level'            => 'toplevel',
+    'dump_level'            => 'seqlevel',
     'dump_cs_version'       => undef,
     'include_non_reference' => 0,
   };

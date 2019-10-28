@@ -27,8 +27,9 @@ class Integrity(eHive.BaseRunnable):
             
             # Use dir name from the manifest
             for name in manifest:
-                file_name = manifest[name]["file"]
-                manifest[name] = path.join(path.dirname(manifest_path), file_name)
+                if "file" in manifest[name]:
+                    file_name = manifest[name]["file"]
+                    manifest[name] = path.join(path.dirname(manifest_path), file_name)
             
             # Get content
             dna = {}
@@ -51,8 +52,11 @@ class Integrity(eHive.BaseRunnable):
                 print("Got a seq_regions")
                 seq_regions = self.get_json(manifest["seq_region"])
                 seqr_lengths = {}
+                seqr_seqlevel = []
                 for seq in seq_regions:
                     seq_lengths[seq["name"]] = seq["length"]
+                    if seq["coord_system_level"] == "contig":
+                        seqr_seqlevel.append(seq["name"])
             if "functional_annotation" in manifest:
                 print("Got a func_anns")
                 func_ann = self.get_functional_annotation(manifest['functional_annotation'])
@@ -70,8 +74,7 @@ class Integrity(eHive.BaseRunnable):
 
             # Check fasta dna and seq_region integrity
             if dna and seq_regions:
-                # We don't tolerate any length difference
-                errors += self.check_lengths(dna, seq_lengths, "fasta dna vs seq_regions json", 0)
+                errors += self.check_ids(dna.keys(), seqr_seqlevel, "fasta dna vs seq_regions json")
 
         if errors:
             raise Exception("Integrity test failed: " + str(errors))
@@ -137,6 +140,30 @@ class Integrity(eHive.BaseRunnable):
                                     peps[pep_id] = floor(length[pep_id] / 3) - 1
 
         return { "seq_region": seqs, "genes": genes, "translations": peps }
+
+    def check_ids(self, list1, list2, name):
+        only1 = [];
+        only2 = [];
+        common = [];
+
+        for item_id in list1:
+            if item_id in list2:
+                common.append(item_id)
+            else:
+                only1.append(item_id)
+        for item_id in list2:
+            if item_id not in common:
+                only2.append(item_id)
+
+        errors = []
+        if common:
+            print("%d common elements in %s" % (len(common), name))
+        if only1:
+            errors.append("%d only in first list in %s (first: %s)" % (len(only1), name, only1[0]))
+        if only2:
+            errors.append("%d only in second list in %s (first: %s)" % (len(only2), name, only2[0]))
+
+        return errors
 
             
     def check_lengths(self, list1, list2, name, allowed_diff = None):
