@@ -56,6 +56,7 @@ sub default_options {
        'do_fasta' => 1,
        'do_gff' => 1,
        'do_meta' => 1,
+       'do_agp' => 1,
 
 	   ## 'job_factory' parameters
 	   'species'     => [], 
@@ -143,6 +144,8 @@ sub pipeline_wide_parameters {
             'output_dir'     => $self->o('output_dir'),
             'release'       => $self->o('release'),
             'do_fasta'      => $self->o('do_fasta'),
+            'do_gff'      => $self->o('do_gff'),
+            'do_agp'      => $self->o('do_agp'),
             'do_gff'      => $self->o('do_gff'),
             'do_meta'      => $self->o('do_meta'),
             'schemas'      => $self->o('schemas'),
@@ -240,6 +243,7 @@ sub pipeline_analyses {
        -flow_into      => {'1' => [
            WHEN('#do_fasta#', 'fasta'),
            WHEN('#do_gff#', 'gff3'),
+           WHEN('#do_agp#', 'agp'),
            WHEN('#do_meta#', 'metadata'),
          ] }
      },
@@ -347,6 +351,17 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFastaPeptide',
       -parameters => { hash_key => "fasta_pep", },
       -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=fasta_file' },
+      -max_retry_count => 0,
+      -hive_capacity   => 20,
+      -priority        => 5,
+      -rc_name         => 'default',
+    },
+
+### AGP
+    { -logic_name  => 'agp',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpAGP',
+      -parameters => { hash_key => "agp" },
+      -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=agp_file' },
       -max_retry_count => 0,
       -hive_capacity   => 20,
       -priority        => 5,
