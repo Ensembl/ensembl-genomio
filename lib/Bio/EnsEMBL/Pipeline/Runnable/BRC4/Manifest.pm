@@ -10,6 +10,7 @@ use File::Spec::Functions qw(catdir catfile);
 use File::Copy qw(cp);
 use File::Basename qw(basename);
 use Digest::MD5 qw(md5_hex);
+use v5.14;
 
 sub run {
   my ($self) = @_;
@@ -25,17 +26,34 @@ sub run {
   my %final_manifest;
   for my $name (keys %$manifest) {
 
-    cp($manifest->{$name}, $dir);
-    my $file = basename($manifest->{$name});
+    if (ref($manifest->{$name}) eq 'HASH') {
+      foreach my $subname (sort keys %{ $manifest->{$name} }) {
+        cp($manifest->{$name}->{$subname}, $dir);
+        my $file = basename($manifest->{$name}->{$subname});
 
-    open my $fh, '<', catfile($dir, $file);
-    my $md5sum = Digest::MD5->new->addfile($fh)->hexdigest;
-    close $fh;
+        open my $fh, '<', catfile($dir, $file);
+        my $md5sum = Digest::MD5->new->addfile($fh)->hexdigest;
+        close $fh;
 
-    $final_manifest{$name} = {
-      file => $file,
-      md5sum => $md5sum,
-    };
+        $final_manifest{$name}{$subname} = {
+          file => $file,
+          md5sum => $md5sum,
+        };
+      }
+    } else {
+
+      cp($manifest->{$name}, $dir);
+      my $file = basename($manifest->{$name});
+
+      open my $fh, '<', catfile($dir, $file) or die("$dir/$file: $!");
+      my $md5sum = Digest::MD5->new->addfile($fh)->hexdigest;
+      close $fh;
+
+      $final_manifest{$name} = {
+        file => $file,
+        md5sum => $md5sum,
+      };
+    }
   }
 
   # Then create a manifest file

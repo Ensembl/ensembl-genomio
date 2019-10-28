@@ -23,34 +23,14 @@ use warnings;
 use base ('Bio::EnsEMBL::Production::Pipeline::Common::Base');
 use File::Spec::Functions qw(catdir catfile);
 
-sub param_defaults {
-  my ($self) = @_;
-  
-  return {
-    %{$self->SUPER::param_defaults},
-    'seq_level' => 'contig',
-  };
-}
-
-sub fetch_input {
-  my ($self) = @_;
-  
-  my $sub_dir = $self->create_dir('agp');
-  my $agp_file = catfile($sub_dir, $self->production_name() . '.agp');
-  $self->param('agp_file', $agp_file);
-}
-
 sub run {
   my ($self) = @_;
   my $species      = $self->param_required('species');
-  my $agp_file     = $self->param_required('agp_file');
-  my $seq_level    = $self->param_required('seq_level');
   
   my $gap_type = 'scaffold';
   my $linkage  = 'yes';
   my $evidence = 'paired-ends';
   
-  open(my $out_fh, '>', $agp_file) or $self->throw("Cannot open file $agp_file: $!");
   
   my $dba = $self->core_dba();
   my $ama = $dba->get_adaptor('AssemblyMapper');
@@ -59,6 +39,8 @@ sub run {
 
   my @coord_maps = $self->get_coord_maps($dba);
 
+  my $sub_dir = $self->create_dir('agp');
+  my %agp_files;
   foreach my $pair (@coord_maps) {
     my $first_level_cs = $csa->fetch_by_dbID($pair->[0]);
     my $second_level_cs = $csa->fetch_by_dbID($pair->[1]);
@@ -66,6 +48,10 @@ sub run {
     my $mapper = $ama->fetch_by_CoordSystems($first_level_cs, $second_level_cs);
     my $slices = $sa->fetch_all($first_level_cs->name, $first_level_cs->version);
 
+    my $map_name = $first_level_cs->name() . "-" . $second_level_cs->name();
+    my $agp_file = catfile($sub_dir, $self->production_name() . '_' . $map_name . '.agp');
+    $agp_files{$map_name} = $agp_file;
+    open(my $out_fh, '>', $agp_file) or $self->throw("Cannot open file $agp_file: $!");
     foreach my $slice (sort {$a->seq_region_name cmp $b->seq_region_name} @$slices) {
       my @seq_level_coords =
         $mapper->map(
@@ -115,15 +101,19 @@ sub run {
         
         $asm_start += $length;
       }
+      close($out_fh);
     }
   }
   
-  close($out_fh);
+  $self->param("agp_files", \%agp_files);
 }
 
 sub write_output {
   my ($self) = @_;
-  $self->dataflow_output_id({ 'agp_file' => $self->param('agp_file')}, 2);
+  $self->dataflow_output_id(
+    {
+      'agp_files' => $self->param('agp_files'),
+    }, 2);
 }
 
 sub get_coord_maps {
@@ -136,6 +126,8 @@ sub get_coord_maps {
     LEFT JOIN seq_region sc ON a.cmp_seq_region_id = sc.seq_region_id
     LEFT JOIN coord_system ca ON sa.coord_system_id = ca.coord_system_id
     LEFT JOIN coord_system cc ON sc.coord_system_id = cc.coord_system_id
+    WHERE ca.attrib LIKE "%default_version%"
+      AND cc.attrib LIKE "%default_version%"
     GROUP BY sa.coord_system_id, sc.coord_system_id;
   ';
   

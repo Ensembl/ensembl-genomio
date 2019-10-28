@@ -361,7 +361,7 @@ sub pipeline_analyses {
     { -logic_name  => 'agp',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpAGP',
       -parameters => { hash_key => "agp" },
-      -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=agp_file' },
+      -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=agp_files' },
       -max_retry_count => 0,
       -hive_capacity   => 20,
       -priority        => 5,
