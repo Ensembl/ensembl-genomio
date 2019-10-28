@@ -56,15 +56,16 @@ sub run {
   my $ama = $dba->get_adaptor('AssemblyMapper');
   my $csa = $dba->get_adaptor('CoordSystem');
   my $sa  = $dba->get_adaptor('Slice');
+
+  my @coord_maps = $self->get_coord_maps($dba);
+
+  foreach my $pair (@coord_maps) {
+    my $first_level_cs = $csa->fetch_by_dbID($pair->[0]);
+    my $second_level_cs = $csa->fetch_by_dbID($pair->[1]);
   
-  my $seq_level_cs = $csa->fetch_by_name($seq_level);  
-  my @top_level_names = $self->top_level_names($dba);
-  
-  foreach my $top_level_name (sort {$a cmp $b} @top_level_names) {
-    my $top_level_cs = $csa->fetch_by_name($top_level_name);
-    my $mapper = $ama->fetch_by_CoordSystems($top_level_cs, $seq_level_cs);
-    my $slices = $sa->fetch_all($top_level_name);
-    
+    my $mapper = $ama->fetch_by_CoordSystems($first_level_cs, $second_level_cs);
+    my $slices = $sa->fetch_all($first_level_cs->name, $first_level_cs->version);
+
     foreach my $slice (sort {$a->seq_region_name cmp $b->seq_region_name} @$slices) {
       my @seq_level_coords =
         $mapper->map(
@@ -72,7 +73,7 @@ sub run {
           $slice->start,
           $slice->end,
           $slice->strand,
-          $top_level_cs
+          $first_level_cs
         );
       
       my $asm_start = 1;
@@ -125,23 +126,30 @@ sub write_output {
   $self->dataflow_output_id({ 'agp_file' => $self->param('agp_file')}, 2);
 }
 
-sub top_level_names {
+sub get_coord_maps {
   my ($self, $dba) = @_;
-  
-  my $top_level_sql = '
-    SELECT cs.name FROM 
-      coord_system cs inner join 
-      seq_region sr using (coord_system_id) 
-      inner join seq_region_attrib sra using (seq_region_id) inner join 
-      attrib_type at using (attrib_type_id) 
-    where at.code="toplevel" 
-    group by cs.name;
+
+  my $pairs_sql = '
+    SELECT sa.coord_system_id, sc.coord_system_id
+    FROM assembly a
+    LEFT JOIN seq_region sa ON a.asm_seq_region_id = sa.seq_region_id
+    LEFT JOIN seq_region sc ON a.cmp_seq_region_id = sc.seq_region_id
+    LEFT JOIN coord_system ca ON sa.coord_system_id = ca.coord_system_id
+    LEFT JOIN coord_system cc ON sc.coord_system_id = cc.coord_system_id
+    GROUP BY sa.coord_system_id, sc.coord_system_id;
   ';
   
   my $dbh = $dba->dbc->db_handle();
-  my $top_level_names = $dbh->selectcol_arrayref($top_level_sql);
-  
-  return @$top_level_names;
+
+  my $sth = $dbh->prepare($pairs_sql);
+  $sth->execute();
+
+  my @pairs;
+  while (my @pair = $sth->fetchrow_array()) {
+    push @pairs, \@pair;
+  }
+
+  return @pairs;
 }
 
 1;
