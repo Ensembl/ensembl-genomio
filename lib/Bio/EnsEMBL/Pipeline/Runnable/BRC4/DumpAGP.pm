@@ -48,8 +48,10 @@ sub run {
     my $mapper = $ama->fetch_by_CoordSystems($first_level_cs, $second_level_cs);
     my $slices = $sa->fetch_all($first_level_cs->name, $first_level_cs->version);
 
+    print(sprintf("Coords: %s vs %s : %d slices", $first_level_cs->name, $second_level_cs->name, scalar(@$slices)) . "\n");
+
     my $map_name = $first_level_cs->name() . "-" . $second_level_cs->name();
-    my $agp_file = catfile($sub_dir, $self->production_name() . '_' . $map_name . '.agp');
+    my $agp_file = catfile($sub_dir, $self->production_name() . '_assembly_' . $map_name . '.agp');
     $agp_files{$map_name} = $agp_file;
     open(my $out_fh, '>', $agp_file) or $self->throw("Cannot open file $agp_file: $!");
     foreach my $slice (sort {$a->seq_region_name cmp $b->seq_region_name} @$slices) {
@@ -101,8 +103,8 @@ sub run {
         
         $asm_start += $length;
       }
-      close($out_fh);
     }
+    close($out_fh);
   }
   
   $self->param("agp_files", \%agp_files);
