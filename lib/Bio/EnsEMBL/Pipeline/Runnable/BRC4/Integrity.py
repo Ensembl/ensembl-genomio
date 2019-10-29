@@ -56,13 +56,12 @@ class Integrity(eHive.BaseRunnable):
             if "seq_region" in manifest:
                 print("Got a seq_regions")
                 seq_regions = self.get_json(manifest["seq_region"])
-                print(len(seq_regions))
                 seqr_lengths = {}
-                seqr_seqlevel = []
+                seqr_seqlevel = {}
                 for seq in seq_regions:
                     seq_lengths[seq["name"]] = seq["length"]
                     if seq["coord_system_level"] == "contig":
-                        seqr_seqlevel.append(seq["name"])
+                        seqr_seqlevel[seq["name"]] = seq["length"]
             if "functional_annotation" in manifest:
                 print("Got a func_anns")
                 func_ann = self.get_functional_annotation(manifest['functional_annotation'])
@@ -83,11 +82,11 @@ class Integrity(eHive.BaseRunnable):
 
             # Check fasta dna and seq_region integrity
             if dna and seq_regions:
-                errors += self.check_ids(dna.keys(), seqr_seqlevel, "fasta dna vs seq_regions json")
+                errors += self.check_seq_region_lengths(seq_lengths, dna, "seq_regions json vs dna")
 
             # Check agp and seq_region integrity
-            if agp_seqr and seq_regions:
-                errors += self.check_ids(agp_seqr, seq_regions, "agps vs seq_regions json")
+            if agp_seqr and seq_lengths:
+                errors += self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
 
         if errors:
             raise Exception("Integrity test failed: " + str(errors))
@@ -162,13 +161,19 @@ class Integrity(eHive.BaseRunnable):
             
             with open(agp_path, "r") as agph:
                 for line in agph:
-                    cols = line.split("\t")
-                    asm_id = cols[0]
-                    cmp_id = cols[5]
-                    seqr[asm_id] = 1
-                    seqr[cmp_id] = 1
+                    (asm_id, asm_start, asm_end, asm_part, typ, cmp_id, cmp_start, cmp_end, cmp_strand) = line.split("\t")
+                    if typ != "W":
+                        continue
 
-        return seqr.keys()
+                    # Assembled seq length
+                    if not asm_id in seqr or seqr[asm_id] < int(asm_end):
+                        seqr[asm_id] = int(asm_end)
+    
+                    # Composite seq length
+                    if not cmp_id in seqr or seqr[cmp_id] < int(cmp_end):
+                        seqr[cmp_id] = int(cmp_end)
+
+        return seqr
 
 
     def check_ids(self, list1, list2, name):
