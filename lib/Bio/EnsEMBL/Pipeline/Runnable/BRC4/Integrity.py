@@ -30,6 +30,11 @@ class Integrity(eHive.BaseRunnable):
                 if "file" in manifest[name]:
                     file_name = manifest[name]["file"]
                     manifest[name] = path.join(path.dirname(manifest_path), file_name)
+                else:
+                    for f in manifest[name]:
+                        if "file" in manifest[name][f]:
+                            file_name = manifest[name][f]["file"]
+                            manifest[name][f] = path.join(path.dirname(manifest_path), file_name)
             
             # Get content
             dna = {}
@@ -51,6 +56,7 @@ class Integrity(eHive.BaseRunnable):
             if "seq_region" in manifest:
                 print("Got a seq_regions")
                 seq_regions = self.get_json(manifest["seq_region"])
+                print(len(seq_regions))
                 seqr_lengths = {}
                 seqr_seqlevel = []
                 for seq in seq_regions:
@@ -60,6 +66,9 @@ class Integrity(eHive.BaseRunnable):
             if "functional_annotation" in manifest:
                 print("Got a func_anns")
                 func_ann = self.get_functional_annotation(manifest['functional_annotation'])
+            if "agp" in manifest:
+                print("Got agp files")
+                agp_seqr = self.get_agp_seq_regions(manifest['agp'])
 
             # Check gff3
             if gff:
@@ -75,6 +84,10 @@ class Integrity(eHive.BaseRunnable):
             # Check fasta dna and seq_region integrity
             if dna and seq_regions:
                 errors += self.check_ids(dna.keys(), seqr_seqlevel, "fasta dna vs seq_regions json")
+
+            # Check agp and seq_region integrity
+            if agp_seqr and seq_regions:
+                errors += self.check_ids(agp_seqr, seq_regions, "agps vs seq_regions json")
 
         if errors:
             raise Exception("Integrity test failed: " + str(errors))
@@ -140,6 +153,23 @@ class Integrity(eHive.BaseRunnable):
                                     peps[pep_id] = floor(length[pep_id] / 3) - 1
 
         return { "seq_region": seqs, "genes": genes, "translations": peps }
+
+    def get_agp_seq_regions(self, agp_dict):
+
+        seqr = {}
+        for agp in agp_dict:
+            agp_path = agp_dict[agp]
+            
+            with open(agp_path, "r") as agph:
+                for line in agph:
+                    cols = line.split("\t")
+                    asm_id = cols[0]
+                    cmp_id = cols[5]
+                    seqr[asm_id] = 1
+                    seqr[cmp_id] = 1
+
+        return seqr.keys()
+
 
     def check_ids(self, list1, list2, name):
         only1 = [];
