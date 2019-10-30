@@ -18,6 +18,7 @@ sub pipeline_wide_parameters {
         %{$self->SUPER::pipeline_wide_parameters},
         'debug' => $self->o('debug'),
         'tmp_dir' => $self->o('tmp_dir'),
+        check_manifest => $self->o('check_manifest'),
     };
 }
 
@@ -35,23 +36,39 @@ sub default_options {
     version => undef,
 
     # Meta configuration directory
-    meta_dir => undef,
+    data_dir => $self->o('data_dir'),
 
     # Working directory
-    pipeline_dir => undef,
+    pipeline_dir => 'tmp',
 
-    # Server configuration (where the databases will be created)
-    db_host => undef,
-    db_port => undef,
-    db_user => undef,
-    db_pass => undef,
+    check_manifest => 1,
+
     ##############################
 
     # Basic pipeline configuration
-    pipeline_name => 'genome_loader',
+    pipeline_name => 'brc4_genome_loader',
     email => $ENV{USER} . '@ebi.ac.uk',
 
     debug => 0,
+  };
+}
+
+sub pipeline_create_commands {
+    my ($self) = @_;
+    return [
+      # inheriting database and hive tables' creation
+      @{$self->SUPER::pipeline_create_commands},
+      'mkdir -p '.$self->o('tmp_dir'),
+    ];
+}
+
+# Ensures output parameters get propagated implicitly
+sub hive_meta_table {
+  my ($self) = @_;
+  
+  return {
+    %{$self->SUPER::hive_meta_table},
+    'hive_use_param_stack'  => 1,
   };
 }
 
@@ -69,10 +86,10 @@ sub pipeline_analyses {
       -parameters        => {
         pipeline_dir => $self->o('pipeline_dir'),
       },
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '1->A' => 'SpeciesList',
+        '1->A' => 'Manifest_factory',
         'A->1' => 'Cleanup',
       },
     },
@@ -81,31 +98,53 @@ sub pipeline_analyses {
       # Delete the temp working directory
       -logic_name => 'Cleanup',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
 
     {
-      # Create a thread for each species and define its main parameters
-      # Reads all the json files in a meta directory and creates a thread for each valid one
-      # Also creates a separate tmp_dir = work_dir/#species#
-      # All parameters output become available to all downstream analyses
-      #
+      # Create a thread for each species = manifest file
       # Output:
-      # species =#genus#_#species_name#_#GCA#
-      # db =  #species#_core_#release#_#version#_#assembly#
-      # meta (extracted from the species metadata file)
-      # tmp_dir = #pipeline_dir#/#species#
-      -logic_name        => 'SpeciesList',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -logic_name        => 'Manifest_factory',
+      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
       -parameters        => {
-        meta_dir => $self->o('meta_dir'),
+        data_dir => $self->o('data_dir'),
+        inputcmd => "find #data_dir# -type f -name manifest.json",
       },
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => {
+        2 => WHEN('#check_manifest#', {
+          'Manifest_integrity' => { manifest => '#_0#' }
+        }, ELSE({
+          'Prepare_genome' => {manifest => '#_0#' }
+        })),
+      },
+    },
+
+    {
+      # Check the integrity of the manifest before loading anything
+      -logic_name => 'Manifest_integrity',
+      -module     => 'Integrity',
+      -language => 'python3',
+      -analysis_capacity   => 5,
+      -rc_name         => '8GB',
+      -max_retry_count => 0,
+      -flow_into => 'Prepare_genome',
+    },
+
+    {
+      # Prepare all the metadata:
+      # - species
+      # - db_name
+      # - manifest_metadata
+      -logic_name => 'Prepare_genome',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '1->A' => ['CreateDB', 'GetData'],
-        'A->1' => { 'LoadData' => INPUT_PLUS() },
+        '1->A' => 'CreateDB',
+        'A->1' => 'LoadData',
       },
     },
 
@@ -113,41 +152,7 @@ sub pipeline_analyses {
       # Init the Ensembl core
       -logic_name => 'CreateDB',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
-      -rc_name    => 'normal',
-      -meadow_type       => 'LSF',
-    },
-
-    {
-      # Retrieve the sequences files
-      # TODO: expand how we should get the data:
-      #    cp from a local dir, from ftp?
-      #    Do we get the files path from the meta conf file?
-      #    How much can this be automated?
-      #
-      # Output:
-      # - fasta file (only one?)
-      # - AGP?;qa
-      #
-      -logic_name => 'GetData',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
-      -rc_name    => 'normal',
-      -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1' => 'CheckData',
-      },
-    },
-
-    {
-      # Check and sanitize the sequences files
-      # - Unzip
-      # - Remove ambiguous IUPAC nucleotides
-      # - Check vs the list of seq_regions (should we get a separate list?)
-      -logic_name => 'CheckData',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
 
@@ -156,7 +161,7 @@ sub pipeline_analyses {
       -logic_name => 'LoadData',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'PrepareAssemblyData',
@@ -168,7 +173,7 @@ sub pipeline_analyses {
       -logic_name => 'PrepareAssemblyData',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1' => 'LoadAssemblyData',
@@ -179,7 +184,7 @@ sub pipeline_analyses {
       -logic_name => 'LoadAssemblyData',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1' => 'SetupAssemblyMetadata',
@@ -190,7 +195,7 @@ sub pipeline_analyses {
       -logic_name => 'SetupAssemblyMetadata',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
 
@@ -199,7 +204,7 @@ sub pipeline_analyses {
       -logic_name => 'LoadMetadata',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'FillMetadata',
@@ -211,7 +216,7 @@ sub pipeline_analyses {
       -logic_name => 'FillMetadata',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1' => 'FillTaxonomy',
@@ -222,7 +227,7 @@ sub pipeline_analyses {
       -logic_name => 'FillTaxonomy',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
 
@@ -230,22 +235,23 @@ sub pipeline_analyses {
       -logic_name => 'ConstructRepeatLib',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [],
-      -rc_name    => 'normal',
+      -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
   ];
 }
 
 sub resource_classes {
-
-  my ($self) = @_;
-  
-  return {
-    'default'           => { 'LOCAL' => '' },
-    'normal'            => {'LSF' => '-q production-rh74 -M 1000 -R "rusage[mem=1000]"' },
-    'bigmem'           => {'LSF' => '-q production-rh74 -M 4000 -R "rusage[mem=4000]"' },
-    'biggermem'           => {'LSF' => '-q production-rh74 -M 32000 -R "rusage[mem=32000]"' },
-  }
+    my $self = shift;
+    return {
+      'default'  	=> {'LSF' => '-q production-rh74 -M 4000   -R "rusage[mem=4000]"'},
+      '8GB'       => {'LSF' => '-q production-rh74 -M 8000   -R "rusage[mem=8000]"'},
+      '15GB'      => {'LSF' => '-q production-rh74 -M 15000  -R "rusage[mem=15000]"'},
+      '32GB'  	 	=> {'LSF' => '-q production-rh74 -M 32000  -R "rusage[mem=32000]"'},
+      '64GB'  	 	=> {'LSF' => '-q production-rh74 -M 64000  -R "rusage[mem=64000]"'},
+      '128GB'  	 	=> {'LSF' => '-q production-rh74 -M 128000 -R "rusage[mem=128000]"'},
+      '256GB'  	 	=> {'LSF' => '-q production-rh74 -M 256000 -R "rusage[mem=256000]"'},
+	}
 }
 
 1;
