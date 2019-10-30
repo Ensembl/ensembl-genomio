@@ -39,7 +39,7 @@ sub param_defaults {
     # DNA params
     'dump_level'            => 'seqlevel',
     'dump_cs_version'       => undef,
-    'include_non_reference' => 0,
+    'include_non_reference' => 1,
   };
 }
 

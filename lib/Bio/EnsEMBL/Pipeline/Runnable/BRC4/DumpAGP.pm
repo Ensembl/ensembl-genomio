@@ -46,7 +46,8 @@ sub run {
     my $second_level_cs = $csa->fetch_by_dbID($pair->[1]);
   
     my $mapper = $ama->fetch_by_CoordSystems($first_level_cs, $second_level_cs);
-    my $slices = $sa->fetch_all($first_level_cs->name, $first_level_cs->version);
+    my $non_ref = 1;
+    my $slices = $sa->fetch_all($first_level_cs->name, $first_level_cs->version, $non_ref);
 
     print(sprintf("Coords: %s vs %s : %d slices", $first_level_cs->name, $second_level_cs->name, scalar(@$slices)) . "\n");
 

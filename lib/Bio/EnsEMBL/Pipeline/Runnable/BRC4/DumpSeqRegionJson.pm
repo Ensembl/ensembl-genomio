@@ -30,14 +30,13 @@ sub prepare_data {
 
   # Get all coord system seq regions
   my @coord_ids = $self->get_coords($dba);
-  print("Coords: " .join(", ", @coord_ids) . "\n");
 
   my @seq_regions;
   for my $coord_id (@coord_ids) {
     my $coord_level_cs = $csa->fetch_by_dbID($coord_id);
-    my $slices = $sa->fetch_all($coord_level_cs->name);
+    my $slices = $sa->fetch_all($coord_level_cs->name, undef, 1);
 
-    print(scalar(@$slices) . " slices in $coord_id\n");
+    print(scalar(@$slices) . " " . $coord_level_cs->name . "s (" . ($coord_level_cs->version || "no version") . ")\n");
 
     foreach my $slice (@$slices) {
       my $syns = $syna->get_synonyms( $slice->get_seq_region_id() );
@@ -57,6 +56,10 @@ sub prepare_data {
       # alternate codon table? integer
       my ($codon_table) = @{$slice->get_all_Attributes('codon_table')};
       $seq_region->{codon_table} = int($codon_table->value()) if $codon_table;
+
+      # non reference? Boolean
+      my ($non_ref) = @{$slice->get_all_Attributes('non_ref')};
+      $seq_region->{non_ref} = JSON::true if $non_ref;
 
       # SO_term? string
       my ($so_term) = @{$slice->get_all_Attributes('SO_term')};
