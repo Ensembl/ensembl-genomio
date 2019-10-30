@@ -12,7 +12,8 @@
         "fasta_pep" : { "$ref" : "#/definitions/file_info" },
         "metadata_seq_region" : { "$ref" : "#/definitions/file_info" },
         "metadata_genome" : { "$ref" : "#/definitions/file_info" },
-        "metadata_functional_annotation" : { "$ref" : "#/definitions/file_info" }
+        "metadata_functional_annotation" : { "$ref" : "#/definitions/file_info" },
+        "agp" : { "$ref" : "#/definitions/agp_info" }
       }
     },
     "file_info" : {
@@ -20,7 +21,12 @@
       "properties": {
         "file" : {"type" : "string" },
         "md5sum" : {"type" : "string" }
-      }
+      },
+      "required" : ["file", "md5sum" ]
+    },
+    "agp_info" : {
+      "type": "object",
+      "additionalProperties": { "$ref" : "#/definitions/file_info" }
     }
   },
 
