@@ -86,6 +86,8 @@ sub default_options {
        ensembl_mode => 0,
 
 	   ## fasta parameters
+      dump_level => 'seqlevel', # Alternative: toplevel
+
        # types to emit
        'dna_sequence_type_list'  => ['dna'],
        'pep_sequence_type_list'  => ['cdna', 'ncrna'],
@@ -339,7 +341,10 @@ sub pipeline_analyses {
     # 
     { -logic_name  => 'fasta_dna',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFastaDNA',
-      -parameters => { hash_key => "fasta_dna", },
+      -parameters => {
+        hash_key => "fasta_dna",
+        dump_level => $self->o('dump_level'),
+      },
       -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=fasta_file' },
       -max_retry_count => 0,
       -hive_capacity   => 20,
