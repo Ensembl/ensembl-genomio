@@ -22,7 +22,8 @@
             "scaffold",
             "supercontig",
             "non_ref_scaffold",
-            "contig"
+            "contig",
+            "chunk"
           ]
         },
         "omit" : { "type" : "boolean", "decription" : "prevent loading/processing of the scaffold" },
