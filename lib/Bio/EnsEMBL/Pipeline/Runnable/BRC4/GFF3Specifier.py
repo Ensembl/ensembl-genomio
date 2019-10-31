@@ -109,7 +109,8 @@ class GFF3Specifier(eHive.BaseRunnable):
 
                     # Special production-specific modification
                     if remove_prefix and key in ("ID", "Parent") and ":" in value:
-                        (btype, real_value) = value.split(":")
+
+                        (btype, real_value) = value.split(":", 1)
                         if btype and real_value:
                             value = real_value
 
