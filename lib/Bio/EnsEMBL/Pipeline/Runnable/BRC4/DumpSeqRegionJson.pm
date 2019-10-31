@@ -80,11 +80,16 @@ sub prepare_data {
 sub get_coords {
   my ($self, $dba) = @_;
 
-  my $coords_sql = '
+  my $species = $self->param('species');
+
+  my $coords_sql = "
     SELECT coord_system_id
     FROM coord_system
-    WHERE attrib LIKE "%default_version%";
-  ';
+      LEFT JOIN meta USING(species_id)
+    WHERE attrib LIKE '%default_version%'
+      AND meta_key = 'species.production_name'
+      AND meta_value = '$species';
+    ";
   
   my $dbh = $dba->dbc->db_handle();
 

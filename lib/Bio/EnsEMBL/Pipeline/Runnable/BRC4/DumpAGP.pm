@@ -122,17 +122,22 @@ sub write_output {
 sub get_coord_maps {
   my ($self, $dba) = @_;
 
-  my $pairs_sql = '
+  my $species = $self->param("species");
+
+  my $pairs_sql = "
     SELECT sa.coord_system_id, sc.coord_system_id
     FROM assembly a
-    LEFT JOIN seq_region sa ON a.asm_seq_region_id = sa.seq_region_id
-    LEFT JOIN seq_region sc ON a.cmp_seq_region_id = sc.seq_region_id
-    LEFT JOIN coord_system ca ON sa.coord_system_id = ca.coord_system_id
-    LEFT JOIN coord_system cc ON sc.coord_system_id = cc.coord_system_id
-    WHERE ca.attrib LIKE "%default_version%"
-      AND cc.attrib LIKE "%default_version%"
+      LEFT JOIN seq_region sa ON a.asm_seq_region_id = sa.seq_region_id
+      LEFT JOIN seq_region sc ON a.cmp_seq_region_id = sc.seq_region_id
+      LEFT JOIN coord_system ca ON sa.coord_system_id = ca.coord_system_id
+      LEFT JOIN coord_system cc ON sc.coord_system_id = cc.coord_system_id
+      LEFT JOIN meta m ON ca.species_id = m.species_id
+    WHERE ca.attrib LIKE '%default_version%'
+      AND cc.attrib LIKE '%default_version%'
+      AND m.meta_key = 'species.production_name'
+      AND m.meta_value = '$species'
     GROUP BY sa.coord_system_id, sc.coord_system_id;
-  ';
+  ";
   
   my $dbh = $dba->dbc->db_handle();
 
