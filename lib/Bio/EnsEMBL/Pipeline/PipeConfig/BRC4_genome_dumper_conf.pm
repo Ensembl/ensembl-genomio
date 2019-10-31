@@ -186,6 +186,7 @@ sub pipeline_analyses {
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
        -hive_capacity => 10,
        -rc_name       => 'default'
+       -analysis_capacity => 1,
     },
 
 	 { -logic_name     => 'Species_factory',
@@ -242,6 +243,7 @@ sub pipeline_analyses {
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
        -hive_capacity  => -1,
        -rc_name 	   => 'default',
+       -analysis_capacity => 1,
        -flow_into      => {'1' => [
            WHEN('#do_fasta#', 'fasta'),
            WHEN('#do_gff#', 'gff3'),
@@ -335,6 +337,7 @@ sub pipeline_analyses {
 ### FASTA (cdna, cds, dna, pep, ncrna)
     { -logic_name  => 'fasta',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -analysis_capacity => 1,
       -flow_into  => ['fasta_dna', 'fasta_pep'],
       -rc_name         => 'default',
     },
@@ -376,6 +379,7 @@ sub pipeline_analyses {
 ### METADATA
     { -logic_name  => 'metadata',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -analysis_capacity => 1,
       -flow_into  => [
         'seq_region',
         'functional_annotation',
