@@ -7,9 +7,42 @@ use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
+use Bio::EnsEMBL::ApiVersion qw(software_version);
 
 use File::Spec::Functions qw(catdir);
 use FindBin;
+
+sub default_options {
+  my ($self) = @_;
+  return {
+    %{ $self->SUPER::default_options() },
+
+    ##############################
+    # Config to be set by the user
+    # VB release id
+    release => $self->o('release'),
+    db_prefix => "",
+
+    # Ensembl version (deduced from the environment?)
+    ensembl_version => software_version(),
+
+    # Meta configuration directory
+    data_dir => $self->o('data_dir'),
+
+    # Working directory
+    tmp_dir => 'tmp',
+
+    check_manifest => 1,
+
+    ##############################
+
+    # Basic pipeline configuration
+    pipeline_name => 'brc4_genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
+    email => $ENV{USER} . '@ebi.ac.uk',
+
+    debug => 0,
+  };
+}
 
 sub pipeline_wide_parameters {
     my ($self) = @_;
@@ -20,37 +53,6 @@ sub pipeline_wide_parameters {
         'tmp_dir' => $self->o('tmp_dir'),
         check_manifest => $self->o('check_manifest'),
     };
-}
-
-sub default_options {
-  my ($self) = @_;
-  return {
-    %{ $self->SUPER::default_options() },
-
-    ##############################
-    # Config to be set by the user
-    # VB release id
-    release => undef,
-
-    # Ensembl version (deduced from the environment?)
-    version => undef,
-
-    # Meta configuration directory
-    data_dir => $self->o('data_dir'),
-
-    # Working directory
-    pipeline_dir => 'tmp',
-
-    check_manifest => 1,
-
-    ##############################
-
-    # Basic pipeline configuration
-    pipeline_name => 'brc4_genome_loader',
-    email => $ENV{USER} . '@ebi.ac.uk',
-
-    debug => 0,
-  };
 }
 
 sub pipeline_create_commands {
@@ -83,9 +85,7 @@ sub pipeline_analyses {
       -logic_name => 'Start',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [{}],
-      -parameters        => {
-        pipeline_dir => $self->o('pipeline_dir'),
-      },
+      -analysis_capacity   => 1,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
@@ -98,6 +98,7 @@ sub pipeline_analyses {
       # Delete the temp working directory
       -logic_name => 'Cleanup',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -analysis_capacity   => 1,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
@@ -111,8 +112,10 @@ sub pipeline_analyses {
         data_dir => $self->o('data_dir'),
         inputcmd => "find #data_dir# -type f -name manifest.json",
       },
+      -analysis_capacity   => 1,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
+      -max_retry_count => 0,
       -flow_into => {
         2 => WHEN('#check_manifest#', {
           'Manifest_integrity' => { manifest => '#_0#' }
@@ -139,12 +142,20 @@ sub pipeline_analyses {
       # - db_name
       # - manifest_metadata
       -logic_name => 'Prepare_genome',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -module     => 'PrepareGenome',
+      -language => 'python3',
+      -parameters => {
+        release => $self->o('release'),
+        ensembl_version => $self->o('ensembl_version'),
+        db_prefix => $self->o('db_prefix'),
+      },
+      -analysis_capacity   => 1,
+      -max_retry_count => 0,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '1->A' => 'CreateDB',
-        'A->1' => 'LoadData',
+        '2->A' => 'CreateDB',
+        'A->2' => 'LoadData',
       },
     },
 
