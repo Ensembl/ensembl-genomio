@@ -22,10 +22,11 @@
         "accession" : { "type" : "string", "description" : "Unique INSDC accession for the genome" },
         "date" : { "type" : "string" },
         "name" : { "type" : "string" },
-        "version" : { "oneOf": [ {"type" : "string" }, {"type" : "integer" } ] }
+        "version" : {"type" : "integer" }
       },
       "required": [
-        "accession"
+        "accession",
+        "version"
         ]
     },
     "genebuild_info": {

@@ -50,9 +50,41 @@ sub prepare_data {
     }
   }
 
+  # Check the assembly version
+  $meta = $self->check_assembly_version($meta);
+
   $dba->dbc()->disconnect_if_idle();
 
   return $meta;
+}
+
+sub check_assembly_version {
+  my ($self, $meta) = @_;
+
+  my $assembly = $meta->{assembly};
+
+  # Is there a version?
+  my $version = $assembly->{version} // $assembly->{name};
+  if ($version) {
+    # Version is an integer
+    if (not $version =~ /\D/) {
+      return int($meta);
+    }
+
+    # Version is not an integer, but ends in one
+    if ($version =~ /^[A-z]+([0-9]+)$/) {
+      $meta->{assembly}->{version} = int($1);
+      return $meta;
+    
+    # There is a version but I can't get a number out of it
+    } else {
+      die("Can't extract version number from assembly version: $version");
+    }
+  } else {
+    use Data::Dumper;
+    die("No assembly version found in meta: " . Dumper($meta));
+  }
+  return;
 }
 
 1;
