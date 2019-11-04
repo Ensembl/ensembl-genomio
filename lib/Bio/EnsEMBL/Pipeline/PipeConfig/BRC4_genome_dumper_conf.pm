@@ -185,7 +185,7 @@ sub pipeline_analyses {
     {  -logic_name => 'Cleanup',
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
        -hive_capacity => 10,
-       -rc_name       => 'default'
+       -rc_name       => 'default',
        -analysis_capacity => 1,
     },
 
