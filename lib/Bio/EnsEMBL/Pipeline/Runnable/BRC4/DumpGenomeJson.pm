@@ -68,7 +68,8 @@ sub check_assembly_version {
   if ($version) {
     # Version is an integer
     if (not $version =~ /\D/) {
-      return int($meta);
+      $meta->{assembly}->{version} = int($meta->{assembly}->{version});
+      return $meta;
     }
 
     # Version is not an integer, but ends in one
