@@ -37,22 +37,31 @@ sub default_options {
     ##############################
 
     # Basic pipeline configuration
-    pipeline_name => 'brc4_genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
+    pipeline_tag => '',
+    pipeline_name => 'brc4_genome_loader_' .
+      $self->o('release') . '_' . $self->o('ensembl_version') . $self->o('pipeline_tag'),
     email => $ENV{USER} . '@ebi.ac.uk',
+    pipeline_dir => 'genome_loader_' .  $self->o('release') . '_' . $self->o('ensembl_version'),
 
     debug => 0,
   };
 }
 
 sub pipeline_wide_parameters {
-    my ($self) = @_;
+  my ($self) = @_;
 
-    return {
-        %{$self->SUPER::pipeline_wide_parameters},
-        'debug' => $self->o('debug'),
-        'tmp_dir' => $self->o('tmp_dir'),
-        check_manifest => $self->o('check_manifest'),
-    };
+  return {
+    %{$self->SUPER::pipeline_wide_parameters},
+    debug          => $self->o('debug'),
+    tmp_dir        => $self->o('tmp_dir'),
+    check_manifest => $self->o('check_manifest'),
+    pipeline_dir   => $self->o('pipeline_dir'),
+    ensembl_root_dir => $self->o('ensembl_root_dir'),
+
+    proddb_url   => $self->o('proddb_url'),
+    taxonomy_url => $self->o('taxonomy_url'),
+    dbsrv_url    =>$self->o('dbsrv_url'),
+  };
 }
 
 sub pipeline_create_commands {
@@ -67,7 +76,7 @@ sub pipeline_create_commands {
 # Ensures output parameters get propagated implicitly
 sub hive_meta_table {
   my ($self) = @_;
-  
+
   return {
     %{$self->SUPER::hive_meta_table},
     'hive_use_param_stack'  => 1,
@@ -89,7 +98,7 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '1->A' => 'Manifest_factory',
+        '1->A' => 'FillDBParams',
         'A->1' => 'Cleanup',
       },
     },
@@ -101,6 +110,23 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
+    },
+
+    {
+      # fill db params from urls
+      # output ..._host ..._port ...
+      -logic_name => 'FillDBParams',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DbUrlToParams',
+      -parameters => {
+        db_urls => {
+          dbsrv    => '#dbsrv_url#',
+          proddb   => '#proddb_url#',
+          taxonomy => '#taxonomy_url#',
+        },
+      },
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
+      -flow_into => 'Manifest_factory',
     },
 
     {
@@ -154,17 +180,68 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '2->A' => 'CreateDB',
+        '2->A' => 'CleanUpAndCreateDB',
         'A->2' => 'LoadData',
       },
     },
 
     {
       # Init the Ensembl core
-      -logic_name => 'CreateDB',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
+      -logic_name => 'CleanUpAndCreateDB',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url'),
+        sql     => [
+          'DROP DATABASE IF EXISTS #db_name#;' ,
+          'CREATE DATABASE #db_name#;' ,
+        ],
+      },
       -meadow_type       => 'LSF',
+      -rc_name    => 'default',
+      -flow_into => [ 'LoadDBSchema' ],
+    },
+
+    {
+      -logic_name => 'LoadDBSchema',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::DbCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        input_file => $self->o('ensembl_root_dir') . '/ensembl/sql/table.sql',
+      },
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
+      -flow_into  => [ 'PopulateProductionTables' ],
+    },
+
+    {
+      -logic_name    => "PopulateProductionTables",
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #dump_path#; ' .
+          ' perl #base_dir#/ensembl-production/scripts/production_database/populate_production_db_tables.pl '
+            . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --database #db_name# '
+            . ' --mhost #proddb_host# --mport #proddb_port# --muser #proddb_user# --mdatabase #proddb_dbname# '
+            . ' --dumppath #dump_path# --dropbaks '
+            . ' > #dump_path#/stdout 2> #dump_path#/stderr ',
+        'base_dir'       => $self->o('ensembl_root_dir'),
+        'dump_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_production_db_tables',
+      },
+      -flow_into   => [ 'PopulateAnalysisDescription' ],
+    },
+
+    {
+      -logic_name    => "PopulateAnalysisDescription",
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #dump_path#; ' .
+          ' perl #base_dir#/ensembl-production/scripts/production_database/populate_analysis_description.pl '
+            . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --database #db_name# '
+            . ' --mhost #proddb_host# --mport #proddb_port# --muser #proddb_user# --mdatabase #proddb_dbname# '
+            . ' --dumppath #dump_path# '
+            . ' > #dump_path#/stdout 2> #dump_path#/stderr ',
+        'base_dir'  => $self->o('ensembl_root_dir'),
+        'dump_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_analysis_description',
+      },
     },
 
     {
