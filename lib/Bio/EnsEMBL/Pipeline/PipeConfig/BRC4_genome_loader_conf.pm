@@ -226,22 +226,6 @@ sub pipeline_analyses {
         'base_dir'       => $self->o('ensembl_root_dir'),
         'dump_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_production_db_tables',
       },
-      -flow_into   => [ 'PopulateAnalysisDescription' ],
-    },
-
-    {
-      -logic_name    => "PopulateAnalysisDescription",
-      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-      -parameters  => {
-        'cmd' => 'mkdir -p #dump_path#; ' .
-          ' perl #base_dir#/ensembl-production/scripts/production_database/populate_analysis_description.pl '
-            . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --database #db_name# '
-            . ' --mhost #proddb_host# --mport #proddb_port# --muser #proddb_user# --mdatabase #proddb_dbname# '
-            . ' --dumppath #dump_path# '
-            . ' > #dump_path#/stdout 2> #dump_path#/stderr ',
-        'base_dir'  => $self->o('ensembl_root_dir'),
-        'dump_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_analysis_description',
-      },
     },
 
     {
