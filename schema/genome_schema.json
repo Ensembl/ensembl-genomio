@@ -19,7 +19,15 @@
     "assembly_info": {
       "type": "object",
       "properties": {
-        "accession" : { "type" : "string", "description" : "Unique INSDC accession for the genome" },
+        "accession" : {
+          "type" : "string",
+          "description" : "Unique INSDC accession for the genome"
+        },
+        "chromosome_display_order" : {
+          "type" : "array",
+          "items" : { "type" : "string" },
+          "description" : "if present, only the listed chromosomes will be be displayed"
+        },
         "date" : { "type" : "string" },
         "name" : { "type" : "string" },
         "version" : {"type" : "integer" }

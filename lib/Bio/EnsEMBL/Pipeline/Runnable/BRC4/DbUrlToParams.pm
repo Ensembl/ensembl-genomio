@@ -39,7 +39,7 @@ sub run {
 
   my $db_urls = $self->param('db_urls') || {};
   return if (!$db_urls);
-  
+
   my $out = {};
   for my $pfx (keys %$db_urls) {
     next if (!exists $db_urls->{$pfx});
@@ -58,6 +58,9 @@ sub db_params_from_url {
   # faking scheme for URI to work
   my $uri = URI->new(join('://', ('ftp', @no_proto)))->canonical;
 
+  my $uri_str = $uri->as_string;
+  $uri_str =~ s,^ftp://,${proto}://,;
+
   my $path = $uri->path;
   if (defined $path) {
     $path =~ s,/+,/,g;
@@ -66,7 +69,7 @@ sub db_params_from_url {
   }
 
   my %pre = (
-    url  => $uri->as_string, 
+    url  => $uri_str,
     host => $uri->host,
     port => $uri->port,
     user => $uri->user,
