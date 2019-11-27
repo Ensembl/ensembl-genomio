@@ -33,6 +33,10 @@ sub default_options {
     tmp_dir => 'tmp',
 
     check_manifest => 1,
+    cs_order => 'chunk,contig,supercontig,non_ref_scaffold,scaffold,superscaffold,linkage_group,chromosome',
+    prune_agp => 1,
+    unversion_scaffolds => 0,
+    sr_syn_src  => 'ensembl_internal_synonym', # 50803
 
     ##############################
 
@@ -60,7 +64,12 @@ sub pipeline_wide_parameters {
 
     proddb_url   => $self->o('proddb_url'),
     taxonomy_url => $self->o('taxonomy_url'),
-    dbsrv_url    =>$self->o('dbsrv_url'),
+    dbsrv_url    => $self->o('dbsrv_url'),
+
+    cs_order     => $self->o('cs_order'),
+    prune_agp    => $self->o('prune_agp'),
+    unversion_scaffolds => $self->o('unversion_scaffolds'),
+    sr_syn_src  => $self->o('sr_syn_src'),
   };
 }
 
@@ -232,13 +241,30 @@ sub pipeline_analyses {
       # Head analysis for the loading of data
       -logic_name => 'LoadData',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '1->A' => 'PrepareAssemblyData',
+        '1->A' => 'LoadSequenceData',
         'A->1' => 'LoadMetadata',
       },
+    },
+
+    {
+      -logic_name => 'LoadSequenceData',
+      -module     => 'LoadSequenceData',
+      -language => 'python3',
+      -parameters        => {
+        work_dir => $self->o('pipeline_dir') . '/#db_name#/load_sequence',
+        cs_order => $self->o('cs_order'),
+        prune_agp => $self->o('prune_agp'),
+        unversion_scaffolds => $self->o('unversion_scaffolds'),
+        sr_syn_src  => $self->o('sr_syn_src'),
+      },
+      -analysis_capacity   => 5,
+      -rc_name         => '8GB',
+      -max_retry_count => 0,
+      -meadow_type       => 'LSF',
+      -flow_into  => [ 'PrepareAssemblyData' ],
     },
 
     {
