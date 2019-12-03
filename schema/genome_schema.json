@@ -10,7 +10,15 @@
         "taxonomy_id" : { "type" : "integer" },
         "production_name" : { "type" : "string" },
         "scientific_name" : { "type" : "string" },
-        "strain" : { "type" : "string" }
+        "strain" : { "type" : "string" },
+        "display_name" : { "type" : "string" },
+        "division" : { "type" : "string" },
+        "alias" : {
+          "oneOf" : [
+            { "type" : "string" },
+            { "type" : "array", "items" : { "type" : "string" } }
+          ]
+        }
       },
       "required": [
         "taxonomy_id"
@@ -40,7 +48,9 @@
     "genebuild_info": {
       "type": "object",
       "properties": {
-        "version" : { "type" : "string" }
+        "version" : { "type" : "string" },
+        "method" : { "type" : "string" },
+        "start_date" : { "type" : "string" }
       },
       "required": [
         "version"

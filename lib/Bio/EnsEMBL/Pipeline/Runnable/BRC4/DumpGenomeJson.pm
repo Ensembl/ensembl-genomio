@@ -35,18 +35,17 @@ sub prepare_data {
   };
 
   my %meta_list = (
-    species => [ qw(taxonomy_id production_name scientific_name strain) ],
+    species => [ qw(taxonomy_id production_name scientific_name strain display_name division alias) ],
     assembly => [ qw(accession date name version) ],
-    genebuild => [ qw(version) ],
+    genebuild => [ qw(version method start_date) ],
     provider => [ qw(name url) ],
   );
   for my $domain (keys %meta_list) {
     for my $key (@{$meta_list{$domain}}) {
       my @values = @{ $ma->list_value_by_key($domain . '.' . $key) };
-      my ($value) = @values;
-      next if not defined $value;
-      $value = int($value) if $value =~ /^\d+$/;
-      $meta->{$domain}->{$key} = $value;
+      next if scalar(@values) < 1;
+      @values = map { ($_ =~ /^\d+$/)? int($_) : $_ } @values;
+      $meta->{$domain}->{$key} = (scalar(@values) > 1)? \@values : $values[0];
     }
   }
 

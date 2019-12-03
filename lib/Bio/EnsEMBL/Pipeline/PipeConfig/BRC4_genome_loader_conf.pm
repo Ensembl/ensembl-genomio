@@ -36,7 +36,8 @@ sub default_options {
     cs_order => 'chunk,contig,supercontig,non_ref_scaffold,scaffold,superscaffold,linkage_group,chromosome',
     prune_agp => 1,
     unversion_scaffolds => 0,
-    sr_syn_src  => 'ensembl_internal_synonym', # 50803
+    sr_syn_src_name  => 'ensembl_internal_synonym', # 50803
+    division => 'EnsemblMetazoa',
 
     ##############################
 
@@ -69,7 +70,8 @@ sub pipeline_wide_parameters {
     cs_order     => $self->o('cs_order'),
     prune_agp    => $self->o('prune_agp'),
     unversion_scaffolds => $self->o('unversion_scaffolds'),
-    sr_syn_src  => $self->o('sr_syn_src'),
+    sr_syn_src_name  => $self->o('sr_syn_src_name'),
+    division    => $self->o('division'),
   };
 }
 
@@ -201,6 +203,7 @@ sub pipeline_analyses {
       -parameters => {
         db_conn => $self->o('dbsrv_url'),
         sql     => [
+          'SET GLOBAL max_allowed_packet=2147483648;',
           'DROP DATABASE IF EXISTS #db_name#;' ,
           'CREATE DATABASE #db_name#;' ,
         ],
@@ -235,6 +238,8 @@ sub pipeline_analyses {
         'base_dir'       => $self->o('ensembl_root_dir'),
         'dump_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_production_db_tables',
       },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
     },
 
     {
@@ -258,42 +263,11 @@ sub pipeline_analyses {
         cs_order => $self->o('cs_order'),
         prune_agp => $self->o('prune_agp'),
         unversion_scaffolds => $self->o('unversion_scaffolds'),
-        sr_syn_src  => $self->o('sr_syn_src'),
+        sr_syn_src  => $self->o('sr_syn_src_name'),
       },
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 2,
       -rc_name         => '8GB',
       -max_retry_count => 0,
-      -meadow_type       => 'LSF',
-      -flow_into  => [ 'PrepareAssemblyData' ],
-    },
-
-    {
-      -logic_name => 'PrepareAssemblyData',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1' => 'LoadAssemblyData',
-      },
-    },
-
-    {
-      -logic_name => 'LoadAssemblyData',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1' => 'SetupAssemblyMetadata',
-      },
-    },
-
-    {
-      -logic_name => 'SetupAssemblyMetadata',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
-      -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
 
@@ -312,8 +286,15 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'FillMetadata',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
+      -module     => 'FillMetadata',
+      -language => 'python3',
+      -parameters        => {
+        work_dir => $self->o('pipeline_dir') . '/#db_name#/fill_metadata',
+        division => $self->o('division'),
+        ignore => [ qw/ assembly.version / ],
+        copy => { 'assembly.name' => 'assembly.default' },
+      },
+      -max_retry_count => 0,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
@@ -323,10 +304,24 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'FillTaxonomy',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . ' perl #base_dir#/ensembl-pipeline/scripts/load_taxonomy.pl '
+            . '   --dbhost #dbsrv_host# --dbport #dbsrv_port# '
+            . '   --dbuser #dbsrv_user# --dbpass #dbsrv_pass# '
+            . '   --dbname #db_name# '
+            . '   --taxondbhost #taxonomy_host# --taxondbport #taxonomy_port# ' # no taxondbuser
+            . '   --taxondbname #taxonomy_dbname# '
+            . '   --taxon_id #taxonomy_id# '
+            . '   > #log_path#/stdout 2> #log_path#/stderr ',
+        'taxonomy_id' => '#expr( #genome_data#->{"species"}->{"taxonomy_id"} )expr#',
+        'base_dir' => $self->o('ensembl_root_dir'),
+        'log_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_taxonomy',
+      },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
     },
 
     {
