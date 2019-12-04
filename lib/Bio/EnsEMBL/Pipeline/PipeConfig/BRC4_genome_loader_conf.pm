@@ -275,12 +275,11 @@ sub pipeline_analyses {
       # Head analysis for the loading of the metadata
       -logic_name => 'LoadMetadata',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'FillMetadata',
-        'A->1' => 'ConstructRepeatLib',
+        'A->1' => 'ProcessRepeats',
       },
     },
 
@@ -325,12 +324,104 @@ sub pipeline_analyses {
     },
 
     {
+      -logic_name => 'ProcessRepeats',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1->A' => 'ConstructRepeatLib',
+        'A->1' => 'LoadGFF3Models',
+      },
+    },
+
+    {
       -logic_name => 'ConstructRepeatLib',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => [ 'AnnotateRepeats' ],
+    },
+
+    {
+      -logic_name => 'AnnotateRepeats',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
+
+    {
+      -logic_name => 'LoadGFF3Models',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1->A' => 'GFF3Tidy',
+        'A->1' => 'LoadFunctionalAnnotation',
+      },
+    },
+
+    {
+      -logic_name => 'GFF3Tidy',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => [ 'GFF3Validate' ],
+    },
+
+    {
+      -logic_name => 'GFF3Validate',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => [ 'LoadGFF3' ],
+    },
+
+    {
+      -logic_name => 'LoadGFF3',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => [ 'FixModels' ],
+    },
+
+    {
+      -logic_name => 'FixModels',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => [ 'ApplySeqEdits' ],
+    },
+
+    {
+      -logic_name => 'ApplySeqEdits',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => [ 'GenPatchesReport' ],
+    },
+
+    {
+      -logic_name => 'GenPatchesReport',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => [ 'ApplyPatches' ],
+    },
+
+    {
+      -logic_name => 'ApplyPatches',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+    },
+
+    {
+      -logic_name => 'LoadFunctionalAnnotation',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+    },
+
   ];
 }
 

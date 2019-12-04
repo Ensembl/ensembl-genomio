@@ -22,7 +22,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::EGPipeline::LoadGFF3::Base
+Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::Base
 
 =head1 Author
 
@@ -30,7 +30,7 @@ James Allen
 
 =cut
 
-package Bio::EnsEMBL::EGPipeline::LoadGFF3::Base;
+package Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::Base;
 
 use strict;
 use warnings;
