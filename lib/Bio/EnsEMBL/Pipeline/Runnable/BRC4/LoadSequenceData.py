@@ -483,29 +483,47 @@ class LoadSequenceData(eHive.BaseRunnable):
         for (cs, rank) in sorted(cs_rank.items(), key=lambda p: -p[1]):
            logs = pj(log_pfx, "%02d_%s" %(rank, cs) )
            if (rank == sequence_rank):
-               self.load_cs_data(cs, rank, "fasta", asm_v, fasta, logs, seq_level = True)
+               self.load_cs_data(cs, rank, "fasta", asm_v, fasta, logs, loaded_regions = None, seq_level = True)
            else:
                useful_agps = list(filter(lambda x: cs in x, agps.keys()))
                if len(useful_agps) == 0:
                    raise Exception("non-seq_level cs %s has no agps to assemble it from" % (cs))
-               load_region = True
+               loaded_regions = set()
                for pair, agp_file_pruned in map(lambda k: (k, agps[k]), useful_agps):
                    if (not pair.startswith(cs+"-")):
                        continue
-                   self.load_cs_data(cs, rank, pair, asm_v, agp_file_pruned, logs, load_region)
-                   load_region = False
-
+                   self.load_cs_data(cs, rank, pair, asm_v, agp_file_pruned, logs, loaded_regions)
 
     def load_cs_data(self,
                      cs, rank, pair, asm_v,
                      src_file, log_pfx,
-                     load_region = True, seq_level = False):
+                     loaded_regions = None, seq_level = False):
         # NB load_seq_region.pl and load_agp.pl are not failing on parameter errors (0 exit code)
         os.makedirs(dirname(log_pfx), exist_ok=True)
-        if load_region:
+        if seq_level:
             self.load_seq_region(cs, rank, asm_v, src_file, log_pfx, seq_level)
+        elif loaded_regions is not None:
+            new_regions = set()
+            clean_file = src_file + ".regions_deduped"
+            self.filter_already_loaded_regions_from_agp(src_file, clean_file, loaded_regions, new_regions)
+            self.load_seq_region(cs, rank, asm_v, clean_file, log_pfx, seq_level)
+            loaded_regions.update(new_regions)
         if not seq_level:
             self.load_agp(pair, asm_v, src_file, log_pfx)
+
+    def filter_already_loaded_regions_from_agp(self, src_file, dst_file, loaded_regions, new_regions):
+       with open(src_file) as src:
+           with open(dst_file, "w") as dst:
+                for line in src:
+                    fields = line.strip().split("\t")
+                    ( asm_id, asm_start, asm_end, asm_part,
+                      type_,
+                      cmp_id, cmp_start, cmp_end, cmp_strand
+                    ) = fields
+                    if type_ in "NU" or asm_id in loaded_regions:
+                        continue
+                    new_regions.add(asm_id)
+                    print(line.strip(), file = dst)
 
     def load_seq_region(self, cs, rank, asm_v, src_file, log_pfx, seq_level = False):
         en_root = self.param_required("ensembl_root_dir")
