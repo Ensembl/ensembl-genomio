@@ -9,7 +9,8 @@ use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
 use Bio::EnsEMBL::ApiVersion qw(software_version);
 
-use File::Spec::Functions qw(catdir);
+use File::Basename;
+use File::Spec::Functions qw(catdir catfile);
 use FindBin;
 
 sub default_options {
@@ -39,6 +40,14 @@ sub default_options {
     sr_syn_src_name  => 'ensembl_internal_synonym', # 50803
     division => 'EnsemblMetazoa',
 
+    # GenomeTools aliases (from eg-pipelines: Bio::EnsEMBL::EGPipeline::PipeConfig::LoadGFF3_conf)
+    gt_exe        => 'gt',
+    gff3_tidy     => $self->o('gt_exe').' gff3 -tidy -sort -retainids',
+    gff3_validate => $self->o('gt_exe').' gff3validator',
+
+    # GFF3 cleaning params
+    gff3_ignore_file => catfile(dirname(__FILE__), qw/gff3.ignore/),
+    gff3_clean_additionally => 0,
     ##############################
 
     # Basic pipeline configuration
@@ -72,6 +81,13 @@ sub pipeline_wide_parameters {
     unversion_scaffolds => $self->o('unversion_scaffolds'),
     sr_syn_src_name  => $self->o('sr_syn_src_name'),
     division    => $self->o('division'),
+
+    gt_exe        => $self->o('gt_exe'),
+    gff3_tidy     => $self->o('gff3_tidy'),
+    gff3_validate => $self->o('gff3_validate'),
+
+    gff3_ignore_file => $self->o('gff3_ignore_file'),
+    gff3_clean_additionally =>  $self->o('gff3_clean_additionally'),
   };
 }
 
@@ -355,24 +371,76 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '1->A' => 'GFF3Tidy',
+        '1->A' => 'GFF3CleanIgnored',
         'A->1' => 'LoadFunctionalAnnotation',
       },
     },
 
     {
-      -logic_name => 'GFF3Tidy',
+      -logic_name => 'GFF3CleanIgnored',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . ' less #gff3_ignore_file# | '
+            . '   perl -pe \'s/#.*$/\n/; s/^\s+//; s/ +$//; s/ +/ /g;\' | '
+            . '   grep -vP \'^\s*$\' | '
+            . '   perl -pe \'s/^/\t/; s/$/\t/\' > #gff3_ignore_pat#; '
+            . ' less #gff3_orig_file# | grep -viFf #gff3_ignore_pat# > #gff3_clean_file# ',
+        'log_path' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/clean',
+        'gff3_orig_file' => '#expr( #manifest_data#->{"gff3"} )expr#',
+        'gff3_clean_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/clean/clean.gff3',
+        'gff3_ignore_file' => $self->o('gff3_ignore_file'),
+        'gff3_ignore_pat' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/clean/gff3.ignore.pat',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
+      -flow_into => WHEN('#gff3_clean_additionally#' =>
+                      [ 'GFF3CleanAdditionally' ],
+                    ELSE
+                      [ 'GFF3Tidy' ]
+                    ),
+    },
+
+    {
+      -logic_name => 'GFF3CleanAdditionally',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
+      -flow_into => [ 'GFF3Tidy' ],
+    },
+
+    {
+      -logic_name => 'GFF3Tidy',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . ' #gff3_tidy# #gff3_clean_file# > #gff3_tidy_file# 2> #log_path#/stderr ',
+        'log_path' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy',
+        'gff3_tidy' => $self->o('gff3_tidy'),
+        'gff3_clean_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/clean/clean.gff3',
+        'gff3_tidy_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
       -flow_into => [ 'GFF3Validate' ],
     },
 
     {
       -logic_name => 'GFF3Validate',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . ' #gff3_validate# #gff3_tidy_file# '
+            . '   > #log_path#/stdout 2> #log_path#/stderr ',
+        'log_path' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/validate',
+        'gff3_validate' => $self->o('gff3_validate'),
+        'gff3_tidy_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
+      },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
       -flow_into => [ 'LoadGFF3' ],
     },
 
