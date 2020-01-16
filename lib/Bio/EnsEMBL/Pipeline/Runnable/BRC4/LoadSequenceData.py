@@ -75,12 +75,13 @@ class LoadSequenceData(eHive.BaseRunnable):
 
         self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), unversion_scaffolds)
 
+        self.add_asm_mappings(agps_pruned.keys(), pj(wd, "asm_mappings"))
+
         self.set_toplevel(pj(wd, "set_toplevel"), self.param("not_toplevel_cs"))
 
         asm_meta = self.from_param("genome_data","assembly")
         self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"))
 
-        self.add_asm_mappings(agps_pruned.keys(), pj(wd, "asm_mappings"))
 
 
     # STAGES
