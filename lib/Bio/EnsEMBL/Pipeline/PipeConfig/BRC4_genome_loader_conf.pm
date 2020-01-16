@@ -48,6 +48,43 @@ sub default_options {
     # GFF3 cleaning params
     gff3_ignore_file => catfile(dirname(__FILE__), qw/gff3.ignore/),
     gff3_clean_additionally => 0,
+
+    # LoadGFF3 params
+    gff3_load_gene_source       => 'EnsemblMetazoa',
+    gff3_load_logic_name        => 'gff3_genes',
+    #gff3_load_logic_name        => 'refseq_import_visible',
+    gff3_load_analysis_module   => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3',
+    gff3_load_production_lookup => 1,
+    # feature types
+    gff3_use_polypeptides  => 0, # ignore 'polypeptides' lines !
+    gff3_gene_types   => [ qw/
+        gene pseudogene miRNA_gene ncRNA_gene
+        rRNA_gene snoRNA_gene snRNA_gene tRNA_gene
+      /],
+    gff3_mrna_types   => [ qw/
+        mRNA transcript pseudogenic_transcript
+        pseudogenic_rRNA pseudogenic_tRNA
+        ncRNA lincRNA lncRNA miRNA pre_miRNA
+        RNase_MRP_RNA RNAse_P_RNA rRNA snoRNA
+        snRNA sRNA SRP_RNA tRNA
+        lnc_RNA
+      /],
+    gff3_exon_types   => [qw/ exon pseudogenic_exon /],
+    gff3_cds_types    => [qw/ CDS /],
+    gff3_utr_types    => [qw/ five_prime_UTR three_prime_UTR /],
+    gff3_ignore_types => [ qw/
+        misc_RNA RNA
+        match match_part
+        sequence_feature
+        cDNA_match nucleotide_match protein_match
+        polypeptide protein
+        chromosome supercontig contig
+        region biological_region
+        regulatory_region repeat_region
+        golden_path_region intron orthologous_to
+      /],
+    gff3_types_complete  => 1,
+
     ##############################
 
     # Basic pipeline configuration
@@ -88,6 +125,20 @@ sub pipeline_wide_parameters {
 
     gff3_ignore_file => $self->o('gff3_ignore_file'),
     gff3_clean_additionally =>  $self->o('gff3_clean_additionally'),
+
+    gff3_load_gene_source       => $self->o('gff3_load_gene_source'),
+    gff3_load_logic_name        => $self->o('gff3_load_logic_name'),
+    gff3_load_analysis_module   => $self->o('gff3_load_analysis_module'),
+    gff3_load_production_lookup => $self->o('gff3_load_production_lookup'),
+
+    gff3_use_polypeptides => $self->o('gff3_use_polypeptides'),
+    gff3_gene_types => $self->o('gff3_gene_types'),
+    gff3_mrna_types => $self->o('gff3_mrna_types'),
+    gff3_ignore_types => $self->o('gff3_ignore_types'),
+    gff3_exon_types => $self->o('gff3_exon_types'),
+    gff3_cds_types => $self->o('gff3_cds_types'),
+    gff3_utr_types => $self->o('gff3_utr_types'),
+    gff3_types_complete => $self->o('gff3_types_complete'),
   };
 }
 
@@ -441,14 +492,53 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
+      -flow_into => [ 'LoadGFF3AnalysisSetup' ],
+    },
+
+    {
+      -logic_name => 'LoadGFF3AnalysisSetup',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::AnalysisSetup',
+      -parameters        => {
+        logic_name         => $self->o('gff3_load_logic_name'),
+        module             => $self->o('gff3_load_analysis_module'),
+        db_url             => '#dbsrv_url#' . '#db_name#',
+        production_lookup  => $self->o('gff3_load_production_lookup'),
+        prodb_url          => '#proddb_url#',
+        delete_existing    => 1,
+      },
+      -rc_name    => 'default',
+      -meadow_type => 'LSF',
+      -analysis_capacity => 10,
+      -max_retry_count   => 0,
       -flow_into => [ 'LoadGFF3' ],
     },
 
     {
       -logic_name => 'LoadGFF3',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3',
+      -parameters => {
+        #species         => '#expr( #genome_data#->{"species"}->{"production_name"} )expr#',
+        gff3_file       => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
+        # fasta_file      => $self->o('pipeline_dir') . '/#db_name#/load_sequence/fasts/seq_no_iupac.fasta',
+        fasta_file      => '#expr( #manifest_data#->{"fasta_dna"} )expr#',
+        gene_source     => $self->o('gff3_load_gene_source'),
+        logic_name      => $self->o('gff3_load_logic_name'),
+        # feature types
+        gene_types      => $self->o('gff3_gene_types'),
+        mrna_types      => $self->o('gff3_mrna_types'),
+        exon_types      => $self->o('gff3_exon_types'),
+        cds_types       => $self->o('gff3_cds_types'),
+        utr_types       => $self->o('gff3_utr_types'),
+        ignore_types    => $self->o('gff3_ignore_types'),
+        types_complete  => $self->o('gff3_types_complete'),
+        polypeptides    => $self->o('gff3_use_polypeptides'), # it's better to ignore ignore 'polypeptides' lines 
+        # dbparams
+        db_url          => '#dbsrv_url#' . '#db_name#',
+      },
+      -max_retry_count   => 0,
+      -rc_name    => '15GB',
       -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
       -flow_into => [ 'FixModels' ],
     },
 

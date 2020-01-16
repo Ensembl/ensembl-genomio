@@ -30,12 +30,14 @@ James Allen
 
 =cut
 
-package Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::Base;
+package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base;
 
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::EGPipeline::Common::RunnableDB::Base');
+use Bio::EnsEMBL::Hive::Utils::URL qw/ parse /;
+
+use base ('Bio::EnsEMBL::Hive::Process');
 
 sub param_defaults {
   my ($self) = @_;
@@ -57,8 +59,15 @@ sub fetch_input {
   
   # Need explicit disconnects, so that connections are freed up
   # while the analysis is running.
-  my $db_type = $self->param('db_type');
-  my $dba = $self->get_DBAdaptor($db_type);
+  my $dbp = Bio::EnsEMBL::Hive::Utils::URL::parse($self->param_required('db_url'));
+  my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+    -host   => $dbp->{host},
+    -port   => $dbp->{port},
+    -user   => $dbp->{user},
+    -pass   => $dbp->{pass},
+    -dbname => $dbp->{dbname},
+  );
+
   $dba->dbc && $dba->dbc->disconnect_if_idle();
   $self->dbc && $self->dbc->disconnect_if_idle();
 }

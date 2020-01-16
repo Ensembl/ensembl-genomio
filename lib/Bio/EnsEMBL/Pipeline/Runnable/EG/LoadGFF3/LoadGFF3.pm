@@ -30,19 +30,20 @@ James Allen
 
 =cut
 
-package Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::LoadGFF3;
+package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3;
 
 use strict;
 use warnings;
 use feature 'say';
 
-use base ('Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::Base');
+use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 
 use Bio::DB::SeqFeature::Store;
 use Bio::DB::SeqFeature::Store::GFF3Loader;
 
 use Bio::EnsEMBL::Exon;
 use Bio::EnsEMBL::Gene;
+use Bio::EnsEMBL::Hive::Utils::URL qw/ parse /;
 use Bio::EnsEMBL::PredictionExon;
 use Bio::EnsEMBL::PredictionTranscript;
 use Bio::EnsEMBL::Transcript;
@@ -50,7 +51,7 @@ use Bio::EnsEMBL::Translation;
 
 sub param_defaults {
   my ($self) = @_;
-  
+
   return {
     %{$self->SUPER::param_defaults},
     gene_types      => ['gene', 'pseudogene', 'miRNA_gene', 'ncRNA_gene',
@@ -100,7 +101,7 @@ sub load_db {
   
   my $db = Bio::DB::SeqFeature::Store->new(-adaptor => 'memory');
   
-  my $loader = Bio::DB::SeqFeature::Store::GFF3Loader->new(-store => $db);
+  my $loader = Bio::DB::SeqFeature::Store::GFF3Loader->new(-store => $db, -ignore_seqregion => 1);
   
   $loader->load($gff_file, $fasta_file);
   
@@ -149,11 +150,17 @@ sub check_db {
 
 sub load_genes {
   my ($self, $db) = @_;
-  my $db_type    = $self->param_required('db_type');
   my $logic_name = $self->param_required('logic_name');
   my @gene_types = @{ $self->param_required('gene_types') };
   
-  my $dba = $self->get_DBAdaptor($db_type);
+  my $dbp = Bio::EnsEMBL::Hive::Utils::URL::parse($self->param_required('db_url'));
+  my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+    -host   => $dbp->{host},
+    -port   => $dbp->{port},
+    -user   => $dbp->{user},
+    -pass   => $dbp->{pass},
+    -dbname => $dbp->{dbname},
+  );
   
   # Fetch slices and their synonyms into a lookup hash.
   my %slices = $self->fetch_slices($dba);
