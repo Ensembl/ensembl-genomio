@@ -30,7 +30,7 @@ James Allen
 
 =cut
 
-package Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::FixModels;
+package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::FixModels;
 
 use strict;
 use warnings;

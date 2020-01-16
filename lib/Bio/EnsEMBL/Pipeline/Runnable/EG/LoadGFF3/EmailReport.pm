@@ -30,7 +30,7 @@ James Allen
 
 =cut
 
-package Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::EmailReport;
+package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::EmailReport;
 
 use strict;
 use warnings;
@@ -40,7 +40,7 @@ use File::Path qw(make_path);
 
 use base qw(
   Bio::EnsEMBL::EGPipeline::Common::RunnableDB::EmailReport
-  Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::Base
+  Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base
 );
 
 sub fetch_input {

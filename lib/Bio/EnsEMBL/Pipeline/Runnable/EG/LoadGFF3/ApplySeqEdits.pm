@@ -30,7 +30,7 @@ James Allen
 
 =cut
 
-package Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::ApplySeqEdits;
+package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ApplySeqEdits;
 
 use strict;
 use warnings;
