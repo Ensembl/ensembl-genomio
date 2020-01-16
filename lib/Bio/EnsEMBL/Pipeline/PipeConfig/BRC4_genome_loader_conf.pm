@@ -35,7 +35,7 @@ sub default_options {
 
     check_manifest => 1,
     cs_order => 'chunk,contig,supercontig,non_ref_scaffold,scaffold,superscaffold,linkage_group,chromosome',
-    prune_agp => 1,
+    prune_agp => 0,
     unversion_scaffolds => 0,
     sr_syn_src_name  => 'ensembl_internal_synonym', # 50803
     division => 'EnsemblMetazoa',
