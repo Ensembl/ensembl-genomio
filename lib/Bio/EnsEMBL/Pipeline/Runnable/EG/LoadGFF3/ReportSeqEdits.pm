@@ -30,7 +30,7 @@ James Allen
 
 =cut
 
-package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::EmailReport;
+package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ReportSeqEdits;
 
 use strict;
 use warnings;
@@ -38,15 +38,11 @@ use warnings;
 use File::Basename qw(fileparse);
 use File::Path qw(make_path);
 
-use base qw(
-  Bio::EnsEMBL::EGPipeline::Common::RunnableDB::EmailReport
-  Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base
-);
+use base qw(Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base);
 
-sub fetch_input {
+sub run {
   my ($self) = @_;
-  my $species            = $self->param_required('species');
-  my $db_type            = $self->param_required('db_type');
+
   my $logic_name         = $self->param_required('logic_name');
   my $protein_fasta_file = $self->param('protein_fasta_file');
 
@@ -56,16 +52,12 @@ sub fetch_input {
   my $protein_seq_report_filename = $self->param('protein_seq_report_filename');
   my $protein_seq_fixes_filename = $self->param('protein_seq_fixes_filename');
   
-  my $dba = $self->get_DBAdaptor($db_type);
+  my $dba = $self->url2dba($self->param_required('db_url'));
   my $dbh = $dba->dbc->db_handle;
   
-  my $report = '';
   my $biotype_report_data = $self->biotype_report($dbh, $logic_name);
-  $report .= $biotype_report_data; 
   my $seq_edit_tt_report_data = $self->seq_edit_tt_report($dbh, $logic_name);
-  $report .= $seq_edit_tt_report_data;  
   my $seq_edit_tn_report_data = $self->seq_edit_tn_report($dbh, $logic_name);
-  $report .= $seq_edit_tn_report_data;  
 
   $self->dump_report($biotype_report_data, $biotype_report_filename);
   $self->dump_report($seq_edit_tt_report_data, $seq_edit_tt_report_filename);
@@ -73,13 +65,11 @@ sub fetch_input {
 
   if ($protein_fasta_file && -e $protein_fasta_file) {
     my ($seq_report, $fixes) = $self->protein_seq_report($dba, $logic_name, $protein_fasta_file);
-    $report .= $seq_report;
-    $report .= $fixes;
     $self->dump_report($seq_report, $protein_seq_report_filename);
     $self->dump_report($fixes, $protein_seq_fixes_filename);
   }
-  
-  $self->param('text', $report);
+
+  $dba->dbc->disconnect_if_idle();
 }
 
 sub biotype_report {
