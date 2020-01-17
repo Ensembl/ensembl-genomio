@@ -55,10 +55,9 @@ package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::AnalysisSetup;
 use strict;
 use warnings;
 
-#use base qw(Bio::EnsEMBL::EGPipeline::Common::RunnableDB::Base);
-use base ('Bio::EnsEMBL::Hive::Process');
+#use base ('Bio::EnsEMBL::Hive::Process');
+use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 use Bio::EnsEMBL::Analysis;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::Utils::URL qw/ parse /;
 
 sub param_defaults {
@@ -127,7 +126,7 @@ sub run {
   my $new_analysis = $self->create_analysis;
   $aa->store($new_analysis);
  
-  $dba->dbc->disconnect_if_idle(); 
+  $dba->dbc->disconnect_if_idle();
 }
 
 sub create_analysis {
@@ -189,20 +188,8 @@ sub production_updates {
       $self->param($property, $properties{$property});
     }      
   }
-}
 
-sub url2dba {
-  my ($self, $url) = @_;
-
-  my $dbp = Bio::EnsEMBL::Hive::Utils::URL::parse($url);
-  my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-    -host   => $dbp->{host},
-    -port   => $dbp->{port},
-    -user   => $dbp->{user},
-    -pass   => $dbp->{pass},
-    -dbname => $dbp->{dbname},
-  );
-  return $dba;
+  $dbc->disconnect_if_idle();
 }
 
 1;

@@ -43,7 +43,6 @@ use Bio::DB::SeqFeature::Store::GFF3Loader;
 
 use Bio::EnsEMBL::Exon;
 use Bio::EnsEMBL::Gene;
-use Bio::EnsEMBL::Hive::Utils::URL qw/ parse /;
 use Bio::EnsEMBL::PredictionExon;
 use Bio::EnsEMBL::PredictionTranscript;
 use Bio::EnsEMBL::Transcript;
@@ -103,6 +102,7 @@ sub load_db {
   
   my $loader = Bio::DB::SeqFeature::Store::GFF3Loader->new(-store => $db, -ignore_seqregion => 1);
   
+  #$loader->load($gff_file);
   $loader->load($gff_file, $fasta_file);
   
   return $db;
@@ -153,14 +153,7 @@ sub load_genes {
   my $logic_name = $self->param_required('logic_name');
   my @gene_types = @{ $self->param_required('gene_types') };
   
-  my $dbp = Bio::EnsEMBL::Hive::Utils::URL::parse($self->param_required('db_url'));
-  my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-    -host   => $dbp->{host},
-    -port   => $dbp->{port},
-    -user   => $dbp->{user},
-    -pass   => $dbp->{pass},
-    -dbname => $dbp->{dbname},
-  );
+  my $dba = $self->url2dba($self->param_required('db_url'));
   
   # Fetch slices and their synonyms into a lookup hash.
   my %slices = $self->fetch_slices($dba);
@@ -189,6 +182,8 @@ sub load_genes {
     
     $self->add_transcripts($db, $ga, $pta, $gff_gene, $gene);
   }
+
+  $dba->dbc->disconnect_if_idle();
 }
 
 sub check_seq_ids {
