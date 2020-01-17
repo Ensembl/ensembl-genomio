@@ -100,9 +100,8 @@ sub load_db {
   
   my $db = Bio::DB::SeqFeature::Store->new(-adaptor => 'memory');
   
-  my $loader = Bio::DB::SeqFeature::Store::GFF3Loader->new(-store => $db, -ignore_seqregion => 1);
+  my $loader = Bio::DB::SeqFeature::Store::GFF3Loader->new(-store => $db, -ignore_seqregion => 1, -chunk_size => 10000000);
   
-  #$loader->load($gff_file);
   $loader->load($gff_file, $fasta_file);
   
   return $db;

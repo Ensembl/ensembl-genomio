@@ -22,7 +22,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::FixModels
+Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::FixModels
 
 =head1 Author
 
@@ -36,22 +36,23 @@ use strict;
 use warnings;
 use feature 'say';
 
-use base ('Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::Base');
+use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 
 use List::Util qw(min);
 use Path::Tiny qw(path);
 
 sub run {
   my ($self) = @_;
-  my $db_type            = $self->param_required('db_type');
   my $logic_name         = $self->param_required('logic_name');
   my $protein_fasta_file = $self->param_required('protein_fasta_file');
-  
-  my $dba = $self->get_DBAdaptor($db_type);
+
+  my $dba = $self->url2dba($self->param_required('db_url'));
   
   $self->fix_models($dba, $logic_name, $protein_fasta_file);
   
   $self->set_protein_coding($dba, $logic_name);
+
+  $dba->dbc->disconnect_if_idle();
 }
 
 sub fix_models {

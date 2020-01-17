@@ -422,8 +422,19 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '1->A' => 'GFF3CleanIgnored',
+        '1->A' => 'GFF3CleanAndLoad',
         'A->1' => 'LoadFunctionalAnnotation',
+      },
+    },
+
+    {
+      -logic_name => 'GFF3CleanAndLoad',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1->A' => 'GFF3CleanIgnored',
+        'A->1' => 'LoadGFF3AnalysisSetup',
       },
     },
 
@@ -492,7 +503,28 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
-      -flow_into => [ 'LoadGFF3AnalysisSetup' ],
+      -flow_into => [ 'DNAFastaGetTopLevel' ],
+    },
+
+    {
+      -logic_name => 'DNAFastaGetTopLevel',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . ' cat  #gff3_tidy_file# | '
+            . '   awk -F "\t" \'$0 !~ /^#/ && $3 != "seq_region" {print $1}\' | sort | uniq | '
+            . '   perl #dumper# '
+            . '     --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --dbname #db_name# '
+            . '     > #dna_fasta_file# '
+            . '     2> #log_path#/stderr ',
+        'log_path' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta',
+        'gff3_tidy_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
+        'dna_fasta_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta/toplevel.fasta',
+        'dumper' => $self->o('ensembl_root_dir') . '/new-genome-loader/scripts/get_dna_fasta_for.pl',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
     },
 
     {
@@ -519,8 +551,7 @@ sub pipeline_analyses {
       -parameters => {
         #species         => '#expr( #genome_data#->{"species"}->{"production_name"} )expr#',
         gff3_file       => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
-        # fasta_file      => $self->o('pipeline_dir') . '/#db_name#/load_sequence/fasts/seq_no_iupac.fasta',
-        fasta_file      => '#expr( #manifest_data#->{"fasta_dna"} )expr#',
+        fasta_file      => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta/toplevel.fasta',
         gene_source     => $self->o('gff3_load_gene_source'),
         logic_name      => $self->o('gff3_load_logic_name'),
         # feature types
@@ -544,22 +575,36 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'FixModels',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::FixModels',
+      -parameters => {
+        logic_name      => $self->o('gff3_load_logic_name'),
+        db_url          => '#dbsrv_url#' . '#db_name#',
+        protein_fasta_file      => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+      },
+      -max_retry_count   => 0,
+      -rc_name    => '15GB',
       -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
       -flow_into => [ 'ApplySeqEdits' ],
     },
 
     {
       -logic_name => 'ApplySeqEdits',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ApplySeqEdits',
+      -parameters => {
+        logic_name      => $self->o('gff3_load_logic_name'),
+        db_url          => '#dbsrv_url#' . '#db_name#',
+        protein_fasta_file      => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+      },
+      -max_retry_count   => 0,
+      -rc_name    => '15GB',
       -meadow_type       => 'LSF',
-      -flow_into => [ 'GenPatchesReport' ],
+      -analysis_capacity   => 5,
+      -flow_into => [ 'ReportSeqEdits' ],
     },
 
     {
-      -logic_name => 'GenPatchesReport',
+      -logic_name => 'ReportSeqEdits',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
       -meadow_type       => 'LSF',

@@ -22,7 +22,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::ApplySeqEdits
+Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ApplySeqEdits
 
 =head1 Author
 
@@ -36,18 +36,17 @@ use strict;
 use warnings;
 use feature 'say';
 
-use base ('Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::Base');
+use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 
 use Path::Tiny qw(path);
 
 sub run {
   my ($self) = @_;
-  my $db_type            = $self->param_required('db_type');
   my $logic_name         = $self->param_required('logic_name');
   my $genbank_file       = $self->param('genbank_file');
   my $protein_fasta_file = $self->param('protein_fasta_file');
   
-  my $dba = $self->get_DBAdaptor($db_type);
+  my $dba = $self->url2dba($self->param_required('db_url'));
   
   if ($genbank_file) {
     $self->seq_edits_from_genbank($dba, $genbank_file);
@@ -58,6 +57,8 @@ sub run {
   }
   
   $self->set_protein_coding($dba, $logic_name);
+
+  $dba->dbc->disconnect_if_idle();
 }
 
 sub seq_edits_from_genbank {
