@@ -48,6 +48,7 @@ sub default_options {
     # GFF3 cleaning params
     gff3_ignore_file => catfile(dirname(__FILE__), qw/gff3.ignore/),
     gff3_clean_additionally => 0,
+    gff3_autoapply_manual_seq_edits => 1,
 
     # LoadGFF3 params
     gff3_load_gene_source       => 'EnsemblMetazoa',
@@ -123,8 +124,9 @@ sub pipeline_wide_parameters {
     gff3_tidy     => $self->o('gff3_tidy'),
     gff3_validate => $self->o('gff3_validate'),
 
-    gff3_ignore_file => $self->o('gff3_ignore_file'),
-    gff3_clean_additionally =>  $self->o('gff3_clean_additionally'),
+    gff3_ignore_file            => $self->o('gff3_ignore_file'),
+    gff3_clean_additionally     => $self->o('gff3_clean_additionally'),
+    gff3_autoapply_manual_seq_edits => $self->o('gff3_autoapply_manual_seq_edits'),
 
     gff3_load_gene_source       => $self->o('gff3_load_gene_source'),
     gff3_load_logic_name        => $self->o('gff3_load_logic_name'),
@@ -605,15 +607,31 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'ReportSeqEdits',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ReportSeqEdits',
+      -parameters => {
+        logic_name      => $self->o('gff3_load_logic_name'),
+        db_url          => '#dbsrv_url#' . '#db_name#',
+        protein_fasta_file      => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+          biotype_report_filename      => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/biotypes.txt',
+          seq_edit_tt_report_filename  => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/seq_edit_tt.txt',
+          seq_edit_tn_report_filename  => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/seq_edit_tn.txt',
+          protein_seq_report_filename  => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins.txt',
+          protein_seq_fixes_filename   => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins_fixes.txt',
+      },
+      -max_retry_count   => 0,
+      -rc_name    => '15GB',
       -meadow_type       => 'LSF',
-      -flow_into => [ 'ApplyPatches' ],
+      -analysis_capacity   => 5,
+      -flow_into => WHEN('#gff3_autoapply_manual_seq_edits#' => [ 'ApplyPatches' ]),
     },
 
     {
       -logic_name => 'ApplyPatches',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::DbCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        input_file => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins_fixes.txt',
+      },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
