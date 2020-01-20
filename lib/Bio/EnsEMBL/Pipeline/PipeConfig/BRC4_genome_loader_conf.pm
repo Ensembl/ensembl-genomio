@@ -9,7 +9,8 @@ use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
 use Bio::EnsEMBL::ApiVersion qw(software_version);
 
-use File::Spec::Functions qw(catdir);
+use File::Basename;
+use File::Spec::Functions qw(catdir catfile);
 use FindBin;
 
 sub default_options {
@@ -34,10 +35,56 @@ sub default_options {
 
     check_manifest => 1,
     cs_order => 'chunk,contig,supercontig,non_ref_scaffold,scaffold,superscaffold,linkage_group,chromosome',
-    prune_agp => 1,
+    prune_agp => 0,
     unversion_scaffolds => 0,
     sr_syn_src_name  => 'ensembl_internal_synonym', # 50803
     division => 'EnsemblMetazoa',
+
+    # GenomeTools aliases (from eg-pipelines: Bio::EnsEMBL::EGPipeline::PipeConfig::LoadGFF3_conf)
+    gt_exe        => 'gt',
+    gff3_tidy     => $self->o('gt_exe').' gff3 -tidy -sort -retainids',
+    gff3_validate => $self->o('gt_exe').' gff3validator',
+
+    # GFF3 cleaning params
+    gff3_ignore_file => catfile(dirname(__FILE__), qw/gff3.ignore/),
+    gff3_clean_additionally => 0,
+    gff3_autoapply_manual_seq_edits => 1,
+
+    # LoadGFF3 params
+    gff3_load_gene_source       => 'EnsemblMetazoa',
+    gff3_load_logic_name        => 'gff3_genes',
+    #gff3_load_logic_name        => 'refseq_import_visible',
+    gff3_load_analysis_module   => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3',
+    gff3_load_production_lookup => 1,
+    # feature types
+    gff3_use_polypeptides  => 0, # ignore 'polypeptides' lines !
+    gff3_gene_types   => [ qw/
+        gene pseudogene miRNA_gene ncRNA_gene
+        rRNA_gene snoRNA_gene snRNA_gene tRNA_gene
+      /],
+    gff3_mrna_types   => [ qw/
+        mRNA transcript pseudogenic_transcript
+        pseudogenic_rRNA pseudogenic_tRNA
+        ncRNA lincRNA lncRNA miRNA pre_miRNA
+        RNase_MRP_RNA RNAse_P_RNA rRNA snoRNA
+        snRNA sRNA SRP_RNA tRNA
+        lnc_RNA
+      /],
+    gff3_exon_types   => [qw/ exon pseudogenic_exon /],
+    gff3_cds_types    => [qw/ CDS /],
+    gff3_utr_types    => [qw/ five_prime_UTR three_prime_UTR /],
+    gff3_ignore_types => [ qw/
+        misc_RNA RNA
+        match match_part
+        sequence_feature
+        cDNA_match nucleotide_match protein_match
+        polypeptide protein
+        chromosome supercontig contig
+        region biological_region
+        regulatory_region repeat_region
+        golden_path_region intron orthologous_to
+      /],
+    gff3_types_complete  => 1,
 
     ##############################
 
@@ -72,6 +119,28 @@ sub pipeline_wide_parameters {
     unversion_scaffolds => $self->o('unversion_scaffolds'),
     sr_syn_src_name  => $self->o('sr_syn_src_name'),
     division    => $self->o('division'),
+
+    gt_exe        => $self->o('gt_exe'),
+    gff3_tidy     => $self->o('gff3_tidy'),
+    gff3_validate => $self->o('gff3_validate'),
+
+    gff3_ignore_file            => $self->o('gff3_ignore_file'),
+    gff3_clean_additionally     => $self->o('gff3_clean_additionally'),
+    gff3_autoapply_manual_seq_edits => $self->o('gff3_autoapply_manual_seq_edits'),
+
+    gff3_load_gene_source       => $self->o('gff3_load_gene_source'),
+    gff3_load_logic_name        => $self->o('gff3_load_logic_name'),
+    gff3_load_analysis_module   => $self->o('gff3_load_analysis_module'),
+    gff3_load_production_lookup => $self->o('gff3_load_production_lookup'),
+
+    gff3_use_polypeptides => $self->o('gff3_use_polypeptides'),
+    gff3_gene_types => $self->o('gff3_gene_types'),
+    gff3_mrna_types => $self->o('gff3_mrna_types'),
+    gff3_ignore_types => $self->o('gff3_ignore_types'),
+    gff3_exon_types => $self->o('gff3_exon_types'),
+    gff3_cds_types => $self->o('gff3_cds_types'),
+    gff3_utr_types => $self->o('gff3_utr_types'),
+    gff3_types_complete => $self->o('gff3_types_complete'),
   };
 }
 
@@ -275,12 +344,11 @@ sub pipeline_analyses {
       # Head analysis for the loading of the metadata
       -logic_name => 'LoadMetadata',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'FillMetadata',
-        'A->1' => 'ConstructRepeatLib',
+        'A->1' => 'ProcessRepeats',
       },
     },
 
@@ -325,12 +393,256 @@ sub pipeline_analyses {
     },
 
     {
+      -logic_name => 'ProcessRepeats',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1->A' => 'ConstructRepeatLib',
+        'A->1' => 'LoadGFF3Models',
+      },
+    },
+
+    {
       -logic_name => 'ConstructRepeatLib',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -input_ids  => [],
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => [ 'AnnotateRepeats' ],
+    },
+
+    {
+      -logic_name => 'AnnotateRepeats',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
+
+    {
+      -logic_name => 'LoadGFF3Models',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1->A' => 'GFF3CleanAndLoad',
+        'A->1' => 'LoadFunctionalAnnotation',
+      },
+    },
+
+    {
+      -logic_name => 'GFF3CleanAndLoad',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1->A' => 'GFF3CleanIgnored',
+        'A->1' => 'LoadGFF3AnalysisSetup',
+      },
+    },
+
+    {
+      -logic_name => 'GFF3CleanIgnored',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . ' less #gff3_ignore_file# | '
+            . '   perl -pe \'s/#.*$/\n/; s/^\s+//; s/ +$//; s/ +/ /g;\' | '
+            . '   grep -vP \'^\s*$\' | '
+            . '   perl -pe \'s/^/\t/; s/$/\t/\' > #gff3_ignore_pat#; '
+            . ' less #gff3_orig_file# | grep -viFf #gff3_ignore_pat# > #gff3_clean_file# ',
+        'log_path' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/clean',
+        'gff3_orig_file' => '#expr( #manifest_data#->{"gff3"} )expr#',
+        'gff3_clean_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/clean/clean.gff3',
+        'gff3_ignore_file' => $self->o('gff3_ignore_file'),
+        'gff3_ignore_pat' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/clean/gff3.ignore.pat',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
+      -flow_into => WHEN('#gff3_clean_additionally#' =>
+                      [ 'GFF3CleanAdditionally' ],
+                    ELSE
+                      [ 'GFF3Tidy' ]
+                    ),
+    },
+
+    {
+      -logic_name => 'GFF3CleanAdditionally',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => [ 'GFF3Tidy' ],
+    },
+
+    {
+      -logic_name => 'GFF3Tidy',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . ' #gff3_tidy# #gff3_clean_file# > #gff3_tidy_file# 2> #log_path#/stderr ',
+        'log_path' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy',
+        'gff3_tidy' => $self->o('gff3_tidy'),
+        'gff3_clean_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/clean/clean.gff3',
+        'gff3_tidy_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
+      -flow_into => [ 'GFF3Validate' ],
+    },
+
+    {
+      -logic_name => 'GFF3Validate',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . ' #gff3_validate# #gff3_tidy_file# '
+            . '   > #log_path#/stdout 2> #log_path#/stderr ',
+        'log_path' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/validate',
+        'gff3_validate' => $self->o('gff3_validate'),
+        'gff3_tidy_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
+      -flow_into => [ 'DNAFastaGetTopLevel' ],
+    },
+
+    {
+      -logic_name => 'DNAFastaGetTopLevel',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . ' cat  #gff3_tidy_file# | '
+            . '   awk -F "\t" \'$0 !~ /^#/ && $3 != "seq_region" {print $1}\' | sort | uniq | '
+            . '   perl #dumper# '
+            . '     --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --dbname #db_name# '
+            . '     > #dna_fasta_file# '
+            . '     2> #log_path#/stderr ',
+        'log_path' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta',
+        'gff3_tidy_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
+        'dna_fasta_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta/toplevel.fasta',
+        'dumper' => $self->o('ensembl_root_dir') . '/new-genome-loader/scripts/get_dna_fasta_for.pl',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
+    },
+
+    {
+      -logic_name => 'LoadGFF3AnalysisSetup',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::AnalysisSetup',
+      -parameters        => {
+        logic_name         => $self->o('gff3_load_logic_name'),
+        module             => $self->o('gff3_load_analysis_module'),
+        db_url             => '#dbsrv_url#' . '#db_name#',
+        production_lookup  => $self->o('gff3_load_production_lookup'),
+        prodb_url          => '#proddb_url#',
+        delete_existing    => 1,
+      },
+      -rc_name    => 'default',
+      -meadow_type => 'LSF',
+      -analysis_capacity => 10,
+      -max_retry_count   => 0,
+      -flow_into => [ 'LoadGFF3' ],
+    },
+
+    {
+      -logic_name => 'LoadGFF3',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3',
+      -parameters => {
+        #species         => '#expr( #genome_data#->{"species"}->{"production_name"} )expr#',
+        gff3_file       => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
+        fasta_file      => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta/toplevel.fasta',
+        gene_source     => $self->o('gff3_load_gene_source'),
+        logic_name      => $self->o('gff3_load_logic_name'),
+        # feature types
+        gene_types      => $self->o('gff3_gene_types'),
+        mrna_types      => $self->o('gff3_mrna_types'),
+        exon_types      => $self->o('gff3_exon_types'),
+        cds_types       => $self->o('gff3_cds_types'),
+        utr_types       => $self->o('gff3_utr_types'),
+        ignore_types    => $self->o('gff3_ignore_types'),
+        types_complete  => $self->o('gff3_types_complete'),
+        polypeptides    => $self->o('gff3_use_polypeptides'), # it's better to ignore ignore 'polypeptides' lines 
+        # dbparams
+        db_url          => '#dbsrv_url#' . '#db_name#',
+      },
+      -max_retry_count   => 0,
+      -rc_name    => '15GB',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
+      -flow_into => [ 'FixModels' ],
+    },
+
+    {
+      -logic_name => 'FixModels',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::FixModels',
+      -parameters => {
+        logic_name      => $self->o('gff3_load_logic_name'),
+        db_url          => '#dbsrv_url#' . '#db_name#',
+        protein_fasta_file      => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+      },
+      -max_retry_count   => 0,
+      -rc_name    => '15GB',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
+      -flow_into => [ 'ApplySeqEdits' ],
+    },
+
+    {
+      -logic_name => 'ApplySeqEdits',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ApplySeqEdits',
+      -parameters => {
+        logic_name      => $self->o('gff3_load_logic_name'),
+        db_url          => '#dbsrv_url#' . '#db_name#',
+        protein_fasta_file      => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+      },
+      -max_retry_count   => 0,
+      -rc_name    => '15GB',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
+      -flow_into => [ 'ReportSeqEdits' ],
+    },
+
+    {
+      -logic_name => 'ReportSeqEdits',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ReportSeqEdits',
+      -parameters => {
+        logic_name      => $self->o('gff3_load_logic_name'),
+        db_url          => '#dbsrv_url#' . '#db_name#',
+        protein_fasta_file      => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+          biotype_report_filename      => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/biotypes.txt',
+          seq_edit_tt_report_filename  => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/seq_edit_tt.txt',
+          seq_edit_tn_report_filename  => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/seq_edit_tn.txt',
+          protein_seq_report_filename  => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins.txt',
+          protein_seq_fixes_filename   => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins_fixes.txt',
+      },
+      -max_retry_count   => 0,
+      -rc_name    => '15GB',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
+      -flow_into => WHEN('#gff3_autoapply_manual_seq_edits#' => [ 'ApplyPatches' ]),
+    },
+
+    {
+      -logic_name => 'ApplyPatches',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::DbCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        input_file => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins_fixes.txt',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+    },
+
+    {
+      -logic_name => 'LoadFunctionalAnnotation',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+    },
+
   ];
 }
 
