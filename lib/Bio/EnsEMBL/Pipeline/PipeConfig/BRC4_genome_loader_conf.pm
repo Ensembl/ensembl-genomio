@@ -12,6 +12,11 @@ use Bio::EnsEMBL::ApiVersion qw(software_version);
 use File::Basename;
 use File::Spec::Functions qw(catdir catfile);
 use FindBin;
+use Class::Inspector;
+
+my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
+my $package_dir = dirname($package_path);
+my $scripts_dir = "$package_dir/../../../../../scripts";
 
 sub default_options {
   my ($self) = @_;
@@ -522,7 +527,7 @@ sub pipeline_analyses {
         'log_path' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta',
         'gff3_tidy_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
         'dna_fasta_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta/toplevel.fasta',
-        'dumper' => $self->o('ensembl_root_dir') . '/new-genome-loader/scripts/get_dna_fasta_for.pl',
+        'dumper' => "$scripts_dir/get_dna_fasta_for.pl",
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
