@@ -23,22 +23,35 @@ sub default_options {
   return {
     %{ $self->SUPER::default_options() },
 
-    ##############################
+    ############################################
     # Config to be set by the user
     # VB release id
     release => $self->o('release'),
     db_prefix => "",
-
-    # Ensembl version (deduced from the environment?)
-    ensembl_version => software_version(),
+    
+    # Basic pipeline configuration
+    pipeline_tag => '',
+    pipeline_name => 'brc4_genome_loader_' .
+      $self->o('release') . '_' . $self->o('ensembl_version') . $self->o('pipeline_tag'),
+    email => $ENV{USER} . '@ebi.ac.uk',
+    
+    # Working directory
+    pipeline_dir => 'genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
 
     # Meta configuration directory
     data_dir => $self->o('data_dir'),
 
-    # Working directory
-    tmp_dir => 'tmp',
-
+    # Skip manifest checking (only if you know the checks are passed)
     check_manifest => 1,
+
+    debug => 0,
+
+    ############################################
+    # Config unlikely to be changed by the user
+    
+    ensembl_version => software_version(),
+
+    # Coordinate system order
     cs_order => 'chunk,contig,supercontig,non_ref_scaffold,scaffold,superscaffold,linkage_group,chromosome',
     prune_agp => 0,
     unversion_scaffolds => 0,
@@ -90,17 +103,6 @@ sub default_options {
         golden_path_region intron orthologous_to
       /],
     gff3_types_complete  => 1,
-
-    ##############################
-
-    # Basic pipeline configuration
-    pipeline_tag => '',
-    pipeline_name => 'brc4_genome_loader_' .
-      $self->o('release') . '_' . $self->o('ensembl_version') . $self->o('pipeline_tag'),
-    email => $ENV{USER} . '@ebi.ac.uk',
-    pipeline_dir => 'genome_loader_' .  $self->o('release') . '_' . $self->o('ensembl_version'),
-
-    debug => 0,
   };
 }
 
@@ -110,7 +112,6 @@ sub pipeline_wide_parameters {
   return {
     %{$self->SUPER::pipeline_wide_parameters},
     debug          => $self->o('debug'),
-    tmp_dir        => $self->o('tmp_dir'),
     check_manifest => $self->o('check_manifest'),
     pipeline_dir   => $self->o('pipeline_dir'),
     ensembl_root_dir => $self->o('ensembl_root_dir'),
@@ -154,7 +155,7 @@ sub pipeline_create_commands {
     return [
       # inheriting database and hive tables' creation
       @{$self->SUPER::pipeline_create_commands},
-      'mkdir -p '.$self->o('tmp_dir'),
+      'mkdir -p '.$self->o('pipeline_dir'),
     ];
 }
 
@@ -174,7 +175,6 @@ sub pipeline_analyses {
   return
   [
     # Starting point
-    # Create the tmp pipeline directory
     {
       -logic_name => 'Start',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
