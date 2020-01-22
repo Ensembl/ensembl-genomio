@@ -101,7 +101,7 @@ class GFF3Specifier(eHive.BaseRunnable):
                 attributes = []
                 for a in attrs:
                     (key, value) = a.split("=")
-                    if self.allowed_attributes and key not in self.allowed_attributes:
+                    if (self.allowed_attributes and key not in self.allowed_attributes) or (biotype == 'gene' and key == 'Name'):
                         if not key in skipped_attributes:
                             skipped_attributes[key] = 0
                         skipped_attributes[key] += 1
