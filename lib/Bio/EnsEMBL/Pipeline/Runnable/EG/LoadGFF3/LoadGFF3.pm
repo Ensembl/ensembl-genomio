@@ -48,6 +48,13 @@ use Bio::EnsEMBL::PredictionTranscript;
 use Bio::EnsEMBL::Transcript;
 use Bio::EnsEMBL::Translation;
 
+my $biotype_map = {
+  gene => {},
+  transcript => {
+    lnc_RNA => 'lncRNA',
+  },
+};
+
 sub param_defaults {
   my ($self) = @_;
 
@@ -720,6 +727,26 @@ sub set_nontranslating_gene {
   }
 }
 
+sub map_biotype_gene {
+  my ($self, $biotype) = @_;
+  
+  if (exists $biotype_map->{gene}->{$biotype}) {
+    return $biotype_map->{gene}->{$biotype};
+  } else {
+    return $biotype;
+  }
+}
+
+sub map_biotype_transcript {
+  my ($self, $biotype) = @_;
+  
+  if (exists $biotype_map->{transcript}->{$biotype}) {
+    return $biotype_map->{transcript}->{$biotype};
+  } else {
+    return $biotype;
+  }
+}
+
 sub new_gene {
   my ($self, $gff_gene, $slice, $analysis) = @_;
   my $source = $self->param_required('gene_source');
@@ -733,9 +760,10 @@ sub new_gene {
     $biotype = 'pseudogene';
   } elsif ($gff_gene->type =~ /^gene:*/) {
     $biotype = 'protein_coding';
-  } else {
-    ($biotype) = $gff_gene->type =~ /^(\w+):*/;
+  } elsif ($gff_gene->type =~ /^(\w+):*/) {
+    ($biotype) = $1;
   }
+  $biotype = $self->map_biotype_gene($biotype);
   
   my $gene = Bio::EnsEMBL::Gene->new(
     -stable_id     => $stable_id,
@@ -767,6 +795,7 @@ sub new_transcript {
     $gene->biotype($biotype);
   } elsif ($gff_transcript->type !~ /^(mRNA|transcript):*/i) {
     ($biotype) = $gff_transcript->type =~ /^(\w+):*/;
+    $biotype = $self->map_biotype_transcript($biotype);
     $gene->biotype($biotype);
   } else {
     $biotype = $gene->biotype;
