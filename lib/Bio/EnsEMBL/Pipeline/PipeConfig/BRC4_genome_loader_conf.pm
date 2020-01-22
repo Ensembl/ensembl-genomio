@@ -642,10 +642,22 @@ sub pipeline_analyses {
     },
 
     {
-      -logic_name => 'LoadFunctionalAnnotation',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -logic_name  => 'LoadFunctionalAnnotation',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #log_path#; '
+            . 'perl #fann_loader# '
+            . '  --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --dbname #db_name# '
+            . '  -json #fann_json_file# '
+            . '  > #log_path#/stdout '
+            . '  2> #log_path#/stderr ',
+        'log_path'       => $self->o('pipeline_dir') . '/#db_name#/load_functional_annotation',
+        'fann_loader'    => "$scripts_dir/load_fann.pl",
+        'fann_json_file' => '#expr( #manifest_data#->{"functional_annotation"} )expr#',
+      },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
+      -analysis_capacity   => 5,
     },
 
   ];

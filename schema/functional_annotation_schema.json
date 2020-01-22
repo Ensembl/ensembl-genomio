@@ -22,8 +22,12 @@
           "type" : "object",
           "properties" : {
             "dbname" : { "type" : "string" },
-            "id" : { "type" : "string" }
-          }
+            "id" : { "type" : "string" },
+            "description" : { "type" : "string" },
+            "info_type" : { "type" : "string", "description" : "additional source information" },
+            "info_text" : { "type" : "string", "description" : "additional source information" }
+          },
+          "required": [ "dbname", "id" ]
     },
     "ontology_term_type" : {
       "type" : "string",
@@ -57,6 +61,7 @@
           ]
         },
         "ontology_terms" : {
+          "description" : "deprecated. use 'xrefs' instead",
           "oneOf" : [
             { "$ref" : "#/definitions/ontology_term_type" },
             { "type": "array", "items" : { "$ref" : "#/definitions/ontology_term_type" } }
@@ -82,8 +87,8 @@
         "object_type" : "gene",
         "description": "voltage-gated sodium channel" ,
         "synonyms" : [ { "synonym" : "para", "default" : true }, "kdr", "VSC" ],
-        "xrefs" : "EntrezGene:1278521",
-        "ontology_terms" : [ "GO:0005216", "SO:0000834" ]
+        "xrefs" : [ { "dbname" : "EntrezGene", "id" : "1278521" }, { "dbname" : "GO", "id" : "GO:0005216" } ],
+        "ontology_terms" : [ "GO:0005217", "SO:0000834" ]
     } ]
   ]
 }

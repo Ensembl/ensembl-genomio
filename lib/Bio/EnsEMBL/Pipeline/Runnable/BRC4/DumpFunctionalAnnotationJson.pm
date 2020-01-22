@@ -62,9 +62,8 @@ sub prepare_data {
     }
 
     # Xrefs (if any)
-    my ($xrefs, $onto) = get_xrefs($item);
+    my $xrefs = get_xrefs($item);
     $feat{xrefs} = $xrefs if $xrefs and @$xrefs;
-    $feat{ontology_terms} = $onto if $onto and @$onto;
 
     push @features, \%feat;
   }
@@ -97,19 +96,18 @@ sub get_xrefs {
   my $entries = $gene->get_all_DBEntries();
 
   my @xrefs;
-  my @onto;
   ENTRY: for my $entry (@$entries) {
     my $dbname = $entry->dbname;
     my $id = $entry->display_id;
 
-    if ($dbname =~ /^[GS]O$/) {
-      push @onto, $id;
-    } else {
-      my $xref = { dbname => $dbname, id => $id };
-      push @xrefs, $xref;
-    }
+    my $xref = { dbname => $dbname, id => $id };
+    $xref->{description} = $entry->description if ($entry->description);
+    $xref->{info_type} = $entry->info_type if ($entry->info_type);
+    $xref->{info_text} = $entry->info_text if ($entry->info_text);
+
+    push @xrefs, $xref;
   }
-  return \@xrefs, \@onto;
+  return \@xrefs;
 }
 
 1;
