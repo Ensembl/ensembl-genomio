@@ -72,6 +72,9 @@ sub prepare_data {
   $dba->dbc()->disconnect_if_idle();
 
   print(scalar(@seq_regions) . " seq_regions\n");
+  
+  # Sort
+  @seq_regions = sort { $a->{name} cmp $b->{name} } @seq_regions;
 
   # Write data to json
   return \@seq_regions;
