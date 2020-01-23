@@ -43,6 +43,7 @@ class Integrity(eHive.BaseRunnable):
             seq_lengths = {}
             gff = {}
             func_ann = {}
+            agp_seqr = {}
 
             if "gff3" in manifest:
                 print("Got a gff")
