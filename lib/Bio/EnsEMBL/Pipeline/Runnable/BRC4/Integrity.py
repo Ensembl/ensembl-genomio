@@ -245,9 +245,9 @@ class Integrity(eHive.BaseRunnable):
         if diff:
             errors.append("%d common elements with different length in %s (e.g. %s)" % (len(diff), name, diff_list[0]))
         if only1:
-            errors.append("%d only in first list in %s (first: %s)" % (len(only1), name, only1[0]))
+            errors.append("%d only in first list in %s (first: %s, last: %s)" % (len(only1), name, only1[0], only1[-1]))
         if only2:
-            errors.append("%d only in second list in %s (first: %s)" % (len(only2), name, only2[0]))
+            errors.append("%d only in second list in %s (first: %s, last: %s)" % (len(only2), name, only2[0], only2[-1]))
 
         return errors
 
