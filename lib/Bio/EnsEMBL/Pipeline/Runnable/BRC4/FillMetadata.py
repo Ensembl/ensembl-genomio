@@ -62,7 +62,7 @@ class FillMetadata(eHive.BaseRunnable):
     def flattern(self, data, ignore_lst, pfx = None):
         # vectors with values only
         if isinstance(data, list):
-            return [ ( pfx, v ) for v in list ]
+            return [ ( pfx, v ) for v in data ]
         elif isinstance(data, dict):
             ignore_lst = frozenset(ignore_lst)
             res = []
