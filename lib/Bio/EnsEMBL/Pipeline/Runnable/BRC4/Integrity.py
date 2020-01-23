@@ -60,9 +60,9 @@ class Integrity(eHive.BaseRunnable):
                 seqr_lengths = {}
                 seqr_seqlevel = {}
                 for seq in seq_regions:
-                    seq_lengths[seq["name"]] = seq["length"]
+                    seq_lengths[seq["name"]] = int(seq["length"])
                     if seq["coord_system_level"] == "contig":
-                        seqr_seqlevel[seq["name"]] = seq["length"]
+                        seqr_seqlevel[seq["name"]] = int(seq["length"])
             if "functional_annotation" in manifest:
                 print("Got a func_anns")
                 func_ann = self.get_functional_annotation(manifest['functional_annotation'])
@@ -119,38 +119,44 @@ class Integrity(eHive.BaseRunnable):
             return { "genes" : genes, "translations" : translations }
 
     def get_gff3(self, gff3_path):
+        if gff3_path.endswith(".gz"):
+            with io.TextIOWrapper(gzip.open(gff3_path, "r")) as gff3_handle:
+                return self.parse_gff3(gff3_handle)
+        else:
+            with open(gff3_path, "r") as gff3_handle:
+                return self.parse_gff3(gff3_handle)
 
+    def parse_gff3(self, gff3_handle):
         ensembl_mode = self.param("ensembl_mode")
         seqs = {};
         genes = {};
         peps = {};
 
-        with io.TextIOWrapper(gzip.open(gff3_path, "r")) as gff3_handle:
-            gff = GFF.parse(gff3_handle)
-            for seq in gff:
-                seqs[seq.id] = len(seq.seq)
-                
-                for feat in seq.features:
-                    if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
-                        gene_id = feat.id
-                        if ensembl_mode:
-                            gene_id = gene_id.replace("gene:", "")
-                        # Store gene length
-                        genes[gene_id] = abs(feat.location.end - feat.location.start)
-                        # Get CDS
-                        for feat2 in feat.sub_features:
-                            if feat2.type == "mRNA":
-                                length = {}
-                                for feat3 in feat2.sub_features:
-                                    if feat3.type == "CDS":
-                                        pep_id = feat3.id
-                                        if ensembl_mode:
-                                            pep_id = pep_id.replace("CDS:", "")
-                                        if pep_id not in length:
-                                            length[pep_id] = 0
-                                        length[pep_id] += abs(feat3.location.end - feat3.location.start)
-                                for pep_id in length:
-                                    peps[pep_id] = floor(length[pep_id] / 3) - 1
+        gff = GFF.parse(gff3_handle)
+        for seq in gff:
+            seqs[seq.id] = len(seq.seq)
+            
+            for feat in seq.features:
+                if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
+                    gene_id = feat.id
+                    if ensembl_mode:
+                        gene_id = gene_id.replace("gene:", "")
+                    # Store gene length
+                    genes[gene_id] = abs(feat.location.end - feat.location.start)
+                    # Get CDS
+                    for feat2 in feat.sub_features:
+                        if feat2.type == "mRNA":
+                            length = {}
+                            for feat3 in feat2.sub_features:
+                                if feat3.type == "CDS":
+                                    pep_id = feat3.id
+                                    if ensembl_mode:
+                                        pep_id = pep_id.replace("CDS:", "")
+                                    if pep_id not in length:
+                                        length[pep_id] = 0
+                                    length[pep_id] += abs(feat3.location.end - feat3.location.start)
+                            for pep_id in length:
+                                peps[pep_id] = floor(length[pep_id] / 3) - 1
 
         return { "seq_region": seqs, "genes": genes, "translations": peps }
 
