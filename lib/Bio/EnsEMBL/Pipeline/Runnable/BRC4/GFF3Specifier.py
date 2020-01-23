@@ -34,11 +34,11 @@ class GFF3Specifier(eHive.BaseRunnable):
             "biotype",
             ]
 
-    def param_default(self):
+    def param_defaults(self):
         return {
             # Ensembl adds a prefix to features because different
             # types can use the same id in EG (gene and transcript)
-            ensembl_mode : False
+            "ensembl_mode" : False
         }
 
     def run(self):

@@ -12,9 +12,9 @@ from math import floor
 
 class Integrity(eHive.BaseRunnable):
 
-    def param_default(self):
+    def param_defaults(self):
         return {
-                ensembl_mode : False,
+            "ensembl_mode" : False,
         }
 
     def run(self):

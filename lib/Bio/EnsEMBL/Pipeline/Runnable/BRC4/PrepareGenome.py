@@ -7,10 +7,10 @@ import re
 
 class PrepareGenome(eHive.BaseRunnable):
 
-    def param_default(self):
+    def param_defaults(self):
         return {
-                ensembl_mode : False,
-                db_prefix: ""
+                "ensembl_mode" : False,
+                "db_prefix" : ""
         }
 
     def run(self):
