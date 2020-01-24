@@ -125,6 +125,12 @@ while (<$fh>) {
       my $syns = (!defined $set_display_xref_4 || $set_display_xref_4 eq $xref->{id})? $external_syns : undef; 
       $set_display_xref_4 = undef if (defined $set_display_xref_4 && $set_display_xref_4 eq $xref->{id});
 
+      # remove 'self-synonyms'
+      if (defined $syns) {
+        $syns = [ grep { $_ ne $xref->{id} } @$syns ];
+        $syns = undef if (scalar(@$syns) == 0);
+      }
+
       my $xref_db_entry = store_xref(
         $dbea,
         lc("$type"), $obj->dbID,
