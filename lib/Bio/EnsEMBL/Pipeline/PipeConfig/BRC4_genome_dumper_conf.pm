@@ -36,6 +36,13 @@ use Data::Dumper;
 use Bio::EnsEMBL::Hive::Version 2.4;
 use Bio::EnsEMBL::ApiVersion qw/software_version/;
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
+use Class::Inspector;
+use File::Basename;
+
+my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
+my $package_dir = dirname($package_path);
+my $schema_dir = "$package_dir/../../../../../schema";
+
 use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
 
 sub default_options {
@@ -96,14 +103,14 @@ sub default_options {
        'process_logic_names' => [],
        'skip_logic_names'    => [],
 
-     ## Metadata parameters
-       'schema_dir' => $self->o('schema_dir'),
-       'schemas' => {
-         'seq_region' => catfile($self->o('schema_dir'), "seq_region_schema.json"),
-         'functional_annotation' => catfile($self->o('schema_dir'), "functional_annotation_schema.json"),
-         'genome' => catfile($self->o('schema_dir'), "genome_schema.json"),
-         'manifest' => catfile($self->o('schema_dir'), "manifest_schema.json"),
-       },
+
+      ## Metadata parameters
+      'schemas' => {
+        'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
+        'functional_annotation' => catfile($schema_dir, "functional_annotation_schema.json"),
+        'genome' => catfile($schema_dir, "genome_schema.json"),
+        'manifest' => catfile($schema_dir, "manifest_schema.json"),
+      },
 	};
 }
 
