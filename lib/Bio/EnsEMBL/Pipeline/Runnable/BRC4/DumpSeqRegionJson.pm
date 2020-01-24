@@ -27,6 +27,8 @@ sub prepare_data {
   my $csa = $dba->get_adaptor('CoordSystem');
   my $syna = Bio::EnsEMBL::Registry->get_adaptor(
     $self->production_name, "core", "seqregionsynonym" );
+  my $kba = Bio::EnsEMBL::Registry->get_adaptor(
+    $self->production_name, "core", "KaryotypeBand" );
 
   # Get all coord system seq regions
   my @coord_ids = $self->get_coords($dba);
@@ -65,6 +67,10 @@ sub prepare_data {
       my ($so_term) = @{$slice->get_all_Attributes('SO_term')};
       $seq_region->{SO_term} = $so_term->value() if $so_term;
 
+      # karyotype bands
+      my $karyo_bands = $self->get_karyotype_bands($slice, $kba);
+      $seq_region->{karyotype_bands} = $karyo_bands if (scalar(@$karyo_bands) > 0);
+
       push @seq_regions, $seq_region;
     }
   }
@@ -72,7 +78,7 @@ sub prepare_data {
   $dba->dbc()->disconnect_if_idle();
 
   print(scalar(@seq_regions) . " seq_regions\n");
-  
+
   # Sort
   @seq_regions = sort { $a->{name} cmp $b->{name} } @seq_regions;
 
@@ -93,12 +99,34 @@ sub get_coords {
       AND meta_key = 'species.production_name'
       AND meta_value = '$species';
     ";
-  
+
   my $dbh = $dba->dbc->db_handle();
 
   my $array = $dbh->selectcol_arrayref($coords_sql);
 
   return @$array;
+}
+
+sub get_karyotype_bands {
+  my ($self, $slice, $kba) = @_;
+
+  my $res = [];
+  foreach my $band ( @{ $kba->fetch_all_by_Slice($slice) } ) {
+    my $o = {
+      start => $band->seq_region_start,
+      end => $band->seq_region_end,
+      name => $band->name,
+    };
+    my $stain = $band->stain;
+    if (defined $stain) {
+      $o->{stain} = $stain;
+    }
+    $o->{structure} = "telomere" if ($stain eq 'TEL');
+    $o->{structure} = "centromere" if ($stain eq 'ACEN');
+    push @$res, $o;
+  }
+
+  return $res;
 }
 
 1;
