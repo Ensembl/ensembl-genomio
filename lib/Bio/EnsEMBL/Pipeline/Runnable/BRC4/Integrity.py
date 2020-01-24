@@ -50,10 +50,12 @@ class Integrity(eHive.BaseRunnable):
                 gff = self.get_gff3(manifest["gff3"])
             if "fasta_dna" in manifest:
                 print("Got a fasta dna")
-                dna = self.get_fasta_lengths(manifest["fasta_dna"])
+                dna, dna_errors = self.get_fasta_lengths(manifest["fasta_dna"])
+                errors += dna_errors
             if "fasta_pep" in manifest:
                 print("Got a fasta pep")
-                pep = self.get_fasta_lengths(manifest["fasta_pep"])
+                pep, pep_errors = self.get_fasta_lengths(manifest["fasta_pep"])
+                errors += pep_errors
             if "seq_region" in manifest:
                 print("Got a seq_regions")
                 seq_regions = self.get_json(manifest["seq_region"])
@@ -90,13 +92,32 @@ class Integrity(eHive.BaseRunnable):
                 errors += self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
 
         if errors:
-            raise Exception("Integrity test failed: " + str(errors))
+            errors_str = "\n".join(errors)
+            raise Exception("Integrity test failed:\n%s" % errors_str)
 
     def get_fasta_lengths(self, fasta_path):
         data = {}
+        non_unique = {}
+        non_unique_count = 0
+        empty_id_count = 0
         for rec in SeqIO.parse(fasta_path, "fasta"):
-            data[rec.id] = len(rec)
-        return data
+            # Flag empty ids
+            if rec.id == "":
+                empty_id_count += 1
+            else:
+                # Flag redundant ids
+                if rec.id in data:
+                    non_unique[rec.id] = 1
+                    non_unique_count += 1
+                # Store sequence id and length
+                data[rec.id] = len(rec)
+        
+        errors = []
+        if empty_id_count > 0:
+            errors.append("%d sequences with empty ids in %s" % (empty_id_count, fasta_path))
+        if non_unique_count > 0:
+            errors.append("%d non unique sequence ids in %s" % (non_unique_count, fasta_path))
+        return data, errors
 
     def get_json(self, json_path):
         with open(json_path) as json_file:
