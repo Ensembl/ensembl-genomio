@@ -49,6 +49,21 @@
             "mitochondrial_chromosome",
             "nuclear_chromosome"
           ]
+        },
+        "karyotype_bands" : {
+          "type" : "array",
+          "items" : {
+            "type": "object",
+            "description" : "string",
+            "properties": {
+              "name" : { "type" : "string", "description" : "band name" },
+              "start" : { "type" : "integer", "minimum" : 1 , "description" : "band start" },
+              "end" : { "type" : "integer", "minimum" : 1 , "description" : "band end" },
+              "stain" : { "type" : "string", "description" : "band stain. use 'TEL' for telomere and 'ACEN' for centromere" },
+              "structure" : { "type" : "string", "description" : "telomere or centromere flag", "enum" : [ "centromere", "telomere" ] }
+            },
+            "required" : [ "name", "start", "end" ]
+          }
         }
       },
       "required" : [
