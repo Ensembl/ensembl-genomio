@@ -239,27 +239,52 @@ sub pipeline_analyses {
       -max_retry_count => 0,
       -flow_into => {
         2 => WHEN('#check_manifest#', {
-          'check_manifest_schema' => { manifest => '#_0#' }
+          'Manifest_check' => { manifest => '#_0#' }
         }, ELSE({
           'Prepare_genome' => {manifest => '#_0#' }
         })),
       },
     },
-
-     { -logic_name     => 'check_manifest_schema',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-       -parameters     => {
-         json_file => '#manifest#',
-         metadata_type => 'manifest',
-         json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
-         cmd => 'jsonschema -i #json_file# #json_schema#',
-       },
-       -max_retry_count => 0,
-       -analysis_capacity => 1,
-       -batch_size     => 50,
-	     -rc_name        => 'default',
-      -flow_into       => { '1' => 'Manifest_integrity' },
-     },
+    
+    # Checking files
+    {
+      -logic_name => 'Manifest_check',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity => 1,
+      -batch_size     => 50,
+      -flow_into  => {
+        '1->A' => 'Json_schema_factory',
+        'A->1' => 'Manifest_integrity',
+      },
+    },
+    
+    {
+      -logic_name => 'Json_schema_factory',
+      -module     => 'JsonSchemaFactory',
+      -language => 'python3',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity => 1,
+      -batch_size     => 50,
+      -flow_into  => {
+        2 => 'check_json_schema',
+      },
+    },
+    
+    { -logic_name     => 'check_json_schema',
+      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters     => {
+        json_file => '#metadata_json#',
+        json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
+        cmd => 'jsonschema -i #json_file# #json_schema#',
+        hash_key => "#metadata_type#",
+      },
+      -analysis_capacity => 1,
+      -batch_size     => 50,
+      -rc_name        => 'default',
+    },
 
     {
       # Check the integrity of the manifest before loading anything
