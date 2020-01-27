@@ -2,6 +2,7 @@
 
 from BCBio import GFF
 
+import re
 import eHive
 import json
 from Bio import SeqIO
@@ -44,6 +45,7 @@ class Integrity(eHive.BaseRunnable):
             gff = {}
             func_ann = {}
             agp_seqr = {}
+            genome = {}
 
             if "gff3" in manifest:
                 print("Got a gff")
@@ -71,6 +73,18 @@ class Integrity(eHive.BaseRunnable):
             if "agp" in manifest:
                 print("Got agp files")
                 agp_seqr = self.get_agp_seq_regions(manifest['agp'])
+            if "genome" in manifest:
+                print("Got a genome")
+                genome = self.get_json(manifest["genome"])
+
+            # Check genome
+            if genome:
+                if "assembly" in genome:
+                    genome_ass = genome["assembly"]
+                    if "accession" in genome_ass:
+                        genome_acc = genome_ass["accession"]
+                        if not re.match("GCA_\d{9}(\.\d+)?", genome_acc):
+                            errors += ["Genome assembly accession is wrong: '%s'" %genome_acc]
 
             # Check gff3
             if gff:
