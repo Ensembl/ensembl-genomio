@@ -46,6 +46,14 @@ sub prepare_data {
     for my $key (@{$meta_list{$domain}}) {
       my @values = @{ $ma->list_value_by_key($domain . '.' . $key) };
       next if scalar(@values) < 1;
+      # Special case: assembly version should be a number,
+      # extracted from the end of the assembly
+      if ("$domain.$key" eq 'assembly.version') {
+        die if @values > 1;
+        my $av = $values[0];
+        $av =~ s/^\D+(\d+)$//;
+        @values = ($av);
+      }
       @values = map { int($_) } @values if $integer{$domain . '.' . $key};
       $meta->{$domain}->{$key} = (scalar(@values) > 1)? \@values : $values[0];
     }
