@@ -110,6 +110,9 @@ sub get_coords {
 sub get_karyotype_bands {
   my ($self, $slice, $kba) = @_;
 
+  #return [] if (!$slice->adaptor()->is_toplevel( $slice->get_seq_region_id() ));
+  return [] if (!$slice->is_toplevel); # "At risk", can became legacy
+
   my $res = [];
   foreach my $band ( @{ $kba->fetch_all_by_Slice($slice) } ) {
     my $o = {

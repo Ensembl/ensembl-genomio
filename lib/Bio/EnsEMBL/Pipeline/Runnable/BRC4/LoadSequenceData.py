@@ -30,6 +30,7 @@ class LoadSequenceData(eHive.BaseRunnable):
                 'codon_table' : 'codon_table',
                 'location' : 'SO_term',
                 'non_ref' : 'non_ref',
+                'karyotype_bands' : 'karyotype_bands',
             },
             'not_toplevel_cs' : [], # i.e. "contig", "non_ref_scaffold"
             'nullify_cs_version_from' : 'contig',
@@ -73,7 +74,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         seq_reg_file = self.from_param("manifest_data", "seq_region")
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
-        self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), unversion_scaffolds)
+        self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), karyotype_info_tag = "karyotype_bands")
 
         self.add_asm_mappings(agps_pruned.keys(), pj(wd, "asm_mappings"))
 
@@ -81,7 +82,6 @@ class LoadSequenceData(eHive.BaseRunnable):
 
         asm_meta = self.from_param("genome_data","assembly")
         self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"))
-
 
 
     # STAGES
@@ -214,7 +214,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         return sp.run(cmd, shell=True, check=True)
 
 
-    def add_sr_attribs(self, meta_file, wd, unversioned = False):
+    def add_sr_attribs(self, meta_file, wd, karyotype_info_tag = None):
         os.makedirs(wd, exist_ok=True)
         # find interesting attribs in meta_file
         attribs_map = self.param("sr_attrib_types")
@@ -252,9 +252,45 @@ class LoadSequenceData(eHive.BaseRunnable):
                 lambda p:(p[1], p[0][tag]),
                 filter(lambda x: tag in x[0], chosen.values())
             ))
-            self.set_sr_attrib(attr_type, srlist, pj(wd, "sr_attr_set_"+tag))
+            self.set_sr_attrib(
+                attr_type,
+                srlist,
+                pj(wd, "sr_attr_set_"+tag),
+                (karyotype_info_tag and tag == karyotype_info_tag)
+            )
 
-    def set_sr_attrib(self, attr_type, id_val_lst, log_pfx):
+
+    def add_karyotype_bands(self, id_val_lst, log_pfx):
+        os.makedirs(dirname(log_pfx), exist_ok=True)
+        insert_sql_file = log_pfx + "_insert_karyotype_bands.sql"
+        if len(id_val_lst) <= 0:
+            return
+        with open(insert_sql_file, "w") as sql:
+            print("insert into karyotype (seq_region_id, seq_region_start, seq_region_end, band, stain) values", file=sql)
+            sep = ""
+            for _sr_id, _val in id_val_lst:
+                for band in _val:
+                    # print("BAND: " + str(band), file = sys.stderr)
+                    start = band["start"]
+                    end = band["end"]
+                    name = "name" in band and "'%s'" % (band["name"]) or "NULL"
+                    stain = "stain" in band and "'%s'" % (band["stain"]) or "NULL"
+                    if "structure" in band:
+                        if band["structure"] == "telomere":
+                            stain = "'TEL'"
+                        elif band["structure"] == "centromere":
+                            stain = "'ACEN'"
+                    val_str =  ",".join(list(map(lambda x: str(x), [_sr_id, start, end, name, stain])))
+                    print ('%s (%s)' % (sep, val_str), file = sql)
+                    sep = ","
+            print(";", file=sql)
+        # run insert sql
+        self.run_sql_req(insert_sql_file, log_pfx, from_file = True)
+
+
+    def set_sr_attrib(self, attr_type, id_val_lst, log_pfx, karyotype_info = False):
+        if karyotype_info: 
+            return self.add_karyotype_bands(id_val_lst, log_pfx)
         # generaate sql req for loading
         os.makedirs(dirname(log_pfx), exist_ok=True)
         insert_sql_file = log_pfx + "_insert_attribs.sql"
