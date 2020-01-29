@@ -51,7 +51,7 @@ sub prepare_data {
       if ("$domain.$key" eq 'assembly.version') {
         die if @values > 1;
         my $av = $values[0];
-        $av =~ s/^\D+(\d+)$//;
+        $av =~ s/^\D+(\d+)$/$1/;
         @values = ($av);
       }
       @values = map { int($_) } @values if $integer{$domain . '.' . $key};
