@@ -66,7 +66,7 @@ sub param_defaults {
                         'pseudogenic_rRNA', 'pseudogenic_tRNA',
                         'ncRNA', 'lincRNA', 'lncRNA', 'miRNA', 'pre_miRNA',
                         'RNase_MRP_RNA', 'RNAse_P_RNA', 'rRNA', 'snoRNA',
-                        'snRNA', 'sRNA', 'SRP_RNA', 'tRNA'],
+                        'snRNA', 'sRNA', 'SRP_RNA', 'tRNA', 'scRNA'],
     exon_types      => ['exon', 'pseudogenic_exon'],
     cds_types       => ['CDS'],
     utr_types       => ['five_prime_UTR', 'three_prime_UTR'],

@@ -94,7 +94,7 @@ sub default_options {
         pseudogenic_rRNA pseudogenic_tRNA
         ncRNA lincRNA lncRNA miRNA pre_miRNA
         RNase_MRP_RNA RNAse_P_RNA rRNA snoRNA
-        snRNA sRNA SRP_RNA tRNA
+        snRNA sRNA SRP_RNA tRNA scRNA
         lnc_RNA
       /],
     gff3_exon_types   => [qw/ exon pseudogenic_exon /],
