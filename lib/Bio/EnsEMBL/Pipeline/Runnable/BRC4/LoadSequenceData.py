@@ -202,16 +202,56 @@ class LoadSequenceData(eHive.BaseRunnable):
 
     def set_toplevel(self, log_pfx, ignored_cs = []):
         # set top_level(6) seq_region_attrib
+        os.makedirs(dirname(log_pfx), exist_ok=True)
         en_root = self.param_required("ensembl_root_dir")
         cmd = (r'''{_set_tl} {_db_string} {_ignored_cs} ''' +
                r'''     > {_log}.stdout 2> {_log}.stderr''').format(
             _set_tl = "perl %s" % (pj(en_root, r"ensembl-pipeline/scripts/set_toplevel.pl")),
             _db_string = self.db_string(),
             _ignored_cs = " ".join(map(lambda x: "-ignore_coord_system %s" % (x), ignored_cs)),
-            _log = "%s_seq" % (log_pfx),
+            _log = log_pfx,
         )
         print("running %s" % (cmd), file = sys.stderr)
-        return sp.run(cmd, shell=True, check=True)
+        sp.run(cmd, shell=True, check=True)
+        # remove toplevel attribute for seq_regions that are parts of different seq_regions
+        sql_not_toplevel_list = r'''
+          select distinct a.cmp_seq_region_id, sr_c.name, cs_c.name
+            from assembly a,
+                 seq_region sr_c, seq_region sr_a,
+                 coord_system cs_c, coord_system cs_a
+            where a.cmp_seq_region_id = sr_c.seq_region_id
+              and a.asm_seq_region_id = sr_a.seq_region_id
+              and sr_c.coord_system_id = cs_c.coord_system_id
+              and sr_a.coord_system_id = cs_a.coord_system_id
+              and cs_c.attrib like "%default_version%"
+              and cs_a.attrib like "%default_version%"
+              and sr_c.seq_region_id in (
+                select distinct seq_region_id
+                  from seq_region_attrib
+                  where attrib_type_id = 6 and value = 1
+              )
+        '''
+        # perhaps, make sense to check sr_c.coord_system_id != sr_a.coord_system_id
+        self.run_sql_req(sql_not_toplevel_list, ".".join([log_pfx, "not_toplevel_list"]))
+        # delete wrongly assigned attribs
+        sql_not_toplevel_delete = r'''
+          delete from seq_region_attrib
+            where attrib_type_id = 6 and value = 1
+              and seq_region_id in (
+                select distinct a.cmp_seq_region_id
+                  from assembly a,
+                       seq_region sr_c, seq_region sr_a,
+                       coord_system cs_c, coord_system cs_a
+                  where a.cmp_seq_region_id = sr_c.seq_region_id
+                    and a.asm_seq_region_id = sr_a.seq_region_id
+                    and sr_c.coord_system_id = cs_c.coord_system_id
+                    and sr_a.coord_system_id = cs_a.coord_system_id
+                    and cs_c.attrib like "%default_version%"
+                    and cs_a.attrib like "%default_version%"
+              );
+        '''
+        # perhaps, check sr_c.coord_system_id != sr_a.coord_system_id
+        self.run_sql_req(sql_not_toplevel_delete, ".".join([log_pfx, "not_toplevel_delete"]))
 
 
     def add_sr_attribs(self, meta_file, wd, karyotype_info_tag = None):
