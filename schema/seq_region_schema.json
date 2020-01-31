@@ -64,6 +64,11 @@
             },
             "required" : [ "name", "start", "end" ]
           }
+        },
+        "length" : {
+          "type" : "integer",
+          "minimum" : 1,
+          "description" : "wikipedia: 33, https://www.ebi.ac.uk/ena/browse/translation-tables: 25"
         }
       },
       "required" : [
