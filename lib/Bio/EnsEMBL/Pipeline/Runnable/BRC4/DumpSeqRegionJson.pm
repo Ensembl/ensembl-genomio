@@ -123,9 +123,9 @@ sub get_karyotype_bands {
     my $stain = $band->stain;
     if (defined $stain) {
       $o->{stain} = $stain;
+      $o->{structure} = "telomere" if ($stain eq 'TEL');
+      $o->{structure} = "centromere" if ($stain eq 'ACEN');
     }
-    $o->{structure} = "telomere" if ($stain eq 'TEL');
-    $o->{structure} = "centromere" if ($stain eq 'ACEN');
     push @$res, $o;
   }
 
