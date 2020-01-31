@@ -70,6 +70,9 @@ sub prepare_data {
 
   $dba->dbc()->disconnect_if_idle();
 
+  # Sort for easier file comparison
+  @features = sort { $a->{id} cmp $b->{id} } @features;
+
   return \@features;
 }
 
