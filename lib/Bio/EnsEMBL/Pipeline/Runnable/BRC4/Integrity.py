@@ -180,7 +180,7 @@ class Integrity(eHive.BaseRunnable):
                     genes[gene_id] = abs(feat.location.end - feat.location.start)
                     # Get CDS
                     for feat2 in feat.sub_features:
-                        if feat2.type == "mRNA":
+                        if feat2.type in ("mRNA", "pseudogenic_transcript"):
                             length = {}
                             for feat3 in feat2.sub_features:
                                 if feat3.type == "CDS":
