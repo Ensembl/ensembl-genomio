@@ -4,6 +4,7 @@ import eHive
 import json
 from os import path
 import re
+import mysql.connector
 
 class PrepareGenome(eHive.BaseRunnable):
 
@@ -64,8 +65,8 @@ class PrepareGenome(eHive.BaseRunnable):
                 return json.load(genome_file)
 
     def make_db_name(self, genome):
-
-        production_name = genome["species"]["production_name"]
+        
+        production_name = self.make_production_name(genome)
         ensembl_version = str(self.param_required("ensembl_version"))
         release = str(self.param_required("release"))
         assembly_version = str(self.get_assembly_version(genome))
@@ -86,19 +87,80 @@ class PrepareGenome(eHive.BaseRunnable):
             db_name = db_prefix + "_" + db_name
 
         return db_name
+    
+    def make_production_name(self, genome):
+        if "species" in genome:
+            genome_sp = genome["species"]
+            if "production_name" in genome_sp:
+                prod_name = genome_sp["production_name"]
+            else:
+                # Create prod name from taxonomy
+                if "taxonomy_id" in genome_sp:
+                    taxon_id = genome_sp["taxonomy_id"]
+                    scientific_name = self.get_scientific_name(taxon_id)
+                    # Only keep the first 2 words
+                    split_name = scientific_name.split(" ")
+                    genus = split_name[0].lower()
+                    species = split_name[1]
+                    prod_name = genus + "_" + species
+                else:
+                    raise Exception("Can't find taxonomy id for genome: %s" % genome)
+            return prod_name
+        else:
+            raise Exception("Can't make production name for genome: %s" % genome)
+    
+    def get_scientific_name(self, taxon_id):
+        
+        host = self.param("taxonomy_host")
+        user = self.param("taxonomy_user")
+        port = self.param("taxonomy_port")
+        dbname = self.param("taxonomy_dbname")
+        
+        # Get connector to taxon db
+        mydb = mysql.connector.connect(
+                host=host,
+                user=user,
+                port=port,
+                database=dbname
+                )
+        cur = mydb.cursor()
+        
+        # Get scientific name
+        select_st = "SELECT name FROM ncbi_taxa_name WHERE name_class=%s and taxon_id=%s"
+        data = ("scientific name", taxon_id)
+        cur.execute(select_st, data)
+        row = cur.fetchone()
+        for s in row:
+            return s
+        return
 
     def get_assembly_version(self, genome):
 
         if "assembly" in genome:
             assembly = genome["assembly"]
-            if "version" in assembly and isinstance(assembly["version"], int):
-                return assembly["version"]
+            if "version" in assembly:
+                aversion = assembly["version"]
+                if isinstance(aversion, int):
+                    return aversion
+                else:
+                    try:
+                        aversion = int(aversion)
+                        return aversion
+                    except:
+                        raise Exception("Assembly version is not an integer: %s" % aversion)
             elif "name" in assembly:
                 # Get last number at the end of the assembly name
                 matches = re.match("\w+?(\d+?)$", assembly["name"])
                 if matches:
                     version = matches.group(1)
                     return version
+                else:
+                    raise Exception("No assembly version found in %s" % str(genome))
+            else:
+                raise Exception("Can't get assembly version from name in from %s" % str(genome))
+        else:
+            raise Exception("Can't get assembly data in genome %s" % str(genome))
+                
 
     def check_db_name_format(self, db_name):
         match = re.match("[a-z]+_[a-z]+(_[a-z0-9]+)?_core_\d+_\d+_\d+$", db_name)
