@@ -708,7 +708,22 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
+      -flow_into => 'MetaCoord',
     },
+
+    {
+      -logic_name    => "MetaCoord",
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'base_dir'       => $self->o('ensembl_root_dir'),
+        'cmd' => 'perl #base_dir#/ensembl/misc-scripts/meta_coord/update_meta_coord.pl '
+            . ' --dbhost #dbsrv_host# --dbport #dbsrv_port# --dbuser #dbsrv_user# --dbpass #dbsrv_pass# --dbpattern #db_name# ',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 1,
+    },
+
 
   ];
 }
