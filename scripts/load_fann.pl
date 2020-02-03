@@ -77,7 +77,7 @@ my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 my $dbea = $dba->get_DBEntryAdaptor;
 my $_a = {};
 sub a {
-  my ($dba, $name) = @_;  
+  my ($dba, $name) = @_;
   if (!exists $_a->{$name}) {
     # warn "getting adaptor for \"$name\"\n";
     $_a->{$name} = $dba->get_adaptor($name);
@@ -104,52 +104,55 @@ while (<$fh>) {
     }
 
     if (lc($type) eq "gene") {
-      $obj->description($it->{description}) if (exists $it->{description} && $it->{description} !~ m/^\s*$/); 
-      # update 
+      $obj->description($it->{description}) if (exists $it->{description} && $it->{description} !~ m/^\s*$/);
+      # update
       eval { $a->update($obj) };
       if ($@) {
         warn "failed to update object (id: \"$id\", type \"$type\"): $@\n";
-      } 
+      }
     }
-    
+
     # xrefs
     my $ont = array_ref($it->{ontology_terms});
-    my $xrefs_raw = array_ref($it->{xrefs}); 
+    my $xrefs_raw = array_ref($it->{xrefs});
     my $synonyms = array_ref($it->{synonyms});
 
-    my ($set_display_xref_4, $external_syns) = get_syns($synonyms, $id, $type);
-
+    my ($display_xref, $syns) = get_syns($synonyms, $id, $type);
     my @xrefs = ( @$xrefs_raw, map { { id => $_, dbname => substr($_, 0, 2) } } @$ont );
+
+    my $already_used = 0;
     for my $xref (@xrefs) {
-      # use synonyms only first time or for the specific reference (the first one) (only once, if ids match)
-      my $syns = (!defined $set_display_xref_4 || $set_display_xref_4 eq $xref->{id})? $external_syns : undef; 
-      $set_display_xref_4 = undef if (defined $set_display_xref_4 && $set_display_xref_4 eq $xref->{id});
+      # "attach" synonyms to the xref with the display_xref_name
+      #  or to the first seen xref
+      my $attach_syns = 0;
+      if (defined $display_xref) {
+        $attach_syns = $display_xref eq $xref->{id};
+      } else {
+        $attach_syns = !$already_used;
+        $already_used = 1;
+      }
 
       # remove 'self-synonyms'
-      if (defined $syns) {
-        $syns = [ grep { $_ ne $xref->{id} } @$syns ];
-        $syns = undef if (scalar(@$syns) == 0);
-      }
+      my $add_list = $attach_syns
+        ? [ grep {$_ ne $xref->{id} } @{$syns || []} ]
+        : undef;
 
       my $xref_db_entry = store_xref(
         $dbea,
         lc("$type"), $obj->dbID,
         $xref->{dbname}, $xref->{id}, $xref->{id},
-        $syns,
+        $add_list,
         $xref->{description}, $xref->{info_type}, $xref->{info_text}
       );
-      
+
       # update 'display_xref' only for the first time or for the $set_display_xref_4
-      if (defined $xref_db_entry && defined $syns && scalar(@$syns) > 0) {
-        eval { $obj->display_xref($xref_db_entry) };
+      if (defined $display_xref && $display_xref eq $xref->{id}) {
+        $obj->display_xref($xref_db_entry);
+        eval{ $a->update($obj) };
         if ($@) {
           warn "Failed to update display_xref_id for $type $id (", $xref->{dbname}.":".$xref->{id} ,")\n";
-        } else {
-          $a->update($obj);
         }
       }
-      # add synonyms only for the xref specified by $set_display_xref_4 or the first one
-      $external_syns = undef if (! defined $set_display_xref_4);
     }
   }
 }
@@ -164,8 +167,8 @@ sub get_syns {
   my @default_ones = map { $_->{synonym} } grep { ref($_) eq "HASH" && ($_->{default}) } @$synonyms;
   if (scalar(@default_ones) > 1) {
     warn "not a single default synonym for \"$type\" \"$id\"\n";
-  } 
-  my @syns = map { ref($_) ne "HASH" ? $_ : $_->{synonym} } @$synonyms; 
+  }
+  my @syns = map { ref($_) ne "HASH" ? $_ : $_->{synonym} } @$synonyms;
   return ($default_ones[0], \@syns)
 }
 
