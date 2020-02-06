@@ -15,7 +15,7 @@
       "type": "object",
       "properties": {
         "name" : { "type" : "string" },
-        "synonym" : {
+        "synonyms" : {
           "oneOf" : [
             { "$ref" : "#/definitions/seq_region_synonym_info" },
             { "type" : "array", "items" : { "$ref" : "#/definitions/seq_region_synonym_info" } }
