@@ -4,14 +4,21 @@
   "description" : "JSON schema for exchanging meta information for scaffolds",
 
   "definitions" : {
+    "seq_region_synonym_info" : {
+      "type": "object",
+      "properties": {
+        "name" : { "type" : "string" },
+        "source": { "type" : "string" }
+      }
+    },
     "seq_region_info" : {
       "type": "object",
       "properties": {
         "name" : { "type" : "string" },
         "synonym" : {
           "oneOf" : [
-            { "type" : "string" },
-            { "type" : "array", "items" : { "type" : "string"} }
+            { "$ref" : "#/definitions/seq_region_synonym_info" },
+            { "type" : "array", "items" : { "$ref" : "#/definitions/seq_region_synonym_info" } }
           ],
           "description" : "Personally I don't like having array and obj with the same name."
         },
