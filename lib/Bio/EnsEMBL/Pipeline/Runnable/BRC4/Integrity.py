@@ -1,15 +1,17 @@
 #!env python3
 
-from BCBio import GFF
-
-import re
 import eHive
-import json
-from Bio import SeqIO
-from os import path
 import gzip
 import io
+import json
+import re
+import sys
+
+from BCBio import GFF
+from Bio import SeqIO
+from os import path
 from math import floor
+
 
 class Integrity(eHive.BaseRunnable):
 
@@ -90,10 +92,10 @@ class Integrity(eHive.BaseRunnable):
             if gff:
                 if pep:
                     # We don't compare the peptide lengths because of seqedits
-                    errors += self.check_lengths(pep, gff["translations"], "Fasta translations vs gff")
+                    errors += self.check_lengths(pep, gff["translations"], "Fasta translations vs gff", special_diff = True)
                 if func_ann:
-                    errors += self.check_lengths(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff")
-                    errors += self.check_lengths(func_ann["translations"], gff["translations"], "Translation ids metadata vs gff")
+                    errors += self.check_lengths(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff", ok = "1in2")
+                    errors += self.check_lengths(func_ann["translations"], gff["translations"], "Translation ids metadata vs gff", ok = "1in2")
                 if seq_regions:
                     errors += self.check_seq_region_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff")
 
@@ -243,46 +245,49 @@ class Integrity(eHive.BaseRunnable):
         return errors
 
             
-    def check_lengths(self, list1, list2, name, allowed_diff = None):
-        only1 = [];
-        only2 = [];
+    def check_lengths(self, list1, list2, name, allowed_len_diff = None, ok = None, special_diff = False):
+        # check list diffferences, checks if abs(values diff) < allowed_len_diff
+        #  use 'ok' set to "1in2" or "2in1" if it's ok to have asymmetry 
+        set1 = frozenset(list1)
+        set2 = frozenset(list2)
 
-        common = [];
-        diff = [];
-        diff_list = [];
-        diff1 = [];
-        diff1_list = [];
-
-        for item_id in list1:
-            if item_id in list2:
-                # Check that the difference of length is within a threshold
-                if allowed_diff is not None and abs(list1[item_id] - list2[item_id]) > allowed_diff:
-                    # Special case: shorter by one, so assuming the stop codon is not included in the CDS (when it should be)
-                    if list1[item_id] - list2[item_id] == 1:
-                        diff1.append(item_id)
-                        diff1_list.append("%s: %d vs %d" % (item_id, list1[item_id], list2[item_id]))
-                    else:
-                        diff.append(item_id)
-                        diff_list.append("%s: %d vs %d" % (item_id, list1[item_id], list2[item_id]))
-                else:
-                    common.append(item_id)
-            else:
-                only1.append(item_id)
-        for item_id in list2:
-            if item_id not in common and item_id not in diff and item_id not in diff1:
-                only2.append(item_id)
+        list1_2 = list(set1 - set2)
+        list2_1 = list(set2 - set1)
 
         errors = []
-        if common:
-            print("%d common elements in %s" % (len(common), name))
-        if diff1:
-            errors.append("%d common elements with one shorter in %s (e.g. %s)" % (len(diff1), name, diff1_list[0]))
-        if diff:
-            errors.append("%d common elements with different length in %s (e.g. %s)" % (len(diff), name, diff_list[0]))
-        if only1:
-            errors.append("%d only in first list in %s (first: %s, last: %s)" % (len(only1), name, only1[0], only1[-1]))
-        if only2:
-            errors.append("%d only in second list in %s (first: %s, last: %s)" % (len(only2), name, only2[0], only2[-1]))
+        if len(list1_2) > 0 and (ok != "2in1"):
+            errors.append("%d from the first list only for %s (i.e. %s)" % (len(list1_2), name, list1_2[0]))
+        if len(list2_1) > 0 and (ok != "1in2"):
+            errors.append("%d from the second list only for %s (i.e. %s)" % (len(list2_1), name, list2_1[0]))
+
+        common_len = 0
+        if allowed_len_diff is None:
+            common_len = len(set1 & set2)
+        else:
+            # check for the sequence length difference
+            diff_len_list = []
+            diff_len_special_list = []
+            for e in set1 & set2:
+                dl12 = list1[item_id] - list2[item_id]
+                if abs(dl12) <= allowed_len_diff:
+                    common_len += 1
+                else:
+                    _dlist = diff_len_list
+                    # Special case: 1 AA /BP shorter,
+                    #   so assuming the stop codon is not included in the CDS (when it should be)
+                    if dl12 == 1 and special_diff:
+                        _dlist = diff_len_special_list
+                    _dlist.append("%s: %d vs %d" % (item_id, list1[item_id], list2[item_id]))
+            if diff_len_special_list:
+                errors.append("%d common elements with one BP/AA length diff for %s (e.g. %s)" % (
+                    len(diff_len_special_list), name, diff_len_special_list[0]
+                ))
+            if diff_len_list:
+                errors.append("%d common elements with length diff for %s (e.g. %s)" % (
+                    len(diff_len_list), name, diff_len_list[0]
+                ))
+        if common_len > 0:
+            print("%d common elements between lists for %s" % (common_len, name), file = sys.stderr)
 
         return errors
 
