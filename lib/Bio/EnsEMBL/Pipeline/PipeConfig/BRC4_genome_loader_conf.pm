@@ -430,7 +430,7 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
         'cmd' => 'mkdir -p #log_path#; '
-            . ' perl #base_dir#/ensembl-pipeline/scripts/load_taxonomy.pl '
+            . ' perl #base_dir#/ensembl-analysis/scripts/assembly_loading/load_taxonomy.pl '
             . '   --dbhost #dbsrv_host# --dbport #dbsrv_port# '
             . '   --dbuser #dbsrv_user# --dbpass #dbsrv_pass# '
             . '   --dbname #db_name# '

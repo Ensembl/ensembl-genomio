@@ -206,7 +206,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         en_root = self.param_required("ensembl_root_dir")
         cmd = (r'''{_set_tl} {_db_string} {_ignored_cs} ''' +
                r'''     > {_log}.stdout 2> {_log}.stderr''').format(
-            _set_tl = "perl %s" % (pj(en_root, r"ensembl-pipeline/scripts/set_toplevel.pl")),
+            _set_tl = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/set_toplevel.pl")),
             _db_string = self.db_string(),
             _ignored_cs = " ".join(map(lambda x: "-ignore_coord_system %s" % (x), ignored_cs)),
             _log = log_pfx,
@@ -625,7 +625,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         cmd = (r'''{_loader} {_db_string} -coord_system_version {_asm_v} -default_version ''' +
                r'''    -rank {_rank} -coord_system_name {_cs} {_sl_flag} -{_tag}_file {_file}''' +
                r'''     > {_log}.stdout 2> {_log}.stderr''').format(
-            _loader = "perl %s" % (pj(en_root, r"ensembl-pipeline/scripts/load_seq_region.pl")),
+            _loader = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/load_seq_region.pl")),
             _db_string = self.db_string(),
             _asm_v = asm_v,
             _rank = rank,
@@ -646,7 +646,7 @@ class LoadSequenceData(eHive.BaseRunnable):
                r'''    -assembled_name {_asm} -component_name {_cmp} ''' +
                r'''    -agp_file {_file} ''' +
                r'''    > {_log}.stdout 2> {_log}.stderr''').format(
-            _loader = "perl %s" % (pj(en_root, r"ensembl-pipeline/scripts/load_agp.pl")),
+            _loader = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/load_agp.pl")),
             _db_string = self.db_string(),
             _asm_v = asm_v,
             _asm = asm_n,
@@ -670,7 +670,7 @@ class LoadSequenceData(eHive.BaseRunnable):
 
     def agp_prune(self, from_file, to_file, used = None):
         # reomve used component
-        #   and GAPS as they are not used by 'ensembl-pipeline/scripts/load_agp.pl'
+        #   and GAPS as they are not used by 'ensembl-analysis/scripts/assembly_loading/load_agp.pl'
         os.makedirs(dirname(to_file), exist_ok=True)
         open_ = self.is_gz(from_file) and gzip.open or open
         if used is None:
