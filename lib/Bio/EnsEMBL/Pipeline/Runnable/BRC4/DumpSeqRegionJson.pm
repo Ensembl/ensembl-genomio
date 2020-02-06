@@ -50,7 +50,9 @@ sub prepare_data {
 
       # Additional metadata
       # Synonyms? Array
-      $seq_region->{synonyms} = [ map { $_->name } @$syns ] if @$syns;
+      if (@$syns) {
+        $seq_region->{synonyms} = [ sort { $a->{name} cmp $b->{name} } map { { name => $_->name, source => $_->dbname } } @$syns ];
+      }
 
       # Is circular? Boolean
       $seq_region->{circular} = JSON::true if $slice->is_circular;

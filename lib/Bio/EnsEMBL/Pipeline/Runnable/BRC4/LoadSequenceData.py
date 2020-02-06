@@ -368,9 +368,11 @@ class LoadSequenceData(eHive.BaseRunnable):
 
     def add_sr_synonyms(self, meta_file, wd, unversioned = False):
         os.makedirs(wd, exist_ok=True)
+
         # get names, syns from db
         syns_out_pfx = pj(wd, "syns_from_core")
         self.get_db_syns(syns_out_pfx)
+
         # load them into dict
         sr_ids = dict()
         seen_syns_pre = []
@@ -384,6 +386,7 @@ class LoadSequenceData(eHive.BaseRunnable):
                 if syn != "NULL":
                     seen_syns_pre.append(syn)
         seen_syns = frozenset(seen_syns_pre)
+
         # load syns from file
         new_syns = dict()
         with open(meta_file) as mf:
@@ -393,7 +396,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             for e in data:
                 if "synonyms" not in e:
                    continue
-                es = list(filter(lambda s: s not in seen_syns, e["synonyms"]))
+                es = list(filter(lambda s: s["name"] not in seen_syns, e["synonyms"]))
                 # do we need unversioned syn as well???
                 # Nov 2019: no, we need explicit list
                 if len(es) <= 0:
@@ -407,26 +410,41 @@ class LoadSequenceData(eHive.BaseRunnable):
                 if eid is None:
                     raise Exception("Not able to find seq_region for '%s'" % (e["name"]))
                 new_syns[eid] = es
-        # generaate sql req for loading
+
+        # generate sql req for loading
         insert_sql_file = pj(wd, "insert_syns.sql")
         if new_syns:
+            # Get the external_db ids for the synonym sources
+            ext_db_pfx = pj(wd, "ext_dbs")
+            extdb_ids = self.get_external_db_ids(ext_db_pfx)
+
             with open(insert_sql_file, "w") as sql:
-                print("insert into seq_region_synonym (seq_region_id, synonym) values", file=sql)
+                print("insert into seq_region_synonym (seq_region_id, synonym, external_db_id) values", file=sql)
                 fst = ""
                 for _sr_id, _sr_syn in sum(map(lambda p: [(p[0], s) for s in p[1]], new_syns.items()), [ ]):
-                    print ('%s (%s, "%s")' % (fst, _sr_id, _sr_syn), file = sql)
-                    fst = ","
+                    if _sr_syn["source"] in extdb_ids:
+                        extdb_id = extdb_ids[_sr_syn["source"]]
+                        print ('%s (%s, "%s", %s)' % (fst, _sr_id, _sr_syn["name"], extdb_id), file = sql)
+                        fst = ","
+                    else:
+                        raise Exception("There is no external_db for source '%s'" % _sr_syn["name"])
                 print(";", file=sql)
+
             # run insert sql
             self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
-            # update external_db_id
-            sql_update_xdb = r'''update seq_region_synonym srs, external_db xdb
-                set srs.external_db_id = xdb.external_db_id
-                where srs.external_db_id is NULL
-                  and xdb.db_name = "%s"
-            ;''' % (self.param("sr_syn_src"))
-            self.run_sql_req(sql_update_xdb, pj(wd, "update_syns_xdb"))
 
+    def get_external_db_ids(self, out_pfx):
+        sql = r'''select external_db_id, db_name FROM external_db;'''
+        res = self.run_sql_req(sql, out_pfx)
+
+        dbs = {}
+        with open(out_pfx + ".stdout") as db_file:
+            for line in db_file:
+                if (line.startswith("external_db_id")):
+                    continue
+                (db_id, name) = line.strip().split("\t")
+                dbs[name] = db_id
+        return dbs
 
     def unversion_scaffolds(self, cs_rank, logs):
         # non-versioned syns for contigs, versioned for the rest
