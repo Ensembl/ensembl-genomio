@@ -200,8 +200,16 @@ sub protein_seq_report {
         
         if ($db_seq ne $file_seq) {
           my $length = length($db_seq);
-          push @results, [$tt_id, $tn_id, 'Sequences do not match', $db_seq, $file_seq];
-          push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 144, '1 $length $file_seq' FROM translation WHERE stable_id = '$tn_id';";
+
+          # Initial methionine only?
+          (my $met_first_db_seq = $file_seq) =~ s/^./M/;
+          if ($met_first_db_seq eq $file_seq) {
+            push @results, [$tt_id, $tn_id, 'First amino acid in db changed to Met', $db_seq, $file_seq];
+            push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 170, '1 1 M' FROM translation WHERE stable_id = '$tn_id';";
+          } else {
+            push @results, [$tt_id, $tn_id, 'Sequences do not match', $db_seq, $file_seq];
+            push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 144, '1 $length $file_seq' FROM translation WHERE stable_id = '$tn_id';";
+          }
           push @fixes, "UPDATE gene INNER JOIN transcript USING (gene_id) SET gene.biotype = 'protein_coding', transcript.biotype = 'protein_coding' WHERE transcript.stable_id = '$tt_id';";
         }
         
