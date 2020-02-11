@@ -158,6 +158,7 @@ class PrepareGenome(eHive.BaseRunnable):
                 else:
                     try:
                         aversion = int(aversion)
+                        genome["assembly"]["version"] = aversion
                         return aversion
                     except:
                         raise Exception("Assembly version is not an integer: %s" % aversion)
@@ -165,8 +166,9 @@ class PrepareGenome(eHive.BaseRunnable):
                 # Get last number at the end of the assembly name
                 matches = re.match("\w+?(\d+?)$", assembly["name"])
                 if matches:
-                    version = matches.group(1)
-                    return version
+                    aversion = matches.group(1)
+                    genome["assembly"]["version"] = aversion
+                    return aversion
                 else:
                     raise Exception("No assembly version found in %s" % str(genome))
             else:
