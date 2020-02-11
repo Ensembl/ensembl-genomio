@@ -102,11 +102,20 @@ class PrepareGenome(eHive.BaseRunnable):
                 if "taxonomy_id" in genome_sp:
                     taxon_id = genome_sp["taxonomy_id"]
                     scientific_name = self.get_scientific_name(taxon_id)
+                    
                     # Only keep the first 2 words
                     split_name = scientific_name.split(" ")
                     genus = split_name[0].lower()
                     species = split_name[1]
-                    prod_name = genus + "_" + species
+                    
+                    # Production name, with INSDC accession for uniqueness
+                    accession = genome["assembly"]["accession"]
+                    if not accession or accession == "":
+                        raise Exception("The INSDC accession is needed")
+                    accession = re.sub("\.\d+$", "", accession)
+                    accession = accession.lower()
+                    prod_name = genus + "_" + species + "_" + accession
+                    genome["species"]["production_name"] = prod_name
                 else:
                     raise Exception("Can't find taxonomy id for genome: %s" % genome)
             return prod_name
@@ -167,7 +176,7 @@ class PrepareGenome(eHive.BaseRunnable):
                 
 
     def check_db_name_format(self, db_name):
-        match = re.match("[a-z]+_[a-z]+(_[a-z0-9]+)?_core_\d+_\d+_\d+$", db_name)
+        match = re.match("[a-z]+_[a-z]+(_[A-z0-9]+){0,3}_core_\d+_\d+_\d+$", db_name)
 
         if not match:
             raise Exception("Generated DB name is not the right format: %s" % db_name)
