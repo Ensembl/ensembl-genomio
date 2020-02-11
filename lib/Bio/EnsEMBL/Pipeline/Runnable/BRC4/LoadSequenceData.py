@@ -113,7 +113,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         # don't add mapping id there is a single CS
         if cs_pairs is None or len(cs_pairs) < 1:
             return
-        asm_v = self.asm_v()
+        asm_v = self.asm_name()
         for pair in cs_pairs:
             higher, lower = pair.strip().split("-")
             sql = r'''insert ignore into meta (species_id, meta_key, meta_value) values
@@ -124,7 +124,7 @@ class LoadSequenceData(eHive.BaseRunnable):
 
     def nullify_ctg_cs_version(self, log_pfx):
         # nullify every cs with rank larger than contig, but don't nullify toplevel ones
-        asm_v = self.asm_v()
+        asm_v = self.asm_name()
         # get cs_info (and if they have toplevel regions)
         sql = r'''select cs.coord_system_id as coord_system_id,
                          cs.name, cs.rank, (tl.coord_system_id is NULL) as no_toplevel
@@ -522,7 +522,7 @@ class LoadSequenceData(eHive.BaseRunnable):
 
 
     def copy_sr_name_to_syn(self, cs, x_db, log_pfx):
-        asm_v = self.asm_v()
+        asm_v = self.asm_name()
         sql = r'''insert into seq_region_synonym (seq_region_id, synonym, external_db_id)
                   select
                       sr.seq_region_id, sr.name, xdb.external_db_id
@@ -540,7 +540,7 @@ class LoadSequenceData(eHive.BaseRunnable):
     def sr_name_unversion(self, cs, tbl, fld, log_pfx):
         # select synonym, substr(synonym,  1, locate(".", synonym, length(synonym)-2)-1)
         #     from seq_region_synonym  where synonym like "%._"
-        asm_v = self.asm_v()
+        asm_v = self.asm_name()
         sql = r'''update {_tbl} t, seq_region sr, coord_system cs
                     set
                       t.{_fld} = substr(t.{_fld},  1, locate(".", t.{_fld}, length(t.{_fld})-2)-1)
@@ -611,7 +611,7 @@ class LoadSequenceData(eHive.BaseRunnable):
 
 
     def load_seq_data(self, fasta, agps, cs_rank, log_pfx):
-        asm_v = self.asm_v()
+        asm_v = self.asm_name()
 
         sequence_rank = max(cs_rank.values())
         for (cs, rank) in sorted(cs_rank.items(), key=lambda p: -p[1]):
@@ -756,16 +756,11 @@ class LoadSequenceData(eHive.BaseRunnable):
     def is_gz(self, filename):
       return filename.endswith(".gz")
 
-    def asm_v(self):
-        asm_v = self.from_param("genome_data","assembly")
-        if "name" in asm_v:
-            asm_v = asm_v["name"]
-        elif "accession" in asm_v:
-            asm_v = asm_v["accession"]
-            asm_v = asm_v.replace("_","").replace(".","v")
-        else:
-            raise Exception("no accession or name in genome_data")
-        return asm_v
+    def asm_name(self):
+        asm = self.from_param("genome_data","assembly")
+        if "name" not in asm:
+            raise Exception("no assembly/name in genome_data")
+        return asm["name"]
 
     # TODO: add some metafunc setter getter
     def from_param(self, param, key, not_throw = False):

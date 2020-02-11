@@ -2,9 +2,12 @@
 
 import eHive
 import json
-from os import path
-import re
 import mysql.connector
+import re
+import sys
+
+from os import path
+
 
 class PrepareGenome(eHive.BaseRunnable):
 
@@ -21,6 +24,7 @@ class PrepareGenome(eHive.BaseRunnable):
         
         manifest = self.get_manifest(manifest_path)
         genome = self.get_genome(manifest)
+        self.update_assembly_name(genome)
 
         print(manifest)
         print("")
@@ -168,3 +172,15 @@ class PrepareGenome(eHive.BaseRunnable):
         if not match:
             raise Exception("Generated DB name is not the right format: %s" % db_name)
 
+
+    def update_assembly_name(self, data):
+        if data and "assembly" in data:
+            asm = data["assembly"]
+            if "name" not in asm:
+                if "accession" not in asm:
+                    raise Exception("no accession or name in genome_data/assembly")
+                acc = asm["accession"].replace("_","").replace(".","v")
+                asm["name"] = acc
+                print("using \"%s\" as assembly.name" % (data["assembly"]["name"]), file = sys.stderr)
+        else:
+            raise Exception("no 'assembly' data provided in genome_data")
