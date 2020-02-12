@@ -24,7 +24,7 @@ sub param_defaults {
             "micronuclear_chromosome",
             "mitochondrial_chromosome",
             "nuclear_chromosome"
-          ];
+          ]
   };
 }
 
@@ -42,7 +42,7 @@ sub prepare_data {
     $self->production_name, "core", "KaryotypeBand" );
 
   # Get location SO terms
-  my $location_so_term = $self->param("location_so_term");
+  my %location_so_term = map { $_ => 1 } $self->param("location_so_term");
 
   # Get all coord system seq regions
   my @coord_ids = $self->get_coords($dba);

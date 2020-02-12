@@ -30,7 +30,8 @@
             "supercontig",
             "non_ref_scaffold",
             "contig",
-            "chunk"
+            "chunk",
+            "primary_assembly"
           ]
         },
         "omit" : { "type" : "boolean", "decription" : "prevent loading/processing of the scaffold" },
