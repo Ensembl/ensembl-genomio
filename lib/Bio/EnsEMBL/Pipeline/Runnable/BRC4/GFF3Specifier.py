@@ -25,6 +25,7 @@ class GFF3Specifier(eHive.BaseRunnable):
             "chromosome",
             "scaffold",
             "contig",
+            "region",
     ]
     allowed_attributes = [
             "ID",
