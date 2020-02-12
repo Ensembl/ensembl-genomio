@@ -116,6 +116,7 @@ class Integrity(eHive.BaseRunnable):
         non_unique = {}
         non_unique_count = 0
         empty_id_count = 0
+        contains_stop_codon = 0
         for rec in SeqIO.parse(fasta_path, "fasta"):
             # Flag empty ids
             if rec.id == "":
@@ -126,13 +127,17 @@ class Integrity(eHive.BaseRunnable):
                     non_unique[rec.id] = 1
                     non_unique_count += 1
                 # Store sequence id and length
-                data[rec.id] = len(rec)
+                data[rec.id] = len(rec.seq)
+                if "*" in rec.seq:
+                    contains_stop_codon += 1
         
         errors = []
         if empty_id_count > 0:
             errors.append("%d sequences with empty ids in %s" % (empty_id_count, fasta_path))
         if non_unique_count > 0:
             errors.append("%d non unique sequence ids in %s" % (non_unique_count, fasta_path))
+        if contains_stop_codon > 0:
+            errors.append("%d sequences with stop codons in %s" % (contains_stop_codon, fasta_path))
         return data, errors
 
     def get_json(self, json_path):
