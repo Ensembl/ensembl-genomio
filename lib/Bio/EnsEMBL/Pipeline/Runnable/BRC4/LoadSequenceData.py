@@ -20,7 +20,7 @@ class LoadSequenceData(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {
-            'cs_order' : 'chunk,contig,supercontig,non_ref_scaffold,scaffold,superscaffold,linkage_group,chromosome',
+            'cs_order' : 'chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome',
             'IUPAC' : 'RYKMSWBDHV',
             'unversion_scaffolds' : 0,
             'versioned_sr_syn_src' : 'INSDC', # 50710
@@ -34,6 +34,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             },
             'not_toplevel_cs' : [], # i.e. "contig", "non_ref_scaffold"
             'nullify_cs_version_from' : 'contig',
+            'noagp_cs_name_default' : 'primary_assembly',
         }
 
 
@@ -56,29 +57,51 @@ class LoadSequenceData(eHive.BaseRunnable):
         fasta_clean = pj(wd, "fasta", "seq_no_iupac.fasta")
         self.remove_IUPAC(fasta_raw, fasta_clean)
 
-        agps = self.from_param("manifest_data", "agp")
-        cs_order = self.coord_sys_order(self.param("cs_order"))
-        cs_rank = self.used_cs_ranks(agps, cs_order)
+        # coord system ranking and agps processing
+        agps = self.from_param("manifest_data", "agp", not_throw = True)
 
+        # rank cs_names, met in agps.keys ("-" separated, i.e. "scaffold-contig") based on cs_order
+        #   use noagp_cs_name_default for "noagp" assemblies
+        cs_order = self.coord_sys_order(self.param("cs_order"))
+        noagps_cs = self.param("noagp_cs_name_default")
+        cs_rank = self.used_cs_ranks(agps, cs_order, noagps_cs)
+
+        # remove gaps and lower_level mappings if the are coveres by higher level ones
+        #   i.e.: remove 'contigN to chromosomeZ', if 'contigN to scaffoldM' and 'scaffoldM to chromosomeZ' are in place
+        #   returns None if no agps provided
         agps_pruned_dir = pj(wd, "agps_pruned")
         agps_pruned = self.prune_agps(agps, cs_order, agps_pruned_dir, self.param_bool("prune_agp"))
 
+        # empty agps_pruned ignored
         self.load_seq_data(fasta_clean, agps_pruned, cs_rank, pj(wd, "load"))
 
-        self.add_contig_ena_attrib(pj(wd, "load", "set_ena"))
+        # mark all the "contig"s or noagp_cs as being sourced from ENA
+        if agps is None:
+            self.add_contig_ena_attrib(pj(wd, "load", "set_ena"), cs_name = noagps_cs)
+        else:
+            self.add_contig_ena_attrib(pj(wd, "load", "set_ena"))
 
+        # unversion scaffold, remove ".\d$" from names if there's a need
         unversion_scaffolds = self.param_bool("unversion_scaffolds")
         if unversion_scaffolds:
             self.unversion_scaffolds(cs_rank, pj(wd, "unversion_scaffolds"))
 
+        # add seq_region synonyms
         seq_reg_file = self.from_param("manifest_data", "seq_region")
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
+        # add seq_region attributes and karyotype info
         self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), karyotype_info_tag = "karyotype_bands")
 
-        self.add_asm_mappings(agps_pruned.keys(), pj(wd, "asm_mappings"))
+        # add assembly mappings between various cs to meta table for the mapper to work properly
+        cs_pairs = agps_pruned and agps_pruned.keys() or None
+        self.add_asm_mappings(cs_pairs, pj(wd, "asm_mappings"))
 
+        # set toplevel seq_region attribute
         self.set_toplevel(pj(wd, "set_toplevel"), self.param("not_toplevel_cs"))
+
+        # nullify contig version and that in mapping strings
+        self.nullify_ctg_cs_version(pj(wd, "asm_mapping", "nullify_cs_versions"))
 
         asm_meta = self.from_param("genome_data","assembly")
         self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"))
@@ -87,19 +110,21 @@ class LoadSequenceData(eHive.BaseRunnable):
     # STAGES
     def add_asm_mappings(self, cs_pairs, log_pfx):
         # nullifies asm_mappings contig versions as well, but don't nullify toplevel
-        asm_v = self.from_param("genome_data","assembly")["name"]
+        # don't add mapping id there is a single CS
+        if cs_pairs is None or len(cs_pairs) < 1:
+            return
+        asm_v = self.asm_name()
         for pair in cs_pairs:
             higher, lower = pair.strip().split("-")
             sql = r'''insert ignore into meta (species_id, meta_key, meta_value) values
                     (1, "assembly.mapping", "{_higher}:{_v}|{_lower}:{_v}")
                   ;'''.format(_v = asm_v, _higher = higher, _lower = lower)
             self.run_sql_req(sql, pj(log_pfx, pair))
-        self.nullify_ctg_cs_version(pj(log_pfx, "nullify_cs_versions"))
 
 
     def nullify_ctg_cs_version(self, log_pfx):
         # nullify every cs with rank larger than contig, but don't nullify toplevel ones
-        asm_v = self.from_param("genome_data","assembly")["name"]
+        asm_v = self.asm_name()
         # get cs_info (and if they have toplevel regions)
         sql = r'''select cs.coord_system_id as coord_system_id,
                          cs.name, cs.rank, (tl.coord_system_id is NULL) as no_toplevel
@@ -130,7 +155,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         ctg_lst = list(filter(lambda cs: cs["name"] == nullify_cs_version_from, cs_info))
         clear_thr = ctg_lst and int(ctg_lst[0]["rank"]) or seq_rank
         clear_lst = [ (cs["coord_system_id"], cs["name"]) for cs in cs_info
-                        if (bool(cs["no_toplevel"]) and int(cs["rank"]) >= clear_thr) ]
+                        if (bool(int(cs["no_toplevel"])) and int(cs["rank"]) >= clear_thr) ]
         # run sql
         if clear_lst:
             clear_pfx = pj(log_pfx, "clear")
@@ -480,23 +505,24 @@ class LoadSequenceData(eHive.BaseRunnable):
         return sp.run(cmd, shell=True, check=True)
 
 
-    def add_contig_ena_attrib(self, log_pfx):
+    def add_contig_ena_attrib(self, log_pfx, cs_name = "contig"):
         # Add ENA attrib for contigs (no sequence_level checks -- just cs name)
         #   (see ensembl-datacheck/lib/Bio/EnsEMBL/DataCheck/Checks/SeqRegionNamesINSDC.pm)
+        cs_name = "contig"
         sql = r'''insert into seq_region_attrib (seq_region_id, attrib_type_id, value)
                 select
                   sr.seq_region_id, at.attrib_type_id, "ENA"
                 from
                   seq_region sr, coord_system cs, attrib_type at
                 where   sr.coord_system_id = cs.coord_system_id
-                    and cs.name = "contig"
+                    and cs.name = "%s"
                     and at.code = "external_db"
-              ;'''
+              ;''' % (cs_name)
         return self.run_sql_req(sql, log_pfx)
 
 
     def copy_sr_name_to_syn(self, cs, x_db, log_pfx):
-        asm_v = self.from_param("genome_data","assembly")["name"]
+        asm_v = self.asm_name()
         sql = r'''insert into seq_region_synonym (seq_region_id, synonym, external_db_id)
                   select
                       sr.seq_region_id, sr.name, xdb.external_db_id
@@ -514,7 +540,7 @@ class LoadSequenceData(eHive.BaseRunnable):
     def sr_name_unversion(self, cs, tbl, fld, log_pfx):
         # select synonym, substr(synonym,  1, locate(".", synonym, length(synonym)-2)-1)
         #     from seq_region_synonym  where synonym like "%._"
-        asm_v = self.from_param("genome_data","assembly")["name"]
+        asm_v = self.asm_name()
         sql = r'''update {_tbl} t, seq_region sr, coord_system cs
                     set
                       t.{_fld} = substr(t.{_fld},  1, locate(".", t.{_fld}, length(t.{_fld})-2)-1)
@@ -537,8 +563,17 @@ class LoadSequenceData(eHive.BaseRunnable):
         return { e:i for i,e in enumerate(filter(lambda x: len(x)>0, cs_order_lst)) }
 
 
-    def used_cs_ranks(self, agps, cs_order):
-        cs_used_set = frozenset(sum(map(lambda x: x.split("-"), agps.keys()),[]))
+    def used_cs_ranks(self, agps, cs_order, noagp_default = None):
+        # rank cs_names, met in agps.keys ("-" separated), i.e. "scaffold-contig"
+        #   only agps keys used, values are ignored
+        #   use noagp_cs_name_default for "noagp" assemblies
+        if agps is None:
+            if noagp_default is None:
+                raise Exception("NoAGP assembly with no default coordinate system name")
+            cs_used_set = frozenset([noagp_default])
+        else:
+            cs_used_set = frozenset(sum(map(lambda x: x.split("-"), agps.keys()),[]))
+
         cs_unknown = cs_used_set.difference(cs_order.keys())
         if (len(cs_unknown) > 0):
             raise Exception("Unknown coordinate system(s) %s" % {str(cs_unknown)})
@@ -550,7 +585,11 @@ class LoadSequenceData(eHive.BaseRunnable):
         #   highest component (cmp) cs level (lowest rank)
         #   lowest difference between cs ranks (asm - cmp)
         #   i.e: chromosome-scaffold scaffold-chunk chromosome-chunk
+        #   if no agps return empty pruned result
+        if agps is None: return None
+
         agp_cs_pairs = list(map(lambda x: [x]+x.split("-"), agps.keys()))
+
         agp_levels = [ (x[0], cs_order[x[1]], cs_order[x[2]]) for x in agp_cs_pairs ]
         bad_agps = list(filter(lambda x: x[1] < x[2], agp_levels))
         if (len(bad_agps) > 0):
@@ -572,7 +611,7 @@ class LoadSequenceData(eHive.BaseRunnable):
 
 
     def load_seq_data(self, fasta, agps, cs_rank, log_pfx):
-        asm_v = self.from_param("genome_data","assembly")["name"]
+        asm_v = self.asm_name()
 
         sequence_rank = max(cs_rank.values())
         for (cs, rank) in sorted(cs_rank.items(), key=lambda p: -p[1]):
@@ -580,7 +619,7 @@ class LoadSequenceData(eHive.BaseRunnable):
            if (rank == sequence_rank):
                self.load_cs_data(cs, rank, "fasta", asm_v, fasta, logs, loaded_regions = None, seq_level = True)
            else:
-               useful_agps = list(filter(lambda x: cs in x, agps.keys()))
+               useful_agps = list(filter(lambda x: cs in x, agps and agps.keys() or []))
                if len(useful_agps) == 0:
                    raise Exception("non-seq_level cs %s has no agps to assemble it from" % (cs))
                loaded_regions = set()
@@ -717,6 +756,11 @@ class LoadSequenceData(eHive.BaseRunnable):
     def is_gz(self, filename):
       return filename.endswith(".gz")
 
+    def asm_name(self):
+        asm = self.from_param("genome_data","assembly")
+        if "name" not in asm:
+            raise Exception("no assembly/name in genome_data")
+        return asm["name"]
 
     # TODO: add some metafunc setter getter
     def from_param(self, param, key, not_throw = False):

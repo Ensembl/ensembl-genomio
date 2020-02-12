@@ -61,7 +61,7 @@ sub default_options {
     ensembl_version => software_version(),
 
     # Coordinate system order
-    cs_order => 'chunk,contig,supercontig,non_ref_scaffold,scaffold,superscaffold,linkage_group,chromosome',
+    cs_order => 'chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome',
     prune_agp => 0,
     unversion_scaffolds => 0,
     sr_syn_src_name  => 'ensembl_internal_synonym', # 50803
