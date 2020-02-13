@@ -728,7 +728,10 @@ sub set_nontranslating_gene {
 }
 
 sub map_biotype_gene {
-  my ($self, $biotype) = @_;
+  my ($self, $biotype, $gene) = @_;
+  
+  my $biotype_attr = $self->get_feature_biotype($gene);
+  $biotype = $biotype_attr if $biotype_attr;
   
   if (exists $biotype_map->{gene}->{$biotype}) {
     return $biotype_map->{gene}->{$biotype};
@@ -738,13 +741,52 @@ sub map_biotype_gene {
 }
 
 sub map_biotype_transcript {
-  my ($self, $biotype) = @_;
+  my ($self, $biotype, $transcript) = @_;
+  
+  my $biotype_attr = $self->get_feature_biotype($transcript);
+  $biotype = $biotype_attr if $biotype_attr;
   
   if (exists $biotype_map->{transcript}->{$biotype}) {
     return $biotype_map->{transcript}->{$biotype};
   } else {
     return $biotype;
   }
+}
+
+sub get_feature_biotype {
+  my ($self, $feature) = @_;
+  
+  # Use biotype from GFF3
+  my $biotype = $feature->type;
+  
+  # Get biotype attribute
+  my %attr = $feature->attributes();
+  my $biotype_attr = $attr{'biotype'} ? $attr{biotype}[0] : undef;
+  
+  # Replace biotype with the more precise biotype attribute
+  if ($biotype_attr) {
+    my $known_biotypes = $self->get_db_biotypes();
+    
+    if ($known_biotypes->{$biotype_attr}) {
+      return $biotype_attr;
+    } else {
+      warn("Unrecognized biotype (as gff3 attribute): $biotype_attr\n");
+      return;
+    }
+  }
+}
+
+sub get_db_biotypes {
+  my ($self) = @_;
+  
+  if (not $self->{_known_biotypes}) {
+    my $dba = $self->url2dba($self->param_required('db_url'));
+    my $ba = $dba->get_adaptor('Biotype');
+    my %biotypes = map { $_->name => 1 } @{$ba->fetch_all()};
+    $self->{_known_biotypes} = \%biotypes;
+  }
+  
+  return $self->{_known_biotypes};
 }
 
 sub new_gene {
@@ -763,7 +805,7 @@ sub new_gene {
   } elsif ($gff_gene->type =~ /^(\w+):*/) {
     ($biotype) = $1;
   }
-  $biotype = $self->map_biotype_gene($biotype);
+  $biotype = $self->map_biotype_gene($biotype, $gff_gene);
   
   my $gene = Bio::EnsEMBL::Gene->new(
     -stable_id     => $stable_id,
@@ -795,7 +837,7 @@ sub new_transcript {
     $gene->biotype($biotype);
   } elsif ($gff_transcript->type !~ /^(mRNA|transcript):*/i) {
     ($biotype) = $gff_transcript->type =~ /^(\w+):*/;
-    $biotype = $self->map_biotype_transcript($biotype);
+    $biotype = $self->map_biotype_transcript($biotype, $gff_transcript);
     $gene->biotype($biotype);
   } else {
     $biotype = $gene->biotype;
