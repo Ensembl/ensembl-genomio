@@ -6,6 +6,7 @@
   "definitions" : {
     "seq_region_synonym_info" : {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "name" : { "type" : "string" },
         "source": { "type" : "string" }
@@ -13,6 +14,7 @@
     },
     "seq_region_info" : {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "name" : { "type" : "string" },
         "synonyms" : {
@@ -62,6 +64,7 @@
           "type" : "array",
           "items" : {
             "type": "object",
+            "additionalProperties": false,
             "description" : "string",
             "properties": {
               "name" : { "type" : "string", "description" : "band name" },
