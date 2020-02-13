@@ -10,6 +10,7 @@
         { "type" : "string" },
         { 
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "synonym" : { "type" : "string" },
             "default" : { "type" : "boolean" }
@@ -20,6 +21,7 @@
     },
     "xref_object" : {
           "type" : "object",
+          "additionalProperties": false,
           "properties" : {
             "dbname" : { "type" : "string" },
             "id" : { "type" : "string" },
@@ -35,6 +37,7 @@
     },
     "functional_annotation" : {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "id" : { "type" : "string" },
         "object_type" : {
