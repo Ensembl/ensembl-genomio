@@ -17,6 +17,7 @@ class GFF3Specifier(eHive.BaseRunnable):
             "three_prime_UTR",
             "five_prime_UTR",
             "pseudogenic_transcript",
+            "pseudogenic_exon",
             "pseudogene",
             ]
     ignored_biotypes = [
@@ -106,6 +107,20 @@ class GFF3Specifier(eHive.BaseRunnable):
                             skipped_attributes[key] = 0
                         skipped_attributes[key] += 1
                         continue
+                    
+                    # Skip ID for exons
+                    if key == "ID" and biotype in ("exon", "pseudogenic_exon"):
+                        if not key in skipped_attributes:
+                            skipped_attributes[key] = 0
+                        skipped_attributes[key] += 1
+                        continue
+                    # Skip biotype for exons, CDS
+                    if key == "biotype" and biotype in ("exon", "pseudogenic_exon"):
+                        if not key in skipped_attributes:
+                            skipped_attributes[key] = 0
+                        skipped_attributes[key] += 1
+                        continue
+                        
 
                     # Special production-specific modification
                     if remove_prefix and key in ("ID", "Parent") and ":" in value:
