@@ -42,7 +42,7 @@ sub prepare_data {
     $self->production_name, "core", "KaryotypeBand" );
 
   # Get location SO terms
-  my %location_so_term = map { $_ => 1 } $self->param("location_so_term");
+  my %location_so_term = map { $_ => 1 } @{$self->param("location_so_term")};
 
   # Get all coord system seq regions
   my @coord_ids = $self->get_coords($dba);
@@ -83,10 +83,11 @@ sub prepare_data {
       my ($so_term) = @{$slice->get_all_Attributes('SO_term')};
       if ($so_term) {
         # Special case: location SO terms
-        if ($location_so_term{$so_term}) {
+        if ($location_so_term{$so_term->value}) {
           $seq_region->{location} = $so_term->value();
         } else {
-          $seq_region->{SO_term} = $so_term->value();
+          die("No SO_term allowed: '" . $so_term->value . "'");
+          #$seq_region->{SO_term} = $so_term->value();
         }
       }
 
