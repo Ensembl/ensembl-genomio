@@ -119,6 +119,16 @@ while (<$fh>) {
 
     my ($display_xref, $syns) = get_syns($synonyms, $id, $type);
     my @xrefs = ( @$xrefs_raw, map { { id => $_, dbname => substr($_, 0, 2) } } @$ont );
+    
+    # Add display_xref to xrefs if it is not there
+    if ($display_xref and not grep { $_->{id} eq $display_xref } @xrefs) {
+      my $dxref = {
+        id => $display_xref,
+        dbname => 'VB_Community_Annotation',
+        info_type => 'DIRECT',
+      };
+      push @xrefs, $dxref;
+    }
 
     my $already_used = 0;
     for my $xref (@xrefs) {
@@ -139,10 +149,15 @@ while (<$fh>) {
 
       my $xref_db_entry = store_xref(
         $dbea,
-        lc("$type"), $obj->dbID,
-        $xref->{dbname}, $xref->{id}, $xref->{id},
+        lc("$type"),
+        $obj->dbID,
+        $xref->{dbname},
+        $xref->{id},
+        $xref->{id},
         $add_list,
-        $xref->{description}, $xref->{info_type}, $xref->{info_text}
+        $xref->{description},
+        $xref->{info_type},
+        $xref->{info_text}
       );
 
       # update 'display_xref' only for the first time or for the $set_display_xref_4
