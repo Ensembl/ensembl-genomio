@@ -80,14 +80,16 @@ my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 );
 
 my $dbea = $dba->get_DBEntryAdaptor;
-my $_a = {};
-sub a {
+
+# Load and cache adaptors
+my $_adaptors = {};
+sub get_adaptor {
   my ($dba, $name) = @_;
-  if (!exists $_a->{$name}) {
+  if (!exists $_adaptors->{$name}) {
     # warn "getting adaptor for \"$name\"\n";
-    $_a->{$name} = $dba->get_adaptor($name);
+    $_adaptors->{$name} = $dba->get_adaptor($name);
   }
-  return $_a->{$name};
+  return $_adaptors->{$name};
 }
 
 while (<$fh>) {
@@ -96,12 +98,12 @@ while (<$fh>) {
   for my $it (@$data) {
     my ($id, $type) = map {$it->{$_}} qw/ id object_type /;
 
-    my $a = a($dba, $type);
-    if (not defined $a) {
+    my $adaptor = get_adaptor($dba, $type);
+    if (not defined $adaptor) {
       warn qq/can't get adaptor for "$type" (id: "$id"). skipping...\n/;
       next;
     }
-    my $obj = $a->fetch_by_stable_id($id);
+    my $obj = $adaptor->fetch_by_stable_id($id);
     if (not defined $obj) {
       warn qq/can't get object for "$id" (type: "$type"). skipping...\n/;
       next;
@@ -110,7 +112,7 @@ while (<$fh>) {
     if (lc($type) eq "gene") {
       $obj->description($it->{description}) if (exists $it->{description} && $it->{description} !~ m/^\s*$/);
       # update
-      eval { $a->update($obj) };
+      eval { $adaptor->update($obj) };
       if ($@) {
         warn "failed to update object (id: \"$id\", type \"$type\"): $@\n";
       }
@@ -167,7 +169,7 @@ while (<$fh>) {
       # update 'display_xref' only for the first time or for the $set_display_xref_4
       if (defined $display_xref && $display_xref eq $xref->{id}) {
         $obj->display_xref($xref_db_entry);
-        eval{ $a->update($obj) };
+        eval{ $adaptor->update($obj) };
         if ($@) {
           warn "Failed to update display_xref_id for $type $id (", $xref->{dbname}.":".$xref->{id} ,")\n";
         }
