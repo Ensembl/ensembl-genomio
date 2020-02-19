@@ -94,23 +94,40 @@ sub get_synonyms {
 }
 
 sub get_xrefs {
-  my ($gene) = @_;
+  my ($feature) = @_;
 
-  my $entries = $gene->get_all_DBEntries();
+  my $entries = $feature->get_all_DBEntries();
 
   my @xrefs;
+  my %found_entries;
   ENTRY: for my $entry (@$entries) {
-    my $dbname = $entry->dbname;
-    my $id = $entry->display_id;
-
-    my $xref = { dbname => $dbname, id => $id };
-    $xref->{description} = $entry->description if ($entry->description);
-    $xref->{info_type} = $entry->info_type if ($entry->info_type);
-    $xref->{info_text} = $entry->info_text if ($entry->info_text);
-
-    push @xrefs, $xref;
+    push @xrefs, create_xref($entry);
+    $found_entries{$entry->dbID} = 1;
   }
+  
+  # Check that the display_xref is among the xref,
+  # add it to the xref otherwise
+  if ($feature->can('display_xref')) {
+    my $display_entry = $feature->display_xref;
+    if ($display_entry and not $found_entries{$display_entry->dbID}) {
+      push @xrefs, create_xref($display_entry);
+    }
+  }
+  
   return \@xrefs;
+}
+
+sub create_xref {
+  my ($entry) = @_;
+  
+  my $dbname = $entry->dbname;
+  my $id = $entry->display_id;
+
+  my $xref = { dbname => $dbname, id => $id };
+  $xref->{description} = $entry->description if ($entry->description);
+  $xref->{info_type} = $entry->info_type if ($entry->info_type);
+  $xref->{info_text} = $entry->info_text if ($entry->info_text);
+  return $xref;
 }
 
 1;

@@ -452,7 +452,7 @@ class LoadSequenceData(eHive.BaseRunnable):
                         print ('%s (%s, "%s", %s)' % (fst, _sr_id, _sr_syn["name"], extdb_id), file = sql)
                         fst = ","
                     else:
-                        raise Exception("There is no external_db for source '%s'" % _sr_syn["name"])
+                        raise Exception("There is no external_db with source '%s' for %s" % (_sr_syn["source"], _sr_syn["name"]))
                 print(";", file=sql)
 
             # run insert sql

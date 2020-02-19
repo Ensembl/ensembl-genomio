@@ -82,7 +82,7 @@ sub check_assembly_version {
     }
 
     # Version is not an integer, but ends in one
-    if ($version =~ /^[A-z]+([0-9]+)$/) {
+    if ($version =~ /[A-z]+([0-9]+)$/) {
       $meta->{assembly}->{version} = int($1);
       return $meta;
     

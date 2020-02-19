@@ -23,6 +23,7 @@
          -pass
          -dbname
          -json
+         -display_db_default
          -help
 
 =head1 EXAMPLE
@@ -43,7 +44,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use JSON;
 
 my ($host, $port, $user, $pass, $dbname);
-my ($filename);
+my ($filename, $display_db_default);
 my $help = 0;
 
 &GetOptions(
@@ -53,6 +54,7 @@ my $help = 0;
   'pass=s'      => \$pass,
   'dbname=s'    => \$dbname,
   'json=s'    => \$filename,
+  'display_db_default=s' => \$display_db_default,
   'help|?'      => \$help,
 ) or pod2usage(-message => "use -help", -verbose => 1);
 pod2usage(-verbose => 2) if $help;
@@ -66,6 +68,9 @@ if (defined $filename) {
   warn "no -json filename specified. using STDIN as input.\n";
 }
 
+# Default db name for the display_xref and synonyms
+$display_db_default //= 'VB_Community_Annotation';
+
 my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   -host => $host,
   -user => $user,
@@ -75,16 +80,17 @@ my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 );
 
 my $dbea = $dba->get_DBEntryAdaptor;
-my $_a = {};
-sub a {
-  my ($dba, $name) = @_;
-  if (!exists $_a->{$name}) {
-    # warn "getting adaptor for \"$name\"\n";
-    $_a->{$name} = $dba->get_adaptor($name);
-  }
-  return $_a->{$name};
-}
 
+# Load and cache adaptors
+my $_adaptors = {};
+sub get_adaptor {
+  my ($dba, $name) = @_;
+  if (!exists $_adaptors->{$name}) {
+    # warn "getting adaptor for \"$name\"\n";
+    $_adaptors->{$name} = $dba->get_adaptor($name);
+  }
+  return $_adaptors->{$name};
+}
 
 while (<$fh>) {
   chomp;
@@ -92,12 +98,12 @@ while (<$fh>) {
   for my $it (@$data) {
     my ($id, $type) = map {$it->{$_}} qw/ id object_type /;
 
-    my $a = a($dba, $type);
-    if (not defined $a) {
+    my $adaptor = get_adaptor($dba, $type);
+    if (not defined $adaptor) {
       warn qq/can't get adaptor for "$type" (id: "$id"). skipping...\n/;
       next;
     }
-    my $obj = $a->fetch_by_stable_id($id);
+    my $obj = $adaptor->fetch_by_stable_id($id);
     if (not defined $obj) {
       warn qq/can't get object for "$id" (type: "$type"). skipping...\n/;
       next;
@@ -106,7 +112,7 @@ while (<$fh>) {
     if (lc($type) eq "gene") {
       $obj->description($it->{description}) if (exists $it->{description} && $it->{description} !~ m/^\s*$/);
       # update
-      eval { $a->update($obj) };
+      eval { $adaptor->update($obj) };
       if ($@) {
         warn "failed to update object (id: \"$id\", type \"$type\"): $@\n";
       }
@@ -119,6 +125,16 @@ while (<$fh>) {
 
     my ($display_xref, $syns) = get_syns($synonyms, $id, $type);
     my @xrefs = ( @$xrefs_raw, map { { id => $_, dbname => substr($_, 0, 2) } } @$ont );
+    
+    # Add display_xref to xrefs if it is not there
+    if ($display_xref and not grep { $_->{id} eq $display_xref } @xrefs) {
+      my $dxref = {
+        id => $display_xref,
+        dbname => $display_db_default,
+        info_type => 'DIRECT',
+      };
+      push @xrefs, $dxref;
+    }
 
     my $already_used = 0;
     for my $xref (@xrefs) {
@@ -139,16 +155,21 @@ while (<$fh>) {
 
       my $xref_db_entry = store_xref(
         $dbea,
-        lc("$type"), $obj->dbID,
-        $xref->{dbname}, $xref->{id}, $xref->{id},
+        lc("$type"),
+        $obj->dbID,
+        $xref->{dbname},
+        $xref->{id},
+        $xref->{id},
         $add_list,
-        $xref->{description}, $xref->{info_type}, $xref->{info_text}
+        $xref->{description},
+        $xref->{info_type},
+        $xref->{info_text}
       );
 
       # update 'display_xref' only for the first time or for the $set_display_xref_4
       if (defined $display_xref && $display_xref eq $xref->{id}) {
         $obj->display_xref($xref_db_entry);
-        eval{ $a->update($obj) };
+        eval{ $adaptor->update($obj) };
         if ($@) {
           warn "Failed to update display_xref_id for $type $id (", $xref->{dbname}.":".$xref->{id} ,")\n";
         }

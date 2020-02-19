@@ -153,6 +153,10 @@ class PrepareGenome(eHive.BaseRunnable):
             assembly = genome["assembly"]
             if "version" in assembly:
                 aversion = assembly["version"]
+                
+                if str(aversion) == "0":
+                    raise Exception("Assembly version cannot be 0")
+                
                 if isinstance(aversion, int):
                     return aversion
                 else:
