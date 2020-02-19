@@ -23,7 +23,7 @@
          -pass
          -dbname
          -json
-         -display_db
+         -display_db_default
          -help
 
 =head1 EXAMPLE
@@ -44,7 +44,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use JSON;
 
 my ($host, $port, $user, $pass, $dbname);
-my ($filename, $display_db);
+my ($filename, $display_db_default);
 my $help = 0;
 
 &GetOptions(
@@ -54,7 +54,7 @@ my $help = 0;
   'pass=s'      => \$pass,
   'dbname=s'    => \$dbname,
   'json=s'    => \$filename,
-  'display_db=s' => \$display_db,
+  'display_db_default=s' => \$display_db_default,
   'help|?'      => \$help,
 ) or pod2usage(-message => "use -help", -verbose => 1);
 pod2usage(-verbose => 2) if $help;
@@ -69,7 +69,7 @@ if (defined $filename) {
 }
 
 # Default db name for the display_xref and synonyms
-$display_db //= 'VB_Community_Annotation';
+$display_db_default //= 'VB_Community_Annotation';
 
 my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   -host => $host,
@@ -130,7 +130,7 @@ while (<$fh>) {
     if ($display_xref and not grep { $_->{id} eq $display_xref } @xrefs) {
       my $dxref = {
         id => $display_xref,
-        dbname => $display_db,
+        dbname => $display_db_default,
         info_type => 'DIRECT',
       };
       push @xrefs, $dxref;
