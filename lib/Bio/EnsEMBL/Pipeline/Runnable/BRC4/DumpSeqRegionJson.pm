@@ -36,15 +36,20 @@ sub prepare_data {
   my @seq_regions;
   for my $coord_id (@coord_ids) {
     my $coord_level_cs = $csa->fetch_by_dbID($coord_id);
+    
+    my $is_primary = ($coord_level_cs->name eq 'primary_assembly');
+    
     my $slices = $sa->fetch_all($coord_level_cs->name, undef, 1);
 
     print(scalar(@$slices) . " " . $coord_level_cs->name . "s (" . ($coord_level_cs->version || "no version") . ")\n");
 
     foreach my $slice (@$slices) {
       my $syns = $syna->get_synonyms( $slice->get_seq_region_id() );
+      my $coord_system_name = $is_primary ? $self->get_coord_system_tag($slice) : $slice->coord_system_name;
+      
       my $seq_region = {
         name => $slice->seq_region_name(),
-        coord_system_level => $slice->coord_system_name(),
+        coord_system_level => $coord_system_name,
         length => $slice->length(),
       };
 
@@ -86,6 +91,13 @@ sub prepare_data {
 
   # Write data to json
   return \@seq_regions;
+}
+
+sub get_coord_system_tag {
+  my ($self, $slice) = @_;
+  my ($tag_attr) = @{ $slice->get_all_Attributes('coord_system_tag') };
+  die "No tag for slice " . $slice->seq_region_name if not $tag_attr;
+  return $tag_attr->value;
 }
 
 sub get_coords {
