@@ -31,6 +31,7 @@ class LoadSequenceData(eHive.BaseRunnable):
                 'location' : 'sequence_location',
                 'non_ref' : 'non_ref',
                 'karyotype_bands' : 'karyotype_bands',
+                'coord_system_level' : 'coord_system_tag',
             },
             'not_toplevel_cs' : [], # i.e. "contig", "non_ref_scaffold"
             'nullify_cs_version_from' : 'contig',
@@ -91,7 +92,8 @@ class LoadSequenceData(eHive.BaseRunnable):
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
         # add seq_region attributes and karyotype info
-        self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), karyotype_info_tag = "karyotype_bands")
+        is_primary_assembly = agps is None
+        self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), karyotype_info_tag = "karyotype_bands", is_primary_assembly = is_primary_assembly)
 
         # add assembly mappings between various cs to meta table for the mapper to work properly
         cs_pairs = agps_pruned and agps_pruned.keys() or None
@@ -279,8 +281,9 @@ class LoadSequenceData(eHive.BaseRunnable):
         self.run_sql_req(sql_not_toplevel_delete, ".".join([log_pfx, "not_toplevel_delete"]))
 
 
-    def add_sr_attribs(self, meta_file, wd, karyotype_info_tag = None):
+    def add_sr_attribs(self, meta_file, wd, karyotype_info_tag = None, is_primary_assembly = False):
         os.makedirs(wd, exist_ok=True)
+        
         # find interesting attribs in meta_file
         attribs_map = self.param("sr_attrib_types")
         interest = frozenset(attribs_map.keys())
@@ -294,9 +297,11 @@ class LoadSequenceData(eHive.BaseRunnable):
                     chosen[e["name"]] = [e, -1]
         if len(chosen) <= 0:
             return
+        
         # get names, syns from db
         syns_out_pfx = pj(wd, "syns_from_core")
         self.get_db_syns(syns_out_pfx)
+        
         # load into dict
         with open(syns_out_pfx + ".stdout") as syns_file:
             for line in syns_file:
@@ -311,8 +316,13 @@ class LoadSequenceData(eHive.BaseRunnable):
                                 )
                             )
                         chosen[_name][1] = sr_id
+                        
         # add seq_region_attribs
         for tag, attr_type in attribs_map.items():
+            # Only add coord_system_tag for primary assembly
+            if not is_primary_assembly and tag == 'coord_system_level':
+                continue
+            
             srlist = list(map(
                 lambda p:(p[1], p[0][tag]),
                 filter(lambda x: tag in x[0], chosen.values())
