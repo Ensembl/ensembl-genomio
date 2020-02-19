@@ -24,6 +24,7 @@
          -dbname
          -json
          -display_db_default
+         -feature_version_default
          -help
 
 =head1 EXAMPLE
@@ -44,18 +45,19 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use JSON;
 
 my ($host, $port, $user, $pass, $dbname);
-my ($filename, $display_db_default);
+my ($filename, $display_db_default, $feature_version_default);
 my $help = 0;
 
 &GetOptions(
-  'host=s'      => \$host,
-  'port=s'      => \$port,
-  'user=s'      => \$user,
-  'pass=s'      => \$pass,
-  'dbname=s'    => \$dbname,
-  'json=s'    => \$filename,
-  'display_db_default=s' => \$display_db_default,
-  'help|?'      => \$help,
+  'host=s'                     => \$host,
+  'port=s'                     => \$port,
+  'user=s'                     => \$user,
+  'pass=s'                     => \$pass,
+  'dbname=s'                   => \$dbname,
+  'json=s'                     => \$filename,
+  'display_db_default=s'       => \$display_db_default,
+  'feature_version_default=i'  => \$feature_version_default,
+  'help|?'                     => \$help,
 ) or pod2usage(-message => "use -help", -verbose => 1);
 pod2usage(-verbose => 2) if $help;
 
@@ -96,7 +98,9 @@ while (<$fh>) {
   chomp;
   my $data = array_ref(decode_json($_));
   for my $it (@$data) {
+    my $do_update = 0;
     my ($id, $type) = map {$it->{$_}} qw/ id object_type /;
+    my $lc_type = lc($type);
 
     my $adaptor = get_adaptor($dba, $type);
     if (not defined $adaptor) {
@@ -109,12 +113,22 @@ while (<$fh>) {
       next;
     }
 
-    if (lc($type) eq "gene") {
+    # gene description
+    if ($lc_type eq "gene") {
       $obj->description($it->{description}) if (exists $it->{description} && $it->{description} !~ m/^\s*$/);
-      # update
-      eval { $adaptor->update($obj) };
-      if ($@) {
-        warn "failed to update object (id: \"$id\", type \"$type\"): $@\n";
+      $do_update = 1;
+    }
+
+    # gene and transript versions
+    if ($lc_type eq "gene" or $lc_type eq "transcript") {
+      my $version = exists $it->{version}
+         ? $it->{version}
+         : $feature_version_default;
+      if (defined $version) {
+        $obj->version($version);
+        $do_update = 1;
+        # remove if fixed in core API
+        update_version($dba, $lc_type, $id, $obj, $version);
       }
     }
 
@@ -125,7 +139,7 @@ while (<$fh>) {
 
     my ($display_xref, $syns) = get_syns($synonyms, $id, $type);
     my @xrefs = ( @$xrefs_raw, map { { id => $_, dbname => substr($_, 0, 2) } } @$ont );
-    
+
     # Add display_xref to xrefs if it is not there
     if ($display_xref and not grep { $_->{id} eq $display_xref } @xrefs) {
       my $dxref = {
@@ -137,6 +151,7 @@ while (<$fh>) {
     }
 
     my $already_used = 0;
+    my $stored_xref = undef;
     for my $xref (@xrefs) {
       # "attach" synonyms to the xref with the display_xref_name
       #  or to the first seen xref
@@ -155,7 +170,7 @@ while (<$fh>) {
 
       my $xref_db_entry = store_xref(
         $dbea,
-        lc("$type"),
+        $lc_type,
         $obj->dbID,
         $xref->{dbname},
         $xref->{id},
@@ -169,10 +184,17 @@ while (<$fh>) {
       # update 'display_xref' only for the first time or for the $set_display_xref_4
       if (defined $display_xref && $display_xref eq $xref->{id}) {
         $obj->display_xref($xref_db_entry);
-        eval{ $adaptor->update($obj) };
-        if ($@) {
-          warn "Failed to update display_xref_id for $type $id (", $xref->{dbname}.":".$xref->{id} ,")\n";
-        }
+        $do_update = 1;
+        $stored_xref = $xref->{dbname}.':'.$xref->{id};
+      }
+    }
+
+    # do update
+    if ($do_update) {
+      eval { $adaptor->update($obj) };
+      if ($@) {
+        my $xref_msg = defined $stored_xref? " display_xref_id for $stored_xref ": "";
+        warn "failed to update object (id: \"$id\", type \"$type\")$xref_msg: $@\n";
       }
     }
   }
@@ -226,3 +248,16 @@ sub store_xref {
   return;
 }
 
+
+sub update_version {
+  my ($dba, $type, $id, $obj, $version) = @_;
+
+  eval {
+    my $sth = $dba->dbc->prepare(" UPDATE $type "
+                           . " SET version = ? "
+                           . " WHERE ${type}_id = ? ");
+    $sth->execute($version, $obj->dbID);
+    $sth->finish();
+  };
+  warn "failed to update object's version (id: \"$id\", type \"$type\", version \"$version\"): $@\n" if ($@);
+}

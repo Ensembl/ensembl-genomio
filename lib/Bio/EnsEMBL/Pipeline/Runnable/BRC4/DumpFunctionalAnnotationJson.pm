@@ -52,13 +52,19 @@ sub prepare_data {
       id => $item->stable_id,
       object_type => $type,
     );
-    
+
     # Gene specific metadata
     if ($type eq 'gene') {
       my $syns = get_synonyms($item);
       $feat{synonyms} = $syns if $syns and @$syns;
       $feat{description} = $item->description if $item->description;
+      $feat{version} = $item->version if $item->version;
       $feat{is_pseudogene} = JSON::true if $item->biotype eq 'pseudogene';
+    }
+
+    # Transcript specific metadata
+    if ($type eq 'transcript') {
+      $feat{version} = $item->version if $item->version;
     }
 
     # Xrefs (if any)
@@ -104,7 +110,7 @@ sub get_xrefs {
     push @xrefs, create_xref($entry);
     $found_entries{$entry->dbID} = 1;
   }
-  
+
   # Check that the display_xref is among the xref,
   # add it to the xref otherwise
   if ($feature->can('display_xref')) {
@@ -113,13 +119,13 @@ sub get_xrefs {
       push @xrefs, create_xref($display_entry);
     }
   }
-  
+
   return \@xrefs;
 }
 
 sub create_xref {
   my ($entry) = @_;
-  
+
   my $dbname = $entry->dbname;
   my $id = $entry->display_id;
 
