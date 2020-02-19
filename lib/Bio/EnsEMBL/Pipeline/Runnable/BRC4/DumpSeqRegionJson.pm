@@ -14,17 +14,6 @@ sub param_defaults {
   return {
     %{$self->SUPER::param_defaults},
     metadata_name => 'seq_region',
-    location_so_term => [
-            "apicoplast_chromosome",
-            "chloroplast_chromosome",
-            "chromoplast_chromosome",
-            "cyanelle_chromosome",
-            "leucoplast_chromosome",
-            "macronuclear_chromosome",
-            "micronuclear_chromosome",
-            "mitochondrial_chromosome",
-            "nuclear_chromosome"
-          ]
   };
 }
 
@@ -40,9 +29,6 @@ sub prepare_data {
     $self->production_name, "core", "seqregionsynonym" );
   my $kba = Bio::EnsEMBL::Registry->get_adaptor(
     $self->production_name, "core", "KaryotypeBand" );
-
-  # Get location SO terms
-  my %location_so_term = map { $_ => 1 } @{$self->param("location_so_term")};
 
   # Get all coord system seq regions
   my @coord_ids = $self->get_coords($dba);
@@ -79,17 +65,9 @@ sub prepare_data {
       my ($non_ref) = @{$slice->get_all_Attributes('non_ref')};
       $seq_region->{non_ref} = JSON::true if $non_ref;
 
-      # SO_term? string
-      my ($so_term) = @{$slice->get_all_Attributes('SO_term')};
-      if ($so_term) {
-        # Special case: location SO terms
-        if ($location_so_term{$so_term->value}) {
-          $seq_region->{location} = $so_term->value();
-        } else {
-          die("No SO_term allowed: '" . $so_term->value . "'");
-          #$seq_region->{SO_term} = $so_term->value();
-        }
-      }
+      # Location? string
+      my ($location) = @{$slice->get_all_Attributes('sequence_location')};
+      $seq_region->{location} = $location->value() if $location;
 
       # karyotype bands
       my $karyo_bands = $self->get_karyotype_bands($slice, $kba);

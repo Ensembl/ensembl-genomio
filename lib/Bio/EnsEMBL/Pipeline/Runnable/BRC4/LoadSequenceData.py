@@ -28,7 +28,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             'sr_attrib_types' : {
                 'circular' : 'circular_seq',
                 'codon_table' : 'codon_table',
-                'location' : 'SO_term',
+                'location' : 'sequence_location',
                 'non_ref' : 'non_ref',
                 'karyotype_bands' : 'karyotype_bands',
             },
