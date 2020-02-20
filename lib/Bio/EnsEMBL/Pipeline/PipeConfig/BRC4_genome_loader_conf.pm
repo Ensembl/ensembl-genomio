@@ -427,20 +427,22 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'FillTaxonomy',
-      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -module      => 'Bio::EnsEMBL::Analysis::Hive::RunnableDB::HiveAssemblyLoading::HiveLoadTaxonomyInfo',
       -parameters  => {
-        'cmd' => 'mkdir -p #log_path#; '
-            . ' perl #base_dir#/ensembl-analysis/scripts/assembly_loading/load_taxonomy.pl '
-            . '   --dbhost #dbsrv_host# --dbport #dbsrv_port# '
-            . '   --dbuser #dbsrv_user# --dbpass #dbsrv_pass# '
-            . '   --dbname #db_name# '
-            . '   --taxondbhost #taxonomy_host# --taxondbport #taxonomy_port# ' # no taxondbuser
-            . '   --taxondbname #taxonomy_dbname# '
-            . '   --taxon_id #taxonomy_id# '
-            . '   > #log_path#/stdout 2> #log_path#/stderr ',
-        'taxonomy_id' => '#expr( #genome_data#->{"species"}->{"taxonomy_id"} )expr#',
-        'base_dir' => $self->o('ensembl_root_dir'),
-        'log_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_taxonomy',
+        'taxon_id' => '#expr( #genome_data#->{"species"}->{"taxomy_id"} )expr#',
+        'target_db' => {
+          -host => "#dbsrv_host#",
+          -port => "#dbsrv_port#",
+          -pass => "#dbsrv_pass#",
+          -user => "#dbsrv_user#",
+          -dbname => "#db_name#",
+        },
+        'taxonomy_db' => {
+          -host => "#taxonomy_host#",
+          -port => "#taxonomy_port#",
+          -user => "#taxonomy_user#",
+          -dbname => "#taxonomy_dbname#",
+        },
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
