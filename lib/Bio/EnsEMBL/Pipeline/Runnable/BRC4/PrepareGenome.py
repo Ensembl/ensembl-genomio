@@ -108,6 +108,10 @@ class PrepareGenome(eHive.BaseRunnable):
                     genus = split_name[0].lower()
                     species = split_name[1]
                     
+                    # Special case
+                    if species == "sp.":
+                        species = "sp"
+                    
                     # Production name, with INSDC accession for uniqueness
                     accession = genome["assembly"]["accession"]
                     if not accession or accession == "":
