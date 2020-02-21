@@ -2,6 +2,7 @@ package Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpJsonBase;
 
 use strict;
 use warnings;
+use autodie;
 
 use JSON;
 use File::Path qw(make_path);
@@ -46,10 +47,13 @@ sub write_json_file {
   my $json_file_path =
     $sub_dir . '/' . $self->production_name() . '_' . $metadata_name . '.json';
   $self->info("Writing to $json_file_path");
-  open my $json_file, '>', $json_file_path or
-    die "Could not open $json_file_path for writing";
-  print $json_file encode_json($data);
-  close $json_file;
+  
+  # Print pretty JSON
+  my $json = JSON->new;
+  open my $jsonfh, '>', $json_file_path;
+  print $jsonfh $json->pretty->encode($data);
+  close $jsonfh;
+  
   $self->info("Write complete");
   return $json_file_path;
 }
