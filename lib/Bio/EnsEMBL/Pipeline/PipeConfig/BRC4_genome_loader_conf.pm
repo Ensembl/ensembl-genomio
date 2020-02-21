@@ -468,7 +468,7 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'ConstructRepeatLib',
-        'A->1' => 'LoadGFF3Models',
+        'A->1' => 'LoadGeneModelCheck',
       },
     },
 
@@ -486,6 +486,16 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
+    
+    {
+      -logic_name => 'LoadGeneModelCheck',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1' => WHEN('#manifest_data#->{"gff3"}' => 'LoadGFF3Models'),
+      },
+    },
 
     {
       -logic_name => 'LoadGFF3Models',
@@ -494,7 +504,7 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'GFF3CleanAndLoad',
-        'A->1' => 'LoadFunctionalAnnotation',
+        'A->1' => 'LoadFunctionalAnnotationCheck',
       },
     },
 
@@ -703,6 +713,16 @@ sub pipeline_analyses {
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
+    },
+    
+    {
+      -logic_name => 'LoadFunctionalAnnotationCheck',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1' => WHEN('#manifest_data#->{"functional_annotation"}' => 'LoadFunctionalAnnotation'),
+      },
     },
 
     {
