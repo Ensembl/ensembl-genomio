@@ -185,7 +185,7 @@ class PrepareGenome(eHive.BaseRunnable):
         match = re.match("[a-z]+_[a-z]+(_[A-z0-9]+){0,2}_core_\d+_\d+_\d+$", db_name)
 
         if not match:
-            raise Exception("Generated DB name is not the right format: %s" % db_name)
+            raise Exception("Generated DB name is not the right format: %s (in %s)" % (db_name, self.param_required("manifest")))
 
 
     def update_assembly_name(self, data):

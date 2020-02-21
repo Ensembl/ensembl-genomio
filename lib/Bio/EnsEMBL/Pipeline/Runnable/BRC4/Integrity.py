@@ -109,7 +109,7 @@ class Integrity(eHive.BaseRunnable):
 
         if errors:
             errors_str = "\n".join(errors)
-            raise Exception("Integrity test failed:\n%s" % errors_str)
+            raise Exception("Integrity test failed for %s:\n%s" % (manifest_path, errors_str))
 
     def get_fasta_lengths(self, fasta_path):
         data = {}
