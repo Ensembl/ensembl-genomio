@@ -29,13 +29,13 @@ sub default_options {
     # VB release id
     release => $self->o('release'),
     db_prefix => "",
-    
+
     # Basic pipeline configuration
     pipeline_tag => '',
     pipeline_name => 'brc4_genome_loader_' .
       $self->o('release') . '_' . $self->o('ensembl_version') . $self->o('pipeline_tag'),
     email => $ENV{USER} . '@ebi.ac.uk',
-    
+
     # Working directory
     pipeline_dir => 'genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
 
@@ -57,7 +57,7 @@ sub default_options {
 
     ############################################
     # Config unlikely to be changed by the user
-    
+
     ensembl_version => software_version(),
 
     # Coordinate system order
@@ -112,6 +112,9 @@ sub default_options {
         golden_path_region intron orthologous_to
       /],
     gff3_types_complete  => 1,
+    # genes and transcripts versions
+    default_feature_version => 1,
+    no_feature_version_defaults => 0,
   };
 }
 
@@ -157,6 +160,9 @@ sub pipeline_wide_parameters {
     gff3_cds_types => $self->o('gff3_cds_types'),
     gff3_utr_types => $self->o('gff3_utr_types'),
     gff3_types_complete => $self->o('gff3_types_complete'),
+
+    default_feature_version     => $self->o('default_feature_version'),
+    no_feature_version_defaults => $self->o('no_feature_version_defaults')
   };
 }
 
@@ -245,7 +251,7 @@ sub pipeline_analyses {
         })),
       },
     },
-    
+
     # Checking files
     {
       -logic_name => 'Manifest_check',
@@ -259,7 +265,7 @@ sub pipeline_analyses {
         'A->1' => 'Manifest_integrity',
       },
     },
-    
+
     {
       -logic_name => 'Json_schema_factory',
       -module     => 'JsonSchemaFactory',
@@ -272,7 +278,7 @@ sub pipeline_analyses {
         2 => 'check_json_schema',
       },
     },
-    
+
     { -logic_name     => 'check_json_schema',
       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters     => {
@@ -621,7 +627,7 @@ sub pipeline_analyses {
         utr_types       => $self->o('gff3_utr_types'),
         ignore_types    => $self->o('gff3_ignore_types'),
         types_complete  => $self->o('gff3_types_complete'),
-        polypeptides    => $self->o('gff3_use_polypeptides'), # it's better to ignore ignore 'polypeptides' lines 
+        polypeptides    => $self->o('gff3_use_polypeptides'), # it's better to ignore ignore 'polypeptides' lines
         # dbparams
         db_url          => '#dbsrv_url#' . '#db_name#',
       },
@@ -701,15 +707,37 @@ sub pipeline_analyses {
             . 'perl #fann_loader# '
             . '  --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --dbname #db_name# '
             . '  -json #fann_json_file# '
+            . '  #default_feat_v# '
             . '  > #log_path#/stdout '
             . '  2> #log_path#/stderr ',
         'log_path'       => $self->o('pipeline_dir') . '/#db_name#/load_functional_annotation',
         'fann_loader'    => "$scripts_dir/load_fann.pl",
         'fann_json_file' => '#expr( #manifest_data#->{"functional_annotation"} )expr#',
+        'default_feat_v' => '#expr( #no_feature_version_defaults# ? "": "-feature_version_default ".#default_feature_version# )expr#',
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
+      -flow_into => WHEN('#no_feature_version_defaults#' =>
+                      [ 'MetaCoord' ],
+                    ELSE
+                      [ 'FixFeatureVersion' ]
+                    ),
+    },
+
+    {
+      # Init the Ensembl core
+      -logic_name => 'FixFeatureVersion',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => '#dbsrv_url#' . '#db_name#',
+        sql     => [
+          'UPDATE gene SET version = #default_feature_version# WHERE version IS NULL;',
+          'UPDATE transcript SET version = #default_feature_version# WHERE version IS NULL;',
+        ],
+      },
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
       -flow_into => 'MetaCoord',
     },
 

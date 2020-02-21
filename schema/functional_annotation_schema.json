@@ -71,7 +71,8 @@
           ]
         },
         "is_pseudogene" : { "type" : "boolean" },
-        "note" : { "type" : "string", "description" : "optional note" }
+        "note" : { "type" : "string", "description" : "optional note" },
+        "version" : { "type" : "integer", "descriptio" : "used only for genes and transcripts" }
       },
       "required" : [
         "id", "object_type"
