@@ -85,7 +85,7 @@ class Integrity(eHive.BaseRunnable):
                     genome_ass = genome["assembly"]
                     if "accession" in genome_ass:
                         genome_acc = genome_ass["accession"]
-                        if not re.match("GCA_\d{9}(\.\d+)?", genome_acc):
+                        if not re.match("GC[AF]_\d{9}(\.\d+)?", genome_acc):
                             errors += ["Genome assembly accession is wrong: '%s'" %genome_acc]
 
             # Check gff3

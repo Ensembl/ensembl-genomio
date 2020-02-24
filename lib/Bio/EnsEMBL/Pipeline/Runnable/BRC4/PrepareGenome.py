@@ -24,6 +24,7 @@ class PrepareGenome(eHive.BaseRunnable):
         
         manifest = self.get_manifest(manifest_path)
         genome = self.get_genome(manifest)
+        self.update_accession(genome)
         self.update_assembly_name(genome)
 
         print(manifest)
@@ -201,5 +202,15 @@ class PrepareGenome(eHive.BaseRunnable):
                 acc = asm["accession"].replace("_","").replace(".","v")
                 asm["name"] = acc
                 print("using \"%s\" as assembly.name" % (data["assembly"]["name"]), file = sys.stderr)
+        else:
+            raise Exception("no 'assembly' data provided in genome_data")
+    
+    def update_accession(self, data):
+        if data and "assembly" in data:
+            asm = data["assembly"]
+            if "accession" in asm and asm["accession"].startswith("GCF_"):
+                ### CHANGE TO GCA
+                data["assembly"]["accession"] = data["assembly"]["accession"].replace("GCF_", "GCA_")
+                print("using \"%s\" as assembly.accession" % (data["assembly"]["accession"]), file = sys.stderr)
         else:
             raise Exception("no 'assembly' data provided in genome_data")
