@@ -59,10 +59,12 @@ sub run {
   # Then create a manifest file
   my $manifest_path = catfile($dir, 'manifest.json');
   
-  open my $json, '>', $manifest_path or
-    die "Could not open $manifest_path for writing";
-  print $json encode_json(\%final_manifest);
-  close $json;
+  # Print pretty JSON
+  my $json = JSON->new;
+  open my $jsonfh, '>', $manifest_path or
+  die "Could not open $manifest_path for writing";
+  print $jsonfh $json->pretty->encode(\%final_manifest);
+  close $jsonfh;
 
   $self->dataflow_output_id({ "manifest" => $manifest_path }, 2);
 

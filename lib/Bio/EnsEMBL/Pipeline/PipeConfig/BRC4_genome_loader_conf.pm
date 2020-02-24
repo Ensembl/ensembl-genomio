@@ -288,6 +288,7 @@ sub pipeline_analyses {
         hash_key => "#metadata_type#",
       },
       -analysis_capacity => 1,
+      -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
     },
@@ -300,6 +301,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 5,
       -rc_name         => '8GB',
       -max_retry_count => 0,
+      -failed_job_tolerance => 100,
       -flow_into => 'Prepare_genome',
     },
 
@@ -318,6 +320,7 @@ sub pipeline_analyses {
       },
       -analysis_capacity   => 1,
       -max_retry_count => 0,
+      -failed_job_tolerance => 100,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
@@ -338,6 +341,7 @@ sub pipeline_analyses {
           'CREATE DATABASE #db_name#;' ,
         ],
       },
+      -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
       -flow_into => [ 'LoadDBSchema' ],
@@ -350,6 +354,7 @@ sub pipeline_analyses {
         db_conn => $self->o('dbsrv_url') . '#db_name#',
         input_file => $self->o('ensembl_root_dir') . '/ensembl/sql/table.sql',
       },
+      -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
       -flow_into  => [ 'PopulateProductionTables' ],
@@ -368,6 +373,7 @@ sub pipeline_analyses {
         'base_dir'       => $self->o('ensembl_root_dir'),
         'dump_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_production_db_tables',
       },
+      -analysis_capacity   => 1,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
@@ -395,7 +401,7 @@ sub pipeline_analyses {
         unversion_scaffolds => $self->o('unversion_scaffolds'),
         sr_syn_src  => $self->o('sr_syn_src_name'),
       },
-      -analysis_capacity   => 2,
+      -analysis_capacity   => 4,
       -rc_name         => '8GB',
       -max_retry_count => 0,
       -meadow_type       => 'LSF',
@@ -462,7 +468,7 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'ConstructRepeatLib',
-        'A->1' => 'LoadGFF3Models',
+        'A->1' => 'LoadGeneModelCheck',
       },
     },
 
@@ -480,6 +486,16 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
+    
+    {
+      -logic_name => 'LoadGeneModelCheck',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1' => WHEN('#manifest_data#->{"gff3"}' => 'LoadGFF3Models'),
+      },
+    },
 
     {
       -logic_name => 'LoadGFF3Models',
@@ -488,7 +504,7 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'GFF3CleanAndLoad',
-        'A->1' => 'LoadFunctionalAnnotation',
+        'A->1' => 'LoadFunctionalAnnotationCheck',
       },
     },
 
@@ -697,6 +713,16 @@ sub pipeline_analyses {
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
+    },
+    
+    {
+      -logic_name => 'LoadFunctionalAnnotationCheck',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        '1' => WHEN('#manifest_data#->{"functional_annotation"}' => 'LoadFunctionalAnnotation'),
+      },
     },
 
     {

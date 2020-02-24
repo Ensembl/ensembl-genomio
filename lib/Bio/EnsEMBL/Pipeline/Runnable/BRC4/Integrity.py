@@ -85,7 +85,7 @@ class Integrity(eHive.BaseRunnable):
                     genome_ass = genome["assembly"]
                     if "accession" in genome_ass:
                         genome_acc = genome_ass["accession"]
-                        if not re.match("GCA_\d{9}(\.\d+)?", genome_acc):
+                        if not re.match("GC[AF]_\d{9}(\.\d+)?", genome_acc):
                             errors += ["Genome assembly accession is wrong: '%s'" %genome_acc]
 
             # Check gff3
@@ -109,7 +109,7 @@ class Integrity(eHive.BaseRunnable):
 
         if errors:
             errors_str = "\n".join(errors)
-            raise Exception("Integrity test failed:\n%s" % errors_str)
+            raise Exception("Integrity test failed for %s:\n%s" % (manifest_path, errors_str))
 
     def get_fasta_lengths(self, fasta_path):
         data = {}
