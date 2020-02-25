@@ -301,7 +301,7 @@ sub pipeline_analyses {
       -parameters     => {
         json_file => '#metadata_json#',
         json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
-        cmd => 'jsonschema -i #json_file# #json_schema#',
+        cmd => 'jsonschema -i #json_file# #json_schema# 2> /dev/null',
         hash_key => "#metadata_type#",
       },
       -analysis_capacity => 1,
