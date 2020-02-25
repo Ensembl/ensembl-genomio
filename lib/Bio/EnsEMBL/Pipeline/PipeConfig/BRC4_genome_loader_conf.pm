@@ -38,6 +38,7 @@ sub default_options {
 
     # Working directory
     pipeline_dir => 'genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
+    registry_path => catfile($self->o('pipeline_dir'), 'registry.pm'),
 
     # Meta configuration directory
     data_dir => $self->o('data_dir'),
@@ -203,7 +204,6 @@ sub pipeline_analyses {
         'A->1' => 'Cleanup',
       },
     },
-
     {
       # Delete the temp working directory
       -logic_name => 'Cleanup',
@@ -227,7 +227,24 @@ sub pipeline_analyses {
       },
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
-      -flow_into => 'Manifest_factory',
+      -flow_into => {
+        '1->A' => 'Manifest_factory',
+        'A->1' => 'CreateRegistry',
+      },
+    },
+
+    {
+      # Create an Ensembl registry file
+      -logic_name => 'CreateRegistry',
+      -module     => 'CreateRegistry',
+      -language => 'python3',
+      -parameters => {
+        registry_path => $self->o('registry_path'),
+        db_prefix => $self->o('db_prefix'),
+      },
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
     },
 
     {
@@ -326,6 +343,7 @@ sub pipeline_analyses {
       -flow_into  => {
         '2->A' => 'CleanUpAndCreateDB',
         'A->2' => 'LoadData',
+        '2'    => '?accu_name=db_name&accu_address=[]',
       },
     },
 
