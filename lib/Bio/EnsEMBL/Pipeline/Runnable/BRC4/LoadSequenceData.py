@@ -751,7 +751,7 @@ class LoadSequenceData(eHive.BaseRunnable):
     def remove_IUPAC(self, from_file, to_file):
         IUPAC = self.param("IUPAC")
         os.makedirs(dirname(to_file), exist_ok=True)
-        cmd = r'''{_cat} {_file} | sed -r '/^[^>]/ {{ s/[{_IUPAC}]+/N/g; s/{_iupac}/n/g }}' > {_out}'''.format(
+        cmd = r'''{_cat} {_file} | sed -r '/^[^>]/ {{ s/[{_IUPAC}]/N/g; s/{_iupac}/n/g }}' > {_out}'''.format(
             _cat = self.is_gz(from_file) and "zcat" or "cat",
             _file = from_file,
             _IUPAC = IUPAC.upper(),
