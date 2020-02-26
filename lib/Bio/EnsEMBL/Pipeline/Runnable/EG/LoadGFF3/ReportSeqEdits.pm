@@ -202,7 +202,7 @@ sub protein_seq_report {
           my $length = length($db_seq);
 
           # Initial methionine only?
-          (my $met_first_db_seq = $file_seq) =~ s/^./M/;
+          (my $met_first_db_seq = $db_seq) =~ s/^./M/;
           if ($met_first_db_seq eq $file_seq) {
             push @results, [$tt_id, $tn_id, 'First amino acid in db changed to Met', $db_seq, $file_seq];
             push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 170, '1 1 M' FROM translation WHERE stable_id = '$tn_id';";
