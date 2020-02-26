@@ -24,12 +24,9 @@ sub prepare_data {
 
   # Get genes
   my @features;
-  my $ga = Bio::EnsEMBL::Registry->get_adaptor(
-    $self->production_name, "core", "gene" );
-  my $ta = Bio::EnsEMBL::Registry->get_adaptor(
-    $self->production_name, "core", "transcript" );
-  my $pa = Bio::EnsEMBL::Registry->get_adaptor(
-    $self->production_name, "core", "translation" );
+  my $ga = $dba->get_adaptor('Gene');
+  my $ta = $dba->get_adaptor('Transcript');
+  my $pa = $dba->get_adaptor('Translation');
 
   my @items;
   push @items, @{$ga->fetch_all()};

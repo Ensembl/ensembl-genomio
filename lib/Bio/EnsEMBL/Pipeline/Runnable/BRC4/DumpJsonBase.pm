@@ -43,9 +43,10 @@ sub write_json_file {
 
   my $metadata_name =  $self->param('metadata_name');
   my $sub_dir = $self->create_dir('json');
-  $self->info("Processing " . $self->production_name() . " into $sub_dir" );
+  my $species = $self->param_required("species");
+  $self->info("Processing $species into $sub_dir" );
   my $json_file_path =
-    $sub_dir . '/' . $self->production_name() . '_' . $metadata_name . '.json';
+    $sub_dir . '/' . $species . '_' . $metadata_name . '.json';
   $self->info("Writing to $json_file_path");
   
   # Print pretty JSON

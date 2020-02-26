@@ -25,10 +25,8 @@ sub prepare_data {
   # Get seq_regions
   my $sa = $dba->get_adaptor('Slice');
   my $csa = $dba->get_adaptor('CoordSystem');
-  my $syna = Bio::EnsEMBL::Registry->get_adaptor(
-    $self->production_name, "core", "seqregionsynonym" );
-  my $kba = Bio::EnsEMBL::Registry->get_adaptor(
-    $self->production_name, "core", "KaryotypeBand" );
+  my $syna = $dba->get_adaptor('SeqRegionSynonym');
+  my $kba = $dba->get_adaptor('KaryotypeBand');
 
   # Get all coord system seq regions
   my @coord_ids = $self->get_coords($dba);
@@ -110,7 +108,7 @@ sub get_coords {
     FROM coord_system
       LEFT JOIN meta USING(species_id)
     WHERE attrib LIKE '%default_version%'
-      AND meta_key = 'species.production_name'
+      AND (meta_key = 'species.production_name' OR meta_key = 'species.alias')
       AND meta_value = '$species';
     ";
 
