@@ -43,6 +43,14 @@ class PrepareGenome(eHive.BaseRunnable):
                     "genome_data": genome
                     }, 2)
 
+        # DB metadata for registry
+        self.dataflow(
+                {
+                    "db_data" : {
+                        "db_name": db_name,
+                        "genome_data": genome,
+                    }
+                }, 3)
 
     def get_manifest(self, manifest_path):
         with open(manifest_path) as manifest_file:

@@ -21,12 +21,12 @@ sub prepare_data {
   my ($self) = @_;
 
   my $sub_dir = $self->create_dir('json');
-  $self->info(
-          "Processing " . $self->production_name() . " genome into $sub_dir" );
+  my $species = $self->param_required("species");
+  $self->info("Processing $species genome into $sub_dir");
 
   # Get meta table
-  my $ma = Bio::EnsEMBL::Registry->get_adaptor($self->production_name, 'Core', 'MetaContainer');
   my $dba = $self->core_dba();
+  my $ma = $dba->get_adaptor('MetaContainer');
 
   my $meta = {
     species => {},

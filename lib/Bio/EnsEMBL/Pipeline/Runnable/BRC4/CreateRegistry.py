@@ -10,19 +10,37 @@ class CreateRegistry(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {
+                "use_alias_name": False,
         }
 
     def run(self):
-        dbnames = self.param_required("db_name")
+        db_data = self.param_required("db_data")
         registry_path = self.param_required("registry_path")
         
-        if dbnames:
+        if db_data:
             print("Write to " + registry_path)
             
             with open(registry_path, "w") as registry:
                 self.print_intro(registry)
-                for dbname in dbnames:
-                    self.print_db(registry, dbname)
+                for db in db_data:
+                    dbname = db["db_name"]
+                    prod_name = db["genome_data"]["species"]["production_name"]
+                    
+                    # Alias?
+                    alias_name = prod_name
+                    if "alias" in db["genome_data"]["species"]:
+                        alias = db["genome_data"]["species"]["alias"]
+                        if isinstance(alias, list):
+                            alias_name = alias[0]
+                        else:
+                            alias_name = alias
+                    
+                    # Use prod_name or alias as name?
+                    species = prod_name
+                    if self.param("use_alias_name"):
+                        species = alias_name
+                    
+                    self.print_db(registry, dbname, species)
                 registry.write("\n1;\n")
     
     def print_intro(self, registry):
@@ -34,15 +52,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
         registry.write(intro)
         
     
-    def print_db(self, registry, dbname):
-        
-        species = dbname.split("_core_", 1)[0]
-        
-        if self.param_exists('db_prefix'):
-            db_prefix = self.param('db_prefix')
-            if db_prefix:
-                db_prefix = db_prefix + "_"
-                species = species.split(db_prefix, 1)[1]
+    def print_db(self, registry, dbname, species):
         
         host = self.param("dbsrv_host")
         port = self.param("dbsrv_port")

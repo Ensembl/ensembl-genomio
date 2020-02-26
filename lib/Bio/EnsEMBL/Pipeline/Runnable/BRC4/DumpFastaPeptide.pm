@@ -49,7 +49,7 @@ sub fetch_input {
   my $fasta_type = 'pep';
 
   my $sub_dir = $self->create_dir('fasta_' . $fasta_type);
-  my $fasta_file = catfile($sub_dir, $self->production_name() . '_' . $fasta_type . '.fa');
+  my $fasta_file = catfile($sub_dir, $self->param_required("species") . '_' . $fasta_type . '.fa');
   $self->param('fasta_file', $fasta_file);
 }
 

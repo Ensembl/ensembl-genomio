@@ -55,6 +55,9 @@ sub default_options {
       'genome' => catfile($schema_dir, "genome_schema.json"),
       'manifest' => catfile($schema_dir, "manifest_schema.json"),
     },
+    
+    # Use alias instead of production_name for the registry?
+    registry_alias_name => 0,
 
     ############################################
     # Config unlikely to be changed by the user
@@ -241,6 +244,7 @@ sub pipeline_analyses {
       -parameters => {
         registry_path => $self->o('registry_path'),
         db_prefix => $self->o('db_prefix'),
+        use_alias_name => $self->o('registry_alias_name'),
       },
       -analysis_capacity   => 1,
       -rc_name    => 'default',
@@ -343,7 +347,7 @@ sub pipeline_analyses {
       -flow_into  => {
         '2->A' => 'CleanUpAndCreateDB',
         'A->2' => 'LoadData',
-        '2'    => '?accu_name=db_name&accu_address=[]',
+        '3'    => '?accu_name=db_data&accu_address=[]',
       },
     },
 
