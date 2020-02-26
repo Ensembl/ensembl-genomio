@@ -94,108 +94,117 @@ sub get_adaptor {
   return $_adaptors->{$name};
 }
 
-while (<$fh>) {
-  chomp;
-  my $data = array_ref(decode_json($_));
-  for my $it (@$data) {
-    my $do_update = 0;
-    my ($id, $type) = map {$it->{$_}} qw/ id object_type /;
-    my $lc_type = lc($type);
+# Slurp the json string
+my $json_string;
+{
+  local $/; #Enable 'slurp' mode
+  $json_string = <$fh>;
+  close $fh;
+  die("No json data") if not $json_string;
+}
 
-    my $adaptor = get_adaptor($dba, $type);
-    if (not defined $adaptor) {
-      warn qq/can't get adaptor for "$type" (id: "$id"). skipping...\n/;
-      next;
-    }
-    my $obj = $adaptor->fetch_by_stable_id($id);
-    if (not defined $obj) {
-      warn qq/can't get object for "$id" (type: "$type"). skipping...\n/;
-      next;
-    }
+# Decode the json string in an array
+my $data = array_ref(decode_json($json_string));
 
-    # gene description
-    if ($lc_type eq "gene") {
-      $obj->description($it->{description}) if (exists $it->{description} && $it->{description} !~ m/^\s*$/);
+# Import each item in the array
+for my $it (@$data) {
+  my $do_update = 0;
+  my ($id, $type) = map {$it->{$_}} qw/ id object_type /;
+  my $lc_type = lc($type);
+
+  my $adaptor = get_adaptor($dba, $type);
+  if (not defined $adaptor) {
+    warn qq/can't get adaptor for "$type" (id: "$id"). skipping...\n/;
+    next;
+  }
+  my $obj = $adaptor->fetch_by_stable_id($id);
+  if (not defined $obj) {
+    warn qq/can't get object for "$id" (type: "$type"). skipping...\n/;
+    next;
+  }
+
+  # gene description
+  if ($lc_type eq "gene") {
+    $obj->description($it->{description}) if (exists $it->{description} && $it->{description} !~ m/^\s*$/);
+    $do_update = 1;
+  }
+
+  # gene and transript versions
+  if ($lc_type eq "gene" or $lc_type eq "transcript") {
+    my $version = exists $it->{version}
+        ? $it->{version}
+        : $feature_version_default;
+    if (defined $version) {
+      $obj->version($version);
       $do_update = 1;
+      # remove if fixed in core API
+      update_version($dba, $lc_type, $id, $obj, $version);
+    }
+  }
+
+  # xrefs
+  my $ont = array_ref($it->{ontology_terms});
+  my $xrefs_raw = array_ref($it->{xrefs});
+  my $synonyms = array_ref($it->{synonyms});
+
+  my ($display_xref, $syns) = get_syns($synonyms, $id, $type);
+  my @xrefs = ( @$xrefs_raw, map { { id => $_, dbname => substr($_, 0, 2) } } @$ont );
+
+  # Add display_xref to xrefs if it is not there
+  if ($display_xref and not grep { $_->{id} eq $display_xref } @xrefs) {
+    my $dxref = {
+      id => $display_xref,
+      dbname => $display_db_default,
+      info_type => 'DIRECT',
+    };
+    push @xrefs, $dxref;
+  }
+
+  my $already_used = 0;
+  my $stored_xref = undef;
+  for my $xref (@xrefs) {
+    # "attach" synonyms to the xref with the display_xref_name
+    #  or to the first seen xref
+    my $attach_syns = 0;
+    if (defined $display_xref) {
+      $attach_syns = $display_xref eq $xref->{id};
+    } else {
+      $attach_syns = !$already_used;
+      $already_used = 1;
     }
 
-    # gene and transript versions
-    if ($lc_type eq "gene" or $lc_type eq "transcript") {
-      my $version = exists $it->{version}
-         ? $it->{version}
-         : $feature_version_default;
-      if (defined $version) {
-        $obj->version($version);
-        $do_update = 1;
-        # remove if fixed in core API
-        update_version($dba, $lc_type, $id, $obj, $version);
-      }
+    # remove 'self-synonyms'
+    my $add_list = $attach_syns
+      ? [ grep {$_ ne $xref->{id} } @{$syns || []} ]
+      : undef;
+
+    my $xref_db_entry = store_xref(
+      $dbea,
+      $lc_type,
+      $obj->dbID,
+      $xref->{dbname},
+      $xref->{id},
+      $xref->{id},
+      $add_list,
+      $xref->{description},
+      $xref->{info_type},
+      $xref->{info_text}
+    );
+
+    # update 'display_xref' only for the first time or for the $set_display_xref_4
+    if (defined $display_xref && $display_xref eq $xref->{id}) {
+      $obj->display_xref($xref_db_entry);
+      $do_update = 1;
+      $stored_xref = $xref->{dbname}.':'.$xref->{id};
     }
+  }
 
-    # xrefs
-    my $ont = array_ref($it->{ontology_terms});
-    my $xrefs_raw = array_ref($it->{xrefs});
-    my $synonyms = array_ref($it->{synonyms});
-
-    my ($display_xref, $syns) = get_syns($synonyms, $id, $type);
-    my @xrefs = ( @$xrefs_raw, map { { id => $_, dbname => substr($_, 0, 2) } } @$ont );
-
-    # Add display_xref to xrefs if it is not there
-    if ($display_xref and not grep { $_->{id} eq $display_xref } @xrefs) {
-      my $dxref = {
-        id => $display_xref,
-        dbname => $display_db_default,
-        info_type => 'DIRECT',
-      };
-      push @xrefs, $dxref;
-    }
-
-    my $already_used = 0;
-    my $stored_xref = undef;
-    for my $xref (@xrefs) {
-      # "attach" synonyms to the xref with the display_xref_name
-      #  or to the first seen xref
-      my $attach_syns = 0;
-      if (defined $display_xref) {
-        $attach_syns = $display_xref eq $xref->{id};
-      } else {
-        $attach_syns = !$already_used;
-        $already_used = 1;
-      }
-
-      # remove 'self-synonyms'
-      my $add_list = $attach_syns
-        ? [ grep {$_ ne $xref->{id} } @{$syns || []} ]
-        : undef;
-
-      my $xref_db_entry = store_xref(
-        $dbea,
-        $lc_type,
-        $obj->dbID,
-        $xref->{dbname},
-        $xref->{id},
-        $xref->{id},
-        $add_list,
-        $xref->{description},
-        $xref->{info_type},
-        $xref->{info_text}
-      );
-
-      # update 'display_xref' only for the first time or for the $set_display_xref_4
-      if (defined $display_xref && $display_xref eq $xref->{id}) {
-        $obj->display_xref($xref_db_entry);
-        $do_update = 1;
-        $stored_xref = $xref->{dbname}.':'.$xref->{id};
-      }
-    }
-
-    # do update
-    if ($do_update) {
-      eval { $adaptor->update($obj) };
-      if ($@) {
-        my $xref_msg = defined $stored_xref? " display_xref_id for $stored_xref ": "";
-        warn "failed to update object (id: \"$id\", type \"$type\")$xref_msg: $@\n";
-      }
+  # do update
+  if ($do_update) {
+    eval { $adaptor->update($obj) };
+    if ($@) {
+      my $xref_msg = defined $stored_xref? " display_xref_id for $stored_xref ": "";
+      warn "failed to update object (id: \"$id\", type \"$type\")$xref_msg: $@\n";
     }
   }
 }
