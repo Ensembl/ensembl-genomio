@@ -419,21 +419,22 @@ sub pipeline_analyses {
       -rc_name         => 'default',
     },
 
-     { -logic_name     => 'check_json_schema',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-       -parameters     => {
-         json_file => '#metadata_json#',
-         json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
-         cmd => 'jsonschema -i #json_file# #json_schema#',
-         hash_key => "#metadata_type#",
-       },
-       -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=metadata_json' },
-       -max_retry_count => 1,
-       -analysis_capacity => 1,
-       -batch_size     => 50,
-	     -rc_name        => 'default',
-     },
-    ];
+    { -logic_name     => 'check_json_schema',
+      -module         => 'SchemaValidator',
+      -language => 'python3',
+      -parameters     => {
+        json_file => '#metadata_json#',
+        json_schema => '#schemas#',
+        hash_key => "#metadata_type#",
+      },
+      -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=metadata_json' },
+      -analysis_capacity => 1,
+      -analysis_capacity => 1,
+      -failed_job_tolerance => 100,
+      -batch_size     => 50,
+      -rc_name        => 'default',
+    },
+  ];
 }
 
 1;
