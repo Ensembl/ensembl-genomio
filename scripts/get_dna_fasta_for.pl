@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-  get_dna_fasta4.pl
+  get_dna_fasta_for.pl
 
 =head1 SYNOPSIS
 
@@ -17,7 +17,7 @@
 
 =head1 ARGUMENTS
 
-  perl get_dna_fasta4.pl
+  perl get_dna_fast_for.pl
          -dbname
          -host
          -port
