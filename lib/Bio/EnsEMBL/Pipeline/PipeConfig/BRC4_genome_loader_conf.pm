@@ -301,12 +301,11 @@ sub pipeline_analyses {
     },
 
     { -logic_name     => 'check_json_schema',
-      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -module         => 'SchemaValidator',
+      -language => 'python3',
       -parameters     => {
         json_file => '#metadata_json#',
-        json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
-        cmd => 'jsonschema -i #json_file# #json_schema# 2> /dev/null',
-        hash_key => "#metadata_type#",
+        json_schema => '#schemas#',
       },
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
