@@ -421,6 +421,7 @@ sub pipeline_analyses {
         prune_agp => $self->o('prune_agp'),
         unversion_scaffolds => $self->o('unversion_scaffolds'),
         sr_syn_src  => $self->o('sr_syn_src_name'),
+        external_db_map => $self->o('external_db_map'),
       },
       -analysis_capacity   => 4,
       -rc_name         => '8GB',
