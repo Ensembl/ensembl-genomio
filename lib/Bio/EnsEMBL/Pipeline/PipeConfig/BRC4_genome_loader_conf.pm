@@ -18,6 +18,7 @@ my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
 my $package_dir = dirname($package_path);
 my $scripts_dir = "$package_dir/../../../../../scripts";
 my $schema_dir = "$package_dir/../../../../../schema";
+my $data_dir = "$package_dir/../../../../../data";
 
 sub default_options {
   my ($self) = @_;
@@ -58,6 +59,9 @@ sub default_options {
     
     # Use alias instead of production_name for the registry?
     registry_alias_name => 0,
+    
+    # External_db name map file
+    external_db_map => catfile($data_dir, 'external_db_map_default.txt'),
 
     ############################################
     # Config unlikely to be changed by the user
@@ -756,6 +760,7 @@ sub pipeline_analyses {
             . '  --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --dbname #db_name# '
             . '  -json #fann_json_file# '
             . '  #default_feat_v# '
+            . '  -external_db_map ' . $self->o('external_db_map')
             . '  > #log_path#/stdout '
             . '  2> #log_path#/stderr ',
         'log_path'       => $self->o('pipeline_dir') . '/#db_name#/load_functional_annotation',

@@ -25,6 +25,7 @@
          -json
          -display_db_default
          -feature_version_default
+         -external_db_map
          -help
 
 =head1 EXAMPLE
@@ -45,7 +46,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use JSON;
 
 my ($host, $port, $user, $pass, $dbname);
-my ($filename, $display_db_default, $feature_version_default);
+my ($filename, $display_db_default, $feature_version_default, $external_db_map);
 my $help = 0;
 
 &GetOptions(
@@ -57,6 +58,7 @@ my $help = 0;
   'json=s'                     => \$filename,
   'display_db_default=s'       => \$display_db_default,
   'feature_version_default=i'  => \$feature_version_default,
+  'external_db_map=s'          => \$external_db_map,
   'help|?'                     => \$help,
 ) or pod2usage(-message => "use -help", -verbose => 1);
 pod2usage(-verbose => 2) if $help;
@@ -105,6 +107,9 @@ my $json_string;
 
 # Decode the json string in an array
 my $data = array_ref(decode_json($json_string));
+
+# Get external_db_map
+my $extdb_map = get_external_db_map($external_db_map);
 
 # Import each item in the array
 for my $it (@$data) {
@@ -177,12 +182,17 @@ for my $it (@$data) {
     my $add_list = $attach_syns
       ? [ grep {$_ ne $xref->{id} } @{$syns || []} ]
       : undef;
+      
+    # Used mapped external db name if it exists
+    my $dbname = $xref->{dbname};
+    my $mapped_dbname = $extdb_map->{$dbname};
+    $dbname = $mapped_dbname if $mapped_dbname;
 
     my $xref_db_entry = store_xref(
       $dbea,
       $lc_type,
       $obj->dbID,
-      $xref->{dbname},
+      $dbname,
       $xref->{id},
       $xref->{id},
       $add_list,
@@ -214,6 +224,24 @@ close($fh);
 
 
 # utils
+
+sub get_external_db_map {
+  my($path) = @_;
+  
+  return {} if not $path;
+  
+  my %db_map;
+  open my $map_fh, "<", $path or die "$!: $path";
+  while (my $line = readline $map_fh) {
+    next if $line =~ /#/;
+    chomp $line;
+    my ($from_name, $to_name) = split("\t", $line);
+    $db_map{$from_name} = $to_name;
+  }
+  
+  return \%db_map;
+}
+
 sub get_syns {
   my ($synonyms, $id, $type) = @_;
   my @default_ones = map { $_->{synonym} } grep { ref($_) eq "HASH" && ($_->{default}) } @$synonyms;
