@@ -129,7 +129,7 @@ sub create_xref {
 
   my $xref = { dbname => $dbname, id => $id };
   $xref->{description} = $entry->description if ($entry->description);
-  $xref->{info_type} = $entry->info_type if ($entry->info_type);
+  $xref->{info_type} = $entry->info_type if ($entry->info_type and $entry->info_type ne 'NONE');
   $xref->{info_text} = $entry->info_text if ($entry->info_text);
   return $xref;
 }
