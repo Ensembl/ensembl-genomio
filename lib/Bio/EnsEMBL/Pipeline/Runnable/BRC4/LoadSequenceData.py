@@ -36,6 +36,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             'not_toplevel_cs' : [], # i.e. "contig", "non_ref_scaffold"
             'nullify_cs_version_from' : 'contig',
             'noagp_cs_name_default' : 'primary_assembly',
+            'external_db_map' : None,
         }
 
 
@@ -456,18 +457,40 @@ class LoadSequenceData(eHive.BaseRunnable):
             with open(insert_sql_file, "w") as sql:
                 print("insert into seq_region_synonym (seq_region_id, synonym, external_db_id) values", file=sql)
                 fst = ""
+                db_map = self.get_external_db_map()
                 for _sr_id, _sr_syn in sum(map(lambda p: [(p[0], s) for s in p[1]], new_syns.items()), [ ]):
-                    if _sr_syn["source"] in extdb_ids:
-                        extdb_id = extdb_ids[_sr_syn["source"]]
+                    db_name = _sr_syn["source"]
+                    if db_name in db_map:
+                        db_name = db_map[db_name]
+                        
+                    if db_name in extdb_ids:
+                        extdb_id = extdb_ids[db_name]
+                        
                         print ('%s (%s, "%s", %s)' % (fst, _sr_id, _sr_syn["name"], extdb_id), file = sql)
                         fst = ","
                     else:
-                        raise Exception("There is no external_db with source '%s' for %s" % (_sr_syn["source"], _sr_syn["name"]))
+                        raise Exception("There is no external_db with source '%s' for %s" % (db_name, _sr_syn["name"]))
                 print(";", file=sql)
 
             # run insert sql
             self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
-
+            
+    def get_external_db_map(self):
+        """
+        Get a map from a file for external_dbs to Ensembl dbnames
+        """
+        external_map_path = self.param("external_db_map")
+        db_map = dict()
+        if external_map_path is None: return db_map
+        
+        # Load the map
+        with open(external_map_path, "r") as map_file:
+            for line in map_file:
+                if line.startswith("#"): continue
+                (from_name, to_name) = line.strip().split("\t")
+                db_map[from_name] = to_name
+        return db_map
+        
     def get_external_db_ids(self, out_pfx):
         sql = r'''select external_db_id, db_name FROM external_db;'''
         res = self.run_sql_req(sql, out_pfx)
