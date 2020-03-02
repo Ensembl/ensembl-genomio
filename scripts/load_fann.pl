@@ -233,7 +233,7 @@ sub get_external_db_map {
   my %db_map;
   open my $map_fh, "<", $path or die "$!: $path";
   while (my $line = readline $map_fh) {
-    next if $line =~ /#/;
+    next if $line =~ /^#/ or $line =~ /^\s*$/;
     chomp $line;
     my ($from_name, $to_name) = split("\t", $line);
     $db_map{$from_name} = $to_name;
