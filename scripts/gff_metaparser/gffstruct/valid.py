@@ -3,7 +3,8 @@
 import sys
 
 from collections import defaultdict
-from gffstruct.rules import *
+
+from .rules import *
 
 # VALID STRUCTURES class
 
@@ -12,6 +13,12 @@ class ValidStructures:
     AliasRule,
     IgnoreRule,
     ValidRule,
+    ValidIfRule,
+    FixRule,
+    ForceFixRule,
+    SubRule,
+    ForceSubRule,
+    SetRule,
   ]
 
   def __init__(self, config):
@@ -41,11 +48,12 @@ class ValidStructures:
       if not nocmt:
         continue
       pattern, name, *actions = nocmt.split(maxsplit=2)
-      self.add_rule(name.lower(), pattern, actions, lineno)
+      self.add_rule(name, pattern, actions, lineno)
 
-  def add_rule(self, name, pattern, actions, lineno):
+  def add_rule(self, name_raw, pattern, actions, lineno):
+    name = name_raw.lower().strip()
     if name not in self.rule_factories:
-       # print("can't load rule %s at line %s" % (name, lineno), file = sys.stderr)
+       print("can't load unknown rule %s at line %s" % (name, lineno), file = sys.stderr)
        return
     fabric = self.rule_factories[name]
     rule = fabric(pattern, actions, lineno)
@@ -69,6 +77,6 @@ class ValidStructures:
       rule.process(struct, re_context = re_context)
     else:
       # log not seen stuct / struct tag
-      BaseRule.process_unknown(struct, noconfig = (self.config == None))
+      UnseenRule.process(struct, noconfig = (self.config == None))
       pass
     # return ???
