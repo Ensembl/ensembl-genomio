@@ -12,8 +12,6 @@ from collections import defaultdict
 from gffstruct.prefixtree import PfxTr
 from gffstruct.valid import ValidStructures
 
-
-
 def dump_seq_region():
   pass
 
@@ -49,7 +47,6 @@ def dump_stats():
 def get_args():
   # https://docs.python.org/3/library/argparse.html#metavar
   parser = argparse.ArgumentParser()
-  parser.add_argument("--structures_conf", metavar="structures.conf", required=False, help="valid structures config file")
   parser.add_argument("--stats_only", action="store_true", required=False, help="produce only stats output")
   parser.add_argument("--only_qualifiers", type = str, required=False,
                       default = "",
@@ -60,6 +57,9 @@ def get_args():
   # logging options ??
   parser.add_argument('--verbose', '-v', action='count', default=0)
   # file arguments
+  parser.add_argument("--structures_conf", metavar="structures.conf", required=False,
+                      type=argparse.FileType('rt', encoding='UTF-8'),
+                      help="valid structures config file")
   parser.add_argument("--stats_out", metavar="stats.out", required = False,
                       type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
                       help="stats output [STDOUT]" )
@@ -76,7 +76,7 @@ def get_args():
 def main():
   args = get_args()
 
-  structer = ValidStructures(args.structures_conf)
+  known_structures = ValidStructures(args.structures_conf)
 
   print("examining  %s" % (args.gff_in.name), file = sys.stderr)
 
@@ -143,5 +143,11 @@ def main():
 if __name__ == "__main__":
     # execute only if run as a script
     main()
+
+
+# zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --only_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype --structures_conf new-genome-loader/scripts/gff_metaparser/conf/valid_structures.conf -
+
+# zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --only_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype -
+
 
 
