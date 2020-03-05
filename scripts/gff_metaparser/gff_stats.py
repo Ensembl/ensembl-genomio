@@ -10,16 +10,7 @@ from collections import defaultdict
 
 # locals
 from gffstruct.prefixtree import PfxTr
-
-
-
-class ValidStructures:
-  def __init__(self, filename=None):
-    pass
-  def load_conf(self, filename):
-    pass
-  def process(self, struct):
-    pass
+from gffstruct.valid import ValidStructures
 
 
 
@@ -60,6 +51,10 @@ def get_args():
   parser = argparse.ArgumentParser()
   parser.add_argument("--structures_conf", metavar="structures.conf", required=False, help="valid structures config file")
   parser.add_argument("--stats_only", action="store_true", required=False, help="produce only stats output")
+  parser.add_argument("--only_qualifiers", type = str, required=False,
+                      default = "",
+                      metavar = "source,name,parent,dbxref,phase,product,protein_id,biotype",
+                      help="comma separated list of qualifiers to use [keeping all by default]")
   # ? separate sources, value to include #ALL_SOURCES with #
   parser.add_argument("--no_longest_pfx", action="store_true", required=False, help="no lognest pfrefixes for IDs" )
   # logging options ??
@@ -80,11 +75,14 @@ def get_args():
 
 def main():
   args = get_args()
+
   structer = ValidStructures(args.structures_conf)
 
   print("examining  %s" % (args.gff_in.name), file = sys.stderr)
 
-  useful_quals = frozenset("source Name Parent Dbxref phase product protein_id biotype".split())
+  useful_qls = frozenset(filter(lambda x: x != "", args.only_qualifiers.split(",")))
+  print("using quals %s" % (args.only_qualifiers), file = sys.stderr)
+
 
   stats = defaultdict(int)
   stats_sources = defaultdict(set)
@@ -95,7 +93,9 @@ def main():
     # use https://docs.python.org/3/library/operator.html attrgetter methodcaller ??
     #print(feature.type, feature.id, feature.location)
     quals = feature.qualifiers
-    out = { k:v[0] for k,v in quals.items() if k in useful_quals }
+    out = { k : (len(v) > 0 and v[0] or None)
+              for k,v in quals.items()
+                if (not useful_qls or k.lower() in useful_qls) }
     #print(out)
 
     if prefix is None:
@@ -143,34 +143,5 @@ def main():
 if __name__ == "__main__":
     # execute only if run as a script
     main()
-
-#  limits = examiner.available_limits(in_handle)
-#  limits.keys()
-#  #Out[9]: dict_keys(['gff_id', 'gff_source_type', 'gff_source', 'gff_type'])
-
-#  limits['gff_source_type']
-#  #{('Genbank', 'region'): 459,
-# ('Genbank', 'gene'): 15577,
-# ('Genbank', 'mRNA'): 15577,
-# ('Genbank', 'exon'): 74199,
-# ('Genbank', 'CDS'): 68827}
-
-# list(limits['gff_source_type'].keys())[0][1]
-# #Out[13]: 'region'
-
-#limits['gff_type']
-#Out[14]:
-#{('region',): 459,
-# ('gene',): 15577,
-# ('mRNA',): 15577,
-# ('exon',): 74199,
-# ('CDS',): 68827}
-
-#limits['gff_source']
-#Out[15]: {('Genbank',): 174639}
-
-
-
-
 
 
