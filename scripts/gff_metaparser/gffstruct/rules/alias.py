@@ -5,6 +5,8 @@ from collections import defaultdict
 
 class AliasRule(BaseRule):
   NAME = "ALIAS"
+  _RULES = dict()
+
   aliases = defaultdict(str)
   lineno = defaultdict(list)
 
@@ -19,7 +21,6 @@ class AliasRule(BaseRule):
 
     cls.aliases[pattern] = "|".join( [cls.aliases[pattern]] + list(pre_pat) )
 
-
   def __init__(self, pattern, actions, lineno = None):
      if not pattern or not pattern.startswith("@"):
        print("ignoring: rule %s for %s (line %d): alias should start with '@'" % (
@@ -32,6 +33,10 @@ class AliasRule(BaseRule):
   @classmethod
   def update_lineno(cls, pattern, lineno):
     cls.lineno[pattern].append(lineno)
+
+  @classmethod
+  def alias2regexp(cls, pattern):
+    pass
 
   def dump(self):
     print(self.aliases)

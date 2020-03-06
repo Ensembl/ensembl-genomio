@@ -29,15 +29,23 @@ class ValidStructures:
     self.load_conf()
 
     # propagate aliases to rules
+    # use self.rule_factories['alias'].alias2regexp()
 
     # filling patterns to match to
-    self.const_match = defaultdict()
-    self.regex_match = []
+    self.const_patterns = defaultdict()
+    self.regex_patterns = []
     for name in self.rule_factories:
-      rule = self.rule_factories[name]
-      self.const_match.update([ (pat, rule) for pat in rule.const_patterns() ])
-      if rule.regex_patterns:
-        self.regex_match.append(rule)
+      factory = self.rule_factories[name]
+      const_patterns = factory.const_patterns()
+      rewriting = frozenset(const_patterns) & frozenset(self.const_patterns)
+      if rewriting:
+         print("const_patterns clash for %s" % (" ,".join(rewriting)) ,file=sys.stderr)
+      else:
+        self.const_patterns.update(const_patterns)
+      # check regex? or dynamically when multiple hits
+      regex_patterns = factory.regex_patterns
+      if factory.regex_patterns:
+        self.regex_patterns.append(regex_patterns)
 
   def load_conf(self):
     if not self.config:
@@ -55,8 +63,8 @@ class ValidStructures:
     if name not in self.rule_factories:
        print("can't load unknown rule %s at line %s" % (name, lineno), file = sys.stderr)
        return
-    fabric = self.rule_factories[name]
-    rule = fabric(pattern, actions, lineno)
+    factory = self.rule_factories[name]
+    rule = factory(pattern, actions, lineno)
 
     rule.dump()
 
@@ -64,12 +72,12 @@ class ValidStructures:
   def process(self, struct):
     tag = struct.tag
     rule, re_context = None, None
-    if tag in self.const_match:
-      rule = self.const_match[tag]
+    if tag in self.const_patterns:
+      rule = self.const_patterns[tag]
     else:
       # do not process if there was a static match, match first
-      for it in self.regex_match:
-        re_context = it.regex_match(tag)
+      for it in self.regex_patterns:
+        re_context = it.regex_patterns(tag)
         if re_context:
           rule = it
           break
