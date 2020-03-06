@@ -29,23 +29,23 @@ class ValidStructures:
     self.load_conf()
 
     # propagate aliases to rules
-    # use self.rule_factories['alias'].alias2regexp()
+    aliasCls = 'alias' in self.rule_factories and self.rule_factories['alias'] or None
 
     # filling patterns to match to
-    self.const_patterns = defaultdict()
-    self.regex_patterns = []
+    self.const_patterns = defaultdict(list)
+    self.regex_patterns = list()
+
     for name in self.rule_factories:
       factory = self.rule_factories[name]
+      factory.mature_regex(aliasCls)
       const_patterns = factory.const_patterns()
-      rewriting = frozenset(const_patterns) & frozenset(self.const_patterns)
-      if rewriting:
-         print("const_patterns clash for %s" % (" ,".join(rewriting)) ,file=sys.stderr)
-      else:
-        self.const_patterns.update(const_patterns)
-      # check regex? or dynamically when multiple hits
-      regex_patterns = factory.regex_patterns
-      if factory.regex_patterns:
-        self.regex_patterns.append(regex_patterns)
+      there_were = frozenset(const_patterns.keys()) & frozenset(self.const_patterns.keys())
+      if there_were:
+         print("already seen pattern for %s" % (", ".join(there_were)) ,file=sys.stderr)
+      for pat, rules in const_patterns.items():
+        self.const_patterns[pat] += rules
+      # regex_pattersn are checked dynamically for multiple hits
+      self.regex_patterns += factory.regex_patterns()
 
   def load_conf(self):
     if not self.config:
@@ -61,13 +61,10 @@ class ValidStructures:
   def add_rule(self, name_raw, pattern, actions, lineno):
     name = name_raw.lower().strip()
     if name not in self.rule_factories:
-       print("can't load unknown rule %s at line %s" % (name, lineno), file = sys.stderr)
-       return
+      print("can't load unknown rule %s (raw: %s) at line %s" % (name, name_raw, lineno), file = sys.stderr)
+      return
     factory = self.rule_factories[name]
     rule = factory(pattern, actions, lineno)
-
-    rule.dump()
-
 
   def process(self, struct):
     tag = struct.tag

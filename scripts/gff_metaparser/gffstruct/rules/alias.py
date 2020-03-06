@@ -1,11 +1,14 @@
 # 
+import re
+import sys
+
 from .base import BaseRule
 
 from collections import defaultdict
 
 class AliasRule(BaseRule):
   NAME = "ALIAS"
-  _RULES = dict()
+  _RULES = BaseRule.RulesType()
 
   aliases = defaultdict(str)
   lineno = defaultdict(list)
@@ -35,10 +38,10 @@ class AliasRule(BaseRule):
     cls.lineno[pattern].append(lineno)
 
   @classmethod
-  def alias2regexp(cls, pattern):
-    pass
-
-  def dump(self):
-    print(self.aliases)
-    print(self.lineno)
+  def mature_regex(cls, pattern):
+    if pattern == AliasRule:
+      return None, None
+    # print("maturing %s" % pattern, file=sys.stderr)
+    # try case insensitive
+    return pattern, re.compile(pattern)
 
