@@ -1,6 +1,6 @@
 # 
-import re
 import sys
+import re
 
 from .base import BaseRule
 
@@ -11,6 +11,8 @@ class AliasRule(BaseRule):
   _RULES = BaseRule.RulesType()
 
   aliases = defaultdict(str)
+  capture = dict()
+  regexp = dict()
   lineno = defaultdict(list)
 
   @classmethod
@@ -20,13 +22,22 @@ class AliasRule(BaseRule):
     pre_pat = ",".join(actions).split(",")
     pre_pat = map(lambda x: x.strip(), pre_pat)
     pre_pat = filter(None, pre_pat)
-    pre_pat = map(lambda x: r'\b%s\b' % x, filter(None, pre_pat))
+    pre_pat = map(lambda x: r'\\b%s\\b' % x, filter(None, pre_pat)) # N.B. double quoting, because used in re.sub
+    pre_pat = list(pre_pat)
 
-    cls.aliases[pattern] = "|".join( [cls.aliases[pattern]] + list(pre_pat) )
+    if pattern in cls.aliases and pre_pat:
+      cls.aliases[pattern] += "|"
+    cls.aliases[pattern] += "|".join(pre_pat)
+
+    capture = r'(?P<%s>%s)' % (pattern.replace(BaseRule.AliasSymbol(),""), cls.aliases[pattern])
+    cls.capture[pattern] = capture
+    rx = r'%s\b' % pattern # should start with '@' otherwise add initial \b
+    # print("rx %s capture %s" %(rx, capture), file=sys.stderr)
+    cls.regexp[pattern] = re.compile(rx)
 
   def __init__(self, pattern, actions, lineno = None):
      if not pattern or not pattern.startswith("@"):
-       print("ignoring: rule %s for %s (line %d): alias should start with '@'" % (
+       print(r"ignoring: rule %s for %s (line %d): alias should start with '@'" % (
               self.NAME, pattern, lineno
             ), file=sys.stderr)
        return
@@ -40,8 +51,10 @@ class AliasRule(BaseRule):
   @classmethod
   def mature_regex(cls, pattern):
     if pattern == AliasRule:
-      return None, None
-    # print("maturing %s" % pattern, file=sys.stderr)
+      return None
     # try case insensitive
-    return pattern, re.compile(pattern)
+    for alias, capture in cls.capture.items():
+      rx = cls.regexp[alias]
+      pattern = rx.sub(capture, pattern)
+    return pattern
 

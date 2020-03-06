@@ -67,21 +67,31 @@ class ValidStructures:
     rule = factory(pattern, actions, lineno)
 
   def process(self, struct):
-    tag = struct.tag
-    rule, re_context = None, None
+    tag_raw = struct.tag
+    tag = tag_raw.lower().strip()
+    matched_rules = []
+
     if tag in self.const_patterns:
-      rule = self.const_patterns[tag]
+      matched_rules += list(map(lambda x: MatchedRuleCtx(x), self.const_patterns[tag]))
+    # or stop if there's a constant match
+    for it in self.regex_patterns:
+      matching = it.re.match(tag)
+      if matching:
+        matched_rules.append(MatchedRuleCtx(it.rule, matching))
+
+    if matched_rules:
+      for wrp in matched_rules:
+        wrp.rule.process(struct, re_context = wrp.ctx)
     else:
-      # do not process if there was a static match, match first
-      for it in self.regex_patterns:
-        re_context = it.regex_patterns(tag)
-        if re_context:
-          rule = it
-          break
-    if rule:
-      rule.process(struct, re_context = re_context)
-    else:
-      # log not seen stuct / struct tag
       UnseenRule.process(struct, noconfig = (self.config == None))
-      pass
+
     # return ???
+  class Structure:
+    def __init__(self, tag = ""):
+      self.tag = tag
+
+class MatchedRuleCtx:
+  def __init__(self, rule, ctx = None):
+    self.rule = rule
+    self.ctx = ctx
+

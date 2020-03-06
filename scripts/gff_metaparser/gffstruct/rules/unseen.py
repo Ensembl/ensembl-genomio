@@ -1,3 +1,5 @@
+import sys
+
 from .base import BaseRule
 
 class UnseenRule(BaseRule):

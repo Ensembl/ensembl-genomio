@@ -1,10 +1,10 @@
 # rules classes
 
+import re
 import sys
 
 from collections import defaultdict
 from copy import deepcopy
-
 
 def _RulesType():
   return {
@@ -52,16 +52,17 @@ class BaseRule:
     for pat, rules in cls._RULES["_regex_match_pre"].items():
       for rule in rules:
         raw_pat = rule._pattern.strip()
-        re_pat, re_compiled = aliases_cls.mature_regex(raw_pat)
+
+        re_pat = aliases_cls.mature_regex(raw_pat)
         if re_pat == None:
           continue
         if re_pat == raw_pat:
           cls._RULES["const_match"][pat].append(rule)
-          print("cannot mature pattern %s (raw: %s) for %s (line %d)" % (
+          print(r"cannot mature pattern %s (raw: %s) for %s (line %d)" % (
                pat, raw_pat, cls.NAME, rule._lineno,
             ), file=sys.stderr)
         else:
-            cls._RULES["regex_match"].append((re_pat, re_compiled, rule))
+            cls._RULES["regex_match"].append(RERuleWrapper(rule, re_pat))
 
   @classmethod
   def const_patterns(cls):
@@ -71,6 +72,26 @@ class BaseRule:
   def regex_patterns(cls):
     return deepcopy(cls._RULES["regex_match"])
 
-  def process(self, tag, re_context = None):
+  def process(self, struct, re_context = None):
+    print("processing %s for %s with match groups %s" % (
+        struct.tag, self.NAME, str(re_context and re_context.groupdict() or None)
+      ))
     pass
+
+
+# ideally, add wrapping for static, as well
+class RuleWrapper:
+  def __init__(self, rule, pattern = None, const_match = True):
+    self.rule = rule
+    self.pattern = pattern
+    self.const_match = const_match
+
+class RERuleWrapper(RuleWrapper):
+  def __init__(self, rule, pattern = None, const_match = False):
+    self.rule = rule
+    self.pattern = pattern
+    self.const_match = const_match
+    self.re = None
+    if pattern:
+      self.re = re.compile(pattern)
 

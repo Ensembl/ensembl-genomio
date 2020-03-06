@@ -10,7 +10,7 @@ from collections import defaultdict
 
 # locals
 from gffstruct.prefixtree import PfxTr
-from gffstruct.valid import ValidStructures
+from gffstruct.validstruct import ValidStructures
 
 def dump_seq_region():
   pass
@@ -83,7 +83,6 @@ def main():
   useful_qls = frozenset(filter(lambda x: x != "", args.only_qualifiers.split(",")))
   print("using quals %s" % (args.only_qualifiers), file = sys.stderr)
 
-
   stats = defaultdict(int)
   stats_sources = defaultdict(set)
   stats_prefixes = defaultdict(lambda: defaultdict(PfxTr)) # should be paths:item based
@@ -105,6 +104,8 @@ def main():
     new_prev_ids = prev_ids + [feature.id]
 
     if not feature.sub_features:
+      known_structures.process(ValidStructures.Structure(prefix))
+
       # analyze
       stats[prefix] += 1
       stats_sources[prefix].add(out["source"])
@@ -119,7 +120,7 @@ def main():
   for contig in gff:
     for cnt, feature in enumerate(contig.features):
       down_features(feature)
-      # if cnt > 2: break
+      # if cnt > 20: break
     # break
 
 
