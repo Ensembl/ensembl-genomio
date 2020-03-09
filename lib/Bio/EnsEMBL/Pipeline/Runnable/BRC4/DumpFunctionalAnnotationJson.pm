@@ -61,6 +61,7 @@ sub prepare_data {
 
     # Transcript specific metadata
     if ($type eq 'transcript') {
+      $feat{description} = $item->description if $item->description;
       $feat{version} = $item->version if $item->version;
     }
 

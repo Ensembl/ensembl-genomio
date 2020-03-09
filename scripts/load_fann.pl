@@ -128,8 +128,8 @@ for my $it (@$data) {
     next;
   }
 
-  # gene description
-  if ($lc_type eq "gene") {
+  # gene and transcript description
+  if ($lc_type eq "gene" or $lc_type eq 'transcript') {
     $obj->description($it->{description}) if (exists $it->{description} && $it->{description} !~ m/^\s*$/);
     $do_update = 1;
   }
