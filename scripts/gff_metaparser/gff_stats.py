@@ -45,7 +45,6 @@ def dump_stats():
   pass
 
 def get_args():
-  # https://docs.python.org/3/library/argparse.html#metavar
   parser = argparse.ArgumentParser()
   parser.add_argument("--stats_only", action="store_true", required=False, help="produce only stats output")
   parser.add_argument("--only_qualifiers", type = str, required=False,
