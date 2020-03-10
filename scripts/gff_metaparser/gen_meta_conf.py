@@ -37,6 +37,8 @@ def get_args():
   parser.add_argument("--manifest_out", metavar="manifest.json", required = True, type=str,
                       help="manifest file output" )
   # meta_defaults
+  parser.add_argument("--assembly_version", metavar="1", required = False,
+                      type=int, default = 1, help="assembly.version default" )
   parser.add_argument("--species_division", metavar="EnsemblMetazoa", required = False,
                       type=str, default = "EnsemblMetazoa", help="species.division default" )
   parser.add_argument("--genebuild_method", metavar="import", required = False,
@@ -127,14 +129,14 @@ class MetaConf:
           taxon_id = int(taxon_id_pre.split(":")[1])
           self.update("TAXON_ID", taxon_id, tech = True)
 
-  def update_from_dict(self, d, k):
+  def update_from_dict(self, d, k, tech = False):
     if d is None:
       return
     if k not in d:
       return
     if not str(d[k]).strip():
       return
-    self.update(k, d[k])
+    self.update(k, d[k], tech)
 
   def update_derived_data(self, defaults = None):
     # assembly metadata
@@ -144,6 +146,7 @@ class MetaConf:
       self.update("assembly.name", new_name)
     aname = self.get("assembly.name")
     self.update("assembly.default", aname)
+    self.update_from_dict(defaults, "assembly.version", tech = True)
     # species metadata
     self.update_from_dict(defaults, "species.division")
     _sci_name = self.get("species.scientific_name")
@@ -163,7 +166,7 @@ class MetaConf:
     syns.append(w[0][0] + "." + w[1][:3])
     syns.append((w[0][0] + w[1][:3]).lower())
     if syns:
-      self.update("species.alias", [])
+      self.update("species.alias", syns)
     # genebuild metadata
     self.update_from_dict(defaults, "genebuild.method")
     self.update_from_dict(defaults, "genebuild.level")
@@ -172,15 +175,47 @@ class MetaConf:
     self.update("genebuild.start_date",
                 "%s-%0d-%s" % (today.year, today.month, self.get("species.division")))
    
+  def dump_genome_conf(self, json_out):
+    out = {}
+    fields = [
+      "provider.name",
+      "provider.url",
+      "assembly.accession",
+      "assembly.name",
+      "genebuild.method",
+      "genebuild.start_date",
+      "genebuild.version",
+      "*species.alias",
+      "species.display_name",
+      "species.division",
+      "species.production_name",
+      "species.scientific_name",
+      "species.strain",
+    ]
+    for f in fields:
+      if f.startswith("*"):
+        self.split_add(out, f[1:], self.get(f[1:], idx=None))
+      else:
+        self.split_add(out, f, self.get(f))
+    self.split_add(out, "assembly.version", self.get("assembly.version", tech=True))
+    self.split_add(out, "species.taxonomy_id", self.get("TAXON_ID", tech=True))
+    if out:
+      os.makedirs(dirname(json_out), exist_ok=True)
+      with open(json_out, 'wt') as jf:
+        json.dump(out, jf, indent = 2)
 
-
-## GENOME CONF ##
-class GenomeConf:
-  def __init__(self, meta = None):
-    pass
-  def dump(self, out = None):
-    pass
-
+  def split_add(self, out, key, val):
+    if val is None:
+      return
+    keys = key.split(".")
+    if not keys:
+      return
+    pre = {keys[-1]: val}
+    for k in keys[:-1]:
+      if k not in out:
+        out[k] =  dict()
+      out = out[k]
+    out.update(pre)
 
 ## MANIFEST CONF ##
 class Manifest:
@@ -214,7 +249,10 @@ class Manifest:
     outfile = pj(outdir,tag+sfx)
 
     os.makedirs(outdir, exist_ok=True)
-    shutil.copyfile(name, outfile)
+    try:
+      shutil.copyfile(name, outfile)
+    except(shutil.SameFileError):
+      pass
     return outfile
 
   def md5sum(self, name):
@@ -254,19 +292,19 @@ def main():
   meta = MetaConf(args.raw_meta_conf)
   meta.merge_from_gbff(args.gbff_file)
   meta.update_derived_data({
-    "species.division" : args.species_division,
+    "assembly.version" : args.assembly_version,
     "genebuild.method" : args.genebuild_method,
     "genebuild.level" : args.genebuild_level,
+    "species.division" : args.species_division,
   })
   meta.dump(args.meta_out)
 
-  genome = GenomeConf(meta)
-  genome.dump(args.genome_conf)
+  meta.dump_genome_conf(args.genome_conf)
 
   manifest = Manifest({
     "fasta_dna" : args.fasta_dna,
     "fasta_pep" : args.fasta_pep,
-    # "genome" : args.genome_conf.name, # check overriding on self copy (compare abs paths/ inodes?)
+    "genome" : args.genome_conf, # check overriding on self copy (compare abs paths/ inodes?)
   })
   manifest.dump(args.manifest_out, outdir=args.data_out_dir)
 
