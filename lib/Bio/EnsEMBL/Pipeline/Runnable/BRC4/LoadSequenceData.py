@@ -182,13 +182,15 @@ class LoadSequenceData(eHive.BaseRunnable):
         chr_order = meta and tag in meta and meta[tag] or None
         if (chr_order == None):
             # get chromosome id and karyotype_rank id
-            ids_sql = r'''select sr.seq_region_id as seq_region_id
+            ids_sql = r'''select distinct sr.seq_region_id as seq_region_id
                         from seq_region sr, seq_region_attrib sra, coord_system cs, attrib_type at
                         where sr.seq_region_id = sra.seq_region_id
                           and sr.coord_system_id = cs.coord_system_id
                           and sra.attrib_type_id = at.attrib_type_id
-                          and cs.name = "chromosome"
-                          and at.code = "toplevel"
+                          and (
+                               ( cs.name = "chromosome" and at.code = "toplevel" )
+                            or ( at.code = "coord_system_tag" and sra.value = "chromosome" )
+                          )
                        order by seq_region_id
                       ;'''
             ids_log_pfx = pj(wd,'chr_ids')
