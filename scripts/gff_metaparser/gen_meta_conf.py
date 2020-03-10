@@ -72,25 +72,40 @@ class MetaConf:
       for v in vals:
         print("\t".join([str(k), str(v)]), file=out)
 
+  def update(self, key, val, tech = False):
+    out = self.data
+    if tech:
+      out = self.tech_data
+    if val is None or not val:
+      return
+    if key in out and out[key]: 
+      return  
+    out[key].append(val)
+
   def merge_from_gbff(self, gbff_file):
     if not gbff_file:
       return
 
-    data = {}
     print("adding data from  %s" % gbff_file, file = sys.stderr)
     _open = gbff_file.endswith(".gz") and gzip.open or open
     with _open(gbff_file, 'rt') as gbff:
       gb_parser = SeqIO.parse(gbff, "genbank")
       record = next(gb_parser)
       qualifiers = record.features[0].qualifiers
+      if "organism" in qualifiers:
+        sci_name = qualifiers["organism"][0] 
+        self.update("scientific_name", sci_name)
+      if "strain" in qualifiers:
+        strain = qualifiers["strain"][0] 
+        self.update("strain", strain)
+      if "db_xref" in qualifiers:
+        taxon_id_pre = list(filter(lambda x: x.startswith("taxon:"), qualifiers["db_xref"]))[0]
+        if taxon_id_pre:
+          taxon_id = int(taxon_id_pre.split(":")[1])
+          self.update("TAXON_ID", taxon_id, tech = True)
 
-      data["scientific_name"] = qualifiers["organism"][0]
-      data["strain"] = qualifiers["strain"][0]
-      # strain.replace(" ","")?
-      # production name
-      taxon_id_pre = list(filter(lambda x: x.startswith("taxon:"), qualifiers["db_xref"]))[0]
-      data["taxonomy_id"] = int(taxon_id_pre.split(":")[1])
-
+  def update_derived_data(self):
+    pass
 
 ## GENOME CONF ##
 class GenomeConf:
@@ -171,6 +186,7 @@ def main():
 
   meta = MetaConf(args.raw_meta_conf)
   meta.merge_from_gbff(args.gbff_file)
+  meta.update_derived_data()
   meta.dump(args.meta_out)
 
   genome = GenomeConf(meta)
