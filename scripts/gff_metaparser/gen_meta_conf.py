@@ -1,5 +1,5 @@
 import argparse
-
+import datetime
 import gzip
 import json
 import os
@@ -36,6 +36,14 @@ def get_args():
                       help="genome json file output" )
   parser.add_argument("--manifest_out", metavar="manifest.json", required = True, type=str,
                       help="manifest file output" )
+  # meta_defaults
+  parser.add_argument("--species_division", metavar="EnsemblMetazoa", required = False,
+                      type=str, default = "EnsemblMetazoa", help="species.division default" )
+  parser.add_argument("--genebuild_method", metavar="import", required = False,
+                      type=str, default = "import", help="genebuild.method default" )
+  parser.add_argument("--genebuild_level", metavar="toplevel", required = False,
+                      type=str, default = "toplevel", help="genebuild.level default" )
+  #
   args = parser.parse_args()
   return args
 
@@ -65,12 +73,24 @@ class MetaConf:
         out[tag.strip()].append(rest[0].rstrip())
 
   def dump(self, out):
-    for k, vals in self.tech_data.items():
-      for v in vals:
+    for k, vals in sorted(self.tech_data.items(), key=lambda x: x[0]):
+      for v in sorted(vals):
         print("\t".join(["#CONF", str(k), str(v)]), file=out)
-    for k, vals in self.data.items():
+    for k, vals in sorted(self.data.items(), key=lambda x: x[0]):
       for v in vals:
         print("\t".join([str(k), str(v)]), file=out)
+
+  def get(self, key, idx = 0, tech = False):
+    d = self.data
+    if tech:
+      d = self.tech_data
+    if key not in d or len(d[key]) < 1:
+      return None
+    if idx is None:
+      return d[key]
+    if idx >= len(d[key]):
+      return None
+    return d[key][idx]
 
   def update(self, key, val, tech = False):
     out = self.data
@@ -80,7 +100,10 @@ class MetaConf:
       return
     if key in out and out[key]: 
       return  
-    out[key].append(val)
+    if isinstance(val, list):
+      out[key] += val
+    else:
+      out[key].append(val)
 
   def merge_from_gbff(self, gbff_file):
     if not gbff_file:
@@ -94,18 +117,62 @@ class MetaConf:
       qualifiers = record.features[0].qualifiers
       if "organism" in qualifiers:
         sci_name = qualifiers["organism"][0] 
-        self.update("scientific_name", sci_name)
+        self.update("species.scientific_name", sci_name)
       if "strain" in qualifiers:
         strain = qualifiers["strain"][0] 
-        self.update("strain", strain)
+        self.update("species.strain", strain)
       if "db_xref" in qualifiers:
         taxon_id_pre = list(filter(lambda x: x.startswith("taxon:"), qualifiers["db_xref"]))[0]
         if taxon_id_pre:
           taxon_id = int(taxon_id_pre.split(":")[1])
           self.update("TAXON_ID", taxon_id, tech = True)
 
-  def update_derived_data(self):
-    pass
+  def update_from_dict(self, d, k):
+    if d is None:
+      return
+    if k not in d:
+      return
+    if not str(d[k]).strip():
+      return
+    self.update(k, d[k])
+
+  def update_derived_data(self, defaults = None):
+    # assembly metadata
+    new_name = self.get("assembly.accession")
+    if new_name:
+      new_name = new_name.strip().replace("_","").replace(".","v")
+      self.update("assembly.name", new_name)
+    aname = self.get("assembly.name")
+    self.update("assembly.default", aname)
+    # species metadata
+    self.update_from_dict(defaults, "species.division")
+    _sci_name = self.get("species.scientific_name")
+    _acc = self.get("assembly.accession").split(".")[0].replace("_", "")
+    _strain = self.get("species.strain")
+    _prod_name = ("%s_%s" % (_sci_name, _acc)).lower().replace(" ","_")
+    self.update("species.production_name", _prod_name)
+    _display_name = _sci_name
+    if _strain:
+      _display_name = ("%s (%s)" % (_sci_name, _strain))
+    self.update("species.display_name", _display_name)
+    self.update("species.url", _prod_name.capitalize())
+    # syns
+    syns = []
+    w = list(filter(None, _sci_name.split()))
+    syns.append(w[0][0] + ". " + w[1])
+    syns.append(w[0][0] + "." + w[1][:3])
+    syns.append((w[0][0] + w[1][:3]).lower())
+    if syns:
+      self.update("species.alias", [])
+    # genebuild metadata
+    self.update_from_dict(defaults, "genebuild.method")
+    self.update_from_dict(defaults, "genebuild.level")
+    self.update("genebuild.version", new_name + ".0")
+    today = datetime.datetime.today()
+    self.update("genebuild.start_date",
+                "%s-%0d-%s" % (today.year, today.month, self.get("species.division")))
+   
+
 
 ## GENOME CONF ##
 class GenomeConf:
@@ -186,7 +253,11 @@ def main():
 
   meta = MetaConf(args.raw_meta_conf)
   meta.merge_from_gbff(args.gbff_file)
-  meta.update_derived_data()
+  meta.update_derived_data({
+    "species.division" : args.species_division,
+    "genebuild.method" : args.genebuild_method,
+    "genebuild.level" : args.genebuild_level,
+  })
   meta.dump(args.meta_out)
 
   genome = GenomeConf(meta)
