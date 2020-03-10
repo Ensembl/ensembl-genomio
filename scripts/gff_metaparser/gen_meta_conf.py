@@ -173,7 +173,7 @@ class MetaConf:
     self.update("genebuild.version", new_name + ".0")
     today = datetime.datetime.today()
     self.update("genebuild.start_date",
-                "%s-%0d-%s" % (today.year, today.month, self.get("species.division")))
+                "%s-%02d-%s" % (today.year, today.month, self.get("species.division")))
    
   def dump_genome_conf(self, json_out):
     out = {}
