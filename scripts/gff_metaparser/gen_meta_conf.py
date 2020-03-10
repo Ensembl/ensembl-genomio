@@ -138,7 +138,7 @@ class Manifest:
   def md5sum(self, name):
     if not name:
       return
-    pre = sp.check_output(["md5sum", name], shell=True)
+    pre = sp.check_output("md5sum %s" % name, shell=True)
     (md5sum, *rest) = pre.split()
     return md5sum
 
@@ -159,9 +159,9 @@ class Manifest:
       print("calculating md5 for %s (%s)" %(outfile, tag), file=sys.stderr)
       md5 = self.md5sum(outfile)
       if outfile and md5:
-        out[tag] = { "file" : out_file , "md5sum" : md5 }
+        out[tag] = { "file" : outfile , "md5sum" : md5.decode() }
     if out:
-      with _open(json_out, 'rt') as jf:
+      with open(json_out, 'wt') as jf:
         json.dump(out, jf, indent = 2)
 
 
