@@ -30,13 +30,11 @@ def get_args():
   parser.add_argument("--meta_out", metavar="data/metadata/species", required = False,
                       type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
                       help="stats output [STDOUT]" )
-  parser.add_argument("--data_out_dir", metavar="data/metadata", required = False, type=str,
+  parser.add_argument("--data_out_dir", metavar="data/metadata", required = True, type=str,
                       help="dir to store files into" )
-  parser.add_argument("--genome_conf", metavar="genome.json", required = True,
-                      type=argparse.FileType('w',  encoding='UTF-8'),
+  parser.add_argument("--genome_conf", metavar="genome.json", required = True, type=str,
                       help="genome json file output" )
-  parser.add_argument("--manifest_out", metavar="manifest.json", required = True,
-                      type=argparse.FileType('w',  encoding='UTF-8'),
+  parser.add_argument("--manifest_out", metavar="manifest.json", required = True, type=str,
                       help="manifest file output" )
   args = parser.parse_args()
   return args
@@ -63,7 +61,8 @@ class MetaConf:
       if re.match(r'^\s*$', raw):
         continue
       tag, *rest = raw.split(maxsplit = 1)
-      out[tag.strip()].append(rest[0])
+      if rest:
+        out[tag.strip()].append(rest[0].rstrip())
 
   def dump(self, out):
     for k, vals in self.tech_data.items():
@@ -73,14 +72,14 @@ class MetaConf:
       for v in vals:
         print("\t".join([str(k), str(v)]), file=out)
 
-  def merge_from_gbff(self, gbff):
-    if not gbff:
+  def merge_from_gbff(self, gbff_file):
+    if not gbff_file:
       return
 
     data = {}
-    print("adding data from  %s" % gbff, file = sys.stderr)
-    _open = gbff.endswith(".gz") and gzip.open or open
-    with _open(fname, 'rt') as gbff:
+    print("adding data from  %s" % gbff_file, file = sys.stderr)
+    _open = gbff_file.endswith(".gz") and gzip.open or open
+    with _open(gbff_file, 'rt') as gbff:
       gb_parser = SeqIO.parse(gbff, "genbank")
       record = next(gb_parser)
       qualifiers = record.features[0].qualifiers
@@ -105,7 +104,8 @@ class GenomeConf:
 class Manifest:
   def __init__(self, mapping, ungzip = True, always_copy = True):
     self.files = mapping
-    pass
+    self.ungzip = ungzip
+    self.always_copy = always_copy
 
   def is_gz(self, name):
     return name.endswith(".gz")
@@ -115,12 +115,12 @@ class Manifest:
       print("no out_dir specified to uncompress to", file=sys.stderr)
       return None
 
-    sfx_pos_pre = name.rfind(".")
-    sfx = name[name.rfind(".", 0, sfx_pos_pre):-1]
+    nogzname = name.replace(".gz", "") 
+    sfx = nogzname[nogzname.rfind("."):]
     outfile = pj(outdir,tag+sfx)
 
     os.makedirs(outdir, exist_ok=True)
-    sp.run(r'''gunzip -c %s > %s''' % (name, outfile))
+    sp.run(r'''gunzip -c %s > %s''' % (name, outfile), shell = True)
     return outfile
 
   def copy(self, name, tag, outdir):
@@ -128,7 +128,7 @@ class Manifest:
       print("no out_dir specified to copy to", file=sys.stderr)
       return None
 
-    sfx = name[name.rfind("."):-1]
+    sfx = name[name.rfind("."):]
     outfile = pj(outdir,tag+sfx)
 
     os.makedirs(outdir, exist_ok=True)
@@ -138,25 +138,31 @@ class Manifest:
   def md5sum(self, name):
     if not name:
       return
-    pre = sp.check_output(["md5sum", name])
+    pre = sp.check_output(["md5sum", name], shell=True)
     (md5sum, *rest) = pre.split()
     return md5sum
 
-  def dump(self, outfile, outdir = None):
+  def dump(self, json_out, outdir = None):
     if outdir:
       os.makedirs(outdir, exist_ok=True)
     out = {}
     for tag, name in self.files.items():
-      out_file = name
-      if self.is_gz(name):
-        out_file = self.gunzip(name, tag, outdir)
+      if not name:
+        continue 
+      outfile = name
+      if self.is_gz(name) and self.ungzip:
+        print("uncompressing %s for %s" %(name, tag), file=sys.stderr)
+        outfile = self.gunzip(name, tag, outdir)
       elif self.always_copy:
-        out_file = self.copy(name, tag, )
-      md5 = md5sum(out_file)
-      if out_file and md5:
+        print("copying %s for %s" %(name, tag), file=sys.stderr)
+        outfile = self.copy(name, tag, outdir)
+      print("calculating md5 for %s (%s)" %(outfile, tag), file=sys.stderr)
+      md5 = self.md5sum(outfile)
+      if outfile and md5:
         out[tag] = { "file" : out_file , "md5sum" : md5 }
     if out:
-      json.dump(out, outfile, indent = 2)
+      with _open(json_out, 'rt') as jf:
+        json.dump(out, jf, indent = 2)
 
 
 ## MAIN ##
@@ -172,8 +178,8 @@ def main():
 
   manifest = Manifest({
     "fasta_dna" : args.fasta_dna,
-    "fasta_pep" : args.fasta_dna,
-    "genome" : genome_out,
+    "fasta_pep" : args.fasta_pep,
+    # "genome" : args.genome_conf.name, # check overriding on self copy (compare abs paths/ inodes?)
   })
   manifest.dump(args.manifest_out, outdir=args.data_out_dir)
 
