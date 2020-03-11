@@ -227,6 +227,9 @@ class LoadSequenceData(eHive.BaseRunnable):
         if len(sr_ids) > 0:
             tag = "karyotype_rank"
             self.set_sr_attrib(tag, sr_ids, pj(wd, "sr_attr_set_"+tag))
+            tag = "coord_system_tag"
+            sr_ids_chr = [ (_id, "chromosome") for _id, _  in sr_ids ]
+            self.set_sr_attrib(tag, sr_ids_chr, pj(wd, "sr_attr_set_"+tag))
 
 
     def set_toplevel(self, log_pfx, ignored_cs = []):
@@ -374,7 +377,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         if len(id_val_lst) <= 0:
             return
         with open(insert_sql_file, "w") as sql:
-            print("insert into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
+            print("insert ignore into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
             fst = ""
             for _sr_id, _val in id_val_lst:
                 if isinstance(_val, bool):
