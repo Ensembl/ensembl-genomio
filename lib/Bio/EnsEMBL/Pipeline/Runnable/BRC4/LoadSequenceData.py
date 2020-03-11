@@ -46,7 +46,6 @@ class LoadSequenceData(eHive.BaseRunnable):
 
         # initialize whatever
         genome = self.from_param("manifest_data", "genome")
-        sra = self.from_param("manifest_data", "seq_region")
 
         # TODO
         # split into contigs, add AGP
@@ -88,7 +87,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             self.unversion_scaffolds(cs_rank, pj(wd, "unversion_scaffolds"))
 
         # add seq_region synonyms
-        seq_reg_file = self.from_param("manifest_data", "seq_region")
+        seq_reg_file = self.from_param("manifest_data", "seq_region", not_throw = True)
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
         # add seq_region attributes and karyotype info
@@ -287,6 +286,8 @@ class LoadSequenceData(eHive.BaseRunnable):
 
 
     def add_sr_attribs(self, meta_file, wd, karyotype_info_tag = None, is_primary_assembly = False):
+        if not meta_file:
+          return
         os.makedirs(wd, exist_ok=True)
         
         # find interesting attribs in meta_file
@@ -429,27 +430,28 @@ class LoadSequenceData(eHive.BaseRunnable):
 
         # load syns from file
         new_syns = dict()
-        with open(meta_file) as mf:
-            data = json.load(mf)
-            if not isinstance(data, list):
-                data = [ data ]
-            for e in data:
-                if "synonyms" not in e:
-                   continue
-                es = list(filter(lambda s: s["name"] not in seen_syns, e["synonyms"]))
-                # do we need unversioned syn as well???
-                # Nov 2019: no, we need explicit list
-                if len(es) <= 0:
-                    continue
-                en = e["name"]
-                eid = en in sr_ids and sr_ids[en] or None
-                if unversioned and eid is None:
-                    if en[-2] == ".":
-                         en = en[:-2]
-                         eid = en in sr_ids and sr_ids[en] or None
-                if eid is None:
-                    raise Exception("Not able to find seq_region for '%s'" % (e["name"]))
-                new_syns[eid] = es
+        if meta_file:
+            with open(meta_file) as mf:
+                data = json.load(mf)
+                if not isinstance(data, list):
+                    data = [ data ]
+                for e in data:
+                    if "synonyms" not in e:
+                       continue
+                    es = list(filter(lambda s: s["name"] not in seen_syns, e["synonyms"]))
+                    # do we need unversioned syn as well???
+                    # Nov 2019: no, we need explicit list
+                    if len(es) <= 0:
+                        continue
+                    en = e["name"]
+                    eid = en in sr_ids and sr_ids[en] or None
+                    if unversioned and eid is None:
+                        if en[-2] == ".":
+                            en = en[:-2]
+                            eid = en in sr_ids and sr_ids[en] or None
+                    if eid is None:
+                        raise Exception("Not able to find seq_region for '%s'" % (e["name"]))
+                    new_syns[eid] = es
 
         # generate sql req for loading
         insert_sql_file = pj(wd, "insert_syns.sql")
