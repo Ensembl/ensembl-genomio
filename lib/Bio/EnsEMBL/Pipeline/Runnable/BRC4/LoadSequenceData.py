@@ -437,6 +437,7 @@ class LoadSequenceData(eHive.BaseRunnable):
                 # Nov 2019: no, we need explicit list
                 if len(es) <= 0:
                     continue
+                
                 en = e["name"]
                 eid = en in sr_ids and sr_ids[en] or None
                 if unversioned and eid is None:
@@ -469,7 +470,7 @@ class LoadSequenceData(eHive.BaseRunnable):
                         print ('%s (%s, "%s", %s)' % (fst, _sr_id, _sr_syn["name"], extdb_id), file = sql)
                         fst = ","
                     else:
-                        raise Exception("There is no external_db with source '%s' for %s" % (db_name, _sr_syn["name"]))
+                        raise Exception("There is no external_db with source '%s' for '%s' in '%s'" % (db_name, _sr_syn["name"], meta_file))
                 print(";", file=sql)
 
             # run insert sql
