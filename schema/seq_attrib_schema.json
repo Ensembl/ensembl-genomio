@@ -24,9 +24,9 @@
         "object_id" : { "type" : "string" },
         "seqattrib_type" : { "type" : "string",
           "enum" : [
-            "rna_edit",
+            "_rna_edit",
             "amino_acid_sub",
-            "selenocysteine"
+            "_selenocysteine"
           ]
         },
         "start" : { "type" : "integer", "minimum" : 1 },
@@ -43,7 +43,7 @@
         "object_type" : { "type" : "string", "value" : "transcript" },
         "object_id" : { "type" : "string" },
         "seqattrib_type" : { "type" : "string",
-          "value" : "frameshift"
+          "value" : "Frameshift"
         },
         "intron_number" : { "type" : "integer", "minimum" : 1 }
       },
@@ -58,8 +58,8 @@
         "object_id" : { "type" : "string" },
         "seqattrib_type" : { "type" : "string",
           "enum" : [
-            "translation_start",
-            "translation_end"
+            "_transl_start",
+            "_transl_end"
           ]
         },
         "position" : { "type" : "integer", "minimum" : 1 }
@@ -76,7 +76,7 @@
     {
       "object_type": "transcript",
       "object_id": "AEL018662-RA",
-      "seqattrib_type": "rna_edit",
+      "seqattrib_type": "_rna_edit",
       "start": 1537,
       "end": 1537,
       "sequence": "TAA"
@@ -84,7 +84,7 @@
     {
       "object_type": "transcript",
       "object_id": "AAEL000404-RA",
-      "seqattrib_type": "rna_edit",
+      "seqattrib_type": "_rna_edit",
       "start": 630,
       "end": 630,
       "sequence": ""
@@ -92,7 +92,7 @@
     {
       "object_type": "transcript",
       "object_id": "AAEL000404-RA",
-      "seqattrib_type": "rna_edit",
+      "seqattrib_type": "_rna_edit",
       "start": 847,
       "end": 846,
       "sequence": "N"
@@ -100,13 +100,13 @@
     {
       "object_type": "transcript",
       "object_id": "AEL018662-RA",
-      "seqattrib_type": "translation_start",
+      "seqattrib_type": "_transl_start",
       "position": 9
     },
     {
       "object_type": "transcript",
       "object_id": "AAEL009181-RA",
-      "seqattrib_type": "rna_edit",
+      "seqattrib_type": "_rna_edit",
       "start": 1,
       "end": 0,
       "sequence": "TGCACAAAATGAGAAAACAAGCAATTTTGCTGATAGTCGCCTTTACAATCGCGGTCTCCGCGATCACCGGAGCCGAAGCGGACA"
@@ -114,13 +114,13 @@
     {
       "object_type": "transcript",
       "object_id": "AAEL002158-RA",
-      "seqattrib_type": "translation_end",
+      "seqattrib_type": "_transl_end",
       "position": 832
     },
     {
       "object_type": "transcript",
       "object_id": "AAEL002158-RA",
-      "seqattrib_type": "rna_edit",
+      "seqattrib_type": "_rna_edit",
       "start": 785,
       "end": 784,
       "sequence": "GAGCTGGGCGTGCAGCTCTTTGACGAGTATCTCGATAAGGCGGAGTAAGCCGCTTAGCTCGAGTGTGACTGTAAAATTTAAGAGTTGGGTTTTCCCCGTAGAA"
@@ -128,7 +128,7 @@
     {
       "object_type": "transcript",
       "object_id": "AAEL000404-RA",
-      "seqattrib_type": "frameshift",
+      "seqattrib_type": "Frameshift",
       "intron_number": 2
     },
     {
@@ -142,7 +142,7 @@
     {
       "object_type": "translation",
       "object_id": "AAEL003681-PB",
-      "seqattrib_type": "selenocysteine",
+      "seqattrib_type": "_selenocysteine",
       "start": 58,
       "end": 58,
       "sequence": "U"
