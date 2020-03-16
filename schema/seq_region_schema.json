@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/schema#",
-  "$id": "https://.../.../schema/v0.0.0/scaffolds_attribs_schema.json",
-  "description" : "JSON schema for exchanging meta information for scaffolds",
+  "$id": "https://.../.../schema/v0.0.0/seq_region_schema.json",
+  "description" : "JSON schema for exchanging meta information for seq regions",
 
   "definitions" : {
     "seq_region_synonym_info" : {
@@ -36,7 +36,7 @@
             "primary_assembly"
           ]
         },
-        "omit" : { "type" : "boolean", "decription" : "prevent loading/processing of the scaffold" },
+        "omit" : { "type" : "boolean", "description" : "prevent loading/processing of the scaffold" },
         "circular" : { "type" : "boolean" },
         "codon_table" : {
           "type" : "integer", "default" : 1,
@@ -44,7 +44,7 @@
           "description" : "wikipedia: 33, https://www.ebi.ac.uk/ena/browse/translation-tables: 25"
         },
         "note" : { "type" : "string", "description" : "optional note" },
-        "non_ref" : { "type" : "boolean", "decription" : "clashes with non_ref_scaffold cs ?" },
+        "non_ref" : { "type" : "boolean", "description" : "clashes with non_ref_scaffold cs ?" },
         "location" : {
           "type" : "string",
           "description" : "SO_trem attribute to account for mitochondria, apicoplasts, etc.",
