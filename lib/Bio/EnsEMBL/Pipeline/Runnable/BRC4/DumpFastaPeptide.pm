@@ -72,11 +72,14 @@ sub run {
     $line_width,
   );
 
+  # Load transcripts with CDS
   my $dba = $self->core_dba();
   my $tra = $dba->get_adaptor('Transcript');
-  my $transcripts = $tra->fetch_all_by_biotype('protein_coding');
+  my $protein_coding = $tra->fetch_all_by_biotype('protein_coding');
+  my $nontranslating_CDS = $tra->fetch_all_by_biotype('nontranslating_CDS');
+  my @transcripts = sort { $a->stable_id cmp $b->stable_id } (@$protein_coding, @$nontranslating_CDS);
 
-  foreach my $transcript (sort { $a->stable_id cmp $b->stable_id } @{$transcripts}) {
+  foreach my $transcript (@transcripts) {
     if (defined $is_canonical) {
       next if $is_canonical != $transcript->is_canonical;
     }

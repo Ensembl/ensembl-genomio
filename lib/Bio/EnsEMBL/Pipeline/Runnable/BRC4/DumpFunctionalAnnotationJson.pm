@@ -32,6 +32,8 @@ sub prepare_data {
   push @items, @{$ga->fetch_all()};
   push @items, @{$ta->fetch_all()};
   push @items, @{$pa->fetch_all()};
+  
+  $self->load_external_db_map();
 
   foreach my $item (@items) {
 
@@ -52,7 +54,7 @@ sub prepare_data {
 
     # Gene specific metadata
     if ($type eq 'gene') {
-      my $syns = get_synonyms($item);
+      my $syns = $self->get_synonyms($item);
       $feat{synonyms} = $syns if $syns and @$syns;
       $feat{description} = $item->description if $item->description;
       $feat{version} = $item->version if $item->version;
@@ -61,11 +63,12 @@ sub prepare_data {
 
     # Transcript specific metadata
     if ($type eq 'transcript') {
+      $feat{description} = $item->description if $item->description;
       $feat{version} = $item->version if $item->version;
     }
 
     # Xrefs (if any)
-    my $xrefs = get_xrefs($item);
+    my $xrefs = $self->get_xrefs($item);
     $feat{xrefs} = $xrefs if $xrefs and @$xrefs;
 
     push @features, \%feat;
@@ -80,7 +83,7 @@ sub prepare_data {
 }
 
 sub get_synonyms {
-  my ($gene) = @_;
+  my ($self, $gene) = @_;
 
   my $disp = $gene->display_xref();
   return if not $disp;
@@ -97,14 +100,14 @@ sub get_synonyms {
 }
 
 sub get_xrefs {
-  my ($feature) = @_;
+  my ($self, $feature) = @_;
 
   my $entries = $feature->get_all_DBEntries();
 
   my @xrefs;
   my %found_entries;
   ENTRY: for my $entry (@$entries) {
-    push @xrefs, create_xref($entry);
+    push @xrefs, $self->create_xref($entry);
     $found_entries{$entry->dbID} = 1;
   }
 
@@ -113,7 +116,7 @@ sub get_xrefs {
   if ($feature->can('display_xref')) {
     my $display_entry = $feature->display_xref;
     if ($display_entry and not $found_entries{$display_entry->dbID}) {
-      push @xrefs, create_xref($display_entry);
+      push @xrefs, $self->create_xref($display_entry);
     }
   }
 
@@ -121,16 +124,41 @@ sub get_xrefs {
 }
 
 sub create_xref {
-  my ($entry) = @_;
+  my ($self, $entry) = @_;
 
   my $dbname = $entry->dbname;
   my $id = $entry->display_id;
+  
+  # Replace dbname from external_db map
+  my $db_map = $self->param('db_map');
+  if ($db_map and $db_map->{$dbname}) {
+    $dbname = $db_map->{$dbname};
+  }
 
   my $xref = { dbname => $dbname, id => $id };
   $xref->{description} = $entry->description if ($entry->description);
-  $xref->{info_type} = $entry->info_type if ($entry->info_type);
+  $xref->{info_type} = $entry->info_type if ($entry->info_type and $entry->info_type ne 'NONE');
   $xref->{info_text} = $entry->info_text if ($entry->info_text);
   return $xref;
+}
+
+sub load_external_db_map {
+  my ($self) = @_;
+  
+  my %map;
+  my $map_path = $self->param("external_db_map");
+  if ($map_path) {
+    open my $mapfh, "<", $map_path or die "$!";
+    while (my $line = readline $mapfh) {
+      chomp $line;
+      next if $line =~ /^\*$/ or $line =~ /^#/;
+      # We use the mapping in reverse order because we dump
+      my ($to, $from) = split("\t", $line);
+      $map{$from} = $to;
+    }
+    close $mapfh;
+  }
+  $self->param('db_map', \%map);
 }
 
 1;
