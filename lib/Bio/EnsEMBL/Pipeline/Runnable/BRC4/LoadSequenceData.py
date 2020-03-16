@@ -47,7 +47,6 @@ class LoadSequenceData(eHive.BaseRunnable):
 
         # initialize whatever
         genome = self.from_param("manifest_data", "genome")
-        sra = self.from_param("manifest_data", "seq_region")
 
         # TODO
         # split into contigs, add AGP
@@ -89,7 +88,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             self.unversion_scaffolds(cs_rank, pj(wd, "unversion_scaffolds"))
 
         # add seq_region synonyms
-        seq_reg_file = self.from_param("manifest_data", "seq_region")
+        seq_reg_file = self.from_param("manifest_data", "seq_region", not_throw = True)
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
         # add seq_region attributes and karyotype info
@@ -183,13 +182,15 @@ class LoadSequenceData(eHive.BaseRunnable):
         chr_order = meta and tag in meta and meta[tag] or None
         if (chr_order == None):
             # get chromosome id and karyotype_rank id
-            ids_sql = r'''select sr.seq_region_id as seq_region_id
+            ids_sql = r'''select distinct sr.seq_region_id as seq_region_id
                         from seq_region sr, seq_region_attrib sra, coord_system cs, attrib_type at
                         where sr.seq_region_id = sra.seq_region_id
                           and sr.coord_system_id = cs.coord_system_id
                           and sra.attrib_type_id = at.attrib_type_id
-                          and cs.name = "chromosome"
-                          and at.code = "toplevel"
+                          and (
+                               ( cs.name = "chromosome" and at.code = "toplevel" )
+                            or ( at.code = "coord_system_tag" and sra.value = "chromosome" )
+                          )
                        order by seq_region_id
                       ;'''
             ids_log_pfx = pj(wd,'chr_ids')
@@ -226,6 +227,9 @@ class LoadSequenceData(eHive.BaseRunnable):
         if len(sr_ids) > 0:
             tag = "karyotype_rank"
             self.set_sr_attrib(tag, sr_ids, pj(wd, "sr_attr_set_"+tag))
+            tag = "coord_system_tag"
+            sr_ids_chr = [ (_id, "chromosome") for _id, _  in sr_ids ]
+            self.set_sr_attrib(tag, sr_ids_chr, pj(wd, "sr_attr_set_"+tag))
 
 
     def set_toplevel(self, log_pfx, ignored_cs = []):
@@ -283,6 +287,8 @@ class LoadSequenceData(eHive.BaseRunnable):
 
 
     def add_sr_attribs(self, meta_file, wd, karyotype_info_tag = None, is_primary_assembly = False):
+        if not meta_file:
+          return
         os.makedirs(wd, exist_ok=True)
         
         # find interesting attribs in meta_file
@@ -373,7 +379,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         if len(id_val_lst) <= 0:
             return
         with open(insert_sql_file, "w") as sql:
-            print("insert into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
+            print("insert ignore into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
             fst = ""
             for _sr_id, _val in id_val_lst:
                 if isinstance(_val, bool):
@@ -425,28 +431,28 @@ class LoadSequenceData(eHive.BaseRunnable):
 
         # load syns from file
         new_syns = dict()
-        with open(meta_file) as mf:
-            data = json.load(mf)
-            if not isinstance(data, list):
-                data = [ data ]
-            for e in data:
-                if "synonyms" not in e:
-                   continue
-                es = list(filter(lambda s: s["name"] not in seen_syns, e["synonyms"]))
-                # do we need unversioned syn as well???
-                # Nov 2019: no, we need explicit list
-                if len(es) <= 0:
-                    continue
-                
-                en = e["name"]
-                eid = en in sr_ids and sr_ids[en] or None
-                if unversioned and eid is None:
-                    if en[-2] == ".":
-                         en = en[:-2]
-                         eid = en in sr_ids and sr_ids[en] or None
-                if eid is None:
-                    raise Exception("Not able to find seq_region for '%s'" % (e["name"]))
-                new_syns[eid] = es
+        if meta_file:
+            with open(meta_file) as mf:
+                data = json.load(mf)
+                if not isinstance(data, list):
+                    data = [ data ]
+                for e in data:
+                    if "synonyms" not in e:
+                       continue
+                    es = list(filter(lambda s: s["name"] not in seen_syns, e["synonyms"]))
+                    # do we need unversioned syn as well???
+                    # Nov 2019: no, we need explicit list
+                    if len(es) <= 0:
+                        continue
+                    en = e["name"]
+                    eid = en in sr_ids and sr_ids[en] or None
+                    if unversioned and eid is None:
+                        if en[-2] == ".":
+                            en = en[:-2]
+                            eid = en in sr_ids and sr_ids[en] or None
+                    if eid is None:
+                        raise Exception("Not able to find seq_region for '%s'" % (e["name"]))
+                    new_syns[eid] = es
 
         # generate sql req for loading
         insert_sql_file = pj(wd, "insert_syns.sql")

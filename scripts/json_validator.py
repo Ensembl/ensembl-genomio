@@ -6,10 +6,10 @@ from jsonschema import validate
 
 
 def run(json_file, json_schema):
-    
+
     file_data = get_json(json_file)
     schema_data = get_json(json_schema)
-    
+
     validate(instance=file_data, schema=schema_data)
 
 def get_json(json_path):
@@ -24,8 +24,9 @@ def main():
                 help='the json file to test')
     parser.add_argument('json_schema', metavar='json_schema', type=str,
                 help='the json schema to test against')
-    
+
     args = parser.parse_args()
     run(args.json_file, args.json_schema)
 
-main()
+if __name__ == "__main__":
+    main()
