@@ -27,6 +27,9 @@ sub prepare_data {
   my $csa = $dba->get_adaptor('CoordSystem');
   my $syna = $dba->get_adaptor('SeqRegionSynonym');
   my $kba = $dba->get_adaptor('KaryotypeBand');
+  
+  $self->load_external_db_map();
+  my $db_map = $self->param('db_map');
 
   # Get all coord system seq regions
   my @coord_ids = $self->get_coords($dba);
@@ -54,7 +57,14 @@ sub prepare_data {
       # Additional metadata
       # Synonyms? Array
       if (@$syns) {
-        $seq_region->{synonyms} = [ sort { $a->{name} cmp $b->{name} } map { { name => $_->name, source => $_->dbname } } @$syns ];
+        for my $syn (sort { $a->name cmp $b->name } @$syns) {
+          # Remap external db name if needed
+          my $dbname = $syn->dbname;
+          if ($db_map and $db_map->{$dbname}) {
+            $dbname = $db_map->{$dbname};
+          }
+          push @{$seq_region->{synonyms}}, { name => $syn->name, source => $dbname };
+        }
       }
 
       # Is circular? Boolean
@@ -142,6 +152,25 @@ sub get_karyotype_bands {
   }
 
   return $res;
+}
+
+sub load_external_db_map {
+  my ($self) = @_;
+  
+  my %map;
+  my $map_path = $self->param("external_db_map");
+  if ($map_path) {
+    open my $mapfh, "<", $map_path or die "$!";
+    while (my $line = readline $mapfh) {
+      chomp $line;
+      next if $line =~ /^\*$/ or $line =~ /^#/;
+      # We use the mapping in reverse order because we dump
+      my ($to, $from) = split("\t", $line);
+      $map{$from} = $to;
+    }
+    close $mapfh;
+  }
+  $self->param('db_map', \%map);
 }
 
 1;
