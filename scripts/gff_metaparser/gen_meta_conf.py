@@ -100,8 +100,8 @@ class MetaConf:
       out = self.tech_data
     if val is None or not val:
       return
-    if key in out and out[key]: 
-      return  
+    if key in out and out[key]:
+      return
     if isinstance(val, list):
       out[key] += val
     else:
@@ -118,16 +118,27 @@ class MetaConf:
       record = next(gb_parser)
       qualifiers = record.features[0].qualifiers
       if "organism" in qualifiers:
-        sci_name = qualifiers["organism"][0] 
+        sci_name = qualifiers["organism"][0]
         self.update("species.scientific_name", sci_name)
       if "strain" in qualifiers:
-        strain = qualifiers["strain"][0] 
+        strain = qualifiers["strain"][0]
+        self.update("species.strain", strain)
+      elif "isolate" in qualifiers:
+        strain = qualifiers["isolate"][0]
         self.update("species.strain", strain)
       if "db_xref" in qualifiers:
         taxon_id_pre = list(filter(lambda x: x.startswith("taxon:"), qualifiers["db_xref"]))[0]
         if taxon_id_pre:
           taxon_id = int(taxon_id_pre.split(":")[1])
           self.update("TAXON_ID", taxon_id, tech = True)
+      annotations = record.annotations
+      if "structured_comment" in annotations:
+        str_cmt = annotations["structured_comment"]
+        if "Genome-Assembly-Data" in str_cmt:
+          gad = str_cmt["Genome-Assembly-Data"]
+          ankey = list(filter(lambda x: "assembly" in x.lower() and "name" in x.lower(), gad.keys()))
+          if ankey:
+            self.update("assembly.name", gad[ankey[0]])
 
   def update_from_dict(self, d, k, tech = False):
     if d is None:
@@ -170,11 +181,11 @@ class MetaConf:
     # genebuild metadata
     self.update_from_dict(defaults, "genebuild.method")
     self.update_from_dict(defaults, "genebuild.level")
-    self.update("genebuild.version", new_name + ".0")
+    self.update("genebuild.version", aname.replace("_", "").replace(".","v") + ".0")
     today = datetime.datetime.today()
     self.update("genebuild.start_date",
                 "%s-%02d-%s" % (today.year, today.month, self.get("species.division")))
-   
+
   def dump_genome_conf(self, json_out):
     out = {}
     fields = [
@@ -232,7 +243,7 @@ class Manifest:
       print("no out_dir specified to uncompress to", file=sys.stderr)
       return None
 
-    nogzname = name.replace(".gz", "") 
+    nogzname = name.replace(".gz", "")
     sfx = nogzname[nogzname.rfind("."):]
     outfile = pj(outdir,tag+sfx)
 
@@ -268,7 +279,7 @@ class Manifest:
     out = {}
     for tag, name in self.files.items():
       if not name:
-        continue 
+        continue
       outfile = name
       if self.is_gz(name) and self.ungzip:
         print("uncompressing %s for %s" %(name, tag), file=sys.stderr)
