@@ -111,6 +111,8 @@ sub default_options {
         'genome' => catfile($schema_dir, "genome_schema.json"),
         'manifest' => catfile($schema_dir, "manifest_schema.json"),
       },
+      # Map back the external db names
+      external_db_map => undef,
 	};
 }
 
@@ -397,6 +399,9 @@ sub pipeline_analyses {
 
     { -logic_name  => 'seq_region',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpSeqRegionJson',
+      -parameters     => {
+        external_db_map => $self->o('external_db_map'),
+      },
       -flow_into  => { 2 => ['check_json_schema'] },
       -max_retry_count => 0,
       -hive_capacity  => 20,
@@ -405,6 +410,9 @@ sub pipeline_analyses {
 
     { -logic_name  => 'functional_annotation',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFunctionalAnnotationJson',
+      -parameters     => {
+        external_db_map => $self->o('external_db_map'),
+      },
       -flow_into  => { 2 => ['check_json_schema'] },
       -max_retry_count => 0,
       -hive_capacity  => 20,
