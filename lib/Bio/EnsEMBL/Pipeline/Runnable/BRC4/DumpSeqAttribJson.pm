@@ -126,9 +126,10 @@ sub get_translation_seq_attribs {
       my $attrib_values;
 
       # Get attrib specific values
-      if ($code eq 'amino_acid_sub' or
-          $code eq '_selenocysteine') {
+      if ($code eq 'amino_acid_sub') {
         $attrib_values = $self->format_edit($attrib);
+      } elsif ($code eq '_selenocysteine') {
+        $attrib_values = $self->format_position($attrib);
       }
       die("Could not get attrib values for $code, ".$translation->stable_id) if not $attrib_values;
 

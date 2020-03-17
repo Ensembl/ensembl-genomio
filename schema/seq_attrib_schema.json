@@ -10,7 +10,8 @@
       "oneOf" : [
         { "$ref" : "#/definitions/seqedit_info" },
         { "$ref" : "#/definitions/frameshift_info" },
-        { "$ref" : "#/definitions/translation_pos_info" }
+        { "$ref" : "#/definitions/translation_pos_info" },
+        { "$ref" : "#/definitions/selenocysteine_info" }
       ]
     },
 
@@ -22,12 +23,7 @@
           "enum" : [ "transcript", "translation" ]
         },
         "object_id" : { "type" : "string" },
-        "seq_attrib_type" : { "type" : "string",
-          "enum" : [
-            "sequence_alteration",
-            "selenocysteine"
-          ]
-        },
+        "seq_attrib_type" : { "const" : "sequence_alteration" },
         "start" : { "type" : "integer", "minimum" : 1 },
         "end" : { "type" : "integer", "minimum" : 0 },
         "sequence" : { "type" : "string" }
@@ -41,9 +37,7 @@
       "properties": {
         "object_type" : { "type" : "string", "value" : "transcript" },
         "object_id" : { "type" : "string" },
-        "seq_attrib_type" : { "type" : "string",
-          "value" : "frameshift"
-        },
+        "seq_attrib_type" : { "const" : "frameshift" },
         "intron_number" : { "type" : "integer", "minimum" : 1 }
       },
       "required" : [ "object_type", "object_id", "seq_attrib_type", "intron_number" ]
@@ -61,6 +55,18 @@
             "coding_end"
           ]
         },
+        "position" : { "type" : "integer", "minimum" : 1 }
+      },
+      "required" : [ "object_type", "object_id", "seq_attrib_type", "position" ]
+    },
+
+    "selenocysteine_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "object_type" : { "type" : "string", "value" : "translation" },
+        "object_id" : { "type" : "string" },
+        "seq_attrib_type" : { "const" : "selenocysteine" },
         "position" : { "type" : "integer", "minimum" : 1 }
       },
       "required" : [ "object_type", "object_id", "seq_attrib_type", "position" ]
