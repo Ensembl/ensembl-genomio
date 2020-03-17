@@ -13,6 +13,7 @@ sub param_defaults {
 
   return {
     %{$self->SUPER::param_defaults},
+    interbase_system => 1,
     metadata_name => 'seq_attrib',
     allowed_transcript_attribs => {
       _rna_edit     => "sequence_alteration",
@@ -145,12 +146,28 @@ sub format_edit {
   my ($self, $attrib) = @_;
 
   my ($start, $end, $seq) = split / /, $attrib->value;
+
+  if ($self->param('interbase_system')) {
+    ($start, $end) = $self->ensembl_to_interbase($start, $end);
+  }
+
   my %values = (
     start => int($start),
     end => int($end),
     sequence => $seq,
   );
   return \%values;
+}
+
+sub ensembl_to_interbase {
+  my ($self, $start, $end) = @_;
+
+  # The only difference between Ensembl current system (1-based) and
+  # an interbase system (0-based) is that Ensembl start is +1
+  # The result is more legible
+  $start--;
+
+  return ($start, $end);
 }
 
 sub format_position {

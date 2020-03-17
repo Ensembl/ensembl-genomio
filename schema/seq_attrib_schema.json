@@ -24,7 +24,7 @@
         },
         "object_id" : { "type" : "string" },
         "seq_attrib_type" : { "const" : "sequence_alteration" },
-        "start" : { "type" : "integer", "minimum" : 1 },
+        "start" : { "type" : "integer", "minimum" : 0 },
         "end" : { "type" : "integer", "minimum" : 0 },
         "sequence" : { "type" : "string" }
       },
