@@ -34,6 +34,8 @@ def get_args():
                       help="dir to store files into" )
   parser.add_argument("--genome_conf", metavar="genome.json", required = True, type=str,
                       help="genome json file output" )
+  parser.add_argument("--seq_region_conf", metavar="seq_region.json", required = False, type=str,
+                      help="seq_region json file output" )
   parser.add_argument("--manifest_out", metavar="manifest.json", required = True, type=str,
                       help="manifest file output" )
   # meta_defaults
@@ -54,6 +56,7 @@ def get_args():
 class MetaConf:
   def __init__(self, config = None):
     self.tech_data = defaultdict(list)
+    self._order = dict()
     self.data = defaultdict(list)
 
     self.load_from_tsv(config)
@@ -73,6 +76,7 @@ class MetaConf:
       tag, *rest = raw.split(maxsplit = 1)
       if rest:
         out[tag.strip()].append(rest[0].rstrip())
+        self._order[tag.strip()] = len(self._order) # use the last rank for multi keys
 
   def dump(self, out):
     for k, vals in sorted(self.tech_data.items(), key=lambda x: x[0]):
@@ -210,6 +214,14 @@ class MetaConf:
         self.split_add(out, f, self.get(f))
     self.split_add(out, "assembly.version", self.get("assembly.version", tech=True))
     self.split_add(out, "species.taxonomy_id", self.get("TAXON_ID", tech=True))
+
+    # get chr aliases
+    tk = self.tech_data.keys()
+    chr_k = list(filter(lambda x: x.upper().startswith("CONTIG_CHR_"), tk))
+    if chr_k:
+       ctg_lst = [ self.get(k, tech = True) for k in sorted(chr_k, key = lambda x: self._order[x]) ]
+       out["assembly"]["chromosome_display_order"] = ctg_lst
+
     if out:
       os.makedirs(dirname(json_out), exist_ok=True)
       with open(json_out, 'wt') as jf:
@@ -227,6 +239,36 @@ class MetaConf:
         out[k] =  dict()
       out = out[k]
     out.update(pre)
+
+  def dump_seq_region_conf(self, json_out):
+    if not json_out:
+      return
+
+    tk = self.tech_data.keys()
+    chr_k = list(filter(lambda x: x.upper().startswith("CONTIG_CHR_"), tk))
+    mt_k = frozenset(filter(lambda x: x.upper().startswith("MT_"), tk))
+
+    out = []
+    for k in chr_k:
+      ctg_id = self.get(k, tech = True)
+      syn = k.upper().split("_", 2)[2]
+      out.append({
+        "name" : ctg_id,
+        "synonyms" : [{ "name" : syn , "source" : "Ensembl_Metazoa" }],
+      })
+      if mt_k and syn == "MT":
+        out[-1]["location"] = "mitochondrial_chromosome"
+        if "MT_CODON_TABLE" in mt_k:
+          out[-1]["codon_table"] = int(self.get("MT_CODON_TABLE", tech=True))
+        if "MT_CIRCULAR" in mt_k:
+          mtc = self.get("MT_CIRCULAR", tech=True).strip().upper()
+          out[-1]["circular"] = ( mtc == "YES" or mtc == "1" )
+
+    if out:
+      os.makedirs(dirname(json_out), exist_ok=True)
+      with open(json_out, 'wt') as jf:
+        json.dump(out, jf, indent = 2)
+
 
 ## MANIFEST CONF ##
 class Manifest:
@@ -311,11 +353,13 @@ def main():
   meta.dump(args.meta_out)
 
   meta.dump_genome_conf(args.genome_conf)
+  meta.dump_seq_region_conf(args.seq_region_conf)
 
   manifest = Manifest({
     "fasta_dna" : args.fasta_dna,
     "fasta_pep" : args.fasta_pep,
-    "genome" : args.genome_conf, # check overriding on self copy (compare abs paths/ inodes?)
+    "genome" : args.genome_conf,
+    "seq_region" : args.seq_region_conf, # check overriding on self copy (compare abs paths/ inodes?)
   })
   manifest.dump(args.manifest_out, outdir=args.data_out_dir)
 
