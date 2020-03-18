@@ -221,7 +221,7 @@ class MetaConf:
     tk = self.tech_data.keys()
     chr_k = list(filter(lambda x: x.upper().startswith("CONTIG_CHR_"), tk))
     if chr_k:
-       ctg_lst = [ self.get(k, tech = True) for k in sorted(chr_k, key = lambda x: self._order[x]) ]
+       ctg_lst = [ self.get(k, tech = True).split()[0] for k in sorted(chr_k, key = lambda x: self._order[x]) ]
        out["assembly"]["chromosome_display_order"] = ctg_lst
 
     if out:
@@ -283,6 +283,16 @@ class MetaConf:
         if "MT_CIRCULAR" in mt_k:
           mtc = self.get("MT_CIRCULAR", tech=True).strip().upper()
           out[-1]["circular"] = ( mtc == "YES" or mtc == "1" )
+
+    used_ctg_names = frozenset([s["name"] for s in out])
+    for ctg_id in ctg_len:
+      if ctg_id in used_ctg_names:
+        continue
+      out.append({
+        "name" : ctg_id,
+        "length" : ctg_len[ctg_id],
+        "coord_system_level" : "contig",
+      })
 
     if out:
       os.makedirs(dirname(json_out), exist_ok=True)
