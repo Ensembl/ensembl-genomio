@@ -37,6 +37,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             'nullify_cs_version_from' : 'contig',
             'noagp_cs_name_default' : 'primary_assembly',
             'external_db_map' : None,
+            'cs_tag_for_ordered' : None,
         }
 
 
@@ -106,7 +107,8 @@ class LoadSequenceData(eHive.BaseRunnable):
         self.nullify_ctg_cs_version(pj(wd, "asm_mapping", "nullify_cs_versions"))
 
         asm_meta = self.from_param("genome_data","assembly")
-        self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"))
+        add_cs_tag = self.param("cs_tag_for_ordered")
+        self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"), add_cs_tag)
 
 
     # STAGES
@@ -173,7 +175,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             self.run_sql_req(clear_pfx + ".sql", clear_pfx, from_file = True)
 
 
-    def add_chr_karyotype_rank(self, meta, wd):
+    def add_chr_karyotype_rank(self, meta, wd, add_cs_tag = None):
         # get order from  meta["chromosome_display_order"] , omit unmentioned
         #   otherwise get toplevel "chromosome" seq_regions, sort by seq_region_id
         os.makedirs(wd, exist_ok=True)
@@ -223,13 +225,17 @@ class LoadSequenceData(eHive.BaseRunnable):
             # assert seq_region_id is not reused
             if len(sr_ids) == len(frozenset(map(lambda p: p[0], sr_ids))):
                 raise Exception("same seq_region with different karyotype_rank: %s" % (str(sr_ids)))
+            # trying to set chromosome tag
+            #   should not change or add if seq_region_tag is already loaded (INSERT IGNORE used)
+            if len(sr_ids) > 0 and add_cs_tag is not None:
+              tag = "coord_system_tag"
+              sr_ids_chr = [ (_id, add_cs_tag) for _id, _  in sr_ids ]
+              self.set_sr_attrib(tag, sr_ids_chr, pj(wd, "sr_attr_set_"+tag))
+
         # insert attrib sql
         if len(sr_ids) > 0:
             tag = "karyotype_rank"
             self.set_sr_attrib(tag, sr_ids, pj(wd, "sr_attr_set_"+tag))
-            tag = "coord_system_tag"
-            sr_ids_chr = [ (_id, "chromosome") for _id, _  in sr_ids ]
-            self.set_sr_attrib(tag, sr_ids_chr, pj(wd, "sr_attr_set_"+tag))
 
 
     def set_toplevel(self, log_pfx, ignored_cs = []):
@@ -373,6 +379,21 @@ class LoadSequenceData(eHive.BaseRunnable):
     def set_sr_attrib(self, attr_type, id_val_lst, log_pfx, karyotype_info = False):
         if karyotype_info: 
             return self.add_karyotype_bands(id_val_lst, log_pfx)
+        # generate sql req for getting attrib_type_id
+        sql_seq_region_attrib = r'''select attrib_type_id from attrib_type
+            where code = "%s"
+        ;''' % (attr_type)
+        self.run_sql_req(sql_seq_region_attrib, log_pfx+"_attrib_type_id")
+        attrib_type_id = None
+        with open(log_pfx+"_attrib_type_id" + ".stdout") as f:
+          for line in f:
+            if line.startswith("attrib_type_id"):
+              continue
+            attrib_type_id = line.strip()
+            break
+        if attrib_type_id is None:
+          raise Exception("No such known attrib type: \"%s\"" % (attr_type))
+ 
         # generaate sql req for loading
         os.makedirs(dirname(log_pfx), exist_ok=True)
         insert_sql_file = log_pfx + "_insert_attribs.sql"
@@ -386,18 +407,11 @@ class LoadSequenceData(eHive.BaseRunnable):
                     _val = int(_val)
                 if isinstance(_val, str):
                     _val = '"%s"' % (_val)
-                print ('%s (%s, 0, %s)' % (fst, _sr_id, str(_val)), file = sql)
+                print ('%s (%s, %s, %s)' % (fst, _sr_id, attrib_type_id, str(_val)), file = sql)
                 fst = ","
             print(";", file=sql)
         # run insert sql
         self.run_sql_req(insert_sql_file, log_pfx, from_file = True)
-        # update external_db_id
-        sql_update_at = r'''update seq_region_attrib sra, attrib_type at
-            set sra.attrib_type_id = at.attrib_type_id
-            where sra.attrib_type_id = 0
-              and at.code = "%s"
-        ;''' % (attr_type)
-        self.run_sql_req(sql_update_at, log_pfx+"_update_attr_type")
 
     def get_db_syns(self, out_pfx):
         # get names, syns from db

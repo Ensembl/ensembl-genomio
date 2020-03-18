@@ -34,17 +34,21 @@ def get_args():
                       help="dir to store files into" )
   parser.add_argument("--genome_conf", metavar="genome.json", required = True, type=str,
                       help="genome json file output" )
+  parser.add_argument("--seq_region_conf", metavar="seq_region.json", required = False, type=str,
+                      help="seq_region json file output" )
   parser.add_argument("--manifest_out", metavar="manifest.json", required = True, type=str,
                       help="manifest file output" )
   # meta_defaults
   parser.add_argument("--assembly_version", metavar="1", required = False,
-                      type=int, default = 1, help="assembly.version default" )
+                      type=int, default = 1, help="assembly.version default")
   parser.add_argument("--species_division", metavar="EnsemblMetazoa", required = False,
-                      type=str, default = "EnsemblMetazoa", help="species.division default" )
+                      type=str, default = "EnsemblMetazoa", help="species.division default")
   parser.add_argument("--genebuild_method", metavar="import", required = False,
-                      type=str, default = "import", help="genebuild.method default" )
+                      type=str, default = "import", help="genebuild.method default")
   parser.add_argument("--genebuild_level", metavar="toplevel", required = False,
-                      type=str, default = "toplevel", help="genebuild.level default" )
+                      type=str, default = "toplevel", help="genebuild.level default")
+  parser.add_argument("--syns_src", metavar="GenBank", required = False,
+                      type=str, default = "GenBank", help="syns source default")
   #
   args = parser.parse_args()
   return args
@@ -54,6 +58,7 @@ def get_args():
 class MetaConf:
   def __init__(self, config = None):
     self.tech_data = defaultdict(list)
+    self._order = dict()
     self.data = defaultdict(list)
 
     self.load_from_tsv(config)
@@ -73,6 +78,7 @@ class MetaConf:
       tag, *rest = raw.split(maxsplit = 1)
       if rest:
         out[tag.strip()].append(rest[0].rstrip())
+        self._order[tag.strip()] = len(self._order) # use the last rank for multi keys
 
   def dump(self, out):
     for k, vals in sorted(self.tech_data.items(), key=lambda x: x[0]):
@@ -82,12 +88,12 @@ class MetaConf:
       for v in vals:
         print("\t".join([str(k), str(v)]), file=out)
 
-  def get(self, key, idx = 0, tech = False):
+  def get(self, key, idx = 0, tech = False, default = None):
     d = self.data
     if tech:
       d = self.tech_data
     if key not in d or len(d[key]) < 1:
-      return None
+      return default
     if idx is None:
       return d[key]
     if idx >= len(d[key]):
@@ -100,8 +106,8 @@ class MetaConf:
       out = self.tech_data
     if val is None or not val:
       return
-    if key in out and out[key]: 
-      return  
+    if key in out and out[key]:
+      return
     if isinstance(val, list):
       out[key] += val
     else:
@@ -118,16 +124,27 @@ class MetaConf:
       record = next(gb_parser)
       qualifiers = record.features[0].qualifiers
       if "organism" in qualifiers:
-        sci_name = qualifiers["organism"][0] 
+        sci_name = qualifiers["organism"][0]
         self.update("species.scientific_name", sci_name)
       if "strain" in qualifiers:
-        strain = qualifiers["strain"][0] 
+        strain = qualifiers["strain"][0]
+        self.update("species.strain", strain)
+      elif "isolate" in qualifiers:
+        strain = qualifiers["isolate"][0]
         self.update("species.strain", strain)
       if "db_xref" in qualifiers:
         taxon_id_pre = list(filter(lambda x: x.startswith("taxon:"), qualifiers["db_xref"]))[0]
         if taxon_id_pre:
           taxon_id = int(taxon_id_pre.split(":")[1])
           self.update("TAXON_ID", taxon_id, tech = True)
+      annotations = record.annotations
+      if "structured_comment" in annotations:
+        str_cmt = annotations["structured_comment"]
+        if "Genome-Assembly-Data" in str_cmt:
+          gad = str_cmt["Genome-Assembly-Data"]
+          ankey = list(filter(lambda x: "assembly" in x.lower() and "name" in x.lower(), gad.keys()))
+          if ankey:
+            self.update("assembly.name", gad[ankey[0]])
 
   def update_from_dict(self, d, k, tech = False):
     if d is None:
@@ -170,11 +187,11 @@ class MetaConf:
     # genebuild metadata
     self.update_from_dict(defaults, "genebuild.method")
     self.update_from_dict(defaults, "genebuild.level")
-    self.update("genebuild.version", new_name + ".0")
+    self.update("genebuild.version", aname.replace("_", "").replace(".","v") + ".0")
     today = datetime.datetime.today()
     self.update("genebuild.start_date",
                 "%s-%02d-%s" % (today.year, today.month, self.get("species.division")))
-   
+
   def dump_genome_conf(self, json_out):
     out = {}
     fields = [
@@ -199,6 +216,14 @@ class MetaConf:
         self.split_add(out, f, self.get(f))
     self.split_add(out, "assembly.version", self.get("assembly.version", tech=True))
     self.split_add(out, "species.taxonomy_id", self.get("TAXON_ID", tech=True))
+
+    # get chr aliases
+    tk = self.tech_data.keys()
+    chr_k = list(filter(lambda x: x.upper().startswith("CONTIG_CHR_"), tk))
+    if chr_k:
+       ctg_lst = [ self.get(k, tech = True) for k in sorted(chr_k, key = lambda x: self._order[x]) ]
+       out["assembly"]["chromosome_display_order"] = ctg_lst
+
     if out:
       os.makedirs(dirname(json_out), exist_ok=True)
       with open(json_out, 'wt') as jf:
@@ -217,6 +242,54 @@ class MetaConf:
       out = out[k]
     out.update(pre)
 
+  def dump_seq_region_conf(self, json_out, fasta_file = None, syns_src = "GenBank"):
+    if not json_out:
+      return
+
+    tk = self.tech_data.keys()
+    chr_k = list(filter(lambda x: x.upper().startswith("CONTIG_CHR_"), tk))
+    mt_k = frozenset(filter(lambda x: x.upper().startswith("MT_"), tk))
+
+    ctg_len = dict()
+    if chr_k and fasta_file:
+      _open = fasta_file.endswith(".gz") and gzip.open or open
+      with _open(fasta_file, 'rt') as fasta:
+        fasta_parser = SeqIO.parse(fasta, "fasta")
+        for rec in fasta_parser:
+          ctg_len[rec.name] = len(rec)
+
+    out = []
+    for k in chr_k:
+      ctg_id, *syns = self.get(k, tech = True).split()
+      syn = k.upper().split("_", 2)[2]
+      syns.append(syn)
+      syns = list(set(syns))
+      syns_out = [ {
+          "name" : s ,
+          "source" : s == syn and "Ensembl_Metazoa" or syns_src
+        } for s in syns ]
+      cs_tag = self.get("ORDERED_CS_TAG", tech = True, default = "chromosome")
+      out.append({
+        "name" : ctg_id,
+        "synonyms" : syns_out,
+        "coord_system_level" : cs_tag,
+      })
+      if ctg_id in ctg_len:
+        out[-1]["length"] = ctg_len[ctg_id]
+      if mt_k and syn == "MT":
+        out[-1]["location"] = "mitochondrial_chromosome"
+        if "MT_CODON_TABLE" in mt_k:
+          out[-1]["codon_table"] = int(self.get("MT_CODON_TABLE", tech=True))
+        if "MT_CIRCULAR" in mt_k:
+          mtc = self.get("MT_CIRCULAR", tech=True).strip().upper()
+          out[-1]["circular"] = ( mtc == "YES" or mtc == "1" )
+
+    if out:
+      os.makedirs(dirname(json_out), exist_ok=True)
+      with open(json_out, 'wt') as jf:
+        json.dump(out, jf, indent = 2)
+
+
 ## MANIFEST CONF ##
 class Manifest:
   def __init__(self, mapping, ungzip = True, always_copy = True):
@@ -232,7 +305,7 @@ class Manifest:
       print("no out_dir specified to uncompress to", file=sys.stderr)
       return None
 
-    nogzname = name.replace(".gz", "") 
+    nogzname = name.replace(".gz", "")
     sfx = nogzname[nogzname.rfind("."):]
     outfile = pj(outdir,tag+sfx)
 
@@ -268,7 +341,7 @@ class Manifest:
     out = {}
     for tag, name in self.files.items():
       if not name:
-        continue 
+        continue
       outfile = name
       if self.is_gz(name) and self.ungzip:
         print("uncompressing %s for %s" %(name, tag), file=sys.stderr)
@@ -300,11 +373,13 @@ def main():
   meta.dump(args.meta_out)
 
   meta.dump_genome_conf(args.genome_conf)
+  meta.dump_seq_region_conf(args.seq_region_conf, args.fasta_dna, syns_src = args.syns_src)
 
   manifest = Manifest({
     "fasta_dna" : args.fasta_dna,
     "fasta_pep" : args.fasta_pep,
-    "genome" : args.genome_conf, # check overriding on self copy (compare abs paths/ inodes?)
+    "genome" : args.genome_conf,
+    "seq_region" : args.seq_region_conf, # check overriding on self copy (compare abs paths/ inodes?)
   })
   manifest.dump(args.manifest_out, outdir=args.data_out_dir)
 

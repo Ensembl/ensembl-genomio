@@ -28,6 +28,7 @@
           "type" : "string",
           "enum" : [
             "chromosome",
+            "linkage_group",
             "scaffold",
             "supercontig",
             "non_ref_scaffold",
