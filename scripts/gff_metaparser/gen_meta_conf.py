@@ -240,7 +240,7 @@ class MetaConf:
       out = out[k]
     out.update(pre)
 
-  def dump_seq_region_conf(self, json_out):
+  def dump_seq_region_conf(self, json_out, fasta_file = None):
     if not json_out:
       return
 
@@ -248,14 +248,27 @@ class MetaConf:
     chr_k = list(filter(lambda x: x.upper().startswith("CONTIG_CHR_"), tk))
     mt_k = frozenset(filter(lambda x: x.upper().startswith("MT_"), tk))
 
+    ctg_len = dict()
+    if chr_k and fasta_file:
+      _open = fasta_file.endswith(".gz") and gzip.open or open
+      with _open(fasta_file, 'rt') as fasta:
+        fasta_parser = SeqIO.parse(fasta, "fasta")
+        for rec in fasta_parser:
+          ctg_len[rec.name] = len(rec)
+
     out = []
     for k in chr_k:
-      ctg_id = self.get(k, tech = True)
+      ctg_id, *syns = self.get(k, tech = True).split()
       syn = k.upper().split("_", 2)[2]
-      out.append({
-        "name" : ctg_id,
-        "synonyms" : [{ "name" : syn , "source" : "Ensembl_Metazoa" }],
-      })
+      syns.append(syn)
+      syns = list(set(syns))
+      syns_out = [ {
+          "name" : s ,
+          "source" : s == syn and "Ensembl_Metazoa" or "RefSeq"
+        } for s in syns ]
+      out.append({ "name" : ctg_id, "synonyms" : syns_out })
+      if ctg_id in ctg_len:
+        out[-1]["length"] = ctg_len[ctg_id]
       if mt_k and syn == "MT":
         out[-1]["location"] = "mitochondrial_chromosome"
         if "MT_CODON_TABLE" in mt_k:
@@ -353,7 +366,7 @@ def main():
   meta.dump(args.meta_out)
 
   meta.dump_genome_conf(args.genome_conf)
-  meta.dump_seq_region_conf(args.seq_region_conf)
+  meta.dump_seq_region_conf(args.seq_region_conf, args.fasta_dna)
 
   manifest = Manifest({
     "fasta_dna" : args.fasta_dna,
