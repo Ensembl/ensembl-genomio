@@ -40,7 +40,7 @@
           "description" : "if present, only the listed chromosomes will be be displayed"
         },
         "date" : { "type" : "string" },
-        "name" : { "type" : "string", "pattern" : "^[A-Za-z0-9]+$" },
+        "name" : { "type" : "string", "pattern" : "^[A-Za-z0-9_\\.]+$" },
         "version" : {"type" : "integer" }
       },
       "required": [
