@@ -208,7 +208,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         else:
             # show only chromosomes from the chromosome_order
             # get names, syns from db
-            order = dict(map(lambda e: (e[1], e[0]), enumerate(chr_order, start = 1)))
+            chr_rank = { name : rank for rank, name in enumerate(chr_order, start = 1) }
             # get syns
             syns_out_pfx = pj(wd, "syns_from_core")
             self.get_db_syns(syns_out_pfx)
@@ -217,14 +217,15 @@ class LoadSequenceData(eHive.BaseRunnable):
                 for line in syns_file:
                     (sr_id, name, syn) = line.strip().split("\t")
                     for _name in [name, syn]:
-                        if _name in order:
-                           sr_ids.append((int(sr_id), order[_name]))
-            # assert order is not reused
+                        if _name in chr_rank:
+                           sr_ids.append((int(sr_id), chr_rank[_name]))
+            sr_ids=list(set(sr_ids))
+            # assert chr_rank is not reused
             if len(sr_ids) != len(frozenset(map(lambda p: p[1], sr_ids))):
                 raise Exception("karyotype_rank is reused: %s" % (str(sr_ids)))
             # assert seq_region_id is not reused
-            if len(sr_ids) == len(frozenset(map(lambda p: p[0], sr_ids))):
-                raise Exception("same seq_region with different karyotype_rank: %s" % (str(sr_ids)))
+            if len(sr_ids) != len(frozenset(map(lambda p: p[0], sr_ids))):
+                raise Exception("same seq_region with different karyotype_rank or wrong seq_regions used in \"chromosome_display_order\". known: %s" % (str(sr_ids)))
             # trying to set chromosome tag
             #   should not change or add if seq_region_tag is already loaded (INSERT IGNORE used)
             if len(sr_ids) > 0 and add_cs_tag is not None:

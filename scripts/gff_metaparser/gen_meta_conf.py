@@ -221,7 +221,7 @@ class MetaConf:
     tk = self.tech_data.keys()
     chr_k = list(filter(lambda x: x.upper().startswith("CONTIG_CHR_"), tk))
     if chr_k:
-       ctg_lst = [ self.get(k, tech = True) for k in sorted(chr_k, key = lambda x: self._order[x]) ]
+       ctg_lst = [ self.get(k, tech = True).split()[0] for k in sorted(chr_k, key = lambda x: self._order[x]) ]
        out["assembly"]["chromosome_display_order"] = ctg_lst
 
     if out:
