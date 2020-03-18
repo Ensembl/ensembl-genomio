@@ -148,9 +148,7 @@
       "object_type": "translation",
       "object_id": "AAEL003681-PB",
       "seq_attrib_type": "selenocysteine",
-      "start": 58,
-      "end": 58,
-      "sequence": "U"
+      "position": 58
     }
   ]
 }
