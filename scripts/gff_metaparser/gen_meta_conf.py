@@ -40,13 +40,15 @@ def get_args():
                       help="manifest file output" )
   # meta_defaults
   parser.add_argument("--assembly_version", metavar="1", required = False,
-                      type=int, default = 1, help="assembly.version default" )
+                      type=int, default = 1, help="assembly.version default")
   parser.add_argument("--species_division", metavar="EnsemblMetazoa", required = False,
-                      type=str, default = "EnsemblMetazoa", help="species.division default" )
+                      type=str, default = "EnsemblMetazoa", help="species.division default")
   parser.add_argument("--genebuild_method", metavar="import", required = False,
-                      type=str, default = "import", help="genebuild.method default" )
+                      type=str, default = "import", help="genebuild.method default")
   parser.add_argument("--genebuild_level", metavar="toplevel", required = False,
-                      type=str, default = "toplevel", help="genebuild.level default" )
+                      type=str, default = "toplevel", help="genebuild.level default")
+  parser.add_argument("--syns_src", metavar="GenBank", required = False,
+                      type=str, default = "GenBank", help="syns source default")
   #
   args = parser.parse_args()
   return args
@@ -86,12 +88,12 @@ class MetaConf:
       for v in vals:
         print("\t".join([str(k), str(v)]), file=out)
 
-  def get(self, key, idx = 0, tech = False):
+  def get(self, key, idx = 0, tech = False, default = None):
     d = self.data
     if tech:
       d = self.tech_data
     if key not in d or len(d[key]) < 1:
-      return None
+      return default
     if idx is None:
       return d[key]
     if idx >= len(d[key]):
@@ -240,7 +242,7 @@ class MetaConf:
       out = out[k]
     out.update(pre)
 
-  def dump_seq_region_conf(self, json_out, fasta_file = None):
+  def dump_seq_region_conf(self, json_out, fasta_file = None, syns_src = "GenBank"):
     if not json_out:
       return
 
@@ -264,9 +266,14 @@ class MetaConf:
       syns = list(set(syns))
       syns_out = [ {
           "name" : s ,
-          "source" : s == syn and "Ensembl_Metazoa" or "RefSeq"
+          "source" : s == syn and "Ensembl_Metazoa" or syns_src
         } for s in syns ]
-      out.append({ "name" : ctg_id, "synonyms" : syns_out })
+      cs_tag = self.get("ORDERED_CS_TAG", tech = True, default = "chromosome")
+      out.append({
+        "name" : ctg_id,
+        "synonyms" : syns_out,
+        "coord_system_level" : cs_tag,
+      })
       if ctg_id in ctg_len:
         out[-1]["length"] = ctg_len[ctg_id]
       if mt_k and syn == "MT":
@@ -366,7 +373,7 @@ def main():
   meta.dump(args.meta_out)
 
   meta.dump_genome_conf(args.genome_conf)
-  meta.dump_seq_region_conf(args.seq_region_conf, args.fasta_dna)
+  meta.dump_seq_region_conf(args.seq_region_conf, args.fasta_dna, syns_src = args.syns_src)
 
   manifest = Manifest({
     "fasta_dna" : args.fasta_dna,
