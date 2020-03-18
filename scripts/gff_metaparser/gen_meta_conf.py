@@ -284,6 +284,16 @@ class MetaConf:
           mtc = self.get("MT_CIRCULAR", tech=True).strip().upper()
           out[-1]["circular"] = ( mtc == "YES" or mtc == "1" )
 
+    used_ctg_names = frozenset([s["name"] for s in out])
+    for ctg_id in ctg_len:
+      if ctg_id in used_ctg_names:
+        continue
+      out.append({
+        "name" : ctg_id,
+        "length" : ctg_len[ctg_id],
+        "coord_system_level" : "contig",
+      })
+
     if out:
       os.makedirs(dirname(json_out), exist_ok=True)
       with open(json_out, 'wt') as jf:
