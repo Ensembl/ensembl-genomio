@@ -107,6 +107,7 @@ sub default_options {
       ## Metadata parameters
       'schemas' => {
         'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
+        'seq_attrib' => catfile($schema_dir, "seq_attrib_schema.json"),
         'functional_annotation' => catfile($schema_dir, "functional_annotation_schema.json"),
         'genome' => catfile($schema_dir, "genome_schema.json"),
         'manifest' => catfile($schema_dir, "manifest_schema.json"),
@@ -391,6 +392,7 @@ sub pipeline_analyses {
       -analysis_capacity => 1,
       -flow_into  => [
         'seq_region',
+        'seq_attrib',
         'functional_annotation',
         'genome',
       ],
@@ -402,6 +404,14 @@ sub pipeline_analyses {
       -parameters     => {
         external_db_map => $self->o('external_db_map'),
       },
+      -flow_into  => { 2 => ['check_json_schema'] },
+      -max_retry_count => 0,
+      -hive_capacity  => 20,
+      -rc_name         => 'default',
+    },
+
+    { -logic_name  => 'seq_attrib',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpSeqAttribJson',
       -flow_into  => { 2 => ['check_json_schema'] },
       -max_retry_count => 0,
       -hive_capacity  => 20,
