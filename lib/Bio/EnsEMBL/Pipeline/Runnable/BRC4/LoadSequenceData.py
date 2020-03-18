@@ -37,6 +37,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             'nullify_cs_version_from' : 'contig',
             'noagp_cs_name_default' : 'primary_assembly',
             'external_db_map' : None,
+            'cs_tag_for_ordered' : None,
         }
 
 
@@ -106,7 +107,8 @@ class LoadSequenceData(eHive.BaseRunnable):
         self.nullify_ctg_cs_version(pj(wd, "asm_mapping", "nullify_cs_versions"))
 
         asm_meta = self.from_param("genome_data","assembly")
-        self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"))
+        add_cs_tag = self.param("cs_tag_for_ordered")
+        self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"), add_cs_tag)
 
 
     # STAGES
@@ -173,7 +175,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             self.run_sql_req(clear_pfx + ".sql", clear_pfx, from_file = True)
 
 
-    def add_chr_karyotype_rank(self, meta, wd):
+    def add_chr_karyotype_rank(self, meta, wd, add_cs_tag = None):
         # get order from  meta["chromosome_display_order"] , omit unmentioned
         #   otherwise get toplevel "chromosome" seq_regions, sort by seq_region_id
         os.makedirs(wd, exist_ok=True)
@@ -225,9 +227,9 @@ class LoadSequenceData(eHive.BaseRunnable):
                 raise Exception("same seq_region with different karyotype_rank: %s" % (str(sr_ids)))
             # trying to set chromosome tag
             #   should not change or add if seq_region_tag is already loaded (INSERT IGNORE used)
-            if len(sr_ids) > 0:
+            if len(sr_ids) > 0 and add_cs_tag is not None:
               tag = "coord_system_tag"
-              sr_ids_chr = [ (_id, "chromosome") for _id, _  in sr_ids ]
+              sr_ids_chr = [ (_id, add_cs_tag) for _id, _  in sr_ids ]
               self.set_sr_attrib(tag, sr_ids_chr, pj(wd, "sr_attr_set_"+tag))
 
         # insert attrib sql
