@@ -187,9 +187,28 @@ sub load_genes {
     my $gene = $self->new_gene($gff_gene, $slice, $analysis);
     
     $self->add_transcripts($db, $ga, $pta, $gff_gene, $gene);
+    $self->set_pseudogene($ga, $gene);
   }
 
   $dba->dbc->disconnect_if_idle();
+}
+
+sub set_pseudogene {
+  my ($self, $ga, $gene) = @_;
+  return if $gene->biotype eq 'pseudogene';
+
+  # Only set the gene as pseudogene if all transcripts are pseudogenes!
+  my $transcripts = $gene->get_all_Transcripts;
+  my $num_tr = scalar @$transcripts;
+  my $num_pseudo = scalar (grep { $_->biotype eq 'pseudogene'  } @$transcripts);
+
+  if ($num_tr eq $num_pseudo) {
+    warn("Set ".$gene->stable_id." as a pseudogene because all transcripts are pseudogenic");
+    $gene->biotype('pseudogene');
+    $ga->store($gene);
+  } elsif ($num_pseudo > 0) {
+    warn("Gene ".$gene->stable_id." is a mix of pseudogenic and non-pseudogenic transcripts");
+  }
 }
 
 sub check_seq_ids {
@@ -286,8 +305,6 @@ sub add_pseudogenic_transcript {
   my ($self, $db, $gff_gene, $gene) = @_;
   my @exon_types      = @{ $self->param_required('exon_types') };
   my $min_intron_size = $self->param('min_intron_size');
-  
-  $gene->biotype('pseudogene');
   
   my $gff_transcript = $self->infer_transcript($db, $gff_gene);
   
@@ -702,7 +719,6 @@ sub set_nontranslating_gene {
   my $nontranslating = $self->param_required('nontranslating');
   
   if ($nontranslating eq 'pseudogene') {
-    $gene->biotype('pseudogene');
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
       $transcript->biotype('pseudogene');
     }
@@ -769,9 +785,6 @@ sub get_feature_biotype {
     
     if ($known_biotypes->{$biotype_attr}) {
       return $biotype_attr;
-    } else {
-      warn("Unrecognized biotype (as gff3 attribute): $biotype_attr\n");
-      return;
     }
   }
 }
@@ -834,7 +847,6 @@ sub new_transcript {
   my $biotype;
   if ($gff_transcript->type =~ /^pseudogenic/i) {
     $biotype = 'pseudogene';
-    $gene->biotype($biotype);
   } elsif ($gff_transcript->type !~ /^(mRNA|transcript):*/i) {
     ($biotype) = $gff_transcript->type =~ /^(\w+):*/;
     $biotype = $self->map_biotype_transcript($biotype, $gff_transcript);
