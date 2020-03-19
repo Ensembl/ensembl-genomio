@@ -84,16 +84,18 @@ sub run {
       next if $is_canonical != $transcript->is_canonical;
     }
 
-    my $seq_obj = $transcript->translate();
-    $seq_obj->display_id($transcript->translation->stable_id);
+    if ($transcript->translation) {
+      my $seq_obj = $transcript->translate();
+      $seq_obj->display_id($transcript->translation->stable_id);
 
-    if ($seq_obj->seq() =~ /\*/ && !$allow_stop_codons) {
-      $self->warning("Translation for transcript ".$transcript->stable_id." contains stop codons. Skipping.");
-    } else {
-      if ($seq_obj->seq() =~ /\*/) {
-        $self->warning("Translation for transcript ".$transcript->stable_id." contains stop codons.");
+      if ($seq_obj->seq() =~ /\*/ && !$allow_stop_codons) {
+        $self->warning("Translation for transcript ".$transcript->stable_id." contains stop codons. Skipping.");
+      } else {
+        if ($seq_obj->seq() =~ /\*/) {
+          $self->warning("Translation for transcript ".$transcript->stable_id." contains stop codons.");
+        }
+        $serializer->print_Seq($seq_obj);
       }
-      $serializer->print_Seq($seq_obj);
     }
   }
 

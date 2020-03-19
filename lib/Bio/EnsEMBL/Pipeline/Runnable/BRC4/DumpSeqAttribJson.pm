@@ -13,7 +13,6 @@ sub param_defaults {
 
   return {
     %{$self->SUPER::param_defaults},
-    interbase_system => 1,
     metadata_name => 'seq_attrib',
     allowed_transcript_attribs => {
       _rna_edit     => "sequence_alteration",
@@ -146,10 +145,7 @@ sub format_edit {
   my ($self, $attrib) = @_;
 
   my ($start, $end, $seq) = split / /, $attrib->value;
-
-  if ($self->param('interbase_system')) {
-    ($start, $end) = $self->ensembl_to_interbase($start, $end);
-  }
+  ($start, $end) = $self->ensembl_to_interbase($start, $end);
 
   my %values = (
     start => int($start),

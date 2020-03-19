@@ -11,6 +11,7 @@ from BCBio import GFF
 from Bio import SeqIO
 from os import path
 from math import floor
+import hashlib
 
 
 class Integrity(eHive.BaseRunnable):
@@ -32,12 +33,22 @@ class Integrity(eHive.BaseRunnable):
             for name in manifest:
                 if "file" in manifest[name]:
                     file_name = manifest[name]["file"]
-                    manifest[name] = path.join(path.dirname(manifest_path), file_name)
+                    file_name = path.join(path.dirname(manifest_path), file_name)
+
+                    md5sum = manifest[name]["md5sum"]
+                    errors += self.check_md5sum(file_name, md5sum)
+
+                    manifest[name] = file_name
                 else:
                     for f in manifest[name]:
                         if "file" in manifest[name][f]:
                             file_name = manifest[name][f]["file"]
-                            manifest[name][f] = path.join(path.dirname(manifest_path), file_name)
+                            file_name = path.join(path.dirname(manifest_path), file_name)
+
+                            md5sum = manifest[name][f]["md5sum"]
+                            errors += self.check_md5sum(file_name, md5sum)
+
+                            manifest[name][f] = file_name
             
             # Get content
             dna = {}
@@ -110,6 +121,17 @@ class Integrity(eHive.BaseRunnable):
         if errors:
             errors_str = "\n".join(errors)
             raise Exception("Integrity test failed for %s:\n%s" % (manifest_path, errors_str))
+
+    def check_md5sum(self, path, md5sum):
+        errors = []
+
+        with open(path, "rb") as f:
+            bytes = f.read()
+            readable_hash = hashlib.md5(bytes).hexdigest()
+            if readable_hash != md5sum:
+                errors.append("File %s has a wrong md5sum" % path)
+
+        return errors
 
     def get_fasta_lengths(self, fasta_path):
         data = {}
