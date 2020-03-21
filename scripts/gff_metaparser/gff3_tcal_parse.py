@@ -113,7 +113,7 @@ def main():
               gene_info["xrefs"] = gene_info["xrefs"][0]
             if not gene_info["xrefs"]:
               del(gene_info["xrefs"])
-          json_out.append([gene_info])
+          json_out.append(gene_info)
     GFF.write([out_rec], args.gff_out)
 
   if (json_out):
