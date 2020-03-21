@@ -114,7 +114,7 @@ def main():
             if not gene_info["xrefs"]:
               del(gene_info["xrefs"])
           json_out.append([gene_info])
-    GFF.write([out_rec], sys.stdout)
+    GFF.write([out_rec], args.gff_out)
 
   if (json_out):
     json.dump(json_out, args.fann_out, indent = 2)
