@@ -563,7 +563,6 @@ class LoadSequenceData(eHive.BaseRunnable):
     def add_contig_ena_attrib(self, log_pfx, cs_name = "contig"):
         # Add ENA attrib for contigs (no sequence_level checks -- just cs name)
         #   (see ensembl-datacheck/lib/Bio/EnsEMBL/DataCheck/Checks/SeqRegionNamesINSDC.pm)
-        cs_name = "contig"
         sql = r'''insert into seq_region_attrib (seq_region_id, attrib_type_id, value)
                 select
                   sr.seq_region_id, at.attrib_type_id, "ENA"
