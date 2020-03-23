@@ -26,6 +26,10 @@ def get_args():
                       help="fasta file with dna sequences")
   parser.add_argument("--fasta_pep", metavar="species_pep.fa", required = False, type=str,
                       help="fasta file with protein sequences")
+  parser.add_argument("--gff_file", metavar="species.gff3", required = False, type=str,
+                      help="gff file with  gene models")
+  parser.add_argument("--fann_file", metavar="functional_annotation.json", required = False, type=str,
+                      help="json file with functional annotation")
   # out
   parser.add_argument("--meta_out", metavar="data/metadata/species", required = False,
                       type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
@@ -389,7 +393,9 @@ def main():
     "fasta_dna" : args.fasta_dna,
     "fasta_pep" : args.fasta_pep,
     "genome" : args.genome_conf,
-    "seq_region" : args.seq_region_conf, # check overriding on self copy (compare abs paths/ inodes?)
+    "seq_region" : args.seq_region_conf,
+    "functional_annotation" : args.fann_file,
+    "gff3" : args.gff_file,
   })
   manifest.dump(args.manifest_out, outdir=args.data_out_dir)
 
