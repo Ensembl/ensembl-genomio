@@ -75,11 +75,14 @@ sub run {
   # Load transcripts with CDS
   my $dba = $self->core_dba();
   my $tra = $dba->get_adaptor('Transcript');
-  my $protein_coding = $tra->fetch_all_by_biotype('protein_coding');
-  my $nontranslating_CDS = $tra->fetch_all_by_biotype('nontranslating_CDS');
-  my @transcripts = sort { $a->stable_id cmp $b->stable_id } (@$protein_coding, @$nontranslating_CDS);
+  my @coding_biotypes = qw(protein_coding pseudogene_with_CDS nontranslating_CDS);
 
-  foreach my $transcript (@transcripts) {
+  my @transcripts;
+  for my $biotype (@coding_biotypes) {
+    push @transcripts, @{ $tra->fetch_all_by_biotype($biotype) };
+  }
+
+  foreach my $transcript (sort { $a->stable_id cmp $b->stable_id } @transcripts) {
     if (defined $is_canonical) {
       next if $is_canonical != $transcript->is_canonical;
     }
