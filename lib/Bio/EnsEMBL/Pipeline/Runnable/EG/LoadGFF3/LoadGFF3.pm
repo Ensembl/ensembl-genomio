@@ -162,6 +162,9 @@ sub load_genes {
   my @gene_types = @{ $self->param_required('gene_types') };
   
   my $dba = $self->url2dba($self->param_required('db_url'));
+
+  # Set pseudogene_with_CDS biotype
+  $self->set_pseudogene_biotypes($dba);
   
   # Fetch slices and their synonyms into a lookup hash.
   my %slices = $self->fetch_slices($dba);
@@ -195,6 +198,59 @@ sub load_genes {
   $dba->dbc->disconnect_if_idle();
 }
 
+sub set_pseudogene_biotypes {
+  my ($self, $dba) = @_;
+
+  my $ba = $dba->get_adaptor('biotype');
+  my $name = 'pseudogene_with_CDS';
+
+  my $query = "INSERT INTO biotype(
+  name,
+  object_type,
+  biotype_group,
+  description,
+  so_acc,
+  so_term
+  ) VALUES(?,?,?,?,?,?);";
+  my $dbh = $dba->dbc->db_handle;
+  my $sth = $dbh->prepare($query);
+
+  # Set up gene
+  my $dbgene = $ba->fetch_by_name_object_type($name, 'gene');
+  if (not $dbgene->so_term) {
+    # Store via SQL (no API to store biotypes)
+    my @values = (
+      $name,
+      'gene',
+      'pseudogene',
+      'pseudogene with CDS',
+      'SO:0000336',
+      'pseudogene'
+    );
+    $sth->execute(@values);
+
+  } else {
+    warn("Biotype for gene OK");
+  }
+
+  # Set up transcript
+  my $dbtranscript = $ba->fetch_by_name_object_type($name, 'transcript');
+  if (not $dbtranscript->so_term) {
+    # Store via SQL (no API to store biotypes)
+    my @values = (
+      $name,
+      'transcript',
+      'pseudogene',
+      'pseudogene with CDS',
+      'SO:0000516',
+      'pseudogenic_transcript'
+    );
+    $sth->execute(@values);
+  } else {
+    warn("Biotype for transcript OK");
+  }
+}
+
 sub set_pseudogene {
   my ($self, $ga, $gene) = @_;
 
@@ -206,13 +262,13 @@ sub set_pseudogene {
 
   if ($num_tr eq ($num_pseudo + $num_pseudo_CDS)) {
     if ($num_pseudo_CDS > 0) {
-      warn("Set ".$gene->stable_id." as a pseudogene with CDS because all transcripts are pseudogenic and $num_pseudo_CDS/$num_tr are pseudogene with CDS\n");
+      warn("Set ".$gene->stable_id." as a pseudogene_with_CDS because all transcripts are pseudogenic and $num_pseudo_CDS/$num_tr are pseudogene_with_CDS\n");
       $gene->biotype('pseudogene_with_CDS');
-      $ga->store($gene);
+      $ga->update($gene);
     } else {
       warn("Set ".$gene->stable_id." as a pseudogene (without CDS) because all transcripts are pseudogenic\n");
       $gene->biotype('pseudogene');
-      $ga->store($gene);
+      $ga->update($gene);
     }
   }
 }
