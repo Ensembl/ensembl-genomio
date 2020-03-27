@@ -92,6 +92,9 @@ class LoadSequenceData(eHive.BaseRunnable):
         seq_reg_file = self.from_param("manifest_data", "seq_region", not_throw = True)
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
+        # add seq_region BRC4 name
+        self.add_sr_brc4_name(seq_reg_file, pj(wd, "seq_region_brc4_name"), unversion_scaffolds)
+
         # add seq_region attributes and karyotype info
         is_primary_assembly = agps is None
         self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), karyotype_info_tag = "karyotype_bands", is_primary_assembly = is_primary_assembly)
@@ -496,7 +499,76 @@ class LoadSequenceData(eHive.BaseRunnable):
 
             # run insert sql
             self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
+
+    def add_sr_brc4_name(self, meta_file, wd, unversioned = False):
+        os.makedirs(wd, exist_ok=True)
+        brc4_pfx = pj(wd, "brc4_name")
+
+        # load brc4 name from file
+        brc4_name= {}
+        if meta_file:
+            with open(meta_file) as mf:
+                data = json.load(mf)
+                if not isinstance(data, list):
+                    data = [ data ]
+                for e in data:
+                    if "BRC4_seq_region_name" in e:
+                        brc4_name[e["name"]] = e["BRC4_seq_region_name"]
+                    else:
+                        brc4_name[e["name"]] = e["name"]
+
+        # Load seq_regions from db
+        seq_region_ids = self.get_db_seq_region_ids(brc4_pfx)
+        # Get BRC4 attrib id
+        brc4_attrib_id = self.get_db_brc4_attrib_id(brc4_pfx)
+
+        # generate sql req for loading
+        insert_sql_file = pj(wd, "insert_brc4_name.sql")
+
+        with open(insert_sql_file, "w") as sql:
+            print("insert into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
+            lines = []
+
+            for seq_name in brc4_name:
+                if seq_name in seq_region_ids:
+                    seq_region_id = seq_region_ids[seq_name]
+                    lines.append('(%s, %s, "%s")' %(seq_region_id, brc4_attrib_id, brc4_name[seq_name]))
+                else:
+                    raise Exception("There is no seq_region named '%s'" % (seq_name))
+
+            print (",\n".join(lines) + ";", file = sql)
+
+        # run insert sql
+        self.run_sql_req(insert_sql_file, pj(wd, "insert_brc4_name"), from_file = True)
             
+    def get_db_brc4_attrib_id(self, out_pfx):
+        sql = r'''select attrib_type_id FROM attrib_type WHERE code="%s";'''
+        res = self.run_sql_req(sql % ("BRC4_seq_region_name"), out_pfx)
+
+        attrib_id = None
+        with open(out_pfx + ".stdout") as db_file:
+            for line in db_file:
+                if (line.startswith("attrib_type_id")):
+                    continue
+                attrib_id = line.strip()
+
+        if not attrib_id:
+            raise Exception("No BRC4 seq region name attrib type in db")
+        return attrib_id
+            
+    def get_db_seq_region_ids(self, out_pfx):
+        sql = r'''select seq_region_id, name FROM seq_region;'''
+        res = self.run_sql_req(sql, out_pfx)
+
+        seq_ids = {}
+        with open(out_pfx + ".stdout") as db_file:
+            for line in db_file:
+                if (line.startswith("seq_region_id")):
+                    continue
+                (seq_id, seq_name) = line.strip().split("\t")
+                seq_ids[seq_name] = seq_id
+        return seq_ids
+
     def get_external_db_map(self):
         """
         Get a map from a file for external_dbs to Ensembl dbnames

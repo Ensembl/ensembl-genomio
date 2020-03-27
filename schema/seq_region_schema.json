@@ -17,6 +17,7 @@
       "additionalProperties": false,
       "properties": {
         "name" : { "type" : "string" },
+        "BRC4_seq_region_name" : { "type" : "string" },
         "synonyms" : {
           "oneOf" : [
             { "$ref" : "#/definitions/seq_region_synonym_info" },

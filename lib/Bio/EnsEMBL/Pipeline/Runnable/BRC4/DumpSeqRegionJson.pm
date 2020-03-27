@@ -67,6 +67,10 @@ sub prepare_data {
         }
       }
 
+      # BRC4 name
+      my ($brc4_attrib) = @{$slice->get_all_Attributes('BRC4_seq_region_name')};
+      $seq_region->{BRC4_seq_region_name} = $brc4_attrib->value() if $brc4_attrib;
+
       # Is circular? Boolean
       $seq_region->{circular} = JSON::true if $slice->is_circular;
 
