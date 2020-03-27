@@ -10,16 +10,18 @@ from .rules import *
 class ValidStructures(BaseStructures):
   KNOWN_RULES = [
     AliasRule,
-    IgnoreRule,
-    ValidRule,
-    ValidIfRule,
-    FixRule,
-    ForceFixRule,
-    SubRule,
-    ForceSubRule,
-    SetRule,
+    GffRule,
+    GffSubRule,
+    GffForceSubRule,
+
+    JsonRule,
+    JsonSubRule,
+    JsonForceSubRule,
+    JsonAppendRule,
+    JsonIdRule,
   ]
 
   class Structure:
     def __init__(self, tag = ""):
       self.tag = tag
+
