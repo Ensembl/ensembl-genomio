@@ -9,8 +9,11 @@ from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 
 # locals
-from gffstruct.metaparserstruct import MetaParserStructures
 from gffstruct.fannkeeper import FannKeeper
+from gffstruct.gff3walker import ExtMapper
+from gffstruct.gff3walker import IdNormalizer
+from gffstruct.gff3walker import GFF3Walker
+from gffstruct.metaparserstruct import MetaParserStructures
 
 
 def get_args():
@@ -47,54 +50,36 @@ def get_args():
   return args
 
 
-def load_xref_mappings(map_file, map_str):
-  # check source uniquness
-  pass
 
 
-def load_pfx_trims(trim_str):
-  # features, can be reused, gen array
-  # sep class for trimmer?, ID processor?
-  pass
-
-
+class PfxTrimmer(IdNormalizer):
+  def __init__(self, trim_str):
+    # features, can be reused, gen array
+    pass
 
 
 def main():
   args = get_args()
 
   parser = MetaParserStructures(args.conf)
+  pfx_trimmer = PfxTrimmer(args.pfx_trims)
+  xref_map = ExtMapper("xref", map_file = args.xref_map, map_str=args.xref_map_str)
 
   fann_ctx = FannKeeper()
-  gff3_walker = GFF3Walker(args.gff_in, "leafQual", fann_ctx)
+  gff3_walker = GFF3Walker(args.gff_in,
+    structure_tags = "leafQual", global_ctx = fann_ctx, norm_id = pfx_trimmer)
 
   gff3_walker.walk(parser)
 
-  gff3_walker.dump_res_gff3(args.gff_out)
+  gff3_walker.dump_res_gff3(args.gff_out, maps = {"@xrefs": [xref_map]}) # or xref mapper obj
   fann_ctx.dump_json(args.fann_out)
 
-
-
-  interest_q = {
-    "ID" : "ID",
-    #"Parent" : "Parent",
-    "gene_biotype" : "biotype",
-    "phase" : "phase",
-  }
 
   clean_tags = frozenset(["ID", "Parent"])
   def name_clean(x, tag = None):
     if tag and tag in clean_tags:
       return x.replace("cds-", "").replace("gene-", "").replace("rna-gnl|WGS:VCGU|", "").replace("exon-gnl|WGS:VCGU|", "")
     return x
-
-  json_type_map = {
-    "gene" : "gene",
-    "mrna" : "transcript",
-  }
-  # how to pass properties to upper object
-  #  ? update prev_levels
-  #  ? prev levels is for json ???
 
 
 if __name__ == "__main__":

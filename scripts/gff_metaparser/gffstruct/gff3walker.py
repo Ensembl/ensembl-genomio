@@ -1,19 +1,43 @@
+import re
 import sys
 
 from BCBio import GFF
 
-class GFF3Walker:
-  # BaseWalker?
-  # single gff walking code
-  # flag to iterate through qualifiers
-  # tag=fullPath|leafQual|leafOrQual # class?? enum? named tuple?
-  # /gene/mrna/exon
-  # exon/id
-  # exon
-  def __init__(in_file, structure_tags="full", global_ctx = None):
-    self.in_file = in_file
-    self.gctx = global_ctx
+class IdNormalizer:
+  def __init__(self, re_rules = dict()):
     pass
+
+  def compile_rules(self):
+    pass
+
+  def normalize(self, id_str, type = None):
+    id_str = str(id_str)
+    pass
+
+  def __call__(self, *args, **kwargs):
+    retun self.normalize(self, *args, **kwargs)
+
+
+class ExtMapper:
+  def __init__(self, map_file = None, map_str = None):
+    pass
+
+
+class GFF3Walker:
+  _valid_structure_tags = frozenset("fullPath leafQual".split()) # /gene/mrna/exon vs exon/id, exon
+
+  def __init__(in_file, structure_tags="fullPath", global_ctx = None, norm_id = None):
+    if structure_tags not in _valid_structure_tags:
+      raise Exception("not a valid 'structure_tags' value: %s" % structure_tags)
+    self._struct_tags = structure_tags
+    self._in_file = in_file
+    self._gctx = global_ctx
+    self._norm_id = norm_id
+
+  def norm_id(self, id, type):
+    if self._norm_id is None:
+      return id
+    return self._norm_id(id, type = type)
 
   def walk(self, parser, out_file):
     gff =  GFF.parse(self.in_file)
