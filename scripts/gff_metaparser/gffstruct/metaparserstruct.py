@@ -7,7 +7,9 @@ from .rules import *
 
 # VALID STRUCTURES class
 
-class ValidStructures(BaseStructures):
+
+class MetaParserStructures(BaseStructures):
+  # ugly class names, rename to something more meaningful
   KNOWN_RULES = [
     AliasRule,
     GffRule,
@@ -18,7 +20,7 @@ class ValidStructures(BaseStructures):
     JsonSubRule,
     JsonForceSubRule,
     JsonAppendRule,
-    JsonIdRule,
+    JsonIdRule, # ? do we need it
   ]
 
   class Structure:

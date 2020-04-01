@@ -1,7 +1,6 @@
 import argparse
 import io
 import json
-import pprint
 import sys
 
 from BCBio import GFF
@@ -9,27 +8,76 @@ from Bio.Seq import UnknownSeq
 from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 
-# xamining  data/GCA_007210705.1_Tcal_SD_v2.1/GCA_007210705.1_Tcal_SD_v2.1_genomic.gff.gz
-# gene/mRNA/exon  74199   Genbank {"gene": ["gene-TCAL_", 74199], "mRNA": ["rna-gnl|WGS:VCGU|TCAL_", 74199], "exon": ["exon-gnl|WGS:VCGU|TCAL_", 74199]}
-# gene/mRNA/CDS   68827   Genbank {"gene": ["gene-TCAL_", 68827], "mRNA": ["rna-gnl|WGS:VCGU|TCAL_", 68827], "CDS": ["cds-TRY", 68827]}
-#region  459     Genbank {"region": ["", 459]}
+# locals
+from gffstruct.metaparserstruct import MetaParserStructures
+
 
 def get_args():
   parser = argparse.ArgumentParser()
-  # ? separate sources, value to include #ALL_SOURCES with #
-  # file arguments
-  parser.add_argument("--fann_out", metavar="functional_annotation.json", required = False,
-                      type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
-                      help="stats output [STDOUT]" )
+  # various configs and maps
+  parser.add_argument("--conf", metavar="gff_metaparser.conf", required=True,
+                      type=argparse.FileType('rt', encoding='UTF-8'),
+                      help="valid parser config file")
+  parser.add_argument("--pfx_trims", metavar="gene:gene-,mrna:rna-gnl|WGS:VCGU|,exon:exon-gnl|WGS:VCGU|TCAL_,cds:cds",
+                      required = False, type=str,
+                      help="list of feature:id_pfx(,...) to trim id_pfx from feature's ID (reuse feature for multiple pfx, case ignored")
+  parser.add_argument("--xref_map", metavar="xref_map.tsv", required=False,
+                      type=argparse.FileType('rt', encoding='UTF-8'),
+                      help="tab separated file with xref mappings")
+  parser.add_argument("--xref_map_str", metavar="NCBI_GP:GenBank,gff_xref:ensembl_xref", required=False,
+                      type = str,
+                      help="comma separated list of xref mappings in the format from:to")
+  # output
   parser.add_argument("--gff_out", metavar="out.gff3", required = False,
                       type=argparse.FileType('w', encoding='UTF-8'), default=sys.stdout,
                       help="resulting gff output [STDOUT]" )
+  parser.add_argument("--fann_out", metavar="functional_annotation.json", required = False,
+                      type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
+                      help="stats output [STDOUT]" )
+  # input
+  parser.add_argument("--fasta", metavar="fasta.fna", required = False,
+                      type=str,
+                      help="fasta file with sequences to calculate length (region length or max feature end will be used, if absent)")
   parser.add_argument("gff_in", metavar="in.gff3",
                       type=argparse.FileType('rt', encoding='UTF-8'),
                       help="input gff file (use '-' to read from STDIN)" )
+  #
   args = parser.parse_args()
   return args
 
+
+def load_xref_mappings(map_file, map_str):
+  # check source uniquness
+  pass
+
+
+def load_pfx_trims(trim_str):
+  # features, can be reused, gen array
+  # sep class for trimmer?, ID processor?
+  pass
+
+
+class FannKeeper:
+  # storing result functional annotation object
+  # data[type_alias][id]  i.e. data["seq_region"][_SEQ_ID]
+  # move to separate file
+  def __init__(self):
+    pass
+
+  def dump_json(self, out_file):
+    pass
+
+
+class GFF3Walker:
+  # single gff walking code
+  # flag to iterate through qualifiers
+  # tag=fullPath|leafQual|leafOrQual # class?? enum? named tuple?
+  # /gene/mrna/exon
+  # exon/id
+  # exon
+  def __init__(in_file, tag="fullPath", global_ctx = None):
+    # GFF3Walker(args.gff_in, "leafOrQual", fannKeeperInstance)
+    pass
 
 
 def main():
@@ -48,9 +96,6 @@ def main():
       return x.replace("cds-", "").replace("gene-", "").replace("rna-gnl|WGS:VCGU|", "").replace("exon-gnl|WGS:VCGU|", "")
     return x
 
-  xrefs_map = {
-    "NCBI_GP" : "GenBank",
-  }
 
   json_type_map = {
     "gene" : "gene",
@@ -60,8 +105,6 @@ def main():
   #  ? update prev_levels
   #  ? prev levels is for json ???
 
-
-# {"object_type":"gene","id":"AGAP004678","xrefs":[{"info_type":"DIRECT","id":"agCG45746","dbname":"Celera_Gene"},{"info_type":"DIRECT","id":"ebi640","dbname":"Celera_Gene"},{"info_type":"DEPENDENT","id":"1275380","dbname":"EntrezGene"}]}
 
 
   def process_feature(ft, out, prev_levels = []):

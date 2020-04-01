@@ -1,7 +1,6 @@
 import argparse
 import io
 import json
-import pprint
 import sys
 
 from BCBio.GFF import GFFExaminer
