@@ -10,6 +10,7 @@ from Bio.SeqRecord import SeqRecord
 
 # locals
 from gffstruct.metaparserstruct import MetaParserStructures
+from gffstruct.fannkeeper import FannKeeper
 
 
 def get_args():
@@ -57,31 +58,22 @@ def load_pfx_trims(trim_str):
   pass
 
 
-class FannKeeper:
-  # storing result functional annotation object
-  # data[type_alias][id]  i.e. data["seq_region"][_SEQ_ID]
-  # move to separate file
-  def __init__(self):
-    pass
-
-  def dump_json(self, out_file):
-    pass
-
-
-class GFF3Walker:
-  # single gff walking code
-  # flag to iterate through qualifiers
-  # tag=fullPath|leafQual|leafOrQual # class?? enum? named tuple?
-  # /gene/mrna/exon
-  # exon/id
-  # exon
-  def __init__(in_file, tag="fullPath", global_ctx = None):
-    # GFF3Walker(args.gff_in, "leafOrQual", fannKeeperInstance)
-    pass
 
 
 def main():
   args = get_args()
+
+  parser = MetaParserStructures(args.conf)
+
+  fann_ctx = FannKeeper()
+  gff3_walker = GFF3Walker(args.gff_in, "leafQual", fann_ctx)
+
+  gff3_walker.walk(parser)
+
+  gff3_walker.dump_res_gff3(args.gff_out)
+  fann_ctx.dump_json(args.fann_out)
+
+
 
   interest_q = {
     "ID" : "ID",
@@ -96,7 +88,6 @@ def main():
       return x.replace("cds-", "").replace("gene-", "").replace("rna-gnl|WGS:VCGU|", "").replace("exon-gnl|WGS:VCGU|", "")
     return x
 
-
   json_type_map = {
     "gene" : "gene",
     "mrna" : "transcript",
@@ -104,63 +95,6 @@ def main():
   # how to pass properties to upper object
   #  ? update prev_levels
   #  ? prev levels is for json ???
-
-
-
-  def process_feature(ft, out, prev_levels = []):
-    #quals_to_keep =
-    #quals_to_json = 
-    quals = {
-      interest_q[k]: name_clean(v[0], k)
-        for k, v in ft.qualifiers.items() if k in interest_q
-    }
-
-    if ft.type == "gene":
-      prev_levels.append({"object_type": "gene", "id" : quals["ID"], "xrefs": []})
-
-    if "Dbxref" in ft.qualifiers:
-      # could be many
-      xref = ft.qualifiers["Dbxref"][0]
-      xsrc, xid = xref.split(":", 1)
-      xsrc = xsrc in xrefs_map and xrefs_map[xsrc] or xsrc
-      if prev_levels and xsrc:
-        prev_levels[0]["xrefs"].append({
-          "info_type":"DIRECT","id":xid,"dbname":xsrc,
-        })
-
-    outft = SeqFeature(ft.location, strand = ft.strand, type = ft.type, qualifiers = quals)
-
-    outft.sub_features = []
-    for sft in ft.sub_features:
-      process_feature(sft, outft.sub_features, prev_levels)
-
-    out.append(outft)
-
-    return
-
-
-  json_out = []
-  gff =  GFF.parse(args.gff_in)
-  for contig in gff:
-    out_rec = SeqRecord(UnknownSeq(length=len(contig)), id = contig.id)
-    out_rec.features = []
-    for cnt, topft in enumerate(contig.features):
-      if topft.type == "gene":
-        info = []
-        process_feature(topft, out_rec.features, info)
-        if info:
-          gene_info = info[0]
-          if "xrefs" in gene_info:
-            #gene_info["xrefs"] = list(set(gene_info["xrefs"]))
-            if gene_info["xrefs"]:
-              gene_info["xrefs"] = gene_info["xrefs"][0]
-            if not gene_info["xrefs"]:
-              del(gene_info["xrefs"])
-          json_out.append(gene_info)
-    GFF.write([out_rec], args.gff_out)
-
-  if (json_out):
-    json.dump(json_out, args.fann_out, indent = 2)
 
 
 if __name__ == "__main__":
