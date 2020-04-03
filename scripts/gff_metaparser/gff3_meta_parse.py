@@ -10,10 +10,10 @@ from Bio.SeqRecord import SeqRecord
 
 # locals
 from gffstruct.fannkeeper import FannKeeper
-from gffstruct.gff3walker import ExtMapper
-from gffstruct.gff3walker import IdNormalizer
 from gffstruct.gff3walker import GFF3Walker
 from gffstruct.metaparserstruct import MetaParserStructures
+from gffstruct.utils import ExtMapper
+from gffstruct.utils import PfxTrimmer
 
 
 def get_args():
@@ -37,7 +37,10 @@ def get_args():
                       help="resulting gff output [STDOUT]" )
   parser.add_argument("--fann_out", metavar="functional_annotation.json", required = False,
                       type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
-                      help="stats output [STDOUT]" )
+                      help="functional annnotation output [STDOUT]" )
+  parser.add_argument("--seq_region_out", metavar="seq_region_raw.json", required = False,
+                      type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
+                      help="seq_region metadata json output [STDOUT]" )
   # input
   parser.add_argument("--fasta", metavar="fasta.fna", required = False,
                       type=str,
@@ -50,12 +53,9 @@ def get_args():
   return args
 
 
-
-
-class PfxTrimmer(IdNormalizer):
-  def __init__(self, trim_str):
-    # features, can be reused, gen array
-    pass
+def seq_region_filter(x, prop = "object_type", tag = "seq_region"):
+  # todo: get tag/"seq_region" from config
+  return x and prop in x and x[prop] == tag or False
 
 
 def main():
@@ -66,25 +66,17 @@ def main():
   xref_map = ExtMapper("xref", map_file = args.xref_map, map_str=args.xref_map_str)
 
   fann_ctx = FannKeeper()
-  gff3_walker = GFF3Walker(args.gff_in,
-    structure_tags = "leafQual", global_ctx = fann_ctx, norm_id = pfx_trimmer)
+  gff3_walker = GFF3Walker(args.gff_in, structure_tags = "leafQual",
+                            global_ctx = fann_ctx, norm_id = pfx_trimmer)
 
-  gff3_walker.walk(parser)
+  gff3_walker.walk(parser, out_file = args.gff_out)
 
-  gff3_walker.dump_res_gff3(args.gff_out, maps = {"@xrefs": [xref_map]}) # or xref mapper obj
-  fann_ctx.dump_json(args.fann_out)
-
-
-  clean_tags = frozenset(["ID", "Parent"])
-  def name_clean(x, tag = None):
-    if tag and tag in clean_tags:
-      return x.replace("cds-", "").replace("gene-", "").replace("rna-gnl|WGS:VCGU|", "").replace("exon-gnl|WGS:VCGU|", "")
-    return x
+  fann_ctx.dump_json(args.fann_out, maps = [xref_map], filter = lambda x: not seq_region_filter(x))
+  fann_ctx.dump_json(args.seq_region_out, filter = lambda x: seq_region_filter(x))
 
 
 if __name__ == "__main__":
     # execute only if run as a script
     main()
-
 
 # cat tcal.gff3  | python new-genome-loader/scripts/gff_metaparser/gff3_tcal_parse.py --fann_out t.json -  > t.gff3

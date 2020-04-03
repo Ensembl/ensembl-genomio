@@ -13,7 +13,9 @@ class FannKeeper:
   def add(self, path, value):
     pass
 
-  def dump_json(self, out_file, filter=None):
+  def dump_json(self, out_file, mamps = None, filter=None):
+    if not out_file:
+      return
     json.dump(json_out, out_file, indent = 2)
     pass
 

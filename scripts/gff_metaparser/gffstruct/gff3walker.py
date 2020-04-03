@@ -3,25 +3,6 @@ import sys
 
 from BCBio import GFF
 
-class IdNormalizer:
-  def __init__(self, re_rules = dict()):
-    pass
-
-  def compile_rules(self):
-    pass
-
-  def normalize(self, id_str, type = None):
-    id_str = str(id_str)
-    pass
-
-  def __call__(self, *args, **kwargs):
-    retun self.normalize(self, *args, **kwargs)
-
-
-class ExtMapper:
-  def __init__(self, map_file = None, map_str = None):
-    pass
-
 
 class GFF3Walker:
   _valid_structure_tags = frozenset("fullPath leafQual".split()) # /gene/mrna/exon vs exon/id, exon
@@ -41,6 +22,9 @@ class GFF3Walker:
 
   def walk(self, parser, out_file):
     gff =  GFF.parse(self.in_file)
+    if not out_file:
+      pass
+
     for contig in gff:
       out_rec = SeqRecord(UnknownSeq(length=len(contig)), id = contig.id)
       out_rec.features = []
@@ -89,4 +73,49 @@ class GFF3Walker:
 
     out.append(outft)
     return
+
+
+  def down_features(self, feature, prefix = None, prev_ids = []):
+    #print(feature)
+    # use https://docs.python.org/3/library/operator.html attrgetter methodcaller ??
+    #print(feature.type, feature.id, feature.location)
+    quals = feature.qualifiers
+    out = { k : (len(v) > 0 and v[0] or None)
+              for k,v in quals.items()
+                if (not useful_qls or k.lower() in useful_qls) }
+    #print(out)
+
+    if prefix is None:
+      prefix = feature.type
+    else:
+      prefix += "/" + feature.type
+    new_prev_ids = prev_ids + [feature.id]
+
+    if not feature.sub_features:
+      known_structures.process(ValidStructures.Structure(prefix))
+
+      # analyze
+      stats[prefix] += 1
+      stats_sources[prefix].add(out["source"])
+      for (ftype, fid) in zip (prefix.split("/"), new_prev_ids):
+        stats_prefixes[prefix][ftype].add(fid)
+
+    for sf in feature.sub_features:
+      down_features(sf, prefix, new_prev_ids)
+
+
+  def get_stats(self):
+    useful_qls = frozenset(filter(lambda x: x != "", args.only_qualifiers.split(",")))
+
+    stats = defaultdict(int)
+    stats_sources = defaultdict(set)
+    stats_prefixes = defaultdict(lambda: defaultdict(PfxTr)) # should be paths:item based
+
+    gff = GFF.parse(args.gff_in)
+    for contig in gff:
+      for cnt, feature in enumerate(contig.features):
+        self.down_features(feature)
+        # if cnt > 20: break
+      # break
+
 
