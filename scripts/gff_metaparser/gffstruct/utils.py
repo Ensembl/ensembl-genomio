@@ -1,11 +1,12 @@
+import gzip
 import re
 
 from collections import defaultdict
+from Bio import SeqIO
 
 class IdTrimmer:
-  self._rules = None
-
   def __init__(self, re_rules = dict()):
+    self._rules = None
     self.compile_rules(re_rules)
 
   def compile_rules(self, rules):
@@ -28,6 +29,7 @@ class IdTrimmer:
 
 class PfxTrimmer(IdTrimmer):
   def __init__(self, trim_str):
+    self._rules = None
     if not trim_str:
       return
     rules = defaultdict(list)
@@ -49,4 +51,28 @@ class ExtMapper:
 
   def __call__(self, *args, **kwargs):
     retun self.map(self, *args, **kwargs)
+
+class SeqLenDict:
+  def __init__(self, fna_file = None):
+    self._len = None
+    self.load_from_file(fna_file)
+
+  def load_from_file(self, fasta_file):
+    if not fasta_file:
+      return
+    _open = fasta_file.endswith(".gz") and gzip.open or open
+    with _open(fasta_file, 'rt') as fasta:
+      fasta_parser = SeqIO.parse(fasta, "fasta")
+      self._len = dict()
+      for rec in fasta_parser:
+        self._len[rec.name] = len(rec)
+
+  def get_len(self, srid):
+    if self._len and srid in self._len:
+      return self._len[srid]
+    return None
+
+  def __call__(self, srid):
+    return self.get_len(srid)
+
 

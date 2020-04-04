@@ -3,10 +3,6 @@ import io
 import json
 import sys
 
-from BCBio import GFF
-from Bio.Seq import UnknownSeq
-from Bio.SeqFeature import SeqFeature
-from Bio.SeqRecord import SeqRecord
 
 # locals
 from gffstruct.fannkeeper import FannKeeper
@@ -14,6 +10,7 @@ from gffstruct.gff3walker import GFF3Walker
 from gffstruct.metaparserstruct import MetaParserStructures
 from gffstruct.utils import ExtMapper
 from gffstruct.utils import PfxTrimmer
+from gffstruct.utils import SeqLenDict
 
 
 def get_args():
@@ -62,21 +59,25 @@ def main():
   args = get_args()
 
   parser = MetaParserStructures(args.conf)
+
   pfx_trimmer = PfxTrimmer(args.pfx_trims)
+  seq_len = SeqLenDict(args.fasta)
   xref_map = ExtMapper("xref", map_file = args.xref_map, map_str=args.xref_map_str)
 
   fann_ctx = FannKeeper()
   gff3_walker = GFF3Walker(args.gff_in, structure_tags = "leafQual",
                             global_ctx = fann_ctx, norm_id = pfx_trimmer)
 
-  gff3_walker.walk(parser, out_file = args.gff_out)
+  gff3_walker.walk(parser, out_file = args.gff_out, seq_len_dict = seq_len)
 
   fann_ctx.dump_json(args.fann_out, maps = [xref_map], filter = lambda x: not seq_region_filter(x))
   fann_ctx.dump_json(args.seq_region_out, filter = lambda x: seq_region_filter(x))
 
 
+# main
 if __name__ == "__main__":
-    # execute only if run as a script
+    # execute only if beeing run as a script
     main()
+
 
 # cat tcal.gff3  | python new-genome-loader/scripts/gff_metaparser/gff3_tcal_parse.py --fann_out t.json -  > t.gff3

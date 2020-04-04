@@ -2,6 +2,10 @@ import re
 import sys
 
 from BCBio import GFF
+from Bio import SeqIO
+from Bio.Seq import UnknownSeq
+from Bio.SeqFeature import SeqFeature
+from Bio.SeqRecord import SeqRecord
 
 
 class GFF3Walker:
@@ -20,7 +24,11 @@ class GFF3Walker:
       return id
     return self._norm_id(id, type = type)
 
-  def walk(self, parser, out_file):
+  # parser = MetaParserStructures(args.conf)
+  # gff3_walker = GFF3Walker(args.gff_in, structure_tags = "leafQual",
+  #                           global_ctx = fann_ctx, norm_id = pfx_trimmer)
+  # gff3_walker.walk(parser, out_file = args.gff_out, seq_len_dict = seq_len)
+  def walk(self, parser, out_file = None, seq_len_dict = None):
     gff =  GFF.parse(self.in_file)
     if not out_file:
       pass
