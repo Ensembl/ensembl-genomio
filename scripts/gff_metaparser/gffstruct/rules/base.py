@@ -72,9 +72,9 @@ class BaseRule:
   def regex_patterns(cls):
     return deepcopy(cls._RULES["regex_match"])
 
-  def process(self, struct, re_context = None):
+  def process(self, context, re_context = None):
     print("processing %s for %s with match groups %s" % (
-        struct.tag, self.NAME, str(re_context and re_context.groupdict() or None)
+        context.tag, self.NAME, str(re_context and re_context.groupdict() or None)
       ))
     pass
 

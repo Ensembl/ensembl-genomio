@@ -54,8 +54,8 @@ class BaseStructures:
     factory = self.rule_factories[name]
     rule = factory(pattern, actions, lineno)
 
-  def process(self, struct):
-    tag_raw = struct.tag
+  def process(self, context):
+    tag_raw = context.tag
     tag = tag_raw.lower().strip()
     matched_rules = []
 
@@ -69,15 +69,11 @@ class BaseStructures:
 
     if matched_rules:
       for wrp in matched_rules:
-        wrp.rule.process(struct, re_context = wrp.ctx)
+        wrp.rule.process(context, re_context = wrp.ctx)
     else:
-      UnseenRule.process(struct, noconfig = (self.config == None))
+      UnseenRule.process(context, noconfig = (self.config == None))
 
     # return ???
-
-  class Structure:
-    def __init__(self, tag = ""):
-      self.tag = tag
 
 class MatchedRuleCtx:
   def __init__(self, rule, ctx = None):

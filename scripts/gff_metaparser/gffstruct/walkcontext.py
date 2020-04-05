@@ -1,9 +1,15 @@
 
 class WalkContext:
-   def __init__(self, global_context = None, ctg_len_inferer = None):
+   def __init__(self, tag = "", global_context = None, ctg_len_inferer = None):
+     self.tag = ""
      self._gctx = global_context
      self._ctg_len = ctg_len_inferer
      pass
+
+  def tag(*val):
+    if len(val) == 0:
+      return self.tag
+    self.tag = str(val[0])
 
   def update(self, *key_val, **kwargs):
     # can have either dict as key or string with non-empty val

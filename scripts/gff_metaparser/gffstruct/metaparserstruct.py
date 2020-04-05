@@ -23,8 +23,3 @@ class MetaParserStructures(BaseStructures):
     JsonIdRule, # ? do we need it
   ]
 
-  class Structure:
-    def __init__(self, tag = "", context = None):
-      self.tag = tag
-      self.context = context
-

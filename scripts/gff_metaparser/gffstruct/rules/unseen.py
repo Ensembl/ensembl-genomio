@@ -7,7 +7,7 @@ class UnseenRule(BaseRule):
   _RULES = BaseRule.RulesType()
 
   @classmethod
-  def process(cls, struct, noconfig=True):
-    print("no matching pattern for %s" % struct.tag, file=sys.stderr)
+  def process(cls, context, noconfig=True):
+    print("no matching pattern for %s" % context.tag, file=sys.stderr)
     pass
 

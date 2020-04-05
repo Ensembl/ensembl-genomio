@@ -99,13 +99,14 @@ class GFF3Walker:
 
    # leaf match
    if self._struct_tags == "fullPath":
-       # add tag to context??? or add context to MetaParserStructures
-       self._parser.process(self._parser.Structure(tag = fulltag, context = context))
+       context.tag(fulltag)
+       self._parser.process(context)
    elif self._struct_tags == "leafQual":
      for qname in [None] + quals.keys():
        leaftag = "/".join(filter(None, [feat.type, leaf]))
+       context.tag(leaftag)
        context.update(_LEAFTAG = leaftag)
-       self._parser.process(self._parser.Structure(tag = leaftag, context = context))
+       self._parser.process(context)
    else:
      raise Exception("unknown struct tags type: %s" % self._struct_tags)
 
