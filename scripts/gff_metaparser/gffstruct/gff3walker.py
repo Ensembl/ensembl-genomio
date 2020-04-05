@@ -34,11 +34,6 @@ class GFF3Walker:
       return id
     return self._norm_id(id, type = type)
 
-  # parser = MetaParserStructures(args.conf)
-  # gff3_walker = GFF3Walker(parser, args.gff_in, structure_tags = "leafQual",
-  #                           global_ctx = fann_ctx, norm_id = pfx_trimmer)
-  # gff3_walker.walk(out_file = args.gff_out, seq_len_dict = seq_len)
-
   def walk(self, out_file = None, seq_len_dict = None):
     gff =  GFF.parse(self.in_file)
     for contig in gff:
@@ -50,11 +45,14 @@ class GFF3Walker:
       if out_file is not None:
         out_rec_features = []
       for cnt, topft in enumerate(contig.features):
-        # interate through all of the features
+        # iterate through all of the features
         context = WalkContext(global_context = self._gctx, ctg_len_inferer = ctg_len)
         context.update("_SEQID", contig.id)
         self.process_feature(topft, context, out_rec_features)
       # run postponed (i.e. validation)
+      # rules? global context??? VALID_IF rule (gene/mrna.id/CDS, gene/mrna.id/exon)
+      # store gene.id/mrna.id/_feature at global context for checking
+      # thus stor gene.id and mrna.id in the context or previous context shallow copies/clones in the context
       # update context?????
       # out record processing
       if out_file and out_rec_features:
@@ -62,76 +60,89 @@ class GFF3Walker:
         out_rec.features = out_rec_features
         GFF.write([out_rec], out_file)
 
-      #  # was
-      #  if topft.type == "gene":
-      #    info = []
-      #    process_feature(topft, out_rec_features, info)
-      #    if info:
-      #      gene_info = info[0]
-      #      if "xrefs" in gene_info:
-      #        #gene_info["xrefs"] = list(set(gene_info["xrefs"]))
-      #        if gene_info["xrefs"]:
-      #          gene_info["xrefs"] = gene_info["xrefs"][0]
-      #        if not gene_info["xrefs"]:
-      #          del(gene_info["xrefs"])
-      #      json_out.append(gene_info)
+
+  def process_feature(self, feat, context, out = None):
+    # store stats in the context
+    # store json objects/structs in the global context
+    # store validation info in the context
+    # fill _STRCTTAG and _LEAFTAG, etc.., biotype, phase are in quals
+    # predefined _SEQID _SRC _TYPE _START _END _STRAND _PHASE _QUALS _PARENTID _FULLTAG _LEAFTAG 
+    loc = feat.location
+    quals = feat.qualifiers
+    phase = quals.get("phase")
+    fulltag_parts = list(filter(None,[context.get("_FULLTAG"), feat.type]))
+    fulltag = "/".join(fulltag_parts)
+    depth = len(fulltag_parts)
+
+    context.update(
+      _ID      = feat.id,
+      _SRC     = feat.source,
+      _TYPE    = feat.type,
+      _START   = loc.start,
+      _END     = loc.end,
+      _STRAND  = feat.strand,
+      _PHASE   = phase,
+      _QUALS   = quals,
+      _FULLTAG = fulltag,
+      _DEPTH   = depth,
+    );
+
+    # leaf match
+    if self._struct_tags == "fullPath":
+        context.tag(fulltag)
+        self._parser.process(context)
+    elif self._struct_tags == "leafQual":
+      for qname in [None] + quals.keys():
+        leaftag = "/".join(filter(None, [feat.type, leaf]))
+        context.tag(leaftag)
+        context.update(_LEAFTAG = leaftag)
+        self._parser.process(context)
+    else:
+      raise Exception("unknown struct tags type: %s" % self._struct_tags)
+
+    # what if inserting, splitting, skipping, etc
+    # fix rule, force_fix rule
+
+    # process sub features
+    res_sub_features = None
+    if out is not None:
+      res_sub_features = []
+
+    context.snap() # ???
+    # ??? clone context??? use sub_features??? 
+    for subfeat in feat.sub_features:
+      context.update(_PARENTID = feat.id)
+      self.process_feature(subfeat, context, res_sub_features)
+
+    if out:
+      outft = SeqFeature(context["_LOCATION"],
+        strand = context["_STRAND"],
+        type = context["_TYPE"],
+        qualifiers = context["_QUALS"])
+      if res_sub_features:
+        outft.sub_features = res_subfeatures
+      # if depth is 1 process fixes????
+      # validation depth???
+      out.append(outft)
+
+    return
 
 
-  def process_feature(self, feat, context, out = None, prev_levels = []):
-   # fill _STRCTTAG and _LEAFTAG, etc.., biotype, phase are in quals
-   # predefined _SEQID _SRC _TYPE _START _END _STRAND _PHASE _QUALS _PARENTID _FULLTAG _LEAFTAG 
-   loc = feat.location
-   quals = feat.qualifiers
-   phase = quals.get("phase")
-   fulltag = "/",join(filter(None,[context.get("_FULLTAG"), feat.type]))
-
-   context.update(
-     _ID      = feat.id,
-     _SRC     = feat.source,
-     _TYPE    = feat.type,
-     _START   = loc.start,
-     _END     = loc.end,
-     _STRAND  = feat.strand,
-     _PHASE   = phase,
-     _QUALS   = quals,
-     _FULLTAG = fulltag,
-   );
-
-   # leaf match
-   if self._struct_tags == "fullPath":
-       context.tag(fulltag)
-       self._parser.process(context)
-   elif self._struct_tags == "leafQual":
-     for qname in [None] + quals.keys():
-       leaftag = "/".join(filter(None, [feat.type, leaf]))
-       context.tag(leaftag)
-       context.update(_LEAFTAG = leaftag)
-       self._parser.process(context)
-   else:
-     raise Exception("unknown struct tags type: %s" % self._struct_tags)
-
-   # what if inserting, splitting, skipping, etc
-
-   # process sub features
-   sub_features = None
-   if out is not None:
-     sub_features = []
-
-   for subfeat in feat.sub_features:
-     context.update(_PARENTID = feat.id)
-     self.process_feature(subfeat, conetext, sub_features, prev_levels)
-
-   if out:
-     outft = SeqFeature(context["_LOCATION"],
-       strand = context["_STRAND"],
-       type = context["_TYPE"],
-       qualifiers = context["_QUALS"])
-     if sub_features:
-       outft.sub_features = subfeatures
-     out.append(outft)
-
-
-   # before going deeper
+  def some(self, some):
+    # before going deeper
+    #  # was
+    #  if topft.type == "gene":
+    #    info = []
+    #    process_feature(topft, out_rec_features, info)
+    #    if info:
+    #      gene_info = info[0]
+    #      if "xrefs" in gene_info:
+    #        #gene_info["xrefs"] = list(set(gene_info["xrefs"]))
+    #        if gene_info["xrefs"]:
+    #          gene_info["xrefs"] = gene_info["xrefs"][0]
+    #        if not gene_info["xrefs"]:
+    #          del(gene_info["xrefs"])
+    #      json_out.append(gene_info)
 
 
   def process_feature_old(self, ft, out, prev_levels = []):

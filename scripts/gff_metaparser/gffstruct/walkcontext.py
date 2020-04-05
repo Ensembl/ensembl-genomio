@@ -1,10 +1,16 @@
+import copy
 
 class WalkContext:
    def __init__(self, tag = "", global_context = None, ctg_len_inferer = None):
-     self.tag = ""
+     self.data = dict()
+     self.tag = tag
      self._gctx = global_context
      self._ctg_len = ctg_len_inferer
-     pass
+     self.prev = []
+
+  def snap():
+    # shallow data copy
+    self.prev.append({"tag" : tag, "data" : copy.copy(self.data)})
 
   def tag(*val):
     if len(val) == 0:
