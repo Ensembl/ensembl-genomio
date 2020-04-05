@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 from Bio import SeqIO
 
+
 class IdTrimmer:
   def __init__(self, re_rules = dict()):
     self._rules = None
@@ -74,5 +75,32 @@ class SeqLenDict:
 
   def __call__(self, srid):
     return self.get_len(srid)
+
+
+class UpdatingLen:
+  def __init__(self, val):
+    self._update = False
+    self._val = val
+    if not self._val:
+      self._update = True
+
+  def is_updating(self):
+    return self._update
+
+  def update(self, val, stop_on_success = False):
+    if not self._update:
+      return
+    self._val = val
+    if self._val and stop_on_success:
+      self._update = False
+
+  def __call__(self, *args, **kwargs):
+    return self.update(*args, **kwargs)
+
+  def __int__(self):
+    return self._val or int(0)
+
+  def __len__(self):
+    return self.__int__()
 
 

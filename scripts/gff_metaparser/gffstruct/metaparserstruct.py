@@ -24,6 +24,7 @@ class MetaParserStructures(BaseStructures):
   ]
 
   class Structure:
-    def __init__(self, tag = ""):
+    def __init__(self, tag = "", context = None):
       self.tag = tag
+      self.context = context
 

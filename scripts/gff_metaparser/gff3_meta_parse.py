@@ -65,10 +65,10 @@ def main():
   xref_map = ExtMapper("xref", map_file = args.xref_map, map_str=args.xref_map_str)
 
   fann_ctx = FannKeeper()
-  gff3_walker = GFF3Walker(args.gff_in, structure_tags = "leafQual",
+  gff3_walker = GFF3Walker(parser, args.gff_in, structure_tags = "leafQual",
                             global_ctx = fann_ctx, norm_id = pfx_trimmer)
 
-  gff3_walker.walk(parser, out_file = args.gff_out, seq_len_dict = seq_len)
+  gff3_walker.walk(out_file = args.gff_out, seq_len_dict = seq_len)
 
   fann_ctx.dump_json(args.fann_out, maps = [xref_map], filter = lambda x: not seq_region_filter(x))
   fann_ctx.dump_json(args.seq_region_out, filter = lambda x: seq_region_filter(x))
