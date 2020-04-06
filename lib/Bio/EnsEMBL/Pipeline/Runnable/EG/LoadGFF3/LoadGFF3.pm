@@ -927,11 +927,11 @@ sub new_transcript {
     }
 
   } elsif ($gff_transcript->type !~ /^(mRNA|transcript):*/i) {
-    die("Protein coding $stable_id is not translatable??") if not $translatable;
     ($biotype) = $gff_transcript->type =~ /^(\w+):*/;
     $biotype = $self->map_biotype_transcript($biotype, $gff_transcript);
     $gene->biotype($biotype);
   } else {
+    die("Protein coding $stable_id is not translatable??") if not $translatable;
     $biotype = $gene->biotype;
   }
   
