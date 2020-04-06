@@ -210,7 +210,9 @@ sub protein_seq_report {
             push @results, [$tt_id, $tn_id, 'Sequences do not match', $db_seq, $file_seq];
             push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 144, '1 $length $file_seq' FROM translation WHERE stable_id = '$tn_id';";
           }
-          push @fixes, "UPDATE gene INNER JOIN transcript USING (gene_id) SET gene.biotype = 'protein_coding', transcript.biotype = 'protein_coding' WHERE transcript.stable_id = '$tt_id';";
+          if ($transcript->biotype ne 'pseudogene_with_CDS') {
+            push @fixes, "UPDATE gene INNER JOIN transcript USING (gene_id) SET gene.biotype = 'protein_coding', transcript.biotype = 'protein_coding' WHERE transcript.stable_id = '$tt_id';";
+          }
         }
         
       } else {
