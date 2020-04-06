@@ -31,6 +31,7 @@ class BaseRule:
     self._actions = actions
     self._lineno = lineno
     self.update_rules()
+    self.prepare_actions()
 
   def update_rules(self):
     pat = self._pattern.strip().lower()
@@ -71,6 +72,9 @@ class BaseRule:
   @classmethod
   def regex_patterns(cls):
     return deepcopy(cls._RULES["regex_match"])
+
+  def prepare_actions(self):
+     pass
 
   def process(self, context, re_context = None):
     print("processing %s for %s with match groups %s" % (

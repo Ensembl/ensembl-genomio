@@ -7,6 +7,16 @@ class GffRule(BaseRule):
   NAME = "GFF"
   _RULES = BaseRule.RulesType()
 
+  def prepare_actions(self):
+     pass
+
+  def process(self, context, re_context = None):
+    print("processing %s for %s with match groups %s" % (
+        context.tag, self.NAME, str(re_context and re_context.groupdict() or None)
+      ))
+    pass
+
+
 class GffSubRule(GffRule):
   NAME = "GFF_SUB"
   _RULES = BaseRule.RulesType()

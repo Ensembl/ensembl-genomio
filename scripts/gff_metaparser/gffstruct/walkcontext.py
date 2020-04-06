@@ -25,9 +25,7 @@ class WalkContext:
     elif len(key_val) == 2:
       key, val = key_val
       if val is not None:
-        #average update
-        # todo
-        pass
+        data[key] = val
     # update from **kwargs
     for k, v in kwargs.items():
       self.update(k,v)
@@ -36,6 +34,7 @@ class WalkContext:
     # global ???
     if key not in data:
       return None
+    return data[key]
     pass
 
   def __getitem__(self, key):
