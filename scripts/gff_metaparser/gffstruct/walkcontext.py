@@ -6,11 +6,20 @@ class WalkContext:
      self.tag = tag
      self._gctx = global_context
      self._ctg_len = ctg_len_inferer
+     self.processed_rules = []
      self.prev = []
+     self.top = None
+     self.fixes = []
 
   def snap():
     # shallow data copy
     self.prev.append({"tag" : tag, "data" : copy.copy(self.data)})
+
+  def top(*feature):
+    if len(feature) == 0:
+      return self.top
+    if feature[0]:
+      self.top = feature[0]
 
   def tag(*val):
     if len(val) == 0:
@@ -39,3 +48,8 @@ class WalkContext:
 
   def __getitem__(self, key):
     return self.get(key)
+
+  def update_processed_rules(self, lst):
+    self.processed_rules += lst
+
+

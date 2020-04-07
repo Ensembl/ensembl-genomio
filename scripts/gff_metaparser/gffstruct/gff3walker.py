@@ -16,7 +16,7 @@ from .walkcontext import WalkContext
 
 
 class GFF3Walker:
-  _valid_structure_tags = frozenset("fullPath leafQual".split()) # /gene/mrna/exon vs exon/id, exon
+  _valid_structure_tags = frozenset("fullPath anyQual".split()) # /gene/mrna/exon vs exon/id, exon
 
   def __init__(parser, in_file, structure_tags="fullPath", global_ctx = None, norm_id = None):
     if not parser:
@@ -73,6 +73,9 @@ class GFF3Walker:
     fulltag_parts = list(filter(None,[context.get("_FULLTAG"), feat.type]))
     fulltag = "/".join(fulltag_parts)
     depth = len(fulltag_parts)
+    is_leaf = not feat.sub_features
+    if depth == 1:
+      context.top(feat)
 
     context.update(
       _ID      = feat.id,
@@ -87,32 +90,48 @@ class GFF3Walker:
       _DEPTH   = depth,
     );
 
-    # leaf match
-    if self._struct_tags == "fullPath":
-        context.tag(fulltag)
-        self._parser.process(context)
-    elif self._struct_tags == "leafQual":
+    # match
+    processed_rules = []
+    if self._struct_tags == "anyQual":
       for qname in [None] + quals.keys():
         leaftag = "/".join(filter(None, [feat.type, leaf]))
         context.tag(leaftag)
         context.update(_LEAFTAG = leaftag)
-        self._parser.process(context)
+        processed_rules += self._parser.process(context)
+    elif self._struct_tags == "fullPath":
+        if is_leaf:
+          # processing only leaf nodes
+          context.tag(fulltag)
+          processed_rules += self._parser.process(context)
     else:
       raise Exception("unknown struct tags type: %s" % self._struct_tags)
 
-    # what if inserting, splitting, skipping, etc
-    # fix rule, force_fix rule
+    context.update_processed_rules(processed_rules)
 
     # process sub features
     res_sub_features = None
     if out is not None:
       res_sub_features = []
 
-    context.snap() # ???
-    # ??? clone context??? use sub_features??? 
+    context.snap() # ??? clone context??? use sub_features??? 
     for subfeat in feat.sub_features:
-      context.update(_PARENTID = feat.id)
+      context.update(
+        _PARENT = feat,
+        _PARENTID = feat.id,
+      )
       self.process_feature(subfeat, context, res_sub_features)
+
+    if depth == 1:
+      # process fixes, posponed validations, etc, FIX ans SUB rules
+      # update context / replace
+      # gene/primary_transcript/mirna/exon
+      # [gene , mrna utr exon exon cds cds  utr mirna exon , mrna utr exon cds utr, ...  ]
+      # check that all the fixes are compatible, no different rules matched if  FIX and SUB rules (add rule method???)
+      # parser.postponed_validation()? factory.valid??? 
+      # validation depth???
+      # store fixes into context
+      # merges several fixes for different exons i.e.
+      pass
 
     if out:
       outft = SeqFeature(context["_LOCATION"],
@@ -121,8 +140,6 @@ class GFF3Walker:
         qualifiers = context["_QUALS"])
       if res_sub_features:
         outft.sub_features = res_subfeatures
-      # if depth is 1 process fixes????
-      # validation depth???
       out.append(outft)
 
     return

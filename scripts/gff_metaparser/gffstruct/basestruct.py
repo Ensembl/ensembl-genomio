@@ -57,8 +57,8 @@ class BaseStructures:
   def process(self, context):
     tag_raw = context.tag
     tag = tag_raw.lower().strip()
-    matched_rules = []
 
+    matched_rules = []
     if tag in self.const_patterns:
       matched_rules += list(map(lambda x: MatchedRuleCtx(x), self.const_patterns[tag]))
     # or stop if there's a constant match
@@ -67,16 +67,20 @@ class BaseStructures:
       if matching:
         matched_rules.append(MatchedRuleCtx(it.rule, matching))
 
+    processed_rules = defaultdict(list)
+
     if matched_rules:
       for wrp in matched_rules:
-        wrp.rule.process(context, re_context = wrp.ctx)
+        wrp.rule.process(context, re_context = wrp.re_context)
+        processed_rules[tag].append(wp.rule.NAME)
     else:
       UnseenRule.process(context, noconfig = (self.config == None))
+      processed_rules[tag].append(UnseenRule.NAME)
 
-    # return ???
+    return processed_rules
 
 class MatchedRuleCtx:
-  def __init__(self, rule, ctx = None):
+  def __init__(self, rule, re_contetxt = None):
     self.rule = rule
-    self.ctx = ctx
+    self.re_context = re_context
 
