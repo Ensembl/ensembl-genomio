@@ -49,17 +49,10 @@ class GFF3Walker:
         context = WalkContext(global_context = self._gctx, ctg_len_inferer = ctg_len)
         context.update("_SEQID", contig.id)
         self.process_feature(topft, context, out_rec_features)
-      # run postponed (i.e. validation)
-      # rules? global context??? VALID_IF rule (gene/mrna.id/CDS, gene/mrna.id/exon)
-      # store gene.id/mrna.id/_feature at global context for checking
-      # thus stor gene.id and mrna.id in the context or previous context shallow copies/clones in the context
-      # update context?????
-      # out record processing
       if out_file and out_rec_features:
         out_rec = SeqRecord(UnknownSeq(length=len(ctg_len)), id = contig.id)
         out_rec.features = out_rec_features
         GFF.write([out_rec], out_file)
-
 
   def process_feature(self, feat, context, out = None):
     # store stats in the context
@@ -107,6 +100,8 @@ class GFF3Walker:
       raise Exception("unknown struct tags type: %s" % self._struct_tags)
 
     context.update_processed_rules(processed_rules)
+    if processed_rules:
+      self._parser.prepare_postponed(context)
 
     # process sub features
     res_sub_features = None
@@ -122,13 +117,12 @@ class GFF3Walker:
       self.process_feature(subfeat, context, res_sub_features)
 
     if depth == 1:
+      self._parser.run_postponed(context)
       # process fixes, posponed validations, etc, FIX ans SUB rules
       # update context / replace
       # gene/primary_transcript/mirna/exon
       # [gene , mrna utr exon exon cds cds  utr mirna exon , mrna utr exon cds utr, ...  ]
       # check that all the fixes are compatible, no different rules matched if  FIX and SUB rules (add rule method???)
-      # parser.postponed_validation()? factory.valid??? 
-      # validation depth???
       # store fixes into context
       # merges several fixes for different exons i.e.
       pass
@@ -143,7 +137,6 @@ class GFF3Walker:
       out.append(outft)
 
     return
-
 
   def some(self, some):
     # before going deeper

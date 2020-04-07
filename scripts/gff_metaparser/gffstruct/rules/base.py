@@ -82,6 +82,14 @@ class BaseRule:
       ))
     pass
 
+  @classmethod
+  def prepare_postponed(cls, context):
+    pass
+
+  @classmethod
+  def run_postponed(clsf, context):
+    pass
+
 
 # ideally, add wrapping for static, as well
 class RuleWrapper:

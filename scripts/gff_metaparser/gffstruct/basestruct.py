@@ -10,6 +10,7 @@ class BaseStructures:
   ]
 
   def __init__(self, config):
+    self.rule_names = [ r.NAME.lower().strip() for r in self.KNOWN_RULES ]
     self.rule_factories = { r.NAME.lower().strip() : r for r in self.KNOWN_RULES }
 
     # prepare factories from KNOWN_RULES
@@ -78,6 +79,17 @@ class BaseStructures:
       processed_rules[tag].append(UnseenRule.NAME)
 
     return processed_rules
+
+  def prepare_postponed(self, context):
+    for name in self.rule_names:
+      factory = self.rule_factories[name]
+      factory.prepare_postponed(context)
+
+  def run_postponed(self, context):
+    for name in self.rule_names:
+      factory = self.rule_factories[name]
+      # rule should decide itself if to run or not
+      factory.run_postponed(context)
 
 class MatchedRuleCtx:
   def __init__(self, rule, re_contetxt = None):

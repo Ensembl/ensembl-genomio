@@ -52,4 +52,9 @@ class WalkContext:
   def update_processed_rules(self, lst):
     self.processed_rules += lst
 
+  def add_fix(self, fix):
+    pass
+
+  def merge_fixes(self):
+    pass
 
