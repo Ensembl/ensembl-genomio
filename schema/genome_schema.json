@@ -14,6 +14,7 @@
         "strain" : { "type" : "string" },
         "display_name" : { "type" : "string" },
         "division" : { "type" : "string" },
+        "BRC4_organism_abbrev" : { "type" : "string" },
         "alias" : {
           "oneOf" : [
             { "type" : "string" },
