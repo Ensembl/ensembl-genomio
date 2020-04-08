@@ -87,6 +87,7 @@ sub default_options {
     gff3_autoapply_manual_seq_edits => 1,
 
     # LoadGFF3 params
+    load_pseudogene_with_CDS => 1,
     gff3_load_gene_source       => 'EnsemblMetazoa',
     gff3_load_logic_name        => 'gff3_genes',
     #gff3_load_logic_name        => 'refseq_import_visible',
@@ -673,6 +674,7 @@ sub pipeline_analyses {
         ignore_types    => $self->o('gff3_ignore_types'),
         types_complete  => $self->o('gff3_types_complete'),
         polypeptides    => $self->o('gff3_use_polypeptides'), # it's better to ignore ignore 'polypeptides' lines
+        load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
         # dbparams
         db_url          => '#dbsrv_url#' . '#db_name#',
       },

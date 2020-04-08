@@ -83,6 +83,7 @@ sub param_defaults {
     polypeptides    => 1,
     min_intron_size => undef,
     nontranslating  => 'nontranslating_CDS',
+    load_pseudogene_with_CDS => 0,
     prediction      => 0,
     gene_source     => 'Ensembl',
     stable_ids      => {},
@@ -200,6 +201,8 @@ sub load_genes {
 
 sub set_pseudogene_biotypes {
   my ($self, $dba) = @_;
+
+  next if not $self->param('load_pseudogene_with_CDS');
 
   my $ba = $dba->get_adaptor('biotype');
   my $name = 'pseudogene_with_CDS';
@@ -918,7 +921,7 @@ sub new_transcript {
 
   my $biotype;
   if ($gff_transcript->type =~ /^pseudogenic/i) {
-    if ($translatable) {
+    if ($translatable and $self->param('load_pseudogene_with_CDS')) {
       warn("Pseudogene has CDSs: $stable_id\n");
       $biotype = 'pseudogene_with_CDS';
     } else {
