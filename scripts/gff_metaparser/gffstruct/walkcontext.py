@@ -1,15 +1,15 @@
 import copy
 
 class WalkContext:
-   def __init__(self, tag = "", global_context = None, ctg_len_inferer = None):
-     self.data = dict()
-     self.tag = tag
-     self._gctx = global_context
-     self._ctg_len = ctg_len_inferer
-     self.processed_rules = []
-     self.prev = []
-     self.top = None
-     self.fixes = []
+  def __init__(self, tag = "", global_context = None, ctg_len_inferer = None):
+    self.data = dict()
+    self.tag = tag
+    self._gctx = global_context
+    self._ctg_len = ctg_len_inferer
+    self.processed_rules = []
+    self.prev = []
+    self.top = None
+    self.fixes = []
 
   def snap():
     # shallow data copy
@@ -39,7 +39,7 @@ class WalkContext:
     for k, v in kwargs.items():
       self.update(k,v)
 
-  def get(self, key, global=False):
+  def get(self, key):
     # global ???
     if key not in data:
       return None

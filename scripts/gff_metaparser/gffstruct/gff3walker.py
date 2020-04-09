@@ -10,7 +10,6 @@ from Bio.SeqRecord import SeqRecord
 
 # locals
 from .utils import UpdatingLen
-from .utils import getna
 from .walkcontext import WalkContext
 
 
@@ -139,6 +138,7 @@ class GFF3Walker:
     return
 
   def some(self, some):
+    pass
     # before going deeper
     #  # was
     #  if topft.type == "gene":

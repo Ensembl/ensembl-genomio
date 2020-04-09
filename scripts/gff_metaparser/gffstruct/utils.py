@@ -25,7 +25,7 @@ class IdTrimmer:
     return self._rules[type].sub("", id_str)
 
   def __call__(self, *args, **kwargs):
-    retun self.normalize(self, *args, **kwargs)
+    return self.normalize(*args, **kwargs)
 
 
 class PfxTrimmer(IdTrimmer):
@@ -51,7 +51,7 @@ class ExtMapper:
     pass
 
   def __call__(self, *args, **kwargs):
-    retun self.map(self, *args, **kwargs)
+    return self.map(*args, **kwargs)
 
 class SeqLenDict:
   def __init__(self, fna_file = None):
