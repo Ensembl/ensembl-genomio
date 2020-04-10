@@ -27,11 +27,18 @@ class GFF3Walker:
     self._in_file = in_file
     self.global_context = global_ctx
     self._norm_id = norm_id
+    self._supported_fields = dict()
 
   def norm_id(self, id, type):
     if self._norm_id is None:
       return id
     return self._norm_id(id, type = type)
+
+  def supporting(self, obj, field):
+    tp = type(obj)
+    if tp not in self._supported_fields:
+      self._supported_fields[tp] = frozenset(obj.__dir__())
+    return field in self._supported_fields[tp]
 
   def walk(self, out_file = None, seq_len_dict = None):
     gff =  GFF.parse(self._in_file)
@@ -66,12 +73,15 @@ class GFF3Walker:
     fulltag = "/".join(fulltag_parts)
     depth = len(fulltag_parts)
     is_leaf = not feat.sub_features
+    source = self.supporting(feat, "source") and feat.source or None
+
     if depth == 1:
+      # set top feature
       context.top(feat)
 
-    supported_fields = feat.__dir__()
     context.update(
       _ID      = feat.id,
+      _SRC     = source,
       _TYPE    = feat.type,
       _START   = loc.start,
       _END     = loc.end,
@@ -81,10 +91,6 @@ class GFF3Walker:
       _FULLTAG = fulltag,
       _DEPTH   = depth,
     );
-    if "source" in supported_fields:
-      context.update(
-        _SRC     = feat.source,
-      );
 
     # match
     processed_rules = []
@@ -112,7 +118,7 @@ class GFF3Walker:
       res_sub_features = []
 
     context.snap() # ??? clone context??? use sub_features??? 
-    if "sub_features" in supported_fields:
+    if self.supporting(feat, "sub_features"):
       for subfeat in feat.sub_features:
         context.update(
           _PARENT = feat,
