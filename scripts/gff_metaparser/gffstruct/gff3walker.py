@@ -17,15 +17,15 @@ from .walkcontext import WalkContext
 class GFF3Walker:
   _valid_structure_tags = frozenset("fullPath anyQual".split()) # /gene/mrna/exon vs exon/id, exon
 
-  def __init__(parser, in_file, structure_tags="fullPath", global_ctx = None, norm_id = None):
+  def __init__(self, parser, in_file, structure_tags="fullPath", global_ctx = None, norm_id = None):
     if not parser:
       raise Exception("not a valid parser: %s" % str(parser))
-    if structure_tags not in _valid_structure_tags:
+    if structure_tags not in self._valid_structure_tags:
       raise Exception("not a valid 'structure_tags' value: %s" % structure_tags)
     self._parser = parser
     self._struct_tags = structure_tags
     self._in_file = in_file
-    self._gctx = global_ctx
+    self.global_context = global_ctx
     self._norm_id = norm_id
 
   def norm_id(self, id, type):
@@ -34,18 +34,18 @@ class GFF3Walker:
     return self._norm_id(id, type = type)
 
   def walk(self, out_file = None, seq_len_dict = None):
-    gff =  GFF.parse(self.in_file)
+    gff =  GFF.parse(self._in_file)
     for contig in gff:
       # get len from gff or fna file, try to infere if not available
       ctg_len = UpdatingLen(len(contig))
-      ctg_len.update(seq_len_dict(ctg_id), stop_on_success = True)
+      ctg_len.update(seq_len_dict(contig.id), stop_on_success = True)
       # feature processing
       out_rec_features = None
       if out_file is not None:
         out_rec_features = []
       for cnt, topft in enumerate(contig.features):
         # iterate through all of the features
-        context = WalkContext(global_context = self._gctx, ctg_len_inferer = ctg_len)
+        context = WalkContext(global_context = self.global_context, ctg_len_inferer = ctg_len)
         context.update("_SEQID", contig.id)
         self.process_feature(topft, context, out_rec_features)
       if out_file and out_rec_features:
@@ -69,9 +69,9 @@ class GFF3Walker:
     if depth == 1:
       context.top(feat)
 
+    supported_fields = feat.__dir__()
     context.update(
       _ID      = feat.id,
-      _SRC     = feat.source,
       _TYPE    = feat.type,
       _START   = loc.start,
       _END     = loc.end,
@@ -81,15 +81,19 @@ class GFF3Walker:
       _FULLTAG = fulltag,
       _DEPTH   = depth,
     );
+    if "source" in supported_fields:
+      context.update(
+        _SRC     = feat.source,
+      );
 
     # match
     processed_rules = []
     if self._struct_tags == "anyQual":
-      for qname in [None] + quals.keys():
-        leaftag = "/".join(filter(None, [feat.type, leaf]))
+      for qname in [None] + list(quals.keys()):
+        leaftag = "/".join(filter(None, [feat.type, qname]))
         context.tag(leaftag)
         context.update(_LEAFTAG = leaftag)
-        processed_rules += self._parser.process(context)
+        processed_rules += self._parser.process(context, ignore_unseen = True)
     elif self._struct_tags == "fullPath":
         if is_leaf:
           # processing only leaf nodes
@@ -108,12 +112,13 @@ class GFF3Walker:
       res_sub_features = []
 
     context.snap() # ??? clone context??? use sub_features??? 
-    for subfeat in feat.sub_features:
-      context.update(
-        _PARENT = feat,
-        _PARENTID = feat.id,
-      )
-      self.process_feature(subfeat, context, res_sub_features)
+    if "sub_features" in supported_fields:
+      for subfeat in feat.sub_features:
+        context.update(
+          _PARENT = feat,
+          _PARENTID = feat.id,
+        )
+        self.process_feature(subfeat, context, res_sub_features)
 
     if depth == 1:
       self._parser.run_postponed(context)

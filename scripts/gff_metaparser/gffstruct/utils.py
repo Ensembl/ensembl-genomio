@@ -44,7 +44,7 @@ class PfxTrimmer(IdTrimmer):
 
 
 class ExtMapper:
-  def __init__(self, map_file = None, map_str = None):
+  def __init__(self, tag,  map_file = None, map_str = None):
     pass
 
   def map(self, val):

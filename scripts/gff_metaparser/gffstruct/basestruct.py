@@ -4,6 +4,9 @@ import sys
 
 from collections import defaultdict
 
+# local
+from .rules import UnseenRule
+
 # BASE STRUCTURES class
 class BaseStructures:
   KNOWN_RULES = [
@@ -30,7 +33,7 @@ class BaseStructures:
       const_patterns = factory.const_patterns()
       there_were = frozenset(const_patterns.keys()) & frozenset(self.const_patterns.keys())
       if there_were:
-         print("already seen pattern for %s" % (", ".join(there_were)) ,file=sys.stderr)
+         print("already seen pattern in config for %s" % (", ".join(there_were)) ,file=sys.stderr)
       for pat, rules in const_patterns.items():
         self.const_patterns[pat] += rules
       # regex_pattersn are checked dynamically for multiple hits
@@ -55,8 +58,8 @@ class BaseStructures:
     factory = self.rule_factories[name]
     rule = factory(pattern, actions, lineno)
 
-  def process(self, context):
-    tag_raw = context.tag
+  def process(self, context, ignore_unseen = False):
+    tag_raw = context.tag()
     tag = tag_raw.lower().strip()
 
     matched_rules = []
@@ -73,8 +76,8 @@ class BaseStructures:
     if matched_rules:
       for wrp in matched_rules:
         wrp.rule.process(context, re_context = wrp.re_context)
-        processed_rules[tag].append(wp.rule.NAME)
-    else:
+        processed_rules[tag].append(wrp.rule.NAME)
+    elif not ignore_unseen:
       UnseenRule.process(context, noconfig = (self.config == None))
       processed_rules[tag].append(UnseenRule.NAME)
 
@@ -92,7 +95,7 @@ class BaseStructures:
       factory.run_postponed(context)
 
 class MatchedRuleCtx:
-  def __init__(self, rule, re_contetxt = None):
+  def __init__(self, rule, re_context = None):
     self.rule = rule
     self.re_context = re_context
 

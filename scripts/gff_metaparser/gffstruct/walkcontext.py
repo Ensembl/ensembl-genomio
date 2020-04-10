@@ -3,28 +3,28 @@ import copy
 class WalkContext:
   def __init__(self, tag = "", global_context = None, ctg_len_inferer = None):
     self.data = dict()
-    self.tag = tag
-    self._gctx = global_context
-    self._ctg_len = ctg_len_inferer
+    self._tag = tag
+    self.global_context = global_context
+    self.ctg_len = ctg_len_inferer
     self.processed_rules = []
     self.prev = []
-    self.top = None
+    self._top = None
     self.fixes = []
 
-  def snap():
+  def snap(self):
     # shallow data copy
-    self.prev.append({"tag" : tag, "data" : copy.copy(self.data)})
+    self.prev.append({"tag" : self._tag, "data" : copy.copy(self.data)})
 
-  def top(*feature):
+  def top(self, *feature):
     if len(feature) == 0:
-      return self.top
+      return self._top
     if feature[0]:
-      self.top = feature[0]
+      self._top = feature[0]
 
-  def tag(*val):
+  def tag(self, *val):
     if len(val) == 0:
-      return self.tag
-    self.tag = str(val[0])
+      return self._tag
+    self._tag = str(val[0])
 
   def update(self, *key_val, **kwargs):
     # can have either dict as key or string with non-empty val
@@ -34,16 +34,16 @@ class WalkContext:
     elif len(key_val) == 2:
       key, val = key_val
       if val is not None:
-        data[key] = val
+        self.data[key] = val
     # update from **kwargs
     for k, v in kwargs.items():
       self.update(k,v)
 
   def get(self, key):
     # global ???
-    if key not in data:
+    if key not in self.data:
       return None
-    return data[key]
+    return self.data[key]
     pass
 
   def __getitem__(self, key):

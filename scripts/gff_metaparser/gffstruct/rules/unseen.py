@@ -8,6 +8,6 @@ class UnseenRule(BaseRule):
 
   @classmethod
   def process(cls, context, noconfig=True):
-    print("no matching pattern for %s" % context.tag, file=sys.stderr)
+    print("no matching pattern for %s" % context.tag(), file=sys.stderr)
     pass
 
