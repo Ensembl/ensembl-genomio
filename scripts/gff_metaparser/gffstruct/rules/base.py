@@ -28,7 +28,8 @@ class BaseRule:
 
   def __init__(self, pattern, actions, lineno):
     self._pattern = pattern
-    self._actions = actions
+    self._actions_raw = actions
+    self._actions = None
     self._lineno = lineno
     self.update_rules()
     self.prepare_actions()

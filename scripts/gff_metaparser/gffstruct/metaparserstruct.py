@@ -14,12 +14,8 @@ class MetaParserStructures(BaseStructures):
     AliasRule,
     GffRule,
     GffSubRule,
-    GffForceSubRule,
 
     JsonRule,
     JsonSubRule,
-    JsonForceSubRule,
-    JsonAppendRule,
-    JsonIdRule, # ? do we need it
   ]
 

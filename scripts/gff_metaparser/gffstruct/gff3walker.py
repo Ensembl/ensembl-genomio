@@ -97,8 +97,10 @@ class GFF3Walker:
     if self._struct_tags == "anyQual":
       for qname in [None] + list(quals.keys()):
         leaftag = "/".join(filter(None, [feat.type, qname]))
+        leafvalue = qname in quals and quals[qname] or None
         context.tag(leaftag)
         context.update(_LEAFTAG = leaftag)
+        context.update(_LEAFVALUE = leafvalue)
         processed_rules += self._parser.process(context, ignore_unseen = True)
     elif self._struct_tags == "fullPath":
         if is_leaf:

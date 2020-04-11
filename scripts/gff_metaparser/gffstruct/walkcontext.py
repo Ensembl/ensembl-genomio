@@ -39,10 +39,10 @@ class WalkContext:
     for k, v in kwargs.items():
       self.update(k,v)
 
-  def get(self, key):
+  def get(self, key, default = None):
     # global ???
     if key not in self.data:
-      return None
+      return default
     return self.data[key]
     pass
 
