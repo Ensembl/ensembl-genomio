@@ -56,6 +56,8 @@ class BaseRule:
         raw_pat = rule._pattern.strip()
 
         re_pat = aliases_cls.mature_regex(raw_pat)
+        #print("maturing pat ", pat, " raw_pat ", raw_pat, " re_pat ", re_pat, file=sys.stderr)
+
         if re_pat == None:
           continue
         if re_pat == raw_pat:

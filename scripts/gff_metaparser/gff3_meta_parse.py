@@ -70,8 +70,8 @@ def main():
 
   gff3_walker.walk(out_file = args.gff_out, seq_len_dict = seq_len)
 
-  fann_ctx.dump_json(args.fann_out, maps = [xref_map], filter = lambda x: not seq_region_filter(x))
-  fann_ctx.dump_json(args.seq_region_out, filter = lambda x: seq_region_filter(x))
+  fann_ctx.dump_json(args.fann_out, maps = [xref_map], dump_filter = lambda x: not seq_region_filter(x))
+  fann_ctx.dump_json(args.seq_region_out, dump_filter = lambda x: seq_region_filter(x))
 
 
 # main

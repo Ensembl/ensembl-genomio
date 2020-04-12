@@ -117,8 +117,6 @@ class JsonRule(BaseRule):
       if v != data[k]:
         interpolated = True
       data[k] = v
-    if interpolated:
-      print(data, file = sys.stderr)
     return interpolated
 
   def process(self, context, re_context = None):
@@ -149,8 +147,7 @@ class JsonRule(BaseRule):
       data = { _a["key"] : value }
     if _a["addon"]:
       data.update(_a["addon"])
-    if self.interpolate(data, context):
-      print("interpolating data for rule %s at line %s applyed to %s" % (self.NAME, self._lineno, context.tag()), file = sys.stderr)
+    self.interpolate(data, context)
 
     context.global_context.add(obj_tag, obj_id, _a["path"], data, force = self._OUTPUT_FORCE_SUB)
 

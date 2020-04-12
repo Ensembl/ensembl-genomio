@@ -11,19 +11,23 @@ class FannKeeper:
     self._data = defaultdict(lambda: defaultdict(dict))
 
   def add(self, obj_tag, obj_id, path, value, force = False):
-    if path is None:
-      path = ""
+    if not value:
+      return
+
+    # find a place to insert to
     top = self._data[obj_tag][obj_id]
-    for p in path.split("/"):
-      if type(p) == list:
-        Except("To many list levels for %s:%s/%s" %(obj_tag, obj_id, path))
-      if p not in top:
-        if p.startswith("@"):
-          p = p[1:]
-          top[p] = list()
-        else:
-          top[p] = dict()
-      top = top[p]
+    if path:
+      for p in path.split("/"):
+        if type(p) == list:
+          Except("To many list levels for %s:%s/%s" %(obj_tag, obj_id, path))
+        if p not in top:
+          if p.startswith("@"):
+            p = p[1:]
+            top[p] = list()
+          else:
+            top[p] = dict()
+        top = top[p]
+
     # update top
     if type(top) == list:
       top.append(value)
@@ -33,11 +37,12 @@ class FannKeeper:
         continue
       if v:
         top[k] = v
+    return
 
-  def dump_json(self, out_file, maps = None, filter=None):
+  def dump_json(self, out_file, maps = None, dump_filter=None):
     if not out_file:
       return
-    # json.dump(self._data, out_file, indent = 2)
-    pass
-
-
+    vals = []
+    for tag in sorted(self._data.keys()):
+      vals += list(filter(dump_filter, self._data[tag].values()))
+    json.dump(vals, out_file, indent = 2)

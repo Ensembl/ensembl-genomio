@@ -11,6 +11,7 @@ class GffRule(BaseRule):
      pass
 
   def process(self, context, re_context = None):
+    return
     print("processing %s for %s with match groups %s" % (
         context.tag(), self.NAME, str(re_context and re_context.groupdict() or None)
       ))
