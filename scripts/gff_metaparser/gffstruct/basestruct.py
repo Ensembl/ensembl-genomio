@@ -67,7 +67,7 @@ class BaseStructures:
       matched_rules += list(map(lambda x: MatchedRuleCtx(x), self.const_patterns[tag]))
     # or stop if there's a constant match
     for it in self.regex_patterns:
-      matching = it.re.match(tag)
+      matching = it.re.fullmatch(tag)
       if matching:
         matched_rules.append(MatchedRuleCtx(it.rule, matching))
 

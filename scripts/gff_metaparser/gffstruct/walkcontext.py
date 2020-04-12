@@ -44,7 +44,6 @@ class WalkContext:
     if key not in self.data:
       return default
     return self.data[key]
-    pass
 
   def __getitem__(self, key):
     return self.get(key)
