@@ -28,8 +28,8 @@ class WalkContext:
 
   def update(self, *key_val, **kwargs):
     # can have either dict as key or string with non-empty val
-    if isinstance(key_val, dict):
-      for k, v in key_val.items():
+    if len(key_val) == 1 and isinstance(key_val[0], dict):
+      for k, v in key_val[0].items():
         self.update(k,v)
     elif len(key_val) == 2:
       key, val = key_val
