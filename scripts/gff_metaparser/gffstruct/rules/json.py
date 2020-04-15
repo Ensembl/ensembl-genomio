@@ -7,7 +7,7 @@ import sys
 class JsonRule(BaseRule):
   NAME = "JSON"
   _RULES = BaseRule.RulesType()
-  _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_S"])
+  _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_S", "_SPLIT"])
   _OUTPUT_FORCE_SUB = False
   _CTX_PFX="_TECH_JSON_"
 
@@ -34,6 +34,15 @@ class JsonRule(BaseRule):
     if type(ign) == list:
       ign = "|".join(ign)
     self._actions["ignore"] = re.compile(ign, flags = re.I)
+
+  def add_actions_split(self, tech):
+    if not tech or "_SPLIT" not in tech:
+      return
+    split = tech["_SPLIT"]
+    if not split:
+      return
+    delim, *keys = split.split(";")
+    self._actions["split"] = { "delim":delim, "keys": keys }
 
   def add_actions_sub(self, tech):
     if not tech or "_SUB" not in tech:
@@ -92,32 +101,64 @@ class JsonRule(BaseRule):
       "map" : tech and tech.get("_MAP", None) or None,
       "sub" : None,
       "ignore" : None,
+      "split" : None,
     }
     self.add_actions_sub(tech)
     self.add_actions_ignore(tech)
+    self.add_actions_split(tech)
 
-  def interpolate(self, data, context):
+  def interpolate(self, data, context, do_split = True):
     interpolated = False
-    for k in data:
-      v = data[k]
-      if v is None or type(v) != str:
-        continue
-      v = context.get(v, default = v)
 
-      asub = self._actions["sub"]
-      amap = self._actions["map"]
-      aignore = self._actions["ignore"]
-      if asub:
-        for f,t in asub:
-          v = f.sub(t, v)
-      if amap and v in amap:
-        v = amap[v]
-      if aignore and aignore.search(v) is not None:
-        v = None
-      if v != data[k]:
-        interpolated = True
-      data[k] = v
-    return interpolated
+    if data is None:
+      return None, interpolated
+
+    if type(data) == dict:
+      out = dict()
+      for k in data:
+        v, _interpolated = self.interpolate(data[k], context, do_split)
+        interpolated = interpolated or _interpolated
+        if v is not None:
+          out[k] = v
+      if not out:
+        out = None
+      return out, interpolated
+
+    if type(data) == list:
+      out = []
+      for v in data:
+        v, _interpolated = self.interpolate(v, context, do_split)
+        interpolated = interpolated or _interpolated
+        if v is not None:
+          out.append(v)
+      if not out:
+        out = None
+      return out, interpolated
+
+    v = context.get(data, default = data)
+
+    asplit = self._actions["split"]
+    asub = self._actions["sub"]
+    amap = self._actions["map"]
+    aignore = self._actions["ignore"]
+
+    if asplit and do_split:
+      res = v.split(asplit["delim"])
+      if asplit["keys"]:
+        return self.interpolate(dict(zip(asplit["keys"], res)), context, do_split = False)
+      else:
+        return self.interpolate(res, context, do_split = False)
+
+    if asub:
+      for f,t in asub:
+        v = f.sub(t, v)
+    if amap and v in amap:
+      v = amap[v]
+    if aignore and aignore.search(v) is not None:
+      v = None
+
+    return v, v != data
+
 
   def process(self, context, re_context = None):
     if not self._actions:
@@ -147,7 +188,10 @@ class JsonRule(BaseRule):
       data = { _a["key"] : value }
     if _a["addon"]:
       data.update(_a["addon"])
-    self.interpolate(data, context)
+
+    data, _ = self.interpolate(data, context)
+    if data is None:
+      return
 
     context.global_context.add(obj_tag, obj_id, _a["path"], data, force = self._OUTPUT_FORCE_SUB)
 

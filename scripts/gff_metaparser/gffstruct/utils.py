@@ -10,8 +10,8 @@ class IdTrimmer:
     self._rules = None
     self.compile_rules(re_rules)
 
-  def compile_rules(self, rules):
-    if rules:
+  def compile_rules(self, re_rules):
+    if re_rules:
       self._rules = { k:re.compile(v) for k,v in re_rules.items() }
 
   def normalize(self, id_str, type = None):
@@ -35,11 +35,11 @@ class PfxTrimmer(IdTrimmer):
       return
     rules = defaultdict(list)
     for trim_pair in filter(None,trim_str.split(",")):
-      tag, *pat = split("\t",1)
+      tag, *pat = trim_pair.split(":",1)
       if not pat:
         tag, pat = "ANY", [tag]
       rules[tag].append(pat[0])
-    rules = { k: r"^(?:%s)" % ("|".join(v)) for k, v in rules }
+    rules = { k: r"^(?:%s)" % ("|".join(v)) for k, v in rules.items() }
     self.compile_rules(rules)
 
 
