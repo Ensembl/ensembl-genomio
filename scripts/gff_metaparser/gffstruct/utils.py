@@ -12,17 +12,20 @@ class IdTrimmer:
 
   def compile_rules(self, re_rules):
     if re_rules:
-      self._rules = { k:re.compile(v) for k,v in re_rules.items() }
+      self._rules = { k.lower():re.compile(v) for k,v in re_rules.items() }
 
   def normalize(self, id_str, type = None):
     id_str = str(id_str)
+    _type = type.lower()
     if not self._rules:
       return id_str
     if type is None:
-      type = "ANY"
-    if type not in self._rules:
-      return id_str
-    return self._rules[type].sub("", id_str)
+      _type = "any"
+    if _type in self._rules:
+      return self._rules[_type].sub("", id_str)
+    if "any" in self._rules:
+      return self._rules["any"].sub("", id_str)
+    return id_str
 
   def __call__(self, *args, **kwargs):
     return self.normalize(*args, **kwargs)
@@ -38,7 +41,7 @@ class PfxTrimmer(IdTrimmer):
       tag, *pat = trim_pair.split(":",1)
       if not pat:
         tag, pat = "ANY", [tag]
-      rules[tag].append(pat[0])
+      rules[tag].append(re.escape(pat[0]))
     rules = { k: r"^(?:%s)" % ("|".join(v)) for k, v in rules.items() }
     self.compile_rules(rules)
 

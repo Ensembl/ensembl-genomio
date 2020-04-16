@@ -29,7 +29,7 @@ class GFF3Walker:
     self._norm_id = norm_id
     self._supported_fields = dict()
 
-  def norm_id(self, id, type):
+  def norm_id(self, id, type=None):
     if self._norm_id is None:
       return id
     return self._norm_id(id, type = type)
@@ -62,10 +62,7 @@ class GFF3Walker:
 
   def process_feature(self, feat, context, out = None):
     # store stats in the context
-    # store json objects/structs in the global context
-    # store validation info in the context
-    # fill _STRCTTAG and _LEAFTAG, etc.., biotype, phase are in quals
-    # predefined _SEQID _SRC _TYPE _START _END _STRAND _PHASE _QUALS _PARENTID _FULLTAG _LEAFTAG 
+
     loc = feat.location
     quals = feat.qualifiers
     phase = quals.get("phase")
@@ -75,11 +72,17 @@ class GFF3Walker:
     is_leaf = not feat.sub_features
     source = self.supporting(feat, "source") and feat.source or None
 
+    #norm
+    feat.id = self.norm_id(feat.id, feat.type)
+    if quals and quals.get("ID"):
+      quals["ID"][0] = self.norm_id(quals["ID"][0], feat.type)
+
     if depth == 1:
       # set top feature
       context.top(feat)
 
     context.update(
+      force_clean = True,
       _ID      = feat.id,
       _SRC     = source,
       _TYPE    = feat.type,
@@ -119,18 +122,21 @@ class GFF3Walker:
     if out is not None:
       res_sub_features = []
 
-    context.snap() # ??? clone context??? use sub_features??? 
     if self.supporting(feat, "sub_features"):
+      parent_ctx_snap = context.snap()
+      ctx_parent_part = {
+        "_PARENT" : feat,
+        "_PARENTID" : feat.id,
+        "_PARENTCTX" : parent_ctx_snap,
+      }
       for subfeat in feat.sub_features:
-        context.update(
-          _PARENT = feat,
-          _PARENTID = feat.id,
-        )
+        context.update(ctx_parent_part)
         self.process_feature(subfeat, context, res_sub_features)
 
     if depth == 1:
       self._parser.run_postponed(context)
       # process fixes, posponed validations, etc, FIX ans SUB rules
+      # replace out if fixes
       # update context / replace
       # gene/primary_transcript/mirna/exon
       # [gene , mrna utr exon exon cds cds  utr mirna exon , mrna utr exon cds utr, ...  ]

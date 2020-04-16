@@ -19,7 +19,7 @@ def get_args():
   parser.add_argument("--conf", metavar="gff_metaparser.conf", required=True,
                       type=argparse.FileType('rt', encoding='UTF-8'),
                       help="valid parser config file")
-  parser.add_argument("--pfx_trims", metavar="gene:gene-,mrna:rna-gnl|WGS:VCGU|,exon:exon-gnl|WGS:VCGU|TCAL_,cds:cds-",
+  parser.add_argument("--pfx_trims", metavar="ANY:gene-,ANY:rna-gnl|WGS:VCGU|,exon:exon-gnl|WGS:VCGU|TCAL_,cds:cds-",
                       required = False, type=str,
                       help="list of feature:id_pfx(,...) to trim id_pfx from feature's ID (reuse feature for multiple pfx, case ignored")
   parser.add_argument("--xref_map", metavar="xref_map.tsv", required=False,
