@@ -83,4 +83,4 @@ if __name__ == "__main__":
     main()
 
 
-# cat tcal.gff3  | python new-genome-loader/scripts/gff_metaparser/gff3_tcal_parse.py --fann_out t.json -  > t.gff3
+# cat tcal.gff3 | python ./new-genome-loader/scripts/gff_metaparser/gff3_meta_parse.py --conf ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser.conf --pfx_trims 'ANY:gene-,ANY:rna-gnl|WGS:VCGU|,exon:exon-gnl|WGS:VCGU|TCAL_,cds:cds-' --conf_patch ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser/xref2gene.patch --fann_out t.json - > t.gff3
