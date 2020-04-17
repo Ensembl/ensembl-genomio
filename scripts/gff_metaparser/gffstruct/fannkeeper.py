@@ -2,7 +2,6 @@ import json
 
 from collections import defaultdict
 
-
 class FannKeeper:
   # storing result functional annotation object
   # data[type_alias][id]  i.e. data["seq_region"][_SEQ_ID]
@@ -33,11 +32,25 @@ class FannKeeper:
       top.append(value)
       return
     for k, v in value.items():
-      if k in top and top[k] and not force:
+      if not v:
         continue
-      if v:
+      if k not in top:
         top[k] = v
+        continue
+      if type(v) == list:
+        top[k] += v
+        top[k] = self.uniq_list(top[k])
+        continue
+      if not force:
+        continue
+      top[k] = v
     return
+
+  def uniq_list(self, lst):
+    # slow
+    if len(lst) <= 1:
+      return lst
+    return [ json.loads(x) for x in frozenset(map(lambda x: json.dumps(x, sort_keys = True), lst)) ]
 
   def dump_json(self, out_file, maps = None, dump_filter=None):
     if not out_file:
@@ -45,4 +58,4 @@ class FannKeeper:
     vals = []
     for tag in sorted(self._data.keys()):
       vals += list(filter(dump_filter, self._data[tag].values()))
-    json.dump(vals, out_file, indent = 2)
+    json.dump(vals, out_file, indent = 2, sort_keys = True)

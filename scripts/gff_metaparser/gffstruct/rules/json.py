@@ -80,6 +80,11 @@ class JsonRule(BaseRule):
       *path, key = path
       path = "/".join(path)
 
+    key_is_list = False
+    if key.startswith("@"):
+      key = key[1:]
+      key_is_list = True
+
     # id part of the out_tag 
     store_to_parent = False
     out_tag, *id_key = out_tag_raw.split(":")
@@ -97,6 +102,7 @@ class JsonRule(BaseRule):
       "id_key" : id_key,
       "path" : path,
       "key" : key,
+      "key_is_list" : key_is_list,
       "addon" : addon, # interpolate addon, run sub, run map afterwards
       "map" : tech and tech.get("_MAP", None) or None,
       "sub" : None,
@@ -182,6 +188,9 @@ class JsonRule(BaseRule):
     value = context.get("_LEAFVALUE")
     if type(value) == list and len(value) == 1:
       value = value[0]
+    if type(value) != list and _a["key_is_list"]:
+      # wrap back
+      value = [ value ]
 
     data = {}
     if _a["key"]:

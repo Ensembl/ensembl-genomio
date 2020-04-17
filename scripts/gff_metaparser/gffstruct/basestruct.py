@@ -12,12 +12,13 @@ class BaseStructures:
   KNOWN_RULES = [
   ]
 
-  def __init__(self, config):
+  def __init__(self, config, conf_patch = None):
     self.rule_names = [ r.NAME.lower().strip() for r in self.KNOWN_RULES ]
     self.rule_factories = { r.NAME.lower().strip() : r for r in self.KNOWN_RULES }
 
     # prepare factories from KNOWN_RULES
     self.config = config
+    self.conf_patch = conf_patch
     self.load_conf()
 
     # propagate aliases to rules
@@ -39,15 +40,33 @@ class BaseStructures:
       # regex_pattersn are checked dynamically for multiple hits
       self.regex_patterns += factory.regex_patterns()
 
+  def parse_conf_str(self, raw):
+    (nocmt, *_) = raw.partition('#')
+    nocmt = nocmt.strip()
+    if not nocmt:
+      return None, None, None
+    pattern, name, *actions = nocmt.split(maxsplit=2)
+    return pattern, name, actions
+
   def load_conf(self):
     if not self.config:
       return
+    patches = defaultdict(lambda:defaultdict(dict))
+    if self.conf_patch:
+      with open(self.conf_patch) as pf:
+        for lineno, raw in enumerate(pf, start=1):
+          pattern, name, actions = self.parse_conf_str(raw)
+          if pattern is not None and name is not None:
+            patches[name][pattern]["actions"] = actions
+            patches[name][pattern]["lineno"] = "patch:%s" % lineno
+
     for lineno, raw in enumerate(self.config, start=1):
-      (nocmt, *_) = raw.partition('#')
-      nocmt = nocmt.strip()
-      if not nocmt:
+      pattern, name, actions = self.parse_conf_str(raw)
+      if pattern is None:
         continue
-      pattern, name, *actions = nocmt.split(maxsplit=2)
+      if name in patches and pattern in patches[name]:
+        actions = patches[name][pattern]["actions"]
+        lineno = patches[name][pattern]["lineno"]
       self.add_rule(name, pattern, actions, lineno)
 
   def add_rule(self, name_raw, pattern, actions, lineno):

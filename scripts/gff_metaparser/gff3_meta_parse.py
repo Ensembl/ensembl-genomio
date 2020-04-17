@@ -19,6 +19,9 @@ def get_args():
   parser.add_argument("--conf", metavar="gff_metaparser.conf", required=True,
                       type=argparse.FileType('rt', encoding='UTF-8'),
                       help="valid parser config file")
+  parser.add_argument("--conf_patch", metavar="conf.patch", required=False,
+                      type=str,
+                      help="config patch file")
   parser.add_argument("--pfx_trims", metavar="ANY:gene-,ANY:rna-gnl|WGS:VCGU|,exon:exon-gnl|WGS:VCGU|TCAL_,cds:cds-",
                       required = False, type=str,
                       help="list of feature:id_pfx(,...) to trim id_pfx from feature's ID (reuse feature for multiple pfx, case ignored")
@@ -58,7 +61,7 @@ def seq_region_filter(x, prop = "object_type", tag = "seq_region"):
 def main():
   args = get_args()
 
-  parser = MetaParserStructures(args.conf)
+  parser = MetaParserStructures(args.conf, conf_patch = args.conf_patch)
 
   pfx_trimmer = PfxTrimmer(args.pfx_trims)
   seq_len = SeqLenDict(args.fasta)
