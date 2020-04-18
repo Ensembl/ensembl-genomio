@@ -4,8 +4,6 @@ from collections import defaultdict
 
 class FannKeeper:
   # storing result functional annotation object
-  # data[type_alias][id]  i.e. data["seq_region"][_SEQ_ID]
-  # move to separate file
   def __init__(self):
     self._data = defaultdict(lambda: defaultdict(dict))
 

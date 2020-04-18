@@ -9,6 +9,7 @@ from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 
 # locals
+from .gffkeeper import GffKeeeper
 from .utils import UpdatingLen
 from .walkcontext import WalkContext
 
@@ -52,9 +53,12 @@ class GFF3Walker:
         out_rec_features = []
       for cnt, topft in enumerate(contig.features):
         # iterate through all of the features
-        context = WalkContext(global_context = self.global_context, ctg_len_inferer = ctg_len)
+        gff_keeper = GffKeeeper()
+        context = WalkContext(gff_keeper = gff_keeper, global_context = self.global_context,
+                                ctg_len_inferer = ctg_len)
         context.update("_SEQID", contig.id)
         self.process_feature(topft, context, out_rec_features)
+      # m.b. change to use gff keeper, if empty, etc
       if out_file and out_rec_features:
         out_rec = SeqRecord(UnknownSeq(length=len(ctg_len)), id = contig.id)
         out_rec.features = out_rec_features
@@ -69,13 +73,14 @@ class GFF3Walker:
     fulltag_parts = list(filter(None,[context.get("_FULLTAG"), feat.type]))
     fulltag = "/".join(fulltag_parts)
     depth = len(fulltag_parts)
-    is_leaf = not feat.sub_features
     source = self.supporting(feat, "source") and feat.source or None
+    is_leaf = not feat.sub_features # fullPaths processed and IDs can be ommited only when is_leaf
 
     #norm
-    feat.id = self.norm_id(feat.id, feat.type)
-    if quals and quals.get("ID"):
-      quals["ID"][0] = self.norm_id(quals["ID"][0], feat.type)
+    if self._norm_id and self._norm_id.supporting(feat.type):
+      feat.id = self.norm_id(feat.id, feat.type)
+      if quals and quals.get("ID"):
+        quals["ID"][0] = self.norm_id(quals["ID"][0], feat.type)
 
     if depth == 1:
       # set top feature
@@ -93,14 +98,20 @@ class GFF3Walker:
       _QUALS   = quals,
       _FULLTAG = fulltag,
       _DEPTH   = depth,
+      _ISLEAF  = is_leaf,
     );
 
     # match
     processed_rules = []
     if self._struct_tags == "anyQual":
-      for qname in [None] + list(quals.keys()):
+      for qname in [None] + list(quals.keys()) + ["parent"]:
         leaftag = "/".join(filter(None, [feat.type, qname]))
-        leafvalue = qname in quals and quals[qname] or None
+        leafvalue = None
+        if qname:
+          if qname.lower() == "parent": # because we have preprocessed parent IDS
+            leafvalue = context.get("_PARENTID")
+          elif qname in quals:
+            leafvalue = quals[qname]
         context.tag(leaftag)
         context.update(_LEAFTAG = leaftag)
         context.update(_LEAFVALUE = leafvalue)
@@ -130,7 +141,7 @@ class GFF3Walker:
         "_PARENTCTX" : parent_ctx_snap,
       }
       for subfeat in feat.sub_features:
-        context.update(ctx_parent_part)
+        context.update(ctx_parent_part, force_clean = True)
         self.process_feature(subfeat, context, res_sub_features)
 
     if depth == 1:

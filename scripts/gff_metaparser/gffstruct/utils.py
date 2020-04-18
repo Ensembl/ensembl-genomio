@@ -14,6 +14,13 @@ class IdTrimmer:
     if re_rules:
       self._rules = { k.lower():re.compile(v) for k,v in re_rules.items() }
 
+  def supporting(self, type = None):
+    if type is None or not self._rules:
+      return False
+    if "any" in self._rules:
+      return True
+    return type.lower() in self._rules
+
   def normalize(self, id_str, type = None):
     id_str = str(id_str)
     _type = type.lower()
