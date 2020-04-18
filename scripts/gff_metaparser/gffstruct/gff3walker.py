@@ -9,7 +9,7 @@ from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 
 # locals
-from .gffkeeper import GffKeeeper
+from .gffkeeper import GffKeeper
 from .utils import UpdatingLen
 from .walkcontext import WalkContext
 
@@ -53,7 +53,7 @@ class GFF3Walker:
         out_rec_features = []
       for cnt, topft in enumerate(contig.features):
         # iterate through all of the features
-        gff_keeper = GffKeeeper()
+        gff_keeper = GffKeeper()
         context = WalkContext(gff_keeper = gff_keeper, global_context = self.global_context,
                                 ctg_len_inferer = ctg_len)
         context.update("_SEQID", contig.id)
