@@ -100,6 +100,7 @@ class GFF3Walker:
       _DEPTH   = depth,
       _ISLEAF  = is_leaf,
     );
+    self._parser.prepare_context(context)
 
     # match
     processed_rules = []
@@ -113,8 +114,12 @@ class GFF3Walker:
           elif qname in quals:
             leafvalue = quals[qname]
         context.tag(leaftag)
-        context.update(_LEAFTAG = leaftag)
-        context.update(_LEAFVALUE = leafvalue)
+        context.update(
+          force_clean = True,
+          _QNAME = qname,
+          _LEAFTAG = leaftag,
+          _LEAFVALUE = leafvalue,
+        )
         processed_rules += self._parser.process(context, ignore_unseen = True)
     elif self._struct_tags == "fullPath":
         if is_leaf:

@@ -86,6 +86,10 @@ class BaseRule:
     pass
 
   @classmethod
+  def prepare_context(cls, context):
+    pass
+
+  @classmethod
   def prepare_postponed(cls, context):
     pass
 

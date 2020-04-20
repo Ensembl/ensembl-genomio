@@ -102,6 +102,11 @@ class BaseStructures:
 
     return processed_rules
 
+  def prepare_context(self, context):
+    for name in self.rule_names:
+      factory = self.rule_factories[name]
+      factory.prepare_context(context)
+
   def prepare_postponed(self, context):
     for name in self.rule_names:
       factory = self.rule_factories[name]
