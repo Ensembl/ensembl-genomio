@@ -8,35 +8,58 @@ class GffRule(BaseRule):
   # though parents should be excluded from qulifiers, they'll be added automatically based on parent feature ID
   NAME = "GFF"
   _RULES = BaseRule.RulesType()
+  _FORCE_SUB = False
 
   @classmethod
   def prepare_context(cls, context):
     context.update(
+      {
+        "_%s_USEDQUALS" % cls.NAME : None,
+        "_%s_QUALSCOPYALL" % cls.NAME : None,
+      },
       force_clean = True,
-      _USEDQUALS = None,
-      _QUALSCOPYALL = None,
     )
 
   def prepare_actions(self):
-     pass
+    self._target_quals = None
+    raw = [ x.strip() for x in " ".join(self._actions_raw).replace(",", " ").split() if x.strip() ]
+    raw = list(frozenset(raw))
+    if raw:
+      self._target_quals = raw
 
   def process(self, context, re_context = None):
-   used_quals = context.get("_USEDQUALS")
-   if used_quals is None:
-     context.update(_USEDQUALS = {})
-     used_quals = context.get("_USEDQUALS")
-   qname = context.get("_QNAME")
-   if qname is None:
-     context.update(_QUALSCOPYALL = True)
-     return
-   #new_name = self._new_name
-   # TODO: use new name, what if changing feature?
-   used_quals.update({qname.lower():(qname, context.get("_LEAFVALUE"))})
+    _uqname = "_%s_USEDQUALS" % self.NAME
+    used_quals = context.get(_uqname)
+    if used_quals is None:
+      context.update({ _uqname:{} })
+      used_quals = context.get(_uqname)
+
+    qname = context.get("_QNAME")
+    if qname is None:
+      context.update(_QUALSCOPYALL = True)
+      return
+
+    value = context.get("_LEAFVALUE")
+
+    if not self._target_quals:
+      used_quals.update({qname.lower():(qname, value)})
+      return
+
+    for new_name in self._target_quals:
+      if not self._FORCE_SUB and new_name.lower() in used_quals:
+        continue
+      used_quals.update({new_name.lower():(new_name, value)})
 
   @classmethod
   def prepare_postponed(cls, context):
     # get seen quals and construct new qual
-    used_quals = context.get("_USEDQUALS")
+    _uqname = "_%s_USEDQUALS" % cls.NAME
+    used_quals = context.get(_uqname)
+    if used_quals is None:
+      return
+    is_leaf = context.get("_ISLEAF")
+    if "phase" not in used_quals:
+      phase = context.get("_PHASE")
     if used_quals is None:
       return
     is_leaf = context.get("_ISLEAF")
@@ -47,7 +70,7 @@ class GffRule(BaseRule):
     if not is_leaf:
       if "id" not in used_quals:
         used_quals.update({"ID":context.get("_ID")})
-    if context.get("_QUALSCOPYALL"):
+    if context.get("_%s_QUALSCOPYALL" % cls.NAME):
       # TODO: copy, everything not used
       # do not copy parent
       pass
@@ -57,8 +80,4 @@ class GffRule(BaseRule):
 class GffSubRule(GffRule):
   NAME = "GFF_SUB"
   _RULES = BaseRule.RulesType()
-
-  @classmethod
-  def prepare_postponed(cls, context):
-    pass
-
+  _FORCE_SUB = True
