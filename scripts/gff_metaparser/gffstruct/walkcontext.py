@@ -32,16 +32,16 @@ class WalkContext:
     # can have either dict as key or string with non-empty val
     if len(key_val) == 1 and isinstance(key_val[0], dict):
       for k, v in key_val[0].items():
-        self.update(k,v)
+        self.update(k,v, force_clean = force_clean)
     elif len(key_val) == 2:
       key, val = key_val
       if val is not None:
         self.data[key] = val
-      elif force_clean and k in self.data:
-        del self.data[k]
+      elif force_clean and key in self.data:
+        del self.data[key]
     # update from **kwargs
     for k, v in kwargs.items():
-      self.update(k,v)
+      self.update(k,v, force_clean = force_clean)
 
   def get(self, key, default = None):
     # global ???
