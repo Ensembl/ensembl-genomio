@@ -67,10 +67,15 @@ class JsonRule(BaseRule):
     addon, tech = self.parse_json(*jsonstr)
 
     if tag_path.count("@")  != tag_path.count("/@"):
-      raise Exception("wrong @list notation used in path string for rule %s at line %s" % (self.NAME, self._lineno))
+      raise Exception("wrong @list notation is used in path string for rule %s at line %s" % (self.NAME, self._lineno))
     if tag_path.count("@") > 1:
       raise Exception("to many @list in path string for rule %s at line %s" % (self.NAME, self._lineno))
-
+    if tag_path.count("!")  != tag_path.count("/!"):
+      raise Exception("wrong !scalar notation is used in path string for rule %s at line %s" % (self.NAME, self._lineno))
+    if tag_path.count("!") > 1:
+      raise Exception("to many !scalar in path string for rule %s at line %s" % (self.NAME, self._lineno))
+    if tag_path.count("!") == 1 and not tag_path.split("/")[-1].startswith("!"):
+      raise Exception("!scalar not as the last part of path string for rule %s at line %s" % (self.NAME, self._lineno))
 
     key = ""
     out_tag_raw, *path = tag_path.split("/")
@@ -80,10 +85,13 @@ class JsonRule(BaseRule):
       *path, key = path
       path = "/".join(path)
 
-    key_is_list = False
-    if key.startswith("@"):
+    key_is_list = None
+    if key.startswith("@"): # force list
       key = key[1:]
       key_is_list = True
+    if key.startswith("!"): # force scalar
+      key = key[1:]
+      key_is_list = False
 
     # id part of the out_tag 
     store_to_parent = False
@@ -188,9 +196,12 @@ class JsonRule(BaseRule):
     value = context.get("_LEAFVALUE")
     if type(value) == list and len(value) == 1:
       value = value[0]
-    if type(value) != list and _a["key_is_list"]:
+    if type(value) != list and _a["key_is_list"] == True:
       # wrap back
       value = [ value ]
+    if type(value) == list and _a["key_is_list"] == False:
+      # force scalar
+      value = ",".join(value)
 
     data = {}
     if _a["key"]:
