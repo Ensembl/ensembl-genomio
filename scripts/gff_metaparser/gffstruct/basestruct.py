@@ -66,7 +66,12 @@ class BaseStructures:
         continue
       if name in patches and pattern in patches[name]:
         actions = patches[name][pattern]["actions"]
+        lineno_cfg = lineno
         lineno = patches[name][pattern]["lineno"]
+        if actions == ["DISCARD"]:
+          print("discarding rule %s for %s at %s because of the patch DISCARD at %s" % (name, pattern, lineno_cfg, lineno), file=sys.stderr)
+          continue
+        print("replacing rule %s for %s at %s because of the patch at %s" % (name, pattern, lineno_cfg, lineno), file=sys.stderr)
       self.add_rule(name, pattern, actions, lineno)
 
   def add_rule(self, name_raw, pattern, actions, lineno):
