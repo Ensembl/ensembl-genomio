@@ -114,10 +114,12 @@ sub set_protein_coding {
   my $genes = $ga->fetch_all_by_logic_name($logic_name);
   
   foreach my $gene (@$genes) {
+    next if $gene->biotype ne 'protein_coding';
     my $nontranslating_transcript = 0;
     my $protein_coding_transcript = 0;
     
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
+      next if $transcript->biotype ne 'protein_coding';
       if ($transcript->translation) {
         if ($transcript->translation->seq =~ /\*/) {
           $transcript->biotype('nontranslating_CDS');

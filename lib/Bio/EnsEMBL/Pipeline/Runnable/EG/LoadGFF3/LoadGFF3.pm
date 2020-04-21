@@ -83,6 +83,7 @@ sub param_defaults {
     polypeptides    => 1,
     min_intron_size => undef,
     nontranslating  => 'nontranslating_CDS',
+    load_pseudogene_with_CDS => 0,
     prediction      => 0,
     gene_source     => 'Ensembl',
     stable_ids      => {},
@@ -160,6 +161,9 @@ sub load_genes {
   my @gene_types = @{ $self->param_required('gene_types') };
   
   my $dba = $self->url2dba($self->param_required('db_url'));
+
+  # Set pseudogene_with_CDS biotype
+  $self->set_pseudogene_biotypes($dba);
   
   # Fetch slices and their synonyms into a lookup hash.
   my %slices = $self->fetch_slices($dba);
@@ -193,21 +197,80 @@ sub load_genes {
   $dba->dbc->disconnect_if_idle();
 }
 
+sub set_pseudogene_biotypes {
+  my ($self, $dba) = @_;
+
+  return if not $self->param('load_pseudogene_with_CDS');
+
+  my $ba = $dba->get_adaptor('biotype');
+  my $name = 'pseudogene_with_CDS';
+
+  my $query = "INSERT INTO biotype(
+  name,
+  object_type,
+  biotype_group,
+  description,
+  so_acc,
+  so_term
+  ) VALUES(?,?,?,?,?,?);";
+  my $dbh = $dba->dbc->db_handle;
+  my $sth = $dbh->prepare($query);
+
+  # Set up gene
+  my $dbgene = $ba->fetch_by_name_object_type($name, 'gene');
+  if (not $dbgene->so_term) {
+    # Store via SQL (no API to store biotypes)
+    my @values = (
+      $name,
+      'gene',
+      'pseudogene',
+      'pseudogene with CDS',
+      'SO:0000336',
+      'pseudogene'
+    );
+    $sth->execute(@values);
+
+  } else {
+    warn("Biotype for gene OK");
+  }
+
+  # Set up transcript
+  my $dbtranscript = $ba->fetch_by_name_object_type($name, 'transcript');
+  if (not $dbtranscript->so_term) {
+    # Store via SQL (no API to store biotypes)
+    my @values = (
+      $name,
+      'transcript',
+      'pseudogene',
+      'pseudogene with CDS',
+      'SO:0000516',
+      'pseudogenic_transcript'
+    );
+    $sth->execute(@values);
+  } else {
+    warn("Biotype for transcript OK");
+  }
+}
+
 sub set_pseudogene {
   my ($self, $ga, $gene) = @_;
-  return if $gene->biotype eq 'pseudogene';
 
-  # Only set the gene as pseudogene if all transcripts are pseudogenes!
+  # Only set the gene as pseudogene with CDS if all transcripts are pseudogenes and at least one has a CDS
   my $transcripts = $gene->get_all_Transcripts;
   my $num_tr = scalar @$transcripts;
-  my $num_pseudo = scalar (grep { $_->biotype eq 'pseudogene'  } @$transcripts);
+  my $num_pseudo = scalar (grep { $_->biotype eq 'pseudogene' } @$transcripts);
+  my $num_pseudo_CDS = scalar (grep { $_->biotype eq 'pseudogene_with_CDS' } @$transcripts);
 
-  if ($num_tr eq $num_pseudo) {
-    warn("Set ".$gene->stable_id." as a pseudogene because all transcripts are pseudogenic");
-    $gene->biotype('pseudogene');
-    $ga->store($gene);
-  } elsif ($num_pseudo > 0) {
-    warn("Gene ".$gene->stable_id." is a mix of pseudogenic and non-pseudogenic transcripts");
+  if ($num_tr eq ($num_pseudo + $num_pseudo_CDS)) {
+    if ($num_pseudo_CDS > 0) {
+      warn("Set ".$gene->stable_id." as a pseudogene_with_CDS because all transcripts are pseudogenic and $num_pseudo_CDS/$num_tr are pseudogene_with_CDS\n");
+      $gene->biotype('pseudogene_with_CDS');
+      $ga->update($gene);
+    } else {
+      warn("Set ".$gene->stable_id." as a pseudogene (without CDS) because all transcripts are pseudogenic\n");
+      $gene->biotype('pseudogene');
+      $ga->update($gene);
+    }
   }
 }
 
@@ -247,7 +310,9 @@ sub add_transcripts {
     } else {
       foreach my $gff_transcript (@gff_transcripts) {
         my $transcript = $self->add_transcript($db, $gff_transcript, $gene);
-        if ($transcript->biotype eq 'protein_coding') {
+
+        if ($transcript->biotype eq 'protein_coding'
+            or $transcript->biotype eq 'pseudogene_with_CDS') {
           $self->add_translation($db, $gff_transcript, $gene, $transcript);
         }
           
@@ -266,7 +331,7 @@ sub add_transcript {
   my @exon_types      = @{ $self->param_required('exon_types') };
   my $min_intron_size = $self->param('min_intron_size');
   
-  my $transcript = $self->new_transcript($gff_transcript, $gene);
+  my $transcript = $self->new_transcript($db, $gff_transcript, $gene);
   $transcript->stable_id($gene->stable_id) unless $transcript->stable_id;
   
   my @gff_exons = $gff_transcript->get_SeqFeatures(@exon_types);
@@ -308,7 +373,7 @@ sub add_pseudogenic_transcript {
   
   my $gff_transcript = $self->infer_transcript($db, $gff_gene);
   
-  my $transcript = $self->new_transcript($gff_transcript, $gene);
+  my $transcript = $self->new_transcript($db, $gff_transcript, $gene);
   $transcript->stable_id($gene->stable_id);
   
   my @gff_exons = $gff_gene->get_SeqFeatures(@exon_types);
@@ -370,7 +435,11 @@ sub add_translation {
 	 } else {
     	my $seq = $transcript->translate()->seq;
     	if (!$seq || $seq eq '' || $seq =~ /\*/) {
-      	$self->set_nontranslating_transcript($transcript);
+        if ($seq =~ /\*/ and $transcript->biotype eq 'pseudogene_with_CDS') {
+          warn("Pseudogene_with_CDS has stop codons\n");
+        } else {
+        	$self->set_nontranslating_transcript($transcript);
+        }
     	}
 	 }
   } else {
@@ -840,18 +909,30 @@ sub new_gene {
 }
 
 sub new_transcript {
-  my ($self, $gff_transcript, $gene) = @_;
+  my ($self, $db, $gff_transcript, $gene) = @_;
   
   my $stable_id = $self->get_stable_id($gff_transcript);
-  
+
+  # Check if there is a translation
+  my ($translation_id) = $self->get_cds_id($gff_transcript);
+  my $translatable = defined $translation_id;
+
   my $biotype;
   if ($gff_transcript->type =~ /^pseudogenic/i) {
-    $biotype = 'pseudogene';
+    if ($translatable and $self->param('load_pseudogene_with_CDS')) {
+      warn("Pseudogene has CDSs: $stable_id\n");
+      $biotype = 'pseudogene_with_CDS';
+    } else {
+      warn("Pseudogene has no CDS: $stable_id\n");
+      $biotype = 'pseudogene';
+    }
+
   } elsif ($gff_transcript->type !~ /^(mRNA|transcript):*/i) {
     ($biotype) = $gff_transcript->type =~ /^(\w+):*/;
     $biotype = $self->map_biotype_transcript($biotype, $gff_transcript);
     $gene->biotype($biotype);
   } else {
+    die("Protein coding $stable_id is not translatable??") if not $translatable;
     $biotype = $gene->biotype;
   }
   
