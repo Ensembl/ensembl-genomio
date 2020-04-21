@@ -94,8 +94,6 @@ sub run {
   my ($self) = @_;
   my $gff3_file  = $self->param_required('gff3_file');
   my $fasta_file = $self->param_required('fasta_file');
-
-  warn("Using $gff3_file");
   
   # Load the genes into an in-memory BioPerl database.
   my $db = $self->load_db($gff3_file, $fasta_file);
@@ -202,7 +200,7 @@ sub load_genes {
 sub set_pseudogene_biotypes {
   my ($self, $dba) = @_;
 
-  next if not $self->param('load_pseudogene_with_CDS');
+  return if not $self->param('load_pseudogene_with_CDS');
 
   my $ba = $dba->get_adaptor('biotype');
   my $name = 'pseudogene_with_CDS';
