@@ -72,7 +72,7 @@ class GFF3Walker:
     phase = quals.get("phase")
     fulltag_parts = list(filter(None,[context.get("_FULLTAG"), feat.type]))
     fulltag = "/".join(fulltag_parts)
-    depth = len(fulltag_parts)
+    depth = fulltag.count("/") + 1
     source = self.supporting(feat, "source") and feat.source or None
     is_leaf = not feat.sub_features # fullPaths processed and IDs can be ommited only when is_leaf
 
@@ -144,6 +144,7 @@ class GFF3Walker:
         "_PARENT" : feat,
         "_PARENTID" : feat.id,
         "_PARENTCTX" : parent_ctx_snap,
+        "_FULLTAG" : fulltag,
       }
       for subfeat in feat.sub_features:
         context.update(ctx_parent_part, force_clean = True)

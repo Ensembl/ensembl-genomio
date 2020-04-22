@@ -14,7 +14,7 @@ class WalkContext:
 
   def snap(self):
     # shallow data copy
-    self.prev.append({"tag" : self._tag, "data" : copy.copy(self.data)})
+    self.prev.append(copy.copy(self.data))
     return self.prev[-1]
 
   def top(self, *feature):
