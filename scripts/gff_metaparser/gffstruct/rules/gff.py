@@ -76,6 +76,24 @@ class GffRule(BaseRule):
       pass
     print("prepare possponed: ", str(used_quals), context.get("_ID"), context.get("_TYPE"), file=sys.stderr)
 
+  @classmethod
+  def run_postponed(cls, context):
+    for ctx in context.prev[::-1]:
+      if ctx.get("_ISLEAF"):
+        used_quals = ctx.get("_%s_USEDQUALS" % cls.NAME)
+        if not used_quals:
+          continue
+        print("leaf used_quals: ", used_quals, file = sys.stderr)
+        print("leaf", list(map(lambda t: ctx.get(t), ["_ID", "_TYPE", "_FULLTAG", "_DEPTH"])), file = sys.stderr)
+        parent_ctx = ctx.get("_PARENTCTX")
+        while parent_ctx:
+          print("parent", list(map(lambda t: parent_ctx.get(t), ["_ID", "_TYPE", "_FULLTAG", "_DEPTH"])), file = sys.stderr)
+          used_quals = parent_ctx.get("_%s_USEDQUALS" % cls.NAME)
+          if (used_quals):
+            print(used_quals, file = sys.stderr)
+          parent_ctx = parent_ctx.get("_PARENTCTX")
+        print("", file=sys.stderr)
+
 
 class GffSubRule(GffRule):
   NAME = "GFF_SUB"
