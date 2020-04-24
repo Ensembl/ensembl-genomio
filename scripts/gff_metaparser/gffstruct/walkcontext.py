@@ -1,16 +1,15 @@
 import copy
 
 class WalkContext:
-  def __init__(self, tag = "", gff_keeper = None, global_context = None, ctg_len_inferer = None):
+  def __init__(self, tag = "", global_context = None, ctg_len_inferer = None):
     self.data = dict()
     self._tag = tag
-    self.gff_keeper = gff_keeper
     self.global_context = global_context
     self.ctg_len = ctg_len_inferer
     self.processed_rules = []
     self.prev = []
     self._top = None
-    self.fixes = []
+    self._useful_leaves = []
 
   def snap(self):
     # shallow data copy
@@ -54,6 +53,11 @@ class WalkContext:
 
   def update_processed_rules(self, lst):
     self.processed_rules += lst
+
+  def used_leaves(self, *leaves):
+    if len(leaves) == 0:
+      return copy.copy(self._useful_leaves)
+    self._useful_leaves += leaves
 
   def add_fix(self, fix):
     pass

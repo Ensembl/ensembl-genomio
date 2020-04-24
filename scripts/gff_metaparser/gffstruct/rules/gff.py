@@ -74,28 +74,35 @@ class GffRule(BaseRule):
       # TODO: copy, everything not used
       # do not copy parent
       pass
-    print("prepare possponed: ", str(used_quals), context.get("_ID"), context.get("_TYPE"), file=sys.stderr)
+    # print("prepare possponed: ", cls.NAME, str(used_quals), context.get("_ID"), context.get("_TYPE"), file=sys.stderr)
 
   @classmethod
   def run_postponed(cls, context):
-    for ctx in context.prev[::-1]:
-      if ctx.get("_ISLEAF"):
-        used_quals = ctx.get("_%s_USEDQUALS" % cls.NAME)
-        if not used_quals:
-          continue
-        print("leaf used_quals: ", used_quals, file = sys.stderr)
-        print("leaf", list(map(lambda t: ctx.get(t), ["_ID", "_TYPE", "_FULLTAG", "_DEPTH"])), file = sys.stderr)
-        parent_ctx = ctx.get("_PARENTCTX")
-        while parent_ctx:
-          print("parent", list(map(lambda t: parent_ctx.get(t), ["_ID", "_TYPE", "_FULLTAG", "_DEPTH"])), file = sys.stderr)
-          used_quals = parent_ctx.get("_%s_USEDQUALS" % cls.NAME)
-          if (used_quals):
-            print(used_quals, file = sys.stderr)
-          parent_ctx = parent_ctx.get("_PARENTCTX")
-        print("", file=sys.stderr)
+    return
 
 
 class GffSubRule(GffRule):
   NAME = "GFF_SUB"
   _RULES = BaseRule.RulesType()
   _FORCE_SUB = True
+
+  @classmethod
+  def run_postponed(cls, context):
+    for ctx in context.prev:
+      gff_uq = ctx.get("_GFF_USEDQUALS")
+      gff_sub_uq = ctx.get("_GFF_SUB_USEDQUALS")
+      #if gff_uq:
+      #  print("GFF", gff_uq, file=sys.stderr)
+      #if gff_sub_uq:
+      #  print("GFF_SUB", gff_sub_uq, file=sys.stderr)
+      if gff_uq:
+        if gff_sub_uq:
+          for k in gff_sub_uq:
+            gff_uq[k] = gff_sub_uq[k]
+          del ctx["_GFF_SUB_USEDQUALS"]
+      elif gff_sub_uq:
+        ctx["_GFF_USEDQUALS"] = gff_sub_uq
+        del ctx["_GFF_SUB_USEDQUALS"]
+      if ctx.get("_GFF_USEDQUALS") and ctx.get("_ISLEAF"):
+        context.used_leaves(ctx)
+
