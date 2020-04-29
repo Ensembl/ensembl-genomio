@@ -32,7 +32,7 @@ class AliasRule(BaseRule):
     capture = r'(?P<%s>%s)' % (pattern.replace(BaseRule.AliasSymbol(),""), cls.aliases[pattern])
     cls.capture[pattern] = capture
     rx = r'%s\b' % pattern # should start with '@' otherwise add initial \b
-    # print("rx %s capture %s" %(rx, capture), file=sys.stderr)
+    # print("rx %s capture %s pattern %s " %(rx, capture, pattern), file=sys.stderr)
     cls.regexp[pattern] = re.compile(rx)
 
   def __init__(self, pattern, actions, lineno = None):

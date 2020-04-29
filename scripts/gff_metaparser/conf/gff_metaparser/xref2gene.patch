@@ -1,0 +1,8 @@
+# patch for the gff_metaparser.conf to propagate CDS and ~mRNA xrefs to gene JSON 
+
+@MRNA/dbxref	JSON	gene:_PARENT/@xrefs	{"_SPLIT":":;dbname;id", "_MAP": {"NCBI_GP":"GenBank"} }
+
+cds/dbxref	JSON	gene:_PARENT/@xrefs	{"_SPLIT":":;dbname;id", "_MAP": {"NCBI_GP":"GenBank"} }
+
+# cds/dbxref	JSON	DISCARD # discard example
+

@@ -199,13 +199,17 @@ class MetaConf:
   def dump_genome_conf(self, json_out):
     out = {}
     fields = [
-      "provider.name",
-      "provider.url",
+      #"annotation.provider_name",
+      #"annotation.provider_url",
+      #"assembly.provider_name",
+      #"assembly.provider_url",
       "assembly.accession",
       "assembly.name",
       "genebuild.method",
       "genebuild.start_date",
       "genebuild.version",
+      "provider.name",
+      "provider.url",
       "*species.alias",
       "species.display_name",
       "species.division",
@@ -255,7 +259,7 @@ class MetaConf:
     mt_k = frozenset(filter(lambda x: x.upper().startswith("MT_"), tk))
 
     ctg_len = dict()
-    if chr_k and fasta_file:
+    if fasta_file:
       _open = fasta_file.endswith(".gz") and gzip.open or open
       with _open(fasta_file, 'rt') as fasta:
         fasta_parser = SeqIO.parse(fasta, "fasta")

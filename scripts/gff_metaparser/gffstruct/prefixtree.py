@@ -23,6 +23,6 @@ class PfxTr:
          return(pfx, max_cnt)
        max_cnt = root.letters[c].count
        pfx += c
-       root = root.letters[c] 
+       root = root.letters[c]
      return (pfx, max_cnt)
 

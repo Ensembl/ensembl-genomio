@@ -28,9 +28,11 @@ class BaseRule:
 
   def __init__(self, pattern, actions, lineno):
     self._pattern = pattern
-    self._actions = actions
+    self._actions_raw = actions
+    self._actions = None
     self._lineno = lineno
     self.update_rules()
+    self.prepare_actions()
 
   def update_rules(self):
     pat = self._pattern.strip().lower()
@@ -54,6 +56,8 @@ class BaseRule:
         raw_pat = rule._pattern.strip()
 
         re_pat = aliases_cls.mature_regex(raw_pat)
+        #print("maturing pat ", pat, " raw_pat ", raw_pat, " re_pat ", re_pat, file=sys.stderr)
+
         if re_pat == None:
           continue
         if re_pat == raw_pat:
@@ -72,10 +76,25 @@ class BaseRule:
   def regex_patterns(cls):
     return deepcopy(cls._RULES["regex_match"])
 
-  def process(self, struct, re_context = None):
+  def prepare_actions(self):
+     pass
+
+  def process(self, context, re_context = None):
     print("processing %s for %s with match groups %s" % (
-        struct.tag, self.NAME, str(re_context and re_context.groupdict() or None)
+        context.tag(), self.NAME, str(re_context and re_context.groupdict() or None)
       ))
+    pass
+
+  @classmethod
+  def prepare_context(cls, context):
+    pass
+
+  @classmethod
+  def prepare_postponed(cls, context):
+    pass
+
+  @classmethod
+  def run_postponed(clsf, context):
     pass
 
 
