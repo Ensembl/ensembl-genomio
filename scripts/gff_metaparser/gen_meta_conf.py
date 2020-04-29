@@ -255,7 +255,7 @@ class MetaConf:
     mt_k = frozenset(filter(lambda x: x.upper().startswith("MT_"), tk))
 
     ctg_len = dict()
-    if chr_k and fasta_file:
+    if fasta_file:
       _open = fasta_file.endswith(".gz") and gzip.open or open
       with _open(fasta_file, 'rt') as fasta:
         fasta_parser = SeqIO.parse(fasta, "fasta")
