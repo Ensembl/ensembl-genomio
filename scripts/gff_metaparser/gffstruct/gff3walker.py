@@ -91,6 +91,7 @@ class GFF3Walker:
       _FULLTAG = fulltag,
       _DEPTH   = depth,
       _ISLEAF  = is_leaf,
+      _RULESDATA = None,
     );
     self._parser.prepare_context(context)
 

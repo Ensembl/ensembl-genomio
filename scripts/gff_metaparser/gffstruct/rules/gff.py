@@ -1,6 +1,7 @@
 from .base import BaseRule
 
 import sys
+from collections import defaultdict
 
 class GffRule(BaseRule):
   # IDs can be substituted, but can be  ommited only for leaves
@@ -12,13 +13,14 @@ class GffRule(BaseRule):
 
   @classmethod
   def prepare_context(cls, context):
-    context.update(
-      {
-        "_%s_USEDQUALS" % cls.NAME : None,
-        "_%s_QUALSCOPYALL" % cls.NAME : None,
-      },
-      force_clean = True,
-    )
+    rules_data = context.get("_RULESDATA")
+    if not rules_data:
+      context.update({"_RULESDATA": defaultdict(dict)}, force_clean = True)
+      rules_data = context.get("_RULESDATA")
+    rules_data = rules_data[cls.NAME]
+    rules_data["USEDQUALS"] = None
+    rules_data["QUALSCOPYALL"] = None
+
 
   def prepare_actions(self):
     self._target_quals = None
@@ -28,11 +30,10 @@ class GffRule(BaseRule):
       self._target_quals = raw
 
   def process(self, context, re_context = None):
-    _uqname = "_%s_USEDQUALS" % self.NAME
-    used_quals = context.get(_uqname)
+    used_quals = context.get("_RULESDATA")[self.NAME].get("USEDQUALS")
     if used_quals is None:
-      context.update({ _uqname:{} })
-      used_quals = context.get(_uqname)
+      context.get("_RULESDATA")[self.NAME]["USEDQUALS"] = {}
+      used_quals = context.get("_RULESDATA")[self.NAME].get("USEDQUALS")
 
     qname = context.get("_QNAME")
     if qname is None:
@@ -53,8 +54,7 @@ class GffRule(BaseRule):
   @classmethod
   def prepare_postponed(cls, context):
     # get seen quals and construct new qual
-    _uqname = "_%s_USEDQUALS" % cls.NAME
-    used_quals = context.get(_uqname)
+    used_quals = context.get("_RULESDATA")[cls.NAME].get("USEDQUALS")
     if used_quals is None:
       return
     is_leaf = context.get("_ISLEAF")
@@ -70,7 +70,7 @@ class GffRule(BaseRule):
     if not is_leaf:
       if "id" not in used_quals:
         used_quals.update({"ID":context.get("_ID")})
-    if context.get("_%s_QUALSCOPYALL" % cls.NAME):
+    if context.get("_RULESDATA")[cls.NAME].get("QUALSCOPYALL"):
       # TODO: copy, everything not used
       # do not copy parent
       pass
@@ -89,20 +89,18 @@ class GffSubRule(GffRule):
   @classmethod
   def run_postponed(cls, context):
     for ctx in context.prev:
-      gff_uq = ctx.get("_GFF_USEDQUALS")
-      gff_sub_uq = ctx.get("_GFF_SUB_USEDQUALS")
-      #if gff_uq:
-      #  print("GFF", gff_uq, file=sys.stderr)
-      #if gff_sub_uq:
-      #  print("GFF_SUB", gff_sub_uq, file=sys.stderr)
+      gff_uq = ctx["_RULESDATA"][GffRule.NAME].get("USEDQUALS")
+      gff_sub_uq = ctx["_RULESDATA"][GffSubRule.NAME].get("USEDQUALS")
       if gff_uq:
         if gff_sub_uq:
           for k in gff_sub_uq:
             gff_uq[k] = gff_sub_uq[k]
-          del ctx["_GFF_SUB_USEDQUALS"]
+          del ctx["_RULESDATA"][GffSubRule.NAME]["USEDQUALS"]
       elif gff_sub_uq:
-        ctx["_GFF_USEDQUALS"] = gff_sub_uq
-        del ctx["_GFF_SUB_USEDQUALS"]
-      if ctx.get("_GFF_USEDQUALS") and ctx.get("_ISLEAF"):
+        ctx["_RULESDATA"][GffRule.NAME]["USEDQUALS"] = gff_sub_uq
+        del ctx["_RULESDATA"][GffSubRule.NAME]["USEDQUALS"]
+      # update used_leaves
+      gff_uq = ctx["_RULESDATA"][GffRule.NAME].get("USEDQUALS")
+      if gff_uq and ctx.get("_ISLEAF"):
         context.used_leaves(ctx)
 

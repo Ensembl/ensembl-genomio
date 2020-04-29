@@ -30,15 +30,20 @@ class SeqFeatComposer:
       # self.merge_used_quals(ctx)
       print("leaf", list(map(lambda t: ctx.get(t), ["_ID", "_TYPE", "_FULLTAG", "_DEPTH"])), file = sys.stderr)
 
-      used_quals = ctx.get("_GFF_USEDQUALS")
-      print("leaf used_quals: ", used_quals, file = sys.stderr)
+      rules_data = ctx.get("_RULESDATA")
+      if rules_data:
+        used_quals = rules_data["GFF"]["USEDQUALS"]
+        print("leaf used_quals: ", used_quals, file = sys.stderr)
 
       parent_ctx = ctx.get("_PARENTCTX")
       while parent_ctx:
         print("parent", list(map(lambda t: parent_ctx.get(t), ["_ID", "_TYPE", "_FULLTAG", "_DEPTH"])), file = sys.stderr)
-        used_quals = parent_ctx.get("_GFF_USEDQUALS")
-        if (used_quals):
-          print(used_quals, file = sys.stderr)
+
+        rules_data = parent_ctx.get("_RULESDATA")
+        if rules_data:
+          used_quals = rules_data["GFF"]["USEDQUALS"]
+          if (used_quals):
+            print("used_quals", used_quals, file = sys.stderr)
         parent_ctx = parent_ctx.get("_PARENTCTX")
       print("", file=sys.stderr)
     #
