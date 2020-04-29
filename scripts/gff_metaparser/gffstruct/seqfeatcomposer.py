@@ -32,7 +32,8 @@ class SeqFeatComposer:
 
       rules_data = ctx.get("_RULESDATA")
       if rules_data:
-        used_quals = rules_data["GFF"]["USEDQUALS"]
+        # perhaps use "MERGED" data???
+        used_quals = rules_data["_ALL"]["USEDQUALS"]
         print("leaf used_quals: ", used_quals, file = sys.stderr)
 
       parent_ctx = ctx.get("_PARENTCTX")
@@ -41,7 +42,7 @@ class SeqFeatComposer:
 
         rules_data = parent_ctx.get("_RULESDATA")
         if rules_data:
-          used_quals = rules_data["GFF"]["USEDQUALS"]
+          used_quals = rules_data["_ALL"]["USEDQUALS"]
           if (used_quals):
             print("used_quals", used_quals, file = sys.stderr)
         parent_ctx = parent_ctx.get("_PARENTCTX")

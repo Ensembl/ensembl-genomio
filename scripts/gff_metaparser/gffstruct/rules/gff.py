@@ -91,16 +91,20 @@ class GffSubRule(GffRule):
     for ctx in context.prev:
       gff_uq = ctx["_RULESDATA"][GffRule.NAME].get("USEDQUALS")
       gff_sub_uq = ctx["_RULESDATA"][GffSubRule.NAME].get("USEDQUALS")
+
+      # !!! no other rules can be used with the GFF or GFF_SUB rules !!!
       if gff_uq:
+        ctx["_RULESDATA"]["_ALL"]["USEDQUALS"] = gff_uq
+        del ctx["_RULESDATA"][GffRule.NAME]["USEDQUALS"]
         if gff_sub_uq:
           for k in gff_sub_uq:
-            gff_uq[k] = gff_sub_uq[k]
+            out[k] = gff_sub_uq[k]
           del ctx["_RULESDATA"][GffSubRule.NAME]["USEDQUALS"]
       elif gff_sub_uq:
-        ctx["_RULESDATA"][GffRule.NAME]["USEDQUALS"] = gff_sub_uq
+        ctx["_RULESDATA"]["_ALL"]["USEDQUALS"] = gff_sub_uq
         del ctx["_RULESDATA"][GffSubRule.NAME]["USEDQUALS"]
+
       # update used_leaves
-      gff_uq = ctx["_RULESDATA"][GffRule.NAME].get("USEDQUALS")
-      if gff_uq and ctx.get("_ISLEAF"):
+      if ctx["_RULESDATA"]["_ALL"].get("USEDQUALS") and ctx.get("_ISLEAF"):
         context.used_leaves(ctx)
 
