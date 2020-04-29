@@ -95,6 +95,9 @@ class GFF3Walker:
     );
     self._parser.prepare_context(context)
 
+    # update contig length
+    context.update_ctg_len(loc.end)
+
     # match
     processed_rules = []
     if self._struct_tags == "anyQual":

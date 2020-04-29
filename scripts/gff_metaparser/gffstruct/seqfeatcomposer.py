@@ -32,7 +32,6 @@ class SeqFeatComposer:
 
       rules_data = ctx.get("_RULESDATA")
       if rules_data:
-        # perhaps use "MERGED" data???
         used_quals = rules_data["_ALL"]["USEDQUALS"]
         print("leaf used_quals: ", used_quals, file = sys.stderr)
 

@@ -65,3 +65,7 @@ class WalkContext:
   def merge_fixes(self):
     pass
 
+  def update_ctg_len(self, length):
+   if self.ctg_len is not None:
+     self.ctg_len(length)
+

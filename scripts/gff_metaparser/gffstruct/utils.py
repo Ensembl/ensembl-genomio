@@ -100,7 +100,10 @@ class UpdatingLen:
   def update(self, val, stop_on_success = False):
     if not self._update:
       return
-    self._val = val
+    if not val:
+      return
+    if not self._val or self._val < val:
+      self._val = val
     if self._val and stop_on_success:
       self._update = False
 
