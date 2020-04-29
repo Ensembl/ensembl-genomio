@@ -199,13 +199,17 @@ class MetaConf:
   def dump_genome_conf(self, json_out):
     out = {}
     fields = [
-      "provider.name",
-      "provider.url",
+      #"annotation.provider_name",
+      #"annotation.provider_url",
+      #"assembly.provider_name",
+      #"assembly.provider_url",
       "assembly.accession",
       "assembly.name",
       "genebuild.method",
       "genebuild.start_date",
       "genebuild.version",
+      "provider.name",
+      "provider.url",
       "*species.alias",
       "species.display_name",
       "species.division",
