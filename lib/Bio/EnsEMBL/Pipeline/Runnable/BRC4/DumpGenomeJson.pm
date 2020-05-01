@@ -39,6 +39,7 @@ sub prepare_data {
     assembly => [ qw(accession date name version) ],
     genebuild => [ qw(version method start_date) ],
     provider => [ qw(name url) ],
+    BRC4 => [ qw(organism_abbrev component) ],
   );
   my %integer = map {$_ => 1} qw(species.taxonomy_id assembly.version);
 

@@ -14,7 +14,14 @@
         "strain" : { "type" : "string" },
         "display_name" : { "type" : "string" },
         "division" : { "type" : "string" },
-        "BRC4_organism_abbrev" : { "type" : "string" },
+        "BRC4" : {
+          "type": "object",
+          "additionalProperties": false,
+          "properties" : {
+            "organism_abbrev" : { "type" : "string" },
+            "component" : { "type" : "string" }
+          }
+        },
         "alias" : {
           "oneOf" : [
             { "type" : "string" },

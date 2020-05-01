@@ -17,7 +17,9 @@
       "additionalProperties": false,
       "properties": {
         "name" : { "type" : "string" },
+        "object_type" : { "type" : "string", "enum" : [ "seq_region" ] },
         "BRC4_seq_region_name" : { "type" : "string" },
+        "EBI_seq_region_name" : { "type" : "string" },
         "synonyms" : {
           "oneOf" : [
             { "$ref" : "#/definitions/seq_region_synonym_info" },
