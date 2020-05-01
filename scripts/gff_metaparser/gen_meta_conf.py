@@ -30,6 +30,10 @@ def get_args():
                       help="gff file with  gene models")
   parser.add_argument("--fann_file", metavar="functional_annotation.json", required = False, type=str,
                       help="json file with functional annotation")
+  parser.add_argument("--seq_region_raw", metavar="seq_region_raw.json", required = False, type=str,
+                      help="seq_region raw json file to patch")
+  parser.add_argument("--asm_rep_file", metavar="species_assembly_report.txt", required = False, type=str,
+                      help="GenBank assembly report to get seq_region syns from")
   # out
   parser.add_argument("--meta_out", metavar="data/metadata/species", required = False,
                       type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
@@ -159,7 +163,7 @@ class MetaConf:
       return
     self.update(k, d[k], tech)
 
-  def update_derived_data(self, defaults = None):
+  def update_derived_data(self, defaults = None, update_annotation_related = False):
     # assembly metadata
     new_name = self.get("assembly.accession")
     if new_name:
@@ -189,12 +193,13 @@ class MetaConf:
     if syns:
       self.update("species.alias", syns)
     # genebuild metadata
-    self.update_from_dict(defaults, "genebuild.method")
-    self.update_from_dict(defaults, "genebuild.level")
-    self.update("genebuild.version", aname.replace("_", "").replace(".","v") + ".0")
-    today = datetime.datetime.today()
-    self.update("genebuild.start_date",
-                "%s-%02d-%s" % (today.year, today.month, self.get("species.division")))
+    if update_annotation_related:
+      self.update_from_dict(defaults, "genebuild.method")
+      self.update_from_dict(defaults, "genebuild.level")
+      self.update("genebuild.version", aname.replace("_", "").replace(".","v") + ".0")
+      today = datetime.datetime.today()
+      self.update("genebuild.start_date",
+                  "%s-%02d-%s" % (today.year, today.month, self.get("species.division")))
 
   def dump_genome_conf(self, json_out):
     out = {}
@@ -250,7 +255,9 @@ class MetaConf:
       out = out[k]
     out.update(pre)
 
-  def dump_seq_region_conf(self, json_out, fasta_file = None, syns_src = "GenBank"):
+  def dump_seq_region_conf(self, json_out,
+                          fasta_file = None, asm_rep_file = None, seq_region_raw = None,
+                          syns_src = "GenBank"):
     if not json_out:
       return
 
@@ -266,16 +273,50 @@ class MetaConf:
         for rec in fasta_parser:
           ctg_len[rec.name] = len(rec)
 
+    asm_rep_syns = dict()
+    if asm_rep_file:
+      # INSDC_accession, INSDC_submitted_name 
+      use_cols = {
+        "Sequence-Name" : "INSDC_submitted_name",
+        "GenBank-Accn" : "INSDC",
+        "RefSeq-Accn" : "RefSeq",
+        "Assigned-Molecule" : "GenBank",
+     }
+      _open = asm_rep_file.endswith(".gz") and gzip.open or open
+      with _open(asm_rep_file, 'rt') as asm_rep:
+        header_line = None
+        header_fixed = None
+        for line in asm_rep:
+          if not header_fixed:
+            if line.startswith("#"):
+              header_line = line
+              continue
+            elif header_line:
+              header_fixed = { i : use_cols.get(n.strip())
+                                 for i, n in enumerate(header_line[1:].split())
+                                   if n.strip() in use_cols }
+            else:
+              break
+          _data = line.split()
+          _syns = { src: _data[i].strip() for i, src in header_fixed.items() if i < len(_data) }
+          _out = { src: nm for src, nm in _syns.items() if nm and nm.lower() != "na" }
+          for src in [ "INSDC", "RefSeq" ]: 
+            if src not in _out:
+              continue
+            asm_rep_syns[_out[src]] = _out
+
     out = []
     for k in chr_k:
       ctg_id, *syns = self.get(k, tech = True).split()
       syn = k.upper().split("_", 2)[2]
       syns.append(syn)
       syns = list(set(syns))
-      syns_out = [ {
-          "name" : s ,
-          "source" : s == syn and "Ensembl_Metazoa" or syns_src
-        } for s in syns ]
+      syns_out = { nm : (nm == syn and "Ensembl_Metazoa" or syns_src) for nm in syns } 
+      if ctg_id in asm_rep_syns:
+        for src, nm in asm_rep_syns[ctg_id].items():
+          syns_out[nm] = src
+      syns_out = [ { "name" : nm, "source" : src } for nm, src in syns_out.items() ]
+      # merge syns_out with asm_rep_syns
       cs_tag = self.get("ORDERED_CS_TAG", tech = True, default = "chromosome")
       out.append({
         "name" : ctg_id,
@@ -296,11 +337,21 @@ class MetaConf:
     for ctg_id in ctg_len:
       if ctg_id in used_ctg_names:
         continue
-      out.append({
+      sr = {
         "name" : ctg_id,
         "length" : ctg_len[ctg_id],
         "coord_system_level" : "contig",
-      })
+      }
+      if ctg_id in asm_rep_syns:
+        syns_out = [ { "name" : nm, "source" : src } for src, nm in asm_rep_syns[ctg_id].items() ]
+        if syns_out:
+          sr["synonyms"] = syns_out
+      out.append(sr)
+
+    # merge with seq_region_raw 
+    if seq_region_raw:
+      # load and merge into out
+      pass
 
     if out:
       os.makedirs(dirname(json_out), exist_ok=True)
@@ -387,11 +438,15 @@ def main():
     "genebuild.method" : args.genebuild_method,
     "genebuild.level" : args.genebuild_level,
     "species.division" : args.species_division,
-  })
+  }, update_annotation_related = (args.gff_file is not None))
   meta.dump(args.meta_out)
 
   meta.dump_genome_conf(args.genome_conf)
-  meta.dump_seq_region_conf(args.seq_region_conf, args.fasta_dna, syns_src = args.syns_src)
+  meta.dump_seq_region_conf(args.seq_region_conf,
+                            fasta_file = args.fasta_dna,
+                            asm_rep_file = args.asm_rep_file,
+                            seq_region_raw = args.seq_region_raw,
+                            syns_src = args.syns_src)
 
   manifest = Manifest({
     "fasta_dna" : args.fasta_dna,
