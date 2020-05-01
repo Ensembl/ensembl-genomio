@@ -553,7 +553,7 @@ class LoadSequenceData(eHive.BaseRunnable):
                 attrib_id = line.strip()
 
         if not attrib_id:
-            raise Exception("No %s seq region name attrib type in db" %s attrib_name)
+            raise Exception("No %s seq region name attrib type in db" % attrib_name)
         return attrib_id
 
     def get_db_seq_region_ids(self, out_pfx):
