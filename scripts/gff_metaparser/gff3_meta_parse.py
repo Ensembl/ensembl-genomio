@@ -22,9 +22,12 @@ def get_args():
   parser.add_argument("--conf_patch", metavar="conf.patch", required=False,
                       type=str,
                       help="config patch file")
-  parser.add_argument("--pfx_trims", metavar="ANY:gene-,ANY:rna-gnl|WGS:VCGU|,exon:exon-gnl|WGS:VCGU|,cds:cds-",
+  parser.add_argument("--pfx_trims", metavar="ANY!:.+\|,ANY:gene-,cds:cds-,exon:exon-",
                       required = False, type=str,
-                      help="list of feature:id_pfx(,...) to trim id_pfx from feature's ID (reuse feature for multiple pfx, case ignored")
+                      help="""Comma separated list of `feature:id_pfx` pairs to trim. `feature` case is ignored.
+                              If `feature` part is ommited or 'ANY' is used, `id_pfx` will be treamed from any `feature`.
+                              If '!' is NOT used before ':', `id_pfx` is escaped.
+                              Same `feature` (also true for 'ANY' or empty) can be specified several times.""")
   parser.add_argument("--xref_map", metavar="xref_map.tsv", required=False,
                       type=argparse.FileType('rt', encoding='UTF-8'),
                       help="tab separated file with xref mappings")
@@ -83,4 +86,4 @@ if __name__ == "__main__":
     main()
 
 
-# cat tcal.gff3 | python ./new-genome-loader/scripts/gff_metaparser/gff3_meta_parse.py --conf ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser.conf --pfx_trims 'ANY:gene-,ANY:rna-gnl|WGS:VCGU|,exon:exon-gnl|WGS:VCGU|,cds:cds-' --conf_patch ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser/xref2gene.patch --fann_out t.json --seq_region_out sr.json - > t.gff3
+# cat tcal.gff3 | python ./new-genome-loader/scripts/gff_metaparser/gff3_meta_parse.py --conf ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser.conf --pfx_trims 'ANY!:.+\|,ANY:gene-,cds:cds-,exon:exon-' --conf_patch ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser/xref2gene.patch --fann_out t.json --seq_region_out sr.json - > t.gff3
