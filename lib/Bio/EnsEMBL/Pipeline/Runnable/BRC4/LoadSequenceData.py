@@ -532,7 +532,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             for seq_name in ad_hoc_names:
                 if seq_name in seq_region_ids:
                     seq_region_id = seq_region_ids[seq_name]
-                    for tag, adname in ad_hoc_names[seq_name]:
+                    for tag, adname in ad_hoc_names[seq_name].items():
                         lines.append('(%s, %s, "%s")' %(seq_region_id, attrib_ids[tag], adname))
                 else:
                     raise Exception("There is no seq_region named '%s'" % (seq_name))
