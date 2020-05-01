@@ -1,20 +1,20 @@
 #!env python3
 
-from BCBio import GFF
-
 import eHive
 import gzip
+import io
 import json
 import os
 import subprocess as sp
 import sys
 
+from collections import defaultdict
+from math import floor
 from os.path import dirname, join as pj
 
+from BCBio import GFF
 from Bio import SeqIO
 
-import io
-from math import floor
 
 class LoadSequenceData(eHive.BaseRunnable):
 
@@ -92,8 +92,8 @@ class LoadSequenceData(eHive.BaseRunnable):
         seq_reg_file = self.from_param("manifest_data", "seq_region", not_throw = True)
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
-        # add seq_region BRC4 name
-        self.add_sr_brc4_name(seq_reg_file, pj(wd, "seq_region_brc4_name"), unversion_scaffolds)
+        # add seq_region EBI and BRC4 names
+        self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversion_scaffolds)
 
         # add seq_region attributes and karyotype info
         is_primary_assembly = agps is None
@@ -487,10 +487,9 @@ class LoadSequenceData(eHive.BaseRunnable):
                     db_name = _sr_syn["source"]
                     if db_name in db_map:
                         db_name = db_map[db_name]
-                        
+
                     if db_name in extdb_ids:
                         extdb_id = extdb_ids[db_name]
-                        
                         print ('%s (%s, "%s", %s)' % (fst, _sr_id, _sr_syn["name"], extdb_id), file = sql)
                         fst = ","
                     else:
@@ -500,50 +499,51 @@ class LoadSequenceData(eHive.BaseRunnable):
             # run insert sql
             self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
 
-    def add_sr_brc4_name(self, meta_file, wd, unversioned = False):
+    def add_sr_ebi_brc4_names(self, meta_file, wd, unversioned = False):
         os.makedirs(wd, exist_ok=True)
-        brc4_pfx = pj(wd, "brc4_name")
+        ebi_brc4_pfx = pj(wd, "ebi_brc4_name")
 
         # load brc4 name from file
-        brc4_name= {}
+        ad_hoc_names = defaultdict(dict)
         if meta_file:
             with open(meta_file) as mf:
                 data = json.load(mf)
                 if not isinstance(data, list):
                     data = [ data ]
                 for e in data:
-                    if "BRC4_seq_region_name" in e:
-                        brc4_name[e["name"]] = e["BRC4_seq_region_name"]
-                    else:
-                        brc4_name[e["name"]] = e["name"]
+                    name = e["name"]
+                    for tag in ["BRC4", "EBI"]:
+                        attrib_name = "%s_seq_region_name" % tag
+                        if attrib_name in e:
+                            ad_hoc_names[name][tag] = e[attrib_name]
+                        else:
+                            ad_hoc_names[name][tag] = name
 
         # Load seq_regions from db
-        seq_region_ids = self.get_db_seq_region_ids(brc4_pfx)
-        # Get BRC4 attrib id
-        brc4_attrib_id = self.get_db_brc4_attrib_id(brc4_pfx)
+        seq_region_ids = self.get_db_seq_region_ids(ebi_brc4_pfx)
+        # Get EBI and BRC4 attrib ids
+        attrib_ids = { tag : self.get_db_attrib_id("%s_seq_region_name" % tag, ebi_brc4_pfx+"_"+tag) for tag in ["BRC4", "EBI"] }
 
         # generate sql req for loading
         insert_sql_file = pj(wd, "insert_brc4_name.sql")
-
         with open(insert_sql_file, "w") as sql:
             print("insert into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
             lines = []
-
-            for seq_name in brc4_name:
+            for seq_name in ad_hoc_names:
                 if seq_name in seq_region_ids:
                     seq_region_id = seq_region_ids[seq_name]
-                    lines.append('(%s, %s, "%s")' %(seq_region_id, brc4_attrib_id, brc4_name[seq_name]))
+                    for tag, adname in ad_hoc_names[seq_name]:
+                        lines.append('(%s, %s, "%s")' %(seq_region_id, attrib_ids[tag], adname))
                 else:
                     raise Exception("There is no seq_region named '%s'" % (seq_name))
-
             print (",\n".join(lines) + ";", file = sql)
 
         # run insert sql
         self.run_sql_req(insert_sql_file, pj(wd, "insert_brc4_name"), from_file = True)
-            
-    def get_db_brc4_attrib_id(self, out_pfx):
+
+    def get_db_attrib_id(self, attrib_name, out_pfx):
         sql = r'''select attrib_type_id FROM attrib_type WHERE code="%s";'''
-        res = self.run_sql_req(sql % ("BRC4_seq_region_name"), out_pfx)
+        res = self.run_sql_req(sql % (attrib_name), out_pfx)
 
         attrib_id = None
         with open(out_pfx + ".stdout") as db_file:
@@ -553,9 +553,9 @@ class LoadSequenceData(eHive.BaseRunnable):
                 attrib_id = line.strip()
 
         if not attrib_id:
-            raise Exception("No BRC4 seq region name attrib type in db")
+            raise Exception("No %s seq region name attrib type in db" %s attrib_name)
         return attrib_id
-            
+
     def get_db_seq_region_ids(self, out_pfx):
         sql = r'''select seq_region_id, name FROM seq_region;'''
         res = self.run_sql_req(sql, out_pfx)
