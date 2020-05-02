@@ -55,7 +55,7 @@ class PfxTrimmer(IdTrimmer):
       else:
         pat = re.escape(pat)
       rules[tag].append(pat)
-    rules = { k: r"^(?:%s)" % ("|".join( v + rules.get("ANY", []))) for k, v in rules.items() }
+    rules = { k: r"^(?:%s)" % ("|".join(rules.get("ANY", []) + v)) for k, v in rules.items() }
     # print(rules, file=sys.stderr)
     self.compile_rules(rules)
 
