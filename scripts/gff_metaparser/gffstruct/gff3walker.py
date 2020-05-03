@@ -48,13 +48,18 @@ class GFF3Walker:
       ctg_len = UpdatingLen(len(contig))
       ctg_len.update(seq_len_dict(contig.id), stop_on_success = True)
       # feature processing
+      out_rec_features = None
+      if out_file:
+        out_rec_features = []
       for cnt, topft in enumerate(contig.features):
         # iterate through all of the features
         context = WalkContext(global_context = self.global_context, ctg_len_inferer = ctg_len)
         context.update("_SEQID", contig.id)
         self.process_feature(topft, context)
+        # compose gff
+        sf_composer.compose(context, out_rec_features)
       # dump gff
-      sf_composer.gff_write(context, contig_len = len(ctg_len), out_file = out_file)
+      sf_composer.gff_write(out_rec_features, contig_id = contig.id, contig_len = len(ctg_len), out_file = out_file)
 
 
   def process_feature(self, feat, context):
@@ -80,17 +85,18 @@ class GFF3Walker:
 
     context.update(
       force_clean = True,
-      _ID      = feat.id,
-      _SRC     = source,
-      _TYPE    = feat.type,
-      _START   = loc.start,
-      _END     = loc.end,
-      _STRAND  = feat.strand,
-      _PHASE   = phase,
-      _QUALS   = quals,
-      _FULLTAG = fulltag,
-      _DEPTH   = depth,
-      _ISLEAF  = is_leaf,
+      _ID        = feat.id,
+      _SRC       = source,
+      _TYPE      = feat.type,
+      _START     = loc.start,
+      _END       = loc.end,
+      _STRAND    = feat.strand,
+      _LOCATION  = feat.location,
+      _PHASE     = phase,
+      _QUALS     = quals,
+      _FULLTAG   = fulltag,
+      _DEPTH     = depth,
+      _ISLEAF    = is_leaf,
       _RULESDATA = None,
     );
     self._parser.prepare_context(context)

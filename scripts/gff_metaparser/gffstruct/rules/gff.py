@@ -66,10 +66,10 @@ class GffRule(BaseRule):
     if "phase" not in used_quals:
       phase = context.get("_PHASE")
       if phase is not None:
-        used_quals.update({"phase":phase})
+        used_quals.update({"phase":("phase", phase)})
     if not is_leaf:
       if "id" not in used_quals:
-        used_quals.update({"ID":context.get("_ID")})
+        used_quals.update({"ID":("ID", context.get("_ID"))})
     if context.get("_RULESDATA")[cls.NAME].get("QUALSCOPYALL"):
       # TODO: copy, everything not used
       # do not copy parent
