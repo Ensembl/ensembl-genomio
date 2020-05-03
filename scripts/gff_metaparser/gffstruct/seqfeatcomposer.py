@@ -72,7 +72,7 @@ class SeqFeatComposer:
     # go from used leaves to top
     for ctx in context.used_leaves():
       rules_data = ctx.get("_RULESDATA")
-      if rules_data:
+      if rules_data and "_ALL" in rules_data and "USEDQUALS" in rules_data["_ALL"]:
         used_quals = rules_data["_ALL"]["USEDQUALS"]
 
       feat = self.processed_add(ctx, used_quals = used_quals)
@@ -80,7 +80,7 @@ class SeqFeatComposer:
 
       while parent_ctx:
         rules_data = parent_ctx.get("_RULESDATA")
-        if rules_data:
+        if rules_data and "_ALL" in rules_data and "USEDQUALS" in rules_data["_ALL"]:
           used_quals = rules_data["_ALL"]["USEDQUALS"]
 
         feat = self.processed_add(parent_ctx, used_quals = used_quals, kid = feat)
