@@ -203,15 +203,25 @@ class JsonRule(BaseRule):
       # force scalar
       value = ",".join(value)
 
+    itag = None
     data = {}
     if _a["key"]:
       data = { _a["key"] : value }
+    elif value is not None:
+      itag = "_TECHVAL4IGNORE_"
+      data[itag] = value
     if _a["addon"]:
       data.update(_a["addon"])
 
     data, _ = self.interpolate(data, context)
     if data is None:
       return
+
+    if itag is not None:
+      if itag in data:
+        del data[itag]
+      else:
+        return
 
     context.global_context.add(obj_tag, obj_id, _a["path"], data, force = self._OUTPUT_FORCE_SUB)
 
