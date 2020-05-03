@@ -32,7 +32,8 @@ class SeqFeatComposer:
     cid = self.cid(ctx)
     feat = self._processed.get(cid)
 
-    used_quals_flat = { v[0]:v[1] for k, v in (used_quals or {}).items() }
+    # flattern and exclude "parent"s
+    used_quals_flat = { v[0]:v[1] for k, v in (used_quals or {}).items() if k != "parent" }
 
     if not feat:
       location = ctx["_LOCATION"] # die if no location
