@@ -10,6 +10,7 @@ from collections import defaultdict
 # locals
 from gffstruct.prefixtree import PfxTr
 from gffstruct.validstruct import ValidStructures
+from gffstruct.walkcontext import WalkContext
 
 def dump_seq_region():
   pass
@@ -102,7 +103,7 @@ def main():
     new_prev_ids = prev_ids + [feature.id]
 
     if not feature.sub_features:
-      known_structures.process(ValidStructures.Structure(prefix))
+      known_structures.process(WalkContext(prefix), ignore_unseen = args.stats_only or args.structures_conf is None)
 
       # analyze
       stats[prefix] += 1
@@ -146,7 +147,7 @@ if __name__ == "__main__":
 
 # zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --only_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype --structures_conf new-genome-loader/scripts/gff_metaparser/conf/valid_structures.conf -
 
-# zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --only_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype -
+# zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --stats-only --only_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype -
 
 
 

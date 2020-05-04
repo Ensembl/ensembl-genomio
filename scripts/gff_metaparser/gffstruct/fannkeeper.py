@@ -1,11 +1,11 @@
 import json
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 class FannKeeper:
   # storing result functional annotation object
   def __init__(self):
-    self._data = defaultdict(lambda: defaultdict(dict))
+    self._data = defaultdict(lambda: defaultdict(OrderedDict))
 
   def add(self, obj_tag, obj_id, path, value, force = False):
     if not value:

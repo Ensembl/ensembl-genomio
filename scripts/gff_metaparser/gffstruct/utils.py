@@ -1,5 +1,6 @@
 import gzip
 import re
+import sys
 
 from collections import defaultdict
 from Bio import SeqIO
@@ -48,8 +49,14 @@ class PfxTrimmer(IdTrimmer):
       tag, *pat = trim_pair.split(":",1)
       if not pat:
         tag, pat = "ANY", [tag]
-      rules[tag].append(re.escape(pat[0]))
-    rules = { k: r"^(?:%s)" % ("|".join(v)) for k, v in rules.items() }
+      pat = pat[0]
+      if tag.endswith("!"):
+        tag = tag[:-1]
+      else:
+        pat = re.escape(pat)
+      rules[tag].append(pat)
+    rules = { k: r"^(?:%s)" % ("|".join(rules.get("ANY", []) + v)) for k, v in rules.items() }
+    # print(rules, file=sys.stderr)
     self.compile_rules(rules)
 
 

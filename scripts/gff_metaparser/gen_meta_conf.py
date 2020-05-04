@@ -8,7 +8,7 @@ import shutil
 import subprocess as sp
 import sys
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from os.path import dirname, join as pj
 
 from Bio import SeqIO
@@ -56,7 +56,7 @@ def get_args():
   parser.add_argument("--genebuild_level", metavar="toplevel", required = False,
                       type=str, default = "toplevel", help="genebuild.level default")
   parser.add_argument("--syns_src", metavar="GenBank", required = False,
-                      type=str, default = "GenBank", help="syns source default")
+                      type=str, default = "GenBank", help="seq region syns source default")
   #
   args = parser.parse_args()
   return args
@@ -300,12 +300,12 @@ class MetaConf:
           _data = line.split()
           _syns = { src: _data[i].strip() for i, src in header_fixed.items() if i < len(_data) }
           _out = { src: nm for src, nm in _syns.items() if nm and nm.lower() != "na" }
-          for src in [ "INSDC", "RefSeq" ]: 
+          for src in [ "INSDC", "RefSeq" ]:
             if src not in _out:
               continue
             asm_rep_syns[_out[src]] = _out
 
-    out = []
+    out = OrderedDict()
     for k in chr_k:
       ctg_id, *syns = self.get(k, tech = True).split()
       syn = k.upper().split("_", 2)[2]
@@ -318,22 +318,22 @@ class MetaConf:
       syns_out = [ { "name" : nm, "source" : src } for nm, src in syns_out.items() ]
       # merge syns_out with asm_rep_syns
       cs_tag = self.get("ORDERED_CS_TAG", tech = True, default = "chromosome")
-      out.append({
+      out[ctg_id] = {
         "name" : ctg_id,
         "synonyms" : syns_out,
         "coord_system_level" : cs_tag,
-      })
+      }
       if ctg_id in ctg_len:
-        out[-1]["length"] = ctg_len[ctg_id]
+        out[ctg_id]["length"] = ctg_len[ctg_id]
       if mt_k and syn == "MT":
-        out[-1]["location"] = "mitochondrial_chromosome"
+        out[ctg_id]["location"] = "mitochondrial_chromosome"
         if "MT_CODON_TABLE" in mt_k:
-          out[-1]["codon_table"] = int(self.get("MT_CODON_TABLE", tech=True))
+          out[ctg_id]["codon_table"] = int(self.get("MT_CODON_TABLE", tech=True))
         if "MT_CIRCULAR" in mt_k:
           mtc = self.get("MT_CIRCULAR", tech=True).strip().upper()
-          out[-1]["circular"] = ( mtc == "YES" or mtc == "1" )
+          out[ctg_id]["circular"] = ( mtc == "YES" or mtc == "1" )
 
-    used_ctg_names = frozenset([s["name"] for s in out])
+    used_ctg_names = frozenset(out.keys())
     for ctg_id in ctg_len:
       if ctg_id in used_ctg_names:
         continue
@@ -346,17 +346,51 @@ class MetaConf:
         syns_out = [ { "name" : nm, "source" : src } for src, nm in asm_rep_syns[ctg_id].items() ]
         if syns_out:
           sr["synonyms"] = syns_out
-      out.append(sr)
+      out[ctg_id] = sr
 
-    # merge with seq_region_raw 
+    # merge with seq_region_raw
+    out_list = []
+    merged_seq_regions = set()
     if seq_region_raw:
-      # load and merge into out
-      pass
+      _open = seq_region_raw.endswith(".gz") and gzip.open or open
+      with _open(seq_region_raw, 'rt') as sr_raw:
+        _data = json.load(sr_raw, object_pairs_hook=OrderedDict)
+        if type(_data) != list:
+          _data = [ _data ]
+        for rawsr in _data:
+          if "name" not in rawsr or not rawsr["name"]:
+            continue
+          name = rawsr["name"]
+          # update synonym sources
+          for syn in filter(lambda s: "source" not in s, rawsr.get("synonyms", [])):
+            syn["source"] = syns_src
+          # merge with out data
+          merged_seq_regions.add(name)
+          if name not in out:
+            out_list.append(rawsr)
+          else:
+            rawsyns = rawsr.get("synonyms", [])
+            out_data = out[name]
+            for k in out_data:
+              if k not in rawsr or (not rawsr[k] and out_data[k]):
+                rawsr[k] = out_data[k]
+            # more accurate merge of syns, not sure about "coord_system_level"
+            if rawsyns:
+              # put everything that left
+              used_syns = frozenset([s["name"] for s in rawsyns])
+              rawsyns += [ s for s in out_data.get("synonyms", []) if s["name"] not in used_syns ]
+            # append
+            out_list.append(rawsr)
 
-    if out:
+    # add unused seq_regions from out
+    for name, sr in out.items():
+      if name not in merged_seq_regions:
+        out_list.append(sr)
+
+    if out_list:
       os.makedirs(dirname(json_out), exist_ok=True)
       with open(json_out, 'wt') as jf:
-        json.dump(out, jf, indent = 2)
+        json.dump(out_list, jf, indent = 2, sort_keys = True)
 
 
 ## MANIFEST CONF ##

@@ -7,7 +7,7 @@ import sys
 class JsonRule(BaseRule):
   NAME = "JSON"
   _RULES = BaseRule.RulesType()
-  _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_S", "_SPLIT"])
+  _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_S", "_SPLIT", "_NUMVAL"])
   _OUTPUT_FORCE_SUB = False
   _CTX_PFX="_TECH_JSON_"
 
@@ -57,6 +57,32 @@ class JsonRule(BaseRule):
       from_, to_ = from_to.split(";", 1)
       from_ = re.compile(from_, flags = re.I)
       self._actions["sub"].append((from_, to_))
+
+  @classmethod
+  def a2n(cls, val, totype = None):
+    if val is None or type(val) != str:
+      return val
+    if not totype:
+      return val
+    if totype != True and totype != "int":
+      return val
+    try: return int(val)
+    except: pass
+    try:
+      outval = float(val)
+      if totype == "int":
+        return int(outval)
+      return outval
+    except: pass
+    return val
+
+  def add_actions_numval(self, tech):
+    if not tech or "_NUMVAL" not in tech:
+      return
+    numval = tech["_NUMVAL"]
+    if not numval:
+      return
+    self._actions["numval"] = lambda x: JsonRule.a2n(x, totype = numval)
 
   def prepare_actions(self):
     raw = [ x.strip() for x in "\t".join(self._actions_raw).split("\t") if x ]
@@ -116,10 +142,12 @@ class JsonRule(BaseRule):
       "sub" : None,
       "ignore" : None,
       "split" : None,
+      "numval" : None,
     }
     self.add_actions_sub(tech)
     self.add_actions_ignore(tech)
     self.add_actions_split(tech)
+    self.add_actions_numval(tech)
 
   def interpolate(self, data, context, do_split = True):
     interpolated = False
@@ -149,12 +177,14 @@ class JsonRule(BaseRule):
         out = None
       return out, interpolated
 
+    # scalar section
     v = context.get(data, default = data)
 
     asplit = self._actions["split"]
     asub = self._actions["sub"]
     amap = self._actions["map"]
     aignore = self._actions["ignore"]
+    anumval = self._actions["numval"]
 
     if asplit and do_split:
       res = v.split(asplit["delim"])
@@ -170,6 +200,8 @@ class JsonRule(BaseRule):
       v = amap[v]
     if aignore and aignore.search(v) is not None:
       v = None
+    if anumval:
+      v = anumval(v)
 
     return v, v != data
 
@@ -203,15 +235,25 @@ class JsonRule(BaseRule):
       # force scalar
       value = ",".join(value)
 
+    itag = None
     data = {}
     if _a["key"]:
       data = { _a["key"] : value }
+    elif value is not None:
+      itag = "_TECHVAL4IGNORE_"
+      data[itag] = value
     if _a["addon"]:
       data.update(_a["addon"])
 
     data, _ = self.interpolate(data, context)
     if data is None:
       return
+
+    if itag is not None:
+      if itag in data:
+        del data[itag]
+      else:
+        return
 
     context.global_context.add(obj_tag, obj_id, _a["path"], data, force = self._OUTPUT_FORCE_SUB)
 
