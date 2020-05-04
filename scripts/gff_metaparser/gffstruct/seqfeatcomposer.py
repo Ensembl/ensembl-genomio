@@ -43,9 +43,11 @@ class SeqFeatComposer:
       strand = ctx.get("_STRAND")
       phase = ctx.get("_PHASE")
       # quals
-      quals = used_quals_flat or { "ID" : _id, "phase" : phase }
+      quals = used_quals_flat or {}
       if not is_leaf and "ID" not in quals:
         quals["ID"] = _id
+      if phase is not None and "phase" not in quals:
+        quals["phase"] = phase
       # create feat object
       obj = SeqFeature(location, strand = strand, type = _type, qualifiers = quals)
       # fill processed
