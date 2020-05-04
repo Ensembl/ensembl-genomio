@@ -4,7 +4,7 @@ import re
 import sys
 
 from collections import defaultdict
-from copy import deepcopy
+from copy import deepcopy, copy
 
 def _RulesType():
   return {
@@ -70,11 +70,11 @@ class BaseRule:
 
   @classmethod
   def const_patterns(cls):
-    return deepcopy(cls._RULES["const_match"])
+    return copy(cls._RULES["const_match"])
 
   @classmethod
   def regex_patterns(cls):
-    return deepcopy(cls._RULES["regex_match"])
+    return copy(cls._RULES["regex_match"])
 
   def prepare_actions(self):
      pass
