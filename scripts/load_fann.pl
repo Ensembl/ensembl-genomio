@@ -73,7 +73,7 @@ if (defined $filename) {
 }
 
 # Default db name for the display_xref and synonyms
-$display_db_default //= 'VB_Community_Annotation';
+$display_db_default //= 'BRC4_Community_Annotation';
 
 my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   -host => $host,
