@@ -47,6 +47,7 @@ sub prepare_data {
     for my $key (@{$meta_list{$domain}}) {
       my @values = @{ $ma->list_value_by_key($domain . '.' . $key) };
       next if scalar(@values) < 1;
+      
       # Special case: assembly version should be a number,
       # extracted from the end of the assembly
       if ("$domain.$key" eq 'assembly.version') {
@@ -83,7 +84,7 @@ sub check_assembly_version {
     }
 
     # Version is not an integer, but ends in one
-    if ($version =~ /[A-z]+([0-9]+)$/) {
+    if ($version =~ /[A-z_\.]+([0-9]+)$/) {
       $meta->{assembly}->{version} = int($1);
       return $meta;
     

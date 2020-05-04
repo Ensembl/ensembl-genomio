@@ -1,5 +1,5 @@
-Community_Symbol	VB_Community_Symbol
-Community_Annotation	VB_Community_Annotation
+Community_Symbol	BRC4_Community_Symbol
+Community_Annotation	BRC4_Community_Annotation
 EntrezGene	EntrezGene
 GO	GO
 NCBI protein db	protein_id
