@@ -361,25 +361,26 @@ class MetaConf:
           if "name" not in rawsr or not rawsr["name"]:
             continue
           name = rawsr["name"]
+          # update synonym sources
+          for syn in filter(lambda s: "source" not in s, rawsr.get("synonyms", [])):
+            syn["source"] = syns_src
+          # merge with out data
           merged_seq_regions.add(name)
           if name not in out:
             out_list.append(rawsr)
           else:
-            rawsyns = sr.get("synonyms", [])
+            rawsyns = rawsr.get("synonyms", [])
             out_data = out[name]
             for k in out_data:
               if k not in rawsr or (not rawsr[k] and out_data[k]):
                 rawsr[k] = out_data[k]
             # more accurate merge of syns, not sure about "coord_system_level"
             if rawsyns:
-              # update sources
-              for syn in filter(lambda s: "source" not in s, rawsyns):
-                syn["source"] = syns_src
               # put everything that left
-              used_syns = frozeset([s["name"] for s in rawsyns])
+              used_syns = frozenset([s["name"] for s in rawsyns])
               rawsyns += [ s for s in out_data.get("synonyms", []) if s["name"] not in used_syns ]
             # append
-            out_list.append(sr)
+            out_list.append(rawsr)
 
     # add unused seq_regions from out
     for name, sr in out.items():
