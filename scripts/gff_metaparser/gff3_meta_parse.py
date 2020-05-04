@@ -34,6 +34,7 @@ def get_args():
   parser.add_argument("--xref_map_str", metavar="NCBI_GP:GenBank,gff_xref:ensembl_xref", required=False,
                       type = str,
                       help="comma separated list of xref mappings in the format from:to")
+  parser.add_argument("--dump_used_options", action="store_true", required=False, help="dump used (not None) options")
   # output
   parser.add_argument("--gff_out", metavar="out.gff3", required = False,
                       type=argparse.FileType('w', encoding='UTF-8'), default=sys.stdout,
@@ -53,6 +54,10 @@ def get_args():
                       help="input gff file (use '-' to read from STDIN)" )
   #
   args = parser.parse_args()
+  if args.dump_used_options:
+    print("used options:", file=sys.stderr)
+    for o, v in args.__dict__.items():
+      if v: print("  %s: %s" %(o, v), file=sys.stderr)
   return args
 
 
