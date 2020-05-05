@@ -96,8 +96,7 @@
       },
       "required" : [
         "species",
-        "assembly",
-        "BRC4"
+        "assembly"
         ]
     }
   },
