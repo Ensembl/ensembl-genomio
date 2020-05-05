@@ -223,7 +223,7 @@ sub set_pseudogene_biotypes {
     my @values = (
       $name,
       'gene',
-      'pseudogene',
+      'coding',
       'pseudogene with CDS',
       'SO:0000336',
       'pseudogene'
@@ -241,7 +241,7 @@ sub set_pseudogene_biotypes {
     my @values = (
       $name,
       'transcript',
-      'pseudogene',
+      'coding',
       'pseudogene with CDS',
       'SO:0000516',
       'pseudogenic_transcript'
