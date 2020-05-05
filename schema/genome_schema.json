@@ -14,14 +14,6 @@
         "strain" : { "type" : "string" },
         "display_name" : { "type" : "string" },
         "division" : { "type" : "string" },
-        "BRC4" : {
-          "type": "object",
-          "additionalProperties": false,
-          "properties" : {
-            "organism_abbrev" : { "type" : "string" },
-            "component" : { "type" : "string" }
-          }
-        },
         "alias" : {
           "oneOf" : [
             { "type" : "string" },
@@ -79,6 +71,18 @@
         "name"
         ]
     },
+    "BRC4_info": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "component" : { "type" : "string" },
+        "organism_abbrev" : { "type" : "string" }
+      },
+      "required": [
+        "component",
+        "organism_abbrev"
+        ]
+    },
 
     "genome_info" : {
       "type": "object",
@@ -87,10 +91,13 @@
         "species" : { "$ref" : "#/definitions/species_info" },
         "assembly" : { "$ref" : "#/definitions/assembly_info" },
         "genebuild" : { "$ref" : "#/definitions/genebuild_info" },
-        "provider" : { "$ref" : "#/definitions/provider_info" }
+        "provider" : { "$ref" : "#/definitions/provider_info" },
+        "BRC4" : { "$ref" : "#/definitions/BRC4_info" }
       },
       "required" : [
-        "species"
+        "species",
+        "assembly",
+        "BRC4"
         ]
     }
   },
