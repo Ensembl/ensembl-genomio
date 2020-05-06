@@ -27,7 +27,7 @@ sub default_options {
 
     ############################################
     # Config to be set by the user
-    # VB release id
+    # MZ/BRC4 release id
     release => $self->o('release'),
     db_prefix => "",
 
@@ -125,6 +125,8 @@ sub default_options {
     # genes and transcripts versions
     default_feature_version => 1,
     no_feature_version_defaults => 0,
+    # disable brc4 features
+    no_brc4_stuff => 0,
   };
 }
 
@@ -174,6 +176,8 @@ sub pipeline_wide_parameters {
 
     default_feature_version     => $self->o('default_feature_version'),
     no_feature_version_defaults => $self->o('no_feature_version_defaults')
+
+    no_brc4_stuff => $self->o('no_brc4_stuff'),
   };
 }
 
@@ -430,6 +434,7 @@ sub pipeline_analyses {
         sr_syn_src  => $self->o('sr_syn_src_name'),
         external_db_map => $self->o('external_db_map'),
         cs_tag_for_ordered => $self->o('cs_tag_for_ordered'),
+        no_brc4_stuff => $self->o('no_brc4_stuff'),
       },
       -analysis_capacity   => 4,
       -rc_name         => '8GB',
