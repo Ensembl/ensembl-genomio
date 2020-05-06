@@ -24,7 +24,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             'IUPAC' : 'RYKMSWBDHV',
             'unversion_scaffolds' : 0,
             'versioned_sr_syn_src' : 'INSDC', # 50710
-            'sr_syn_src' : 'VB_Community_Symbol', # 211
+            'sr_syn_src' : 'BRC4_Community_Symbol', # 211
             'sr_attrib_types' : {
                 'circular' : 'circular_seq',
                 'codon_table' : 'codon_table',
@@ -38,6 +38,7 @@ class LoadSequenceData(eHive.BaseRunnable):
             'noagp_cs_name_default' : 'primary_assembly',
             'external_db_map' : None,
             'cs_tag_for_ordered' : None,
+            'no_brc4_stuff' : False,
         }
 
 
@@ -93,7 +94,8 @@ class LoadSequenceData(eHive.BaseRunnable):
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
         # add seq_region EBI and BRC4 names
-        self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversion_scaffolds)
+        if not no_brc4_stuff:
+          self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversion_scaffolds)
 
         # add seq_region attributes and karyotype info
         is_primary_assembly = agps is None
