@@ -175,7 +175,7 @@ sub pipeline_wide_parameters {
     gff3_types_complete => $self->o('gff3_types_complete'),
 
     default_feature_version     => $self->o('default_feature_version'),
-    no_feature_version_defaults => $self->o('no_feature_version_defaults')
+    no_feature_version_defaults => $self->o('no_feature_version_defaults'),
 
     load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
     no_brc4_stuff => $self->o('no_brc4_stuff'),
