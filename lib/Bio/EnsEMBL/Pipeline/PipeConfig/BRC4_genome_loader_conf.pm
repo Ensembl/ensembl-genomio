@@ -127,6 +127,8 @@ sub default_options {
     no_feature_version_defaults => 0,
     # disable brc4 features
     no_brc4_stuff => 0,
+    # ignore final stop codons check in Integrity
+    ignore_final_stops => 0,
   };
 }
 
@@ -179,6 +181,7 @@ sub pipeline_wide_parameters {
 
     load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
     no_brc4_stuff => $self->o('no_brc4_stuff'),
+    ignore_final_stops => $self->o('ignore_final_stops'),
   };
 }
 
@@ -329,7 +332,10 @@ sub pipeline_analyses {
       # Check the integrity of the manifest before loading anything
       -logic_name => 'Manifest_integrity',
       -module     => 'Integrity',
-      -language => 'python3',
+      -language   => 'python3',
+      -parameters => {
+        ignore_final_stops => $self->o('ignore_final_stops'),
+      },
       -analysis_capacity   => 5,
       -rc_name         => '8GB',
       -max_retry_count => 0,
@@ -688,7 +694,7 @@ sub pipeline_analyses {
       -rc_name    => '15GB',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
-      -flow_into => [ 'FixModels' ],
+      -flow_into => WHEN('#expr( exists #manifest_data#->{"fasta_pep"} && #manifest_data#->{"fasta_pep"} )expr#' => [ 'FixModels' ]),
     },
 
     {
