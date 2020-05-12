@@ -853,7 +853,7 @@ sub pipeline_analyses {
       -parameters  => {
         'cmd' => 'mkdir -p #dump_path#; ' .
           ' perl #base_dir#/ensembl/misc-scripts/canonical_transcripts/select_canonical_transcripts.pl '
-            . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --dbname #db_name# '
+            . ' --dbhost #dbsrv_host# --dbport #dbsrv_port# --dbuser #dbsrv_user# --dbpass #dbsrv_pass# --dbname #db_name# '
             . ' --write --coord_system_name toplevel '
             . ' --log #dump_path#/set_canonical_tr.log '
             . ' > #dump_path#/stdout 2> #dump_path#/stderr ',
