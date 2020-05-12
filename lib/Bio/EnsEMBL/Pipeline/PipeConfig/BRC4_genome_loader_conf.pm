@@ -177,6 +177,7 @@ sub pipeline_wide_parameters {
     default_feature_version     => $self->o('default_feature_version'),
     no_feature_version_defaults => $self->o('no_feature_version_defaults')
 
+    load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
     no_brc4_stuff => $self->o('no_brc4_stuff'),
   };
 }
@@ -824,7 +825,6 @@ sub pipeline_analyses {
       -flow_into => 'Frameshifts',
     },
 
-
     {
       -logic_name    => "Frameshifts",
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -836,7 +836,27 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 2,
+      -flow_into => 'CanonicalTranscripts',
     },
+
+    {
+      -logic_name    => "CanonicalTranscripts",
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #dump_path#; ' .
+          ' perl #base_dir#/ensembl/misc-scripts/canonical_transcripts/select_canonical_transcripts.pl '
+            . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --dbname #db_name# '
+            . ' --write --coord_system_name toplevel '
+            . ' --log #dump_path#/set_canonical_tr.log '
+            . ' > #dump_path#/stdout 2> #dump_path#/stderr ',
+        'base_dir'       => $self->o('ensembl_root_dir'),
+        'dump_path' => $self->o('pipeline_dir') . '/#db_name#/canonical_transcripts',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 2,
+    },
+
   ];
 }
 
