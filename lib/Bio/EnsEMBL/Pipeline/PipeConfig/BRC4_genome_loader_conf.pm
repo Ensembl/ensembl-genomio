@@ -689,12 +689,14 @@ sub pipeline_analyses {
         load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
         # dbparams
         db_url          => '#dbsrv_url#' . '#db_name#',
+        # condition
+        _has_fasta_pep => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
       },
       -max_retry_count   => 0,
       -rc_name    => '15GB',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
-      -flow_into => WHEN('#expr( exists #manifest_data#->{"fasta_pep"} && #manifest_data#->{"fasta_pep"} )expr#' => [ 'FixModels' ]),
+      -flow_into => WHEN('#_has_fasta_pep#' => [ 'FixModels' ]),
     },
 
     {
