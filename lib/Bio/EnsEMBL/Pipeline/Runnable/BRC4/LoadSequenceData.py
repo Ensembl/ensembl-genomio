@@ -94,6 +94,7 @@ class LoadSequenceData(eHive.BaseRunnable):
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
         # add seq_region EBI and BRC4 names
+        no_brc4_stuff = self.param("no_brc4_stuff")
         if not no_brc4_stuff:
           self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversion_scaffolds)
 
