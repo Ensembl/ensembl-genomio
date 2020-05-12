@@ -53,9 +53,10 @@
     "annotation_info": {
       "type": "object",
       "additionalProperties": false,
+      "properties": {
         "provider_name" : { "type" : "string" },
         "provider_url" : { "type" : "string", "format" : "url" }
-      },
+      }
     },
     "genebuild_info": {
       "type": "object",
