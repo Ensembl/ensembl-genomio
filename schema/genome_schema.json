@@ -41,12 +41,21 @@
         },
         "date" : { "type" : "string" },
         "name" : { "type" : "string", "pattern" : "^[A-Za-z0-9_\\.]+$" },
-        "version" : {"type" : "integer" }
+        "version" : {"type" : "integer" },
+        "provider_name" : { "type" : "string" },
+        "provider_url" : { "type" : "string", "format" : "url" }
       },
       "required": [
         "accession",
         "version"
       ]
+    },
+    "annotation_info": {
+      "type": "object",
+      "additionalProperties": false,
+        "provider_name" : { "type" : "string" },
+        "provider_url" : { "type" : "string", "format" : "url" }
+      },
     },
     "genebuild_info": {
       "type": "object",
@@ -61,6 +70,7 @@
         ]
     },
     "provider_info": {
+      "description" : "legacy. use (annotation|assembly).provider_(name|url) instead",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -90,6 +100,7 @@
       "properties": {
         "species" : { "$ref" : "#/definitions/species_info" },
         "assembly" : { "$ref" : "#/definitions/assembly_info" },
+        "annotation" : { "$ref" : "#/definitions/annotation_info" },
         "genebuild" : { "$ref" : "#/definitions/genebuild_info" },
         "provider" : { "$ref" : "#/definitions/provider_info" },
         "BRC4" : { "$ref" : "#/definitions/BRC4_info" }
