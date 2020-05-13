@@ -123,6 +123,7 @@ class GFF3Walker:
           _LEAFVALUE = leafvalue,
         )
         processed_rules += self._parser.process(context, ignore_unseen = True)
+        # print(fulltag, leaftag, "processed", len(processed_rules), file=sys.stderr)
     elif self._struct_tags == "fullPath":
         if is_leaf:
           # processing only leaf nodes

@@ -127,6 +127,8 @@ sub default_options {
     no_feature_version_defaults => 0,
     # disable brc4 features
     no_brc4_stuff => 0,
+    # ignore final stop codons check in Integrity
+    ignore_final_stops => 0,
   };
 }
 
@@ -175,9 +177,11 @@ sub pipeline_wide_parameters {
     gff3_types_complete => $self->o('gff3_types_complete'),
 
     default_feature_version     => $self->o('default_feature_version'),
-    no_feature_version_defaults => $self->o('no_feature_version_defaults')
+    no_feature_version_defaults => $self->o('no_feature_version_defaults'),
 
+    load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
     no_brc4_stuff => $self->o('no_brc4_stuff'),
+    ignore_final_stops => $self->o('ignore_final_stops'),
   };
 }
 
@@ -328,7 +332,10 @@ sub pipeline_analyses {
       # Check the integrity of the manifest before loading anything
       -logic_name => 'Manifest_integrity',
       -module     => 'Integrity',
-      -language => 'python3',
+      -language   => 'python3',
+      -parameters => {
+        ignore_final_stops => $self->o('ignore_final_stops'),
+      },
       -analysis_capacity   => 5,
       -rc_name         => '8GB',
       -max_retry_count => 0,
@@ -682,12 +689,14 @@ sub pipeline_analyses {
         load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
         # dbparams
         db_url          => '#dbsrv_url#' . '#db_name#',
+        # condition
+        _has_fasta_pep => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
       },
       -max_retry_count   => 0,
       -rc_name    => '15GB',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
-      -flow_into => [ 'FixModels' ],
+      -flow_into => WHEN('#_has_fasta_pep#' => [ 'FixModels' ]),
     },
 
     {
@@ -824,7 +833,6 @@ sub pipeline_analyses {
       -flow_into => 'Frameshifts',
     },
 
-
     {
       -logic_name    => "Frameshifts",
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -836,7 +844,27 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 2,
+      -flow_into => 'CanonicalTranscripts',
     },
+
+    {
+      -logic_name    => "CanonicalTranscripts",
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #dump_path#; ' .
+          ' perl #base_dir#/ensembl/misc-scripts/canonical_transcripts/select_canonical_transcripts.pl '
+            . ' --dbhost #dbsrv_host# --dbport #dbsrv_port# --dbuser #dbsrv_user# --dbpass #dbsrv_pass# --dbname #db_name# '
+            . ' --write --coord_system_name toplevel '
+            . ' --log #dump_path#/set_canonical_tr.log '
+            . ' > #dump_path#/stdout 2> #dump_path#/stderr ',
+        'base_dir'       => $self->o('ensembl_root_dir'),
+        'dump_path' => $self->o('pipeline_dir') . '/#db_name#/canonical_transcripts',
+      },
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity   => 2,
+    },
+
   ];
 }
 

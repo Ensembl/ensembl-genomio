@@ -112,5 +112,5 @@ class RERuleWrapper(RuleWrapper):
     self.const_match = const_match
     self.re = None
     if pattern:
-      self.re = re.compile(pattern)
+      self.re = re.compile(pattern, flags=re.I )
 

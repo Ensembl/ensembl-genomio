@@ -19,6 +19,7 @@ class Integrity(eHive.BaseRunnable):
     def param_defaults(self):
         return {
             "ensembl_mode" : False,
+            "ignore_final_stops" : False,
         }
 
     def run(self):
@@ -69,7 +70,8 @@ class Integrity(eHive.BaseRunnable):
                 errors += dna_errors
             if "fasta_pep" in manifest:
                 print("Got a fasta pep")
-                pep, pep_errors = self.get_fasta_lengths(manifest["fasta_pep"])
+                ignore_final_stops = self.param("ignore_final_stops")
+                pep, pep_errors = self.get_fasta_lengths(manifest["fasta_pep"], ignore_final_stops = ignore_final_stops)
                 errors += pep_errors
             if "seq_region" in manifest:
                 print("Got a seq_regions")
@@ -133,7 +135,7 @@ class Integrity(eHive.BaseRunnable):
 
         return errors
 
-    def get_fasta_lengths(self, fasta_path):
+    def get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
         data = {}
         non_unique = {}
         non_unique_count = 0
@@ -150,8 +152,12 @@ class Integrity(eHive.BaseRunnable):
                     non_unique_count += 1
                 # Store sequence id and length
                 data[rec.id] = len(rec.seq)
-                if "*" in rec.seq:
+                stops = rec.seq.count("*")
+                if stops > 1:
                     contains_stop_codon += 1
+                elif stops == 1:
+                    if not rec.seq.endswith("*") or not ignore_final_stops:
+                        contains_stop_codon += 1
         
         errors = []
         if empty_id_count > 0:
