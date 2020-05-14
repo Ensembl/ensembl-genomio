@@ -8,7 +8,7 @@ use JSON;
 use File::Path qw(make_path);
 use File::Spec::Functions qw(catdir catfile);
 use File::Copy qw(cp);
-use File::Basename qw(basename);
+use File::Basename qw(basename dirname);
 use Digest::MD5 qw(md5_hex);
 use v5.14;
 
@@ -18,8 +18,11 @@ sub run {
   my $manifest = $self->param_required('manifest');
   my $output_dir = $self->param_required('output_dir');
   my $species = $self->param_required('species');
+  my $species_component = $self->get_meta_value('BRC4.component');
+  my $species_abbrev = $self->get_meta_value('BRC4.organism_abbrev');
+  my $species_name = $species_abbrev // $species;
 
-  my $dir = catdir($output_dir, $species);
+  my $dir = catdir($output_dir, $species_component, $species_name);
   make_path($dir);
 
   # First move all files to the species dir
@@ -28,31 +31,10 @@ sub run {
 
     if (ref($manifest->{$name}) eq 'HASH') {
       foreach my $subname (sort keys %{ $manifest->{$name} }) {
-        cp($manifest->{$name}->{$subname}, $dir);
-        my $file = basename($manifest->{$name}->{$subname});
-
-        open my $fh, '<', catfile($dir, $file);
-        my $md5sum = Digest::MD5->new->addfile($fh)->hexdigest;
-        close $fh;
-
-        $final_manifest{$name}{$subname} = {
-          file => $file,
-          md5sum => $md5sum,
-        };
+        $final_manifest{$name}{$subname} = prepare_file($manifest->{$name}->{$subname}, $dir, $species, $species_abbrev);
       }
     } else {
-
-      cp($manifest->{$name}, $dir);
-      my $file = basename($manifest->{$name});
-
-      open my $fh, '<', catfile($dir, $file) or die("$dir/$file: $!");
-      my $md5sum = Digest::MD5->new->addfile($fh)->hexdigest;
-      close $fh;
-
-      $final_manifest{$name} = {
-        file => $file,
-        md5sum => $md5sum,
-      };
+      $final_manifest{$name} = prepare_file($manifest->{$name}, $dir, $species, $species_abbrev);
     }
   }
 
@@ -69,6 +51,53 @@ sub run {
   $self->dataflow_output_id({ "manifest" => $manifest_path }, 2);
 
   return;
+}
+
+sub get_meta_value {
+  my ($self, $key) = @_;
+
+  my $dba = $self->core_dba();
+  my $ma = $dba->get_adaptor('MetaContainer');
+  my ($value) = @{ $ma->list_value_by_key($key) };
+
+  return $value;
+}
+
+sub prepare_file {
+  my ($old_path, $dir, $species, $species_abbrev) = @_;
+
+  my $new_path = new_file_path($old_path, $dir, $species, $species_abbrev);
+  cp($old_path, $new_path);
+  my $md5sum = md5sum($new_path);
+  my $file_name = basename($new_path);
+
+  return {
+    file => $file_name,
+    md5sum => $md5sum,
+  };
+}
+
+sub new_file_path {
+  my ($file_path, $dir, $from, $to) = @_;
+
+  my $file_name = basename($file_path);
+
+  # Rename file?
+  if ($to) {
+    $file_name =~ s/$from/$to/;
+  }
+  my $new_file_path = catfile($dir, $file_name);
+  return $new_file_path;
+}
+
+sub md5sum {
+  my ($file_path) = @_;
+
+  open my $fh, '<', $file_path;
+  my $md5sum = Digest::MD5->new->addfile($fh)->hexdigest;
+  close $fh;
+
+  return $md5sum;
 }
 
 1;

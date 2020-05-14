@@ -30,8 +30,7 @@ sub prepare_data {
 
   my $meta = {
     species => {},
-    assembly => {},
-    genebuild => {}
+    assembly => {}
   };
 
   my %meta_list = (
