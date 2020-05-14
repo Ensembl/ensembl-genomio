@@ -806,6 +806,8 @@ sub pipeline_analyses {
         sql     => [
           'UPDATE gene SET version = #default_feature_version# WHERE version IS NULL;',
           'UPDATE transcript SET version = #default_feature_version# WHERE version IS NULL;',
+          'UPDATE translation SET version = #default_feature_version# WHERE version IS NULL;',
+          'UPDATE exon SET version = #default_feature_version# WHERE version IS NULL;',
         ],
       },
       -meadow_type       => 'LSF',
