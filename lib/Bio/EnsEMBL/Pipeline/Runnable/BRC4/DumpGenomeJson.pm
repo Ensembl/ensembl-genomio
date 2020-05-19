@@ -35,9 +35,9 @@ sub prepare_data {
 
   my %meta_list = (
     species => [ qw(taxonomy_id production_name scientific_name strain display_name division alias) ],
-    assembly => [ qw(accession date name version) ],
+    assembly => [ qw(accession date name version provider_name provider_url) ],
     genebuild => [ qw(version method start_date) ],
-    provider => [ qw(name url) ],
+    annotation => [ qw(provider_name provider_url) ],
     BRC4 => [ qw(organism_abbrev component) ],
   );
   my %integer = map {$_ => 1} qw(species.taxonomy_id assembly.version);
