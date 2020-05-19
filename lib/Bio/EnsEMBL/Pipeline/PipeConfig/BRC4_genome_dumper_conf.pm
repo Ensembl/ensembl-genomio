@@ -63,6 +63,10 @@ sub default_options {
        'do_fasta' => 1,
        'do_gff' => 1,
        'do_meta' => 1,
+        'do_func' => 1,
+        'do_genome' => 1,
+        'do_seq_attr' => 1,
+        'do_seq_reg' => 1,
        'do_agp' => 1,
 
 	   ## 'job_factory' parameters
@@ -160,6 +164,10 @@ sub pipeline_wide_parameters {
             'do_agp'      => $self->o('do_agp'),
             'do_gff'      => $self->o('do_gff'),
             'do_meta'      => $self->o('do_meta'),
+            'do_genome'      => $self->o('do_genome'),
+            'do_func'      => $self->o('do_func'),
+            'do_seq_reg'      => $self->o('do_seq_reg'),
+            'do_seq_attr'      => $self->o('do_seq_attr'),
             'schemas'      => $self->o('schemas'),
             #'remove_features_prefix'      => $self->o('remove_features_prefix'),
     };
@@ -391,10 +399,10 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -analysis_capacity => 1,
       -flow_into  => [
-        'seq_region',
-        'seq_attrib',
-        'functional_annotation',
-        'genome',
+        WHEN('#do_seq_reg#', 'seq_region'),
+        WHEN('#do_seq_attr#', 'seq_attrib'),
+        WHEN('#do_func#', 'functional_annotation'),
+        WHEN('#do_genome#', 'genome'),
       ],
       -rc_name         => 'default',
     },
