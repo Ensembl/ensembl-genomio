@@ -59,15 +59,18 @@ sub default_options {
 	     'email'         => $self->o('ENV', 'USER').'@ebi.ac.uk',
        'output_dir'    => './output',
        'tmp_dir'    => './tmp',
+      
+       # Disable all to be able to select each part separately
+       'dump_all' => 1,
 
-       'do_fasta' => 1,
-       'do_gff' => 1,
-       'do_meta' => 1,
-        'do_func' => 1,
-        'do_genome' => 1,
-        'do_seq_attr' => 1,
-        'do_seq_reg' => 1,
-       'do_agp' => 1,
+       'do_fasta' => $self->o('dump_all'),
+       'do_gff' => $self->o('dump_all'),
+       'do_agp' => $self->o('dump_all'),
+       # Json meta
+        'do_func' => $self->o('dump_all'),
+        'do_genome' => $self->o('dump_all'),
+        'do_seq_attr' => $self->o('dump_all'),
+        'do_seq_reg' => $self->o('dump_all'),
 
 	   ## 'job_factory' parameters
 	   'species'     => [], 
@@ -123,6 +126,7 @@ sub default_options {
 
 sub pipeline_create_commands {
     my ($self) = @_;
+
     return [
       # inheriting database and hive tables' creation
       @{$self->SUPER::pipeline_create_commands},
@@ -163,7 +167,6 @@ sub pipeline_wide_parameters {
             'do_gff'      => $self->o('do_gff'),
             'do_agp'      => $self->o('do_agp'),
             'do_gff'      => $self->o('do_gff'),
-            'do_meta'      => $self->o('do_meta'),
             'do_genome'      => $self->o('do_genome'),
             'do_func'      => $self->o('do_func'),
             'do_seq_reg'      => $self->o('do_seq_reg'),
@@ -266,7 +269,7 @@ sub pipeline_analyses {
            WHEN('#do_fasta#', 'fasta'),
            WHEN('#do_gff#', 'gff3'),
            WHEN('#do_agp#', 'agp'),
-           WHEN('#do_meta#', 'metadata'),
+           'metadata',
          ] }
      },
 
