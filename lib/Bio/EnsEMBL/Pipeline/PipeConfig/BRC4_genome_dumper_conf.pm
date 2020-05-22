@@ -214,7 +214,7 @@ sub pipeline_analyses {
       -rc_name 	       => 'default',
       -max_retry_count => 0,
       -flow_into       => {
-                           '2->A' => 'Backbone_job_pipeline',
+                           '2->A' => 'Files_makers',
                            'A->2' => 'Manifest_maker',
                          },
     },
@@ -252,7 +252,7 @@ sub pipeline_analyses {
       -max_retry_count => 0,
     },
  	
-     { -logic_name     => 'Backbone_job_pipeline',
+     { -logic_name     => 'Files_makers',
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
        -hive_capacity  => -1,
        -rc_name 	   => 'default',
@@ -306,21 +306,21 @@ sub pipeline_analyses {
 	    -hive_capacity  => 20,
       -priority        => 5,
       -rc_name        => '32GB',
-      -flow_into      => { '1'  => 'GFF3_BRC4_filter' },
+      -flow_into      => { '1'  => 'GFF3_BRC4_filtering' },
 	 },	
 
 ### GFF3:post-processing
    # This only allows the one type of file necessary for BRC4
-   { -logic_name  => 'GFF3_BRC4_filter',
+   { -logic_name  => 'GFF3_BRC4_filtering',
      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::FilterGFF3',
       -max_retry_count => 0,
      -batch_size     => 10,
      -rc_name        => 'default',
-     -flow_into      => { 2 =>'GFF3_BRC4_specifier' },
+     -flow_into      => { 2 =>'GFF3_BRC4_specifications' },
    },
 
    # BRC4 specifications alterations
-   { -logic_name  => 'GFF3_BRC4_specifier',
+   { -logic_name  => 'GFF3_BRC4_specifications',
      -module      => 'GFF3Specifier',
      -language    => 'python3',
      -parameters     => {
