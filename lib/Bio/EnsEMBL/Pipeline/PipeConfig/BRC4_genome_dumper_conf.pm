@@ -63,7 +63,8 @@ sub default_options {
        # Disable all to be able to select each part separately
        'dump_all' => 1,
 
-       'do_fasta' => $self->o('dump_all'),
+       'do_fasta_dna' => $self->o('dump_all'),
+       'do_fasta_pep' => $self->o('dump_all'),
        'do_gff' => $self->o('dump_all'),
        'do_agp' => $self->o('dump_all'),
        # Json meta
@@ -163,7 +164,8 @@ sub pipeline_wide_parameters {
             'base_path'     => $self->o('tmp_dir'),
             'output_dir'     => $self->o('output_dir'),
             'release'       => $self->o('release'),
-            'do_fasta'      => $self->o('do_fasta'),
+            'do_fasta_dna'      => $self->o('do_fasta_dna'),
+            'do_fasta_pep'      => $self->o('do_fasta_pep'),
             'do_gff'      => $self->o('do_gff'),
             'do_agp'      => $self->o('do_agp'),
             'do_gff'      => $self->o('do_gff'),
@@ -258,10 +260,10 @@ sub pipeline_analyses {
        -rc_name 	   => 'default',
        -analysis_capacity => 1,
        -flow_into      => {'1' => [
+           'Fasta_makers',
+           'Metadata_makers',
            WHEN('#do_gff#', 'GFF3_maker'),
            WHEN('#do_agp#', 'AGP_maker'),
-           WHEN('#do_fasta#', 'Fasta_makers'),
-           'Metadata_makers',
          ] }
      },
 
@@ -285,7 +287,7 @@ sub pipeline_analyses {
        -rc_name 	   => 'default',
        -flow_into      => {
          '-1' => 'GFF3_maker_highmem',
-         '1'  => 'GFF3_BRC4_filter'
+         '1'  => 'GFF3_BRC4_filtering'
        },
      },
 
@@ -354,7 +356,10 @@ sub pipeline_analyses {
     { -logic_name  => 'Fasta_makers',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -analysis_capacity => 1,
-      -flow_into  => ['Fasta_DNA', 'Fasta_peptide'],
+      -flow_into  => [
+        WHEN('#do_fasta_dna#', 'Fasta_DNA'),
+        WHEN('#do_fasta_pep#', 'Fasta_peptide'),
+      ],
       -rc_name         => 'default',
     },
     # 
