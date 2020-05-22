@@ -332,8 +332,7 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '2->A' => 'CleanUpAndCreateDB',
-        'A->2' => 'LoadData',
+        '2' => 'CleanUpAndCreateDB',
       },
     },
 
@@ -352,7 +351,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
-      -flow_into => [ 'LoadDBSchema' ],
+      -flow_into => { 1 => { 'LoadDBSchema' => INPUT_PLUS() } },
     },
 
     {
@@ -365,7 +364,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
-      -flow_into  => [ 'PopulateProductionTables' ],
+      -flow_into  => 'PopulateProductionTables',
     },
 
     {
@@ -384,18 +383,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-    },
-
-    {
-      # Head analysis for the loading of data
-      -logic_name => 'LoadData',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1->A' => 'LoadSequenceData',
-        'A->1' => 'LoadMetadata',
-      },
+      -flow_into  => 'LoadSequenceData',
     },
 
     {
@@ -416,18 +404,7 @@ sub pipeline_analyses {
       -rc_name         => '8GB',
       -max_retry_count => 0,
       -meadow_type       => 'LSF',
-    },
-
-    {
-      # Head analysis for the loading of the metadata
-      -logic_name => 'LoadMetadata',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1->A' => 'FillMetadata',
-        'A->1' => 'LoadGeneModelCheck',
-      },
+      -flow_into  => 'FillMetadata',
     },
 
     {
@@ -443,9 +420,7 @@ sub pipeline_analyses {
       -max_retry_count => 0,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1' => 'FillTaxonomy',
-      },
+      -flow_into  => 'FillTaxonomy',
     },
 
     {
@@ -470,16 +445,7 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
-    },
-
-    {
-      -logic_name => 'LoadGeneModelCheck',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1' => WHEN('#manifest_data#->{"gff3"}' => 'LoadGFF3Models'),
-      },
+      -flow_into  => WHEN('#manifest_data#->{"gff3"}' => 'LoadGFF3Models'),
     },
 
     {
