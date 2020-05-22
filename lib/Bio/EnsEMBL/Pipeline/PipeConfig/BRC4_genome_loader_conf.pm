@@ -218,19 +218,9 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '1->A' => 'FillDBParams',
-        'A->1' => 'Cleanup',
+        '1' => 'FillDBParams',
       },
     },
-    {
-      # Delete the temp working directory
-      -logic_name => 'Cleanup',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -analysis_capacity   => 1,
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-    },
-
     {
       # fill db params from urls
       # output ..._host ..._port ...
