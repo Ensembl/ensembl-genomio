@@ -447,7 +447,7 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'FillMetadata',
-        'A->1' => 'ProcessRepeats',
+        'A->1' => 'LoadGeneModelCheck',
       },
     },
 
@@ -493,32 +493,6 @@ sub pipeline_analyses {
       -analysis_capacity   => 5,
     },
 
-    {
-      -logic_name => 'ProcessRepeats',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1->A' => 'ConstructRepeatLib',
-        'A->1' => 'LoadGeneModelCheck',
-      },
-    },
-
-    {
-      -logic_name => 'ConstructRepeatLib',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into => [ 'AnnotateRepeats' ],
-    },
-
-    {
-      -logic_name => 'AnnotateRepeats',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-    },
-    
     {
       -logic_name => 'LoadGeneModelCheck',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
