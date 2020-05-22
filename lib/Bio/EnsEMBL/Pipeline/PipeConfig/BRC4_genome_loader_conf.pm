@@ -39,7 +39,6 @@ sub default_options {
 
     # Working directory
     pipeline_dir => 'genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
-    registry_path => catfile($self->o('pipeline_dir'), 'registry.pm'),
 
     # Meta configuration directory
     data_dir => $self->o('data_dir'),
@@ -56,9 +55,6 @@ sub default_options {
       'genome' => catfile($schema_dir, "genome_schema.json"),
       'manifest' => catfile($schema_dir, "manifest_schema.json"),
     },
-    
-    # Use alias instead of production_name for the registry?
-    registry_alias_name => 0,
     
     # External_db name map file
     external_db_map => catfile($data_dir, 'external_db_map_default.txt'),
@@ -236,24 +232,8 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
       -flow_into => {
-        '1->A' => 'Manifest_factory',
-        'A->1' => 'CreateRegistry',
+        '1' => 'Manifest_factory',
       },
-    },
-
-    {
-      # Create an Ensembl registry file
-      -logic_name => 'CreateRegistry',
-      -module     => 'CreateRegistry',
-      -language => 'python3',
-      -parameters => {
-        registry_path => $self->o('registry_path'),
-        db_prefix => $self->o('db_prefix'),
-        use_alias_name => $self->o('registry_alias_name'),
-      },
-      -analysis_capacity   => 1,
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
     },
 
     {
@@ -354,7 +334,6 @@ sub pipeline_analyses {
       -flow_into  => {
         '2->A' => 'CleanUpAndCreateDB',
         'A->2' => 'LoadData',
-        '3'    => '?accu_name=db_data&accu_address=[]',
       },
     },
 
