@@ -79,7 +79,6 @@ sub default_options {
 
     # GFF3 cleaning params
     gff3_ignore_file => catfile(dirname(__FILE__), qw/gff3.ignore/),
-    gff3_clean_additionally => 0,
     gff3_autoapply_manual_seq_edits => 1,
 
     # LoadGFF3 params
@@ -155,7 +154,6 @@ sub pipeline_wide_parameters {
     gff3_validate => $self->o('gff3_validate'),
 
     gff3_ignore_file            => $self->o('gff3_ignore_file'),
-    gff3_clean_additionally     => $self->o('gff3_clean_additionally'),
     gff3_autoapply_manual_seq_edits => $self->o('gff3_autoapply_manual_seq_edits'),
 
     gff3_load_gene_source       => $self->o('gff3_load_gene_source'),
@@ -441,32 +439,25 @@ sub pipeline_analyses {
           -user => "#taxonomy_user#",
           -dbname => "#taxonomy_dbname#",
         },
+        has_gff3 => '#manifest_data#->{"gff3"}',
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
-      -flow_into  => WHEN('#manifest_data#->{"gff3"}' => 'LoadGFF3Models'),
+      -flow_into  => WHEN('#has_gff3#' => 'Load_gene_models'),
     },
 
     {
-      -logic_name => 'LoadGFF3Models',
+      -logic_name => 'Load_gene_models',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1->A' => 'GFF3CleanAndLoad',
-        'A->1' => 'LoadFunctionalAnnotationCheck',
+      -parameters => {
+        'has_func_annotation' => '#manifest_data#->{"functional_annotation"}',
       },
-    },
-
-    {
-      -logic_name => 'GFF3CleanAndLoad',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'GFF3CleanIgnored',
-        'A->1' => 'LoadGFF3AnalysisSetup',
+        'A->1' => WHEN('#has_func_annotation#', 'LoadFunctionalAnnotation', ELSE 'Finalize_gene_models'),
       },
     },
 
@@ -489,19 +480,7 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
-      -flow_into => WHEN('#gff3_clean_additionally#' =>
-                      [ 'GFF3CleanAdditionally' ],
-                    ELSE
-                      [ 'GFF3Tidy' ]
-                    ),
-    },
-
-    {
-      -logic_name => 'GFF3CleanAdditionally',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into => [ 'GFF3Tidy' ],
+      -flow_into => 'GFF3Tidy',
     },
 
     {
@@ -557,6 +536,7 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
+      -flow_into => 'LoadGFF3AnalysisSetup',
     },
 
     {
@@ -599,13 +579,13 @@ sub pipeline_analyses {
         # dbparams
         db_url          => '#dbsrv_url#' . '#db_name#',
         # condition
-        _has_fasta_pep => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+        has_fasta_peptide => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
       },
       -max_retry_count   => 0,
       -rc_name    => '15GB',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
-      -flow_into => WHEN('#_has_fasta_pep#' => [ 'FixModels' ]),
+      -flow_into => WHEN('#has_fasta_peptide#' => [ 'FixModels' ]),
     },
 
     {
@@ -668,16 +648,6 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
     },
-    
-    {
-      -logic_name => 'LoadFunctionalAnnotationCheck',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into  => {
-        '1' => WHEN('#manifest_data#->{"functional_annotation"}' => 'LoadFunctionalAnnotation'),
-      },
-    },
 
     {
       -logic_name  => 'LoadFunctionalAnnotation',
@@ -699,15 +669,22 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
-      -flow_into => WHEN('#no_feature_version_defaults#' =>
-                      [ 'MetaCoord' ],
-                    ELSE
-                      [ 'FixFeatureVersion' ]
-                    ),
+      -flow_into => 'Finalize_gene_models',
+    },
+
+    # Finish up annotations
+    {
+      -logic_name => 'Finalize_gene_models',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => WHEN('#no_feature_version_defaults#' => 'MetaCoord',
+                    ELSE 'FixFeatureVersion'
+      ),
     },
 
     {
-      # Init the Ensembl core
+      # Add versions for features if needed
       -logic_name => 'FixFeatureVersion',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
       -parameters => {
