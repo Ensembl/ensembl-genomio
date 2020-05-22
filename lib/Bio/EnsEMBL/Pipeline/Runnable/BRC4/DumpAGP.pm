@@ -39,6 +39,9 @@ sub run {
 
   my @coord_maps = $self->get_coord_maps($dba);
 
+  # Do generate AGP if there is no mapping (i.e. only one coord_system)
+  return if @coord_maps == 0;
+
   my $sub_dir = $self->create_dir('agp');
   my %agp_files;
   foreach my $pair (@coord_maps) {
@@ -113,10 +116,13 @@ sub run {
 
 sub write_output {
   my ($self) = @_;
-  $self->dataflow_output_id(
-    {
-      'agp_files' => $self->param('agp_files'),
-    }, 2);
+
+  if ($self->param_exists('agp_files')) {
+    $self->dataflow_output_id(
+      {
+        'agp_files' => $self->param('agp_files'),
+      }, 2);
+  }
 }
 
 sub get_coord_maps {
