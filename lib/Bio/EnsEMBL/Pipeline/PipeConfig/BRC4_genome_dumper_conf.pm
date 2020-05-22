@@ -198,16 +198,8 @@ sub pipeline_analyses {
        -rc_name       => 'default',
       -input_ids      => [ {} ],
       -flow_into       => {
-                           '1->A' => 'Species_factory',
-                           'A->1' => 'Cleanup',
+                           '1' => 'Species_factory',
                          },
-    },
-
-    {  -logic_name => 'Cleanup',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-       -hive_capacity => 10,
-       -rc_name       => 'default',
-       -analysis_capacity => 1,
     },
 
 	 { -logic_name     => 'Species_factory',
