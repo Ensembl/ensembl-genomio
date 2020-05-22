@@ -222,19 +222,19 @@ sub pipeline_analyses {
       -rc_name 	       => 'default',
       -max_retry_count => 0,
       -flow_into       => {
-                           '2->A' => 'backbone_job_pipeline',
-                           'A->2' => 'manifest',
+                           '2->A' => 'Backbone_job_pipeline',
+                           'A->2' => 'Manifest_maker',
                          },
     },
-    { -logic_name  => 'manifest',
+    { -logic_name  => 'Manifest_maker',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::Manifest',
       -max_retry_count => 0,
       -analysis_capacity   => 1,
       -rc_name         => 'default',
-      -flow_into       => { '2' => 'check_manifest' },
+      -flow_into       => { '2' => 'Manifest_check' },
     },
 
-     { -logic_name     => 'check_manifest',
+     { -logic_name     => 'Manifest_check',
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
        -parameters     => {
          json_file => '#manifest#',
@@ -246,10 +246,10 @@ sub pipeline_analyses {
        -analysis_capacity => 1,
        -batch_size     => 50,
 	     -rc_name        => 'default',
-      -flow_into       => { '1' => 'integrity' },
+      -flow_into       => { '1' => 'Integrity_check' },
      },
 
-    { -logic_name  => 'integrity',
+    { -logic_name  => 'Integrity_check',
       -module      => 'Integrity',
       -language    => 'python3',
       -parameters     => {
@@ -260,21 +260,21 @@ sub pipeline_analyses {
       -max_retry_count => 0,
     },
  	
-     { -logic_name     => 'backbone_job_pipeline',
+     { -logic_name     => 'Backbone_job_pipeline',
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
        -hive_capacity  => -1,
        -rc_name 	   => 'default',
        -analysis_capacity => 1,
        -flow_into      => {'1' => [
-           WHEN('#do_fasta#', 'fasta'),
-           WHEN('#do_gff#', 'gff3'),
-           WHEN('#do_agp#', 'agp'),
-           'metadata',
+           WHEN('#do_gff#', 'GFF3_maker'),
+           WHEN('#do_agp#', 'AGP_maker'),
+           WHEN('#do_fasta#', 'Fasta_makers'),
+           'Metadata_makers',
          ] }
      },
 
 ### GFF3
-     { -logic_name     => 'gff3',
+     { -logic_name     => 'GFF3_maker',
        -module         => 'Bio::EnsEMBL::Production::Pipeline::GFF3::DumpFile',
        -parameters     => {
           feature_type       => $self->o('feature_type'),
@@ -291,10 +291,13 @@ sub pipeline_analyses {
        -hive_capacity  => 20,
        -priority        => 5,
        -rc_name 	   => 'default',
-       -flow_into      => { '-1' => 'gff3_highmem', '1'  => 'gff3_BRC4_filter' },
+       -flow_into      => {
+         '-1' => 'GFF3_maker_highmem',
+         '1'  => 'GFF3_BRC4_filter'
+       },
      },
 
-	 { -logic_name     => 'gff3_highmem',
+	 { -logic_name     => 'GFF3_maker_highmem',
        -module         => 'Bio::EnsEMBL::Production::Pipeline::GFF3::DumpFile',
        -parameters     => {
           feature_type       => $self->o('feature_type'),
@@ -311,21 +314,21 @@ sub pipeline_analyses {
 	    -hive_capacity  => 20,
       -priority        => 5,
       -rc_name        => '32GB',
-      -flow_into      => { '1'  => 'gff3_BRC4_filter' },
+      -flow_into      => { '1'  => 'GFF3_BRC4_filter' },
 	 },	
 
 ### GFF3:post-processing
    # This only allows the one type of file necessary for BRC4
-   { -logic_name  => 'gff3_BRC4_filter',
+   { -logic_name  => 'GFF3_BRC4_filter',
      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::FilterGFF3',
       -max_retry_count => 0,
      -batch_size     => 10,
      -rc_name        => 'default',
-     -flow_into      => { 2 =>'gff3_BRC4_specifier' },
+     -flow_into      => { 2 =>'GFF3_BRC4_specifier' },
    },
 
    # BRC4 specifications alterations
-   { -logic_name  => 'gff3_BRC4_specifier',
+   { -logic_name  => 'GFF3_BRC4_specifier',
      -module      => 'GFF3Specifier',
      -language    => 'python3',
      -parameters     => {
@@ -335,12 +338,12 @@ sub pipeline_analyses {
       -max_retry_count => 0,
      -batch_size     => 10,
      -rc_name        => 'default',
-     -flow_into      => { 2 =>'gff3_validation' },
+     -flow_into      => { 2 =>'GFF3_validation' },
    },
    
    # Sort the features
    # The validation step also adds the complete list of seq_regions to the header
-   { -logic_name     => 'gff3_validation',
+   { -logic_name     => 'GFF3_validation',
      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
      -parameters     => {
        cmd => $self->o('gff3_tidy').' -gzip -o #final_gff_file# #specifications_gff_file# && ' .
@@ -356,14 +359,14 @@ sub pipeline_analyses {
 
 
 ### FASTA (cdna, cds, dna, pep, ncrna)
-    { -logic_name  => 'fasta',
+    { -logic_name  => 'Fasta_makers',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -analysis_capacity => 1,
-      -flow_into  => ['fasta_dna', 'fasta_pep'],
+      -flow_into  => ['Fasta_DNA', 'Fasta_peptide'],
       -rc_name         => 'default',
     },
     # 
-    { -logic_name  => 'fasta_dna',
+    { -logic_name  => 'Fasta_DNA',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFastaDNA',
       -parameters => {
         hash_key => "fasta_dna",
@@ -376,7 +379,7 @@ sub pipeline_analyses {
       -rc_name         => 'default',
     },
 
-    { -logic_name  => 'fasta_pep',
+    { -logic_name  => 'Fasta_peptide',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFastaPeptide',
       -parameters => { hash_key => "fasta_pep", },
       -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=fasta_file' },
@@ -387,7 +390,7 @@ sub pipeline_analyses {
     },
 
 ### AGP
-    { -logic_name  => 'agp',
+    { -logic_name  => 'AGP_maker',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpAGP',
       -parameters => { hash_key => "agp" },
       -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=agp_files' },
@@ -398,57 +401,57 @@ sub pipeline_analyses {
     },
 
 ### METADATA
-    { -logic_name  => 'metadata',
+    { -logic_name  => 'Metadata_makers',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -analysis_capacity => 1,
       -flow_into  => [
-        WHEN('#do_seq_reg#', 'seq_region'),
-        WHEN('#do_seq_attr#', 'seq_attrib'),
-        WHEN('#do_func#', 'functional_annotation'),
-        WHEN('#do_genome#', 'genome'),
+        WHEN('#do_seq_reg#', 'Seq_region'),
+        WHEN('#do_seq_attr#', 'Seq_attrib'),
+        WHEN('#do_func#', 'Functional_annotation'),
+        WHEN('#do_genome#', 'Genome'),
       ],
       -rc_name         => 'default',
     },
 
-    { -logic_name  => 'seq_region',
+    { -logic_name  => 'Seq_region',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpSeqRegionJson',
       -parameters     => {
         external_db_map => $self->o('external_db_map'),
       },
-      -flow_into  => { 2 => ['check_json_schema'] },
+      -flow_into  => { 2 => ['Check_json_schema'] },
       -max_retry_count => 0,
       -hive_capacity  => 20,
       -rc_name         => 'default',
     },
 
-    { -logic_name  => 'seq_attrib',
+    { -logic_name  => 'Seq_attrib',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpSeqAttribJson',
-      -flow_into  => { 2 => ['check_json_schema'] },
+      -flow_into  => { 2 => ['Check_json_schema'] },
       -max_retry_count => 0,
       -hive_capacity  => 20,
       -rc_name         => 'default',
     },
 
-    { -logic_name  => 'functional_annotation',
+    { -logic_name  => 'Functional_annotation',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFunctionalAnnotationJson',
       -parameters     => {
         external_db_map => $self->o('external_db_map'),
       },
-      -flow_into  => { 2 => ['check_json_schema'] },
+      -flow_into  => { 2 => ['Check_json_schema'] },
       -max_retry_count => 0,
       -hive_capacity  => 20,
       -rc_name         => 'default',
     },
 
-    { -logic_name  => 'genome',
+    { -logic_name  => 'Genome',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpGenomeJson',
-      -flow_into  => { 2 => ['check_json_schema'] },
+      -flow_into  => { 2 => ['Check_json_schema'] },
       -max_retry_count => 0,
       -hive_capacity  => 20,
       -rc_name         => 'default',
     },
 
-    { -logic_name     => 'check_json_schema',
+    { -logic_name     => 'Check_json_schema',
       -module         => 'SchemaValidator',
       -language => 'python3',
       -parameters     => {
