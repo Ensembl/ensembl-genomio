@@ -19,7 +19,8 @@
             { "type" : "string" },
             { "type" : "array", "items" : { "type" : "string" } }
           ]
-        }
+        },
+        "BRC4_organism_abbrev" : { "type" : "string" }
       },
       "required": [
         "taxonomy_id"

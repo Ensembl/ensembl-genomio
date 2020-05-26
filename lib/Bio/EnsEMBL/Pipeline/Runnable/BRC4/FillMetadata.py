@@ -34,6 +34,27 @@ class FillMetadata(eHive.BaseRunnable):
                 if "production_name" in sd:
                     sd["url"] = sd["production_name"].capitalize()
 
+        # RETROCOMPATIBILITY
+        # provider name and url to assembly.provider_*: retrocompatibility
+        if "provider" in genome_data:
+            prov = genome_data["provider"]
+            if "name" not in prov and not "provider_name" in genome_data["assembly"]:
+                genome_data["assembly"]["provider_name"] = prov["name"]
+            if "url" not in prov and not "provider_url" in genome_data["assembly"]:
+                genome_data["assembly"]["provider_url"] = prov["url"]
+            del genome_data["provider"]
+        
+        # BRC4 organism abbrev: move from species to BRC4 namespace
+        if "species" in genome_data:
+            sd = genome_data["species"]
+            if "BRC4_organism_abbrev" in sd:
+                if "BRC4" not in genome_data:
+                    genome_data["BRC4"] = {}
+                if "organism_abbrev" not in genome_data["BRC4"]:
+                    genome_data["BRC4"]["organism_abbrev"] = sd["BRC4_organism_abbrev"]
+                del genome_data["species"]["BRC4_organism_abbrev"]
+        # END RETROCOMPATIBILITY
+
         # flattern and dump
         flat = self.flattern(genome_data, ignore)
         flat += list(map( lambda p: ( copy[p[0]], p[1] ), filter(lambda x: x[0] in copy, flat) ))
