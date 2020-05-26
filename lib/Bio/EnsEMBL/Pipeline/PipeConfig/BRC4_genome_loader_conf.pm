@@ -117,11 +117,14 @@ sub default_options {
         golden_path_region intron orthologous_to
       /],
     gff3_types_complete  => 1,
+
     # genes and transcripts versions
     default_feature_version => 1,
     no_feature_version_defaults => 0,
+
     # disable brc4 features
     no_brc4_stuff => 0,
+
     # ignore final stop codons check in Integrity
     ignore_final_stops => 0,
   };
@@ -750,8 +753,27 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 2,
+      -flow_into => 'PopulateAnalysis',
     },
 
+    # Finalize database
+    {
+      -logic_name    => "PopulateAnalysis",
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #dump_path#;' .
+            . ' perl #base_dir#/ensembl-production/scripts/production_database/populate_analysis_description.pl '
+            . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --database #db_name# '
+            . ' --mhost #proddb_host# --mport #proddb_port# --muser #proddb_user# --mdatabase #proddb_dbname# '
+            . ' --dumppath #dump_path#'
+            . ' --dropbak',
+        'base_dir'       => $self->o('ensembl_root_dir'),
+        'dump_path' => $self->o('pipeline_dir') . '/#db_name#/fill_production_analysis',
+      },
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+    },
   ];
 }
 
