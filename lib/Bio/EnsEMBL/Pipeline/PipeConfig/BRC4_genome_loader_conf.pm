@@ -341,7 +341,6 @@ sub pipeline_analyses {
       -parameters => {
         db_conn => $self->o('dbsrv_url'),
         sql     => [
-          'SET GLOBAL max_allowed_packet=2147483648;',
           'DROP DATABASE IF EXISTS #db_name#;' ,
           'CREATE DATABASE #db_name#;' ,
         ],
