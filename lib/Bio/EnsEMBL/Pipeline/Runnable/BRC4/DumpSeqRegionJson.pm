@@ -14,6 +14,7 @@ sub param_defaults {
   return {
     %{$self->SUPER::param_defaults},
     metadata_name => 'seq_region',
+    dump_level => 'seqlevel'
   };
 }
 
@@ -27,6 +28,8 @@ sub prepare_data {
   my $csa = $dba->get_adaptor('CoordSystem');
   my $syna = $dba->get_adaptor('SeqRegionSynonym');
   my $kba = $dba->get_adaptor('KaryotypeBand');
+  my $dump_level = $self->param('dump_level');
+  my $only_top_level = ($dump_level eq 'toplevel');
   
   $self->load_external_db_map();
   my $db_map = $self->param('db_map');
@@ -44,7 +47,8 @@ sub prepare_data {
 
     print(scalar(@$slices) . " " . $coord_level_cs->name . "s (" . ($coord_level_cs->version || "no version") . ")\n");
 
-    foreach my $slice (@$slices) {
+    SLICE: foreach my $slice (@$slices) {
+      next SLICE if $only_top_level and (not $slice->is_toplevel());
       my $syns = $syna->get_synonyms( $slice->get_seq_region_id() );
       my $coord_system_name = $is_primary ? $self->get_coord_system_tag($slice) : $slice->coord_system_name;
       
@@ -73,7 +77,8 @@ sub prepare_data {
 
       # EBI name
       my ($ebi_attrib) = @{$slice->get_all_Attributes('EBI_seq_region_name')};
-      $seq_region->{EBI_seq_region_name} = $ebi_attrib->value() if $ebi_attrib;
+      my $ebi_name = $ebi_attrib ? $ebi_attrib->value() : $slice->seq_region_name();
+      $seq_region->{EBI_seq_region_name} = $ebi_name;
 
       # Is circular? Boolean
       $seq_region->{circular} = JSON::true if $slice->is_circular;

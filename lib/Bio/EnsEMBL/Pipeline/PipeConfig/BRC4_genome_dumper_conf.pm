@@ -42,6 +42,7 @@ use File::Basename;
 my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
 my $package_dir = dirname($package_path);
 my $schema_dir = "$package_dir/../../../../../schema";
+my $data_dir = "$package_dir/../../../../../data";
 
 use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
 
@@ -121,7 +122,7 @@ sub default_options {
         'manifest' => catfile($schema_dir, "manifest_schema.json"),
       },
       # Map back the external db names
-      external_db_map => undef,
+      external_db_map => catfile($data_dir, 'external_db_map_default.txt'),
 	};
 }
 
@@ -414,6 +415,7 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpSeqRegionJson',
       -parameters     => {
         external_db_map => $self->o('external_db_map'),
+        dump_level => $self->o('dump_level'),
       },
       -flow_into  => { 2 => ['Check_json_schema'] },
       -max_retry_count => 0,
