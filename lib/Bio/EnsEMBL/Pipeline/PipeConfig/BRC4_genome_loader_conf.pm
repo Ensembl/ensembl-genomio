@@ -127,6 +127,9 @@ sub default_options {
 
     # ignore final stop codons check in Integrity
     ignore_final_stops => 0,
+
+    # Rename seq_region name in the seq_region table with this attribute
+    seq_name_code => "EBI_seq_region_name"
   };
 }
 
@@ -773,6 +776,28 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
+      -flow_into => 'Change_seq_region_name',
+    },
+
+    {
+      # Use a different seq_region name
+      -logic_name => 'Change_seq_region_name',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        seq_attrib_name => $self->o('seq_name_code'),
+        sql     => [
+          "UPDATE seq_region s ".
+          "LEFT JOIN seq_region_attrib sa USING(seq_region_id) ".
+          "LEFT JOIN attrib_type a USING(attrib_type_id) ".
+          "SET s.name=value ".
+          "WHERE sa.attrib_type_id IS NOT NULL ".
+          "AND a.code = '#seq_attrib_name#';",
+        ],
+      },
+      -analysis_capacity   => 1,
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
     },
   ];
 }
