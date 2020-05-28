@@ -24,6 +24,7 @@ sub run {
 
   # Write data to json
   my $output_file = $self->write_json_file($data);
+  return if not $output_file;
 
   $self->dataflow_output_id(
     {
@@ -40,6 +41,17 @@ sub prepare_data {
 
 sub write_json_file {
   my ($self, $data) = @_;
+
+  # Check that data is not empty
+  if (ref($data) eq 'HASH' and scalar(%$data) == 0) {
+    return;
+  }
+  elsif (ref($data) eq 'ARRAY' and scalar(@$data) == 0) {
+    return;
+  }
+  elsif (ref($data) eq '' and not defined $data) {
+    return;
+  }
 
   my $metadata_name =  $self->param('metadata_name');
   my $sub_dir = $self->create_dir('json');

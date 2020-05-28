@@ -31,10 +31,12 @@ sub run {
 
     if (ref($manifest->{$name}) eq 'HASH') {
       foreach my $subname (sort keys %{ $manifest->{$name} }) {
-        $final_manifest{$name}{$subname} = prepare_file($manifest->{$name}->{$subname}, $dir, $species, $species_abbrev);
+        my $file = prepare_file($manifest->{$name}->{$subname}, $dir, $species, $species_abbrev);
+        $final_manifest{$name}{$subname} = $file if $file;
       }
     } else {
-      $final_manifest{$name} = prepare_file($manifest->{$name}, $dir, $species, $species_abbrev);
+      my $file = prepare_file($manifest->{$name}, $dir, $species, $species_abbrev);
+      $final_manifest{$name} = $file if $file;
     }
   }
 
@@ -65,6 +67,8 @@ sub get_meta_value {
 
 sub prepare_file {
   my ($old_path, $dir, $species, $species_abbrev) = @_;
+
+  return if not -s $old_path;
 
   my $new_path = new_file_path($old_path, $dir, $species, $species_abbrev);
   cp($old_path, $new_path);
