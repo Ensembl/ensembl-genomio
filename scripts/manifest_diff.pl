@@ -490,13 +490,13 @@ sub compare_gff3 {
   my $data2 = get_gff3($gff2, $dna_map);
 
   # Compare biotypes counts
-  say "Differences:";
   my %stats = (
     same => [],
     diff => [],
     only1 => [],
     only2 => [],
   );
+  my $ncoords_diff = 0;
 
   my (@all_only1, @all_only2);
   
@@ -528,7 +528,7 @@ sub compare_gff3 {
             or $feat1->{end}   != $feat2->{end}
         ) {
           $coords_diff++;
-          say(sprintf("Different (only first one shown): %s:%d-%d vs %s:%d-%d", ($feat1->{chr}, $feat1->{start}, $feat1->{end}, $feat2->{chr}, $feat2->{start}, $feat2->{end}))) if $coords_diff == 1;
+          diag(sprintf("Different (only first one shown): %s:%d-%d vs %s:%d-%d", ($feat1->{chr}, $feat1->{start}, $feat1->{end}, $feat2->{chr}, $feat2->{start}, $feat2->{end}))) if $coords_diff == 1;
         }
       }
 
@@ -537,6 +537,7 @@ sub compare_gff3 {
         my $line = "\tSAME\t$type ($count1)";
         $line .= " (diff coord: $coords_diff)" if $coords_diff;
         push @{$stats{same}}, $line;
+        $ncoords_diff++ if $coords_diff;
       } else {
         # List differences
         my ($only1, $only2, $redundant) = diff_entries($entries1, $entries2);
@@ -574,19 +575,27 @@ sub compare_gff3 {
     my @lines = @{ $stats{$name} };
 
     for my $line (@lines) {
-      say $line;
+      diag $line;
     }
   }
 
   @all_only1 = sort @all_only1;
   @all_only2 = sort @all_only2;
 
-  say "Details, only in 1:" if @all_only1;
-  for my $str (@all_only1) { say "\t$str" }
+  my $nonly1 = scalar @all_only1;
+  my $nonly2 = scalar @all_only2;
 
-  say "Details, only in 2:" if @all_only2;
-  for my $str (@all_only2) { say "\t$str" }
+  cmp_ok($nonly1, '==', 0, "No gff entries found only in file 1 ($nonly1)");
+  for my $str (@all_only1) {
+    diag "\t$str";
+  }
 
+  cmp_ok($nonly2, '==', 0, "No gff entries found only in file 2 ($nonly2)");
+  for my $str (@all_only2) {
+    diag "\t$str";
+  }
+
+  cmp_ok($ncoords_diff, '==', 0, "All common entries have the same coordinates ($ncoords_diff)");
   return;
 }
 
