@@ -69,9 +69,10 @@ sub compare_manifests {
           diag "Compare files $file1 and $file2";
           my $data1 = get_sorted_json($path1);
           my $data2 = get_sorted_json($path2);
-          #delete $data2->{assembly}->{name};
-          #delete $data2->{species}->{division};
-          #delete $data2->{species}->{production_name};
+
+          # Remove quite a lot of keys
+          $data1 = clean_genome_meta($data1);
+          $data2 = clean_genome_meta($data2);
 
           my $deep = 1;
           compare_json($data1, $data2, $deep);
@@ -100,6 +101,34 @@ sub compare_manifests {
     }
   }
   done_testing();
+}
+
+sub clean_genome_meta {
+  my ($data) = @_;
+
+  delete $data->{annotation};
+  delete $data->{species}->{division};
+  delete $data->{species}->{production_name};
+  delete $data->{assembly}->{name};
+
+  delete $data->{BRC4};
+  delete $data->{species}->{BRC4_organism_abbrev};
+
+  $data = move_provider($data, "name");
+  $data = move_provider($data, "url");
+
+  return $data;
+}
+
+sub move_provider {
+  my ($data, $key) = @_;
+
+  if ($data->{assembly}->{"provider_".$key} and not $data->{provider}->{$key}) {
+    $data->{provider}{$key} = $data->{assembly}->{"provider_".$key};
+    delete $data->{assembly}->{"provider_".$key};
+  }
+
+  return $data;
 }
 
 sub get_manifest {
