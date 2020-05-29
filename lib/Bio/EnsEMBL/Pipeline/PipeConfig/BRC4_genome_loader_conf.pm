@@ -444,7 +444,7 @@ sub pipeline_analyses {
           -user => "#taxonomy_user#",
           -dbname => "#taxonomy_dbname#",
         },
-        has_gff3 => '#manifest_data#->{"gff3"}',
+        has_gff3 => '#expr( #manifest_data#->{"gff3"} )expr#',
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
@@ -456,7 +456,7 @@ sub pipeline_analyses {
       -logic_name => 'Load_gene_models',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -parameters => {
-        'has_func_annotation' => '#manifest_data#->{"functional_annotation"}',
+        'has_func_annotation' => '#expr( #manifest_data#->{"functional_annotation"} )expr#',
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
