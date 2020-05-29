@@ -657,8 +657,8 @@ sub get_gff3 {
 
     $chr = $map->{$chr} if $map and $map->{$chr};
 
-    # Remove small UTRs like UPenn
-    if (($type eq 'five_prime_UTR' or $type eq 'three_prime_UTR') and $end - $start < 3) {
+    # Actually just ignore UTRs: those are not loaded anyway
+    if (($type eq 'five_prime_UTR' or $type eq 'three_prime_UTR')) {
       next;
     }
 
