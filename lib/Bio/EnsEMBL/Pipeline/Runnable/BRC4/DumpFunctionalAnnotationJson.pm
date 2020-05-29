@@ -51,21 +51,21 @@ sub prepare_data {
       id => $item->stable_id,
       object_type => $type,
     );
+    $feat{version} = $item->version if $item->version;
 
     # Gene specific metadata
     if ($type eq 'gene') {
       my $syns = $self->get_synonyms($item);
       $feat{synonyms} = $syns if $syns and @$syns;
-      $feat{description} = $item->description if $item->description;
-      $feat{version} = $item->version if $item->version;
       $feat{is_pseudogene} = JSON::true if $item->biotype eq 'pseudogene';
+      $feat{description} = $item->description if $item->description;
     }
 
     # Transcript specific metadata
     if ($type eq 'transcript') {
       $feat{description} = $item->description if $item->description;
-      $feat{version} = $item->version if $item->version;
     }
+
 
     # Xrefs (if any)
     my $xrefs = $self->get_xrefs($item);

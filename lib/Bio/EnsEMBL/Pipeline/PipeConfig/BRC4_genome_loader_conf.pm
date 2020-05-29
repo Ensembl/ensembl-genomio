@@ -117,13 +117,19 @@ sub default_options {
         golden_path_region intron orthologous_to
       /],
     gff3_types_complete  => 1,
+
     # genes and transcripts versions
     default_feature_version => 1,
     no_feature_version_defaults => 0,
+
     # disable brc4 features
     no_brc4_stuff => 0,
+
     # ignore final stop codons check in Integrity
     ignore_final_stops => 0,
+
+    # Rename seq_region name in the seq_region table with this attribute
+    seq_name_code => "EBI_seq_region_name"
   };
 }
 
@@ -341,7 +347,6 @@ sub pipeline_analyses {
       -parameters => {
         db_conn => $self->o('dbsrv_url'),
         sql     => [
-          'SET GLOBAL max_allowed_packet=2147483648;',
           'DROP DATABASE IF EXISTS #db_name#;' ,
           'CREATE DATABASE #db_name#;' ,
         ],
@@ -751,8 +756,49 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 2,
+      -flow_into => 'PopulateAnalysis',
     },
 
+    # Finalize database
+    {
+      -logic_name    => "PopulateAnalysis",
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        'cmd' => 'mkdir -p #dump_path#;' .
+            . ' perl #base_dir#/ensembl-production/scripts/production_database/populate_analysis_description.pl '
+            . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --database #db_name# '
+            . ' --mhost #proddb_host# --mport #proddb_port# --muser #proddb_user# --mdatabase #proddb_dbname# '
+            . ' --dumppath #dump_path#'
+            . ' --dropbak',
+        'base_dir'       => $self->o('ensembl_root_dir'),
+        'dump_path' => $self->o('pipeline_dir') . '/#db_name#/fill_production_analysis',
+      },
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into => 'Change_seq_region_name',
+    },
+
+    {
+      # Use a different seq_region name
+      -logic_name => 'Change_seq_region_name',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        seq_attrib_name => $self->o('seq_name_code'),
+        sql     => [
+          "UPDATE seq_region s ".
+          "LEFT JOIN seq_region_attrib sa USING(seq_region_id) ".
+          "LEFT JOIN attrib_type a USING(attrib_type_id) ".
+          "SET s.name=value ".
+          "WHERE sa.attrib_type_id IS NOT NULL ".
+          "AND a.code = '#seq_attrib_name#';",
+        ],
+      },
+      -analysis_capacity   => 1,
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
+    },
   ];
 }
 
