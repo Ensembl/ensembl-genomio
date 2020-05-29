@@ -38,9 +38,9 @@ class FillMetadata(eHive.BaseRunnable):
         # provider name and url to assembly.provider_*: retrocompatibility
         if "provider" in genome_data:
             prov = genome_data["provider"]
-            if "name" not in prov and not "provider_name" in genome_data["assembly"]:
+            if "name" in prov and not "provider_name" in genome_data["assembly"]:
                 genome_data["assembly"]["provider_name"] = prov["name"]
-            if "url" not in prov and not "provider_url" in genome_data["assembly"]:
+            if "url" in prov and not "provider_url" in genome_data["assembly"]:
                 genome_data["assembly"]["provider_url"] = prov["url"]
             del genome_data["provider"]
         
