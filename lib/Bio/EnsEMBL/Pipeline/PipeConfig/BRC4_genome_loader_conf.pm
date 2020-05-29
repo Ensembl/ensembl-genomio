@@ -764,7 +764,7 @@ sub pipeline_analyses {
       -logic_name    => "PopulateAnalysis",
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
-        'cmd' => 'mkdir -p #dump_path#;' .
+        'cmd' => 'mkdir -p #dump_path#;'
             . ' perl #base_dir#/ensembl-production/scripts/production_database/populate_analysis_description.pl '
             . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --database #db_name# '
             . ' --mhost #proddb_host# --mport #proddb_port# --muser #proddb_user# --mdatabase #proddb_dbname# '
