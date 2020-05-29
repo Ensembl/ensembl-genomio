@@ -24,10 +24,10 @@ my %opt = %{ opt_check() };
 my ($file1, $file2) = ($opt{in1}, $opt{in2});
 
 if ($file1 =~ /\.fa(sta)?$/ and $file2 =~ /\.fa(sta)?$/) {
-  say "Compare fasta files";
+  diag "Compare fasta files";
   compare_fasta($file1, $file2);
 } elsif ($file1 =~ /manifest.json$/ and $file2 =~ /manifest.json$/) {
-  say "Compare manifests";
+  diag "Compare manifests";
   compare_manifests($file1, $file2, \%opt);
 } else {
   say "Unrecognized files compared";
@@ -44,7 +44,7 @@ sub compare_manifests {
   my $dna_map;
   if ($opt->{map}) {
     $dna_map = get_map($manifest1, $manifest2, $dir1, $dir2);
-    say "Mapped DNA sequences: " . scalar(keys %$dna_map);
+    #say "Mapped DNA sequences: " . scalar(keys %$dna_map);
   }
 
   for my $name (sort keys %$manifest1) {
@@ -56,17 +56,17 @@ sub compare_manifests {
       my $path2 = catfile($dir2, $file2);
 
       if ($name =~ /^fasta/ and $opt->{do_fasta}) {
-        say "Compare files $file1 and $file2";
+        diag "Compare files $file1 and $file2";
         my $is_dna = ($name =~ /dna/);
         compare_fasta($path1, $path2, $is_dna);
       }
       if ($name eq 'gff3' and $opt->{do_gff3}) {
-        say "Compare files $file1 and $file2";
+        diag "Compare files $file1 and $file2";
         compare_gff3($path1, $path2, $dna_map);
       }
       if ($opt->{do_json}) {
         if ($name eq 'genome') {
-          say "Compare files $file1 and $file2";
+          diag "Compare files $file1 and $file2";
           my $data1 = get_sorted_json($path1);
           my $data2 = get_sorted_json($path2);
           #delete $data2->{assembly}->{name};
@@ -77,7 +77,7 @@ sub compare_manifests {
           compare_json($data1, $data2, $deep);
         }
         if ($name eq 'seq_region') {
-          say "Compare files $file1 and $file2";
+          diag "Compare files $file1 and $file2";
           my $deep = 0;
           my $data1 = get_sorted_json($path1);
           my $data2 = get_sorted_json($path2);
@@ -86,7 +86,7 @@ sub compare_manifests {
           compare_entries($data1, $data2, "name");
         }
         if ($name eq 'functional_annotation') {
-          say "Compare files $file1 and $file2";
+          diag "Compare files $file1 and $file2";
           my $deep = 0;
           my $data1 = get_sorted_json($path1);
           my $data2 = get_sorted_json($path2);
@@ -182,8 +182,11 @@ sub fasta_diff {
   my $seqs1 = get_fasta($f1);
   my $seqs2 = get_fasta($f2);
 
-  say("fasta1: " . scalar(keys %$seqs1));
-  say("fasta2: " . scalar(keys %$seqs2));
+  my $n1 = scalar(keys %$seqs1);
+  my $n2 = scalar(keys %$seqs2);
+  cmp_ok($n1, '>', 0, "Fasta 1 has sequences ($n1)");
+  cmp_ok($n2, '>', 0, "Fasta 1 has sequences ($n2)");
+  cmp_ok($n1, '==', $n2, "Fasta 1 and 2 have the same number of sequences");
 
   my $count_ambiguous = 0;
   my $count_different_seq = 0;
@@ -198,7 +201,7 @@ sub fasta_diff {
       # Diff lengths
       if (length($seq1) != length($seq2)) {
           $count_different_length++;
-        say("$id different lengths: " . length($seq1) . " vs " . length($seq2));
+          diag("$id different lengths: " . length($seq1) . " vs " . length($seq2));
       } elsif ($seq1 ne $seq2) {
         if ($is_dna) {
           # Check if the difference is only for ambiguous chars
@@ -207,7 +210,7 @@ sub fasta_diff {
             $count_ambiguous++;
           } else {
             $count_different_seq++;
-            say("$id different sequences");
+            diag("$id different sequences");
           }
         }
       } else {
@@ -217,19 +220,22 @@ sub fasta_diff {
       delete $seqs1->{$id};
       delete $seqs2->{$id};
     } else {
-      say("$id is only in fasta 1");
+      diag("$id is only in fasta 1");
     }
   }
   for my $id (sort keys %$seqs2) {
-      say("$id is only in fasta 2");
+      diag("$id is only in fasta 2");
   }
 
-  say("Only in fasta 1: " . scalar(keys %$seqs1));
-  say("Only in fasta 2: " . scalar(keys %$seqs2));
-  say("$count_identical identical sequences") if $count_identical;
-  say("$count_different_seq different sequences") if $count_different_seq;
-  say("$count_different_length different lengths") if $count_different_length;
-  say("$count_ambiguous identical except for ambiguous nucleotides") if $count_ambiguous;
+  my $nonly1 = scalar(keys %$seqs1);
+  my $nonly2 = scalar(keys %$seqs2);
+  cmp_ok($nonly1, '==', 0, "Fasta 1 has no sequence specific to it ($nonly1)");
+  cmp_ok($nonly2, '==', 0, "Fasta 2 has no sequence specific to it ($nonly2)");
+  cmp_ok($count_different_length, '==', 0, "All sequences are the same length ($count_different_length different)");
+  cmp_ok($count_different_seq, '==', 0, "All sequences are the same sequence, expect for ambiguous letters ($count_different_seq different)");
+
+  #say("$count_identical identical sequences") if $count_identical;
+  #say("$count_ambiguous identical except for ambiguous nucleotides") if $count_ambiguous;
 }
 
 sub diff_is_ambiguous {
@@ -379,25 +385,23 @@ sub remove_keys {
 sub compare_entries {
   my ($data1, $data2, $key) = @_;
   
-  # List elements that differ
+  my $ndata1 = scalar @$data1;
+  my $ndata2 = scalar @$data2;
+  cmp_ok($ndata1, '==', $ndata2, "Same number of entries ($ndata1 vs $ndata2)");
+
+  # Extract entries that are in common
   ($data1, $data2) = list_diff($data1, $data2, $key);
 
-  if (scalar(@$data1) == scalar(@$data2)) {
-    
-    my @sorted1 = sort { $a->{$key} cmp $b->{$key} } @$data1;
-    my @sorted2 = sort { $a->{$key} cmp $b->{$key} } @$data2;
-    
-    for (my $i = 0; $i < @sorted1; $i++) {
-      my $en1 = $sorted1[$i];
-      my $en2 = $sorted2[$i];
-      my $value = "$en1->{$key}";
-      $value .= "/$en2->{$key}" if $en1->{$key} ne $en2->{$key};
-      cmp_deeply($en1, $en2, "Json content identical for $value");
-    }
-  } else {
-    # Compare the overall json
-    my $deep = 0;
-    compare_json($data1, $data2, $deep);
+  # Compare those entries that are in common
+  my @sorted1 = sort { $a->{$key} cmp $b->{$key} } @$data1;
+  my @sorted2 = sort { $a->{$key} cmp $b->{$key} } @$data2;
+
+  for (my $i = 0; $i < @sorted1; $i++) {
+    my $en1 = $sorted1[$i];
+    my $en2 = $sorted2[$i];
+    my $value = "$en1->{$key}";
+    $value .= "/$en2->{$key}" if $en1->{$key} ne $en2->{$key};
+    cmp_deeply($en1, $en2, "Json content identical for $value");
   }
 }
 
@@ -416,14 +420,17 @@ sub list_diff {
     }
   }
   
-  say scalar(keys %ids1)." only in file 1" if %ids1;
-  say scalar(keys %ids2)." only in file 2" if %ids2;
-  
+  my $nfile1 = scalar(keys %ids1);
+  my $nfile2 = scalar(keys %ids2);
+
+  cmp_ok($nfile1, "==", 0, "No entry found only in file 1 ($nfile1)");
   for my $id (sort keys %ids1) {
-    say "ONLY in file 1: $id";
+    diag "ONLY in file 1: $id";
   }
+
+  cmp_ok($nfile2, "==", 0, "No entry found only in file 2 ($nfile2)");
   for my $id (sort keys %ids2) {
-    say "ONLY in file 2: $id";
+    diag "ONLY in file 2: $id";
   }
 
   $data1 = [grep { $common{ $_->{$key} } } @$data1];
