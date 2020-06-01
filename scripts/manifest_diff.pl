@@ -216,8 +216,7 @@ sub fasta_diff {
   my $n1 = scalar(keys %$seqs1);
   my $n2 = scalar(keys %$seqs2);
   cmp_ok($n1, '>', 0, "Fasta 1 has sequences ($n1)");
-  cmp_ok($n2, '>', 0, "Fasta 1 has sequences ($n2)");
-  cmp_ok($n1, '==', $n2, "Fasta 1 and 2 have the same number of sequences");
+  cmp_ok($n2, '>', 0, "Fasta 2 has sequences ($n2)");
 
   my $count_ambiguous = 0;
   my $count_different_seq = 0;
@@ -260,10 +259,10 @@ sub fasta_diff {
 
   my $nonly1 = scalar(keys %$seqs1);
   my $nonly2 = scalar(keys %$seqs2);
-  cmp_ok($nonly1, '==', 0, "Fasta 1 has no sequence specific to it ($nonly1)");
-  cmp_ok($nonly2, '==', 0, "Fasta 2 has no sequence specific to it ($nonly2)");
-  cmp_ok($count_different_length, '==', 0, "All sequences are the same length ($count_different_length different)");
-  cmp_ok($count_different_seq, '==', 0, "All sequences are the same sequence, expect for ambiguous letters ($count_different_seq different)");
+  cmp_ok($nonly1, '==', 0, "Fasta 1 has no sequence specific to it");
+  cmp_ok($nonly2, '==', 0, "Fasta 2 has no sequence specific to it");
+  cmp_ok($count_different_length, '==', 0, "All sequences are the same length");
+  cmp_ok($count_different_seq, '==', 0, "All sequences are the same sequence, expect for ambiguous letters");
 
   #say("$count_identical identical sequences") if $count_identical;
   #say("$count_ambiguous identical except for ambiguous nucleotides") if $count_ambiguous;
@@ -437,7 +436,6 @@ sub compare_entries {
   
   my $ndata1 = scalar @$data1;
   my $ndata2 = scalar @$data2;
-  cmp_ok($ndata1, '==', $ndata2, "Same number of entries ($ndata1 vs $ndata2)");
 
   # Extract entries that are in common
   ($data1, $data2) = list_diff($data1, $data2, $key);
@@ -473,12 +471,12 @@ sub list_diff {
   my $nfile1 = scalar(keys %ids1);
   my $nfile2 = scalar(keys %ids2);
 
-  cmp_ok($nfile1, "==", 0, "No entry found only in file 1 ($nfile1)");
+  cmp_ok($nfile1, "==", 0, "No entry found only in file 1");
   for my $id (sort keys %ids1) {
     diag "ONLY in file 1: $id";
   }
 
-  cmp_ok($nfile2, "==", 0, "No entry found only in file 2 ($nfile2)");
+  cmp_ok($nfile2, "==", 0, "No entry found only in file 2");
   for my $id (sort keys %ids2) {
     diag "ONLY in file 2: $id";
   }
@@ -509,17 +507,6 @@ sub compare_gff3 {
 
   my $data1 = get_gff3($gff1);
   my $data2 = get_gff3($gff2, $dna_map);
-
-  # Compare biotypes counts
-  my %stats = (
-    same => [],
-    diff => [],
-    only1 => [],
-    only2 => [],
-  );
-  my $ncoords_diff = 0;
-
-  my (@all_only1, @all_only2);
   
   # Changes made during import
   $data1 = merge_types($data1, "gene", "ncRNA_gene");
@@ -527,6 +514,7 @@ sub compare_gff3 {
   $data1 = merge_types($data1, "exon", "pseudogenic_exon");
   $data2 = merge_types($data2, "exon", "pseudogenic_exon");
   
+
   for my $type (sort keys %$data1) {
     my $entries1 = $data1->{$type};
     my $count1 = scalar(keys %$entries1);
@@ -535,109 +523,104 @@ sub compare_gff3 {
       my $entries2 = $data2->{$type};
       my $count2 = scalar(keys %$entries2);
 
+      diag "$type: $count1 vs $count2";
+
       delete $data2->{$type};
 
       # Check features coordinates
-      my $coords_diff = 0;
+      my (@coords_diff, %only1, %only2);
       for my $id (keys %$entries1) {
         my $feat1 = $entries1->{$id};
         my $feat2 = $entries2->{$id};
-        next if not $feat2;
+        if (not $feat2) {
+          $only1{$id} = $feat1;
+          delete $entries1->{$id};
+          next;
+        }
+        delete $entries1->{$id};
+        delete $entries2->{$id};
+
         if (
                $feat1->{chr} ne $feat2->{chr}
             or $feat1->{start} != $feat2->{start}
             or $feat1->{end}   != $feat2->{end}
         ) {
-          $coords_diff++;
-          diag(sprintf("Different (only first one shown): %s:%d-%d vs %s:%d-%d", ($feat1->{chr}, $feat1->{start}, $feat1->{end}, $feat2->{chr}, $feat2->{start}, $feat2->{end}))) if $coords_diff == 1;
+          push @coords_diff, sprintf("%s (%s:%d-%d\tvs\t%s:%d-%d)",
+            ($id,
+              $feat1->{chr},
+              $feat1->{start},
+              $feat1->{end},
+              $feat2->{chr},
+              $feat2->{start}, 
+              $feat2->{end}
+            ));
         }
       }
+      for my $id (keys %$entries2) {
+        $only2{$id} = $entries2->{$id};
+        delete $entries2->{$id};
+      }
+      my ($only1_coord, $only2_coord, $redundant) = diff_coord_entries(\%only1, \%only2);
 
-      # Check length count
-      if ($count1 == $count2) {
-        my $line = "\tSAME\t$type ($count1)";
-        $line .= " (diff coord: $coords_diff)" if $coords_diff;
-        push @{$stats{same}}, $line;
-        $ncoords_diff++ if $coords_diff;
+      @coords_diff = sort @coords_diff;
+      cmp_ok(scalar(@coords_diff), "==", 0, "$type: same id = same coordinates");
+      for my $str (@coords_diff) { diag("$type: different coordinates: $str") };
+
+      # Compare by id, only for genes, transcripts and translations
+      if ($type eq 'gene' or $type eq 'mRNA' or $type eq 'CDS') {
+        cmp_ok(scalar(keys %only1), "==", 0, "$type: none found only in gff 1 by id");
+        for my $str (sort keys %only1) { diag("$type: Only in gff1: $str") };
+
+        cmp_ok(scalar(keys %only2), "==", 0, "$type: none found only in gff 2 by id");
+        for my $str (sort keys %only2) { diag("$type: Only in gff2: $str") };
+
+        # Compare by coordinates
+        cmp_ok($redundant, "==", 0, "$type: No redundant features");
       } else {
-        # List differences
-        my ($only1, $only2, $redundant) = diff_entries($entries1, $entries2);
-
-        if (@$only1 or @$only2) {
-          push @all_only1, map { "$type\t$_" } @$only1;
-          push @all_only2, map { "$type\t$_" } @$only2;
-
-          my $line = "\tDIFF\t$type ($count1 != $count2)";
-          $line .= " (diff coord: $coords_diff)" if $coords_diff;
-          push @{$stats{diff}}, $line;
-        } else {
-          my $line = "\tSAME\t$type ($count1)";
-          $line .= " (diff coord: $coords_diff)" if $coords_diff;
-          $line .= " ($redundant redundant)" if $redundant;
-          push @{$stats{same}}, $line;
-        }
+        diag("$type: $redundant redundant features");
       }
+
+      cmp_ok(scalar(@$only1_coord), "==", 0, "$type: none found only in gff 1");
+      for my $str (@$only1_coord) { diag("$type: Only in gff1 by coordinates: $str") };
+
+      cmp_ok(scalar(@$only2_coord), "==", 0, "$type: none found only in gff 2");
+      for my $str (@$only2_coord) { diag("$type: Only in gff2 by coordinates: $str") };
     }
     else {
-      push @{$stats{only1}}, "\tONLY1\t$type ($count1)";
-      push @all_only1, map { "$type\t$_" } sort keys %$entries1;
+      fail("$type only found in gff1");
+      for my $str (sort keys %$entries1) { diag("$type: Only in gff1: $str") };
     }
     delete $data1->{$type};
   }
   
   for my $type (keys %$data2) {
     my $entries2 = $data2->{$type};
-    my $count2 = scalar(keys %$entries2);
-    push @{$stats{only2}}, "\tONLY2\t$type ($count2)";
-    push @all_only2, map { "$type\t$_" } sort keys %$entries2;
+    fail("$type only found in gff2");
+    for my $str (sort keys %$entries2) { diag("$type: Only in gff2: $str") };
   }
 
-  for my $name (qw(same diff only1 only2)) {
-    my @lines = @{ $stats{$name} };
-
-    for my $line (@lines) {
-      diag $line;
-    }
-  }
-
-  @all_only1 = sort @all_only1;
-  @all_only2 = sort @all_only2;
-
-  my $nonly1 = scalar @all_only1;
-  my $nonly2 = scalar @all_only2;
-
-  cmp_ok($nonly1, '==', 0, "No gff entries found only in file 1 ($nonly1)");
-  for my $str (@all_only1) {
-    diag "\t$str";
-  }
-
-  cmp_ok($nonly2, '==', 0, "No gff entries found only in file 2 ($nonly2)");
-  for my $str (@all_only2) {
-    diag "\t$str";
-  }
-
-  cmp_ok($ncoords_diff, '==', 0, "All common entries have the same coordinates ($ncoords_diff)");
   return;
 }
 
-sub diff_entries {
+sub diff_coord_entries {
   my($e1, $e2) = @_;
   
   # Compare by coords, not id
-  my $redundant;
+  my $redundant = 0;
   my (%c1, %c2);
   for my $id (keys %$e1) {
     my $e = $e1->{$id};
-    my $coord = join(" ", map { $e->{$_} } qw(chr start end));
+    my $coord = sprintf("%s:%d-%d", map { $e->{$_} } qw(chr start end));
     if ($c1{$coord}) {
       #say STDERR "Already a feature at $coord: $c1{$coord} (new: $id)";
       $redundant++;
     }
     $c1{$coord} = $id;
   }
+
   for my $id (keys %$e2) {
     my $e = $e2->{$id};
-    my $coord = join(" ", map { $e->{$_} } qw(chr start end));
+    my $coord = sprintf("%s:%d-%d", map { $e->{$_} } qw(chr start end));
     $c2{$coord} = $id;
   }
   
@@ -648,10 +631,8 @@ sub diff_entries {
     }
   }
 
-  my @only1 = map { "$_\t$c1{$_}" } sort keys %c1;
-  my @only2 = map { "$_\t$c2{$_}" } sort keys %c2;
-  
-  my $c = @only1 + @only2;
+  my @only1 = map { "$c1{$_} ($_)" } sort keys %c1;
+  my @only2 = map { "$c2{$_} ($_)" } sort keys %c2;
   
   return \@only1, \@only2, $redundant;
 }
