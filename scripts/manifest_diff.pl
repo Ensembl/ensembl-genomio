@@ -95,6 +95,8 @@ sub compare_manifests {
           #$data2 = remove_keys($data2, "xrefs", "version", "is_pseudogene");
           $data1 = remove_keys($data1, "version");
           $data2 = remove_keys($data2, "version");
+          $data1 = unique_array_keys($data1, "xrefs", "id", "dbname");
+          $data2 = unique_array_keys($data2, "xrefs", "id", "dbname");
           compare_entries($data1, $data2, "id");
         }
       }
@@ -406,6 +408,25 @@ sub remove_keys {
   for my $entry (@$data) {
     for my $key (@keys) {
       delete $entry->{$key} if $entry->{$key};
+    }
+  }
+  return $data;
+}
+
+sub unique_array_keys {
+  my ($data, $key, @tags) = @_;
+
+  for my $entry (@$data) {
+    my $array = $entry->{$key};
+    if ($array and ref($array) eq 'ARRAY') {
+      my %done;
+      my @new_array;
+      for my $item (@$array) {
+        my $key = join(':', map { $item->{$_} } @tags);
+        push @new_array, $item if not $done{$key}++;
+      }
+      $entry->{$key} = \@new_array;
+      my $diff = scalar(@$array) - scalar(keys %done);
     }
   }
   return $data;
