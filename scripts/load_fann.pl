@@ -165,6 +165,9 @@ for my $it (@$data) {
     push @xrefs, $dxref;
   }
 
+  # Remove duplications
+  @xrefs = unique_xrefs(@xrefs);
+
   my $already_used = 0;
   my $stored_xref = undef;
   for my $xref (@xrefs) {
@@ -224,6 +227,19 @@ close($fh);
 
 
 # utils
+
+sub unique_xrefs {
+  my (@xrefs) = @_;
+
+  my %done;
+  my @unique_xrefs;
+  for my $xref (@xrefs) {
+    my $key = $xref->{id} .":". $xref->{dbname};
+    push @unique_xrefs, $xref if not $done{$key}++;
+  }
+
+  return @unique_xrefs;
+}
 
 sub get_external_db_map {
   my($path) = @_;
