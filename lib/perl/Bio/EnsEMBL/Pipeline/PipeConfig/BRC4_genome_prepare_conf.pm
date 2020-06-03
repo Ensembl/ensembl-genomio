@@ -89,7 +89,6 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => 'Genome_factory',
-      },
     },
 
     {
@@ -106,11 +105,12 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -max_retry_count => 0,
       -flow_into => {
-        '2' => { 'check_genome_schema' => { genome_json => '#_0#' } },
+        '2' => { 'Check_genome_schema' => { genome_json => '#_0#' } },
       },
     },
 
-    { -logic_name     => 'Check_genome_schema',
+    {
+      -logic_name     => 'Check_genome_schema',
       -module         => 'ensembl.brc4.runnable.schema_validator',
       -language => 'python3',
       -parameters     => {
@@ -122,9 +122,30 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
-      -flow_into  => '',
+      -flow_into  => 'Download_assembly_data',
     },
 
+
+    {
+      -logic_name     => 'Download_assembly_data',
+      -module         => 'ensembl.brc4.runnable.download_assembly_data',
+      -language => 'python3',
+      -parameters     => {
+        genome_json => '#genome_json#',
+        download_dir => $self->o('pipeline_dir') . "/download",
+      },
+      -analysis_capacity => 1,
+      -failed_job_tolerance => 100,
+      -rc_name        => 'default',
+      -flow_into  => { '2' => 'End' },
+    },
+
+    {
+      -logic_name => 'End',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+    },
   ];
 }
 
