@@ -41,8 +41,10 @@ use File::Basename;
 
 my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
 my $package_dir = dirname($package_path);
-my $schema_dir = "$package_dir/../../../../../schema";
-my $data_dir = "$package_dir/../../../../../data";
+my $root_dir = "$package_dir/../../../../../..";
+
+my $schema_dir = "$root_dir/schema";
+my $data_dir = "$root_dir/data";
 
 use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
 

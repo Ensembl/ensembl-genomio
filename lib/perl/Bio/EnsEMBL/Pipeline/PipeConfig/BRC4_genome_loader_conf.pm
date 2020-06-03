@@ -16,9 +16,11 @@ use Class::Inspector;
 
 my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
 my $package_dir = dirname($package_path);
-my $scripts_dir = "$package_dir/../../../../../scripts";
-my $schema_dir = "$package_dir/../../../../../schema";
-my $data_dir = "$package_dir/../../../../../data";
+my $root_dir = "$package_dir/../../../../../..";
+
+my $scripts_dir = "$root_dir/scripts";
+my $schema_dir = "$root_dir/schema";
+my $data_dir = "$root_dir/data";
 
 sub default_options {
   my ($self) = @_;
