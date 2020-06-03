@@ -198,7 +198,7 @@ class JsonRule(BaseRule):
         v = f.sub(t, v)
     if amap and v in amap:
       v = amap[v]
-    if aignore and aignore.search(v) is not None:
+    if aignore and v and aignore.search(v) is not None:
       v = None
     if anumval:
       v = anumval(v)
