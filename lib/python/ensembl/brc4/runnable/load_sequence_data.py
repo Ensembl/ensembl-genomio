@@ -16,7 +16,7 @@ from BCBio import GFF
 from Bio import SeqIO
 
 
-class LoadSequenceData(eHive.BaseRunnable):
+class load_sequence_data(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {

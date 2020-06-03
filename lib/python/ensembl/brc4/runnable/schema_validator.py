@@ -4,7 +4,7 @@ import eHive
 import json
 from jsonschema import validate
 
-class SchemaValidator(eHive.BaseRunnable):
+class schema_validator(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {

@@ -32,7 +32,7 @@
       "properties": {
         "accession" : {
           "type" : "string",
-          "pattern" : "^[A-Z]+_?[0-9]+(\\.[0-9]+)?$",
+          "pattern" : "^GC[AF]_[0-9]+(\\.[0-9]+)?$",
           "description" : "Unique INSDC accession for the genome"
         },
         "chromosome_display_order" : {

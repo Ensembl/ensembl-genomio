@@ -16,9 +16,11 @@ use Class::Inspector;
 
 my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
 my $package_dir = dirname($package_path);
-my $scripts_dir = "$package_dir/../../../../../scripts";
-my $schema_dir = "$package_dir/../../../../../schema";
-my $data_dir = "$package_dir/../../../../../data";
+my $root_dir = "$package_dir/../../../../../..";
+
+my $scripts_dir = "$root_dir/scripts";
+my $schema_dir = "$root_dir/schema";
+my $data_dir = "$root_dir/data";
 
 sub default_options {
   my ($self) = @_;
@@ -271,14 +273,14 @@ sub pipeline_analyses {
       -analysis_capacity => 1,
       -batch_size     => 50,
       -flow_into  => {
-        '1->A' => 'Json_schema_factory',
+        '1->A' => 'json_schema_factory',
         'A->1' => 'Manifest_integrity',
       },
     },
 
     {
-      -logic_name => 'Json_schema_factory',
-      -module     => 'JsonSchemaFactory',
+      -logic_name => 'json_schema_factory',
+      -module     => 'ensembl.brc4.runnable.json_schema_factory',
       -language => 'python3',
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
@@ -290,7 +292,7 @@ sub pipeline_analyses {
     },
 
     { -logic_name     => 'check_json_schema',
-      -module         => 'SchemaValidator',
+      -module         => 'ensembl.brc4.runnable.schema_validator',
       -language => 'python3',
       -parameters     => {
         json_file => '#metadata_json#',
@@ -305,7 +307,7 @@ sub pipeline_analyses {
     {
       # Check the integrity of the manifest before loading anything
       -logic_name => 'Manifest_integrity',
-      -module     => 'Integrity',
+      -module     => 'ensembl.brc4.runnable.integrity',
       -language   => 'python3',
       -parameters => {
         ignore_final_stops => $self->o('ignore_final_stops'),
@@ -323,7 +325,7 @@ sub pipeline_analyses {
       # - db_name
       # - manifest_metadata
       -logic_name => 'Prepare_genome',
-      -module     => 'PrepareGenome',
+      -module     => 'ensembl.brc4.runnable.prepare_genome',
       -language => 'python3',
       -parameters => {
         release => $self->o('release'),
@@ -391,7 +393,7 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'LoadSequenceData',
-      -module     => 'LoadSequenceData',
+      -module     => 'ensembl.brc4.runnable.load_sequence_data',
       -language => 'python3',
       -parameters        => {
         work_dir => $self->o('pipeline_dir') . '/#db_name#/load_sequence',
@@ -412,7 +414,7 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'FillMetadata',
-      -module     => 'FillMetadata',
+      -module     => 'ensembl.brc4.runnable.fill_metadata',
       -language => 'python3',
       -parameters        => {
         work_dir => $self->o('pipeline_dir') . '/#db_name#/fill_metadata',
