@@ -98,7 +98,7 @@ class GffSubRule(GffRule):
         del ctx["_RULESDATA"][GffRule.NAME]["USEDQUALS"]
         if gff_sub_uq:
           for k in gff_sub_uq:
-            out[k] = gff_sub_uq[k]
+            gff_uq[k] = gff_sub_uq[k]
           del ctx["_RULESDATA"][GffSubRule.NAME]["USEDQUALS"]
       elif gff_sub_uq:
         ctx["_RULESDATA"]["_ALL"]["USEDQUALS"] = gff_sub_uq
