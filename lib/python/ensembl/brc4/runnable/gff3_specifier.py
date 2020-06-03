@@ -7,7 +7,7 @@ import gzip
 import io
 from math import floor
 
-class GFF3Specifier(eHive.BaseRunnable):
+class gff3_specifier(eHive.BaseRunnable):
 
     allowed_biotypes = [
             "gene",

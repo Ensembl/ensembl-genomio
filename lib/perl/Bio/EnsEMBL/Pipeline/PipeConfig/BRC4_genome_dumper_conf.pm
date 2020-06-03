@@ -245,7 +245,7 @@ sub pipeline_analyses {
      },
 
     { -logic_name  => 'Integrity_check',
-      -module      => 'Integrity',
+      -module      => 'ensembl.brc4.runnable.integrity',
       -language    => 'python3',
       -parameters     => {
         ensembl_mode => $self->o('ensembl_mode'),
@@ -324,7 +324,7 @@ sub pipeline_analyses {
 
    # BRC4 specifications alterations
    { -logic_name  => 'GFF3_BRC4_specifications',
-     -module      => 'GFF3Specifier',
+     -module      => 'ensembl.brc4.runnable.gff3_specifier',
      -language    => 'python3',
      -parameters     => {
        gff_file => '#filtered_gff_file#',
@@ -451,7 +451,7 @@ sub pipeline_analyses {
     },
 
     { -logic_name     => 'Check_json_schema',
-      -module         => 'SchemaValidator',
+      -module         => 'ensembl.brc4.runnable.schema_validator',
       -language => 'python3',
       -parameters     => {
         json_file => '#metadata_json#',

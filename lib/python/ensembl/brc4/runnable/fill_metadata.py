@@ -7,7 +7,7 @@ import sys
 
 from os.path import dirname, join as pj
 
-class FillMetadata(eHive.BaseRunnable):
+class fill_metadata(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {

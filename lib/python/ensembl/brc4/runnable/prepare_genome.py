@@ -9,7 +9,7 @@ import sys
 from os import path
 
 
-class PrepareGenome(eHive.BaseRunnable):
+class prepare_genome(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {

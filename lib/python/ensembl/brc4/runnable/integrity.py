@@ -14,7 +14,7 @@ from math import floor
 import hashlib
 
 
-class Integrity(eHive.BaseRunnable):
+class integrity(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {

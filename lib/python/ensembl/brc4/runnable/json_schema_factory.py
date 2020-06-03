@@ -4,7 +4,7 @@ import eHive
 import json
 from os import path
 
-class JsonSchemaFactory(eHive.BaseRunnable):
+class json_schema_factory(eHive.BaseRunnable):
 
     def run(self):
         manifest_path = self.param_required("manifest")
