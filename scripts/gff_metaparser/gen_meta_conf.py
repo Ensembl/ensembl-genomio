@@ -295,7 +295,9 @@ class MetaConf:
                                    if n.strip() in use_cols }
             else:
               break
-          _data = line.split()
+          _data = line.split("\t")
+          if len(_data) <= 1:
+            _data = line.split()
           _syns = { src: _data[i].strip() for i, src in header_fixed.items() if i < len(_data) }
           _out = { src: nm for src, nm in _syns.items() if nm and nm.lower() != "na" }
           for src in [ "INSDC", "RefSeq" ]:
