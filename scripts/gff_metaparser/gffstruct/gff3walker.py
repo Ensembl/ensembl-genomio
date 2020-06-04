@@ -107,12 +107,15 @@ class GFF3Walker:
     # match
     processed_rules = []
     if self._struct_tags == "anyQual":
-      for qname in [None] + list(quals.keys()) + ["parent"]:
+      allowed_add_ons = ["parent", "_START", "_END"]
+      for qname in [None] + list(quals.keys()) + allowed_add_ons:
         leaftag = "/".join(filter(None, [feat.type, qname]))
         leafvalue = None
         if qname:
           if qname.lower() == "parent": # because we have preprocessed parent IDS
             leafvalue = context.get("_PARENTID")
+          elif qname in allowed_add_ons:
+            leafvalue = context.get(qname)
           elif qname in quals:
             leafvalue = quals[qname]
         context.tag(leaftag)
