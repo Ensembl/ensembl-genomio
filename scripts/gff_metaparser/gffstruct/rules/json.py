@@ -7,7 +7,7 @@ import sys
 class JsonRule(BaseRule):
   NAME = "JSON"
   _RULES = BaseRule.RulesType()
-  _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_S", "_SPLIT", "_NUMVAL"])
+  _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_SUB", "_SPLIT", "_NUMVAL"])
   _OUTPUT_FORCE_SUB = False
   _CTX_PFX="_TECH_JSON_"
 
@@ -193,9 +193,10 @@ class JsonRule(BaseRule):
       else:
         return self.interpolate(res, context, do_split = False)
 
-    if asub:
+    if asub and v and type(v) == str:
       for f,t in asub:
-        v = f.sub(t, v)
+        if v:
+          v = f.sub(t, v)
     if amap and v in amap:
       v = amap[v]
     if aignore and v and aignore.search(v) is not None:
