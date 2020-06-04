@@ -278,7 +278,6 @@ class MetaConf:
         "Sequence-Name" : "INSDC_submitted_name",
         "GenBank-Accn" : "INSDC",
         "RefSeq-Accn" : "RefSeq",
-        "Assigned-Molecule" : "GenBank",
      }
       _open = asm_rep_file.endswith(".gz") and gzip.open or open
       with _open(asm_rep_file, 'rt') as asm_rep:
