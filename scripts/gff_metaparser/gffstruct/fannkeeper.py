@@ -17,9 +17,12 @@ class FannKeeper:
       for p in path.split("/"):
         if type(p) == list:
           Except("To many list levels for %s:%s/%s" %(obj_tag, obj_id, path))
+        p_is_list = False
+        if p.startswith("@"):
+          p_is_list = True
+          p = p[1:]
         if p not in top:
-          if p.startswith("@"):
-            p = p[1:]
+          if p_is_list:
             top[p] = list()
           else:
             top[p] = dict()
