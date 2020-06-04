@@ -40,6 +40,7 @@ sub default_options {
     output_dir => $self->o('output_dir'),
 
     debug => 0,
+    ensembl_mode => 0,
 
     ## Metadata parameters
     'schemas' => {
@@ -137,14 +138,76 @@ sub pipeline_analyses {
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
       -rc_name        => 'default',
-      -flow_into  => { '2' => 'End' },
+      -flow_into  => {
+        '2->A' => 'Process',
+        'A->2' => 'Manifest_maker',
+      },
     },
 
     {
-      -logic_name => 'End',
+      -logic_name => 'Process',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -analysis_capacity   => 1,
       -rc_name    => 'default',
+      -flow_into  => ['Process_seq_region', 'Process_fasta_dna'],
+    },
+
+    # Process files to our specifications
+    {
+      -logic_name => 'Process_seq_region',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+      -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=seq_region_json' },
+    },
+
+    {
+      -logic_name => 'Process_fasta_dna',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+      -parameters     => {
+        hash_key => "fasta_dna",
+      },
+      -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=fasta_dna' },
+    },
+
+    # Collate files to their final dir
+    { -logic_name  => 'Manifest_maker',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::Manifest',
+      -max_retry_count => 0,
+      -analysis_capacity   => 1,
+      -rc_name         => 'default',
+      -parameters     => {
+        hash_key => "seq_region",
+      },
+      -flow_into       => { '2' => 'Manifest_check' },
+    },
+
+     { -logic_name     => 'Manifest_check',
+       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+       -parameters     => {
+         json_file => '#manifest#',
+         metadata_type => 'manifest',
+         json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
+         cmd => 'jsonschema -i #json_file# #json_schema#',
+       },
+       -max_retry_count => 0,
+       -analysis_capacity => 1,
+       -batch_size     => 50,
+	     -rc_name        => 'default',
+      -flow_into       => { '1' => 'Integrity_check' },
+     },
+
+    { -logic_name  => 'Integrity_check',
+      -module      => 'ensembl.brc4.runnable.integrity',
+      -language    => 'python3',
+      -parameters     => {
+        ensembl_mode => $self->o('ensembl_mode'),
+      },
+      -analysis_capacity   => 5,
+      -rc_name         => '8GB',
+      -max_retry_count => 0,
     },
   ];
 }
