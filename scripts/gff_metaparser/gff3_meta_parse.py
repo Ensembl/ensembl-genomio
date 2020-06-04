@@ -22,7 +22,7 @@ def get_args():
   parser.add_argument("--conf_patch", metavar="conf.patch", required=False,
                       type=str,
                       help="config patch file")
-  parser.add_argument("--pfx_trims", metavar="ANY!:.+\|,ANY:gene-,ANY:rna-,cds:cds-,exon:exon-",
+  parser.add_argument("--pfx_trims", metavar="ANY!:.+\|,ANY:id-,ANY:gene-,ANY:rna-,cds:cds-,exon:exon-",
                       required = False, type=str,
                       help="""Comma separated list of `feature:id_pfx` pairs to trim. `feature` case is ignored.
                               If `feature` part is ommited or 'ANY' is used, `id_pfx` will be treamed from any `feature`.
