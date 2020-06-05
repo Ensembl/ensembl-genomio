@@ -23,10 +23,7 @@ my %opt = %{ opt_check() };
 
 my ($file1, $file2) = ($opt{in1}, $opt{in2});
 
-if ($file1 =~ /\.fa(sta)?$/ and $file2 =~ /\.fa(sta)?$/) {
-  diag "Compare fasta files";
-  compare_fasta($file1, $file2);
-} elsif ($file1 =~ /manifest.json$/ and $file2 =~ /manifest.json$/) {
+if ($file1 =~ /manifest.json$/ and $file2 =~ /manifest.json$/) {
   diag "Compare manifests";
   compare_manifests($file1, $file2, \%opt);
 } else {
@@ -684,11 +681,12 @@ sub usage {
     $help = "[ $error ]\n";
   }
   $help .= <<'EOF';
-    SCRIPTDESCRIPTION
+    Compare two sets of files given their manifest, assuming they follow BRC4 specifications.
     
-    --in1 <path>
-    --in2 <path>
+    --in1 <path>      : path the the first manifest file
+    --in2 <path>      : path the the second manifest file
     
+    SPECIFIC TESTS:
     --do_fasta
     --do_gff3
     --do_json
