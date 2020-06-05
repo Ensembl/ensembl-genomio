@@ -56,7 +56,7 @@ sub compare_manifests {
       if ($name =~ /^fasta/ and $opt->{do_fasta}) {
         diag "Compare files $file1 and $file2";
         my $is_dna = ($name =~ /dna/);
-        compare_fasta($path1, $path2, $is_dna);
+        compare_fasta($path1, $path2, $is_dna, $map1, $map2);
       }
       if ($name eq 'gff3' and $opt->{do_gff3}) {
         diag "Compare files $file1 and $file2";
@@ -185,16 +185,14 @@ sub get_seqs {
 }
 
 sub compare_fasta {
-  my ($fasta1, $fasta2, $is_dna) = @_;
+  my ($f1, $f2, $is_dna, $map1, $map2) = @_;
 
-  fasta_diff($fasta1, $fasta2, $is_dna);
-}
-
-sub fasta_diff {
-  my ($f1, $f2, $is_dna) = @_;
-
-  my $seqs1 = get_fasta($f1);
-  my $seqs2 = get_fasta($f2);
+  if (not $is_dna) {
+    $map1 = {};
+    $map2 = {};
+  }
+  my $seqs1 = get_fasta($f1, $map1);
+  my $seqs2 = get_fasta($f2, $map2);
 
   my $n1 = scalar(keys %$seqs1);
   my $n2 = scalar(keys %$seqs2);
@@ -280,7 +278,7 @@ sub is_ambiguous {
 }
 
 sub get_fasta {
-  my ($fasta) = @_;
+  my ($fasta, $map) = @_;
 
   my %seqs;
   my ($seq, $id);
@@ -289,6 +287,7 @@ sub get_fasta {
     chomp $line;
     if ($line =~ /^>\s*(.+)\s*$/) {
       if ($id) {
+        $id = $map->{$id} if $map->{$id};
         $seqs{$id} = $seq;
       }
       $id = $1;
@@ -298,6 +297,7 @@ sub get_fasta {
     }
   }
   if ($id) {
+    $id = $map->{$id} if $map->{$id};
     $seqs{$id} = $seq;
   }
   close $fh;
