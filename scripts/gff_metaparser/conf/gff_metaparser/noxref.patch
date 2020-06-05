@@ -1,0 +1,5 @@
+# patch for the gff_metaparser.conf to propagate CDS and ~mRNA xrefs to gene JSON 
+
+@GENE/dbxref	JSON	DISCARD
+@MRNA/dbxref	JSON	DISCARD
+cds/dbxref	JSON	DISCARD
