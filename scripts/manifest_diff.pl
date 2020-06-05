@@ -17,6 +17,9 @@ use Test::Deep;
 use Test::Differences;
 
 ###############################################################################
+my $seqr_key_default = "BRC4_seq_region_name";
+
+###############################################################################
 # MAIN
 # Get command line args
 my %opt = %{ opt_check() };
@@ -39,9 +42,8 @@ sub compare_manifests {
   my $manifest2 = get_manifest($man2);
 
   # Get seq_region name mapping
-  my $key = "BRC4_seq_region_name";
-  my $map1 = get_map($manifest1, $dir1, $key);
-  my $map2 = get_map($manifest2, $dir2, $key);
+  my $map1 = get_map($manifest1, $dir1, $opt{seqr_key});
+  my $map2 = get_map($manifest2, $dir2, $opt{seqr_key});
 
   for my $name (sort keys %$manifest1) {
     my $file1 = $manifest1->{$name};
@@ -664,11 +666,14 @@ sub usage {
   if ($error) {
     $help = "[ $error ]\n";
   }
-  $help .= <<'EOF';
+  $help .= <<"EOF";
     Compare two sets of files given their manifest, assuming they follow BRC4 specifications.
     
     --in1 <path>      : path the the first manifest file
     --in2 <path>      : path the the second manifest file
+
+    OPTIONS:
+    --seqr_key <str>  : Key to use to map the seq_regions (default: $seqr_key_default)
     
     SPECIFIC TESTS:
     --do_fasta
@@ -691,6 +696,7 @@ sub opt_check {
     "do_fasta",
     "do_gff3",
     "do_json",
+    "seqr_key=s",
     "help",
     "verbose",
     "debug",
@@ -701,6 +707,7 @@ sub opt_check {
     $opt{do_gff3} = 1;
     $opt{do_json} = 1;
   }
+  $opt{seqr_key} //= $seqr_key_default;
   usage()                if $opt{help};
   usage("Manifest 1 needed")  if not $opt{in1};
   usage("Manifest 2 needed")  if not $opt{in2};
