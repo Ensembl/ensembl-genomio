@@ -177,7 +177,9 @@ class MetaConf:
     _sci_name = self.get("species.scientific_name")
     _acc = self.get("assembly.accession").split(".")[0].replace("_", "")
     _strain = self.get("species.strain")
-    _prod_name = ("%s_%s" % (_sci_name, _acc)).lower().replace(" ","_")
+    _prod_name = _sci_name.strip().lower()
+    _prod_name = "_".join(re.sub(r'[^a-z0-9A-Z]+', '_', _prod_name).split("_")[:2])
+    _prod_name = ("%s_%s" % (_prod_name, _acc)).lower().replace(" ","_")
     self.update("species.production_name", _prod_name)
     _display_name = _sci_name
     if _strain:
