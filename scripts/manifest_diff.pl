@@ -38,11 +38,10 @@ sub compare_manifests {
   my $manifest1 = get_manifest($man1);
   my $manifest2 = get_manifest($man2);
 
-  my $dna_map;
-  if ($opt->{map}) {
-    $dna_map = get_map($manifest1, $manifest2, $dir1, $dir2);
-    #say "Mapped DNA sequences: " . scalar(keys %$dna_map);
-  }
+  # Get seq_region name mapping
+  my $key = "BRC4_seq_region_name";
+  my $map1 = get_map($manifest1, $dir1, $key);
+  my $map2 = get_map($manifest2, $dir2, $key);
 
   for my $name (sort keys %$manifest1) {
     my $file1 = $manifest1->{$name};
@@ -59,7 +58,7 @@ sub compare_manifests {
       }
       if ($name eq 'gff3' and $opt->{do_gff3}) {
         diag "Compare files $file1 and $file2";
-        compare_gff3($path1, $path2, $dna_map);
+        compare_gff3($path1, $path2, $map1, $map2);
       }
       if ($opt->{do_json}) {
         if ($name eq 'genome') {
@@ -142,33 +141,18 @@ sub get_manifest {
 }
 
 sub get_map {
-  my ($m1, $m2, $dir1, $dir2) = @_;
-
-  # First get the fasta files
-  my ($fasta1) = grep { $_ eq 'fasta_dna' } keys %$m1;
-  my ($fasta2) = grep { $_ eq 'fasta_dna' } keys %$m2;
-
-  die "No dna fasta in " . join(", ", sort keys %$m1) if not $fasta1;
-  die "No dna fasta in " . join(", ", sort keys %$m2) if not $fasta2;
-
-  my $seqs1 = get_seqs(catfile($dir1, $m1->{$fasta1}));
-  my $seqs2 = get_seqs(catfile($dir2, $m1->{$fasta2}));
-
-  # Match the ids
+  my ($manifest, $dir, $key) = @_;
+  
   my %map;
-  for my $seqh (keys %$seqs1) {
-    if (exists $seqs2->{$seqh}) {
-      my @ids1 = sort @{ $seqs1->{$seqh} };
-      my @ids2 = sort @{ $seqs2->{$seqh} };
-      if (@ids1 == 1 and @ids2 == 1) {
-        $map{$ids2[0]} = $ids1[0];
-      } else {
-        for (my $i = 0; $i < @ids1; $i++) {
-          $map{$ids2[$i]} = $ids1[$i];
-        }
-      }
+  my $seqr_file = $manifest->{seq_region};
+  if ($seqr_file) {
+    my $seqr_path = catfile($dir, $seqr_file);
+    if (-e $seqr_path) {
+      my $seqr = get_json($seqr_path);
+      %map = map { $_->{name} => $_->{$key} } grep { exists $_->{$key} } @$seqr;
     }
   }
+
   return \%map;
 }
 
@@ -500,10 +484,10 @@ sub merge_types {
 }
 
 sub compare_gff3 {
-  my ($gff1, $gff2, $dna_map) = @_;
+  my ($gff1, $gff2, $map1, $map2) = @_;
 
-  my $data1 = get_gff3($gff1);
-  my $data2 = get_gff3($gff2, $dna_map);
+  my $data1 = get_gff3($gff1, $map1);
+  my $data2 = get_gff3($gff2, $map2);
   
   # Changes made during import
   $data1 = merge_types($data1, "gene", "ncRNA_gene");
@@ -691,8 +675,6 @@ sub usage {
     --do_gff3
     --do_json
 
-    --map
-    
     --help            : show this help message
     --verbose         : show detailed progress
     --debug           : show even more information (for debugging purposes)
@@ -709,7 +691,6 @@ sub opt_check {
     "do_fasta",
     "do_gff3",
     "do_json",
-    "map",
     "help",
     "verbose",
     "debug",
