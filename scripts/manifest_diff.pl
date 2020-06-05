@@ -72,27 +72,22 @@ sub compare_manifests {
           $data1 = clean_genome_meta($data1);
           $data2 = clean_genome_meta($data2);
 
-          my $deep = 1;
-          compare_json($data1, $data2, $deep);
+          eq_or_diff($data1, $data2, "Json content identical");
         }
         if ($name eq 'seq_region') {
           diag "Compare files $file1 and $file2";
-          my $deep = 0;
           my $data1 = get_sorted_json($path1, $opt{seqr_key});
           my $data2 = get_sorted_json($path2, $opt{seqr_key});
-#          $data1 = remove_keys($data1, "BRC4_seq_region_name", "EBI_seq_region_name");
-#          $data2 = remove_keys($data2, "BRC4_seq_region_name", "EBI_seq_region_name");
+#          $data1 = remove_keys($data1, ["BRC4_seq_region_name", "EBI_seq_region_name"]);
+#          $data2 = remove_keys($data2, ["BRC4_seq_region_name", "EBI_seq_region_name"]);
           compare_entries($data1, $data2, $opt{seqr_key});
         }
         if ($name eq 'functional_annotation') {
           diag "Compare files $file1 and $file2";
-          my $deep = 0;
           my $data1 = get_sorted_json($path1);
           my $data2 = get_sorted_json($path2);
-          #$data1 = remove_keys($data1, "xrefs", "version", "is_pseudogene");
-          #$data2 = remove_keys($data2, "xrefs", "version", "is_pseudogene");
-          #$data1 = remove_keys($data1, "version");
-          #$data2 = remove_keys($data2, "version");
+          $data1 = remove_keys($data1, ["xrefs", "version"]);
+          $data2 = remove_keys($data2, ["xrefs", "version"]);
           $data1 = unique_array_keys($data1, "xrefs", "id", "dbname");
           $data2 = unique_array_keys($data2, "xrefs", "id", "dbname");
           compare_entries($data1, $data2, "id");
@@ -372,21 +367,11 @@ sub sort_json {
   }
 }
 
-sub compare_json {
-  my ($data1, $data2, $deep) = @_;
-
-  if ($deep) {
-    eq_or_diff($data1, $data2, "Json content identical");
-  } else {
-    cmp_deeply($data1, $data2, "Json content identical");
-  }
-}
-
 sub remove_keys {
-  my ($data, @keys) = @_;
+  my ($data, $keys) = @_;
   
   for my $entry (@$data) {
-    for my $key (@keys) {
+    for my $key (@$keys) {
       delete $entry->{$key} if $entry->{$key};
     }
   }
@@ -415,9 +400,6 @@ sub unique_array_keys {
 sub compare_entries {
   my ($data1, $data2, $key) = @_;
   
-  my $ndata1 = scalar @$data1;
-  my $ndata2 = scalar @$data2;
-
   # Extract entries that are in common
   ($data1, $data2) = list_diff($data1, $data2, $key);
 
@@ -430,7 +412,16 @@ sub compare_entries {
     my $en2 = $sorted2[$i];
     my $value = "$en1->{$key}";
     $value .= "/$en2->{$key}" if $en1->{$key} ne $en2->{$key};
-    cmp_deeply($en1, $en2, "Json content identical for $value");
+
+    # Special
+    if ($en1->{description}) {
+      $en1->{description} =~ s/ \[Source:VB Community Annotation\]//;
+    }
+    if ($en2->{description}) {
+      $en2->{description} =~ s/ \[Source:VB Community Annotation\]//;
+    }
+
+    eq_or_diff($en1, $en2, "Json content identical for $value");
   }
 }
 
