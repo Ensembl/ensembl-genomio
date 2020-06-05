@@ -45,6 +45,7 @@ sub default_options {
     ## Metadata parameters
     'schemas' => {
       'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
+      'seq_attrib' => catfile($schema_dir, "seq_attrib_schema.json"),
       'functional_annotation' => catfile($schema_dir, "functional_annotation_schema.json"),
       'genome' => catfile($schema_dir, "genome_schema.json"),
       'manifest' => catfile($schema_dir, "manifest_schema.json"),
@@ -123,42 +124,74 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
-      -flow_into  => 'Download_assembly_data',
+      -flow_into  => {1 => { 'Read_genome_data' => INPUT_PLUS() } },
     },
 
+    {
+      -logic_name     => 'Read_genome_data',
+      -module         => 'ensembl.brc4.runnable.read_json',
+      -language => 'python3',
+      -parameters     => {
+        json_path => '#genome_json#',
+        name => "genome_data"
+      },
+      -analysis_capacity => 1,
+      -failed_job_tolerance => 100,
+      -batch_size     => 50,
+      -rc_name        => 'default',
+      -flow_into  => { 2 => 'Download_assembly_data' },
+    },
 
     {
       -logic_name     => 'Download_assembly_data',
       -module         => 'ensembl.brc4.runnable.download_assembly_data',
       -language => 'python3',
       -parameters     => {
-        genome_json => '#genome_json#',
+        genome_data => '#genome_data#',
         download_dir => $self->o('pipeline_dir') . "/download",
       },
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
       -rc_name        => 'default',
       -flow_into  => {
-        '2->A' => 'Process',
-        'A->2' => 'Manifest_maker',
+        '2->A' => { 'Process_data' => INPUT_PLUS() },
+        'A->2' => { 'Manifest_maker' => INPUT_PLUS() },
       },
     },
 
     {
-      -logic_name => 'Process',
+      -logic_name => 'Process_data',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -flow_into  => ['Process_seq_region', 'Process_fasta_dna'],
+      -flow_into  => [
+        'Process_genome_metadata',
+        'Process_seq_region',
+        'Process_fasta_dna',
+      ],
     },
 
     # Process files to our specifications
+    {
+      -logic_name => 'Process_genome_metadata',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+      -parameters     => {
+        hash_key => "genome",
+      },
+      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=genome_json' },
+    },
+
     {
       -logic_name => 'Process_seq_region',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=seq_region_json' },
+      -parameters     => {
+        hash_key => "seq_region",
+      },
+      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=seq_region_json' },
     },
 
     {
@@ -169,35 +202,37 @@ sub pipeline_analyses {
       -parameters     => {
         hash_key => "fasta_dna",
       },
-      -flow_into  => { 2 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=fasta_dna' },
+      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=fasta_dna' },
     },
 
     # Collate files to their final dir
     { -logic_name  => 'Manifest_maker',
-      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::Manifest',
+      -module      => 'ensembl.brc4.runnable.manifest',
+      -language    => 'python3',
       -max_retry_count => 0,
       -analysis_capacity   => 1,
       -rc_name         => 'default',
       -parameters     => {
-        hash_key => "seq_region",
+        output_dir => $self->o('output_dir'),
       },
       -flow_into       => { '2' => 'Manifest_check' },
     },
 
-     { -logic_name     => 'Manifest_check',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-       -parameters     => {
-         json_file => '#manifest#',
-         metadata_type => 'manifest',
-         json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
-         cmd => 'jsonschema -i #json_file# #json_schema#',
-       },
-       -max_retry_count => 0,
-       -analysis_capacity => 1,
-       -batch_size     => 50,
-	     -rc_name        => 'default',
-      -flow_into       => { '1' => 'Integrity_check' },
-     },
+    {
+      -logic_name     => 'Manifest_check',
+      -module         => 'ensembl.brc4.runnable.schema_validator',
+      -language => 'python3',
+      -parameters     => {
+        metadata_type => 'manifest',
+        json_file => '#manifest#',
+        json_schema => '#schemas#',
+      },
+      -analysis_capacity => 1,
+      -failed_job_tolerance => 100,
+      -batch_size     => 50,
+      -rc_name        => 'default',
+      -flow_into       => 'Integrity_check',
+    },
 
     { -logic_name  => 'Integrity_check',
       -module      => 'ensembl.brc4.runnable.integrity',

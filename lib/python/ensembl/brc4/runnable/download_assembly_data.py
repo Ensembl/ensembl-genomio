@@ -4,25 +4,25 @@ import eHive
 import json
 import os, re
 import ftplib
+import hashlib
 
 class download_assembly_data(eHive.BaseRunnable):
 
     def run(self):
-        genome_json = self.param('genome_json')
+        genome_data = self.param('genome_data')
         download_dir = self.param('download_dir')
 
-        # Get genome data
-        genome_data = self.get_json(genome_json)
         accession = genome_data["assembly"]["accession"]
 
-        # Set dedicated dir for download
+        # Set and create dedicated dir for download
         download_dir = os.path.join(download_dir, accession)
-        
         if not os.path.isdir(download_dir):
             os.makedirs(download_dir)
-            self.download_files(accession, download_dir)
 
-        # TODO: md5check
+        # Download if files dont' exist or fail checksum
+        if not self.md5_files(download_dir):
+            print("Download the files")
+            self.download_files(accession, download_dir)
         
         # Select specific files and give them a name
         files = self.get_files_selection(download_dir)
@@ -30,17 +30,67 @@ class download_assembly_data(eHive.BaseRunnable):
         if len(files) == 0:
             raise Exception("No file downloaded")
 
-        files["download_dir"] = download_dir
-
-        # Output all those files
+        # Output all those named files + dir
         self.dataflow(files, 2)
 
+
     def get_json(self, json_path):
+        """
+        Retrieve the json data from a json file
+        """
         with open(json_path) as json_file:
             json_data = json.load(json_file)
         return json_data
 
+    def md5_files(self, dl_dir):
+        """
+        Check all files checksums with the sums listed in a checksum file, if available.
+        Return False if there is no checksum file, or a file is missing, or has a wrong checksum.
+        """
+        files = os.listdir(dl_dir)
+
+        md5_file = "md5checksums.txt"
+        if md5_file in files:
+            md5_path = os.path.join(dl_dir, md5_file)
+            sums = self.get_checksums(md5_path)
+        else:
+            return False
+
+        for dl_file, checksum in sums:
+            file_path = os.path.join(dl_dir, dl_file)
+            
+            # Don't even try if the file is missing
+            if not os.path.isfile(file_path):
+                print("File %s is missing" % file_path)
+                return False
+
+            # Check the file checksum
+            with open(file_path, mode='rb') as f:
+                file_sum = hashlib.md5(file_path).hexdigest()
+            if file_sum != checksum:
+                print("File %s checksum doesn't match" % file_path)
+                return False
+
+        return True
+    
+    def get_checksums(self, checksum_path):
+        """
+        Get a dict of checksums from a file, with file names as keys and sums as values
+        """
+        
+        sums = {}
+        with open(checksum_path, mode='r') as fh:
+            for line in fh:
+                parts = line.split("\t")
+                if len(parts) == 2:
+                    (checksum, file_path) = parts
+                    sums[file_path] = checksum
+        return sums
+
     def download_files(self, accession, dl_dir):
+        """
+        Given an INSDC accession, download all available files from the ftp to the download dir
+        """
         match = re.match("GC[AF]_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
         part1 = match.group(1)
         part2 = match.group(2)
@@ -69,13 +119,22 @@ class download_assembly_data(eHive.BaseRunnable):
                         f.retrbinary("RETR " + ftp_file, fp.write)
 
     def get_files_selection(self, dl_dir):
+        """
+        Among all the files downloaded, only keep a subset for which we use a controlled name.
+        Return a dict[name] = file_path
+        The file_path is relative to the download dir
+        Current names:
+            report
+            fasta_dna
+            gff3
+        """
         files = {}
         for dl_file in os.listdir(dl_dir):
             if dl_file.endswith("assembly_report.txt"):
-                files["report"] = dl_file
+                files["report"] = os.path.join(dl_dir, dl_file)
             elif dl_file.endswith("genomic.fna.gz"):
-                files["fasta_dna"] = dl_file
+                files["fasta_dna"] = os.path.join(dl_dir, dl_file)
             elif dl_file.endswith("genomic.gff.gz"):
-                files["gff3"] = dl_file
+                files["gff3"] = os.path.join(dl_dir, dl_file)
         return files
 
