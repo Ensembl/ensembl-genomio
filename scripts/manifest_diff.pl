@@ -78,11 +78,11 @@ sub compare_manifests {
         if ($name eq 'seq_region') {
           diag "Compare files $file1 and $file2";
           my $deep = 0;
-          my $data1 = get_sorted_json($path1);
-          my $data2 = get_sorted_json($path2);
-          $data1 = remove_keys($data1, "BRC4_seq_region_name", "EBI_seq_region_name");
-          $data2 = remove_keys($data2, "BRC4_seq_region_name", "EBI_seq_region_name");
-          compare_entries($data1, $data2, "name");
+          my $data1 = get_sorted_json($path1, $opt{seqr_key});
+          my $data2 = get_sorted_json($path2, $opt{seqr_key});
+#          $data1 = remove_keys($data1, "BRC4_seq_region_name", "EBI_seq_region_name");
+#          $data2 = remove_keys($data2, "BRC4_seq_region_name", "EBI_seq_region_name");
+          compare_entries($data1, $data2, $opt{seqr_key});
         }
         if ($name eq 'functional_annotation') {
           diag "Compare files $file1 and $file2";
@@ -91,8 +91,8 @@ sub compare_manifests {
           my $data2 = get_sorted_json($path2);
           #$data1 = remove_keys($data1, "xrefs", "version", "is_pseudogene");
           #$data2 = remove_keys($data2, "xrefs", "version", "is_pseudogene");
-          $data1 = remove_keys($data1, "version");
-          $data2 = remove_keys($data2, "version");
+          #$data1 = remove_keys($data1, "version");
+          #$data2 = remove_keys($data2, "version");
           $data1 = unique_array_keys($data1, "xrefs", "id", "dbname");
           $data2 = unique_array_keys($data2, "xrefs", "id", "dbname");
           compare_entries($data1, $data2, "id");
@@ -333,17 +333,15 @@ sub get_json {
 }
 
 sub sort_json {
-  my ($json, $delete_version) = @_;
+  my ($json, $key) = @_;
+
+  $key //= "name";
 
   if (ref($json) eq '') {
     return $json;
   } elsif (ref($json) eq 'HASH') {
     for my $key (keys %$json) {
-      if ($key eq 'version' and $delete_version) {
-        delete $json->{$key};
-      } else {
-        $json->{$key} = sort_json($json->{$key}, $delete_version);
-      }
+      $json->{$key} = sort_json($json->{$key});
     }
     return $json;
   } elsif (ref($json) eq 'ARRAY') {
@@ -357,15 +355,15 @@ sub sort_json {
         # Sort for functional_annotation
         if ($json->[0]->{object_type} and $json->[0]->{id}) {
           $json = [ sort { $a->{object_type} cmp $b->{object_type} and $a->{id} cmp $b->{id} } @$json ];
-          # Sort for others
-        } elsif ($json->[0]->{name}) {
-          $json = [ sort { $a->{name} cmp $b->{name} } @$json ];
+        # Sort for others
+        } elsif ($json->[0]->{$key}) {
+          $json = [ sort { $a->{$key} cmp $b->{$key} } @$json ];
         }
       }
 
       # Sort each element in the array itself
       for (my $i = 0; $i < @$json; $i++) {
-        $json->[$i] = sort_json($json->[$i], $delete_version);
+        $json->[$i] = sort_json($json->[$i]);
       }
     }
     return $json;
