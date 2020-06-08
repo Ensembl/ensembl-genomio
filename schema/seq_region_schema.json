@@ -61,7 +61,8 @@
             "macronuclear_chromosome",
             "micronuclear_chromosome",
             "mitochondrial_chromosome",
-            "nuclear_chromosome"
+            "nuclear_chromosome",
+            "plasmid"
           ]
         },
         "karyotype_bands" : {
