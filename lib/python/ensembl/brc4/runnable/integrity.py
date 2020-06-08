@@ -105,10 +105,16 @@ class integrity(eHive.BaseRunnable):
             if gff:
                 if pep:
                     # We don't compare the peptide lengths because of seqedits
-                    errors += self.check_lengths(pep, gff["translations"], "Fasta translations vs gff", special_diff = True)
+                    tr_errors = self.check_lengths(pep, gff["translations"], "Fasta translations vs gff", special_diff = True)
+                    if len(tr_errors) > 0:
+                        tr_errors = self.check_lengths(pep, gff["all_translations"], "Fasta translations vs gff (include pseudo CDS)", special_diff = True)
+                    errors += tr_errors
                 if func_ann:
                     errors += self.check_lengths(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff", ok = "1in2")
-                    errors += self.check_lengths(func_ann["translations"], gff["translations"], "Translation ids metadata vs gff", ok = "1in2")
+                    tr_errors = self.check_lengths(func_ann["translations"], gff["translations"], "Translation ids metadata vs gff", ok = "1in2")
+                    if len(tr_errors) > 0:
+                        tr_errors = self.check_lengths(func_ann["translations"], gff["all_translations"], "Translation ids metadata vs gff (include pseudo CDS)", ok = "1in2")
+                    errors += tr_errors
                 if seq_regions:
                     errors += self.check_seq_region_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff")
 
@@ -198,9 +204,10 @@ class integrity(eHive.BaseRunnable):
 
     def parse_gff3(self, gff3_handle):
         ensembl_mode = self.param("ensembl_mode")
-        seqs = {};
-        genes = {};
-        peps = {};
+        seqs = {}
+        genes = {}
+        peps = {}
+        all_peps = {}
 
         gff = GFF.parse(gff3_handle)
         for seq in gff:
@@ -226,9 +233,14 @@ class integrity(eHive.BaseRunnable):
                                         length[pep_id] = 0
                                     length[pep_id] += abs(feat3.location.end - feat3.location.start)
                             for pep_id in length:
-                                peps[pep_id] = floor(length[pep_id] / 3) - 1
+                                # Store length for translations, add pseudo translations separately
+                                pep_length = floor(length[pep_id] / 3) - 1
+                                if feat.type != "pseudogene":
+                                    peps[pep_id] = pep_length
+                                all_peps[pep_id] = pep_length
 
-        return { "seq_region": seqs, "genes": genes, "translations": peps }
+
+        return { "seq_region": seqs, "genes": genes, "translations": peps, "all_translations": all_peps }
 
     def get_agp_seq_regions(self, agp_dict):
 
