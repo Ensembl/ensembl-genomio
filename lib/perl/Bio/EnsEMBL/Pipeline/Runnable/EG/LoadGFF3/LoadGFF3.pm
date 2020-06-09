@@ -350,40 +350,53 @@ sub add_exons {
 sub add_translation {
   my ($self, $db, $gff_transcript, $gene, $transcript) = @_;
   my $polypeptides = $self->param_required('polypeptides');
-  
+
   my ($translation_id, $gff_object, $genomic_start, $genomic_end);
-  
+
   if ($polypeptides) {
     ($translation_id, $gff_object, $genomic_start, $genomic_end) = $self->get_polypeptide($db, $transcript->stable_id);
   }
-  
+
   if (! defined $translation_id) {
     ($translation_id, $gff_object, $genomic_start, $genomic_end) = $self->infer_translation($gff_transcript, $transcript);
   }
-  
+
   if (defined $genomic_start && defined $genomic_end && ($genomic_end - $genomic_start) > 1 ) {
     my ($start_exon, $end_exon, $seq_start, $seq_end) = $self->translation_coordinates($transcript, $genomic_start, $genomic_end);
-    
+
     my $translation = $self->new_translation($translation_id, $start_exon, $end_exon, $seq_start, $seq_end);
-    
+
     $self->add_xrefs($gff_object, $transcript->analysis, $translation, 'translation');
-    
+
     $transcript->translation($translation);
-    
+
     $self->set_exon_phase($transcript);
 
-    if(!$transcript->translate()) {
-		$self->set_nontranslating_transcript($transcript);
-	 } else {
-    	my $seq = $transcript->translate()->seq;
-    	if (!$seq || $seq eq '' || $seq =~ /\*/) {
-        if ($seq =~ /\*/ and $transcript->biotype eq 'pseudogene_with_CDS') {
-          warn("Pseudogene_with_CDS has stop codons\n");
-        } else {
-        	$self->set_nontranslating_transcript($transcript);
+    if (!$transcript->translate()) {
+      $self->set_nontranslating_transcript($transcript);
+    } else {
+      my $seq = $transcript->translate()->seq;
+
+      my $biotype = $transcript->biotype;
+
+      if ($biotype eq 'pseudogene_with_CDS') {
+        # Truncate the sequence if it has stop codons
+        # Only keep whatever is before the first stop codon
+        # (it might be an empty string, in which case the translation is empty)
+        if ($seq and $seq =~ /\*/) {
+          warn("Pseudogene_with_CDS has stop codons: truncating\n");
+          my ($seq) = split(/\*/, $seq);
         }
-    	}
-	 }
+
+        # Change to normal pseudogene if there is no sequence
+        if (not $seq or $seq  eq '') {
+          $transcript->biotype("pseudogene");
+          $transcript->translation(undef);
+        }
+      } elsif (not $seq or $seq eq '' or $seq =~ /\*/) {
+        $self->set_nontranslating_transcript($transcript);
+      }
+    }
   } else {
     $self->set_nontranslating_transcript($transcript);
   }
