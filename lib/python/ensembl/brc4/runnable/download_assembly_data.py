@@ -126,15 +126,22 @@ class download_assembly_data(eHive.BaseRunnable):
         Current names:
             report
             fasta_dna
+            fasta_pep
             gff3
+            gbff
         """
         files = {}
+        file_ends = {
+                "assembly_report.txt" : "report",
+                "genomic.fna.gz" : "fasta_dna",
+                "protein.faa.gz" : "fasta_pep",
+                "genomic.gff.gz" : "gff3",
+                "genomic.gbff.gz" : "gbff",
+        }
+
         for dl_file in os.listdir(dl_dir):
-            if dl_file.endswith("assembly_report.txt"):
-                files["report"] = os.path.join(dl_dir, dl_file)
-            elif dl_file.endswith("genomic.fna.gz"):
-                files["fasta_dna"] = os.path.join(dl_dir, dl_file)
-            elif dl_file.endswith("genomic.gff.gz"):
-                files["gff3"] = os.path.join(dl_dir, dl_file)
+            for end, name in file_ends.items():
+                if dl_file.endswith(end):
+                    files[name] = os.path.join(dl_dir, dl_file)
         return files
 
