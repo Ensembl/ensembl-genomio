@@ -65,6 +65,7 @@ sub pipeline_wide_parameters {
     debug          => $self->o('debug'),
     'schemas'      => $self->o('schemas'),
     pipeline_dir   => $self->o('pipeline_dir'),
+    work_dir       => catdir($self->o('pipeline_dir'), "process_files"),
   };
 }
 
@@ -168,6 +169,7 @@ sub pipeline_analyses {
         'Process_genome_metadata',
         'Process_seq_region',
         'Process_fasta_dna',
+        'Process_fasta_pep',
       ],
     },
 
@@ -196,13 +198,26 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'Process_fasta_dna',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -module     => 'ensembl.brc4.runnable.process_fasta',
+      -language    => 'python3',
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -parameters     => {
-        hash_key => "fasta_dna",
+        file_name => "fasta_dna",
       },
-      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=fasta_dna' },
+      -flow_into  => { 2 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=fasta_dna' },
+    },
+
+    {
+      -logic_name => 'Process_fasta_pep',
+      -module     => 'ensembl.brc4.runnable.process_fasta',
+      -language    => 'python3',
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+      -parameters     => {
+        file_name => "fasta_pep",
+      },
+      -flow_into  => { 2 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=fasta_pep' },
     },
 
     # Collate files to their final dir
