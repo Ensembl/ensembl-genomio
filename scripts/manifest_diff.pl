@@ -17,16 +17,16 @@ use Test::Deep;
 use Test::Differences;
 
 ###############################################################################
+my $seqr_key_default = "BRC4_seq_region_name";
+
+###############################################################################
 # MAIN
 # Get command line args
 my %opt = %{ opt_check() };
 
 my ($file1, $file2) = ($opt{in1}, $opt{in2});
 
-if ($file1 =~ /\.fa(sta)?$/ and $file2 =~ /\.fa(sta)?$/) {
-  diag "Compare fasta files";
-  compare_fasta($file1, $file2);
-} elsif ($file1 =~ /manifest.json$/ and $file2 =~ /manifest.json$/) {
+if ($file1 =~ /manifest.json$/ and $file2 =~ /manifest.json$/) {
   diag "Compare manifests";
   compare_manifests($file1, $file2, \%opt);
 } else {
@@ -41,11 +41,9 @@ sub compare_manifests {
   my $manifest1 = get_manifest($man1);
   my $manifest2 = get_manifest($man2);
 
-  my $dna_map;
-  if ($opt->{map}) {
-    $dna_map = get_map($manifest1, $manifest2, $dir1, $dir2);
-    #say "Mapped DNA sequences: " . scalar(keys %$dna_map);
-  }
+  # Get seq_region name mapping
+  my $map1 = get_map($manifest1, $dir1, $opt{seqr_key});
+  my $map2 = get_map($manifest2, $dir2, $opt{seqr_key});
 
   for my $name (sort keys %$manifest1) {
     my $file1 = $manifest1->{$name};
@@ -58,11 +56,11 @@ sub compare_manifests {
       if ($name =~ /^fasta/ and $opt->{do_fasta}) {
         diag "Compare files $file1 and $file2";
         my $is_dna = ($name =~ /dna/);
-        compare_fasta($path1, $path2, $is_dna);
+        compare_fasta($path1, $path2, $is_dna, $map1, $map2);
       }
       if ($name eq 'gff3' and $opt->{do_gff3}) {
         diag "Compare files $file1 and $file2";
-        compare_gff3($path1, $path2, $dna_map);
+        compare_gff3($path1, $path2, $map1, $map2);
       }
       if ($opt->{do_json}) {
         if ($name eq 'genome') {
@@ -74,27 +72,22 @@ sub compare_manifests {
           $data1 = clean_genome_meta($data1);
           $data2 = clean_genome_meta($data2);
 
-          my $deep = 1;
-          compare_json($data1, $data2, $deep);
+          eq_or_diff($data1, $data2, "Json content identical");
         }
         if ($name eq 'seq_region') {
           diag "Compare files $file1 and $file2";
-          my $deep = 0;
-          my $data1 = get_sorted_json($path1);
-          my $data2 = get_sorted_json($path2);
-          $data1 = remove_keys($data1, "BRC4_seq_region_name", "EBI_seq_region_name");
-          $data2 = remove_keys($data2, "BRC4_seq_region_name", "EBI_seq_region_name");
-          compare_entries($data1, $data2, "name");
+          my $data1 = get_sorted_json($path1, $opt{seqr_key});
+          my $data2 = get_sorted_json($path2, $opt{seqr_key});
+#          $data1 = remove_keys($data1, ["BRC4_seq_region_name", "EBI_seq_region_name"]);
+#          $data2 = remove_keys($data2, ["BRC4_seq_region_name", "EBI_seq_region_name"]);
+          compare_entries($data1, $data2, $opt{seqr_key});
         }
         if ($name eq 'functional_annotation') {
           diag "Compare files $file1 and $file2";
-          my $deep = 0;
           my $data1 = get_sorted_json($path1);
           my $data2 = get_sorted_json($path2);
-          #$data1 = remove_keys($data1, "xrefs", "version", "is_pseudogene");
-          #$data2 = remove_keys($data2, "xrefs", "version", "is_pseudogene");
-          $data1 = remove_keys($data1, "version");
-          $data2 = remove_keys($data2, "version");
+          $data1 = remove_keys($data1, ["xrefs", "version"]);
+          $data2 = remove_keys($data2, ["xrefs", "version"]);
           $data1 = unique_array_keys($data1, "xrefs", "id", "dbname");
           $data2 = unique_array_keys($data2, "xrefs", "id", "dbname");
           compare_entries($data1, $data2, "id");
@@ -145,33 +138,18 @@ sub get_manifest {
 }
 
 sub get_map {
-  my ($m1, $m2, $dir1, $dir2) = @_;
-
-  # First get the fasta files
-  my ($fasta1) = grep { $_ eq 'fasta_dna' } keys %$m1;
-  my ($fasta2) = grep { $_ eq 'fasta_dna' } keys %$m2;
-
-  die "No dna fasta in " . join(", ", sort keys %$m1) if not $fasta1;
-  die "No dna fasta in " . join(", ", sort keys %$m2) if not $fasta2;
-
-  my $seqs1 = get_seqs(catfile($dir1, $m1->{$fasta1}));
-  my $seqs2 = get_seqs(catfile($dir2, $m1->{$fasta2}));
-
-  # Match the ids
+  my ($manifest, $dir, $key) = @_;
+  
   my %map;
-  for my $seqh (keys %$seqs1) {
-    if (exists $seqs2->{$seqh}) {
-      my @ids1 = sort @{ $seqs1->{$seqh} };
-      my @ids2 = sort @{ $seqs2->{$seqh} };
-      if (@ids1 == 1 and @ids2 == 1) {
-        $map{$ids2[0]} = $ids1[0];
-      } else {
-        for (my $i = 0; $i < @ids1; $i++) {
-          $map{$ids2[$i]} = $ids1[$i];
-        }
-      }
+  my $seqr_file = $manifest->{seq_region};
+  if ($seqr_file) {
+    my $seqr_path = catfile($dir, $seqr_file);
+    if (-e $seqr_path) {
+      my $seqr = get_json($seqr_path);
+      %map = map { $_->{name} => $_->{$key} } grep { exists $_->{$key} } @$seqr;
     }
   }
+
   return \%map;
 }
 
@@ -202,16 +180,14 @@ sub get_seqs {
 }
 
 sub compare_fasta {
-  my ($fasta1, $fasta2, $is_dna) = @_;
+  my ($f1, $f2, $is_dna, $map1, $map2) = @_;
 
-  fasta_diff($fasta1, $fasta2, $is_dna);
-}
-
-sub fasta_diff {
-  my ($f1, $f2, $is_dna) = @_;
-
-  my $seqs1 = get_fasta($f1);
-  my $seqs2 = get_fasta($f2);
+  if (not $is_dna) {
+    $map1 = {};
+    $map2 = {};
+  }
+  my $seqs1 = get_fasta($f1, $map1);
+  my $seqs2 = get_fasta($f2, $map2);
 
   my $n1 = scalar(keys %$seqs1);
   my $n2 = scalar(keys %$seqs2);
@@ -297,7 +273,7 @@ sub is_ambiguous {
 }
 
 sub get_fasta {
-  my ($fasta) = @_;
+  my ($fasta, $map) = @_;
 
   my %seqs;
   my ($seq, $id);
@@ -306,6 +282,7 @@ sub get_fasta {
     chomp $line;
     if ($line =~ /^>\s*(.+)\s*$/) {
       if ($id) {
+        $id = $map->{$id} if $map->{$id};
         $seqs{$id} = $seq;
       }
       $id = $1;
@@ -315,6 +292,7 @@ sub get_fasta {
     }
   }
   if ($id) {
+    $id = $map->{$id} if $map->{$id};
     $seqs{$id} = $seq;
   }
   close $fh;
@@ -350,17 +328,15 @@ sub get_json {
 }
 
 sub sort_json {
-  my ($json, $delete_version) = @_;
+  my ($json, $key) = @_;
+
+  $key //= "name";
 
   if (ref($json) eq '') {
     return $json;
   } elsif (ref($json) eq 'HASH') {
     for my $key (keys %$json) {
-      if ($key eq 'version' and $delete_version) {
-        delete $json->{$key};
-      } else {
-        $json->{$key} = sort_json($json->{$key}, $delete_version);
-      }
+      $json->{$key} = sort_json($json->{$key});
     }
     return $json;
   } elsif (ref($json) eq 'ARRAY') {
@@ -374,15 +350,15 @@ sub sort_json {
         # Sort for functional_annotation
         if ($json->[0]->{object_type} and $json->[0]->{id}) {
           $json = [ sort { $a->{object_type} cmp $b->{object_type} and $a->{id} cmp $b->{id} } @$json ];
-          # Sort for others
-        } elsif ($json->[0]->{name}) {
-          $json = [ sort { $a->{name} cmp $b->{name} } @$json ];
+        # Sort for others
+        } elsif ($json->[0]->{$key}) {
+          $json = [ sort { $a->{$key} cmp $b->{$key} } @$json ];
         }
       }
 
       # Sort each element in the array itself
       for (my $i = 0; $i < @$json; $i++) {
-        $json->[$i] = sort_json($json->[$i], $delete_version);
+        $json->[$i] = sort_json($json->[$i]);
       }
     }
     return $json;
@@ -391,21 +367,11 @@ sub sort_json {
   }
 }
 
-sub compare_json {
-  my ($data1, $data2, $deep) = @_;
-
-  if ($deep) {
-    eq_or_diff($data1, $data2, "Json content identical");
-  } else {
-    cmp_deeply($data1, $data2, "Json content identical");
-  }
-}
-
 sub remove_keys {
-  my ($data, @keys) = @_;
+  my ($data, $keys) = @_;
   
   for my $entry (@$data) {
-    for my $key (@keys) {
+    for my $key (@$keys) {
       delete $entry->{$key} if $entry->{$key};
     }
   }
@@ -434,9 +400,6 @@ sub unique_array_keys {
 sub compare_entries {
   my ($data1, $data2, $key) = @_;
   
-  my $ndata1 = scalar @$data1;
-  my $ndata2 = scalar @$data2;
-
   # Extract entries that are in common
   ($data1, $data2) = list_diff($data1, $data2, $key);
 
@@ -449,7 +412,16 @@ sub compare_entries {
     my $en2 = $sorted2[$i];
     my $value = "$en1->{$key}";
     $value .= "/$en2->{$key}" if $en1->{$key} ne $en2->{$key};
-    cmp_deeply($en1, $en2, "Json content identical for $value");
+
+    # Special
+    if ($en1->{description}) {
+      $en1->{description} =~ s/ \[Source:VB Community Annotation\]//;
+    }
+    if ($en2->{description}) {
+      $en2->{description} =~ s/ \[Source:VB Community Annotation\]//;
+    }
+
+    eq_or_diff($en1, $en2, "Json content identical for $value");
   }
 }
 
@@ -503,10 +475,10 @@ sub merge_types {
 }
 
 sub compare_gff3 {
-  my ($gff1, $gff2, $dna_map) = @_;
+  my ($gff1, $gff2, $map1, $map2) = @_;
 
-  my $data1 = get_gff3($gff1);
-  my $data2 = get_gff3($gff2, $dna_map);
+  my $data1 = get_gff3($gff1, $map1);
+  my $data2 = get_gff3($gff2, $map2);
   
   # Changes made during import
   $data1 = merge_types($data1, "gene", "ncRNA_gene");
@@ -683,18 +655,20 @@ sub usage {
   if ($error) {
     $help = "[ $error ]\n";
   }
-  $help .= <<'EOF';
-    SCRIPTDESCRIPTION
+  $help .= <<"EOF";
+    Compare two sets of files given their manifest, assuming they follow BRC4 specifications.
     
-    --in1 <path>
-    --in2 <path>
+    --in1 <path>      : path the the first manifest file
+    --in2 <path>      : path the the second manifest file
+
+    OPTIONS:
+    --seqr_key <str>  : Key to use to map the seq_regions (default: $seqr_key_default)
     
+    SPECIFIC TESTS:
     --do_fasta
     --do_gff3
     --do_json
 
-    --map
-    
     --help            : show this help message
     --verbose         : show detailed progress
     --debug           : show even more information (for debugging purposes)
@@ -711,7 +685,7 @@ sub opt_check {
     "do_fasta",
     "do_gff3",
     "do_json",
-    "map",
+    "seqr_key=s",
     "help",
     "verbose",
     "debug",
@@ -722,6 +696,7 @@ sub opt_check {
     $opt{do_gff3} = 1;
     $opt{do_json} = 1;
   }
+  $opt{seqr_key} //= $seqr_key_default;
   usage()                if $opt{help};
   usage("Manifest 1 needed")  if not $opt{in1};
   usage("Manifest 2 needed")  if not $opt{in2};
