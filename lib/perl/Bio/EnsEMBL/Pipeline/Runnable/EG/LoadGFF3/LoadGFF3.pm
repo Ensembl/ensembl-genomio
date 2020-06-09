@@ -873,7 +873,7 @@ sub new_transcript {
   my $translatable = defined $translation_id;
 
   my $biotype;
-  if ($gff_transcript->type =~ /^pseudogenic/i) {
+  if ($gff_transcript->type =~ /^pseudogenic/i or $gene->biotype eq "pseudogene") {
     if ($translatable and $self->param('load_pseudogene_with_CDS')) {
       warn("Pseudogene has CDSs: $stable_id\n");
       $biotype = 'pseudogene_with_CDS';
