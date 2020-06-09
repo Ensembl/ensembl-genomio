@@ -240,6 +240,7 @@ sub pipeline_analyses {
       -parameters     => {
         ensembl_mode => $self->o('ensembl_mode'),
       },
+      -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
       -rc_name         => '8GB',
       -max_retry_count => 0,
