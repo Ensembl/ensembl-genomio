@@ -166,6 +166,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -flow_into  => [
+        'Process_gff3',
         'Process_genome_metadata',
         'Process_seq_region',
         'Process_fasta_dna',
@@ -175,25 +176,38 @@ sub pipeline_analyses {
 
     # Process files to our specifications
     {
+      -logic_name => 'Process_gff3',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+      -parameters     => {
+        file_name => "gff3",
+      },
+      # Change is needed here otherwise integrity is broken
+#      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=gff3' },
+    },
+
+    {
       -logic_name => 'Process_genome_metadata',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -parameters     => {
-        hash_key => "genome",
+        file_name => "genome",
       },
-      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=genome_json' },
+      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=genome_json' },
     },
 
     {
       -logic_name => 'Process_seq_region',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -module     => 'ensembl.brc4.runnable.process_seq_region',
+      -language    => 'python3',
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -parameters     => {
-        hash_key => "seq_region",
+        file_name => "seq_region",
       },
-      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=seq_region_json' },
+      -flow_into  => { 2 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=seq_region' },
     },
 
     {
