@@ -1,22 +1,10 @@
 from .base import BaseRule
 
-class FixRule(BaseRule):
-  NAME = "FIX"
-  _RULES = BaseRule.RulesType()
-
-class ForceFixRule(FixRule):
-  NAME = "FORCE_FIX"
-  _RULES = BaseRule.RulesType()
-
-class SubRule(FixRule):
+class SubRule(BaseRule):
   NAME = "SUB"
   _RULES = BaseRule.RulesType()
 
-class ForceSubRule(SubRule):
-  NAME = "FORCE_SUB"
-  _RULES = BaseRule.RulesType()
-
-class SetRule(FixRule):
-  NAME = "SET"
+class SpellRule(BaseRule):
+  NAME = "SPELL"
   _RULES = BaseRule.RulesType()
 

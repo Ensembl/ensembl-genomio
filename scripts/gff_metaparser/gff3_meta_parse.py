@@ -28,6 +28,9 @@ def get_args():
                               If `feature` part is ommited or 'ANY' is used, `id_pfx` will be treamed from any `feature`.
                               If '!' is NOT used before ':', `id_pfx` is escaped.
                               Same `feature` (also true for 'ANY' or empty) can be specified several times.""")
+  parser.add_argument("--prepend_gff3_gene_id", action="store_true",
+                      required=False,
+                      help="add 'gene:' prefix to gene IDS in gff")
   parser.add_argument("--xref_map", metavar="xref_map.tsv", required=False,
                       type=argparse.FileType('rt', encoding='UTF-8'),
                       help="tab separated file with xref mappings")
@@ -77,7 +80,8 @@ def main():
 
   fann_ctx = FannKeeper()
   gff3_walker = GFF3Walker(parser, args.gff_in, structure_tags = "anyQual",
-                            global_ctx = fann_ctx, norm_id = pfx_trimmer)
+                            global_ctx = fann_ctx, norm_id = pfx_trimmer,
+                            gff_gene_id_prepend = args.prepend_gff3_gene_id )
 
   gff3_walker.walk(out_file = args.gff_out, seq_len_dict = seq_len)
 

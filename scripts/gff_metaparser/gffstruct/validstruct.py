@@ -13,10 +13,7 @@ class ValidStructures(BaseStructures):
     IgnoreRule,
     ValidRule,
     ValidIfRule,
-    FixRule,
-    ForceFixRule,
     SubRule,
-    ForceSubRule,
-    SetRule,
+    SpellRule,
   ]
 

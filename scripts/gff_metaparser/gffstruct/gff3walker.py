@@ -14,7 +14,8 @@ class GFF3Walker:
   _valid_structure_tags = frozenset("fullPath anyQual".split()) # /gene/mrna/exon vs exon/id, exon
 
 
-  def __init__(self, parser, in_file, structure_tags="fullPath", global_ctx = None, norm_id = None):
+  def __init__(self, parser, in_file, structure_tags="fullPath",
+                global_ctx = None, norm_id = None, gff_gene_id_prepend = False):
     if not parser:
       raise Exception("not a valid parser: %s" % str(parser))
     if structure_tags not in self._valid_structure_tags:
@@ -25,6 +26,7 @@ class GFF3Walker:
     self.global_context = global_ctx
     self._norm_id = norm_id
     self._supported_fields = dict()
+    self._gff_gene_id_prepend = gff_gene_id_prepend
 
 
   def norm_id(self, id, type=None):
@@ -42,7 +44,7 @@ class GFF3Walker:
 
   def walk(self, out_file = None, seq_len_dict = None):
     gff =  GFF.parse(self._in_file)
-    sf_composer = SeqFeatComposer() #  ?? init composer once, get on __init__???
+    sf_composer = SeqFeatComposer(gene_id_prepend=self._gff_gene_id_prepend) #  ?? init composer once, get on __init__???
     for contig in gff:
       # get len from gff or fna file, try to infere if not available
       ctg_len = UpdatingLen(len(contig))
