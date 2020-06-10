@@ -114,6 +114,7 @@ class download_assembly_data(eHive.BaseRunnable):
                     if re.match("^\.", ftp_file): continue
                     if file_entry["type"] == "dir": continue
 
+                    # Copy the file locally
                     local_path = os.path.join(dl_dir, ftp_file)
                     with open(local_path, 'wb') as fp:
                         f.retrbinary("RETR " + ftp_file, fp.write)
@@ -139,9 +140,21 @@ class download_assembly_data(eHive.BaseRunnable):
                 "genomic.gbff.gz" : "gbff",
         }
 
+        root_name = self.get_root_name(dl_dir)
+        if root_name == None:
+            raise Exception("Could not determine the files root name in %s" % ftp_dir)
+
         for dl_file in os.listdir(dl_dir):
             for end, name in file_ends.items():
-                if dl_file.endswith(end):
+                if dl_file == root_name + end:
                     files[name] = os.path.join(dl_dir, dl_file)
         return files
+
+    def get_root_name(self, dl_dir):
+        """Get root name for assembly files, using the report file as base"""
+
+        for dl_file in os.listdir(dl_dir):
+            matches = re.search("^(.+_)assembly_report.txt", dl_file)
+            if matches:
+                return matches.group(1)
 
