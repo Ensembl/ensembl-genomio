@@ -107,7 +107,7 @@ class BaseStructures:
     # or stop if there's a constant match
     for it in self.regex_patterns:
       # print("matching regexp ", it.pattern, "tag", tag, file = sys.stderr )
-      matching = it.re.fullmatch(tag)
+      matching = it.re.fullmatch(tag_raw)
       if matching:
         matched_rules.append(MatchedRuleCtx(it.rule, matching))
 
