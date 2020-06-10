@@ -12,9 +12,10 @@ class BaseStructures:
   KNOWN_RULES = [
   ]
 
-  def __init__(self, config, conf_patch = None):
+  def __init__(self, config, conf_patch = None, rule_options = None):
     self.rule_names = [ r.NAME.lower().strip() for r in self.KNOWN_RULES ]
     self.rule_factories = { r.NAME.lower().strip() : r for r in self.KNOWN_RULES }
+    self.rule_options = frozenset(rule_options or [])
 
     # prepare factories from KNOWN_RULES
     self.config = config
@@ -64,6 +65,20 @@ class BaseStructures:
       pattern, name, actions = self.parse_conf_str(raw)
       if pattern is None:
         continue
+
+      raw_name = name
+      name_parts = name.split(":")
+      name = name_parts[0]
+      if len(name_parts) == 3:
+        if name_parts[1] not in self.rule_options:
+          name = name_parts[2]
+          print("using failback rule %s (from %s) for %s at %s" % (name, raw_name, pattern, lineno), file=sys.stderr)
+        else:
+          print("using main rule %s (from %s) for %s at %s. skipping" % (name, raw_name, pattern, lineno), file=sys.stderr)
+      elif len(name_parts) != 1:
+        print("wrong number of name parts for rule %s at %s. skipping" % (raw_name, lineno), file=sys.stderr)
+        continue
+
       if name in patches and pattern in patches[name]:
         actions = patches[name][pattern]["actions"]
         lineno_cfg = lineno
