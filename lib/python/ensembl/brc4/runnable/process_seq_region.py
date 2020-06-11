@@ -6,7 +6,7 @@ import gzip
 import shutil
 import csv
 import json
-from BCBio import GFF
+from Bio import SeqIO, SeqRecord
 
 class process_seq_region(eHive.BaseRunnable):
 
@@ -14,7 +14,7 @@ class process_seq_region(eHive.BaseRunnable):
         genome_data = self.param('genome_data')
         work_dir = self.param('work_dir')
         report_path = self.param('report')
-        gff3_path = self.param('gff3')
+        gbff_path = self.param('gbff')
 
         # Set and create dedicated work dir
         accession = genome_data["assembly"]["accession"]
@@ -29,13 +29,13 @@ class process_seq_region(eHive.BaseRunnable):
 
         # Get seq_regions data from report and gff3, and merge them
         report_regions = self.get_report_regions(report_path)
-        gff3_regions = self.get_gff3_regions(gff3_path)
-        seq_regions = self.merge_regions(report_regions, gff3_regions)
+        gbff_regions = self.get_gbff_regions(gbff_path)
+        seq_regions = self.merge_regions(report_regions, gbff_regions)
 
         # Print out the file
         self.print_json(final_path, seq_regions)
 
-        # No other operation
+        # Flow out the file and type
         output = {
                 "metadata_type" : metadata_type,
                 "metadata_json": final_path
@@ -99,27 +99,29 @@ class process_seq_region(eHive.BaseRunnable):
         return seq_regions
                 
 
-    def get_gff3_regions(self, gff3_path) -> dict:
+    def get_gbff_regions(self, gbff_path) -> dict:
         """
-        Get seq_region data from the gff3 if available
+        Get seq_region data from the gbff file
         Return a dict of seq_regions, with their name as the key
         """
-        if not gff3_path:
+        if not gbff_path:
             return None
         
         seq_regions = {}
-        _open = gff3_path.endswith(".gz") and gzip.open or open
-        with _open(gff3_path, 'rt') as gff3_file:
-            gff = GFF.parse(gff3_file)
-            
-            for seq_region in gff:
+        _open = gbff_path.endswith(".gz") and gzip.open or open
+        with _open(gbff_path, 'rt') as gbff_file:
+
+            for record in SeqIO.parse(gbff_file, "genbank"):
                 seqr = {}
-                for feat in seq_region.features:
-                    if feat.type == "region":
-                        if "Is_circular" in feat.qualifiers:
-                            seqr["circular"] = True
+                
+                # Is the seq_region circular?
+                annotations = record.annotations
+                if "topology" in annotations and annotations["topology"] == "circular":
+                    seqr["circular"] = True
+                
+                # Store the seq_region
                 if seqr:
-                    seq_regions[seq_region.id] = seqr
+                    seq_regions[record.id] = seqr
 
         return seq_regions
 
