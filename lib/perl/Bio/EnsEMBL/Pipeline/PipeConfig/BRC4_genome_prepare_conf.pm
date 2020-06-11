@@ -195,7 +195,9 @@ sub pipeline_analyses {
       -parameters     => {
         file_name => "genome",
       },
-      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=genome_json' },
+      -flow_into => {
+        1 => { "Check_json_schema" => { metadata_type => 'genome', metadata_json => '#genome_json#' } }
+      }
     },
 
     {
