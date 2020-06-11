@@ -73,6 +73,7 @@ class process_seq_region(eHive.BaseRunnable):
                 "Sequence-Name" : "INSDC_submitted_name",
                 "GenBank-Accn" : "INSDC",
                 "RefSeq-Accn" : "RefSeq",
+                "Assigned-Molecule" : "GenBank",
                 }
 
         # Get the report in a CSV format, easier to manipulate
