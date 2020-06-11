@@ -3,14 +3,12 @@ import io
 import json
 import sys
 
-from BCBio.GFF import GFFExaminer
-from BCBio import GFF
-from collections import defaultdict
 
 # locals
-from gffstruct.prefixtree import PfxTr
+from gffstruct.statskeeper import StatsKeeper
+from gffstruct.gff3walker import GFF3Walker
+from gffstruct.utils import SeqLenDict
 from gffstruct.validstruct import ValidStructures
-from gffstruct.walkcontext import WalkContext
 
 
 def get_args():
@@ -43,6 +41,9 @@ def get_args():
                       type=argparse.FileType('w', encoding='UTF-8'), default=sys.stdout,
                       help="resulting gff output [STDOUT]" )
   # input
+  parser.add_argument("--fasta", metavar="fasta.fna", required = False,
+                      type=str,
+                      help="fasta file with sequences to calculate length (region length or max feature end will be used, if absent)")
   parser.add_argument("gff_in", metavar="in.gff3",
                       type=argparse.FileType('rt', encoding='UTF-8'),
                       help="input gff file (use '-' to read from STDIN)" )
@@ -60,8 +61,33 @@ def main():
   rule_options = args.rule_options
   if rule_options:
     rule_options = list(filter(None, map(lambda s: s.strip(), ",".join(rule_options).split(","))))
-  known_structures = ValidStructures(args.conf, rule_options = rule_options)
 
+  parser = ValidStructures(args.conf, rule_options = rule_options)
+
+  seq_len = SeqLenDict(args.fasta)
+
+  stats_keeper = StatsKeeper()
+  gff3_walker = GFF3Walker(parser, args.gff_in, structure_tags = "fullPath",
+                            global_ctx = stats_keeper)
+
+  gff3_walker.walk(out_file = args.gff_out, seq_len_dict = seq_len)
+
+  stats_keeper.dump(args.stats_out, detailed=arg.detailed_report)
+
+  if args.fail_unknown:
+    if stats_keeper.has("")
+
+# main
+if __name__ == "__main__":
+  # execute only if run as a script
+  main()
+
+
+
+
+# OLD
+
+def old():
   print("examining  %s" % (args.gff_in.name), file = sys.stderr)
 
   useful_qls = frozenset(filter(lambda x: x != "", args.processed_qualifiers.split(",")))
@@ -125,9 +151,6 @@ def main():
     pass
 
 
-if __name__ == "__main__":
-    # execute only if run as a script
-    main()
 
 
 # zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --processed_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype --conf new-genome-loader/scripts/gff_metaparser/conf/valid_structures.conf -
