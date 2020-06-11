@@ -85,14 +85,14 @@ def main():
 
   gff3_walker.walk(out_file = args.gff_out, seq_len_dict = seq_len)
 
-  fann_ctx.dump_json(args.fann_out, maps = [xref_map], dump_filter = lambda x: not seq_region_filter(x))
-  fann_ctx.dump_json(args.seq_region_out, dump_filter = lambda x: seq_region_filter(x))
+  fann_ctx.dump(args.fann_out, maps = [xref_map], dump_filter = lambda x: not seq_region_filter(x))
+  fann_ctx.dump(args.seq_region_out, dump_filter = lambda x: seq_region_filter(x))
 
 
 # main
 if __name__ == "__main__":
-    # execute only if beeing run as a script
-    main()
+  # execute only if beeing run as a script
+  main()
 
 
 # cat tcal.gff3 | python ./new-genome-loader/scripts/gff_metaparser/gff3_meta_parse.py --conf ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser.conf --pfx_trims 'ANY!:.+\|,ANY:gene-,cds:cds-,exon:exon-' --conf_patch ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser/xref2gene.patch --fann_out t.json --seq_region_out sr.json - > t.gff3

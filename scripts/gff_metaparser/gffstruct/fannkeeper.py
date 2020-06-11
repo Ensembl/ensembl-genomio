@@ -2,7 +2,9 @@ import json
 
 from collections import defaultdict, OrderedDict
 
-class FannKeeper:
+from .basekeeper import BaseKeeper
+
+class FannKeeper(BaseKeeper):
   # storing result functional annotation object
   def __init__(self):
     self._data = defaultdict(lambda: defaultdict(OrderedDict))
@@ -30,7 +32,8 @@ class FannKeeper:
 
     # update top
     if type(top) == list:
-      top.append(value)
+      if not self.list_has(top, value):
+        top.append(value)
       return
     for k, v in value.items():
       if not v:
@@ -51,7 +54,15 @@ class FannKeeper:
     # slow
     if len(lst) <= 1:
       return lst
-    return [ json.loads(x) for x in frozenset(map(lambda x: json.dumps(x, sort_keys = True), lst)) ]
+    return [ json.loads(p) for p in frozenset(map(lambda x: json.dumps(x, sort_keys = True), lst)) ]
+
+  def list_has(self, lst, obj):
+    # slow
+    if not lst or obj is None or len(lst) < 1:
+      return False
+    prj = json.dumps(obj, sort_keys = True)
+    return prj in frozenset(map(lambda x: json.dumps(x, sort_keys = True), lst))
+
 
   def dump_json(self, out_file, maps = None, dump_filter=None):
     if not out_file:
@@ -60,3 +71,6 @@ class FannKeeper:
     for tag in sorted(self._data.keys()):
       vals += list(filter(dump_filter, self._data[tag].values()))
     json.dump(vals, out_file, indent = 2, sort_keys = True)
+
+  def dump(self, out_file, maps = None, dump_filter=None):
+    self.dump_json(out_file, maps, dump_filter)
