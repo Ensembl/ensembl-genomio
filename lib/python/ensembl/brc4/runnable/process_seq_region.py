@@ -1,14 +1,36 @@
 #!env python3
 
-import os
+import os, re, shutil
 import eHive
 import gzip
-import shutil
-import csv
-import json
+import csv, json
+
 from Bio import SeqIO, SeqRecord
 
 class process_seq_region(eHive.BaseRunnable):
+
+    def param_defaults(self):
+        return {
+
+                "synonym_map" : {
+                    "Sequence-Name" : "INSDC_submitted_name",
+                    "GenBank-Accn" : "INSDC",
+                    "RefSeq-Accn" : "RefSeq",
+                    "Assigned-Molecule" : "GenBank",
+                    },
+
+                "molecule_map" : {
+                    "mitochondrion" : {
+                        "coord_system_level": "chromosome",
+                        "location" : "mitochondrial_chromosome"
+                        },
+                    "plasmid" : {
+                        "coord_system_level": "chromosome",
+                        "location" : "plasmid"
+                        },
+                    }
+                }
+        
 
     def run(self):
         genome_data = self.param('genome_data')
@@ -45,25 +67,6 @@ class process_seq_region(eHive.BaseRunnable):
     def print_json(self, path, data) -> None:
         with open(path, "w") as json_out:
             json_out.write(json.dumps(data, sort_keys=True, indent=4))
-
-    def report_to_csv(self, report_path) -> str:
-        """Load an assembly report as a csv string"""
-
-        _open = report_path.endswith(".gz") and gzip.open or open
-        with _open(report_path, 'rt') as report:
-            data = ""
-            last_head = ""
-            for line in report:
-                # Ignore header
-                if line.startswith("#"):
-                    last_head = line
-                    continue
-                else:
-                    if last_head:
-                        data += last_head[2:].strip() + "\n"
-                        last_head = None
-                    data += line
-            return data
     
     def merge_regions(self, regions1, regions2) -> list:
         """
@@ -131,75 +134,99 @@ class process_seq_region(eHive.BaseRunnable):
         Return a dict of seq_regions, with their name as the key
         """
 
-        # Map the fields to their synonym name
-        synonym_map = {
-                "Sequence-Name" : "INSDC_submitted_name",
-                "GenBank-Accn" : "INSDC",
-                "RefSeq-Accn" : "RefSeq",
-                "Assigned-Molecule" : "GenBank",
-                }
-        # Location of molecules
-        molecules_map = {
-                "mitochondrion" : {
-                    "coord_system_level": "chromosome",
-                    "location" : "mitochondrial_chromosome"
-                    },
-                "plasmid" : {
-                    "coord_system_level": "chromosome",
-                    "location" : "plasmid"
-                    },
-                }
-
         # Get the report in a CSV format, easier to manipulate
-        report_csv = self.report_to_csv(report_path)
+        report_csv, metadata = self.report_to_csv(report_path)
         
         # Feed the csv string to the CSV reader
         reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
         
+        # Metadata
+        assembly_level = "contig"
+        if "Assembly level" in metadata:
+            assembly_level = metadata["Assembly level"].lower()
+        
         # Create the seq_regions
         seq_regions = {}
         for row in reader:
-            seq_region = {}
-            
-            # Synonyms
-            synonyms = []
-            for field, source in synonym_map.items():
-                if field in row and row[field].lower() != "na":
-                    synonym = { "source" : source, "name" : row[field] }
-                    synonyms.append(synonym)
-            if len(synonyms) > 0:
-                seq_region["synonyms"] = synonyms
-            
-            # Length
-            field = "Sequence-Length"
-            name = "length"
-            if field in row and row[field].lower() != "na":
-                seq_region[name] = int(row[field])
-            
-            # Name
-            field = "GenBank-Accn"
-            name = "name"
-            if field in row and row[field].lower() != "na":
-                seq_region[name] = row[field]
-            
-            # Coord system and location
-            seq_role = row["Sequence-Role"]
-            
-            if seq_role == "unplaced-scaffold":
-                seq_region["coord_system_level"] = "scaffold"
-            elif seq_role == "assembled-molecule":
-                location = row["Assigned-Molecule-Location/Type"].lower()
-                
-                # Get prepared metadata for this location
-                if location in molecules_map:
-                    molecule = molecules_map[location]
-                    seq_region = {**seq_region, **molecule}
-                else:
-                    raise Exception("Unrecognized sequence location: %s" % seq_location)
-            else:
-                raise Exception("Unrecognized sequence role: %s" % seq_role)
-            
+            seq_region = self.make_seq_region(row, assembly_level)
             seq_regions[seq_region["name"]] = seq_region
         
         return seq_regions
     
+    def make_seq_region(self, row, assembly_level) -> dict:
+        """
+        From a row of the report, create one seq_region
+        Return a seq_region dict
+        """
+        seq_region = {}
+
+        # Map the fields to their synonym name
+        synonym_map = self.param("synonym_map")
+        molecule_map = self.param("molecule_map")
+
+        # Synonyms
+        synonyms = []
+        for field, source in synonym_map.items():
+            if field in row and row[field].lower() != "na":
+                synonym = { "source" : source, "name" : row[field] }
+                synonyms.append(synonym)
+        if len(synonyms) > 0:
+            seq_region["synonyms"] = synonyms
+        
+        # Length
+        field = "Sequence-Length"
+        name = "length"
+        if field in row and row[field].lower() != "na":
+            seq_region[name] = int(row[field])
+        
+        # Name
+        field = "GenBank-Accn"
+        name = "name"
+        if field in row and row[field].lower() != "na":
+            seq_region[name] = row[field]
+        
+        # Coord system and location
+        seq_role = row["Sequence-Role"]
+        
+        if seq_role == "unplaced-scaffold":
+            seq_region["coord_system_level"] = assembly_level
+        elif seq_role == "assembled-molecule":
+            location = row["Assigned-Molecule-Location/Type"].lower()
+            
+            # Get prepared metadata for this location
+            if location in molecule_map:
+                molecule = molecule_map[location]
+                seq_region = {**seq_region, **molecule}
+            else:
+                raise Exception("Unrecognized sequence location: %s" % seq_location)
+        else:
+            raise Exception("Unrecognized sequence role: %s" % seq_role)
+        return seq_region
+
+    def report_to_csv(self, report_path) -> (str, dict):
+        """
+        Load an assembly report as a csv string
+        Returns the csv as a string, and the head metadata as a dict
+        """
+
+        _open = report_path.endswith(".gz") and gzip.open or open
+        with _open(report_path, 'rt') as report:
+            data = ""
+            metadata = {}
+            last_head = ""
+            for line in report:
+                # Ignore header
+                if line.startswith("#"):
+                    # Get metadata values if possible
+                    match = re.search("# (.+?): (.+?)$", line)
+                    if match:
+                        metadata[match.group(1)] = match.group(2)
+                    last_head = line
+                    continue
+                else:
+                    if last_head:
+                        data += last_head[2:].strip() + "\n"
+                        last_head = None
+                    data += line
+            return data, metadata
+
