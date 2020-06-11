@@ -7,7 +7,7 @@ class UnseenRule(BaseRule):
   _RULES = BaseRule.RulesType()
 
   @classmethod
-  def process(cls, context, noconfig=True):
-    print("no matching pattern for %s" % context.tag(), file=sys.stderr)
-    pass
+  def process(cls, context, re_context = None):
+    # add stats
+    context.global_context.add(cls.NAME, context)
 

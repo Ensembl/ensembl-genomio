@@ -70,12 +70,18 @@ def main():
   gff3_walker = GFF3Walker(parser, args.gff_in, structure_tags = "fullPath",
                             global_ctx = stats_keeper)
 
-  gff3_walker.walk(out_file = args.gff_out, seq_len_dict = seq_len)
+  gff_out = args.gff_out
+  if args.stats_only:
+    gff_out = None
+  gff3_walker.walk(out_file = gff_out, seq_len_dict = seq_len)
 
-  stats_keeper.dump(args.stats_out, detailed=arg.detailed_report)
+  stats_keeper.dump(args.stats_out, detailed=args.detailed_report)
 
-  if args.fail_unknown:
-    if stats_keeper.has("")
+  if args.fail_unknown and not args.stats_only:
+    unseen_stats = stats_keeper.summary("UNSEEN")
+    if unseen_stats:
+      print("failing because of the UNSEEN structure(s): %s", unseen_stats, file=sys.stderr)
+      sys.exit(1)
 
 # main
 if __name__ == "__main__":

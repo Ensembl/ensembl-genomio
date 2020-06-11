@@ -70,11 +70,16 @@ class BaseStructures:
       name_parts = name.split(":")
       name = name_parts[0]
       if len(name_parts) == 3:
-        if name_parts[1] not in self.rule_options:
+        rule_opt = name_parts[1]
+        not_rule_opt = False
+        if rule_opt[0] == "!":
+          rule_opt = rule_opt[1:]
+          not_rule_opt = True
+        if (rule_opt not in self.rule_options) ^ not_rule_opt:
           name = name_parts[2]
           print("using failback rule %s (from %s) for %s at %s" % (name, raw_name, pattern, lineno), file=sys.stderr)
         else:
-          print("using main rule %s (from %s) for %s at %s. skipping" % (name, raw_name, pattern, lineno), file=sys.stderr)
+          print("using main rule %s (from %s) for %s at %s" % (name, raw_name, pattern, lineno), file=sys.stderr)
       elif len(name_parts) != 1:
         print("wrong number of name parts for rule %s at %s. skipping" % (raw_name, lineno), file=sys.stderr)
         continue
@@ -118,7 +123,7 @@ class BaseStructures:
         wrp.rule.process(context, re_context = wrp.re_context)
         processed_rules[tag].append(wrp.rule.NAME)
     elif not ignore_unseen:
-      UnseenRule.process(context, noconfig = (self.config == None))
+      UnseenRule.process(context)
       processed_rules[tag].append(UnseenRule.NAME)
 
     return processed_rules
