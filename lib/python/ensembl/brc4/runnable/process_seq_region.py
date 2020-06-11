@@ -21,8 +21,8 @@ class process_seq_region(eHive.BaseRunnable):
             os.makedirs(work_dir)
 
         # Final file name
-        file_name = "seq_region"
-        new_file_name = accession + "_" + file_name + ".json"
+        metadata_type = "seq_region"
+        new_file_name = accession + "_" + metadata_type + ".json"
         final_path = os.path.join(work_dir, new_file_name)
 
         # Extract the seq_region informations from the report
@@ -33,7 +33,11 @@ class process_seq_region(eHive.BaseRunnable):
         print(final_path)
 
         # No other operation
-        self.dataflow({ file_name : final_path }, 2)
+        output = {
+                "metadata_type" : metadata_type,
+                "metadata_json": final_path
+                }
+        self.dataflow(output, 2)
 
     def print_json(self, path, data) -> None:
         with open(path, "w") as json_out:
@@ -70,11 +74,6 @@ class process_seq_region(eHive.BaseRunnable):
                 "GenBank-Accn" : "INSDC",
                 "RefSeq-Accn" : "RefSeq",
                 }
-        # Map the fields to their value
-        values_map = {
-                "Sequence-Length" : "length",
-                "GenBank-Accn" : "name",
-                }
 
         # Get the report in a CSV format, easier to manipulate
         report_csv = self.report_to_csv(report_path)
@@ -96,23 +95,30 @@ class process_seq_region(eHive.BaseRunnable):
             if len(synonyms) > 0:
                 seq_region["synonyms"] = synonyms
             
-            # Other values
-            for field, name in values_map.items():
-                if field in row and row[field].lower() != "na":
-                    seq_region[name] = row[field]
+            # Length
+            field = "Sequence-Length"
+            name = "length"
+            if field in row and row[field].lower() != "na":
+                seq_region[name] = int(row[field])
+            
+            # Name
+            field = "GenBank-Accn"
+            name = "name"
+            if field in row and row[field].lower() != "na":
+                seq_region[name] = row[field]
             
             # Coord system and location
             seq_role = row["Sequence-Role"]
             
             if seq_role == "unplaced-scaffold":
-                seq_region["coord_system_tag"] = "scaffold"
+                seq_region["coord_system_level"] = "scaffold"
             elif seq_role == "assembled-molecule":
                 location = row["Assigned-Molecule-Location/Type"]
                 if location == "Mitochondrion":
-                    seq_region["coord_system_tag"] = "chromosome"
+                    seq_region["coord_system_level"] = "chromosome"
                     seq_region["location"] = "mitochondrial_chromosome"
                 elif location == "Plasmid":
-                    seq_region["coord_system_tag"] = "chromosome"
+                    seq_region["coord_system_level"] = "chromosome"
                     seq_region["location"] = "plasmid"
                 else:
                     raise Exception("Unrecognized sequence location: %s" % seq_location)

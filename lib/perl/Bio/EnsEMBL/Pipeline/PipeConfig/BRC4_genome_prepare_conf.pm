@@ -207,7 +207,25 @@ sub pipeline_analyses {
       -parameters     => {
         file_name => "seq_region",
       },
-      -flow_into  => { 2 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=seq_region' },
+      -flow_into  => {
+        2 => 'Check_json_schema'
+      },
+    },
+
+    { -logic_name     => 'Check_json_schema',
+      -module         => 'ensembl.brc4.runnable.schema_validator',
+      -language => 'python3',
+      -parameters     => {
+        json_file => '#metadata_json#',
+        json_schema => '#schemas#',
+        hash_key => "#metadata_type#",
+      },
+      -analysis_capacity => 1,
+      -analysis_capacity => 1,
+      -failed_job_tolerance => 100,
+      -batch_size     => 50,
+      -rc_name        => 'default',
+      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=metadata_json' },
     },
 
     {
