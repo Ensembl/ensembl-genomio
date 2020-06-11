@@ -138,6 +138,17 @@ class process_seq_region(eHive.BaseRunnable):
                 "RefSeq-Accn" : "RefSeq",
                 "Assigned-Molecule" : "GenBank",
                 }
+        # Location of molecules
+        molecules_map = {
+                "mitochondrion" : {
+                    "coord_system_level": "chromosome",
+                    "location" : "mitochondrial_chromosome"
+                    },
+                "plasmid" : {
+                    "coord_system_level": "chromosome",
+                    "location" : "plasmid"
+                    },
+                }
 
         # Get the report in a CSV format, easier to manipulate
         report_csv = self.report_to_csv(report_path)
@@ -177,13 +188,12 @@ class process_seq_region(eHive.BaseRunnable):
             if seq_role == "unplaced-scaffold":
                 seq_region["coord_system_level"] = "scaffold"
             elif seq_role == "assembled-molecule":
-                location = row["Assigned-Molecule-Location/Type"]
-                if location == "Mitochondrion":
-                    seq_region["coord_system_level"] = "chromosome"
-                    seq_region["location"] = "mitochondrial_chromosome"
-                elif location == "Plasmid":
-                    seq_region["coord_system_level"] = "chromosome"
-                    seq_region["location"] = "plasmid"
+                location = row["Assigned-Molecule-Location/Type"].lower()
+                
+                # Get prepared metadata for this location
+                if location in molecules_map:
+                    molecule = molecules_map[location]
+                    seq_region = {**seq_region, **molecule}
                 else:
                     raise Exception("Unrecognized sequence location: %s" % seq_location)
             else:
