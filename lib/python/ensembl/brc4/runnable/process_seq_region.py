@@ -13,6 +13,7 @@ class process_seq_region(eHive.BaseRunnable):
         genome_data = self.param('genome_data')
         work_dir = self.param('work_dir')
         report_path = self.param('report')
+        gff3_path = self.param('gff3')
 
         # Set and create dedicated work dir
         accession = genome_data["assembly"]["accession"]
@@ -26,7 +27,13 @@ class process_seq_region(eHive.BaseRunnable):
         final_path = os.path.join(work_dir, new_file_name)
 
         # Extract the seq_region informations from the report
-        seq_regions = self.report_seq_regions(report_path)
+        report_regions = self.get_report_regions(report_path)
+
+        # Get metadata from the gff3
+        gff3_regions = self.get_gff3_regions(gff3_path)
+        
+        # Merge the metadata from gff3
+        seq_regions = self.merge_regions(report_regions, gff3_regions)
 
         # Print out the file
         self.print_json(final_path, seq_regions)
@@ -38,7 +45,7 @@ class process_seq_region(eHive.BaseRunnable):
                 "metadata_json": final_path
                 }
         self.dataflow(output, 2)
-
+    
     def print_json(self, path, data) -> None:
         with open(path, "w") as json_out:
             json_out.write(json.dumps(data, sort_keys=True, indent=4))
@@ -62,10 +69,55 @@ class process_seq_region(eHive.BaseRunnable):
                     data += line
             return data
     
-    def report_seq_regions(self, report_path) -> list:
+    def merge_regions(self, regions1, regions2) -> list:
+        """
+        Merge seq_regions from different sources
+        Return a list of seq_regions
+        """
+        if not regions1: regions1 = []
+        if not regions2: regions2 = []
+        
+        # Get all the names
+        names1 = frozenset(regions1)
+        names2 = frozenset(regions2)
+        all_names = names1.union(names2)
+        
+        # Create the seq_regions, merge if needed
+        seq_regions = []
+        for name in all_names:
+            seqr1 = None
+            seqr2 = None
+            if name in names1:
+                seqr1 = regions1[name]
+            if name in names2:
+                seqr2 = regions2[name]
+            if seqr1 and seqr2:
+                merged_seqr = {**seqr1, **seqr2}
+                seq_regions.append(merged_seqr)
+            elif seqr1:
+                seq_regions.append(seqr1)
+            else:
+                seq_regions.append(seqr2)
+
+        seq_regions.sort(key=lambda x: x["name"])
+        return seq_regions
+                
+
+    def get_gff3_regions(self, gff3_path) -> dict:
+        """
+        Get seq_region data from the gff3 if available
+        Return a dict of seq_regions, with their name as the key
+        """
+        if not gff3_path:
+            return None
+        
+        seq_regions = {}
+        return seq_regions
+
+    def get_report_regions(self, report_path) -> dict:
         """
         Get seq_region data from report file
-        Return a list of seq_regions
+        Return a dict of seq_regions, with their name as the key
         """
 
         # Map the fields to their synonym name
@@ -83,7 +135,7 @@ class process_seq_region(eHive.BaseRunnable):
         reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
         
         # Create the seq_regions
-        seq_regions = []
+        seq_regions = {}
         for row in reader:
             seq_region = {}
             
@@ -126,7 +178,7 @@ class process_seq_region(eHive.BaseRunnable):
             else:
                 raise Exception("Unrecognized sequence role: %s" % seq_role)
             
-            seq_regions.append(seq_region)
+            seq_regions[seq_region["name"]] = seq_region
         
         return seq_regions
     
