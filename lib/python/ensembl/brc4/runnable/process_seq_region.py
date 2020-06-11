@@ -6,6 +6,7 @@ import gzip
 import shutil
 import csv
 import json
+from BCBio import GFF
 
 class process_seq_region(eHive.BaseRunnable):
 
@@ -26,18 +27,13 @@ class process_seq_region(eHive.BaseRunnable):
         new_file_name = accession + "_" + metadata_type + ".json"
         final_path = os.path.join(work_dir, new_file_name)
 
-        # Extract the seq_region informations from the report
+        # Get seq_regions data from report and gff3, and merge them
         report_regions = self.get_report_regions(report_path)
-
-        # Get metadata from the gff3
         gff3_regions = self.get_gff3_regions(gff3_path)
-        
-        # Merge the metadata from gff3
         seq_regions = self.merge_regions(report_regions, gff3_regions)
 
         # Print out the file
         self.print_json(final_path, seq_regions)
-        print(final_path)
 
         # No other operation
         output = {
@@ -112,6 +108,19 @@ class process_seq_region(eHive.BaseRunnable):
             return None
         
         seq_regions = {}
+        _open = gff3_path.endswith(".gz") and gzip.open or open
+        with _open(gff3_path, 'rt') as gff3_file:
+            gff = GFF.parse(gff3_file)
+            
+            for seq_region in gff:
+                seqr = {}
+                for feat in seq_region.features:
+                    if feat.type == "region":
+                        if "Is_circular" in feat.qualifiers:
+                            seqr["circular"] = True
+                if seqr:
+                    seq_regions[seq_region.id] = seqr
+
         return seq_regions
 
     def get_report_regions(self, report_path) -> dict:
