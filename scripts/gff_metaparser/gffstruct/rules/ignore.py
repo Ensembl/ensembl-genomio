@@ -8,3 +8,4 @@ class IgnoreRule(BaseRule):
   def process(cls, context, re_context = None):
     # add stats
     context.global_context.add(cls.NAME, context)
+

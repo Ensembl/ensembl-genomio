@@ -35,7 +35,7 @@ def get_args():
                       type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
                       help="stats output [STDOUT]" )
   parser.add_argument("--detailed_report", metavar="detailed.log", required = False,
-                      type=str, default=None,
+                      type=argparse.FileType('w',  encoding='UTF-8'),
                       help="file to report every failed and modified model" )
   parser.add_argument("--gff_out", metavar="out.gff3", required = False,
                       type=argparse.FileType('w', encoding='UTF-8'), default=sys.stdout,
@@ -66,7 +66,7 @@ def main():
 
   seq_len = SeqLenDict(args.fasta)
 
-  stats_keeper = StatsKeeper()
+  stats_keeper = StatsKeeper(detailed=args.detailed_report, no_longest_pfx = args.no_longest_pfx)
   gff3_walker = GFF3Walker(parser, args.gff_in, structure_tags = "fullPath",
                             global_ctx = stats_keeper)
 
@@ -75,89 +75,18 @@ def main():
     gff_out = None
   gff3_walker.walk(out_file = gff_out, seq_len_dict = seq_len)
 
-  stats_keeper.dump(args.stats_out, detailed=args.detailed_report)
+  stats_keeper.dump(args.stats_out)
 
-  if args.fail_unknown and not args.stats_only:
+  if args.fail_unknown:
     unseen_stats = stats_keeper.summary("UNSEEN")
     if unseen_stats:
-      print("failing because of the UNSEEN structure(s): %s", unseen_stats, file=sys.stderr)
+      print("\nfailing because of the UNSEEN structure(s):\n%s" % unseen_stats, file=sys.stderr)
       sys.exit(1)
 
 # main
 if __name__ == "__main__":
   # execute only if run as a script
   main()
-
-
-
-
-# OLD
-
-def old():
-  print("examining  %s" % (args.gff_in.name), file = sys.stderr)
-
-  useful_qls = frozenset(filter(lambda x: x != "", args.processed_qualifiers.split(",")))
-  print("using quals %s" % (args.processed_qualifiers), file = sys.stderr)
-
-  stats = defaultdict(int)
-  stats_sources = defaultdict(set)
-  stats_prefixes = defaultdict(lambda: defaultdict(PfxTr)) # should be paths:item based
-
-  def down_features(feature, prefix = None, prev_ids = []):
-    #print(feature)
-    # use https://docs.python.org/3/library/operator.html attrgetter methodcaller ??
-    #print(feature.type, feature.id, feature.location)
-    quals = feature.qualifiers
-    out = { k : (len(v) > 0 and v[0] or None)
-              for k,v in quals.items()
-                if (not useful_qls or k.lower() in useful_qls) }
-    #print(out)
-
-    if prefix is None:
-      prefix = feature.type
-    else:
-      prefix += "/" + feature.type
-    new_prev_ids = prev_ids + [feature.id]
-
-    if not feature.sub_features:
-      known_structures.process(WalkContext(prefix), ignore_unseen = args.stats_only or args.conf is None)
-
-      # analyze
-      stats[prefix] += 1
-      stats_sources[prefix].add(out["source"])
-      for (ftype, fid) in zip (prefix.split("/"), new_prev_ids):
-        stats_prefixes[prefix][ftype].add(fid)
-
-    for sf in feature.sub_features:
-      down_features(sf, prefix, new_prev_ids)
-
-
-  gff =  GFF.parse(args.gff_in)
-  for contig in gff:
-    for cnt, feature in enumerate(contig.features):
-      down_features(feature)
-      # if cnt > 20: break
-    # break
-
-
-# create structures, provide link to top, and root ???
-# set to None when done?
-
-  for k in sorted(stats.keys(), key = lambda x: -stats[x]):
-    pfx_info = {}
-    if k in stats_prefixes:
-      for part in stats_prefixes[k]:
-        pfx_info[part] = stats_prefixes[k][part].get_max()
-    print("%s\t%d\t%s\t%s" % (
-      k, stats[k],
-      ",".join(stats_sources[k]),
-      json.dumps(pfx_info)
-    ), file = args.stats_out)
-
-    pass
-
-
-
 
 # zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --processed_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype --conf new-genome-loader/scripts/gff_metaparser/conf/valid_structures.conf -
 
