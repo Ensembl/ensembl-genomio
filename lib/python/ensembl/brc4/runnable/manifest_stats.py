@@ -49,14 +49,20 @@ class manifest_stats(eHive.BaseRunnable):
         
         # Get basic data
         coord_systems = {}
+        circular = 0
+        locations = []
         for seqr in seq_regions:
             coord_level = seqr["coord_system_level"]
             if not coord_level in coord_systems:
                 coord_systems[coord_level] = []
             coord_systems[coord_level].append(seqr["length"])
+            
+            if "circular" in seqr:
+                circular += 1
+            if "location" in seqr:
+                locations.append(seqr["location"])
         
         # Stats
-        
         stats = []
         stats.append(os.path.basename(seq_region_path))
         stats.append("Total coord_systems %d" % len(coord_systems))
@@ -72,6 +78,16 @@ class manifest_stats(eHive.BaseRunnable):
                     }
             for name, count in stat_counts.items():
                 stats.append("%9d\t%s" % (count, name))
+        
+        # Special
+        if circular or locations:
+            stats.append("\nSpecial")
+            if circular:
+                stats.append("%9d\t%s" % (circular, "circular sequences"))
+            if locations:
+                stats.append("%9d\t%s" % (len(locations), "sequences with location"))
+                for loc in locations:
+                    stats.append("\t\t\t%s" % loc)
         
         stats.append("\n")
 
