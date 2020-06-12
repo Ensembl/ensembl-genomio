@@ -56,16 +56,23 @@ class manifest_stats(eHive.BaseRunnable):
             coord_systems[coord_level].append(seqr["length"])
         
         # Stats
+        
         stats = []
         stats.append(os.path.basename(seq_region_path))
         stats.append("Total coord_systems %d" % len(coord_systems))
         for coord_name, lengths in coord_systems.items():
-            stats.append("Coord_system: %s" % coord_name)
-            stats.append("\tTotal sequences\t%d" % len(lengths))
-            stats.append("\tTotal sequence length\t%d" % sum(lengths))
-            stats.append("\tMinimum sequence length\t%d" % min(lengths))
-            stats.append("\tMaximum sequence length\t%d" % max(lengths))
-            stats.append("\tMean sequence length\t%d" % mean(lengths))
+            stats.append("\nCoord_system: %s" % coord_name)
+            
+            stat_counts = {
+                    "Total sequences" : len(lengths),
+                    "Total sequence length" : sum(lengths),
+                    "Minimum sequence length" : min(lengths),
+                    "Maximum sequence length" : max(lengths),
+                    "Mean sequence length" : mean(lengths),
+                    }
+            for name, count in stat_counts.items():
+                stats.append("%9d\t%s" % (count, name))
+        
         stats.append("\n")
 
         return stats
@@ -101,7 +108,7 @@ class manifest_stats(eHive.BaseRunnable):
         for source in gff_data.keys():
             count = gff_data[source]
             biotype = source[1]
-            stats.append("\t%d\t%s" % (count, biotype))
+            stats.append("%9d\t%s" % (count, biotype))
         
         return stats
 
