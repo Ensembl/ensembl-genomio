@@ -9,13 +9,10 @@ import hashlib
 class download_assembly_data(eHive.BaseRunnable):
 
     def run(self):
-        genome_data = self.param('genome_data')
+        accession = self.param_required('accession')
         download_dir = self.param('download_dir')
 
-        accession = genome_data["assembly"]["accession"]
-
         # Set and create dedicated dir for download
-        download_dir = os.path.join(download_dir, accession)
         if not os.path.isdir(download_dir):
             os.makedirs(download_dir)
 
@@ -23,6 +20,8 @@ class download_assembly_data(eHive.BaseRunnable):
         if not self.md5_files(download_dir):
             print("Download the files")
             self.download_files(accession, download_dir)
+            if not self.md5_files(download_dir):
+                raise Exception("Failed md5sum of downloaded files")
         
         # Select specific files and give them a name
         files = self.get_files_selection(download_dir)
@@ -50,27 +49,28 @@ class download_assembly_data(eHive.BaseRunnable):
         files = os.listdir(dl_dir)
 
         md5_file = "md5checksums.txt"
-        if md5_file in files:
-            md5_path = os.path.join(dl_dir, md5_file)
-            sums = self.get_checksums(md5_path)
-        else:
-            return False
 
-        for dl_file, checksum in sums:
+        # Get checksums and compare
+        md5_path = os.path.join(dl_dir, md5_file)
+        sums = self.get_checksums(md5_path)
+
+        print("File sums from %s: %d" % (md5_path, len(sums)))
+        
+        for dl_file, checksum in sums.items():
             file_path = os.path.join(dl_dir, dl_file)
             
-            # Don't even try if the file is missing
-            if not os.path.isfile(file_path):
-                print("File %s is missing" % file_path)
-                return False
-
-            # Check the file checksum
+#            try:
+                # Check the file checksum
             with open(file_path, mode='rb') as f:
-                file_sum = hashlib.md5(file_path).hexdigest()
+                content = f.read()
+                file_sum = hashlib.md5(content).hexdigest()
             if file_sum != checksum:
                 print("File %s checksum doesn't match" % file_path)
                 return False
+            else:
+                print("File checksum ok %s" % file_path)
 
+        print("All checksums OK")
         return True
     
     def get_checksums(self, checksum_path):
@@ -81,10 +81,13 @@ class download_assembly_data(eHive.BaseRunnable):
         sums = {}
         with open(checksum_path, mode='r') as fh:
             for line in fh:
-                parts = line.split("\t")
-                if len(parts) == 2:
-                    (checksum, file_path) = parts
+                checksum, file_path = line.strip().split("  ")
+                file_path = file_path[2:]
+                if not file_path.find("/") >= 0:
                     sums[file_path] = checksum
+
+        if len(sums) == 0:
+            raise Exception("No checksums found in %s" % checksum_path)
         return sums
 
     def download_files(self, accession, dl_dir):
@@ -136,7 +139,7 @@ class download_assembly_data(eHive.BaseRunnable):
                 "assembly_report.txt" : "report",
                 "genomic.fna.gz" : "fasta_dna",
                 "protein.faa.gz" : "fasta_pep",
-                "genomic.gff.gz" : "gff3",
+                "genomic.gff.gz" : "gff3_raw",
                 "genomic.gbff.gz" : "gbff",
         }
 
