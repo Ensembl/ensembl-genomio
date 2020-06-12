@@ -60,11 +60,6 @@ class GffRule(BaseRule):
     is_leaf = context.get("_ISLEAF")
     if "phase" not in used_quals:
       phase = context.get("_PHASE")
-    if used_quals is None:
-      return
-    is_leaf = context.get("_ISLEAF")
-    if "phase" not in used_quals:
-      phase = context.get("_PHASE")
       if phase is not None:
         used_quals.update({"phase":("phase", phase)})
     if not is_leaf:
