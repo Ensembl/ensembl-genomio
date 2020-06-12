@@ -280,10 +280,11 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
-      -flow_into       => 'Integrity_check',
+      -flow_into       => ['Integrity_check', "Manifest_stats"],
     },
 
-    { -logic_name  => 'Integrity_check',
+    {
+      -logic_name  => 'Integrity_check',
       -module      => 'ensembl.brc4.runnable.integrity',
       -language    => 'python3',
       -parameters     => {
@@ -292,6 +293,15 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
       -rc_name         => '8GB',
+      -max_retry_count => 0,
+#      -flow_into       => 'Manifest_stats',
+    },
+    {
+      -logic_name  => 'Manifest_stats',
+      -module      => 'ensembl.brc4.runnable.manifest_stats',
+      -language    => 'python3',
+      -analysis_capacity   => 1,
+      -rc_name         => 'default',
       -max_retry_count => 0,
     },
   ];
