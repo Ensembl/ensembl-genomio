@@ -24,7 +24,7 @@ class process_fasta(eHive.BaseRunnable):
             os.makedirs(work_dir)
 
         # Final file name
-        new_file_name = accession + "_" + file_name + ".fa"
+        new_file_name = file_name + ".fa"
 
         # Final path
         head, tail = os.path.split(file_path)

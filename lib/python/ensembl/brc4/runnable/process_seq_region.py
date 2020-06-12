@@ -46,7 +46,7 @@ class process_seq_region(eHive.BaseRunnable):
 
         # Final file name
         metadata_type = "seq_region"
-        new_file_name = accession + "_" + metadata_type + ".json"
+        new_file_name = metadata_type + ".json"
         final_path = os.path.join(work_dir, new_file_name)
 
         # Get seq_regions data from report and gff3, and merge them
