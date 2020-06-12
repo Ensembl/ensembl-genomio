@@ -21,7 +21,7 @@ class StatsKeeper(BaseKeeper):
       tagstat["counts"] = 0
     tagstat["counts"] += 1
 
-    type_id_coords = [ self.type_id_coords_from_ctx(x) for x in context.prev + [context] ]
+    type_id_coords = context.get_to_root(getter = lambda x: self.type_id_coords_from_ctx(x))
 
     if self._detailed:
       print("rule %s for %s: %s " % (rule_name, _fulltag, type_id_coords), file = self._detailed)

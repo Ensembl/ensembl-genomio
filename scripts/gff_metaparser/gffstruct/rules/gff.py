@@ -21,7 +21,6 @@ class GffRule(BaseRule):
     rules_data["USEDQUALS"] = None
     rules_data["QUALSCOPYALL"] = None
 
-
   def prepare_actions(self):
     self._target_quals = None
     raw = [ x.strip() for x in " ".join(self._actions_raw).replace(",", " ").split() if x.strip() ]

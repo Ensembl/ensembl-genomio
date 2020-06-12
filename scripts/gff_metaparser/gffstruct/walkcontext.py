@@ -69,3 +69,15 @@ class WalkContext:
    if self.ctg_len is not None:
      self.ctg_len(length)
 
+  def get_to_root(self, getter=None):
+    if not getter:
+      return None
+    res = []
+    it = self.data
+    while it:
+      out = getter(it)
+      if out:
+        res.append(out)
+        it = it.get("_PARENTCTX")
+    return res[::-1]
+
