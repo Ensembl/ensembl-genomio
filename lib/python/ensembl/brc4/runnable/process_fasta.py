@@ -16,10 +16,6 @@ class process_fasta(eHive.BaseRunnable):
         if not self.param_exists(file_name):
             return
 
-        accession = genome_data["assembly"]["accession"]
-
-        # Set and create dedicated dir for download
-        work_dir = os.path.join(work_dir, accession)
         if not os.path.isdir(work_dir):
             os.makedirs(work_dir)
 

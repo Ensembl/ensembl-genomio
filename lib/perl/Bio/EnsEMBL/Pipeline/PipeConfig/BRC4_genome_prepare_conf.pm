@@ -19,6 +19,7 @@ my $package_dir = dirname($package_path);
 my $root_dir = "$package_dir/../../../../../..";
 
 my $schema_dir = "$root_dir/schema";
+my $metazoa_script_dir = "$root_dir/scripts/gff_metaparser";
 
 sub default_options {
   my ($self) = @_;
@@ -41,6 +42,8 @@ sub default_options {
 
     debug => 0,
     ensembl_mode => 0,
+    parser_conf => catfile($metazoa_script_dir, "conf/gff_metaparser.conf"),
+    parser_patch => catfile($metazoa_script_dir, "conf/gff_metaparser/brc4.patch"),
 
     ## Metadata parameters
     'schemas' => {
@@ -65,7 +68,9 @@ sub pipeline_wide_parameters {
     debug          => $self->o('debug'),
     'schemas'      => $self->o('schemas'),
     pipeline_dir   => $self->o('pipeline_dir'),
-    work_dir       => catdir($self->o('pipeline_dir'), "process_files"),
+
+    download_dir   => catdir($self->o('pipeline_dir'), "download", '#accession#'),
+    work_dir       => catdir($self->o('pipeline_dir'), "process_files", "#accession#"),
   };
 }
 
@@ -140,17 +145,23 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
-      -flow_into  => { 2 => 'Download_assembly_data' },
+      -flow_into  => { 2 => 'Get_accession' },
+    },
+
+    {
+      -logic_name     => 'Get_accession',
+      -module         => 'ensembl.brc4.runnable.say_accession',
+      -language => 'python3',
+      -analysis_capacity => 1,
+      -batch_size     => 50,
+      -rc_name        => 'default',
+      -flow_into  => { 2 => { 'Download_assembly_data' => INPUT_PLUS() } },
     },
 
     {
       -logic_name     => 'Download_assembly_data',
       -module         => 'ensembl.brc4.runnable.download_assembly_data',
       -language => 'python3',
-      -parameters     => {
-        genome_data => '#genome_data#',
-        download_dir => $self->o('pipeline_dir') . "/download",
-      },
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
       -rc_name        => 'default',
@@ -166,25 +177,54 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -flow_into  => [
-        'Process_gff3',
+        WHEN("#gff3_raw#", ['Ungzip_gff3', 'Process_fasta_pep']),
         'Process_genome_metadata',
         'Process_seq_region',
         'Process_fasta_dna',
-        'Process_fasta_pep',
       ],
     },
 
-    # Process files to our specifications
     {
-      -logic_name => 'Process_gff3',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -analysis_capacity   => 1,
-      -rc_name    => 'default',
-      -parameters     => {
-        file_name => "gff3",
+      -logic_name     => 'Ungzip_gff3',
+      -module         => 'ensembl.brc4.runnable.ungzip',
+      -language => 'python3',
+      -parameters  => {
+        input => "#gff3_raw#",
+        output => "#work_dir#/flat.gff3",
+        out_name => "gff3_flat",
       },
-      # Change is needed here otherwise integrity is broken
-      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=gff3' },
+      -analysis_capacity => 1,
+      -failed_job_tolerance => 100,
+      -rc_name        => 'default',
+      -flow_into  => { 2 => 'Process_gff3' },
+    },
+
+    {
+      -logic_name    => "Process_gff3",
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        gff3       => catfile("#work_dir#", "gene_models.gff3"),
+        functional_annotation => catfile("#work_dir#", "functional_annotation.json"),
+        gff3_name => "gff3",
+        func_name => "functional_anotation",
+        parser_conf => $self->o("parser_conf"),
+        parser_patch => $self->o("parser_patch") ? " --conf_patch " . $self->o("parser_patch") : "",
+
+        cmd => "python3 $metazoa_script_dir/gff3_meta_parse.py" .
+          " --dump_used_options" .
+          " --conf #parser_conf#" .
+          "#parser_patch#" .
+          " --gff_out #gff3#" . 
+          " --fann_out #functional_annotation#" .
+          " #gff3_flat#",
+      },
+      -analysis_capacity   => 1,
+      -rc_name    => '8GB',
+      -meadow_type       => 'LSF',
+      -flow_into  => [
+          '?accu_name=manifest_files&accu_address={gff3_name}&accu_input_variable=gff3',
+          '?accu_name=manifest_files&accu_address={func_name}&accu_input_variable=functional_annotation'
+        ],
     },
 
     {

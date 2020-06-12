@@ -38,9 +38,7 @@ class process_seq_region(eHive.BaseRunnable):
         report_path = self.param('report')
         gbff_path = self.param('gbff')
 
-        # Set and create dedicated work dir
-        accession = genome_data["assembly"]["accession"]
-        work_dir = os.path.join(work_dir, accession)
+        # Create dedicated work dir
         if not os.path.isdir(work_dir):
             os.makedirs(work_dir)
 
