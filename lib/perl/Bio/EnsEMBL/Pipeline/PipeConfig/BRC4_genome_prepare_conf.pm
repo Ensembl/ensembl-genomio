@@ -184,7 +184,7 @@ sub pipeline_analyses {
         file_name => "gff3",
       },
       # Change is needed here otherwise integrity is broken
-#      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=gff3' },
+      -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=gff3' },
     },
 
     {
