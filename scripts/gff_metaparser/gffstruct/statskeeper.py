@@ -41,7 +41,7 @@ class StatsKeeper(BaseKeeper):
       tagstat = self._data[rule_name][_tag]
       counts = str(tagstat.get("counts"))
       chain = str([ { tp : pfx.get_max() } for tp, pfx in tagstat.get("pfx", {}).items() ])
-      out_line = "\t".join(["#stats", rule_name, _tag, counts, chain])
+      out_line = "\t".join(["## stats", rule_name, _tag, counts, chain])
       if out_file:
         print(out_line, file = out_file)
       else:
