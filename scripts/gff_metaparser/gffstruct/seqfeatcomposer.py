@@ -34,7 +34,7 @@ class SeqFeatComposer:
     feat = self._processed.get(cid)
 
     # flattern and exclude "parent"s
-    used_quals_flat = { v[0]:v[1] for k, v in (used_quals or {}).items() if k != "parent" }
+    used_quals_flat = { v[0]:v[1] for k, v in (used_quals or {}).items() if k != "parent" and k[0] != "_" }
 
     if not feat:
       location = ctx["_LOCATION"] # die if no location
@@ -57,7 +57,8 @@ class SeqFeatComposer:
       if phase is not None and "phase" not in quals:
         quals["phase"] = phase
       # create feat object
-      obj = SeqFeature(location, strand = strand, type = _type, qualifiers = quals)
+      quals = self.sort_quals(quals)
+      obj = SeqFeature(location, strand = strand, type = _type, qualifiers = quals) # NB referebce to quals / allows post assign modifications
       # fill processed
       feat = { "cid" : cid, "obj" : obj, "quals" : quals, "kids" : dict(), "is_leaf" : is_leaf }
       self._processed[cid] = feat
@@ -69,6 +70,9 @@ class SeqFeatComposer:
           if not _id.startswith("gene:"):
             used_quals_flat["ID"][0] = "gene:%s" % _id
       # fill quals
+      used_quals_flat = self.sort_quals(used_quals_flat)
+      # assert( id(feat["quals"]) = id(feat["obj"].qualifiers) )
+      # print(cid, hex(id(feat["quals"])), hex(id(feat["obj"].qualifiers)), file=sys.stderr)
       feat["quals"].update(used_quals_flat)
 
     if kid:
@@ -77,6 +81,13 @@ class SeqFeatComposer:
         feat["kids"][kcid] = len(feat["kids"])
 
     return feat
+
+  def sort_quals(self, quals):
+    if not quals:
+      return quals
+    filtered_id = filter(lambda x: x[0] == "ID", quals.items())
+    filtered = filter(lambda x: x[0][0] != "_" and x[0] != "ID", quals.items())
+    return dict(list(filtered_id) + list(sorted(filtered, key=lambda x:x[0])))
 
   def compose(self, context, out = None):
     if out is None: return
@@ -87,6 +98,7 @@ class SeqFeatComposer:
 
     # go from used leaves to top
     for ctx in context.used_leaves():
+      # print("compose ctx type", ctx.get("_TYPE"), file =sys.stderr)
       rules_data = ctx.get("_RULESDATA")
       if rules_data and "_ALL" in rules_data and "USEDQUALS" in rules_data["_ALL"]:
         used_quals = rules_data["_ALL"]["USEDQUALS"]
