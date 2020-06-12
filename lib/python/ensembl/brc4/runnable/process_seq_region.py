@@ -171,6 +171,7 @@ class process_seq_region(eHive.BaseRunnable):
                 synonym = { "source" : source, "name" : row[field] }
                 synonyms.append(synonym)
         if len(synonyms) > 0:
+            synonyms.sort(key=lambda x: x["source"])
             seq_region["synonyms"] = synonyms
         
         # Length
