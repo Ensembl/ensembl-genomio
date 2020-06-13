@@ -81,3 +81,12 @@ class WalkContext:
         it = it.get("_PARENTCTX")
     return res[::-1]
 
+  def run_to_root(self, updater=None):
+    if not updater:
+      return
+    it = self.data
+    while it:
+      updater(it)
+      it = it.get("_PARENTCTX")
+    return
+

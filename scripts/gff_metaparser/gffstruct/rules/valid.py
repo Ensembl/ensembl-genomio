@@ -1,7 +1,7 @@
-from .base import BaseRule
-
 import sys
+
 from collections import defaultdict
+from .base import BaseRule
 
 class ValidRule(BaseRule):
   NAME = "VALID"
@@ -15,17 +15,30 @@ class ValidRule(BaseRule):
     if not rules_data:
       context.update({"_RULESDATA": defaultdict(dict)}, force_clean = True)
       rules_data = context.get("_RULESDATA")
-    rules_data = rules_data["_ALL"]
+    rules_data = rules_data[cls.NAME]
     rules_data["USEDQUALS"] = None
 
   @classmethod
   def process(cls, context, re_context = None):
     # add stats
     context.global_context.add(cls.NAME, context)
+    context.run_to_root(updater = lambda x: cls.mark_as_usefull(x))
+    context.update(force_clean = True, _RECTX = re_context)
 
   @classmethod
-  def run_postponed(cls, context):
+  def mark_as_usefull(cls, ctx):
+    used_quals = ctx.get("_RULESDATA")[cls.NAME].get("USEDQUALS")
+    if used_quals is None:
+      ctx.get("_RULESDATA")[cls.NAME]["USEDQUALS"] = {}
+
+  @classmethod
+  def run_postponed(cls, context, name_override = None):
+    name_to_check = name_override or cls.NAME
     for ctx in context.prev:
+      check_quals = ctx.get("_RULESDATA")[name_to_check].get("USEDQUALS")
+      if check_quals is None:
+        continue
+
       if ctx.get("_ISLEAF"):
         context.used_leaves(ctx)
 

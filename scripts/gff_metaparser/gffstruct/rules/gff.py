@@ -71,7 +71,7 @@ class GffRule(BaseRule):
     # print("prepare possponed: ", cls.NAME, str(used_quals), context.get("_ID"), context.get("_TYPE"), file=sys.stderr)
 
   @classmethod
-  def run_postponed(cls, context):
+  def run_postponed(clsf, context, name_override = None):
     return
 
 
@@ -81,7 +81,7 @@ class GffSubRule(GffRule):
   _FORCE_SUB = True
 
   @classmethod
-  def run_postponed(cls, context):
+  def run_postponed(cls, context, name_override = None):
     for ctx in context.prev:
       gff_uq = ctx["_RULESDATA"][GffRule.NAME].get("USEDQUALS")
       gff_sub_uq = ctx["_RULESDATA"][GffSubRule.NAME].get("USEDQUALS")
