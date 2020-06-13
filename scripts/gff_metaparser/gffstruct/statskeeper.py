@@ -1,4 +1,4 @@
-import json
+import re
 import sys
 
 from collections import defaultdict, OrderedDict
@@ -12,6 +12,9 @@ class StatsKeeper(BaseKeeper):
     self._data = defaultdict(lambda: defaultdict(dict))
     self._detailed = detailed
     self._no_longest_pfx = no_longest_pfx
+    self._idstat = defaultdict(lambda: defaultdict(int))
+    self._tr_d_0 = str.maketrans("123456789", "0"*9)
+    self._tr_00_0 = re.compile("0+")
 
   def add(self, rule_name, context):
     _fulltag = context.get("_FULLTAG")
@@ -32,6 +35,13 @@ class StatsKeeper(BaseKeeper):
       for _type, _id, _ in type_id_coords:
         if _id and _id != ".":
           tagstat["pfx"][_type].add(_id)
+          self._idstat[_type][self.stem_id(_id)] += 1
+          self._idstat[_type]["_ALL"] += 1
+    return
+
+  def stem_id(self, s):
+    pre = str(s).translate(self._tr_d_0)
+    return self._tr_00_0.sub("0", pre)
 
   def summary(self, rule_name, out_file = None):
     if rule_name not in self._data:
@@ -50,9 +60,15 @@ class StatsKeeper(BaseKeeper):
       return True
     return "\n".join(out)
 
-  def dump(self, out_file):
+  def dump(self, out_file, id_stats = True):
     for _rule in self._data:
       self.summary(_rule, out_file)
+    if not id_stats:
+      return
+    for _type, _id_cnt in sorted(self._idstat.items(), key = lambda k: k[0]):
+      for _id, _cnt in sorted(_id_cnt.items(), key = lambda k: -k[1]):
+        if _id == "_ALL": continue
+        print("## stats\tID\t%s\t%s\t%s\t%s" % (_type, _id_cnt["_ALL"], _id, _cnt), file=out_file)
 
   def type_id_coords_from_ctx(self, context):
     if not context:

@@ -19,6 +19,7 @@ def get_args():
                       help="valid structures config file")
   # various options
   parser.add_argument("--stats_only", action="store_true", required=False, help="produce only stats output")
+  parser.add_argument("--no_id_stats", action="store_true", required=False, help="do not dump stemmed id stats")
   parser.add_argument("--fail_unknown", action="store_true", required=False, help="fail if unknown structure met")
   parser.add_argument("--processed_qualifiers",
                       metavar = "source,name,parent,dbxref,phase,product,protein_id,biotype",
@@ -75,7 +76,7 @@ def main():
     gff_out = None
   gff3_walker.walk(out_file = gff_out, seq_len_dict = seq_len)
 
-  stats_keeper.dump(args.stats_out)
+  stats_keeper.dump(args.stats_out, id_stats = not args.no_id_stats)
 
   if args.fail_unknown:
     unseen_stats = stats_keeper.summary("UNSEEN")
