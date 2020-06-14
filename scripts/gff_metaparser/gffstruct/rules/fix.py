@@ -2,6 +2,8 @@ import sys
 
 from .base import BaseRule
 from .valid import ValidRule
+from .fix_action import FixAction
+
 
 class SubRule(ValidRule):
   NAME = "SUB"
@@ -9,8 +11,8 @@ class SubRule(ValidRule):
 
   def prepare_actions(self):
     self._actions = None
-    raw = [ x.strip() for x in " ".join(self._actions_raw).replace(",", " ").split() if x.strip() ]
-    self._actions = raw
+    raw = [ x.strip() for x in " ".join(self._actions_raw).split() if x.strip() ]
+    self._actions = list(filter(lambda x: bool(x), [ FixAction(r, self) for r in raw ]))
 
   def process(self, context, re_context = None):
     # super(ValidRule) to fill stats and context
