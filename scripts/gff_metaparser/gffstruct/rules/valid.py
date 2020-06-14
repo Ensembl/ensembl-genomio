@@ -19,17 +19,19 @@ class ValidRule(BaseRule):
     rules_data["USEDQUALS"] = None
 
   @classmethod
-  def process(cls, context, re_context = None):
+  def process(cls, context, re_context = None, name_override = None):
+    _name = name_override or cls.NAME
     # add stats
-    context.global_context.add(cls.NAME, context)
-    context.run_to_root(updater = lambda x: cls.mark_as_usefull(x))
+    context.global_context.add(_name, context)
+    context.run_to_root(updater = lambda x: cls.mark_as_usefull(x, name_override = _name))
     context.update(force_clean = True, _RECTX = re_context)
 
   @classmethod
-  def mark_as_usefull(cls, ctx):
-    used_quals = ctx.get("_RULESDATA")[cls.NAME].get("USEDQUALS")
+  def mark_as_usefull(cls, ctx, name_override = None):
+    _name = name_override or cls.NAME
+    used_quals = ctx.get("_RULESDATA")[_name].get("USEDQUALS")
     if used_quals is None:
-      ctx.get("_RULESDATA")[cls.NAME]["USEDQUALS"] = {}
+      ctx.get("_RULESDATA")[_name]["USEDQUALS"] = {}
 
   @classmethod
   def run_postponed(cls, context, name_override = None):
