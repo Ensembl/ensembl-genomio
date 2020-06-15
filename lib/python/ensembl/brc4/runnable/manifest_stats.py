@@ -51,7 +51,12 @@ class manifest_stats(eHive.BaseRunnable):
         coord_systems = {}
         circular = 0
         locations = []
+        codon_tables = []
         for seqr in seq_regions:
+            # Get readable seq_region name
+            genbank = "synonyms" in seqr and [x for x in seqr["synonyms"] if x["source"] == "GenBank"]
+            seqr_name = genbank and genbank[0]["name"] or seqr["name"]
+
             coord_level = seqr["coord_system_level"]
             if not coord_level in coord_systems:
                 coord_systems[coord_level] = []
@@ -59,9 +64,9 @@ class manifest_stats(eHive.BaseRunnable):
             
             if "circular" in seqr:
                 circular += 1
+            if "codon_table" in seqr:
+                codon_tables.append("%s = %s" % (seqr_name, seqr["codon_table"]))
             if "location" in seqr:
-                genbank = "synonyms" in seqr and [x for x in seqr["synonyms"] if x["source"] == "GenBank"]
-                seqr_name = genbank and genbank[0]["name"] or seqr["name"]
                 locations.append("%s = %s" % (seqr_name, seqr["location"]))
         
         # Stats
@@ -90,6 +95,10 @@ class manifest_stats(eHive.BaseRunnable):
                 stats.append("%9d\t%s" % (len(locations), "sequences with location"))
                 for loc in locations:
                     stats.append("\t\t\t%s" % loc)
+            if codon_tables:
+                stats.append("%9d\t%s" % (len(codon_tables), "sequences with codon_table"))
+                for table in codon_tables:
+                    stats.append("\t\t\t%s" % table)
         
         stats.append("\n")
 
