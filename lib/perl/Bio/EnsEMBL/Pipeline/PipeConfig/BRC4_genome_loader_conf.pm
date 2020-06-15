@@ -53,6 +53,7 @@ sub default_options {
     ## Metadata parameters
     'schemas' => {
       'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
+      'seq_attrib' => catfile($schema_dir, "seq_attrib_schema.json"),
       'functional_annotation' => catfile($schema_dir, "functional_annotation_schema.json"),
       'genome' => catfile($schema_dir, "genome_schema.json"),
       'manifest' => catfile($schema_dir, "manifest_schema.json"),
