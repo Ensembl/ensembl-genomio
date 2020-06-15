@@ -19,15 +19,11 @@ class process_seq_region(eHive.BaseRunnable):
                     "Assigned-Molecule" : "GenBank",
                     },
 
-                "molecule_map" : {
-                    "mitochondrion" : {
-                        "coord_system_level": "chromosome",
-                        "location" : "mitochondrial_chromosome"
-                        },
-                    "plasmid" : {
-                        "coord_system_level": "chromosome",
-                        "location" : "plasmid"
-                        },
+                "molecule_location" : {
+                    "chromosome" : "nuclear_chromosome",
+                    "mitochondrion" : "mitochondrial_chromosome",
+                    "apicoplast" : "apicoplast_chromosome",
+                    "plasmid" : "plasmid"
                     }
                 }
         
@@ -160,7 +156,7 @@ class process_seq_region(eHive.BaseRunnable):
 
         # Map the fields to their synonym name
         synonym_map = self.param("synonym_map")
-        molecule_map = self.param("molecule_map")
+        molecule_location = self.param("molecule_location")
 
         # Synonyms
         synonyms = []
@@ -187,17 +183,17 @@ class process_seq_region(eHive.BaseRunnable):
         # Coord system and location
         seq_role = row["Sequence-Role"]
         
-        if seq_role == "unplaced-scaffold":
+        if seq_role in ("unplaced-scaffold", "unlocalized-scaffold"):
             seq_region["coord_system_level"] = assembly_level
         elif seq_role == "assembled-molecule":
             location = row["Assigned-Molecule-Location/Type"].lower()
             
-            # Get prepared metadata for this location
-            if location in molecule_map:
-                molecule = molecule_map[location]
-                seq_region = {**seq_region, **molecule}
+            # Get location metadata
+            if location in molecule_location:
+                seq_region["coord_system_level"] = "chromosome"
+                seq_region["location"] = molecule_location[location]
             else:
-                raise Exception("Unrecognized sequence location: %s" % seq_location)
+                raise Exception("Unrecognized sequence location: %s (is %s)" % (location, str(molecule_location)))
         else:
             raise Exception("Unrecognized sequence role: %s" % seq_role)
         return seq_region
