@@ -17,7 +17,7 @@ use Test::Deep;
 use Test::Differences;
 
 ###############################################################################
-my $seqr_key_default = "BRC4_seq_region_name";
+my $seqr_key_default = "name";
 
 ###############################################################################
 # MAIN
@@ -410,8 +410,10 @@ sub compare_entries {
   for (my $i = 0; $i < @sorted1; $i++) {
     my $en1 = $sorted1[$i];
     my $en2 = $sorted2[$i];
-    my $value = "$en1->{$key}";
-    $value .= "/$en2->{$key}" if $en1->{$key} ne $en2->{$key};
+
+    my $value1 = $en1->{$key} ? "$en1->{$key}" : $en1->{name};
+    my $value2 = $en2->{$key} ? "$en2->{$key}" : $en2->{name};
+    my $value = "$value1/$value2";
 
     # Special
     if ($en1->{description}) {
@@ -427,6 +429,9 @@ sub compare_entries {
 
 sub list_diff {
   my ($data1, $data2, $key) = @_;
+
+  die "No $key in data1" if not $data1->[0]->{$key};
+  die "No $key in data2" if not $data2->[0]->{$key};
   
   my %ids1 = map { $_->{$key} => 1 } @$data1;
   my %ids2 = map { $_->{$key} => 1 } @$data2;
@@ -704,6 +709,6 @@ sub opt_check {
   Log::Log4perl->easy_init($DEBUG) if $opt{debug};
   return \%opt;
 }
-__END__
 
+__END__
 
