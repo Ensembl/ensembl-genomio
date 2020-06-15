@@ -62,8 +62,11 @@ class download_assembly_data(eHive.BaseRunnable):
         for dl_file, checksum in sums.items():
             file_path = os.path.join(dl_dir, dl_file)
             
-#            try:
-                # Check the file checksum
+            if not os.path.isfile(file_path):
+                print("No file %s found" % file_path)
+                return False
+            
+            # Check the file checksum
             with open(file_path, mode='rb') as f:
                 content = f.read()
                 file_sum = hashlib.md5(content).hexdigest()
