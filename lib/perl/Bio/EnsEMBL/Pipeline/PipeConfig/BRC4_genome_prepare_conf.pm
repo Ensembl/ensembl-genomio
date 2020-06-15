@@ -205,6 +205,7 @@ sub pipeline_analyses {
       -parameters  => {
         gff3       => catfile("#work_dir#", "gene_models.gff3"),
         functional_annotation => catfile("#work_dir#", "functional_annotation.json"),
+        seq_region_raw => catfile("#work_dir#", "seq_region_raw.json"),
         gff3_name => "gff3",
         func_name => "functional_anotation",
         parser_conf => $self->o("parser_conf"),
@@ -216,6 +217,7 @@ sub pipeline_analyses {
           "#parser_patch#" .
           " --gff_out #gff3#" . 
           " --fann_out #functional_annotation#" .
+          " --seq_region_out #seq_region_raw#" .
           " #gff3_flat#",
       },
       -analysis_capacity   => 1,
