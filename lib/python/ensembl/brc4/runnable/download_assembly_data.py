@@ -53,6 +53,9 @@ class download_assembly_data(eHive.BaseRunnable):
         # Get checksums and compare
         md5_path = os.path.join(dl_dir, md5_file)
         sums = self.get_checksums(md5_path)
+        
+        if not sums:
+            return
 
         print("File sums from %s: %d" % (md5_path, len(sums)))
         
@@ -77,6 +80,9 @@ class download_assembly_data(eHive.BaseRunnable):
         """
         Get a dict of checksums from a file, with file names as keys and sums as values
         """
+
+        if not os.path.isfile(checksum_path):
+            return
         
         sums = {}
         with open(checksum_path, mode='r') as fh:
@@ -86,8 +92,6 @@ class download_assembly_data(eHive.BaseRunnable):
                 if not file_path.find("/") >= 0:
                     sums[file_path] = checksum
 
-        if len(sums) == 0:
-            raise Exception("No checksums found in %s" % checksum_path)
         return sums
 
     def download_files(self, accession, dl_dir):
