@@ -6,7 +6,7 @@ import sys, io, re, os
 import json
 from statistics import mean
 from BCBio.GFF import GFFExaminer
-
+from collections import OrderedDict
 
 class manifest_stats(eHive.BaseRunnable):
 
@@ -60,7 +60,9 @@ class manifest_stats(eHive.BaseRunnable):
             if "circular" in seqr:
                 circular += 1
             if "location" in seqr:
-                locations.append(seqr["location"])
+                genbank = "synonyms" in seqr and [x for x in seqr["synonyms"] if x["source"] == "GenBank"]
+                seqr_name = genbank and genbank[0]["name"] or seqr["name"]
+                locations.append("%s = %s" % (seqr_name, seqr["location"]))
         
         # Stats
         stats = []
@@ -69,13 +71,13 @@ class manifest_stats(eHive.BaseRunnable):
         for coord_name, lengths in coord_systems.items():
             stats.append("\nCoord_system: %s" % coord_name)
             
-            stat_counts = {
-                    "Total sequences" : len(lengths),
-                    "Total sequence length" : sum(lengths),
-                    "Minimum sequence length" : min(lengths),
-                    "Maximum sequence length" : max(lengths),
-                    "Mean sequence length" : mean(lengths),
-                    }
+            stat_counts = OrderedDict()
+            stat_counts["Number of sequences"] = len(lengths)
+            stat_counts["Sequence length sum"] = sum(lengths)
+            stat_counts["Sequence length minimum"] = min(lengths)
+            stat_counts["Sequence length mean"] = mean(lengths)
+            stat_counts["Sequence length maximum"] = max(lengths)
+
             for name, count in stat_counts.items():
                 stats.append("%9d\t%s" % (count, name))
         
