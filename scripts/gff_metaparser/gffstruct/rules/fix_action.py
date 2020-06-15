@@ -18,9 +18,35 @@ class FixAction:
     )
 
   def parse(self, raw):
-    return raw.split("/")
-    #if not self._action: self._action = None
-    #if not self._action[0]: self._action = None
+    out = []
+    raw_splitted = raw.split("/")
+    for p in raw.split("/"):
+      if p.strip() == "" or p == "-":
+        out.append({ "action": "exclude" })
+        continue
+      action = "rename"
+      if p[0] == "+":
+        p = p[1:]
+        action = "add"
+      _type, *quals = p.replace(",",".").split(".")
+      _type = _type.strip()
+      if _type == "":
+        print("empty type for %s" % (self), file=sys.stderr)
+        return None
+      quals = dict([ (kv+"=").split("=")[0:2] for kv in quals if kv ])
+      out.append({
+        "action" : action,
+        "type" : _type,
+        "quals" : quals,
+      })
+    # TODO balanced number of all - added == number of old
+    return out or None
+
+  def act(self, ctx):
+    re_ctx = ctx.get("_RECTX") and ctx["_RECTX"].groupdict() or None
+    print("run_postponed for sub rectx:", re_ctx, ctx.get("_FULLTAG"), self._action, file=sys.stderr)
+    return {}
+    # run_postponed for sub rectx: {'MRNA': 'mRNA', 'CDS': 'CDS'} gene/mRNA/CDS ['gene/transcript.biotype=@MRNA/@CDS']
 
     #gene/@MRNA/@CDS	SUB	gene/transcript.biotype=@MRNA/@CDS
     #
@@ -28,6 +54,5 @@ class FixAction:
     #gene/primary_transcript/mirna/exon	SUB	ncRNA_gene/-/miRNA/exon
     #mirna	SUB	+ncRNA_gene/miRNA.biotype=miRNA/+exon
     #
-    # balanced number of all - added == number of old
 
 

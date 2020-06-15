@@ -30,6 +30,7 @@ class SubRule(ValidRule):
     # super(ValidRule) to fill initial data
     ValidRule.run_postponed(context, name_override = name_to_check)
 
+    new_nodes = dict()
     for ctx in context.used_leaves():
       check_quals = ctx.get("_RULESDATA")[name_to_check].get("USEDQUALS")
       if check_quals is None: continue
@@ -37,9 +38,25 @@ class SubRule(ValidRule):
       actions = ctx.get("_RULESDATA")[cls.NAME].get("ACTIONS")
       if not actions: continue
 
-      re_ctx = ctx.get("_RECTX") and ctx["_RECTX"].groupdict() or None
-      print("run_postponed for sub rectx:", re_ctx, ctx.get("_FULLTAG"), actions, file=sys.stderr)
-      # run_postponed for sub rectx: {'MRNA': 'mRNA', 'CDS': 'CDS'} gene/mRNA/CDS ['gene/transcript.biotype=@MRNA/@CDS']
+      for a in actions:
+        new_nodes.update(a.act(ctx))
+
+    #if not new_nodes:
+    #  return
+
+    # drop unused leaves
+    ctx_leaves = context._useful_leaves
+    for i in range(len(ctx_leaves))[::-1]:
+      leaf = ctx_leaves[i]
+      if id(leaf) in new_nodes and new_nodes[id(leaf)] is None:
+        ctx_leaves.pop(index = i)
+
+    # append new nodes
+    for _id, node in new_nodes.items():
+      if node is None: continue
+      context.prev.append(node)
+      if node.get("_ISLEAF"): ctx_leaves.append(node)
+
     return
 
 
