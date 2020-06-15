@@ -220,6 +220,7 @@ sub pipeline_analyses {
           " --seq_region_out #seq_region_raw#" .
           " #gff3_flat#",
       },
+      -failed_job_tolerance => 100,
       -analysis_capacity   => 1,
       -rc_name    => '8GB',
       -meadow_type       => 'LSF',
@@ -251,6 +252,7 @@ sub pipeline_analyses {
       -parameters     => {
         file_name => "seq_region",
       },
+      -failed_job_tolerance => 100,
       -flow_into  => {
         2 => 'Check_json_schema'
       },
