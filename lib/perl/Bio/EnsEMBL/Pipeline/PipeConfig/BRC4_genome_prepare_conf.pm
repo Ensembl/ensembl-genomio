@@ -225,7 +225,7 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -flow_into  => [
           '?accu_name=manifest_files&accu_address={gff3_name}&accu_input_variable=gff3',
-          '?accu_name=manifest_files&accu_address={func_name}&accu_input_variable=functional_annotation'
+          { "Check_json_schema" => { metadata_type => 'functional_annotation', metadata_json => '#functional_annotation#' } }
         ],
     },
 
