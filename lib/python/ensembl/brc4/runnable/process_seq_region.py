@@ -115,12 +115,28 @@ class process_seq_region(eHive.BaseRunnable):
                 annotations = record.annotations
                 if "topology" in annotations and annotations["topology"] == "circular":
                     seqr["circular"] = True
+
+                # Is there a genetic code defined?
+                codon_table = self.get_codon_table(record)
+                if codon_table:
+                    seqr["codon_table"] = codon_table
                 
                 # Store the seq_region
                 if seqr:
                     seq_regions[record.id] = seqr
 
         return seq_regions
+    
+    def get_codon_table(self, record) -> int:
+        """
+        Given a genbank record, seeks codon table features
+        Returns a number if found
+        """
+        for feat in record.features:
+            if "transl_table" in feat.qualifiers:
+                return int(feat.qualifiers["transl_table"][0])
+        
+        return
 
     def get_report_regions(self, report_path) -> dict:
         """
