@@ -24,6 +24,9 @@ class process_seq_region(eHive.BaseRunnable):
                     "mitochondrion" : "mitochondrial_chromosome",
                     "apicoplast" : "apicoplast_chromosome",
                     "plasmid" : "plasmid"
+                    },
+                "location_codon" : {
+                    "apicoplast_chromosome" : 4
                     }
                 }
         
@@ -48,6 +51,9 @@ class process_seq_region(eHive.BaseRunnable):
         gbff_regions = self.get_gbff_regions(gbff_path)
         seq_regions = self.merge_regions(report_regions, gbff_regions)
 
+        # Guess translation table
+        self.guess_translation_table(seq_regions)
+
         # Print out the file
         self.print_json(final_path, seq_regions)
 
@@ -57,6 +63,16 @@ class process_seq_region(eHive.BaseRunnable):
                 "metadata_json": final_path
                 }
         self.dataflow(output, 2)
+
+    def guess_translation_table(self, seq_regions) -> int:
+        """
+        Guess codon table based on location
+        """
+        location_codon = self.param("location_codon")
+        
+        for seqr in seq_regions:
+            if "location" in seqr and seqr["location"] in location_codon:
+                seqr["codon_table"] = location_codon[seqr["location"]]
     
     def print_json(self, path, data) -> None:
         with open(path, "w") as json_out:
