@@ -5,7 +5,7 @@ import gzip
 import sys, io, re, os
 import json
 from statistics import mean
-from BCBio.GFF import GFFExaminer
+from BCBio import GFF
 from collections import OrderedDict
 
 class manifest_stats(eHive.BaseRunnable):
@@ -21,6 +21,7 @@ class manifest_stats(eHive.BaseRunnable):
             stats += self.get_seq_region_stats(manifest["seq_region"])
         
         stats_path = os.path.join(os.path.dirname(manifest_path), "stats.txt")
+        print(stats_path)
         with open(stats_path, "w") as stats_out:
             stats_out.write("\n".join(stats))
         
@@ -43,6 +44,7 @@ class manifest_stats(eHive.BaseRunnable):
                             manifest[name][f] = file_name
             
             return manifest
+
     def get_seq_region_stats(self, seq_region_path):
         
         seq_regions = self.get_json(seq_region_path)
@@ -125,17 +127,26 @@ class manifest_stats(eHive.BaseRunnable):
     def parse_gff3(self, gff3_handle):
         biotypes = {}
 
-        examiner = GFFExaminer()
-        inside = examiner.available_limits(gff3_handle)
-        print()
+        for rec in GFF.parse(gff3_handle):
+            for feat in rec.features:
+                self.increment_biotype(biotypes, feat)
+                for feat2 in feat.sub_features:
+                    self.increment_biotype(biotypes, feat2)
+                    for feat3 in feat2.sub_features:
+                        self.increment_biotype(biotypes, feat3)
+                
+        # Order
+        sorted_biotypes = OrderedDict()
+        for name in sorted(biotypes.keys()):
+            sorted_biotypes[name] = biotypes[name]
         
-        gff_data = inside["gff_source_type"]
-        
-        stats = []
-        for source in gff_data.keys():
-            count = gff_data[source]
-            biotype = source[1]
-            stats.append("%9d\t%s" % (count, biotype))
+        stats = ["%9d\t%20s\tID = %s" % (data["count"], biotype, data["example"]) for (biotype, data) in sorted_biotypes.items()]
         
         return stats
 
+    def increment_biotype(self, biotypes, feature):
+        biotype = feature.type
+        if not biotype in biotypes:
+            biotypes[biotype] = { "count" : 0, "example" : feature.id }
+        biotypes[biotype]["count"] += 1
+        
