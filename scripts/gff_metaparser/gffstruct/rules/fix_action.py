@@ -54,14 +54,12 @@ class FixAction:
           return None
         p = p[1:]
         self._copy_leaves += 1
-      _type, *quals = p.replace(",",".").split(".")
+      _type, *quals = p.replace(":",",").split(",")
       _type = _type.strip()
       if _type == "":
         print("empty type for %s" % (self), file=sys.stderr)
         return None
       quals = dict([ (kv+"=").split("=")[0:2] for kv in quals if kv ])
-      # remove duplicated id for the copied leaf
-      if action == "copy_leaf": quals["id"] = None
       out.append({
         "action" : action,
         "type" : _type,
@@ -120,7 +118,11 @@ class FixAction:
   def copy_node(self, node, new_nodes, keep_leaf = False, clean = False):
     if node.get("_ISCOPY"):
       return node
-    ncopy = copy.deepcopy(node)
+    #ncopy = copy.deepcopy(node)
+    ncopy = node.copy()
+    old_rules_data = ncopy.get("_RULESDATA")
+    if old_rules_data is not None:
+      ncopy["_RULESDATA"] = copy.deepcopy(old_rules_data)
     ncopy["_ISCOPY"] = True
     new_nodes[id(ncopy)] = ncopy
     # clean
