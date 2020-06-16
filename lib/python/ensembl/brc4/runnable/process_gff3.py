@@ -13,6 +13,9 @@ class process_gff3(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {
+                "gene_types" : ("gene", "ncRNA_gene", "pseudogene"),
+                "transcript_types" : ("transcript", "mRNA", "pseudogenic_transcript", "tRNA", "pseudogenic_tRNA", "rRNA"),
+                "ignored_types" : ("region")
                 }
         
 
@@ -51,6 +54,10 @@ class process_gff3(eHive.BaseRunnable):
         and also write a functional_annotation file
         """
         
+        allowed_gene_types = self.param("gene_types")
+        allowed_transcript_types = self.param("transcript_types")
+        ignored_types = self.param("ignored_types")
+        
         functional_annotation = []
         
         with open(out_gff_path, "w") as gff3_out:
@@ -63,9 +70,9 @@ class process_gff3(eHive.BaseRunnable):
                     
                     # GENES
                     for gene in record.features:
-                        if gene.type in ("region"):
+                        if gene.type in ignored_types:
                             continue
-                        if gene.type in ("gene", "ncRNA_gene", "pseudogene"):
+                        if gene.type in allowed_gene_types:
                             # New gene ID 
                             gene.id = self.normalize_gene_id(gene.id)
                             
@@ -76,24 +83,31 @@ class process_gff3(eHive.BaseRunnable):
                             gene.qualifiers = {
                                     "ID" : gene.id
                                     }
+                            
+                            # Transform gene - CDS to gene-transcript-exon-CDS
+                            if gene.sub_features[0].type == "CDS":
+                                print("Insert transcript-exon for %s" % gene.id)
+                                transcript = self.gene_to_cds(gene)
+                                gene.sub_features = [transcript]
 
                             # TRANSCRIPTS
                             for count, transcript in enumerate(gene.sub_features):
-                                if transcript.type in ("transcript", "mRNA", "pseudogenic_transcript", "tRNA", "pseudogenic_tRNA"):
-                                    # New transcript ID
-                                    transcript_number = count + 1
-                                    transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
-                                    
-                                    # Store transcript functional annotation
-                                    self.add_funcann_feature(functional_annotation, transcript, "transcript")
-                                    
-                                    # Replace qualifiers
-                                    transcript.qualifiers = {
-                                            "ID" : transcript.id,
-                                            "Parent" : gene.id,
-                                            }
-                                else:
+
+                                if transcript.type not in allowed_transcript_types:
                                     raise Exception("Unrecognized transcript type: %s" % transcript.type)
+
+                                # New transcript ID
+                                transcript_number = count + 1
+                                transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
+                                
+                                # Store transcript functional annotation
+                                self.add_funcann_feature(functional_annotation, transcript, "transcript")
+                                
+                                # Replace qualifiers
+                                transcript.qualifiers = {
+                                        "ID" : transcript.id,
+                                        "Parent" : gene.id,
+                                        }
 
                                 # EXONS AND CDS
                                 cds_found = False
@@ -131,6 +145,19 @@ class process_gff3(eHive.BaseRunnable):
         
         # Write functional annotation
         self.print_json(out_funcann_path, functional_annotation)
+    
+    def gene_to_cds(self, gene):
+        """Create a transcript - exon - cds chain"""
+        
+        transcript = SeqFeature(gene.location, type="transcript")
+        transcript.sub_features = []
+
+        for cds in gene.sub_features:
+            exon = SeqFeature(cds.location, type="exon")
+            transcript.sub_features.append(exon)
+            transcript.sub_features.append(cds)
+        
+        return transcript
         
     
     def print_json(self, path, data) -> None:
