@@ -71,38 +71,58 @@ class FixAction:
     re_ctx = ctx.get("_RECTX") and ctx["_RECTX"].groupdict() or None
     self.run_subsitutions(ctx, re_ctx)
 
+    #return {}
+
     new_nodes = {}
     # add / remove updating parent ctx
-    ait = self._action
     prev, it = None, ctx
     for ait in reversed(self._action):
       is_leaf = it.get("_ISLEAF", False)
       parent = it.get("_PARENTCTX")
       aa = ait["action"]
       if aa == "exclude":
+        self.del_node_if_leaf(it, new_nodes)
+        pcopy = self.copy_node(parent, new_nodes)
+        parent = pcopy
+        #
+        if is_leaf:
+          pcopy["_ISLEAF"] = True
+        elif prev:
+          prev_copy = self.copy_node(prev, new_nodes)
+          prev = prev_copy
+          prev["_PARENTCTX"] = pcopy
+        #
+        prev, it = prev, parent
+      elif aa == "add":
         pass
-      if aa == "add":
-        pass
-      prev, it = it, it.get("_PARENTCTX")
-
-    # run delitions
-    # mark as deleted ? add copy with skipped ?
-
-    return {}
-
-    #gene/@MRNA/@CDS	SUB	gene/transcript.biotype=@MRNA/@CDS
+      prev, it = it, parent
     #
-    #gene/primary_transcript/mirna/exon	SUB	ncRNA_gene/pre_miRNA/-/exon
-    #gene/primary_transcript/mirna/exon	SUB	ncRNA_gene/-/miRNA/exon
+    return new_nodes
+
+  def copy_node(self, node, new_nodes):
+    if node.get("_ISCOPY"):
+      return node
+    ncopy = node.copy()
+    ncopy["_ISCOPY"] = True
+    new_nodes[id(ncopy)] = ncopy
+    # mark old leaf as unused
+    self.del_node_if_leaf(node, new_nodes)
+    return ncopy
+
+  def del_node_if_leaf(self, node, new_nodes):
+    if node.get("_ISLEAF", False):
+      new_nodes[id(node)] = None
+
+    #gene/@MRNA/@CDS	SUB	gene/-/@CDS
     #mirna	SUB	+ncRNA_gene/miRNA.biotype=miRNA/+exon
-    #
+    # addd exon/add cds
 
   def run_subsitutions(self, ctx, re_ctx):
     if ctx is None:
       return None
     if self._action is None:
       return None
-    ait = self._action
+    #
     it = ctx
     for ait in reversed(self._action):
       aa = ait["action"]
