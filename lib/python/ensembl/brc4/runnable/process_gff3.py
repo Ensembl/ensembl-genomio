@@ -51,6 +51,8 @@ class process_gff3(eHive.BaseRunnable):
         and also write a functional_annotation file
         """
         
+        functional_annotation = []
+        
         with open(out_gff_path, "w") as gff3_out:
             with open(in_gff_path, "r") as gff3_in:
                 gff = GFF.parse(gff3_in)
@@ -64,7 +66,13 @@ class process_gff3(eHive.BaseRunnable):
                         if gene.type in ("region"):
                             continue
                         if gene.type in ("gene", "ncRNA_gene", "pseudogene"):
+                            # New gene ID 
                             gene.id = self.normalize_gene_id(gene.id)
+                            
+                            # Store gene functional annotation
+                            self.add_funcann_feature(functional_annotation, gene, "gene")
+                            
+                            # replace qualifiers
                             gene.qualifiers = {
                                     "ID" : gene.id
                                     }
@@ -72,8 +80,14 @@ class process_gff3(eHive.BaseRunnable):
                             # TRANSCRIPTS
                             for count, transcript in enumerate(gene.sub_features):
                                 if transcript.type in ("transcript", "mRNA", "pseudogenic_transcript", "tRNA", "pseudogenic_tRNA"):
+                                    # New transcript ID
                                     transcript_number = count + 1
                                     transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
+                                    
+                                    # Store transcript functional annotation
+                                    self.add_funcann_feature(functional_annotation, transcript, "transcript")
+                                    
+                                    # Replace qualifiers
                                     transcript.qualifiers = {
                                             "ID" : transcript.id,
                                             "Parent" : gene.id,
@@ -82,13 +96,24 @@ class process_gff3(eHive.BaseRunnable):
                                     raise Exception("Unrecognized transcript type: %s" % transcript.type)
 
                                 # EXONS AND CDS
+                                cds_found = False
                                 for count, feat in enumerate(transcript.sub_features):
-                                    if feat.type in ("exon"):
+                                    
+                                    if feat.type == "exon":
+                                        # Replace qualifiers
                                         feat.qualifiers = {
                                                 "Parent" : transcript.id,
                                                 }
-                                    elif feat.type in ("CDS"):
+                                    elif feat.type == "CDS":
+                                        # New CDS ID
                                         feat.id = self.normalize_cds_id(feat.id)
+                                        
+                                        # Store CDS functional annotation (only once)
+                                        if not cds_found:
+                                            cds_found = True
+                                            self.add_funcann_feature(functional_annotation, feat, "translation")
+                                        
+                                        # Replace qualifiers
                                         feat.qualifiers = {
                                                 "ID" : feat.id,
                                                 "Parent" : transcript.id,
@@ -103,7 +128,38 @@ class process_gff3(eHive.BaseRunnable):
                     new_records.append(new_record)
                 
                 GFF.write(new_records, gff3_out)
-                    
+        
+        # Write functional annotation
+        self.print_json(out_funcann_path, functional_annotation)
+        
+    
+    def print_json(self, path, data) -> None:
+        """Dump an object to a json file"""
+        
+        with open(path, "w") as json_out:
+            json_out.write(json.dumps(data, sort_keys=True, indent=4))
+    
+    def add_funcann_feature(self, funcann, feature, name):
+        """Append a feature object following the specifications"""
+        
+        feature_object = {
+                "object_type" : name,
+                "id" : feature.id
+                }
+        
+        # Description?
+        if "product" in feature.qualifiers:
+            description = feature.qualifiers["product"][0]
+            if not re.search("^hypothetical protein$", description):
+                feature_object["description"] = description
+        
+        # Synonyms?
+        
+        # is_pseudogene?
+        if feature.type.startswith("pseudogen"):
+            feature_object["is_pseudogene"] = True
+        
+        funcann.append(feature_object)
     
     def normalize_gene_id(self, gene_id) -> str:
         """Remove any unnecessary prefixes around the gene ID"""
