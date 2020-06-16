@@ -255,7 +255,7 @@ sub pipeline_analyses {
      -parameters     => {
        temp_gff3 => "#gff3#" . ".tmp",
        cmd => "mv #gff3# #temp_gff3#" .
-       " && " . $self->o('gff3_tidy') . " -gzip -o #gff3# #temp_gff3#" .
+       " && " . $self->o('gff3_tidy') . " -o #gff3# #temp_gff3#" .
        " && " . $self->o('gff3_validate') . ' #gff3#',
        file_name => "gff3",
      },
