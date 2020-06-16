@@ -103,6 +103,7 @@ class SeqFeatComposer:
       if rules_data and "_ALL" in rules_data and "USEDQUALS" in rules_data["_ALL"]:
         used_quals = rules_data["_ALL"]["USEDQUALS"]
 
+      # TODO: rewrite in a sane manner. see fix_actions
       feat = self.processed_add(ctx, used_quals = used_quals)
       parent_ctx = ctx.get("_PARENTCTX")
 

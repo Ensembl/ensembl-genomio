@@ -36,6 +36,7 @@ class FixAction:
   def parse(self, raw):
     out = []
     raw_splitted = raw.split("/")
+    possible_leaf = raw_splitted[-1]
     for p in raw_splitted:
       if p.strip() == "" or p == "-":
         out.append({ "action": "exclude" })
@@ -48,7 +49,7 @@ class FixAction:
         self._additions += 1
       elif p[0] == "!":
         action = "copy_leaf"
-        if id(p) != id(raw_splitted[-1]):
+        if id(p) != id(possible_leaf):
           self._action = False
           print("copy_leaf(!) used not with leaf in %s" % (self), file=sys.stderr)
           return None
