@@ -71,26 +71,21 @@ class FixAction:
     re_ctx = ctx.get("_RECTX") and ctx["_RECTX"].groupdict() or None
     self.run_subsitutions(ctx, re_ctx)
 
-    #return {}
-
     new_nodes = {}
-    # add / remove updating parent ctx
+    # add / remove, updating parent ctx
     prev, it = None, ctx
     for ait in reversed(self._action):
       is_leaf = it.get("_ISLEAF", False)
       parent = it.get("_PARENTCTX")
       aa = ait["action"]
       if aa == "exclude":
-        self.del_node_if_leaf(it, new_nodes)
-        pcopy = self.copy_node(parent, new_nodes)
-        parent = pcopy
-        #
         if is_leaf:
-          pcopy["_ISLEAF"] = True
+          self.del_node_if_leaf(it, new_nodes)
+          parent = self.copy_node(parent, new_nodes)
+          parent["_ISLEAF"] = True
         elif prev:
-          prev_copy = self.copy_node(prev, new_nodes)
-          prev = prev_copy
-          prev["_PARENTCTX"] = pcopy
+          prev = self.copy_node(prev, new_nodes)
+          prev["_PARENTCTX"] = parent
         #
         prev, it = prev, parent
       elif aa == "add":
