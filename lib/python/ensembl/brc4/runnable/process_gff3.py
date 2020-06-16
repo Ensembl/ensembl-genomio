@@ -45,7 +45,7 @@ class process_gff3(eHive.BaseRunnable):
                 }
         self.dataflow(output, 3)
 
-    def simpler_gff3(self, in_gff_path, out_gff_path, out_funcann_path):
+    def simpler_gff3(self, in_gff_path, out_gff_path, out_funcann_path) -> None:
         """
         Load a GFF3 from INSDC, and rewrite it in a simpler version,
         and also write a functional_annotation file
@@ -106,36 +106,40 @@ class process_gff3(eHive.BaseRunnable):
                     
     
     def normalize_gene_id(self, gene_id) -> str:
+        """Remove any unnecessary prefixes around the gene ID"""
+
         prefixes = ("gene-", "gene:")
-        for prefix in prefixes:
-            gene_id = self.remove_prefix(gene_id, prefix)
+        gene_id = self.remove_prefixes(gene_id, prefixes)
         return gene_id
     
     def normalize_transcript_id(self, gene_id, number) -> str:
+        """Use a gene ID and a number to make a formatted transcript ID"""
+
         transcript_id = "%s_t%d" % (gene_id, number)
         return transcript_id
 
     def normalize_cds_id(self, cds_id) -> str:
+        """Remove any unnecessary prefixes around the CDS ID"""
+
         prefixes = ("cds-", "cds:")
-        for prefix in prefixes:
-            cds_id = self.remove_prefix(cds_id, prefix)
+        cds_id = self.remove_prefixes(cds_id, prefixes)
         return cds_id
     
     def make_transcript_id(self, gene_id, transcript_number) -> str:
-        """
-        Create a transcript ID based on a gene and the number of the transcript
-        """
+        """Create a transcript ID based on a gene and the number of the transcript"""
+        
         # Simply add a numbered suffix to the gene_id
         transcript_id = "%s_t%d" (gene_id, transcript_number)
 
         return transcript_id
 
-    def remove_prefix(self, identifier, prefix) -> str:
+    def remove_prefixes(self, identifier, prefixes) -> str:
         """
-        Remove a prefix from an identifier if it is found
+        Remove prefixes from an identifier if they are found
         Return the unaltered identifier otherwise
         """
-        if identifier.startswith(prefix):
-            identifier = identifier[len(prefix):]
+        for prefix in prefixes:
+            if identifier.startswith(prefix):
+                identifier = identifier[len(prefix):]
         return identifier
 
