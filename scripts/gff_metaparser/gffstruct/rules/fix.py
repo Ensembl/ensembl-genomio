@@ -40,6 +40,7 @@ class SubRule(ValidRule):
       #
       _w_ex = len(list(filter(lambda a: a._exclusions > 0, actions)))
       _w_add = len(list(filter(lambda a: a._additions > 0, actions)))
+      # ignore copy leaves here
       actions_types_num = sum([
           _w_ex > 0,
           _w_add > 0,
