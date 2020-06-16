@@ -45,6 +45,9 @@ sub default_options {
     parser_conf => catfile($metazoa_script_dir, "conf/gff_metaparser.conf"),
     parser_patch => catfile($metazoa_script_dir, "conf/gff_metaparser/brc4.patch"),
 
+    ############################################
+    # Config unlikely to be changed by the user
+
     ## Metadata parameters
     'schemas' => {
       'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
@@ -54,9 +57,10 @@ sub default_options {
       'manifest' => catfile($schema_dir, "manifest_schema.json"),
     },
 
-    ############################################
-    # Config unlikely to be changed by the user
-
+    ## gff3 parameters
+    'gt_exe'          => 'gt',
+    'gff3_tidy'       => $self->o('gt_exe').' gff3 -tidy -sort -retainids -force',
+    'gff3_validate'   => $self->o('gt_exe').' gff3validator',
   };
 }
 
@@ -225,10 +229,26 @@ sub pipeline_analyses {
       -rc_name    => '8GB',
       -meadow_type       => 'LSF',
       -flow_into  => [
-          '?accu_name=manifest_files&accu_address={gff3_name}&accu_input_variable=gff3',
+          { 'GFF3_validation' => { gff3 => "#gff3#" } },
           { "Check_json_schema" => { metadata_type => 'functional_annotation', metadata_json => '#functional_annotation#' } }
         ],
     },
+   
+   { -logic_name     => 'GFF3_validation',
+     -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+     -parameters     => {
+       temp_gff3 => "#gff3#" . ".tmp",
+       cmd => "mv #gff3# #temp_gff3#" .
+       " && " . $self->o('gff3_tidy') . " -gzip -o #gff3# #temp_gff3#" .
+       " && " . $self->o('gff3_validate') . ' #gff3#',
+       file_name => "gff3",
+     },
+      -max_retry_count => 0,
+     -analysis_capacity => 10,
+     -batch_size        => 10,
+     -rc_name           => 'default',
+     -flow_into  => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=gff3',
+   },
 
     {
       -logic_name => 'Process_genome_metadata',
