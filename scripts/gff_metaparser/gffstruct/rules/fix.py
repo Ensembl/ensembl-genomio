@@ -30,7 +30,7 @@ class SubRule(ValidRule):
     # super(ValidRule) to fill initial data
     ValidRule.run_postponed(context, name_override = name_to_check)
 
-    new_nodes = dict()
+    new_nodes = dict() # {id(node) : node}
     for ctx in context.used_leaves():
       check_quals = ctx.get("_RULESDATA")[name_to_check].get("USEDQUALS")
       if check_quals is None: continue
@@ -52,7 +52,6 @@ class SubRule(ValidRule):
         continue
 
       for a in actions:
-        # context.global_context.add("detailed", str(a), context) ???
         res = a.act(ctx)
         new_nodes.update(a.act(ctx) or {})
 

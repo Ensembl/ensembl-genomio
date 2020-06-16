@@ -52,9 +52,16 @@ class FixAction:
     return out or None
 
   def act(self, ctx):
+    """
+      copy node if updating parentctx:
+        if adding or changing parentctx (skipping)
+        remove/set _ISLEAF when needed
+      return dict added nodes {id(node):id}
+      mark removed/updated leaves as {id(node):none}
+      mark leaves as to be removed from old leaves
+    """
     if self._action is None:
       return None
-
     fulltag = ctx.get("_FULLTAG")
     depth = ctx.get("_DEPTH")
     if depth != len(self._action) - self._additions:
@@ -62,15 +69,43 @@ class FixAction:
       return None
 
     re_ctx = ctx.get("_RECTX") and ctx["_RECTX"].groupdict() or None
+    self.run_subsitutions(ctx, re_ctx)
 
-    #print("run_postponed for sub rectx:", re_ctx, ctx.get("_FULLTAG"), self._action, file=sys.stderr)
+    new_nodes = {}
+    # add / remove updating parent ctx
+    ait = self._action
+    prev, it = None, ctx
+    for ait in reversed(self._action):
+      is_leaf = it.get("_ISLEAF", False)
+      parent = it.get("_PARENTCTX")
+      aa = ait["action"]
+      if aa == "exclude":
+        pass
+      if aa == "add":
+        pass
+      prev, it = it, it.get("_PARENTCTX")
 
-    # run substitutions
+    # run delitions
+    # mark as deleted ? add copy with skipped ?
+
+    return {}
+
+    #gene/@MRNA/@CDS	SUB	gene/transcript.biotype=@MRNA/@CDS
+    #
+    #gene/primary_transcript/mirna/exon	SUB	ncRNA_gene/pre_miRNA/-/exon
+    #gene/primary_transcript/mirna/exon	SUB	ncRNA_gene/-/miRNA/exon
+    #mirna	SUB	+ncRNA_gene/miRNA.biotype=miRNA/+exon
+    #
+
+  def run_subsitutions(self, ctx, re_ctx):
+    if ctx is None:
+      return None
+    if self._action is None:
+      return None
     ait = self._action
     it = ctx
     for ait in reversed(self._action):
       aa = ait["action"]
-      print(ait, file = sys.stderr)
       if aa == "add":
         continue
       if aa == "rename":
@@ -90,18 +125,9 @@ class FixAction:
                 used_quals[_q] = (tq, v)
             else:
               used_quals.update({_q:(q, v)})
-          pass
+      #do nothing for exclude
       it = it.get("_PARENTCTX")
-     # run delitions
-     # mark as deleted ? add copy with skipped ?
-    return {}
-
-    #gene/@MRNA/@CDS	SUB	gene/transcript.biotype=@MRNA/@CDS
-    #
-    #gene/primary_transcript/mirna/exon	SUB	ncRNA_gene/pre_miRNA/-/exon
-    #gene/primary_transcript/mirna/exon	SUB	ncRNA_gene/-/miRNA/exon
-    #mirna	SUB	+ncRNA_gene/miRNA.biotype=miRNA/+exon
-    #
+    return
 
   def from_rectx(self, x, re_ctx=None):
     if not re_ctx or x is None: return x
