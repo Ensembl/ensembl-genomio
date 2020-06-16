@@ -88,18 +88,20 @@ class FixAction:
     re_ctx = ctx.get("_RECTX") and ctx["_RECTX"].groupdict() or None
     self.run_subsitutions(ctx, re_ctx)
 
-    new_nodes = {}
+    # gather ids  depth to use by
+    # fix depths
+    # data to use by "add"
+    ids_types = []
+    new_depth = len(self._action or []) # new depth to use by "add"
+
     # add / remove, updating parent ctx
+    new_nodes = {}
     prev, it = None, ctx
     for ait in reversed(self._action):
       is_leaf = it.get("_ISLEAF", False)
       parent = it.get("_PARENTCTX")
       aa = ait["action"]
-      if aa == "copy_leaf":
-        if is_leaf:
-          it = self.copy_node(it, new_nodes, keep_leaf = True, clean = True)
-          self.update_node(it, ait, re_ctx)
-      elif aa == "exclude":
+      if aa == "exclude":
         if is_leaf:
           self.del_node_if_leaf(it, new_nodes)
           parent = self.copy_node(parent, new_nodes)
@@ -109,12 +111,30 @@ class FixAction:
           prev["_PARENTCTX"] = parent
         #
         prev, it = prev, parent
+        continue
       elif aa == "add":
         # use id sfx based on depth, mb different for gene
         pass
+      elif aa == "copy_leaf":
+        if is_leaf:
+          it = self.copy_node(it, new_nodes, keep_leaf = True, clean = True)
+          self.update_node(it, ait, re_ctx)
+      #
       prev, it = it, parent
     #
     return new_nodes
+
+    # add depth to id suffix
+    # what if no ID? add ID based on type_location
+    # mirna SUB +ncRNA_gene/miRNA.biotype=miRNA/+exon
+    # gene/pre_mirna SUB ncRNA_gene/pre_miRNA/+exon
+    # @RNA_EXON_ONLY/exon SUB +gene.biotype=@RNA_EXON_ONLY/mRNA.biotype=@RNA_EXON_ONLY/exon
+    # pseudogene SUB pseudogene/+pseudogenic_transcript/+exon
+    # pseudogene/exon SUB pseudogene/+pseudogenic_transcript/exon
+    # gene	SUB	pseudogene/+pseudogenic_transcript/+exon
+    # gene/cds	SUB	gene/+mRNA/!exon
+    # gene/cds	SUB	gene/+mRNA/CDS
+
 
   def copy_node(self, node, new_nodes, keep_leaf = False, clean = False):
     if node.get("_ISCOPY"):
@@ -138,18 +158,6 @@ class FixAction:
   def del_node_if_leaf(self, node, new_nodes):
     if node.get("_ISLEAF", False):
       new_nodes[id(node)] = None
-
-    #gene/@MRNA/@CDS	SUB	gene/-/@CDS
-    # mirna SUB +ncRNA_gene/miRNA.biotype=miRNA/+exon
-    # gene/pre_mirna SUB ncRNA_gene/pre_miRNA/+exon
-    # @RNA_EXON_ONLY/exon SUB +gene.biotype=@RNA_EXON_ONLY/mRNA.biotype=@RNA_EXON_ONLY/exon
-    # pseudogene SUB pseudogene/+pseudogenic_transcript/+exon
-    # pseudogene/exon SUB pseudogene/+pseudogenic_transcript/exon
-    # addd exon/add cds
-
-    # gene	SUB	pseudogene/+pseudogenic_transcript/+exon	# MT related (ie MT ORI in flybase)
-    # gene/cds	SUB	gene/+mRNA/exon	# MT related coding genes, should use both rules, perhaps use FIX rule?
-    # gene/cds	SUB	gene/+mRNA/CDS
 
   def run_subsitutions(self, ctx, re_ctx):
     if ctx is None:
