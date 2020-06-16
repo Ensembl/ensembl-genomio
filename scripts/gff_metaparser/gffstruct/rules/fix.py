@@ -35,11 +35,26 @@ class SubRule(ValidRule):
       check_quals = ctx.get("_RULESDATA")[name_to_check].get("USEDQUALS")
       if check_quals is None: continue
 
+      fulltag = ctx.get("_FULLTAG")
+
       actions = ctx.get("_RULESDATA")[cls.NAME].get("ACTIONS")
       if not actions: continue
 
+      _w_ex = len(list(filter(lambda a: a._exclusions > 0, actions)))
+      _w_add = len(list(filter(lambda a: a._additions > 0, actions)))
+      actions_types_num = sum([
+          _w_ex > 0,
+          _w_add > 0,
+          (len(actions) - _w_ex - _w_add) > 0,
+      ])
+      if actions_types_num > 1:
+        print("too many action types for %s. skipping" % fulltag, file = sys.stderr)
+        continue
+
       for a in actions:
-        new_nodes.update(a.act(ctx))
+        # context.global_context.add("detailed", str(a), context) ???
+        res = a.act(ctx)
+        new_nodes.update(a.act(ctx) or {})
 
     #if not new_nodes:
     #  return
