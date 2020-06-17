@@ -84,7 +84,8 @@ class FixAction:
       return None
     depth = ctx.get("_DEPTH")
     if depth != len(self._action) - self._additions:
-      print("unbalanced number of tag %s  and actions %s. skipping", file = sys.stderr)
+      fulltag = ctg.get("_FULLTAG")
+      print("unbalanced number of tag %s and actions %s. skipping", fulltag, self, file = sys.stderr)
       return None
 
     re_ctx = ctx.get("_RECTX") and ctx["_RECTX"].groupdict() or None
@@ -140,13 +141,11 @@ class FixAction:
           continue
         else: # insert before
           _src = prev
-          _it = self.copy_node(_src, new_nodes, clean = True)
+          _it = self.copy_node(_src, new_nodes, clean = True, force = True)
           _it["_PARENTCTX"] = None
           _it["_ISLEAF"] = False
-          # leaf or update kid
-          if prev is not None:
-            prev = self.copy_node(prev, new_nodes)
-            prev["_PARENTCTX"] = _it
+          # force update prev, otherwise, copy the whole chain
+          prev["_PARENTCTX"] = _it
           #
           _adata = self.copy_action(ait, gen_id = True, depth=adepth)
           self.update_node(_it, _adata)
@@ -168,22 +167,17 @@ class FixAction:
       data["quals"] = { "ID" : self.new_id(action, depth = depth) }
     return data
 
-
   def new_id(self, action, depth = 0):
     if depth < 0: depth  = 100 - depth
     #print("NEW NODE", node, file = sys.stderr)
-    #return "%s_id_%s" % (action and action.get("type") or None, depth)
-    return "%s_" % (action and action.get("type") or None)
+    return "%s_id_%s" % (action and action.get("type") or None, depth)
+    #return "%s_" % (action and action.get("type") or None)
 
     #gene/@MRNA/@CDS	SUB	+nt1/+nt2/gene:biotype=aaa,gene_biotype=aaa/transcript:biotype=@MRNA/+nt4/+nt5/CDS/+nt6/+nt7
-    # add depth to id suffix
-    # what if no ID? add ID based on type_location
+
     # mirna SUB +ncRNA_gene/miRNA.biotype=miRNA/+exon
-    # gene/pre_mirna SUB ncRNA_gene/pre_miRNA/+exon
     # @RNA_EXON_ONLY/exon SUB +gene.biotype=@RNA_EXON_ONLY/mRNA.biotype=@RNA_EXON_ONLY/exon
-    # pseudogene SUB pseudogene/+pseudogenic_transcript/+exon
     # pseudogene/exon SUB pseudogene/+pseudogenic_transcript/exon
-    # gene	SUB	pseudogene/+pseudogenic_transcript/+exon
     # gene/cds	SUB	gene/+mRNA/!exon
     # gene/cds	SUB	gene/+mRNA/CDS
 
