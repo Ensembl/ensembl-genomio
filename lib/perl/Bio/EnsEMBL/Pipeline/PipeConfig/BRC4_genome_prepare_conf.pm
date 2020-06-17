@@ -240,7 +240,7 @@ sub pipeline_analyses {
       -parameters  => {
         in_gff3 => "#gff3_flat#",
       },
-      -failed_job_tolerance => 0,
+      -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
       -rc_name    => '8GB',
       -meadow_type       => 'LSF',
