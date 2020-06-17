@@ -4,10 +4,11 @@ import sys
 from .valid import ValidRule
 
 class FixAction:
-  def __init__(self, raw, rule):
+  def __init__(self, raw, rule, always_generate_new_ids = False):
      self._raw = raw
      self._rule_name = rule.NAME
      self._rule_lineno = rule._lineno
+     self._always_gen_id = always_generate_new_ids
      #
      self._additions = 0
      self._exclusions = 0
@@ -117,17 +118,22 @@ class FixAction:
         # x x N x x
         insert_after = bool(it)
         if insert_after:
-          new_nd = self.copy_node(it, new_nodes, clean = True)
-          new_adata = ait.copy()
-          new_id = self.new_id(new_adata, adepth)
-          new_adata["quals"] = {"ID" : new_id}
-          self.update_node(new_nd, new_adata)
-          if prev:
+          _src = it
+          _it = self.copy_node(_src, new_nodes, clean = True)
+          _it["_PARENTCTX"] = _src
+          # leaf or update kid
+          if prev is not None:
             prev = self.copy_node(prev, new_nodes)
-            prev["_PARENTCTX"] = new_nd
+            prev["_PARENTCTX"] = _it
+            _it["_ISLEAF"] = False
           else:
-            new_nd["_ISLEAF"] = True
-          prev, it, adepth = new_nd, it, adepth - 1
+            _it["_ISLEAF"] = True
+          # update node
+          _gen_id = not _it.get("_ISLEAF", False) or self._always_gen_id
+          _adata = self.copy_action(ait, gen_id = _gen_id, depth=adepth)
+          self.update_node(_it, _adata)
+          #
+          prev, it, adepth = _it, it, adepth - 1
           continue
         else: # insert before
           new_nd = self.copy_node(prev, new_nodes, keep_leaf = True, clean = True)
@@ -150,10 +156,18 @@ class FixAction:
     #
     return new_nodes
 
-  def new_id(self, node, depth = 0):
+  def copy_action(self, action, gen_id = False, depth = 0):
+    data = action.copy()
+    if gen_id:
+      data["quals"] = { "ID" : self.new_id(action, depth = depth) }
+    return data
+
+
+  def new_id(self, action, depth = 0):
     if depth < 0: depth  = 100 - depth
-    print("NEW NODE", node, file = sys.stderr)
-    return "%s_id_%s" % (node and node.get("type") or None, depth)
+    #print("NEW NODE", node, file = sys.stderr)
+    #return "%s_id_%s" % (action and action.get("type") or None, depth)
+    return "%s_" % (action and action.get("type") or None)
 
     #gene/@MRNA/@CDS	SUB	+nt1/+nt2/gene:biotype=aaa,gene_biotype=aaa/transcript:biotype=@MRNA/+nt4/+nt5/CDS/+nt6/+nt7
     # add depth to id suffix
