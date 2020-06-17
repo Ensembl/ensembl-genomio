@@ -43,7 +43,7 @@ class process_gff3(eHive.BaseRunnable):
         
         # Output the functional annotation file
         output = {
-                "metadata_type" : "json",
+                "metadata_type" : "functional_annotation",
                 "metadata_json": out_funcann_path
                 }
         self.dataflow(output, 3)
@@ -80,8 +80,10 @@ class process_gff3(eHive.BaseRunnable):
                             self.add_funcann_feature(functional_annotation, gene, "gene")
                             
                             # replace qualifiers
+                            old_qualifiers = gene.qualifiers
                             gene.qualifiers = {
-                                    "ID" : gene.id
+                                    "ID" : gene.id,
+                                    "source" : old_qualifiers["source"]
                                     }
                             
                             # Transform gene - CDS to gene-transcript-exon-CDS
@@ -104,10 +106,13 @@ class process_gff3(eHive.BaseRunnable):
                                 self.add_funcann_feature(functional_annotation, transcript, "transcript")
                                 
                                 # Replace qualifiers
+                                old_qualifiers = transcript.qualifiers
                                 transcript.qualifiers = {
                                         "ID" : transcript.id,
                                         "Parent" : gene.id,
                                         }
+                                if "source" in old_qualifiers:
+                                    transcript.qualifiers["source"] = old_qualifiers["source"]
 
                                 # EXONS AND CDS
                                 cds_found = False
@@ -115,9 +120,12 @@ class process_gff3(eHive.BaseRunnable):
                                     
                                     if feat.type == "exon":
                                         # Replace qualifiers
+                                        old_qualifiers = feat.qualifiers
                                         feat.qualifiers = {
                                                 "Parent" : transcript.id,
                                                 }
+                                        if "source" in old_qualifiers:
+                                            feat.qualifiers["source"] = old_qualifiers["source"]
                                     elif feat.type == "CDS":
                                         # New CDS ID
                                         feat.id = self.normalize_cds_id(feat.id)
@@ -131,9 +139,15 @@ class process_gff3(eHive.BaseRunnable):
                                         feat.qualifiers = {
                                                 "ID" : feat.id,
                                                 "Parent" : transcript.id,
+                                                "phase" : feat.qualifiers["phase"],
+                                                "source" : feat.qualifiers["source"]
                                                 }
                                     else:
                                         raise Exception("Unrecognized exon type: %s" % exon.type)
+                            
+                            # PSEUDOGENE CDS IDs
+                            if gene.type == "pseudogene":
+                                self.normalize_pseudogene_cds(gene)
                                     
                         else:
                             raise Exception("Unrecognized gene type: %s" % gene.type)
@@ -150,10 +164,12 @@ class process_gff3(eHive.BaseRunnable):
         """Create a transcript - exon - cds chain"""
         
         transcript = SeqFeature(gene.location, type="transcript")
+        transcript.qualifiers["source"] = gene.qualifiers["source"]
         transcript.sub_features = []
 
         for cds in gene.sub_features:
             exon = SeqFeature(cds.location, type="exon")
+            exon.qualifiers["source"] = gene.qualifiers["source"]
             transcript.sub_features.append(exon)
             transcript.sub_features.append(cds)
         
@@ -207,6 +223,15 @@ class process_gff3(eHive.BaseRunnable):
         prefixes = ("cds-", "cds:")
         cds_id = self.remove_prefixes(cds_id, prefixes)
         return cds_id
+    
+    def normalize_pseudogene_cds(self, gene):
+        """Ensure CDS from a pseudogene have a different ID"""
+
+        for transcript in gene.sub_features:
+            for feat in transcript.sub_features:
+                if feat.type == "CDS" and gene.id == feat.id:
+                    feat.id = "%s_cds" % gene.id
+                    feat.qualifiers["ID"] = feat.id
     
     def make_transcript_id(self, gene_id, transcript_number) -> str:
         """Create a transcript ID based on a gene and the number of the transcript"""
