@@ -77,9 +77,10 @@ class FixAction:
       mark removed/updated leaves as {id(node):none}
       mark leaves as to be removed from old leaves
     """
+    if ctx is None:
+      return None
     if self._action is None:
       return None
-    fulltag = ctx.get("_FULLTAG")
     depth = ctx.get("_DEPTH")
     if depth != len(self._action) - self._additions:
       print("unbalanced number of tag %s  and actions %s. skipping", file = sys.stderr)
@@ -88,42 +89,73 @@ class FixAction:
     re_ctx = ctx.get("_RECTX") and ctx["_RECTX"].groupdict() or None
     self.run_subsitutions(ctx, re_ctx)
 
-    # gather ids  depth to use by
-    # fix depths
     # data to use by "add"
-    ids_types = []
-    new_depth = len(self._action or []) # new depth to use by "add"
+    adepth = len(self._action or []) # action depth to use by "add"
 
     # add / remove, updating parent ctx
     new_nodes = {}
     prev, it = None, ctx
     for ait in reversed(self._action):
-      is_leaf = it.get("_ISLEAF", False)
-      parent = it.get("_PARENTCTX")
+      is_leaf, parent = False, None
+      if it:
+        is_leaf = it.get("_ISLEAF", False)
+        parent = it.get("_PARENTCTX")
       aa = ait["action"]
       if aa == "exclude":
         if is_leaf:
           self.del_node_if_leaf(it, new_nodes)
-          parent = self.copy_node(parent, new_nodes)
-          parent["_ISLEAF"] = True
+          if parent:
+            parent = self.copy_node(parent, new_nodes)
+            parent["_ISLEAF"] = True
         elif prev:
           prev = self.copy_node(prev, new_nodes)
           prev["_PARENTCTX"] = parent
         #
-        prev, it = prev, parent
+        prev, it, adepth = prev, parent, adepth - 1
         continue
       elif aa == "add":
-        # use id sfx based on depth, mb different for gene
-        pass
+        # x x N x x
+        insert_after = bool(it)
+        if insert_after:
+          new_nd = self.copy_node(it, new_nodes, clean = True)
+          new_adata = ait.copy()
+          new_id = self.new_id(new_adata, adepth)
+          new_adata["quals"] = {"ID" : new_id}
+          self.update_node(new_nd, new_adata)
+          if prev:
+            prev = self.copy_node(prev, new_nodes)
+            prev["_PARENTCTX"] = new_nd
+          else:
+            new_nd["_ISLEAF"] = True
+          prev, it, adepth = new_nd, it, adepth - 1
+          continue
+        else: # insert before
+          new_nd = self.copy_node(prev, new_nodes, keep_leaf = True, clean = True)
+          new_nd["_ISLEAF"] = False
+          new_adata = ait.copy()
+          new_id = self.new_id(new_adata, adepth)
+          new_adata["quals"] = {"ID" : new_id}
+          self.update_node(new_nd, new_adata)
+          if prev:
+            prev = self.copy_node(prev, new_nodes)
+            prev["_PARENTCTX"] = new_nd
+          prev, it, adepth = new_nd, it, adepth - 1
+          continue
       elif aa == "copy_leaf":
         if is_leaf:
           it = self.copy_node(it, new_nodes, keep_leaf = True, clean = True)
           self.update_node(it, ait, re_ctx)
       #
-      prev, it = it, parent
+      prev, it, adepth = it, parent, adepth - 1
     #
     return new_nodes
 
+  def new_id(self, node, depth = 0):
+    if depth < 0: depth  = 100 - depth
+    print("NEW NODE", node, file = sys.stderr)
+    return "%s_id_%s" % (node and node.get("type") or None, depth)
+
+    #gene/@MRNA/@CDS	SUB	+nt1/+nt2/gene:biotype=aaa,gene_biotype=aaa/transcript:biotype=@MRNA/+nt4/+nt5/CDS/+nt6/+nt7
     # add depth to id suffix
     # what if no ID? add ID based on type_location
     # mirna SUB +ncRNA_gene/miRNA.biotype=miRNA/+exon
@@ -159,7 +191,7 @@ class FixAction:
     if node.get("_ISLEAF", False):
       new_nodes[id(node)] = None
 
-  def run_subsitutions(self, ctx, re_ctx):
+  def run_subsitutions(self, ctx, re_ctx=None):
     if ctx is None:
       return None
     if self._action is None:
@@ -176,7 +208,7 @@ class FixAction:
       it = it.get("_PARENTCTX")
     return
 
-  def update_node(self, node, action, re_ctx):
+  def update_node(self, node, action, re_ctx = None):
     if not node or not action:
       return
     _type = self.from_rectx(action["type"], re_ctx)
