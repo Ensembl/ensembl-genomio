@@ -91,6 +91,10 @@ class process_gff3(eHive.BaseRunnable):
                                 print("Insert transcript-exon for %s" % gene.id)
                                 transcript = self.gene_to_cds(gene)
                                 gene.sub_features = [transcript]
+                            
+                            # PSEUDOGENE CDS IDs
+                            if gene.type == "pseudogene":
+                                self.normalize_pseudogene_cds(gene)
 
                             # TRANSCRIPTS
                             for count, transcript in enumerate(gene.sub_features):
@@ -144,10 +148,6 @@ class process_gff3(eHive.BaseRunnable):
                                                 }
                                     else:
                                         raise Exception("Unrecognized exon type: %s" % exon.type)
-                            
-                            # PSEUDOGENE CDS IDs
-                            if gene.type == "pseudogene":
-                                self.normalize_pseudogene_cds(gene)
                                     
                         else:
                             raise Exception("Unrecognized gene type: %s" % gene.type)
@@ -163,7 +163,7 @@ class process_gff3(eHive.BaseRunnable):
     def gene_to_cds(self, gene):
         """Create a transcript - exon - cds chain"""
         
-        transcript = SeqFeature(gene.location, type="transcript")
+        transcript = SeqFeature(gene.location, type="mRNA")
         transcript.qualifiers["source"] = gene.qualifiers["source"]
         transcript.sub_features = []
 
@@ -229,9 +229,11 @@ class process_gff3(eHive.BaseRunnable):
 
         for transcript in gene.sub_features:
             for feat in transcript.sub_features:
-                if feat.type == "CDS" and gene.id == feat.id:
-                    feat.id = "%s_cds" % gene.id
-                    feat.qualifiers["ID"] = feat.id
+                if feat.type == "CDS":
+                    feat.id = self.normalize_cds_id(feat.id)
+                    if gene.id == feat.id:
+                        feat.id = "%s_cds" % gene.id
+                        feat.qualifiers["ID"] = feat.id
     
     def make_transcript_id(self, gene_id, transcript_number) -> str:
         """Create a transcript ID based on a gene and the number of the transcript"""
