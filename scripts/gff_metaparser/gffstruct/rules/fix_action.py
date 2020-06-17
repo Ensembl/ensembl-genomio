@@ -163,8 +163,9 @@ class FixAction:
 
   def copy_action(self, action, gen_id = False, depth = 0):
     data = action.copy()
+    data["quals"] = data.get("quals", {}).copy()
     if gen_id:
-      data["quals"] = { "ID" : self.new_id(action, depth = depth) }
+      data["quals"].update({ "ID" : self.new_id(action, depth = depth) })
     return data
 
   def new_id(self, action, depth = 0):
@@ -172,15 +173,6 @@ class FixAction:
     #print("NEW NODE", node, file = sys.stderr)
     return "%s_id_%s" % (action and action.get("type") or None, depth)
     #return "%s_" % (action and action.get("type") or None)
-
-    #gene/@MRNA/@CDS	SUB	+nt1/+nt2/gene:biotype=aaa,gene_biotype=aaa/transcript:biotype=@MRNA/+nt4/+nt5/CDS/+nt6/+nt7
-
-    # mirna SUB +ncRNA_gene/miRNA.biotype=miRNA/+exon
-    # @RNA_EXON_ONLY/exon SUB +gene.biotype=@RNA_EXON_ONLY/mRNA.biotype=@RNA_EXON_ONLY/exon
-    # pseudogene/exon SUB pseudogene/+pseudogenic_transcript/exon
-    # gene/cds	SUB	gene/+mRNA/!exon
-    # gene/cds	SUB	gene/+mRNA/CDS
-
 
   def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False):
     if not force and node.get("_ISCOPY"):
