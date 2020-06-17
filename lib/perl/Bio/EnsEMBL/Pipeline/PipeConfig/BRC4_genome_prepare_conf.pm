@@ -45,6 +45,9 @@ sub default_options {
     parser_conf => catfile($metazoa_script_dir, "conf/gff_metaparser.conf"),
     parser_patch => catfile($metazoa_script_dir, "conf/gff_metaparser/brc4.patch"),
 
+    ############################################
+    # Config unlikely to be changed by the user
+
     ## Metadata parameters
     'schemas' => {
       'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
@@ -54,9 +57,10 @@ sub default_options {
       'manifest' => catfile($schema_dir, "manifest_schema.json"),
     },
 
-    ############################################
-    # Config unlikely to be changed by the user
-
+    ## gff3 parameters
+    'gt_exe'          => 'gt',
+    'gff3_tidy'       => $self->o('gt_exe').' gff3 -tidy -sort -retainids -force',
+    'gff3_validate'   => $self->o('gt_exe').' gff3validator',
   };
 }
 
@@ -199,47 +203,77 @@ sub pipeline_analyses {
       -flow_into  => { 2 => 'Process_gff3' },
     },
 
+#    {
+#      -logic_name    => "Process_gff3",
+#      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+#      -parameters  => {
+#        gff3       => catfile("#work_dir#", "gene_models.gff3"),
+#        functional_annotation => catfile("#work_dir#", "functional_annotation.json"),
+#        seq_region_raw => catfile("#work_dir#", "seq_region_raw.json"),
+#        gff3_name => "gff3",
+#        func_name => "functional_anotation",
+#        parser_conf => $self->o("parser_conf"),
+#        parser_patch => $self->o("parser_patch") ? " --conf_patch " . $self->o("parser_patch") : "",
+#
+#        cmd => "python3 $metazoa_script_dir/gff3_meta_parse.py" .
+#          " --dump_used_options" .
+#          " --conf #parser_conf#" .
+#          "#parser_patch#" .
+#          " --gff_out #gff3#" . 
+#          " --fann_out #functional_annotation#" .
+#          " --seq_region_out #seq_region_raw#" .
+#          " #gff3_flat#",
+#      },
+#      -failed_job_tolerance => 100,
+#      -analysis_capacity   => 5,
+#      -rc_name    => '8GB',
+#      -meadow_type       => 'LSF',
+#      -flow_into  => [
+#          { 'GFF3_validation' => { gff3 => "#gff3#" } },
+#          { "Check_json_schema" => { metadata_type => 'functional_annotation', metadata_json => '#functional_annotation#' } }
+#        ],
+#    },
     {
       -logic_name    => "Process_gff3",
-      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -module     => 'ensembl.brc4.runnable.process_gff3',
+      -language    => 'python3',
       -parameters  => {
-        gff3       => catfile("#work_dir#", "gene_models.gff3"),
-        functional_annotation => catfile("#work_dir#", "functional_annotation.json"),
-        seq_region_raw => catfile("#work_dir#", "seq_region_raw.json"),
-        gff3_name => "gff3",
-        func_name => "functional_anotation",
-        parser_conf => $self->o("parser_conf"),
-        parser_patch => $self->o("parser_patch") ? " --conf_patch " . $self->o("parser_patch") : "",
-
-        cmd => "python3 $metazoa_script_dir/gff3_meta_parse.py" .
-          " --dump_used_options" .
-          " --conf #parser_conf#" .
-          "#parser_patch#" .
-          " --gff_out #gff3#" . 
-          " --fann_out #functional_annotation#" .
-          " --seq_region_out #seq_region_raw#" .
-          " #gff3_flat#",
+        in_gff3 => "#gff3_flat#",
       },
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
       -rc_name    => '8GB',
       -meadow_type       => 'LSF',
-      -flow_into  => [
-          '?accu_name=manifest_files&accu_address={gff3_name}&accu_input_variable=gff3',
-          { "Check_json_schema" => { metadata_type => 'functional_annotation', metadata_json => '#functional_annotation#' } }
-        ],
+      -flow_into  => {
+          2 => 'GFF3_validation',
+          3 => "Check_json_schema",
+        },
     },
+   
+   { -logic_name     => 'GFF3_validation',
+     -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+     -parameters     => {
+       temp_gff3 => "#gff3#" . ".tmp",
+       cmd => "mv #gff3# #temp_gff3#" .
+       " && " . $self->o('gff3_tidy') . " -o #gff3# #temp_gff3#" .
+       " && " . $self->o('gff3_validate') . ' #gff3#',
+       file_name => "gff3",
+     },
+      -max_retry_count => 0,
+     -analysis_capacity => 10,
+     -batch_size        => 10,
+     -rc_name           => 'default',
+     -flow_into  => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=gff3',
+   },
 
     {
       -logic_name => 'Process_genome_metadata',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -module     => 'ensembl.brc4.runnable.process_genome_data',
+      -language    => 'python3',
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -parameters     => {
-        file_name => "genome",
-      },
       -flow_into => {
-        1 => { "Check_json_schema" => { metadata_type => 'genome', metadata_json => '#genome_json#' } }
+        2 => "Check_json_schema"
       }
     },
 

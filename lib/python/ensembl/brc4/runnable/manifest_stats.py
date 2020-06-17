@@ -5,7 +5,7 @@ import gzip
 import sys, io, re, os
 import json
 from statistics import mean
-from BCBio.GFF import GFFExaminer
+from BCBio import GFF
 from collections import OrderedDict
 
 class manifest_stats(eHive.BaseRunnable):
@@ -21,6 +21,7 @@ class manifest_stats(eHive.BaseRunnable):
             stats += self.get_seq_region_stats(manifest["seq_region"])
         
         stats_path = os.path.join(os.path.dirname(manifest_path), "stats.txt")
+        print(stats_path)
         with open(stats_path, "w") as stats_out:
             stats_out.write("\n".join(stats))
         
@@ -43,6 +44,7 @@ class manifest_stats(eHive.BaseRunnable):
                             manifest[name][f] = file_name
             
             return manifest
+
     def get_seq_region_stats(self, seq_region_path):
         
         seq_regions = self.get_json(seq_region_path)
@@ -51,7 +53,12 @@ class manifest_stats(eHive.BaseRunnable):
         coord_systems = {}
         circular = 0
         locations = []
+        codon_tables = []
         for seqr in seq_regions:
+            # Get readable seq_region name
+            genbank = "synonyms" in seqr and [x for x in seqr["synonyms"] if x["source"] == "GenBank"]
+            seqr_name = genbank and genbank[0]["name"] or seqr["name"]
+
             coord_level = seqr["coord_system_level"]
             if not coord_level in coord_systems:
                 coord_systems[coord_level] = []
@@ -59,9 +66,9 @@ class manifest_stats(eHive.BaseRunnable):
             
             if "circular" in seqr:
                 circular += 1
+            if "codon_table" in seqr:
+                codon_tables.append("%s = %s" % (seqr_name, seqr["codon_table"]))
             if "location" in seqr:
-                genbank = "synonyms" in seqr and [x for x in seqr["synonyms"] if x["source"] == "GenBank"]
-                seqr_name = genbank and genbank[0]["name"] or seqr["name"]
                 locations.append("%s = %s" % (seqr_name, seqr["location"]))
         
         # Stats
@@ -90,6 +97,10 @@ class manifest_stats(eHive.BaseRunnable):
                 stats.append("%9d\t%s" % (len(locations), "sequences with location"))
                 for loc in locations:
                     stats.append("\t\t\t%s" % loc)
+            if codon_tables:
+                stats.append("%9d\t%s" % (len(codon_tables), "sequences with codon_table"))
+                for table in codon_tables:
+                    stats.append("\t\t\t%s" % table)
         
         stats.append("\n")
 
@@ -116,17 +127,26 @@ class manifest_stats(eHive.BaseRunnable):
     def parse_gff3(self, gff3_handle):
         biotypes = {}
 
-        examiner = GFFExaminer()
-        inside = examiner.available_limits(gff3_handle)
-        print()
+        for rec in GFF.parse(gff3_handle):
+            for feat in rec.features:
+                self.increment_biotype(biotypes, feat)
+                for feat2 in feat.sub_features:
+                    self.increment_biotype(biotypes, feat2)
+                    for feat3 in feat2.sub_features:
+                        self.increment_biotype(biotypes, feat3)
+                
+        # Order
+        sorted_biotypes = OrderedDict()
+        for name in sorted(biotypes.keys()):
+            sorted_biotypes[name] = biotypes[name]
         
-        gff_data = inside["gff_source_type"]
-        
-        stats = []
-        for source in gff_data.keys():
-            count = gff_data[source]
-            biotype = source[1]
-            stats.append("%9d\t%s" % (count, biotype))
+        stats = ["%9d\t%20s\tID = %s" % (data["count"], biotype, data["example"]) for (biotype, data) in sorted_biotypes.items()]
         
         return stats
 
+    def increment_biotype(self, biotypes, feature):
+        biotype = feature.type
+        if not biotype in biotypes:
+            biotypes[biotype] = { "count" : 0, "example" : feature.id }
+        biotypes[biotype]["count"] += 1
+        
