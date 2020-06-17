@@ -136,7 +136,7 @@ class FixAction:
           # update node
           _gen_id = not _it.get("_ISLEAF", False) or self._always_gen_id
           _adata = self.copy_action(ait, gen_id = _gen_id, src_id = _src_id, depth = adepth)
-          self.update_node(_it, _adata)
+          self.update_node(_it, _adata, re_ctx)
           #
           prev, it, adepth = _it, it, adepth - 1
           continue
@@ -152,7 +152,7 @@ class FixAction:
           prev["_PARENTCTX"] = _it
           #
           _adata = self.copy_action(ait, gen_id = True, src_id = _src_id, depth=adepth)
-          self.update_node(_it, _adata)
+          self.update_node(_it, _adata, re_ctx)
           #
           prev, it, adepth = _it, it, adepth - 1
           continue
