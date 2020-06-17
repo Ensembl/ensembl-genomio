@@ -177,7 +177,6 @@ class FixAction:
   def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False):
     if not force and node.get("_ISCOPY"):
       return node
-    #ncopy = copy.deepcopy(node)
     ncopy = node.copy()
     old_rules_data = ncopy.get("_RULESDATA")
     if old_rules_data is not None:
