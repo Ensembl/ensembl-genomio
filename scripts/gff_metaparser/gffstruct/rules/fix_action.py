@@ -118,8 +118,11 @@ class FixAction:
         # x x N x x
         insert_after = bool(it)
         if insert_after:
+          # copy (for the first time)
+          it = self.copy_node(it, new_nodes, clean = False)
+          # copy to add
           _src = it
-          _it = self.copy_node(_src, new_nodes, clean = True)
+          _it = self.copy_node(_src, new_nodes, clean = True, force = True)
           _it["_PARENTCTX"] = _src
           # leaf or update kid
           if prev is not None:
@@ -136,16 +139,19 @@ class FixAction:
           prev, it, adepth = _it, it, adepth - 1
           continue
         else: # insert before
-          new_nd = self.copy_node(prev, new_nodes, keep_leaf = True, clean = True)
-          new_nd["_ISLEAF"] = False
-          new_adata = ait.copy()
-          new_id = self.new_id(new_adata, adepth)
-          new_adata["quals"] = {"ID" : new_id}
-          self.update_node(new_nd, new_adata)
-          if prev:
+          _src = prev
+          _it = self.copy_node(_src, new_nodes, clean = True)
+          _it["_PARENTCTX"] = None
+          _it["_ISLEAF"] = False
+          # leaf or update kid
+          if prev is not None:
             prev = self.copy_node(prev, new_nodes)
-            prev["_PARENTCTX"] = new_nd
-          prev, it, adepth = new_nd, it, adepth - 1
+            prev["_PARENTCTX"] = _it
+          #
+          _adata = self.copy_action(ait, gen_id = True, depth=adepth)
+          self.update_node(_it, _adata)
+          #
+          prev, it, adepth = _it, it, adepth - 1
           continue
       elif aa == "copy_leaf":
         if is_leaf:
@@ -182,8 +188,8 @@ class FixAction:
     # gene/cds	SUB	gene/+mRNA/CDS
 
 
-  def copy_node(self, node, new_nodes, keep_leaf = False, clean = False):
-    if node.get("_ISCOPY"):
+  def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False):
+    if not force and node.get("_ISCOPY"):
       return node
     #ncopy = copy.deepcopy(node)
     ncopy = node.copy()
@@ -194,7 +200,6 @@ class FixAction:
     new_nodes[id(ncopy)] = ncopy
     # clean
     if clean:
-      pass
       ncopy.get("_RULESDATA")["_ALL"]["USEDQUALS"] = {}
     # mark old leaf as unused
     if not keep_leaf:
