@@ -121,8 +121,7 @@ class FixAction:
         if insert_after:
           # copy (for the first time)
           it = self.copy_node(it, new_nodes, clean = False)
-          if not it.get("_ID"):
-            self.update_id(it, self.new_id({"type": it.get("_TYPE")}, depth=0))
+          _src_id = self.gen_and_update_id(it, parent = parent, depth = adepth)
           # copy to add
           _src = it
           _it = self.copy_node(_src, new_nodes, clean = True, force = True)
@@ -136,23 +135,23 @@ class FixAction:
             _it["_ISLEAF"] = True
           # update node
           _gen_id = not _it.get("_ISLEAF", False) or self._always_gen_id
-          _adata = self.copy_action(ait, gen_id = _gen_id, depth=adepth)
+          _adata = self.copy_action(ait, gen_id = _gen_id, src_id = _src_id, depth = adepth)
           self.update_node(_it, _adata)
           #
           prev, it, adepth = _it, it, adepth - 1
           continue
         else: # insert before
           # force modify prev, otherwise copy the whole chain
-          if not prev.get("_ID"):
-            self.update_id(prev, self.new_id({"type": prev.get("_TYPE")}, depth=0))
+          _src_id = self.gen_and_update_id(prev, parent = parent, depth = adepth)
           _src = prev
+          # copy to add
           _it = self.copy_node(_src, new_nodes, clean = True, force = True)
           _it["_PARENTCTX"] = None
           _it["_ISLEAF"] = False
           # force update prev, otherwise, copy the whole chain
           prev["_PARENTCTX"] = _it
           #
-          _adata = self.copy_action(ait, gen_id = True, depth=adepth)
+          _adata = self.copy_action(ait, gen_id = True, src_id = _src_id, depth=adepth)
           self.update_node(_it, _adata)
           #
           prev, it, adepth = _it, it, adepth - 1
@@ -166,20 +165,17 @@ class FixAction:
     #
     return new_nodes
 
-  # use locus tag, if there's no source id
-  def copy_action(self, action, gen_id = False, depth = 0, type = None):
+  def copy_action(self, action, gen_id = False, src_id = None, depth = 0, type = None):
     data = action.copy()
     data["quals"] = data.get("quals", {}).copy()
     if type: action["type"] = type
     if gen_id:
-      data["quals"].update({ "ID" : self.new_id(action, depth = depth) })
+      data["quals"].update({ "ID" : self.new_id(src_id = src_id, depth = depth) })
     return data
 
-  def new_id(self, action, depth = 0):
+  def new_id(self, src_id = None, depth = 0):
     if depth < 0: depth  = 100 - depth
-    #print("NEW NODE", node, file = sys.stderr)
-    return "%s_id_%s" % (action and action.get("type") or None, depth)
-    #return "%s_" % (action and action.get("type") or None)
+    return "%s_dfd_%s" % (src_id, depth)
 
   def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False):
     if not force and node.get("_ISCOPY"):
@@ -250,6 +246,19 @@ class FixAction:
       used_quals = node.get("_RULESDATA")["_ALL"].get("USEDQUALS")
     used_quals.update({"id":("ID", id)})
 
+  def gen_and_update_id(self, it, parent = None, depth = 0):
+    _id = it.get("_ID")
+    if _id:
+      return _id
+    if depth < 0: depth = 100 - depth
+    _pid = parent and parent.get("_ID")
+    if _pid:
+      _id = "%s_dfcd_%s" % (_pid, depth) # derived feature from child at depth
+    else:
+      # use locus tag
+      _id = "%s:%s_%s%s_dfd_%s" % (it["_SEQID"], it["_START"], it["_END"], it["_STRAND"] != "1" and it["_STRAND"] or "", depth)
+    self.update_id(it, _id)
+
   def from_rectx(self, x, re_ctx=None):
     if not re_ctx or x is None: return x
     if type(x) != str or len(x) < 2: return x
@@ -257,5 +266,4 @@ class FixAction:
       x = x[1:]
       x = re_ctx.get(x, x)
     return x
-
 
