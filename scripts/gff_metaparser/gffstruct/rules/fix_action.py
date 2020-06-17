@@ -119,8 +119,12 @@ class FixAction:
         # x x N x x
         insert_after = bool(it)
         if insert_after:
-          # copy (for the first time)
-          it = self.copy_node(it, new_nodes, clean = False)
+          if it.get("_ISCOPY") is None:
+            # copy (for the first time)
+            it = self.copy_node(it, new_nodes, clean = False)
+            _gen_id = not it.get("_ID")
+            _adata = self.copy_action(ait, gen_id = _gen_id, depth=0, type = it.get("_TYPE"))
+            self.update_node(it, _adata)
           # copy to add
           _src = it
           _it = self.copy_node(_src, new_nodes, clean = True, force = True)
@@ -161,9 +165,10 @@ class FixAction:
     #
     return new_nodes
 
-  def copy_action(self, action, gen_id = False, depth = 0):
+  def copy_action(self, action, gen_id = False, depth = 0, type = None):
     data = action.copy()
     data["quals"] = data.get("quals", {}).copy()
+    if type: action["type"] = type
     if gen_id:
       data["quals"].update({ "ID" : self.new_id(action, depth = depth) })
     return data
