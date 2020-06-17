@@ -67,7 +67,8 @@ def main():
 
   seq_len = SeqLenDict(args.fasta)
 
-  stats_keeper = StatsKeeper(detailed=args.detailed_report, no_longest_pfx = args.no_longest_pfx, no_id_stats_rules = ["UNSEEN"])
+  no_id_stats_rules = [ "UNSEEN", "IGNORE" ] # no id stats for these rules
+  stats_keeper = StatsKeeper(detailed=args.detailed_report, no_longest_pfx = args.no_longest_pfx, no_id_stats_rules = no_id_stats_rules)
   gff3_walker = GFF3Walker(parser, args.gff_in, structure_tags = "fullPath",
                             global_ctx = stats_keeper)
 
