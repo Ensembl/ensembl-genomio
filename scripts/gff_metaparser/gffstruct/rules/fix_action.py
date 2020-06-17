@@ -119,12 +119,10 @@ class FixAction:
         # x x N x x
         insert_after = bool(it)
         if insert_after:
-          if it.get("_ISCOPY") is None:
-            # copy (for the first time)
-            it = self.copy_node(it, new_nodes, clean = False)
-            _gen_id = not it.get("_ID")
-            _adata = self.copy_action(ait, gen_id = _gen_id, depth=0, type = it.get("_TYPE"))
-            self.update_node(it, _adata)
+          # copy (for the first time)
+          it = self.copy_node(it, new_nodes, clean = False)
+          if not it.get("_ID"):
+            self.update_id(it, self.new_id({"type": it.get("_TYPE")}, depth=0))
           # copy to add
           _src = it
           _it = self.copy_node(_src, new_nodes, clean = True, force = True)
@@ -144,6 +142,9 @@ class FixAction:
           prev, it, adepth = _it, it, adepth - 1
           continue
         else: # insert before
+          # force modify prev, otherwise copy the whole chain
+          if not prev.get("_ID"):
+            self.update_id(prev, self.new_id({"type": prev.get("_TYPE")}, depth=0))
           _src = prev
           _it = self.copy_node(_src, new_nodes, clean = True, force = True)
           _it["_PARENTCTX"] = None
@@ -165,6 +166,7 @@ class FixAction:
     #
     return new_nodes
 
+  # use locus tag, if there's no source id
   def copy_action(self, action, gen_id = False, depth = 0, type = None):
     data = action.copy()
     data["quals"] = data.get("quals", {}).copy()
@@ -237,6 +239,16 @@ class FixAction:
         else:
           used_quals.update({_q:(q, v)})
     return
+
+  def update_id(self, node, id):
+    if not node:
+      return
+    node["_ID"] = id
+    used_quals = node.get("_RULESDATA")["_ALL"].get("USEDQUALS")
+    if used_quals is None:
+      node.get("_RULESDATA")["_ALL"]["USEDQUALS"] = {}
+      used_quals = node.get("_RULESDATA")["_ALL"].get("USEDQUALS")
+    used_quals.update({"id":("ID", id)})
 
   def from_rectx(self, x, re_ctx=None):
     if not re_ctx or x is None: return x
