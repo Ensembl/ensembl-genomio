@@ -868,27 +868,59 @@ sub new_transcript {
   
   my $stable_id = $self->get_stable_id($gff_transcript);
 
-  # Check if there is a translation
-  my ($translation_id) = $self->get_cds_id($gff_transcript);
-  my $translatable = defined $translation_id;
-
+  # Decide the biotype of the transcript
   my $biotype;
-  if ($gff_transcript->type =~ /^pseudogenic/i or $gene->biotype eq "pseudogene") {
-    if ($translatable and $self->param('load_pseudogene_with_CDS')) {
-      warn("Pseudogene has CDSs: $stable_id\n");
-      $biotype = 'pseudogene_with_CDS';
-    } else {
-      warn("Pseudogene has no CDS: $stable_id\n");
-      $biotype = 'pseudogene';
-    }
+  my $gene_type = $gene->biotype;
+  my $transcript_type = $gff_transcript->type;
+  $transcript_type =~ s/:.+$//;
+  
+  # Pseudogene
+  if ($gene_type eq 'pseudogene' or $transcript_type =~ /^pseudogenic_/) {
+    my $tr_type = $transcript_type;
+    $tr_type =~ s/^pseudogenic_//;
+    
+    # Protein_coding pseudogene: CDS or not?
+    if ($tr_type eq "transcript" or $tr_type eq "mRNA") {
+      # Check if there is a translation
+      my ($translation_id) = $self->get_cds_id($gff_transcript);
+      my $translatable = defined $translation_id;
 
-  } elsif ($gff_transcript->type !~ /^(mRNA|transcript):*/i) {
-    ($biotype) = $gff_transcript->type =~ /^(\w+):*/;
-    $biotype = $self->map_biotype_transcript($biotype, $gff_transcript);
-    $gene->biotype($biotype);
+      if ($translatable and $self->param('load_pseudogene_with_CDS')) {
+        warn("Pseudogene has CDSs: $stable_id\n");
+        $biotype = 'pseudogene_with_CDS';
+      } else {
+        warn("Pseudogene has no CDS: $stable_id ($transcript_type, $gene_type)\n");
+        $biotype = 'pseudogene';
+      }
+      
+    # Pseudogenic_tRNA
+    } elsif ($tr_type eq "tRNA") {
+        warn("Pseudogenic tRNA: $stable_id\n");
+        $biotype = 'tRNA_pseudogene';
+        $gene->biotype($biotype);
+
+    # Pseudogenic_rRNA
+    } elsif ($tr_type eq "pseudogenic_rRNA") {
+        warn("Pseudogenic rRNA: $stable_id\n");
+        $biotype = 'rRNA_pseudogene';
+        $gene->biotype($biotype);
+    
+    # Other kinds of pseudogenes?
+    } else {
+      die("Unrecognized pseudogene biotype: $transcript_type (gene: $gene_type)");
+    }
+    
+  # Protein coding
+  } elsif ($transcript_type eq 'mRNA' or $transcript_type eq "transcript") {
+    $biotype = "protein_coding";
+  
+  # Non protein coding
   } else {
-    die("Protein coding $stable_id is not translatable??") if not $translatable;
-    $biotype = $gene->biotype;
+    $biotype = $transcript_type;
+    $biotype = $self->map_biotype_transcript($biotype, $gff_transcript);
+
+    # NB: we may need a control of what biotypes are known or not
+    $gene->biotype($biotype);
   }
   
   my $transcript = Bio::EnsEMBL::Transcript->new(
