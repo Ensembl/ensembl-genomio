@@ -8,10 +8,11 @@ from .prefixtree import PfxTr
 
 class StatsKeeper(BaseKeeper):
   # storing stats
-  def __init__(self, detailed = None, no_longest_pfx = False):
+  def __init__(self, detailed = None, no_longest_pfx = False, no_id_stats_rules = []):
     self._data = defaultdict(lambda: defaultdict(dict))
     self._detailed = detailed
     self._no_longest_pfx = no_longest_pfx
+    self._no_id_stats_rules = frozenset(no_id_stats_rules)
     self._idstat = defaultdict(lambda: defaultdict(int))
     self._tr_d_0 = str.maketrans("123456789", "0"*9)
     self._tr_00_0 = re.compile("0+")
@@ -35,8 +36,9 @@ class StatsKeeper(BaseKeeper):
       for _type, _id, _ in type_id_coords:
         if _id and _id != ".":
           tagstat["pfx"][_type].add(_id)
-          self._idstat[_type][self.stem_id(_id)] += 1
-          self._idstat[_type]["_ALL"] += 1
+          if not self._no_id_stats_rules or rule_name not in self._no_id_stats_rules:
+            self._idstat[_type][self.stem_id(_id)] += 1
+            self._idstat[_type]["_ALL"] += 1
     return
 
   def stem_id(self, s):
