@@ -1,5 +1,7 @@
 import sys
 
+from collections import defaultdict
+
 from .base import BaseRule
 from .valid import ValidRule
 from .fix_action import FixAction
@@ -67,12 +69,31 @@ class SubRule(ValidRule):
       if id(leaf) in new_nodes and new_nodes[id(leaf)] is None:
         ctx_leaves.pop(i)
     # append new nodes
+    seen_ids = defaultdict(int)
     for _id, node in new_nodes.items():
       if node is None: continue
+      cls.update_seen_id(node, seen_ids)
       context.prev.append(node)
       if node.get("_ISLEAF"): ctx_leaves.append(node)
     #
     return
+
+  @classmethod
+  def update_seen_id(cls, node, seen_ids):
+    _id = node.get("_RULESDATA")["_ALL"].get("USEDQUALS",{}).get("id", [None, None])[1]
+    if _id and type(_id) == list:
+      _id = _id[0]
+    if not _id:
+      _id = node.get("_ID")
+    if not _id:
+      return
+    seen_ids[_id] += 1
+    if seen_ids[_id] == 1:
+      return
+    _id = "%s_%s" % (_id, seen_ids[_id])
+    FixAction.update_id(node, _id)
+
+
 
 
 class SpellRule(BaseRule):

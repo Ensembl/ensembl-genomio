@@ -236,7 +236,8 @@ class FixAction:
           used_quals.update({_q:(q, v)})
     return
 
-  def update_id(self, node, id):
+  @classmethod
+  def update_id(cls, node, id):
     if not node:
       return
     node["_ID"] = id
