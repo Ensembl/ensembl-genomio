@@ -268,14 +268,12 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'Process_genome_metadata',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -module     => 'ensembl.brc4.runnable.process_genome_data',
+      -language    => 'python3',
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -parameters     => {
-        file_name => "genome",
-      },
       -flow_into => {
-        1 => { "Check_json_schema" => { metadata_type => 'genome', metadata_json => '#genome_json#' } }
+        2 => "Check_json_schema"
       }
     },
 
