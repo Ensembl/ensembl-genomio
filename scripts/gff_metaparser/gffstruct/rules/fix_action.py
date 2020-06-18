@@ -251,7 +251,7 @@ class FixAction:
     if type:
       splitted_name = self._split_camel_re.sub(r"\1_\2", type).split("_")
       _type = "d" + "".join([s[0] for s in splitted_name if s])
-    return "%s_%sd%s" % (src_id, _type, depth)
+    return "%s_%sd%s" % (src_id, _type.lower(), depth)
 
   def gen_and_update_id(self, it, parent = None, depth = 0, action = None):
     _id = it.get("_ID")
