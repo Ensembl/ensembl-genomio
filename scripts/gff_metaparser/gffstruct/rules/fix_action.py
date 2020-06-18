@@ -1,7 +1,7 @@
 import copy
+import re
 import sys
 
-from .valid import ValidRule
 
 class FixAction:
   def __init__(self, raw, rule, always_generate_new_ids = False):
@@ -13,6 +13,8 @@ class FixAction:
      self._additions = 0
      self._exclusions = 0
      self._copy_leaves = 0
+     #
+     self._split_camel_re = re.compile(r"([a-z])([A-Z])")
      #
      self._action = None
      self._action = self.parse(self._raw)
@@ -121,7 +123,7 @@ class FixAction:
         if insert_after:
           # copy (for the first time)
           it = self.copy_node(it, new_nodes, clean = False)
-          _src_id = self.gen_and_update_id(it, parent = parent, depth = adepth)
+          _src_id = self.gen_and_update_id(it, parent = parent, depth = adepth, action = ait)
           # copy to add
           _src = it
           _it = self.copy_node(_src, new_nodes, clean = True, force = True)
@@ -142,7 +144,7 @@ class FixAction:
           continue
         else: # insert before
           # force modify prev, otherwise copy the whole chain
-          _src_id = self.gen_and_update_id(prev, parent = parent, depth = adepth)
+          _src_id = self.gen_and_update_id(prev, parent = parent, depth = adepth, action = ait)
           _src = prev
           # copy to add
           _it = self.copy_node(_src, new_nodes, clean = True, force = True)
@@ -170,12 +172,8 @@ class FixAction:
     data["quals"] = data.get("quals", {}).copy()
     if type: action["type"] = type
     if gen_id:
-      data["quals"].update({ "ID" : self.new_id(src_id = src_id, depth = depth) })
+      data["quals"].update({ "ID" : self.new_id(src_id = src_id, depth = depth, type = action["type"]) })
     return data
-
-  def new_id(self, src_id = None, depth = 0):
-    if depth < 0: depth  = 100 - depth
-    return "%s_dfd_%s" % (src_id, depth)
 
   def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False):
     if not force and node.get("_ISCOPY"):
@@ -247,17 +245,27 @@ class FixAction:
       used_quals = node.get("_RULESDATA")["_ALL"].get("USEDQUALS")
     used_quals.update({"id":("ID", id)})
 
-  def gen_and_update_id(self, it, parent = None, depth = 0):
+  def new_id(self, src_id = None, depth = 0, type = None):
+    if depth < 0: depth  = 100 - depth
+    _type = "df"
+    if type:
+      splitted_name = self._split_camel_re.sub(r"\1_\2", type).split("_")
+      _type = "d" + "".join([s[0] for s in splitted_name if s])
+    return "%s_%sd%s" % (src_id, _type, depth)
+
+  def gen_and_update_id(self, it, parent = None, depth = 0, action = None):
     _id = it.get("_ID")
     if _id:
       return _id
-    if depth < 0: depth = 100 - depth
-    _pid = parent and parent.get("_ID")
-    if _pid:
-      _id = "%s_dfcd_%s" % (_pid, depth) # derived feature from child at depth
+    _src_id = parent and parent.get("_ID")
+    if _src_id:
+      _src_id = "%s_ch" % _src_id # child derived
     else:
       # use locus tag
-      _id = "%s:%s_%s%s_dfd_%s" % (it["_SEQID"], it["_START"], it["_END"], it["_STRAND"] != "1" and it["_STRAND"] or "", depth)
+      _src_id = "%s:%s_%s%s" % (it["_SEQID"], it["_START"], it["_END"], it["_STRAND"] != "1" and it["_STRAND"] or "")
+    _type = action and action.get("type") or None
+    _id = self.new_id(src_id = _src_id, depth = depth, type=_type)
+
     self.update_id(it, _id)
 
   def from_rectx(self, x, re_ctx=None):
