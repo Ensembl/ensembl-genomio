@@ -1,0 +1,11 @@
+##sequence-region NW_022145526.1 1 2368880
+NW_022145526.1	RefSeq	region	1	2368880	.	+	.	ID=NW_022145526.1:1..2368880;Dbxref=taxon:7668;Name=Unknown;cell-type=sperm;chromosome=Unknown;gbkey=Src;genome=genomic;isolate=Spur 01;mol_type=genomic DNA;sex=male
+
+NW_022145526.1	BestRefSeq	gene	1476050	1476151	.	-	.	ID=gene-Mir2005;Dbxref=GeneID:100314426,miRBase:MI0010275;Name=Mir2005;description=microRNA mir-2005;gbkey=Gene;gene=Mir2005;gene_biotype=miRNA;gene_synonym=mir-2005,spu-mir-2005
+NW_022145526.1	BestRefSeq	primary_transcript	1476050	1476151	.	-	.	ID=rna-NR_036422.1;Parent=gene-Mir2005;Dbxref=GeneID:100314426,Genbank:NR_036422.1,miRBase:MI0010275;Name=NR_036422.1;gbkey=precursor_RNA;gene=Mir2005;product=microRNA mir-2005;transcript_id=NR_036422.1
+
+NW_022145526.1	BestRefSeq	exon	1476050	1476151	.	-	.	ID=exon-NR_036422.1-1;Parent=rna-NR_036422.1;Dbxref=GeneID:100314426,Genbank:NR_036422.1,miRBase:MI0010275;gbkey=precursor_RNA;gene=Mir2005;product=microRNA mir-2005;transcript_id=NR_036422.1
+
+NW_022145526.1	BestRefSeq	miRNA	1476107	1476130	.	-	.	ID=rna-Mir2005;Parent=rna-NR_036422.1;Dbxref=GeneID:100314426,miRBase:MIMAT0009746,miRBase:MI0010275;gbkey=ncRNA;gene=Mir2005;product=spu-miR-2005
+
+NW_022145526.1	BestRefSeq	exon	1476107	1476130	.	-	.	ID=exon-Mir2005-1;Parent=rna-Mir2005;Dbxref=GeneID:100314426,miRBase:MIMAT0009746,miRBase:MI0010275;gbkey=ncRNA;gene=Mir2005;product=spu-miR-2005
