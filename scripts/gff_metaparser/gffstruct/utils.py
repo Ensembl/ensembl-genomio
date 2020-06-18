@@ -22,7 +22,7 @@ class IdTrimmer:
       return True
     return type.lower() in self._rules
 
-  def normalize(self, id_str, type = None):
+  def normalize(self, id_str, type = None, context = None):
     id_str = str(id_str)
     _type = type.lower()
     if not self._rules:

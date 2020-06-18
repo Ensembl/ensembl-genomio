@@ -12,9 +12,10 @@ class BaseStructures:
   KNOWN_RULES = [
   ]
 
-  def __init__(self, config, conf_patch = None):
+  def __init__(self, config, conf_patch = None, rule_options = None):
     self.rule_names = [ r.NAME.lower().strip() for r in self.KNOWN_RULES ]
     self.rule_factories = { r.NAME.lower().strip() : r for r in self.KNOWN_RULES }
+    self.rule_options = frozenset(rule_options or [])
 
     # prepare factories from KNOWN_RULES
     self.config = config
@@ -64,6 +65,25 @@ class BaseStructures:
       pattern, name, actions = self.parse_conf_str(raw)
       if pattern is None:
         continue
+
+      raw_name = name
+      name_parts = name.split(":")
+      name = name_parts[0]
+      if len(name_parts) == 3:
+        rule_opt = name_parts[1]
+        not_rule_opt = False
+        if rule_opt[0] == "!":
+          rule_opt = rule_opt[1:]
+          not_rule_opt = True
+        if (rule_opt not in self.rule_options) ^ not_rule_opt:
+          name = name_parts[2]
+          print("using failback rule %s (from %s) for %s at %s" % (name, raw_name, pattern, lineno), file=sys.stderr)
+        else:
+          print("using main rule %s (from %s) for %s at %s" % (name, raw_name, pattern, lineno), file=sys.stderr)
+      elif len(name_parts) != 1:
+        print("wrong number of name parts for rule %s at %s. skipping" % (raw_name, lineno), file=sys.stderr)
+        continue
+
       if name in patches and pattern in patches[name]:
         actions = patches[name][pattern]["actions"]
         lineno_cfg = lineno
@@ -92,7 +112,7 @@ class BaseStructures:
     # or stop if there's a constant match
     for it in self.regex_patterns:
       # print("matching regexp ", it.pattern, "tag", tag, file = sys.stderr )
-      matching = it.re.fullmatch(tag)
+      matching = it.re.fullmatch(tag_raw)
       if matching:
         matched_rules.append(MatchedRuleCtx(it.rule, matching))
 
@@ -103,7 +123,7 @@ class BaseStructures:
         wrp.rule.process(context, re_context = wrp.re_context)
         processed_rules[tag].append(wrp.rule.NAME)
     elif not ignore_unseen:
-      UnseenRule.process(context, noconfig = (self.config == None))
+      UnseenRule.process(context)
       processed_rules[tag].append(UnseenRule.NAME)
 
     return processed_rules

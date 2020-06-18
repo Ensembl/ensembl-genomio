@@ -1,0 +1,12 @@
+##gff-version 3
+##sequence-region GG738845.1 1 1555553
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=5762
+GG738845.1	Genbank	region	1	1555553	.	+	.	ID=GG738845.1:1..1555553;Dbxref=taxon:5762;country=USA;gbkey=Src;genome=genomic;mol_type=genomic DNA;strain=NEG-M
+GG738845.1	Genbank	gene	11332	17506	.	-	.	ID=gene-NAEGRDRAFT_61067;Name=NAEGRDRAFT_61067;end_range=17506,.;gbkey=Gene;gene_biotype=protein_coding;locus_tag=NAEGRDRAFT_61067;partial=true;start_range=.,11332
+GG738845.1	Genbank	mRNA	11332	17506	.	-	.	ID=rna-NAEGRDRAFT_61067;Parent=gene-NAEGRDRAFT_61067;end_range=17506,.;gbkey=mRNA;locus_tag=NAEGRDRAFT_61067;partial=true;product=basal body protein;start_range=.,11332
+GG738845.1	Genbank	exon	17467	17506	.	-	.	ID=exon-NAEGRDRAFT_61067-1;Parent=rna-NAEGRDRAFT_61067;end_range=17506,.;gbkey=mRNA;locus_tag=NAEGRDRAFT_61067;partial=true;product=basal body protein
+#GG738845.1	Genbank	CDS	17467	17506	.	-	0	ID=cds-EFC50603.1;Parent=rna-NAEGRDRAFT_61067;Dbxref=InterPro:IPR002859,InterPro:IPR006209,JGIDB:Naegr1_61067,NCBI_GP:EFC50603.1;Name=EFC50603.1;Note=basal body protein NBP homolog%2C member of Naegleria-specific gene family;gbkey=CDS;locus_tag=NAEGRDRAFT_61067;product=basal body protein;protein_id=EFC50603.1
+# to test no insertion parent with no id
+GG738845.1	Genbank	CDS	17467	17506	.	-	0	Parent=rna-NAEGRDRAFT_61067;Dbxref=InterPro:IPR002859,InterPro:IPR006209,JGIDB:Naegr1_61067,NCBI_GP:EFC50603.1;Name=EFC50603.1;Note=basal body protein NBP homolog%2C member of Naegleria-specific gene family;gbkey=CDS;locus_tag=NAEGRDRAFT_61067;product=basal body protein
+# to test generated id duplications
+#GG738845.1	Genbank	CDS	17508	17509	.	-	0	Parent=rna-NAEGRDRAFT_61067;Dbxref=InterPro:IPR002859,InterPro:IPR006209,JGIDB:Naegr1_61067,NCBI_GP:EFC50603.1;Name=EFC50603.1;Note=basal body protein NBP homolog%2C member of Naegleria-specific gene family;gbkey=CDS;locus_tag=NAEGRDRAFT_61067;product=basal body protein

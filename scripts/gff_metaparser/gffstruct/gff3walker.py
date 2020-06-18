@@ -29,10 +29,10 @@ class GFF3Walker:
     self._gff_gene_id_prepend = gff_gene_id_prepend
 
 
-  def norm_id(self, id, type=None):
+  def norm_id(self, id, type=None, context=None):
     if self._norm_id is None:
       return id
-    return self._norm_id(id, type = type)
+    return self._norm_id(id, type = type, context = context)
 
 
   def supporting(self, obj, field):
@@ -75,19 +75,12 @@ class GFF3Walker:
     source = self.supporting(feat, "source") and feat.source or None
     is_leaf = not self.supporting(feat, "sub_features") or not feat.sub_features # fullPath processed and ID can be ommited only for leaves
 
-    #norm
-    if self._norm_id and self._norm_id.supporting(feat.type):
-      feat.id = self.norm_id(feat.id, feat.type)
-      if quals and quals.get("ID"):
-        quals["ID"][0] = self.norm_id(quals["ID"][0], feat.type)
-
     if depth == 1:
       # set top feature
       context.top(feat)
 
     context.update(
       force_clean = True,
-      _ID        = feat.id,
       _SRC       = source,
       _TYPE      = feat.type,
       _START     = loc.start,
@@ -95,12 +88,24 @@ class GFF3Walker:
       _STRAND    = feat.strand,
       _LOCATION  = feat.location,
       _PHASE     = phase,
-      _QUALS     = quals,
       _FULLTAG   = fulltag,
       _DEPTH     = depth,
       _ISLEAF    = is_leaf,
       _RULESDATA = None,
     );
+
+    #norm
+    if self._norm_id and self._norm_id.supporting(feat.type):
+      feat.id = self.norm_id(feat.id, feat.type)
+      if quals and quals.get("ID"):
+        quals["ID"][0] = self.norm_id(quals["ID"][0], feat.type, context = context.data)
+
+    context.update(
+      force_clean = True,
+      _ID        = feat.id,
+      _QUALS     = quals,
+    );
+
     self._parser.prepare_context(context)
 
     # update contig length

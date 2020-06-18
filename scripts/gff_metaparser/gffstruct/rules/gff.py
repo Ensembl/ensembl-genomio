@@ -21,7 +21,6 @@ class GffRule(BaseRule):
     rules_data["USEDQUALS"] = None
     rules_data["QUALSCOPYALL"] = None
 
-
   def prepare_actions(self):
     self._target_quals = None
     raw = [ x.strip() for x in " ".join(self._actions_raw).replace(",", " ").split() if x.strip() ]
@@ -60,11 +59,6 @@ class GffRule(BaseRule):
     is_leaf = context.get("_ISLEAF")
     if "phase" not in used_quals:
       phase = context.get("_PHASE")
-    if used_quals is None:
-      return
-    is_leaf = context.get("_ISLEAF")
-    if "phase" not in used_quals:
-      phase = context.get("_PHASE")
       if phase is not None:
         used_quals.update({"phase":("phase", phase)})
     if not is_leaf:
@@ -77,7 +71,7 @@ class GffRule(BaseRule):
     # print("prepare possponed: ", cls.NAME, str(used_quals), context.get("_ID"), context.get("_TYPE"), file=sys.stderr)
 
   @classmethod
-  def run_postponed(cls, context):
+  def run_postponed(clsf, context, name_override = None):
     return
 
 
@@ -87,7 +81,7 @@ class GffSubRule(GffRule):
   _FORCE_SUB = True
 
   @classmethod
-  def run_postponed(cls, context):
+  def run_postponed(cls, context, name_override = None):
     for ctx in context.prev:
       gff_uq = ctx["_RULESDATA"][GffRule.NAME].get("USEDQUALS")
       gff_sub_uq = ctx["_RULESDATA"][GffSubRule.NAME].get("USEDQUALS")
