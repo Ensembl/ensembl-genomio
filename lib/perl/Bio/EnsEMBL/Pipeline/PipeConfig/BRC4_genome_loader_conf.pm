@@ -103,7 +103,7 @@ sub default_options {
         ncRNA lincRNA lncRNA miRNA pre_miRNA
         RNase_MRP_RNA RNAse_P_RNA rRNA snoRNA
         snRNA sRNA SRP_RNA tRNA scRNA
-        lnc_RNA
+        lnc_RNA guide_RNA
       /],
     gff3_exon_types   => [qw/ exon pseudogenic_exon /],
     gff3_cds_types    => [qw/ CDS /],
