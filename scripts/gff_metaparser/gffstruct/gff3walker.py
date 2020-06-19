@@ -169,10 +169,7 @@ class GFF3Walker:
         "_PARENTCTX" : parent_ctx_snap,
         "_FULLTAG" : fulltag,
       }
-      subfeatures = feat.sub_features
-      if feat.strand and feat.strand < 0:
-        subfeatures = reversed(subfeatures)
-      for subfeat in subfeatures:
+      for subfeat in feat.sub_features:
         context.update(ctx_parent_part, force_clean = True)
         self.process_feature(subfeat, context)
 
