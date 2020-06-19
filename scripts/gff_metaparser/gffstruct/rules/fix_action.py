@@ -97,6 +97,7 @@ class FixAction:
     adepth = len(self._action or []) # action depth to use by "add"
 
     # add / remove, updating parent ctx
+    chain_start = ctx
     new_nodes = {}
     prev, it = None, ctx
     for ait in reversed(self._action):
@@ -111,8 +112,10 @@ class FixAction:
           if parent:
             parent = self.copy_node(parent, new_nodes)
             parent["_ISLEAF"] = True
+            chains_start = parent
         elif prev:
-          prev = self.copy_node(prev, new_nodes)
+          #copy the whole chain
+          prev = self.copy_chain(chain_start, prev, new_nodes)
           prev["_PARENTCTX"] = parent
         #
         prev, it, adepth = prev, parent, adepth - 1
@@ -135,6 +138,7 @@ class FixAction:
             _it["_ISLEAF"] = False
           else:
             _it["_ISLEAF"] = True
+            chain_start = _it
           # update node
           _gen_id = not _it.get("_ISLEAF", False) or self._always_gen_id
           _adata = self.copy_action(ait, gen_id = _gen_id, src_id = _src_id, depth = adepth)
@@ -162,6 +166,7 @@ class FixAction:
         if is_leaf:
           it = self.copy_node(it, new_nodes, keep_leaf = True, clean = True)
           self.update_node(it, ait, re_ctx)
+          chain_start = it
       #
       prev, it, adepth = it, parent, adepth - 1
     #
@@ -191,6 +196,26 @@ class FixAction:
     if not keep_leaf:
       self.del_node_if_leaf(node, new_nodes)
     return ncopy
+
+  def copy_chain(self, chain_start, stop_at, new_nodes, keep_leaf = False):
+    if chain_start is None: return None
+    if stop_at is None: return None
+    #
+    it, prev = chain_start, None
+    while it:
+      cp = self.copy_node(it, new_nodes)
+      if prev:
+        prev["_PARENTCTX"] = cp
+      else:
+        cp["_ISLEAF"] = True
+      if it == stop_at:
+        it = cp
+        break
+      prev, it = cp, cp.get("_PARENTCTX")
+    #
+    if not it:
+      return None
+    return it
 
   def del_node_if_leaf(self, node, new_nodes):
     if node.get("_ISLEAF", False):
