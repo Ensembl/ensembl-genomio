@@ -33,6 +33,24 @@ class GFF3Walker:
       return id
     return self._norm_id(id, type = type, context = context)
 
+  def norm_and_update_id(self, feat, quals, context):
+    _id, _type = feat.id, feat.type
+    if not _id:
+      return _id
+    if _type:
+      _type = _type.lower()
+    _raw_id = _id
+    # can norm
+    if self._norm_id and self._norm_id.supporting(feat.type):
+      _id = self.norm_id(_id, _type, context) # or cotext.data???
+    # fix duplicates
+    _id = context.fix_id_sfx(_id, _type)
+    # update
+    if _raw_id != _id:
+      feat.id = _id
+      if quals and quals.get("ID"):
+        quals["ID"][0] = _id
+    return _id
 
   def supporting(self, obj, field):
     tp = type(obj)
@@ -94,14 +112,11 @@ class GFF3Walker:
     );
 
     #norm
-    if self._norm_id and self._norm_id.supporting(feat.type):
-      feat.id = self.norm_id(feat.id, feat.type)
-      if quals and quals.get("ID"):
-        quals["ID"][0] = self.norm_id(quals["ID"][0], feat.type, context = context.data)
+    new_id = self.norm_and_update_id(feat, quals, context)
 
     context.update(
       force_clean = True,
-      _ID        = feat.id,
+      _ID        = new_id,
       _QUALS     = quals,
     );
 
@@ -154,7 +169,10 @@ class GFF3Walker:
         "_PARENTCTX" : parent_ctx_snap,
         "_FULLTAG" : fulltag,
       }
-      for subfeat in feat.sub_features:
+      subfeatures = feat.sub_features
+      if feat.strand and feat.strand < 0:
+        subfeatures = reversed(subfeatures)
+      for subfeat in subfeatures:
         context.update(ctx_parent_part, force_clean = True)
         self.process_feature(subfeat, context)
 

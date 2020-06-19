@@ -1,4 +1,5 @@
 import copy
+from collections import defaultdict
 
 class WalkContext:
   def __init__(self, tag = "", global_context = None, ctg_len_inferer = None):
@@ -10,6 +11,7 @@ class WalkContext:
     self.prev = []
     self._top = None
     self._useful_leaves = []
+    self.used_id_stats = defaultdict(lambda: defaultdict(lambda : defaultdict(int))) # id depth count
 
   def snap(self):
     # shallow data copy
@@ -89,4 +91,44 @@ class WalkContext:
       updater(it)
       it = it.get("_PARENTCTX")
     return
+
+  def store_id_stats(self, _id, _type):
+    self.used_id_stats[_id][0]["_ALL"] += 1
+    self.used_id_stats[_id][0][_type.lower()] += 1
+    # depth
+    depth = self.data.get("_DEPTH", 0)
+    self.used_id_stats[_id][depth]["_ALL"] += 1
+    #
+    self.used_id_stats[_id][depth][_type or "_ALL"] += 1
+
+  def fix_id_sfx(self, raw_id, _type):
+    if not raw_id:
+      return raw_id
+    if not raw_id in self.used_id_stats:
+      self.store_id_stats(raw_id, _type)
+      return raw_id
+    # special cases
+    depth = self.data.get("_DEPTH", 0)
+    _type_lc = _type.lower()
+    is_tr_type = "rna" in _type_lc or "transcript" in _type_lc
+    # transcript
+    if depth == 2 and is_tr_type:
+      self.store_id_stats(raw_id, _type)
+      self.store_id_stats(raw_id, "_TRANSCRIPT_LEVEL")
+      _id = raw_id + "_t" + str(self.used_id_stats[raw_id][depth]["_TRANSCRIPT_LEVEL"])
+      self.store_id_stats(_id, _type)
+      return _id
+    # cds -- multifeature
+    if _type_lc == "cds":
+      self.store_id_stats(raw_id, _type)
+      allc = self.used_id_stats[raw_id][0]["_ALL"]
+      typec = self.used_id_stats[raw_id][0][_type_lc]
+      if typec == allc:
+        self.store_id_stats(raw_id, _type)
+        return raw_id
+    # usual case
+    self.store_id_stats(raw_id, _type)
+    _id = raw_id + "_" + str(self.used_id_stats[raw_id][0]["_ALL"])
+    self.store_id_stats(_id, _type)
+    return _id
 
