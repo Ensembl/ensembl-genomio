@@ -301,6 +301,10 @@ class MetaConf:
             _data = line.split()
           _syns = { src: _data[i].strip() for i, src in header_fixed.items() if i < len(_data) }
           _out = { src: nm for src, nm in _syns.items() if nm and nm.lower() != "na" }
+          if "INSDC_submitted_name" in _out and "INSDC" in _out and _out["INSDC_submitted_name"] == _out["INSDC"]:
+            _out.pop("INSDC_submitted_name")
+          if "INSDC_submitted_name" in _out and "RefSeq" in _out and _out["INSDC_submitted_name"] == _out["RefSeq"]:
+            _out.pop("INSDC_submitted_name")
           for src in [ "INSDC", "RefSeq" ]:
             if src not in _out:
               continue
