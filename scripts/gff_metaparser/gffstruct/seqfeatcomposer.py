@@ -9,10 +9,9 @@ from Bio.SeqRecord import SeqRecord
 
 class SeqFeatComposer:
   # storing/building gff structures
-  def __init__(self, gene_id_prepend):
+  def __init__(self):
     self._topf = set()
     self._processed = {}
-    self._gene_id_prepend = gene_id_prepend
 
   def gff_write(self, out_rec_features, contig_id = None, contig_len = None, out_file = None):
     if out_file is None:
@@ -42,17 +41,10 @@ class SeqFeatComposer:
       is_leaf = ctx["_ISLEAF"]
       strand = ctx.get("_STRAND")
       phase = ctx.get("_PHASE")
-      # gene:ID workaround
-      update_id = False
       _id = ctx.get("_ID")
-      if (_type == "gene" and self._gene_id_prepend):
-        _id = "gene:%s" %_id
-        update_id = True
       # quals
       quals = used_quals_flat or {}
       if not is_leaf and "ID" not in quals:
-        update_id = True
-      if update_id:
         quals["ID"] = _id
       if phase is not None and "phase" not in quals:
         quals["phase"] = phase
@@ -63,12 +55,6 @@ class SeqFeatComposer:
       feat = { "cid" : cid, "obj" : obj, "quals" : quals, "kids" : dict(), "is_leaf" : is_leaf }
       self._processed[cid] = feat
     else:
-      # gene:ID workaround
-      if "ID" in used_quals_flat:
-        _id = used_quals_flat["ID"][0]
-        if feat.get("obj") and "gene" in feat["obj"].type.lower() and self._gene_id_prepend:
-          if not _id.startswith("gene:"):
-            used_quals_flat["ID"][0] = "gene:%s" % _id
       # fill quals
       used_quals_flat = self.sort_quals(used_quals_flat)
       # assert( id(feat["quals"]) = id(feat["obj"].qualifiers) )
