@@ -78,7 +78,7 @@ class WalkContext:
       out = getter(it)
       if out:
         res.append(out)
-        it = it.get("_PARENTCTX")
+      it = it.get("_PARENTCTX")
     return res[::-1]
 
   def run_to_root(self, updater=None):
