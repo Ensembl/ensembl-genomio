@@ -66,7 +66,7 @@ class SeqFeatComposer:
       # gene:ID workaround
       if "ID" in used_quals_flat:
         _id = used_quals_flat["ID"][0]
-        if feat.get("obj") and feat["obj"].type == "gene" and self._gene_id_prepend:
+        if feat.get("obj") and "gene" in feat["obj"].type.lower() and self._gene_id_prepend:
           if not _id.startswith("gene:"):
             used_quals_flat["ID"][0] = "gene:%s" % _id
       # fill quals
