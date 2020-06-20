@@ -32,37 +32,38 @@ class SubRule(ValidRule):
     # super(ValidRule) to fill initial data
     ValidRule.run_postponed(context, name_override = name_to_check)
 
-    new_nodes = dict() # {id(node) : node}
+    # shared between actions and chains / leaves
+    nodes_data = defaultdict(dict)
+    #   new_nodes {id(node) : node}
+    #
     for ctx in context.used_leaves():
+      fulltag = ctx.get("_FULLTAG")
       check_quals = ctx.get("_RULESDATA")[name_to_check].get("USEDQUALS")
-      if check_quals is None: continue
-      #
+      if check_quals is None:
+        continue
       actions = ctx.get("_RULESDATA")[cls.NAME].get("ACTIONS")
-      if not actions: continue
+      if not actions:
+        continue
+      actions = frozenset(actions)
       #
-      _w_ex = len(list(filter(lambda a: a._exclusions > 0, actions)))
-      _w_add = len(list(filter(lambda a: a._additions > 0, actions)))
-      # ignore copy leaves here
-      actions_types_num = sum([
-          _w_ex > 0,
-          _w_add > 0,
-          (len(actions) - _w_ex - _w_add) > 0,
-      ])
-      if actions_types_num > 1:
-        fulltag = ctx.get("_FULLTAG")
-        print("too many action types for %s. skipping" % fulltag, file = sys.stderr)
+      types_num = cls.action_types_num(actions)
+      if types_num > 1:
+        print("too many different action types (%s) for %s. skipping" %
+               (types_num, fulltag), file = sys.stderr)
         continue
       #
       done = set()
       for a in actions:
         if id(a) in done: continue
+        res = a.act(ctx, nodes_data)
+        nodes_data["new_nodes"].update(res or {})
         done.add(id(a))
-        res = a.act(ctx)
-        new_nodes.update(res or {})
-
+      #
     # alterations
-    if not new_nodes: return
-    # drop unused leaves
+    if not nodes_data["new_nodes"]:
+      return
+    new_nodes = nodes_data["new_nodes"]
+    # drop leaves previously marked for delition
     ctx_leaves = context._useful_leaves
     for i in range(len(ctx_leaves))[::-1]:
       leaf = ctx_leaves[i]
@@ -93,7 +94,17 @@ class SubRule(ValidRule):
     _id = "%s_%s" % (_id, seen_ids[_id])
     FixAction.update_id(node, _id)
 
-
+  @classmethod
+  def action_types_num(cls, actions):
+    _w_ex = len(list(filter(lambda a: a._exclusions > 0, actions)))
+    _w_add = len(list(filter(lambda a: a._additions > 0, actions)))
+    # ignore copy leaves here
+    actions_types_num = sum([
+        _w_ex > 0,
+        _w_add > 0,
+        (len(actions) - _w_ex - _w_add) > 0,
+    ])
+    return actions_types_num
 
 
 class SpellRule(BaseRule):

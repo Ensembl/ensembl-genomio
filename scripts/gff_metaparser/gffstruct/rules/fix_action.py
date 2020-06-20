@@ -68,10 +68,11 @@ class FixAction:
         "action" : action,
         "type" : _type,
         "quals" : quals,
+        "depth" : len(out) + 1,
       })
     return out or None
 
-  def act(self, ctx):
+  def act(self, ctx, nodes_data):
     """
       copy node if updating parentctx:
         if adding or changing parentctx (skipping)
@@ -84,93 +85,72 @@ class FixAction:
       return None
     if self._action is None:
       return None
+    fulltag = ctx.get("_FULLTAG")
     depth = ctx.get("_DEPTH")
-    if depth != len(self._action) - self._additions:
-      fulltag = ctg.get("_FULLTAG")
-      print("unbalanced number of tag %s and actions %s. skipping", fulltag, self, file = sys.stderr)
+    if depth != self.active_depth():
+      print("unbalanced number of tag %s and actions %s. skipping" % (fulltag, self), file = sys.stderr)
+      return None
+    # no mixed add & remove rules yet
+    if self.action_types_num() > 1:
+      print("too many action types for %s and action %s. skipping" %(fulltag, self), file = sys.stderr)
       return None
 
+    # run substitutions on original nodes
     re_ctx = ctx.get("_RECTX") and ctx["_RECTX"].groupdict() or None
     self.run_subsitutions(ctx, re_ctx)
 
-    # data to use by "add"
-    adepth = len(self._action or []) # action depth to use by "add"
-
-    # add / remove, updating parent ctx
-    chain_start = ctx
     new_nodes = {}
-    prev, it = None, ctx
-    for ait in reversed(self._action):
-      is_leaf, parent = False, None
-      if it:
-        is_leaf = it.get("_ISLEAF", False)
-        parent = it.get("_PARENTCTX")
-      aa = ait["action"]
-      if aa == "exclude":
-        if is_leaf:
-          self.del_node_if_leaf(it, new_nodes)
-          if parent:
-            parent = self.copy_node(parent, new_nodes)
-            parent["_ISLEAF"] = True
-            chains_start = parent
-        elif prev:
-          #copy the whole chain
-          prev = self.copy_chain(chain_start, prev, new_nodes)
-          prev["_PARENTCTX"] = parent
-        #
-        prev, it, adepth = prev, parent, adepth - 1
-        continue
-      elif aa == "add":
-        # x x N x x
-        insert_after = bool(it)
-        if insert_after:
-          # copy (for the first time)
-          it = self.copy_node(it, new_nodes, clean = False)
-          _src_id = self.gen_and_update_id(it, parent = parent, depth = adepth, action = ait)
-          # copy to add
-          _src = it
-          _it = self.copy_node(_src, new_nodes, clean = True, force = True)
-          _it["_PARENTCTX"] = _src
-          # leaf or update kid
-          if prev is not None:
-            prev = self.copy_node(prev, new_nodes)
-            prev["_PARENTCTX"] = _it
-            _it["_ISLEAF"] = False
-          else:
-            _it["_ISLEAF"] = True
-            chain_start = _it
-          # update node
-          _gen_id = not _it.get("_ISLEAF", False) or self._always_gen_id
-          _adata = self.copy_action(ait, gen_id = _gen_id, src_id = _src_id, depth = adepth)
-          self.update_node(_it, _adata, re_ctx)
-          #
-          prev, it, adepth = _it, it, adepth - 1
-          continue
-        else: # insert before
-          # force modify prev, otherwise copy the whole chain
-          _src_id = self.gen_and_update_id(prev, parent = parent, depth = adepth, action = ait)
-          _src = prev
-          # copy to add
-          _it = self.copy_node(_src, new_nodes, clean = True, force = True)
-          _it["_PARENTCTX"] = None
-          _it["_ISLEAF"] = False
-          # force update prev, otherwise, copy the whole chain
-          prev["_PARENTCTX"] = _it
-          #
-          _adata = self.copy_action(ait, gen_id = True, src_id = _src_id, depth=adepth)
-          self.update_node(_it, _adata, re_ctx)
-          #
-          prev, it, adepth = _it, it, adepth - 1
-          continue
-      elif aa == "copy_leaf":
-        if is_leaf:
-          it = self.copy_node(it, new_nodes, keep_leaf = True, clean = True)
-          self.update_node(it, ait, re_ctx)
-          chain_start = it
-      #
-      prev, it, adepth = it, parent, adepth - 1
+    # remove
+    if self._exclusions > 0:
+      self.run_exclusions(ctx, new_nodes)
+      return new_nodes
+
+    # copy leaves first
+    if self._copy_leaves > 0:
+      self.run_copy_leaves(ctx, new_nodes, re_ctx)
+    # add
+    if self._additions > 0:
+      new_leaves = list(new_nodes.values())
+      for node in [ ctx ] + new_leaves:
+        self.run_additions(node, new_nodes, nodes_data)
+      return new_nodes
     #
     return new_nodes
+
+  def run_copy_leaves(self, ctx, new_nodes, re_ctx):
+    prev, it = None, ctx
+    for ait in reversed(self._action):
+      is_leaf = it.get("_ISLEAF", False)
+      parent = it.get("_PARENTCTX")
+      #
+      if ait["action"] == "copy_leaf":
+        if is_leaf:
+          # copy node, keep leaf, add link to the source group
+          it = self.copy_node(it, new_nodes, keep_leaf = True, clean = True)
+          self.update_node(it, ait, re_ctx)
+        #
+      # copy only leaf, so
+      break
+      #
+      prev, it = it, parent
+      continue
+    return
+
+  def run_additions(self, ctx, new_nodes, nodes_data):
+    # are different length allowed?
+    # original and current iterators
+    oit, oprev = ctx, None
+    it, prev = ctx, None
+    for ait in reversed(self._action):
+      aa, adepth = ait["action"], ait["depth"]
+
+      oparent = it and it.get("_PARENTCTX") or None
+      if ait["action"] != "add":
+        # should we copy unused to chain?
+        continue
+      #
+    #
+    return
 
   def copy_action(self, action, gen_id = False, src_id = None, depth = 0, type = None):
     data = action.copy()
@@ -180,10 +160,17 @@ class FixAction:
       data["quals"].update({ "ID" : self.new_id(src_id = src_id, depth = depth, type = action["type"]) })
     return data
 
-  def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False):
+  def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False, store_src_link = False):
     if not force and node.get("_ISCOPY"):
       return node
     ncopy = node.copy()
+    ncopy["_COPIES_LINKS"] = None
+
+    if store_src_link:
+      if not node.get("_COPIES_LINKS"): node["_COPIES_LINKS"] = []
+      node["_COPIES_LINKS"].append(ncopy)
+      ncopy["_SRC_LINK"] = node
+
     old_rules_data = ncopy.get("_RULESDATA")
     if old_rules_data is not None:
       ncopy["_RULESDATA"] = copy.deepcopy(old_rules_data)
@@ -219,7 +206,10 @@ class FixAction:
 
   def del_node_if_leaf(self, node, new_nodes):
     if node.get("_ISLEAF", False):
-      new_nodes[id(node)] = None
+      if id(node) in new_nodes:
+        new_nodes[id(node)]["_DELETED"] = True
+      else:
+        new_nodes[id(node)] = None
 
   def run_subsitutions(self, ctx, re_ctx=None):
     if ctx is None:
@@ -236,6 +226,30 @@ class FixAction:
         self.update_node(it, ait, re_ctx)
       #do nothing for exclude and copy_leaf
       it = it.get("_PARENTCTX")
+    return
+
+  def run_exclusions(self, ctx, new_nodes):
+    prev, it = None, ctx
+    chain_start = ctx
+    for ait in reversed(self._action):
+      is_leaf = it.get("_ISLEAF", False)
+      parent = it.get("_PARENTCTX")
+      #
+      if ait["action"] == "exclude":
+        if is_leaf:
+          self.del_node_if_leaf(it, new_nodes)
+          if parent:
+            parent = self.copy_node(parent, new_nodes)
+            parent["_ISLEAF"] = True
+            chain_start = parent
+        elif prev:
+          #copy the whole chain
+          prev = self.copy_chain(chain_start, prev, new_nodes)
+          prev["_PARENTCTX"] = parent
+        #
+        prev, it = prev, parent
+      else:
+        prev, it = it, parent
     return
 
   def update_node(self, node, action, re_ctx = None):
@@ -301,3 +315,17 @@ class FixAction:
       x = re_ctx.get(x, x)
     return x
 
+  def active_depth(self):
+    return len(self._action) - self._additions
+
+  def action_types_num(self):
+    actions = [ self ]
+    _w_ex = len(list(filter(lambda a: a._exclusions > 0, actions)))
+    _w_add = len(list(filter(lambda a: a._additions > 0, actions)))
+    # ignore copy leaves here
+    actions_types_num = sum([
+        _w_ex > 0,
+        _w_add > 0,
+        (len(actions) - _w_ex - _w_add) > 0,
+    ])
+    return actions_types_num

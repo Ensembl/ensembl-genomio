@@ -1,0 +1,2 @@
+NC_001566.1	RefSeq	gene	8644	9987	.	-	.	ID=gene-ND4;Dbxref=GeneID:807702;Name=ND4;gbkey=Gene;gene=ND4;gene_biotype=protein_coding
+NC_001566.1	RefSeq	CDS	8644	9987	.	-	0	ID=cds-NP_008090.1;Parent=gene-ND4;Dbxref=Genbank:NP_008090.1,GeneID:807702;Name=NP_008090.1;gbkey=CDS;gene=ND4;product=NADH dehydrogenase subunit 4;protein_id=NP_008090.1;transl_table=5
