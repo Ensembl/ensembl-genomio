@@ -105,14 +105,18 @@ class FixAction:
       self.run_exclusions(ctx, new_nodes)
       return new_nodes
 
+    print("\nACTION", file=sys.stderr)
+    print("new nodes before copying", list(map(id, new_nodes.values())), file=sys.stderr)
     # copy leaves first
     if self._copy_leaves > 0:
       self.run_copy_leaves(ctx, new_nodes, re_ctx)
+    print("new nodes after leaves copying", list(map(id, new_nodes.values())), file=sys.stderr)
     # add
     if self._additions > 0:
       new_leaves = list(new_nodes.values())
-      for node in [ ctx ] + new_leaves:
-        self.run_additions(node, new_nodes, nodes_data)
+      for node in new_leaves or [ ctx ]:
+        print("\naddition part for", self, id(node), file=sys.stderr)
+        self.run_additions(node, re_ctx, new_nodes, nodes_data)
       return new_nodes
     #
     return new_nodes
@@ -136,19 +140,56 @@ class FixAction:
       continue
     return
 
-  def run_additions(self, ctx, new_nodes, nodes_data):
+  def node2add_after(self, oit, action, prev, oprev, re_ctx, nodes_data, new_nodes):
+    prev_nodes = nodes_data["prev_nodes"]
+    aa, atype, adepth = action["action"], action["type"], action["depth"]
+    if aa == "copy_leaf":
+      aa = "rename"
+    oit_id = oit is None and "None" or str(id(oit))
+    pn_key = "%s_%s_%s" % (oit_id, aa, adepth)
+    print("checking", pn_key, file=sys.stderr)
+    if pn_key in prev_nodes:
+      new_node = prev_nodes[pn_key]
+      print("getting", id(new_node), "prev", id(new_node.get("_PARENT")), file=sys.stderr)
+      return new_node
+    #
+    modify = aa == "add"
+    new_node = self.copy_node(oit or oprev, new_nodes, clean = modify, force = True)
+    self.del_node_if_leaf(oit, new_nodes)
+    if modify:
+      self.update_node(new_node, action, re_ctx)
+      # gen id
+      self.update_id(new_node, pn_key)
+    else:
+      new_node["_NOIDUPDATE"] = True
+
+    if prev:
+      print("updating prev ", id(prev), " parent with ", id(new_node), file=sys.stderr)
+      prev["_PARENTCTX"] = new_node
+      new_node["_ISLEAF"] = False
+    else:
+      new_node["_ISLEAF"] = True
+    #
+    prev_nodes[pn_key] = new_node
+    print("brand new node", id(new_node), file=sys.stderr)
+    return new_node
+
+  def run_additions(self, ctx, re_ctx, new_nodes, nodes_data):
     # are different length allowed?
     # original and current iterators
     oit, oprev = ctx, None
-    it, prev = ctx, None
+    prev = None
     for ait in reversed(self._action):
-      aa, adepth = ait["action"], ait["depth"]
-
-      oparent = it and it.get("_PARENTCTX") or None
+      oparent = oit and oit.get("_PARENTCTX") or None
+      #gene/+tr/cds
+      #gene/+tr/exon(cds)
+      #+1/+2/gene/+3/+tr/cds/+4/+5
+      it = self.node2add_after(oit, ait, prev, oprev, re_ctx, nodes_data, new_nodes)
+      if prev:
+        prev["_PARENTCTX"] = it
+      prev = it
       if ait["action"] != "add":
-        # should we copy unused to chain?
-        continue
-      #
+        oit, oprev = oparent, oit
     #
     return
 
@@ -160,22 +201,17 @@ class FixAction:
       data["quals"].update({ "ID" : self.new_id(src_id = src_id, depth = depth, type = action["type"]) })
     return data
 
-  def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False, store_src_link = False):
+  def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False):
     if not force and node.get("_ISCOPY"):
       return node
     ncopy = node.copy()
-    ncopy["_COPIES_LINKS"] = None
-
-    if store_src_link:
-      if not node.get("_COPIES_LINKS"): node["_COPIES_LINKS"] = []
-      node["_COPIES_LINKS"].append(ncopy)
-      ncopy["_SRC_LINK"] = node
-
+    ncopy["_ISDELETED"] = False
+    ncopy["_ISCOPY"] = not force
+    new_nodes[id(ncopy)] = ncopy
+    #
     old_rules_data = ncopy.get("_RULESDATA")
     if old_rules_data is not None:
       ncopy["_RULESDATA"] = copy.deepcopy(old_rules_data)
-    ncopy["_ISCOPY"] = True
-    new_nodes[id(ncopy)] = ncopy
     # clean
     if clean:
       ncopy.get("_RULESDATA")["_ALL"]["USEDQUALS"] = {}
@@ -206,10 +242,11 @@ class FixAction:
 
   def del_node_if_leaf(self, node, new_nodes):
     if node.get("_ISLEAF", False):
-      if id(node) in new_nodes:
-        new_nodes[id(node)]["_DELETED"] = True
+      node_id = id(node)
+      if new_nodes.get(node_id):
+        node["_ISDELETED"] = True
       else:
-        new_nodes[id(node)] = None
+        new_nodes[node_id] = None
 
   def run_subsitutions(self, ctx, re_ctx=None):
     if ctx is None:

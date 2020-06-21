@@ -65,17 +65,45 @@ class SubRule(ValidRule):
     new_nodes = nodes_data["new_nodes"]
     # drop leaves previously marked for delition
     ctx_leaves = context._useful_leaves
+    print("\ncleaning old leaves", file=sys.stderr)
     for i in range(len(ctx_leaves))[::-1]:
       leaf = ctx_leaves[i]
-      if id(leaf) in new_nodes and new_nodes[id(leaf)] is None:
-        ctx_leaves.pop(i)
-    # append new nodes
-    seen_ids = defaultdict(int)
+      lid = id(leaf)
+      if lid in new_nodes:
+        if new_nodes[lid] is None or new_nodes[lid].get("_ISDELETED"):
+          print("removin old leaf", lid, file=sys.stderr)
+          ctx_leaves.pop(i)
+
+    # updating leaves
+
+    # update ctx and leaves
     for _id, node in new_nodes.items():
-      if node is None: continue
+      if node is None:
+        continue
+      if node.get("_ISDELETED"):
+        continue
+      context.prev.append(node)
+      if node.get("_ISLEAF"):
+        print("adding leaf node with id", _id, file=sys.stderr)
+        ctx_leaves.append(node)
+
+
+    # iterate, check if new
+
+    return
+    # init seen_ids
+    seen_ids = defaultdict(int)
+    for _id, node in list(new_nodes.items()) + (context.prev or []):
+      if node is None or node.get("_ISDELETED"):
+        continue
+
+
       cls.update_seen_id(node, seen_ids)
       context.prev.append(node)
-      if node.get("_ISLEAF"): ctx_leaves.append(node)
+      if node.get("_ISLEAF"):
+         ctx_leaves.append(node)
+         lid = id(node); lead = node
+         print("dropping leaf", lid, leaf.get("_ID"), leaf.get("_TYPE"), file=sys.stderr)
     #
     return
 
