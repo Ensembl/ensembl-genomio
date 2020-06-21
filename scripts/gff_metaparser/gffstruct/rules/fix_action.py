@@ -4,6 +4,8 @@ import sys
 
 
 class FixAction:
+  _split_camel_re = re.compile(r"([a-z])([A-Z])")
+
   def __init__(self, raw, rule, always_generate_new_ids = False):
      self._raw = raw
      self._rule_name = rule.NAME
@@ -15,7 +17,6 @@ class FixAction:
      self._exclusions = 0
      self._copy_leaves = 0
      #
-     self._split_camel_re = re.compile(r"([a-z])([A-Z])")
      #
      self._action = None
      self._action = self.parse(self._raw)
@@ -134,7 +135,15 @@ class FixAction:
           it = self.copy_node(it, new_nodes, keep_leaf = True, clean = True)
           self.update_node(it, ait, re_ctx)
           if self._always_gen_id:
-            self.update_id(it, "EXONID_")
+            src_id = self.n_id(parent)
+            if not src_id:
+              if parent:
+                src_id = self.new_id(parent["_TYPE"], ait["type"])
+                self.update_id(parent, src_id)
+              else:
+                src_id = ait["type"]
+            new_id = self.new_id(self.n_id(parent), ait["type"])
+            self.update_id(it, new_id)
             it["_NOIDUPDATE"] = False
         #
       # copy only leaf, so
@@ -163,7 +172,18 @@ class FixAction:
     if modify:
       self.update_node(new_node, action, re_ctx)
       # gen id
-      self.update_id(new_node, pn_key)
+      src_id = self.n_id(oit or oprev)
+      if not src_id:
+        if oit:
+          src_id = self.new_id(oit["_TYPE"], atype)
+          self.update_id(oit, src_id)
+        elif oprev:
+          src_id = self.new_id(oprev["_TYPE"], atype)
+          self.update_id(oprev, src_id)
+        else:
+          src_id = atype
+      new_id = self.new_id(src_id, atype)
+      self.update_id(new_node, new_id)
       new_node["_NOIDUPDATE"] = False
     else:
       if new_node.get("_NOIDUPDATE") is None:
@@ -187,9 +207,6 @@ class FixAction:
     prev = None
     for ait in reversed(self._action):
       oparent = oit and oit.get("_PARENTCTX") or None
-      #gene/+tr/cds
-      #gene/+tr/exon(cds)
-      #+1/+2/gene/+3/+tr/cds/+4/+5
       it = self.node2add_after(oit, ait, prev, oprev, re_ctx, nodes_data, new_nodes)
       if prev:
         prev["_PARENTCTX"] = it
@@ -198,14 +215,6 @@ class FixAction:
         oit, oprev = oparent, oit
     #
     return
-
-  def copy_action(self, action, gen_id = False, src_id = None, depth = 0, type = None):
-    data = action.copy()
-    data["quals"] = data.get("quals", {}).copy()
-    if type: action["type"] = type
-    if gen_id:
-      data["quals"].update({ "ID" : self.new_id(src_id = src_id, depth = depth, type = action["type"]) })
-    return data
 
   def copy_node(self, node, new_nodes, keep_leaf = False, clean = False, force = False):
     if not force and node.get("_ISCOPY"):
@@ -247,7 +256,7 @@ class FixAction:
     return it
 
   def del_node_if_leaf(self, node, new_nodes):
-    if node.get("_ISLEAF", False):
+    if node and node.get("_ISLEAF", False):
       node_id = id(node)
       if new_nodes.get(node_id):
         node["_ISDELETED"] = True
@@ -317,25 +326,38 @@ class FixAction:
     return
 
   @classmethod
-  def update_id(cls, node, id):
+  def n_id(cls, node):
+    _id = node.get("_RULESDATA")["_ALL"].get("USEDQUALS",{}).get("id", [None, None])[1]
+    if _id and type(_id) == list:
+      _id = _id[0]
+    if not _id:
+      _id = node.get("_ID")
+    if not _id:
+      return None
+    return _id
+
+  @classmethod
+  def update_id(cls, node, _id):
     if not node:
       return
-    node["_ID"] = id
+    node["_ID"] = _id
     used_quals = node.get("_RULESDATA")["_ALL"].get("USEDQUALS")
     if used_quals is None:
       node.get("_RULESDATA")["_ALL"]["USEDQUALS"] = {}
       used_quals = node.get("_RULESDATA")["_ALL"].get("USEDQUALS")
-    used_quals.update({"id":("ID", id)})
+    used_quals.update({"id":("ID", _id)})
 
-  def new_id(self, src_id = None, depth = 0, type = None):
+  @classmethod
+  def new_id(cls, src_id, type = None, depth = 0):
     if depth < 0: depth  = 100 - depth
     _type = "df"
     if type:
-      splitted_name = self._split_camel_re.sub(r"\1_\2", type).split("_")
-      _type = "d" + "".join([s[0] for s in splitted_name if s])
-    return "%s_%sd%s" % (src_id, _type.lower(), depth)
+      splitted_name = cls._split_camel_re.sub(r"\1_\2", type).split("_")
+      _type = "df_" + "".join([s[0] for s in splitted_name if s])
+    return "%s_%s" % (src_id, _type.lower())
+    #return "%s_%sd%s" % (src_id, _type.lower(), depth)
 
-  def gen_and_update_id(self, it, parent = None, depth = 0, action = None):
+  def __gen_and_update_id(self, it, parent = None, depth = 0, action = None):
     _id = it.get("_ID")
     if _id:
       return _id
@@ -372,3 +394,4 @@ class FixAction:
         (len(actions) - _w_ex - _w_add) > 0,
     ])
     return actions_types_num
+

@@ -88,8 +88,7 @@ class SubRule(ValidRule):
     seen_ids = []
     for leaf in ctx_leaves:
       seen_ids += context.get_to_root(node = leaf,
-        # use better ID getter
-        getter = lambda x: (x.get("_ID"), id(x), x.get("_NOIDUPDATE")) ) or []
+        getter = lambda x: (FixAction.n_id(x), id(x), x.get("_NOIDUPDATE")) ) or []
     seen_ids = set(seen_ids)
     print("seen_ids", seen_ids, file=sys.stderr)
     seen_counts = defaultdict(int)
@@ -102,16 +101,25 @@ class SubRule(ValidRule):
     print("met_once", met_once, file=sys.stderr)
     # iterate, check if _NOIDUPDATE is not none and false
     seen = defaultdict(int)
+    seen.update({_id:1 for _id, _ in seen_counts.items()})
+    print("seen_ids", seen, file=sys.stderr)
     updated_obj_ids = set()
     for leaf in ctx_leaves:
       context.run_to_root(node = leaf,
-        updater = lambda x: x
-          and "_NOIDUPDATE" in x and not x["_NOIDUPDATE"]
-          and x.get("_ID") and x["_ID"] not in met_once
-          and id(x) not in updated_obj_ids
-          and cls.update_seen_id(x, seen, updated_obj_ids)
+        updater = lambda x: cls.id_updater(x, seen, met_once, updated_obj_ids)
       )
+    print("seen_ids", seen, file=sys.stderr)
+    print("updated obj ids", updated_obj_ids, file=sys.stderr)
     return
+
+  @classmethod
+  def id_updater(cls, node, seen_ids, met_once, updated_obj_ids):
+    if "_NOIDUPDATE" not in node or node["_NOIDUPDATE"]:
+      return
+    _id = FixAction.n_id(node)
+    if not _id or _id in met_once:
+      return
+    cls.update_seen_id(node, seen_ids, updated_obj_ids)
 
   @classmethod
   def update_seen_id(cls, node, seen_ids, updated):
@@ -119,13 +127,9 @@ class SubRule(ValidRule):
       return
     print("updating", id(node), file=sys.stderr)
     updated.add(id(node))
-    _id = node.get("_RULESDATA")["_ALL"].get("USEDQUALS",{}).get("id", [None, None])[1]
-    if _id and type(_id) == list:
-      _id = _id[0]
+    _id = FixAction.n_id(node)
     if not _id:
-      _id = node.get("_ID")
-    if not _id:
-      return
+      return None
     seen_ids[_id] += 1
     if seen_ids[_id] == 1:
       return
