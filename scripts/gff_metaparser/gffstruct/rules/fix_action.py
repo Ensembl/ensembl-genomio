@@ -10,8 +10,7 @@ class FixAction:
      self._raw = raw
      self._rule_name = rule.NAME
      self._rule_lineno = rule._lineno
-     #self._always_gen_id = always_generate_new_ids
-     self._always_gen_id = True
+     self._always_gen_id = always_generate_new_ids
      #
      self._additions = 0
      self._exclusions = 0
