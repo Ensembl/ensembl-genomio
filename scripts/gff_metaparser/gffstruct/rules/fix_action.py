@@ -8,7 +8,8 @@ class FixAction:
      self._raw = raw
      self._rule_name = rule.NAME
      self._rule_lineno = rule._lineno
-     self._always_gen_id = always_generate_new_ids
+     #self._always_gen_id = always_generate_new_ids
+     self._always_gen_id = True
      #
      self._additions = 0
      self._exclusions = 0
@@ -132,6 +133,9 @@ class FixAction:
           # copy node, keep leaf, add link to the source group
           it = self.copy_node(it, new_nodes, keep_leaf = True, clean = True)
           self.update_node(it, ait, re_ctx)
+          if self._always_gen_id:
+            self.update_id(it, "EXONID_")
+            it["_NOIDUPDATE"] = False
         #
       # copy only leaf, so
       break
@@ -160,9 +164,11 @@ class FixAction:
       self.update_node(new_node, action, re_ctx)
       # gen id
       self.update_id(new_node, pn_key)
+      new_node["_NOIDUPDATE"] = False
     else:
-      new_node["_NOIDUPDATE"] = True
-
+      if new_node.get("_NOIDUPDATE") is None:
+        new_node["_NOIDUPDATE"] = True
+    #
     if prev:
       print("updating prev ", id(prev), " parent with ", id(new_node), file=sys.stderr)
       prev["_PARENTCTX"] = new_node

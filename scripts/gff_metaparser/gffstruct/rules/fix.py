@@ -74,8 +74,6 @@ class SubRule(ValidRule):
           print("removin old leaf", lid, file=sys.stderr)
           ctx_leaves.pop(i)
 
-    # updating leaves
-
     # update ctx and leaves
     for _id, node in new_nodes.items():
       if node is None:
@@ -86,29 +84,41 @@ class SubRule(ValidRule):
       if node.get("_ISLEAF"):
         print("adding leaf node with id", _id, file=sys.stderr)
         ctx_leaves.append(node)
-
-
-    # iterate, check if new
-
-    return
-    # init seen_ids
-    seen_ids = defaultdict(int)
-    for _id, node in list(new_nodes.items()) + (context.prev or []):
-      if node is None or node.get("_ISDELETED"):
-        continue
-
-
-      cls.update_seen_id(node, seen_ids)
-      context.prev.append(node)
-      if node.get("_ISLEAF"):
-         ctx_leaves.append(node)
-         lid = id(node); lead = node
-         print("dropping leaf", lid, leaf.get("_ID"), leaf.get("_TYPE"), file=sys.stderr)
-    #
+    # find ids that met once
+    seen_ids = []
+    for leaf in ctx_leaves:
+      seen_ids += context.get_to_root(node = leaf,
+        # use better ID getter
+        getter = lambda x: (x.get("_ID"), id(x), x.get("_NOIDUPDATE")) ) or []
+    seen_ids = set(seen_ids)
+    print("seen_ids", seen_ids, file=sys.stderr)
+    seen_counts = defaultdict(int)
+    for _id, _ptr, _flag in seen_ids:
+      if _id:
+        seen_counts[_id] +=1
+    met_once = frozenset([_id for _id, _c in seen_counts.items() if _c == 1])
+    print("met_once", met_once, file=sys.stderr)
+    #met_once = frozenset()
+    print("met_once", met_once, file=sys.stderr)
+    # iterate, check if _NOIDUPDATE is not none and false
+    seen = defaultdict(int)
+    updated_obj_ids = set()
+    for leaf in ctx_leaves:
+      context.run_to_root(node = leaf,
+        updater = lambda x: x
+          and "_NOIDUPDATE" in x and not x["_NOIDUPDATE"]
+          and x.get("_ID") and x["_ID"] not in met_once
+          and id(x) not in updated_obj_ids
+          and cls.update_seen_id(x, seen, updated_obj_ids)
+      )
     return
 
   @classmethod
-  def update_seen_id(cls, node, seen_ids):
+  def update_seen_id(cls, node, seen_ids, updated):
+    if id(node) in updated:
+      return
+    print("updating", id(node), file=sys.stderr)
+    updated.add(id(node))
     _id = node.get("_RULESDATA")["_ALL"].get("USEDQUALS",{}).get("id", [None, None])[1]
     if _id and type(_id) == list:
       _id = _id[0]

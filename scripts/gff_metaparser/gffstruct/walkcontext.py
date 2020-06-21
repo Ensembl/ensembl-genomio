@@ -71,11 +71,13 @@ class WalkContext:
    if self.ctg_len is not None:
      self.ctg_len(length)
 
-  def get_to_root(self, getter=None):
+  def get_to_root(self, getter=None, node = None):
     if not getter:
       return None
     res = []
-    it = self.data
+    it = node
+    if it is None:
+      it = self.data
     while it:
       out = getter(it)
       if out:
@@ -83,10 +85,12 @@ class WalkContext:
       it = it.get("_PARENTCTX")
     return res[::-1]
 
-  def run_to_root(self, updater=None):
+  def run_to_root(self, updater=None, node = None):
     if not updater:
       return
-    it = self.data
+    it = node
+    if it is None:
+      it = self.data
     while it:
       updater(it)
       it = it.get("_PARENTCTX")
