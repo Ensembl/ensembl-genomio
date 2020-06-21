@@ -107,17 +107,13 @@ class FixAction:
       self.run_exclusions(ctx, new_nodes)
       return new_nodes
 
-    print("\nACTION", file=sys.stderr)
-    print("new nodes before copying", list(map(id, new_nodes.values())), file=sys.stderr)
     # copy leaves first
     if self._copy_leaves > 0:
       self.run_copy_leaves(ctx, new_nodes, re_ctx)
-    print("new nodes after leaves copying", list(map(id, new_nodes.values())), file=sys.stderr)
     # add
     if self._additions > 0:
       new_leaves = list(new_nodes.values())
       for node in new_leaves or [ ctx ]:
-        print("\naddition part for", self, id(node), file=sys.stderr)
         self.run_additions(node, re_ctx, new_nodes, nodes_data)
       return new_nodes
     #
@@ -160,10 +156,8 @@ class FixAction:
       aa = "rename"
     oit_id = oit is None and "None" or str(id(oit))
     pn_key = "%s_%s_%s" % (oit_id, aa, adepth)
-    print("checking", pn_key, file=sys.stderr)
     if pn_key in prev_nodes:
       new_node = prev_nodes[pn_key]
-      print("getting", id(new_node), "prev", id(new_node.get("_PARENT")), file=sys.stderr)
       return new_node
     #
     modify = aa == "add"
@@ -190,14 +184,12 @@ class FixAction:
         new_node["_NOIDUPDATE"] = True
     #
     if prev:
-      print("updating prev ", id(prev), " parent with ", id(new_node), file=sys.stderr)
       prev["_PARENTCTX"] = new_node
       new_node["_ISLEAF"] = False
     else:
       new_node["_ISLEAF"] = True
     #
     prev_nodes[pn_key] = new_node
-    print("brand new node", id(new_node), file=sys.stderr)
     return new_node
 
   def run_additions(self, ctx, re_ctx, new_nodes, nodes_data):

@@ -65,13 +65,11 @@ class SubRule(ValidRule):
     new_nodes = nodes_data["new_nodes"]
     # drop leaves previously marked for delition
     ctx_leaves = context._useful_leaves
-    print("\ncleaning old leaves", file=sys.stderr)
     for i in range(len(ctx_leaves))[::-1]:
       leaf = ctx_leaves[i]
       lid = id(leaf)
       if lid in new_nodes:
         if new_nodes[lid] is None or new_nodes[lid].get("_ISDELETED"):
-          print("removin old leaf", lid, file=sys.stderr)
           ctx_leaves.pop(i)
 
     # update ctx and leaves
@@ -82,7 +80,6 @@ class SubRule(ValidRule):
         continue
       context.prev.append(node)
       if node.get("_ISLEAF"):
-        print("adding leaf node with id", _id, file=sys.stderr)
         ctx_leaves.append(node)
     # find ids that met once
     seen_ids = []
@@ -90,26 +87,19 @@ class SubRule(ValidRule):
       seen_ids += context.get_to_root(node = leaf,
         getter = lambda x: (FixAction.n_id(x), id(x), x.get("_NOIDUPDATE")) ) or []
     seen_ids = set(seen_ids)
-    print("seen_ids", seen_ids, file=sys.stderr)
     seen_counts = defaultdict(int)
     for _id, _ptr, _flag in seen_ids:
       if _id:
         seen_counts[_id] +=1
     met_once = frozenset([_id for _id, _c in seen_counts.items() if _c == 1])
-    print("met_once", met_once, file=sys.stderr)
-    #met_once = frozenset()
-    print("met_once", met_once, file=sys.stderr)
     # iterate, check if _NOIDUPDATE is not none and false
     seen = defaultdict(int)
     seen.update({_id:1 for _id, _ in seen_counts.items()})
-    print("seen_ids", seen, file=sys.stderr)
     updated_obj_ids = set()
     for leaf in ctx_leaves:
       context.run_to_root(node = leaf,
         updater = lambda x: cls.id_updater(x, seen, met_once, updated_obj_ids)
       )
-    print("seen_ids", seen, file=sys.stderr)
-    print("updated obj ids", updated_obj_ids, file=sys.stderr)
     return
 
   @classmethod
@@ -125,7 +115,6 @@ class SubRule(ValidRule):
   def update_seen_id(cls, node, seen_ids, updated):
     if id(node) in updated:
       return
-    print("updating", id(node), file=sys.stderr)
     updated.add(id(node))
     _id = FixAction.n_id(node)
     if not _id:
