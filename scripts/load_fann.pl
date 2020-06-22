@@ -80,12 +80,6 @@ if (defined $filename) {
 $display_db_default //= 'BRC4_Community_Annotation';
 $analysis_name //= 'brc4_import';
 
-my $aa       = $dba->get_adaptor('Analysis');
-my $analysis = $aa->fetch_by_logic_name($analysis_name);
-if (! defined $analysis) {
-  $self->throw("Analysis '$analysis_name' does not exist in the database.");
-}
-
 my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   -host => $host,
   -user => $user,
@@ -93,6 +87,13 @@ my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   -port => $port,
   -dbname => $dbname,
 );
+
+
+my $aa       = $dba->get_adaptor('Analysis');
+my $analysis = $aa->fetch_by_logic_name($analysis_name);
+if (! defined $analysis) {
+  die "Analysis '$analysis_name' does not exist in the database.\n";
+}
 
 my $dbea = $dba->get_DBEntryAdaptor;
 
