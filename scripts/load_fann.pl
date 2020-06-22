@@ -26,6 +26,7 @@
          -display_db_default
          -feature_version_default
          -external_db_map
+         -analysis_name
          -help
 
 =head1 EXAMPLE
@@ -33,6 +34,7 @@
   perl ./load_fann.pl \
     -host <db_host> -port <db_port> -user <db_user> -pass <db_pass> \
     -dbname <core_db> \
+    -analysis_name <logic_name> \
     -json species_functional_annotation.json
 
 =cut
@@ -46,7 +48,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use JSON;
 
 my ($host, $port, $user, $pass, $dbname);
-my ($filename, $display_db_default, $feature_version_default, $external_db_map);
+my ($filename, $display_db_default, $feature_version_default);
+my ($external_db_map, $analysis_name);
 my $help = 0;
 
 &GetOptions(
@@ -59,6 +62,7 @@ my $help = 0;
   'display_db_default=s'       => \$display_db_default,
   'feature_version_default=i'  => \$feature_version_default,
   'external_db_map=s'          => \$external_db_map,
+  'analysis_name=s'          => \$analysis_name,
   'help|?'                     => \$help,
 ) or pod2usage(-message => "use -help", -verbose => 1);
 pod2usage(-verbose => 2) if $help;
@@ -74,6 +78,13 @@ if (defined $filename) {
 
 # Default db name for the display_xref and synonyms
 $display_db_default //= 'BRC4_Community_Annotation';
+$analysis_name //= 'brc4_import';
+
+my $aa       = $dba->get_adaptor('Analysis');
+my $analysis = $aa->fetch_by_logic_name($analysis_name);
+if (! defined $analysis) {
+  $self->throw("Analysis '$analysis_name' does not exist in the database.");
+}
 
 my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   -host => $host,
@@ -289,6 +300,7 @@ sub store_xref {
     -description => $description,
     -info_type   => $info_type,
     -info_text   => $info_text,
+    -analysis    => $analysis,
   );
 
   # add synonyms

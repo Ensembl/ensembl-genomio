@@ -139,6 +139,7 @@ sub default_options {
 
     # defautl xref display_db
     xref_display_db_default => 'BRC4_Community_Annotation',
+    xref_load_logic_name => 'brc4_import',
   };
 }
 
@@ -193,7 +194,9 @@ sub pipeline_wide_parameters {
     ignore_final_stops => $self->o('ignore_final_stops'),
 
     swap_gcf_gca => $self->o('swap_gcf_gca'),
+
     xref_display_db_default => $self->o('xref_display_db_default'),
+    xref_load_logic_name => $self->o('xref_load_logic_name'),
   };
 }
 
@@ -677,6 +680,7 @@ sub pipeline_analyses {
             . '  -json #fann_json_file# '
             . '  #default_feat_v# '
             . '  #default_db_display# '
+            . '  -analysis_name #xref_load_logic_name# '
             . '  -external_db_map ' . $self->o('external_db_map')
             . '  > #log_path#/stdout '
             . '  2> #log_path#/stderr ',
