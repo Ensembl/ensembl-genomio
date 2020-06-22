@@ -136,6 +136,9 @@ sub default_options {
 
     # if loaded from RefSeq(GCF) change seq_region names to GenBank(GCA)
     swap_gcf_gca => 0,
+
+    # defautl xref display_db
+    xref_display_db_default => 'BRC4_Community_Annotation',
   };
 }
 
@@ -190,6 +193,7 @@ sub pipeline_wide_parameters {
     ignore_final_stops => $self->o('ignore_final_stops'),
 
     swap_gcf_gca => $self->o('swap_gcf_gca'),
+    xref_display_db_default => $self->o('xref_display_db_default'),
   };
 }
 
@@ -672,6 +676,7 @@ sub pipeline_analyses {
             . '  --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --dbname #db_name# '
             . '  -json #fann_json_file# '
             . '  #default_feat_v# '
+            . '  #default_db_display# '
             . '  -external_db_map ' . $self->o('external_db_map')
             . '  > #log_path#/stdout '
             . '  2> #log_path#/stderr ',
@@ -679,6 +684,7 @@ sub pipeline_analyses {
         'fann_loader'    => "$scripts_dir/load_fann.pl",
         'fann_json_file' => '#expr( #manifest_data#->{"functional_annotation"} )expr#',
         'default_feat_v' => '#expr( #no_feature_version_defaults# ? "": "-feature_version_default ".#default_feature_version# )expr#',
+        'default_db_display' => '#expr( #xref_display_db_default# ? "-display_db_default ".#xref_display_db_default# : "" )expr#',
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
