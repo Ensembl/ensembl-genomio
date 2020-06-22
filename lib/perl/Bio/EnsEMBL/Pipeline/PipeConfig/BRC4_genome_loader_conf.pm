@@ -132,7 +132,10 @@ sub default_options {
     ignore_final_stops => 0,
 
     # Rename seq_region name in the seq_region table with this attribute
-    seq_name_code => "EBI_seq_region_name"
+    seq_name_code => "EBI_seq_region_name",
+
+    # if loaded from RefSeq(GCF) change seq_region names to GenBank(GCA)
+    swap_gcf_gca => 0,
   };
 }
 
@@ -185,6 +188,8 @@ sub pipeline_wide_parameters {
     load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
     no_brc4_stuff => $self->o('no_brc4_stuff'),
     ignore_final_stops => $self->o('ignore_final_stops'),
+
+    swap_gcf_gca => $self->o('swap_gcf_gca'),
   };
 }
 
@@ -405,6 +410,7 @@ sub pipeline_analyses {
         external_db_map => $self->o('external_db_map'),
         cs_tag_for_ordered => $self->o('cs_tag_for_ordered'),
         no_brc4_stuff => $self->o('no_brc4_stuff'),
+        swap_gcf_gca => $self->o('swap_gcf_gca'),
       },
       -analysis_capacity   => 4,
       -rc_name         => '8GB',
@@ -779,7 +785,32 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -flow_into => 'Change_seq_region_name',
+      -flow_into => WHEN('#swap_gcf_gca#' => 'Swap_GCF_GCA',
+                    ELSE 'Change_seq_region_name'
+                    ),
+    },
+   
+    {
+      # SWAP GCF TO GCA seq_region names
+      -logic_name => 'Swap_GCF_GCA',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        seq_attrib_name => $self->o('seq_name_code'),
+        sql     => [
+          # depends on the order of INSDC syns if there are few of them,
+          #   which should't so for the new load
+          'UPDATE seq_region sr ' .
+          '  LEFT JOIN seq_region_synonym srs USING(seq_region_id) ' .
+          '  LEFT JOIN external_db edb USING(external_db_id) ' .
+          '  SET sr.name = srs.synonym ' .
+          '  WHERE srs.external_db_id IS NOT NULL ' .
+          '  AND edb.db_name = "INSDC"; ',
+        ],
+      },
+      -analysis_capacity   => 1,
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
     },
 
     {
