@@ -162,6 +162,10 @@ class JsonRule(BaseRule):
         interpolated = interpolated or _interpolated
         if v is not None:
           out[k] = v
+        else:
+          # drop the whole dict, if field is gone
+          if data[k] is not None:
+            return None, True
       if not out:
         out = None
       return out, interpolated
@@ -197,8 +201,11 @@ class JsonRule(BaseRule):
       for f,t in asub:
         if v:
           v = f.sub(t, v)
-    if amap and v in amap:
-      v = amap[v]
+    if amap:
+      if v in amap:
+        v = amap[v]
+      elif amap.get("_IGNORE_REST"):
+        v = None
     if aignore and v and aignore.search(v) is not None:
       v = None
     if anumval:
