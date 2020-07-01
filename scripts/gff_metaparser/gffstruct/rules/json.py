@@ -182,7 +182,7 @@ class JsonRule(BaseRule):
       return out, interpolated
 
     # scalar section
-    v = context.get(data, default = data)
+    v = context.get(data, data)
 
     asplit = self._actions["split"]
     asub = self._actions["sub"]
@@ -242,6 +242,8 @@ class JsonRule(BaseRule):
     if type(value) == list and _a["key_is_list"] == False:
       # force scalar
       value = ",".join(value)
+    context_data = context.data.copy()
+    context_data["_LEAFVALUE"] = value
 
     itag = None
     data = {}
@@ -253,7 +255,7 @@ class JsonRule(BaseRule):
     if _a["addon"]:
       data.update(_a["addon"])
 
-    data, _ = self.interpolate(data, context)
+    data, _ = self.interpolate(data, context_data)
     if data is None:
       return
 
