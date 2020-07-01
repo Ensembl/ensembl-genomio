@@ -32,7 +32,11 @@ class FannKeeper(BaseKeeper):
 
     # update top
     if type(top) == list:
-      if not self.list_has(top, value):
+      if not force:
+        if not self.list_has(top, value):
+          top.append(value)
+      else:
+        top.clear()
         top.append(value)
       return
     for k, v in value.items():
@@ -42,8 +46,11 @@ class FannKeeper(BaseKeeper):
         top[k] = v
         continue
       if type(v) == list:
-        top[k] += v
-        top[k] = self.uniq_list(top[k])
+        if not force:
+          top[k] += v
+          top[k] = self.uniq_list(top[k])
+        else:
+          top[k] = [ v ]
         continue
       if not force:
         continue
