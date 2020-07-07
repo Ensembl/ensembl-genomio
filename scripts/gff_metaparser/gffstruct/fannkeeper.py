@@ -1,4 +1,5 @@
 import json
+import sys
 
 from collections import defaultdict, OrderedDict
 
@@ -11,6 +12,12 @@ class FannKeeper(BaseKeeper):
 
   def add(self, obj_tag, obj_id, path, value, force = False):
     if not value:
+      return
+
+    if obj_id and type(obj_id) == list:
+      obj_id = obj_id[0]
+
+    if not obj_id:
       return
 
     # find a place to insert to
@@ -76,7 +83,14 @@ class FannKeeper(BaseKeeper):
       return
     vals = []
     for tag in sorted(self._data.keys()):
-      vals += list(filter(dump_filter, self._data[tag].values()))
+      no_stashed = []
+      for h in self._data[tag].values():
+        x = h
+        if "_STASH" in x:
+          x = h.copy()
+          del x["_STASH"]
+        no_stashed.append(x)
+      vals += list(filter(dump_filter, no_stashed))
     json.dump(vals, out_file, indent = 2, sort_keys = True)
 
   def dump(self, out_file, maps = None, dump_filter=None):
