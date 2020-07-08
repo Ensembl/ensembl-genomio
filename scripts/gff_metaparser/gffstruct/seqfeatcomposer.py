@@ -12,14 +12,43 @@ class SeqFeatComposer:
   def __init__(self):
     self._topf = set()
     self._processed = {}
+    self._supported_fields = dict()
 
-  def gff_write(self, out_rec_features, contig_id = None, contig_len = None, out_file = None):
+  def gff_write(self, out_rec_features, contig_id = None, contig_len = None, out_file = None, global_context = None):
     if out_file is None:
       return
     if out_rec_features:
+      self.update_stashed(out_rec_features, global_context)
       out_rec = SeqRecord(UnknownSeq(length=contig_len), id = contig_id)
       out_rec.features = out_rec_features
       GFF.write([out_rec], out_file)
+
+  def update_stashed(self, features, global_context):
+    if not features or not global_context:
+      return
+    for feat in features:
+      quals = self.supporting(feat, "qualifiers") and feat.qualifiers or {}
+      del_list = []
+      for q in quals.keys():
+        val = quals[q]
+        if type(val) == dict and "_FROM_STASH" in val:
+          val = val["_FROM_STASH"]
+          val = global_context.get(val.get("obj_tag"), val.get("id"), val.get("path"))
+          if val is None:
+            del_list.append(q)
+          else:
+            quals[q] = val
+      for q in del_list:
+        del quals[q]
+      if self.supporting(feat, "sub_features"):
+        self.update_stashed(feat.sub_features, global_context)
+    return
+
+  def supporting(self, obj, field):
+    tp = type(obj)
+    if tp not in self._supported_fields:
+      self._supported_fields[tp] = frozenset(obj.__dir__())
+    return field in self._supported_fields[tp]
 
   def cid(self, ctx):
     p_type, p_id, p_ctx = "", "", ctx.get("_PARENTCTX")
@@ -42,6 +71,7 @@ class SeqFeatComposer:
       strand = ctx.get("_STRAND")
       phase = ctx.get("_PHASE")
       _id = ctx.get("_ID")
+      source = ctx.get("_SRC")
       # quals
       quals = used_quals_flat or {}
       if not is_leaf and "ID" not in quals:
@@ -51,8 +81,9 @@ class SeqFeatComposer:
       # create feat object
       quals = self.sort_quals(quals)
       obj = SeqFeature(location, strand = strand, type = _type, qualifiers = quals) # NB referebce to quals / allows post assign modifications
+      obj.source = source
       # fill processed
-      feat = { "cid" : cid, "obj" : obj, "quals" : quals, "kids" : dict(), "is_leaf" : is_leaf }
+      feat = { "cid" : cid, "obj" : obj, "quals" : quals, "kids" : dict(), "is_leaf" : is_leaf, "source" : source }
       self._processed[cid] = feat
     else:
       # fill quals
@@ -107,6 +138,8 @@ class SeqFeatComposer:
     for cid, feat in self._processed.items():
       if feat["kids"]:
         feat["obj"].sub_features = [ self._processed[cid]["obj"] for cid, _ in sorted(feat["kids"].items(), key = lambda k: -k[1]) ]
+      else:
+        feat["obj"].sub_features = []
     # fill out
     for cid in sorted(self._topf):
       #print(cid, file = sys.stderr)

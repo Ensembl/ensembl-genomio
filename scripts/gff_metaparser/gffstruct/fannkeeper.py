@@ -22,8 +22,6 @@ class FannKeeper(BaseKeeper):
     if not path:
       return top
     for p in path.split("/"):
-      if type(top) != dict:
-        return None
       if p not in top:
         return None
       top = top[p]
@@ -96,7 +94,6 @@ class FannKeeper(BaseKeeper):
     prj = json.dumps(obj, sort_keys = True)
     return prj in frozenset(map(lambda x: json.dumps(x, sort_keys = True), lst))
 
-
   def dump_json(self, out_file, maps = None, dump_filter=None):
     if not out_file:
       return
@@ -107,7 +104,7 @@ class FannKeeper(BaseKeeper):
         x = h
         if "_STASH" in x:
           x = h.copy()
-          del x["_STASH"]
+          x.pop("_STASH")
         no_stashed.append(x)
       vals += list(filter(dump_filter, no_stashed))
     json.dump(vals, out_file, indent = 2, sort_keys = True)
