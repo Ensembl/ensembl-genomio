@@ -10,6 +10,7 @@ class GffRule(BaseRule):
   NAME = "GFF"
   _RULES = BaseRule.RulesType()
   _FORCE_SUB = False
+  _SPECIAL_KEYS =  frozenset(["_FROM_STASH"])
 
   @classmethod
   def prepare_context(cls, context):
@@ -23,10 +24,54 @@ class GffRule(BaseRule):
 
   def prepare_actions(self):
     self._target_quals = None
-    raw = [ x.strip() for x in " ".join(self._actions_raw).replace(",", " ").split() if x.strip() ]
-    raw = list(frozenset(raw))
-    if raw:
-      self._target_quals = raw
+
+    raw = [ x.strip() for x in "\t".join(self._actions_raw).split("\t") if x ]
+    if len(raw) < 1:
+      return
+
+    targets, *jsonstr = raw
+    targets = [ x.strip() for x in targets.replace(",", " ").split() if x.strip() ]
+    targets = list(frozenset(targets))
+    if targets:
+      self._target_quals = targets
+
+    if not jsonstr:
+      return
+
+    addon, tech = self.parse_json(*jsonstr)
+    self._actions = {
+      "addon" : addon,
+      "from_stash" : None,
+    }
+    self.add_actions_from_stash(tech)
+
+  def add_actions_from_stash(self, tech):
+    #cds/parent GFF parent {"_FROM_STASH":[{"ID": "mrna:_PARENT/_STASH/cds_id"}]}
+    if not tech or "_FROM_STASH" not in tech:
+      return
+    unstash = tech["_FROM_STASH"]
+    out = []
+    for qual, gctx_path in unstash.items():
+      pre_obj, *_path = gctx_path.split("/", 1)
+      # if not path, use pre_obj as source ? todo
+      obj_tag, *id_key = pre_obj.split(":")
+      get_from_parent = False
+      if not id_key:
+        id_key = "_ID"
+      elif id_key[0] == "_PARENT":
+        id_key = pre_obj
+        get_from_parent = True
+      else:
+        id_key = id_key[0]
+      out.append({
+        "qual" : qual,
+        "obj_tag" : obj_tag,
+        "from_parent" : get_from_parent,
+        "id_key" : id_key,
+        "path" : _path and _path[0] or None,
+      })
+    if out:
+      self._actions["from_stash"] = out
 
   def process(self, context, re_context = None):
     used_quals = context.get("_RULESDATA")[self.NAME].get("USEDQUALS")
@@ -41,9 +86,20 @@ class GffRule(BaseRule):
 
     value = context.get("_LEAFVALUE")
 
-    if not self._target_quals:
+    if not self._target_quals and not self._actions:
       used_quals.update({qname.lower():(qname, value)})
       return
+
+    if self._actions:
+      from_stash = self._actions.get("from_stash", [])
+      # print(from_stash, file=sys.stderr)
+      for it in from_stash:
+        name = it["qual"]
+        #value = str({"_FROM_STASH" : it})
+        value = it["path"]
+        if not self._FORCE_SUB and name.lower() in used_quals:
+          continue
+        used_quals.update({name.lower():(name, value)})
 
     for new_name in self._target_quals:
       if not self._FORCE_SUB and new_name.lower() in used_quals:
@@ -68,7 +124,7 @@ class GffRule(BaseRule):
       # TODO: copy, everything not used
       # do not copy parent
       pass
-    # print("prepare possponed: ", cls.NAME, str(used_quals), context.get("_ID"), context.get("_TYPE"), file=sys.stderr)
+    # print("prepare postponed: ", cls.NAME, str(used_quals), context.get("_ID"), context.get("_TYPE"), file=sys.stderr)
 
   @classmethod
   def run_postponed(clsf, context, name_override = None):
@@ -82,6 +138,12 @@ class GffSubRule(GffRule):
 
   @classmethod
   def run_postponed(cls, context, name_override = None):
+    #id_tag = "%s%s" % (self._CTX_PFX, id_tag)
+    #obj_id = context.get(id_tag)
+    #print(context.data.keys(), file = sys.stderr)
+    # use from stash / store before in process
+    # ? update from global ctx in gff write, because only there there's filled global contex. though, prepare in process
+
     for ctx in context.prev:
       gff_uq = ctx["_RULESDATA"][GffRule.NAME].get("USEDQUALS")
       gff_sub_uq = ctx["_RULESDATA"][GffSubRule.NAME].get("USEDQUALS")

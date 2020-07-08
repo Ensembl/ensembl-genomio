@@ -1,6 +1,5 @@
 from .base import BaseRule
 
-import json
 import re
 import sys
 
@@ -9,21 +8,6 @@ class JsonRule(BaseRule):
   _RULES = BaseRule.RulesType()
   _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_SUB", "_SPLIT", "_NUMVAL"])
   _OUTPUT_FORCE_SUB = False
-  _CTX_PFX="_TECH_JSON_"
-
-  def parse_json(self, *s):
-    data, tech = None, None
-    if not s:
-      return data, tech
-
-    try:
-      raw = json.loads(s[0])
-      data = { k: v for k,v in raw.items() if k not in self._SPECIAL_KEYS }
-      tech = { k: v for k,v in raw.items() if k in self._SPECIAL_KEYS }
-    except:
-      raise Exception("wrong JSON part for rule %s at line %s: %s" % (self.NAME, self._lineno, str(s)))
-
-    return data, tech
 
   def add_actions_ignore(self, tech):
     if not tech or "_IGNORE" not in tech:

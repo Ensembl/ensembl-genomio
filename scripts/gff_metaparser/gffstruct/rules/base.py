@@ -1,5 +1,6 @@
 # rules classes
 
+import json
 import re
 import sys
 
@@ -17,6 +18,8 @@ def _RulesType():
 class BaseRule:
   NAME = ""
   _RULES = _RulesType()
+  _SPECIAL_KEYS = []
+  _CTX_PFX="_TECH_4KIDS_"
 
   @classmethod
   def RulesType(cls):
@@ -96,6 +99,20 @@ class BaseRule:
   @classmethod
   def run_postponed(clsf, context, name_override = None):
     pass
+
+  def parse_json(self, *s):
+    data, tech = None, None
+    if not s:
+      return data, tech
+
+    try:
+      raw = json.loads(s[0])
+      data = { k: v for k,v in raw.items() if k not in self._SPECIAL_KEYS }
+      tech = { k: v for k,v in raw.items() if k in self._SPECIAL_KEYS }
+    except:
+      raise Exception("wrong JSON part for rule %s at line %s: %s" % (self.NAME, self._lineno, str(s)))
+
+    return data, tech
 
 
 # ideally, add wrapping for static, as well
