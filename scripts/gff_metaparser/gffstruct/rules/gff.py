@@ -67,7 +67,7 @@ class GffRule(BaseRule):
         "qual" : qual,
         "obj_tag" : obj_tag,
         "from_parent" : get_from_parent,
-        "id_key" : id_key,
+        "id" : id_key,
         "path" : _path and _path[0] or None,
       })
     if out:
@@ -95,16 +95,31 @@ class GffRule(BaseRule):
       # print(from_stash, file=sys.stderr)
       for it in from_stash:
         name = it["qual"]
-        #value = str({"_FROM_STASH" : it})
-        value = it["path"]
+        value = self.render_stashed(it, context)
         if not self._FORCE_SUB and name.lower() in used_quals:
           continue
-        used_quals.update({name.lower():(name, value)})
+        if value:
+          used_quals.update({name.lower():(name, value)})
 
     for new_name in self._target_quals:
       if not self._FORCE_SUB and new_name.lower() in used_quals:
         continue
       used_quals.update({new_name.lower():(new_name, value)})
+
+  def render_stashed(self, stashed, context = None):
+    if not stashed or not context:
+      return None
+    _id = "%s%s" % (self._CTX_PFX, stashed.get("id"))
+    _id = context.get(_id)
+    if not _id:
+      return None
+    # try to get data from global context
+    val = context.global_context.get(stashed["obj_tag"], _id, stashed["path"])
+    if val is not None:
+      return val
+    out = stashed.copy()
+    out["id"] = _id
+    return {"_FROM_STASH": out}
 
   @classmethod
   def prepare_postponed(cls, context):

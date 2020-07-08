@@ -10,6 +10,25 @@ class FannKeeper(BaseKeeper):
   def __init__(self):
     self._data = defaultdict(lambda: defaultdict(OrderedDict))
 
+  def get(self, obj_tag, obj_id, path):
+    if not obj_tag:
+      return
+    if obj_id and type(obj_id) == list:
+      obj_id = obj_id[0]
+    if not obj_id:
+      return
+    # find a place to get_from
+    top = self._data[obj_tag][obj_id]
+    if not path:
+      return top
+    for p in path.split("/"):
+      if type(top) != dict:
+        return None
+      if p not in top:
+        return None
+      top = top[p]
+    return top
+
   def add(self, obj_tag, obj_id, path, value, force = False):
     if not value:
       return
