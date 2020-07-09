@@ -76,6 +76,9 @@ sub default_options {
         'do_seq_attr' => $self->o('dump_all'),
         'do_seq_reg' => $self->o('dump_all'),
 
+      # Other dumps
+       'sql_dir' => undef,
+
 	   ## 'job_factory' parameters
 	   'species'     => [], 
 	   'antispecies' => [],
@@ -176,6 +179,7 @@ sub pipeline_wide_parameters {
             'do_func'      => $self->o('do_func'),
             'do_seq_reg'      => $self->o('do_seq_reg'),
             'do_seq_attr'      => $self->o('do_seq_attr'),
+            'sql_dir'      => $self->o('sql_dir'),
             'schemas'      => $self->o('schemas'),
             #'remove_features_prefix'      => $self->o('remove_features_prefix'),
     };
@@ -221,6 +225,7 @@ sub pipeline_analyses {
       -flow_into       => {
                            '2->A' => 'Files_makers',
                            'A->2' => 'Manifest_maker',
+                           '2' => WHEN('#sql_dir#', 'Dump_genome_sql'),
                          },
     },
     { -logic_name  => 'Manifest_maker',
@@ -466,6 +471,13 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
+    },
+
+    { -logic_name  => 'Dump_genome_sql',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpGenomeSQL',
+      -max_retry_count => 0,
+      -hive_capacity  => 20,
+      -rc_name         => 'default',
     },
   ];
 }
