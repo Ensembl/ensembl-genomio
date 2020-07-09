@@ -34,6 +34,10 @@ sub fetch_input {
   my $dump_path = catfile($output_dir, $dump_file);
   $self->param('output_file', $dump_path);
   
+  my $options = [
+    "--max_allowed_packet 1G",
+  ];
+  $self->param("dump_options", $options);
   $self->SUPER::fetch_input();
 }
 
