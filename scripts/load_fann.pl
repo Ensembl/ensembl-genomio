@@ -209,7 +209,7 @@ for my $it (@$data) {
       $obj->dbID,
       $dbname,
       $xref->{id},
-      $xref->{id},
+      $xref->{display_id} // $xref->{id},
       $add_list,
       $xref->{description},
       $xref->{info_type},
@@ -218,9 +218,13 @@ for my $it (@$data) {
 
     # update 'display_xref' only for the first time or for the $set_display_xref_4
     if (defined $display_xref && $display_xref eq $xref->{id}) {
-      $obj->display_xref($xref_db_entry);
-      $do_update = 1;
-      $stored_xref = $xref->{dbname}.':'.$xref->{id};
+      if ($lc_type eq "gene" || $lc_type eq "transcript") {
+        $obj->display_xref($xref_db_entry);
+        $do_update = 1;
+        $stored_xref = $xref->{dbname}.':'.$xref->{id};
+      } else {
+        warn "not updating display_id for $type (id: \"$id\")\n";
+      }
     }
   }
 

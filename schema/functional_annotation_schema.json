@@ -25,6 +25,7 @@
           "properties" : {
             "dbname" : { "type" : "string" },
             "id" : { "type" : "string" },
+            "display_id" : { "type" : "string" },
             "description" : { "type" : "string" },
             "info_type" : { "type" : "string", "description" : "additional source information" },
             "info_text" : { "type" : "string", "description" : "additional source information" }
