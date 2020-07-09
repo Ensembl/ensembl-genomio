@@ -6,6 +6,7 @@ import gzip
 import csv, json
 
 from Bio import SeqIO, SeqRecord
+import requests, sys
 
 class process_seq_region(eHive.BaseRunnable):
 
@@ -53,6 +54,7 @@ class process_seq_region(eHive.BaseRunnable):
 
         # Guess translation table
         self.guess_translation_table(seq_regions)
+        self.get_mitochondrial_codon_table(seq_regions, genome_data["species"]["taxonomy_id"])
 
         # Print out the file
         self.print_json(final_path, seq_regions)
@@ -64,7 +66,7 @@ class process_seq_region(eHive.BaseRunnable):
                 }
         self.dataflow(output, 2)
 
-    def guess_translation_table(self, seq_regions) -> int:
+    def guess_translation_table(self, seq_regions) -> None:
         """
         Guess codon table based on location
         """
@@ -73,6 +75,37 @@ class process_seq_region(eHive.BaseRunnable):
         for seqr in seq_regions:
             if "location" in seqr and seqr["location"] in location_codon:
                 seqr["codon_table"] = location_codon[seqr["location"]]
+
+    def get_mitochondrial_codon_table(self, seq_regions, tax_id) -> None:
+        """
+        Get codon table for mitochondria based on taxonomy
+        """
+        tax_codon_table = self.get_mito_tax_codon_table(tax_id)
+        if not tax_codon_table:
+            return
+        
+        for seqr in seq_regions:
+            if "location" in seqr and seqr["location"] == "mitochondrial_chromosome":
+                if "codon_table" in seqr:
+                    continue
+                seqr["codon_table"] = tax_codon_table
+
+    def get_mito_tax_codon_table(self, tax_id) -> int:
+        """
+        Get codon table for mitochondria based on taxonomy
+        """
+        server = "https://www.ebi.ac.uk"
+        ext = "/ena/data/taxonomy/v1/taxon/tax-id/" + str(tax_id)
+
+        r = requests.get(server + ext, headers={ "Content-Type" : "application/json"})
+
+        if not r.ok:
+            r.raise_for_status()
+            sys.exit()
+
+        decoded = r.json()
+        if "mitochondrialGeneticCode" in decoded:
+            return int(decoded["mitochondrialGeneticCode"])
     
     def print_json(self, path, data) -> None:
         with open(path, "w") as json_out:
