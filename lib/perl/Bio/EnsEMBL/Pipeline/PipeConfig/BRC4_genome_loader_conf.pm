@@ -96,6 +96,7 @@ sub default_options {
     gff3_gene_types   => [ qw/
         gene pseudogene miRNA_gene ncRNA_gene
         rRNA_gene snoRNA_gene snRNA_gene tRNA_gene
+        transposable_element
       /],
     gff3_mrna_types   => [ qw/
         mRNA transcript pseudogenic_transcript
@@ -103,7 +104,7 @@ sub default_options {
         ncRNA lincRNA lncRNA miRNA pre_miRNA
         RNase_MRP_RNA RNAse_P_RNA rRNA snoRNA
         snRNA sRNA SRP_RNA tRNA scRNA
-        lnc_RNA guide_RNA
+        lnc_RNA guide_RNA transposable_element
       /],
     gff3_exon_types   => [qw/ exon pseudogenic_exon /],
     gff3_cds_types    => [qw/ CDS /],
