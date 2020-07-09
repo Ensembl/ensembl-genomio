@@ -1,0 +1,7 @@
+# patch for the gff_metaparser.conf to supress adding seq_region synomyms
+
+region/name	JSON	DISCARD
+region/alias	JSON	DISCARD
+scaffold/alias	JSON	DISCARD
+region/chromosome	JSON	DISCARD
+
