@@ -24,6 +24,7 @@ class SeqRegion:
   circular : bool = False
   codon_table : Optional[int] = None
   synonyms: List[SeqRegionSyn] = field(default_factory=list)
+  _rank: Optional[int] = None
 
 def no_nulls_dict(x):
   return {k:v for k, v in x if v is not None}
@@ -41,6 +42,7 @@ class SeqRegionConf:
     self.ordered : List[SeqRegion] = field(default_factory=list) # try like this
     #self.ordered : List[SeqRegion]
     self.syns : Dict[str, str]  = field(default_factory=dict)
+    self.syn_src_default = syns_src
     # process
     #  get actual seq_region names
     self.fill_length_from_fasta(fasta_file)
@@ -63,106 +65,122 @@ class SeqRegionConf:
     os.makedirs(dirname(json_out), exist_ok=True)
     with open(json_out, 'wt') as jf:
       out_list = list(map(lambda x: dc.asdict(x, dict_factory = no_nulls_dict), self.seq_regions.values()))
+      # reorder based on _rank value and nullify it
       json.dump(out_list, jf, indent = 2, sort_keys = True)
+
+  def merge_syns(self, old_syns: List[SeqRegionSyn], new_syns: Optional[List[SeqRegionSyn]],
+                   use_new_source: bool = False) -> List[SeqRegionSyn]:
+    return old_syns
 
   def fill_length_from_fasta(self, fasta_file: Optional[str]) -> None:
     """load actual seq_region nmaes and length from the fasta file if provided"""
-    if fasta_file:
-      _open = fasta_file.endswith(".gz") and gzip.open or open
-      with _open(fasta_file, 'rt') as fasta:
-        fasta_parser = SeqIO.parse(fasta, "fasta")
-        for rec in fasta_parser:
-          self.seq_regions[rec.name] = dc.replace(self.seq_regions[rec.name],
-                                                  name = rec.name,
-                                                  length = len(rec))
+    if not fasta_file:
+      return
+    _open = fasta_file.endswith(".gz") and gzip.open or open
+    with _open(fasta_file, 'rt') as fasta:
+      fasta_parser = SeqIO.parse(fasta, "fasta")
+      for rec in fasta_parser:
+        self.seq_regions[rec.name] = dc.replace(self.seq_regions[rec.name],
+                                                name = rec.name,
+                                                length = len(rec))
     return
 
   def fill_info_from_tech(self, tech_data: Optional[dict]) -> None:
-    tk = self.tech_data.keys()
-    chr_k = list(filter(lambda x: x.upper().startswith("CONTIG_CHR_"), tk))
-    mt_k = frozenset(filter(lambda x: x.upper().startswith("MT_"), tk))
+    """load data synomyms from meta tags like CONTIG_CHR_..."""
+    if not tech_data:
+      return
+    tk = tech_data.keys()
+    # name for contig tags
+    contig_chr_keys = list(filter(lambda x: x.upper().startswith("CONTIG_CHR_"), tk))
 
-    out = OrderedDict()
-    for k in chr_k:
-      ctg_id, *syns = self.get(k, tech = True).split()
-      syn = k.upper().split("_", 2)[2]
-      syns.append(syn)
-      syns = list(set(syns))
-      syns_out = { nm : (nm == syn and "Ensembl_Metazoa" or syns_src) for nm in syns }
-      if ctg_id in asm_rep_syns:
-        for src, nm in asm_rep_syns[ctg_id].items():
-          syns_out[nm] = src
-      syns_out = [ { "name" : nm, "source" : src } for nm, src in syns_out.items() ]
-      # merge syns_out with asm_rep_syns
-      cs_tag = self.get("ORDERED_CS_TAG", tech = True, default = "chromosome")
-      out[ctg_id] = {
-        "name" : ctg_id,
-        "synonyms" : syns_out,
-        "coord_system_level" : cs_tag,
-      }
-      if ctg_id in ctg_len:
-        out[ctg_id]["length"] = ctg_len[ctg_id]
-      if mt_k and syn == "MT":
-        out[ctg_id]["location"] = "mitochondrial_chromosome"
-        if "MT_CODON_TABLE" in mt_k:
-          out[ctg_id]["codon_table"] = int(self.get("MT_CODON_TABLE", tech=True))
-        if "MT_CIRCULAR" in mt_k:
-          mtc = self.get("MT_CIRCULAR", tech=True).strip().upper()
-          out[ctg_id]["circular"] = ( mtc == "YES" or mtc == "1" )
+    # mito related keys
+    mt_keys = frozenset(filter(lambda x: x.upper().startswith("MT_"), tk))
+    mt_codon_table = int(tech_data.get("MT_CODON_TABLE", 0)) or None
+    mt_circular = tech_data.get("MT_CIRCULAR", "0").upper() in ["YES", "1", "TRUE"]
 
-    used_ctg_names = frozenset(out.keys())
-    for ctg_id in ctg_len:
-      if ctg_id in used_ctg_names:
-        continue
-      sr = {
-        "name" : ctg_id,
-        "length" : ctg_len[ctg_id],
-        "coord_system_level" : "contig",
-      }
-      if ctg_id in asm_rep_syns:
-        syns_out = [ { "name" : nm, "source" : src } for src, nm in asm_rep_syns[ctg_id].items() ]
-        if syns_out:
-          sr["synonyms"] = syns_out
-      out[ctg_id] = sr
+    # default cs name for listed contigs
+    cs_tag = tech_data.get("ORDERED_CS_TAG", "chromosome")
 
+    for rank, k in enumerate(contig_chr_keys):
+      syn = k.upper().split("_",2)[2]
+      contig, *additional_syns = tech_data.get(k, "").split()
+      # syns
+      old_syns = self.seq_regions[contig].synonyms
+      new_syns = [ SeqRegionSyn(s, s == syn and "Ensembl_Metazoa" or self.syn_src_default)
+                    for s in ([syn] + additional_syns) ]
+      syns = self.merge_syns(old_syns, new_syns, use_new_source = True)
+      # update seq region
+      self.seq_regions[contig] = dc.replace(self.seq_regions[contig],
+                                            _rank = rank,
+                                            name = contig,
+                                            coord_system_level = cs_tag,
+                                            synonyms = syns
+                                            )
+      # mito
+      if mt_keys and syn == "MT":
+        self.seq_regions[contig] = dc.replace(self.seq_regions[contig],
+                                              _rank = rank,
+                                              location = "mitochondrial_chromosome",
+                                              circular = mt_circular,
+                                              codon_table = mt_codon_table
+                                             )
+    return
 
-  def fill_info_from_asm_rep(self) -> None:
-    asm_rep_syns = dict()
-    if asm_rep_file:
-      # INSDC_accession, INSDC_submitted_name
-      use_cols = {
-        "Sequence-Name" : "INSDC_submitted_name",
-        "GenBank-Accn" : "INSDC",
-        "RefSeq-Accn" : "RefSeq",
-     }
-      _open = asm_rep_file.endswith(".gz") and gzip.open or open
-      with _open(asm_rep_file, 'rt') as asm_rep:
-        header_line = None
-        header_fixed = None
-        for line in asm_rep:
-          if not header_fixed:
-            if line.startswith("#"):
-              header_line = line
-              continue
-            elif header_line:
-              header_fixed = { i : use_cols.get(n.strip())
-                                 for i, n in enumerate(header_line[1:].split())
-                                   if n.strip() in use_cols }
-            else:
-              break
-          _data = line.split("\t")
-          if len(_data) <= 1:
-            _data = line.split()
-          _syns = { src: _data[i].strip() for i, src in header_fixed.items() if i < len(_data) }
-          _out = { src: nm for src, nm in _syns.items() if nm and nm.lower() != "na" }
-          if "INSDC_submitted_name" in _out and "INSDC" in _out and _out["INSDC_submitted_name"] == _out["INSDC"]:
-            _out.pop("INSDC_submitted_name")
-          if "INSDC_submitted_name" in _out and "RefSeq" in _out and _out["INSDC_submitted_name"] == _out["RefSeq"]:
-            _out.pop("INSDC_submitted_name")
-          for src in [ "INSDC", "RefSeq" ]:
-            if src not in _out:
-              continue
-            asm_rep_syns[_out[src]] = _out
+  def fill_info_from_asm_rep(self, asm_rep_file: Optional[str]) -> None:
+    """load synonyms from assembly report, infer actual contig names,  add synonyms to them.
+       should be called after loading from fasta or seq_region_raw"""
+    if not asm_rep_file:
+      return
+    # INSDC_accession, INSDC_submitted_name
+    use_cols = {
+      "Sequence-Name" : "INSDC_submitted_name",
+      "GenBank-Accn" : "INSDC",
+      "RefSeq-Accn" : "RefSeq",
+      "UCSC-style-name" : "GenBank",
+    }
+
+    _open = asm_rep_file.endswith(".gz") and gzip.open or open
+    with _open(asm_rep_file, 'rt') as asm_rep:
+      header_line = None
+      header_fixed = None
+      # 
+      for line in asm_rep:
+        if not header_fixed:
+          if line.startswith("#"):
+            header_line = line
+            continue
+          elif header_line:
+            header_fixed = { i : use_cols.get(n.strip())
+                               for i, n in enumerate(header_line[1:].split())
+                                 if n.strip() in use_cols }
+          else:
+            break
+        # split data line somehow
+        data_fields = line.split("\t")
+        if len(data_fields) <= 1:
+          data_fields = line.split()
+
+        syns_sources_raw ={ src: _data[i].strip() for i, src in header_fixed.items() if i < len(data_fields) }
+        syns_sources = { src: nm for src, nm in syns_sources_raw.items() if nm and nm.lower() != "na" }
+
+        # TODO: continue  HERE
+
+        if "INSDC_submitted_name" in _out and "INSDC" in _out and _out["INSDC_submitted_name"] == _out["INSDC"]:
+          _out.pop("INSDC_submitted_name")
+        if "INSDC_submitted_name" in _out and "RefSeq" in _out and _out["INSDC_submitted_name"] == _out["RefSeq"]:
+          _out.pop("INSDC_submitted_name")
+
+        for src in [ "INSDC", "RefSeq" ]:
+          if src not in _out:
+            continue
+          asm_rep_syns[_out[src]] = _out
+
+    # merge syns_out with asm_rep_syns
+    if ctg_id in asm_rep_syns:
+      syns_out = [ { "name" : nm, "source" : src } for src, nm in asm_rep_syns[ctg_id].items() ]
+      if syns_out:
+        sr["synonyms"] = syns_out
+    out[ctg_id] = sr
     return
 
   def fill_info_from_seq_region_raw(self, raw_json: str, ignore_syns: bool = False) -> None:
