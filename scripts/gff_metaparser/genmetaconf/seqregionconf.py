@@ -2,6 +2,7 @@ import dataclasses as dc
 import gzip
 import json
 import os
+import re
 
 from collections import defaultdict, OrderedDict
 from dataclasses import dataclass, field
@@ -48,13 +49,13 @@ class SeqRegionConf:
     self.fill_length_from_fasta(fasta_file)
     return
     #  load data from seq_region_raw
-    self.fill_info_from_seq_region_raw(seq_region_raw)
+    self.fill_info_from_seq_region_raw(seq_region_raw, use_syns = False)
     #  get data from meta
     self.fill_info_from_tech(meta)
     #  fill synonyms from report file
     self.fill_info_from_asm_rep(asm_rep_file)
     #  load from seq_region_genebank, infer names based on the loaded synonyms
-    self.fill_info_from_seq_region_raw(seq_region_genbank, ignore_syns = True)
+    self.fill_info_from_seq_region_raw(seq_region_genbank, update_syns = False)
 
   def dump(self, json_out: str) -> None:
     if not json_out:
@@ -110,23 +111,25 @@ class SeqRegionConf:
                     for s in ([syn] + additional_syns) ]
       syns = self.merge_syns(old_syns, new_syns, use_new_source = True)
       # update seq region
-      self.seq_regions[contig] = dc.replace(self.seq_regions[contig],
-                                            _rank = rank,
-                                            name = contig,
-                                            coord_system_level = cs_tag,
-                                            synonyms = syns
-                                            )
+      self.seq_regions[contig] = dc.replace(
+        self.seq_regions[contig],
+        _rank = rank,
+        name = contig,
+        coord_system_level = cs_tag,
+        synonyms = syns
+      )
       # mito
       if mt_keys and syn == "MT":
-        self.seq_regions[contig] = dc.replace(self.seq_regions[contig],
-                                              _rank = rank,
-                                              location = "mitochondrial_chromosome",
-                                              circular = mt_circular,
-                                              codon_table = mt_codon_table
-                                             )
+        self.seq_regions[contig] = dc.replace(
+          self.seq_regions[contig],
+          _rank = rank,
+          location = "mitochondrial_chromosome",
+          circular = mt_circular,
+          codon_table = mt_codon_table
+        )
     return
 
-  def fill_info_from_asm_rep(self, asm_rep_file: Optional[str]) -> None:
+  def fill_info_from_asm_rep(self, asm_rep_file: Optional[str], unversion = True) -> None:
     """load synonyms from assembly report, infer actual contig names,  add synonyms to them.
        should be called after loading from fasta or seq_region_raw"""
     if not asm_rep_file:
@@ -160,28 +163,42 @@ class SeqRegionConf:
         if len(data_fields) <= 1:
           data_fields = line.split()
 
-        syns_sources_raw ={ src: _data[i].strip() for i, src in header_fixed.items() if i < len(data_fields) }
-        syns_sources = { src: nm for src, nm in syns_sources_raw.items() if nm and nm.lower() != "na" }
+        sources_syns_raw = { src: data_fields[i].strip() for i, src in header_fixed.items() if i < len(data_fields) }
+        sources_syns = { src: nm for src, nm in sources_syns_raw.items() if nm and nm.lower() != "na" }
+        # remove INSDC_submitted_name if it's equal to INSDC or RefSeq one
+        major_syns = { src: nm for src, nm in sources_syns.items() if src in ["INSDC", "RefSeq"] }
+        if "INSDC_submitted_name" in sources_syns:
+          if sources_syns["INSDC_submitted_name"] in set(major_syns.values()):
+            sources_syns.pop("INSDC_submitted_name")
 
-        # TODO: continue  HERE
-
-        if "INSDC_submitted_name" in _out and "INSDC" in _out and _out["INSDC_submitted_name"] == _out["INSDC"]:
-          _out.pop("INSDC_submitted_name")
-        if "INSDC_submitted_name" in _out and "RefSeq" in _out and _out["INSDC_submitted_name"] == _out["RefSeq"]:
-          _out.pop("INSDC_submitted_name")
-
-        for src in [ "INSDC", "RefSeq" ]:
-          if src not in _out:
+        # attach
+        for src, syn in sources_syns.items():
+          if src not in ["INSDC_submitted_name", "INSDC", "RefSeq"]:
             continue
-          asm_rep_syns[_out[src]] = _out
-
-    # merge syns_out with asm_rep_syns
-    if ctg_id in asm_rep_syns:
-      syns_out = [ { "name" : nm, "source" : src } for src, nm in asm_rep_syns[ctg_id].items() ]
-      if syns_out:
-        sr["synonyms"] = syns_out
-    out[ctg_id] = sr
+          contig = syn
+          if contig not in self.seq_regions:
+            if unversion:
+              contig = self.unversion(contig)
+              if contig not in self.seq_regions:
+                continue
+              self.syns.update({syn : contig})
+            else:
+              continue
+          self.syns.update({s : contig for s in sources_syns.values()})
+          # update_syns
+          old_syns = self.seq_regions[contig].synonyms
+          new_syns = [ SeqRegionSyn(name, src) for src, name in sources_syns.items() if (name and src) ]
+          syns = self.merge_syns(old_syns, new_syns, use_new_source = True)
+          self.seq_regions[contig] = dc.replace(
+            self.seq_regions[contig],
+            synonyms = syns
+          )
     return
+
+  def unversion(self, name: str) -> str:
+    if "." not in name:
+      return name
+    return re.sub(r'([^\.])\.\d+$', r'\1', name)
 
   def fill_info_from_seq_region_raw(self, raw_json: str, ignore_syns: bool = False) -> None:
     # merge with seq_region_raw
