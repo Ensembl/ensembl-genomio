@@ -55,7 +55,7 @@ class SeqRegionConf:
     #  fill synonyms from report file
     self.fill_info_from_asm_rep(asm_rep_file)
     #  load from seq_region_genebank, infer names based on the loaded synonyms
-    self.fill_info_from_seq_region_raw(seq_region_genbank, update_syns = False)
+    self.fill_info_from_seq_region_raw(seq_region_genbank, add_missing = False, update_syns = False)
 
   def dump(self, json_out: str) -> None:
     if not json_out:
@@ -200,44 +200,41 @@ class SeqRegionConf:
       return name
     return re.sub(r'([^\.])\.\d+$', r'\1', name)
 
-  def fill_info_from_seq_region_raw(self, raw_json: str, ignore_syns: bool = False) -> None:
-    # merge with seq_region_raw
-    out_list = []
-    merged_seq_regions = set()
-    if seq_region_raw:
-      _open = seq_region_raw.endswith(".gz") and gzip.open or open
-      with _open(seq_region_raw, 'rt') as sr_raw:
-        _data = json.load(sr_raw, object_pairs_hook=OrderedDict)
-        if type(_data) != list:
-          _data = [ _data ]
-        for rawsr in _data:
-          if "name" not in rawsr or not rawsr["name"]:
-            continue
-          name = rawsr["name"]
-          # update synonym sources
-          for syn in filter(lambda s: "source" not in s, rawsr.get("synonyms", [])):
-            syn["source"] = syns_src
-          # merge with out data
-          merged_seq_regions.add(name)
-          if name not in out:
-            out_list.append(rawsr)
-          else:
-            rawsyns = rawsr.get("synonyms", [])
-            out_data = out[name]
-            for k in out_data:
-              if k not in rawsr or (not rawsr[k] and out_data[k]):
-                rawsr[k] = out_data[k]
-            # more accurate merge of syns, not sure about "coord_system_level"
-            if rawsyns:
-              # put everything that left
-              used_syns = frozenset([s["name"] for s in rawsyns])
-              rawsyns += [ s for s in out_data.get("synonyms", []) if s["name"] not in used_syns ]
-            # append
-            out_list.append(rawsr)
-
-    # add unused seq_regions from out
-    for name, sr in out.items():
-      if name not in merged_seq_regions:
-        out_list.append(sr)
-
+  def fill_info_from_seq_region_raw(self, raw_json: Optional[str], add_missing: bool = True, use_syns: bool = True, update_syns: bool = True) -> None:
+    if not raw_json:
+      return
+    _open = raw_json.endswith(".gz") and gzip.open or open
+    with _open(raw_json, 'rt') as sr_raw:
+      data = json.load(sr_raw, object_pairs_hook=OrderedDict)
+      if type(data) != list:
+        data = [ data ]
+      for sr in data:
+        name = sr.get("name")
+        if not name:
+          continue
+        contig = name
+        if use_syns and contig not in self.seq_regions:
+          contig = self.syns.get(contig, contig)
+        if not add_missing and contig not in self.seq_regions:
+          continue
+        # updating othewise
+        sr_dict = dc.asdict(self.seq_regions[contig], dict_factory = no_nulls_dict)
+        updates = {}
+        for tag in "length coord_system_level location circular codon_table".split():
+          val = sr.get(tag)
+          if val is None: continue
+          if sr_dict.get(tag) is not None: continue
+          updates[tag] = val
+        # synonyms
+        raw_syns = sr.get("synonyms")
+        if update_syns and raw_syns:
+          old_syns = self.seq_regions[contig].synonyms
+          raw_syns = [ SeqRegionSyn(s["name"], s["source"]) for s in raw_syns ]
+          updates["synonyms"] = self.merge_syns(old_syns, raw_syns, use_new_source = True)
+        # update
+        self.seq_regions[contig] = dc.replace(
+          self.seq_regions[contig],
+          **updates
+        )
+    return
 
