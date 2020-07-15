@@ -73,6 +73,7 @@ def main():
                             fasta_file = args.fasta_dna,
                             asm_rep_file = args.asm_rep_file,
                             seq_region_raw = args.seq_region_raw,
+                            seq_region_genbank = args.seq_region_genbank,
                             syns_src = args.syns_src)
   # gen manifest
   manifest = Manifest({
