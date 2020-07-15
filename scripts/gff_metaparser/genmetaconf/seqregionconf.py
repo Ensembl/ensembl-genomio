@@ -3,6 +3,7 @@ import gzip
 import json
 import os
 import re
+import sys
 
 from collections import defaultdict, OrderedDict
 from dataclasses import dataclass, field
@@ -41,13 +42,11 @@ class SeqRegionConf:
                ):
     self.seq_regions : Dict[str, SeqRegion] = defaultdict(lambda:SeqRegion("",0))
     self.ordered : List[SeqRegion] = field(default_factory=list) # try like this
-    #self.ordered : List[SeqRegion]
-    self.syns : Dict[str, str]  = field(default_factory=dict)
+    self.syns : Dict[str, str] = dict()
     self.syn_src_default = syns_src
     # process
     #  get actual seq_region names
     self.fill_length_from_fasta(fasta_file)
-    return
     #  load data from seq_region_raw
     self.fill_info_from_seq_region_raw(seq_region_raw, use_syns = False)
     #  get data from meta
@@ -55,7 +54,7 @@ class SeqRegionConf:
     #  fill synonyms from report file
     self.fill_info_from_asm_rep(asm_rep_file)
     #  load from seq_region_genebank, infer names based on the loaded synonyms
-    self.fill_info_from_seq_region_raw(seq_region_genbank, add_missing = False, update_syns = False)
+    self.fill_info_from_seq_region_raw(seq_region_genbank, add_missing = False, update_from_new = True, update_syns = False)
 
   def dump(self, json_out: str) -> None:
     if not json_out:
@@ -69,9 +68,27 @@ class SeqRegionConf:
       # reorder based on _rank value and nullify it
       json.dump(out_list, jf, indent = 2, sort_keys = True)
 
-  def merge_syns(self, old_syns: List[SeqRegionSyn], new_syns: Optional[List[SeqRegionSyn]],
-                   use_new_source: bool = False) -> List[SeqRegionSyn]:
-    return old_syns
+  def merge_syns(self,
+                 old_syns: List[SeqRegionSyn],
+                 new_syns: Optional[List[SeqRegionSyn]],
+                 use_new_source: bool = False) -> List[SeqRegionSyn]:
+    if not new_syns:
+      return old_syns
+    if not old_syns:
+      return new_syns
+    syns_dict = defaultdict(set)
+    for s in old_syns:
+      syns_dict[s.name].add(s.source)
+    for n in new_syns:
+      if n.name not in syns_dict or not use_new_source:
+        syns_dict[n.name].add(n.source)
+      else:
+        syns_dict[n.name]=set([n.source])
+    out = []
+    for name, sources in syns_dict.items():
+      for src in sources:
+        out.append(SeqRegionSyn(name, src))
+    return out
 
   def fill_length_from_fasta(self, fasta_file: Optional[str]) -> None:
     """load actual seq_region nmaes and length from the fasta file if provided"""
@@ -200,11 +217,17 @@ class SeqRegionConf:
       return name
     return re.sub(r'([^\.])\.\d+$', r'\1', name)
 
-  def fill_info_from_seq_region_raw(self, raw_json: Optional[str], add_missing: bool = True, use_syns: bool = True, update_syns: bool = True) -> None:
+  def fill_info_from_seq_region_raw(self,
+                                    raw_json: Optional[str],
+                                    add_missing: bool = True,
+                                    use_syns: bool = True,
+                                    update_from_new: bool = True,
+                                    update_syns: bool = True) -> None:
     if not raw_json:
       return
     _open = raw_json.endswith(".gz") and gzip.open or open
     with _open(raw_json, 'rt') as sr_raw:
+      print("adding data from seq_regions json:", raw_json, file=sys.stderr)
       data = json.load(sr_raw, object_pairs_hook=OrderedDict)
       if type(data) != list:
         data = [ data ]
@@ -223,13 +246,13 @@ class SeqRegionConf:
         for tag in "length coord_system_level location circular codon_table".split():
           val = sr.get(tag)
           if val is None: continue
-          if sr_dict.get(tag) is not None: continue
+          if not update_from_new and sr_dict.get(tag) is not None: continue
           updates[tag] = val
         # synonyms
         raw_syns = sr.get("synonyms")
         if update_syns and raw_syns:
           old_syns = self.seq_regions[contig].synonyms
-          raw_syns = [ SeqRegionSyn(s["name"], s["source"]) for s in raw_syns ]
+          raw_syns = [ SeqRegionSyn(s["name"], s.get("source", self.syn_src_default)) for s in raw_syns ]
           updates["synonyms"] = self.merge_syns(old_syns, raw_syns, use_new_source = True)
         # update
         self.seq_regions[contig] = dc.replace(
