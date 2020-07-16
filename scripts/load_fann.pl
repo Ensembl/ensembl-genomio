@@ -50,6 +50,7 @@ use JSON;
 my ($host, $port, $user, $pass, $dbname);
 my ($filename, $display_db_default, $feature_version_default);
 my ($external_db_map, $analysis_name);
+my $skip_unknown_xref_source = 0;
 my $help = 0;
 
 &GetOptions(
@@ -62,7 +63,8 @@ my $help = 0;
   'display_db_default=s'       => \$display_db_default,
   'feature_version_default=i'  => \$feature_version_default,
   'external_db_map=s'          => \$external_db_map,
-  'analysis_name=s'          => \$analysis_name,
+  'analysis_name=s'            => \$analysis_name,
+  'skip_unknown_xref_source:i' => \$skip_unknown_xref_source,
   'help|?'                     => \$help,
 ) or pod2usage(-message => "use -help", -verbose => 1);
 pod2usage(-verbose => 2) if $help;
@@ -201,7 +203,12 @@ for my $it (@$data) {
     # Used mapped external db name if it exists
     my $dbname = $xref->{dbname};
     my $mapped_dbname = $extdb_map->{$dbname};
-    $dbname = $mapped_dbname if $mapped_dbname;
+    if ($mapped_dbname) {
+      next if $mapped_dbname eq "_IGNORE_";
+      $dbname = $mapped_dbname;
+    } else {
+      next if $skip_unknown_xref_source;
+    }
 
     my $xref_db_entry = store_xref(
       $dbea,
