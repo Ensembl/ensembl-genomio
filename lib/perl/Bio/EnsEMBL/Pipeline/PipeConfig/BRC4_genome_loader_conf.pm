@@ -60,7 +60,9 @@ sub default_options {
     },
     
     # External_db name map file
-    external_db_map => catfile($data_dir, 'external_db_map_default.txt'),
+    external_db_map_name => 'external_db_map_default.txt',
+    external_db_map => catfile($data_dir, $self->o('external_db_map_name')),
+
 
     ############################################
     # Config unlikely to be changed by the user
@@ -198,6 +200,9 @@ sub pipeline_wide_parameters {
 
     xref_display_db_default => $self->o('xref_display_db_default'),
     xref_load_logic_name => $self->o('xref_load_logic_name'),
+
+    external_db_map_name => $self->o('external_db_map_name'),
+    external_db_map => $self->o('external_db_map'),
   };
 }
 
