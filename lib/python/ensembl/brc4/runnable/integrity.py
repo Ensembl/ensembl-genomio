@@ -214,7 +214,7 @@ class integrity(eHive.BaseRunnable):
             seqs[seq.id] = len(seq.seq)
             
             for feat in seq.features:
-                if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
+                if feat.type in ["gene", "ncRNA_gene", "pseudogene", "transposable_element"]:
                     gene_id = feat.id
                     if ensembl_mode:
                         gene_id = gene_id.replace("gene:", "")
