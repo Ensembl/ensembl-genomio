@@ -30,7 +30,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf;
 
 use strict;
 use warnings;
-use File::Spec::Functions qw/catfile/;
+use File::Spec::Functions qw/catfile catdir/;
 use Data::Dumper;
 use Bio::EnsEMBL::Hive::Version 2.4;
 use Bio::EnsEMBL::ApiVersion qw/software_version/;
@@ -99,6 +99,7 @@ sub pipeline_wide_parameters {
             'pipeline_name' => $self->o('pipeline_name'), #This must be defined for the beekeeper to work properly
             'base_path'     => $self->o('tmp_dir'),
             'output_dir'     => $self->o('output_dir'),
+            download_dir   => catdir($self->o('tmp_dir'), "download", '#species#'),
     };
 }
 
@@ -141,7 +142,7 @@ sub pipeline_analyses {
       -flow_into       => {
                            '2->A' => [
                              'Files_makers',
-                             'INSDC_download'
+                             'Get_accession'
                            ],
                            'A->2' => 'Compare',
                          },
@@ -158,7 +159,7 @@ sub pipeline_analyses {
        },
        -flow_into      => {'1' => [
            WHEN('not -e #fasta_dna_file#', 'Fasta_DNA'),
-           '?accu_name=core_files&accu_address={hash_key}&accu_input_variable=fasta_dna_file',
+           '?accu_name=core_fasta_dna&accu_input_variable=fasta_dna_file',
          ] }
      },
 
@@ -176,9 +177,34 @@ sub pipeline_analyses {
     },
 
     # INSDC download
-    {  -logic_name => 'INSDC_download',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-       -rc_name       => 'default',
+    { -logic_name  => 'Get_accession',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::GetMetaValue',
+      -parameters => {
+        param_name => "accession",
+        param_key => "assembly.accession",
+      },
+      -max_retry_count => 0,
+      -hive_capacity   => 1,
+      -rc_name         => 'default',
+      -flow_into  => {
+        2 => [
+           WHEN('not -e #insdc_dna_file#', 'INSDC_download'),
+         ]
+      },
+    },
+    {
+      -logic_name     => 'INSDC_download',
+      -module         => 'ensembl.brc4.runnable.download_assembly_data',
+      -parameters => {
+        accession => "#accession#",
+      },
+      -language => 'python3',
+      -analysis_capacity => 1,
+      -failed_job_tolerance => 100,
+      -rc_name        => 'default',
+      -flow_into  => {
+        2 => '?accu_name=insdc_fasta_dna&accu_input_variable=fasta_dna',
+      },
     },
 
     # Compare
