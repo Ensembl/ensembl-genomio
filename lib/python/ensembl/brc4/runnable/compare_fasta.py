@@ -21,7 +21,7 @@ class compare_fasta(eHive.BaseRunnable):
     def run(self):
         fasta1 = self.param_required("fasta1")
         fasta2 = self.param_required("fasta2")
-        map_dna_path = self.param_required("map_dna")
+        map_dna_path = self.param_required("seq_regions")
         output_dir = self.param_required("output_dir")
         species = self.param_required("species")
         name = self.param_required("comparison_name")
@@ -80,19 +80,19 @@ class compare_fasta(eHive.BaseRunnable):
             comp.append("Same number of sequences: %d" % len(seq1))
         
         # Compare all ids
-        ids1 = frozenset(seq1.keys())
-        ids2 = frozenset(seq2.keys())
-        
-        common = frozenset.intersection(ids1, ids2)
-        comp.append("\nCommon ids: %d" % len(common))
-        
-        diff1 = frozenset.difference(ids1, ids2)
-        if diff1:
-            comp.append("WARNING: Ids only in 1: %d" % len(diff1))
-        diff2 = frozenset.difference(ids2, ids1)
-        
-        if diff1:
-            comp.append("WARNING: Ids only in 2: %d" % len(diff2))
+       # ids1 = frozenset(seq1.keys())
+       # ids2 = frozenset(seq2.keys())
+       # 
+       # common = frozenset.intersection(ids1, ids2)
+       # comp.append("\nCommon ids: %d" % len(common))
+       # 
+       # diff1 = frozenset.difference(ids1, ids2)
+       # if diff1:
+       #     comp.append("WARNING: Ids only in 1: %d" % len(diff1))
+       # diff2 = frozenset.difference(ids2, ids1)
+       # 
+       # if diff1:
+       #     comp.append("WARNING: Ids only in 2: %d" % len(diff2))
         
         # Compare sequences
         seqs1 = {value: key for key, value in seq1.items()}

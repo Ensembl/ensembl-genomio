@@ -136,7 +136,7 @@ sub pipeline_analyses {
                              antispecies => $self->o('antispecies'),
                              run_all     => $self->o('run_all'),
                           },
-	    -hive_capacity   => -1,
+	    -analysis_capacity   => 1,
       -rc_name 	       => 'default',
       -max_retry_count => 0,
       -flow_into       => {
@@ -147,18 +147,21 @@ sub pipeline_analyses {
  	
      { -logic_name     => 'Files_makers',
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-       -hive_capacity  => -1,
+       -analysis_capacity  => -1,
        -rc_name 	   => 'default',
        -analysis_capacity => 1,
+       -batch_size   => 100,
        -parameters => {
          fasta_dna_file => "#base_path#/metazoa/fasta_dna/#species#/#species#_dna.fa",
+         seq_region_file => "#base_path#/metazoa/json/#species#/#species#_seq_region.json",
          hash_key => "fasta_dna",
        },
        -flow_into      => {'1' => [
            WHEN('not -e #fasta_dna_file#', 'Fasta_DNA'),
+           WHEN('not -e #seq_region_file#', 'Seq_region'),
            '?accu_name=core_fasta_dna&accu_input_variable=fasta_dna_file',
+           '?accu_name=seq_region_json&accu_input_variable=seq_region_file',
            'Get_accession',
-           "Seq_region",
          ] }
      },
 
@@ -170,7 +173,7 @@ sub pipeline_analyses {
         dump_level => "toplevel",
       },
       -max_retry_count => 0,
-      -hive_capacity   => 20,
+      -analysis_capacity   => 20,
       -priority        => 5,
       -rc_name         => 'default',
     },
@@ -182,11 +185,8 @@ sub pipeline_analyses {
         dump_level => 'toplevel',
       },
       -max_retry_count => 0,
-      -hive_capacity  => 20,
+      -analysis_capacity  => 20,
       -rc_name         => 'default',
-      -flow_into  => {
-        2 => '?accu_name=map_dna&accu_input_variable=metadata_json',
-      },
     },
 
     # INSDC download
@@ -197,7 +197,8 @@ sub pipeline_analyses {
         param_key => "assembly.accession",
       },
       -max_retry_count => 0,
-      -hive_capacity   => 1,
+      -analysis_capacity   => 1,
+      -batch_size   => 100,
       -rc_name         => 'default',
       -flow_into  => {
         2 => [
@@ -227,6 +228,7 @@ sub pipeline_analyses {
       -parameters => {
         fasta1 => "#insdc_fasta_dna#",
         fasta2 => "#core_fasta_dna#",
+        seq_regions => "#seq_region_json#",
         comparison_name => "fasta_dna"
       },
       -language => 'python3',
