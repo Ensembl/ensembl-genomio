@@ -67,7 +67,8 @@ sub param_defaults {
                         'pseudogenic_rRNA', 'pseudogenic_tRNA',
                         'ncRNA', 'lincRNA', 'lncRNA', 'miRNA', 'pre_miRNA',
                         'RNase_MRP_RNA', 'RNAse_P_RNA', 'rRNA', 'snoRNA',
-                        'snRNA', 'sRNA', 'SRP_RNA', 'tRNA', 'scRNA', 'guide_RNA', ],
+                        'snRNA', 'sRNA', 'SRP_RNA', 'tRNA', 'scRNA', 'guide_RNA',
+                        'transposable_element', ],
     exon_types      => ['exon', 'pseudogenic_exon'],
     cds_types       => ['CDS'],
     utr_types       => ['five_prime_UTR', 'three_prime_UTR'],
@@ -911,6 +912,10 @@ sub new_transcript {
       die("Unrecognized pseudogene biotype: $transcript_type (gene: $gene_type)");
     }
     
+  # transposable_element
+  } elsif ($gene_type eq 'transposable_element') {
+    $biotype = "transposable_element";
+  
   # Protein coding
   } elsif ($transcript_type eq 'mRNA' or $transcript_type eq "transcript") {
     $biotype = "protein_coding";
