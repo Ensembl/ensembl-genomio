@@ -67,7 +67,7 @@ class compare_fasta(eHive.BaseRunnable):
                 name = rec.id
                 if name in map_dna:
                     name = map_dna[name]
-                sequences[name] = rec.seq.upper()
+                sequences[name] = re.sub(r"[^CGTA]", "N", str(rec.seq.upper()))
         return sequences
 
     def compare_ids(self, seq1, seq2):
