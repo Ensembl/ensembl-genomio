@@ -140,10 +140,7 @@ sub pipeline_analyses {
       -rc_name 	       => 'default',
       -max_retry_count => 0,
       -flow_into       => {
-                           '2->A' => [
-                             'Files_makers',
-                             'Get_accession'
-                           ],
+                           '2->A' => 'Files_makers',
                            'A->2' => 'Compare',
                          },
     },
@@ -160,6 +157,8 @@ sub pipeline_analyses {
        -flow_into      => {'1' => [
            WHEN('not -e #fasta_dna_file#', 'Fasta_DNA'),
            '?accu_name=core_fasta_dna&accu_input_variable=fasta_dna_file',
+           'Get_accession',
+           "Seq_region",
          ] }
      },
 
@@ -174,6 +173,20 @@ sub pipeline_analyses {
       -hive_capacity   => 20,
       -priority        => 5,
       -rc_name         => 'default',
+    },
+
+    {
+      -logic_name  => 'Seq_region',
+      -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpSeqRegionJson',
+      -parameters     => {
+        dump_level => 'toplevel',
+      },
+      -max_retry_count => 0,
+      -hive_capacity  => 20,
+      -rc_name         => 'default',
+      -flow_into  => {
+        2 => '?accu_name=map_dna&accu_input_variable=metadata_json',
+      },
     },
 
     # INSDC download
@@ -208,9 +221,18 @@ sub pipeline_analyses {
     },
 
     # Compare
-    {  -logic_name => 'Compare',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-       -rc_name       => 'default',
+    {
+      -logic_name => 'Compare',
+      -module         => 'ensembl.brc4.runnable.compare_fasta',
+      -parameters => {
+        fasta1 => "#insdc_fasta_dna#",
+        fasta2 => "#core_fasta_dna#",
+        comparison_name => "fasta_dna"
+      },
+      -language => 'python3',
+      -analysis_capacity => 1,
+      -failed_job_tolerance => 0,
+      -rc_name        => 'default',
     },
   ];
 }
