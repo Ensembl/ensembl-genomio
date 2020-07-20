@@ -23,6 +23,7 @@ class compare_fasta(eHive.BaseRunnable):
         fasta2 = self.param_required("fasta2")
         map_dna_path = self.param_required("map_dna")
         output_dir = self.param_required("output_dir")
+        species = self.param_required("species")
         name = self.param_required("comparison_name")
         
         map_dna = self.get_map(map_dna_path)
@@ -31,8 +32,11 @@ class compare_fasta(eHive.BaseRunnable):
         
         comparison = self.compare_ids(seq1, seq2)
         
-        for line in comparison:
-            print(line)
+        output_file = output_dir + "/" + species + "_" + name + ".log"
+        print("Write results in %s" % output_file)
+        with open(output_file, "w") as out_fh:
+            for line in comparison:
+                out_fh.write(line + "\n")
         
     def get_map(self, map_path):
         
@@ -80,16 +84,23 @@ class compare_fasta(eHive.BaseRunnable):
         ids2 = frozenset(seq2.keys())
         
         common = frozenset.intersection(ids1, ids2)
-        comp.append("Common ids: %d" % len(common))
+        comp.append("\nCommon ids: %d" % len(common))
+        
         diff1 = frozenset.difference(ids1, ids2)
-        comp.append("WARNING: Ids only in 1: %d" % len(diff1))
+        if diff1:
+            comp.append("WARNING: Ids only in 1: %d" % len(diff1))
         diff2 = frozenset.difference(ids2, ids1)
-        comp.append("WARNING: Ids only in 2: %d" % len(diff2))
+        
+        if diff1:
+            comp.append("WARNING: Ids only in 2: %d" % len(diff2))
         
         # Compare sequences
         seqs1 = {value: key for key, value in seq1.items()}
         seqs2 = {value: key for key, value in seq2.items()}
         
+        common = {value for key, value in seqs1.items() if key in seqs2}
+        comp.append("\nCommon sequences: %d" % len(common))
+
         only1 = {key: value for key, value in seqs1.items() if not key in seqs2}
         only2 = {key: value for key, value in seqs2.items() if not key in seqs1}
         
