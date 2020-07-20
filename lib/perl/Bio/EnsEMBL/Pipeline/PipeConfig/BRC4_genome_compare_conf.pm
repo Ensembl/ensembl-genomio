@@ -232,9 +232,9 @@ sub pipeline_analyses {
         comparison_name => "fasta_dna"
       },
       -language => 'python3',
-      -analysis_capacity => 1,
+      -analysis_capacity => 5,
       -failed_job_tolerance => 0,
-      -rc_name        => 'default',
+      -rc_name        => '8GB',
     },
   ];
 }
