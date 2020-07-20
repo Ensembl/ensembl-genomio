@@ -107,13 +107,15 @@ class compare_fasta(eHive.BaseRunnable):
         if only1:
             total = sum([len(seq) for seq in only1.keys()])
             comp.append("WARNING: Sequences only in 1: %d (%d)" % (len(only1), total))
-            for seq, name in only1.items():
-                comp.append("\tOnly in 1: %s (%d)" % (name, len(seq)))
+            only_seq1 = {name: len(seq) for seq, name in only1.items()}
+            for name in sorted(only_seq1):
+                comp.append("\tOnly in 1: %s (%d)" % (name, only_seq1[name]))
                 
         if only2:
             total = sum([len(seq) for seq in only2.keys()])
             comp.append("WARNING: Sequences only in 2: %d (%d)" % (len(only2), total))
-            for seq, name in only2.items():
-                comp.append("\tOnly in 2: %s (%d)" % (name, len(seq)))
+            only_seq2 = {name: len(seq) for seq, name in only2.items()}
+            for name in sorted(only_seq2):
+                comp.append("\tOnly in 2: %s (%d)" % (name, only_seq2[name]))
         
         return comp
