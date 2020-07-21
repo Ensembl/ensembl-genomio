@@ -26,6 +26,7 @@
          -display_db_default
          -feature_version_default
          -external_db_map
+         -analysis_name
          -help
 
 =head1 EXAMPLE
@@ -33,6 +34,7 @@
   perl ./load_fann.pl \
     -host <db_host> -port <db_port> -user <db_user> -pass <db_pass> \
     -dbname <core_db> \
+    -analysis_name <logic_name> \
     -json species_functional_annotation.json
 
 =cut
@@ -46,7 +48,9 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use JSON;
 
 my ($host, $port, $user, $pass, $dbname);
-my ($filename, $display_db_default, $feature_version_default, $external_db_map);
+my ($filename, $display_db_default, $feature_version_default);
+my ($external_db_map, $analysis_name);
+my $skip_unknown_xref_source = 0;
 my $help = 0;
 
 &GetOptions(
@@ -59,6 +63,8 @@ my $help = 0;
   'display_db_default=s'       => \$display_db_default,
   'feature_version_default=i'  => \$feature_version_default,
   'external_db_map=s'          => \$external_db_map,
+  'analysis_name=s'            => \$analysis_name,
+  'skip_unknown_xref_source:i' => \$skip_unknown_xref_source,
   'help|?'                     => \$help,
 ) or pod2usage(-message => "use -help", -verbose => 1);
 pod2usage(-verbose => 2) if $help;
@@ -74,6 +80,7 @@ if (defined $filename) {
 
 # Default db name for the display_xref and synonyms
 $display_db_default //= 'BRC4_Community_Annotation';
+$analysis_name //= 'brc4_import';
 
 my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   -host => $host,
@@ -82,6 +89,13 @@ my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   -port => $port,
   -dbname => $dbname,
 );
+
+
+my $aa       = $dba->get_adaptor('Analysis');
+my $analysis = $aa->fetch_by_logic_name($analysis_name);
+if (! defined $analysis) {
+  die "Analysis '$analysis_name' does not exist in the database.\n";
+}
 
 my $dbea = $dba->get_DBEntryAdaptor;
 
@@ -189,7 +203,12 @@ for my $it (@$data) {
     # Used mapped external db name if it exists
     my $dbname = $xref->{dbname};
     my $mapped_dbname = $extdb_map->{$dbname};
-    $dbname = $mapped_dbname if $mapped_dbname;
+    if ($mapped_dbname) {
+      next if $mapped_dbname eq "_IGNORE_";
+      $dbname = $mapped_dbname;
+    } else {
+      next if $skip_unknown_xref_source;
+    }
 
     my $xref_db_entry = store_xref(
       $dbea,
@@ -197,7 +216,7 @@ for my $it (@$data) {
       $obj->dbID,
       $dbname,
       $xref->{id},
-      $xref->{id},
+      $xref->{display_id} // $xref->{id},
       $add_list,
       $xref->{description},
       $xref->{info_type},
@@ -206,9 +225,13 @@ for my $it (@$data) {
 
     # update 'display_xref' only for the first time or for the $set_display_xref_4
     if (defined $display_xref && $display_xref eq $xref->{id}) {
-      $obj->display_xref($xref_db_entry);
-      $do_update = 1;
-      $stored_xref = $xref->{dbname}.':'.$xref->{id};
+      if ($lc_type eq "gene" || $lc_type eq "transcript") {
+        $obj->display_xref($xref_db_entry);
+        $do_update = 1;
+        $stored_xref = $xref->{dbname}.':'.$xref->{id};
+      } else {
+        warn "not updating display_id for $type (id: \"$id\")\n";
+      }
     }
   }
 
@@ -289,6 +312,7 @@ sub store_xref {
     -description => $description,
     -info_type   => $info_type,
     -info_text   => $info_text,
+    -analysis    => $analysis,
   );
 
   # add synonyms

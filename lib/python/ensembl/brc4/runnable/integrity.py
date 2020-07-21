@@ -214,7 +214,7 @@ class integrity(eHive.BaseRunnable):
             seqs[seq.id] = len(seq.seq)
             
             for feat in seq.features:
-                if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
+                if feat.type in ["gene", "ncRNA_gene", "pseudogene", "transposable_element"]:
                     gene_id = feat.id
                     if ensembl_mode:
                         gene_id = gene_id.replace("gene:", "")
@@ -301,9 +301,9 @@ class integrity(eHive.BaseRunnable):
 
         errors = []
         if len(list1_2) > 0 and (ok != "2in1"):
-            errors.append("%d from the first list only for %s (i.e. %s)" % (len(list1_2), name, list1_2[0]))
+            errors.append("%s: %d from the first list only (i.e. %s)" % (name, len(list1_2),  list1_2[0]))
         if len(list2_1) > 0 and (ok != "1in2"):
-            errors.append("%d from the second list only for %s (i.e. %s)" % (len(list2_1), name, list2_1[0]))
+            errors.append("%s: %d from the second list only (i.e. %s)" % (name, len(list2_1), list2_1[0]))
 
         common_len = 0
         if allowed_len_diff is None:

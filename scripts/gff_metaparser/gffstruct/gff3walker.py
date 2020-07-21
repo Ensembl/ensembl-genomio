@@ -78,7 +78,11 @@ class GFF3Walker:
         # compose gff
         sf_composer.compose(context, out_rec_features)
       # dump gff
-      sf_composer.gff_write(out_rec_features, contig_id = contig.id, contig_len = len(ctg_len), out_file = out_file)
+      sf_composer.gff_write(out_rec_features,
+                            contig_id = contig.id,
+                            contig_len = len(ctg_len),
+                            out_file = out_file,
+                            global_context = context.global_context)
 
 
   def process_feature(self, feat, context):

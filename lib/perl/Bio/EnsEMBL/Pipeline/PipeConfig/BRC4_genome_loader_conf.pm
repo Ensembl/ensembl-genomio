@@ -60,7 +60,9 @@ sub default_options {
     },
     
     # External_db name map file
-    external_db_map => catfile($data_dir, 'external_db_map_default.txt'),
+    external_db_map_name => 'external_db_map_default.txt',
+    external_db_map => catfile($data_dir, $self->o('external_db_map_name')),
+
 
     ############################################
     # Config unlikely to be changed by the user
@@ -96,6 +98,7 @@ sub default_options {
     gff3_gene_types   => [ qw/
         gene pseudogene miRNA_gene ncRNA_gene
         rRNA_gene snoRNA_gene snRNA_gene tRNA_gene
+        transposable_element
       /],
     gff3_mrna_types   => [ qw/
         mRNA transcript pseudogenic_transcript
@@ -103,7 +106,7 @@ sub default_options {
         ncRNA lincRNA lncRNA miRNA pre_miRNA
         RNase_MRP_RNA RNAse_P_RNA rRNA snoRNA
         snRNA sRNA SRP_RNA tRNA scRNA
-        lnc_RNA guide_RNA
+        lnc_RNA guide_RNA transposable_element
       /],
     gff3_exon_types   => [qw/ exon pseudogenic_exon /],
     gff3_cds_types    => [qw/ CDS /],
@@ -132,7 +135,14 @@ sub default_options {
     ignore_final_stops => 0,
 
     # Rename seq_region name in the seq_region table with this attribute
-    seq_name_code => "EBI_seq_region_name"
+    seq_name_code => "EBI_seq_region_name",
+
+    # if loaded from RefSeq(GCF) change seq_region names to GenBank(GCA)
+    swap_gcf_gca => 0,
+
+    # defautl xref display_db
+    xref_display_db_default => 'BRC4_Community_Annotation',
+    xref_load_logic_name => 'brc4_import',
   };
 }
 
@@ -185,6 +195,14 @@ sub pipeline_wide_parameters {
     load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
     no_brc4_stuff => $self->o('no_brc4_stuff'),
     ignore_final_stops => $self->o('ignore_final_stops'),
+
+    swap_gcf_gca => $self->o('swap_gcf_gca'),
+
+    xref_display_db_default => $self->o('xref_display_db_default'),
+    xref_load_logic_name => $self->o('xref_load_logic_name'),
+
+    external_db_map_name => $self->o('external_db_map_name'),
+    external_db_map => $self->o('external_db_map'),
   };
 }
 
@@ -405,6 +423,7 @@ sub pipeline_analyses {
         external_db_map => $self->o('external_db_map'),
         cs_tag_for_ordered => $self->o('cs_tag_for_ordered'),
         no_brc4_stuff => $self->o('no_brc4_stuff'),
+        swap_gcf_gca => $self->o('swap_gcf_gca'),
       },
       -analysis_capacity   => 4,
       -rc_name         => '8GB',
@@ -666,6 +685,8 @@ sub pipeline_analyses {
             . '  --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --dbname #db_name# '
             . '  -json #fann_json_file# '
             . '  #default_feat_v# '
+            . '  #default_db_display# '
+            . '  -analysis_name #xref_load_logic_name# '
             . '  -external_db_map ' . $self->o('external_db_map')
             . '  > #log_path#/stdout '
             . '  2> #log_path#/stderr ',
@@ -673,6 +694,7 @@ sub pipeline_analyses {
         'fann_loader'    => "$scripts_dir/load_fann.pl",
         'fann_json_file' => '#expr( #manifest_data#->{"functional_annotation"} )expr#',
         'default_feat_v' => '#expr( #no_feature_version_defaults# ? "": "-feature_version_default ".#default_feature_version# )expr#',
+        'default_db_display' => '#expr( #xref_display_db_default# ? "-display_db_default ".#xref_display_db_default# : "" )expr#',
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
@@ -779,7 +801,32 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -flow_into => 'Change_seq_region_name',
+      -flow_into => WHEN('#swap_gcf_gca#' => 'Swap_GCF_GCA',
+                    ELSE 'Change_seq_region_name'
+                    ),
+    },
+   
+    {
+      # SWAP GCF TO GCA seq_region names
+      -logic_name => 'Swap_GCF_GCA',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        seq_attrib_name => $self->o('seq_name_code'),
+        sql     => [
+          # depends on the order of INSDC syns if there are few of them,
+          #   which should't so for the new load
+          'UPDATE seq_region sr ' .
+          '  LEFT JOIN seq_region_synonym srs USING(seq_region_id) ' .
+          '  LEFT JOIN external_db edb USING(external_db_id) ' .
+          '  SET sr.name = srs.synonym ' .
+          '  WHERE srs.external_db_id IS NOT NULL ' .
+          '  AND edb.db_name = "INSDC"; ',
+        ],
+      },
+      -analysis_capacity   => 1,
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
     },
 
     {

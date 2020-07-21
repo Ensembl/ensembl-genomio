@@ -5,6 +5,7 @@ import gzip
 import io
 import json
 import os
+import re
 import subprocess as sp
 import sys
 
@@ -39,6 +40,7 @@ class load_sequence_data(eHive.BaseRunnable):
             'external_db_map' : None,
             'cs_tag_for_ordered' : None,
             'no_brc4_stuff' : False,
+            'swap_gcf_gca' : False,
         }
 
 
@@ -451,6 +453,10 @@ class load_sequence_data(eHive.BaseRunnable):
         seen_syns = frozenset(seen_syns_pre)
 
         # load syns from file
+        swap_gcf_gca = self.param("swap_gcf_gca")
+        preferred_sources = frozenset(["INSDC"])
+        if swap_gcf_gca:
+          preferred_sources = frozenset(["INSDC", "RefSeq"])
         new_syns = dict()
         if meta_file:
             with open(meta_file) as mf:
@@ -460,16 +466,30 @@ class load_sequence_data(eHive.BaseRunnable):
                 for e in data:
                     if "synonyms" not in e:
                        continue
-                    es = list(filter(lambda s: s["name"] not in seen_syns, e["synonyms"]))
                     # do we need unversioned syn as well???
                     # Nov 2019: no, we need explicit list
+                    # Jun 2020: yes, but only for the preferred sources (GenBank and RefSeq)
+                    es = []
+                    for s in e["synonyms"]:
+                      # load INSDC and RefSeq synonyms
+                      nm = s["name"]
+                      unv_nm = nm
+                      if s["source"] in preferred_sources:
+                        unv_nm = re.sub(r"\.\d+$", "", nm)
+                        es.append(s)
+                      else:
+                        if nm not in seen_syns: 
+                          es.append(s) 
+                      if unv_nm != nm and unv_nm not in seen_syns:
+                        es.append({"source" : "ensembl_internal_synonym", "name" : unv_nm})
+                      #
                     if len(es) <= 0:
                         continue
                     en = e["name"]
                     eid = en in sr_ids and sr_ids[en] or None
                     if unversioned and eid is None:
                         if en[-2] == ".":
-                            en = en[:-2]
+                            en = re.sub(r"\.\d+$", "", en)
                             eid = en in sr_ids and sr_ids[en] or None
                     if eid is None:
                         raise Exception("Not able to find seq_region for '%s'" % (e["name"]))
@@ -483,7 +503,7 @@ class load_sequence_data(eHive.BaseRunnable):
             extdb_ids = self.get_external_db_ids(ext_db_pfx)
 
             with open(insert_sql_file, "w") as sql:
-                print("insert into seq_region_synonym (seq_region_id, synonym, external_db_id) values", file=sql)
+                print("insert ignore into seq_region_synonym (seq_region_id, synonym, external_db_id) values", file=sql)
                 fst = ""
                 db_map = self.get_external_db_map()
                 for _sr_id, _sr_syn in sum(map(lambda p: [(p[0], s) for s in p[1]], new_syns.items()), [ ]):

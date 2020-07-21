@@ -1,6 +1,5 @@
 from .base import BaseRule
 
-import json
 import re
 import sys
 
@@ -9,21 +8,6 @@ class JsonRule(BaseRule):
   _RULES = BaseRule.RulesType()
   _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_SUB", "_SPLIT", "_NUMVAL"])
   _OUTPUT_FORCE_SUB = False
-  _CTX_PFX="_TECH_JSON_"
-
-  def parse_json(self, *s):
-    data, tech = None, None
-    if not s:
-      return data, tech
-
-    try:
-      raw = json.loads(s[0])
-      data = { k: v for k,v in raw.items() if k not in self._SPECIAL_KEYS }
-      tech = { k: v for k,v in raw.items() if k in self._SPECIAL_KEYS }
-    except:
-      raise Exception("wrong JSON part for rule %s at line %s: %s" % (self.NAME, self._lineno, str(s)))
-
-    return data, tech
 
   def add_actions_ignore(self, tech):
     if not tech or "_IGNORE" not in tech:
@@ -162,6 +146,10 @@ class JsonRule(BaseRule):
         interpolated = interpolated or _interpolated
         if v is not None:
           out[k] = v
+        else:
+          # drop the whole dict, if field is gone
+          if data[k] is not None:
+            return None, True
       if not out:
         out = None
       return out, interpolated
@@ -178,7 +166,7 @@ class JsonRule(BaseRule):
       return out, interpolated
 
     # scalar section
-    v = context.get(data, default = data)
+    v = context.get(data, data)
 
     asplit = self._actions["split"]
     asub = self._actions["sub"]
@@ -197,8 +185,11 @@ class JsonRule(BaseRule):
       for f,t in asub:
         if v:
           v = f.sub(t, v)
-    if amap and v in amap:
-      v = amap[v]
+    if amap:
+      if v in amap:
+        v = amap[v]
+      elif amap.get("_IGNORE_REST"):
+        v = None
     if aignore and v and aignore.search(v) is not None:
       v = None
     if anumval:
@@ -235,6 +226,8 @@ class JsonRule(BaseRule):
     if type(value) == list and _a["key_is_list"] == False:
       # force scalar
       value = ",".join(value)
+    context_data = context.data.copy()
+    context_data["_LEAFVALUE"] = value
 
     itag = None
     data = {}
@@ -246,7 +239,7 @@ class JsonRule(BaseRule):
     if _a["addon"]:
       data.update(_a["addon"])
 
-    data, _ = self.interpolate(data, context)
+    data, _ = self.interpolate(data, context_data)
     if data is None:
       return
 
