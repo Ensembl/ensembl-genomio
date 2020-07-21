@@ -318,7 +318,7 @@ sub add_pseudogenic_transcript {
   my $gff_transcript = $self->infer_transcript($db, $gff_gene);
   
   my $transcript = $self->new_transcript($db, $gff_transcript, $gene);
-  $transcript->stable_id($gene->stable_id);
+  $transcript->stable_id($gene->stable_id) unless $transcript->stable_id;
   
   my @gff_exons = $gff_gene->get_SeqFeatures(@exon_types);
   my $gff_exons;
@@ -915,6 +915,7 @@ sub new_transcript {
   # transposable_element
   } elsif ($gene_type eq 'transposable_element') {
     $biotype = "transposable_element";
+    $stable_id = $gene->stable_id . '-RA' if (!$stable_id && $gene->stable_id);
   
   # Protein coding
   } elsif ($transcript_type eq 'mRNA' or $transcript_type eq "transcript") {
@@ -928,7 +929,7 @@ sub new_transcript {
     # NB: we may need a control of what biotypes are known or not
     $gene->biotype($biotype);
   }
-  
+
   my $transcript = Bio::EnsEMBL::Transcript->new(
     -stable_id     => $stable_id,
     -biotype       => $biotype,
