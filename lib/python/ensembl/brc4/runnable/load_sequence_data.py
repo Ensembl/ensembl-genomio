@@ -81,10 +81,11 @@ class load_sequence_data(eHive.BaseRunnable):
         self.load_seq_data(fasta_clean, agps_pruned, cs_rank, pj(wd, "load"))
 
         # mark all the "contig"s or noagp_cs as being sourced from ENA
-        if agps is None:
-            self.add_contig_ena_attrib(pj(wd, "load", "set_ena"), cs_name = noagps_cs)
-        else:
-            self.add_contig_ena_attrib(pj(wd, "load", "set_ena"))
+        if not self.param_bool("no_contig_ena_attrib"):
+            if agps is None:
+                self.add_contig_ena_attrib(pj(wd, "load", "set_ena"), cs_name = noagps_cs)
+            else:
+                self.add_contig_ena_attrib(pj(wd, "load", "set_ena"))
 
         # unversion scaffold, remove ".\d$" from names if there's a need
         unversion_scaffolds = self.param_bool("unversion_scaffolds")
