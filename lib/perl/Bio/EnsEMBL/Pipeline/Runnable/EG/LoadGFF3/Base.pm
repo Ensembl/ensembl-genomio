@@ -122,7 +122,7 @@ sub set_protein_coding {
     my $protein_coding_transcript = 0;
     
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
-      next if $transcript->biotype ne 'protein_coding' and $gene->biotype ne 'nontranslating_CDS';
+      next if $transcript->biotype ne 'protein_coding' and $transcript->biotype ne 'nontranslating_CDS';
       if ($transcript->translation) {
         if ($transcript->translation->seq =~ /\*/) {
           $self->log_warn("setting biotype to nontranslating_CDS for transcript ", $transcript->stable_id, "\n") if $transcript->biotype ne "nontranslating_CDS";
