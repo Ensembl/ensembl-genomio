@@ -610,6 +610,8 @@ sub pipeline_analyses {
         db_url          => '#dbsrv_url#' . '#db_name#',
         # condition
         has_fasta_peptide => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+        # log
+        loader_log     => $self->o('pipeline_dir') . '/#db_name#/load_gff3/gff3loader.log',
       },
       -max_retry_count   => 0,
       -rc_name    => '15GB',
