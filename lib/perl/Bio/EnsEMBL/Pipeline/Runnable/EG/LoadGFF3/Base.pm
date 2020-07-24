@@ -35,6 +35,9 @@ package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base;
 use strict;
 use warnings;
 
+use File::Basename qw(fileparse);
+use File::Path qw(make_path);
+
 use base ('Bio::EnsEMBL::Hive::Process');
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::Utils::URL qw/ parse /;
@@ -154,6 +157,50 @@ sub url2dba {
     -dbname => $dbp->{dbname},
   );
   return $dba;
+}
+
+# logging methods
+
+sub log {
+  my ($self, @msg) = @_;
+  $self->{_local_log} = [] if (!defined $self->{_local_log});
+  push @{$self->{_local_log}}, join(" ", @msg);
+}
+
+sub log_warning {
+  my ($self, @msg) = @_;
+  $self->log(@msg);
+  $self->warning(@msg);
+}
+
+sub log_warn {
+  my ($self, @msg) = @_;
+  $self->log(@msg);
+  warn(@msg);
+}
+
+sub log_throw {
+  my ($self, @msg) = @_;
+  $self->log(@msg, "dying...");
+  $self->dump_log();
+  $self->throw(@msg);
+}
+
+sub dump_log {
+  my ($self) = @_;
+
+  my $path = $self->param("log");
+  return unless defined $path;
+
+  my ($filename, $dir, undef) = fileparse($path);
+  if (!-e $dir) {
+    make_path($dir) or $self->throw("Failed to create directory '$dir'");
+  }
+
+  open( my $fh, ">", "$path")
+    or die "Can't open > $path: $!";
+  print $fh join("\n", @{ $self->{_local_log} // [] });
+  close($fh)
 }
 
 1;

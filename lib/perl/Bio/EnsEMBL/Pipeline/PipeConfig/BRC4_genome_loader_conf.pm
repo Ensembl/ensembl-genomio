@@ -611,7 +611,7 @@ sub pipeline_analyses {
         # condition
         has_fasta_peptide => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
         # log
-        loader_log     => $self->o('pipeline_dir') . '/#db_name#/load_gff3/gff3loader.log',
+        log             => $self->o('pipeline_dir') . '/#db_name#/load_gff3/gff3loader.log',
       },
       -max_retry_count   => 0,
       -rc_name    => '15GB',
@@ -627,6 +627,7 @@ sub pipeline_analyses {
         logic_name      => $self->o('gff3_load_logic_name'),
         db_url          => '#dbsrv_url#' . '#db_name#',
         protein_fasta_file      => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+        log             => $self->o('pipeline_dir') . '/#db_name#/load_gff3/fix_models.log',
       },
       -max_retry_count   => 0,
       -rc_name    => '15GB',
@@ -642,6 +643,7 @@ sub pipeline_analyses {
         logic_name      => $self->o('gff3_load_logic_name'),
         db_url          => '#dbsrv_url#' . '#db_name#',
         protein_fasta_file      => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+        log             => $self->o('pipeline_dir') . '/#db_name#/load_gff3/apply_seq_edits.log',
       },
       -max_retry_count   => 0,
       -rc_name    => '15GB',

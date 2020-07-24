@@ -36,9 +36,6 @@ use strict;
 use warnings;
 use feature 'say';
 
-use File::Basename qw(fileparse);
-use File::Path qw(make_path);
-
 use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 
 use Bio::DB::SeqFeature::Store;
@@ -776,6 +773,7 @@ sub set_nontranslating_gene {
     if ($protein_coding_transcript) {
       $gene->biotype('protein_coding');
     } elsif ($nontranslating_transcript) {
+      $self->log_warn("Set ".$gene->stable_id." biotype to nontranslating_CDS (from set_nontranslating_gene, there are 'nontranslating_CDS' transcripts)\n");
       $gene->biotype('nontranslating_CDS');
     }
   }
@@ -942,6 +940,7 @@ sub new_transcript {
     $self->log_warn("non-protein_codig: $stable_id\n");
 
     # NB: we may need a control of what biotypes are known or not
+    $self->log_warn("seting biotype to $biotype for non-codig: $stable_id (gene ", $gene->stable_id, ")\n");
     $gene->biotype($biotype);
   }
 
@@ -1077,49 +1076,6 @@ sub sort_coding {
 
 sub sort_genomic {  
   return $a->start <=> $b->start;
-}
-
-sub log {
-  my ($self, @msg) = @_;
-  $self->{_loader_log} = [] if (!defined $self->{_loader_log});
-  push @{$self->{_loader_log}}, join(" ", @msg);
-}
-
-sub log_warning {
-  my ($self, @msg) = @_;
-  $self->log(@msg);
-  $self->warning(@msg);
-}
-
-sub log_warn {
-  my ($self, @msg) = @_;
-  $self->log(@msg);
-  warn(@msg);
-}
-
-
-sub log_throw {
-  my ($self, @msg) = @_;
-  $self->log(@msg, "dying...");
-  $self->dump_log();
-  $self->throw(@msg);
-}
-
-sub dump_log {
-  my ($self) = @_;
-
-  my $path = $self->param("loader_log");
-  return unless defined $path;
-
-  my ($filename, $dir, undef) = fileparse($path);
-  if (!-e $dir) {
-    make_path($dir) or $self->throw("Failed to create directory '$dir'");
-  }
-
-  open( my $fh, ">", "$path")
-    or die "Can't open > $path: $!";
-  print $fh join("\n", @{ $self->{_loader_log} // [] });
-  close($fh)
 }
 
 1;
