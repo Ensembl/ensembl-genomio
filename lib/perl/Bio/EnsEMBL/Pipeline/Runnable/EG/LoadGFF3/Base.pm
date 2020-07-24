@@ -125,9 +125,11 @@ sub set_protein_coding {
       next if $transcript->biotype ne 'protein_coding' and $gene->biotype ne 'nontranslating_CDS';
       if ($transcript->translation) {
         if ($transcript->translation->seq =~ /\*/) {
+          $self->log_warn("setting biotype to nontranslating_CDS for transcript ", $transcript->stable_id, "\n") if $transcript->biotype ne "nontranslating_CDS";
           $transcript->biotype('nontranslating_CDS');
           $nontranslating_transcript++;
         } else {
+          $self->log_warn("setting biotype to protein_coding for transcript ", $transcript->stable_id, "\n")  if $transcript->biotype ne "protein_coding";
           $transcript->biotype('protein_coding');
           $protein_coding_transcript++;
         }
@@ -136,9 +138,11 @@ sub set_protein_coding {
     }
     
     if ($protein_coding_transcript) {
+      $self->log_warn("setting biotype to protein_coding for gene ", $gene->stable_id, "\n") if $gene->biotype ne 'protein_coding';
       $gene->biotype('protein_coding');
       $ga->update($gene);
     } elsif ($nontranslating_transcript) {
+      $self->log_warn("setting biotype to nontranslating_CDS for gene ", $gene->stable_id, "\n") if $gene->biotype ne 'nontranslating_CDS';
       $gene->biotype('nontranslating_CDS');
       $ga->update($gene);
     }
