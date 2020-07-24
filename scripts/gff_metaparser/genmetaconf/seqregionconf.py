@@ -18,14 +18,23 @@ class SeqRegionSyn:
   source: str
 
 @dataclass
+class KaryotypeBand:
+  name: str
+  start: int
+  end: int
+  stain: Optional[str]
+  structure: Optional[str]
+
+@dataclass
 class SeqRegion:
   name: str
   length: int
   coord_system_level: str = "contig"
   location: Optional[str] = None
-  circular : bool = False
+  circular : Optional[bool] = None
   codon_table : Optional[int] = None
   synonyms: List[SeqRegionSyn] = field(default_factory=list)
+  karyotype_bands: List[KaryotypeBand] = field(default_factory=list)
   _rank: Optional[int] = None
 
 def no_nulls_dict(x):
@@ -243,11 +252,25 @@ class SeqRegionConf:
         # updating othewise
         sr_dict = dc.asdict(self.seq_regions[contig], dict_factory = no_nulls_dict)
         updates = {}
-        for tag in "length coord_system_level location circular codon_table".split():
+        tags_to_copy_str = "length coord_system_level location circular codon_table karyotype_bands"
+        for tag in tags_to_copy_str.split():
           val = sr.get(tag)
           if val is None: continue
+          if not val: continue
           if not update_from_new and sr_dict.get(tag) is not None: continue
           updates[tag] = val
+        # update karyotype_bands coloring
+        #sorted([(0,3), (1,2), (2,3)], key = lambda x:(x[1],-x[0])) == [(1, 2), (2, 3), (0, 3)]
+        bands_start_sorted = sorted(
+          updates.get("karyotype_bands", []),
+          key = lambda x: (x["end"], -x["start"])
+        )
+        prev, band_no = None, 0
+        for band in bands_start_sorted:
+          if band.get("stain"): continue # don't increase band_no or change prev
+          if prev and band["start"] <= prev["start"]: continue # same for "metaband"
+          band["stain"] = band_no and "gpos75" or "gpos25"
+          prev, band_no = band, (band_no + 1) % 2
         # synonyms
         raw_syns = sr.get("synonyms")
         if update_syns and raw_syns:
