@@ -76,6 +76,7 @@ sub default_options {
     sr_syn_src_name  => 'ensembl_internal_synonym', # 50803
     division => 'EnsemblMetazoa',
     cs_tag_for_ordered => undef, # add cs_tag attr for sr from assembly.display_chromosome_order
+    no_contig_ena_attrib => 0,
 
     # GenomeTools aliases (from eg-pipelines: Bio::EnsEMBL::EGPipeline::PipeConfig::LoadGFF3_conf)
     gt_exe        => 'gt',
@@ -167,6 +168,7 @@ sub pipeline_wide_parameters {
     sr_syn_src_name  => $self->o('sr_syn_src_name'),
     division    => $self->o('division'),
     cs_tag_for_ordered => $self->o('cs_tag_for_ordered'),
+    no_contig_ena_attrib => $self->o('no_contig_ena_attrib'),
 
     gt_exe        => $self->o('gt_exe'),
     gff3_tidy     => $self->o('gff3_tidy'),
@@ -422,6 +424,7 @@ sub pipeline_analyses {
         sr_syn_src  => $self->o('sr_syn_src_name'),
         external_db_map => $self->o('external_db_map'),
         cs_tag_for_ordered => $self->o('cs_tag_for_ordered'),
+        no_contig_ena_attrib => $self->o('no_contig_ena_attrib'),
         no_brc4_stuff => $self->o('no_brc4_stuff'),
         swap_gcf_gca => $self->o('swap_gcf_gca'),
       },
@@ -607,6 +610,8 @@ sub pipeline_analyses {
         db_url          => '#dbsrv_url#' . '#db_name#',
         # condition
         has_fasta_peptide => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
+        # log
+        loader_log     => $self->o('pipeline_dir') . '/#db_name#/load_gff3/gff3loader.log',
       },
       -max_retry_count   => 0,
       -rc_name    => '15GB',
