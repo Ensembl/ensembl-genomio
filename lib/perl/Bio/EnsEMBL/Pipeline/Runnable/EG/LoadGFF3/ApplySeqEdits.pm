@@ -59,6 +59,8 @@ sub run {
   $self->set_protein_coding($dba, $logic_name);
 
   $dba->dbc->disconnect_if_idle();
+
+  $self->dump_log();
 }
 
 sub seq_edits_from_genbank {
@@ -84,14 +86,14 @@ sub seq_edits_from_genbank {
       
       my ($accession) = $record =~ /^VERSION\s+(\S+)/m;
       my $transcript  = $ta->fetch_by_stable_id($accession);
-      $self->throw("$accession in file, not in database") unless $transcript;
-      #$self->warning($accession);
+      $self->log_throw("$accession in file, not in database") unless $transcript;
+      #$self->log_warning($accession);
       
       my $cdna_seq = $self->extract_seq($record);
       
       # Check that the sequences don't already match before trying anything...
       if ($transcript->seq->seq ne $cdna_seq) {
-        $self->warning('Attempting seq_edits for '.$transcript->stable_id);
+        $self->log_warning('Attempting seq_edits for '.$transcript->stable_id);
         $total_count++;
         
         # Start and end will only be defined if they fall within a seq_edit.
@@ -111,16 +113,16 @@ sub seq_edits_from_genbank {
         
         foreach my $edit (@$edits) {
           my $seq_edit = $self->add_transcript_seq_edit($transcript, @$edit);
-          $self->warning("Adding seq_edit: ".join(' ', @$edit)."\n");
+          $self->log_warning("Adding seq_edit for ", $transcript->stable_id, ": ".join(' ', @$edit)."\n");
           push @attribs, $seq_edit;
         }
         
         if ($transcript->seq->seq eq $cdna_seq) {
-          $self->warning('Storing seq_edits');
+          $self->log_warning('Storing seq_edits for ', $transcript->stable_id);
           $aa->store_on_Transcript($transcript, \@attribs);
           $edit_count++;
         } else {       
-          $self->warning("Not storing seq_edits\nEdited seq:\n".$transcript->seq->seq."\nTarget seq:\n$cdna_seq\n");
+          $self->log_warning("Not storing seq_edits\nEdited seq:\n".$transcript->seq->seq."\nTarget seq:\n$cdna_seq\n");
           
           #my $seq_edit = $self->add_transcript_seq_edit($transcript, 1, $transcript->length, $cdna_seq);
           #$aa->store_on_Transcript($transcript, [$seq_edit]);
@@ -129,7 +131,7 @@ sub seq_edits_from_genbank {
     }
   }
   
-  $self->warning("$edit_count / $total_count seq_edits successful");
+  $self->log_warning("$edit_count / $total_count seq_edits successful");
 }
 
 sub extract_edits {
@@ -245,6 +247,7 @@ sub seq_edits_from_protein {
       my $transcript_length = length($transcript->translateable_seq);
       my $partial_codon = $transcript_length % 3;
       if ($partial_codon && length($file_seq) == length($db_seq) + 1) {
+        $self->log_warning("looping partial last codon for transcript ", $transcript->stable_id, " transaltion ", $translation->stable_id);
         $file_seq =~ s/.$//;
       }
       
@@ -260,13 +263,15 @@ sub seq_edits_from_protein {
             $pos += 1;      
             my $att = $self->add_translation_seq_edit($translation, $pos, $pos, $amino_acid);
             push @atts, $att;
+
+            $self->log_warning("replacing stop codon at $pos with $amino_acid  for transcript ", $transcript->stable_id, " transaltion ", $translation->stable_id);
           }
           
           if ($db_seq eq $file_seq) {
             $aa->store_on_Translation($translation, \@atts);
           }
         } else {
-          $self->warning('Protein sequence length mismatch for '.$translation->stable_id);
+          $self->log_warning('Protein sequence length mismatch for '.$translation->stable_id);
         }
       }
     }

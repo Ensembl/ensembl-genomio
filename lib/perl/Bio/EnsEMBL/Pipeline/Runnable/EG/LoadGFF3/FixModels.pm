@@ -53,6 +53,8 @@ sub run {
   $self->set_protein_coding($dba, $logic_name);
 
   $dba->dbc->disconnect_if_idle();
+
+  $self->dump_log();
 }
 
 sub fix_models {
@@ -86,12 +88,12 @@ sub fix_models {
           my $success = $self->shift_translation($dba, $transcript, $file_seq);
           
           if ($success) {
-            $self->warning('Shifted translation of '.$transcript->stable_id);
+            $self->log_warning('Shifted translation (nontranslating_CDS) of '.$transcript->stable_id);
           } else {
             $success = $self->shift_gene($dba, $transcript, $file_seq);
             
             if ($success) {
-              $self->warning('Shifted position of '.$transcript->stable_id);
+              $self->log_warning('Shifted position (nontranslating_CDS) of '.$transcript->stable_id);
             }
           }
         }
@@ -191,7 +193,7 @@ sub update_gene_position {
     WHERE gene_id = ?;
   ";
   my $sth = $dba->dbc->db_handle->prepare($sql);
-  $sth->execute($dbid) or $self->throw("Failed to execute: $sql");
+  $sth->execute($dbid) or $self->log_throw("Failed to execute: $sql");
 }
 
 1;
