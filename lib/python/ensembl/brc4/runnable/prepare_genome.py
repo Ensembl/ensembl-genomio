@@ -112,6 +112,14 @@ class prepare_genome(eHive.BaseRunnable):
                     taxon_id = genome_sp["taxonomy_id"]
                     scientific_name = self.get_scientific_name(taxon_id)
                     
+                    # Name in bracket means that it may be renamed by the community
+                    # But we don't want those...
+                    if "[" in scientific_name:
+                        scientific_name = scientific_name.replace("[", "").replace("]", "")
+
+                    if "-" in scientific_name:
+                        scientific_name = scientific_name.replace("-", "")
+                    
                     # Only keep the first 2 words
                     split_name = scientific_name.split(" ")
                     genus = split_name[0].lower()
@@ -120,6 +128,13 @@ class prepare_genome(eHive.BaseRunnable):
                     # Special case
                     if species == "sp.":
                         species = "sp"
+                    
+                    # Check for special characters
+                    if not re.match(r"^[a-zA-Z0-9]+$", genus):
+                        raise Exception("The genus has special characters: " + genus)
+                    if re.match(r"^[a-zA-Z0-9]$", species):
+                        raise Exception("The species has special characters: " + species)
+                    print(genus + " " + species)
                     
                     # Production name, with INSDC accession for uniqueness
                     accession = genome["assembly"]["accession"]
