@@ -359,7 +359,8 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '2' => 'CleanUpAndCreateDB',
+        '2->A' => 'CleanUpAndCreateDB',
+        'A->2' => 'Finalize_database',
       },
     },
 
@@ -791,10 +792,18 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 2,
-      -flow_into => 'PopulateAnalysis',
     },
 
     # Finalize database
+    {
+      -logic_name => 'Finalize_database',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        1 => { "PopulateAnalysis" => INPUT_PLUS() }
+      }
+    },
     {
       -logic_name    => "PopulateAnalysis",
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
