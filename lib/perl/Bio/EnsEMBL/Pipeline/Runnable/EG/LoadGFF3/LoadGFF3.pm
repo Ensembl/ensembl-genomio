@@ -815,14 +815,14 @@ sub get_feature_biotype {
   # Get biotype attribute
   my %attr = $feature->attributes();
   my $biotype_attr = $attr{'biotype'} ? $attr{biotype}[0] : undef;
+  $biotype_attr = lc($biotype_attr);
   
   # Replace biotype with the more precise biotype attribute
   if ($biotype_attr) {
     my $known_biotypes = $self->get_db_biotypes();
+    my $mapped_biotype = $known_biotypes->{$biotype_attr};
     
-    if ($known_biotypes->{$biotype_attr}) {
-      return $biotype_attr;
-    }
+    return $mapped_biotype if $mapped_biotype;
   }
 }
 
@@ -832,7 +832,7 @@ sub get_db_biotypes {
   if (not $self->{_known_biotypes}) {
     my $dba = $self->url2dba($self->param_required('db_url'));
     my $ba = $dba->get_adaptor('Biotype');
-    my %biotypes = map { $_->name => 1 } @{$ba->fetch_all()};
+    my %biotypes = map { lc($_->name) => $_->name } @{$ba->fetch_all()};
     $self->{_known_biotypes} = \%biotypes;
   }
   
