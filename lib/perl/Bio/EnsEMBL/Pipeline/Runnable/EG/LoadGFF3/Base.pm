@@ -179,7 +179,7 @@ sub log_warning {
 
 sub log_throw {
   my ($self, $msg) = @_;
-  $self->log($msg + " dying...");
+  $self->log($msg . " dying...");
   $self->dump_log();
   $self->throw($msg);
 }
