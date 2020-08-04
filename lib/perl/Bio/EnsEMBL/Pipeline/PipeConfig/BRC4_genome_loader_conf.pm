@@ -90,7 +90,7 @@ sub default_options {
     # LoadGFF3 params
     load_pseudogene_with_CDS => 1,
     gff3_load_gene_source       => 'EnsemblMetazoa',
-    gff3_load_logic_name        => 'gff3_genes',
+    gff3_load_logic_name        => 'brc4_import',
     #gff3_load_logic_name        => 'refseq_import_visible',
     gff3_load_analysis_module   => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3',
     gff3_load_production_lookup => 1,
