@@ -247,7 +247,7 @@ sub seq_edits_from_protein {
       my $transcript_length = length($transcript->translateable_seq);
       my $partial_codon = $transcript_length % 3;
       if ($partial_codon && length($file_seq) == length($db_seq) + 1) {
-        $self->log_warning("Loping off partial last codon for transcript " . $transcript->stable_id . " translation " . $translation->stable_id);
+        $self->log_warning("WARNING: Loping off partial last codon for transcript " . $transcript->stable_id . " translation " . $translation->stable_id);
         $file_seq =~ s/.$//;
       }
       
@@ -264,14 +264,14 @@ sub seq_edits_from_protein {
             my $att = $self->add_translation_seq_edit($translation, $pos, $pos, $amino_acid);
             push @atts, $att;
 
-            $self->log_warning("replacing stop codon at $pos with $amino_acid  for transcript " . $transcript->stable_id . " translation " . $translation->stable_id);
+            $self->log_warning("WARNING: replacing stop codon at $pos with $amino_acid  for transcript " . $transcript->stable_id . " translation " . $translation->stable_id);
           }
           
           if ($db_seq eq $file_seq) {
             $aa->store_on_Translation($translation, \@atts);
           }
         } else {
-          $self->log_warning('Protein sequence length mismatch for '.$translation->stable_id);
+          $self->log_warning('WARNING: Protein sequence length mismatch for '.$translation->stable_id);
         }
       }
     }

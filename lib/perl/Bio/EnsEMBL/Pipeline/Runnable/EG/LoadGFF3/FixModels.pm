@@ -88,12 +88,12 @@ sub fix_models {
           my $success = $self->shift_translation($dba, $transcript, $file_seq);
           
           if ($success) {
-            $self->log_warning('Shifted translation (nontranslating_CDS) of '.$transcript->stable_id);
+            $self->log_warning('WARNING: Shifted translation (nontranslating_CDS) of '.$transcript->stable_id);
           } else {
             $success = $self->shift_gene($dba, $transcript, $file_seq);
             
             if ($success) {
-              $self->log_warning('Shifted position (nontranslating_CDS) of '.$transcript->stable_id);
+              $self->log_warning('WARNING: Shifted position (nontranslating_CDS) of '.$transcript->stable_id);
             }
           }
         }

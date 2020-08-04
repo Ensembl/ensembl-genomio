@@ -378,7 +378,7 @@ sub add_translation {
     $self->set_exon_phase($transcript);
 
     if (!$transcript->translate()) {
-      $self->log_warning("no translation for transcript " . $transcript->stable_id);
+      $self->log_warning("WARNING: no translation for transcript " . $transcript->stable_id);
       $self->set_nontranslating_transcript($transcript);
     } else {
       my $seq = $transcript->translate()->seq;
@@ -390,24 +390,24 @@ sub add_translation {
         # Only keep whatever is before the first stop codon
         # (it might be an empty string, in which case the translation is empty)
         if ($seq and $seq =~ /\*/) {
-          $self->log_warning("Pseudogene_with_CDS has stop codons: truncating (" . $transcript->stable_id . ")");
+          $self->log_warning("WARNING: Pseudogene_with_CDS has stop codons: truncating (" . $transcript->stable_id . ")");
           my ($seq) = split(/\*/, $seq);
         }
 
         # Change to normal pseudogene if there is no sequence
         if (not $seq or $seq  eq '') {
-          $self->log_warning("Changing biotype from pseudogene_with_CDS to pseudogene for " . $transcript->stable_id);
+          $self->log_warning("WARNING: Changing biotype from pseudogene_with_CDS to pseudogene for " . $transcript->stable_id);
           $transcript->biotype("pseudogene");
           $transcript->translation(undef);
         }
       } elsif (not $seq or $seq eq '' or $seq =~ /\*/) {
-        $self->log_warning("No translation seq or one with the stop for transcript " . $transcript->stable_id .
+        $self->log_warning("WARNING: No translation seq or one with the stop for transcript " . $transcript->stable_id .
                         ": $seq from " . $transcript->translateable_seq());
         $self->set_nontranslating_transcript($transcript);
       }
     }
   } else {
-    $self->log_warning("No translation (genomic start/end) for transcript " . $transcript->stable_id);
+    $self->log_warning("WARNING: No translation (genomic start/end) for transcript " . $transcript->stable_id);
     $self->set_nontranslating_transcript($transcript);
   }
 }
@@ -425,7 +425,7 @@ sub get_stable_id {
     # need to ensure uniqueness ourselves...
     if (exists $$stable_ids{$stable_id}) {
       $stable_id .= '_'.$$stable_ids{$stable_id}++;
-      $self->log_warning("Added suffix to make stable ID unique: $stable_id");
+      $self->log_warning("WARNING: Added suffix to make stable ID unique: $stable_id");
     } else {
       $$stable_ids{$stable_id} = 1;
     }
@@ -483,7 +483,7 @@ sub get_polypeptide {
   my @polypeptides = $db->get_features_by_attribute(Derives_from => $transcript_id);
   if (scalar(@polypeptides)) {
     if (scalar(@polypeptides) > 1) {
-      $self->log_warning("More than one polypeptide defined for $transcript_id. ".
+      $self->log_warning("WARNING: More than one polypeptide defined for $transcript_id. ".
                      "Only the longest will be processed.");
       my @sorted = sort { length($b->seq->seq) <=> length($a->seq->seq) } @polypeptides;
       $polypeptide = $sorted[0];
@@ -743,7 +743,7 @@ sub set_nontranslating_transcript {
   
   $transcript->biotype($nontranslating);
 
-  $self->log_warning("Setting transcript " . $transcript->stable_id . " nontranslating");
+  $self->log_warning("Setting transcript " . $transcript->stable_id . " as nontranslating");
   
   if ($nontranslating ne 'nontranslating_CDS') {
     $transcript->translation(undef);
