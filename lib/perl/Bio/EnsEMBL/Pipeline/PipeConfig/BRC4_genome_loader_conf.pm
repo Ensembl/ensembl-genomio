@@ -90,7 +90,7 @@ sub default_options {
     # LoadGFF3 params
     load_pseudogene_with_CDS => 1,
     gff3_load_gene_source       => 'EnsemblMetazoa',
-    gff3_load_logic_name        => 'gff3_genes',
+    gff3_load_logic_name        => 'brc4_import',
     #gff3_load_logic_name        => 'refseq_import_visible',
     gff3_load_analysis_module   => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3',
     gff3_load_production_lookup => 1,
@@ -319,7 +319,7 @@ sub pipeline_analyses {
         json_file => '#metadata_json#',
         json_schema => '#schemas#',
       },
-      -analysis_capacity => 1,
+      -analysis_capacity => 2,
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
@@ -333,7 +333,7 @@ sub pipeline_analyses {
       -parameters => {
         ignore_final_stops => $self->o('ignore_final_stops'),
       },
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -rc_name         => '8GB',
       -max_retry_count => 0,
       -failed_job_tolerance => 100,
@@ -359,7 +359,8 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '2' => 'CleanUpAndCreateDB',
+        '2->A' => 'CleanUpAndCreateDB',
+        'A->2' => 'Finalize_database',
       },
     },
 
@@ -406,7 +407,7 @@ sub pipeline_analyses {
         'base_dir'       => $self->o('ensembl_root_dir'),
         'dump_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_production_db_tables',
       },
-      -analysis_capacity   => 1,
+      -analysis_capacity   => 2,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => 'LoadSequenceData',
@@ -428,7 +429,7 @@ sub pipeline_analyses {
         no_brc4_stuff => $self->o('no_brc4_stuff'),
         swap_gcf_gca => $self->o('swap_gcf_gca'),
       },
-      -analysis_capacity   => 4,
+      -analysis_capacity   => 10,
       -rc_name         => '8GB',
       -max_retry_count => 0,
       -meadow_type       => 'LSF',
@@ -446,6 +447,7 @@ sub pipeline_analyses {
         copy => { 'assembly.name' => 'assembly.default' },
       },
       -max_retry_count => 0,
+      -analysis_capacity   => 10,
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => 'FillTaxonomy',
@@ -473,7 +475,7 @@ sub pipeline_analyses {
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -flow_into  => WHEN('#has_gff3#' => 'Load_gene_models'),
     },
 
@@ -509,7 +511,7 @@ sub pipeline_analyses {
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -flow_into => 'GFF3Tidy',
     },
 
@@ -526,7 +528,7 @@ sub pipeline_analyses {
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -flow_into => [ 'GFF3Validate' ],
     },
 
@@ -543,7 +545,7 @@ sub pipeline_analyses {
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -flow_into => [ 'DNAFastaGetTopLevel' ],
     },
 
@@ -565,7 +567,7 @@ sub pipeline_analyses {
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -flow_into => 'LoadGFF3AnalysisSetup',
     },
 
@@ -613,10 +615,11 @@ sub pipeline_analyses {
         # log
         log             => $self->o('pipeline_dir') . '/#db_name#/load_gff3/gff3loader.log',
       },
+      -failed_job_tolerance => 10,
       -max_retry_count   => 0,
       -rc_name    => '15GB',
       -meadow_type       => 'LSF',
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -flow_into => WHEN('#has_fasta_peptide#' => [ 'FixModels' ]),
     },
 
@@ -632,7 +635,7 @@ sub pipeline_analyses {
       -max_retry_count   => 0,
       -rc_name    => '15GB',
       -meadow_type       => 'LSF',
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -flow_into => [ 'ApplySeqEdits' ],
     },
 
@@ -648,7 +651,7 @@ sub pipeline_analyses {
       -max_retry_count   => 0,
       -rc_name    => '15GB',
       -meadow_type       => 'LSF',
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -flow_into => [ 'ReportSeqEdits' ],
     },
 
@@ -668,7 +671,7 @@ sub pipeline_analyses {
       -max_retry_count   => 0,
       -rc_name    => '15GB',
       -meadow_type       => 'LSF',
-      -analysis_capacity   => 5,
+      -analysis_capacity   => 10,
       -flow_into => WHEN('#gff3_autoapply_manual_seq_edits#' => [ 'ApplyPatches' ]),
     },
 
@@ -680,6 +683,7 @@ sub pipeline_analyses {
         input_file => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins_fixes.txt',
       },
       -rc_name    => 'default',
+      -analysis_capacity   => 10,
       -meadow_type       => 'LSF',
     },
 
@@ -788,10 +792,18 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -analysis_capacity   => 2,
-      -flow_into => 'PopulateAnalysis',
     },
 
     # Finalize database
+    {
+      -logic_name => 'Finalize_database',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -flow_into  => {
+        1 => { "PopulateAnalysis" => INPUT_PLUS() }
+      }
+    },
     {
       -logic_name    => "PopulateAnalysis",
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',

@@ -62,13 +62,14 @@ sub param_defaults {
     %{$self->SUPER::param_defaults},
     gene_types      => ['gene', 'pseudogene', 'miRNA_gene', 'ncRNA_gene',
                         'rRNA_gene', 'snoRNA_gene', 'snRNA_gene', 'tRNA_gene',
-                        'transposable_element', ],
+                        'transposable_element'],
     mrna_types      => ['mRNA', 'transcript', 'pseudogenic_transcript',
                         'pseudogenic_rRNA', 'pseudogenic_tRNA',
                         'ncRNA', 'lincRNA', 'lncRNA', 'miRNA', 'pre_miRNA',
                         'RNase_MRP_RNA', 'RNAse_P_RNA', 'rRNA', 'snoRNA',
                         'snRNA', 'sRNA', 'SRP_RNA', 'tRNA', 'scRNA', 'guide_RNA',
-                        'transposable_element', ],
+                        'telomerase_RNA', 'antisense_RNA',
+                        'transposable_element'],
     exon_types      => ['exon', 'pseudogenic_exon'],
     cds_types       => ['CDS'],
     utr_types       => ['five_prime_UTR', 'three_prime_UTR'],
@@ -79,7 +80,8 @@ sub param_defaults {
                         'polypeptide', 'protein',
                         'chromosome', 'supercontig', 'contig',
                         'region', 'biological_region',
-                        'regulatory_region', 'repeat_region'],
+                        'regulatory_region', 'repeat_region',
+                        'long_terminal_repeat', 'STS'],
     types_complete  => 1,
     use_name_field  => undef,
     polypeptides    => 1,
@@ -209,11 +211,11 @@ sub set_pseudogene {
 
   if ($num_tr eq ($num_pseudo + $num_pseudo_CDS)) {
     if ($num_pseudo_CDS > 0) {
-      $self->log_warn("Set ".$gene->stable_id." as a pseudogene_with_CDS because all transcripts are pseudogenic and $num_pseudo_CDS/$num_tr are pseudogene_with_CDS\n");
+      $self->log_warning("Set " . $gene->stable_id . " as a pseudogene_with_CDS because all transcripts are pseudogenic and $num_pseudo_CDS/$num_tr are pseudogene_with_CDS");
       $gene->biotype('pseudogene_with_CDS');
       $ga->update($gene);
     } else {
-      $self->log_warn("Set ".$gene->stable_id." as a pseudogene (without CDS) because all transcripts are pseudogenic\n");
+      $self->log_warning("Set " . $gene->stable_id . " as a pseudogene (without CDS) because all transcripts are pseudogenic");
       $gene->biotype('pseudogene');
       $ga->update($gene);
     }
@@ -377,7 +379,7 @@ sub add_translation {
     $self->set_exon_phase($transcript);
 
     if (!$transcript->translate()) {
-      $self->log_warn("no translation for transcript ", $transcript->stable_id, "\n");
+      $self->log_warning("WARNING: no translation for transcript " . $transcript->stable_id);
       $self->set_nontranslating_transcript($transcript);
     } else {
       my $seq = $transcript->translate()->seq;
@@ -389,24 +391,24 @@ sub add_translation {
         # Only keep whatever is before the first stop codon
         # (it might be an empty string, in which case the translation is empty)
         if ($seq and $seq =~ /\*/) {
-          $self->log_warn("Pseudogene_with_CDS has stop codons: truncating (", $transcript->stable_id, ")\n");
+          $self->log_warning("WARNING: Pseudogene_with_CDS has stop codons: truncating (" . $transcript->stable_id . ")");
           my ($seq) = split(/\*/, $seq);
         }
 
         # Change to normal pseudogene if there is no sequence
         if (not $seq or $seq  eq '') {
-          $self->log_warn("changing biotype from pseudogene_with_CDS to pseudogene for", $transcript->stable_id, "\n");
+          $self->log_warning("WARNING: Changing biotype from pseudogene_with_CDS to pseudogene for " . $transcript->stable_id);
           $transcript->biotype("pseudogene");
           $transcript->translation(undef);
         }
       } elsif (not $seq or $seq eq '' or $seq =~ /\*/) {
-        $self->log_warn("no translation seq or one with the stop for transcript ", $transcript->stable_id,
-                        ": $seq from ", $transcript->translateable_seq(),"\n");
+        $self->log_warning("WARNING: No translation seq or one with the stop for transcript " . $transcript->stable_id .
+                        ": $seq from " . $transcript->translateable_seq());
         $self->set_nontranslating_transcript($transcript);
       }
     }
   } else {
-    $self->log_warn("no translation (genomic start/end) for transcript ", $transcript->stable_id, "\n");
+    $self->log_warning("WARNING: No translation (genomic start/end) for transcript " . $transcript->stable_id);
     $self->set_nontranslating_transcript($transcript);
   }
 }
@@ -424,7 +426,7 @@ sub get_stable_id {
     # need to ensure uniqueness ourselves...
     if (exists $$stable_ids{$stable_id}) {
       $stable_id .= '_'.$$stable_ids{$stable_id}++;
-      $self->log_warning("Added suffix to make stable ID unique: $stable_id");
+      $self->log_warning("WARNING: Added suffix to make stable ID unique: $stable_id");
     } else {
       $$stable_ids{$stable_id} = 1;
     }
@@ -482,7 +484,7 @@ sub get_polypeptide {
   my @polypeptides = $db->get_features_by_attribute(Derives_from => $transcript_id);
   if (scalar(@polypeptides)) {
     if (scalar(@polypeptides) > 1) {
-      $self->log_warning("More than one polypeptide defined for $transcript_id. ".
+      $self->log_warning("WARNING: More than one polypeptide defined for $transcript_id. ".
                      "Only the longest will be processed.");
       my @sorted = sort { length($b->seq->seq) <=> length($a->seq->seq) } @polypeptides;
       $polypeptide = $sorted[0];
@@ -742,7 +744,7 @@ sub set_nontranslating_transcript {
   
   $transcript->biotype($nontranslating);
 
-  $self->log_warn("setting transcript ", $transcript->stable_id, " nontranslating\n");
+  $self->log_warning("Setting transcript " . $transcript->stable_id . " as nontranslating");
   
   if ($nontranslating ne 'nontranslating_CDS') {
     $transcript->translation(undef);
@@ -773,7 +775,7 @@ sub set_nontranslating_gene {
     if ($protein_coding_transcript) {
       $gene->biotype('protein_coding');
     } elsif ($nontranslating_transcript) {
-      $self->log_warn("Set ".$gene->stable_id." biotype to nontranslating_CDS (from set_nontranslating_gene, there are 'nontranslating_CDS' transcripts)\n");
+      $self->log_warning("Set " . $gene->stable_id . " biotype to nontranslating_CDS (from set_nontranslating_gene, there are 'nontranslating_CDS' transcripts)");
       $gene->biotype('nontranslating_CDS');
     }
   }
@@ -814,14 +816,14 @@ sub get_feature_biotype {
   # Get biotype attribute
   my %attr = $feature->attributes();
   my $biotype_attr = $attr{'biotype'} ? $attr{biotype}[0] : undef;
+  $biotype_attr = lc($biotype_attr);
   
   # Replace biotype with the more precise biotype attribute
   if ($biotype_attr) {
     my $known_biotypes = $self->get_db_biotypes();
+    my $mapped_biotype = $known_biotypes->{$biotype_attr};
     
-    if ($known_biotypes->{$biotype_attr}) {
-      return $biotype_attr;
-    }
+    return $mapped_biotype if $mapped_biotype;
   }
 }
 
@@ -831,7 +833,7 @@ sub get_db_biotypes {
   if (not $self->{_known_biotypes}) {
     my $dba = $self->url2dba($self->param_required('db_url'));
     my $ba = $dba->get_adaptor('Biotype');
-    my %biotypes = map { $_->name => 1 } @{$ba->fetch_all()};
+    my %biotypes = map { lc($_->name) => $_->name } @{$ba->fetch_all()};
     $self->{_known_biotypes} = \%biotypes;
   }
   
@@ -898,22 +900,22 @@ sub new_transcript {
       my $translatable = defined $translation_id;
 
       if ($translatable and $self->param('load_pseudogene_with_CDS')) {
-        $self->log_warn("Pseudogene has CDSs: $stable_id\n");
+        $self->log_warning("Pseudogene has CDSs: $stable_id");
         $biotype = 'pseudogene_with_CDS';
       } else {
-        $self->log_warn("Pseudogene has no CDS: $stable_id ($transcript_type, $gene_type)\n");
+        $self->log_warning("Pseudogene has no CDS: $stable_id ($transcript_type, $gene_type)");
         $biotype = 'pseudogene';
       }
       
     # Pseudogenic_tRNA
     } elsif ($tr_type eq "tRNA") {
-        $self->log_warn("Pseudogenic tRNA: $stable_id\n");
+        $self->log_warning("Pseudogenic tRNA: $stable_id");
         $biotype = 'tRNA_pseudogene';
         $gene->biotype($biotype);
 
     # Pseudogenic_rRNA
     } elsif ($tr_type eq "pseudogenic_rRNA") {
-        $self->log_warn("Pseudogenic rRNA: $stable_id\n");
+        $self->log_warning("Pseudogenic rRNA: $stable_id");
         $biotype = 'rRNA_pseudogene';
         $gene->biotype($biotype);
     
@@ -926,21 +928,21 @@ sub new_transcript {
   } elsif ($gene_type eq 'transposable_element') {
     $biotype = "transposable_element";
     $stable_id = $gene->stable_id . '-RA' if (!$stable_id && $gene->stable_id);
-    $self->log_warn("transposable_element: $stable_id\n");
+    $self->log_warning("Transposable_element: $stable_id");
   
   # Protein coding
   } elsif ($transcript_type eq 'mRNA' or $transcript_type eq "transcript") {
     $biotype = "protein_coding";
-    $self->log_warn("protein_codig: $stable_id\n");
+    $self->log_warning("Protein_coding: $stable_id");
   
   # Non protein coding
   } else {
     $biotype = $transcript_type;
     $biotype = $self->map_biotype_transcript($biotype, $gff_transcript);
-    $self->log_warn("non-protein_codig: $stable_id\n");
+    $self->log_warning("Non-protein_coding: $stable_id");
 
     # NB: we may need a control of what biotypes are known or not
-    $self->log_warn("seting biotype to $biotype for non-codig: $stable_id (gene ", $gene->stable_id, ")\n");
+    $self->log_warning("Setting biotype to $biotype for non-coding: $stable_id (gene " . $gene->stable_id . ")");
     $gene->biotype($biotype);
   }
 

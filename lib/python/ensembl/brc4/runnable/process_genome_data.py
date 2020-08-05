@@ -25,8 +25,10 @@ class process_genome_data(eHive.BaseRunnable):
         
 
     def run(self):
-        genome_data = self.param('genome_data')
+        genome_json = self.param('genome_json')
         work_dir = self.param('work_dir')
+        
+        genome_data = self.get_json(genome_json)
 
         # Create dedicated work dir
         if not os.path.isdir(work_dir):
@@ -49,6 +51,11 @@ class process_genome_data(eHive.BaseRunnable):
                 "metadata_json": final_path
                 }
         self.dataflow(output, 2)
+    
+    def get_json(self, json_path) -> dict:
+        with open(json_path) as json_file:
+            data = json.load(json_file)
+            return data
     
     def print_json(self, path, data) -> None:
         with open(path, "w") as json_out:

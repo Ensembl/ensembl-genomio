@@ -125,11 +125,11 @@ sub set_protein_coding {
       next if $transcript->biotype ne 'protein_coding' and $transcript->biotype ne 'nontranslating_CDS';
       if ($transcript->translation) {
         if ($transcript->translation->seq =~ /\*/) {
-          $self->log_warn("setting biotype to nontranslating_CDS for transcript ", $transcript->stable_id, "\n") if $transcript->biotype ne "nontranslating_CDS";
+          $self->log_warning("Setting biotype to nontranslating_CDS for transcript " . $transcript->stable_id) if $transcript->biotype ne "nontranslating_CDS";
           $transcript->biotype('nontranslating_CDS');
           $nontranslating_transcript++;
         } else {
-          $self->log_warn("setting biotype to protein_coding for transcript ", $transcript->stable_id, "\n")  if $transcript->biotype ne "protein_coding";
+          $self->log_warning("Setting biotype to protein_coding for transcript " . $transcript->stable_id)  if $transcript->biotype ne "protein_coding";
           $transcript->biotype('protein_coding');
           $protein_coding_transcript++;
         }
@@ -138,11 +138,11 @@ sub set_protein_coding {
     }
     
     if ($protein_coding_transcript) {
-      $self->log_warn("setting biotype to protein_coding for gene ", $gene->stable_id, "\n") if $gene->biotype ne 'protein_coding';
+      $self->log_warning("Setting biotype to protein_coding for gene " . $gene->stable_id) if $gene->biotype ne 'protein_coding';
       $gene->biotype('protein_coding');
       $ga->update($gene);
     } elsif ($nontranslating_transcript) {
-      $self->log_warn("setting biotype to nontranslating_CDS for gene ", $gene->stable_id, "\n") if $gene->biotype ne 'nontranslating_CDS';
+      $self->log_warning("Setting biotype to nontranslating_CDS for gene " . $gene->stable_id) if $gene->biotype ne 'nontranslating_CDS';
       $gene->biotype('nontranslating_CDS');
       $ga->update($gene);
     }
@@ -166,28 +166,22 @@ sub url2dba {
 # logging methods
 
 sub log {
-  my ($self, @msg) = @_;
+  my ($self, $msg) = @_;
   $self->{_local_log} = [] if (!defined $self->{_local_log});
-  push @{$self->{_local_log}}, join(" ", @msg);
+  push @{$self->{_local_log}}, $msg;
 }
 
 sub log_warning {
-  my ($self, @msg) = @_;
-  $self->log(@msg);
-  $self->warning(@msg);
-}
-
-sub log_warn {
-  my ($self, @msg) = @_;
-  $self->log(@msg);
-  warn(@msg);
+  my ($self, $msg) = @_;
+  $self->log($msg);
+  $self->warning($msg);
 }
 
 sub log_throw {
-  my ($self, @msg) = @_;
-  $self->log(@msg, "dying...");
+  my ($self, $msg) = @_;
+  $self->log($msg . " dying...");
   $self->dump_log();
-  $self->throw(@msg);
+  $self->throw($msg);
 }
 
 sub dump_log {
