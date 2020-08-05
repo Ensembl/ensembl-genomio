@@ -35,8 +35,7 @@ sub default_options {
 
     # Basic pipeline configuration
     pipeline_tag => '',
-    pipeline_name => 'brc4_genome_loader_' .
-      $self->o('release') . '_' . $self->o('ensembl_version') . $self->o('pipeline_tag'),
+    pipeline_name => 'brc4_genome_loader' . $self->o('pipeline_tag'),
     email => $ENV{USER} . '@ebi.ac.uk',
 
     # Working directory
