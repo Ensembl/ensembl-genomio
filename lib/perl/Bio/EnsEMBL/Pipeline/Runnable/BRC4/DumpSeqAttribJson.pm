@@ -22,6 +22,7 @@ sub param_defaults {
     },
     allowed_translation_attribs => {
       amino_acid_sub  => "sequence_alteration",
+      initial_met     => "sequence_alteration",
       _selenocysteine => "selenocysteine",
     },
   };
@@ -79,20 +80,21 @@ sub get_transcript_seq_attribs {
   for my $attrib (@$attribs) {
     my $code = $attrib->code;
     if ($allowed_attribs->{$code}) {
-       my %attrib = (
-          object_type => $object_type,
-          object_id   => $transcript->stable_id,
-          seq_attrib_type => $allowed_attribs->{$code},
-        );
+      $code = $allowed_attribs->{$code};
+      my %attrib = (
+        object_type => $object_type,
+        object_id   => $transcript->stable_id,
+        seq_attrib_type => $code,
+      );
       my $attrib_values;
 
       # Get attrib specific values
-      if ($code eq '_rna_edit') {
+      if ($code eq 'sequence_alteration') {
         $attrib_values = $self->format_edit($attrib);
-      } elsif ($code eq '_transl_start' or
-               $code eq '_transl_end') {
+      } elsif ($code eq 'coding_start' or
+               $code eq 'coding_end') {
         $attrib_values = $self->format_position($attrib);
-      } elsif ($code eq 'Frameshift') {
+      } elsif ($code eq 'frameshift') {
         $attrib_values = $self->format_frameshift($attrib);
       }
       die("Could not get attrib values for $code, ".$transcript->stable_id) if not $attrib_values;
@@ -118,17 +120,18 @@ sub get_translation_seq_attribs {
   for my $attrib (@$attribs) {
     my $code = $attrib->code;
     if ($allowed_attribs->{$code}) {
-       my %attrib = (
-          object_type => $object_type,
-          object_id   => $translation->stable_id,
-          seq_attrib_type => $allowed_attribs->{$code},
-        );
+      $code = $allowed_attribs->{$code};
+      my %attrib = (
+        object_type => $object_type,
+        object_id   => $translation->stable_id,
+        seq_attrib_type => $code,
+      );
       my $attrib_values;
 
       # Get attrib specific values
-      if ($code eq 'amino_acid_sub') {
+      if ($code eq 'sequence_alteration') {
         $attrib_values = $self->format_edit($attrib);
-      } elsif ($code eq '_selenocysteine') {
+      } elsif ($code eq 'selenocysteine') {
         $attrib_values = $self->format_position($attrib);
       }
       die("Could not get attrib values for $code, ".$translation->stable_id) if not $attrib_values;
