@@ -73,7 +73,7 @@ sub param_defaults {
     exon_types      => ['exon', 'pseudogenic_exon'],
     cds_types       => ['CDS'],
     utr_types       => ['five_prime_UTR', 'three_prime_UTR'],
-    ignore_types    => ['misc_RNA', 'RNA',
+    ignore_types    => [
                         'match', 'match_part',
                         'sequence_feature',
                         'cDNA_match', 'nucleotide_match', 'protein_match',
@@ -887,6 +887,9 @@ sub new_transcript {
   my $gene_type = $gene->biotype;
   my $transcript_type = $gff_transcript->type;
   $transcript_type =~ s/:.+$//;
+
+  my ($translation_id) = $self->get_cds_id($gff_transcript);
+  my $translatable = defined $translation_id;
   
   # Pseudogene
   if ($gene_type eq 'pseudogene' or $transcript_type =~ /^pseudogenic_/) {
@@ -896,8 +899,6 @@ sub new_transcript {
     # Protein_coding pseudogene: CDS or not?
     if ($tr_type eq "transcript" or $tr_type eq "mRNA") {
       # Check if there is a translation
-      my ($translation_id) = $self->get_cds_id($gff_transcript);
-      my $translatable = defined $translation_id;
 
       if ($translatable and $self->param('load_pseudogene_with_CDS')) {
         $self->log_warning("Pseudogene has CDSs: $stable_id");
@@ -930,8 +931,8 @@ sub new_transcript {
     $stable_id = $gene->stable_id . '-RA' if (!$stable_id && $gene->stable_id);
     $self->log_warning("Transposable_element: $stable_id");
   
-  # Protein coding
-  } elsif ($transcript_type eq 'mRNA' or $transcript_type eq "transcript") {
+  # Protein coding: if there are CDSs, don't rely on the biotype
+  } elsif ($translatable) {
     $biotype = "protein_coding";
     $self->log_warning("Protein_coding: $stable_id");
   
