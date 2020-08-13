@@ -61,6 +61,10 @@ sub default_options {
 	     'email'         => $self->o('ENV', 'USER').'@ebi.ac.uk',
        'output_dir'    => './output',
        'tmp_dir'    => './tmp',
+       
+       # No impact to the final files (so arbritrary value is fine),
+       # but required by the gff3 and fasta dumper from Ensembl production
+       'release' => 50,
       
        # Disable all to be able to select each part separately
        'dump_all' => 1,
@@ -286,7 +290,7 @@ sub pipeline_analyses {
         gene               => $self->o('gene'),
 	      out_file_stem      => $self->o('out_file_stem'),
 	      xrefs              => $self->o('xrefs'),        
-        release  => 50, # Not important for us
+        release  => $self->o('release'),
         },
       -max_retry_count => 0,
        -hive_capacity  => 20,
@@ -310,7 +314,7 @@ sub pipeline_analyses {
         gene               => $self->o('gene'),
 	      out_file_stem      => $self->o('out_file_stem'),
 	      xrefs              => $self->o('xrefs'),        
-        release  => 50, # Not important for us
+        release  => $self->o('release'),
         },
       -max_retry_count => 0,
 	    -hive_capacity  => 20,
