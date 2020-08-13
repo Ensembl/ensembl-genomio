@@ -35,8 +35,7 @@ sub default_options {
 
     # Basic pipeline configuration
     pipeline_tag => '',
-    pipeline_name => 'brc4_genome_loader_' .
-      $self->o('release') . '_' . $self->o('ensembl_version') . $self->o('pipeline_tag'),
+    pipeline_name => 'brc4_genome_loader' . $self->o('pipeline_tag'),
     email => $ENV{USER} . '@ebi.ac.uk',
 
     # Working directory
@@ -62,6 +61,9 @@ sub default_options {
     # External_db name map file
     external_db_map_name => 'external_db_map_default.txt',
     external_db_map => catfile($data_dir, $self->o('external_db_map_name')),
+
+    # Do not load xrefs that we generate ourselves
+    skip_ensembl_xrefs => 1,
 
 
     ############################################
@@ -96,33 +98,6 @@ sub default_options {
     gff3_load_production_lookup => 1,
     # feature types
     gff3_use_polypeptides  => 0, # ignore 'polypeptides' lines !
-    gff3_gene_types   => [ qw/
-        gene pseudogene miRNA_gene ncRNA_gene
-        rRNA_gene snoRNA_gene snRNA_gene tRNA_gene
-        transposable_element
-      /],
-    gff3_mrna_types   => [ qw/
-        mRNA transcript pseudogenic_transcript
-        pseudogenic_rRNA pseudogenic_tRNA
-        ncRNA lincRNA lncRNA miRNA pre_miRNA
-        RNase_MRP_RNA RNAse_P_RNA rRNA snoRNA
-        snRNA sRNA SRP_RNA tRNA scRNA
-        lnc_RNA guide_RNA transposable_element
-      /],
-    gff3_exon_types   => [qw/ exon pseudogenic_exon /],
-    gff3_cds_types    => [qw/ CDS /],
-    gff3_utr_types    => [qw/ five_prime_UTR three_prime_UTR /],
-    gff3_ignore_types => [ qw/
-        misc_RNA RNA
-        match match_part
-        sequence_feature
-        cDNA_match nucleotide_match protein_match
-        polypeptide protein
-        chromosome supercontig contig
-        region biological_region
-        regulatory_region repeat_region
-        golden_path_region intron orthologous_to
-      /],
     gff3_types_complete  => 1,
 
     # genes and transcripts versions
@@ -183,12 +158,6 @@ sub pipeline_wide_parameters {
     gff3_load_production_lookup => $self->o('gff3_load_production_lookup'),
 
     gff3_use_polypeptides => $self->o('gff3_use_polypeptides'),
-    gff3_gene_types => $self->o('gff3_gene_types'),
-    gff3_mrna_types => $self->o('gff3_mrna_types'),
-    gff3_ignore_types => $self->o('gff3_ignore_types'),
-    gff3_exon_types => $self->o('gff3_exon_types'),
-    gff3_cds_types => $self->o('gff3_cds_types'),
-    gff3_utr_types => $self->o('gff3_utr_types'),
     gff3_types_complete => $self->o('gff3_types_complete'),
 
     default_feature_version     => $self->o('default_feature_version'),
@@ -598,15 +567,8 @@ sub pipeline_analyses {
         fasta_file      => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta/toplevel.fasta',
         gene_source     => $self->o('gff3_load_gene_source'),
         logic_name      => $self->o('gff3_load_logic_name'),
-        # feature types
-        gene_types      => $self->o('gff3_gene_types'),
-        mrna_types      => $self->o('gff3_mrna_types'),
-        exon_types      => $self->o('gff3_exon_types'),
-        cds_types       => $self->o('gff3_cds_types'),
-        utr_types       => $self->o('gff3_utr_types'),
-        ignore_types    => $self->o('gff3_ignore_types'),
         types_complete  => $self->o('gff3_types_complete'),
-        polypeptides    => $self->o('gff3_use_polypeptides'), # it's better to ignore ignore 'polypeptides' lines
+        polypeptides    => $self->o('gff3_use_polypeptides'), # it's better to ignore 'polypeptides' lines
         load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
         # dbparams
         db_url          => '#dbsrv_url#' . '#db_name#',
@@ -699,6 +661,7 @@ sub pipeline_analyses {
             . '  #default_db_display# '
             . '  -analysis_name #xref_load_logic_name# '
             . '  -external_db_map ' . $self->o('external_db_map')
+            . '  -skip_ensembl_xrefs ' . $self->o('skip_ensembl_xrefs')
             . '  > #log_path#/stdout '
             . '  2> #log_path#/stderr ',
         'log_path'       => $self->o('pipeline_dir') . '/#db_name#/load_functional_annotation',

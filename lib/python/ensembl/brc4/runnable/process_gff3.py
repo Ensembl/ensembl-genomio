@@ -17,6 +17,7 @@ class process_gff3(eHive.BaseRunnable):
                 "transcript_types" : ("transcript", "mRNA", "pseudogenic_transcript", "tRNA", "pseudogenic_tRNA", "rRNA"),
                 "ignored_types" : ("region", "gap"),
                 "ncRNA_gene_types" : ("tRNA", "rRNA"),
+                "skip_unrecognized" : False
                 }
         
 
@@ -59,6 +60,7 @@ class process_gff3(eHive.BaseRunnable):
         allowed_transcript_types = self.param("transcript_types")
         ignored_types = self.param("ignored_types")
         ncRNA_gene_types = self.param("ncRNA_gene_types")
+        skip_unrecognized = self.param("skip_unrecognized")
         
         functional_annotation = []
         
@@ -72,7 +74,6 @@ class process_gff3(eHive.BaseRunnable):
                     
                     # GENES
                     for gene in record.features:
-                        print(gene.type)
                         
                         if gene.type in ignored_types:
                             continue
@@ -80,7 +81,6 @@ class process_gff3(eHive.BaseRunnable):
                         if gene.type in ncRNA_gene_types:
                             # Transcript-level gene: add a gene parent
                             gene = self.ncrna_gene(gene)
-                            print(gene)
                             
                         if gene.type in allowed_gene_types:
                             
@@ -108,10 +108,17 @@ class process_gff3(eHive.BaseRunnable):
                                 self.normalize_pseudogene_cds(gene)
 
                             # TRANSCRIPTS
+                            transcripts_to_delete = []
                             for count, transcript in enumerate(gene.sub_features):
 
                                 if transcript.type not in allowed_transcript_types:
-                                    raise Exception("Unrecognized transcript type: %s for %s" % (transcript.type, transcript.id))
+                                    message = "Unrecognized transcript type: %s for %s" % (transcript.type, transcript.id)
+                                    if skip_unrecognized:
+                                        print(message)
+                                        transcripts_to_delete.append(count)
+                                        continue
+                                    else:
+                                        raise Exception(message)
 
                                 # New transcript ID
                                 transcript_number = count + 1
@@ -131,7 +138,8 @@ class process_gff3(eHive.BaseRunnable):
 
                                 # EXONS AND CDS
                                 cds_found = False
-                                for count, feat in enumerate(transcript.sub_features):
+                                exons_to_delete = []
+                                for tcount, feat in enumerate(transcript.sub_features):
                                     
                                     if feat.type == "exon":
                                         # Replace qualifiers
@@ -158,12 +166,31 @@ class process_gff3(eHive.BaseRunnable):
                                                 "source" : feat.qualifiers["source"]
                                                 }
                                     else:
-                                        raise Exception("Unrecognized exon type: %s" % exon.type)
+                                        message = "Unrecognized exon type: %s" % exon.type
+                                        if skip_unrecognized:
+                                            print(message)
+                                            exons_to_delete.append(tcount)
+                                            continue
+                                        else:
+                                            raise Exception(message)
+                                
+                                if exons_to_delete:
+                                    for elt in sorted(exons_to_delete, reverse=True):
+                                        transcript.sub_features.pop(elt)
+                            
+                            if transcripts_to_delete:
+                                for elt in sorted(transcripts_to_delete, reverse=True):
+                                    gene.sub_features.pop(elt)
                                     
                         else:
-                            print(gene)
-                            raise Exception("Unrecognized gene type: %s" % gene.type)
-                    
+                            message = "Unrecognized gene type: %s" % gene.type
+                            if skip_unrecognized:
+                                print(message)
+                                del gene
+                                continue
+                            else:
+                                raise Exception(message)
+
                         new_record.features.append(gene)
                     new_records.append(new_record)
                 

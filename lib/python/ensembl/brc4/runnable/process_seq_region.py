@@ -51,6 +51,9 @@ class process_seq_region(eHive.BaseRunnable):
         report_regions = self.get_report_regions(report_path)
         gbff_regions = self.get_gbff_regions(gbff_path)
         seq_regions = self.merge_regions(report_regions, gbff_regions)
+        
+        # Setup the BRC4_seq_region_name
+        self.add_brc4_ebi_name(seq_regions)
 
         # Guess translation table
         self.guess_translation_table(seq_regions)
@@ -75,6 +78,20 @@ class process_seq_region(eHive.BaseRunnable):
         for seqr in seq_regions:
             if "location" in seqr and seqr["location"] in location_codon:
                 seqr["codon_table"] = location_codon[seqr["location"]]
+
+    def add_brc4_ebi_name(self, seq_regions) -> None:
+        """
+        Use INSDC name without version as default BRC4 and EBI names
+        """
+        
+        for seqr in seq_regions:
+            if "synonyms" in seqr:
+                for syn in seqr["synonyms"]:
+                    if syn["source"] == "INSDC":
+                        insdc_name = syn["name"]
+                        flat_name, dot, version = insdc_name.partition(".")
+                        seqr["BRC4_seq_region_name"] = flat_name
+                        seqr["EBI_seq_region_name"] = flat_name
 
     def get_mitochondrial_codon_table(self, seq_regions, tax_id) -> None:
         """

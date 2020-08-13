@@ -57,11 +57,14 @@ sub default_options {
 
 	   ## General parameters
        'registry'      => $self->o('registry'),   
-       'release'       => $self->o('release'),
        'pipeline_name' => "brc4_genome_dumper",
 	     'email'         => $self->o('ENV', 'USER').'@ebi.ac.uk',
        'output_dir'    => './output',
        'tmp_dir'    => './tmp',
+       
+       # No impact to the final files (so arbritrary value is fine),
+       # but required by the gff3 and fasta dumper from Ensembl production
+       'release' => 50,
       
        # Disable all to be able to select each part separately
        'dump_all' => 1,
@@ -169,7 +172,6 @@ sub pipeline_wide_parameters {
 		    'pipeline_name' => $self->o('pipeline_name'), #This must be defined for the beekeeper to work properly
             'base_path'     => $self->o('tmp_dir'),
             'output_dir'     => $self->o('output_dir'),
-            'release'       => $self->o('release'),
             'do_fasta_dna'      => $self->o('do_fasta_dna'),
             'do_fasta_pep'      => $self->o('do_fasta_pep'),
             'do_gff'      => $self->o('do_gff'),
@@ -288,6 +290,7 @@ sub pipeline_analyses {
         gene               => $self->o('gene'),
 	      out_file_stem      => $self->o('out_file_stem'),
 	      xrefs              => $self->o('xrefs'),        
+        release  => $self->o('release'),
         },
       -max_retry_count => 0,
        -hive_capacity  => 20,
@@ -311,6 +314,7 @@ sub pipeline_analyses {
         gene               => $self->o('gene'),
 	      out_file_stem      => $self->o('out_file_stem'),
 	      xrefs              => $self->o('xrefs'),        
+        release  => $self->o('release'),
         },
       -max_retry_count => 0,
 	    -hive_capacity  => 20,
