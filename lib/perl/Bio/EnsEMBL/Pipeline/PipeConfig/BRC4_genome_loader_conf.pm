@@ -62,6 +62,9 @@ sub default_options {
     external_db_map_name => 'external_db_map_default.txt',
     external_db_map => catfile($data_dir, $self->o('external_db_map_name')),
 
+    # Do not load xrefs that we generate ourselves
+    skip_ensembl_xrefs => 1,
+
 
     ############################################
     # Config unlikely to be changed by the user
@@ -658,6 +661,7 @@ sub pipeline_analyses {
             . '  #default_db_display# '
             . '  -analysis_name #xref_load_logic_name# '
             . '  -external_db_map ' . $self->o('external_db_map')
+            . '  -skip_ensembl_xrefs ' . $self->o('skip_ensembl_xrefs')
             . '  > #log_path#/stdout '
             . '  2> #log_path#/stderr ',
         'log_path'       => $self->o('pipeline_dir') . '/#db_name#/load_functional_annotation',
