@@ -363,6 +363,9 @@ class load_sequence_data(eHive.BaseRunnable):
         insert_sql_file = log_pfx + "_insert_karyotype_bands.sql"
         if len(id_val_lst) <= 0:
             return
+        _skip_list = set([_sr_id for _sr_id, _val in id_val_lst if not _val])
+        if len(id_val_lst) == len(_skip_list):
+           return
         with open(insert_sql_file, "w") as sql:
             print("insert into karyotype (seq_region_id, seq_region_start, seq_region_end, band, stain) values", file=sql)
             sep = ""
