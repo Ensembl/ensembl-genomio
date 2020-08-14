@@ -8,7 +8,7 @@ import os
 import sys
 
 from collections import defaultdict
-from os.path import dirname, join as pj
+from os.path import abspath, dirname, join as pj
 
 from Bio import SeqIO # type: ignore
 
@@ -39,6 +39,11 @@ class MetaConf:
       if rest:
         out[tag.strip()].append(rest[0].rstrip())
         self._order[tag.strip()] = len(self._order) # use the last rank for multi keys
+    # adding raw file path
+    meta_file_raw = abspath(tsv.name)
+    self.tech_data["META_FILE_RAW"].append(meta_file_raw.rstrip())
+    self._order["META_FILE_RAW"] = len(self._order) # use the last rank for multi keys
+
 
   def dump(self, out):
     for k, vals in sorted(self.tech_data.items(), key=lambda x: x[0]):
