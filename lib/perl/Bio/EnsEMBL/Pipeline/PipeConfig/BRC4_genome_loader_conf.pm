@@ -38,6 +38,10 @@ sub default_options {
     pipeline_name => 'brc4_genome_loader' . $self->o('pipeline_tag'),
     email => $ENV{USER} . '@ebi.ac.uk',
 
+    # Registry must contain the production db and taxonomy db
+    # as well as the newly created dbs (e.g. via a prefix)
+    registry      => $self->o('registry'),
+
     # Working directory
     pipeline_dir => 'genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
 
@@ -133,7 +137,6 @@ sub pipeline_wide_parameters {
     pipeline_dir   => $self->o('pipeline_dir'),
     ensembl_root_dir => $self->o('ensembl_root_dir'),
 
-    proddb_url   => $self->o('proddb_url'),
     taxonomy_url => $self->o('taxonomy_url'),
     dbsrv_url    => $self->o('dbsrv_url'),
 
@@ -196,6 +199,14 @@ sub hive_meta_table {
   };
 }
 
+# Override the default method, to force an automatic loading of the registry in all workers
+sub beekeeper_extra_cmdline_options {
+  my ($self) = @_;
+  return 
+      ' -reg_conf ' . $self->o('registry'),
+  ;
+}
+
 sub pipeline_analyses {
   my ($self) = @_;
 
@@ -221,7 +232,6 @@ sub pipeline_analyses {
       -parameters => {
         db_urls => {
           dbsrv    => '#dbsrv_url#',
-          proddb   => '#proddb_url#',
           taxonomy => '#taxonomy_url#',
         },
       },
@@ -347,7 +357,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
-      -flow_into => { 1 => { 'LoadDBSchema' => INPUT_PLUS() } },
+      -flow_into => 'LoadDBSchema',
     },
 
     {
@@ -360,26 +370,20 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
-      -flow_into  => 'PopulateProductionTables',
+      -flow_into  => 'PopulateControlledTables',
     },
-
+    
     {
-      -logic_name    => "PopulateProductionTables",
-      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-      -parameters  => {
-        'cmd' => 'mkdir -p #dump_path#; ' .
-          ' perl #base_dir#/ensembl-production/scripts/production_database/populate_production_db_tables.pl '
-            . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --database #db_name# '
-            . ' --mhost #proddb_host# --mport #proddb_port# --muser #proddb_user# --mdatabase #proddb_dbname# '
-            . ' --dumppath #dump_path# --dropbaks '
-            . ' > #dump_path#/stdout 2> #dump_path#/stderr ',
-        'base_dir'       => $self->o('ensembl_root_dir'),
-        'dump_path' => $self->o('pipeline_dir') . '/#db_name#/create_core/fill_production_db_tables',
+      -logic_name        => 'PopulateControlledTables',
+      -module            => 'Bio::EnsEMBL::Production::Pipeline::ProductionDBSync::PopulateControlledTables',
+      -parameters => {
+        species => '#expr( #genome_data#->{"species"}->{"production_name"} )expr#',
+        group => 'core',
       },
-      -analysis_capacity   => 2,
+      -analysis_capacity => 2,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
-      -flow_into  => 'LoadSequenceData',
+      -max_retry_count   => 0,
+      -flow_into         => ['LoadSequenceData']
     },
 
     {
@@ -548,7 +552,6 @@ sub pipeline_analyses {
         module             => $self->o('gff3_load_analysis_module'),
         db_url             => '#dbsrv_url#' . '#db_name#',
         production_lookup  => $self->o('gff3_load_production_lookup'),
-        prodb_url          => '#proddb_url#',
         delete_existing    => 1,
       },
       -rc_name    => 'default',
@@ -763,26 +766,19 @@ sub pipeline_analyses {
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -flow_into  => {
-        1 => { "PopulateAnalysis" => INPUT_PLUS() }
-      }
+      -flow_into  => "PopulateAnalysis",
     },
+
     {
-      -logic_name    => "PopulateAnalysis",
-      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-      -parameters  => {
-        'cmd' => 'mkdir -p #dump_path#;'
-            . ' perl #base_dir#/ensembl-production/scripts/production_database/populate_analysis_description.pl '
-            . ' --host #dbsrv_host# --port #dbsrv_port# --user #dbsrv_user# --pass #dbsrv_pass# --database #db_name# '
-            . ' --mhost #proddb_host# --mport #proddb_port# --muser #proddb_user# --mdatabase #proddb_dbname# '
-            . ' --dumppath #dump_path#'
-            . ' --dropbak',
-        'base_dir'       => $self->o('ensembl_root_dir'),
-        'dump_path' => $self->o('pipeline_dir') . '/#db_name#/fill_production_analysis',
+      -logic_name        => 'PopulateAnalysis',
+      -module            => 'Bio::EnsEMBL::Production::Pipeline::ProductionDBSync::PopulateAnalysisDescription',
+      -parameters => {
+        species => '#expr( #genome_data#->{"species"}->{"production_name"} )expr#',
+        group => 'core',
       },
-      -analysis_capacity   => 1,
+      -analysis_capacity => 2,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
+      -max_retry_count   => 0,
       -flow_into => WHEN('#swap_gcf_gca#' => 'Swap_GCF_GCA',
                     ELSE 'Change_seq_region_name'
                     ),
