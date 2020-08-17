@@ -38,7 +38,8 @@ use warnings;
 use File::Basename qw(fileparse);
 use File::Path qw(make_path);
 
-use base ('Bio::EnsEMBL::Hive::Process');
+#use base ('Bio::EnsEMBL::Hive::Process');
+use base ('Bio::EnsEMBL::Production::Pipeline::Common::Base');
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::Utils::URL qw/ parse /;
 

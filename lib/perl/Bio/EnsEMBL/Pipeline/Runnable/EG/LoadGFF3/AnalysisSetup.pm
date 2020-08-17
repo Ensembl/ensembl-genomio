@@ -67,7 +67,6 @@ sub param_defaults {
     module             => undef,
     db_url             => undef,
     production_lookup  => 1,
-    proddb_url         => undef,
     # aux
     delete_existing    => 0,
     logic_rename       => undef,
@@ -157,7 +156,7 @@ sub create_analysis {
 sub production_updates {
   my ($self) = @_;
   my $logic_name = $self->param('logic_name');
-  my $dba        = $self->url2dba($self->param_required('proddb_url'));
+  my $dba        = $self->production_dba();
   my $dbc        = $dba->dbc;
   my $dbh        = $dbc->db_handle();
   my %properties;
