@@ -190,7 +190,8 @@ for my $it (@$data) {
   my @xrefs = ( @$xrefs_raw, map { { id => $_, dbname => substr($_, 0, 2) } } @$ont );
 
   # Add display_xref to xrefs if it is not there
-  if ($display_xref and not grep { $_->{id} eq $display_xref } @xrefs) {
+  my @display_xref_list = grep { $_->{id} eq $display_xref || ($_->{display_id} && $_->{display_id} eq $display_xref) } @xrefs;
+  if ($display_xref && !@display_xref_list) {
     my $dxref = {
       id => $display_xref,
       dbname => $display_db_default,
@@ -212,7 +213,7 @@ for my $it (@$data) {
     #  or to the first seen xref
     my $attach_syns = 0;
     if (defined $display_xref) {
-      $attach_syns = $display_xref eq $xref->{id};
+      $attach_syns = $display_xref eq $xref->{id} || ($xref->{display_id} && $xref->{display_id} eq $display_xref);
     } else {
       $attach_syns = !$already_used;
       $already_used = 1;
@@ -247,7 +248,7 @@ for my $it (@$data) {
     );
 
     # update 'display_xref' only for the first time or for the $set_display_xref_4
-    if (defined $display_xref && $display_xref eq $xref->{id}) {
+    if ( defined $display_xref && ( $display_xref eq $xref->{id} || $xref->{display_id} && $xref->{display_id} eq $display_xref ) ) {
       if ($lc_type eq "gene" || $lc_type eq "transcript") {
         $obj->display_xref($xref_db_entry);
         $do_update = 1;
