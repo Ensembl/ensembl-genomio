@@ -357,7 +357,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
-      -flow_into => { 1 => { 'LoadDBSchema' => INPUT_PLUS() } },
+      -flow_into => 'LoadDBSchema',
     },
 
     {
@@ -766,9 +766,7 @@ sub pipeline_analyses {
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
-      -flow_into  => {
-        1 => { "PopulateAnalysis" => INPUT_PLUS() }
-      }
+      -flow_into  => "PopulateAnalysis",
     },
 
     {
