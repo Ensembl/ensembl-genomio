@@ -38,6 +38,10 @@ sub default_options {
     pipeline_name => 'brc4_genome_loader' . $self->o('pipeline_tag'),
     email => $ENV{USER} . '@ebi.ac.uk',
 
+    # Registry must contain the production db and taxonomy db
+    # as well as the newly created dbs (e.g. via a prefix)
+    registry      => $self->o('registry'),
+
     # Working directory
     pipeline_dir => 'genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
 
@@ -194,6 +198,14 @@ sub hive_meta_table {
     %{$self->SUPER::hive_meta_table},
     'hive_use_param_stack'  => 1,
   };
+}
+
+# Override the default method, to force an automatic loading of the registry in all workers
+sub beekeeper_extra_cmdline_options {
+  my ($self) = @_;
+  return 
+      ' -reg_conf ' . $self->o('registry'),
+  ;
 }
 
 sub pipeline_analyses {
