@@ -370,6 +370,23 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
+      -flow_into  => 'FillMetadata',
+    },
+
+    {
+      -logic_name => 'FillMetadata',
+      -module     => 'ensembl.brc4.runnable.fill_metadata',
+      -language => 'python3',
+      -parameters        => {
+        work_dir => $self->o('pipeline_dir') . '/#db_name#/fill_metadata',
+        division => $self->o('division'),
+        ignore => [ qw/ assembly.version / ],
+        copy => { 'assembly.name' => 'assembly.default' },
+      },
+      -max_retry_count => 0,
+      -analysis_capacity   => 10,
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
       -flow_into  => 'PopulateControlledTables',
     },
     
@@ -405,23 +422,6 @@ sub pipeline_analyses {
       -analysis_capacity   => 10,
       -rc_name         => '8GB',
       -max_retry_count => 0,
-      -meadow_type       => 'LSF',
-      -flow_into  => 'FillMetadata',
-    },
-
-    {
-      -logic_name => 'FillMetadata',
-      -module     => 'ensembl.brc4.runnable.fill_metadata',
-      -language => 'python3',
-      -parameters        => {
-        work_dir => $self->o('pipeline_dir') . '/#db_name#/fill_metadata',
-        division => $self->o('division'),
-        ignore => [ qw/ assembly.version / ],
-        copy => { 'assembly.name' => 'assembly.default' },
-      },
-      -max_retry_count => 0,
-      -analysis_capacity   => 10,
-      -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => 'FillTaxonomy',
     },
