@@ -102,10 +102,6 @@ class process_gff3(eHive.BaseRunnable):
                                 print("Insert transcript-exon for %s (%d CDSs)" % (gene.id, len(gene.sub_features)))
                                 transcript = self.gene_to_cds(gene)
                                 gene.sub_features = [transcript]
-                            
-                            # PSEUDOGENE CDS IDs
-                            if gene.type == "pseudogene":
-                                self.normalize_pseudogene_cds(gene)
 
                             # TRANSCRIPTS
                             transcripts_to_delete = []
@@ -152,6 +148,8 @@ class process_gff3(eHive.BaseRunnable):
                                     elif feat.type == "CDS":
                                         # New CDS ID
                                         feat.id = self.normalize_cds_id(feat.id)
+                                        if feat.id == "":
+                                            feat.id = "%s_cds" % transcript.id
                                         
                                         # Store CDS functional annotation (only once)
                                         if not cds_found:
@@ -181,6 +179,11 @@ class process_gff3(eHive.BaseRunnable):
                             if transcripts_to_delete:
                                 for elt in sorted(transcripts_to_delete, reverse=True):
                                     gene.sub_features.pop(elt)
+
+                            
+                            # PSEUDOGENE CDS IDs
+                            if gene.type == "pseudogene":
+                                self.normalize_pseudogene_cds(gene)
                                     
                         else:
                             message = "Unrecognized gene type: %s" % gene.type
@@ -268,21 +271,33 @@ class process_gff3(eHive.BaseRunnable):
         return transcript_id
 
     def normalize_cds_id(self, cds_id) -> str:
-        """Remove any unnecessary prefixes around the CDS ID"""
+        """
+        Check the CDS ID is proper:
+        - Remove any unnecessary prefixes around the CDS ID
+        - Delete the ID if it is not proper
+        """
 
         prefixes = ("cds-", "cds:")
         cds_id = self.remove_prefixes(cds_id, prefixes)
+
+        # Special case: if the ID doesn't look like one, remove it
+        if re.match("^...\|", cds_id):
+            cds_id = ""
+        
         return cds_id
     
     def normalize_pseudogene_cds(self, gene):
-        """Ensure CDS from a pseudogene have a different ID"""
+        """Ensure CDS from a pseudogene have a proper ID
+        - different from the gene
+        - derived from the gene if it is not proper
+        """
 
         for transcript in gene.sub_features:
             for feat in transcript.sub_features:
                 if feat.type == "CDS":
                     feat.id = self.normalize_cds_id(feat.id)
-                    if gene.id == feat.id:
-                        feat.id = "%s_cds" % gene.id
+                    if feat.id == "" or gene.id == feat.id:
+                        feat.id = "%s_cds" % transcript.id
                         feat.qualifiers["ID"] = feat.id
     
     def make_transcript_id(self, gene_id, transcript_number) -> str:
