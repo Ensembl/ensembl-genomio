@@ -49,7 +49,9 @@ use Bio::EnsEMBL::Transcript;
 use Bio::EnsEMBL::Translation;
 
 my $biotype_map = {
-  gene => {},
+  gene => {
+    lnc_RNA => 'lncRNA',
+  },
   transcript => {
     lnc_RNA => 'lncRNA',
   },
@@ -131,9 +133,16 @@ sub check_db {
   my @ignore_types   = @{ $self->param_required('ignore_types') };
   my $types_complete = $self->param_required('types_complete');
   
+  # append source types from $biotype_map
+  my @biotype_map_source_types = ();
+  for my $feature_type (keys %$biotype_map) {
+    push @biotype_map_source_types, keys %{$biotype_map->{$feature_type}};
+  }
+  @biotype_map_source_types = keys %{{ map {$_ => 1} @biotype_map_source_types }};
+
   my %all_types =
     map {lc($_) => 1}
-    (@gene_types, @mrna_types, @exon_types, @cds_types, @utr_types, @ignore_types);
+    (@gene_types, @mrna_types, @exon_types, @cds_types, @utr_types, @ignore_types, @biotype_map_source_types);
   
   my @type_list = $db->types;
   my @types = map {$_->method} @type_list;
