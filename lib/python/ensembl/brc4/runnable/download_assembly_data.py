@@ -101,18 +101,19 @@ class download_assembly_data(eHive.BaseRunnable):
         """
         Given an INSDC accession, download all available files from the ftp to the download dir
         """
-        match = re.match("GC[AF]_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
-        part1 = match.group(1)
-        part2 = match.group(2)
-        part3 = match.group(3)
-        version = match.group(4)
-        parts = (part1, part2, part3)
+        match = re.match("(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+        gca = match.group(1)
+        part1 = match.group(2)
+        part2 = match.group(3)
+        part3 = match.group(4)
+        version = match.group(5)
+        parts = (gca, part1, part2, part3)
 
         # Get the list of assemblies for this accession
         f = ftplib.FTP()
         f.connect("ftp.ncbi.nlm.nih.gov")
         f.login()
-        f.cwd("genomes/all/GCA/%s/%s/%s" % parts)
+        f.cwd("genomes/all/%s/%s/%s/%s" % parts)
 
         files = []
         for (ftp_dir, entry) in f.mlsd():
