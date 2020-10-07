@@ -824,11 +824,11 @@ sub get_feature_biotype {
   
   # Get biotype attribute
   my %attr = $feature->attributes();
-  my $biotype_attr = $attr{'biotype'} ? $attr{biotype}[0] : undef;
-  $biotype_attr = lc($biotype_attr);
+  my $biotype_attr = $attr{'biotype'} ? $attr{biotype}->[0] : undef;
   
   # Replace biotype with the more precise biotype attribute
   if ($biotype_attr) {
+    $biotype_attr = lc($biotype_attr);
     my $known_biotypes = $self->get_db_biotypes();
     my $mapped_biotype = $known_biotypes->{$biotype_attr};
     
