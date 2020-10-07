@@ -51,11 +51,18 @@ use Bio::EnsEMBL::Translation;
 my $biotype_map = {
   gene => {
     lnc_RNA => 'lncRNA',
+    misc_RNA => 'ncRNA',
+    ncRNA_gene => 'ncRNA',
   },
   transcript => {
     lnc_RNA => 'lncRNA',
+    mRNA => 'ncRNA',
+    misc_RNA => 'ncRNA',
   },
 };
+
+# use to force transfer biotypes from transcripts to genes, see `sub new_transcript`
+my $transfer_biotype_tr2gene = {};
 
 sub param_defaults {
   my ($self) = @_;
@@ -67,7 +74,8 @@ sub param_defaults {
                         'transposable_element'],
     mrna_types      => ['mRNA', 'transcript', 'misc_RNA', 'RNA',
                         'pseudogenic_transcript', 'pseudogenic_rRNA', 'pseudogenic_tRNA',
-                        'ncRNA', 'lincRNA', 'lncRNA', 'miRNA', 'pre_miRNA',
+                        'ncRNA', 'lincRNA', 'miRNA', 'pre_miRNA',
+                        'lncRNA', 'lnc_RNA',
                         'RNase_MRP_RNA', 'RNAse_P_RNA', 'rRNA', 'snoRNA',
                         'snRNA', 'sRNA', 'SRP_RNA', 'tRNA', 'scRNA', 'guide_RNA',
                         'telomerase_RNA', 'antisense_RNA',
@@ -824,11 +832,11 @@ sub get_feature_biotype {
   
   # Get biotype attribute
   my %attr = $feature->attributes();
-  my $biotype_attr = $attr{'biotype'} ? $attr{biotype}[0] : undef;
-  $biotype_attr = lc($biotype_attr);
+  my $biotype_attr = $attr{'biotype'} ? $attr{biotype}->[0] : undef;
   
   # Replace biotype with the more precise biotype attribute
   if ($biotype_attr) {
+    $biotype_attr = lc($biotype_attr);
     my $known_biotypes = $self->get_db_biotypes();
     my $mapped_biotype = $known_biotypes->{$biotype_attr};
     
@@ -843,6 +851,16 @@ sub get_db_biotypes {
     my $dba = $self->url2dba($self->param_required('db_url'));
     my $ba = $dba->get_adaptor('Biotype');
     my %biotypes = map { lc($_->name) => $_->name } @{$ba->fetch_all()};
+
+    # add biotypes from map
+    for my $feature_type (keys %$biotype_map) {
+      for my $bt (keys %{$biotype_map->{$feature_type}}) {
+        my $bt_lc = lc($bt);
+        # biotypes from db has higher priorities
+        $biotypes{$bt_lc} = $biotype_map->{$feature_type}->{$bt} if (!exists $biotypes{$bt_lc});
+      }
+    }
+
     $self->{_known_biotypes} = \%biotypes;
   }
   
@@ -883,6 +901,8 @@ sub new_gene {
   
   $self->add_xrefs($gff_gene, $analysis, $gene, 'gene');
   
+  $self->log_warning("Adding new gene: stable_id $stable_id biotype $biotype");
+  
   return $gene;
 }
 
@@ -897,8 +917,12 @@ sub new_transcript {
   my $transcript_type = $gff_transcript->type;
   $transcript_type =~ s/:.+$//;
 
+  # NB: do not to convert biotypes at this stage, as it will change mRNA to the ncRNA
+
   my ($translation_id) = $self->get_cds_id($gff_transcript);
   my $translatable = defined $translation_id;
+
+  $self->log_warning("Preparing new transcript [raw data]: stable_id $stable_id biotype $transcript_type gene stable_id " . $gene->stable_id . " gene_type $gene_type");
   
   # Pseudogene
   if ($gene_type eq 'pseudogene' or $transcript_type =~ /^pseudogenic_/) {
@@ -952,8 +976,14 @@ sub new_transcript {
     $self->log_warning("Non-protein_coding: $stable_id");
 
     # NB: we may need a control of what biotypes are known or not
-    $self->log_warning("Setting biotype to $biotype for non-coding: $stable_id (gene " . $gene->stable_id . ")");
-    $gene->biotype($biotype);
+    # there's a healthcheck: genes have at least one transcript with a matching biotype group
+    #    see: ensembl-datacheck/lib/Bio/EnsEMBL/DataCheck/Checks/GeneBiotypes.pm
+    if (exists $transfer_biotype_tr2gene->{$biotype} || !$gene_type || lc($gene_type) eq "protein_coding") {
+      $self->log_warning("Setting biotype to $biotype for non-coding: $stable_id (gene " . $gene->stable_id . ")");
+      $gene->biotype($biotype);
+    } else {
+      $self->log_warning("Not updating biotype to $biotype for non-coding: $stable_id (gene " . $gene->stable_id . " gene type " . $gene_type . ")");
+    }
   }
 
   my $transcript = Bio::EnsEMBL::Transcript->new(
@@ -972,6 +1002,8 @@ sub new_transcript {
   
   $self->add_xrefs($gff_transcript, $transcript->analysis, $transcript, 'transcript');
   
+  $self->log_warning("Adding new transcript: stable_id $stable_id biotype $biotype gene stable_id " . $gene->stable_id . " gene biotype " . $gene->biotype);
+
   return $transcript;
 }
 
