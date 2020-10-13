@@ -80,7 +80,7 @@ sub default_options {
         'do_seq_reg' => $self->o('dump_all'),
 
       # Other dumps
-       'sql_dir' => undef,
+       'sql_dir' => "",
 
 	   ## 'job_factory' parameters
 	   'species'     => [], 
