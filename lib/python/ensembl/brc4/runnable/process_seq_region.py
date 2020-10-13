@@ -48,7 +48,6 @@ class process_seq_region(eHive.BaseRunnable):
         final_path = os.path.join(work_dir, new_file_name)
         
         use_refseq = self.param('accession').startswith("GCF_")
-        print("Use refseq: %s" % str(use_refseq))
 
         # Get seq_regions data from report and gff3, and merge them
         report_regions = self.get_report_regions(report_path, use_refseq)
@@ -56,7 +55,7 @@ class process_seq_region(eHive.BaseRunnable):
         seq_regions = self.merge_regions(report_regions, gbff_regions)
         
         # Setup the BRC4_seq_region_name
-        self.add_brc4_ebi_name(seq_regions, use_refseq)
+        self.add_brc4_ebi_name(seq_regions)
 
         # Guess translation table
         self.guess_translation_table(seq_regions)
@@ -82,13 +81,12 @@ class process_seq_region(eHive.BaseRunnable):
             if "location" in seqr and seqr["location"] in location_codon:
                 seqr["codon_table"] = location_codon[seqr["location"]]
 
-    def add_brc4_ebi_name(self, seq_regions, use_refseq) -> None:
+    def add_brc4_ebi_name(self, seq_regions) -> None:
         """
         Use INSDC or RefSeq name without version as default BRC4 and EBI names
         """
         
         source = "INSDC"
-        if use_refseq: source = "RefSeq"
         
         for seqr in seq_regions:
             if "synonyms" in seqr:
@@ -98,6 +96,8 @@ class process_seq_region(eHive.BaseRunnable):
                         flat_name, dot, version = insdc_name.partition(".")
                         seqr["BRC4_seq_region_name"] = flat_name
                         seqr["EBI_seq_region_name"] = flat_name
+            if not "BRC4_seq_region_name" in seqr:
+                raise Exception("Can't get INSDC id for sequence %s" % seqr["name"])
 
     def get_mitochondrial_codon_table(self, seq_regions, tax_id) -> None:
         """
@@ -147,18 +147,17 @@ class process_seq_region(eHive.BaseRunnable):
         names2 = frozenset(regions2)
         all_names = names1.union(names2)
 
-        only2 = names2.difference(names1)
-        if only2: print("There are %d sequences only in collection 2" % len(only2))
-        
         # Create the seq_regions, merge if needed
         seq_regions = []
         for name in all_names:
+            
             seqr1 = None
             seqr2 = None
             if name in names1:
                 seqr1 = regions1[name]
             if name in names2:
                 seqr2 = regions2[name]
+            
             if seqr1 and seqr2:
                 merged_seqr = {**seqr1, **seqr2}
                 seq_regions.append(merged_seqr)
@@ -196,11 +195,29 @@ class process_seq_region(eHive.BaseRunnable):
                 if codon_table:
                     seqr["codon_table"] = codon_table
                 
+                # Is there a comment stating the Genbank record this is based on?
+                genbank_id = self.get_genbank_from_comment(record)
+                if genbank_id:
+                    seqr["synonyms"] = [{ "source": "INSDC", "name": genbank_id}]
+                
                 # Store the seq_region
                 if seqr:
                     seq_regions[record.id] = seqr
-
+                    
         return seq_regions
+    
+    def get_genbank_from_comment(self, record) -> str:
+        """
+        Given a genbank record, find a Genbank ID in the comment (if refseq)
+        """
+        comment = record.annotations["comment"]
+        comment = re.sub("[ \n\r]+", " ", comment)
+
+        match = re.search("The reference sequence was derived from ([^\.]+)\.", comment)
+        if match:
+            return match.group(1)
+        else:
+            return
     
     def get_codon_table(self, record) -> int:
         """
@@ -270,12 +287,13 @@ class process_seq_region(eHive.BaseRunnable):
             if "RefSeq-Accn" in row:
                 seq_region["name"] = row["RefSeq-Accn"]
             else:
-                print("No RefSeq name for %s" % row["Sequence-Name"])
+                raise Exception("No RefSeq name for %s" % row["Sequence-Name"])
+            
         else:
-            if "INSDC" in row["GenBank-Accn"]:
+            if "GenBank-Acc" in row:
                 seq_region["name"] = row["GenBank-Accn"]
             else:
-                print("No INSDC name for %s" % row["Sequence-Name"])
+                raise Exception("No INSDC name for %s" % row["Sequence-Name"])
         
         # Coord system and location
         seq_role = row["Sequence-Role"]
