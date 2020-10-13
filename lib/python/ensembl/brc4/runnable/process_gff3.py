@@ -14,8 +14,24 @@ class process_gff3(eHive.BaseRunnable):
     def param_defaults(self):
         return {
                 "gene_types" : ("gene", "ncRNA_gene", "pseudogene"),
-                "transcript_types" : ("transcript", "mRNA", "pseudogenic_transcript", "tRNA", "pseudogenic_tRNA", "rRNA"),
-                "ignored_types" : ("region", "gap"),
+                "transcript_types" : (
+                    "transcript",
+                    "mRNA",
+                    "pseudogenic_transcript",
+                    "tRNA",
+                    "pseudogenic_tRNA",
+                    "rRNA",
+                    "lnc_RNA",
+                    "snoRNA",
+                    "snRNA",
+                    ),
+                "ignored_types" : (
+                    "region",
+                    "gap",
+                    "sequence_feature",
+                    "repeat_region",
+                    "cDNA_match"
+                    ),
                 "ncRNA_gene_types" : ("tRNA", "rRNA"),
                 "skip_unrecognized" : False
                 }
