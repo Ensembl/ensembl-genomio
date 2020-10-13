@@ -85,6 +85,8 @@ class process_gff3(eHive.BaseRunnable):
                 gff = GFF.parse(gff3_in)
                 
                 new_records = []
+                fail_types = {}
+                
                 for record in gff:
                     new_record = SeqRecord(record.seq, id=record.id)
                     
@@ -124,13 +126,12 @@ class process_gff3(eHive.BaseRunnable):
                             for count, transcript in enumerate(gene.sub_features):
 
                                 if transcript.type not in allowed_transcript_types:
+                                    fail_types[transcript.type] = 1
                                     message = "Unrecognized transcript type: %s for %s" % (transcript.type, transcript.id)
+                                    print(message)
                                     if skip_unrecognized:
-                                        print(message)
                                         transcripts_to_delete.append(count)
                                         continue
-                                    else:
-                                        raise Exception(message)
 
                                 # New transcript ID
                                 transcript_number = count + 1
@@ -180,13 +181,12 @@ class process_gff3(eHive.BaseRunnable):
                                                 "source" : feat.qualifiers["source"]
                                                 }
                                     else:
+                                        fail_types[feat.type] = 1
                                         message = "Unrecognized exon type: %s" % exon.type
+                                        print(message)
                                         if skip_unrecognized:
-                                            print(message)
                                             exons_to_delete.append(tcount)
                                             continue
-                                        else:
-                                            raise Exception(message)
                                 
                                 if exons_to_delete:
                                     for elt in sorted(exons_to_delete, reverse=True):
@@ -202,16 +202,17 @@ class process_gff3(eHive.BaseRunnable):
                                 self.normalize_pseudogene_cds(gene)
                                     
                         else:
+                            fail_types[gene.type] = 1
                             message = "Unrecognized gene type: %s" % gene.type
+                            print(message)
                             if skip_unrecognized:
-                                print(message)
                                 del gene
                                 continue
-                            else:
-                                raise Exception(message)
 
                         new_record.features.append(gene)
                     new_records.append(new_record)
+                
+                if fail_types and not skip_unrecognized: raise Exception("Unrecognized types found (%s): fail" % (" ".join(fail_types.keys())))
                 
                 GFF.write(new_records, gff3_out)
         
