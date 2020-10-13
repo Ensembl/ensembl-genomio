@@ -79,14 +79,33 @@ class prepare_genome(eHive.BaseRunnable):
 
     def make_db_name(self, genome):
         
-        production_name = self.make_production_name(genome)
+        prod_name = self.make_production_name(genome)
         ensembl_version = str(self.param_required("ensembl_version"))
         release = str(self.param_required("release"))
         assembly_version = str(self.get_assembly_version(genome))
         db_prefix = self.param('db_prefix')
 
+        # Check the db name is shorter than the limit: reduce it to "Genus sp"
+        db_prod_name = prod_name
+        max_prod_length = 64 - len("core") - len(str(release)) - len(str(ensembl_version)) - len(str(assembly_version)) - 4
+        if db_prefix:
+            max_prod_length = max_prod_length - len(db_prefix) - 1
+        if len(db_prod_name) > max_prod_length:
+            print("DB name is too long! Trying to shorten it...")
+            (genus_str, species_str, gca_str) = db_prod_name.split("_")
+            db_prod_name = "_".join([genus_str, "sp", gca_str])
+
+            # Still too long? Die
+            if len(db_prod_name) > max_prod_length:
+                raise Exception("Can't use the db name for %s (len = %d, max = %d)" % (db_prod_name, len(db_prod_name), max_prod_length))
+            else:
+                prod_name = db_prod_name
+            
+        # Store this production name
+        genome["species"]["production_name"] = prod_name
+
         name_parts = [
-                production_name,
+                prod_name,
                 "core",
                 release,
                 ensembl_version,
@@ -111,6 +130,11 @@ class prepare_genome(eHive.BaseRunnable):
                 if "taxonomy_id" in genome_sp:
                     taxon_id = genome_sp["taxonomy_id"]
                     scientific_name = self.get_scientific_name(taxon_id)
+
+                    # If what we get is not a species name (only 1 word), use the input name
+                    if " " not in scientific_name:
+                        print("Use input scientific name")
+                        scientific_name = genome_sp["scientific_name"]
                     
                     # Name in bracket means that it may be renamed by the community
                     # But we don't want those...
@@ -123,7 +147,7 @@ class prepare_genome(eHive.BaseRunnable):
                     # Only keep the first 2 words
                     split_name = scientific_name.split(" ")
                     genus = split_name[0].lower()
-                    species = split_name[1]
+                    species = split_name[1].lower()
                     
                     # Special case
                     if species == "sp.":
@@ -143,7 +167,6 @@ class prepare_genome(eHive.BaseRunnable):
                     accession = re.sub("\.\d+$", "", accession).replace("_", "")
                     accession = accession.lower()
                     prod_name = genus + "_" + species + "_" + accession
-                    genome["species"]["production_name"] = prod_name
                 else:
                     raise Exception("Can't find taxonomy id for genome: %s" % genome)
             return prod_name
