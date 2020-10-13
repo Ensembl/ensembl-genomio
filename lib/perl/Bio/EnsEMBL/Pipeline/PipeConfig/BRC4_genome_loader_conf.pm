@@ -399,7 +399,7 @@ sub pipeline_analyses {
       },
       -analysis_capacity => 2,
       -rc_name    => 'default',
-      -max_retry_count   => 0,
+      -max_retry_count   => 3,
       -flow_into         => ['LoadSequenceData']
     },
 
