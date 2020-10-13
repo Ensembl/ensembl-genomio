@@ -121,6 +121,12 @@ class process_gff3(eHive.BaseRunnable):
                                 transcript = self.gene_to_cds(gene)
                                 gene.sub_features = [transcript]
 
+                            # Transform gene - exon to gene-transcript-exon
+                            if gene.sub_features[0].type == "exon":
+                                print("Insert transcript for %s (%d exons)" % (gene.id, len(gene.sub_features)))
+                                transcript = self.gene_to_exon(gene)
+                                gene.sub_features = [transcript]
+
                             # TRANSCRIPTS
                             transcripts_to_delete = []
                             for count, transcript in enumerate(gene.sub_features):
@@ -242,6 +248,18 @@ class process_gff3(eHive.BaseRunnable):
             exon.qualifiers["source"] = gene.qualifiers["source"]
             transcript.sub_features.append(exon)
             transcript.sub_features.append(cds)
+        
+        return transcript
+        
+    def gene_to_exon(self, gene):
+        """Create a transcript - exon chain"""
+        
+        transcript = SeqFeature(gene.location, type="mRNA")
+        transcript.qualifiers["source"] = gene.qualifiers["source"]
+        transcript.sub_features = []
+
+        for exon in gene.sub_features:
+            transcript.sub_features.append(exon)
         
         return transcript
         
