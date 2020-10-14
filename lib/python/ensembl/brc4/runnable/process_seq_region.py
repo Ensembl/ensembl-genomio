@@ -12,7 +12,7 @@ class process_seq_region(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {
-
+                "brc4_mode": True,
                 "synonym_map" : {
                     "Sequence-Name" : "INSDC_submitted_name",
                     "GenBank-Accn" : "INSDC",
@@ -37,6 +37,7 @@ class process_seq_region(eHive.BaseRunnable):
         work_dir = self.param('work_dir')
         report_path = self.param('report')
         gbff_path = self.param('gbff')
+        brc4_mode = self.param('brc4_mode')
 
         # Create dedicated work dir
         if not os.path.isdir(work_dir):
@@ -55,7 +56,7 @@ class process_seq_region(eHive.BaseRunnable):
         seq_regions = self.merge_regions(report_regions, gbff_regions)
         
         # Setup the BRC4_seq_region_name
-        self.add_brc4_ebi_name(seq_regions)
+        if brc4_mode: self.add_brc4_ebi_name(seq_regions)
 
         # Guess translation table
         self.guess_translation_table(seq_regions)
@@ -83,7 +84,7 @@ class process_seq_region(eHive.BaseRunnable):
 
     def add_brc4_ebi_name(self, seq_regions) -> None:
         """
-        Use INSDC or RefSeq name without version as default BRC4 and EBI names
+        Use INSDC name without version as default BRC4 and EBI names
         """
         
         source = "INSDC"
@@ -96,6 +97,7 @@ class process_seq_region(eHive.BaseRunnable):
                         flat_name, dot, version = insdc_name.partition(".")
                         seqr["BRC4_seq_region_name"] = flat_name
                         seqr["EBI_seq_region_name"] = flat_name
+
             if not "BRC4_seq_region_name" in seqr:
                 raise Exception("Can't get INSDC id for sequence %s" % seqr["name"])
 
