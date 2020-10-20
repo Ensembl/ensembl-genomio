@@ -39,7 +39,7 @@ class load_sequence_data(eHive.BaseRunnable):
             'noagp_cs_name_default' : 'primary_assembly',
             'external_db_map' : None,
             'cs_tag_for_ordered' : None,
-            'no_brc4_stuff' : False,
+            'brc4_mode' : True,
             'swap_gcf_gca' : False,
         }
 
@@ -97,8 +97,7 @@ class load_sequence_data(eHive.BaseRunnable):
         self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
         # add seq_region EBI and BRC4 names
-        no_brc4_stuff = self.param("no_brc4_stuff")
-        if not no_brc4_stuff:
+        if self.param("brc4_mode"):
           self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversion_scaffolds)
 
         # add seq_region attributes and karyotype info

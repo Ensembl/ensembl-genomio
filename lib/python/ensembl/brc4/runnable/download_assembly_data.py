@@ -7,6 +7,13 @@ import ftplib
 import hashlib
 
 class download_assembly_data(eHive.BaseRunnable):
+    
+    def param_defaults(self):
+        return {
+            # Set this manually to a higher value if you want to allow assembly versions
+            # higher than the one provided (it will fail if the version given is not the latest)
+            "max_increment" : 0,
+        }
 
     def run(self):
         accession = self.param_required('accession')
@@ -16,13 +23,26 @@ class download_assembly_data(eHive.BaseRunnable):
         if not os.path.isdir(download_dir):
             os.makedirs(download_dir)
 
-        # Download if files dont' exist or fail checksum
+        # Download if files don't exist or fail checksum
         if not self.md5_files(download_dir):
             print("Download the files")
-            self.download_files(accession, download_dir)
+            
+            max_increment = self.param('max_increment')
+
+            for increment in range(0, max_increment + 1):
+                if increment > 0:
+                    print("Increment accession version once from %s" % accession)
+                    version = int(accession[-1])
+                    version += 1
+                    accession = accession[:-1] + str(version)
+                try:
+                    self.download_files(accession, download_dir)
+                    break
+                except:
+                    print("Can't download files for %s" % accession)
             if not self.md5_files(download_dir):
                 raise Exception("Failed md5sum of downloaded files")
-        
+
         # Select specific files and give them a name
         files = self.get_files_selection(download_dir)
 
@@ -101,18 +121,19 @@ class download_assembly_data(eHive.BaseRunnable):
         """
         Given an INSDC accession, download all available files from the ftp to the download dir
         """
-        match = re.match("GC[AF]_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
-        part1 = match.group(1)
-        part2 = match.group(2)
-        part3 = match.group(3)
-        version = match.group(4)
-        parts = (part1, part2, part3)
+        match = re.match("(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+        gca = match.group(1)
+        part1 = match.group(2)
+        part2 = match.group(3)
+        part3 = match.group(4)
+        version = match.group(5)
+        parts = (gca, part1, part2, part3)
 
         # Get the list of assemblies for this accession
         f = ftplib.FTP()
         f.connect("ftp.ncbi.nlm.nih.gov")
         f.login()
-        f.cwd("genomes/all/GCA/%s/%s/%s" % parts)
+        f.cwd("genomes/all/%s/%s/%s/%s" % parts)
 
         files = []
         for (ftp_dir, entry) in f.mlsd():
@@ -156,7 +177,8 @@ class download_assembly_data(eHive.BaseRunnable):
 
         for dl_file in os.listdir(dl_dir):
             for end, name in file_ends.items():
-                if dl_file == root_name + end:
+                file_with_end = dl_file.endswith(end) and not dl_file.endswith("_from_" + end)
+                if root_name and dl_file == root_name + end or file_with_end:
                     files[name] = os.path.join(dl_dir, dl_file)
         return files
 

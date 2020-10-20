@@ -12,7 +12,7 @@ class process_seq_region(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {
-
+                "brc4_mode": True,
                 "synonym_map" : {
                     "Sequence-Name" : "INSDC_submitted_name",
                     "GenBank-Accn" : "INSDC",
@@ -37,6 +37,7 @@ class process_seq_region(eHive.BaseRunnable):
         work_dir = self.param('work_dir')
         report_path = self.param('report')
         gbff_path = self.param('gbff')
+        brc4_mode = self.param('brc4_mode')
 
         # Create dedicated work dir
         if not os.path.isdir(work_dir):
@@ -46,14 +47,16 @@ class process_seq_region(eHive.BaseRunnable):
         metadata_type = "seq_region"
         new_file_name = metadata_type + ".json"
         final_path = os.path.join(work_dir, new_file_name)
+        
+        use_refseq = self.param('accession').startswith("GCF_")
 
         # Get seq_regions data from report and gff3, and merge them
-        report_regions = self.get_report_regions(report_path)
+        report_regions = self.get_report_regions(report_path, use_refseq)
         gbff_regions = self.get_gbff_regions(gbff_path)
         seq_regions = self.merge_regions(report_regions, gbff_regions)
         
         # Setup the BRC4_seq_region_name
-        self.add_brc4_ebi_name(seq_regions)
+        if brc4_mode: self.add_brc4_ebi_name(seq_regions)
 
         # Guess translation table
         self.guess_translation_table(seq_regions)
@@ -84,14 +87,19 @@ class process_seq_region(eHive.BaseRunnable):
         Use INSDC name without version as default BRC4 and EBI names
         """
         
+        source = "INSDC"
+        
         for seqr in seq_regions:
             if "synonyms" in seqr:
                 for syn in seqr["synonyms"]:
-                    if syn["source"] == "INSDC":
+                    if syn["source"] == source:
                         insdc_name = syn["name"]
                         flat_name, dot, version = insdc_name.partition(".")
                         seqr["BRC4_seq_region_name"] = flat_name
                         seqr["EBI_seq_region_name"] = flat_name
+
+            if not "BRC4_seq_region_name" in seqr:
+                raise Exception("Can't get INSDC id for sequence %s" % seqr["name"])
 
     def get_mitochondrial_codon_table(self, seq_regions, tax_id) -> None:
         """
@@ -140,16 +148,18 @@ class process_seq_region(eHive.BaseRunnable):
         names1 = frozenset(regions1)
         names2 = frozenset(regions2)
         all_names = names1.union(names2)
-        
+
         # Create the seq_regions, merge if needed
         seq_regions = []
         for name in all_names:
+            
             seqr1 = None
             seqr2 = None
             if name in names1:
                 seqr1 = regions1[name]
             if name in names2:
                 seqr2 = regions2[name]
+            
             if seqr1 and seqr2:
                 merged_seqr = {**seqr1, **seqr2}
                 seq_regions.append(merged_seqr)
@@ -187,11 +197,29 @@ class process_seq_region(eHive.BaseRunnable):
                 if codon_table:
                     seqr["codon_table"] = codon_table
                 
+                # Is there a comment stating the Genbank record this is based on?
+                genbank_id = self.get_genbank_from_comment(record)
+                if genbank_id:
+                    seqr["synonyms"] = [{ "source": "INSDC", "name": genbank_id}]
+                
                 # Store the seq_region
                 if seqr:
                     seq_regions[record.id] = seqr
-
+                    
         return seq_regions
+    
+    def get_genbank_from_comment(self, record) -> str:
+        """
+        Given a genbank record, find a Genbank ID in the comment (if refseq)
+        """
+        comment = record.annotations["comment"]
+        comment = re.sub("[ \n\r]+", " ", comment)
+
+        match = re.search("The reference sequence was derived from ([^\.]+)\.", comment)
+        if match:
+            return match.group(1)
+        else:
+            return
     
     def get_codon_table(self, record) -> int:
         """
@@ -204,7 +232,7 @@ class process_seq_region(eHive.BaseRunnable):
         
         return
 
-    def get_report_regions(self, report_path) -> dict:
+    def get_report_regions(self, report_path, use_refseq) -> dict:
         """
         Get seq_region data from report file
         Return a dict of seq_regions, with their name as the key
@@ -224,12 +252,13 @@ class process_seq_region(eHive.BaseRunnable):
         # Create the seq_regions
         seq_regions = {}
         for row in reader:
-            seq_region = self.make_seq_region(row, assembly_level)
-            seq_regions[seq_region["name"]] = seq_region
+            seq_region = self.make_seq_region(row, assembly_level, use_refseq)
+            name = seq_region["name"]
+            seq_regions[name] = seq_region
         
         return seq_regions
     
-    def make_seq_region(self, row, assembly_level) -> dict:
+    def make_seq_region(self, row, assembly_level, use_refseq) -> dict:
         """
         From a row of the report, create one seq_region
         Return a seq_region dict
@@ -256,11 +285,17 @@ class process_seq_region(eHive.BaseRunnable):
         if field in row and row[field].lower() != "na":
             seq_region[name] = int(row[field])
         
-        # Name
-        field = "GenBank-Accn"
-        name = "name"
-        if field in row and row[field].lower() != "na":
-            seq_region[name] = row[field]
+        if use_refseq:
+            if "RefSeq-Accn" in row:
+                seq_region["name"] = row["RefSeq-Accn"]
+            else:
+                raise Exception("No RefSeq name for %s" % row["Sequence-Name"])
+            
+        else:
+            if "GenBank-Acc" in row:
+                seq_region["name"] = row["GenBank-Accn"]
+            else:
+                raise Exception("No INSDC name for %s" % row["Sequence-Name"])
         
         # Coord system and location
         seq_role = row["Sequence-Role"]

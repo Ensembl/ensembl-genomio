@@ -108,8 +108,8 @@ sub default_options {
     default_feature_version => 1,
     no_feature_version_defaults => 0,
 
-    # disable brc4 features
-    no_brc4_stuff => 0,
+    # Enable brc4 features
+    brc4_mode => 1,
 
     # ignore final stop codons check in Integrity
     ignore_final_stops => 0,
@@ -167,7 +167,7 @@ sub pipeline_wide_parameters {
     no_feature_version_defaults => $self->o('no_feature_version_defaults'),
 
     load_pseudogene_with_CDS => $self->o('load_pseudogene_with_CDS'),
-    no_brc4_stuff => $self->o('no_brc4_stuff'),
+    brc4_mode => $self->o('brc4_mode'),
     ignore_final_stops => $self->o('ignore_final_stops'),
 
     swap_gcf_gca => $self->o('swap_gcf_gca'),
@@ -399,7 +399,7 @@ sub pipeline_analyses {
       },
       -analysis_capacity => 2,
       -rc_name    => 'default',
-      -max_retry_count   => 0,
+      -max_retry_count   => 3,
       -flow_into         => ['LoadSequenceData']
     },
 
@@ -416,7 +416,6 @@ sub pipeline_analyses {
         external_db_map => $self->o('external_db_map'),
         cs_tag_for_ordered => $self->o('cs_tag_for_ordered'),
         no_contig_ena_attrib => $self->o('no_contig_ena_attrib'),
-        no_brc4_stuff => $self->o('no_brc4_stuff'),
         swap_gcf_gca => $self->o('swap_gcf_gca'),
       },
       -analysis_capacity   => 10,
