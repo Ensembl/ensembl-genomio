@@ -125,7 +125,8 @@ sub pipeline_analyses {
        -rc_name       => 'default',
       -input_ids      => [ {} ],
       -flow_into       => {
-                           '1' => 'Species_factory',
+                           '1->A' => 'Species_factory',
+                           'A->1' => 'ReportComparisons',
                          },
     },
 
@@ -235,6 +236,19 @@ sub pipeline_analyses {
       -analysis_capacity => 5,
       -failed_job_tolerance => 0,
       -rc_name        => '8GB',
+       -flow_into      => {
+         '2' => '?accu_name=stats&accu_address={species}'
+        }
+    },
+
+    # Report comparisons
+    {
+      -logic_name => 'ReportComparisons',
+      -module         => 'ensembl.brc4.runnable.compare_report',
+      -language => 'python3',
+      -analysis_capacity => 1,
+      -failed_job_tolerance => 0,
+      -rc_name        => 'default',
     },
   ];
 }
