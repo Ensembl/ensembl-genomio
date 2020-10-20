@@ -30,13 +30,21 @@ class compare_fasta(eHive.BaseRunnable):
         seq1 = self.get_fasta(fasta1, map_dna)
         seq2 = self.get_fasta(fasta2, map_dna)
         
-        comparison = self.compare_ids(seq1, seq2)
+        (stats, diffs) = self.compare_ids(seq1, seq2)
         
+        # Print full list of results in a file
         output_file = output_dir + "/" + species + "_" + name + ".log"
         print("Write results in %s" % output_file)
         with open(output_file, "w") as out_fh:
-            for line in comparison:
+            for line in diffs:
                 out_fh.write(line + "\n")
+                
+        # Print the stats separately
+        out = {
+                "species" : species,
+                "stats" : stats
+                }
+        self.dataflow(out, 2)
         
     def get_map(self, map_path):
         
@@ -72,6 +80,20 @@ class compare_fasta(eHive.BaseRunnable):
 
     def compare_ids(self, seq1, seq2):
         comp = []
+        stats = {
+                "length1" : len(seq1),
+                "length2" : len(seq2),
+                "diff_length" : abs(len(seq1) - len(seq2)),
+                "common" : 0,
+                "only1" : 0,
+                "only2" : 0,
+                "max_only1" : 0,
+                "max_only2" : 0,
+                "only1_200" : 0,
+                "only1_1000" : 0,
+                "only2_200" : 0,
+                "only2_1000" : 0,
+        }
         
         # Compare number of sequences
         if len(seq1) != len(seq2):
@@ -79,43 +101,73 @@ class compare_fasta(eHive.BaseRunnable):
         else:
             comp.append("Same number of sequences: %d" % len(seq1))
         
-        # Compare all ids
-       # ids1 = frozenset(seq1.keys())
-       # ids2 = frozenset(seq2.keys())
-       # 
-       # common = frozenset.intersection(ids1, ids2)
-       # comp.append("\nCommon ids: %d" % len(common))
-       # 
-       # diff1 = frozenset.difference(ids1, ids2)
-       # if diff1:
-       #     comp.append("WARNING: Ids only in 1: %d" % len(diff1))
-       # diff2 = frozenset.difference(ids2, ids1)
-       # 
-       # if diff1:
-       #     comp.append("WARNING: Ids only in 2: %d" % len(diff2))
-        
         # Compare sequences
         seqs1 = {value: key for key, value in seq1.items()}
         seqs2 = {value: key for key, value in seq2.items()}
         
         common = {value for key, value in seqs1.items() if key in seqs2}
-        comp.append("\nCommon sequences: %d" % len(common))
-
         only1 = {key: value for key, value in seqs1.items() if not key in seqs2}
         only2 = {key: value for key, value in seqs2.items() if not key in seqs1}
+
+        stats["common"] = len(common)
+        stats["only1"] = len(only1)
+        stats["only2"] = len(only2)
         
-        if only1:
-            total = sum([len(seq) for seq in only1.keys()])
-            comp.append("WARNING: Sequences only in 1: %d (%d)" % (len(only1), total))
-            only_seq1 = {name: len(seq) for seq, name in only1.items()}
-            for name in sorted(only_seq1):
-                comp.append("\tOnly in 1: %s (%d)" % (name, only_seq1[name]))
+        if len(only1) > 0 or len(only2) > 0:
+            comp.append("\nCommon sequences: %d" % len(common))
+
+            if only1:
+                stats["max_only1"] = max(len(seq) for seq in only1.keys())
                 
-        if only2:
-            total = sum([len(seq) for seq in only2.keys()])
-            comp.append("WARNING: Sequences only in 2: %d (%d)" % (len(only2), total))
-            only_seq2 = {name: len(seq) for seq, name in only2.items()}
-            for name in sorted(only_seq2):
-                comp.append("\tOnly in 2: %s (%d)" % (name, only_seq2[name]))
+                # Only list sequences where the length is > 200
+                mini = {seq: name for seq, name in only1.items() if len(seq) <= 200}
+                maxi = {seq: name for seq, name in only1.items() if len(seq) > 200}
+                
+                if mini and len(mini) > 3000:
+                    comp.append("WARNING: Ignoring %d sequences from 1 with length <= 200" % len(mini))
+                    only1 = maxi
+                
+            if only1:
+                # Only list sequences where the length is > 1000
+                mini = {seq: name for seq, name in only1.items() if len(seq) <= 1000}
+                maxi = {seq: name for seq, name in only1.items() if len(seq) > 1000}
+
+                if mini and len(mini) > 3000:
+                    comp.append("WARNING: Ignoring %d sequences from 1 with length <= 1000" % len(mini))
+                    only1 = maxi
+            
+            if only1:
+                total = sum([len(seq) for seq in only1.keys()])
+                comp.append("WARNING: Sequences only in 1: %d (%d)" % (len(only1), total))
+                only_seq1 = {name: len(seq) for seq, name in only1.items()}
+                for name, length in sorted(only_seq1.items(), key=lambda x: x[1]):
+                    comp.append("\tOnly in 1: %s (%d)" % (name, length))
+                    
+            if only2:
+                stats["max_only2"] = max(len(seq) for seq in only2.keys())
+
+                # Only list sequences where the length is > 200
+                mini = {seq: name for seq, name in only2.items() if len(seq) <= 200}
+                maxi = {seq: name for seq, name in only2.items() if len(seq) > 200}
+                
+                if mini and len(mini) > 3000:
+                    comp.append("WARNING: Ignoring %d sequences from 2 with length <= 200" % len(mini))
+                    only2 = maxi
+                    
+            if only2:
+                # Only list sequences where the length is > 1000
+                mini = {seq: name for seq, name in only2.items() if len(seq) <= 1000}
+                maxi = {seq: name for seq, name in only2.items() if len(seq) > 1000}
+                
+                if mini and len(mini) > 3000:
+                    comp.append("WARNING: Ignoring %d sequences from 2 with length <= 1000" % len(mini))
+                    only2 = maxi
+
+            if only2:
+                total = sum([len(seq) for seq in only2.keys()])
+                comp.append("WARNING: Sequences only in 2: %d (%d)" % (len(only2), total))
+                only_seq2 = {name: len(seq) for seq, name in only2.items()}
+                for name, length in sorted(only_seq2.items(), key=lambda x: x[1]):
+                    comp.append("\tOnly in 2: %s (%d)" % (name, length))
         
-        return comp
+        return (stats, comp)
