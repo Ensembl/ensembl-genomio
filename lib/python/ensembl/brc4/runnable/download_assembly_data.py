@@ -29,7 +29,7 @@ class download_assembly_data(eHive.BaseRunnable):
             
             max_increment = self.param('max_increment')
 
-            for increment in range(0, max_increment):
+            for increment in range(0, max_increment + 1):
                 if increment > 0:
                     print("Increment accession version once from %s" % accession)
                     version = int(accession[-1])
