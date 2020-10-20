@@ -78,8 +78,8 @@ sub compare_manifests {
           diag "Compare files $file1 and $file2";
           my $data1 = get_sorted_json($path1, $opt{seqr_key});
           my $data2 = get_sorted_json($path2, $opt{seqr_key});
-#          $data1 = remove_keys($data1, ["BRC4_seq_region_name", "EBI_seq_region_name"]);
-#          $data2 = remove_keys($data2, ["BRC4_seq_region_name", "EBI_seq_region_name"]);
+          $data1 = remove_keys($data1, ["EBI_seq_region_name"]);
+          $data2 = remove_keys($data2, ["EBI_seq_region_name"]);
           compare_entries($data1, $data2, $opt{seqr_key});
         }
         if ($name eq 'functional_annotation') {
