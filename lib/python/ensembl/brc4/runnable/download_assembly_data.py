@@ -177,7 +177,8 @@ class download_assembly_data(eHive.BaseRunnable):
 
         for dl_file in os.listdir(dl_dir):
             for end, name in file_ends.items():
-                if root_name and dl_file == root_name + end or dl_file.endswith(end):
+                file_with_end = dl_file.endswith(end) and not dl_file.endswith("_from_" + end)
+                if root_name and dl_file == root_name + end or file_with_end:
                     files[name] = os.path.join(dl_dir, dl_file)
         return files
 
