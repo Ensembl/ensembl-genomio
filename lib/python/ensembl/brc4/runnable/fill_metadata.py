@@ -55,6 +55,12 @@ class fill_metadata(eHive.BaseRunnable):
                 del genome_data["species"]["BRC4_organism_abbrev"]
         # END RETROCOMPATIBILITY
 
+        # Set up display name if not set
+        if "species" in genome_data:
+            sd = genome_data["species"]
+            if not "display_name" in sd and "scientific_name" in sd:
+                genome_data["species"]["display_name"] = sd["scientific_name"]
+
         # flattern and dump
         flat = self.flattern(genome_data, ignore)
         flat += list(map( lambda p: ( copy[p[0]], p[1] ), filter(lambda x: x[0] in copy, flat) ))
