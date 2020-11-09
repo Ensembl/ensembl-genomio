@@ -301,14 +301,17 @@ class process_seq_region(eHive.BaseRunnable):
         # Coord system and location
         seq_role = row["Sequence-Role"]
         
+        # Scaffold?
         if seq_role in ("unplaced-scaffold", "unlocalized-scaffold"):
-            seq_region["coord_system_level"] = assembly_level
+            seq_region["coord_system_level"] = "scaffold"
+        
+        # Chromosome? Check location
         elif seq_role == "assembled-molecule":
+            seq_region["coord_system_level"] = "chromosome"
             location = row["Assigned-Molecule-Location/Type"].lower()
             
             # Get location metadata
             if location in molecule_location:
-                seq_region["coord_system_level"] = "chromosome"
                 seq_region["location"] = molecule_location[location]
             else:
                 raise Exception("Unrecognized sequence location: %s (is %s)" % (location, str(molecule_location)))
