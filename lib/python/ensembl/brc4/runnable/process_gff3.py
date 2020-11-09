@@ -24,6 +24,7 @@ class process_gff3(eHive.BaseRunnable):
                     "lnc_RNA",
                     "snoRNA",
                     "snRNA",
+                    "ncRNA",
                     ),
                 "ignored_types" : (
                     "region",
