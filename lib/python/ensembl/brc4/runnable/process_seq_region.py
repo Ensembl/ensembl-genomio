@@ -292,7 +292,7 @@ class process_seq_region(eHive.BaseRunnable):
                 raise Exception("No RefSeq name for %s" % row["Sequence-Name"])
             
         else:
-            if "GenBank-Acc" in row:
+            if "GenBank-Accn" in row:
                 seq_region["name"] = row["GenBank-Accn"]
             else:
                 raise Exception("No INSDC name for %s" % row["Sequence-Name"])
