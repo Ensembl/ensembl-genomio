@@ -212,14 +212,15 @@ class process_seq_region(eHive.BaseRunnable):
         """
         Given a genbank record, find a Genbank ID in the comment (if refseq)
         """
-        comment = record.annotations["comment"]
-        comment = re.sub("[ \n\r]+", " ", comment)
+        if "comment" in record.annotations:
+            comment = record.annotations["comment"]
+            comment = re.sub("[ \n\r]+", " ", comment)
 
-        match = re.search("The reference sequence was derived from ([^\.]+)\.", comment)
-        if match:
-            return match.group(1)
-        else:
-            return
+            match = re.search("The reference sequence was derived from ([^\.]+)\.", comment)
+            if match:
+                return match.group(1)
+            else:
+                return
     
     def get_codon_table(self, record) -> int:
         """
