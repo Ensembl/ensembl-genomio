@@ -31,6 +31,8 @@ class process_gff3(eHive.BaseRunnable):
                     "gap",
                     "sequence_feature",
                     "repeat_region",
+                    "mobile_genetic_element",
+                    "microsatellite",
                     "cDNA_match"
                     ),
                 "ncRNA_gene_types" : ("tRNA", "rRNA"),
