@@ -118,6 +118,12 @@ class process_gff3(eHive.BaseRunnable):
                                     "source" : old_qualifiers["source"]
                                     }
                             
+                            # Gene with no subfeatures: need to create a transcript at least
+                            if len(gene.sub_features) == 0:
+                                print("Insert transcript for lone gene %s" % (gene.id))
+                                transcript = self.transcript_for_gene(gene)
+                                gene.sub_features = [transcript]
+                            
                             # Transform gene - CDS to gene-transcript-exon-CDS
                             if gene.sub_features[0].type == "CDS":
                                 print("Insert transcript-exon for %s (%d CDSs)" % (gene.id, len(gene.sub_features)))
@@ -237,6 +243,16 @@ class process_gff3(eHive.BaseRunnable):
         gene.id = ncrna.id
 
         return gene
+        
+
+    def transcript_for_gene(self, gene):
+        """Create a transcript for a lone gene"""
+        
+        transcript = SeqFeature(gene.location, type="mRNA")
+        transcript.qualifiers["source"] = gene.qualifiers["source"]
+        transcript.sub_features = []
+        
+        return transcript
         
     
     def gene_to_cds(self, gene):
