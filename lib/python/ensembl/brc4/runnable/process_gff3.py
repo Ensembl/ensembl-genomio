@@ -136,7 +136,7 @@ class process_gff3(eHive.BaseRunnable):
 
                                 if transcript.type not in allowed_transcript_types:
                                     fail_types[transcript.type] = 1
-                                    message = "Unrecognized transcript type: %s for %s" % (transcript.type, transcript.id)
+                                    message = "Unrecognized transcript type: %s for %s (%s)" % (transcript.type, transcript.id, gene.id)
                                     print(message)
                                     if skip_unrecognized:
                                         transcripts_to_delete.append(count)
