@@ -252,7 +252,7 @@ class process_gff3(eHive.BaseRunnable):
                                 elif feat.type == "CDS":
                                     # New CDS ID
                                     feat.id = self.normalize_cds_id(feat.id)
-                                    if feat.id == "":
+                                    if feat.id == "" or feat.id == gene.id or feat.id == transcript.id:
                                         feat.id = "%s_cds" % transcript.id
                                     
                                     # Store CDS functional annotation (only once)
