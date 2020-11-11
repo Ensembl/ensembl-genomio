@@ -44,6 +44,7 @@ sub default_options {
     ensembl_mode => 0,
     parser_conf => catfile($metazoa_script_dir, "conf/gff_metaparser.conf"),
     parser_patch => catfile($metazoa_script_dir, "conf/gff_metaparser/brc4.patch"),
+    merge_split_genes => 0,
 
     ############################################
     # Config unlikely to be changed by the user
@@ -239,6 +240,7 @@ sub pipeline_analyses {
       -language    => 'python3',
       -parameters  => {
         in_gff3 => "#gff3_flat#",
+        merge_split_genes => $self->o('merge_split_genes'),
       },
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,

@@ -37,7 +37,8 @@ class process_gff3(eHive.BaseRunnable):
                     "cDNA_match"
                     ),
                 "ncRNA_gene_types" : ("tRNA", "rRNA"),
-                "skip_unrecognized" : False
+                "skip_unrecognized" : False,
+                "merge_split_genes": False,
                 }
         
 
@@ -122,7 +123,7 @@ class process_gff3(eHive.BaseRunnable):
                 new_line = self.merge_genes(tomerge)
                 out_gff.write(new_line)
         
-        if merged:
+        if merged and not self.param("merge_split_genes"):
             count = len(merged)
             raise Exception("%s merged genes:\n%s\n" % (count, "\n".join(merged)))
 
