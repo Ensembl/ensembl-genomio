@@ -80,6 +80,7 @@ class process_gff3(eHive.BaseRunnable):
         Merge genes in a gff that are split in multiple lines
         """
         tomerge = []
+        merged = []
         
         with open(in_gff_path, "r") as gff3_in:
             for line in gff3_in:
@@ -103,17 +104,27 @@ class process_gff3(eHive.BaseRunnable):
                     # If not, merge if needed, and print the line
                     else:
                         if tomerge:
-                            for l in tomerge: print("\t".join(l))
+                            merged_str = []
+                            for l in tomerge: merged_str.append("\t".join(l))
+                            merged.append("\n".join(merged_str) + "\n")
+
                             new_line = self.merge_genes(tomerge)
-                            print(new_line)
                             out_gff.write(new_line)
                             tomerge = []
                         out_gff.write(line + "\n")
                     
             # Print last merged gene if there is one
             if tomerge:
+                merged_str = []
+                for l in tomerge: merged_str.append("\t".join(l))
+                merged.append("\n".join(merged_str) + "\n")
+
                 new_line = self.merge_genes(tomerge)
                 out_gff.write(new_line)
+        
+        if merged:
+            count = len(merged)
+            raise Exception("%s merged genes:\n%s\n" % (count, "\n".join(merged)))
 
 
     def merge_genes(self, tomerge) -> str:
