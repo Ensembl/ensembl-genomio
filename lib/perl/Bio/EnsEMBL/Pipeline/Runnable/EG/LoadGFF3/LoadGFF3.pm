@@ -51,13 +51,15 @@ use Bio::EnsEMBL::Translation;
 my $biotype_map = {
   gene => {
     lnc_RNA => 'lncRNA',
-    misc_RNA => 'ncRNA',
+    #misc_RNA => 'ncRNA',
     ncRNA_gene => 'ncRNA',
+    transcript => 'misc_RNA',
   },
   transcript => {
     lnc_RNA => 'lncRNA',
     mRNA => 'ncRNA',
-    misc_RNA => 'ncRNA',
+    #misc_RNA => 'ncRNA',
+    transcript => 'misc_RNA',
   },
 };
 
