@@ -39,6 +39,7 @@ class process_gff3(eHive.BaseRunnable):
                 "ncRNA_gene_types" : ("tRNA", "rRNA"),
                 "skip_unrecognized" : False,
                 "merge_split_genes": False,
+                "exclude_seq_regions": [],
                 }
         
 
@@ -165,6 +166,7 @@ class process_gff3(eHive.BaseRunnable):
         ignored_types = self.param("ignored_types")
         ncRNA_gene_types = self.param("ncRNA_gene_types")
         skip_unrecognized = self.param("skip_unrecognized")
+        to_exclude = self.param("exclude_seq_regions")
         
         functional_annotation = []
         
@@ -176,6 +178,9 @@ class process_gff3(eHive.BaseRunnable):
             
             for record in gff:
                 new_record = SeqRecord(record.seq, id=record.id)
+                if record.id in to_exclude:
+                    print("Skip seq_region %s" % record.id)
+                    continue
                 
                 # GENES
                 for gene in record.features:

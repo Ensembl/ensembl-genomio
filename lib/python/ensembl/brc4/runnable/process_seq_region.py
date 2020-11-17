@@ -28,9 +28,9 @@ class process_seq_region(eHive.BaseRunnable):
                     },
                 "location_codon" : {
                     "apicoplast_chromosome" : 4
-                    }
+                    },
+                "exclude_seq_regions": [],
                 }
-        
 
     def run(self):
         genome_data = self.param('genome_data')
@@ -54,6 +54,11 @@ class process_seq_region(eHive.BaseRunnable):
         report_regions = self.get_report_regions(report_path, use_refseq)
         gbff_regions = self.get_gbff_regions(gbff_path)
         seq_regions = self.merge_regions(report_regions, gbff_regions)
+
+        # Exclude seq_regions from a list
+        to_exclude = self.param("exclude_seq_regions")
+        if to_exclude:
+            seq_regions = self.exclude_seq_regions(seq_regions, to_exclude)
         
         # Setup the BRC4_seq_region_name
         if brc4_mode: self.add_brc4_ebi_name(seq_regions)
@@ -71,6 +76,18 @@ class process_seq_region(eHive.BaseRunnable):
                 "metadata_json": final_path
                 }
         self.dataflow(output, 2)
+
+    def exclude_seq_regions(self, seq_regions, to_exclude) -> list():
+        """
+        Remove some seq_regions given as a list
+        """
+        new_seq_regions = []
+        for seqr in seq_regions:
+            if "name" in seqr and seqr["name"] in to_exclude:
+                print("Remove seq_region %s" % seqr["name"])
+            else:
+                new_seq_regions.append(seqr)
+        return new_seq_regions
 
     def guess_translation_table(self, seq_regions) -> None:
         """

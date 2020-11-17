@@ -44,7 +44,12 @@ sub default_options {
     ensembl_mode => 0,
     parser_conf => catfile($metazoa_script_dir, "conf/gff_metaparser.conf"),
     parser_patch => catfile($metazoa_script_dir, "conf/gff_metaparser/brc4.patch"),
+
+    # If the genes appear to be split (multiple parts), merge them as one region
     merge_split_genes => 0,
+    
+    # Do not include those seq_regions (apply to all genomes, this should be seldom used)
+    exclude_seq_regions => [],
 
     ############################################
     # Config unlikely to be changed by the user
@@ -73,6 +78,7 @@ sub pipeline_wide_parameters {
     debug          => $self->o('debug'),
     'schemas'      => $self->o('schemas'),
     pipeline_dir   => $self->o('pipeline_dir'),
+    exclude_seq_regions   => $self->o('exclude_seq_regions'),
 
     download_dir   => catdir($self->o('pipeline_dir'), "download", '#accession#'),
     work_dir       => catdir($self->o('pipeline_dir'), "process_files", "#accession#"),
@@ -329,6 +335,8 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -parameters     => {
         file_name => "fasta_pep",
+        in_genbank => '#gbff#',
+        peptide => 1
       },
       -flow_into  => { 2 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=fasta_pep' },
     },
