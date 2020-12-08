@@ -64,6 +64,7 @@ class compare_fasta(eHive.BaseRunnable):
             
     def add_report_to_map(self, seq_map, report_seq):
         
+        accession_version = r'\.\d+$'
         report = []
         for old_name, insdc_name in seq_map.items():
             if insdc_name not in report_seq:
@@ -72,7 +73,9 @@ class compare_fasta(eHive.BaseRunnable):
                 seqr = report_seq[insdc_name]
                 seqr["name"] = old_name
                 seqr["EBI_seq_region_name"] = old_name
-                seqr["BRC4_seq_region_name"] = insdc_name
+                brc4_name = insdc_name
+                brc4_name = re.sub(accession_version, '', brc4_name)
+                seqr["BRC4_seq_region_name"] = brc4_name
                 syns = [{
                     "source": "INSDC",
                     "name": insdc_name
