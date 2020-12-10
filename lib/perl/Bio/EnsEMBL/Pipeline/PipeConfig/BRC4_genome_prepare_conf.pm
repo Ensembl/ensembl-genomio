@@ -50,6 +50,9 @@ sub default_options {
     
     # Do not include those seq_regions (apply to all genomes, this should be seldom used)
     exclude_seq_regions => [],
+    
+    # Enforce a strong gene ID pattern (replace by GeneID if available)
+    validate_gene_id => 0,
 
     ############################################
     # Config unlikely to be changed by the user
@@ -210,36 +213,6 @@ sub pipeline_analyses {
       -flow_into  => { 2 => 'Process_gff3' },
     },
 
-#    {
-#      -logic_name    => "Process_gff3",
-#      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-#      -parameters  => {
-#        gff3       => catfile("#work_dir#", "gene_models.gff3"),
-#        functional_annotation => catfile("#work_dir#", "functional_annotation.json"),
-#        seq_region_raw => catfile("#work_dir#", "seq_region_raw.json"),
-#        gff3_name => "gff3",
-#        func_name => "functional_anotation",
-#        parser_conf => $self->o("parser_conf"),
-#        parser_patch => $self->o("parser_patch") ? " --conf_patch " . $self->o("parser_patch") : "",
-#
-#        cmd => "python3 $metazoa_script_dir/gff3_meta_parse.py" .
-#          " --dump_used_options" .
-#          " --conf #parser_conf#" .
-#          "#parser_patch#" .
-#          " --gff_out #gff3#" . 
-#          " --fann_out #functional_annotation#" .
-#          " --seq_region_out #seq_region_raw#" .
-#          " #gff3_flat#",
-#      },
-#      -failed_job_tolerance => 100,
-#      -analysis_capacity   => 5,
-#      -rc_name    => '8GB',
-#      -meadow_type       => 'LSF',
-#      -flow_into  => [
-#          { 'GFF3_validation' => { gff3 => "#gff3#" } },
-#          { "Check_json_schema" => { metadata_type => 'functional_annotation', metadata_json => '#functional_annotation#' } }
-#        ],
-#    },
     {
       -logic_name    => "Process_gff3",
       -module     => 'ensembl.brc4.runnable.process_gff3',
@@ -247,6 +220,7 @@ sub pipeline_analyses {
       -parameters  => {
         in_gff3 => "#gff3_flat#",
         merge_split_genes => $self->o('merge_split_genes'),
+        validate_gene_id => $self->o('validate_gene_id'),
       },
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
