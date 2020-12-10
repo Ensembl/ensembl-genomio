@@ -28,9 +28,9 @@ class process_seq_region(eHive.BaseRunnable):
                     },
                 "location_codon" : {
                     "apicoplast_chromosome" : 4
-                    }
+                    },
+                "exclude_seq_regions": [],
                 }
-        
 
     def run(self):
         genome_data = self.param('genome_data')
@@ -54,6 +54,11 @@ class process_seq_region(eHive.BaseRunnable):
         report_regions = self.get_report_regions(report_path, use_refseq)
         gbff_regions = self.get_gbff_regions(gbff_path)
         seq_regions = self.merge_regions(report_regions, gbff_regions)
+
+        # Exclude seq_regions from a list
+        to_exclude = self.param("exclude_seq_regions")
+        if to_exclude:
+            seq_regions = self.exclude_seq_regions(seq_regions, to_exclude)
         
         # Setup the BRC4_seq_region_name
         if brc4_mode: self.add_brc4_ebi_name(seq_regions)
@@ -71,6 +76,18 @@ class process_seq_region(eHive.BaseRunnable):
                 "metadata_json": final_path
                 }
         self.dataflow(output, 2)
+
+    def exclude_seq_regions(self, seq_regions, to_exclude) -> list():
+        """
+        Remove some seq_regions given as a list
+        """
+        new_seq_regions = []
+        for seqr in seq_regions:
+            if "name" in seqr and seqr["name"] in to_exclude:
+                print("Remove seq_region %s" % seqr["name"])
+            else:
+                new_seq_regions.append(seqr)
+        return new_seq_regions
 
     def guess_translation_table(self, seq_regions) -> None:
         """
@@ -212,14 +229,15 @@ class process_seq_region(eHive.BaseRunnable):
         """
         Given a genbank record, find a Genbank ID in the comment (if refseq)
         """
-        comment = record.annotations["comment"]
-        comment = re.sub("[ \n\r]+", " ", comment)
+        if "comment" in record.annotations:
+            comment = record.annotations["comment"]
+            comment = re.sub("[ \n\r]+", " ", comment)
 
-        match = re.search("The reference sequence was derived from ([^\.]+)\.", comment)
-        if match:
-            return match.group(1)
-        else:
-            return
+            match = re.search("The reference sequence was derived from ([^\.]+)\.", comment)
+            if match:
+                return match.group(1)
+            else:
+                return
     
     def get_codon_table(self, record) -> int:
         """
@@ -292,7 +310,7 @@ class process_seq_region(eHive.BaseRunnable):
                 raise Exception("No RefSeq name for %s" % row["Sequence-Name"])
             
         else:
-            if "GenBank-Acc" in row:
+            if "GenBank-Accn" in row:
                 seq_region["name"] = row["GenBank-Accn"]
             else:
                 raise Exception("No INSDC name for %s" % row["Sequence-Name"])
@@ -300,14 +318,17 @@ class process_seq_region(eHive.BaseRunnable):
         # Coord system and location
         seq_role = row["Sequence-Role"]
         
+        # Scaffold?
         if seq_role in ("unplaced-scaffold", "unlocalized-scaffold"):
-            seq_region["coord_system_level"] = assembly_level
+            seq_region["coord_system_level"] = "scaffold"
+        
+        # Chromosome? Check location
         elif seq_role == "assembled-molecule":
+            seq_region["coord_system_level"] = "chromosome"
             location = row["Assigned-Molecule-Location/Type"].lower()
             
             # Get location metadata
             if location in molecule_location:
-                seq_region["coord_system_level"] = "chromosome"
                 seq_region["location"] = molecule_location[location]
             else:
                 raise Exception("Unrecognized sequence location: %s (is %s)" % (location, str(molecule_location)))

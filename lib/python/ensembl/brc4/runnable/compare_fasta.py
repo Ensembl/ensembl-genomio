@@ -10,6 +10,7 @@ from functools import partial
 
 from Bio import SeqIO
 from os import path
+from ensembl.brc4.runnable.parser import Parser
 
 
 class compare_fasta(eHive.BaseRunnable):
@@ -19,6 +20,7 @@ class compare_fasta(eHive.BaseRunnable):
         }
 
     def run(self):
+        report = self.param_required("report")
         fasta1 = self.param_required("fasta1")
         fasta2 = self.param_required("fasta2")
         map_dna_path = self.param_required("seq_regions")
@@ -30,7 +32,11 @@ class compare_fasta(eHive.BaseRunnable):
         seq1 = self.get_fasta(fasta1, map_dna)
         seq2 = self.get_fasta(fasta2, map_dna)
         
-        (stats, diffs) = self.compare_ids(seq1, seq2)
+        (stats, diffs, seq_map) = self.compare_seqs(seq1, seq2)
+        
+        # Print mapping to a file (add report data)
+        map_file = output_dir + "/" + species + "_" + name + ".map"
+        self.print_map(seq_map, map_file, report)
         
         # Print full list of results in a file
         output_file = output_dir + "/" + species + "_" + name + ".log"
@@ -46,6 +52,39 @@ class compare_fasta(eHive.BaseRunnable):
                 }
         self.dataflow(out, 2)
         
+    def print_map(self, seq_map, map_file, report_file):
+        
+        report_parser = Parser()
+        report_seq = report_parser.get_report_regions(report_file)
+        report = self.add_report_to_map(seq_map, report_seq)
+        
+        print("Write map in %s" % map_file)
+        with open(map_file, "w") as out_fh:
+            out_fh.write(json.dumps(report, sort_keys=True, indent=4))
+            
+    def add_report_to_map(self, seq_map, report_seq):
+        
+        accession_version = r'\.\d+$'
+        report = []
+        for old_name, insdc_name in seq_map.items():
+            if insdc_name not in report_seq:
+                raise Exception("No INSDC %s found in report" % insdc_name)
+            else:
+                seqr = report_seq[insdc_name]
+                seqr["name"] = old_name
+                seqr["EBI_seq_region_name"] = old_name
+                brc4_name = insdc_name
+                brc4_name = re.sub(accession_version, '', brc4_name)
+                seqr["BRC4_seq_region_name"] = brc4_name
+                syns = [{
+                    "source": "INSDC",
+                    "name": insdc_name
+                    }]
+                seqr["synonyms"] = syns
+                report.append(seqr)
+        return report
+        
+            
     def get_map(self, map_path):
         
         print("Read file %s" % map_path)
@@ -78,7 +117,7 @@ class compare_fasta(eHive.BaseRunnable):
                 sequences[name] = re.sub(r"[^CGTA]", "N", str(rec.seq.upper()))
         return sequences
 
-    def compare_ids(self, seq1, seq2):
+    def compare_seqs(self, seq1, seq2):
         comp = []
         stats = {
                 "length1" : len(seq1),
@@ -102,12 +141,12 @@ class compare_fasta(eHive.BaseRunnable):
             comp.append("Same number of sequences: %d" % len(seq1))
         
         # Compare sequences
-        seqs1 = {value: key for key, value in seq1.items()}
-        seqs2 = {value: key for key, value in seq2.items()}
+        seqs1 = {seq: name for name, seq in seq1.items()}
+        seqs2 = {seq: name for name, seq in seq2.items()}
         
-        common = {value for key, value in seqs1.items() if key in seqs2}
-        only1 = {key: value for key, value in seqs1.items() if not key in seqs2}
-        only2 = {key: value for key, value in seqs2.items() if not key in seqs1}
+        common = {seqs2[seq]: name for seq, name in seqs1.items() if seq in seqs2}
+        only1 = {seq: name for seq, name in seqs1.items() if not seq in seqs2}
+        only2 = {seq: name for seq, name in seqs2.items() if not seq in seqs1}
 
         stats["common"] = len(common)
         stats["only1"] = len(only1)
@@ -170,4 +209,4 @@ class compare_fasta(eHive.BaseRunnable):
                 for name, length in sorted(only_seq2.items(), key=lambda x: x[1]):
                     comp.append("\tOnly in 2: %s (%d)" % (name, length))
         
-        return (stats, comp)
+        return (stats, comp, common)

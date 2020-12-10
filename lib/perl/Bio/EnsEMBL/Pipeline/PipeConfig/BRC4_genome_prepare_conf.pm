@@ -45,6 +45,15 @@ sub default_options {
     parser_conf => catfile($metazoa_script_dir, "conf/gff_metaparser.conf"),
     parser_patch => catfile($metazoa_script_dir, "conf/gff_metaparser/brc4.patch"),
 
+    # If the genes appear to be split (multiple parts), merge them as one region
+    merge_split_genes => 0,
+    
+    # Do not include those seq_regions (apply to all genomes, this should be seldom used)
+    exclude_seq_regions => [],
+    
+    # Enforce a strong gene ID pattern (replace by GeneID if available)
+    validate_gene_id => 0,
+
     ############################################
     # Config unlikely to be changed by the user
 
@@ -72,6 +81,7 @@ sub pipeline_wide_parameters {
     debug          => $self->o('debug'),
     'schemas'      => $self->o('schemas'),
     pipeline_dir   => $self->o('pipeline_dir'),
+    exclude_seq_regions   => $self->o('exclude_seq_regions'),
 
     download_dir   => catdir($self->o('pipeline_dir'), "download", '#accession#'),
     work_dir       => catdir($self->o('pipeline_dir'), "process_files", "#accession#"),
@@ -203,42 +213,14 @@ sub pipeline_analyses {
       -flow_into  => { 2 => 'Process_gff3' },
     },
 
-#    {
-#      -logic_name    => "Process_gff3",
-#      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-#      -parameters  => {
-#        gff3       => catfile("#work_dir#", "gene_models.gff3"),
-#        functional_annotation => catfile("#work_dir#", "functional_annotation.json"),
-#        seq_region_raw => catfile("#work_dir#", "seq_region_raw.json"),
-#        gff3_name => "gff3",
-#        func_name => "functional_anotation",
-#        parser_conf => $self->o("parser_conf"),
-#        parser_patch => $self->o("parser_patch") ? " --conf_patch " . $self->o("parser_patch") : "",
-#
-#        cmd => "python3 $metazoa_script_dir/gff3_meta_parse.py" .
-#          " --dump_used_options" .
-#          " --conf #parser_conf#" .
-#          "#parser_patch#" .
-#          " --gff_out #gff3#" . 
-#          " --fann_out #functional_annotation#" .
-#          " --seq_region_out #seq_region_raw#" .
-#          " #gff3_flat#",
-#      },
-#      -failed_job_tolerance => 100,
-#      -analysis_capacity   => 5,
-#      -rc_name    => '8GB',
-#      -meadow_type       => 'LSF',
-#      -flow_into  => [
-#          { 'GFF3_validation' => { gff3 => "#gff3#" } },
-#          { "Check_json_schema" => { metadata_type => 'functional_annotation', metadata_json => '#functional_annotation#' } }
-#        ],
-#    },
     {
       -logic_name    => "Process_gff3",
       -module     => 'ensembl.brc4.runnable.process_gff3',
       -language    => 'python3',
       -parameters  => {
         in_gff3 => "#gff3_flat#",
+        merge_split_genes => $self->o('merge_split_genes'),
+        validate_gene_id => $self->o('validate_gene_id'),
       },
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
@@ -327,6 +309,8 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -parameters     => {
         file_name => "fasta_pep",
+        in_genbank => '#gbff#',
+        peptide => 1
       },
       -flow_into  => { 2 => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=fasta_pep' },
     },

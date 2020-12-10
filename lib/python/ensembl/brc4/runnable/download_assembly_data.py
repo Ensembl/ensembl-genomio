@@ -17,7 +17,8 @@ class download_assembly_data(eHive.BaseRunnable):
 
     def run(self):
         accession = self.param_required('accession')
-        download_dir = self.param('download_dir')
+        main_download_dir = self.param('download_dir')
+        download_dir = main_download_dir + "/" + accession
 
         # Set and create dedicated dir for download
         if not os.path.isdir(download_dir):
@@ -35,11 +36,15 @@ class download_assembly_data(eHive.BaseRunnable):
                     version = int(accession[-1])
                     version += 1
                     accession = accession[:-1] + str(version)
+                    download_dir = main_download_dir + "/" + accession
+                    if not os.path.isdir(download_dir):
+                        os.makedirs(download_dir)
                 try:
                     self.download_files(accession, download_dir)
                     break
                 except:
                     print("Can't download files for %s" % accession)
+
             if not self.md5_files(download_dir):
                 raise Exception("Failed md5sum of downloaded files")
 
