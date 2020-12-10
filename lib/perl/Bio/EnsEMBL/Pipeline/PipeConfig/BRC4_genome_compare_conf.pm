@@ -212,13 +212,17 @@ sub pipeline_analyses {
       -module         => 'ensembl.brc4.runnable.download_assembly_data',
       -parameters => {
         accession => "#accession#",
+        max_increment => 2,
       },
       -language => 'python3',
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
       -rc_name        => 'default',
       -flow_into  => {
-        2 => '?accu_name=insdc_fasta_dna&accu_input_variable=fasta_dna',
+        2 => [
+          '?accu_name=insdc_fasta_dna&accu_input_variable=fasta_dna',
+          '?accu_name=insdc_report&accu_input_variable=report',
+        ],
       },
     },
 
@@ -227,6 +231,7 @@ sub pipeline_analyses {
       -logic_name => 'Compare',
       -module         => 'ensembl.brc4.runnable.compare_fasta',
       -parameters => {
+        report => "#insdc_report#",
         fasta1 => "#insdc_fasta_dna#",
         fasta2 => "#core_fasta_dna#",
         seq_regions => "#seq_region_json#",
