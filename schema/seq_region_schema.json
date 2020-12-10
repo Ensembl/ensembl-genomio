@@ -51,7 +51,7 @@
         "non_ref" : { "type" : "boolean", "description" : "clashes with non_ref_scaffold cs ?" },
         "location" : {
           "type" : "string",
-          "description" : "SO_trem attribute to account for mitochondria, apicoplasts, etc.",
+          "description" : "SO_term attribute to account for mitochondria, apicoplasts, etc.",
           "enum" : [
             "apicoplast_chromosome",
             "chloroplast_chromosome",
@@ -62,7 +62,8 @@
             "micronuclear_chromosome",
             "mitochondrial_chromosome",
             "nuclear_chromosome",
-            "plasmid"
+            "plasmid",
+            "maxicircle"
           ]
         },
         "karyotype_bands" : {
