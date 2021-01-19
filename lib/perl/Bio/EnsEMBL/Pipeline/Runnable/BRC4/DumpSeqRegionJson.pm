@@ -117,7 +117,7 @@ sub prepare_data {
 sub get_coord_system_tag {
   my ($self, $slice) = @_;
   my ($tag_attr) = @{ $slice->get_all_Attributes('coord_system_tag') };
-  die "No tag for slice " . $slice->seq_region_name if not $tag_attr;
+  die "No coord_system_tag for slice " . $slice->seq_region_name if not $tag_attr;
   return $tag_attr->value;
 }
 

@@ -26,6 +26,7 @@ class process_gff3(eHive.BaseRunnable):
                     "snoRNA",
                     "snRNA",
                     "ncRNA",
+                    "miRNA",
                     ),
                 "ignored_types" : (
                     "region",
@@ -34,6 +35,10 @@ class process_gff3(eHive.BaseRunnable):
                     "repeat_region",
                     "mobile_genetic_element",
                     "microsatellite",
+                    "satellite_DNA",
+                    "inverted_repeat",
+                    "telomere",
+                    "tandem_repeat",
                     "cDNA_match"
                     ),
                 "ncRNA_gene_types" : ("tRNA", "rRNA"),
@@ -288,7 +293,7 @@ class process_gff3(eHive.BaseRunnable):
                                             }
                                 else:
                                     fail_types[feat.type] = 1
-                                    message = "Unrecognized exon type: %s" % exon.type
+                                    message = "Unrecognized exon type for %s: %s (for transcript %s of type %s)" % (feat.type, feat.id, transcript.id, transcript.type)
                                     print(message)
                                     if skip_unrecognized:
                                         exons_to_delete.append(tcount)
@@ -354,6 +359,8 @@ class process_gff3(eHive.BaseRunnable):
         transcript.sub_features = []
 
         for cds in gene.sub_features:
+            if cds.type != "CDS":
+                raise Exception("Can not create a chain 'transcript - exon - CDS' when the gene children are not all CDSs (%s of type %s is child of gene %s)" % (cds.id, cds.type, gene.id))
             exon = SeqFeature(cds.location, type="exon")
             exon.qualifiers["source"] = gene.qualifiers["source"]
             transcript.sub_features.append(exon)

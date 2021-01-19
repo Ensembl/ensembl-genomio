@@ -2,3 +2,4 @@ bcbio-gff
 biopython
 jsonschema
 mysql-connector-python
+requests
