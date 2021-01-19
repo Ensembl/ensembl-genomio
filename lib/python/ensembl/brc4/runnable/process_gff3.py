@@ -26,6 +26,7 @@ class process_gff3(eHive.BaseRunnable):
                     "snoRNA",
                     "snRNA",
                     "ncRNA",
+                    "miRNA",
                     ),
                 "ignored_types" : (
                     "region",
@@ -34,6 +35,10 @@ class process_gff3(eHive.BaseRunnable):
                     "repeat_region",
                     "mobile_genetic_element",
                     "microsatellite",
+                    "satellite_DNA",
+                    "inverted_repeat",
+                    "telomere",
+                    "tandem_repeat",
                     "cDNA_match"
                     ),
                 "ncRNA_gene_types" : ("tRNA", "rRNA"),
