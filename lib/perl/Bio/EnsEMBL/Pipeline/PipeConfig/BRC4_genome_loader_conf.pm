@@ -249,7 +249,7 @@ sub pipeline_analyses {
       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
       -parameters        => {
         data_dir => $self->o('data_dir'),
-        inputcmd => "find #data_dir# -type f -name manifest.json",
+        inputcmd => "find -L #data_dir# -type f -name manifest.json",
       },
       -analysis_capacity   => 1,
       -rc_name    => 'default',
