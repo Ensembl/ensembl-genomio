@@ -37,7 +37,8 @@
             "non_ref_scaffold",
             "contig",
             "chunk",
-            "primary_assembly"
+            "primary_assembly",
+            "clone"
           ]
         },
         "omit" : { "type" : "boolean", "description" : "prevent loading/processing of the scaffold" },
