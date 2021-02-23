@@ -249,7 +249,7 @@ class process_gff3(eHive.BaseRunnable):
                         for count, transcript in enumerate(gene.sub_features):
 
                             if transcript.type not in allowed_transcript_types:
-                                fail_types[transcript.type] = 1
+                                fail_types["transcript=" + transcript.type] = 1
                                 message = "Unrecognized transcript type: %s for %s (%s)" % (transcript.type, transcript.id, gene.id)
                                 print(message)
                                 if skip_unrecognized:
@@ -304,7 +304,7 @@ class process_gff3(eHive.BaseRunnable):
                                             "source" : feat.qualifiers["source"]
                                             }
                                 else:
-                                    fail_types[feat.type] = 1
+                                    fail_types["sub_transcript=" + feat.type] = 1
                                     message = "Unrecognized exon type for %s: %s (for transcript %s of type %s)" % (feat.type, feat.id, transcript.id, transcript.type)
                                     print(message)
                                     if skip_unrecognized:
@@ -325,8 +325,8 @@ class process_gff3(eHive.BaseRunnable):
                             self.normalize_pseudogene_cds(gene)
                                 
                     else:
-                        fail_types[gene.type] = 1
-                        message = "Unrecognized gene type: %s" % gene.type
+                        fail_types["gene=" + gene.type] = 1
+                        message = "Unrecognized gene type: %s (for %s)" % (gene.type, gene.id)
                         print(message)
                         if skip_unrecognized:
                             del gene
