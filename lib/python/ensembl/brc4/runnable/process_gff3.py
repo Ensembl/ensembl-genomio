@@ -14,7 +14,17 @@ class process_gff3(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {
-                "gene_types" : ("gene", "ncRNA_gene", "pseudogene"),
+                "gene_types" : (
+                    "gene",
+                    "ncRNA_gene",
+                    "pseudogene"
+                    ),
+                "ncRNA_gene_types" : (
+                    "tRNA",
+                    "rRNA",
+                    "transcript",
+                    "misc_RNA"
+                    ),
                 "transcript_types" : (
                     "transcript",
                     "mRNA",
@@ -29,6 +39,7 @@ class process_gff3(eHive.BaseRunnable):
                     "miRNA",
                     ),
                 "ignored_types" : (
+                    "intron",
                     "region",
                     "gap",
                     "sequence_feature",
@@ -39,9 +50,10 @@ class process_gff3(eHive.BaseRunnable):
                     "inverted_repeat",
                     "telomere",
                     "tandem_repeat",
-                    "cDNA_match"
+                    "cDNA_match",
+                    "long_terminal_repeat",
+                    "STS"
                     ),
-                "ncRNA_gene_types" : ("tRNA", "rRNA"),
                 "skip_unrecognized" : False,
                 "merge_split_genes": False,
                 "exclude_seq_regions": [],
