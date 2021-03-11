@@ -4,6 +4,7 @@ import os, re, shutil
 import eHive
 import gzip
 import csv, json
+import datetime
 
 from Bio import SeqIO, SeqRecord
 
@@ -53,7 +54,8 @@ class process_genome_data(eHive.BaseRunnable):
 
         # Amend metadata
         self.add_provider(genome_data)
-        self.add_version(genome_data)
+        self.add_assembly_version(genome_data)
+        self.add_genebuild_metadata(genome_data)
 
         # Print out the file
         self.print_json(final_path, genome_data)
@@ -104,7 +106,7 @@ class process_genome_data(eHive.BaseRunnable):
                 annotation["provider_url"] = provider["annotation"]["provider_url"]
             genome_data["annotation"] = annotation
              
-    def add_version(self, genome_data):
+    def add_assembly_version(self, genome_data):
         """Add version number to assembly"""
         
         assembly = genome_data["assembly"]
@@ -114,3 +116,15 @@ class process_genome_data(eHive.BaseRunnable):
             values = accession.split(".")
             if len(values) == 2 and values[1]:
                 assembly["version"] = int(values[1])
+
+    def add_genebuild_metadata(self, genome_data):
+        """Add metadata to genebuild"""
+        
+        assembly = genome_data["assembly"]
+        genebuild = genome_data["genebuild"]
+        
+        current_date = datetime.date.today().isoformat()
+        if not "version" in genebuild:
+            genebuild["version"] = current_date
+        if not "start_date" in genebuild:
+            genebuild["start_date"] = current_date
