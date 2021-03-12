@@ -7,6 +7,8 @@ import csv, json
 import datetime
 
 from Bio import SeqIO, SeqRecord
+import requests
+import xml.etree.ElementTree as ET
 
 class process_genome_data(eHive.BaseRunnable):
 
@@ -33,17 +35,26 @@ class process_genome_data(eHive.BaseRunnable):
                             "provider_url" : "https://www.ncbi.nlm.nih.gov/refseq",
                             },
                         },
-                    }
+                    },
+                'accession_api_url' : "https://www.ebi.ac.uk/ena/browser/api/xml/%s",
                 }
         
 
     def run(self):
-        genome_json = self.param('genome_json')
-        work_dir = self.param('work_dir')
+        json_path = self.param_required("json_path")
         
-        genome_data = self.get_json(genome_json)
+        genome_data = self.get_json(json_path)
 
+        # Amend metadata
+        self.add_provider(genome_data)
+        self.add_assembly_version(genome_data)
+        self.add_genebuild_metadata(genome_data)
+        self.add_species_metadata(genome_data)
+        
         # Create dedicated work dir
+        accession = genome_data["assembly"]["accession"]
+        self.param("accession", accession)
+        work_dir = self.param('work_dir')
         if not os.path.isdir(work_dir):
             os.makedirs(work_dir)
 
@@ -52,18 +63,14 @@ class process_genome_data(eHive.BaseRunnable):
         new_file_name = metadata_type + ".json"
         final_path = os.path.join(work_dir, new_file_name)
 
-        # Amend metadata
-        self.add_provider(genome_data)
-        self.add_assembly_version(genome_data)
-        self.add_genebuild_metadata(genome_data)
-
         # Print out the file
         self.print_json(final_path, genome_data)
 
         # Flow out the file and type
         output = {
-                "metadata_type" : metadata_type,
-                "metadata_json": final_path
+                "genome_json" : final_path,
+                "genome_data" : genome_data,
+                "accession" : accession
                 }
         self.dataflow(output, 2)
     
@@ -128,3 +135,37 @@ class process_genome_data(eHive.BaseRunnable):
             genebuild["version"] = current_date
         if not "start_date" in genebuild:
             genebuild["start_date"] = current_date
+
+    def add_species_metadata(self, genome_data):
+        """Add species metadata from the accession"""
+        
+        species = genome_data["species"]
+        accession = genome_data["assembly"]["accession"]
+        
+        if not "taxonomy_id" in species:
+            taxonomy = self.get_taxonomy_from_accession(accession)
+            species["taxonomy_id"] = taxonomy["taxon_id"]
+            
+            if not"strain" in species:
+                species["strain"] = taxonomy["strain"]
+            
+            if not"scientific_name" in species:
+                species["scientific_name"] = taxonomy["scientific_name"]
+    
+    def get_taxonomy_from_accession(self, accession):
+        """Provided an accession, get the associated taxonomy metadata"""
+        
+        url = self.param("accession_api_url")
+        
+        response = requests.get(url % accession)
+        entry_xml = response.text
+        
+        entry = ET.fromstring(entry_xml)
+        taxon_node = entry.find(".//TAXON")
+        taxonomy = {
+                'taxon_id' : int(taxon_node.find("TAXON_ID").text),
+                'strain' : taxon_node.find("STRAIN").text,
+                'scientific_name' : taxon_node.find("SCIENTIFIC_NAME").text,
+                }
+        return taxonomy
+        
