@@ -2,13 +2,14 @@
 
 from redminelib import Redmine
 import argparse
-import os, json
+import os, json, re
  
 url = 'https://redmine.apidb.org'
 default_fields = dict(
         status_id = 'open',
         cf_17 = "Data Processing (EBI)",
         )
+insdc_pattern = "^GC[AF]_\d{9}(\.\d+)?$"
 
 def retrieve_genomes(redmine, output_dir, build=None):
     """
@@ -16,7 +17,10 @@ def retrieve_genomes(redmine, output_dir, build=None):
     Each issue/new_genome is stored as one file in the output dir
     """
     
-    issues = get_genome_issues(redmine, build)
+    genomes_with_genes = get_issues(redmine, "Genome sequence and Annotation", build)
+    genomes_without_genes = get_issues(redmine, "Assembled genome sequence without annotation", build)
+    
+    issues = genomes_with_genes + genomes_without_genes
     if not issues:
         print("No issues found")
         return
@@ -26,9 +30,12 @@ def retrieve_genomes(redmine, output_dir, build=None):
     # Create the output dir
     try:
         os.mkdir(output_dir)
+    except:
+        pass
     
     for issue in issues:
         genome_structure = parse_genome(issue)
+        if not genome_structure: continue
         organism = str(issue.id)
 
         organism_file = output_dir + "/" + organism + ".json"
@@ -50,16 +57,44 @@ def parse_genome(issue):
             "genebuild": {},
             }
     
+    # Get GCA accession
     if "GCA number" in customs:
-        genome["assembly"]["accession"] = customs["GCA number"]["value"]
+        accession = customs["GCA number"]["value"]
+        accession = check_accession(accession)
+        if not accession:
+            print("No proper accession for issue %d (%s): %s" % (issue.id, issue.subject, customs["GCA number"]["value"]))
+            return
+        genome["assembly"]["accession"] = accession
+    else:
+        print("No accession for issue %d (%s)" % (issue.id, issue.subject))
+
+    # Get BRC4 component
     if "Component DB" in customs:
         components = customs["Component DB"]["value"]
         if len(components) == 1:
             genome["BRC4"]["component"] = components[0]
         elif len(components) > 1:
             raise Exception("More than 1 component for new genome " + issue.name)
+    else:
+        print("No component for issue %d (%s)" % (issue.id, issue.subject))
 
     return genome
+
+def check_accession(accession):
+    """
+    Check the accession string format
+    Returns a cleaned up accession
+    """
+    accession = accession.strip()
+    
+    # Remove the url if it's in one
+    # There might even be a trailing url
+    accession = re.sub(r"^.+/([^/]+)/?", r"\1", accession)
+    
+    if re.match(insdc_pattern, accession):
+        return accession
+    else:
+        return
 
 def get_custom_fields(issue):
     """
@@ -72,32 +107,32 @@ def get_custom_fields(issue):
         cfs[c["name"]] = c
     return cfs
 
-def get_genome_issues(redmine, build=None):
-    """Retrieve all issue for new genomes, be they with or without gene sets"""
+def get_issues(redmine, datatype, build=None):
+    """
+    Retrieve all issue for new genomes, be they with or without gene sets
+    Return a Redmine ResourceSet
+    """
     
-    other_fields = dict(
-            cf_94 = [
-                "Genome sequence and Annotation",
-                "Assembled genome sequence without annotation"
-                ],
-            )
+    other_fields = { "cf_94" : datatype }
     if build:
         other_fields["fixed_version"] = 'Build ' + str(build)
 
-    return get_ebi_issues(redmine, other_fields)
+    return list(get_ebi_issues(redmine, other_fields))
     
 def get_ebi_issues(redmine, other_fields=dict()):
     """
     Get EBI issues from Redmine, add other fields if provided
     Return a Redmine ResourceSet
     """
-    
+
+    # Other fields replace the keys that already exist in default_fields
     search_fields = { **default_fields, **other_fields }
     
     return redmine.issue.filter(**search_fields)
 
 
 def main():
+    # Parse command line arguments
     parser = argparse.ArgumentParser(description='Retrieve metadata from Redmine')
     
     parser.add_argument('--key', type=str, required=True,
@@ -110,10 +145,12 @@ def main():
     # Optional
     parser.add_argument('--build', type=int,
                 help='Restrict to a given build')
-
     args = parser.parse_args()
     
+    # Start Redmine API
     redmine = Redmine(url, key=args.key)
+    
+    # Choose which data to retrieve
     if args.get == 'genomes':
         retrieve_genomes(redmine, args.output_dir, args.build)
     elif args.get == 'rnaseq':
