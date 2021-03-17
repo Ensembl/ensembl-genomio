@@ -2,7 +2,9 @@
 
 from redminelib import Redmine
 import argparse
-import os, json, re
+import os, json, re, time
+import requests
+import xml.etree.ElementTree as ET
  
 url = 'https://redmine.apidb.org'
 default_fields = dict(
@@ -10,22 +12,17 @@ default_fields = dict(
         cf_17 = "Data Processing (EBI)",
         )
 insdc_pattern = "^GC[AF]_\d{9}(\.\d+)?$"
+accession_api_url = "https://www.ebi.ac.uk/ena/browser/api/xml/%s"
 
 def retrieve_genomes(redmine, output_dir, build=None):
     """
     Get genomes metadata from Redmine, store them in json files.
     Each issue/new_genome is stored as one file in the output dir
     """
-    
-    genomes_with_genes = get_issues(redmine, "Genome sequence and Annotation", build)
-    genomes_without_genes = get_issues(redmine, "Assembled genome sequence without annotation", build)
-    
-    issues = genomes_with_genes + genomes_without_genes
+    issues = get_all_genomes(redmine, build)
     if not issues:
-        print("No issues found")
+        print("No files to create")
         return
-    else:
-        print("%d issues found" % len(issues))
     
     # Create the output dir
     try:
@@ -35,14 +32,32 @@ def retrieve_genomes(redmine, output_dir, build=None):
     
     for issue in issues:
         genome_structure = parse_genome(issue)
-        if not genome_structure: continue
-        organism = str(issue.id)
+        if not genome_structure:
+            print("Skipped issue %d (%s). Not enough metadata." % (issue.id, issue.subject))
+            continue
 
-        organism_file = output_dir + "/" + organism + ".json"
-        f = open(organism_file, "w")
-        json.dump(genome_structure, f, indent=True)
-        f.close()
-        
+        try:
+            organism = genome_structure["BRC4"]["organism_abbrev"]
+            organism_file = output_dir + "/" + organism + ".json"
+            f = open(organism_file, "w")
+            json.dump(genome_structure, f, indent=True)
+            f.close()
+        except:
+            print("Skipped issue %d (%s), no organism_abbrev" % (issue.id, issue.subject))
+            pass
+
+def get_all_genomes(redmine, build=None):
+    """
+    Query Redmine to get all new genomes, with or without genes
+    """
+    genomes_with_genes = get_issues(redmine, "Genome sequence and Annotation", build)
+    genomes_without_genes = get_issues(redmine, "Assembled genome sequence without annotation", build)
+    
+    issues = genomes_with_genes + genomes_without_genes
+    
+    print("%d issues found" % len(issues))
+    return issues
+ 
 def parse_genome(issue):
     """
     Extract genome metadata from a Redmine issue
@@ -62,7 +77,6 @@ def parse_genome(issue):
         accession = customs["GCA number"]["value"]
         accession = check_accession(accession)
         if not accession:
-            print("No proper accession for issue %d (%s): %s" % (issue.id, issue.subject, customs["GCA number"]["value"]))
             return
         genome["assembly"]["accession"] = accession
     else:
@@ -74,9 +88,19 @@ def parse_genome(issue):
         if len(components) == 1:
             genome["BRC4"]["component"] = components[0]
         elif len(components) > 1:
-            raise Exception("More than 1 component for new genome " + issue.name)
+            raise Exception("More than 1 component for new genome " + str(issue.id))
     else:
         print("No component for issue %d (%s)" % (issue.id, issue.subject))
+
+    # Get Organism abbrev
+    if "Organism Abbreviation" in customs:
+        abbrev = customs["Organism Abbreviation"]["value"]
+        if abbrev:
+            genome["BRC4"]["organism_abbrev"] = abbrev
+        else:
+            print("No organism_abbrev for new genome %d (%s)" % (issue.id, issue.subject))
+    else:
+        print("No organism_abbrev for issue %d (%s)" % (issue.id, issue.subject))
 
     return genome
 
@@ -130,6 +154,48 @@ def get_ebi_issues(redmine, other_fields=dict()):
     
     return redmine.issue.filter(**search_fields)
 
+def add_genome_organism_abbrev(redmine, build, update=False):
+    """
+    Retrieve genome issues, get the corresponding INSDC accession, and generate an organism abbrev
+    Put the abbrev back to the Redmine ticket
+    By default do not update the ticket
+    """
+    
+    # First get the genomes issues
+    issues = get_all_genomes(redmine, build)
+    if not issues:
+        print("No Redmine tickets to update")
+        return
+    
+    # Get the taxonomy for each issue
+    for issue in issues:
+        time.sleep(0.1)
+        genome = parse_genome(issue)
+        custom = get_custom_fields(issue)
+        try:
+            accession = custom["GCA number"]["value"]
+            full_name = custom["Experimental Organisms"]["value"]
+            organism_abbrev = make_organism_abbrev(full_name)
+            print("\t".join([str(issue.id), accession, organism_abbrev, issue.subject]))
+        except:
+            print("Could not generate an organism_abbrev for issue %d (%s)" % (issue.id, issue.subject))
+            print(custom["Experimental Organisms"]["value"])
+            continue
+
+    
+def make_organism_abbrev(name):
+    
+    items = name.split(" ")
+    genus = items[0]
+    species = items[1]
+    strain_abbrev = "".join(items[2:])
+    
+    genus = re.sub("^[|]$", "", genus)
+    strain_abbrev = re.sub(r"isolate|strain|breed|str\.|\/", "", strain_abbrev, re.IGNORECASE)
+    
+    organism_abbrev = genus[0].lower() + species[0:3] + strain_abbrev
+    return organism_abbrev
+    
 
 def main():
     # Parse command line arguments
@@ -137,14 +203,16 @@ def main():
     
     parser.add_argument('--key', type=str, required=True,
                 help='Redmine authentification key')
-    parser.add_argument('--output_dir', type=str, required=True,
+    parser.add_argument('--output_dir', type=str, default="./redmine_output",
                 help='Output_dir')
     # Choice
-    parser.add_argument('--get', choices=['genomes', 'rnaseq', 'dnaseq'], required=True,
+    parser.add_argument('--get', choices=['genomes', 'rnaseq', 'dnaseq', 'organism_abbrev'], required=True,
                 help='Get genomes, rnaseq, or dnaseq issues')
     # Optional
     parser.add_argument('--build', type=int,
                 help='Restrict to a given build')
+    parser.add_argument('--update_redmine', type=int,
+                help='Actually update Redmine for the organism_abbrev (dry run by default)')
     args = parser.parse_args()
     
     # Start Redmine API
@@ -157,8 +225,10 @@ def main():
         print("RNA-Seq Redmine retrieval to be implemented")
     elif args.get == 'dnaseq':
         print("DNA-Seq Redmine retrieval to be implemented")
+    elif args.get == 'organism_abbrev':
+        add_genome_organism_abbrev(redmine, args.build, args.update_redmine)
     else:
-        print("Need to say what data you want to get: --genomes? --rnaseq? --dnaseq?")
+        print("Need to say what data you want to --get: genomes? rnaseq? dnaseq? organism_abbrev?")
 
 if __name__ == "__main__":
     main()
