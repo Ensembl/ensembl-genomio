@@ -13,6 +13,7 @@ default_fields = dict(
         )
 insdc_pattern = "^GC[AF]_\d{9}(\.\d+)?$"
 accession_api_url = "https://www.ebi.ac.uk/ena/browser/api/xml/%s"
+veupathdb_id = 1976
 
 def retrieve_genomes(redmine, output_dir, build=None):
     """
@@ -43,7 +44,7 @@ def retrieve_genomes(redmine, output_dir, build=None):
             json.dump(genome_structure, f, indent=True)
             f.close()
         except:
-            print("Skipped issue %d (%s), no organism_abbrev" % (issue.id, issue.subject))
+            print("Skipped issue %d (%s). No organism_abbrev." % (issue.id, issue.subject))
             pass
 
 def get_all_genomes(redmine, build=None):
@@ -52,6 +53,9 @@ def get_all_genomes(redmine, build=None):
     """
     genomes_with_genes = get_issues(redmine, "Genome sequence and Annotation", build)
     genomes_without_genes = get_issues(redmine, "Assembled genome sequence without annotation", build)
+#    genomes_without_genes = []
+    print("%d issues for new genomes with genes found" % len(genomes_with_genes))
+    print("%d issues for new genomes without genes found" % len(genomes_without_genes))
     
     issues = genomes_with_genes + genomes_without_genes
     
@@ -97,10 +101,6 @@ def parse_genome(issue):
         abbrev = customs["Organism Abbreviation"]["value"]
         if abbrev:
             genome["BRC4"]["organism_abbrev"] = abbrev
-        else:
-            print("No organism_abbrev for new genome %d (%s)" % (issue.id, issue.subject))
-    else:
-        print("No organism_abbrev for issue %d (%s)" % (issue.id, issue.subject))
 
     return genome
 
@@ -139,9 +139,19 @@ def get_issues(redmine, datatype, build=None):
     
     other_fields = { "cf_94" : datatype }
     if build:
-        other_fields["fixed_version"] = 'Build ' + str(build)
+        version_id = get_version_id(redmine, build)
+        other_fields["fixed_version_id"] = version_id
 
     return list(get_ebi_issues(redmine, other_fields))
+
+def get_version_id(redmine, build):
+    """
+    Given a build number, get the version id for it
+    """
+    versions = redmine.version.filter(project_id=veupathdb_id)
+    version_name = "Build " + str(build)
+    version_id = [version.id for version in versions if version.name == version_name]
+    return version_id
     
 def get_ebi_issues(redmine, other_fields=dict()):
     """
@@ -179,7 +189,6 @@ def add_genome_organism_abbrev(redmine, build, update=False):
             print("\t".join([str(issue.id), accession, organism_abbrev, issue.subject]))
         except:
             print("Could not generate an organism_abbrev for issue %d (%s)" % (issue.id, issue.subject))
-            print(custom["Experimental Organisms"]["value"])
             continue
 
     
@@ -191,7 +200,8 @@ def make_organism_abbrev(name):
     strain_abbrev = "".join(items[2:])
     
     genus = re.sub("^[|]$", "", genus)
-    strain_abbrev = re.sub(r"isolate|strain|breed|str\.|\/", "", strain_abbrev, re.IGNORECASE)
+    strain_abbrev = re.sub(r"isolate|strain|breed|str\.|subspecies", "", strain_abbrev, re.IGNORECASE)
+    strain_abbrev = re.sub(r"[\/\(\)]", "", strain_abbrev)
     
     organism_abbrev = genus[0].lower() + species[0:3] + strain_abbrev
     return organism_abbrev
@@ -203,7 +213,7 @@ def main():
     
     parser.add_argument('--key', type=str, required=True,
                 help='Redmine authentification key')
-    parser.add_argument('--output_dir', type=str, default="./redmine_output",
+    parser.add_argument('--output_dir', type=str,
                 help='Output_dir')
     # Choice
     parser.add_argument('--get', choices=['genomes', 'rnaseq', 'dnaseq', 'organism_abbrev'], required=True,
@@ -220,7 +230,11 @@ def main():
     
     # Choose which data to retrieve
     if args.get == 'genomes':
-        retrieve_genomes(redmine, args.output_dir, args.build)
+        if args.output_dir:
+            retrieve_genomes(redmine, args.output_dir, args.build)
+        else:
+            print("Need --output_dir")
+            return
     elif args.get == 'rnaseq':
         print("RNA-Seq Redmine retrieval to be implemented")
     elif args.get == 'dnaseq':
