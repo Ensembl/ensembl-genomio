@@ -43,8 +43,8 @@ def retrieve_genomes(redmine, output_dir, build=None):
             f = open(organism_file, "w")
             json.dump(genome_structure, f, indent=True)
             f.close()
-        except:
-            print("Skipped issue %d (%s). No organism_abbrev." % (issue.id, issue.subject))
+        except Exception as error:
+            print("Skipped issue %d (%s). %s." % (issue.id, issue.subject, error))
             pass
 
 def get_all_genomes(redmine, build=None):
