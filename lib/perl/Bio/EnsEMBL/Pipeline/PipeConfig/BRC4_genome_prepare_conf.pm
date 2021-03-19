@@ -87,6 +87,13 @@ sub pipeline_wide_parameters {
     work_dir       => catdir($self->o('pipeline_dir'), "process_files", "#accession#"),
   };
 }
+sub hive_meta_table {
+  my ($self) = @_;
+  return {
+    %{$self->SUPER::hive_meta_table},
+    'hive_use_param_stack'  => 1,
+  };
+}
 
 sub pipeline_create_commands {
     my ($self) = @_;
@@ -127,49 +134,40 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -max_retry_count => 0,
       -flow_into => {
-        '2' => { 'Check_genome_schema' => { genome_json => '#_0#' } },
+        '2' => { 'Process_genome_metadata' => { genome_json => '#_0#' } },
       },
     },
 
     {
-      -logic_name     => 'Check_genome_schema',
+      -logic_name => 'Process_genome_metadata',
+      -module     => 'ensembl.brc4.runnable.process_genome_data',
+      -language    => 'python3',
+      -parameters     => {
+        json_path => '#genome_json#',
+      },
+      -analysis_capacity   => 1,
+      -rc_name    => 'default',
+      -flow_into => {
+        2 => "Check_genome_schema"
+      }
+    },
+
+    { -logic_name     => 'Check_genome_schema',
       -module         => 'ensembl.brc4.runnable.schema_validator',
       -language => 'python3',
       -parameters     => {
         json_file => '#genome_json#',
         json_schema => '#schemas#',
-        metadata_type => 'genome'
+        metadata_type => "genome",
+        hash_key => "#metadata_type#",
       },
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
-      -flow_into  => {1 => { 'Read_genome_data' => INPUT_PLUS() } },
-    },
-
-    {
-      -logic_name     => 'Read_genome_data',
-      -module         => 'ensembl.brc4.runnable.read_json',
-      -language => 'python3',
-      -parameters     => {
-        json_path => '#genome_json#',
-        name => "genome_data"
+      -flow_into  => {
+        1 => 'Download_assembly_data'
       },
-      -analysis_capacity => 1,
-      -failed_job_tolerance => 100,
-      -batch_size     => 50,
-      -rc_name        => 'default',
-      -flow_into  => { 2 => 'Get_accession' },
-    },
-
-    {
-      -logic_name     => 'Get_accession',
-      -module         => 'ensembl.brc4.runnable.say_accession',
-      -language => 'python3',
-      -analysis_capacity => 1,
-      -batch_size     => 50,
-      -rc_name        => 'default',
-      -flow_into  => { 2 => { 'Download_assembly_data' => INPUT_PLUS() } },
     },
 
     {
@@ -180,8 +178,8 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -rc_name        => 'default',
       -flow_into  => {
-        '2->A' => { 'Process_data' => INPUT_PLUS() },
-        'A->2' => { 'Manifest_maker' => INPUT_PLUS() },
+        '2->A' => 'Process_data',
+        'A->2' => 'Manifest_maker',
       },
     },
 
@@ -192,7 +190,6 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -flow_into  => [
         WHEN("#gff3_raw#", ['Ungzip_gff3', 'Process_fasta_pep']),
-        'Process_genome_metadata',
         'Process_seq_region',
         'Process_fasta_dna',
       ],
@@ -247,17 +244,6 @@ sub pipeline_analyses {
      -rc_name           => 'default',
      -flow_into  => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=gff3',
    },
-
-    {
-      -logic_name => 'Process_genome_metadata',
-      -module     => 'ensembl.brc4.runnable.process_genome_data',
-      -language    => 'python3',
-      -analysis_capacity   => 1,
-      -rc_name    => 'default',
-      -flow_into => {
-        2 => "Check_json_schema"
-      }
-    },
 
     {
       -logic_name => 'Process_seq_region',

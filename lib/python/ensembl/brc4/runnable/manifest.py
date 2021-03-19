@@ -14,6 +14,13 @@ class manifest(eHive.BaseRunnable):
         output_dir = self.param_required('output_dir')
 
         # Assume there is a genome file and get metadata from it
+        if not "genome" in manifest_files:
+            genome_file = self.param("genome_json")
+            if genome_file:
+                manifest_files["genome"] = genome_file
+            else:
+                raise Exception("Processed genome metadata file is missing")
+        
         # to configure the file names
         genome_data = self.get_genome_data(manifest_files)
         print(genome_data)
