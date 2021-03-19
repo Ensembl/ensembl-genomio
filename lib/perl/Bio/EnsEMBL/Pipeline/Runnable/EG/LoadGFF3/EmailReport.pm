@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [1999-2019] EMBL-European Bioinformatics Institute
+Copyright [1999-2014] EMBL-European Bioinformatics Institute
 and Wellcome Trust Sanger Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Pipeline::Runnable::EG:LoadGFF3::EmailReport
+Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::EmailReport
 
 =head1 Author
 
@@ -30,7 +30,7 @@ James Allen
 
 =cut
 
-package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ReportSeqEdits;
+package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::EmailReport;
 
 use strict;
 use warnings;
@@ -38,11 +38,15 @@ use warnings;
 use File::Basename qw(fileparse);
 use File::Path qw(make_path);
 
-use base qw(Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base);
+use base qw(
+  Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::EmailReport
+  Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base
+);
 
-sub run {
+sub fetch_input {
   my ($self) = @_;
-
+  my $species            = $self->param_required('species');
+  my $db_type            = $self->param_required('db_type');
   my $logic_name         = $self->param_required('logic_name');
   my $protein_fasta_file = $self->param('protein_fasta_file');
 
@@ -52,12 +56,16 @@ sub run {
   my $protein_seq_report_filename = $self->param('protein_seq_report_filename');
   my $protein_seq_fixes_filename = $self->param('protein_seq_fixes_filename');
   
-  my $dba = $self->core_dba();
+  my $dba = $self->get_DBAdaptor($db_type);
   my $dbh = $dba->dbc->db_handle;
   
+  my $report = '';
   my $biotype_report_data = $self->biotype_report($dbh, $logic_name);
+  $report .= $biotype_report_data; 
   my $seq_edit_tt_report_data = $self->seq_edit_tt_report($dbh, $logic_name);
+  $report .= $seq_edit_tt_report_data;  
   my $seq_edit_tn_report_data = $self->seq_edit_tn_report($dbh, $logic_name);
+  $report .= $seq_edit_tn_report_data;  
 
   $self->dump_report($biotype_report_data, $biotype_report_filename);
   $self->dump_report($seq_edit_tt_report_data, $seq_edit_tt_report_filename);
@@ -65,11 +73,13 @@ sub run {
 
   if ($protein_fasta_file && -e $protein_fasta_file) {
     my ($seq_report, $fixes) = $self->protein_seq_report($dba, $logic_name, $protein_fasta_file);
+    $report .= $seq_report;
+    $report .= $fixes;
     $self->dump_report($seq_report, $protein_seq_report_filename);
     $self->dump_report($fixes, $protein_seq_fixes_filename);
   }
-
-  $dba->dbc->disconnect_if_idle();
+  
+  $self->param('text', $report);
 }
 
 sub biotype_report {
@@ -200,19 +210,9 @@ sub protein_seq_report {
         
         if ($db_seq ne $file_seq) {
           my $length = length($db_seq);
-
-          # Initial methionine only?
-          (my $met_first_db_seq = $db_seq) =~ s/^./M/;
-          if ($met_first_db_seq eq $file_seq) {
-            push @results, [$tt_id, $tn_id, 'First amino acid in db changed to Met', $db_seq, $file_seq];
-            push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 170, '1 1 M' FROM translation WHERE stable_id = '$tn_id';";
-          } else {
-            push @results, [$tt_id, $tn_id, 'Sequences do not match', $db_seq, $file_seq];
-            push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 144, '1 $length $file_seq' FROM translation WHERE stable_id = '$tn_id';";
-          }
-          if ($transcript->biotype ne 'pseudogene_with_CDS') {
-            push @fixes, "UPDATE gene INNER JOIN transcript USING (gene_id) SET gene.biotype = 'protein_coding', transcript.biotype = 'protein_coding' WHERE transcript.stable_id = '$tt_id';";
-          }
+          push @results, [$tt_id, $tn_id, 'Sequences do not match', $db_seq, $file_seq];
+          push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 144, '1 $length $file_seq' FROM translation WHERE stable_id = '$tn_id';";
+          push @fixes, "UPDATE gene INNER JOIN transcript USING (gene_id) SET gene.biotype = 'protein_coding', transcript.biotype = 'protein_coding' WHERE transcript.stable_id = '$tt_id';";
         }
         
       } else {
@@ -260,49 +260,6 @@ sub dump_report {
     or die "Can't open > $path: $!";
   print $fh $data;
   close($fh)
-}
-
-# from eg-pipeline:  Bio::EnsEMBL::EGPipeline::Common::RunnableDB::EmailReport
-sub format_table {
-  my ($self, $title, $columns, $results) = @_;
-
-  my @lengths;
-  foreach (@$columns) {
-    push @lengths, length($_) + 2;
-  }
-
-  foreach (@$results) {
-    for (my $i=0; $i < scalar(@$_); $i++) {
-      if (defined $$_[$i]) {
-        my $len = length($$_[$i]) + 2;
-        $lengths[$i] = $len if $len > $lengths[$i];
-      }
-    }
-  }
-
-  my $table = "\n$title\n";
-  $table .= '+'.join('+', map {'-' x $_ } @lengths).'+'."\n";
-
-  for (my $i=0; $i < scalar(@lengths); $i++) {
-    my $column = $$columns[$i];
-    my $padding = $lengths[$i] - length($column) - 2;
-    $table .= '| '.$column.(' ' x $padding).' ';
-  }
-
-  $table .= '|'."\n".'+'.join('+', map {'-' x $_ } @lengths).'+'."\n";
-
-  foreach (@$results) {
-    for (my $i=0; $i < scalar(@lengths); $i++) {
-      my $value = $$_[$i] || '';
-      my $padding = $lengths[$i] - length($value) - 2;
-      $table .= '| '.$value.(' ' x $padding).' ';
-    }
-    $table .= '|'."\n"
-  }
-
-  $table .= '+'.join('+', map {'-' x $_ } @lengths).'+'."\n";
-
-  return $table;
 }
 
 1;

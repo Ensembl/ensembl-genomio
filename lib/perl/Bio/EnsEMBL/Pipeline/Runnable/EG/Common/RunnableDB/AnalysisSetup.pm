@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [1999-2020] EMBL-European Bioinformatics Institute
+Copyright [1999-2014] EMBL-European Bioinformatics Institute
 and Wellcome Trust Sanger Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,11 +22,14 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::AnalysisSetup
+Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::AnalysisSetup
 
 =head1 DESCRIPTION
 
-Add a new analysis to a database.
+Add a new analysis to a database. By default, the script expects to be
+given the location of a db backup file, since it may delete data without
+doing a backup itself. This behaviour can be switched off, if you walk to
+walk the tightrope without a net (db_backup_required=0).
 
 If the analysis exists already, the default behaviour is to rename the
 existing analysis, and insert a fresh analysis. This is useful if you want
@@ -50,26 +53,38 @@ James Allen
 
 =cut
 
-package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::AnalysisSetup;
+package Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::AnalysisSetup;
 
 use strict;
 use warnings;
 
-#use base ('Bio::EnsEMBL::Hive::Process');
-use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
+use base qw(Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::Base);
 use Bio::EnsEMBL::Analysis;
-use Bio::EnsEMBL::Hive::Utils::URL qw/ parse /;
 
 sub param_defaults {
   return {
-    # basic
-    logic_name         => undef,
-    module             => undef,
-    production_lookup  => 1,
-    # aux
-    delete_existing    => 0,
-    logic_rename       => undef,
-    linked_tables      => [],
+    'db_type'            => 'core',
+    'linked_tables'      => [],
+    'delete_existing'    => 0,
+    'logic_rename'       => undef,
+    'db_backup_required' => 1,
+    'production_lookup'  => 1,
+    'db'                 => undef,
+    'db_version'         => undef,
+    'db_file'            => undef,
+    'program'            => undef,
+    'program_version'    => undef,
+    'program_file'       => undef,
+    'parameters'         => undef,
+    'module'             => undef,
+    'module_version'     => undef,
+    'gff_source'         => undef,
+    'gff_feature'        => undef,
+    'description'        => undef,
+    'display_label'      => undef,
+    'displayable'        => undef,
+    'web_data'           => undef,
+    'output_logic_name'  => 0,
   };
 }
 
@@ -82,13 +97,22 @@ sub fetch_input {
   if (!$self->param('delete_existing')) {
     $self->param('logic_rename', "$logic_name\_bkp") unless $self->param_is_defined('logic_rename');
   }
+  
+  if ($self->param('db_backup_required')) {
+    my $db_backup_file = $self->param_required('db_backup_file');
+    
+    if (!-e $db_backup_file) {
+      $self->throw("Database backup file '$db_backup_file' does not exist");
+    }
+  }
+  
 }
 
 sub run {
   my $self = shift @_;
   my $logic_name = $self->param_required('logic_name');
   
-  my $dba = $self->core_dba();
+  my $dba = $self->get_DBAdaptor($self->param('db_type'));
   my $dbh = $dba->dbc->db_handle;
   my $aa = $dba->get_adaptor('Analysis');
   my $analysis = $aa->fetch_by_logic_name($logic_name);
@@ -124,7 +148,23 @@ sub run {
   my $new_analysis = $self->create_analysis;
   $aa->store($new_analysis);
  
-  $dba->dbc->disconnect_if_idle();
+  $dba->dbc->disconnect_if_idle(); 
+}
+
+sub write_output {
+  my ($self) = @_;
+  my $logic_name        = $self->param_required('logic_name');
+  my $output_logic_name = $self->param_required('output_logic_name');
+  
+  # Output parameter is "created_logic_name" rather than "logic_name"
+  # because you can make all sorts of problems for yourself if you
+  # output a parameter with the same name as one of the input parameters.
+  if ($output_logic_name) {
+    $self->dataflow_output_id(
+      { created_logic_name => $logic_name },
+      $output_logic_name
+    );
+  }
 }
 
 sub create_analysis {
@@ -155,8 +195,7 @@ sub create_analysis {
 sub production_updates {
   my ($self) = @_;
   my $logic_name = $self->param('logic_name');
-  my $dba        = $self->production_dba();
-  my $dbc        = $dba->dbc;
+  my $dbc        = $self->production_dbc();
   my $dbh        = $dbc->db_handle();
   my %properties;
   
@@ -178,16 +217,12 @@ sub production_updates {
   ));
   $sth->fetch();
   
-  $properties{'web_data'} = eval ($properties{'web_data'}) if defined $properties{'web_data'};
-  
   # Explicitly passed parameters do not get overwritten.
   foreach my $property (keys %properties) {
     if (! $self->param_is_defined($property)) {
       $self->param($property, $properties{$property});
     }      
   }
-
-  $dbc->disconnect_if_idle();
 }
 
 1;
