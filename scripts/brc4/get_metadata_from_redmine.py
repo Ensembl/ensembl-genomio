@@ -102,6 +102,15 @@ def parse_genome(issue):
         if abbrev:
             genome["BRC4"]["organism_abbrev"] = abbrev
 
+    # Warn to get GFF2Load
+    if "GFF 2 Load" in customs and customs["GFF 2 Load"]["value"]:
+        gff_path = customs["GFF 2 Load"]["value"]
+        print("GFF2Load: separate gff file for %s: %s (issue %d)" % (genome["BRC4"]["organism_abbrev"], gff_path, issue.id))
+
+    # Warn for replacement
+    if "Replacement genome?" in customs and customs["Replacement genome?"]["value"] == "Yes":
+        print("Replacement: the organism %s is a replacement (issue %d)" % (genome["BRC4"]["organism_abbrev"], issue.id))
+
     return genome
 
 def check_accession(accession):
