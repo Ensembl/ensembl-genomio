@@ -40,7 +40,8 @@ class prepare_genome(eHive.BaseRunnable):
                 {
                     "db_name" : db_name,
                     "manifest_data": manifest,
-                    "genome_data": genome
+                    "genome_data": genome,
+                    "species": genome["species"]["production_name"]
                     }, 2)
 
         # DB metadata for registry
