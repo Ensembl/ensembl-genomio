@@ -116,7 +116,11 @@ class process_seq_region(eHive.BaseRunnable):
                         seqr["EBI_seq_region_name"] = flat_name
 
             if not "BRC4_seq_region_name" in seqr:
-                raise Exception("Can't get INSDC id for sequence %s" % seqr["name"])
+                report_path = self.param('report')
+                genome_data = self.param('genome_data')
+                accession = genome_data["assembly"]["accession"]
+
+                raise Exception("Can't get INSDC id for sequence '%s', from accession %s in report %s. Please replace this value in the report (column GenBank-Accn) with a valid INSDC record (e.g. from the RefSeq page)" % (seqr["name"], accession, report_path))
 
     def get_mitochondrial_codon_table(self, seq_regions, tax_id) -> None:
         """
