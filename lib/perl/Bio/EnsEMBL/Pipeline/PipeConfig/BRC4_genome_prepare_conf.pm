@@ -145,6 +145,7 @@ sub pipeline_analyses {
       -parameters     => {
         json_path => '#genome_json#',
       },
+      -max_retry_count => 0,
       -analysis_capacity   => 1,
       -rc_name    => 'default',
       -flow_into => {
@@ -219,6 +220,7 @@ sub pipeline_analyses {
         merge_split_genes => $self->o('merge_split_genes'),
         validate_gene_id => $self->o('validate_gene_id'),
       },
+      -max_retry_count => 0,
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
       -rc_name    => '8GB',
@@ -254,6 +256,7 @@ sub pipeline_analyses {
       -parameters     => {
         file_name => "seq_region",
       },
+      -max_retry_count => 0,
       -failed_job_tolerance => 100,
       -flow_into  => {
         2 => 'Check_json_schema'
