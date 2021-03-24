@@ -217,6 +217,7 @@ class process_gff3(eHive.BaseRunnable):
                         gene.id = self.normalize_gene_id(gene)
                         
                         # Store gene functional annotation
+                        self.transfer_description(gene)
                         self.add_funcann_feature(functional_annotation, gene, "gene")
                         
                         # replace qualifiers
@@ -341,6 +342,21 @@ class process_gff3(eHive.BaseRunnable):
         
         # Write functional annotation
         self.print_json(out_funcann_path, functional_annotation)
+    
+    def transfer_description(self, gene):
+        """
+        Transfer the transcript product description to the gene if it doesn't have any
+        """
+        allowed_transcript_types = self.param("transcript_types")
+        
+        if not "product" in gene.qualifiers:
+            for tran in gene.sub_features:
+                if tran.type in allowed_transcript_types:
+                    if "product" in tran.qualifiers:
+                        description = tran.qualifiers["product"][0]
+                        gene.qualifiers["product"] = [ description ]
+                        return
+        
     
     def ncrna_gene(self, ncrna):
         """Create a gene for ncRNAs"""
