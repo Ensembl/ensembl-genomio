@@ -146,7 +146,7 @@ class process_genome_data(eHive.BaseRunnable):
             taxonomy = self.get_taxonomy_from_accession(accession)
             species["taxonomy_id"] = taxonomy["taxon_id"]
             
-            if not"strain" in species:
+            if (not "strain" in species) and "strain" in taxonomy:
                 species["strain"] = taxonomy["strain"]
             
             if not"scientific_name" in species:
@@ -162,10 +162,27 @@ class process_genome_data(eHive.BaseRunnable):
         
         entry = ET.fromstring(entry_xml)
         taxon_node = entry.find(".//TAXON")
-        taxonomy = {
-                'taxon_id' : int(taxon_node.find("TAXON_ID").text),
-                'strain' : taxon_node.find("STRAIN").text,
-                'scientific_name' : taxon_node.find("SCIENTIFIC_NAME").text,
-                }
-        return taxonomy
         
+        taxon_id = self.get_node_text(taxon_node, "TAXON_ID")
+        strain = self.get_node_text(taxon_node, "STRAIN")
+        scientific_name = self.get_node_text(taxon_node, "SCIENTIFIC_NAME")
+        
+        if not taxon_id:
+            raise Exception("No taxon_id found for accession %s" % accession)
+        if not scientific_name:
+            raise Exception("No scientific_name found for accession %s" % accession)
+        
+        taxonomy = {
+                'taxon_id' : int(taxon_id),
+                'scientific_name' : scientific_name,
+                }
+        if strain:
+            taxonomy['strain'] = strain
+        
+        return taxonomy
+    
+    def get_node_text(self, node, tag):
+        try:
+            return node.find(tag).text
+        except:
+            return
