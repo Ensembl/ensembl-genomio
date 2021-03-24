@@ -157,7 +157,8 @@ class process_genome_data(eHive.BaseRunnable):
         
         url = self.param("accession_api_url")
         
-        response = requests.get(url % accession)
+        gb_accession = accession.replace("GCF", "GCA")
+        response = requests.get(url % gb_accession)
         entry_xml = response.text
         
         entry = ET.fromstring(entry_xml)
