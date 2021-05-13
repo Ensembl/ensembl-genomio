@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
  
 url = 'https://redmine.apidb.org'
 default_fields = dict(
-        status_id = 'open',
+        status_name = 'Data Processing (EBI)',
         cf_17 = "Data Processing (EBI)",
         )
 insdc_pattern = "^GC[AF]_\d{9}(\.\d+)?$"
@@ -97,19 +97,30 @@ def parse_genome(issue):
         print("No component for issue %d (%s)" % (issue.id, issue.subject))
 
     # Get Organism abbrev
-    if "Organism Abbreviation" in customs:
+    try:
         abbrev = customs["Organism Abbreviation"]["value"]
         if abbrev:
             genome["BRC4"]["organism_abbrev"] = abbrev
+        else:
+            print("No organism abbrev could be found for %s" % issue.id)
+            return
+    except:
+        print("Can't get organism abbrev for %s" % issue.id)
 
     # Warn to get GFF2Load
-    if "GFF 2 Load" in customs and customs["GFF 2 Load"]["value"]:
+    try:
         gff_path = customs["GFF 2 Load"]["value"]
-        print("GFF2Load: separate gff file for %s: %s (issue %d)" % (genome["BRC4"]["organism_abbrev"], gff_path, issue.id))
+        if gff_path:
+            print("GFF2Load: separate gff file for %s: %s (issue %d)" % (genome["BRC4"]["organism_abbrev"], gff_path, issue.id))
+    except:
+        pass
 
     # Warn for replacement
-    if "Replacement genome?" in customs and customs["Replacement genome?"]["value"] == "Yes":
-        print("Replacement: the organism %s is a replacement (issue %d)" % (genome["BRC4"]["organism_abbrev"], issue.id))
+    try:
+        if customs["Replacement genome?"]["value"] == "Yes":
+            print("Replacement: the organism %s is a replacement (issue %d)" % (genome["BRC4"]["organism_abbrev"], issue.id))
+    except:
+        pass
 
     return genome
 
