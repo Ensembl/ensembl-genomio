@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
  
 url = 'https://redmine.apidb.org'
 default_fields = dict(
-        status_id = 'open',
+        status_name = 'Data Processing (EBI)',
         cf_17 = "Data Processing (EBI)",
         )
 insdc_pattern = "^GC[AF]_\d{9}(\.\d+)?$"
