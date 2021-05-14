@@ -75,6 +75,9 @@ sub default_options {
     # LinuxBrew home path
     linuxbrew_home  => $self->o('ENV', 'LINUXBREW_HOME'),
 
+    # default LSF queueu name
+    queue_name =>  'standard',
+
     # pipeline tag
     pipeline_tag => '',
   }
@@ -90,23 +93,23 @@ Description: Interface method that should return a hash of
 sub resource_classes {
   my ($self) = @_;
   return {
-    'default'           => {'LSF' => '-q production-rh74 -M  4000 -R "rusage[mem=4000]"'},
-    'normal'            => {'LSF' => '-q production-rh74 -M  4000 -R "rusage[mem=4000]"'},
-    '2Gb_mem'           => {'LSF' => '-q production-rh74 -M  2000 -R "rusage[mem=2000]"'},
-    '4Gb_mem'           => {'LSF' => '-q production-rh74 -M  4000 -R "rusage[mem=4000]"'},
-    '8Gb_mem'           => {'LSF' => '-q production-rh74 -M  8000 -R "rusage[mem=8000]"'},
-    '12Gb_mem'          => {'LSF' => '-q production-rh74 -M 12000 -R "rusage[mem=12000]"'},
-    '16Gb_mem'          => {'LSF' => '-q production-rh74 -M 16000 -R "rusage[mem=16000]"'},
-    '24Gb_mem'          => {'LSF' => '-q production-rh74 -M 24000 -R "rusage[mem=24000]"'},
-    '32Gb_mem'          => {'LSF' => '-q production-rh74 -M 32000 -R "rusage[mem=32000]"'},
-    '2Gb_mem_4Gb_tmp'   => {'LSF' => '-q production-rh74 -M  2000 -R "rusage[mem=2000,tmp=4000]"'},
-    '4Gb_mem_4Gb_tmp'   => {'LSF' => '-q production-rh74 -M  4000 -R "rusage[mem=4000,tmp=4000]"'},
-    '8Gb_mem_4Gb_tmp'   => {'LSF' => '-q production-rh74 -M  8000 -R "rusage[mem=8000,tmp=4000]"'},
-    '12Gb_mem_4Gb_tmp'  => {'LSF' => '-q production-rh74 -M 12000 -R "rusage[mem=12000,tmp=4000]"'},
-    '16Gb_mem_4Gb_tmp'  => {'LSF' => '-q production-rh74 -M 16000 -R "rusage[mem=16000,tmp=4000]"'},
-    '16Gb_mem_16Gb_tmp' => {'LSF' => '-q production-rh74 -M 16000 -R "rusage[mem=16000,tmp=16000]"'},
-    '24Gb_mem_4Gb_tmp'  => {'LSF' => '-q production-rh74 -M 24000 -R "rusage[mem=24000,tmp=4000]"'},
-    '32Gb_mem_4Gb_tmp'  => {'LSF' => '-q production-rh74 -M 32000 -R "rusage[mem=32000,tmp=4000]"'},
+    'default'           => {'LSF' => '-q ' . $self->o('queue_name') . ' -M  4000 -R "rusage[mem=4000]"'},
+    'normal'            => {'LSF' => '-q ' . $self->o('queue_name') . ' -M  4000 -R "rusage[mem=4000]"'},
+    '2Gb_mem'           => {'LSF' => '-q ' . $self->o('queue_name') . ' -M  2000 -R "rusage[mem=2000]"'},
+    '4Gb_mem'           => {'LSF' => '-q ' . $self->o('queue_name') . ' -M  4000 -R "rusage[mem=4000]"'},
+    '8Gb_mem'           => {'LSF' => '-q ' . $self->o('queue_name') . ' -M  8000 -R "rusage[mem=8000]"'},
+    '12Gb_mem'          => {'LSF' => '-q ' . $self->o('queue_name') . ' -M 12000 -R "rusage[mem=12000]"'},
+    '16Gb_mem'          => {'LSF' => '-q ' . $self->o('queue_name') . ' -M 16000 -R "rusage[mem=16000]"'},
+    '24Gb_mem'          => {'LSF' => '-q ' . $self->o('queue_name') . ' -M 24000 -R "rusage[mem=24000]"'},
+    '32Gb_mem'          => {'LSF' => '-q ' . $self->o('queue_name') . ' -M 32000 -R "rusage[mem=32000]"'},
+    '2Gb_mem_4Gb_tmp'   => {'LSF' => '-q ' . $self->o('queue_name') . ' -M  2000 -R "rusage[mem=2000,tmp=4000]"'},
+    '4Gb_mem_4Gb_tmp'   => {'LSF' => '-q ' . $self->o('queue_name') . ' -M  4000 -R "rusage[mem=4000,tmp=4000]"'},
+    '8Gb_mem_4Gb_tmp'   => {'LSF' => '-q ' . $self->o('queue_name') . ' -M  8000 -R "rusage[mem=8000,tmp=4000]"'},
+    '12Gb_mem_4Gb_tmp'  => {'LSF' => '-q ' . $self->o('queue_name') . ' -M 12000 -R "rusage[mem=12000,tmp=4000]"'},
+    '16Gb_mem_4Gb_tmp'  => {'LSF' => '-q ' . $self->o('queue_name') . ' -M 16000 -R "rusage[mem=16000,tmp=4000]"'},
+    '16Gb_mem_16Gb_tmp' => {'LSF' => '-q ' . $self->o('queue_name') . ' -M 16000 -R "rusage[mem=16000,tmp=16000]"'},
+    '24Gb_mem_4Gb_tmp'  => {'LSF' => '-q ' . $self->o('queue_name') . ' -M 24000 -R "rusage[mem=24000,tmp=4000]"'},
+    '32Gb_mem_4Gb_tmp'  => {'LSF' => '-q ' . $self->o('queue_name') . ' -M 32000 -R "rusage[mem=32000,tmp=4000]"'},
   }
 }
 
