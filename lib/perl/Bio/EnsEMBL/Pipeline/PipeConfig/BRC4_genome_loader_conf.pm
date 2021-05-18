@@ -27,6 +27,9 @@ sub default_options {
   return {
     %{ $self->SUPER::default_options() },
 
+    ## default LSF queue nane 
+    queue_name => "standard",
+
     ############################################
     # Config to be set by the user
     # MZ/BRC4 release id
@@ -832,14 +835,14 @@ sub pipeline_analyses {
 sub resource_classes {
     my $self = shift;
     return {
-      'default'  	=> {'LSF' => '-q production-rh74 -M 4000   -R "rusage[mem=4000]"'},
-      '8GB'       => {'LSF' => '-q production-rh74 -M 8000   -R "rusage[mem=8000]"'},
-      '15GB'      => {'LSF' => '-q production-rh74 -M 15000  -R "rusage[mem=15000]"'},
-      '32GB'  	 	=> {'LSF' => '-q production-rh74 -M 32000  -R "rusage[mem=32000]"'},
-      '64GB'  	 	=> {'LSF' => '-q production-rh74 -M 64000  -R "rusage[mem=64000]"'},
-      '128GB'  	 	=> {'LSF' => '-q production-rh74 -M 128000 -R "rusage[mem=128000]"'},
-      '256GB'  	 	=> {'LSF' => '-q production-rh74 -M 256000 -R "rusage[mem=256000]"'},
-	}
+      'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
+      '8GB'     => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 8000   -R "rusage[mem=8000]"'},
+      '15GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 15000  -R "rusage[mem=15000]"'},
+      '32GB '   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 32000  -R "rusage[mem=32000]"'},
+      '64GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 64000  -R "rusage[mem=64000]"'},
+      '128GB'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 128000 -R "rusage[mem=128000]"'},
+      '256GB  ' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 256000 -R "rusage[mem=256000]"'},
+    }
 }
 
 1;
