@@ -35,7 +35,7 @@ package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::DeleteGenes;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::Base');
+use base ('Bio::EnsEMBL::EGPipeline::Common::RunnableDB::Base');
 
 sub run {
   my ($self) = @_;

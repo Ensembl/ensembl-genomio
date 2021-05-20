@@ -39,7 +39,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::LoadGFF3_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Pipeline::PipeConfig::EGGeneric_conf');
+use base ('Bio::EnsEMBL::EGPipeline::PipeConfig::EGGeneric_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
@@ -300,7 +300,7 @@ sub pipeline_analyses_generic {
 
     {
       -logic_name        => 'DumpGenome',
-      -module            => 'Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::DumpGenome',
+      -module            => 'Bio::EnsEMBL::EGPipeline::Common::RunnableDB::DumpGenome',
       -analysis_capacity => 10,
       -max_retry_count   => 1,
       -parameters        => {
@@ -313,7 +313,7 @@ sub pipeline_analyses_generic {
 
     {
       -logic_name        => 'BackupDatabase',
-      -module            => 'Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::DatabaseDumper',
+      -module            => 'Bio::EnsEMBL::EGPipeline::Common::RunnableDB::DatabaseDumper',
       -analysis_capacity => 10,
       -max_retry_count   => 1,
       -parameters        => {
@@ -340,7 +340,7 @@ sub pipeline_analyses_generic {
 
     {
       -logic_name        => 'AnalysisSetup',
-      -module            => 'Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::AnalysisSetup',
+      -module            => 'Bio::EnsEMBL::EGPipeline::Common::RunnableDB::AnalysisSetup',
       -analysis_capacity => 10,
       -max_retry_count   => 0,
       -parameters        => {

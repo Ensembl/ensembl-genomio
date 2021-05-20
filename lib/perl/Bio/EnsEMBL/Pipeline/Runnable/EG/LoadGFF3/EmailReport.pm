@@ -39,7 +39,7 @@ use File::Basename qw(fileparse);
 use File::Path qw(make_path);
 
 use base qw(
-  Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::EmailReport
+  Bio::EnsEMBL::EGPipeline::Common::RunnableDB::EmailReport
   Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ReportSeqEdits
 );
 

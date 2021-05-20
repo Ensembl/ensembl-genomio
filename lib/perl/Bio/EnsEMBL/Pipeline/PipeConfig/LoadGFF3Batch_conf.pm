@@ -83,7 +83,7 @@ sub pipeline_analyses {
   return [
     {
       -logic_name      => 'SpeciesFactory',
-      -module          => 'Bio::EnsEMBL::Pipeline::Runnable::EG::Common::RunnableDB::EGSpeciesFactory',
+      -module          => 'Bio::EnsEMBL::EGPipeline::Common::RunnableDB::EGSpeciesFactory',
       -input_ids       => [ {} ],
       -parameters      => {
                             species         => $self->o('species'),
