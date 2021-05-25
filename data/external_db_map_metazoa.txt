@@ -1,10 +1,10 @@
 # rules of the form (FROM is case insensitive)
 #  FROM	TO	# for any feature type, if not ignored
 #  FROM _IGNORE_ type	# ignore for the specific type
-
-#  FROM	TO	gene|transcript|translation	!pattern (optional)
+#  FROM	TO	gene|transcript|translation	pattern (optional; prepend with '!' to negate)
 #  FROM _IGNORE_	# ignore any type, unless valid for a specific  type
-
+#
+#  if no FROM mentioned and -skip_unknown_xref_source 1 option is used, xref is ignored 
 
 # check parser conf
 # fixing duplicating flybase_annotation_id
