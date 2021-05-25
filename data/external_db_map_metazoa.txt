@@ -21,6 +21,7 @@ EntrezGene	EntrezGene	gene
 
 flybase_annotation_id	flybase_annotation_id	gene
 FlyBase	flybase_annotation_id	gene
+FlyBase_Annotation_IDs	flybase_annotation_id	gene
 
 flybase_gene_id	flybase_gene_id	gene
 
@@ -51,6 +52,7 @@ Ensembl_Metazoa_transcript	Ensembl_Metazoa_transcript	transcript
 
 flybase_annotation_id	flybase_annotation_id_transcript	transcript
 FlyBase	flybase_annotation_id_transcript	transcript
+FlyBase_Annotation_IDs	flybase_annotation_id_transcript	transcript
 flybase_annotation_id_transcript	flybase_annotation_id_transcript	transcript
 
 flybase_transcript_id	flybase_transcript_id	transcript
@@ -88,6 +90,7 @@ Ensembl_Metazoa_translation	Ensembl_Metazoa_translation	translation
 
 flybase_annotation_id	flybase_annotation_id_translation	translation
 FlyBase	flybase_annotation_id_translation	translation
+FlyBase_Annotation_IDs	flybase_annotation_id_translation	translation
 flybase_annotation_id_translation	flybase_annotation_id_translation	translation
 
 flybase_translation_id	flybase_translation_id	translation
@@ -142,8 +145,6 @@ PubMed	PUBMED
 
 
 # Inore section
-#? FlyBase_Annotation_IDs	flybase_annotation_id
-
 BDGP_clone	_IGNORE_
 Fly-FISH	_IGNORE_
 GI	_IGNORE_
