@@ -320,7 +320,7 @@ sub norm_str {
   my $out = "$raw";
   $out =~ s/^\s*//;
   $out =~ s/\s*$//;
-  $out = undef if (length($pat) == 0);
+  $out = undef if (length($out) == 0);
   return $out;
 }
 
