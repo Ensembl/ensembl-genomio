@@ -1,8 +1,8 @@
-# rules of the form (FROM is case insensitive)
-#  FROM	TO	# for any feature type, if not ignored
-#  FROM _IGNORE_ type	# ignore for the specific type
-#  FROM	TO	gene|transcript|translation	pattern (optional; prepend with '!' to negate)
-#  FROM _IGNORE_	# ignore any type, unless valid for a specific  type
+# rules of the form (FROM is case insensitive, tab-separated):
+#  FROM _IGNORE_ feature_type [pattern]   # ignore for the specific feature type; if pattern present,  checks that xref ID matches
+#  FROM TO feature_type [pattern]   # converts to "TO" for the specific feature type; if pattern present,  checks that xref ID matches
+#  FROM _IGNORE_ # ignore any type, unless valid for a specific  type
+#  FROM	TO  # for any feature type, if not ignored
 #
 #  if no FROM mentioned and -skip_unknown_xref_source 1 option is used, xref is ignored 
 
