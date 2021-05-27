@@ -131,11 +131,11 @@ LJMU	LJMU_translation	translation
 
 
 # Seq regions
-ensembl_internal_synonym ensembl_internal_synonym
+ensembl_internal_synonym	ensembl_internal_synonym	seq_region
 GenBank	GenBank	seq_region
-INSDC_submitted_name INSDC_submitted_name	seq_region
-INSDC INSDC	seq_region
-RefSeq RefSeq	seq_region
+INSDC_submitted_name	INSDC_submitted_name	seq_region
+INSDC	INSDC	seq_region
+RefSeq	RefSeq	seq_region
 
 
 # Any feature
