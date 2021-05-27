@@ -145,7 +145,7 @@ SO	SO
 PubMed	PUBMED
 
 
-# Inore section
+# Ignore section
 
 # Ignoring GO!!!
 GO	_IGNORE_
