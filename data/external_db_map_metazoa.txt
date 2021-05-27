@@ -130,9 +130,17 @@ UniProtKB_all	UniProtKB_all	translation
 LJMU	LJMU_translation	translation
 
 
+# Seq regions
+ensembl_internal_synonym ensembl_internal_synonym
+GenBank	GenBank	seq_region
+INSDC_submitted_name INSDC_submitted_name	seq_region
+INSDC INSDC	seq_region
+RefSeq RefSeq	seq_region
+
+
 # Any feature
-Community_Symbol	BRC4_Community_Symbol
 Community_Annotation	BRC4_Community_Annotation
+Community_Symbol	BRC4_Community_Symbol
 
 EPD	EPD
 
