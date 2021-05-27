@@ -5,6 +5,9 @@
 #  FROM	TO  # for any feature type, if not ignored
 #
 #  if no FROM mentioned and -skip_unknown_xref_source 1 option is used, xref is ignored 
+#  feature type is one of: seq_region, gene, transcript, translation
+#    N.B. - seq_region and no-feature rules do not support patterns at the moment
+#         - if exists feature rule an there's no universal valid rule, other features are treated as ignored
 
 # check parser conf
 # fixing duplicating flybase_annotation_id

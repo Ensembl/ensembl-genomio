@@ -190,14 +190,19 @@ for my $it (@$data) {
   my @xrefs = ( @$xrefs_raw, map { { id => $_, dbname => substr($_, 0, 2) } } @$ont );
 
   # Add display_xref to xrefs if it is not there
-  my @display_xref_list = grep { $_->{id} eq $display_xref || ($_->{display_id} && $_->{display_id} eq $display_xref) } @xrefs;
-  if ($display_xref && !@display_xref_list) {
-    my $dxref = {
-      id => $display_xref,
-      dbname => $display_db_default,
-      info_type => 'DIRECT',
-    };
-    push @xrefs, $dxref;
+  my @display_xref_list = ();
+  if ($display_xref) {
+    my @with_disp_x = grep { $_->{id} eq $display_xref || ($_->{display_id} && $_->{display_id} eq $display_xref) } @xrefs;
+    push @display_xref_list, @with_disp_x;
+
+    if (!@display_xref_list) {
+      my $dxref = {
+        id => $display_xref,
+        dbname => $display_db_default,
+        info_type => 'DIRECT',
+      };
+      push @xrefs, $dxref;
+    }
   }
 
   # Remove duplications
@@ -329,7 +334,7 @@ sub load_external_db_map {
   
   return {} if not $path;
   
-  my $db_map = { VALID => { _ANY_ => {} }, IGNORE => { _ANY_ => {} } };
+  my $db_map = { VALID => { _ANY_ => {}, _OTHER_ => {} }, IGNORE => { _ANY_ => {}, _OTHER_ => {} } };
 
   open my $map_fh, "<", $path or die "$!: $path";
   while (my $line = readline $map_fh) {
@@ -340,13 +345,19 @@ sub load_external_db_map {
     my ($from_name, $to_name, $feature, $pat) = map { norm_str($_) } split(/\t/, $line);
 
     $feature = uc($feature // '_ANY_');
+    next if ($feature eq "SEQ_REGION");
+
+    $from_name = uc($from_name);
+
     if ($to_name eq '_IGNORE_') {
-      $db_map->{IGNORE}->{$feature}->{uc($from_name)} = { val => 1, pat => $pat };
+      $db_map->{IGNORE}->{$feature}->{$from_name} = { val => 1, pat => $pat };
+      $db_map->{IGNORE}->{_OTHER_}->{$from_name} = { val => 1, pat => undef } if ($feature ne "_ANY_");
     } else {
-      $db_map->{VALID}->{$feature}->{uc($from_name)} = { val => $to_name, pat => $pat };
+      $db_map->{VALID}->{$feature}->{$from_name} = { val => $to_name, pat => $pat };
+      $db_map->{VALID}->{_OTHER_}->{$from_name} = { val => 1, pat => undef } if ($feature ne "_ANY_");
     }
   }
-  
+
   return $db_map;
 }
 
@@ -365,12 +376,14 @@ sub db_name_for_feature {
   my $from_name = uc($raw_dbname);
 
   my $ignore_map = $db_map->{IGNORE};
-  my $ignore_feature = exists $ignore_map->{$feature} && exists $ignore_map->{$feature}->{$from_name} || undef;
-  my $ignore_any = exists $ignore_map->{_ANY_} && exists $ignore_map->{_ANY_}->{$from_name} || undef;
+  my $ignore_feature = exists $ignore_map->{$feature} && $ignore_map->{$feature}->{$from_name} || undef;
+  my $ignore_any = exists $ignore_map->{_ANY_} && $ignore_map->{_ANY_}->{$from_name} || undef;
+  my $ignore_other = exists $ignore_map->{_OTHER_} && $ignore_map->{_OTHER_}->{$from_name} || undef;
 
   my $valid_map = $db_map->{VALID};
-  my $valid_feature = exists $valid_map->{$feature} && exists $valid_map->{$feature}->{$from_name} || undef;
-  my $valid_any = exists $valid_map->{_ANY_} && exists $valid_map->{_ANY_}->{$from_name} || undef;
+  my $valid_feature = exists $valid_map->{$feature} && $valid_map->{$feature}->{$from_name} || undef;
+  my $valid_any = exists $valid_map->{_ANY_} && $valid_map->{_ANY_}->{$from_name} || undef;
+  my $valid_other = exists $valid_map->{_OTHER_} && $valid_map->{_OTHER_}->{$from_name} || undef;
 
   # check if there's a specific ignore rule
   if ($ignore_feature) {
@@ -385,6 +398,9 @@ sub db_name_for_feature {
     return $valid_feature->{val} if (!defined $pat);
     return $valid_feature->{val} if ($xref_id =~ m/$pat/);
   }
+
+  # check if mentioned anywhere else and no global validness; no pattern checked
+  return undef if ($valid_other and !$valid_any);
 
   # check global ignore
   return undef if ($ignore_any);
