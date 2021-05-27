@@ -140,14 +140,17 @@ FlyReactome	FlyReactome
 
 GenomeRNAi	GenomeRNAi
 
-GO	GO
-!GO	GO
 SO	SO
 
 PubMed	PUBMED
 
 
 # Inore section
+
+# Ignoring GO!!!
+GO	_IGNORE_
+!GO	_IGNORE_
+
 BDGP_clone	_IGNORE_
 Fly-FISH	_IGNORE_
 GI	_IGNORE_
