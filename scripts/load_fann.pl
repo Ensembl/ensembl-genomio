@@ -294,7 +294,7 @@ sub prepend_GO_SO {
   my ($xrefs) = @_;
   for my $x (@$xrefs) {
     my $db = $x->{dbname};
-    next if !($x eq "GO" || $x eq "SO");
+    next if !($db eq "GO" || $db eq "SO");
     $x->{id} =~ s/^(?:$db:)?/$db:/;
     $x->{display_id} =~ s/^(?:$db:)?/$db:/ if (exists $x->{display_id} && $x->{display_id});
   }
