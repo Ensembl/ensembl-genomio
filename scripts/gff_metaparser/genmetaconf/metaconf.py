@@ -132,7 +132,7 @@ class MetaConf:
     # species metadata
     self.update_from_dict(defaults, "species.division")
     _sci_name = self.get("species.scientific_name")
-    _acc = self.get("assembly.accession").split(".")[0].replace("_", "")
+    _acc = self.get("assembly.accession").replace("_","").replace(".","v")
     _strain = self.get("species.strain")
     _prod_name = _sci_name.strip().lower()
     _prod_name = "_".join(re.sub(r'[^a-z0-9A-Z]+', '_', _prod_name).split("_")[:2])

@@ -607,7 +607,11 @@ class load_sequence_data(eHive.BaseRunnable):
         with open(external_map_path, "r") as map_file:
             for line in map_file:
                 if line.startswith("#"): continue
-                (from_name, to_name) = line.strip().split("\t")
+                line = re.sub(r'#.*', '', line)
+                if re.match(r'^\s*$', line): continue
+                (from_name, to_name, *rest) = line.strip().split("\t")
+                if len(rest) > 0 and rest[0].upper() != "SEQ_REGION": continue
+                if to_name == "_IGNORE_": continue
                 db_map[from_name] = to_name
         return db_map
         
