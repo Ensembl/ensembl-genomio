@@ -115,12 +115,30 @@ sub default_options_generic {
     # Lists of the types that we expect to see in the GFF3 file
     #  and related options moved to
     #    Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3
+
+    # By default, it is assumed that the above type lists are exhaustive.
+    # If there is a type in the GFF3 that is not listed, an error will be
+    # thrown, unless 'types_complete' = 0.
+    types_complete  => 1,
+
+    # By default, load the GFF3 "ID" fields as stable_ids, and ignore "Name"
+    # fields. If they exist, can load them as stable IDs instead, with the
+    # value 'stable_id'; or load them as xrefs by setting to 'xref'.
+    use_name_field => undef,
     
     # If there are polypeptide rows in the GFF3, defined by 'Derives_from'
     # relationships, those will be used to determine the translation
     # (rather than inferring from CDS), off by default
     # if on ('polypeptides' = 1) could lead to models with the missing stop codon
     polypeptides => 0,
+
+    # Some sources have 1- or 2-base introns
+    # defined to deal with readthrough stop codons. But their sequence
+    # files contradict this, and include those intronic bases. The NCBI
+    # .gbff files then define a 1- or 2-base insertion of 'N's, which
+    # fixes everything up (and which this pipeline can handle).
+    # So, the pipeline can merge exons that are separated by a small intron.
+    min_intron_size => undef,
     
     # By default, genes are loaded as full-on genes; load instead as a
     # predicted transcript by setting 'prediction' = 1.
@@ -355,7 +373,9 @@ sub pipeline_analyses_generic {
                               logic_name      => $self->o('logic_name'),
                               types_complete  => $self->o('types_complete'),
                               polypeptides    => $self->o('polypeptides'),
+                              use_name_field  => $self->o('use_name_field'),
                               prediction      => $self->o('prediction'),
+                              min_intron_size => $self->o('min_intron_size'),
                               log             => catdir($self->o('pipeline_dir'), '#species#', 'load_gff3', 'gff3loader.log'),
                             },
       -rc_name           => '8Gb_mem',
@@ -379,8 +399,10 @@ sub pipeline_analyses_generic {
                               gene_source     => $self->o('gene_source'),
                               logic_name      => $self->o('logic_name'),
                               types_complete  => $self->o('types_complete'),
+                              use_name_field  => $self->o('use_name_field'),
                               polypeptides    => $self->o('polypeptides'),
                               prediction      => $self->o('prediction'),
+                              min_intron_size => $self->o('min_intron_size'),
                               log             => catdir($self->o('pipeline_dir'), '#species#', 'gff3loader.log'),
                             },
       -rc_name           => '16Gb_mem',
