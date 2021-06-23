@@ -71,6 +71,8 @@ sub param_defaults {
 
   return {
     %{$self->SUPER::param_defaults},
+
+    # Lists of the types that we expect to see in the GFF3 file
     gene_types      => ['gene', 'pseudogene', 'miRNA_gene', 'ncRNA_gene',
                         'rRNA_gene', 'snoRNA_gene', 'snRNA_gene', 'tRNA_gene',
                         'transposable_element'],
@@ -94,13 +96,42 @@ sub param_defaults {
                         'region', 'biological_region',
                         'regulatory_region', 'repeat_region',
                         'long_terminal_repeat', 'STS'],
+
+    # By default, it is assumed that the above type lists are exhaustive.
+    # If there is a type in the GFF3 that is not listed, an error will be
+    # thrown, unless 'types_complete' = 0.
     types_complete  => 1,
+
+    # By default, load the GFF3 "ID" fields as stable_ids, and ignore "Name"
+    # fields. If they exist, can load them as stable IDs instead, with the
+    # value 'stable_id'; or load them as xrefs by setting to 'xref'.
     use_name_field  => undef,
+
+    # If there are polypeptide rows in the GFF3, defined by 'Derives_from'
+    # relationships, those will be used to determine the translation
+    # (rather than inferring from CDS), unless 'polypeptides' = 0.
+    # N.B. if on, could lead to models with the missing stop codon
     polypeptides    => 1,
+
+    # Some sources have 1- or 2-base introns
+    # defined to deal with readthrough stop codons. But their sequence
+    # files contradict this, and include those intronic bases. The NCBI
+    # .gbff files then define a 1- or 2-base insertion of 'N's, which
+    # fixes everything up (and which this pipeline can handle).
+    # So, the pipeline can merge exons that are separated by a small intron.
     min_intron_size => undef,
+
+    # Set the biotype for transcripts that produce invalid translations. We
+    # can treat them as pseudogenes by setting 'nontranslating' => "pseudogene".
+    # The default is "nontranslating_CDS", and in this case the translation
+    # is still added to the core db, on the assumption that remedial action
+    # will fix it (i.e. via the ApplySeqEdits module).
     nontranslating  => 'nontranslating_CDS',
+
     load_pseudogene_with_CDS => 0,
+
     prediction      => 0,
+
     gene_source     => 'Ensembl',
     stable_ids      => {},
   };
