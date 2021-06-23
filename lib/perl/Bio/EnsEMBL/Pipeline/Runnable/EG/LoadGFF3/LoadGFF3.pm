@@ -137,7 +137,6 @@ sub param_defaults {
 
     # use common prefix as the stable_id for CDS (within the same multifeature)
     find_multifeature_commmon_name => 1,
-    rstrip_multifeature_commmon_name => 1,
   };
 }
 
@@ -498,7 +497,7 @@ sub get_stable_id {
 
   if ($self->param('find_multifeature_commmon_name') && @all_ids) {
     my $new_stable_id = $self->common_prefix(@all_ids);
-    $new_stable_id =~ s/[-\.]+$// if ($self->param('rstrip_multifeature_commmon_name'));
+    $new_stable_id =~ s/[-\.]+$//; # remove trailing hyphens and dots
     if ($new_stable_id) {
       $self->log_warning("using common prefix $new_stable_id as multifeature stable_id for $stable_id");
       # we assume uniquness among multifeature (CDS) prefices: same prefix -- for same CDS only
