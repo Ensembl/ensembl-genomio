@@ -134,6 +134,10 @@ sub param_defaults {
 
     gene_source     => 'Ensembl',
     stable_ids      => {},
+
+    # use common prefix as the stable_id for CDS (within the same multifeature)
+    find_multifeature_commmon_name => 1,
+    rstrip_multifeature_commmon_name => 1,
   };
 }
 
@@ -463,12 +467,46 @@ sub add_translation {
   }
 }
 
+
+sub common_pfx {
+  my ($self, $name, @names) = @_;
+  return $name if (!@names);
+
+  # TODO: benchmark trie variant
+
+  ($name, @names) = keys %{{ map { $_ => 1 } ($name, @names) }};
+  return $name if (!@names);
+
+  my $common = $name;
+  foreach my $other (@names) {
+    my $i = 0;
+    for ($i = 0; $i < length($common) && $i < length($other); $i++) {
+      last if (substr($common, $i, 1) ne substr($other, $i, 1));
+    }
+    $common = substr($common, 0, $i);
+  }
+  return $common;
+}
+
 sub get_stable_id {
-  my ($self, $gff_object) = @_;
+  my ($self, $gff_object, @rest) = @_;
   my $use_name_field = $self->param('use_name_field');
   my $stable_ids     = $self->param_required('stable_ids');
-  
+
   my $stable_id = $gff_object->load_id;
+  my @all_ids = grep { defined $_ && $_ } map { $_->load_id } ($gff_object, @rest);
+
+  if ($self->param('find_multifeature_commmon_name') && @all_ids) {
+    my $new_stable_id = $self->common_pfx(@all_ids);
+    $new_stable_id =~ s/[-\.]+$// if ($self->param('rstrip_multifeature_commmon_name'));
+    if ($new_stable_id) {
+      $self->log_warning("using common prefix $new_stable_id as multifeature stable_id for $stable_id");
+      # we assume uniquness among multifeature (CDS) prefices: same prefix -- for same CDS only
+      $stable_id = $new_stable_id;
+    }
+  }
+
+  # but ignore multifeatures if $use_name_field
   if (defined $use_name_field && $use_name_field eq 'stable_id') {
     $stable_id = $gff_object->name if $gff_object->name;
     
@@ -507,12 +545,19 @@ sub get_cds {
 sub get_cds_id {
   my ($self, $gff_transcript) = @_;
   my @cds_types = @{ $self->param_required('cds_types') };
+
+  my $tr_stable_id = $self->get_stable_id($gff_transcript);
   
   my ($translation_id, $gff_object);
   my @gff_cds = sort sort_genomic $gff_transcript->get_SeqFeatures(@cds_types);
-  if (scalar(@gff_cds) == 1) {
+  my $cds_count = scalar(@gff_cds);
+  if ($cds_count > 0) {
     $gff_object = $gff_cds[0];
-    $translation_id = $self->get_stable_id($gff_object);
+    $translation_id = $self->get_stable_id(@gff_cds);
+    $self->log_warning("get_cds_id: cds_count $cds_count > 1 for transcript $tr_stable_id, "
+	                          . "using first translation_id " . ($translation_id // '')) if ($cds_count > 1);
+  } else {
+    $self->log_warning("get_cds_id: no gff_cds for transcript $tr_stable_id");
   }
   return ($translation_id, $gff_object);
 }
@@ -952,10 +997,10 @@ sub new_transcript {
 
   # NB: do not to convert biotypes at this stage, as it will change mRNA to the ncRNA
 
-  my ($translation_id) = $self->get_cds_id($gff_transcript);
-  my $translatable = defined $translation_id;
+  my ($translation_id, $gff_object) = $self->get_cds_id($gff_transcript);
+  my $translatable = defined $gff_object;
 
-  $self->log_warning("Preparing new transcript [raw data]: stable_id $stable_id biotype $transcript_type gene stable_id " . $gene->stable_id . " gene_type $gene_type");
+  $self->log_warning("Preparing new transcript [raw data]: stable_id $stable_id biotype $transcript_type translatable $translatable gene stable_id " . $gene->stable_id . " gene_type $gene_type");
   
   # Pseudogene
   if ($gene_type eq 'pseudogene' or $transcript_type =~ /^pseudogenic_/) {
