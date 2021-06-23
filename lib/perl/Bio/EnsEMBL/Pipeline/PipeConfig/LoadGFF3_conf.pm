@@ -356,7 +356,7 @@ sub pipeline_analyses_generic {
                               types_complete  => $self->o('types_complete'),
                               polypeptides    => $self->o('polypeptides'),
                               prediction      => $self->o('prediction'),
-                              
+                              log             => catdir($self->o('pipeline_dir'), '#species#', 'load_gff3', 'gff3loader.log'),
                             },
       -rc_name           => '8Gb_mem',
       -flow_into         => {
@@ -381,7 +381,7 @@ sub pipeline_analyses_generic {
                               types_complete  => $self->o('types_complete'),
                               polypeptides    => $self->o('polypeptides'),
                               prediction      => $self->o('prediction'),
-                              
+                              log             => catdir($self->o('pipeline_dir'), '#species#', 'gff3loader.log'),
                             },
       -rc_name           => '16Gb_mem',
       -flow_into         => {
@@ -397,7 +397,10 @@ sub pipeline_analyses_generic {
       -module            => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::FixModels',
       -analysis_capacity => 10,
       -max_retry_count   => 0,
-      -parameters        => {},
+      -parameters        => {
+          logic_name     => $self->o('logic_name'),
+          log            => catdir($self->o('pipeline_dir'), '#species#', 'fix_models.log'),
+      },
       -rc_name           => 'normal',
       -flow_into         => {
                               '1' => WHEN('#apply_seq_edits#' =>
@@ -412,7 +415,10 @@ sub pipeline_analyses_generic {
       -module            => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ApplySeqEdits',
       -analysis_capacity => 10,
       -max_retry_count   => 0,
-      -parameters        => {},
+      -parameters        => {
+          logic_name     => $self->o('logic_name'),
+          log            => catdir($self->o('pipeline_dir'), '#species#', 'apply_seq_edits.log'),
+      },
       -rc_name           => 'normal',
       -flow_into         => ['EmailReport'],
     },
