@@ -111,60 +111,34 @@ sub default_options_generic {
     # Remove any extra gubbins from the Fasta ID.
     fasta_subst => 's/^(>[^\|]+).*/$1/',
     fasta_tidy  => "perl -i -pe '".$self->o('fasta_subst')."'",
-    
-    # Lists of the types that we expect to see in the GFF3 file.
-    gene_types   => ['gene', 'pseudogene', 'miRNA_gene', 'ncRNA_gene',
-                     'rRNA_gene', 'snoRNA_gene', 'snRNA_gene', 'tRNA_gene' ],
-    mrna_types   => ['mRNA', 'transcript', 'pseudogenic_transcript',
-                     'pseudogenic_rRNA', 'pseudogenic_tRNA',
-                     'ncRNA', 'lincRNA', 'lncRNA', 'miRNA', 'pre_miRNA',
-                     'RNase_MRP_RNA', 'RNAse_P_RNA', 'rRNA', 'snoRNA',
-                     'snRNA', 'sRNA', 'SRP_RNA', 'tRNA'],
-    exon_types   => ['exon', 'pseudogenic_exon'],
-    cds_types    => ['CDS'],
-    utr_types    => ['five_prime_UTR', 'three_prime_UTR'],
-    ignore_types => ['misc_RNA', 'RNA', 'intron',
-                     'match', 'match_part',
-                     'cDNA_match', 'nucleotide_match', 'protein_match',
-                     'polypeptide', 'protein',
-                     'chromosome', 'supercontig', 'contig',
-                     'region', 'biological_region',
-                     'regulatory_region', 'repeat_region'],
-    
+
+    # Lists of the types that we expect to see in the GFF3 file
+    #  and related options moved to
+    #    Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3
+
     # By default, it is assumed that the above type lists are exhaustive.
     # If there is a type in the GFF3 that is not listed, an error will be
     # thrown, unless 'types_complete' = 0.
-    types_complete => 1,
-    
+    types_complete  => 1,
+
     # By default, load the GFF3 "ID" fields as stable_ids, and ignore "Name"
     # fields. If they exist, can load them as stable IDs instead, with the
     # value 'stable_id'; or load them as xrefs by setting to 'xref'.
     use_name_field => undef,
     
-    # When adding "Name" fields as xrefs, external_dbs are required.
-    xref_gene_external_db        => undef, # e.g. RefSeq_gene_name
-    xref_transcript_external_db  => undef, # e.g. RefSeq_mRNA
-    xref_translation_external_db => undef, # e.g. RefSeq_peptide
-    
     # If there are polypeptide rows in the GFF3, defined by 'Derives_from'
     # relationships, those will be used to determine the translation
-    # (rather than inferring from CDS), unless 'polypeptides' = 0. 
-    polypeptides => 1,
-    
-    # Some sources (I'm looking at you, RefSeq) have 1- or 2-base introns
+    # (rather than inferring from CDS), off by default
+    # if on ('polypeptides' = 1) could lead to models with the missing stop codon
+    polypeptides => 0,
+
+    # Some sources have 1- or 2-base introns
     # defined to deal with readthrough stop codons. But their sequence
     # files contradict this, and include those intronic bases. The NCBI
     # .gbff files then define a 1- or 2-base insertion of 'N's, which
     # fixes everything up (and which this pipeline can handle).
     # So, the pipeline can merge exons that are separated by a small intron.
     min_intron_size => undef,
-    
-    # Set the biotype for transcripts that produce invalid translations. We
-    # can treat them as pseudogenes by setting 'nontranslating' => "pseudogene".
-    # The default is "nontranslating_CDS", and in this case the translation
-    # is still added to the core db, on the assumption that remedial action
-    # will fix it (i.e. via the ApplySeqEdits module).
-    nontranslating => 'nontranslating_CDS',
     
     # By default, genes are loaded as full-on genes; load instead as a
     # predicted transcript by setting 'prediction' = 1.
@@ -393,24 +367,16 @@ sub pipeline_analyses_generic {
       -max_retry_count   => 0,
       -parameters        => {
                               escape_branch   => -1,
-                              gene_source     => $self->o('gene_source'),
                               gff3_file       => '#gff3_tidy_file#',
-                              gene_types      => $self->o('gene_types'),
-                              mrna_types      => $self->o('mrna_types'),
-                              exon_types      => $self->o('exon_types'),
-                              cds_types       => $self->o('cds_types'),
-                              utr_types       => $self->o('utr_types'),
-                              ignore_types    => $self->o('ignore_types'),
+                              # fasta_file -- global param
+                              gene_source     => $self->o('gene_source'),
+                              logic_name      => $self->o('logic_name'),
                               types_complete  => $self->o('types_complete'),
-                              use_name_field  => $self->o('use_name_field'),
                               polypeptides    => $self->o('polypeptides'),
-                              min_intron_size => $self->o('min_intron_size'),
-                              nontranslating  => $self->o('nontranslating'),
+                              use_name_field  => $self->o('use_name_field'),
                               prediction      => $self->o('prediction'),
-                              xref_gene_external_db        => $self->o('xref_gene_external_db'),
-                              xref_transcript_external_db  => $self->o('xref_transcript_external_db'),
-                              xref_translation_external_db => $self->o('xref_translation_external_db'),
-                              
+                              min_intron_size => $self->o('min_intron_size'),
+                              log             => catdir($self->o('pipeline_dir'), '#species#', 'load_gff3', 'gff3loader.log'),
                             },
       -rc_name           => '8Gb_mem',
       -flow_into         => {
@@ -428,24 +394,16 @@ sub pipeline_analyses_generic {
       -analysis_capacity => 10,
       -max_retry_count   => 0,
       -parameters        => {
-                              gene_source     => $self->o('gene_source'),
                               gff3_file       => '#gff3_tidy_file#',
-                              gene_types      => $self->o('gene_types'),
-                              mrna_types      => $self->o('mrna_types'),
-                              exon_types      => $self->o('exon_types'),
-                              cds_types       => $self->o('cds_types'),
-                              utr_types       => $self->o('utr_types'),
-                              ignore_types    => $self->o('ignore_types'),
+                              # fasta_file -- global param
+                              gene_source     => $self->o('gene_source'),
+                              logic_name      => $self->o('logic_name'),
                               types_complete  => $self->o('types_complete'),
                               use_name_field  => $self->o('use_name_field'),
                               polypeptides    => $self->o('polypeptides'),
-                              min_intron_size => $self->o('min_intron_size'),
-                              nontranslating  => $self->o('nontranslating'),
                               prediction      => $self->o('prediction'),
-                              xref_gene_external_db        => $self->o('xref_gene_external_db'),
-                              xref_transcript_external_db  => $self->o('xref_transcript_external_db'),
-                              xref_translation_external_db => $self->o('xref_translation_external_db'),
-                              
+                              min_intron_size => $self->o('min_intron_size'),
+                              log             => catdir($self->o('pipeline_dir'), '#species#', 'gff3loader.log'),
                             },
       -rc_name           => '16Gb_mem',
       -flow_into         => {
@@ -461,7 +419,10 @@ sub pipeline_analyses_generic {
       -module            => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::FixModels',
       -analysis_capacity => 10,
       -max_retry_count   => 0,
-      -parameters        => {},
+      -parameters        => {
+          logic_name     => $self->o('logic_name'),
+          log            => catdir($self->o('pipeline_dir'), '#species#', 'fix_models.log'),
+      },
       -rc_name           => 'normal',
       -flow_into         => {
                               '1' => WHEN('#apply_seq_edits#' =>
@@ -476,7 +437,10 @@ sub pipeline_analyses_generic {
       -module            => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ApplySeqEdits',
       -analysis_capacity => 10,
       -max_retry_count   => 0,
-      -parameters        => {},
+      -parameters        => {
+          logic_name     => $self->o('logic_name'),
+          log            => catdir($self->o('pipeline_dir'), '#species#', 'apply_seq_edits.log'),
+      },
       -rc_name           => 'normal',
       -flow_into         => ['EmailReport'],
     },

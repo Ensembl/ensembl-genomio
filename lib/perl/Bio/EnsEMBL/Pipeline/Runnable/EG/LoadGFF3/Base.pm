@@ -48,6 +48,9 @@ sub param_defaults {
   my ($self) = @_;
   return {
     db_type => 'core',
+
+    # add caller location and line number to the logging message
+    log_caller_info => 1,
   };
 }
 
@@ -174,15 +177,31 @@ sub log {
 
 sub log_warning {
   my ($self, $msg) = @_;
-  $self->log($msg);
-  $self->warning($msg);
+
+  my $caller_sfx = '';
+  if ($self->param('log_caller_info')) {
+    #thanks https://stackoverflow.com/questions/24555741/how-can-i-get-the-line-for-calling-function
+    my ($pkg, $file, $lineno) = caller;
+    $caller_sfx = " at $file:$lineno";
+  }
+
+  $self->log($msg . $caller_sfx);
+  $self->warning($msg . $caller_sfx);
 }
 
 sub log_throw {
   my ($self, $msg) = @_;
-  $self->log($msg . " dying...");
+
+  my $caller_sfx = '';
+  if ($self->param('log_caller_info')) {
+    #thanks https://stackoverflow.com/questions/24555741/how-can-i-get-the-line-for-calling-function
+    my ($pkg, $file, $lineno) = caller;
+    $caller_sfx = " at $file:$lineno";
+  }
+
+  $self->log($msg . $caller_sfx . " dying...");
   $self->dump_log();
-  $self->throw($msg);
+  $self->throw($msg . $caller_sfx);
 }
 
 sub dump_log {

@@ -71,6 +71,8 @@ sub param_defaults {
 
   return {
     %{$self->SUPER::param_defaults},
+
+    # Lists of the types that we expect to see in the GFF3 file
     gene_types      => ['gene', 'pseudogene', 'miRNA_gene', 'ncRNA_gene',
                         'rRNA_gene', 'snoRNA_gene', 'snRNA_gene', 'tRNA_gene',
                         'transposable_element'],
@@ -94,15 +96,47 @@ sub param_defaults {
                         'region', 'biological_region',
                         'regulatory_region', 'repeat_region',
                         'long_terminal_repeat', 'STS'],
+
+    # By default, it is assumed that the above type lists are exhaustive.
+    # If there is a type in the GFF3 that is not listed, an error will be
+    # thrown, unless 'types_complete' = 0.
     types_complete  => 1,
+
+    # By default, load the GFF3 "ID" fields as stable_ids, and ignore "Name"
+    # fields. If they exist, can load them as stable IDs instead, with the
+    # value 'stable_id'; or load them as xrefs by setting to 'xref'.
     use_name_field  => undef,
+
+    # If there are polypeptide rows in the GFF3, defined by 'Derives_from'
+    # relationships, those will be used to determine the translation
+    # (rather than inferring from CDS), unless 'polypeptides' = 0.
+    # N.B. if on, could lead to models with the missing stop codon
     polypeptides    => 1,
+
+    # Some sources have 1- or 2-base introns
+    # defined to deal with readthrough stop codons. But their sequence
+    # files contradict this, and include those intronic bases. The NCBI
+    # .gbff files then define a 1- or 2-base insertion of 'N's, which
+    # fixes everything up (and which this pipeline can handle).
+    # So, the pipeline can merge exons that are separated by a small intron.
     min_intron_size => undef,
+
+    # Set the biotype for transcripts that produce invalid translations. We
+    # can treat them as pseudogenes by setting 'nontranslating' => "pseudogene".
+    # The default is "nontranslating_CDS", and in this case the translation
+    # is still added to the core db, on the assumption that remedial action
+    # will fix it (i.e. via the ApplySeqEdits module).
     nontranslating  => 'nontranslating_CDS',
+
     load_pseudogene_with_CDS => 0,
+
     prediction      => 0,
+
     gene_source     => 'Ensembl',
     stable_ids      => {},
+
+    # use common prefix as the stable_id for CDS (within the same multifeature)
+    find_multifeature_commmon_name => 1,
   };
 }
 
@@ -432,12 +466,46 @@ sub add_translation {
   }
 }
 
+
+sub common_prefix {
+  my ($self, $name, @names) = @_;
+  return $name if (!@names);
+
+  # TODO: benchmark trie variant
+
+  ($name, @names) = keys %{{ map { $_ => 1 } ($name, @names) }};
+  return $name if (!@names);
+
+  my $common = $name;
+  foreach my $other (@names) {
+    my $i = 0;
+    for ($i = 0; $i < length($common) && $i < length($other); $i++) {
+      last if (substr($common, $i, 1) ne substr($other, $i, 1));
+    }
+    $common = substr($common, 0, $i);
+  }
+  return $common;
+}
+
 sub get_stable_id {
-  my ($self, $gff_object) = @_;
+  my ($self, $gff_object, @rest) = @_;
   my $use_name_field = $self->param('use_name_field');
   my $stable_ids     = $self->param_required('stable_ids');
-  
+
   my $stable_id = $gff_object->load_id;
+  my @all_ids = grep { defined $_ && $_ } map { $_->load_id } ($gff_object, @rest);
+
+  if ($self->param('find_multifeature_commmon_name') && @all_ids) {
+    my $new_stable_id = $self->common_prefix(@all_ids);
+    $new_stable_id =~ s/[-\.]+$//; # remove trailing hyphens and dots
+    if ($new_stable_id) {
+      $self->log_warning("using common prefix $new_stable_id as multifeature stable_id for $stable_id");
+      # we assume uniquness among multifeature (CDS) prefices: same prefix -- for same CDS only
+      $stable_id = $new_stable_id;
+    }
+  }
+
+  # but ignore multifeatures if $use_name_field
   if (defined $use_name_field && $use_name_field eq 'stable_id') {
     $stable_id = $gff_object->name if $gff_object->name;
     
@@ -476,12 +544,19 @@ sub get_cds {
 sub get_cds_id {
   my ($self, $gff_transcript) = @_;
   my @cds_types = @{ $self->param_required('cds_types') };
+
+  my $tr_stable_id = $self->get_stable_id($gff_transcript);
   
   my ($translation_id, $gff_object);
   my @gff_cds = sort sort_genomic $gff_transcript->get_SeqFeatures(@cds_types);
-  if (scalar(@gff_cds) == 1) {
+  my $cds_count = scalar(@gff_cds);
+  if ($cds_count > 0) {
     $gff_object = $gff_cds[0];
-    $translation_id = $self->get_stable_id($gff_object);
+    $translation_id = $self->get_stable_id(@gff_cds);
+    $self->log_warning("get_cds_id: cds_count $cds_count > 1 for transcript $tr_stable_id, "
+	                          . "using first translation_id " . ($translation_id // '')) if ($cds_count > 1);
+  } else {
+    $self->log_warning("get_cds_id: no gff_cds for transcript $tr_stable_id");
   }
   return ($translation_id, $gff_object);
 }
@@ -921,10 +996,10 @@ sub new_transcript {
 
   # NB: do not to convert biotypes at this stage, as it will change mRNA to the ncRNA
 
-  my ($translation_id) = $self->get_cds_id($gff_transcript);
-  my $translatable = defined $translation_id;
+  my ($translation_id, $gff_object) = $self->get_cds_id($gff_transcript);
+  my $translatable = defined $gff_object;
 
-  $self->log_warning("Preparing new transcript [raw data]: stable_id $stable_id biotype $transcript_type gene stable_id " . $gene->stable_id . " gene_type $gene_type");
+  $self->log_warning("Preparing new transcript [raw data]: stable_id $stable_id biotype $transcript_type translatable $translatable gene stable_id " . $gene->stable_id . " gene_type $gene_type");
   
   # Pseudogene
   if ($gene_type eq 'pseudogene' or $transcript_type =~ /^pseudogenic_/) {
