@@ -468,7 +468,7 @@ sub add_translation {
 }
 
 
-sub common_pfx {
+sub common_prefix {
   my ($self, $name, @names) = @_;
   return $name if (!@names);
 
@@ -497,7 +497,7 @@ sub get_stable_id {
   my @all_ids = grep { defined $_ && $_ } map { $_->load_id } ($gff_object, @rest);
 
   if ($self->param('find_multifeature_commmon_name') && @all_ids) {
-    my $new_stable_id = $self->common_pfx(@all_ids);
+    my $new_stable_id = $self->common_prefix(@all_ids);
     $new_stable_id =~ s/[-\.]+$// if ($self->param('rstrip_multifeature_commmon_name'));
     if ($new_stable_id) {
       $self->log_warning("using common prefix $new_stable_id as multifeature stable_id for $stable_id");
