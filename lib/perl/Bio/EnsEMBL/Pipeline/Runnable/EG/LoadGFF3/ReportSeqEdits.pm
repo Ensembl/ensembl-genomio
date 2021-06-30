@@ -52,7 +52,7 @@ sub run {
   my $protein_seq_report_filename = $self->param('protein_seq_report_filename');
   my $protein_seq_fixes_filename = $self->param('protein_seq_fixes_filename');
   
-  my $dba = $self->core_dba();
+  my $dba = $self->get_type_dba();
   my $dbh = $dba->dbc->db_handle;
   
   my $biotype_report_data = $self->biotype_report($dbh, $logic_name);

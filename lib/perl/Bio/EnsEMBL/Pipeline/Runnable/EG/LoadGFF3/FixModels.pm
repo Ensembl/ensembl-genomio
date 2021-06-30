@@ -46,7 +46,7 @@ sub run {
   my $logic_name         = $self->param_required('logic_name');
   my $protein_fasta_file = $self->param_required('protein_fasta_file');
 
-  my $dba = $self->core_dba();
+  my $dba = $self->get_type_dba();
   
   $self->fix_models($dba, $logic_name, $protein_fasta_file);
   
