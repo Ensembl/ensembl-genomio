@@ -88,7 +88,7 @@ sub run {
   my $self = shift @_;
   my $logic_name = $self->param_required('logic_name');
   
-  my $dba = $self->core_dba();
+  my $dba = $self->get_type_dba();
   my $dbh = $dba->dbc->db_handle;
   my $aa = $dba->get_adaptor('Analysis');
   my $analysis = $aa->fetch_by_logic_name($logic_name);

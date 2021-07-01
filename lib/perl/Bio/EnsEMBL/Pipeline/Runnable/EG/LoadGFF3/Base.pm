@@ -67,7 +67,7 @@ sub fetch_input {
   
   # Need explicit disconnects, so that connections are freed up
   # while the analysis is running.
-  my $dba = $self->core_dba();
+  my $dba = $self->get_type_dba();
   $dba->dbc && $dba->dbc->disconnect_if_idle();
   $self->dbc && $self->dbc->disconnect_if_idle();
 }
@@ -219,6 +219,16 @@ sub dump_log {
     or die "Can't open > $path: $!";
   print $fh join("\n", @{ $self->{_local_log} // [] });
   close($fh)
+}
+
+# Get the dba for the appropriate db_type
+sub get_type_dba {
+  my ($self) = @_;
+
+  my $db_type = $self->param('db_type');
+  my $dba = $self->get_DBAdaptor($db_type);
+  
+  return $dba;
 }
 
 1;

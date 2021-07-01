@@ -218,8 +218,8 @@ sub load_genes {
   my ($self, $db) = @_;
   my $logic_name = $self->param_required('logic_name');
   my @gene_types = @{ $self->param_required('gene_types') };
-  
-  my $dba = $self->core_dba();
+
+  my $dba = $self->get_type_dba();
 
   # Fetch slices and their synonyms into a lookup hash.
   my %slices = $self->fetch_slices($dba);
@@ -925,7 +925,7 @@ sub get_db_biotypes {
   my ($self) = @_;
   
   if (not $self->{_known_biotypes}) {
-    my $dba = $self->core_dba();
+    my $dba = $self->get_type_dba();
     my $ba = $dba->get_adaptor('Biotype');
     my %biotypes = map { lc($_->name) => $_->name } @{$ba->fetch_all()};
 
