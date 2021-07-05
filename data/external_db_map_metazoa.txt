@@ -114,15 +114,21 @@ PDB	PDB	translation
 NCBI protein db	protein_id	translation
 protein_id	protein_id	translation
 GB_protein	protein_id	translation
+NCBI_GP	protein_id	translation
+GenPept	protein_id	translation
 
 RefSeq	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
 RefSeq_peptide	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
 
 UniProt/TrEMBL	Uniprot/SPTREMBL	translation
 Uniprot/SPTREMBL	Uniprot/SPTREMBL	translation
+UniProtKB/TrEMBL	Uniprot/SPTREMBL	translation
+UniprotKB/SPTREMBL	Uniprot/SPTREMBL	translation
 
 UniProt/Swiss-Prot	Uniprot/SWISSPROT	translation
 Uniprot/SWISSPROT	Uniprot/SWISSPROT	translation
+UniProtKB/Swiss-Prot	Uniprot/SWISSPROT	translation
+UniprotKB/SWISSPROT	Uniprot/SWISSPROT	translation
 
 Uniprot	UniProtKB_all	translation
 UniProtKB_all	UniProtKB_all	translation
