@@ -43,6 +43,7 @@ RefSeq	RefSeq	gene
 
 RFAM	RFAM	gene
 
+APHIDBASE	APHIDBASE	gene
 BEEBASE	BEEBASE	gene
 LJMU	LJMU	gene
 NasoniaBase	NasoniaBase	gene
