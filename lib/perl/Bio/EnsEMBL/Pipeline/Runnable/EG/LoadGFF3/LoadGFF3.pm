@@ -53,6 +53,7 @@ my $biotype_map = {
     lnc_RNA => 'lncRNA',
     #misc_RNA => 'ncRNA',
     ncRNA_gene => 'ncRNA',
+    other      => undef, # let the 'sub new_transcript' set the proper one
     transcript => 'misc_RNA',
   },
   transcript => {
