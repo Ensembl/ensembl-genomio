@@ -156,7 +156,21 @@ for my $it (@$data) {
     warn qq/can't get adaptor for "$type" (id: "$id"). skipping...\n/;
     next;
   }
-  my $obj = $adaptor->fetch_by_stable_id($id);
+
+  my $obj_list;
+  if ($adaptor->can('fetch_all_versions_by_stable_id')) {
+    $obj_list = $adaptor->fetch_all_versions_by_stable_id($id);
+  } elsif ($adaptor->can('fetch_by_stable_id')) {
+    $obj_list = [ $adaptor->fetch_by_stable_id($id) ];
+  } else {
+    warn qq/no way to fetch object for "$id" (type: "$type"). skipping...\n/;
+    next;
+  }
+  if (not defined $obj_list) {
+    warn qq/can't get objects list for "$id" (type: "$type"). skipping...\n/;
+    next;
+  }
+  my ($obj) = grep { $_ && $id eq ($_->stable_id()  // '') } @$obj_list;
   if (not defined $obj) {
     warn qq/can't get object for "$id" (type: "$type"). skipping...\n/;
     next;
