@@ -157,10 +157,16 @@ for my $it (@$data) {
     next;
   }
 
+  # Sometimes we have stable IDs that have only different capitalisation.
+  # This leads to adding xrefs to the [first] object returned by the `fetch_by_stable_id`.
+  # Do deal with this a more complicated approach using `fetch_all_versions_by_stable_id` was used.
+  # Not forgetting to failback to `fetch_by_stable_id` if there's no `fetch_all_versions_by_stable_id` option
   my $obj_list;
   if ($adaptor->can('fetch_all_versions_by_stable_id')) {
+    # getting all the objects having the similar stable_id with any capitalisation and versions
     $obj_list = $adaptor->fetch_all_versions_by_stable_id($id);
   } elsif ($adaptor->can('fetch_by_stable_id')) {
+    # failing back to simple single object call (for `Translations` mostly)
     $obj_list = [ $adaptor->fetch_by_stable_id($id) ];
   } else {
     warn qq/no way to fetch object for "$id" (type: "$type"). skipping...\n/;
@@ -170,6 +176,7 @@ for my $it (@$data) {
     warn qq/can't get objects list for "$id" (type: "$type"). skipping...\n/;
     next;
   }
+  # grepping for the first object with the proper stable_id (versions are ignored here)
   my ($obj) = grep { $_ && $id eq ($_->stable_id()  // '') } @$obj_list;
   if (not defined $obj) {
     warn qq/can't get object for "$id" (type: "$type"). skipping...\n/;
