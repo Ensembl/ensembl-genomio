@@ -350,6 +350,7 @@ class process_gff3(eHive.BaseRunnable):
     def transfer_description(self, gene):
         """
         Transfer the transcript product description to the gene if it doesn't have any
+        Transfer the translation product description as well
         """
         allowed_transcript_types = self.param("transcript_types")
         
@@ -360,6 +361,15 @@ class process_gff3(eHive.BaseRunnable):
                         description = tran.qualifiers["product"][0]
                         gene.qualifiers["product"] = [ description ]
                         return
+                    
+                    # No transcript product, but a CDS product? Copy it to both transcript and gene
+                    else:
+                        for cds in tran.sub_features:
+                            if "product" in cds.qualifiers:
+                                description = cds.qualifiers["product"][0]
+                                tran.qualifiers["product"] = [ description ]
+                                gene.qualifiers["product"] = [ description ]
+                        # Continue transfering the translation products to the transcripts
         
     
     def ncrna_gene(self, ncrna):
