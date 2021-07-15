@@ -143,8 +143,6 @@ sub pipeline_create_commands {
     return [
       # inheriting database and hive tables' creation
       @{$self->SUPER::pipeline_create_commands},
-      'mkdir -p '.$self->o('tmp_dir'),
-      'mkdir -p '.$self->o('output_dir'),
     ];
 }
 
@@ -194,16 +192,20 @@ sub pipeline_analyses {
     my ($self) = @_;
     
     return [
-    {  -logic_name => 'Start',
-       -module         => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-       -rc_name       => 'default',
+    {
+      -logic_name        => 'Start',
+      -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -input_ids      => [ {} ],
-      -flow_into       => {
-                           '1' => 'Species_factory',
-                         },
+      -parameters        => {
+        cmd => 'mkdir -p '. $self->o('tmp_dir') . ' ; mkdir -p '. $self->o('output_dir'),
+      },
+      -rc_name           => 'default',
+      -max_retry_count   => 0,
+      -flow_into       => 'Species_factory',
     },
 
-	 { -logic_name     => 'Species_factory',
+	 {
+       -logic_name     => 'Species_factory',
        -module         => 'Bio::EnsEMBL::Production::Pipeline::Common::SpeciesFactory',
        -parameters     => {
                              species     => $self->o('species'),
