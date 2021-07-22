@@ -97,7 +97,7 @@ sub default_options {
     gff3_autoapply_manual_seq_edits => 1,
 
     # LoadGFF3 params
-    load_pseudogene_with_CDS => 1,
+    load_pseudogene_with_CDS => 0,
     gff3_load_gene_source       => 'EnsemblMetazoa',
     gff3_load_logic_name        => 'brc4_import',
     #gff3_load_logic_name        => 'refseq_import_visible',
