@@ -243,11 +243,18 @@ def add_organism_to_issue(redmine, issue, new_abbrev, update=False):
     Actually update the Redmine tickets with the organism_abbrev
     """
     if update:
-        print("Add organism abbrev %s for issue %d" % (new_abbrev, issue.id))
-        field_id = xxxxxx
-        redmine.issue.update(issue.id,
-                custom_fields=[{ field_id : new_abbrev }]
-                )
+        print("Add organism Abbrev %s for issue %d" % (new_abbrev, issue.id))
+        custom = get_custom_fields(issue)
+        
+        if "Organism Abbreviation" in custom:
+            field_id = custom["Organism Abbreviation"]["id"]
+            feedback = redmine.issue.update(issue.id,
+                    custom_fields=[{ 'id' : field_id, 'value' : new_abbrev }]
+                    )
+            if not feedback:
+                print("Failed to update the organism abbrev (id %d) with %s" % (field_id, new_abbrev))
+        else:
+            raise Exception("Can't find organism abbrev custom key id")
     else:
         print("[DRY RUN] Add organism abbrev %s for issue %d" % (new_abbrev, issue.id))
 
