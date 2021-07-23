@@ -103,7 +103,6 @@ def parse_genome(issue):
             genome["BRC4"]["organism_abbrev"] = abbrev
         else:
             print("No organism abbrev could be found for %s" % issue.id)
-            return
     except:
         print("Can't get organism abbrev for %s" % issue.id)
 
@@ -134,7 +133,7 @@ def check_accession(accession):
     # Remove the url if it's in one
     # There might even be a trailing url
     accession = re.sub(r"^.+/([^/]+)/?", r"\1", accession)
-    
+
     if re.match(insdc_pattern, accession):
         return accession
     else:
@@ -184,12 +183,14 @@ def get_ebi_issues(redmine, other_fields=dict()):
     
     return redmine.issue.filter(**search_fields)
 
-def add_genome_organism_abbrev(redmine, build, update=False):
+def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
     """
     Retrieve genome issues, get the corresponding INSDC accession, and generate an organism abbrev
     Put the abbrev back to the Redmine ticket
     By default do not update the ticket
     """
+    
+    all_abbrevs = load_abbrevs(abbrevs_file)
     
     # First get the genomes issues
     issues = get_all_genomes(redmine, build)
@@ -198,29 +199,87 @@ def add_genome_organism_abbrev(redmine, build, update=False):
         return
     
     # Get the taxonomy for each issue
+    failed_count = 0;
     for issue in issues:
         time.sleep(0.1)
+        print('')
         genome = parse_genome(issue)
         custom = get_custom_fields(issue)
-        try:
-            accession = custom["GCA number"]["value"]
-            full_name = custom["Experimental Organisms"]["value"]
-            organism_abbrev = make_organism_abbrev(full_name)
-            print("\t".join([str(issue.id), accession, organism_abbrev, issue.subject]))
-        except:
-            print("Could not generate an organism_abbrev for issue %d (%s)" % (issue.id, issue.subject))
+        if not genome:
+            print("Insufficient information for genome in %d (%s)" % (issue.id, issue.subject))
+            failed_count += 1
             continue
 
+        cur_abbrev = custom["Organism Abbreviation"]["value"]
+        try:
+            accession = genome["assembly"]["accession"]
+            full_name = custom["Experimental Organisms"]["value"]
+            new_abbrev = make_organism_abbrev(full_name)
+            if new_abbrev in all_abbrevs:
+                print("Warning: organism abbrev '%s' already exists for issue %d (%s)" % (new_abbrev, issue.id, issue.subject))
+                failed_count += 1
+            elif cur_abbrev:
+                if cur_abbrev == new_abbrev:
+                    print("Organism abbrev %s is already defined for issue %d (%s)" % (cur_abbrev, issue.id, issue.subject))
+                else:
+                    print("Warning: current abbrev (%s) is different from the one generated (%s) for issue %d (%s)" % (cur_abbrev, new_abbrev, issue.id, issue.subject))
+                    
+            else:
+                print("\t".join([str(issue.id), accession, new_abbrev, issue.subject]))
+                add_organism_to_issue(redmine, issue, new_abbrev, update)
+        except Exception as e:
+            print("Could not generate an organism_abbrev for issue %d (%s):" % (issue.id, issue.subject))
+            print("\t" + str(e))
+            failed_count += 1
+            continue
+    
+    print("%d issues considered" % len(issues))
+    if failed_count:
+        print("%d issues failed to load" % failed_count)
+        print("%d issues loaded" % (len(issues) - failed_count))
+
+def add_organism_to_issue(redmine, issue, new_abbrev, update=False):
+    """
+    Actually update the Redmine tickets with the organism_abbrev
+    """
+    if update:
+        print("Add organism abbrev %s for issue %d" % (new_abbrev, issue.id))
+        field_id = xxxxxx
+        redmine.issue.update(issue.id,
+                custom_fields=[{ field_id : new_abbrev }]
+                )
+    else:
+        print("[DRY RUN] Add organism abbrev %s for issue %d" % (new_abbrev, issue.id))
+
+def load_abbrevs(path):
+    """
+    Load a list of organism abbrevs from a file. Expected to be one per line
+    """
+    if not path:
+        print("Warning: I don't have a list of older abbrevs to compare with.")
+        return
+    abbrevs = []
+    with open(path, "r") as abbr_file:
+        for line in abbr_file:
+            line = line.rstrip()
+            if line:
+                abbrevs.append(line)
+    return abbrevs
     
 def make_organism_abbrev(name):
     
+    if name == "":
+        raise Exception("Species name is missing (field 'Experimental Organisms')")
     items = name.split(" ")
+    if len(items) < 3:
+        raise Exception("Species name is too short to create an organism_abbrev: '%s'" % name)
+
     genus = items[0]
     species = items[1]
     strain_abbrev = "".join(items[2:])
     
     genus = re.sub("^[|]$", "", genus)
-    strain_abbrev = re.sub(r"isolate|strain|breed|str\.|subspecies", "", strain_abbrev, re.IGNORECASE)
+    strain_abbrev = re.sub(r"(isolate|strain|breed|str\.|subspecies)", "", strain_abbrev, flags=re.IGNORECASE)
     strain_abbrev = re.sub(r"[\/\(\)]", "", strain_abbrev)
     
     organism_abbrev = genus[0].lower() + species[0:3] + strain_abbrev
@@ -236,12 +295,14 @@ def main():
     parser.add_argument('--output_dir', type=str,
                 help='Output_dir')
     # Choice
-    parser.add_argument('--get', choices=['genomes', 'rnaseq', 'dnaseq', 'organism_abbrev'], required=True,
+    parser.add_argument('--get', choices=['genomes', 'organism_abbrev'], required=True,
                 help='Get genomes, rnaseq, or dnaseq issues')
     # Optional
     parser.add_argument('--build', type=int,
                 help='Restrict to a given build')
-    parser.add_argument('--update_redmine', type=int,
+    parser.add_argument('--current_abbrevs', type=str,
+                help='File that contains the list of current organism_abbrevs')
+    parser.add_argument('--update_redmine', action='store_true', dest='update_redmine',
                 help='Actually update Redmine for the organism_abbrev (dry run by default)')
     args = parser.parse_args()
     
@@ -255,14 +316,10 @@ def main():
         else:
             print("Need --output_dir")
             return
-    elif args.get == 'rnaseq':
-        print("RNA-Seq Redmine retrieval to be implemented")
-    elif args.get == 'dnaseq':
-        print("DNA-Seq Redmine retrieval to be implemented")
     elif args.get == 'organism_abbrev':
-        add_genome_organism_abbrev(redmine, args.build, args.update_redmine)
+        add_genome_organism_abbrev(redmine, args.build, args.current_abbrevs, args.update_redmine)
     else:
-        print("Need to say what data you want to --get: genomes? rnaseq? dnaseq? organism_abbrev?")
+        print("Need to say what data you want to --get: genomes? organism_abbrev?")
 
 if __name__ == "__main__":
     main()
