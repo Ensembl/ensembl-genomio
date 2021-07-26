@@ -206,7 +206,7 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
         genome = parse_genome(issue)
         custom = get_custom_fields(issue)
         if not genome:
-            print("Insufficient information for genome in %d (%s)" % (issue.id, issue.subject))
+            print("WARNING: Insufficient information for genome in %d (%s)" % (issue.id, issue.subject))
             failed_count += 1
             continue
 
@@ -216,11 +216,11 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
             full_name = custom["Experimental Organisms"]["value"]
             new_abbrev = make_organism_abbrev(full_name)
             if new_abbrev in all_abbrevs:
-                print("Warning: organism abbrev '%s' already exists for issue %d (%s)" % (new_abbrev, issue.id, issue.subject))
+                print("WARNING: organism abbrev '%s' is already in use by another species! For issue %d (%s)" % (new_abbrev, issue.id, issue.subject))
                 failed_count += 1
             elif cur_abbrev:
                 if cur_abbrev == new_abbrev:
-                    print("Organism abbrev %s is already defined for issue %d (%s)" % (cur_abbrev, issue.id, issue.subject))
+                    print("Organism abbrev %s is already defined in issue %d (%s)" % (cur_abbrev, issue.id, issue.subject))
                 else:
                     print("Warning: current abbrev (%s) is different from the one generated (%s) for issue %d (%s)" % (cur_abbrev, new_abbrev, issue.id, issue.subject))
                     
@@ -228,7 +228,7 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
                 print("\t".join([str(issue.id), accession, new_abbrev, issue.subject]))
                 add_organism_to_issue(redmine, issue, new_abbrev, update)
         except Exception as e:
-            print("Could not generate an organism_abbrev for issue %d (%s):" % (issue.id, issue.subject))
+            print("WARNING: Could not generate an organism_abbrev for issue %d (%s):" % (issue.id, issue.subject))
             print("\t" + str(e))
             failed_count += 1
             continue
