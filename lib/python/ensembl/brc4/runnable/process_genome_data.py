@@ -50,6 +50,7 @@ class process_genome_data(eHive.BaseRunnable):
         self.add_assembly_version(genome_data)
         self.add_genebuild_metadata(genome_data)
         self.add_species_metadata(genome_data)
+        self.add_brc4_division(genome_data)
         
         # Create dedicated work dir
         accession = genome_data["assembly"]["accession"]
@@ -82,6 +83,12 @@ class process_genome_data(eHive.BaseRunnable):
     def print_json(self, path, data) -> None:
         with open(path, "w") as json_out:
             json_out.write(json.dumps(data, sort_keys=True, indent=4))
+    
+    def add_brc4_division(self, genome_data):
+        """Add default division for BRC4 as the BRC4 component"""
+        if "BRC4" in genome_data and "component" in genome_data["BRC4"]:
+            component = genome_data["BRC4"]["component"]
+            genome_data["species"]["division"] = component
     
     def add_provider(self, genome_data):
         """Add default provider metadata for assembly and gene models"""

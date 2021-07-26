@@ -40,6 +40,7 @@ class process_gff3(eHive.BaseRunnable):
                     "snRNA",
                     "ncRNA",
                     "miRNA",
+                    "ribozyme",
                     ),
                 "ignored_types" : (
                     "intron",
@@ -345,11 +346,34 @@ class process_gff3(eHive.BaseRunnable):
             GFF.write(new_records, gff3_out)
         
         # Write functional annotation
+        functional_annotation = self.clean_functional_annotations(functional_annotation)
         self.print_json(out_funcann_path, functional_annotation)
+
+    def clean_functional_annotations(self, functional_annotation):
+        """
+        Check all products and remove putative/uncharacterized etc.
+        """
+        for feat in functional_annotation:
+            if "description" in feat and not self.check_product(feat["description"]):
+                del feat["description"]
+        return functional_annotation
+    
+    def check_product(self, product):
+        """
+        Check a product string
+        Return True only if the string is valid
+        """
+        
+        no_product_names = ["uncharacterized protein", "putative protein", "hypothetical protein"]
+        
+        if product.lower() in no_product_names:
+            return False
+        return True
     
     def transfer_description(self, gene):
         """
         Transfer the transcript product description to the gene if it doesn't have any
+        Transfer the translation product description as well
         """
         allowed_transcript_types = self.param("transcript_types")
         
@@ -360,6 +384,15 @@ class process_gff3(eHive.BaseRunnable):
                         description = tran.qualifiers["product"][0]
                         gene.qualifiers["product"] = [ description ]
                         return
+                    
+                    # No transcript product, but a CDS product? Copy it to both transcript and gene
+                    else:
+                        for cds in tran.sub_features:
+                            if "product" in cds.qualifiers:
+                                description = cds.qualifiers["product"][0]
+                                tran.qualifiers["product"] = [ description ]
+                                gene.qualifiers["product"] = [ description ]
+                        # Continue transfering the translation products to the transcripts
         
     
     def ncrna_gene(self, ncrna):
