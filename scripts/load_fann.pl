@@ -329,7 +329,7 @@ sub remove_ensembl_xrefs {
   my @new_xrefs;
   for my $xref (@$xrefs) {
     my $dbname = db_name_for_feature($extdb_map, $lc_type, $xref, $skip_unknown_xref_source);
-    if (!!$dbname && !exists $ensembl_xrefs{ $dbname }) {
+    if ($dbname && !exists $ensembl_xrefs{ $dbname }) {
       push @new_xrefs, $xref;
     }
   }
