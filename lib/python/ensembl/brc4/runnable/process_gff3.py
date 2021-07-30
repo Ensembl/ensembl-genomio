@@ -63,10 +63,9 @@ class process_gff3(eHive.BaseRunnable):
                 "skip_unrecognized" : False,
                 "merge_split_genes": False,
                 "exclude_seq_regions": [],
-                "validate_gene_id": False,
-                "gene_id_format": r"^[A-z0-9]+_?\d{3,}$",
+                "validate_gene_id": True,
+                "min_id_length": 8,
                 }
-        
 
     def run(self):
         genome_data = self.param('genome_data')
@@ -513,22 +512,46 @@ class process_gff3(eHive.BaseRunnable):
         new_gene_id = self.remove_prefixes(gene.id, prefixes)
         
         # In case the gene id is not valid, use the GeneID
-        if self.param("validate_gene_id"):
-            valid_gene_pattern = self.param("gene_id_format")
-            if not re.search(valid_gene_pattern, new_gene_id):
+        if not self.valid_gene_id(new_gene_id):
                 print("Gene id is not valid: %s" % new_gene_id)
                 qual = gene.qualifiers
                 if "Dbxref" in qual:
+
                     for xref in qual["Dbxref"]:
                         (db, value) = xref.split(":")
                         if db == "GeneID":
                             new_gene_id = db + "_" + value
+                            print("Using GeneID %s for stable_id instead of %s" % (new_gene_id, gene.id))
                             return new_gene_id
+                    raise Exception("Can't use invalid gene id for %s (no GeneID replacement found)" % gene)
                 else:
                     raise Exception("Can't use invalid gene id for %s" % gene)
         
         return new_gene_id
+    
+    def valid_gene_id(self, name):
+        """Check the gene id format"""
         
+        if not self.param("validate_gene_id"): return True
+        
+        min_length = self.param("min_id_length")
+        
+        # Trna (from tRNAscan)
+        if re.search(r"^Trna", name):
+            print("Gene id is a Trna from tRNA-scan")
+            return False
+        
+        # Coordinates
+        #elif re.search(r"", name):
+        #    print("Gene id is a Trna from tRNA-scan")
+        #    return False
+
+        # Min length
+        elif len(name) <= min_length:
+            print("Gene id is too short (<%d)" % min_length)
+            return False
+        else:
+            return True
     
     def normalize_transcript_id(self, gene_id, number) -> str:
         """Use a gene ID and a number to make a formatted transcript ID"""
