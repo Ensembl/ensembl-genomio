@@ -31,6 +31,7 @@ class process_gff3(eHive.BaseRunnable):
                     "pseudogenic_transcript",
                     "tRNA",
                     "pseudogenic_tRNA",
+                    "pseudogenic_rRNA",
                     "telomerase_RNA",
                     "RNase_P_RNA",
                     "SRP_RNA",
