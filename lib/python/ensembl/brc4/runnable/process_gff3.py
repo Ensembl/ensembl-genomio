@@ -244,6 +244,12 @@ class process_gff3(eHive.BaseRunnable):
                             print("Insert transcript-exon for %s (%d CDSs)" % (gene.id, len(gene.sub_features)))
                             transcript = self.gene_to_cds(gene)
                             gene.sub_features = [transcript]
+                        
+                        # Move CDS from parent gene to parent mRNA
+                        if len(gene.sub_features) == 2 and gene.sub_features[0].type == "mRNA" and gene.sub_features[1].type == "CDS":
+                            print("Move CDS to mRNA for %s (%d CDSs)" % (gene.id, len(gene.sub_features)))
+                            transcript = self.move_cds_to_mrna(gene)
+                            gene.sub_features = [transcript]
 
                         # Transform gene - exon to gene-transcript-exon
                         if gene.sub_features[0].type == "exon":
@@ -433,6 +439,31 @@ class process_gff3(eHive.BaseRunnable):
             transcript.sub_features.append(cds)
         
         return transcript
+        
+    def move_cds_to_mrna(self, gene):
+        """Move a cds child of a gene, to the mRNA"""
+        
+        # This is assuming there is 1 CDS and 1 mRNA without CDS
+        cdss = []
+        mrnas = []
+        for subf in gene.sub_features:
+            if subf.type == "CDS":
+                cdss.append(subf)
+            if subf.type == "mRNA":
+                mrnas.append(subf)
+        
+        if len(cdss) != 1 or len(mrnas) != 1:
+            raise Exception("Can't move CDS to mRNA children: several CDS or mRNA possible for %s" % gene.id)
+        cds = cdss[0]
+        mrna = mrnas[0]
+
+        # Check that the mRNA does not have CDSs
+        for subm in mrna.sub_features:
+            if subm.type == "CDS":
+                raise Exception("Can't move CDS child from gene to mRNA if mRNA already have some CDS for gene %s" % gene.id)
+        mrna.sub_features.append(cds)
+        
+        return mrna
         
     def gene_to_exon(self, gene):
         """Create a transcript - exon chain"""
