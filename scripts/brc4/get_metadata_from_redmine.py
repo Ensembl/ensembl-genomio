@@ -110,14 +110,14 @@ def parse_genome(issue):
     try:
         gff_path = customs["GFF 2 Load"]["value"]
         if gff_path:
-            print("GFF2Load: separate gff file for %s: %s (issue %d)" % (genome["BRC4"]["organism_abbrev"], gff_path, issue.id))
+            print("GFF2LOAD: separate gff file for %s: %s (issue %d)" % (genome["BRC4"]["organism_abbrev"], gff_path, issue.id))
     except:
         pass
 
     # Warn for replacement
     try:
-        if customs["Replacement genome?"]["value"] == "Yes":
-            print("Replacement: the organism %s is a replacement (issue %d)" % (genome["BRC4"]["organism_abbrev"], issue.id))
+        if customs["Replacement genome?"]["value"].startswith("Yes"):
+            print("REPLACEMENT: the organism %s is a replacement (issue %d)" % (genome["BRC4"]["organism_abbrev"], issue.id))
     except:
         pass
 

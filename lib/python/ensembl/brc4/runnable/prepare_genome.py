@@ -195,9 +195,12 @@ class prepare_genome(eHive.BaseRunnable):
         data = ("scientific name", taxon_id)
         cur.execute(select_st, data)
         row = cur.fetchone()
-        for s in row:
-            return s
-        return
+
+        if row:
+            for s in row:
+                return s
+        else:
+            return
 
     def get_assembly_version(self, genome):
 

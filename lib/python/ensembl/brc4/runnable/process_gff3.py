@@ -31,6 +31,7 @@ class process_gff3(eHive.BaseRunnable):
                     "pseudogenic_transcript",
                     "tRNA",
                     "pseudogenic_tRNA",
+                    "pseudogenic_rRNA",
                     "telomerase_RNA",
                     "RNase_P_RNA",
                     "SRP_RNA",
@@ -62,10 +63,9 @@ class process_gff3(eHive.BaseRunnable):
                 "skip_unrecognized" : False,
                 "merge_split_genes": False,
                 "exclude_seq_regions": [],
-                "validate_gene_id": False,
-                "gene_id_format": r"^[A-z0-9]+_?\d{3,}$",
+                "validate_gene_id": True,
+                "min_id_length": 8,
                 }
-        
 
     def run(self):
         genome_data = self.param('genome_data')
@@ -242,6 +242,12 @@ class process_gff3(eHive.BaseRunnable):
                         if gene.sub_features[0].type == "CDS":
                             print("Insert transcript-exon for %s (%d CDSs)" % (gene.id, len(gene.sub_features)))
                             transcript = self.gene_to_cds(gene)
+                            gene.sub_features = [transcript]
+                        
+                        # Move CDS from parent gene to parent mRNA
+                        if len(gene.sub_features) == 2 and gene.sub_features[0].type == "mRNA" and gene.sub_features[1].type == "CDS":
+                            print("Move CDS to mRNA for %s (%d CDSs)" % (gene.id, len(gene.sub_features)))
+                            transcript = self.move_cds_to_mrna(gene)
                             gene.sub_features = [transcript]
 
                         # Transform gene - exon to gene-transcript-exon
@@ -433,6 +439,31 @@ class process_gff3(eHive.BaseRunnable):
         
         return transcript
         
+    def move_cds_to_mrna(self, gene):
+        """Move a cds child of a gene, to the mRNA"""
+        
+        # This is assuming there is 1 CDS and 1 mRNA without CDS
+        cdss = []
+        mrnas = []
+        for subf in gene.sub_features:
+            if subf.type == "CDS":
+                cdss.append(subf)
+            if subf.type == "mRNA":
+                mrnas.append(subf)
+        
+        if len(cdss) != 1 or len(mrnas) != 1:
+            raise Exception("Can't move CDS to mRNA children: several CDS or mRNA possible for %s" % gene.id)
+        cds = cdss[0]
+        mrna = mrnas[0]
+
+        # Check that the mRNA does not have CDSs
+        for subm in mrna.sub_features:
+            if subm.type == "CDS":
+                raise Exception("Can't move CDS child from gene to mRNA if mRNA already have some CDS for gene %s" % gene.id)
+        mrna.sub_features.append(cds)
+        
+        return mrna
+        
     def gene_to_exon(self, gene):
         """Create a transcript - exon chain"""
         
@@ -481,22 +512,46 @@ class process_gff3(eHive.BaseRunnable):
         new_gene_id = self.remove_prefixes(gene.id, prefixes)
         
         # In case the gene id is not valid, use the GeneID
-        if self.param("validate_gene_id"):
-            valid_gene_pattern = self.param("gene_id_format")
-            if not re.search(valid_gene_pattern, new_gene_id):
+        if not self.valid_gene_id(new_gene_id):
                 print("Gene id is not valid: %s" % new_gene_id)
                 qual = gene.qualifiers
                 if "Dbxref" in qual:
+
                     for xref in qual["Dbxref"]:
                         (db, value) = xref.split(":")
                         if db == "GeneID":
                             new_gene_id = db + "_" + value
+                            print("Using GeneID %s for stable_id instead of %s" % (new_gene_id, gene.id))
                             return new_gene_id
+                    raise Exception("Can't use invalid gene id for %s (no GeneID replacement found)" % gene)
                 else:
                     raise Exception("Can't use invalid gene id for %s" % gene)
         
         return new_gene_id
+    
+    def valid_gene_id(self, name):
+        """Check the gene id format"""
         
+        if not self.param("validate_gene_id"): return True
+        
+        min_length = self.param("min_id_length")
+        
+        # Trna (from tRNAscan)
+        if re.search(r"^Trna", name):
+            print("Gene id is a Trna from tRNA-scan")
+            return False
+        
+        # Coordinates
+        #elif re.search(r"", name):
+        #    print("Gene id is a Trna from tRNA-scan")
+        #    return False
+
+        # Min length
+        elif len(name) <= min_length:
+            print("Gene id is too short (<%d)" % min_length)
+            return False
+        else:
+            return True
     
     def normalize_transcript_id(self, gene_id, number) -> str:
         """Use a gene ID and a number to make a formatted transcript ID"""

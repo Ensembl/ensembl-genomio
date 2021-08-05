@@ -1026,7 +1026,7 @@ sub new_transcript {
         $gene->biotype($biotype);
 
     # Pseudogenic_rRNA
-    } elsif ($tr_type eq "pseudogenic_rRNA") {
+    } elsif ($tr_type eq "rRNA") {
         $self->log_warning("Pseudogenic rRNA: $stable_id");
         $biotype = 'rRNA_pseudogene';
         $gene->biotype($biotype);
