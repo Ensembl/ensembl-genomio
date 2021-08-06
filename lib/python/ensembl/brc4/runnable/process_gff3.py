@@ -127,7 +127,7 @@ class process_gff3(eHive.BaseRunnable):
                         attrs[key] = value
                         
                     # Check this is a gene to merge; cache it then
-                    if fields[2] in self.param("allowed_gene_types") and "part" in attrs:
+                    if fields[2] in self.param("gene_types") and "part" in attrs:
                         tomerge.append(fields)
                     
                     # If not, merge if needed, and print the line
