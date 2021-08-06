@@ -220,6 +220,11 @@ class process_gff3(eHive.BaseRunnable):
                     if gene.type in ncRNA_gene_types:
                         # Transcript-level gene: add a gene parent
                         gene = self.ncrna_gene(gene)
+
+                    if gene.type == "CDS":
+                        # Lone CDS: add a gene-transcript parent
+                        print("Make a gene for lone cds %s" % (gene.id))
+                        gene = self.cds_gene(gene)
                         
                     if gene.type in allowed_gene_types:
                         
@@ -413,6 +418,27 @@ class process_gff3(eHive.BaseRunnable):
         gene.qualifiers["source"] = ncrna.qualifiers["source"]
         gene.sub_features = [ncrna]
         gene.id = ncrna.id
+
+        return gene
+        
+    def cds_gene(self, cds):
+        """Create a gene for a lone CDS"""
+        
+        # Create a transcript, add the CDS
+        transcript = SeqFeature(cds.location, type="mRNA")
+        transcript.qualifiers["source"] = cds.qualifiers["source"]
+        transcript.sub_features = [cds]
+
+        # Add an exon too
+        exon = SeqFeature(cds.location, type="exon")
+        exon.qualifiers["source"] = cds.qualifiers["source"]
+        transcript.sub_features.append(exon)
+        
+        # Create a gene, add the transcript
+        gene = SeqFeature(cds.location, type="gene")
+        gene.qualifiers["source"] = cds.qualifiers["source"]
+        gene.sub_features = [transcript]
+        gene.id = self.generate_stable_id()
 
         return gene
         
