@@ -527,6 +527,10 @@ class process_gff3(eHive.BaseRunnable):
             description = feature.qualifiers["product"][0]
             if not re.search("^hypothetical protein$", description):
                 feature_object["description"] = description
+
+        if "Name" in feature.qualifiers and not "description" in feature_object:
+            name = feature.qualifiers["Name"][0]
+            feature_object["description"] = name
         
         # Synonyms?
         
