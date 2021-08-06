@@ -22,6 +22,8 @@ class process_gff3(eHive.BaseRunnable):
                 "ncRNA_gene_types" : (
                     "tRNA",
                     "rRNA",
+                    "pseudogenic_tRNA",
+                    "pseudogenic_rRNA",
                     "transcript",
                     "misc_RNA"
                     ),
