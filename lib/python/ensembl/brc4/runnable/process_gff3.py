@@ -127,7 +127,7 @@ class process_gff3(eHive.BaseRunnable):
                         attrs[key] = value
                         
                     # Check this is a gene to merge; cache it then
-                    if fields[2] == "gene" and "part" in attrs:
+                    if fields[2] in self.param("allowed_gene_types") and "part" in attrs:
                         tomerge.append(fields)
                     
                     # If not, merge if needed, and print the line
@@ -158,9 +158,11 @@ class process_gff3(eHive.BaseRunnable):
 
     def merge_genes(self, tomerge) -> str:
         
+        print("Merge gene in %d parts" % len(tomerge))
         min_start = -1
         max_end = -1
         for gene in tomerge:
+            print("Merge part: %s" % gene[8])
             start = int(gene[3])
             end = int(gene[4])
             
