@@ -423,7 +423,7 @@ class process_gff3(eHive.BaseRunnable):
         
     def cds_gene(self, cds):
         """Create a gene for a lone CDS"""
-        
+
         # Create a transcript, add the CDS
         transcript = SeqFeature(cds.location, type="mRNA")
         transcript.qualifiers["source"] = cds.qualifiers["source"]
@@ -546,7 +546,7 @@ class process_gff3(eHive.BaseRunnable):
         new_gene_id = self.remove_prefixes(gene.id, prefixes)
         
         # In case the gene id is not valid, use the GeneID
-        if not self.valid_gene_id(new_gene_id):
+        if not self.valid_id(new_gene_id):
                 print("Gene id is not valid: %s" % new_gene_id)
                 qual = gene.qualifiers
                 if "Dbxref" in qual:
@@ -591,8 +591,8 @@ class process_gff3(eHive.BaseRunnable):
         
         return new_id
     
-    def valid_gene_id(self, name):
-        """Check the gene id format"""
+    def valid_id(self, name):
+        """Check a stable id format"""
         
         if not self.param("validate_gene_id"): return True
         
@@ -600,22 +600,22 @@ class process_gff3(eHive.BaseRunnable):
         
         # Trna (from tRNAscan)
         if re.search(r"^Trna", name):
-            print("Gene id is a Trna from tRNA-scan: %s" % name)
+            print("Stable id is a Trna from tRNA-scan: %s" % name)
             return False
         
         # Coordinates
         elif re.search(r'^.+:\d+..\d+', name):
-            print("Gene id is a coordinate: %s" % name)
+            print("Stable id is a coordinate: %s" % name)
             return False
 
-        # Coordinates
-        elif re.search(r' ', name):
-            print("Gene id contains spaces: %s" % name)
+        # Special characters
+        elif re.search(r'[ |]', name):
+            print("Stable id contains special characters: %s" % name)
             return False
 
         # Min length
         elif len(name) <= min_length:
-            print("Gene id is too short (<%d) %s" % (min_length, name))
+            print("Stable id is too short (<%d) %s" % (min_length, name))
             return False
         else:
             return True
@@ -637,7 +637,8 @@ class process_gff3(eHive.BaseRunnable):
         cds_id = self.remove_prefixes(cds_id, prefixes)
 
         # Special case: if the ID doesn't look like one, remove it
-        if re.match("^...\|", cds_id):
+        # It needs to be regenerated
+        if not self.valid_id(cds_id):
             cds_id = ""
         
         return cds_id
