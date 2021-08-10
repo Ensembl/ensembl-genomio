@@ -46,6 +46,7 @@ class SeqRegionConf:
                asm_rep_file: Optional[str],
                seq_region_raw: Optional[str],
                seq_region_genbank: Optional[str],
+               seq_region_syns: Optional[str],
                meta: Optional[dict],
                syns_src: str = "GenBank"
                ):
@@ -64,6 +65,8 @@ class SeqRegionConf:
     self.fill_info_from_asm_rep(asm_rep_file)
     #  load from seq_region_genebank, infer names based on the loaded synonyms
     self.fill_info_from_seq_region_raw(seq_region_genbank, add_missing = False, update_from_new = True, update_syns = False)
+    #  load from seq_region_syns, infer names based on the loaded synonyms
+    self.fill_info_from_seq_region_syns(seq_region_syns)
 
   def dump(self, json_out: str) -> None:
     if not json_out:
@@ -172,7 +175,7 @@ class SeqRegionConf:
     with _open(asm_rep_file, 'rt') as asm_rep:
       header_line = None
       header_fixed = None
-      # 
+      #
       for line in asm_rep:
         if not header_fixed:
           if line.startswith("#"):
@@ -282,5 +285,57 @@ class SeqRegionConf:
           self.seq_regions[contig],
           **updates
         )
+    return
+
+  def fill_info_from_seq_region_syns(self,
+                                     seq_region_syns_tsv: Optional[str]) -> None:
+    """load synonyms from tab-separated file, infer actual contig names,  add synonyms to them.
+       should be called after loading from fasta or seq_region_raw"""
+    if not seq_region_syns_tsv:
+      return
+
+    # loading synonyms from tsv file
+    syns_from_tsv = defaultdict(list)
+
+    _open = seq_region_syns_tsv.endswith(".gz") and gzip.open or open
+    with _open(seq_region_syns_tsv, 'rt') as syns_file:
+      for line_raw in syns_file:
+        line = line_raw.rstrip()
+        if line.startswith("#"):
+          continue
+        if line.strip() == "":
+          continue
+        # split data line somehow
+        data_fields = line.split("\t")
+        if len(data_fields) <= 1:
+          data_fields = line.split()
+
+        if len(data_fields) < 2:
+          continue
+
+        known, syn, src, *rest = data_fields + [ self.syn_src_default ]
+        if known and syn and src:
+          syns_from_tsv[known].append(SeqRegionSyn(syn, src))
+
+    if not syns_from_tsv:
+      return
+
+    # merging with existing synonyms
+    already_used = set()
+    for contig, sr in self.seq_regions.items():
+      # get existing synonyms
+      names = frozenset([ contig ] + [ s.name for s in sr.synonyms ])
+      # get subset overlapping with syns_from_tsv
+      can_use = list(filter(lambda n: n in syns_from_tsv, names))
+      # check if usable
+      if len(can_use) != 1:
+        continue
+      if can_use[0] in already_used:
+        print(f"trying to reuse already used synonym {can_use[0]} for seq_region {contig}", file=sys.stderr)
+        # raise exception instead ?
+        continue
+      # update synonyms
+      sr.synonyms = self.merge_syns(sr.synonyms, syns_from_tsv[can_use[0]])
+
     return
 

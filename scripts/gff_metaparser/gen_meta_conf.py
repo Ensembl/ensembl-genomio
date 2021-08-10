@@ -24,6 +24,8 @@ def get_args():
                       help="seq_region raw json file to patch")
   parser.add_argument("--seq_region_genbank", metavar="seq_region_genbank.json", required = False, type=str,
                       help="ad-hoc seq_region raw json file based on the genbank gff3")
+  parser.add_argument("--seq_region_syns", metavar="seq_region_syns.tsv", required = False, type=str,
+                      help="ad-hoc seq_region synomyms [source, optionally] tab-separated file (known_name \\t syn [ \\t source ])")
   parser.add_argument("--asm_rep_file", metavar="species_assembly_report.txt", required = False, type=str,
                       help="GenBank assembly report to get seq_region syns from")
   # out
@@ -74,6 +76,7 @@ def main():
                             asm_rep_file = args.asm_rep_file,
                             seq_region_raw = args.seq_region_raw,
                             seq_region_genbank = args.seq_region_genbank,
+                            seq_region_syns = args.seq_region_syns,
                             syns_src = args.syns_src)
   # gen manifest
   manifest = Manifest({
