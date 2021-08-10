@@ -22,6 +22,8 @@ class process_gff3(eHive.BaseRunnable):
                 "ncRNA_gene_types" : (
                     "tRNA",
                     "rRNA",
+                    "pseudogenic_tRNA",
+                    "pseudogenic_rRNA",
                     "transcript",
                     "misc_RNA"
                     ),
@@ -65,6 +67,7 @@ class process_gff3(eHive.BaseRunnable):
                 "exclude_seq_regions": [],
                 "validate_gene_id": True,
                 "min_id_length": 8,
+                "make_missing_stable_id": False,
                 }
 
     def run(self):
@@ -124,7 +127,7 @@ class process_gff3(eHive.BaseRunnable):
                         attrs[key] = value
                         
                     # Check this is a gene to merge; cache it then
-                    if fields[2] == "gene" and "part" in attrs:
+                    if fields[2] in self.param("gene_types") and "part" in attrs:
                         tomerge.append(fields)
                     
                     # If not, merge if needed, and print the line
@@ -155,9 +158,11 @@ class process_gff3(eHive.BaseRunnable):
 
     def merge_genes(self, tomerge) -> str:
         
+        print("Merge gene in %d parts" % len(tomerge))
         min_start = -1
         max_end = -1
         for gene in tomerge:
+            print("Merge part: %s" % gene[8])
             start = int(gene[3])
             end = int(gene[4])
             
@@ -215,6 +220,11 @@ class process_gff3(eHive.BaseRunnable):
                     if gene.type in ncRNA_gene_types:
                         # Transcript-level gene: add a gene parent
                         gene = self.ncrna_gene(gene)
+
+                    if gene.type == "CDS":
+                        # Lone CDS: add a gene-transcript parent
+                        print("Make a gene for lone cds %s" % (gene.id))
+                        gene = self.cds_gene(gene)
                         
                     if gene.type in allowed_gene_types:
                         
@@ -411,6 +421,27 @@ class process_gff3(eHive.BaseRunnable):
 
         return gene
         
+    def cds_gene(self, cds):
+        """Create a gene for a lone CDS"""
+
+        # Create a transcript, add the CDS
+        transcript = SeqFeature(cds.location, type="mRNA")
+        transcript.qualifiers["source"] = cds.qualifiers["source"]
+        transcript.sub_features = [cds]
+
+        # Add an exon too
+        exon = SeqFeature(cds.location, type="exon")
+        exon.qualifiers["source"] = cds.qualifiers["source"]
+        transcript.sub_features.append(exon)
+        
+        # Create a gene, add the transcript
+        gene = SeqFeature(cds.location, type="gene")
+        gene.qualifiers["source"] = cds.qualifiers["source"]
+        gene.sub_features = [transcript]
+        gene.id = self.generate_stable_id()
+
+        return gene
+        
 
     def transcript_for_gene(self, gene):
         """Create a transcript for a lone gene"""
@@ -496,6 +527,10 @@ class process_gff3(eHive.BaseRunnable):
             description = feature.qualifiers["product"][0]
             if not re.search("^hypothetical protein$", description):
                 feature_object["description"] = description
+
+        if "Name" in feature.qualifiers and not "description" in feature_object:
+            name = feature.qualifiers["Name"][0]
+            feature_object["description"] = name
         
         # Synonyms?
         
@@ -506,13 +541,16 @@ class process_gff3(eHive.BaseRunnable):
         funcann.append(feature_object)
     
     def normalize_gene_id(self, gene) -> str:
-        """Remove any unnecessary prefixes around the gene ID"""
+        """
+        Remove any unnecessary prefixes around the gene ID
+        Generate a new stable id if it is not recognized as valid
+        """
 
         prefixes = ("gene-", "gene:")
         new_gene_id = self.remove_prefixes(gene.id, prefixes)
         
         # In case the gene id is not valid, use the GeneID
-        if not self.valid_gene_id(new_gene_id):
+        if not self.valid_id(new_gene_id):
                 print("Gene id is not valid: %s" % new_gene_id)
                 qual = gene.qualifiers
                 if "Dbxref" in qual:
@@ -523,14 +561,42 @@ class process_gff3(eHive.BaseRunnable):
                             new_gene_id = db + "_" + value
                             print("Using GeneID %s for stable_id instead of %s" % (new_gene_id, gene.id))
                             return new_gene_id
-                    raise Exception("Can't use invalid gene id for %s (no GeneID replacement found)" % gene)
+
+                # Make a new stable_id
+                if self.param("make_missing_stable_id"):
+                    new_id = self.generate_stable_id()
+                    print("New id: %s -> %s" % (new_gene_id, new_id))
+                    return new_id
                 else:
                     raise Exception("Can't use invalid gene id for %s" % gene)
         
         return new_gene_id
     
-    def valid_gene_id(self, name):
-        """Check the gene id format"""
+    def generate_stable_id(self):
+        """
+        Create a gene stable id
+        """
+        if self.param_exists("stable_id_prefix"):
+            prefix = self.param("stable_id_prefix")
+        else:
+            dat = self.param('genome_data')
+            org = dat["BRC4"]["organism_abbrev"]
+            prefix = "TMP_" + org + "_"
+            self.param("stable_id_prefix", prefix)
+        
+        if self.param_exists("current_stable_id_number"):
+            number = self.param("current_stable_id_number")
+        else:
+            number = 1
+        
+        number += 1
+        new_id = "%s%d" % (prefix, number)
+        self.param("current_stable_id_number", number)
+        
+        return new_id
+    
+    def valid_id(self, name):
+        """Check a stable id format"""
         
         if not self.param("validate_gene_id"): return True
         
@@ -538,17 +604,22 @@ class process_gff3(eHive.BaseRunnable):
         
         # Trna (from tRNAscan)
         if re.search(r"^Trna", name):
-            print("Gene id is a Trna from tRNA-scan")
+            print("Stable id is a Trna from tRNA-scan: %s" % name)
             return False
         
         # Coordinates
-        #elif re.search(r"", name):
-        #    print("Gene id is a Trna from tRNA-scan")
-        #    return False
+        elif re.search(r'^.+:\d+..\d+', name):
+            print("Stable id is a coordinate: %s" % name)
+            return False
+
+        # Special characters
+        elif re.search(r'[ |]', name):
+            print("Stable id contains special characters: %s" % name)
+            return False
 
         # Min length
         elif len(name) <= min_length:
-            print("Gene id is too short (<%d)" % min_length)
+            print("Stable id is too short (<%d) %s" % (min_length, name))
             return False
         else:
             return True
@@ -570,7 +641,8 @@ class process_gff3(eHive.BaseRunnable):
         cds_id = self.remove_prefixes(cds_id, prefixes)
 
         # Special case: if the ID doesn't look like one, remove it
-        if re.match("^...\|", cds_id):
+        # It needs to be regenerated
+        if not self.valid_id(cds_id):
             cds_id = ""
         
         return cds_id
