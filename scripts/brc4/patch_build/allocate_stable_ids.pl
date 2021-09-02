@@ -42,12 +42,47 @@ use JSON;
     is => 'rw',
     isa => 'Int',
   );
+
+  sub request {
+    my ($self, $type, $page, $data) = @_;
+    
+    my $json = JSON->new->allow_nonref;
+    my $ua = LWP::UserAgent->new();
+    my $url = $self->url() . '/' . $page;
+    
+    my $request;
+    if ($type eq 'get') {
+      $url .= "?" . join("&", map { "$_=$data->{$_}" } (sort keys %$data));
+      $request = HTTP::Request->new(GET => $url);
+    } elsif ($type eq 'post') {
+      $request = HTTP::Request->new(POST => $url);
+      $request->header('content-type' => 'application/json');
+      $request->content($json->encode($data));
+    }
+    $request->authorization_basic($self->user(), $self->pass());
+    my $res = $ua->request($request);
+    
+    if ($res->is_success) {
+      return $json->decode($res->content());
+    } else {
+      die $res->code . " : '". $res->message() . "'";
+    }
+  }
+  
+  sub request_get {
+    my ($self, $page, $data) = @_;
+    return $self->request('get', $page, $data);
+  }
+  sub request_post {
+    my ($self, $page, $data) = @_;
+    return $self->request('post', $page, $data);
+  }
   
   # Given a species name, load its id from the OSID service
   sub connect {
     my ($self, $species) = @_;
     
-    my $data = $self->request("organisms", { organismName => $species });
+    my $data = $self->request_get("organisms", { organismName => $species });
     
     if (@$data == 1) {
       my $species_id = $data->[0]->{organismId};
@@ -56,28 +91,27 @@ use JSON;
     } else {
       die "No data found for species $species. Make sure it is in the OSID server.";
     }
-    die;
-  }
-
-  sub request {
-    my ($self, $page, $data) = @_;
-    
-    my $ua = LWP::UserAgent->new();
-    my $url = $self->url() . '/' . $page;
-    $url .= "?" . join("&", map { "$_=$data->{$_}" } (sort keys %$data));
-    my $request = HTTP::Request->new(GET => $url);
-    $request->authorization_basic($self->user(), $self->pass());
-    my $res = $ua->request($request);
-    
-    if ($res->is_success) {
-      my $json = JSON->new->allow_nonref;
-      return $json->decode($res->content());
-    } else {
-      die $res->content();
-    }
   }
   
   sub get_gene_ids {
+    my ($self, $number) = @_;
+    
+    say "Requesting $number gene ids...";
+
+    my $data = $self->request_post("idSets", {
+        organismId => $self->species_id,
+        generateGenes => $number
+      });
+
+    if ($data) {
+      my $set = $data->{idSetId};
+      my $ids_list = $data->{generatedIds};
+      die "No gene ids generated (requested $number)" if @$ids_list == 0;
+      my @ids = map { $_->{geneId} } @$ids_list;
+      return ($set, \@ids);
+    } else {
+      die "ERROR: no data, when I expected generated ids and id set";
+    }
   }
   sub get_transcripts_ids {}
 }
@@ -152,8 +186,13 @@ sub allocate_genes {
   my $translations_count = 0;
   
   my @genes = @{ $ga->fetch_all() };
+
+  ##### FOR TESTING
+  @genes = @genes[0..2];
   
-  my $gene_ids = $osid->get_gene_ids(scalar(@genes));
+  my ($set, $gene_ids) = $osid->get_gene_ids(scalar(@genes));
+
+  say "$set : @$gene_ids";
   
   for my $gene (@genes) {
     $genes_count++;
