@@ -13,6 +13,9 @@ my $logger = get_logger();
 use Bio::EnsEMBL::Registry;
 use Try::Tiny;
 use File::Path qw(make_path);
+use LWP::UserAgent;
+use HTTP::Request;
+use JSON;
 
 {
   package OSID_service;
@@ -31,9 +34,47 @@ use File::Path qw(make_path);
     is => 'rw',
     isa => 'Str',
   );
+  has 'species' => (
+    is => 'rw',
+    isa => 'Str',
+  );
+  has 'species_id' => (
+    is => 'rw',
+    isa => 'Int',
+  );
   
-  sub connect {}
-  sub get_gene_ids {}
+  # Given a species name, load its id from the OSID service
+  sub connect {
+    my ($self, $species) = @_;
+    
+    my $ua = LWP::UserAgent->new();
+    my $url = $self->url() . '/organisms';
+    $url .= "?organismName=$species";
+    my $request = HTTP::Request->new(GET => $url);
+    $request->authorization_basic($self->user(), $self->pass());
+    my $res = $ua->request($request);
+    
+    if ($res->is_success) {
+      my $json = JSON->new->allow_nonref;
+      my $data = $json->decode($res->content());
+      
+      if (@$data == 1) {
+        $self->species_id($data->[0]->{organismId});
+      } else {
+          die "No data found for species $species. Make sure it is in the OSID server.";
+      }
+      die;
+    } else {
+      die $res->content();
+    }
+    
+    my $species_id = 0;
+    
+    say "Species $species has id $species_id";
+    $self->species_id($species_id);
+  }
+  sub get_gene_ids {
+  }
   sub get_transcripts_ids {}
 }
 
@@ -91,9 +132,10 @@ if ($opt{update}) {
 } else {
   $osid = OSID_service_dev->new();
 }
-$osid->connect();
+$osid->connect($opt{species});
 allocate_genes($osid, $registry, $opt{species}, $opt{update});
 
+###############################################################################
 sub osid_connection {}
 
 sub allocate_genes {
