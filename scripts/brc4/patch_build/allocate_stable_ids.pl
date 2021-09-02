@@ -47,32 +47,36 @@ use JSON;
   sub connect {
     my ($self, $species) = @_;
     
+    my $data = $self->request("organisms", { organismName => $species });
+    
+    if (@$data == 1) {
+      my $species_id = $data->[0]->{organismId};
+      say "Species $species has id $species_id";
+      $self->species_id($species_id);
+    } else {
+      die "No data found for species $species. Make sure it is in the OSID server.";
+    }
+    die;
+  }
+
+  sub request {
+    my ($self, $page, $data) = @_;
+    
     my $ua = LWP::UserAgent->new();
-    my $url = $self->url() . '/organisms';
-    $url .= "?organismName=$species";
+    my $url = $self->url() . '/' . $page;
+    $url .= "?" . join("&", map { "$_=$data->{$_}" } (sort keys %$data));
     my $request = HTTP::Request->new(GET => $url);
     $request->authorization_basic($self->user(), $self->pass());
     my $res = $ua->request($request);
     
     if ($res->is_success) {
       my $json = JSON->new->allow_nonref;
-      my $data = $json->decode($res->content());
-      
-      if (@$data == 1) {
-        $self->species_id($data->[0]->{organismId});
-      } else {
-          die "No data found for species $species. Make sure it is in the OSID server.";
-      }
-      die;
+      return $json->decode($res->content());
     } else {
       die $res->content();
     }
-    
-    my $species_id = 0;
-    
-    say "Species $species has id $species_id";
-    $self->species_id($species_id);
   }
+  
   sub get_gene_ids {
   }
   sub get_transcripts_ids {}
@@ -123,15 +127,15 @@ my $reg_path = $opt{registry};
 $registry->load_all($reg_path);
 
 my $osid;
-if ($opt{update}) {
+#if ($opt{update}) {
   $osid = OSID_service->new(
     url  => $opt{osid_url},
     user => $opt{osid_user},
     pass => $opt{osid_pass},
   );
-} else {
-  $osid = OSID_service_dev->new();
-}
+  #} else {
+  #  $osid = OSID_service_dev->new();
+  #}
 $osid->connect($opt{species});
 allocate_genes($osid, $registry, $opt{species}, $opt{update});
 
