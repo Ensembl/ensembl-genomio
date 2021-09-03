@@ -212,13 +212,13 @@ my $osid;
   #  $osid = OSID_service_dev->new();
   #}
 $osid->connect($opt{species});
-allocate_genes($osid, $registry, $opt{species}, $opt{update});
+allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{prefix});
 
 ###############################################################################
 sub osid_connection {}
 
 sub allocate_genes {
-  my ($osid, $registry, $species, $update) = @_;
+  my ($osid, $registry, $species, $update, $prefix) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
   
@@ -227,11 +227,13 @@ sub allocate_genes {
   my $translations_count = 0;
   
   my @genes = @{ $ga->fetch_all() };
-
-  ##### FOR TESTING
-  #my $max_test = 10;
-  #@genes = @genes[0..$max_test];
-  ##########
+  
+  if ($prefix) {
+    my $nold = scalar(@genes);
+    @genes = grep { $_->stable_id =~ /^$prefix/ } @genes;
+    my $nnew = scalar(@genes);
+    $logger->info("Reduce list using prefix $prefix: from $nold genes to $nnew");
+  }
   
   # How to get all the ids
 
@@ -313,6 +315,7 @@ sub usage {
     --osid_pass <str> : OSID connection details
     
     --update          : Do the actual changes (default is no OSID call and no db changes)
+    --prefix <str>    : Only replace ids for genes with this prefix [optional]
     
     --help            : show this help message
     --verbose         : show detailed progress
@@ -331,6 +334,7 @@ sub opt_check {
     "osid_user=s",
     "osid_pass=s",
     "update",
+    "prefix:s",
     "help",
     "verbose",
     "debug",
