@@ -44,11 +44,12 @@ use JSON;
   );
 
   sub request {
-    my ($self, $type, $page, $data) = @_;
+    my ($self, $type, $page, $data, $value) = @_;
     
     my $json = JSON->new->allow_nonref;
     my $ua = LWP::UserAgent->new();
     my $url = $self->url() . '/' . $page;
+    $url .= '/' . $value if $value;
     
     my $request;
     if ($type eq 'get') {
@@ -56,6 +57,10 @@ use JSON;
       $request = HTTP::Request->new(GET => $url);
     } elsif ($type eq 'post') {
       $request = HTTP::Request->new(POST => $url);
+      $request->header('content-type' => 'application/json');
+      $request->content($json->encode($data));
+    } elsif ($type eq 'patch') {
+      $request = HTTP::Request->new(PATCH => $url);
       $request->header('content-type' => 'application/json');
       $request->content($json->encode($data));
     }
@@ -77,6 +82,10 @@ use JSON;
     my ($self, $page, $data) = @_;
     return $self->request('post', $page, $data);
   }
+  sub request_patch {
+    my ($self, $page, $data, $value) = @_;
+    return $self->request('patch', $page, $data, $value);
+  }
   
   # Given a species name, load its id from the OSID service
   sub connect {
@@ -86,7 +95,7 @@ use JSON;
     
     if (@$data == 1) {
       my $species_id = $data->[0]->{organismId};
-      say "Species $species has id $species_id";
+      $logger->debug("Species $species has id $species_id");
       $self->species_id($species_id);
     } else {
       die "No data found for species $species. Make sure it is in the OSID server.";
@@ -96,7 +105,7 @@ use JSON;
   sub get_gene_ids {
     my ($self, $number) = @_;
     
-    say "Requesting $number gene ids...";
+    $logger->info("Requesting $number gene ids...");
 
     my $data = $self->request_post("idSets", {
         organismId => $self->species_id,
@@ -104,16 +113,41 @@ use JSON;
       });
 
     if ($data) {
-      my $set = $data->{idSetId};
+      my $set_id = $data->{idSetId};
       my $ids_list = $data->{generatedIds};
       die "No gene ids generated (requested $number)" if @$ids_list == 0;
       my @ids = map { $_->{geneId} } @$ids_list;
-      return ($set, \@ids);
+      return ($set_id, \@ids);
     } else {
       die "ERROR: no data, when I expected generated ids and id set";
     }
   }
-  sub get_transcripts_ids {}
+
+  sub get_transcripts_ids {
+    my ($self, $set_id, $map) = @_;
+    
+    $logger->info("Requesting transcripts ids...");
+
+    my $data = $self->request_patch("idSets", $map, $set_id);
+
+    if ($data) {
+      my $ids_list = $data->{generatedIds};
+      die "No transcripts ids generated" if @$ids_list == 0;
+      
+      my %tr_ids;
+      for my $gene (@$ids_list) {
+        my $gene_id = $gene->{geneId};
+        my $trs = $gene->{transcripts};
+        my $prots = $gene->{proteins};
+        
+        $tr_ids{$gene_id} = {transcripts => $trs, proteins => $prots};
+      }
+      return \%tr_ids;
+      
+    } else {
+      die "ERROR: no data, when I expected generated ids and id set";
+    }
+  }
 }
 
 {
@@ -136,18 +170,25 @@ use JSON;
       push @ids, $prefix . $i;
     }
     
-    return \@ids;
+    return 1, \@ids;
   }
 
   sub get_transcripts_ids {
-    my ($self, $gene_id, $count) = @_;
+    my ($self, $set_id, $map) = @_;
     
-    my @ids = ();
-    for my $i (1..($count+1)) {
-      push @ids, $gene_id . '_t' . $i;
+    my %tr_ids;
+    my @tr_ids = ();
+    my @prot_ids = ();
+    for my $gene_data(@$map) {
+      my $gene_id = $gene_data->{geneId};
+      my $count =  $gene_data->{transcripts};
+      for my $i (1..($count+1)) {
+        push @tr_ids, $gene_id . '.R' . $i;
+        push @prot_ids, $gene_id . '.P' . $i;
+      }
+      $tr_ids{$gene_id} = {transcripts => \@tr_ids, proteins => \@prot_ids};
     }
-    
-    return \@ids;
+    return \%tr_ids;
   }
 }
 
@@ -188,46 +229,70 @@ sub allocate_genes {
   my @genes = @{ $ga->fetch_all() };
 
   ##### FOR TESTING
-  @genes = @genes[0..2];
+  #my $max_test = 10;
+  #@genes = @genes[0..$max_test];
+  ##########
   
-  my ($set, $gene_ids) = $osid->get_gene_ids(scalar(@genes));
+  # How to get all the ids
 
-  say "$set : @$gene_ids";
+  # Part 1: get gene ids, store in a map for later
+  my ($set_id, $gene_ids) = $osid->get_gene_ids(scalar(@genes));
   
+  my %gene_map;
+  my @tran_count;
+  for my $gene (@genes) {
+    # Allocate gene id
+    my $gene_id = shift @$gene_ids;
+    $gene_map{$gene->stable_id} = $gene_id;
+    
+    # Count transcript for that gene, for later transcripts allocation
+    my @transcripts = @{ $gene->get_all_Transcripts };
+
+    # Make content for OSID patch
+    push @tran_count, {
+      'geneId' => $gene_id,
+      'transcripts' => scalar(@transcripts)
+    };
+  }
+  
+  # Part 2: get transcripts ids
+  my $tr_ids = $osid->get_transcripts_ids($set_id, \@tran_count);
+  
+  # Part 3: Actually replace the ids
   for my $gene (@genes) {
     $genes_count++;
 
-    my $gene_id = shift @$gene_ids;
-    say "Use gene id $gene_id to replace " . $gene->stable_id;
+    my $gene_id = $gene_map{$gene->stable_id};
+    $logger->debug("Use gene id $gene_id to replace " . $gene->stable_id);
     
     my @transcripts = @{ $gene->get_all_Transcripts };
-    
-    my $tr_ids = $osid->get_transcripts_ids($gene_id, scalar(@transcripts));
-      for my $tr (@transcripts) {
-        $transcripts_count++;
 
-        my $tr_id = shift @$tr_ids;
-        say "Use transcript id $tr_id to replace " . $tr->stable_id;
-        
-        my $trl = $tr->translation();
-        if ($trl) {
-          my $trl_id = $tr_id;
-          $trl_id =~ s/_t(\d+)$/_p$1/;
-          say "Use translation id $trl_id to replace " . $trl->stable_id;
-          $translations_count++;
-        }
+    my $new_tran_ids = $tr_ids->{$gene_id}->{transcripts};
+    my $new_prot_ids = $tr_ids->{$gene_id}->{proteins};
+    
+    for my $tr (@transcripts) {
+      $transcripts_count++;
+
+      my $tran_id = shift @$new_tran_ids;
+      my $prot_id = shift @$new_prot_ids;
+      $logger->debug("Use tran id $tran_id to replace " . $tr->stable_id);
+
+      my $trl = $tr->translation();
+      if ($trl) {
+        $logger->debug("Use prot id $prot_id to replace " . $trl->stable_id);
+        $translations_count++;
+      }
     }
     
     if ($update) {
-      #
+      # TODO
     }
-    last;
   }
   
-  say STDERR "$genes_count allocated ids for genes";
-  say STDERR "$transcripts_count allocated ids for transcripts";
-  say STDERR "$translations_count allocated ids for translations";
-  say STDERR "(Use --update to make the changes to the database)" if not $update;
+  $logger->info("$genes_count allocated ids for genes");
+  $logger->info("$transcripts_count allocated ids for transcripts");
+  $logger->info("$translations_count allocated ids for translations");
+  $logger->info("(Use --update to make the changes to the database)") if not $update;
 }
 
 ###############################################################################
