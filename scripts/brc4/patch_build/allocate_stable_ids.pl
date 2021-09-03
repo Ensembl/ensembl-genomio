@@ -11,6 +11,7 @@ Log::Log4perl->easy_init($WARN);
 my $logger = get_logger(); 
 
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::DBEntry;
 use Try::Tiny;
 use File::Path qw(make_path);
 use LWP::UserAgent;
@@ -212,15 +213,18 @@ my $osid;
   #  $osid = OSID_service_dev->new();
   #}
 $osid->connect($opt{species});
-allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{prefix});
+allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{prefix});
 
 ###############################################################################
 sub osid_connection {}
 
 sub allocate_genes {
-  my ($osid, $registry, $species, $update, $prefix) = @_;
+  my ($osid, $registry, $species, $update, $xref_source, $prefix) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
+  my $tra = $registry->get_adaptor($species, "core", "transcript");
+  my $prota = $registry->get_adaptor($species, "core", "translation");
+  my $dbenta = $registry->get_adaptor($species, "core", "dbentry");
   
   my $genes_count = 0;
   my $transcripts_count = 0;
@@ -265,29 +269,81 @@ sub allocate_genes {
     $genes_count++;
 
     my $gene_id = $gene_map{$gene->stable_id};
-    $logger->debug("Use gene id $gene_id to replace " . $gene->stable_id);
     
     my @transcripts = @{ $gene->get_all_Transcripts };
 
     my $new_tran_ids = $tr_ids->{$gene_id}->{transcripts};
     my $new_prot_ids = $tr_ids->{$gene_id}->{proteins};
     
+    $logger->debug("Use gene id $gene_id to replace " . $gene->stable_id);
+
+    # Store changes
+    if ($update) {
+      my $old_gene_id = $gene->stable_id;
+      $gene->stable_id($gene_id);
+      $ga->update($gene);
+      
+      # Xref
+      if ($xref_source) {
+        my $dbentry = Bio::EnsEMBL::DBEntry->new(
+          -adaptor => $dbenta,
+          -dbname => $xref_source,
+          -primary_id => $old_gene_id
+        );
+        $dbenta->store($dbentry, $gene->dbID, 'Gene');
+      }
+    }
+    
     for my $tr (@transcripts) {
       $transcripts_count++;
 
       my $tran_id = shift @$new_tran_ids;
       my $prot_id = shift @$new_prot_ids;
-      $logger->debug("Use tran id $tran_id to replace " . $tr->stable_id);
 
-      my $trl = $tr->translation();
-      if ($trl) {
-        $logger->debug("Use prot id $prot_id to replace " . $trl->stable_id);
-        $translations_count++;
+      $logger->debug("$gene_id: Use tran id $tran_id to replace " . $tr->stable_id);
+
+      # Store changes
+      if ($update) {
+        my $old_tr_id = $tr->stable_id;
+        $tr->stable_id($tran_id);
+        $tra->update($tr) if $update;
+
+        # Xref
+        if ($xref_source) {
+          my $dbentry = Bio::EnsEMBL::DBEntry->new(
+            -adaptor => $dbenta,
+            -dbname => $xref_source,
+            -primary_id => $old_tr_id
+          );
+          $dbenta->store($dbentry, $tr->dbID, 'Transcript');
+        }
       }
-    }
-    
-    if ($update) {
-      # TODO
+
+      my $prot = $tr->translation();
+      if ($prot) {
+        $translations_count++;
+
+        $logger->debug("$gene_id: Use prot id $prot_id to replace " . $prot->stable_id);
+
+        # Store changes
+        if ($update) {
+          my $old_prot_id = $prot->stable_id;
+          
+          # There is no update for translations in the Ensembl API, so do it via SQL
+          my $sth = $prota->dbc->prepare( sprintf("UPDATE translation SET stable_id ='%s' WHERE translation_id=%s", $prot_id, $prot->dbID) );
+          $sth->execute();
+          
+          # Xref
+          if ($xref_source) {
+            my $dbentry = Bio::EnsEMBL::DBEntry->new(
+              -adaptor => $dbenta,
+              -dbname => $xref_source,
+              -primary_id => $old_prot_id
+            );
+            $dbenta->store($dbentry, $prot->dbID, 'Translation');
+          }
+        }
+      }
     }
   }
   
@@ -316,6 +372,7 @@ sub usage {
     
     --update          : Do the actual changes (default is no OSID call and no db changes)
     --prefix <str>    : Only replace ids for genes with this prefix [optional]
+    --xref_source <str>: Keep the old ids under this xref name, e.g. "RefSeq" [optional]
     
     --help            : show this help message
     --verbose         : show detailed progress
@@ -335,6 +392,7 @@ sub opt_check {
     "osid_pass=s",
     "update",
     "prefix:s",
+    "xref_source:s",
     "help",
     "verbose",
     "debug",
