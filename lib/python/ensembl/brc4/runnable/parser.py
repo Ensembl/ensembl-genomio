@@ -17,7 +17,9 @@ class Parser:
             "chromosome" : "nuclear_chromosome",
             "mitochondrion" : "mitochondrial_chromosome",
             "apicoplast" : "apicoplast_chromosome",
-            "plasmid" : "plasmid"
+            "plasmid" : "plasmid",
+            "linkage group" : "linkage_group", 
+            "kinetoplast" : "kinetoplast"
     }
     
     def get_report_regions(self, report_path, use_refseq=False) -> dict:
@@ -115,7 +117,7 @@ class Parser:
         seq_role = row["Sequence-Role"]
         
         # Scaffold?
-        if seq_role in ("unplaced-scaffold", "unlocalized-scaffold"):
+        if seq_role in ("unplaced-scaffold", "unlocalized-scaffold","alt-scaffold"):
             seq_region["coord_system_level"] = "scaffold"
         
         # Chromosome? Check location
