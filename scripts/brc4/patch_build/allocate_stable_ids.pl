@@ -203,15 +203,15 @@ my $reg_path = $opt{registry};
 $registry->load_all($reg_path);
 
 my $osid;
-#if ($opt{update}) {
+if ($opt{update}) {
   $osid = OSID_service->new(
     url  => $opt{osid_url},
     user => $opt{osid_user},
     pass => $opt{osid_pass},
   );
-  #} else {
-  #  $osid = OSID_service_dev->new();
-  #}
+} else {
+  $osid = OSID_service_dev->new();
+}
 $osid->connect($opt{species});
 allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{prefix});
 
@@ -238,6 +238,7 @@ sub allocate_genes {
     my $nnew = scalar(@genes);
     $logger->info("Reduce list using prefix $prefix: from $nold genes to $nnew");
   }
+  $logger->info(scalar(@genes) . " genes that will have a new stable_id allocated");
   
   # How to get all the ids
 
