@@ -286,8 +286,8 @@ def make_organism_abbrev(name):
     strain_abbrev = "".join(items[2:])
     
     genus = re.sub("[\[\]]", "", genus)
-    strain_abbrev = re.sub(r"(isolate|strain|breed|str\.|subspecies)", "", strain_abbrev, flags=re.IGNORECASE)
-    strain_abbrev = re.sub(r"[\/\(\)#]", "", strain_abbrev)
+    strain_abbrev = re.sub(r"(isolate|strain|breed|str\.|subspecies|sp\.)", "", strain_abbrev, flags=re.IGNORECASE)
+    strain_abbrev = re.sub(r"[\/\(\)#:]", "", strain_abbrev)
     
     organism_abbrev = genus[0].lower() + species[0:3] + strain_abbrev
     return organism_abbrev
