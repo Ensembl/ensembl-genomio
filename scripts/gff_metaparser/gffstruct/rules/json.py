@@ -74,7 +74,7 @@ class JsonRule(BaseRule):
     prefix = tech["_PREPEND"]
     if not prefix:
       return
-    self._actions["prepend"] = { "prepend" : prefix }
+    self._actions["prepend"] = { "prefix" : prefix }
 
   def add_actions_append(self, tech):
     if not tech or "_APPEND" not in tech:
@@ -82,7 +82,7 @@ class JsonRule(BaseRule):
     suffix = tech["_APPEND"]
     if not suffix:
       return
-    self._actions["append"] = { "append" : suffix }
+    self._actions["append"] = { "suffix" : suffix }
 
   def prepare_actions(self):
     raw = [ x.strip() for x in "\t".join(self._actions_raw).split("\t") if x ]
@@ -143,6 +143,8 @@ class JsonRule(BaseRule):
       "ignore" : None,
       "split" : None,
       "numval" : None,
+      "append" : None,
+      "prepend" : None,
     }
     self.add_actions_prepend(tech)
     self.add_actions_append(tech)
@@ -151,7 +153,7 @@ class JsonRule(BaseRule):
     self.add_actions_ignore(tech)
     self.add_actions_numval(tech)
 
-  def interpolate(self, data, context, do_split = True):
+  def interpolate(self, data, context, do_split_and_earlier_actions = True):
     interpolated = False
 
     if data is None:
@@ -160,7 +162,7 @@ class JsonRule(BaseRule):
     if type(data) == dict:
       out = dict()
       for k in data:
-        v, _interpolated = self.interpolate(data[k], context, do_split)
+        v, _interpolated = self.interpolate(data[k], context, do_split_and_earlier_actions)
         interpolated = interpolated or _interpolated
         if v is not None:
           out[k] = v
@@ -175,7 +177,7 @@ class JsonRule(BaseRule):
     if type(data) == list:
       out = []
       for v in data:
-        v, _interpolated = self.interpolate(v, context, do_split)
+        v, _interpolated = self.interpolate(v, context, do_split_and_earlier_actions)
         interpolated = interpolated or _interpolated
         if v is not None:
           out.append(v)
@@ -187,25 +189,25 @@ class JsonRule(BaseRule):
     v = context.get(data, data)
 
     aprepend = self._actions["prepend"]
-    aappen = self._actions["append"]
+    aappend = self._actions["append"]
     asplit = self._actions["split"]
     asub = self._actions["sub"]
     amap = self._actions["map"]
     aignore = self._actions["ignore"]
     anumval = self._actions["numval"]
 
-    if aprepend and type(v) == str:
-      v = str(aprepend) + v 
+    if do_split_and_earlier_actions and type(v) == str and aprepend and aprepend.get("prefix"):
+      v = str(aprepend["prefix"]) + v
 
-    if aappend and type(v) == str:
-      v = v + str(aappend)
+    if do_split_and_earlier_actions and type(v) == str and aappend and aappend.get("suffix", ""):
+      v = v + str(aappend[suffix])
 
-    if asplit and do_split:
+    if asplit and do_split_and_earlier_actions:
       res = v.split(asplit["delim"])
       if asplit["keys"]:
-        return self.interpolate(dict(zip(asplit["keys"], res)), context, do_split = False)
+        return self.interpolate(dict(zip(asplit["keys"], res)), context, do_split_and_earlier_actions = False)
       else:
-        return self.interpolate(res, context, do_split = False)
+        return self.interpolate(res, context, do_split_and_earlier_actions = False)
 
     if asub and v and type(v) == str:
       for f,t in asub:
