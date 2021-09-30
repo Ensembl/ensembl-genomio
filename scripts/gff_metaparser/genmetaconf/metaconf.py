@@ -215,7 +215,7 @@ class MetaConf:
   def dump_seq_region_conf(self, json_out,
                           fasta_file = None, asm_rep_file = None, seq_region_raw = None,
                           seq_region_genbank = None, seq_region_syns = None,
-                          syns_src = "GenBank"):
+                          syns_src = "GenBank", default_genetic_code = 1):
     if not json_out:
       return
     sr_conf = SeqRegionConf(fasta_file = fasta_file,
@@ -224,5 +224,6 @@ class MetaConf:
                             seq_region_genbank = seq_region_genbank,
                             seq_region_syns = seq_region_syns,
                             syns_src = syns_src,
-                            meta = self.tech_data)
+                            meta = self.tech_data,
+                            default_genetic_code = default_genetic_code)
     sr_conf.dump(json_out)

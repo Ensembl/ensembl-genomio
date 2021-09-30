@@ -48,9 +48,13 @@ class SeqRegionConf:
                seq_region_genbank: Optional[str],
                seq_region_syns: Optional[str],
                meta: Optional[dict],
-               syns_src: str = "GenBank"
+               syns_src: str = "GenBank",
+               default_genetic_code = 1
                ):
-    self.seq_regions : Dict[str, SeqRegion] = defaultdict(lambda:SeqRegion("",0))
+    seq_region_factory = lambda:SeqRegion("",0) 
+    if default_genetic_code != 1: seq_region_factory = lambda:SeqRegion("",0, codon_table = default_genetic_code) 
+
+    self.seq_regions : Dict[str, SeqRegion] = defaultdict(seq_region_factory)
     self.ordered : List[SeqRegion] = field(default_factory=list) # try like this
     self.syns : Dict[str, str] = dict()
     self.syn_src_default = syns_src
