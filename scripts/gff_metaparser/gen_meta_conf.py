@@ -52,7 +52,7 @@ def get_args():
   parser.add_argument("--syns_src", metavar="GenBank", required = False,
                       type=str, default = "GenBank", help="seq region syns source default")
   parser.add_argument("--default_genetic_code", metavar = "1", required = False,
-                      type=int, default = 1, "default genetic code variant")
+                      type=int, default = 1, help="default genetic code variant")
   #
   args = parser.parse_args()
   return args
