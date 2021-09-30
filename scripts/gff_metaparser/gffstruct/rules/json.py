@@ -6,7 +6,7 @@ import sys
 class JsonRule(BaseRule):
   NAME = "JSON"
   _RULES = BaseRule.RulesType()
-  _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_SUB", "_SPLIT", "_NUMVAL"])
+  _SPECIAL_KEYS =  frozenset(["_IGNORE","_MAP", "_SUB", "_SPLIT", "_NUMVAL", "_PREPEND", "_APPEND"])
   _OUTPUT_FORCE_SUB = False
 
   def add_actions_ignore(self, tech):
@@ -68,6 +68,22 @@ class JsonRule(BaseRule):
       return
     self._actions["numval"] = lambda x: JsonRule.a2n(x, totype = numval)
 
+  def add_actions_prepend(self, tech):
+    if not tech or "_PREPEND" not in tech:
+      return
+    prefix = tech["_PREPEND"]
+    if not prefix:
+      return
+    self._actions["prepend"] = { "prepend" : prefix }
+
+  def add_actions_append(self, tech):
+    if not tech or "_APPEND" not in tech:
+      return
+    suffix = tech["_APPEND"]
+    if not suffix:
+      return
+    self._actions["append"] = { "append" : suffix }
+
   def prepare_actions(self):
     raw = [ x.strip() for x in "\t".join(self._actions_raw).split("\t") if x ]
     if len(raw) < 1:
@@ -128,9 +144,11 @@ class JsonRule(BaseRule):
       "split" : None,
       "numval" : None,
     }
+    self.add_actions_prepend(tech)
+    self.add_actions_append(tech)
+    self.add_actions_split(tech)
     self.add_actions_sub(tech)
     self.add_actions_ignore(tech)
-    self.add_actions_split(tech)
     self.add_actions_numval(tech)
 
   def interpolate(self, data, context, do_split = True):
@@ -168,11 +186,19 @@ class JsonRule(BaseRule):
     # scalar section
     v = context.get(data, data)
 
+    aprepend = self._actions["prepend"]
+    aappen = self._actions["append"]
     asplit = self._actions["split"]
     asub = self._actions["sub"]
     amap = self._actions["map"]
     aignore = self._actions["ignore"]
     anumval = self._actions["numval"]
+
+    if aprepend and type(v) == str:
+      v = str(aprepend) + v 
+
+    if aappend and type(v) == str:
+      v = v + str(aappend)
 
     if asplit and do_split:
       res = v.split(asplit["delim"])
