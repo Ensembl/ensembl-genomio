@@ -51,6 +51,8 @@ def get_args():
                       type=str, default = "toplevel", help="genebuild.level default")
   parser.add_argument("--syns_src", metavar="GenBank", required = False,
                       type=str, default = "GenBank", help="seq region syns source default")
+  parser.add_argument("--default_genetic_code", metavar = "1", required = False,
+                      type=int, default = 1, help="default genetic code variant")
   #
   args = parser.parse_args()
   return args
@@ -77,7 +79,8 @@ def main():
                             seq_region_raw = args.seq_region_raw,
                             seq_region_genbank = args.seq_region_genbank,
                             seq_region_syns = args.seq_region_syns,
-                            syns_src = args.syns_src)
+                            syns_src = args.syns_src,
+                            default_genetic_code = args.default_genetic_code)
   # gen manifest
   manifest = Manifest({
     "fasta_dna" : args.fasta_dna,
