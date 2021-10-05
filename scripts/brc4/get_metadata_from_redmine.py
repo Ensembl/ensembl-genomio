@@ -31,10 +31,12 @@ def retrieve_genomes(redmine, output_dir, build=None):
     except:
         pass
     
+    failed_issues = []
     for issue in issues:
         genome_structure = parse_genome(issue)
         if not genome_structure:
             print("Skipped issue %d (%s). Not enough metadata." % (issue.id, issue.subject))
+            failed_issues.append(issue)
             continue
 
         try:
@@ -45,7 +47,14 @@ def retrieve_genomes(redmine, output_dir, build=None):
             f.close()
         except Exception as error:
             print("Skipped issue %d (%s). %s." % (issue.id, issue.subject, error))
+            failed_issues.append(issue)
             pass
+
+    # Print summary of issues of note
+    if failed_issues:
+        print("%d failed issues" % len(failed_issues))
+        for issue in failed_issues:
+            print("\tFailed to load issue %d: %s" % (issue.id, issue.subject))
 
 def get_all_genomes(redmine, build=None):
     """
@@ -199,7 +208,8 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
         return
     
     # Get the taxonomy for each issue
-    failed_count = 0;
+    failed_issues = []
+    
     for issue in issues:
         time.sleep(0.1)
         print('')
@@ -207,7 +217,7 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
         custom = get_custom_fields(issue)
         if not genome:
             print("WARNING: Insufficient information for genome in %d (%s)" % (issue.id, issue.subject))
-            failed_count += 1
+            failed_issues.append(issue)
             continue
 
         cur_abbrev = custom["Organism Abbreviation"]["value"]
@@ -217,7 +227,7 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
             new_abbrev = make_organism_abbrev(full_name)
             if new_abbrev in all_abbrevs:
                 print("WARNING: organism abbrev '%s' is already in use by another species! For issue %d (%s)" % (new_abbrev, issue.id, issue.subject))
-                failed_count += 1
+                failed_issues.append(issue)
             elif cur_abbrev:
                 if cur_abbrev == new_abbrev:
                     print("Organism abbrev %s is already defined in issue %d (%s)" % (cur_abbrev, issue.id, issue.subject))
@@ -230,13 +240,15 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
         except Exception as e:
             print("WARNING: Could not generate an organism_abbrev for issue %d (%s):" % (issue.id, issue.subject))
             print("\t" + str(e))
-            failed_count += 1
+            failed_issues.append(issue)
             continue
     
-    print("%d issues considered" % len(issues))
-    if failed_count:
-        print("%d issues failed to load" % failed_count)
-        print("%d issues loaded" % (len(issues) - failed_count))
+    print("\n%d issues considered" % len(issues))
+    print("%d issues ok (has an organism_abbrev, or that can be made)" % (len(issues) - len(failed_issues)))
+    if failed_issues:
+        print("%d issues failed" % len(failed_issues))
+        for issue in failed_issues:
+            print("\t%s/issues/%s : %s" % (url, issue.id, issue.subject))
 
 def add_organism_to_issue(redmine, issue, new_abbrev, update=False):
     """
