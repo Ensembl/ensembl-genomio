@@ -120,8 +120,8 @@ class compare_fasta(eHive.BaseRunnable):
     def compare_seqs(self, seq1, seq2):
         comp = []
         stats = {
-                "length1" : len(seq1),
-                "length2" : len(seq2),
+                "seq_count_1" : len(seq1),
+                "seq_count_2" : len(seq2),
                 "diff_length" : abs(len(seq1) - len(seq2)),
                 "common" : 0,
                 "only1" : 0,
