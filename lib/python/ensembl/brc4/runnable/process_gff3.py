@@ -118,6 +118,7 @@ class process_gff3(eHive.BaseRunnable):
                 if line.startswith("#"):
                     out_gff.write(line)
                 else:
+                    # Parse one line
                     line = line.rstrip()
                     fields = line.split("\t")
                     attr_fields = fields[8].split(";")
@@ -127,10 +128,10 @@ class process_gff3(eHive.BaseRunnable):
                         attrs[key] = value
                         
                     # Check this is a gene to merge; cache it then
-                    if fields[2] in self.param("gene_types") and "part" in attrs:
+                    if fields[2] in self.param("gene_types") and ("part" in attrs or "is_ordered" in attrs):
                         tomerge.append(fields)
                     
-                    # If not, merge if needed, and print the line
+                    # If not, merge previous gene if needed, and print the line
                     else:
                         if tomerge:
                             merged_str = []
