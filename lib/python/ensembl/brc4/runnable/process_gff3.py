@@ -232,10 +232,6 @@ class process_gff3(eHive.BaseRunnable):
                         # New gene ID 
                         gene.id = self.normalize_gene_id(gene)
                         
-                        # Store gene functional annotation
-                        self.transfer_description(gene)
-                        self.add_funcann_feature(functional_annotation, gene, "gene")
-                        
                         # replace qualifiers
                         old_qualifiers = gene.qualifiers
                         gene.qualifiers = {
@@ -267,6 +263,10 @@ class process_gff3(eHive.BaseRunnable):
                             transcript = self.gene_to_exon(gene)
                             gene.sub_features = [transcript]
 
+                        # Store gene functional annotation
+                        self.transfer_description(gene)
+                        self.add_funcann_feature(functional_annotation, gene, "gene")
+                        
                         # TRANSCRIPTS
                         transcripts_to_delete = []
                         for count, transcript in enumerate(gene.sub_features):
