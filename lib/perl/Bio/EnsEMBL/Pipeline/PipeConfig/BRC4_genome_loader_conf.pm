@@ -117,7 +117,7 @@ sub default_options {
     # ignore final stop codons check in Integrity
     ignore_final_stops => 0,
 
-    # Rename seq_region name in the seq_region table with this attribute
+    # Change seq_region.name to the seq_region_synonym value from the mentioned source
     seq_name_code => "EBI_seq_region_name",
 
     # if loaded from RefSeq(GCF) change seq_region names to GenBank(GCA)
@@ -811,7 +811,6 @@ sub pipeline_analyses {
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
       -parameters => {
         db_conn => $self->o('dbsrv_url') . '#db_name#',
-        seq_attrib_name => $self->o('seq_name_code'),
         sql     => [
           # depends on the order of INSDC syns if there are few of them,
           #   which should't so for the new load
