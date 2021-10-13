@@ -148,7 +148,7 @@ class download_assembly_data(eHive.BaseRunnable):
                 # Get all the files
                 for (ftp_file, file_entry) in f.mlsd():
                     if re.match("^\.", ftp_file): continue
-                    if file_entry["type"] == "dir": continue
+                    if file_entry["type"] != "file": continue
 
                     # Copy the file locally
                     local_path = os.path.join(dl_dir, ftp_file)

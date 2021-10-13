@@ -132,6 +132,7 @@ class compare_fasta(eHive.BaseRunnable):
                 "only1_1000" : 0,
                 "only2_200" : 0,
                 "only2_1000" : 0,
+		"other_locations": 0
         }
         
         # Compare number of sequences
@@ -148,9 +149,71 @@ class compare_fasta(eHive.BaseRunnable):
         only1 = {seq: name for seq, name in seqs1.items() if not seq in seqs2}
         only2 = {seq: name for seq, name in seqs2.items() if not seq in seqs1}
 
+	#comparing the organellar sequences 
+        report = self.param_required("report")
+        report_parser = Parser()
+        report_seq = report_parser.get_report_regions(report)
+        report = self.add_report_to_map(common, report_seq)
+       
+        org = []
+        org1 = []
+       
+        for k, v in report_seq.items():
+            if "location" in v:
+                if v['location'] != "chromosome" and v['location'] != "nuclear_chromosome" and v['location'] != "linkage_group":
+                    x = v['location']
+                    org1.append(x)
+                    org.append(k)
+            else:
+                pass
+       
+	 map_dna_path = self.param_required("seq_regions")
+        data = self.get_json(map_dna_path)
+	org2 = []
+        org3 = []
+        for j in data:
+            for k, v in j.items():
+                if "location" in k:
+                    if v != "chromosome" and v != "nuclear_chromosome" and v != "linkage_group":
+                        y = j['EBI_seq_region_name']
+                        org3.append(v)
+                        org2.append(y)
+                else:
+                    pass
+	#checking for INSDC names for organelllar sequences found in core 
+        for i in range(0, len(org2)):
+            for p, l in report_seq.items():
+                if l['name'] == org2[i]:
+                    org2[i] = p
+        for index, i in enumerate(org2):
+            if i not in org:
+                org.append(i)
+                org1.append(org3[index])
+            else:
+                print("you have duplicates")
+	#comparing organellar sequences with common, only1 and only2 
+	count = 0 
+        for index, i in enumerate(org):
+            if i == 'na':
+                comp.append("MISSING acession in the report (na)")
+            else:
+                if i in common.values():
+                    count = count+1
+                    comp.append("%s (both) in location: %s" % (i, org1[index]))
+                elif i in only1.values():
+                    count = count+1
+                    comp.append("%s (only1) in  location: %s" %
+                                (i, org1[index]))
+                else:
+                    count = count+1
+                    comp.append("%s (only2) in location: %s" %
+                                (i, org1[index]))
+        
         stats["common"] = len(common)
         stats["only1"] = len(only1)
         stats["only2"] = len(only2)
+        stats["other_locations"] = count
+
         
         if len(only1) > 0 or len(only2) > 0:
             comp.append("\nCommon sequences: %d" % len(common))
