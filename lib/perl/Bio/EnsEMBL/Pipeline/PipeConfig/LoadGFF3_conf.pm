@@ -291,6 +291,7 @@ sub pipeline_analyses_generic {
       -analysis_capacity => 10,
       -max_retry_count   => 1,
       -parameters        => {
+                              db_type =>  $self->o('db_type'),
                               output_file => catdir($self->o('pipeline_dir'), '#species#', 'pre_gff3_bkp.sql.gz'),
                             },
       -rc_name           => 'normal',
