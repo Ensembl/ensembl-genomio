@@ -1,5 +1,6 @@
 from .base import BaseRule
 
+import re
 import sys
 from collections import defaultdict
 
@@ -46,12 +47,21 @@ class GffRule(BaseRule):
     self.add_actions_from_stash(tech)
 
   def add_actions_from_stash(self, tech):
-    #cds/parent GFF parent {"_FROM_STASH":[{"ID": "mrna:_PARENT/_STASH/cds_id"}]}
+    #i.e cds/parent GFF parent {"_FROM_STASH":[{"ID": "mrna:_PARENT/_STASH/cds_id"}]}
     if not tech or "_FROM_STASH" not in tech:
       return
     unstash = tech["_FROM_STASH"]
     out = []
     for qual, gctx_path in unstash.items():
+      # special case: _IGNORE rule
+      if qual == "_IGNORE":
+        pat = list(filter(None, list(gctx_path)))
+        if pat:
+          pat = "|".join(pat)
+          out.append({ "qual": "_IGNORE", "ignore" : re.compile(pat, flags = re.I) })
+          # print(f"adding ignore rule: '{pat}'", file=sys.stderr)
+        continue
+      # general path procesing
       pre_obj, *_path = gctx_path.split("/", 1)
       # if not path, use pre_obj as source ? todo
       obj_tag, *id_key = pre_obj.split(":")
@@ -90,19 +100,37 @@ class GffRule(BaseRule):
       used_quals.update({qname.lower():(qname, value)})
       return
 
+    ignore_re = None
     if self._actions:
       from_stash = self._actions.get("from_stash", [])
-      # print(from_stash, file=sys.stderr)
+      # get ignore pattern first (only first)
+      ignore_list = list(filter(lambda x: x.get("qual") == "_IGNORE" and x.get("ignore"), from_stash))
+      if ignore_list:
+        ignore_re = ignore_list[0].get("ignore")
+      # process qual list
       for it in from_stash:
         name = it["qual"]
+        if name == "_IGNORE":
+          continue
         value = self.render_stashed(it, context)
         if not self._FORCE_SUB and name.lower() in used_quals:
+          continue
+        if ignore_re:
+          value = list(filter(lambda x: not isinstance(x, str) or not ignore_re.search(x), list(value)))
+        if not value:
           continue
         if value:
           used_quals.update({name.lower():(name, value)})
 
     for new_name in self._target_quals:
       if not self._FORCE_SUB and new_name.lower() in used_quals:
+        continue
+      # ignore pattern check
+      if ignore_re:
+        # print(f"match {value} against {ignore_re}", file=sys.stderr)
+        value = list(filter(lambda x: not isinstance(x, str) or not ignore_re.search(x), list(value)))
+        # print(f"matched {value}", file=sys.stderr)
+      if not value:
         continue
       used_quals.update({new_name.lower():(new_name, value)})
 
