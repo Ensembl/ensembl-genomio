@@ -119,11 +119,11 @@ class compare_fasta(eHive.BaseRunnable):
 
     def compare_seqs(self, seq1, seq2):
         comp = []
-
+	diff = abs(len(seq1) - len(seq2))
         stats = {
             "seq_count_1": len(seq1),
             "seq_count_2": len(seq2),
-            "num_diff_seq": abs(len(seq1) - len(seq2)),
+            "num_diff_seq": diff,
             "common": 0,
             "only1": 0,
             "only2": 0,
@@ -134,9 +134,11 @@ class compare_fasta(eHive.BaseRunnable):
             "only2_200": 0,
             "only2_1000": 0,
             "other_locations": 0,
-            "summary": None
+            "summary": None,
+	    "organellar_summary": None 
         }
         value = None
+	org_value = None 
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
@@ -210,17 +212,20 @@ class compare_fasta(eHive.BaseRunnable):
                     count = count+1
                     comp.append("%s (only1) in  location: %s" %
                                 (i, org1[index]))
+			org_value = "unkown_with_organelle"
                 else:
                     count = count+1
                     comp.append("%s (only2) in location: %s" %
                                 (i, org1[index]))
-        if value == "mismatch" and count >= 1:
-            value = "organelle added"
+			org_value = "unkown_with_organelle"
+	if diff==count:
+		org_value="organell_added"
         stats["common"] = len(common)
         stats["only1"] = len(only1)
         stats["only2"] = len(only2)
         stats["other_locations"] = count
         stats["summary"] = value
+	stats["organellar_summary"] = org_value
 
         if len(only1) > 0 or len(only2) > 0:
             comp.append("\nCommon sequences: %d" % len(common))
