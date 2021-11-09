@@ -220,17 +220,17 @@ class compare_fasta(eHive.BaseRunnable):
                     count = count+1
                     comp.append("%s (both) in location: %s" % (i, org1[index]))
                     if value == "identical" and count > 0:
-                        org_value = "organell_added"
+                        org_value = "organellar_present"
                 elif i in only1.values():
                     count = count+1
                     comp.append("%s (only1) in  location: %s" %
                                 (i, org1[index]))
-                    org_value = "unknown_with_organelle"
+                    org_value = "unknown_with_organellar"
                 else:
                     count = count+1
                     comp.append("%s (only2) in location: %s" %
                                 (i, org1[index]))
-                    org_value = "unknown_with_organelle"
+                    org_value = "unknown_with_organellar"
 
         # if the mistmatch is due to added organell
         if len(seq1) > len(seq2):
@@ -241,7 +241,7 @@ class compare_fasta(eHive.BaseRunnable):
 
         if diff != 0:
             if diff == count and diff_common == count:
-                org_value = "organell_added"
+                org_value = "organellar_present"
 
         # checking if multiple entries of organellar chromosomes are present
         if len(myList1) != len(a):
