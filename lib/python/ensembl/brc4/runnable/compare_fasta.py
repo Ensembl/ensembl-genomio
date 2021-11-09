@@ -146,7 +146,7 @@ class compare_fasta(eHive.BaseRunnable):
             comp.append("WARNING: Different number of sequences: %d vs %d" % (
                 len(seq1), len(seq2)))
             value = "mismatch"
-            org_value = "unkown"
+            org_value = "unknown"
         else:
             comp.append("Same number of sequences: %d" % len(seq1))
             value = "identical"
@@ -225,12 +225,12 @@ class compare_fasta(eHive.BaseRunnable):
                     count = count+1
                     comp.append("%s (only1) in  location: %s" %
                                 (i, org1[index]))
-                    org_value = "unkown_with_organelle"
+                    org_value = "unknown_with_organelle"
                 else:
                     count = count+1
                     comp.append("%s (only2) in location: %s" %
                                 (i, org1[index]))
-                    org_value = "unkown_with_organelle"
+                    org_value = "unknown_with_organelle"
 
         # if the mistmatch is due to added organell
         if len(seq1) > len(seq2):
