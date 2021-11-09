@@ -119,7 +119,7 @@ class compare_fasta(eHive.BaseRunnable):
 
     def compare_seqs(self, seq1, seq2):
         comp = []
-	diff = abs(len(seq1) - len(seq2))
+        diff = abs(len(seq1) - len(seq2))
         stats = {
             "seq_count_1": len(seq1),
             "seq_count_2": len(seq2),
@@ -135,16 +135,18 @@ class compare_fasta(eHive.BaseRunnable):
             "only2_1000": 0,
             "other_locations": 0,
             "summary": None,
-	    "organellar_summary": None 
+            "organellar_summary": None
         }
-        value = None
-	org_value = None 
+
+        value = None  # variable used for summary
+        org_value = None  # variable used for organellar_summary
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
             comp.append("WARNING: Different number of sequences: %d vs %d" % (
                 len(seq1), len(seq2)))
             value = "mismatch"
+            org_value = "unkown"
         else:
             comp.append("Same number of sequences: %d" % len(seq1))
             value = "identical"
@@ -169,6 +171,8 @@ class compare_fasta(eHive.BaseRunnable):
         org1 = []
         org2 = []
         org3 = []
+
+        # Gathering data from the INSDC report file and storing it into a list
         for k, v in report_seq.items():
             if "location" in v:
                 if v['location'] != "chromosome" and v['location'] != "nuclear_chromosome" and v['location'] != "linkage_group":
@@ -178,6 +182,7 @@ class compare_fasta(eHive.BaseRunnable):
             else:
                 pass
 
+        # Gathering data from Seq_json file and storing it into a list
         for j in data:
             for k, v in j.items():
                 if "location" in k:
@@ -187,7 +192,8 @@ class compare_fasta(eHive.BaseRunnable):
                         org2.append(y)
                 else:
                     pass
-        # checking for INSDC names for organelllar sequences found in core
+
+        # checking for INSDC names for organellar sequences found in core
         for i in range(0, len(org2)):
             for p, l in report_seq.items():
                 if l['name'] == org2[i]:
@@ -199,6 +205,11 @@ class compare_fasta(eHive.BaseRunnable):
             else:
                 print("you have duplicates")
 
+        # checking for multiple entries of organellar seq
+        myList = [i.split('.')[0] for i in org]
+        myList1 = [j[:-1] for j in myList]  # similar accession
+        a = list(set(myList1))
+
         # comparing organellar sequences with common, only1 and only2
         count = 0
         for index, i in enumerate(org):
@@ -208,24 +219,41 @@ class compare_fasta(eHive.BaseRunnable):
                 if i in common.values():
                     count = count+1
                     comp.append("%s (both) in location: %s" % (i, org1[index]))
+                    if value == "identical" and count > 0:
+                        org_value = "organell_added"
                 elif i in only1.values():
                     count = count+1
                     comp.append("%s (only1) in  location: %s" %
                                 (i, org1[index]))
-			org_value = "unkown_with_organelle"
+                    org_value = "unkown_with_organelle"
                 else:
                     count = count+1
                     comp.append("%s (only2) in location: %s" %
                                 (i, org1[index]))
-			org_value = "unkown_with_organelle"
-	if diff==count:
-		org_value="organell_added"
+                    org_value = "unkown_with_organelle"
+
+        # if the mistmatch is due to added organell
+        if len(seq1) > len(seq2):
+            greater_len = len(seq1)
+        else:
+            greater_len = len(seq2)
+        diff_common = greater_len - len(common)
+
+        if diff != 0:
+            if diff == count and diff_common == count:
+                org_value = "organell_added"
+
+        # checking if multiple entries of organellar chromosomes are present
+        if len(myList1) != len(a):
+            org_value = "WARNING:Multiple_entry"
+
+        # updating the stats
         stats["common"] = len(common)
         stats["only1"] = len(only1)
         stats["only2"] = len(only2)
         stats["other_locations"] = count
         stats["summary"] = value
-	stats["organellar_summary"] = org_value
+        stats["organellar_summary"] = org_value
 
         if len(only1) > 0 or len(only2) > 0:
             comp.append("\nCommon sequences: %d" % len(common))
