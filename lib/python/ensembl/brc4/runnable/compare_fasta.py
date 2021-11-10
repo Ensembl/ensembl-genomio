@@ -139,17 +139,16 @@ class compare_fasta(eHive.BaseRunnable):
         }
 
         value = None  # variable used for summary
-        org_value = None  # variable used for organellar_summary
+        org_value = "no_organelles_present"   # variable used for organellar_summary
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
             comp.append("WARNING: Different number of sequences: %d vs %d" % (
                 len(seq1), len(seq2)))
             value = "mismatch"
-            org_value = "unknown"
+            org_value = "identical"
         else:
             comp.append("Same number of sequences: %d" % len(seq1))
-            value = "identical"
 
         # Compare sequences
         seqs1 = {seq: name for name, seq in seq1.items()}
@@ -160,10 +159,17 @@ class compare_fasta(eHive.BaseRunnable):
         only1 = {seq: name for seq, name in seqs1.items() if not seq in seqs2}
         only2 = {seq: name for seq, name in seqs2.items() if not seq in seqs1}
 
+        if len(seq1) == len(seq2) and len(common) == len(seq1):
+            if len(only1) == 0 and len(only2) == 0:
+                value = "identical"
+        else:
+            value = "mismatch"
+
         # comparing the organellar sequences
         report = self.param_required("report")
         report_parser = Parser()
         report_seq = report_parser.get_report_regions(report)
+        
         report = self.add_report_to_map(common, report_seq)
         map_dna_path = self.param_required("seq_regions")
         data = self.get_json(map_dna_path)
@@ -214,7 +220,7 @@ class compare_fasta(eHive.BaseRunnable):
         count = 0
         for index, i in enumerate(org):
             if i == 'na':
-                comp.append("MISSING acession in the report (na)")
+                comp.append("MISSING accession in the report (na)")
             else:
                 if i in common.values():
                     count = count+1
