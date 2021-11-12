@@ -185,7 +185,7 @@ class compare_fasta(eHive.BaseRunnable):
         # Gathering data from the INSDC report file and storing it into a list
         for k, v in report_seq.items():
             if "location" in v:
-                if v['location'] != "chromosome" and v['location'] != "nuclear_chromosome" and v['location'] != "linkage_group":
+                if v['location'] not in ("chromosome", "nuclear_chromosome", "linkage_group"):
                     x = v['location']
                     org1.append(x)
                     org.append(k)
