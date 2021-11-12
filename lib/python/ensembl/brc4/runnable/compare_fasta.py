@@ -196,7 +196,7 @@ class compare_fasta(eHive.BaseRunnable):
         for j in data:
             for k, v in j.items():
                 if "location" in k:
-                    if v != "chromosome" and v != "nuclear_chromosome" and v != "linkage_group":
+                    if v not in ("chromosome", "nuclear_chromosome", "linkage_group"):
                         y = j['EBI_seq_region_name']
                         org3.append(v)
                         org2.append(y)
