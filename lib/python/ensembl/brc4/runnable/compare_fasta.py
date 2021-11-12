@@ -121,6 +121,7 @@ class compare_fasta(eHive.BaseRunnable):
         comp = []
         diff = abs(len(seq1) - len(seq2))
         stats = {
+            "accession": None,
             "seq_count_1": len(seq1),
             "seq_count_2": len(seq2),
             "num_diff_seq": diff,
@@ -169,7 +170,6 @@ class compare_fasta(eHive.BaseRunnable):
         report = self.param_required("report")
         report_parser = Parser()
         report_seq = report_parser.get_report_regions(report)
-        
         report = self.add_report_to_map(common, report_seq)
         map_dna_path = self.param_required("seq_regions")
         data = self.get_json(map_dna_path)
@@ -177,7 +177,11 @@ class compare_fasta(eHive.BaseRunnable):
         org1 = []
         org2 = []
         org3 = []
-
+        # get the accession
+        fasta1 = self.param_required("fasta1")
+        get_acc = fasta1
+        acc = get_acc.split('/')
+        accession = acc[4]
         # Gathering data from the INSDC report file and storing it into a list
         for k, v in report_seq.items():
             if "location" in v:
@@ -254,6 +258,7 @@ class compare_fasta(eHive.BaseRunnable):
             org_value = "WARNING:Multiple_entry"
 
         # updating the stats
+        stats["accession"] = accession
         stats["common"] = len(common)
         stats["only1"] = len(only1)
         stats["only2"] = len(only2)
