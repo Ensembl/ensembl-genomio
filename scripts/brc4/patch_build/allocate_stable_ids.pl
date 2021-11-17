@@ -290,6 +290,14 @@ sub allocate_genes {
           -dbname => $xref_source,
           -primary_id => $old_gene_id
         );
+        
+        # Add analysis ENA for this
+        my $ena_an = Bio::EnsEMBL::Analysis->new(
+          logic_name => 'ena',
+          id => 7122,
+        );
+        $dbentry->analysis($gnomon_an);
+
         $dbenta->store($dbentry, $gene->dbID, 'Gene');
       }
     }
