@@ -89,7 +89,15 @@ sub check_assembly_version {
     
     # There is a version but I can't get a number out of it
     } else {
-      die("Can't extract version number from assembly version: $version");
+      # Last resort: try to get the version from the assembly accession
+      my $acc = $assembly->{accession};
+      if ($acc and $acc =~ /\.(\d+$)/) {
+        my $version = $1;
+        $meta->{assembly}->{version} = $version;
+        return $meta;
+      } else {
+        die("Can't extract version number from assembly version: $version (accession = $acc)");
+      }
     }
   } else {
     use Data::Dumper;
