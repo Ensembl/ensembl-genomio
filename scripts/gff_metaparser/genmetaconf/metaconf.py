@@ -109,7 +109,12 @@ class MetaConf:
           gad = str_cmt["Genome-Assembly-Data"]
           ankey = list(filter(lambda x: "assembly" in x.lower() and "name" in x.lower(), gad.keys()))
           if ankey:
-            self.update("assembly.name", gad[ankey[0]])
+            asm_name = gad[ankey[0]].strip()
+            asm_name = re.sub(r'[^a-z0-9A-Z_\.]+', '_', asm_name)
+            asm_name = re.sub(r'_+', '_', asm_name)
+            asm_name = re.sub(r'^_+', '', asm_name)
+            asm_name = re.sub(r'_+$', '', asm_name)
+            self.update("assembly.name", asm_name)
 
   def update_from_dict(self, d, k, tech = False):
     if d is None:
