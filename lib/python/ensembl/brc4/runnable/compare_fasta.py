@@ -107,14 +107,18 @@ class compare_fasta(eHive.BaseRunnable):
 
         print("Read file %s" % fasta_path)
         sequences = {}
+        len_name = []
         _open = partial(gzip.open, mode='rt') if fasta_path.endswith(
             '.gz') else open
         with _open(fasta_path) as fasta_fh:
             for rec in SeqIO.parse(fasta_fh, "fasta"):
                 name = rec.id
+                # print(name)
                 if name in map_dna:
                     name = map_dna[name]
                 sequences[name] = re.sub(r"[^CGTA]", "N", str(rec.seq.upper()))
+        # print(len(len_name))
+        # print(len(sequences))
         return sequences
 
     def compare_seqs(self, seq1, seq2):
@@ -152,14 +156,36 @@ class compare_fasta(eHive.BaseRunnable):
             comp.append("Same number of sequences: %d" % len(seq1))
 
         # Compare sequences
-        seqs1 = {seq: name for name, seq in seq1.items()}
-        seqs2 = {seq: name for name, seq in seq2.items()}
+        # print(len(seq1.items()))
+        # seqs1 = {seq: name for name, seq in seq1.items()}
+        #seqs1 = {seq: name for name, seq in seq1.items()}
+        seqs1 = {}
+        for k, v in seq1.items():
+            if v in seqs1:
+                seqs1[v].append(k)
+                print(seqs1[v])
+            else:
+                seqs1[v] = [k]
 
+        #seqs2 = {seq: name for name, seq in seq2.items()}
+        seqs2 = {}
+        for k, v in seq2.items():
+            if v in seqs2:
+                seqs2[v].append(k)
+                print("Seq2:",seqs2[v])
+            else:
+                seqs2[v] = [k]
         common = {seqs2[seq]: name for seq,
                   name in seqs1.items() if seq in seqs2}
+        # print(len(seqs1.items()))
+        # print(len(seq1.keys()))
+        # print(len(seqs2.keys()))
+        # for name in seqs1.values():
+        #    print(len(name))
         only1 = {seq: name for seq, name in seqs1.items() if not seq in seqs2}
+        # print(only1.values())
         only2 = {seq: name for seq, name in seqs2.items() if not seq in seqs1}
-
+        # print(only2.values())
         if len(seq1) == len(seq2) and len(common) == len(seq1):
             if len(only1) == 0 and len(only2) == 0:
                 value = "identical"
@@ -249,15 +275,20 @@ class compare_fasta(eHive.BaseRunnable):
             greater_len = len(seq2)
         diff_common = greater_len - len(common)
 
+        diff = abs(len(only1) + len(only2))
         if diff != 0:
             if diff == count and diff_common == count:
                 org_value = "organellar_present"
+
+        if count == 0:
+            org_value = "no_organelles_present"
 
         # checking if multiple entries of organellar chromosomes are present
         if len(myList1) != len(a):
             org_value = "WARNING:Multiple_entry"
 
         # updating the stats
+        stats["num_diff_seq"] = diff
         stats["accession"] = accession
         stats["common"] = len(common)
         stats["only1"] = len(only1)
