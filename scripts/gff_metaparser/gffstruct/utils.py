@@ -124,4 +124,7 @@ class UpdatingLen:
   def __len__(self):
     return self.__int__()
 
+  def __str__(self):
+    return str(self.__len__())
+
 

@@ -35,7 +35,7 @@ def get_args():
                       type = str,
                       help="comma separated list of xref mappings in the format from:to")
   parser.add_argument("--dump_used_options", action="store_true", required=False, help="dump used (not None) options")
-  parser.add_argument("--no_contig_len_extenstion", action="store_true", required=False, help="do not extend contig length based on the feature boundaries")
+  parser.add_argument("--no_contig_len_extenstion", action="store_true", required=False, help="do not extend contig length based on the feature boundaries (try to omit, if fails)")
   # output
   parser.add_argument("--gff_out", metavar="out.gff3", required = False,
                       type=argparse.FileType('w', encoding='UTF-8'), default=sys.stdout,

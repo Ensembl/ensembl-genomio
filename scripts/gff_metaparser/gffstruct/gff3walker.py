@@ -64,7 +64,10 @@ class GFF3Walker:
     sf_composer = SeqFeatComposer() #  ?? init composer once, get on __init__???
     for contig in gff:
       # get len from gff or fna file, try to infere if not available
-      ctg_len = UpdatingLen(len(contig), force_update = contig_length_extension)
+      ctg_len_pre = len(contig)
+      if not contig_length_extension:
+        ctg_len_pre = None
+      ctg_len = UpdatingLen(ctg_len_pre, force_update = contig_length_extension)
       ctg_len.update(seq_len_dict(contig.id), stop_on_success = True)
       # feature processing
       out_rec_features = None

@@ -31,7 +31,7 @@ def get_args():
   parser.add_argument("--rule_options", metavar="load_pseudogene_with_CDS,option2,...",
                      required=False, action="append",
                      help="options to control conditional rules")
-  parser.add_argument("--no_contig_len_extenstion", action="store_true", required=False, help="do not extend contig length based on the feature boundaries")
+  parser.add_argument("--no_contig_len_extenstion", action="store_true", required=False, help="do not extend contig length based on the feature boundaries (try to omit, if fails)")
   # output
   parser.add_argument("--stats_out", metavar="stats.out", required = False,
                       type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
