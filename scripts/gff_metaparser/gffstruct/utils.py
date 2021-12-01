@@ -95,7 +95,8 @@ class SeqLenDict:
 
 
 class UpdatingLen:
-  def __init__(self, val):
+  def __init__(self, val, force_update = True):
+    self._force_update = force_update
     self._update = False
     self._val = val
     if not self._val:
@@ -109,7 +110,7 @@ class UpdatingLen:
       return
     if not val:
       return
-    if not self._val or self._val < val:
+    if not self._val or (self._val < val and self._force_update):
       self._val = val
     if self._val and stop_on_success:
       self._update = False

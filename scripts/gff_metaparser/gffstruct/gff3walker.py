@@ -59,12 +59,12 @@ class GFF3Walker:
     return field in self._supported_fields[tp]
 
 
-  def walk(self, out_file = None, seq_len_dict = None):
+  def walk(self, out_file = None, seq_len_dict = None, contig_length_extension = True):
     gff =  GFF.parse(self._in_file)
     sf_composer = SeqFeatComposer() #  ?? init composer once, get on __init__???
     for contig in gff:
       # get len from gff or fna file, try to infere if not available
-      ctg_len = UpdatingLen(len(contig))
+      ctg_len = UpdatingLen(len(contig), force_update = contig_length_extension)
       ctg_len.update(seq_len_dict(contig.id), stop_on_success = True)
       # feature processing
       out_rec_features = None

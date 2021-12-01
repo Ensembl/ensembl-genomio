@@ -35,6 +35,7 @@ def get_args():
                       type = str,
                       help="comma separated list of xref mappings in the format from:to")
   parser.add_argument("--dump_used_options", action="store_true", required=False, help="dump used (not None) options")
+  parser.add_argument("--no_contig_len_extenstion", action="store_true", required=False, help="do not extend contig length based on the feature boundaries")
   # output
   parser.add_argument("--gff_out", metavar="out.gff3", required = False,
                       type=argparse.FileType('w', encoding='UTF-8'), default=sys.stdout,
@@ -79,7 +80,9 @@ def main():
   gff3_walker = GFF3Walker(parser, args.gff_in, structure_tags = "anyQual",
                             global_ctx = fann_ctx, norm_id = pfx_trimmer)
 
-  gff3_walker.walk(out_file = args.gff_out, seq_len_dict = seq_len)
+  gff3_walker.walk(out_file = args.gff_out,
+                   seq_len_dict = seq_len,
+                   contig_length_extension = not args.no_contig_len_extenstion)
 
   fann_ctx.dump(args.fann_out, maps = [xref_map], dump_filter = lambda x: not seq_region_filter(x))
   fann_ctx.dump(args.seq_region_out, dump_filter = lambda x: seq_region_filter(x))
