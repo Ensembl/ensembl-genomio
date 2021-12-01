@@ -31,6 +31,7 @@ def get_args():
   parser.add_argument("--rule_options", metavar="load_pseudogene_with_CDS,option2,...",
                      required=False, action="append",
                      help="options to control conditional rules")
+  parser.add_argument("--no_contig_len_extenstion", action="store_true", required=False, help="do not extend contig length based on the feature boundaries (try to omit, if fails)")
   # output
   parser.add_argument("--stats_out", metavar="stats.out", required = False,
                       type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
@@ -75,7 +76,8 @@ def main():
   gff_out = args.gff_out
   if args.stats_only:
     gff_out = None
-  gff3_walker.walk(out_file = gff_out, seq_len_dict = seq_len)
+  gff3_walker.walk(out_file = gff_out, seq_len_dict = seq_len,
+                   contig_length_extension = not args.no_contig_len_extenstion)
 
   stats_keeper.dump(args.stats_out, id_stats = not args.no_id_stats)
 
