@@ -282,7 +282,11 @@ def load_abbrevs(path):
         for line in abbr_file:
             line = line.rstrip()
             if line:
-                abbrevs.append(line)
+                fields = line.split("\t")
+                if len(fields) == 1:
+                    abbrevs.append(line)
+                else:
+                    raise Exception("Can't load current abbrevs from a multicolumn string")
     return abbrevs
     
 def make_organism_abbrev(name):

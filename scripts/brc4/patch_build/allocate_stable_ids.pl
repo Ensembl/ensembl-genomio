@@ -212,11 +212,10 @@ if ($opt{update}) {
 } else {
   $osid = OSID_service_dev->new();
 }
-$osid->connect($opt{species});
+$osid->connect($opt{organism});
 allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{prefix});
 
 ###############################################################################
-sub osid_connection {}
 
 sub allocate_genes {
   my ($osid, $registry, $species, $update, $xref_source, $prefix) = @_;
@@ -291,6 +290,14 @@ sub allocate_genes {
           -dbname => $xref_source,
           -primary_id => $old_gene_id
         );
+        
+        # Add analysis ENA for this
+        my $ena_an = Bio::EnsEMBL::Analysis->new(
+          logic_name => 'ena',
+          id => 7122,
+        );
+        $dbentry->analysis($gnomon_an);
+
         $dbenta->store($dbentry, $gene->dbID, 'Gene');
       }
     }
@@ -370,6 +377,8 @@ sub usage {
     --osid_url <str>
     --osid_user <str>
     --osid_pass <str> : OSID connection details
+
+    --organism <str>  : species name in OSID, if it is not the production_name
     
     --update          : Do the actual changes (default is no OSID call and no db changes)
     --prefix <str>    : Only replace ids for genes with this prefix [optional]
@@ -388,6 +397,7 @@ sub opt_check {
   GetOptions(\%opt,
     "registry=s",
     "species=s",
+    "organism=s",
     "osid_url=s",
     "osid_user=s",
     "osid_pass=s",
@@ -401,6 +411,7 @@ sub opt_check {
 
   usage("Registry needed") if not $opt{registry};
   usage("Species needed") if not $opt{species};
+  $opt{organism} //= $opt{species};
   usage("OSID details needed") if not $opt{osid_url} and not $opt{osid_user} and not $opt{osid_pass};
   usage()                if $opt{help};
   Log::Log4perl->easy_init($INFO) if $opt{verbose};
