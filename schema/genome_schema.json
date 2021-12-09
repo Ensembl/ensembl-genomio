@@ -95,6 +95,19 @@
         "organism_abbrev"
         ]
     },
+    "added_sequence_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "description" : "Names of seq_regions (with the corresponding 'added_seq_accession' attribs) coming from the additional assemblies (i.e. apicoplasts, mitochondria, etc)",
+      "properties" : {
+        "name" : {
+          "oneOf" : [
+            { "type" : "string" },
+            { "type" : "array", "items" : { "type" : "string" } }
+          ]
+        }
+      }
+    },
 
     "genome_info" : {
       "type": "object",
@@ -105,7 +118,8 @@
         "annotation" : { "$ref" : "#/definitions/annotation_info" },
         "genebuild" : { "$ref" : "#/definitions/genebuild_info" },
         "provider" : { "$ref" : "#/definitions/provider_info" },
-        "BRC4" : { "$ref" : "#/definitions/BRC4_info" }
+        "BRC4" : { "$ref" : "#/definitions/BRC4_info" },
+        "added_seq" : { "$ref" : "#/definitions/added_sequence_info" }
       },
       "required" : [
         "species",
@@ -115,11 +129,11 @@
   },
 
   "oneOf" : [
-  { "$ref" : "#/definitions/genome_info" }
+    { "$ref" : "#/definitions/genome_info" }
   ],
 
-    "examples": [
-    { "taxonomy_id": 180454 }
+  "examples": [
+    { "species": { "taxonomy_id": 180454 }, "assembly": { "accession" : "GCA_012.3", "version" : 1 } }
   ]
 }
 
