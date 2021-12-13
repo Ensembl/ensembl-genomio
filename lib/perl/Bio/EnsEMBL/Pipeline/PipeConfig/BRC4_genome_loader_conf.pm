@@ -180,6 +180,8 @@ sub pipeline_wide_parameters {
 
     external_db_map_name => $self->o('external_db_map_name'),
     external_db_map => $self->o('external_db_map'),
+
+    add_sequence => $self->o('add_sequence'),
   };
 }
 
@@ -341,9 +343,35 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
       -flow_into  => {
-        '2->A' => 'CleanUpAndCreateDB',
+        '2->A' => 'CreateDB',
         'A->2' => 'Finalize_database',
       },
+    },
+
+    {
+      -logic_name => 'CreateDB',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity => 1,
+      -batch_size     => 50,
+      -flow_into  => {
+        '1' => WHEN('#add_sequence#', 'AddSequence', ELSE('CleanUpAndCreateDB')),
+      },
+    },
+
+    {
+      -logic_name => 'AddSequence',
+      -module     => 'ensembl.brc4.runnable.load_sequence_data',
+      -language => 'python3',
+      -parameters        => {
+        work_dir => $self->o('pipeline_dir') . '/#db_name#/add_sequence',
+      },
+      -analysis_capacity   => 10,
+      -rc_name         => 'default',
+      -max_retry_count => 0,
+      -meadow_type       => 'LSF',
+      -flow_into  => WHEN('#has_gff#', 'Load_gene_models'),
     },
 
     {
