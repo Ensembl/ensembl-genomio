@@ -123,16 +123,16 @@ class FormattedFilesGenerator():
                 print(f"Warning: '{seq.organelle}' is an organelle: make sure to change the codon table number in {self.seq_regions_json} manually if it is not the standard codon table")
             
             # Additional attributes for Ensembl
-            seq_obj["added_seq"] = {
+            seq_obj["added_sequence"] = {
                     "accession" : seq.id,
-                    "asm" : {
-                        "pr_nam" : "",
-                        "pr_url" : "",
+                    "assembly_provider" : {
+                        "name" : "",
+                        "url" : "",
                         }
                     }
-            if not seq_obj["added_seq"]["asm"]["pr_nam"]:
+            if not seq_obj["added_sequence"]["assembly_provider"]["name"]:
                 print(f"Warning: please add the relevant provider name for the assembly in {self.seq_regions_json}")
-            if not seq_obj["added_seq"]["asm"]["pr_url"]:
+            if not seq_obj["added_sequence"]["assembly_provider"]["url"]:
                 print(f"Warning: please add the relevant provider url for the assembly in {self.seq_regions_json}")
 
             # Additional attributes for gene set, if any
@@ -165,13 +165,15 @@ class FormattedFilesGenerator():
                 "assembly" : {
                     "accession" : "GCA_000000000",
                     "version" : 1
-                    }
+                    },
+                "added_seq" : {}
                 }
 
         if not genome_data["species"]["production_name"]:
             print(f"Warning: please add the relevant production_name for this genome in {self.genome_json}")
             
-                
+        ids = [ seq.id for seq in self.seqs]
+        genome_data["added_seq"]["name"] = ids
         
         with open(self.genome_json, "w") as genome_fh:
             genome_fh.write(json.dumps(genome_data, indent=4))
