@@ -2,6 +2,7 @@
 
 import re, sys, argparse
 import os, json
+import hashlib
 
 from Bio import SeqIO
 from Bio import GenBank
@@ -29,8 +30,10 @@ class FormattedFilesGenerator():
             pass
             
         
+        self.manifest = os.path.join(self.output_dir, 'manifest.json')
         self.genome_json = os.path.join(self.output_dir, 'genome.json')
         self.seq_regions_json = os.path.join(self.output_dir, 'seq_regions.json')
+        self.functional_annotation_json = os.path.join(self.output_dir, 'functional_annotation.json')
         self.dna_fasta = os.path.join(self.output_dir, 'dna.fasta')
         self.pep_fasta = os.path.join(self.output_dir, 'pep.fasta')
         self.genes_gff = os.path.join(self.output_dir, 'genes.gff')
@@ -56,6 +59,7 @@ class FormattedFilesGenerator():
             self._write_genome_json()
             self._write_seq_regions_json()
             self._write_dna_fasta()
+            self._write_manifest()
     
     def _get_organella(self, gb_file):
         """
@@ -76,6 +80,33 @@ class FormattedFilesGenerator():
         with open(self.dna_fasta, "w") as fasta_fh:
             SeqIO.write(self.seqs, fasta_fh, "fasta")
     
+    def _write_manifest(self):
+        """
+        Write a manifest following the defined schema
+        """
+        manifest = {}
+        self._add_to_manifest(manifest, 'gff3', self.genes_gff)
+        self._add_to_manifest(manifest, 'fasta_dna', self.dna_fasta)
+        self._add_to_manifest(manifest, 'fasta_pep', self.pep_fasta)
+        self._add_to_manifest(manifest, 'seq_region', self.seq_regions_json)
+        self._add_to_manifest(manifest, 'genome', self.genome_json)
+        self._add_to_manifest(manifest, 'functional_annotation', self.functional_annotation_json)
+        with open(self.manifest, "w") as manifest_fh:
+            manifest_fh.write(json.dumps(manifest, indent=4))
+    
+    def _add_to_manifest(self, manifest, key, path):
+        """
+        Add a file to the manifest, if it exists
+        """
+        if os.path.exists(path):
+            with open(path, "rb") as file_fh:
+                content = file_fh.read()
+                md5 = hashlib.md5(content).hexdigest()
+                manifest[key] = {
+                        "file": os.path.basename(path),
+                        "md5sum": md5
+                        }
+        
     def _write_seq_regions_json(self):
         json_array = []
         
