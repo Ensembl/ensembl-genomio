@@ -127,7 +127,8 @@ class MetaConf:
 
   def update_derived_data(self, defaults = None, update_annotation_related = False):
     # assembly metadata
-    new_name = self.get("assembly.accession")
+    asm_acc = self.get("assembly.accession") 
+    new_name = str(asm_acc)
     if new_name:
       new_name = new_name.strip().replace("_","").replace(".","v")
       self.update("assembly.name", new_name)
@@ -137,15 +138,18 @@ class MetaConf:
     # species metadata
     self.update_from_dict(defaults, "species.division")
     _sci_name = self.get("species.scientific_name")
-    _acc = self.get("assembly.accession").replace("_","").replace(".","v")
+    _acc = str(asm_acc).replace("_","").replace(".","v")
     _strain = self.get("species.strain")
     _prod_name = _sci_name.strip().lower()
     _prod_name = "_".join(re.sub(r'[^a-z0-9A-Z]+', '_', _prod_name).split("_")[:2])
     _prod_name = ("%s_%s" % (_prod_name, _acc)).lower().replace(" ","_")
     self.update("species.production_name", _prod_name)
+    _comm_name = self.get("species.common_name")
     _display_name = _sci_name
-    if _strain:
-      _display_name = ("%s (%s)" % (_sci_name, _strain))
+    if _strain or _comm_name:
+      _strain_comm_part = ", ".join(map(lambda s: str(s), filter(None, [_comm_name, _strain])))
+      _display_name += " (%s)" % _strain_comm_part
+    _display_name += " - " + asm_acc
     self.update("species.display_name", _display_name)
     self.update("species.url", _prod_name.capitalize())
     # syns
@@ -164,6 +168,8 @@ class MetaConf:
       today = datetime.datetime.today()
       self.update("genebuild.start_date",
                   "%s-%02d-%s" % (today.year, today.month, self.get("species.division")))
+      self.update("genebuild.initial_release_date", "%s-%02d" % (today.year, today.month))
+      self.update("genebuild.last_geneset_update", "%s-%02d" % (today.year, today.month))
 
   def dump_genome_conf(self, json_out):
     out = {}
