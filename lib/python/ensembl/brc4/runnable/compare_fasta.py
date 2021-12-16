@@ -270,7 +270,7 @@ class compare_fasta(eHive.BaseRunnable):
         data = self.get_json(map_dna_path)
         org, location = self.organellar(report_seq, data)
 
-        # check ids
+        # check ids for all the matched ans unmatched sequences
         All_id = {}
         for insdc, coredb_name in report_seq.items():
             All_id[insdc] = coredb_name["name"]
@@ -299,12 +299,14 @@ class compare_fasta(eHive.BaseRunnable):
                 comp.append("%s and %s match by id" % (i, All_id[i]))
             else:
                 pass
+
         # checking for multiple entries of organellar seq
         multi_org = [name.split('.')[0] for name in org]
         multi_org_acc = [j[:-1] for j in multi_org]  # similar accession
         unique_org_id = list(set(multi_org_acc))
         unique_location = location.count("mitochondrial_chromosome")
         unique_apicoplast = location.count("apicoplast_chromosome")
+
         # comparing organellar sequences with common, only1 and only2
         count = 0
         for index, i in enumerate(org):
@@ -517,7 +519,6 @@ class compare_fasta(eHive.BaseRunnable):
         return common, comp
 
     def organellar(self, report_seq, data):
-        # comparing the organellar sequences
         org = []
         org1 = []
         org2 = []
