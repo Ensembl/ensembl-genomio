@@ -113,7 +113,7 @@ class compare_fasta(eHive.BaseRunnable):
 
         accession_version = r'\.\d+$'
         report = []
-      
+
         for insdc_name, old_name in seq_map.items():
             if insdc_name not in report_seq:
                 raise Exception("No INSDC %s found in report" % insdc_name)
@@ -464,6 +464,7 @@ class compare_fasta(eHive.BaseRunnable):
                     comp.append(
                         f"Matched 2 different groups of sequences ({group1.count} vs {group2.count}): {group1} and {group2}")
 
+        # check the coredb sequences which has N insted on ATCG
         commonN = {}
 
         only1_Ncount = SeqGroup.N_count(only1)
@@ -492,22 +493,26 @@ class compare_fasta(eHive.BaseRunnable):
                 else:
                     pass
 
+        # sequences which have extra N at the end
         for seq1, name1 in only1.items():
             len1 = len(seq1)
             for seq2, name2 in only2.items():
                 sequence = seq2[:len1]
-                if sequence == seq1:
-                    commonN[name1] = name2
-                    comp.append(
-                        f"Please check an exta N added in core in  %s and %s" % (name1, name2))
-                else:
+                ignored_seq = seq2[len1:]
+                N = ignored_seq.count('N')
+                if len(ignored_seq) != N:
                     pass
+                else:
+                    if sequence == seq1:
+                        commonN[name1] = name2
+                        comp.append(
+                            f"Please check an exta N added in core in  %s and %s" % (name1, name2))
 
         for name1, name2 in commonN.items():
             name1 = str(name1)
             name2 = str(name2)
             common[name1] = name2
-
+        print(comp)
         print(len(common))
         return common, comp
 
