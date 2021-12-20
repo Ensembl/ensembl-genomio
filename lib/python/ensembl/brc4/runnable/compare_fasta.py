@@ -317,7 +317,7 @@ class compare_fasta(eHive.BaseRunnable):
                     count = count+1
                     comp.append("%s (both) in location: %s" %
                                 (i, location[index]))
-                    if value == "identical" and count > 0:
+                    if count > 0:
                         org_value = "identical"
                 elif i in only1:
                     count = count+1
@@ -475,8 +475,8 @@ class compare_fasta(eHive.BaseRunnable):
             length1 = details1["length"]
             for seq2, details2 in only2_Ncount.items():
                 if length1 == details2["length"]:
-                    pos = list(details1["pos"])
-                    sequence = seq2[pos[0]:pos[1]]
+                    pos = list(details2["pos"])
+                    sequence = seq1[pos[0]:pos[1]]
                     diff_pos = pos[1]-pos[0]
                     A = sequence.count('A')
                     C = sequence.count('C')
