@@ -232,7 +232,7 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
                 if cur_abbrev == new_abbrev:
                     print("Organism abbrev %s is already defined in issue %d (%s)" % (cur_abbrev, issue.id, issue.subject))
                 else:
-                    print("Warning: current abbrev (%s) is different from the one generated (%s) for issue %d (%s)" % (cur_abbrev, new_abbrev, issue.id, issue.subject))
+                    print("WARNING: current abbrev (%s) is different from the one generated (%s) for issue %d (%s)" % (cur_abbrev, new_abbrev, issue.id, issue.subject))
                     
             else:
                 print("\t".join([str(issue.id), accession, new_abbrev, issue.subject]))
@@ -293,10 +293,10 @@ def make_organism_abbrev(name):
     
     name = name.strip()
     if name == "":
-        raise Exception("Species name is missing (field 'Experimental Organisms')")
+        raise Exception("WARNING: Species name is missing (field 'Experimental Organisms')")
     items = name.split(" ")
     if len(items) < 3:
-        raise Exception("Species name is too short to create an organism_abbrev: '%s'" % name)
+        raise Exception("WARNING: Species name is too short to create an organism_abbrev: '%s'" % name)
 
     genus = items[0]
     species = items[1]
