@@ -319,7 +319,7 @@ def main():
                 help='Output_dir')
     # Choice
     parser.add_argument('--get', choices=['genomes', 'organism_abbrev'], required=True,
-                help='Get genomes, rnaseq, or dnaseq issues')
+                help='Get genomes, or set organism_abbrev field (use update_redmine for actually changing it)')
     # Optional
     parser.add_argument('--build', type=int,
                 help='Restrict to a given build')
