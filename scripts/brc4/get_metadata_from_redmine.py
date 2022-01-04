@@ -291,6 +291,7 @@ def load_abbrevs(path):
     
 def make_organism_abbrev(name):
     
+    name = name.strip()
     if name == "":
         raise Exception("Species name is missing (field 'Experimental Organisms')")
     items = name.split(" ")
