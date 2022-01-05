@@ -243,17 +243,18 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
         print("No Redmine tickets to update")
         return
     
-    # Get the taxonomy for each issue
+    # Keep track of each problem
+    ok_generate = []
+    ok_exist = []
+    warnings = []
     failed_issues = []
     
     for issue in issues:
         time.sleep(0.1)
-        print('')
         (genome, extra) = parse_genome(issue)
         custom = get_custom_fields(issue)
         if not genome:
-            print("WARNING: Insufficient information for genome in %d (%s)" % (issue.id, issue.subject))
-            failed_issues.append(issue)
+            failed_issues.append({"issue": issue, "desc": "Not enough information to parse"})
             continue
 
         cur_abbrev = custom["Organism Abbreviation"]["value"]
@@ -262,29 +263,35 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
             full_name = custom["Experimental Organisms"]["value"]
             new_abbrev = make_organism_abbrev(full_name)
             if new_abbrev in all_abbrevs:
-                print("WARNING: organism abbrev '%s' is already in use by another species! For issue %d (%s)" % (new_abbrev, issue.id, issue.subject))
-                failed_issues.append(issue)
+                failed_issues.append({"issue" : issue, "desc" : f"Abbrev {new_abbrev} used by other species"})
             elif cur_abbrev:
                 if cur_abbrev == new_abbrev:
-                    print("Organism abbrev %s is already defined in issue %d (%s)" % (cur_abbrev, issue.id, issue.subject))
+                    ok_exist.append({"issue" : issue, "desc" : new_abbrev})
                 else:
-                    print("WARNING: current abbrev (%s) is different from the one generated (%s) for issue %d (%s)" % (cur_abbrev, new_abbrev, issue.id, issue.subject))
+                    warnings.append({"issue" : issue, "desc" : f"Generated id differs: {cur_abbrev} vs {new_abbrev}"})
                     
             else:
-                print("\t".join([str(issue.id), accession, new_abbrev, issue.subject]))
+                ok_generate.append({"issue" : issue, "desc" : new_abbrev})
                 add_organism_to_issue(redmine, issue, new_abbrev, update)
         except Exception as e:
-            print("WARNING: Could not generate an organism_abbrev for issue %d (%s):" % (issue.id, issue.subject))
-            print("\t" + str(e))
-            failed_issues.append(issue)
+            failed_issues.append({"issue" : issue, "desc" : f"Can't make: {e}"})
             continue
     
     print("\n%d issues considered" % len(issues))
-    print("%d issues ok (has an organism_abbrev, or that can be made)" % (len(issues) - len(failed_issues)))
-    if failed_issues:
-        print("%d issues failed" % len(failed_issues))
-        for issue in failed_issues:
-            print("\t%s/issues/%s : %s" % (url, issue.id, issue.subject))
+
+    print_summary(ok_generate, "issues with generated organism abbrev (use --update to set the field)")
+    print_summary(ok_exist, "issues with existing organism_abbrev")
+    print_summary(warnings, "issues with warnings")
+    print_summary(failed_issues, "issues failed")
+
+def print_summary(summaries, description):
+    if summaries:
+        print()
+        print(f"{len(summaries)} {description}:")
+        for summary in summaries:
+            desc = summary["desc"]
+            issue = summary["issue"]
+            print(f"\t{desc:64}\t{issue.id:8}\t{issue.subject}")
 
 def add_organism_to_issue(redmine, issue, new_abbrev, update=False):
     """
