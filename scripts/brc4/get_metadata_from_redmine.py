@@ -31,30 +31,64 @@ def retrieve_genomes(redmine, output_dir, build=None):
     except:
         pass
     
+    ok_genomes = []
     failed_issues = []
+    replacements = []
+    have_gff = []
+
     for issue in issues:
-        genome_structure = parse_genome(issue)
-        if not genome_structure:
-            print("Skipped issue %d (%s). Not enough metadata." % (issue.id, issue.subject))
-            failed_issues.append(issue)
+        genome, extra = parse_genome(issue)
+        if not genome:
+            failed_issues.append(f"\t{'Not enough metadata':32}\t{issue.id:8}\t{issue.subject}")
+            continue
+        
+        if not "BRC4" in genome or not "organism_abbrev" in genome["BRC4"]:
+            failed_issues.append(f"\t{'No organism_abbrev defined':32}\t{issue.id:8}\t{issue.subject}")
             continue
 
+        abbrev = genome["BRC4"]["organism_abbrev"]
+        genome_desc = f"{abbrev:32}\t{issue.id:8}\t({issue.subject})"
+        ok_genomes.append(genome_desc)
+        
+        if "Replacement" in extra:
+            replacements.append(genome_desc)
+        if "GFF" in extra:
+            have_gff.append(genome_desc)
+
         try:
-            organism = genome_structure["BRC4"]["organism_abbrev"]
+            organism = genome["BRC4"]["organism_abbrev"]
             organism_file = output_dir + "/" + organism + ".json"
             f = open(organism_file, "w")
-            json.dump(genome_structure, f, indent=True)
+            json.dump(genome, f, indent=True)
             f.close()
         except Exception as error:
-            print("Skipped issue %d (%s). %s." % (issue.id, issue.subject, error))
-            failed_issues.append(issue)
+            failed_issues.append(f"\tERROR: {error:32}\t{issue.id:8}\t(issue.subject)")
             pass
 
-    # Print summary of issues of note
+    # Print summaries
     if failed_issues:
+        print()
         print("%d failed issues" % len(failed_issues))
-        for issue in failed_issues:
-            print("\tFailed to load issue %d: %s" % (issue.id, issue.subject))
+        for error in failed_issues:
+            print(error)
+
+    if ok_genomes:
+        print()
+        print(f"{len(ok_genomes)} genomes are ok to load (but do check that they are supposed to be new genomes to load from INSDC):")
+        for abbrev in ok_genomes:
+            print(f"\t{abbrev}")
+
+    if replacements:
+        print()
+        print(f"Among those, {len(replacements)} genomes are replacements:")
+        for abbrev in replacements:
+            print(f"\t{abbrev}")
+
+    if have_gff:
+        print()
+        print(f"Among those, {len(have_gff)} genomes have a separate gff to load:")
+        for abbrev in have_gff:
+            print(f"\t{abbrev}")
 
 def get_all_genomes(redmine, build=None):
     """
@@ -85,12 +119,14 @@ def parse_genome(issue):
             "genebuild": {},
             }
     
+    extra = {}
+    
     # Get GCA accession
     if "GCA number" in customs:
         accession = customs["GCA number"]["value"]
         accession = check_accession(accession)
         if not accession:
-            return
+            return (None, None)
         genome["assembly"]["accession"] = accession
     else:
         print("No accession for issue %d (%s)" % (issue.id, issue.subject))
@@ -110,8 +146,6 @@ def parse_genome(issue):
         abbrev = customs["Organism Abbreviation"]["value"]
         if abbrev:
             genome["BRC4"]["organism_abbrev"] = abbrev
-        else:
-            print("No organism abbrev could be found for %s" % issue.id)
     except:
         print("Can't get organism abbrev for %s" % issue.id)
 
@@ -119,18 +153,20 @@ def parse_genome(issue):
     try:
         gff_path = customs["GFF 2 Load"]["value"]
         if gff_path:
-            print("GFF2LOAD: separate gff file for %s: %s (issue %d)" % (genome["BRC4"]["organism_abbrev"], gff_path, issue.id))
+            extra["GFF"] = True
+            #print("GFF2LOAD: separate gff file for %s: %s (issue %d)" % (genome["BRC4"]["organism_abbrev"], gff_path, issue.id))
     except:
         pass
 
     # Warn for replacement
     try:
         if customs["Replacement genome?"]["value"].startswith("Yes"):
-            print("REPLACEMENT: the organism %s is a replacement (issue %d)" % (genome["BRC4"]["organism_abbrev"], issue.id))
+            extra["Replacement"] = True
+            #print("REPLACEMENT: the organism %s is a replacement (issue %d)" % (genome["BRC4"]["organism_abbrev"], issue.id))
     except:
         pass
 
-    return genome
+    return (genome, extra)
 
 def check_accession(accession):
     """
@@ -213,7 +249,7 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
     for issue in issues:
         time.sleep(0.1)
         print('')
-        genome = parse_genome(issue)
+        (genome, extra) = parse_genome(issue)
         custom = get_custom_fields(issue)
         if not genome:
             print("WARNING: Insufficient information for genome in %d (%s)" % (issue.id, issue.subject))
