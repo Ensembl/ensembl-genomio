@@ -246,6 +246,8 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
     # Keep track of each problem
     ok_generate = []
     ok_exist = []
+    ok_replace = []
+    warnings_replace = []
     warnings = []
     failed_issues = []
     
@@ -262,16 +264,30 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
             accession = genome["assembly"]["accession"]
             full_name = custom["Experimental Organisms"]["value"]
             new_abbrev = make_organism_abbrev(full_name)
+
             if new_abbrev in all_abbrevs:
-                failed_issues.append({"issue" : issue, "desc" : f"Abbrev {new_abbrev} used by other species"})
+                if "Replacement" in extra:
+                    ok_replace.append({"issue" : issue, "desc" : new_abbrev})
+                else:
+                    failed_issues.append({
+                        "issue" : issue,
+                        "desc" : f"Abbrev {new_abbrev} used by other species"})
             elif cur_abbrev:
                 if cur_abbrev == new_abbrev:
-                    ok_exist.append({"issue" : issue, "desc" : new_abbrev})
+                    if "Replacement" in extra and not new_abbrev in all_abbrevs:
+                        warnings_replace.append({"issue" : issue, "desc" : f"replacement genome has new abbrev: {new_abbrev}"})
+                    else:    
+                        ok_exist.append({"issue" : issue, "desc" : new_abbrev})
                 else:
-                    warnings.append({"issue" : issue, "desc" : f"Generated id differs: {cur_abbrev} vs {new_abbrev}"})
+                    warnings.append({
+                        "issue" : issue,
+                        "desc" : f"Generated id differs: {cur_abbrev} vs {new_abbrev}"})
                     
             else:
-                ok_generate.append({"issue" : issue, "desc" : new_abbrev})
+                if "Replacement" in extra and not new_abbrev in all_abbrevs:
+                    warnings_replace.append({"issue" : issue, "desc" : f"replacement genome has new abbrev: {new_abbrev}"})
+                else:    
+                    ok_generate.append({"issue" : issue, "desc" : new_abbrev})
                 add_organism_to_issue(redmine, issue, new_abbrev, update)
         except Exception as e:
             failed_issues.append({"issue" : issue, "desc" : f"Can't make: {e}"})
@@ -281,6 +297,8 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
 
     print_summary(ok_generate, "issues with generated organism abbrev (use --update to set the field)")
     print_summary(ok_exist, "issues with existing organism_abbrev")
+    print_summary(ok_replace, "issues are replacement with existing organism_abbrev")
+    print_summary(warnings_replace, "issues are replacement but without a previous organism_abbrev")
     print_summary(warnings, "issues with warnings")
     print_summary(failed_issues, "issues failed")
 
@@ -336,10 +354,10 @@ def make_organism_abbrev(name):
     
     name = name.strip()
     if name == "":
-        raise Exception("WARNING: Species name is missing (field 'Experimental Organisms')")
+        raise Exception("field 'Experimental Organisms' needed")
     items = name.split(" ")
     if len(items) < 3:
-        raise Exception("WARNING: Species name is too short to create an organism_abbrev: '%s'" % name)
+        raise Exception(f"name is too short ({name})")
 
     genus = items[0]
     species = items[1]
