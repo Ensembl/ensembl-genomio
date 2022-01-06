@@ -39,21 +39,20 @@ def retrieve_genomes(redmine, output_dir, build=None):
     for issue in issues:
         genome, extra = parse_genome(issue)
         if not genome:
-            failed_issues.append(f"\t{'Not enough metadata':32}\t{issue.id:8}\t{issue.subject}")
+            failed_issues.append({"issue" : issue, "desc" : "No enough metadata"})
             continue
         
         if not "BRC4" in genome or not "organism_abbrev" in genome["BRC4"]:
-            failed_issues.append(f"\t{'No organism_abbrev defined':32}\t{issue.id:8}\t{issue.subject}")
+            failed_issues.append({"issue" : issue, "desc" : "No organism_abbrev defined"})
             continue
 
         abbrev = genome["BRC4"]["organism_abbrev"]
-        genome_desc = f"{abbrev:32}\t{issue.id:8}\t({issue.subject})"
-        ok_genomes.append(genome_desc)
+        ok_genomes.append({"issue" : issue, "desc" : abbrev})
         
         if "Replacement" in extra:
-            replacements.append(genome_desc)
+            replacements.append({"issue" : issue, "desc" : abbrev})
         if "GFF" in extra:
-            have_gff.append(genome_desc)
+            have_gff.append({"issue" : issue, "desc" : abbrev})
 
         try:
             organism = genome["BRC4"]["organism_abbrev"]
@@ -62,33 +61,14 @@ def retrieve_genomes(redmine, output_dir, build=None):
             json.dump(genome, f, indent=True)
             f.close()
         except Exception as error:
-            failed_issues.append(f"\tERROR: {error:32}\t{issue.id:8}\t(issue.subject)")
+            failed_issues.append({"issue" : issue, "desc" : str(error)})
             pass
 
     # Print summaries
-    if failed_issues:
-        print()
-        print("%d failed issues" % len(failed_issues))
-        for error in failed_issues:
-            print(error)
-
-    if ok_genomes:
-        print()
-        print(f"{len(ok_genomes)} genomes are ok to load (but do check that they are supposed to be new genomes to load from INSDC):")
-        for abbrev in ok_genomes:
-            print(f"\t{abbrev}")
-
-    if replacements:
-        print()
-        print(f"Among those, {len(replacements)} genomes are replacements:")
-        for abbrev in replacements:
-            print(f"\t{abbrev}")
-
-    if have_gff:
-        print()
-        print(f"Among those, {len(have_gff)} genomes have a separate gff to load:")
-        for abbrev in have_gff:
-            print(f"\t{abbrev}")
+    print_summary(failed_issues, "failed issues")
+    print_summary(ok_genomes, "genomes are ok to load (but do check that they are supposed to be new genomes to load from INSDC)")
+    print_summary(replacements, "genomes are replacement")
+    print_summary(have_gff, "genomes have a separate gff to load")
 
 def get_all_genomes(redmine, build=None):
     """
