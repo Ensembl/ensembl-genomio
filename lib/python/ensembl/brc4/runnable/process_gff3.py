@@ -538,7 +538,10 @@ class process_gff3(eHive.BaseRunnable):
 
         if "Name" in feature.qualifiers and not "description" in feature_object:
             name = feature.qualifiers["Name"][0]
-            feature_object["description"] = name
+            
+            # Exclude Name if it just a variant of the feature ID
+            if not feature.id in name:
+                feature_object["description"] = name
         
         # Synonyms?
         
