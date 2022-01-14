@@ -201,12 +201,10 @@ class process_gff3(eHive.BaseRunnable):
         functional_annotation = []
         
         with open(out_gff_path, "w") as gff3_out:
-            gff = GFF.parse(gff3_in)
-            
             new_records = []
             fail_types = {}
             
-            for record in gff:
+            for record in GFF.parse(gff3_in):
                 new_record = SeqRecord(record.seq, id=record.id)
                 if record.id in to_exclude:
                     print("Skip seq_region %s" % record.id)
