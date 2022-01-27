@@ -164,7 +164,10 @@ class process_genome_data(eHive.BaseRunnable):
         
         url = self.param("accession_api_url")
         
+        # Use the GenBank accession without version
         gb_accession = accession.replace("GCF", "GCA")
+        gb_accession = gb_accession.split(".")[0]
+
         response = requests.get(url % gb_accession)
         entry_xml = response.text
         
