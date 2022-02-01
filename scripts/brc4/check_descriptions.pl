@@ -27,7 +27,13 @@ sub main {
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_all($opt{registry}, 1);
   
-  my $ga = $registry->get_adaptor($opt{species}, "core", "gene");
+  check_core($registry, $opt{species});
+}
+
+sub check_core {
+  my ($registry, $species) = @_;
+  
+  my $ga = $registry->get_adaptor($species, "core", "gene");
   $logger->info("Look for genes");
   
   my %count;
