@@ -29,27 +29,23 @@ sub main {
 
   my @species = ($opt{species}) || @{$registry->get_all_species()};
   for my $species (@species) {
-    say("\tSpecies: $species");
-    check_core($registry, $species);
+    check_genes($registry, $species);
   }
-}
-
-sub check_core {
-  my ($registry, $species) = @_;
-
-  my $counts = check_genes($registry, $species);
 }
 
 sub check_genes {
   my ($registry, $species) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
+  my $dbname = $ga->dbc->dbname;
+  say("Database:\t$dbname");
+  say("Species:\t$species");
   
   my %count = (
     empty_transferable => 0,
     empty_not_transferable => 0,
-    gene_full => 0,
     gene_and_transcript_empty => 0,
+    gene_full => 0,
     gene_xref => 0,
     gene_empty => 0,
     gene_total => 0,
@@ -86,14 +82,14 @@ sub check_genes {
     if ($t_desc) {
       $count{empty_transcript_transferable}++;
     } else {
-      $count{transcript_empty}++;
+      $count{gene_and_transcript_empty}++;
     }
     
     # TODO: translation
   }
   
   for my $stat (sort keys %count) {
-    say("\t\t$stat: $count{$stat}");
+    say(sprintf("\t%7d %s", $count{$stat}, $stat));
   }
   
   return %count;
