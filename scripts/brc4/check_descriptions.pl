@@ -27,10 +27,39 @@ sub main {
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_all($opt{registry}, 1);
 
+  say("#build\torgabbrev\tspecies\tgenes\ttransferable\tnot_transferable");
   my @species = ($opt{species}) || @{$registry->get_all_species()};
   for my $species (@species) {
-    check_genes($registry, $species);
+    my $count = check_genes($registry, $species);
+    my $build = get_build($registry, $species);
+    my $org = get_organism_abbrev($registry, $species);
+    
+    my $total = $count->{gene_total};
+    my $transfer = $count->{empty_transcript_transferable};
+    my $not_transfer = $count->{empty_not_transferable};
+    if ($transfer) {
+      say("$build\t$org\t$species\t$total\t$transfer\t$not_transfer");
+    }
   }
+}
+
+sub get_build {
+  my ($registry, $species) = @_;
+
+  my $ga = $registry->get_adaptor($species, "core", "gene");
+  my $dbname = $ga->dbc->dbname;
+  if ($dbname =~ /_(\d+)_\d+_\d+$/) {
+    return $1;
+  }
+}
+
+sub get_organism_abbrev {
+  my ($registry, $species) = @_;
+
+  my $meta = $registry->get_adaptor($species, "core", "MetaContainer");
+  my ($value) = @{ $meta->list_value_by_key("BRC4.organism_abbrev") };
+
+  return $value;
 }
 
 sub check_genes {
@@ -38,11 +67,11 @@ sub check_genes {
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
   my $dbname = $ga->dbc->dbname;
-  say("Database:\t$dbname");
-  say("Species:\t$species");
+  $logger->info("Database:\t$dbname");
+  $logger->info("Species:\t$species");
   
   my %count = (
-    empty_transferable => 0,
+    empty_transcript_transferable => 0,
     empty_not_transferable => 0,
     gene_and_transcript_empty => 0,
     gene_full => 0,
@@ -50,8 +79,6 @@ sub check_genes {
     gene_empty => 0,
     gene_total => 0,
   );
-
-  use Data::Dumper;
   
   GENE: for my $gene (@{$ga->fetch_all()}) {
     $count{gene_total}++;
@@ -89,10 +116,10 @@ sub check_genes {
   }
   
   for my $stat (sort keys %count) {
-    say(sprintf("\t%7d %s", $count{$stat}, $stat));
+    $logger->info(sprintf("\t%7d %s", $count{$stat}, $stat));
   }
   
-  return %count;
+  return \%count;
 }
 
 sub check_description_status {
