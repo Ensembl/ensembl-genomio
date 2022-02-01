@@ -26,15 +26,29 @@ sub main {
   $logger->info("Load registry");
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_all($opt{registry}, 1);
-  
-  check_core($registry, $opt{species});
+
+  my @species = ($opt{species}) || @{$registry->get_all_species()};
+  for my $species (@species) {
+    say("\tSpecies: $species");
+    check_core($registry, $species);
+  }
 }
 
 sub check_core {
   my ($registry, $species) = @_;
   
-  my $ga = $registry->get_adaptor($species, "core", "gene");
-  $logger->info("Look for genes");
+  my @features = qw(gene transcript);
+  
+  for my $feature (@features) {
+    say("\t" . ucfirst($feature) . "s");
+    check_features($registry, $species, $feature);
+  }
+}
+
+sub check_features {
+  my ($registry, $species, $feature) = @_;
+  
+  my $ga = $registry->get_adaptor($species, "core", $feature);
   
   my %count;
   for my $gene (@{$ga->fetch_all()}) {
@@ -49,10 +63,11 @@ sub check_core {
     
     $count{empty}++ if $is_empty;
     $count{xref}++ if $is_xref;
+    $count{full}++ if not ($is_empty or $is_xref);
   }
   
   for my $stat (sort keys %count) {
-    print("$stat: $count{$stat}\n");
+    say("\t\t$stat: $count{$stat}");
   }
 }
 
@@ -68,6 +83,8 @@ sub usage {
     Check genes and transcript descriptions in a core
 
     --registry <path> : Ensembl registry for the core database
+
+    Optional:
     --species <str>   : production_name of one species
     
     --help            : show this help message
@@ -89,7 +106,6 @@ sub opt_check {
   );
 
   usage("Registry needed") if not $opt{registry};
-  usage("Species needed") if not $opt{species};
   usage()                if $opt{help};
   Log::Log4perl->easy_init($INFO) if $opt{verbose};
   Log::Log4perl->easy_init($DEBUG) if $opt{debug};
