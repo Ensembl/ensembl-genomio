@@ -36,39 +36,89 @@ sub main {
 
 sub check_core {
   my ($registry, $species) = @_;
-  
-  my @features = qw(gene transcript);
-  
-  for my $feature (@features) {
-    say("\t" . ucfirst($feature) . "s");
-    check_features($registry, $species, $feature);
-  }
+
+  my $counts = check_genes($registry, $species);
 }
 
-sub check_features {
-  my ($registry, $species, $feature) = @_;
+sub check_genes {
+  my ($registry, $species) = @_;
   
-  my $ga = $registry->get_adaptor($species, "core", $feature);
+  my $ga = $registry->get_adaptor($species, "core", "gene");
   
-  my %count;
-  for my $gene (@{$ga->fetch_all()}) {
-    my $desc = $gene->description;
-    my ($is_xref, $is_empty);
-    
-    if ($desc) {
-      $is_xref = ($desc =~ /\[Source:/);
+  my %count = (
+    empty_transferable => 0,
+    empty_not_transferable => 0,
+    gene_full => 0,
+    gene_and_transcript_empty => 0,
+    gene_xref => 0,
+    gene_empty => 0,
+    gene_total => 0,
+  );
+
+  use Data::Dumper;
+  
+  GENE: for my $gene (@{$ga->fetch_all()}) {
+    $count{gene_total}++;
+    my $g_status = check_description_status($gene->description);
+    if ($g_status->{full}) {
+      $count{gene_full}++;
+      next GENE;
+    } elsif ($g_status->{xref}) {
+      $count{gene_xref}++;
     } else {
-      $is_empty = 1;
+      $count{gene_empty}++;
     }
     
-    $count{empty}++ if $is_empty;
-    $count{xref}++ if $is_xref;
-    $count{full}++ if not ($is_empty or $is_xref);
+    my @transcripts = @{$gene->get_all_Transcripts()};
+
+    my $t_desc = "";
+    for my $transc (@transcripts) {
+      my $t_status = check_description_status($transc->description);
+      
+      if (not $t_desc) {
+        $t_desc = $transc->description;
+      } elsif ($transc->description and $t_desc ne $transc->description) {
+        $count{empty_not_transferable}++;
+        next GENE;
+      }
+    }
+    
+    if ($t_desc) {
+      $count{empty_transcript_transferable}++;
+    } else {
+      $count{transcript_empty}++;
+    }
+    
+    # TODO: translation
   }
   
   for my $stat (sort keys %count) {
     say("\t\t$stat: $count{$stat}");
   }
+  
+  return %count;
+}
+
+sub check_description_status {
+  my ($desc) = @_;
+
+  my %status = (
+    full => 0,
+    empty => 0,
+    xref => 0,
+  );
+  
+  if ($desc) {
+    if ($desc =~ /\[Source:/) {
+      $status{xref} = 1;
+    } else {
+      $status{full} = 1;
+    }
+  } else {
+    $status{empty} = 1;
+  }
+  
+  return \%status;
 }
 
 ###############################################################################
