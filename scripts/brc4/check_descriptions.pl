@@ -82,6 +82,9 @@ sub check_genes {
     gene_total => 0,
   );
   
+  # To check some names are not highly repeated (e.g. hypothetical protein)
+  my %tname;
+  
   GENE: for my $gene (@{$ga->fetch_all()}) {
     my $stable_id = $gene->stable_id;
     
@@ -110,6 +113,7 @@ sub check_genes {
     }
     
     if ($t_desc) {
+      $tname{$t_desc}++;
       my $t_status = check_description_status($t_desc);
       
       if ($t_status->{putative}) {
@@ -124,11 +128,26 @@ sub check_genes {
     # TODO: translation
   }
   
+  check_repeated_names(\%tname);
+  
   for my $stat (sort keys %count) {
     $logger->info(sprintf("\t%7d %s", $count{$stat}, $stat));
   }
   
   return \%count;
+}
+
+sub check_repeated_names {
+  my ($name) = @_;
+  
+  my $sus_threshold = 20;
+  my @sus = grep { $name->{$_} > $sus_threshold } keys %$name;
+  for my $desc (sort { $name->{$b} <=> $name->{$a} } @sus) {
+    my $status = check_description_status($desc);
+    if (not $status->{putative}) {
+      $logger->info("The transcript description '$desc' is repeated $name->{$desc} times");
+    }
+  }
 }
 
 sub check_description_status {
@@ -144,7 +163,7 @@ sub check_description_status {
   if ($desc) {
     if ($desc =~ /\[Source:/) {
       $status{xref} = 1;
-    } elsif ($desc =~ /(conserved)? hypothetical protein/i) {
+    } elsif ($desc =~ /(conserved)? *hypothetical protein(, conserved)?/i) {
       $status{putative} = 1;
     } else {
       $status{full} = 1;
