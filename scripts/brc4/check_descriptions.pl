@@ -101,20 +101,26 @@ sub check_genes {
     
     my @transcripts = @{$gene->get_all_Transcripts()};
 
-    my $t_desc = "";
+    # Check transcript description
+    my $tdesc = "";
     for my $transc (@transcripts) {
-      if (not $t_desc) {
-        $t_desc = $transc->description;
-      } elsif ($transc->description and $t_desc ne $transc->description) {
-        $logger->info("Gene $stable_id has several transcript descriptions:\n\t'$t_desc'\n\t'".$transc->description ."'");
+      my $cur_tdesc = $transc->description;
+      
+      # Some genomes have the same description for different transcripts in the same gene, but with ", variant" added
+      $cur_tdesc =~ s/, variant$// if $cur_tdesc;
+
+      if (not $tdesc) {
+        $tdesc = $cur_tdesc;
+      } elsif ($cur_tdesc and $tdesc ne $cur_tdesc) {
+        $logger->info("Gene $stable_id has several transcript descriptions:\n\t'$tdesc'\n\t'".$transc->description ."'");
         $count{empty_untransferable}++;
         next GENE;
       }
     }
     
-    if ($t_desc) {
-      $tname{$t_desc}++;
-      my $t_status = check_description_status($t_desc);
+    if ($tdesc) {
+      $tname{$tdesc}++;
+      my $t_status = check_description_status($tdesc);
       
       if ($t_status->{putative}) {
         $count{empty_putative}++;
