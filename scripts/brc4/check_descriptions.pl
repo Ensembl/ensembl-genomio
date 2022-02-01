@@ -27,7 +27,7 @@ sub main {
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_all($opt{registry}, 1);
 
-  say("#build\torgabbrev\tspecies\tgenes\ttransferable\tnot_transferable");
+  say("#build\torgabbrev\tspecies\tgenes\ttransferable\tputative\tnot_transferable");
   my @species = ($opt{species}) || @{$registry->get_all_species()};
   for my $species (@species) {
     my $count = check_genes($registry, $species);
@@ -35,10 +35,11 @@ sub main {
     my $org = get_organism_abbrev($registry, $species);
     
     my $total = $count->{gene_total};
-    my $transfer = $count->{empty_transcript_transferable};
-    my $not_transfer = $count->{empty_not_transferable};
+    my $transfer = $count->{empty_transferable};
+    my $not_transfer = $count->{empty_untransferable};
+    my $putative = $count->{empty_putative};
     if ($transfer) {
-      say("$build\t$org\t$species\t$total\t$transfer\t$not_transfer");
+      say("$build\t$org\t$species\t$total\t$transfer\t$putative\t$not_transfer");
     }
   }
 }
@@ -71,8 +72,9 @@ sub check_genes {
   $logger->info("Species:\t$species");
   
   my %count = (
-    empty_transcript_transferable => 0,
-    empty_not_transferable => 0,
+    empty_putative => 0,
+    empty_untransferable => 0,
+    empty_untransferable => 0,
     gene_and_transcript_empty => 0,
     gene_full => 0,
     gene_xref => 0,
@@ -81,6 +83,8 @@ sub check_genes {
   );
   
   GENE: for my $gene (@{$ga->fetch_all()}) {
+    my $stable_id = $gene->stable_id;
+    
     $count{gene_total}++;
     my $g_status = check_description_status($gene->description);
     if ($g_status->{full}) {
@@ -96,18 +100,23 @@ sub check_genes {
 
     my $t_desc = "";
     for my $transc (@transcripts) {
-      my $t_status = check_description_status($transc->description);
-      
       if (not $t_desc) {
         $t_desc = $transc->description;
       } elsif ($transc->description and $t_desc ne $transc->description) {
-        $count{empty_not_transferable}++;
+        $logger->info("Gene $stable_id has several transcript descriptions:\n\t'$t_desc'\n\t'".$transc->description ."'");
+        $count{empty_untransferable}++;
         next GENE;
       }
     }
     
     if ($t_desc) {
-      $count{empty_transcript_transferable}++;
+      my $t_status = check_description_status($t_desc);
+      
+      if ($t_status->{putative}) {
+        $count{empty_putative}++;
+      } else {
+        $count{empty_transferable}++;
+      }
     } else {
       $count{gene_and_transcript_empty}++;
     }
@@ -129,11 +138,14 @@ sub check_description_status {
     full => 0,
     empty => 0,
     xref => 0,
+    putative => 0,
   );
   
   if ($desc) {
     if ($desc =~ /\[Source:/) {
       $status{xref} = 1;
+    } elsif ($desc =~ /(conserved)? hypothetical protein/i) {
+      $status{putative} = 1;
     } else {
       $status{full} = 1;
     }
