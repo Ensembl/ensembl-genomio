@@ -17,6 +17,7 @@ use Data::Dumper;
 
 ###############################################################################
 # MAIN
+my $sus_threshold = 100;
 main();
 
 sub main {
@@ -27,25 +28,29 @@ sub main {
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_all($opt{registry}, 1);
 
-  say("#build\torgabbrev\tspecies\tgenes\ttransferable\tputative\tnot_transferable");
+  say("#build\tcomponent\torgabbrev\tspecies\tgenes\ttransferable\tputative\tnot_transferable");
   my @species = ($opt{species}) || @{$registry->get_all_species()};
-  for my $species (@species) {
+  for my $species (sort @species) {
     my $count = check_genes($registry, $species);
     my $build = get_build($registry, $species);
-    my $org = get_organism_abbrev($registry, $species);
+    my $component = get_meta_value($registry, $species, 'BRC4.component');
+    my $org = get_meta_value($registry, $species, 'BRC4.organism_abbrev');
+    
+    my $ga = $registry->get_adaptor($species, "core", "gene");
+    $ga->dbc->disconnect_if_idle();
     
     my $total = $count->{gene_total};
     my $transfer = $count->{empty_transferable};
     my $not_transfer = $count->{empty_untransferable};
     my $putative = $count->{empty_putative};
     if ($transfer) {
-      say("$build\t$org\t$species\t$total\t$transfer\t$putative\t$not_transfer");
+      say("$build\t$component\t$org\t$species\t$total\t$transfer\t$putative\t$not_transfer");
     }
   }
 }
 
 sub get_build {
-  my ($registry, $species) = @_;
+  my ($registry, $species, $key) = @_;
 
   my $ga = $registry->get_adaptor($species, "core", "gene");
   my $dbname = $ga->dbc->dbname;
@@ -54,11 +59,11 @@ sub get_build {
   }
 }
 
-sub get_organism_abbrev {
-  my ($registry, $species) = @_;
+sub get_meta_value {
+  my ($registry, $species, $key) = @_;
 
   my $meta = $registry->get_adaptor($species, "core", "MetaContainer");
-  my ($value) = @{ $meta->list_value_by_key("BRC4.organism_abbrev") };
+  my ($value) = @{ $meta->list_value_by_key($key) };
 
   return $value;
 }
@@ -73,7 +78,7 @@ sub check_genes {
   
   my %count = (
     empty_putative => 0,
-    empty_untransferable => 0,
+    empty_transferable => 0,
     empty_untransferable => 0,
     gene_and_transcript_empty => 0,
     gene_full => 0,
@@ -107,7 +112,7 @@ sub check_genes {
       my $cur_tdesc = $transc->description;
       
       # Some genomes have the same description for different transcripts in the same gene, but with ", variant" added
-      $cur_tdesc =~ s/, variant$// if $cur_tdesc;
+      $cur_tdesc =~ s/,( transcript)? variant( \d+| [A-Z]\d*)?$// if $cur_tdesc;
 
       if (not $tdesc) {
         $tdesc = $cur_tdesc;
@@ -146,7 +151,6 @@ sub check_genes {
 sub check_repeated_names {
   my ($name) = @_;
   
-  my $sus_threshold = 20;
   my @sus = grep { $name->{$_} > $sus_threshold } keys %$name;
   for my $desc (sort { $name->{$b} <=> $name->{$a} } @sus) {
     my $status = check_description_status($desc);
@@ -169,7 +173,7 @@ sub check_description_status {
   if ($desc) {
     if ($desc =~ /\[Source:/) {
       $status{xref} = 1;
-    } elsif ($desc =~ /(conserved)? *hypothetical protein(, conserved)?/i) {
+    } elsif ($desc =~ /(conserved)? *(hypothetical|uncharacterized) protein(, conserved)?|protein of unknown function/i) {
       $status{putative} = 1;
     } else {
       $status{full} = 1;
