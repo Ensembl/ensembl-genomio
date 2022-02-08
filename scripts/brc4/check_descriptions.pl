@@ -45,13 +45,18 @@ sub main {
 
   my @all_species = ($opt{species}) || @{$registry->get_all_species()};
   for my $species (sort @all_species) {
-    my $count = check_genes($registry, $species);
-    my $build = get_build($registry, $species);
-    my $component = get_meta_value($registry, $species, 'BRC4.component');
-    my $org = get_meta_value($registry, $species, 'BRC4.organism_abbrev');
+    my $ma = $registry->get_adaptor($species, "core", "MetaContainer");
+    my $component = get_meta_value($ma, 'BRC4.component');
+    if ($opt{component} and $opt{component} ne $component) {
+      $ma->dbc->disconnect_if_idle();
+      next;
+    }
 
-    my $ga = $registry->get_adaptor($species, "core", "gene");
-    $ga->dbc->disconnect_if_idle();
+    my $count = check_genes($registry, $species);
+    my $build = get_build($ma, $species);
+    my $org = get_meta_value($ma, 'BRC4.organism_abbrev');
+
+    $ma->dbc->disconnect_if_idle();
 
     my @line = (
       $build,
@@ -73,20 +78,18 @@ sub main {
 }
 
 sub get_build {
-  my ($registry, $species, $key) = @_;
+  my ($ma, $key) = @_;
 
-  my $ga = $registry->get_adaptor($species, "core", "gene");
-  my $dbname = $ga->dbc->dbname;
+  my $dbname = $ma->dbc->dbname;
   if ($dbname =~ /_(\d+)_\d+_\d+$/) {
     return $1;
   }
 }
 
 sub get_meta_value {
-  my ($registry, $species, $key) = @_;
+  my ($ma, $key) = @_;
 
-  my $meta = $registry->get_adaptor($species, "core", "MetaContainer");
-  my ($value) = @{ $meta->list_value_by_key($key) };
+  my ($value) = @{ $ma->list_value_by_key($key) };
 
   return $value;
 }
@@ -268,6 +271,7 @@ sub usage {
 
     Optional:
     --species <str>   : production_name of one species
+    --component <str> : restrict check to species of this component
     
     --help            : show this help message
     --verbose         : show detailed progress
@@ -282,6 +286,7 @@ sub opt_check {
   GetOptions(\%opt,
     "registry=s",
     "species=s",
+    "component=s",
     "help",
     "verbose",
     "debug",
