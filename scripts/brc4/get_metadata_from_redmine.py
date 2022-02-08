@@ -360,7 +360,7 @@ def main():
     parser.add_argument('--output_dir', type=str,
                 help='Output_dir')
     # Choice
-    parser.add_argument('--get', choices=['genomes', 'organism_abbrev'], required=True,
+    parser.add_argument('--get', choices=['genomes', 'organism_abbrev', 'abbreviate'], required=True,
                 help='Get genomes, or set organism_abbrev field (use update_redmine for actually changing it)')
     # Optional
     parser.add_argument('--build', type=int,
@@ -369,6 +369,8 @@ def main():
                 help='File that contains the list of current organism_abbrevs')
     parser.add_argument('--update_redmine', action='store_true', dest='update_redmine',
                 help='Actually update Redmine for the organism_abbrev (dry run by default)')
+    parser.add_argument('--organism', type=str,
+                help='Organism name to abbreviate')
     args = parser.parse_args()
     
     # Start Redmine API
@@ -383,6 +385,9 @@ def main():
             return
     elif args.get == 'organism_abbrev':
         add_genome_organism_abbrev(redmine, args.build, args.current_abbrevs, args.update_redmine)
+    elif args.get == 'abbreviate':
+        abbrev = make_organism_abbrev(args.organism)
+        print(abbrev)
     else:
         print("Need to say what data you want to --get: genomes? organism_abbrev?")
 
