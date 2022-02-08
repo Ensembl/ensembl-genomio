@@ -28,24 +28,47 @@ sub main {
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_all($opt{registry}, 1);
 
-  say("#build\tcomponent\torgabbrev\tspecies\tgenes\ttransferable\tputative\tnot_transferable");
-  my @species = ($opt{species}) || @{$registry->get_all_species()};
-  for my $species (sort @species) {
+  my @header = qw(
+    build
+    component
+    orgabbrev
+    species
+    genes
+    tr_transferable
+    tr_putative
+    tr_untransferable  
+    tl_transferable
+    tl_putative
+    tl_untransferable  
+  );
+  say("#" . join("\t", @header));
+
+  my @all_species = ($opt{species}) || @{$registry->get_all_species()};
+  for my $species (sort @all_species) {
     my $count = check_genes($registry, $species);
     my $build = get_build($registry, $species);
     my $component = get_meta_value($registry, $species, 'BRC4.component');
     my $org = get_meta_value($registry, $species, 'BRC4.organism_abbrev');
-    
+
     my $ga = $registry->get_adaptor($species, "core", "gene");
     $ga->dbc->disconnect_if_idle();
-    
-    my $total = $count->{gene_total};
-    my $transfer = $count->{empty_transferable};
-    my $not_transfer = $count->{empty_untransferable};
-    my $putative = $count->{empty_putative};
-    if ($transfer) {
-      say("$build\t$component\t$org\t$species\t$total\t$transfer\t$putative\t$not_transfer");
-    }
+
+    my @line = (
+      $build,
+      $component,
+      $org,
+      $species,
+      $count->{gene_total},
+
+      $count->{empty_tr_transferable},
+      $count->{empty_tr_putative},
+      $count->{empty_tr_untransferable},
+
+      $count->{empty_tl_transferable},
+      $count->{empty_tl_putative},
+      $count->{empty_tl_untransferable},
+    );
+    say join("\t", @line);    
   }
 }
 
@@ -77,10 +100,14 @@ sub check_genes {
   $logger->info("Species:\t$species");
   
   my %count = (
-    empty_putative => 0,
-    empty_transferable => 0,
-    empty_untransferable => 0,
+    empty_tr_putative => 0,
+    empty_tl_putative => 0,
+    empty_tr_transferable => 0,
+    empty_tr_untransferable => 0,
+    empty_tl_transferable => 0,
+    empty_tl_untransferable => 0,
     gene_and_transcript_empty => 0,
+    all_empty => 0,
     gene_full => 0,
     gene_xref => 0,
     gene_empty => 0,
@@ -89,6 +116,7 @@ sub check_genes {
   
   # To check some names are not highly repeated (e.g. hypothetical protein)
   my %tname;
+  my %tlname;
   
   GENE: for my $gene (@{$ga->fetch_all()}) {
     my $stable_id = $gene->stable_id;
@@ -106,8 +134,9 @@ sub check_genes {
     
     my @transcripts = @{$gene->get_all_Transcripts()};
 
-    # Check transcript description
+    # Check transcript and translation description
     my $tdesc = "";
+    my $tldesc = "";
     for my $transc (@transcripts) {
       my $cur_tdesc = $transc->description;
       
@@ -117,10 +146,22 @@ sub check_genes {
       if (not $tdesc) {
         $tdesc = $cur_tdesc;
       } elsif ($cur_tdesc and $tdesc ne $cur_tdesc) {
-        $logger->info("Gene $stable_id has several transcript descriptions:\n\t'$tdesc'\n\t'".$transc->description ."'");
-        $count{empty_untransferable}++;
+        $logger->info("Gene $stable_id has several transcript descriptions:\n\t'$tdesc'\n\t'".$cur_tdesc ."'");
+        $count{empty_tr_untransferable}++;
         next GENE;
       }
+        
+      # Translation product from Uniprot
+      my $cur_tldesc = get_translation_product($transc);
+      
+      if (not $tldesc) {
+        $tldesc = $cur_tldesc;
+      } elsif ($cur_tldesc and $tldesc ne $cur_tldesc) {
+        $logger->info("Gene $stable_id has several translation products:\n\t'$tldesc'\n\t'".$cur_tldesc ."'");
+        $count{empty_tl_untransferable}++;
+        next GENE;
+      }
+      
     }
     
     if ($tdesc) {
@@ -128,15 +169,22 @@ sub check_genes {
       my $t_status = check_description_status($tdesc);
       
       if ($t_status->{putative}) {
-        $count{empty_putative}++;
+        $count{empty_tr_putative}++;
       } else {
-        $count{empty_transferable}++;
+        $count{empty_tr_transferable}++;
+      }
+    } elsif ($tldesc) {
+      $tlname{$tldesc}++;
+      my $tl_status = check_description_status($tldesc);
+      
+      if ($tl_status->{putative}) {
+        $count{empty_tl_putative}++;
+      } else {
+        $count{empty_tl_transferable}++;
       }
     } else {
-      $count{gene_and_transcript_empty}++;
+      $count{all_empty}++;
     }
-    
-    # TODO: translation
   }
   
   check_repeated_names(\%tname);
@@ -146,6 +194,26 @@ sub check_genes {
   }
   
   return \%count;
+}
+
+sub get_translation_product {
+  my ($transcript) = @_;
+  
+  my $translation = $transcript->translation;
+  return if not $translation;
+  
+  my @dblinks = @{ $translation->get_all_DBEntries('Uniprot%') };
+  my %uniq_descs = map { $_->description => 1 } grep { $_->description } @dblinks;
+  my @descs = grep { $_ } sort keys %uniq_descs;
+  
+  if (@descs == 1) {
+    return shift @descs;
+  } elsif (@descs > 1) {
+    my $tr_id = $transcript->stable_id;
+    my $descs_str = join " | ", @descs;
+    $logger->debug("Warning: several Uniprot products for this transcript '$tr_id': $descs_str\n");
+    return shift @descs;
+  }
 }
 
 sub check_repeated_names {
