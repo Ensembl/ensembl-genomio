@@ -146,6 +146,19 @@ def parse_genome(issue):
     except:
         pass
 
+    # Operations
+    try:
+        operations = customs["EBI operations"]["value"]
+        
+        if "Load from INSDC" in operations:
+            accession = genome["assembly"]["accession"]
+            if not accession.startswith("GCA"):
+                print("")
+                
+            
+    except:
+        pass
+
     return (genome, extra)
 
 def check_accession(accession):
