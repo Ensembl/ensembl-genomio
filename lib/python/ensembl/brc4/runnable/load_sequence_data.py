@@ -10,59 +10,119 @@ import subprocess as sp
 import sys
 
 from collections import defaultdict
-from math import floor
 from os.path import dirname, join as pj
 
-from BCBio import GFF
-from Bio import SeqIO
 
 
 class load_sequence_data(eHive.BaseRunnable):
+    """
+    loading sequence data, seq region names, atrributes and synonyms
+
+    eHive module to load sequnce data, seq region names, atrributes and synonyms from FASTAs AGPs and seq_region.json.
+    Various ensembl perl scripts are used to create coord_systems, load sequences and set attributes.
+    SQL commands through out the code to be replaces with the proper python API at some point.
+    """
 
     def param_defaults(self):
+        """
+        default parameter/options values
+        """
         return {
+            # relative order of the coord_systems types to infer their rank from
             'cs_order' : 'chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome',
-            'IUPAC' : 'RYKMSWBDHV',
+
+            'IUPAC' : 'RYKMSWBDHV',    # symbols to be replaced with N in the DNA sequences (ensembl core(107) doesn't support the whole IUPAC alphabet for DNA)
+
+            # unversion scaffold, remove ".\d$" from seq_region.names if there's a need
             'unversion_scaffolds' : 0,
-            'versioned_sr_syn_src' : 'INSDC', # 50710
-            'sr_syn_src' : 'BRC4_Community_Symbol', # 211
+            'versioned_sr_syn_src' : 'INSDC', # INSDC(50710) # if unversioning non-sequence level cs, store original name (with version) as this synonym
+            'sr_syn_src' : 'BRC4_Community_Symbol', # BRC4_Community_Symbol(211) # if unversioning sequence-level cs, store original name (with version) as this synonym
+
+            # nullify coord_system version for the given coord_system name 
+            'nullify_cs_version_from' : 'contig',
+
+            # default coord_system name for single-level (no AGPs assemblies)
+            'noagp_cs_name_default' : 'primary_assembly',
+
+            'external_db_map' : None,
+
+            # set "coord_system_tag" seq_region attribute to this value if there's a corresponding "chromosome_display_order" list in genome.json metadata
+            #   if None, only "chromosome" coord system is processed (if present)
+            #   (see add_chr_karyotype_rank definition below )
+            'cs_tag_for_ordered' : None,
+
+            # BRC4 compatibility mode; if on, "(EBI|BRC4)_seq_region_name" seq_region_attributes are added
+            'brc4_mode' : True,
+
+            # whether to use RefSeq names as additional seq_region synonyms (if available) or not (see add_sr_synonyms definition below)
+            #  does not swap anything actually, just loads synonyms to be used by a later "swapping" stage
+            'swap_gcf_gca' : False,
+
+            # list of coord systems used in "-ignore_coord_system" options of the "ensembl-analysis/scripts/assembly_loading/set_toplevel.pl" script 
+            #   part of the loading process
+            'not_toplevel_cs' : [], # i.e. "contig", "non_ref_scaffold"
+
+            # explicit list of seq_region properties (keys) to load as seq_region_attrib s (values)
+            #   if a dict's used as a value, treat its keys as "json_path" (/ as delim) map, i.e.
+            #       { "added_sequence" : { "assembly_provider" : { "name" : ... } } } -> "added_sequence/assembly_provider/name"
+            # see schema/seq_region_schema.json
             'sr_attrib_types' : {
                 'circular' : 'circular_seq',
                 'codon_table' : 'codon_table',
                 'location' : 'sequence_location',
                 'non_ref' : 'non_ref',
-                'karyotype_bands' : 'karyotype_bands',
+                # removed: 'karyotype_bands' : 'karyotype_bands',
                 'coord_system_level' : 'coord_system_tag',
+                'added_sequence' : {
+                    # json_path to attrib_type_code(str) mapping
+                    'added_sequence/accession' :  'added_seq_accession',
+                    'added_sequence/assembly_provider/name' :  'added_seq_asm_pr_nam',
+                    'added_sequence/assembly_provider/url' :  'added_seq_asm_pr_url',
+                    'added_sequence/annotation_provider/name' :  'added_seq_ann_pr_nam',
+                    'added_sequence/annotation_provider/url' :  'added_seq_ann_pr_url',
+                }, # added_sequence
             },
-            'not_toplevel_cs' : [], # i.e. "contig", "non_ref_scaffold"
-            'nullify_cs_version_from' : 'contig',
-            'noagp_cs_name_default' : 'primary_assembly',
-            'external_db_map' : None,
-            'cs_tag_for_ordered' : None,
-            'brc4_mode' : True,
-            'swap_gcf_gca' : False,
+
         }
 
 
     def run(self):
+        """
+        Entry point for the Ehive module. All processing is done here in this case.
+        """
         # params
-        en_root = self.param_required("ensembl_root_dir")
-        wd = self.param_required("work_dir")
+        work_dir = self.param_required("work_dir")
 
-        # initialize whatever
-        genome = self.from_param("manifest_data", "genome")
+        # initial sequence loading 
+        self.initial_sequence_loading(work_dir)
 
-        # TODO
-        # split into contigs, add AGP
-        # load data with no agps ??? m.b. create empty cs-cs agps
-        # omit, split
+        # add seq_region synonyms
+        seq_reg_file = self.from_param("manifest_data", "seq_region", not_throw = True)
+        self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
 
-        # rename IUPAC to N symbols using sed
+        # add seq_region EBI and BRC4 names
+        unversioned_scaffolds = self.param("unversion_scaffolds")
+        if self.param("brc4_mode"):
+          self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversioned_scaffolds)
+
+        # add seq_region attributes and karyotype info
+        is_primary_assembly = agps is None
+        self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), karyotype_info_tag = "karyotype_bands", is_primary_assembly = is_primary_assembly)
+
+        asm_meta = self.from_param("genome_data","assembly")
+        add_cs_tag = self.param("cs_tag_for_ordered")
+        self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"), add_cs_tag)
+
+
+    def initial_sequence_loading(self, work_dir):
+        """initial preparation and loading of AGPs and fasta data"""
+        # preprocess FASTA with sequences
+        #   rename IUPAC to N symbols using sed
         fasta_raw = self.from_param("manifest_data", "fasta_dna")
-        fasta_clean = pj(wd, "fasta", "seq_no_iupac.fasta")
+        fasta_clean = pj(work_dir, "fasta", "seq_no_iupac.fasta")
         self.remove_IUPAC(fasta_raw, fasta_clean)
 
-        # coord system ranking and agps processing
+        # start coord system ranking and agps processing
         agps = self.from_param("manifest_data", "agp", not_throw = True)
 
         # rank cs_names, met in agps.keys ("-" separated, i.e. "scaffold-contig") based on cs_order
@@ -74,115 +134,35 @@ class load_sequence_data(eHive.BaseRunnable):
         # remove gaps and lower_level mappings if the are coveres by higher level ones
         #   i.e.: remove 'contigN to chromosomeZ', if 'contigN to scaffoldM' and 'scaffoldM to chromosomeZ' are in place
         #   returns None if no agps provided
-        agps_pruned_dir = pj(wd, "agps_pruned")
+        agps_pruned_dir = pj(work_dir, "agps_pruned")
         agps_pruned = self.prune_agps(agps, cs_order, agps_pruned_dir, self.param_bool("prune_agp"))
 
         # empty agps_pruned ignored
-        self.load_seq_data(fasta_clean, agps_pruned, cs_rank, pj(wd, "load"))
+        self.load_seq_data(fasta_clean, agps_pruned, cs_rank, pj(work_dir, "load"))
 
         # mark all the "contig"s or noagp_cs as being sourced from ENA
         if not self.param_bool("no_contig_ena_attrib"):
             if agps is None:
-                self.add_contig_ena_attrib(pj(wd, "load", "set_ena"), cs_name = noagps_cs)
+                self.add_contig_ena_attrib(pj(work_dir, "load", "set_ena"), cs_name = noagps_cs)
             else:
-                self.add_contig_ena_attrib(pj(wd, "load", "set_ena"))
+                self.add_contig_ena_attrib(pj(work_dir, "load", "set_ena"))
 
         # unversion scaffold, remove ".\d$" from names if there's a need
-        unversion_scaffolds = self.param_bool("unversion_scaffolds")
-        if unversion_scaffolds:
-            self.unversion_scaffolds(cs_rank, pj(wd, "unversion_scaffolds"))
-
-        # add seq_region synonyms
-        seq_reg_file = self.from_param("manifest_data", "seq_region", not_throw = True)
-        self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
-
-        # add seq_region EBI and BRC4 names
-        if self.param("brc4_mode"):
-          self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversion_scaffolds)
-
-        # add seq_region attributes and karyotype info
-        is_primary_assembly = agps is None
-        self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), karyotype_info_tag = "karyotype_bands", is_primary_assembly = is_primary_assembly)
+        if self.param_bool("unversion_scaffolds"):
+            self.unversion_scaffolds(cs_rank, pj(work_dir, "unversion_scaffolds"))
 
         # add assembly mappings between various cs to meta table for the mapper to work properly
         cs_pairs = agps_pruned and agps_pruned.keys() or None
-        self.add_asm_mappings(cs_pairs, pj(wd, "asm_mappings"))
+        self.add_asm_mappings(cs_pairs, pj(work_dir, "asm_mappings"))
 
         # set toplevel seq_region attribute
-        self.set_toplevel(pj(wd, "set_toplevel"), self.param("not_toplevel_cs"))
+        self.set_toplevel(pj(work_dir, "set_toplevel"), self.param("not_toplevel_cs"))
 
-        # nullify contig version and that in mapping strings
-        self.nullify_ctg_cs_version(pj(wd, "asm_mapping", "nullify_cs_versions"))
-
-        asm_meta = self.from_param("genome_data","assembly")
-        add_cs_tag = self.param("cs_tag_for_ordered")
-        self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"), add_cs_tag)
+        # nullify contig version and update mappings strings accordingly
+        self.nullify_ctg_cs_version(pj(work_dir, "asm_mapping", "nullify_cs_versions"))
 
 
     # STAGES
-    def add_asm_mappings(self, cs_pairs, log_pfx):
-        # nullifies asm_mappings contig versions as well, but don't nullify toplevel
-        # don't add mapping id there is a single CS
-        if cs_pairs is None or len(cs_pairs) < 1:
-            return
-        asm_v = self.asm_name()
-        for pair in cs_pairs:
-            higher, lower = pair.strip().split("-")
-            sql = r'''insert ignore into meta (species_id, meta_key, meta_value) values
-                    (1, "assembly.mapping", "{_higher}:{_v}|{_lower}:{_v}")
-                  ;'''.format(_v = asm_v, _higher = higher, _lower = lower)
-            self.run_sql_req(sql, pj(log_pfx, pair))
-
-
-    def nullify_ctg_cs_version(self, log_pfx):
-        # nullify every cs with rank larger than contig, but don't nullify toplevel ones
-        asm_v = self.asm_name()
-        # get cs_info (and if they have toplevel regions)
-        sql = r'''select cs.coord_system_id as coord_system_id,
-                         cs.name, cs.rank, (tl.coord_system_id is NULL) as no_toplevel
-                    from coord_system cs
-                      left join (
-                        select distinct sr.coord_system_id
-                          from seq_region sr, seq_region_attrib sra, attrib_type at
-                          where at.code = "toplevel"
-                            and sra.attrib_type_id = at.attrib_type_id
-                            and sra.value = 1
-                            and sra.seq_region_id = sr.seq_region_id
-                      ) as tl on tl.coord_system_id = cs.coord_system_id
-                    where cs.version = "{_asm_v}"
-                    order by rank
-              ;'''.format(_asm_v = asm_v)
-        # run_sql
-        toplvl_pfx = pj(log_pfx,"toplvl_info")
-        self.run_sql_req(sql, toplvl_pfx)
-        # load info
-        cs_info = []
-        with open(toplvl_pfx + ".stdout") as f:
-            header = next(f).strip().split("\t")
-            for line in f:
-                cs_info.append(dict(zip(header, line.strip().split())))
-        # choose cs rank threshold to start clearing version from
-        seq_rank = max(map(lambda cs: int(cs["rank"]), cs_info))
-        nullify_cs_version_from = self.param("nullify_cs_version_from")
-        ctg_lst = list(filter(lambda cs: cs["name"] == nullify_cs_version_from, cs_info))
-        clear_thr = ctg_lst and int(ctg_lst[0]["rank"]) or seq_rank
-        clear_lst = [ (cs["coord_system_id"], cs["name"]) for cs in cs_info
-                        if (bool(int(cs["no_toplevel"])) and int(cs["rank"]) >= clear_thr) ]
-        # run sql
-        if clear_lst:
-            clear_pfx = pj(log_pfx, "clear")
-            with open(clear_pfx + ".sql", "w") as clear_sql:
-                for (cs_id, cs_name) in clear_lst:
-                    sql = r'''
-                        update meta set
-                            meta_value=replace(meta_value, "|{_cs_name}:{_asm_v}", "|{_cs_name}")
-                            where meta_key="assembly.mapping";
-                        update coord_system set version = NULL where coord_system_id = {_cs_id};
-                    '''.format(_asm_v = asm_v, _cs_name = cs_name, _cs_id = cs_id)
-                    print(sql, file = clear_sql)
-            self.run_sql_req(clear_pfx + ".sql", clear_pfx, from_file = True)
-
-
     def add_chr_karyotype_rank(self, meta, wd, add_cs_tag = None):
         # get order from  meta["chromosome_display_order"] , omit unmentioned
         #   otherwise get toplevel "chromosome" seq_regions, sort by seq_region_id
@@ -247,67 +227,58 @@ class load_sequence_data(eHive.BaseRunnable):
             self.set_sr_attrib(tag, sr_ids, pj(wd, "sr_attr_set_"+tag))
 
 
-    def set_toplevel(self, log_pfx, ignored_cs = []):
-        # set top_level(6) seq_region_attrib
-        os.makedirs(dirname(log_pfx), exist_ok=True)
-        en_root = self.param_required("ensembl_root_dir")
-        cmd = (r'''{_set_tl} {_db_string} {_ignored_cs} ''' +
-               r'''     > {_log}.stdout 2> {_log}.stderr''').format(
-            _set_tl = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/set_toplevel.pl")),
-            _db_string = self.db_string(),
-            _ignored_cs = " ".join(map(lambda x: "-ignore_coord_system %s" % (x), ignored_cs)),
-            _log = log_pfx,
-        )
-        print("running %s" % (cmd), file = sys.stderr)
-        sp.run(cmd, shell=True, check=True)
-        # remove toplevel attribute for seq_regions that are parts of different seq_regions
-        sql_not_toplevel_list = r'''
-          select distinct a.cmp_seq_region_id, sr_c.name, cs_c.name
-            from assembly a,
-                 seq_region sr_c, seq_region sr_a,
-                 coord_system cs_c, coord_system cs_a
-            where a.cmp_seq_region_id = sr_c.seq_region_id
-              and a.asm_seq_region_id = sr_a.seq_region_id
-              and sr_c.coord_system_id = cs_c.coord_system_id
-              and sr_a.coord_system_id = cs_a.coord_system_id
-              and cs_c.attrib like "%default_version%"
-              and cs_a.attrib like "%default_version%"
-              and sr_c.seq_region_id in (
-                select distinct seq_region_id
-                  from seq_region_attrib
-                  where attrib_type_id = 6 and value = 1
-              )
-        '''
-        # perhaps, make sense to check sr_c.coord_system_id != sr_a.coord_system_id
-        self.run_sql_req(sql_not_toplevel_list, ".".join([log_pfx, "not_toplevel_list"]))
-        # delete wrongly assigned attribs
-        sql_not_toplevel_delete = r'''
-          delete from seq_region_attrib
-            where attrib_type_id = 6 and value = 1
-              and seq_region_id in (
-                select distinct a.cmp_seq_region_id
-                  from assembly a,
-                       seq_region sr_c, seq_region sr_a,
-                       coord_system cs_c, coord_system cs_a
-                  where a.cmp_seq_region_id = sr_c.seq_region_id
-                    and a.asm_seq_region_id = sr_a.seq_region_id
-                    and sr_c.coord_system_id = cs_c.coord_system_id
-                    and sr_a.coord_system_id = cs_a.coord_system_id
-                    and cs_c.attrib like "%default_version%"
-                    and cs_a.attrib like "%default_version%"
-              );
-        '''
-        # perhaps, check sr_c.coord_system_id != sr_a.coord_system_id
-        self.run_sql_req(sql_not_toplevel_delete, ".".join([log_pfx, "not_toplevel_delete"]))
-
-
     def add_sr_attribs(self, meta_file, wd, karyotype_info_tag = None, is_primary_assembly = False):
         if not meta_file:
           return
         os.makedirs(wd, exist_ok=True)
+# ADDED 
+        # get attrib_type maps
+        attribs_map = self.param("sr_attrib_types")
+        attrib_type_codes = self.get_attrib_type_codes(attribs_map) # get possible attrib_type code strings
+        attrib_type_pfx = pj(wd, "attrib_types_from_core")
+        attrib_type_ids = self.get_attrib_type_ids(attrib_type_codes, attrib_type_pfx) # get valid codes to id map
+
+        # get seq_region name or syn to id map
+        syns_out_pfx = pj(wd, "syns_from_core")
+        sr_ids_map = self.get_sr_ids_map(syns_out_pfx)
+
+        # attrib and karyotype storages
+        attrib_storage = [] # (seq_region_id, attrib_type_id, value)
+        karyotype_storage = [] # (seq_region_id, {band_data})
+
+        # iterate through seq_region json and fill attrib and karyotype storage
+        with open(meta_file) as mf:
+            data = json.load(mf)
+            if not isinstance(data, list):
+                data = [ data ]
+            for sr in data:
+              sr_name = sr.get("name"); if not sr_name: continue
+              sr_id = sr_ids_map.get(sr_name); if not sr_id: continue
+
+              # prepare karyotype data
+              if karyotype_info_tag and karyotype_info_tag in sr:
+                # get bands data
+                bands = self.get_karyotype_bands(sr[karyotype_info_tag])
+                for band in bands:
+                  karyotype_storage.append((sr_id, band))
+
+              # fill attrib storage based on attribs_map
+              flat_attribs = self.get_flat_attribs(sr, attribs_map, attrib_type_ids)
+              for (a_id, a_val, a_code, a_json_path) in flat_attribs:
+                # only add coord_system_tag for primary assembly
+                if not is_primary_assembly and a_json_path == 'coord_system_level':
+                  continue
+                attrib_storage.append((sr_id, a_id, a_val))
+
+        # insert attribs from storage
+        self.insert_seq_region_attribs(attrib_storage, pj(wd, "seq_region_attribs_insert"))
+        self.insert_karyotype_bands(karyotype_storage, pj(wd, "karyotype_bands_insert"))
+        return
+        # old
+
+# ADDED END
         
         # find interesting attribs in meta_file
-        attribs_map = self.param("sr_attrib_types")
         interest = frozenset(attribs_map.keys())
         chosen = dict()
         with open(meta_file) as mf:
@@ -315,6 +286,7 @@ class load_sequence_data(eHive.BaseRunnable):
             if not isinstance(data, list):
                 data = [ data ]
             for e in data:
+                # added? TODO: here
                 if interest.intersection(e.keys()):
                     chosen[e["name"]] = [e, -1]
         if len(chosen) <= 0:
@@ -357,6 +329,51 @@ class load_sequence_data(eHive.BaseRunnable):
             )
 
 
+    def get_sr_ids_map(self, syns_out_pfx):
+        pass
+
+
+    def set_sr_attrib(self, attr_type, id_val_lst, log_pfx):
+    # was
+    #    def set_sr_attrib(self, attr_type, id_val_lst, log_pfx, karyotype_info = False):
+    #        if karyotype_info:
+    #            return self.add_karyotype_bands(id_val_lst, log_pfx)
+        # generate sql req for getting attrib_type_id
+        sql_seq_region_attrib = r'''select attrib_type_id from attrib_type
+            where code = "%s"
+        ;''' % (attr_type)
+        self.run_sql_req(sql_seq_region_attrib, log_pfx+"_attrib_type_id")
+        attrib_type_id = None
+        with open(log_pfx+"_attrib_type_id" + ".stdout") as f:
+          for line in f:
+            if line.startswith("attrib_type_id"):
+              continue
+            attrib_type_id = line.strip()
+            break
+        if attrib_type_id is None:
+          raise Exception("No such known attrib type: \"%s\"" % (attr_type))
+
+        # generaate sql req for loading
+        os.makedirs(dirname(log_pfx), exist_ok=True)
+        insert_sql_file = log_pfx + "_insert_attribs.sql"
+        if len(id_val_lst) <= 0:
+            return
+        with open(insert_sql_file, "w") as sql:
+            print("insert ignore into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
+            fst = ""
+            for _sr_id, _val in id_val_lst:
+                if isinstance(_val, bool):
+                    _val = int(_val)
+                if isinstance(_val, str):
+                    _val = '"%s"' % (_val)
+                print ('%s (%s, %s, %s)' % (fst, _sr_id, attrib_type_id, str(_val)), file = sql)
+                fst = ","
+            print(";", file=sql)
+        # run insert sql
+        self.run_sql_req(insert_sql_file, log_pfx, from_file = True)
+
+
+
     def add_karyotype_bands(self, id_val_lst, log_pfx):
         os.makedirs(dirname(log_pfx), exist_ok=True)
         insert_sql_file = log_pfx + "_insert_karyotype_bands.sql"
@@ -387,43 +404,6 @@ class load_sequence_data(eHive.BaseRunnable):
         # run insert sql
         self.run_sql_req(insert_sql_file, log_pfx, from_file = True)
 
-
-    def set_sr_attrib(self, attr_type, id_val_lst, log_pfx, karyotype_info = False):
-        if karyotype_info: 
-            return self.add_karyotype_bands(id_val_lst, log_pfx)
-        # generate sql req for getting attrib_type_id
-        sql_seq_region_attrib = r'''select attrib_type_id from attrib_type
-            where code = "%s"
-        ;''' % (attr_type)
-        self.run_sql_req(sql_seq_region_attrib, log_pfx+"_attrib_type_id")
-        attrib_type_id = None
-        with open(log_pfx+"_attrib_type_id" + ".stdout") as f:
-          for line in f:
-            if line.startswith("attrib_type_id"):
-              continue
-            attrib_type_id = line.strip()
-            break
-        if attrib_type_id is None:
-          raise Exception("No such known attrib type: \"%s\"" % (attr_type))
- 
-        # generaate sql req for loading
-        os.makedirs(dirname(log_pfx), exist_ok=True)
-        insert_sql_file = log_pfx + "_insert_attribs.sql"
-        if len(id_val_lst) <= 0:
-            return
-        with open(insert_sql_file, "w") as sql:
-            print("insert ignore into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
-            fst = ""
-            for _sr_id, _val in id_val_lst:
-                if isinstance(_val, bool):
-                    _val = int(_val)
-                if isinstance(_val, str):
-                    _val = '"%s"' % (_val)
-                print ('%s (%s, %s, %s)' % (fst, _sr_id, attrib_type_id, str(_val)), file = sql)
-                fst = ","
-            print(";", file=sql)
-        # run insert sql
-        self.run_sql_req(insert_sql_file, log_pfx, from_file = True)
 
     def get_db_syns(self, out_pfx):
         # get names, syns from db
@@ -629,68 +609,23 @@ class load_sequence_data(eHive.BaseRunnable):
         return dbs
 
     def unversion_scaffolds(self, cs_rank, logs):
-        # non-versioned syns for contigs, versioned for the rest
+        """
+        Unversion scaffold, remove ".\d$" from seq_region.names if there's a need
+
+        Non-versioned syns for contigs (lower, sequence level), versioned for the rest.
+        """
         seq_cs, max_rank = max([ (c, r) for c, r in cs_rank.items()], key = lambda k: k[1])
         for cs in cs_rank:
             if cs == seq_cs:
+                # for non-sequence level cs, store original name (with version) as "sr_syn_src" synonym
                 xdb = self.param("sr_syn_src")
                 self.copy_sr_name_to_syn(cs, xdb, pj(logs, "cp2syn", cs))
                 self.sr_name_unversion(cs, "seq_region_synonym", "synonym", pj(logs, "unv_srs", cs))
             else:
+                # for sequence-level cs, store original name (with version) as "versioned_sr_syn_src" synonym
                 xdb = self.param("versioned_sr_syn_src")
                 self.copy_sr_name_to_syn(cs, xdb, pj(logs, "cp2syn", cs))
                 self.sr_name_unversion(cs, "seq_region", "name", pj(logs, "unv_sr", cs))
-
-
-    def run_sql_req(self, sql, log_pfx, from_file = False):
-        os.makedirs(dirname(log_pfx), exist_ok=True)
-        en_root = self.param_required("ensembl_root_dir")
-
-        sql_option = r''' -sql '{_sql}' '''.format(_sql = sql)
-        if from_file:
-            sql_option = r''' < '{_sql}' '''.format(_sql = sql)
-
-        cmd = r'''{_dbcmd} -url "{_srv}{_dbname}" {_sql_option} > {_out} 2> {_err}'''.format(
-            _dbcmd = 'perl %s/ensembl-hive/scripts/db_cmd.pl' %(en_root),
-            _srv = self.param("dbsrv_url"),
-            _dbname = self.param("db_name"),
-            _sql_option = sql_option,
-            _out = log_pfx + ".stdout",
-            _err = log_pfx + ".stderr"
-        )
-        print("running %s" % (cmd), file = sys.stderr)
-        return sp.run(cmd, shell=True, check=True)
-
-
-    def add_contig_ena_attrib(self, log_pfx, cs_name = "contig"):
-        # Add ENA attrib for contigs (no sequence_level checks -- just cs name)
-        #   (see ensembl-datacheck/lib/Bio/EnsEMBL/DataCheck/Checks/SeqRegionNamesINSDC.pm)
-        sql = r'''insert into seq_region_attrib (seq_region_id, attrib_type_id, value)
-                select
-                  sr.seq_region_id, at.attrib_type_id, "ENA"
-                from
-                  seq_region sr, coord_system cs, attrib_type at
-                where   sr.coord_system_id = cs.coord_system_id
-                    and cs.name = "%s"
-                    and at.code = "external_db"
-              ;''' % (cs_name)
-        return self.run_sql_req(sql, log_pfx)
-
-
-    def copy_sr_name_to_syn(self, cs, x_db, log_pfx):
-        asm_v = self.asm_name()
-        sql = r'''insert into seq_region_synonym (seq_region_id, synonym, external_db_id)
-                  select
-                      sr.seq_region_id, sr.name, xdb.external_db_id
-                  from
-                     seq_region sr, external_db xdb, coord_system cs
-                  where   xdb.db_name = "%s"
-                      and sr.coord_system_id = cs.coord_system_id
-                      and cs.name = "%s"
-                      and cs.version = "%s"
-                      and sr.name like "%%._"
-                ;''' % (x_db, cs, asm_v)
-        return self.run_sql_req(sql, log_pfx)
 
 
     def sr_name_unversion(self, cs, tbl, fld, log_pfx):
@@ -767,6 +702,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
 
     def load_seq_data(self, fasta, agps, cs_rank, log_pfx):
+        """loads sequence data for various coordinate systems accordingly with their rank"""
         asm_v = self.asm_name()
 
         sequence_rank = max(cs_rank.values())
@@ -788,6 +724,10 @@ class load_sequence_data(eHive.BaseRunnable):
                      cs, rank, pair, asm_v,
                      src_file, log_pfx,
                      loaded_regions = None, seq_level = False):
+        """creates a coord_system and loads sequence or assembly(AGP) data for corresponding seqregions
+
+           doesn't load already seen sequences
+        """
         # NB load_seq_region.pl and load_agp.pl are not failing on parameter errors (0 exit code)
         os.makedirs(dirname(log_pfx), exist_ok=True)
         if seq_level:
@@ -816,6 +756,7 @@ class load_sequence_data(eHive.BaseRunnable):
                     print(line.strip(), file = dst)
 
     def load_seq_region(self, cs, rank, asm_v, src_file, log_pfx, seq_level = False):
+        """ensembl script (load_seq_region.pl) based utility for loading seq_regions FASTA sequences"""
         en_root = self.param_required("ensembl_root_dir")
         cmd = (r'''{_loader} {_db_string} -coord_system_version {_asm_v} -default_version ''' +
                r'''    -rank {_rank} -coord_system_name {_cs} {_sl_flag} -{_tag}_file {_file}''' +
@@ -835,6 +776,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
 
     def load_agp(self, pair, asm_v, src_file, log_pfx):
+        """ensembl script (load_agp.pl) based utility for loading seq_regions assembly data (AGPs)"""
         en_root = self.param_required("ensembl_root_dir")
         (asm_n, cmp_n) = pair.strip().split("-")
         cmd = (r'''{_loader} {_db_string} -assembled_version {_asm_v} ''' +
@@ -894,18 +836,6 @@ class load_sequence_data(eHive.BaseRunnable):
         return writes
 
 
-    def remove_IUPAC(self, from_file, to_file):
-        IUPAC = self.param("IUPAC")
-        os.makedirs(dirname(to_file), exist_ok=True)
-        cmd = r'''{_cat} {_file} | sed -r '/^[^>]/ {{ s/[{_IUPAC}]/N/g; s/{_iupac}/n/g }}' > {_out}'''.format(
-            _cat = self.is_gz(from_file) and "zcat" or "cat",
-            _file = from_file,
-            _IUPAC = IUPAC.upper(),
-            _iupac = IUPAC.lower(),
-            _out = to_file
-        )
-        print("running %s" % (cmd), file = sys.stderr)
-        return sp.run(cmd, shell=True, check=True)
 
 
     # UTILS
@@ -928,8 +858,229 @@ class load_sequence_data(eHive.BaseRunnable):
                 raise Exception("Missing required %s data: %s" % (param , key))
         return data[key]
 
-
     def param_bool(self, param):
         val = self.param(param)
         return bool(val) and "0" != val
+
+
+    ## Utilities using external scripts
+    def remove_IUPAC(self, from_file, to_file):
+        """remove non-valid symbols from FASTA file (using sed) ans store the result in a different location"""
+        IUPAC = self.param("IUPAC")
+        os.makedirs(dirname(to_file), exist_ok=True)
+        cmd = r'''{_cat} {_file} | sed -r '/^[^>]/ {{ s/[{_IUPAC}]/N/g; s/{_iupac}/n/g }}' > {_out}'''.format(
+            _cat = self.is_gz(from_file) and "zcat" or "cat",
+            _file = from_file,
+            _IUPAC = IUPAC.upper(),
+            _iupac = IUPAC.lower(),
+            _out = to_file
+        )
+        print("running %s" % (cmd), file = sys.stderr)
+        return sp.run(cmd, shell=True, check=True)
+
+    def set_toplevel(self, log_pfx, ignored_cs = []):
+        """
+        Set toplevel(6) seq_region_attrib using ensembl script.
+
+        Uses set_toplevel.pl ensembl script.
+        """
+        # set top_level(6) seq_region_attrib
+        os.makedirs(dirname(log_pfx), exist_ok=True)
+        en_root = self.param_required("ensembl_root_dir")
+        cmd = (r'''{_set_tl} {_db_string} {_ignored_cs} ''' +
+               r'''     > {_log}.stdout 2> {_log}.stderr''').format(
+            _set_tl = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/set_toplevel.pl")),
+            _db_string = self.db_string(),
+            _ignored_cs = " ".join(map(lambda x: "-ignore_coord_system %s" % (x), ignored_cs)),
+            _log = log_pfx,
+        )
+        print("running %s" % (cmd), file = sys.stderr)
+        sp.run(cmd, shell=True, check=True)
+
+        # remove toplevel attribute for seq_regions that are components 
+        self.remove_components_from_toplevel(log_pfx)
+
+
+    ## SQL executor and utilities using plain SQL
+    def run_sql_req(self, sql, log_pfx, from_file = False):
+        os.makedirs(dirname(log_pfx), exist_ok=True)
+        en_root = self.param_required("ensembl_root_dir")
+
+        sql_option = r''' -sql '{_sql}' '''.format(_sql = sql)
+        if from_file:
+            sql_option = r''' < '{_sql}' '''.format(_sql = sql)
+
+        cmd = r'''{_dbcmd} -url "{_srv}{_dbname}" {_sql_option} > {_out} 2> {_err}'''.format(
+            _dbcmd = 'perl %s/ensembl-hive/scripts/db_cmd.pl' %(en_root),
+            _srv = self.param("dbsrv_url"),
+            _dbname = self.param("db_name"),
+            _sql_option = sql_option,
+            _out = log_pfx + ".stdout",
+            _err = log_pfx + ".stderr"
+        )
+        print("running %s" % (cmd), file = sys.stderr)
+        return sp.run(cmd, shell=True, check=True)
+
+
+    def add_contig_ena_attrib(self, log_pfx, cs_name = "contig"):
+        """
+        Add ENA attrib for contigs if their names are ENA accessions
+
+        Nno sequence_level checks are used -- just cs name.
+        See ensembl-datacheck/lib/Bio/EnsEMBL/DataCheck/Checks/SeqRegionNamesINSDC.pm .
+        SQL code.
+        """
+        sql = r'''insert into seq_region_attrib (seq_region_id, attrib_type_id, value)
+                select
+                  sr.seq_region_id, at.attrib_type_id, "ENA"
+                from
+                  seq_region sr, coord_system cs, attrib_type at
+                where   sr.coord_system_id = cs.coord_system_id
+                    and cs.name = "%s"
+                    and at.code = "external_db"
+              ;''' % (cs_name)
+        return self.run_sql_req(sql, log_pfx)
+
+
+    def copy_sr_name_to_syn(self, cs, x_db, log_pfx):
+        """
+        Store original seq_region names as seq_region_synonym
+
+        Store original seq_region names (from a given cood_systen, "cs" param) as seq_region_synonyms (using "x_db" external source name)
+        SQL code.
+        """
+        asm_v = self.asm_name()
+        sql = r'''insert into seq_region_synonym (seq_region_id, synonym, external_db_id)
+                  select
+                      sr.seq_region_id, sr.name, xdb.external_db_id
+                  from
+                     seq_region sr, external_db xdb, coord_system cs
+                  where   xdb.db_name = "%s"
+                      and sr.coord_system_id = cs.coord_system_id
+                      and cs.name = "%s"
+                      and cs.version = "%s"
+                      and sr.name like "%%._"
+                ;''' % (x_db, cs, asm_v)
+        return self.run_sql_req(sql, log_pfx)
+
+
+    def add_asm_mappings(self, cs_pairs, log_pfx):
+        """
+        Adds "assembly.mapping" strings to meta table.
+
+        Nullifies asm_mappings contig versions as well, but don't nullify toplevel
+        Doesn't add mapping id there is a single CS
+        SQL code.
+        """
+        if cs_pairs is None or len(cs_pairs) < 1:
+            return
+        asm_v = self.asm_name()
+        for pair in cs_pairs:
+            higher, lower = pair.strip().split("-")
+            sql = r'''insert ignore into meta (species_id, meta_key, meta_value) values
+                    (1, "assembly.mapping", "{_higher}:{_v}|{_lower}:{_v}")
+                  ;'''.format(_v = asm_v, _higher = higher, _lower = lower)
+            self.run_sql_req(sql, pj(log_pfx, pair))
+
+    def remove_components_from_toplevel(self, log_pfx):
+        """
+        Remove toplevel attribute for seq_regions that are "components" (parts of different seq_regions).
+
+        SQL code.
+        """
+
+        # get list of seq_regions that are components
+        sql_not_toplevel_list = r'''
+          select distinct a.cmp_seq_region_id, sr_c.name, cs_c.name
+            from assembly a,
+                 seq_region sr_c, seq_region sr_a,
+                 coord_system cs_c, coord_system cs_a
+            where a.cmp_seq_region_id = sr_c.seq_region_id
+              and a.asm_seq_region_id = sr_a.seq_region_id
+              and sr_c.coord_system_id = cs_c.coord_system_id
+              and sr_a.coord_system_id = cs_a.coord_system_id
+              and cs_c.attrib like "%default_version%"
+              and cs_a.attrib like "%default_version%"
+              and sr_c.seq_region_id in (
+                select distinct seq_region_id
+                  from seq_region_attrib
+                  where attrib_type_id = 6 and value = 1
+              )
+        '''
+        # perhaps, make sense to check sr_c.coord_system_id != sr_a.coord_system_id
+        self.run_sql_req(sql_not_toplevel_list, ".".join([log_pfx, "not_toplevel_list"]))
+
+        # delete wrongly assigned attribs
+        sql_not_toplevel_delete = r'''
+          delete from seq_region_attrib
+            where attrib_type_id = 6 and value = 1
+              and seq_region_id in (
+                select distinct a.cmp_seq_region_id
+                  from assembly a,
+                       seq_region sr_c, seq_region sr_a,
+                       coord_system cs_c, coord_system cs_a
+                  where a.cmp_seq_region_id = sr_c.seq_region_id
+                    and a.asm_seq_region_id = sr_a.seq_region_id
+                    and sr_c.coord_system_id = cs_c.coord_system_id
+                    and sr_a.coord_system_id = cs_a.coord_system_id
+                    and cs_c.attrib like "%default_version%"
+                    and cs_a.attrib like "%default_version%"
+              );
+        '''
+        # perhaps, check sr_c.coord_system_id != sr_a.coord_system_id
+        self.run_sql_req(sql_not_toplevel_delete, ".".join([log_pfx, "not_toplevel_delete"]))
+
+
+    def nullify_ctg_cs_version(self, log_pfx):
+        """
+        Nullify every CS version with rank larger than that of "contig", but don't nullify toplevel ones
+        """
+        asm_v = self.asm_name()
+        # get cs_info (and if they have toplevel regions)
+        sql = r'''select cs.coord_system_id as coord_system_id,
+                         cs.name, cs.rank, (tl.coord_system_id is NULL) as no_toplevel
+                    from coord_system cs
+                      left join (
+                        select distinct sr.coord_system_id
+                          from seq_region sr, seq_region_attrib sra, attrib_type at
+                          where at.code = "toplevel"
+                            and sra.attrib_type_id = at.attrib_type_id
+                            and sra.value = 1
+                            and sra.seq_region_id = sr.seq_region_id
+                      ) as tl on tl.coord_system_id = cs.coord_system_id
+                    where cs.version = "{_asm_v}"
+                    order by rank
+              ;'''.format(_asm_v = asm_v)
+        # run_sql
+        toplvl_pfx = pj(log_pfx,"toplvl_info")
+        self.run_sql_req(sql, toplvl_pfx)
+        # load info
+        cs_info = []
+        with open(toplvl_pfx + ".stdout") as f:
+            header = next(f).strip().split("\t")
+            for line in f:
+                cs_info.append(dict(zip(header, line.strip().split())))
+        # choose cs rank threshold to start clearing version from
+        seq_rank = max(map(lambda cs: int(cs["rank"]), cs_info))
+        nullify_cs_version_from = self.param("nullify_cs_version_from")
+        ctg_lst = list(filter(lambda cs: cs["name"] == nullify_cs_version_from, cs_info))
+        clear_thr = ctg_lst and int(ctg_lst[0]["rank"]) or seq_rank
+        clear_lst = [ (cs["coord_system_id"], cs["name"]) for cs in cs_info
+                        if (bool(int(cs["no_toplevel"])) and int(cs["rank"]) >= clear_thr) ]
+        # run sql
+        if clear_lst:
+            clear_pfx = pj(log_pfx, "clear")
+            with open(clear_pfx + ".sql", "w") as clear_sql:
+                for (cs_id, cs_name) in clear_lst:
+                    sql = r'''
+                        update meta set
+                            meta_value=replace(meta_value, "|{_cs_name}:{_asm_v}", "|{_cs_name}")
+                            where meta_key="assembly.mapping";
+                        update coord_system set version = NULL where coord_system_id = {_cs_id};
+                    '''.format(_asm_v = asm_v, _cs_name = cs_name, _cs_id = cs_id)
+                    print(sql, file = clear_sql)
+            self.run_sql_req(clear_pfx + ".sql", clear_pfx, from_file = True)
+
+
+
 
