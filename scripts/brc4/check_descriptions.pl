@@ -29,18 +29,25 @@ sub main {
   $registry->load_all($opt{registry}, 1);
 
   my @header = qw(
-    build
-    component
-    orgabbrev
-    species
-    genes
-    tr_transferable
-    tr_putative
-    tr_untransferable  
+  build
+  component
+  orgabbrev
+  species
+  genes
+  genes_desc
+  genes_xref
+  tr_transferable
+  tr_putative
+  tr_untransferable  
+  );
+  if ($opt{translations}) {
+    my @tl_header = qw(
     tl_transferable
     tl_putative
     tl_untransferable  
-  );
+    );
+    @header = (@header, @tl_header);
+  }
   say("#" . join("\t", @header));
 
   my @all_species = ($opt{species}) || @{$registry->get_all_species()};
@@ -64,15 +71,22 @@ sub main {
       $org,
       $species,
       $count->{gene_total},
+      $count->{gene_full},
+      $count->{gene_xref},
 
       $count->{empty_tr_transferable},
       $count->{empty_tr_putative},
       $count->{empty_tr_untransferable},
-
-      $count->{empty_tl_transferable},
-      $count->{empty_tl_putative},
-      $count->{empty_tl_untransferable},
     );
+
+    if ($opt{translations}) {
+      my @tl_line = (
+        $count->{empty_tl_transferable},
+        $count->{empty_tl_putative},
+        $count->{empty_tl_untransferable},
+      );
+      @line = (@line, @tl_line);
+    }
     say join("\t", @line);    
   }
 }
@@ -95,7 +109,7 @@ sub get_meta_value {
 }
 
 sub check_genes {
-  my ($registry, $species) = @_;
+  my ($registry, $species, $check_translations) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
   my $dbname = $ga->dbc->dbname;
@@ -104,11 +118,8 @@ sub check_genes {
   
   my %count = (
     empty_tr_putative => 0,
-    empty_tl_putative => 0,
     empty_tr_transferable => 0,
     empty_tr_untransferable => 0,
-    empty_tl_transferable => 0,
-    empty_tl_untransferable => 0,
     gene_and_transcript_empty => 0,
     all_empty => 0,
     gene_full => 0,
@@ -116,6 +127,15 @@ sub check_genes {
     gene_empty => 0,
     gene_total => 0,
   );
+
+  if ($check_translations) {
+    my %tl_count = (
+    empty_tl_putative => 0,
+    empty_tl_transferable => 0,
+    empty_tl_untransferable => 0,
+    );
+    %count = (%count, %tl_count);
+  }
   
   # To check some names are not highly repeated (e.g. hypothetical protein)
   my %tname;
@@ -145,26 +165,31 @@ sub check_genes {
       
       # Some genomes have the same description for different transcripts in the same gene, but with ", variant" added
       $cur_tdesc =~ s/,( transcript)? variant( \d+| [A-Z]\d*)?$// if $cur_tdesc;
+      my $cur_check = check_description_status($cur_tdesc);
+      if ($cur_check->{putative}) {
+        $cur_tdesc = "hypothetical protein";
+      }
 
       if (not $tdesc) {
         $tdesc = $cur_tdesc;
-      } elsif ($cur_tdesc and $tdesc ne $cur_tdesc) {
+      } elsif ($cur_tdesc and lc($tdesc) ne lc($cur_tdesc)) {
         $logger->info("Gene $stable_id has several transcript descriptions:\n\t'$tdesc'\n\t'".$cur_tdesc ."'");
         $count{empty_tr_untransferable}++;
         next GENE;
       }
+      
+      if ($check_translations) {
+        # Translation product from Uniprot
+        my $cur_tldesc = get_translation_product($transc);
         
-      # Translation product from Uniprot
-      my $cur_tldesc = get_translation_product($transc);
-      
-      if (not $tldesc) {
-        $tldesc = $cur_tldesc;
-      } elsif ($cur_tldesc and $tldesc ne $cur_tldesc) {
-        $logger->info("Gene $stable_id has several translation products:\n\t'$tldesc'\n\t'".$cur_tldesc ."'");
-        $count{empty_tl_untransferable}++;
-        next GENE;
+        if (not $tldesc) {
+          $tldesc = $cur_tldesc;
+        } elsif ($cur_tldesc and lc($tldesc) ne lc($cur_tldesc)) {
+          $logger->info("Gene $stable_id has several translation products:\n\t'$tldesc'\n\t'".$cur_tldesc ."'");
+          $count{empty_tl_untransferable}++;
+          next GENE;
+        }
       }
-      
     }
     
     if ($tdesc) {
@@ -176,7 +201,7 @@ sub check_genes {
       } else {
         $count{empty_tr_transferable}++;
       }
-    } elsif ($tldesc) {
+    } elsif ($check_translations and $tldesc) {
       $tlname{$tldesc}++;
       my $tl_status = check_description_status($tldesc);
       
@@ -244,7 +269,7 @@ sub check_description_status {
   if ($desc) {
     if ($desc =~ /\[Source:/) {
       $status{xref} = 1;
-    } elsif ($desc =~ /(conserved)? *(hypothetical|uncharacterized) protein(, conserved)?|protein of unknown function/i) {
+    } elsif ($desc =~ /(conserved)? *(hypothetical|uncharacterized|predicted|putative)( *conserved)?[ _]+protein(, conserved)?|protein of unknown function/i) {
       $status{putative} = 1;
     } else {
       $status{full} = 1;
@@ -272,6 +297,7 @@ sub usage {
     Optional:
     --species <str>   : production_name of one species
     --component <str> : restrict check to species of this component
+    --translations    : check how many genes without descriptions from transcript could use a translation Uniprot xref
     
     --help            : show this help message
     --verbose         : show detailed progress
@@ -287,6 +313,7 @@ sub opt_check {
     "registry=s",
     "species=s",
     "component=s",
+    "translations",
     "help",
     "verbose",
     "debug",
