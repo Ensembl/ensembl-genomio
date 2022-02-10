@@ -52,11 +52,13 @@ class load_sequence_data(eHive.BaseRunnable):
             #   (see add_chr_karyotype_rank definition below )
             'cs_tag_for_ordered' : None,
 
-            # BRC4 compatibility mode; if on, "(EBI|BRC4)_seq_region_name" seq_region_attributes are added
+            # BRC4 compatibility mode; if on, "(EBI|BRC4)_seq_region_name" seq_region_attributes are added.
+            #   Blocked by the "swap_gcf_gca" option. In this case insertion should be done on later pipeline stage after seq_region name swapping.
             'brc4_mode' : True,
 
-            # whether to use RefSeq names as additional seq_region synonyms (if available) or not (see add_sr_synonyms definition below)
-            #  does not swap anything actually, just loads synonyms to be used by a later "swapping" stage
+            # Whether to use RefSeq names as additional seq_region synonyms (if available) or not (see add_sr_synonyms definition below)
+            #  Does not swap anything actually, just loads synonyms to be used by a later "swapping" stage
+            #  Disables BRC4 compatibilty mode (see the "brc4_mode" option comment).
             'swap_gcf_gca' : False,
 
             # list of coord systems used in "-ignore_coord_system" options of the "ensembl-analysis/scripts/assembly_loading/set_toplevel.pl" script 
@@ -103,7 +105,7 @@ class load_sequence_data(eHive.BaseRunnable):
         seq_region_map = self.load_map_from_core_db("seq_region",  ["name", "seq_region_id"], work_dir) # for seq_region
 
         # update synonyms and seq_region_attribs
-        unversion_scaffolds = self.param("unversion_scaffolds")
+        unversion = self.param("unversion_scaffolds")
         is_primary_assembly = self.from_param("manifest_data", "agp", not_throw = True) is None
         seq_region_file = self.from_param("manifest_data", "seq_region", not_throw = True)
 
@@ -112,16 +114,24 @@ class load_sequence_data(eHive.BaseRunnable):
                              seq_region_map,
                              external_db_map,
                              pj(work_dir, "seq_region_syns"),
-                             unversion = unversion_scaffolds)
+                             unversion = unversion)
 
-        #   add seq_region EBI and BRC4 names
-        if self.param("brc4_mode"):
-          self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversion_scaffolds)
+        #   add seq_region attributes
+        self.add_sr_attribs(seq_region_file, pj(work_dir, "seq_region_attr"), karyotype_info_tag = "karyotype_bands", is_primary_assembly = is_primary_assembly)
 
-        #   add seq_region attributes and karyotype info
-        self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), karyotype_info_tag = "karyotype_bands", is_primary_assembly = is_primary_assembly)
+        #   add seq_region EBI and BRC4 name attributes in the "BRC4 mode"
+        #     do not add if preparing to swap RefSeq and GeneBank ids; in this case attributes to be added at a later stage in pipeline
+        #     (easier to insert then to update)
+        if self.param("brc4_mode") and not self.param("swap_gcf_gca"):
+            self.add_sr_ebi_brc4_names(seq_region_file,
+                                       seq_region_map,
+                                       attrib_type_map,
+                                       pj(work_dir, "seq_region_ebi_brc4_name"),
+                                       unversion = unversion)
+
 
         # add karyotyope bands data and karyotype ranks attributes
+        # add karyotype info
 
         #   add karyotype ranks attributes
         asm_meta = self.from_param("genome_data","assembly")
@@ -194,7 +204,7 @@ class load_sequence_data(eHive.BaseRunnable):
         Add seq_region_synonym from the schema/seq_region_schema.json compatible meta data file.
         Merge with the already exinsting ones in the db.
         If unversion is true:
-          * the unversioned synonym would be used to get the seq_region_id from "seq_region_map".
+          * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
           * the unversioned synonyms from the unversionable_sources_set will be added as well as the original ones
 
         Too close to the DB schema.
@@ -226,18 +236,8 @@ class load_sequence_data(eHive.BaseRunnable):
             seq_regions = list(json.load(in_file))
             for seq_region in filter(lambda sr: "synonyms" in sr, seq_regions):
                 # iterate through all seq_regions having "synonyms" 
-
-                #   get seq_region_id (perhaps, by using unversioned name)
-                seq_region_name = seq_region["name"]
-                seq_region_id = seq_region_map.get(seq_region_name, None)
-                if seq_region_id is None and unversion:
-                    # try to get seq_region_id for the unversioned name
-                    unversioned_name = re.sub(r"\.\d+$", "", seq_region_name)
-                    seq_region_id = seq_region_map.get(unversioned_name, None)
-
-                # oops, we don't know such seq_region name
-                if seq_region_id is None:
-                    raise Exception(f"Not able to find seq_region for '{seq_region_name}'")
+                seq_region_name, seq_region_id, _ = \
+                    self.name_and_id_from_seq_region_item(seq_region, try_unversion = unversion)
 
                 # fill synonyms_from_json list of trios
                 for synonym_item in list(seq_region["synonyms"]):
@@ -265,7 +265,66 @@ class load_sequence_data(eHive.BaseRunnable):
                         synonyms_from_json.append( (seq_region_id, synonym_name, ensembl_internal_synonym_ext_db_id) )
 
         # run insertion SQL
-        self.insert_new_seq_region_synonyms_to_db(synonyms_from_json, pj(work_dir, "new_seq_region_synonyms"))
+        self.insert_to_db(
+            synonyms_from_json,
+            "seq_region_synonym",
+            ["seq_region_id", "synonym", "external_db_id"],
+            pj(work_dir, "new_seq_region_synonyms"),
+            ignore = True
+        )
+
+
+    def add_sr_ebi_brc4_names(self,
+                              seq_region_file: str,
+                              seq_region_map: dict,
+                              attrib_type_map: dict,
+                              work_dir: str,
+                              unversion: bool = False):
+        """
+        Add "(EBI|BRC4)_seq_region_name" seq_region_attrib(s) either from the seq_region_file meta data file, or from original seq_egion names.
+
+        Add "(EBI|BRC4)_seq_region_name" seq_region_synonym from the schema/seq_region_schema.json compatible meta data file
+          or from the original seq_region_names.
+
+        If unversion is true:
+          * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
+
+        Too close to the DB schema.
+        """
+        os.makedirs(work_dir, exist_ok=True)
+
+        # return if there's nothing to add
+        if not seq_region_file: return
+
+        # technical / optimization. get atttib_type_id(s) for "(EBI|BRC4)_seq_region_name"
+        tagged_sr_name_attrib_id = {
+            tag : self.id_from_map_or_die(f"{tag}_seq_region_name", attrib_type_map, "attrib_type_map") for tag in ["EBI", "BRC4"]
+        }
+
+        # load BRC4/EBI name from seq_region file
+        brc4_ebi_name_attrib_trios = []
+        with open(seq_region_file) as in_file:
+            seq_regions = list(json.load(in_file))
+            for seq_region in seq_regions:
+                # get seq_region_id (perhaps, by using unversioned name)
+                seq_region_name, seq_region_id, unversioned_name = \
+                    self.name_and_id_from_seq_region_item(seq_region, try_unversion = unversion)
+                # append attribs to the brc4_ebi_name_attrib_trios list
+                for tag in ["BRC4", "EBI"]:
+                    attrib_name = f"{tag}_seq_region_name"
+                    attrib_id = tagged_sr_name_attrib_id[tag]
+                    value = seq_region.get(attrib_name, seq_region_name)
+                    brc4_ebi_name_attrib_trios.append( (seq_region_id, attrib_id, value) )
+
+        # run insertion SQL
+        self.insert_to_db(
+            brc4_ebi_name_attrib_trios,
+            "seq_region_attrib",
+            ["seq_region_id", "attrib_type_id", "value"],
+            pj(work_dir, "brc4_ebi_seq_region_synonyms"),
+            ignore = True
+        )
+
 
 
     # STAGES
@@ -512,51 +571,6 @@ class load_sequence_data(eHive.BaseRunnable):
 
 
 
-    def add_sr_ebi_brc4_names(self, meta_file, wd, unversioned = False):
-        os.makedirs(wd, exist_ok=True)
-        ebi_brc4_pfx = pj(wd, "ebi_brc4_name")
-
-        # load brc4 name from file
-        ad_hoc_names = defaultdict(dict)
-        if meta_file:
-            with open(meta_file) as mf:
-                data = json.load(mf)
-                if not isinstance(data, list):
-                    data = [ data ]
-                for e in data:
-                    name = e["name"]
-                    for tag in ["BRC4", "EBI"]:
-                        attrib_name = "%s_seq_region_name" % tag
-                        if attrib_name in e:
-                            ad_hoc_names[name][tag] = e[attrib_name]
-                        else:
-                            ad_hoc_names[name][tag] = name
-
-        # Load seq_regions from db
-        seq_region_ids = self.___get_db_seq_region_ids(ebi_brc4_pfx) # use seq_region_map
-        # Get EBI and BRC4 attrib ids
-        attrib_ids = { tag : self.___get_db_attrib_id("%s_seq_region_name" % tag, ebi_brc4_pfx+"_"+tag) for tag in ["BRC4", "EBI"] }
-        # use map here
-
-        # generate sql req for loading
-        insert_sql_file = pj(wd, "insert_brc4_name.sql")
-        with open(insert_sql_file, "w") as sql:
-            print("insert into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
-            lines = []
-            for seq_name in ad_hoc_names:
-                if seq_name in seq_region_ids:
-                    seq_region_id = seq_region_ids[seq_name]
-                    for tag, adname in ad_hoc_names[seq_name].items():
-                        lines.append('(%s, %s, "%s")' %(seq_region_id, attrib_ids[tag], adname))
-                else:
-                    raise Exception("There is no seq_region named '%s'" % (seq_name))
-            print (",\n".join(lines) + ";", file = sql)
-
-        # run insert sql
-        self.run_sql_req(insert_sql_file, pj(wd, "insert_brc4_name"), from_file = True)
-
-
-
 
     def unversion_scaffolds(self, cs_rank, logs):
         """
@@ -794,6 +808,28 @@ class load_sequence_data(eHive.BaseRunnable):
                 (key, val) = line.strip().split("\t")
                 data[key] = val
         return data
+
+
+    def name_and_id_from_seq_region_item(self, seq_region_item: dict, seq_region_map: dict, try_unversion: bool = False, throw_missing: bool = True) -> (str, str, str):
+        """
+        Get (seq_region_name, seq_region_id, unversioned_name) from seq_region_item struct(dict)
+
+        Gets unversioned_name only if "try_unversion" is True.
+        Throws exception if not able to get seq_region_id from "seq_region_map" and "throw_missing" is true.
+        """
+        #   get seq_region_id (perhaps, by using unversioned name)
+        seq_region_name = seq_region["name"]
+        seq_region_id = seq_region_map.get(seq_region_name, None)
+        if seq_region_id is None and unversion:
+        # try to get seq_region_id for the unversioned name
+            unversioned_name = re.sub(r"\.\d+$", "", seq_region_name)
+            seq_region_id = seq_region_map.get(unversioned_name, "")
+
+       # oops, we don't know such seq_region name
+       if not seq_region_id and throw_missing:
+           raise Exception(f"Not able to find seq_region for '{seq_region_name}'")
+
+       return (seq_region_name, seq_region_id, unversioned_name)
 
 
     def id_from_map_or_die(self, key: str, map_dict: dict, name_for_panic):
@@ -1138,23 +1174,35 @@ class load_sequence_data(eHive.BaseRunnable):
         return syn_trios
 
 
-    def insert_new_seq_region_synonyms_to_db(self, new_synonyms_trios: list, work_dir: str):
+    def insert_to_db(
+            self,
+            list_of_tuples: list,
+            table_name: str,
+            col_names: list,
+            work_dir: str,
+            ignore: bool = True
+        )
         """
-        Insert into the core db's seq_region_synonyms from the list of [ (seq_region_id, synonym, external_db_id)... ] trios.
+        Insert into the core db's {table_name} tuples from {list_of_tuples} as col_names.
 
         SQL code
         """
         # return if nothing to do
-        if not new_synonyms_trios: return
+        if not list_of_tuples: return
+
+        # prepare request parts
+        ignore_str = ignore and "IGNORE" or ""
+        cols_str = ", ".join(col_names)
 
         # generate file with the insert SQL command
-        insert_sql_file = pj(work_dir, "insert_syns.sql")
-
+        insert_sql_file = pj(work_dir, "insert.sql")
         with open(insert_sql_file, "w") as sql:
-            print("INSERT IGNORE INTO seq_region_synonym (seq_region_id, synonym, external_db_id) VALUES", file=sql)
+            print("INSERT {ignore_str} INTO {table_name} ({col_names}) VALUES", file=sql)
             values_sep = ""
-            for trio in new_synonyms_trios:
-                print(f"{values_sep} ({trio[0]}, {trio[1]}, {trio[2]})", file = sql)
+            for tpl in list_of_tuple:
+                tpl_str = ", ".join(map v: str(v), tpl)
+                print(f"{values_sep}({tpl_str})", file = sql)
+                values_sep = ", "
             print(";", file=sql)
 
         # run insert SQL from file
