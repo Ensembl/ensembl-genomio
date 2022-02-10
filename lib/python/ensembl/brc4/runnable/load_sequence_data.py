@@ -44,6 +44,7 @@ class load_sequence_data(eHive.BaseRunnable):
             # default coord_system name for single-level (no AGPs assemblies)
             'noagp_cs_name_default' : 'primary_assembly',
 
+            # file for additional mapping of the synonym sources to the external_db (ensembl), as used by "get_external_db_mapping" function below
             'external_db_map' : None,
 
             # set "coord_system_tag" seq_region attribute to this value if there's a corresponding "chromosome_display_order" list in genome.json metadata
@@ -107,7 +108,11 @@ class load_sequence_data(eHive.BaseRunnable):
         seq_region_file = self.from_param("manifest_data", "seq_region", not_throw = True)
 
         #   add seq_region synonyms
-        self.add_sr_synonyms(seq_region_file, seq_region_map, pj(work_dir, "seq_region_syns"), unversion_scaffolds)
+        self.add_sr_synonyms(seq_region_file,
+                             seq_region_map,
+                             external_db_map,
+                             pj(work_dir, "seq_region_syns"),
+                             unversion = unversion_scaffolds)
 
         #   add seq_region EBI and BRC4 names
         if self.param("brc4_mode"):
@@ -176,98 +181,91 @@ class load_sequence_data(eHive.BaseRunnable):
         self.nullify_ctg_cs_version(pj(work_dir, "asm_mapping", "nullify_cs_versions"))
 
 
-    def add_sr_synonyms(self, seq_region_file: str, seq_region_map: dict, wd: str, unversioned: bool = False):
+    def add_sr_synonyms(self,
+                        seq_region_file: str,
+                        seq_region_map: dict,
+                        external_db_map: dict,
+                        work_dir: str,
+                        unversion: bool = False,
+                        unversionable_sources_set: frozenset = frozenset(["INSDC", "RefSeq"])):
         """
         Add seq_region_synonym from the seq_region_file meta data file.
 
         Add seq_region_synonym from the schema/seq_region_schema.json compatible meta data file.
         Merge with the already exinsting ones in the db.
-        """
-        os.makedirs(wd, exist_ok=True)
+        If unversion is true:
+          * the unversioned synonym would be used to get the seq_region_id from "seq_region_map".
+          * the unversioned synonyms from the unversionable_sources_set will be added as well as the original ones
 
-        # load seq_region_synonyms from json
+        Too close to the DB schema.
+        """
+        os.makedirs(work_dir, exist_ok=True)
+
+        # return if there's nothing to add
+        if not seq_region_file: return
 
         # get seq_region ids, names, syns from db
-        synonyms_trios_db = self.load_seq_region_synonyms_trios_from_core_db(pj(wd, "syns_from_core"))
+        synonyms_trios_db = self.load_seq_region_synonyms_trios_from_core_db(pj(work_dir, "syns_from_core"))
 
         # form set of synonyms already present in db
         synonyms_in_db = frozenset( [trio[2] for trio in synonyms_trios_db if trio[2] != "NULL"] )
 
+        # subset of sources to use the allowed the unversion synonyms
+        unversionable_sources = unversion and unversionable_sources_set or frozenset()
+
+        # technical / optimization. get external_db_id for "ensembl_internal_synonym"
+        ensembl_internal_synonym_ext_db_id = self.id_from_map_or_die("ensembl_internal_synonym", external_db_map, "external_db_map")
+
+        # get dict for additional mapping for sources to external_db names if there's one specified by "external_db_map" module param
+        #   not to be confused with the external_db_map function parameter above
+        additional_sources_mapping = self.get_external_db_mapping()
+
         # load synonyms from the json file
+        synonyms_from_json = [] # [ (seq_region_id, synonym, external_db_id)... ] list of trios for inserting into db 
+        with open(seq_region_file) as in_file:
+            seq_regions = list(json.load(in_file))
+            for seq_region in filter(lambda sr: "synonyms" in sr, seq_regions):
+                # iterate through all seq_regions having "synonyms" 
 
-        swap_gcf_gca = self.param("swap_gcf_gca")
-        preferred_sources = frozenset(["INSDC"])
-        if swap_gcf_gca:
-          preferred_sources = frozenset(["INSDC", "RefSeq"])
-        new_syns = dict()
-        if meta_file:
-            with open(seq_region_file) as mf:
-                data = json.load(mf)
-                if not isinstance(data, list):
-                    data = [ data ]
-                for e in data:
-                    if "synonyms" not in e:
-                       continue
-                    # do we need unversioned syn as well???
-                    # Nov 2019: no, we need explicit list
-                    # Jun 2020: yes, but only for the preferred sources (GenBank and RefSeq)
-                    es = []
-                    for s in e["synonyms"]:
-                      # load INSDC and RefSeq synonyms
-                      nm = s["name"]
-                      unv_nm = nm
-                      if s["source"] in preferred_sources:
-                        unv_nm = re.sub(r"\.\d+$", "", nm)
-                        es.append(s)
-                      else:
-                        if nm not in seen_syns: 
-                          es.append(s) 
-                      if unv_nm != nm and unv_nm not in seen_syns:
-                        es.append({"source" : "ensembl_internal_synonym", "name" : unv_nm})
-                      #
-                    if len(es) <= 0:
-                        continue
-                    en = e["name"]
-                    eid = seq_region_map.get(en, None) #en in sr_ids and sr_ids[en] or None
-                    if unversioned and eid is None:
-                        if en[-2] == ".":
-                            en = re.sub(r"\.\d+$", "", en)
-                            #eid = en in sr_ids and sr_ids[en] or None
-                            eid = seq_region_map.get(en, None)
-                    if eid is None:
-                        raise Exception("Not able to find seq_region for '%s'" % (e["name"]))
-                    new_syns[eid] = es
+                #   get seq_region_id (perhaps, by using unversioned name)
+                seq_region_name = seq_region["name"]
+                seq_region_id = seq_region_map.get(seq_region_name, None)
+                if seq_region_id is None and unversion:
+                    # try to get seq_region_id for the unversioned name
+                    unversioned_name = re.sub(r"\.\d+$", "", seq_region_name)
+                    seq_region_id = seq_region_map.get(unversioned_name, None)
 
-        self.insert_new_synonyms_to_db(.....)
-        # instead of >>>>>
-        # generate sql req for loading
-        insert_sql_file = pj(wd, "insert_syns.sql")
-        if new_syns:
-            # Get the external_db ids for the synonym sources
-            ext_db_pfx = pj(wd, "ext_dbs")
-            extdb_ids = self.get_external_db_map(ext_db_pfx)
+                # oops, we don't know such seq_region name
+                if seq_region_id is None:
+                    raise Exception(f"Not able to find seq_region for '{seq_region_name}'")
 
-            with open(insert_sql_file, "w") as sql:
-                print("insert ignore into seq_region_synonym (seq_region_id, synonym, external_db_id) values", file=sql)
-                fst = ""
-                db_map = self.get_external_db_mapping()
-                for _sr_id, _sr_syn in sum(map(lambda p: [(p[0], s) for s in p[1]], new_syns.items()), [ ]):
-                    db_name = _sr_syn["source"]
-                    if db_name in db_map:
-                        db_name = db_map[db_name]
+                # fill synonyms_from_json list of trios
+                for synonym_item in list(seq_region["synonyms"]):
+                    synonym_name = synonym_item["name"]
+                    source = synonym_item["source"]
+                    unversioned_name = ""
 
-                    if db_name in extdb_ids:
-                        extdb_id = extdb_ids[db_name]
-                        print ('%s (%s, "%s", %s)' % (fst, _sr_id, _sr_syn["name"], extdb_id), file = sql)
-                        fst = ","
-                    else:
-                        raise Exception("There is no external_db with source '%s' for '%s' in '%s'" % (db_name, _sr_syn["name"], meta_file))
-                print(";", file=sql)
+                    # check if there's any addtional mapping for the source, remap if so
+                    if additional_sources_mapping:
+                       source = additional_sources_mapping.get(source, source) # use the same name if no matches in additional_sources_mapping dict
 
-            # run insert sql
-            self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
+                    # try to get unversioned name if applicable 
+                    if source in unversionable_sources:
+                        unversioned_name = re.sub(r"\.\d+$", "", synonym_name)
 
+                    # put trios if names are not already seen in db 
+                    if synonym_name not in synonym_in_db:
+                        external_db_id = self.id_from_map_or_die(source, external_db_map, "external_db_map")
+                        synonyms_from_json.append( (seq_region_id, synonym_name, external_db_id) )
 
+                    #   put additional unversioned synonyms if there's a sane one
+                    if unversioned_name \
+                      and unversioned_name != synonym_name \
+                      and unversioned_name not in synonym_in_db:
+                        synonyms_from_json.append( (seq_region_id, synonym_name, ensembl_internal_synonym_ext_db_id) )
+
+        # run insertion SQL
+        self.insert_new_seq_region_synonyms_to_db(synonyms_from_json, pj(work_dir, "new_seq_region_synonyms"))
 
 
     # STAGES
@@ -557,26 +555,8 @@ class load_sequence_data(eHive.BaseRunnable):
         # run insert sql
         self.run_sql_req(insert_sql_file, pj(wd, "insert_brc4_name"), from_file = True)
 
-    def get_external_db_mapping(self):
-        """
-        Get a map from a file for external_dbs to Ensembl dbnames
-        """
-        external_map_path = self.param("external_db_map")
-        db_map = dict()
-        if external_map_path is None: return db_map
-        
-        # Load the map
-        with open(external_map_path, "r") as map_file:
-            for line in map_file:
-                if line.startswith("#"): continue
-                line = re.sub(r'#.*', '', line)
-                if re.match(r'^\s*$', line): continue
-                (from_name, to_name, *rest) = line.strip().split("\t")
-                if len(rest) > 0 and rest[0].upper() != "SEQ_REGION": continue
-                if to_name == "_IGNORE_": continue
-                db_map[from_name] = to_name
-        return db_map
-        
+
+
 
     def unversion_scaffolds(self, cs_rank, logs):
         """
@@ -705,17 +685,6 @@ class load_sequence_data(eHive.BaseRunnable):
                     print(line.strip(), file = dst)
 
 
-
-    def db_string(self):
-        return "-dbhost {host_} -dbport {port_} -dbuser {user_} -dbpass {pass_} -dbname {dbname_} ".format(
-            host_ = self.param("dbsrv_host"),
-            port_ = self.param("dbsrv_port"),
-            user_ = self.param("dbsrv_user"),
-            pass_ = self.param("dbsrv_pass"),
-            dbname_ = self.param("db_name")
-        )
-
-
     def agp_prune(self, from_file: str, to_file: str, used: set = None):
         """
         Remove already components from the AGP file if they are seen in "used" set
@@ -750,17 +719,48 @@ class load_sequence_data(eHive.BaseRunnable):
         return writes
 
 
+    def get_external_db_mapping(self) -> dict:
+        """
+        Get a map from a file for external_dbs to Ensembl dbnames from "external_db_map" module(!) param
+        """
+        external_map_path = self.param("external_db_map")
+        db_map = dict()
+        if external_map_path is None: return db_map
+
+        # Load the map
+        with open(external_map_path, "r") as map_file:
+            for line in map_file:
+                if line.startswith("#"): continue
+                line = re.sub(r'#.*', '', line)
+                if re.match(r'^\s*$', line): continue
+                (from_name, to_name, *rest) = line.strip().split("\t")
+                if len(rest) > 0 and rest[0].upper() != "SEQ_REGION": continue
+                if to_name == "_IGNORE_": continue
+                db_map[from_name] = to_name
+        return db_map
 
 
     # UTILS
+    def db_string(self):
+        return "-dbhost {host_} -dbport {port_} -dbuser {user_} -dbpass {pass_} -dbname {dbname_} ".format(
+            host_ = self.param("dbsrv_host"),
+            port_ = self.param("dbsrv_port"),
+            user_ = self.param("dbsrv_user"),
+            pass_ = self.param("dbsrv_pass"),
+            dbname_ = self.param("db_name")
+        )
+
+
     def is_gz(self, filename):
       return filename.endswith(".gz")
+
 
     def asm_name(self):
         asm = self.from_param("genome_data","assembly")
         if "name" not in asm:
             raise Exception("no assembly/name in genome_data")
         return asm["name"]
+
 
     # TODO: add some metafunc setter getter
     def from_param(self, param, key, not_throw = False):
@@ -771,6 +771,7 @@ class load_sequence_data(eHive.BaseRunnable):
             else:
                 raise Exception("Missing required %s data: %s" % (param , key))
         return data[key]
+
 
     def param_bool(self, param):
         val = self.param(param)
@@ -793,6 +794,13 @@ class load_sequence_data(eHive.BaseRunnable):
                 (key, val) = line.strip().split("\t")
                 data[key] = val
         return data
+
+
+    def id_from_map_or_die(self, key: str, map_dict: dict, name_for_panic):
+        value = map_dict.get(key, None)
+        if value is None:
+            raise Exception(f"no such key '{key}' in '{name_for_panic}' map")
+        return value
 
 
     ## Utilities using external scripts
@@ -1128,5 +1136,28 @@ class load_sequence_data(eHive.BaseRunnable):
                (sr_id, name, syn) = line.strip().split("\t")
                syn_trios.append((sr_id, name, syn))
         return syn_trios
+
+
+    def insert_new_seq_region_synonyms_to_db(self, new_synonyms_trios: list, work_dir: str):
+        """
+        Insert into the core db's seq_region_synonyms from the list of [ (seq_region_id, synonym, external_db_id)... ] trios.
+
+        SQL code
+        """
+        # return if nothing to do
+        if not new_synonyms_trios: return
+
+        # generate file with the insert SQL command
+        insert_sql_file = pj(work_dir, "insert_syns.sql")
+
+        with open(insert_sql_file, "w") as sql:
+            print("INSERT IGNORE INTO seq_region_synonym (seq_region_id, synonym, external_db_id) VALUES", file=sql)
+            values_sep = ""
+            for trio in new_synonyms_trios:
+                print(f"{values_sep} ({trio[0]}, {trio[1]}, {trio[2]})", file = sql)
+            print(";", file=sql)
+
+        # run insert SQL from file
+        self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
 
 
