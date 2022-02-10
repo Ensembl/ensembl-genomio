@@ -19,7 +19,7 @@ class load_sequence_data(eHive.BaseRunnable):
     loading sequence data, seq region names, atrributes and synonyms
 
     eHive module to load sequnce data, seq region names, atrributes and synonyms from FASTAs AGPs and seq_region.json.
-    Various ensembl perl scripts are used to create coord_systems, load sequences and set attributes.
+    Various ensembl-analysis perl scripts are used to create coord_systems, load sequences and set attributes.
     SQL commands through out the code to be replaces with the proper python API at some point.
     """
 
@@ -93,7 +93,7 @@ class load_sequence_data(eHive.BaseRunnable):
         # params
         work_dir = self.param_required("work_dir")
 
-        # initial sequence loading 
+        # initial sequence loading, using ensembl-analysis scripts 
         self.initial_sequence_loading(work_dir)
 
         # load data from the corresponding core db tables
@@ -107,8 +107,7 @@ class load_sequence_data(eHive.BaseRunnable):
         seq_region_file = self.from_param("manifest_data", "seq_region", not_throw = True)
 
         #   add seq_region synonyms
-        # TODO NEXT
-        self.add_sr_synonyms(seq_region_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
+        self.add_sr_synonyms(seq_region_file, seq_region_map, pj(work_dir, "seq_region_syns"), unversion_scaffolds)
 
         #   add seq_region EBI and BRC4 names
         if self.param("brc4_mode"):
@@ -125,8 +124,12 @@ class load_sequence_data(eHive.BaseRunnable):
         self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"), add_cs_tag)
 
 
-    def initial_sequence_loading(self, work_dir):
-        """initial preparation and loading of AGPs and fasta data"""
+    def initial_sequence_loading(self, work_dir: str):
+        """
+        initial preparation and loading of AGPs and fasta data
+
+        initial preparation and loading of AGPs and fasta data using ensembl-analysis perl scripts
+        """
         # preprocess FASTA with sequences
         #   rename IUPAC to N symbols using sed
         fasta_raw = self.from_param("manifest_data", "fasta_dna")
@@ -171,6 +174,100 @@ class load_sequence_data(eHive.BaseRunnable):
 
         # nullify contig version and update mappings strings accordingly
         self.nullify_ctg_cs_version(pj(work_dir, "asm_mapping", "nullify_cs_versions"))
+
+
+    def add_sr_synonyms(self, seq_region_file: str, seq_region_map: dict, wd: str, unversioned: bool = False):
+        """
+        Add seq_region_synonym from the seq_region_file meta data file.
+
+        Add seq_region_synonym from the schema/seq_region_schema.json compatible meta data file.
+        Merge with the already exinsting ones in the db.
+        """
+        os.makedirs(wd, exist_ok=True)
+
+        # load seq_region_synonyms from json
+
+        # get seq_region ids, names, syns from db
+        synonyms_trios_db = self.load_seq_region_synonyms_trios_from_core_db(pj(wd, "syns_from_core"))
+
+        # form set of synonyms already present in db
+        synonyms_in_db = frozenset( [trio[2] for trio in synonyms_trios_db if trio[2] != "NULL"] )
+
+        # load synonyms from the json file
+
+        swap_gcf_gca = self.param("swap_gcf_gca")
+        preferred_sources = frozenset(["INSDC"])
+        if swap_gcf_gca:
+          preferred_sources = frozenset(["INSDC", "RefSeq"])
+        new_syns = dict()
+        if meta_file:
+            with open(seq_region_file) as mf:
+                data = json.load(mf)
+                if not isinstance(data, list):
+                    data = [ data ]
+                for e in data:
+                    if "synonyms" not in e:
+                       continue
+                    # do we need unversioned syn as well???
+                    # Nov 2019: no, we need explicit list
+                    # Jun 2020: yes, but only for the preferred sources (GenBank and RefSeq)
+                    es = []
+                    for s in e["synonyms"]:
+                      # load INSDC and RefSeq synonyms
+                      nm = s["name"]
+                      unv_nm = nm
+                      if s["source"] in preferred_sources:
+                        unv_nm = re.sub(r"\.\d+$", "", nm)
+                        es.append(s)
+                      else:
+                        if nm not in seen_syns: 
+                          es.append(s) 
+                      if unv_nm != nm and unv_nm not in seen_syns:
+                        es.append({"source" : "ensembl_internal_synonym", "name" : unv_nm})
+                      #
+                    if len(es) <= 0:
+                        continue
+                    en = e["name"]
+                    eid = seq_region_map.get(en, None) #en in sr_ids and sr_ids[en] or None
+                    if unversioned and eid is None:
+                        if en[-2] == ".":
+                            en = re.sub(r"\.\d+$", "", en)
+                            #eid = en in sr_ids and sr_ids[en] or None
+                            eid = seq_region_map.get(en, None)
+                    if eid is None:
+                        raise Exception("Not able to find seq_region for '%s'" % (e["name"]))
+                    new_syns[eid] = es
+
+        self.insert_new_synonyms_to_db(.....)
+        # instead of >>>>>
+        # generate sql req for loading
+        insert_sql_file = pj(wd, "insert_syns.sql")
+        if new_syns:
+            # Get the external_db ids for the synonym sources
+            ext_db_pfx = pj(wd, "ext_dbs")
+            extdb_ids = self.get_external_db_map(ext_db_pfx)
+
+            with open(insert_sql_file, "w") as sql:
+                print("insert ignore into seq_region_synonym (seq_region_id, synonym, external_db_id) values", file=sql)
+                fst = ""
+                db_map = self.get_external_db_mapping()
+                for _sr_id, _sr_syn in sum(map(lambda p: [(p[0], s) for s in p[1]], new_syns.items()), [ ]):
+                    db_name = _sr_syn["source"]
+                    if db_name in db_map:
+                        db_name = db_map[db_name]
+
+                    if db_name in extdb_ids:
+                        extdb_id = extdb_ids[db_name]
+                        print ('%s (%s, "%s", %s)' % (fst, _sr_id, _sr_syn["name"], extdb_id), file = sql)
+                        fst = ","
+                    else:
+                        raise Exception("There is no external_db with source '%s' for '%s' in '%s'" % (db_name, _sr_syn["name"], meta_file))
+                print(";", file=sql)
+
+            # run insert sql
+            self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
+
+
 
 
     # STAGES
@@ -416,105 +513,6 @@ class load_sequence_data(eHive.BaseRunnable):
         self.run_sql_req(insert_sql_file, log_pfx, from_file = True)
 
 
-    def get_db_syns(self, out_pfx):
-        # get names, syns from db
-        sql = r'''select sr.seq_region_id as seq_region_id, sr.name, srs.synonym
-                 from seq_region sr left join seq_region_synonym srs
-                 on sr.seq_region_id = srs.seq_region_id
-                 order by sr.seq_region_id
-              ;'''
-        return self.run_sql_req(sql, out_pfx)
-
-    def add_sr_synonyms(self, meta_file, wd, unversioned = False):
-        os.makedirs(wd, exist_ok=True)
-
-        # get names, syns from db
-        syns_out_pfx = pj(wd, "syns_from_core")
-        self.get_db_syns(syns_out_pfx)
-
-        # load them into dict
-        sr_ids = dict()
-        seen_syns_pre = []
-        with open(syns_out_pfx + ".stdout") as syns_file:
-            for line in syns_file:
-                if (line.startswith("seq_region_id")):
-                    continue
-                (sr_id, name, syn) = line.strip().split("\t")
-                sr_ids[name] = int(sr_id)
-                seen_syns_pre.append(name)
-                if syn != "NULL":
-                    seen_syns_pre.append(syn)
-        seen_syns = frozenset(seen_syns_pre)
-
-        # load syns from file
-        swap_gcf_gca = self.param("swap_gcf_gca")
-        preferred_sources = frozenset(["INSDC"])
-        if swap_gcf_gca:
-          preferred_sources = frozenset(["INSDC", "RefSeq"])
-        new_syns = dict()
-        if meta_file:
-            with open(meta_file) as mf:
-                data = json.load(mf)
-                if not isinstance(data, list):
-                    data = [ data ]
-                for e in data:
-                    if "synonyms" not in e:
-                       continue
-                    # do we need unversioned syn as well???
-                    # Nov 2019: no, we need explicit list
-                    # Jun 2020: yes, but only for the preferred sources (GenBank and RefSeq)
-                    es = []
-                    for s in e["synonyms"]:
-                      # load INSDC and RefSeq synonyms
-                      nm = s["name"]
-                      unv_nm = nm
-                      if s["source"] in preferred_sources:
-                        unv_nm = re.sub(r"\.\d+$", "", nm)
-                        es.append(s)
-                      else:
-                        if nm not in seen_syns: 
-                          es.append(s) 
-                      if unv_nm != nm and unv_nm not in seen_syns:
-                        es.append({"source" : "ensembl_internal_synonym", "name" : unv_nm})
-                      #
-                    if len(es) <= 0:
-                        continue
-                    en = e["name"]
-                    eid = en in sr_ids and sr_ids[en] or None
-                    if unversioned and eid is None:
-                        if en[-2] == ".":
-                            en = re.sub(r"\.\d+$", "", en)
-                            eid = en in sr_ids and sr_ids[en] or None
-                    if eid is None:
-                        raise Exception("Not able to find seq_region for '%s'" % (e["name"]))
-                    new_syns[eid] = es
-
-        # generate sql req for loading
-        insert_sql_file = pj(wd, "insert_syns.sql")
-        if new_syns:
-            # Get the external_db ids for the synonym sources
-            ext_db_pfx = pj(wd, "ext_dbs")
-            extdb_ids = self.get_external_db_map(ext_db_pfx)
-
-            with open(insert_sql_file, "w") as sql:
-                print("insert ignore into seq_region_synonym (seq_region_id, synonym, external_db_id) values", file=sql)
-                fst = ""
-                db_map = self.get_external_db_mapping()
-                for _sr_id, _sr_syn in sum(map(lambda p: [(p[0], s) for s in p[1]], new_syns.items()), [ ]):
-                    db_name = _sr_syn["source"]
-                    if db_name in db_map:
-                        db_name = db_map[db_name]
-
-                    if db_name in extdb_ids:
-                        extdb_id = extdb_ids[db_name]
-                        print ('%s (%s, "%s", %s)' % (fst, _sr_id, _sr_syn["name"], extdb_id), file = sql)
-                        fst = ","
-                    else:
-                        raise Exception("There is no external_db with source '%s' for '%s' in '%s'" % (db_name, _sr_syn["name"], meta_file))
-                print(";", file=sql)
-
-            # run insert sql
-            self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
 
     def add_sr_ebi_brc4_names(self, meta_file, wd, unversioned = False):
         os.makedirs(wd, exist_ok=True)
@@ -718,7 +716,10 @@ class load_sequence_data(eHive.BaseRunnable):
         )
 
 
-    def agp_prune(self, from_file, to_file, used = None):
+    def agp_prune(self, from_file: str, to_file: str, used: set = None):
+        """
+        Remove already components from the AGP file if they are seen in "used" set
+        """
         # reomve used component
         #   and GAPS as they are not used by 'ensembl-analysis/scripts/assembly_loading/load_agp.pl'
         os.makedirs(dirname(to_file), exist_ok=True)
@@ -786,7 +787,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         with open(in_file) as pairs_file:
             for line in pairs_file:
-                if (skip_header):
+                if skip_header:
                     skip_header = False
                     continue
                 (key, val) = line.strip().split("\t")
@@ -795,7 +796,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
 
     ## Utilities using external scripts
-    def remove_IUPAC(self, from_file, to_file):
+    def remove_IUPAC(self, from_file: str, to_file: str):
         """remove non-valid symbols from FASTA file (using sed) ans store the result in a different location"""
         IUPAC = self.param("IUPAC")
         os.makedirs(dirname(to_file), exist_ok=True)
@@ -810,8 +811,8 @@ class load_sequence_data(eHive.BaseRunnable):
         return sp.run(cmd, shell=True, check=True)
 
 
-    def load_seq_region(self, cs, rank, asm_v, src_file, log_pfx, seq_level = False):
-        """ensembl script (load_seq_region.pl) based utility for loading seq_regions FASTA sequences"""
+    def load_seq_region(self, cs: str, rank: str, asm_v: str, src_file: str, log_pfx: str, seq_level = False):
+        """ensembl-analysis script (load_seq_region.pl) based utility for loading seq_regions FASTA sequences"""
         en_root = self.param_required("ensembl_root_dir")
         cmd = (r'''{_loader} {_db_string} -coord_system_version {_asm_v} -default_version ''' +
                r'''    -rank {_rank} -coord_system_name {_cs} {_sl_flag} -{_tag}_file {_file}''' +
@@ -1030,7 +1031,7 @@ class load_sequence_data(eHive.BaseRunnable):
         return self.run_sql_req(sql, log_pfx)
 
 
-    def nullify_ctg_cs_version(self, log_pfx):
+    def nullify_ctg_cs_version(self, log_pfx: str):
         """
         Nullify every CS version with rank larger than that of "contig", but don't nullify toplevel ones.
 
@@ -1083,7 +1084,7 @@ class load_sequence_data(eHive.BaseRunnable):
             self.run_sql_req(clear_pfx + ".sql", clear_pfx, from_file = True)
 
 
-    def load_map_from_core_db(self, table, cols, work_dir):
+    def load_map_from_core_db(self, table, cols, work_dir) -> dict:
         """
         Load 2 "cols" from core db "table" as map
 
@@ -1101,10 +1102,10 @@ class load_sequence_data(eHive.BaseRunnable):
         return data
 
 
-    def load_seq_region_synonyms_from_core_db(self, work_dir):
+    def load_seq_region_synonyms_trios_from_core_db(self, work_dir: str) -> list:
         # was get_db_syns
         """
-        Load seq_region_synonyms from from core db
+        Load seq_region_synonyms from from core db into [(seq_region_id, name, synonym)...] list
 
         SQL code
         """
@@ -1115,9 +1116,17 @@ class load_sequence_data(eHive.BaseRunnable):
                  order by sr.seq_region_id
               ;'''
         res = self.run_sql_req(sql, out_pfx)
-        # return res
 
+        syn_trios = []
         out_file = out_pfx + ".stdout"
-        # TODO
-        return
+        with open(out_file) as syns_file:
+           skip_header = True
+           for line in syns_file:
+               if skip_header:
+                   skip_header = False
+                   continue
+               (sr_id, name, syn) = line.strip().split("\t")
+               syn_trios.append((sr_id, name, syn))
+        return syn_trios
+
 
