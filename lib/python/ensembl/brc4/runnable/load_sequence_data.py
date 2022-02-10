@@ -96,19 +96,30 @@ class load_sequence_data(eHive.BaseRunnable):
         # initial sequence loading 
         self.initial_sequence_loading(work_dir)
 
-        # add seq_region synonyms
-        seq_reg_file = self.from_param("manifest_data", "seq_region", not_throw = True)
-        self.add_sr_synonyms(seq_reg_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
+        # load data from the corresponding core db tables
+        external_db_map = self.load_map_from_core_db("external_db", ["db_name", "external_db_id"], work_dir) # for external_db
+        attrib_type_map = self.load_map_from_core_db("attrib_type",  ["code", "attrib_type_id"], work_dir) # for attrib_type
+        seq_region_map = self.load_map_from_core_db("seq_region",  ["name", "seq_region_id"], work_dir) # for seq_region
 
-        # add seq_region EBI and BRC4 names
-        unversioned_scaffolds = self.param("unversion_scaffolds")
+        # update synonyms and seq_region_attribs
+        unversion_scaffolds = self.param("unversion_scaffolds")
+        is_primary_assembly = self.from_param("manifest_data", "agp", not_throw = True) is None
+        seq_region_file = self.from_param("manifest_data", "seq_region", not_throw = True)
+
+        #   add seq_region synonyms
+        # TODO NEXT
+        self.add_sr_synonyms(seq_region_file, pj(wd, "seq_region_syns"), unversion_scaffolds)
+
+        #   add seq_region EBI and BRC4 names
         if self.param("brc4_mode"):
-          self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversioned_scaffolds)
+          self.add_sr_ebi_brc4_names(seq_reg_file, pj(wd, "seq_region_ebi_brc4_name"), unversion_scaffolds)
 
-        # add seq_region attributes and karyotype info
-        is_primary_assembly = agps is None
+        #   add seq_region attributes and karyotype info
         self.add_sr_attribs(seq_reg_file, pj(wd, "seq_region_attr"), karyotype_info_tag = "karyotype_bands", is_primary_assembly = is_primary_assembly)
 
+        # add karyotyope bands data and karyotype ranks attributes
+
+        #   add karyotype ranks attributes
         asm_meta = self.from_param("genome_data","assembly")
         add_cs_tag = self.param("cs_tag_for_ordered")
         self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"), add_cs_tag)
@@ -280,7 +291,7 @@ class load_sequence_data(eHive.BaseRunnable):
         
         # find interesting attribs in meta_file
         interest = frozenset(attribs_map.keys())
-        chosen = dict()
+        chosen = dict() # dict of regions to be processed
         with open(meta_file) as mf:
             data = json.load(mf)
             if not isinstance(data, list):
@@ -483,12 +494,12 @@ class load_sequence_data(eHive.BaseRunnable):
         if new_syns:
             # Get the external_db ids for the synonym sources
             ext_db_pfx = pj(wd, "ext_dbs")
-            extdb_ids = self.get_external_db_ids(ext_db_pfx)
+            extdb_ids = self.get_external_db_map(ext_db_pfx)
 
             with open(insert_sql_file, "w") as sql:
                 print("insert ignore into seq_region_synonym (seq_region_id, synonym, external_db_id) values", file=sql)
                 fst = ""
-                db_map = self.get_external_db_map()
+                db_map = self.get_external_db_mapping()
                 for _sr_id, _sr_syn in sum(map(lambda p: [(p[0], s) for s in p[1]], new_syns.items()), [ ]):
                     db_name = _sr_syn["source"]
                     if db_name in db_map:
@@ -526,9 +537,10 @@ class load_sequence_data(eHive.BaseRunnable):
                             ad_hoc_names[name][tag] = name
 
         # Load seq_regions from db
-        seq_region_ids = self.get_db_seq_region_ids(ebi_brc4_pfx)
+        seq_region_ids = self.___get_db_seq_region_ids(ebi_brc4_pfx) # use seq_region_map
         # Get EBI and BRC4 attrib ids
-        attrib_ids = { tag : self.get_db_attrib_id("%s_seq_region_name" % tag, ebi_brc4_pfx+"_"+tag) for tag in ["BRC4", "EBI"] }
+        attrib_ids = { tag : self.___get_db_attrib_id("%s_seq_region_name" % tag, ebi_brc4_pfx+"_"+tag) for tag in ["BRC4", "EBI"] }
+        # use map here
 
         # generate sql req for loading
         insert_sql_file = pj(wd, "insert_brc4_name.sql")
@@ -547,35 +559,7 @@ class load_sequence_data(eHive.BaseRunnable):
         # run insert sql
         self.run_sql_req(insert_sql_file, pj(wd, "insert_brc4_name"), from_file = True)
 
-    def get_db_attrib_id(self, attrib_name, out_pfx):
-        sql = r'''select attrib_type_id FROM attrib_type WHERE code="%s";'''
-        res = self.run_sql_req(sql % (attrib_name), out_pfx)
-
-        attrib_id = None
-        with open(out_pfx + ".stdout") as db_file:
-            for line in db_file:
-                if (line.startswith("attrib_type_id")):
-                    continue
-                attrib_id = line.strip()
-
-        if not attrib_id:
-            raise Exception("No %s seq region name attrib type in db" % attrib_name)
-        return attrib_id
-
-    def get_db_seq_region_ids(self, out_pfx):
-        sql = r'''select seq_region_id, name FROM seq_region;'''
-        res = self.run_sql_req(sql, out_pfx)
-
-        seq_ids = {}
-        with open(out_pfx + ".stdout") as db_file:
-            for line in db_file:
-                if (line.startswith("seq_region_id")):
-                    continue
-                (seq_id, seq_name) = line.strip().split("\t")
-                seq_ids[seq_name] = seq_id
-        return seq_ids
-
-    def get_external_db_map(self):
+    def get_external_db_mapping(self):
         """
         Get a map from a file for external_dbs to Ensembl dbnames
         """
@@ -595,18 +579,6 @@ class load_sequence_data(eHive.BaseRunnable):
                 db_map[from_name] = to_name
         return db_map
         
-    def get_external_db_ids(self, out_pfx):
-        sql = r'''select external_db_id, db_name FROM external_db;'''
-        res = self.run_sql_req(sql, out_pfx)
-
-        dbs = {}
-        with open(out_pfx + ".stdout") as db_file:
-            for line in db_file:
-                if (line.startswith("external_db_id")):
-                    continue
-                (db_id, name) = line.strip().split("\t")
-                dbs[name] = db_id
-        return dbs
 
     def unversion_scaffolds(self, cs_rank, logs):
         """
@@ -626,27 +598,6 @@ class load_sequence_data(eHive.BaseRunnable):
                 xdb = self.param("versioned_sr_syn_src")
                 self.copy_sr_name_to_syn(cs, xdb, pj(logs, "cp2syn", cs))
                 self.sr_name_unversion(cs, "seq_region", "name", pj(logs, "unv_sr", cs))
-
-
-    def sr_name_unversion(self, cs, tbl, fld, log_pfx):
-        # select synonym, substr(synonym,  1, locate(".", synonym, length(synonym)-2)-1)
-        #     from seq_region_synonym  where synonym like "%._"
-        asm_v = self.asm_name()
-        sql = r'''update {_tbl} t, seq_region sr, coord_system cs
-                    set
-                      t.{_fld} = substr(t.{_fld},  1, locate(".", t.{_fld}, length(t.{_fld})-2)-1)
-                    where t.{_fld} like "%._"
-                      and t.seq_region_id = sr.seq_region_id
-                      and sr.coord_system_id = cs.coord_system_id
-                      and cs.name = "{_cs}"
-                      and cs.version = "{_asm_v}"
-                ;'''.format(
-                    _tbl = tbl,
-                    _fld = fld,
-                    _cs = cs,
-                    _asm_v = asm_v
-                )
-        return self.run_sql_req(sql, log_pfx)
 
 
     def coord_sys_order(self, cs_order_str):
@@ -755,44 +706,6 @@ class load_sequence_data(eHive.BaseRunnable):
                     new_regions.add(asm_id)
                     print(line.strip(), file = dst)
 
-    def load_seq_region(self, cs, rank, asm_v, src_file, log_pfx, seq_level = False):
-        """ensembl script (load_seq_region.pl) based utility for loading seq_regions FASTA sequences"""
-        en_root = self.param_required("ensembl_root_dir")
-        cmd = (r'''{_loader} {_db_string} -coord_system_version {_asm_v} -default_version ''' +
-               r'''    -rank {_rank} -coord_system_name {_cs} {_sl_flag} -{_tag}_file {_file}''' +
-               r'''     > {_log}.stdout 2> {_log}.stderr''').format(
-            _loader = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/load_seq_region.pl")),
-            _db_string = self.db_string(),
-            _asm_v = asm_v,
-            _rank = rank,
-            _cs = cs,
-            _sl_flag = seq_level and "-sequence_level" or "",
-            _tag = seq_level and "fasta" or "agp",
-            _file = src_file,
-            _log = "%s_seq" % (log_pfx),
-        )
-        print("running %s" % (cmd), file = sys.stderr)
-        return sp.run(cmd, shell=True, check=True)
-
-
-    def load_agp(self, pair, asm_v, src_file, log_pfx):
-        """ensembl script (load_agp.pl) based utility for loading seq_regions assembly data (AGPs)"""
-        en_root = self.param_required("ensembl_root_dir")
-        (asm_n, cmp_n) = pair.strip().split("-")
-        cmd = (r'''{_loader} {_db_string} -assembled_version {_asm_v} ''' +
-               r'''    -assembled_name {_asm} -component_name {_cmp} ''' +
-               r'''    -agp_file {_file} ''' +
-               r'''    > {_log}.stdout 2> {_log}.stderr''').format(
-            _loader = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/load_agp.pl")),
-            _db_string = self.db_string(),
-            _asm_v = asm_v,
-            _asm = asm_n,
-            _cmp = cmp_n,
-            _file = src_file,
-            _log = "%s_agp_%s" % (log_pfx, pair.replace("-","_")),
-        )
-        print("running %s" % (cmd), file = sys.stderr)
-        return sp.run(cmd, shell=True, check=True)
 
 
     def db_string(self):
@@ -863,6 +776,24 @@ class load_sequence_data(eHive.BaseRunnable):
         return bool(val) and "0" != val
 
 
+    def load_map_from_sql_stdout(self, in_file, skip_header = False):
+        """
+        Load map from the SQL output
+
+        Process input in_file with "key  value" pairs
+          and load then into the {key : value} map.
+        Skips header if skip_heade.
+        """
+        with open(in_file) as pairs_file:
+            for line in pairs_file:
+                if (skip_header):
+                    skip_header = False
+                    continue
+                (key, val) = line.strip().split("\t")
+                data[key] = val
+        return data
+
+
     ## Utilities using external scripts
     def remove_IUPAC(self, from_file, to_file):
         """remove non-valid symbols from FASTA file (using sed) ans store the result in a different location"""
@@ -877,6 +808,47 @@ class load_sequence_data(eHive.BaseRunnable):
         )
         print("running %s" % (cmd), file = sys.stderr)
         return sp.run(cmd, shell=True, check=True)
+
+
+    def load_seq_region(self, cs, rank, asm_v, src_file, log_pfx, seq_level = False):
+        """ensembl script (load_seq_region.pl) based utility for loading seq_regions FASTA sequences"""
+        en_root = self.param_required("ensembl_root_dir")
+        cmd = (r'''{_loader} {_db_string} -coord_system_version {_asm_v} -default_version ''' +
+               r'''    -rank {_rank} -coord_system_name {_cs} {_sl_flag} -{_tag}_file {_file}''' +
+               r'''     > {_log}.stdout 2> {_log}.stderr''').format(
+            _loader = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/load_seq_region.pl")),
+            _db_string = self.db_string(),
+            _asm_v = asm_v,
+            _rank = rank,
+            _cs = cs,
+            _sl_flag = seq_level and "-sequence_level" or "",
+            _tag = seq_level and "fasta" or "agp",
+            _file = src_file,
+            _log = "%s_seq" % (log_pfx),
+        )
+        print("running %s" % (cmd), file = sys.stderr)
+        return sp.run(cmd, shell=True, check=True)
+
+
+    def load_agp(self, pair, asm_v, src_file, log_pfx):
+        """ensembl script (load_agp.pl) based utility for loading seq_regions assembly data (AGPs)"""
+        en_root = self.param_required("ensembl_root_dir")
+        (asm_n, cmp_n) = pair.strip().split("-")
+        cmd = (r'''{_loader} {_db_string} -assembled_version {_asm_v} ''' +
+               r'''    -assembled_name {_asm} -component_name {_cmp} ''' +
+               r'''    -agp_file {_file} ''' +
+               r'''    > {_log}.stdout 2> {_log}.stderr''').format(
+            _loader = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/load_agp.pl")),
+            _db_string = self.db_string(),
+            _asm_v = asm_v,
+            _asm = asm_n,
+            _cmp = cmp_n,
+            _file = src_file,
+            _log = "%s_agp_%s" % (log_pfx, pair.replace("-","_")),
+        )
+        print("running %s" % (cmd), file = sys.stderr)
+        return sp.run(cmd, shell=True, check=True)
+
 
     def set_toplevel(self, log_pfx, ignored_cs = []):
         """
@@ -1031,9 +1003,38 @@ class load_sequence_data(eHive.BaseRunnable):
         self.run_sql_req(sql_not_toplevel_delete, ".".join([log_pfx, "not_toplevel_delete"]))
 
 
+    def sr_name_unversion(self, cs, tbl, fld, log_pfx):
+        """
+        Remove version suffix from the seq_region names
+
+        Removes '\.\d+$' suffices from the seq_region names
+        SQL code.
+        """
+        # select synonym, substr(synonym,  1, locate(".", synonym, length(synonym)-2)-1)
+        #     from seq_region_synonym  where synonym like "%._"
+        asm_v = self.asm_name()
+        sql = r'''update {_tbl} t, seq_region sr, coord_system cs
+                    set
+                      t.{_fld} = substr(t.{_fld},  1, locate(".", t.{_fld}, length(t.{_fld})-2)-1)
+                    where t.{_fld} like "%._"
+                      and t.seq_region_id = sr.seq_region_id
+                      and sr.coord_system_id = cs.coord_system_id
+                      and cs.name = "{_cs}"
+                      and cs.version = "{_asm_v}"
+                ;'''.format(
+                    _tbl = tbl,
+                    _fld = fld,
+                    _cs = cs,
+                    _asm_v = asm_v
+                )
+        return self.run_sql_req(sql, log_pfx)
+
+
     def nullify_ctg_cs_version(self, log_pfx):
         """
-        Nullify every CS version with rank larger than that of "contig", but don't nullify toplevel ones
+        Nullify every CS version with rank larger than that of "contig", but don't nullify toplevel ones.
+
+        SQL code
         """
         asm_v = self.asm_name()
         # get cs_info (and if they have toplevel regions)
@@ -1082,5 +1083,41 @@ class load_sequence_data(eHive.BaseRunnable):
             self.run_sql_req(clear_pfx + ".sql", clear_pfx, from_file = True)
 
 
+    def load_map_from_core_db(self, table, cols, work_dir):
+        """
+        Load 2 "cols" from core db "table" as map
 
+        Load { cols[0] : cols[1] } map from the core db "table"
+        SQL code
+        """
+        out_pfx = pj(work_dir, f"{table}_map")
+        sql = f'''select {cols[0]}, {cols[1]} FROM {table};'''
+        res = self.run_sql_req(sql, out_pfx)
+
+        out_file = out_pfx + ".stdout"
+        data = self.load_map_from_sql_stdout(out_file, skip_header = True)
+        if not data:
+            raise Exception(f"No '{table}' map loaded from '{out_file}'")
+        return data
+
+
+    def load_seq_region_synonyms_from_core_db(self, work_dir):
+        # was get_db_syns
+        """
+        Load seq_region_synonyms from from core db
+
+        SQL code
+        """
+        out_pfx = pj(work_dir, f"seq_region_synonyms")
+        sql = r'''select sr.seq_region_id as seq_region_id, sr.name, srs.synonym
+                 from seq_region sr left join seq_region_synonym srs
+                 on sr.seq_region_id = srs.seq_region_id
+                 order by sr.seq_region_id
+              ;'''
+        res = self.run_sql_req(sql, out_pfx)
+        # return res
+
+        out_file = out_pfx + ".stdout"
+        # TODO
+        return
 
