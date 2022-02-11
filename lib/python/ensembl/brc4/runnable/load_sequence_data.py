@@ -65,9 +65,11 @@ class load_sequence_data(eHive.BaseRunnable):
             #   part of the loading process
             'not_toplevel_cs' : [], # i.e. "contig", "non_ref_scaffold"
 
-            # explicit list of seq_region properties (keys) to load as seq_region_attrib s (values)
+            # explicit list of seq_region properties (keys) to load as seq_region_attrib s (values) (see add_sr_attribs definition below) 
             #   if a dict's used as a value, treat its keys as "json_path" (/ as delim) map, i.e.
             #       { "added_sequence" : { "assembly_provider" : { "name" : ... } } } -> "added_sequence/assembly_provider/name"
+            #   only flattable properties can be used, no arrays
+            #   arrays should be processed separately (see `add_sr_synonyms` or `add_karyotype_bands` definitions)
             # see schema/seq_region_schema.json
             'sr_attrib_types' : {
                 'circular' : 'circular_seq',
@@ -290,9 +292,13 @@ class load_sequence_data(eHive.BaseRunnable):
             karyotype_info_tag: str = "karyotype_bands",
             is_primary_assembly: bool = is_primary_assembly):
         """
-        Add seq_region_attrib(s) from the seq_region_file meta data file.
+        Add seq_region_attrib(s) from the seq_region_file meta data file. Explicit list is taken from "sr_attrib_types" module param.
 
         Add seq_region_attrib(s) from the schema/seq_region_schema.json compatible meta data file.
+        Explicit list is taken from "sr_attrib_types" module param.
+        "sr_attrib_types" defines { json_property -> attrib_type.name } map. If the value is dict,
+           its keys are treated as "/"-delimetered "json_path" (i.e. "added_sequence/assembly_provider/name").
+        No arrays can be processed. Only simple or "flattable" types.
         If unversion is true:
           * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
 
@@ -305,15 +311,20 @@ class load_sequence_data(eHive.BaseRunnable):
 
         # technical / optimization. get atttib_type_id(s)
         # create a smaller map with attrib_type_id(s) as values
-        properties_to_use_map = dict() # { property : (attrib_type_id | dict(with/flatterned/json/paths))}
+        properties_to_use = [] # [frozen]set with the top-level "seq_region" properties, that should be processed
+        properties_atrrib_id_map = dict() # { "flatterned/json/paths" : attrib_id_map ))}
+        # fill set and map
         for prop, attrib_type in self.param('sr_attrib_types').items():
+            # adding high level properties to process
+            properties_to_use.append(prop)
+            # adding json paths (or properties themselves) to atrrib_type_id map
             if isinstance(attrib_type, dict): # if using json paths (delimeterd with "/")
-                properties_to_use_map[prop] = dict()
                 for path, inner_attrib_type in attrib_type.items():
-                    properties_to_use_map[prop][path] = self.id_from_map_or_die(inner_attrib_type, attrib_type_map, "attrib_type_map")
+                    properties_attrib_id_map[path] = self.id_from_map_or_die(inner_attrib_type, attrib_type_map, "attrib_type_map")
             else:
-                properties_to_use_map[prop] = self.id_from_map_or_die(attrib_type, attrib_type_map, "attrib_type_map")
-        if not properties_to_use_map: return
+                properties_attrib_id_map[prop] = self.id_from_map_or_die(attrib_type, attrib_type_map, "attrib_type_map")
+        # return if there's nothing to add
+        if not properties_to_use: return
 
         # load attributes from seq_region file
         attrib_trios = [] # [ (seq_region_id, attrib_id, value)... ] list of trios for inserting into db 
