@@ -139,13 +139,11 @@ class load_sequence_data(eHive.BaseRunnable):
                                        pj(work_dir, "seq_region_ebi_brc4_name"),
                                        unversion = unversion)
 
-        # add karyotyope bands data and karyotype ranks attributes
-        # add karyotype info
-
-        #   add karyotype ranks attributes
-        asm_meta = self.from_param("genome_data","assembly")
-        add_cs_tag = self.param("cs_tag_for_ordered")
-        self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"), add_cs_tag)
+        # add karyotype related data
+        self.add_karyotype_data(seq_region_file,
+                                seq_region_map,
+                                attrib_type_map,
+                                pj(work_dir, "karyotype"))
 
 
     def initial_sequence_loading(self, work_dir: str):
@@ -439,6 +437,35 @@ class load_sequence_data(eHive.BaseRunnable):
             ignore = True
         )
 
+        self.add_karyotype_data(seq_region_file,
+                                seq_region_map,
+                                attrib_type_map,
+                                pj(work_dir, "karyotype"))
+
+    def add_karyotype_data(self, seq_region_file: str, seq_region_map: dict , attrib_type_map: dict, work_dir: str):
+        """
+        Adds karyotyope bands from seq_region
+
+Add seq_region_attrib(s) from the seq_region_file meta data file. Explicit list is taken from "sr_attrib_types" module param.
+
+Add seq_region_attrib(s) from the schema/seq_region_schema.json compatible meta data file.
+Explicit list is taken from "sr_attrib_types" module param.
+"sr_attrib_types" defines { json_property -> attrib_type.name } map. If the value is dict,
+its keys are treated as "/"-delimetered "json_path" (i.e. "added_sequence/assembly_provider/name").
+No arrays can be processed. Only simple or "flattable" types.
+If unversion is true:
+* the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
+
+Too close to the DB schema.
+        """
+        # add karyotype related data
+        # add karyotyope bands data and karyotype ranks attributes
+        # add karyotype info
+
+        #   add karyotype ranks attributes
+        asm_meta = self.from_param("genome_data","assembly")
+        add_cs_tag = self.param("cs_tag_for_ordered")
+        self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"), add_cs_tag)
 
 
     # STAGES
