@@ -139,7 +139,6 @@ class load_sequence_data(eHive.BaseRunnable):
                                        pj(work_dir, "seq_region_ebi_brc4_name"),
                                        unversion = unversion)
 
-
         # add karyotyope bands data and karyotype ranks attributes
         # add karyotype info
 
@@ -312,7 +311,7 @@ class load_sequence_data(eHive.BaseRunnable):
         # technical / optimization. get atttib_type_id(s)
         # create a smaller map with attrib_type_id(s) as values
         properties_to_use = [] # [frozen]set with the top-level "seq_region" properties, that should be processed
-        properties_atrrib_id_map = dict() # { "flatterned/json/paths" : attrib_id_map ))}
+        path_attrib_id_map = dict() # { "flatterned/json/paths" : attrib_id_map ))}
         # fill set and map
         for prop, attrib_type in self.param('sr_attrib_types').items():
             # adding high level properties to process
@@ -320,11 +319,13 @@ class load_sequence_data(eHive.BaseRunnable):
             # adding json paths (or properties themselves) to atrrib_type_id map
             if isinstance(attrib_type, dict): # if using json paths (delimeterd with "/")
                 for path, inner_attrib_type in attrib_type.items():
-                    properties_attrib_id_map[path] = self.id_from_map_or_die(inner_attrib_type, attrib_type_map, "attrib_type_map")
+                    path_attrib_id_map[path] = self.id_from_map_or_die(inner_attrib_type, attrib_type_map, "attrib_type_map")
             else:
-                properties_attrib_id_map[prop] = self.id_from_map_or_die(attrib_type, attrib_type_map, "attrib_type_map")
+                path_attrib_id_map[prop] = self.id_from_map_or_die(attrib_type, attrib_type_map, "attrib_type_map")
         # return if there's nothing to add
         if not properties_to_use: return
+
+        properties_to_use = frozenset(properties_to_use)
 
         # load attributes from seq_region file
         attrib_trios = [] # [ (seq_region_id, attrib_id, value)... ] list of trios for inserting into db 
@@ -335,17 +336,15 @@ class load_sequence_data(eHive.BaseRunnable):
                 seq_region_name, seq_region_id, unversioned_name = \
                     self.name_and_id_from_seq_region_item(seq_region, try_unversion = unversion)
 
-                # iterate through generic usable properties
-                for prop_name, attrib_type_id in propeties_to_use_map:
+                # iterate through properties
+                for prop_name in propeties_to_use_map:
                     if prop_name not in seq_region:
                         continue
-                    # flattern to list
-                    value = seq_region[prop_name]
-                    if isinstance(attrib_type, dict):
-                        # using flatterned json paths (delimeterd with "/")
-                    else:
-                        attrib_trios.append( (seq_region_id, attrib_type_id, value) ) # not checking for value type here
-
+                    # flattern path
+                    path_attrib_id_values_list = self.flattern_seq_region_item(seq_region, prop_name, path_attrib_id_map)
+                    # fill attrib_trios
+                    for (path, attrib_id, value) in path_attrib_id_values_list:
+                        attrib_trios.append( (seq_region_id, attrib_id, value) )
 
         # run insertion SQL
         self.insert_to_db(
@@ -357,95 +356,37 @@ class load_sequence_data(eHive.BaseRunnable):
         )
 
 
-# ADDED 
-        # get attrib_type maps
+    def flattern_seq_region_item(self, seq_region: dict, prop_name: str; path_attrib_id_map: dict) -> list:
+        """
+        Flattern seq_region[property] and store corresponding [ (json_path, attrib_id, value)... ] (as list of trios).
 
-        # attrib and karyotype storages
-        attrib_storage = [] # (seq_region_id, attrib_type_id, value)
-        karyotype_storage = [] # (seq_region_id, {band_data})
+        Only works for simple properties or dicts with no arrays on the path. Basically, implemets tree traversal.
+        Utility function used by the `add_sr_attribs` method
+        """
+        res = []
+        # is there anything to do
+        if prop_name not in seq_region: return res
 
-        # iterate through seq_region json and fill attrib and karyotype storage
-        with open(meta_file) as mf:
-            data = json.load(mf)
-            if not isinstance(data, list):
-                data = [ data ]
-            for sr in data:
-              sr_name = sr.get("name"); if not sr_name: continue
-              sr_id = sr_ids_map.get(sr_name); if not sr_id: continue
-
-              # prepare karyotype data
-              if karyotype_info_tag and karyotype_info_tag in sr:
-                # get bands data
-                bands = self.get_karyotype_bands(sr[karyotype_info_tag])
-                for band in bands:
-                  karyotype_storage.append((sr_id, band))
-
-              # fill attrib storage based on attribs_map
-              flat_attribs = self.get_flat_attribs(sr, attribs_map, attrib_type_ids)
-              for (a_id, a_val, a_code, a_json_path) in flat_attribs:
-                # only add coord_system_tag for primary assembly
-                if not is_primary_assembly and a_json_path == 'coord_system_level':
-                  continue
-                attrib_storage.append((sr_id, a_id, a_val))
-
-        # insert attribs from storage
-        self.insert_seq_region_attribs(attrib_storage, pj(wd, "seq_region_attribs_insert"))
-        self.insert_karyotype_bands(karyotype_storage, pj(wd, "karyotype_bands_insert"))
-        return
-        # old
-
-# ADDED END
-        
-        # find interesting attribs in meta_file
-        interest = frozenset(attribs_map.keys())
-        chosen = dict() # dict of regions to be processed
-        with open(meta_file) as mf:
-            data = json.load(mf)
-            if not isinstance(data, list):
-                data = [ data ]
-            for e in data:
-                # added? TODO: here
-                if interest.intersection(e.keys()):
-                    chosen[e["name"]] = [e, -1]
-        if len(chosen) <= 0:
-            return
-        
-        # get names, syns from db
-        syns_out_pfx = pj(wd, "syns_from_core")
-        self.get_db_syns(syns_out_pfx)
-        
-        # load into dict
-        with open(syns_out_pfx + ".stdout") as syns_file:
-            for line in syns_file:
-                (sr_id, name, syn) = line.strip().split("\t")
-                for _name in [name, syn]:
-                    if _name in chosen:
-                        sr_id = int(sr_id)
-                        if chosen[_name][1] != -1 and chosen[_name][1] != sr_id:
-                            raise Exception(
-                                "Same name reused by different seq_regions: %d , %d" % (
-                                    chosen[_name][1], sr_id
-                                )
-                            )
-                        chosen[_name][1] = sr_id
-                        
-        # add seq_region_attribs
-        for tag, attr_type in attribs_map.items():
-            # Only add coord_system_tag for primary assembly
-            if not is_primary_assembly and tag == 'coord_system_level':
+        # set up
+        value = seq_region[prop_name]
+        paths_to_go = [ (prop_name, value) ] # storing path and the corresponding value, to prevent repetetive traversals
+        # iterate
+        while paths_to_go:
+            (path, value) = paths_to_go.pop() # get last item
+            if isinstance(value, list) :
+               # perhaps, it's better to raise exception then to continue silently
+               continue
+            if isinstance(value, dict) :
+                # if value is a complex object, add its leaves
+                for key, val in value.items():
+                    paths_to_go.append( (f"{path}/{key}", val) )
                 continue
-            
-            srlist = list(map(
-                lambda p:(p[1], p[0][tag]),
-                filter(lambda x: tag in x[0], chosen.values())
-            ))
-            self.set_sr_attrib(
-                attr_type,
-                srlist,
-                pj(wd, "sr_attr_set_"+tag),
-                (karyotype_info_tag and tag == karyotype_info_tag)
-            )
-
+            # if value is simple
+            attrib_id = path_attrib_id_map.get(path, None)
+            if attrib_id:
+                res.append( (path, attrib_id, value) )
+        # return what ever we have
+        return res
 
 
     def add_sr_ebi_brc4_names(self,
@@ -565,49 +506,12 @@ class load_sequence_data(eHive.BaseRunnable):
             self.set_sr_attrib(tag, sr_ids, pj(wd, "sr_attr_set_"+tag))
 
 
-    def get_sr_ids_map(self, syns_out_pfx):
-        pass
-
-
     def ____set_sr_attrib(self, attr_type, id_val_lst, log_pfx):
     # was
     #    def set_sr_attrib(self, attr_type, id_val_lst, log_pfx, karyotype_info = False):
     #        if karyotype_info:
     #            return self.add_karyotype_bands(id_val_lst, log_pfx)
-        # generate sql req for getting attrib_type_id
-        sql_seq_region_attrib = r'''select attrib_type_id from attrib_type
-            where code = "%s"
-        ;''' % (attr_type)
-        self.run_sql_req(sql_seq_region_attrib, log_pfx+"_attrib_type_id")
-        attrib_type_id = None
-        with open(log_pfx+"_attrib_type_id" + ".stdout") as f:
-          for line in f:
-            if line.startswith("attrib_type_id"):
-              continue
-            attrib_type_id = line.strip()
-            break
-        if attrib_type_id is None:
-          raise Exception("No such known attrib type: \"%s\"" % (attr_type))
-
-        # generaate sql req for loading
-        os.makedirs(dirname(log_pfx), exist_ok=True)
-        insert_sql_file = log_pfx + "_insert_attribs.sql"
-        if len(id_val_lst) <= 0:
-            return
-        with open(insert_sql_file, "w") as sql:
-            print("insert ignore into seq_region_attrib (seq_region_id, attrib_type_id, value) values", file=sql)
-            fst = ""
-            for _sr_id, _val in id_val_lst:
-                if isinstance(_val, bool):
-                    _val = int(_val)
-                if isinstance(_val, str):
-                    _val = '"%s"' % (_val)
-                print ('%s (%s, %s, %s)' % (fst, _sr_id, attrib_type_id, str(_val)), file = sql)
-                fst = ","
-            print(";", file=sql)
-        # run insert sql
-        self.run_sql_req(insert_sql_file, log_pfx, from_file = True)
-
+        pass
 
 
     def add_karyotype_bands(self, id_val_lst, log_pfx):
