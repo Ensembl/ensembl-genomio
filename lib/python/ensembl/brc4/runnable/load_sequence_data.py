@@ -86,9 +86,6 @@ class load_sequence_data(eHive.BaseRunnable):
                     'added_sequence/annotation_provider/url' :  'added_seq_ann_pr_url',
                 }, # added_sequence
             },
-
-            # seq_region_property used for storing karyotype bands data????
-            'karyotype_bands_property' : 'karyotype_bands',
         }
 
 
@@ -124,9 +121,7 @@ class load_sequence_data(eHive.BaseRunnable):
                             seq_region_map,
                             attrib_type_map,
                             pj(work_dir, "seq_region_attr"),
-                            unversion = unversion,
-                            karyotype_info_tag = "karyotype_bands",
-                            is_primary_assembly = is_primary_assembly)
+                            unversion = unversion)
 
         #   add seq_region EBI and BRC4 name attributes in the "BRC4 mode"
         #     special case of attributes adding with default values derived from seq_region names
@@ -143,7 +138,8 @@ class load_sequence_data(eHive.BaseRunnable):
         self.add_karyotype_data(seq_region_file,
                                 seq_region_map,
                                 attrib_type_map,
-                                pj(work_dir, "karyotype"))
+                                pj(work_dir, "karyotype"),
+                                unversion = unversion)
 
 
     def initial_sequence_loading(self, work_dir: str):
@@ -285,9 +281,7 @@ class load_sequence_data(eHive.BaseRunnable):
             seq_region_map: dict,
             attrib_type_map: dict,
             work_dir,
-            unversion: bool = unversion,
-            karyotype_info_tag: str = "karyotype_bands",
-            is_primary_assembly: bool = is_primary_assembly):
+            unversion: bool = unversion):
         """
         Add seq_region_attrib(s) from the seq_region_file meta data file. Explicit list is taken from "sr_attrib_types" module param.
 
@@ -354,7 +348,7 @@ class load_sequence_data(eHive.BaseRunnable):
         )
 
 
-    def flattern_seq_region_item(self, seq_region: dict, prop_name: str; path_attrib_id_map: dict) -> list:
+    def flattern_seq_region_item(self, seq_region: dict, prop_name: str; path_attrib_id_map: dict, sep: str = "/") -> list:
         """
         Flattern seq_region[property] and store corresponding [ (json_path, attrib_id, value)... ] (as list of trios).
 
@@ -377,7 +371,7 @@ class load_sequence_data(eHive.BaseRunnable):
             if isinstance(value, dict) :
                 # if value is a complex object, add its leaves
                 for key, val in value.items():
-                    paths_to_go.append( (f"{path}/{key}", val) )
+                    paths_to_go.append( (f"{path}{sep}{key}", val) )
                 continue
             # if value is simple
             attrib_id = path_attrib_id_map.get(path, None)
@@ -437,35 +431,104 @@ class load_sequence_data(eHive.BaseRunnable):
             ignore = True
         )
 
-        self.add_karyotype_data(seq_region_file,
-                                seq_region_map,
-                                attrib_type_map,
-                                pj(work_dir, "karyotype"))
 
-    def add_karyotype_data(self, seq_region_file: str, seq_region_map: dict , attrib_type_map: dict, work_dir: str):
+    def add_karyotype_data(self,
+                           seq_region_file: str,
+                           seq_region_map: dict,
+                           attrib_type_map: dict,
+                           work_dir: str,
+                           unversion: bool = False):
         """
-        Adds karyotyope bands from seq_region
+        Adds various karyotypic data from seq_region file and assembly metadata (if present).
 
-Add seq_region_attrib(s) from the seq_region_file meta data file. Explicit list is taken from "sr_attrib_types" module param.
+        Adds various karyotypic data from the schema/seq_region_schema.json compatible meta data file and assembly metadata (if present).
 
-Add seq_region_attrib(s) from the schema/seq_region_schema.json compatible meta data file.
-Explicit list is taken from "sr_attrib_types" module param.
-"sr_attrib_types" defines { json_property -> attrib_type.name } map. If the value is dict,
-its keys are treated as "/"-delimetered "json_path" (i.e. "added_sequence/assembly_provider/name").
-No arrays can be processed. Only simple or "flattable" types.
-If unversion is true:
-* the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
-
-Too close to the DB schema.
+        If unversion is true:
+          * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
         """
-        # add karyotype related data
-        # add karyotyope bands data and karyotype ranks attributes
-        # add karyotype info
+        # add karyotyope bands data
+        regions_with_karyotype_bands = self.add_kayryotype_bands(seq_region_file,
+                                                                 seq_region_map,
+                                                                 attrib_type_map,
+                                                                 pj(work_dir, "karyotype_bands"),
+                                                                 unversion = unversion)
 
-        #   add karyotype ranks attributes
+        # add karyotype ranks attributes
+        # HERE
         asm_meta = self.from_param("genome_data","assembly")
         add_cs_tag = self.param("cs_tag_for_ordered")
         self.add_chr_karyotype_rank(asm_meta, pj(wd,"karyotype"), add_cs_tag)
+
+
+    def add_karyotype_bands(self,
+                            seq_region_file: str,
+                            seq_region_map: dict,
+                            attrib_type_map: dict,
+                            work_dir: str,
+                            unversion: bool = False,
+                            karyotype_bands_property = "karyotype_bands") -> list:
+        """
+        Add karyotypic data from the seq_region metafile.
+
+        Add karyotypic data from the schema/seq_region_schema.json compatible meta data file.
+        Returns list of [ (seq_region_name, seq_region_id, unversioned_name) ] trios for seq_regions having karyotype bands info.
+
+        If unversion is true:
+          * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
+
+        Too close to the DB schema.
+        """
+        os.makedirs(work_dir, exist_ok=True)
+
+        # return if there's nothing to add
+        if not seq_region_file: return
+
+        # load BRC4/EBI name from seq_region file
+        band_tuples = [] # [ (seq_region_id, seq_region_start, seq_region_end, band|"NULL", stain|"NULL")... ] list of tuples for inserting into db 
+        with open(seq_region_file) as in_file:
+            seq_regions = list(json.load(in_file))
+            for seq_region in filter(lambda sr: karyotype_bands_property in sr, seq_regions):
+                # iterate through all seq_regions having "karyotype_bands" 
+
+                # get seq_region_id (perhaps, by using unversioned name)
+                seq_region_name, seq_region_id, unversioned_name = \
+                    self.name_and_id_from_seq_region_item(seq_region, try_unversion = unversion)
+
+                # append bands to the band_tuples list
+                for band in seq_region[ karyotype_bands_property ]:
+                    # print("BAND: " + str(band), file = sys.stderr)
+                    # coords
+                    seq_region_start = band["start"]
+                    seq_region_end = band["end"]
+                    # band_name and stain
+                    band_name = self.quote_or_null( band.get("name", None) )
+                    stain = self.quote_or_null( band.get("stain", None) )
+                    # special cases for stain
+                    structure = band.get("structure", None)
+                    if structure == "telomere":
+                        stain = self.quote_or_null("TEL")
+                    elif structure == "centromere":
+                        stain = self.quote_or_null("ACEN")
+
+                    # append tuple
+                    band_tuples.append( (seq_region_id, eq_region_start, seq_region_end, band_name, stain) )
+
+        # run insertion SQL
+        self.insert_to_db(
+            band_tuples,
+            "karyotype",
+            ["seq_region_id", "seq_region_start", "seq_region_end", "band", "stain"]
+            pj(work_dir, "karyotype_insertion"),
+            ignore = True
+        )
+
+
+    def quote_or_null(self, val: str, quotes: str = "'", null: str = "NULL") -> str;
+        """
+        Return `val` wrapped in `quotes` or `null` value
+        """
+        if val is None: return null
+        return f"{quotes}{val}{quotes}"
 
 
     # STAGES
@@ -531,47 +594,6 @@ Too close to the DB schema.
         if len(sr_ids) > 0:
             tag = "karyotype_rank"
             self.set_sr_attrib(tag, sr_ids, pj(wd, "sr_attr_set_"+tag))
-
-
-    def ____set_sr_attrib(self, attr_type, id_val_lst, log_pfx):
-    # was
-    #    def set_sr_attrib(self, attr_type, id_val_lst, log_pfx, karyotype_info = False):
-    #        if karyotype_info:
-    #            return self.add_karyotype_bands(id_val_lst, log_pfx)
-        pass
-
-
-    def add_karyotype_bands(self, id_val_lst, log_pfx):
-        os.makedirs(dirname(log_pfx), exist_ok=True)
-        insert_sql_file = log_pfx + "_insert_karyotype_bands.sql"
-        if len(id_val_lst) <= 0:
-            return
-        _skip_list = set([_sr_id for _sr_id, _val in id_val_lst if not _val])
-        if len(id_val_lst) == len(_skip_list):
-           return
-        with open(insert_sql_file, "w") as sql:
-            print("insert into karyotype (seq_region_id, seq_region_start, seq_region_end, band, stain) values", file=sql)
-            sep = ""
-            for _sr_id, _val in id_val_lst:
-                for band in _val:
-                    # print("BAND: " + str(band), file = sys.stderr)
-                    start = band["start"]
-                    end = band["end"]
-                    name = "name" in band and "'%s'" % (band["name"]) or "NULL"
-                    stain = "stain" in band and "'%s'" % (band["stain"]) or "NULL"
-                    if "structure" in band:
-                        if band["structure"] == "telomere":
-                            stain = "'TEL'"
-                        elif band["structure"] == "centromere":
-                            stain = "'ACEN'"
-                    val_str =  ",".join(list(map(lambda x: str(x), [_sr_id, start, end, name, stain])))
-                    print ('%s (%s)' % (sep, val_str), file = sql)
-                    sep = ","
-            print(";", file=sql)
-        # run insert sql
-        self.run_sql_req(insert_sql_file, log_pfx, from_file = True)
-
-
 
 
     def unversion_scaffolds(self, cs_rank, logs):
@@ -685,6 +707,7 @@ Too close to the DB schema.
             loaded_regions.update(new_regions)
         if not seq_level:
             self.load_agp(pair, asm_v, src_file, log_pfx)
+
 
     def filter_already_loaded_regions_from_agp(self, src_file, dst_file, loaded_regions, new_regions):
        with open(src_file) as src:
