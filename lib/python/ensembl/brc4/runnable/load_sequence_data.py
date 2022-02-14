@@ -259,13 +259,13 @@ class load_sequence_data(eHive.BaseRunnable):
                     # put trios if names are not already seen in db 
                     if synonym_name not in synonym_in_db:
                         external_db_id = self.id_from_map_or_die(source, external_db_map, "external_db_map")
-                        synonyms_from_json.append( (seq_region_id, synonym_name, external_db_id) )
+                        synonyms_from_json.append( (seq_region_id, self.quote_or_null(synonym_name), external_db_id) )
 
                     #   put additional unversioned synonyms if there's a sane one
                     if unversioned_name \
                       and unversioned_name != synonym_name \
                       and unversioned_name not in synonym_in_db:
-                        synonyms_from_json.append( (seq_region_id, synonym_name, ensembl_internal_synonym_ext_db_id) )
+                        synonyms_from_json.append( (seq_region_id, self.quote_or_null(synonym_name), ensembl_internal_synonym_ext_db_id) )
 
         # run insertion SQL
         self.insert_to_db(
@@ -336,7 +336,7 @@ class load_sequence_data(eHive.BaseRunnable):
                     path_attrib_id_values_list = self.flattern_seq_region_item(seq_region, prop_name, path_attrib_id_map)
                     # fill attrib_trios
                     for (path, attrib_id, value) in path_attrib_id_values_list:
-                        attrib_trios.append( (seq_region_id, attrib_id, value) )
+                        attrib_trios.append( (seq_region_id, attrib_id, self.quote_or_null(value)) )
 
         # run insertion SQL
         self.insert_to_db(
@@ -420,7 +420,7 @@ class load_sequence_data(eHive.BaseRunnable):
                     attrib_name = f"{tag}_seq_region_name"
                     attrib_id = tagged_sr_name_attrib_id[tag]
                     value = seq_region.get(attrib_name, seq_region_name)
-                    brc4_ebi_name_attrib_trios.append( (seq_region_id, attrib_id, value) )
+                    brc4_ebi_name_attrib_trios.append( (seq_region_id, attrib_id, self.quote_or_null(value)) )
 
         # run insertion SQL
         self.insert_to_db(
@@ -506,12 +506,12 @@ class load_sequence_data(eHive.BaseRunnable):
                     # special cases for stain
                     structure = band.get("structure", None)
                     if structure == "telomere":
-                        stain = self.quote_or_null("TEL")
+                        stain = "TEL"
                     elif structure == "centromere":
-                        stain = self.quote_or_null("ACEN")
+                        stain = "ACEN"
 
                     # append tuple
-                    band_tuples.append( (seq_region_id, eq_region_start, seq_region_end, band_name, stain) )
+                    band_tuples.append( (seq_region_id, eq_region_start, seq_region_end, self.quote_or_null(band_name), self.quote_or_null(stain)) )
 
         # run insertion SQL
         self.insert_to_db(
@@ -521,14 +521,6 @@ class load_sequence_data(eHive.BaseRunnable):
             pj(work_dir, "karyotype_insertion"),
             ignore = True
         )
-
-
-    def quote_or_null(self, val: str, quotes: str = "'", null: str = "NULL") -> str;
-        """
-        Return `val` wrapped in `quotes` or `null` value
-        """
-        if val is None: return null
-        return f"{quotes}{val}{quotes}"
 
 
     # STAGES
@@ -1210,6 +1202,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Insert into the core db's {table_name} tuples from {list_of_tuples} as col_names.
 
+        Use `quote_or_null` (see definition below) method for string values, when putting values into `list_of_tuples`
         SQL code
         """
         # return if nothing to do
@@ -1233,4 +1226,15 @@ class load_sequence_data(eHive.BaseRunnable):
         # run insert SQL from file
         self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
 
+
+    def quote_or_null(self, val: str, quotes: str = "'", null: str = "NULL", strings_only = True) -> str;
+        """
+        Return `val` wrapped in `quotes` or `null` value
+
+        Quotes only strings (instances of `str`) if strings_only is True.
+        """
+        if val is None: return null
+        if strings_only and isinstance(val, str):
+            return f"{quotes}{val}{quotes}"
+        return val
 
