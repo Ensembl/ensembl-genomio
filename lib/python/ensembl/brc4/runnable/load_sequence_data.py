@@ -921,8 +921,9 @@ class load_sequence_data(eHive.BaseRunnable):
         if not parts:
             return None
 
+        parts = list(parts)
         last = parts.pop()
-        prefix = pj(parts)
+        prefix = pj(*parts)
 
         os.makedirs(prefix, exist_ok=True)
 
@@ -964,6 +965,7 @@ class load_sequence_data(eHive.BaseRunnable):
           and load then into the {key : value} map.
         Skips header if skip_heade.
         """
+        data = dict()
         with open(in_file) as pairs_file:
             for line in pairs_file:
                 if skip_header:
