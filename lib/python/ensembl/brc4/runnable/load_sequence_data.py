@@ -241,7 +241,7 @@ class load_sequence_data(eHive.BaseRunnable):
         synonyms_from_json = [] # [ (seq_region_id, synonym, external_db_id)... ] list of trios for inserting into db 
         with open(seq_region_file) as in_file:
             seq_regions = list(json.load(in_file))
-            for seq_region in filter(lambda sr: sr.get("synonyms", false), seq_regions):
+            for seq_region in filter(lambda sr: sr.get("synonyms", False), seq_regions):
                 # iterate through all seq_regions having "synonyms" 
                 seq_region_name, seq_region_id, _ = \
                     self.name_and_id_from_seq_region_item(seq_region, try_unversion = unversion)
@@ -507,7 +507,7 @@ class load_sequence_data(eHive.BaseRunnable):
         band_tuples = [] # [ (seq_region_id, seq_region_start, seq_region_end, band|"NULL", stain|"NULL")... ] list of tuples for inserting into db 
         with open(seq_region_file) as in_file:
             seq_regions = list(json.load(in_file))
-            for seq_region in filter(lambda sr: sr.get(karyotype_bands_property, false), seq_regions):
+            for seq_region in filter(lambda sr: sr.get(karyotype_bands_property, False), seq_regions):
                 # iterate through all seq_regions having non-empty "karyotype_bands" 
 
                 # get seq_region_id (perhaps, by using unversioned name)
