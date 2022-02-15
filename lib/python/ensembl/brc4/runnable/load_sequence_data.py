@@ -544,11 +544,10 @@ class load_sequence_data(eHive.BaseRunnable):
         return seq_regions_with_karyotype_bands
 
 
-    # try to add karyotype ranks for regions listed in genome_data/assembly/chromosome_display_order metadata
     def add_karyotype_rank_based_on_assembly_metadata(self,
                                                       seq_region_map: dict,
                                                       attrib_type_map: dict,
-                                                      workdir: str,
+                                                      work_dir: str,
                                                       unversion:bool = True) -> list:,
         """
         Add `karyotype_rank` attributes for seq region data from based on metadata from the "genome_data" module parameter.
@@ -631,89 +630,56 @@ class load_sequence_data(eHive.BaseRunnable):
         return seq_regions_with_karyotype_bands
 
 
-       # HERE implement `update_db_single_group`
+    def add_karyotype_rank_for_chromosomes(self,
+                                           attrib_type_map: dict,
+                                           work_dir: str,
+                                           chromosome_coord_system_name = "chromosome") -> list:
+        """
+        Add `karyotype_rank` attributes for seq region data from the "chromosome" coordinate system.
 
-        if not regions_with_ranks_from_meta:
-            # try to add karyotype_ranks for top-level regions from the "chromosome" coord_system
-            regions_with_ranks_from_chromosome_cs = self.add_karyotype_rank_for_chromosomes(self.pjc(work_dir, "karyotype_ranks_for_chromosomes"))
+        Returns list of [ (seq_region_name, seq_region_id, unversioned_name) ] trios for seq_regions with updated karyotype_ranks.
+        Not altering "coord_system_tag" tag attributes.
+
+        If unversion is true:
+          * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
+
+        Too close to the DB schema.
+        """
+
+        # resulting list of seq_region with karyotype_rank
+        #   list of top level seq regions from the `chromosome_coord_system_name` 
+        chromomes_seq_regions = self.get_toplevel_from_cs(chromosome_coord_system_name,
+                                                          self.pjc(work_dir, chromosome_seq_regions))
+
+        if not chromomes_seq_regions:
+            return chromomes_seq_regions
 
         # technical / optimization. get external_db_id for "ensembl_internal_synonym"
-        ensembl_internal_synonym_ext_db_id = self.id_from_map_or_die("ensembl_internal_synonym", external_db_map, "external_db_map")
+        karyotype_rank_attrib_id = self.id_from_map_or_die("karyotype_rank", attrib_type_map, "attrib_type_map")
+
+        # set/update proper attributes for "chromomosome" regions
+        rank_insertions_trios = []
+        for _, seq_region_id, _ in chromomes_seq_regions:
+            rank_insertions_trios.append( (seq_region_id, karyotype_rank_attrib_id, len(rank_insertions_trios)+1) )
+
+        # run insertion SQL for "karyotype_rank"
+        #    do not alter "coord_system_tag" anyhow in the case of the "chromosome" coord_system
+        self.insert_to_db(
+            rank_insertions_trios,
+            "seq_region_attrib",
+            ["seq_region_id", "attrib_type_id", "value"],
+            self.pjc(work_dir, "karyotype_rank_insertion"),
+            ignore = True
+        )
+
+
+    def :
+       # HERE
+            # try to add karyotype_ranks for top-level regions from the "chromosome" coord_system
+
 
         # make sure that regions with bands have karyotype_ranks
         # self.add_karyotyoe_rank_from_bands_info()
-
-        # set "coord_system_tag" seq_region attribute to this value if there's a corresponding "chromosome_display_order" list in genome.json metadata
-        #   if None, only "chromosome" coord system is processed (if present)
-        #   (see add_chr_karyotype_rank definition below )
-        #    'cs_tag_for_ordered' : None,
-
-        # add karyotype ranks attributes
-        # HERE
-
-    # STAGES
-    def add_chr_karyotype_rank(self, meta, wd, add_cs_tag = None):
-        # get order from  meta["chromosome_display_order"] , omit unmentioned
-        #   otherwise get toplevel "chromosome" seq_regions, sort by seq_region_id
-        os.makedirs(wd, exist_ok=True)
-        sr_ids = []
-        tag = "chromosome_display_order"
-        chr_order = meta and tag in meta and meta[tag] or None
-        if (chr_order == None):
-            # get chromosome id and karyotype_rank id
-            ids_sql = r'''select distinct sr.seq_region_id as seq_region_id
-                        from seq_region sr, seq_region_attrib sra, coord_system cs, attrib_type at
-                        where sr.seq_region_id = sra.seq_region_id
-                          and sr.coord_system_id = cs.coord_system_id
-                          and sra.attrib_type_id = at.attrib_type_id
-                          and (
-                               ( cs.name = "chromosome" and at.code = "toplevel" )
-                            or ( at.code = "coord_system_tag" and sra.value = "chromosome" )
-                          )
-                       order by seq_region_id
-                      ;'''
-            ids_log_pfx = self.pjc(wd,'chr_ids')
-            self.run_sql_req(ids_sql, ids_log_pfx)
-            # load
-            with open(ids_log_pfx + ".stdout") as f:
-                for line in f:
-                    if (line.startswith("seq_region_id")):
-                        continue
-                    (sr_id, ) = line.strip().split("\t")
-                    sr_ids.append(sr_id)
-            sr_ids = [ (_id, i) for i, _id in enumerate(sr_ids, start = 1) ]
-        else:
-            # show only chromosomes from the chromosome_order
-            # get names, syns from db
-            chr_rank = { name : rank for rank, name in enumerate(chr_order, start = 1) }
-            # get syns
-            syns_out_pfx = self.pjc(wd, "syns_from_core")
-            self.get_db_syns(syns_out_pfx)
-            # load into dict
-            with open(syns_out_pfx + ".stdout") as syns_file:
-                for line in syns_file:
-                    (sr_id, name, syn) = line.strip().split("\t")
-                    for _name in [name, syn]:
-                        if _name in chr_rank:
-                           sr_ids.append((int(sr_id), chr_rank[_name]))
-            sr_ids=list(set(sr_ids))
-            # assert chr_rank is not reused
-            if len(sr_ids) != len(frozenset(map(lambda p: p[1], sr_ids))):
-                raise Exception("karyotype_rank is reused: %s" % (str(sr_ids)))
-            # assert seq_region_id is not reused
-            if len(sr_ids) != len(frozenset(map(lambda p: p[0], sr_ids))):
-                raise Exception("same seq_region with different karyotype_rank or wrong seq_regions used in \"chromosome_display_order\". known: %s" % (str(sr_ids)))
-            # trying to set chromosome tag
-            #   should not change or add if seq_region_tag is already loaded (INSERT IGNORE used)
-            if len(sr_ids) > 0 and add_cs_tag is not None:
-              tag = "coord_system_tag"
-              sr_ids_chr = [ (_id, add_cs_tag) for _id, _  in sr_ids ]
-              self.set_sr_attrib(tag, sr_ids_chr, self.pjc(wd, "sr_attr_set_"+tag))
-
-        # insert attrib sql
-        if len(sr_ids) > 0:
-            tag = "karyotype_rank"
-            self.set_sr_attrib(tag, sr_ids, self.pjc(wd, "sr_attr_set_"+tag))
 
 
     def unversion_scaffolds(self, cs_rank, logs):
@@ -1320,6 +1286,7 @@ class load_sequence_data(eHive.BaseRunnable):
                  on sr.seq_region_id = srs.seq_region_id
                  order by sr.seq_region_id
               ;'''
+
         res = self.run_sql_req(sql, out_pfx)
 
         syn_trios = []
@@ -1331,7 +1298,7 @@ class load_sequence_data(eHive.BaseRunnable):
                    skip_header = False
                    continue
                (sr_id, name, syn) = line.strip().split("\t")
-               syn_trios.append((sr_id, name, syn))
+               syn_trios.append( (sr_id, name, syn) )
         return syn_trios
 
 
@@ -1395,6 +1362,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         If `where` condition is present its value is used for the "WHERE" SQL clause.
         Use `quote_or_null` (see definition below) method for string values, when putting values into `list_of_tuples`
+
         SQL code
         """
         # return if nothing to do
@@ -1417,4 +1385,45 @@ class load_sequence_data(eHive.BaseRunnable):
 
         # run insert SQL from file
         self.run_sql_req(update_sql_file, self.pjc(work_dir, "update"), from_file = True)
+
+
+    def get_toplevel_from_cs(self,
+                             coord_system_name,
+                             work_dir) -> list:
+        """
+        Returns list of [ (seq_region_name, seq_region_id, "") ] trios for toplevel seq_regions from coord system with `coord_system_name`
+          or having  "coord_system_tag" attribute with the `coord_system_name` value
+
+        SQL code
+        """
+        out_pfx = self.pjc(work_dir, f"toplevel_from_{coord_system_name}")
+        sql = f'SELECT DISTINCT sr.name, sr.seq_region_id, "" as synonym
+                FROM seq_region sr,
+                     seq_region_attrib sra,
+                     coord_system cs,
+                     attrib_type at
+                WHERE sr.seq_region_id = sra.seq_region_id
+                  AND sr.coord_system_id = cs.coord_system_id
+                  AND sra.attrib_type_id = at.attrib_type_id
+                  AND (  ( cs.name = "{coord_system_name}" and at.code = "toplevel" )
+                      OR ( at.code = "coord_system_tag" and sra.value = "{coord_system_name}" )
+                      )
+                  ORDER BY sr.seq_region_id;
+               ';
+
+        res = self.run_sql_req(sql, out_pfx)
+
+        sr_trios = []
+        out_file = out_pfx + ".stdout"
+        with open(out_file) as sr_file:
+           skip_header = True
+           for line in sr_file:
+               if skip_header:
+                   skip_header = False
+                   continue
+               (name, sr_id, _) = line.strip().split("\t")
+               syn_trios.append( (name, sr_id, "") )
+
+        return syn_trios
+
 
