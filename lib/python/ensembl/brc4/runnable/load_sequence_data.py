@@ -463,13 +463,18 @@ class load_sequence_data(eHive.BaseRunnable):
                                                                                                        self.pjc(work_dir, "karyotype_ranks_from_meta"),
                                                                                                        unversion = unversion)
 
+        regions_with_ranks_from_chromosome_cs = []
         if not regions_with_ranks_from_assembly_metadata:
             # try to add karyotype_ranks for top-level regions from the "chromosome" coord_system
             regions_with_ranks_from_chromosome_cs = self.add_karyotype_rank_for_chromosomes(attrib_type_map,
                                                                                             self.pjc(work_dir, "karyotype_ranks_for_chromosomes"))
 
         # make sure that regions with bands have karyotype_ranks
-        # self.add_karyotyoe_rank_from_bands_info()
+        self.add_karyotype_rank_from_bands_info(regions_with_karyotype_bands,
+                                                regions_with_ranks_from_chromosome_cs
+                                                  + regions_with_ranks_from_assembly_metadata,
+                                                attrib_type_map,
+                                                self.pjc(work_dir, "karyotype_ranks_from_bands"))
 
 
     def add_karyotype_bands(self,
@@ -478,7 +483,7 @@ class load_sequence_data(eHive.BaseRunnable):
                             attrib_type_map: dict,
                             work_dir: str,
                             unversion: bool = False,
-                            karyotype_bands_property = "karyotype_bands") -> list:
+                            karyotype_bands_property = "karyotype_bands") -> list:  # [ (seq_region_name, seq_region_id, unversioned_name) ]
         """
         Add karyotypic data from the seq_region metafile.
 
@@ -548,7 +553,7 @@ class load_sequence_data(eHive.BaseRunnable):
                                                       seq_region_map: dict,
                                                       attrib_type_map: dict,
                                                       work_dir: str,
-                                                      unversion:bool = True) -> list:,
+                                                      unversion:bool = True) -> list: # [ (seq_region_name, seq_region_id, unversioned_name) ]
         """
         Add `karyotype_rank` attributes for seq region data from based on metadata from the "genome_data" module parameter.
         Add only to the seq_regions with ids listed in the array corresponding to 'genome_data/assembly/chromosome_display_order'.
@@ -571,7 +576,7 @@ class load_sequence_data(eHive.BaseRunnable):
         assembly_metadata = self.from_param("genome_data", "assembly", not_throw = True) or dict()
         chromosome_display_order_list = assembly_metadata.get("chromosome_display_order", [])
 
-        # technical / optimization. get external_db_id for "ensembl_internal_synonym"
+        # technical / optimization. get external_db_id for "karyotype_rank" and "coord_system_tag"
         karyotype_rank_attrib_id = self.id_from_map_or_die("karyotype_rank", attrib_type_map, "attrib_type_map")
         coord_system_tag_attrib_id = self.id_from_map_or_die("coord_system_tag", attrib_type_map, "attrib_type_map")
         coord_system_tag = self.param("cs_tag_for_ordered") or "chromosome"
@@ -633,7 +638,7 @@ class load_sequence_data(eHive.BaseRunnable):
     def add_karyotype_rank_for_chromosomes(self,
                                            attrib_type_map: dict,
                                            work_dir: str,
-                                           chromosome_coord_system_name = "chromosome") -> list:
+                                           chromosome_coord_system_name = "chromosome") -> list: # [ (seq_region_name, seq_region_id, unversioned_name) ]
         """
         Add `karyotype_rank` attributes for seq region data from the "chromosome" coordinate system.
 
@@ -654,7 +659,7 @@ class load_sequence_data(eHive.BaseRunnable):
         if not chromomes_seq_regions:
             return chromomes_seq_regions
 
-        # technical / optimization. get external_db_id for "ensembl_internal_synonym"
+        # technical / optimization. get external_db_id for "karyotype_rank"
         karyotype_rank_attrib_id = self.id_from_map_or_die("karyotype_rank", attrib_type_map, "attrib_type_map")
 
         # set/update proper attributes for "chromomosome" regions
@@ -673,13 +678,46 @@ class load_sequence_data(eHive.BaseRunnable):
         )
 
 
-    def :
-       # HERE
-            # try to add karyotype_ranks for top-level regions from the "chromosome" coord_system
+    def add_karyotype_rank_from_bands_info(self,
+                                           regions_with_karyotype_bands: list, # [ (seq_region_name, seq_region_id, unversioned_name) ]
+                                           other_regions_with_ranks: list, # [ (seq_region_name, seq_region_id, unversioned_name) ]   
+                                           attrib_type_map: dict,
+                                           work_dir: str):
+        """
+        Add karyotype_ranks for `regions_with_karyotype_bands` (those with karyotype bands in seq_region metadata) but not present in `other_regions_with_ranks` list.
 
+        Too close to the DB schema.
+        """
+        # form set of used seq_region_id(s)
+        regions_with_ranks = frozenset( map(lambda el: el[1], other_regions_with_ranks) )
 
-        # make sure that regions with bands have karyotype_ranks
-        # self.add_karyotyoe_rank_from_bands_info()
+        # get set of seq_region_ids with bands
+        regions_with_bands = set( map(lambda el: el[1], regions_with_karyotype_bands) )
+
+        # seq_region_ids list to add ranks for
+        region_ids_with_bands_but_no_karyotype_ranks = sorted( list( regions_with_bands - regions_with_ranks ) )
+
+        # return if nothing to add
+        if not region_ids_with_bands_but_no_karyotype_ranks:
+            return
+
+        # technical / optimization. get external_db_id for "karyotype_rank"
+        karyotype_rank_attrib_id = self.id_from_map_or_die("karyotype_rank", attrib_type_map, "attrib_type_map")
+
+        # set/update proper attributes for "chromomosome" regions
+        rank_insertions_trios = []
+        for seq_region_id in region_ids_with_bands_but_no_karyotype_ranks:
+            rank_insertions_trios.append( (seq_region_id, karyotype_rank_attrib_id, len(rank_insertions_trios) + 1 + len(regions_with_ranks)) )
+
+        # run insertion SQL for "karyotype_rank"
+        #    do not alter "coord_system_tag" anyhow in the case of the "chromosome" coord_system
+        self.insert_to_db(
+            rank_insertions_trios,
+            "seq_region_attrib",
+            ["seq_region_id", "attrib_type_id", "value"],
+            self.pjc(work_dir, "karyotype_rank_insertion"),
+            ignore = True
+        )
 
 
     def unversion_scaffolds(self, cs_rank, logs):
