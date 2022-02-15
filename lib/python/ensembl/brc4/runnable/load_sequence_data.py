@@ -244,7 +244,7 @@ class load_sequence_data(eHive.BaseRunnable):
             for seq_region in filter(lambda sr: sr.get("synonyms", False), seq_regions):
                 # iterate through all seq_regions having "synonyms" 
                 seq_region_name, seq_region_id, _ = \
-                    self.name_and_id_from_seq_region_item(seq_region, try_unversion = unversion)
+                    self.name_and_id_from_seq_region_item(seq_region, seq_region_map, try_unversion = unversion)
 
                 # fill synonyms_from_json list of trios
                 for synonym_item in list(seq_region["synonyms"]):
@@ -330,7 +330,7 @@ class load_sequence_data(eHive.BaseRunnable):
             for seq_region in seq_regions:
                 # get seq_region_id (perhaps, by using unversioned name)
                 seq_region_name, seq_region_id, unversioned_name = \
-                    self.name_and_id_from_seq_region_item(seq_region, try_unversion = unversion)
+                    self.name_and_id_from_seq_region_item(seq_region, seq_region_map, try_unversion = unversion)
 
                 # iterate through properties
                 for prop_name in propeties_to_use_map:
@@ -418,7 +418,7 @@ class load_sequence_data(eHive.BaseRunnable):
             for seq_region in seq_regions:
                 # get seq_region_id (perhaps, by using unversioned name)
                 seq_region_name, seq_region_id, unversioned_name = \
-                    self.name_and_id_from_seq_region_item(seq_region, try_unversion = unversion)
+                    self.name_and_id_from_seq_region_item(seq_region, seq_region_map, try_unversion = unversion)
                 # append attribs to the brc4_ebi_name_attrib_trios list
                 for tag in ["BRC4", "EBI"]:
                     attrib_name = f"{tag}_seq_region_name"
@@ -512,7 +512,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
                 # get seq_region_id (perhaps, by using unversioned name)
                 seq_region_name, seq_region_id, unversioned_name = \
-                    self.name_and_id_from_seq_region_item(seq_region, try_unversion = unversion)
+                    self.name_and_id_from_seq_region_item(seq_region, seq_region_map, try_unversion = unversion)
 
                 #append trio to the resulting list 
                 seq_regions_with_karyotype_bands.append( (seq_region_name, seq_region_id, unversioned_name) )
@@ -591,7 +591,7 @@ class load_sequence_data(eHive.BaseRunnable):
             # wrap seq_region_name_raw into seq_region struct { "name": seq_region_name_raw } and
             # get seq_region_id (perhaps, by using unversioned name)
             seq_region_name, seq_region_id, unversioned_name = \
-                self.name_and_id_from_seq_region_item({ "name" : seq_region_name_raw }, try_unversion = unversion)
+                self.name_and_id_from_seq_region_item({ "name" : seq_region_name_raw }, seq_region_map, try_unversion = unversion)
 
             #append trio to the resulting list 
             regions_with_ranks_from_assembly_metadata.append( (seq_region_name, seq_region_id, unversioned_name) )
@@ -984,7 +984,7 @@ class load_sequence_data(eHive.BaseRunnable):
         Throws exception if not able to get seq_region_id from "seq_region_map" and "throw_missing" is true.
         """
         #   get seq_region_id (perhaps, by using unversioned name)
-        seq_region_name = seq_region["name"]
+        seq_region_name = seq_region_item["name"]
         seq_region_id = seq_region_map.get(seq_region_name, None)
         unversioned_name = None
         if seq_region_id is None and unversion:
