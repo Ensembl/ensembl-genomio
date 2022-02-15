@@ -285,7 +285,7 @@ class load_sequence_data(eHive.BaseRunnable):
             seq_region_map: dict,
             attrib_type_map: dict,
             work_dir,
-            unversion: bool = unversion):
+            unversion: bool = False):
         """
         Add seq_region_attrib(s) from the seq_region_file meta data file. Explicit list is taken from "sr_attrib_types" module param.
 
@@ -352,7 +352,7 @@ class load_sequence_data(eHive.BaseRunnable):
         )
 
 
-    def flattern_seq_region_item(self, seq_region: dict, prop_name: str; path_attrib_id_map: dict, sep: str = "/") -> list:
+    def flattern_seq_region_item(self, seq_region: dict, prop_name: str, path_attrib_id_map: dict, sep: str = "/") -> list:
         """
         Flattern seq_region[property] and store corresponding [ (json_path, attrib_id, value)... ] (as list of trios).
 
@@ -540,7 +540,7 @@ class load_sequence_data(eHive.BaseRunnable):
         self.insert_to_db(
             band_tuples,
             "karyotype",
-            ["seq_region_id", "seq_region_start", "seq_region_end", "band", "stain"]
+            ["seq_region_id", "seq_region_start", "seq_region_end", "band", "stain"],
             self.pjc(work_dir, "karyotype_insertion"),
             ignore = True
         )
@@ -990,11 +990,11 @@ class load_sequence_data(eHive.BaseRunnable):
             unversioned_name = re.sub(r"\.\d+$", "", seq_region_name)
             seq_region_id = seq_region_map.get(unversioned_name, "")
 
-       # oops, we don't know such seq_region name
-       if not seq_region_id and throw_missing:
-           raise Exception(f"Not able to find seq_region for '{seq_region_name}'")
+        # oops, we don't know such seq_region name
+        if not seq_region_id and throw_missing:
+            raise Exception(f"Not able to find seq_region for '{seq_region_name}'")
 
-       return (seq_region_name, seq_region_id, unversioned_name)
+        return (seq_region_name, seq_region_id, unversioned_name)
 
 
     def id_from_map_or_die(self, key: str, map_dict: dict, name_for_panic):
@@ -1340,14 +1340,12 @@ class load_sequence_data(eHive.BaseRunnable):
         return syn_trios
 
 
-    def insert_to_db(
-            self,
-            list_of_tuples: list,
-            table_name: str,
-            col_names: list,
-            work_dir: str,
-            ignore: bool = True
-        )
+    def insert_to_db(self,
+                     list_of_tuples: list,
+                     table_name: str,
+                     col_names: list,
+                     work_dir: str,
+                     ignore: bool = True):
         """
         Insert into the core db's {table_name} tuples from {list_of_tuples} as col_names.
 
@@ -1367,7 +1365,7 @@ class load_sequence_data(eHive.BaseRunnable):
             print(f"INSERT {ignore_str} INTO {table_name} ({col_names}) VALUES", file=sql)
             values_sep = ""
             for tpl in list_of_tuple:
-                tpl_str = ", ".join(map v: str(v), tpl)
+                tpl_str = ", ".join(map(str, tpl))
                 print(f"{values_sep}({tpl_str})", file = sql)
                 values_sep = ", "
             print(";", file=sql)
@@ -1376,7 +1374,7 @@ class load_sequence_data(eHive.BaseRunnable):
         self.run_sql_req(insert_sql_file, self.pjc(work_dir, "insert"), from_file = True)
 
 
-    def quote_or_null(self, val: str, quotes: str = "'", null: str = "NULL", strings_only = True) -> str;
+    def quote_or_null(self, val: str, quotes: str = "'", null: str = "NULL", strings_only = True) -> str:
         """
         Return `val` wrapped in `quotes` or `null` value
 
@@ -1388,13 +1386,11 @@ class load_sequence_data(eHive.BaseRunnable):
         return val
 
 
-    def update_db_single_group(
-            self,
-            dict_of_col_to_value: dict,
-            table_name: str,
-            work_dir: str,
-            where: str = None
-        )
+    def update_db_single_group(self,
+                               dict_of_col_to_value: dict,
+                               table_name: str,
+                               work_dir: str,
+                               where: str = None):
         """
         Update given `table` name in db; set `col = val` for all key/value pairs from `dict_of_cols_to_values`
 
@@ -1408,7 +1404,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         # prepare request parts
         where_str = where and f"WHERE {where}" or ""
-        col_val_str = ", ".join([ f"{col} = {val}" for col, val in dict_of_col_to_value.items() ]))
+        col_val_str = ", ".join([ f"{col} = {val}" for col, val in dict_of_col_to_value.items() ])
 
         # generate file with the insert SQL command
         update_sql_file = self.pjc(work_dir, "update.sql")
@@ -1416,7 +1412,7 @@ class load_sequence_data(eHive.BaseRunnable):
             print(f"UPDATE {table_name} SET {col_val_str} {where_str};", file=sql)
             values_sep = ""
             for tpl in list_of_tuple:
-                tpl_str = ", ".join(map v: str(v), tpl)
+                tpl_str = ", ".join( map(str, tpl) )
                 print(f"{values_sep}({tpl_str})", file = sql)
                 values_sep = ", "
             print(";", file=sql)
@@ -1435,7 +1431,7 @@ class load_sequence_data(eHive.BaseRunnable):
         SQL code
         """
         out_pfx = self.pjc(work_dir, f"toplevel_from_{coord_system_name}")
-        sql = f'SELECT DISTINCT sr.name, sr.seq_region_id, "" as synonym
+        sql = f'''SELECT DISTINCT sr.name, sr.seq_region_id, "" as synonym
                 FROM seq_region sr,
                      seq_region_attrib sra,
                      coord_system cs,
@@ -1447,7 +1443,7 @@ class load_sequence_data(eHive.BaseRunnable):
                       OR ( at.code = "coord_system_tag" and sra.value = "{coord_system_name}" )
                       )
                   ORDER BY sr.seq_region_id;
-               ';
+               '''
 
         res = self.run_sql_req(sql, out_pfx)
 
