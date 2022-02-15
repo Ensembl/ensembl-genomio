@@ -117,14 +117,14 @@ class load_sequence_data(eHive.BaseRunnable):
         self.add_sr_synonyms(seq_region_file,
                              seq_region_map,
                              external_db_map,
-                             pj(work_dir, "seq_region_syns"),
+                             self.pjc(work_dir, "seq_region_syns"),
                              unversion = unversion)
 
         #   add seq_region attributes
         self.add_sr_attribs(seq_region_file,
                             seq_region_map,
                             attrib_type_map,
-                            pj(work_dir, "seq_region_attr"),
+                            self.pjc(work_dir, "seq_region_attr"),
                             unversion = unversion)
 
         #   add seq_region EBI and BRC4 name attributes in the "BRC4 mode"
@@ -135,14 +135,14 @@ class load_sequence_data(eHive.BaseRunnable):
             self.add_sr_ebi_brc4_names(seq_region_file,
                                        seq_region_map,
                                        attrib_type_map,
-                                       pj(work_dir, "seq_region_ebi_brc4_name"),
+                                       self.pjc(work_dir, "seq_region_ebi_brc4_name"),
                                        unversion = unversion)
 
         # add karyotype related data
         self.add_karyotype_data(seq_region_file,
                                 seq_region_map,
                                 attrib_type_map,
-                                pj(work_dir, "karyotype"),
+                                self.pjc(work_dir, "karyotype"),
                                 unversion = unversion)
 
 
@@ -155,7 +155,7 @@ class load_sequence_data(eHive.BaseRunnable):
         # preprocess FASTA with sequences
         #   rename IUPAC to N symbols using sed
         fasta_raw = self.from_param("manifest_data", "fasta_dna")
-        fasta_clean = pj(work_dir, "fasta", "seq_no_iupac.fasta")
+        fasta_clean = self.pjc(work_dir, "fasta", "seq_no_iupac.fasta")
         self.remove_IUPAC(fasta_raw, fasta_clean)
 
         # start coord system ranking and agps processing
@@ -170,32 +170,32 @@ class load_sequence_data(eHive.BaseRunnable):
         # remove gaps and lower_level mappings if the are coveres by higher level ones
         #   i.e.: remove 'contigN to chromosomeZ', if 'contigN to scaffoldM' and 'scaffoldM to chromosomeZ' are in place
         #   returns None if no agps provided
-        agps_pruned_dir = pj(work_dir, "agps_pruned")
+        agps_pruned_dir = self.pjc(work_dir, "agps_pruned")
         agps_pruned = self.prune_agps(agps, cs_order, agps_pruned_dir, self.param_bool("prune_agp"))
 
         # empty agps_pruned ignored
-        self.load_seq_data(fasta_clean, agps_pruned, cs_rank, pj(work_dir, "load"))
+        self.load_seq_data(fasta_clean, agps_pruned, cs_rank, self.pjc(work_dir, "load"))
 
         # mark all the "contig"s or noagp_cs as being sourced from ENA
         if not self.param_bool("no_contig_ena_attrib"):
             if agps is None:
-                self.add_contig_ena_attrib(pj(work_dir, "load", "set_ena"), cs_name = noagps_cs)
+                self.add_contig_ena_attrib(self.pjc(work_dir, "load", "set_ena"), cs_name = noagps_cs)
             else:
-                self.add_contig_ena_attrib(pj(work_dir, "load", "set_ena"))
+                self.add_contig_ena_attrib(self.pjc(work_dir, "load", "set_ena"))
 
         # unversion scaffold, remove ".\d$" from names if there's a need
         if self.param_bool("unversion_scaffolds"):
-            self.unversion_scaffolds(cs_rank, pj(work_dir, "unversion_scaffolds"))
+            self.unversion_scaffolds(cs_rank, self.pjc(work_dir, "unversion_scaffolds"))
 
         # add assembly mappings between various cs to meta table for the mapper to work properly
         cs_pairs = agps_pruned and agps_pruned.keys() or None
-        self.add_asm_mappings(cs_pairs, pj(work_dir, "asm_mappings"))
+        self.add_asm_mappings(cs_pairs, self.pjc(work_dir, "asm_mappings"))
 
         # set toplevel seq_region attribute
-        self.set_toplevel(pj(work_dir, "set_toplevel"), self.param("not_toplevel_cs"))
+        self.set_toplevel(self.pjc(work_dir, "set_toplevel"), self.param("not_toplevel_cs"))
 
         # nullify contig version and update mappings strings accordingly
-        self.nullify_ctg_cs_version(pj(work_dir, "asm_mapping", "nullify_cs_versions"))
+        self.nullify_ctg_cs_version(self.pjc(work_dir, "asm_mapping", "nullify_cs_versions"))
 
 
     def add_sr_synonyms(self,
@@ -222,7 +222,7 @@ class load_sequence_data(eHive.BaseRunnable):
         if not seq_region_file: return
 
         # get seq_region ids, names, syns from db
-        synonyms_trios_db = self.load_seq_region_synonyms_trios_from_core_db(pj(work_dir, "syns_from_core"))
+        synonyms_trios_db = self.load_seq_region_synonyms_trios_from_core_db(self.pjc(work_dir, "syns_from_core"))
 
         # form set of synonyms already present in db
         synonyms_in_db = frozenset( [trio[2] for trio in synonyms_trios_db if trio[2] != "NULL"] )
@@ -276,7 +276,7 @@ class load_sequence_data(eHive.BaseRunnable):
             synonyms_from_json,
             "seq_region_synonym",
             ["seq_region_id", "synonym", "external_db_id"],
-            pj(work_dir, "new_seq_region_synonyms"),
+            self.pjc(work_dir, "new_seq_region_synonyms"),
             ignore = True
         )
 
@@ -347,7 +347,7 @@ class load_sequence_data(eHive.BaseRunnable):
             attrib_trios,
             "seq_region_attrib",
             ["seq_region_id", "attrib_type_id", "value"],
-            pj(work_dir, "brc4_ebi_seq_region_synonyms"),
+            self.pjc(work_dir, "brc4_ebi_seq_region_synonyms"),
             ignore = True
         )
 
@@ -431,7 +431,7 @@ class load_sequence_data(eHive.BaseRunnable):
             brc4_ebi_name_attrib_trios,
             "seq_region_attrib",
             ["seq_region_id", "attrib_type_id", "value"],
-            pj(work_dir, "brc4_ebi_seq_region_synonyms"),
+            self.pjc(work_dir, "brc4_ebi_seq_region_synonyms"),
             ignore = True
         )
 
@@ -454,19 +454,19 @@ class load_sequence_data(eHive.BaseRunnable):
         regions_with_karyotype_bands = self.add_karyotype_bands(seq_region_file,
                                                                  seq_region_map,
                                                                  attrib_type_map,
-                                                                 pj(work_dir, "karyotype_bands"),
+                                                                 self.pjc(work_dir, "karyotype_bands"),
                                                                  unversion = unversion)
 
         # try to add karyotype ranks for regions listed in genome_data/assembly/chromosome_display_order metadata
         regions_with_ranks_from_assembly_metadata = self.add_karyotype_rank_based_on_assembly_metadata(seq_region_map,
                                                                                                        attrib_type_map,
-                                                                                                       pj(work_dir, "karyotype_ranks_from_meta"),
+                                                                                                       self.pjc(work_dir, "karyotype_ranks_from_meta"),
                                                                                                        unversion = unversion)
 
         if not regions_with_ranks_from_assembly_metadata:
             # try to add karyotype_ranks for top-level regions from the "chromosome" coord_system
             regions_with_ranks_from_chromosome_cs = self.add_karyotype_rank_for_chromosomes(attrib_type_map,
-                                                                                            pj(work_dir, "karyotype_ranks_for_chromosomes"))
+                                                                                            self.pjc(work_dir, "karyotype_ranks_for_chromosomes"))
 
         # make sure that regions with bands have karyotype_ranks
         # self.add_karyotyoe_rank_from_bands_info()
@@ -536,7 +536,7 @@ class load_sequence_data(eHive.BaseRunnable):
             band_tuples,
             "karyotype",
             ["seq_region_id", "seq_region_start", "seq_region_end", "band", "stain"]
-            pj(work_dir, "karyotype_insertion"),
+            self.pjc(work_dir, "karyotype_insertion"),
             ignore = True
         )
 
@@ -604,7 +604,7 @@ class load_sequence_data(eHive.BaseRunnable):
             rank_insertions_trios,
             "seq_region_attrib",
             ["seq_region_id", "attrib_type_id", "value"],
-            pj(work_dir, "karyotype_rank_insertion"),
+            self.pjc(work_dir, "karyotype_rank_insertion"),
             ignore = True
         )
 
@@ -613,7 +613,7 @@ class load_sequence_data(eHive.BaseRunnable):
             coord_system_tag_attrib_insertion_trios,
             "seq_region_attrib",
             ["seq_region_id", "attrib_type_id", "value"],
-            pj(work_dir, "coord_system_tag_insertion"),
+            self.pjc(work_dir, "coord_system_tag_insertion"),
             ignore = True
         )
 
@@ -621,10 +621,10 @@ class load_sequence_data(eHive.BaseRunnable):
         if force_update_coord_system_tag and coord_system_tag_attrib_seq_region_update_ids:
             seq_region_ids_str = ",".join( map(str, coord_system_tag_attrib_seq_region_update_ids) )
             self.update_db_single_group(
-               "seq_region_attrib",
                { "value" : self.quote_or_null(coord_system_tag) },
+               "seq_region_attrib",
+               self.pjc(work_dir, "coord_system_tag_update"),
                where = f"attrib_type_id = {coord_system_tag_attrib_id} and seq_region_id in ({seq_region_ids_str})"
-               pj(work_dir, "coord_system_tag_update"),
             )
 
         # return resulting list of regions with bands trios
@@ -635,7 +635,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         if not regions_with_ranks_from_meta:
             # try to add karyotype_ranks for top-level regions from the "chromosome" coord_system
-            regions_with_ranks_from_chromosome_cs = self.add_karyotype_rank_for_chromosomes(pj(work_dir, "karyotype_ranks_for_chromosomes"))
+            regions_with_ranks_from_chromosome_cs = self.add_karyotype_rank_for_chromosomes(self.pjc(work_dir, "karyotype_ranks_for_chromosomes"))
 
         # technical / optimization. get external_db_id for "ensembl_internal_synonym"
         ensembl_internal_synonym_ext_db_id = self.id_from_map_or_die("ensembl_internal_synonym", external_db_map, "external_db_map")
@@ -672,7 +672,7 @@ class load_sequence_data(eHive.BaseRunnable):
                           )
                        order by seq_region_id
                       ;'''
-            ids_log_pfx = pj(wd,'chr_ids')
+            ids_log_pfx = self.pjc(wd,'chr_ids')
             self.run_sql_req(ids_sql, ids_log_pfx)
             # load
             with open(ids_log_pfx + ".stdout") as f:
@@ -687,7 +687,7 @@ class load_sequence_data(eHive.BaseRunnable):
             # get names, syns from db
             chr_rank = { name : rank for rank, name in enumerate(chr_order, start = 1) }
             # get syns
-            syns_out_pfx = pj(wd, "syns_from_core")
+            syns_out_pfx = self.pjc(wd, "syns_from_core")
             self.get_db_syns(syns_out_pfx)
             # load into dict
             with open(syns_out_pfx + ".stdout") as syns_file:
@@ -708,12 +708,12 @@ class load_sequence_data(eHive.BaseRunnable):
             if len(sr_ids) > 0 and add_cs_tag is not None:
               tag = "coord_system_tag"
               sr_ids_chr = [ (_id, add_cs_tag) for _id, _  in sr_ids ]
-              self.set_sr_attrib(tag, sr_ids_chr, pj(wd, "sr_attr_set_"+tag))
+              self.set_sr_attrib(tag, sr_ids_chr, self.pjc(wd, "sr_attr_set_"+tag))
 
         # insert attrib sql
         if len(sr_ids) > 0:
             tag = "karyotype_rank"
-            self.set_sr_attrib(tag, sr_ids, pj(wd, "sr_attr_set_"+tag))
+            self.set_sr_attrib(tag, sr_ids, self.pjc(wd, "sr_attr_set_"+tag))
 
 
     def unversion_scaffolds(self, cs_rank, logs):
@@ -727,13 +727,13 @@ class load_sequence_data(eHive.BaseRunnable):
             if cs == seq_cs:
                 # for non-sequence level cs, store original name (with version) as "sr_syn_src" synonym
                 xdb = self.param("sr_syn_src")
-                self.copy_sr_name_to_syn(cs, xdb, pj(logs, "cp2syn", cs))
-                self.sr_name_unversion(cs, "seq_region_synonym", "synonym", pj(logs, "unv_srs", cs))
+                self.copy_sr_name_to_syn(cs, xdb, self.pjc(logs, "cp2syn", cs))
+                self.sr_name_unversion(cs, "seq_region_synonym", "synonym", self.pjc(logs, "unv_srs", cs))
             else:
                 # for sequence-level cs, store original name (with version) as "versioned_sr_syn_src" synonym
                 xdb = self.param("versioned_sr_syn_src")
-                self.copy_sr_name_to_syn(cs, xdb, pj(logs, "cp2syn", cs))
-                self.sr_name_unversion(cs, "seq_region", "name", pj(logs, "unv_sr", cs))
+                self.copy_sr_name_to_syn(cs, xdb, self.pjc(logs, "cp2syn", cs))
+                self.sr_name_unversion(cs, "seq_region", "name", self.pjc(logs, "unv_sr", cs))
 
 
     def coord_sys_order(self, cs_order_str):
@@ -782,7 +782,7 @@ class load_sequence_data(eHive.BaseRunnable):
             used_components = None
         for asm_cmp in agp_levels_sorted:
             agp_file_src = agps[asm_cmp]
-            agp_file_dst = pj(agps_pruned_dir, asm_cmp + ".agp")
+            agp_file_dst = self.pjc(agps_pruned_dir, asm_cmp + ".agp")
             if self.agp_prune(agp_file_src, agp_file_dst, used_components) > 0:
                 agps_pruned[asm_cmp] = agp_file_dst
         return agps_pruned
@@ -794,7 +794,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         sequence_rank = max(cs_rank.values())
         for (cs, rank) in sorted(cs_rank.items(), key=lambda p: -p[1]):
-           logs = pj(log_pfx, "%02d_%s" %(rank, cs) )
+           logs = self.pjc(log_pfx, "%02d_%s" %(rank, cs) )
            if (rank == sequence_rank):
                self.load_cs_data(cs, rank, "fasta", asm_v, fasta, logs, loaded_regions = None, seq_level = True)
            else:
@@ -910,6 +910,21 @@ class load_sequence_data(eHive.BaseRunnable):
         )
 
 
+    def pjc(self, *parts: list) -> str:
+        """
+        Join path parts and try to create every directory but the last one.
+        """
+        if not parts:
+            return None
+
+        last = parts.pop()
+        prefix = pj(parts)
+
+        os.makedirs(prefix, exist_ok=True)
+
+        return pj(prefix, last)
+
+
     def is_gz(self, filename):
       return filename.endswith(".gz")
 
@@ -1007,7 +1022,7 @@ class load_sequence_data(eHive.BaseRunnable):
         cmd = (r'''{_loader} {_db_string} -coord_system_version {_asm_v} -default_version ''' +
                r'''    -rank {_rank} -coord_system_name {_cs} {_sl_flag} -{_tag}_file {_file}''' +
                r'''     > {_log}.stdout 2> {_log}.stderr''').format(
-            _loader = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/load_seq_region.pl")),
+            _loader = "perl %s" % (self.pjc(en_root, r"ensembl-analysis/scripts/assembly_loading/load_seq_region.pl")),
             _db_string = self.db_string(),
             _asm_v = asm_v,
             _rank = rank,
@@ -1029,7 +1044,7 @@ class load_sequence_data(eHive.BaseRunnable):
                r'''    -assembled_name {_asm} -component_name {_cmp} ''' +
                r'''    -agp_file {_file} ''' +
                r'''    > {_log}.stdout 2> {_log}.stderr''').format(
-            _loader = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/load_agp.pl")),
+            _loader = "perl %s" % (self.pjc(en_root, r"ensembl-analysis/scripts/assembly_loading/load_agp.pl")),
             _db_string = self.db_string(),
             _asm_v = asm_v,
             _asm = asm_n,
@@ -1052,7 +1067,7 @@ class load_sequence_data(eHive.BaseRunnable):
         en_root = self.param_required("ensembl_root_dir")
         cmd = (r'''{_set_tl} {_db_string} {_ignored_cs} ''' +
                r'''     > {_log}.stdout 2> {_log}.stderr''').format(
-            _set_tl = "perl %s" % (pj(en_root, r"ensembl-analysis/scripts/assembly_loading/set_toplevel.pl")),
+            _set_tl = "perl %s" % (self.pjc(en_root, r"ensembl-analysis/scripts/assembly_loading/set_toplevel.pl")),
             _db_string = self.db_string(),
             _ignored_cs = " ".join(map(lambda x: "-ignore_coord_system %s" % (x), ignored_cs)),
             _log = log_pfx,
@@ -1143,7 +1158,7 @@ class load_sequence_data(eHive.BaseRunnable):
             sql = r'''insert ignore into meta (species_id, meta_key, meta_value) values
                     (1, "assembly.mapping", "{_higher}:{_v}|{_lower}:{_v}")
                   ;'''.format(_v = asm_v, _higher = higher, _lower = lower)
-            self.run_sql_req(sql, pj(log_pfx, pair))
+            self.run_sql_req(sql, self.pjc(log_pfx, pair))
 
     def remove_components_from_toplevel(self, log_pfx):
         """
@@ -1244,7 +1259,7 @@ class load_sequence_data(eHive.BaseRunnable):
                     order by rank
               ;'''.format(_asm_v = asm_v)
         # run_sql
-        toplvl_pfx = pj(log_pfx,"toplvl_info")
+        toplvl_pfx = self.pjc(log_pfx,"toplvl_info")
         self.run_sql_req(sql, toplvl_pfx)
         # load info
         cs_info = []
@@ -1261,7 +1276,7 @@ class load_sequence_data(eHive.BaseRunnable):
                         if (bool(int(cs["no_toplevel"])) and int(cs["rank"]) >= clear_thr) ]
         # run sql
         if clear_lst:
-            clear_pfx = pj(log_pfx, "clear")
+            clear_pfx = self.pjc(log_pfx, "clear")
             with open(clear_pfx + ".sql", "w") as clear_sql:
                 for (cs_id, cs_name) in clear_lst:
                     sql = r'''
@@ -1281,7 +1296,7 @@ class load_sequence_data(eHive.BaseRunnable):
         Load { cols[0] : cols[1] } map from the core db "table"
         SQL code
         """
-        out_pfx = pj(work_dir, f"{table}_map")
+        out_pfx = self.pjc(work_dir, f"{table}_map")
         sql = f'''select {cols[0]}, {cols[1]} FROM {table};'''
         res = self.run_sql_req(sql, out_pfx)
 
@@ -1299,7 +1314,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         SQL code
         """
-        out_pfx = pj(work_dir, f"seq_region_synonyms")
+        out_pfx = self.pjc(work_dir, f"seq_region_synonyms")
         sql = r'''select sr.seq_region_id as seq_region_id, sr.name, srs.synonym
                  from seq_region sr left join seq_region_synonym srs
                  on sr.seq_region_id = srs.seq_region_id
@@ -1342,9 +1357,9 @@ class load_sequence_data(eHive.BaseRunnable):
         cols_str = ", ".join(col_names)
 
         # generate file with the insert SQL command
-        insert_sql_file = pj(work_dir, "insert.sql")
+        insert_sql_file = self.pjc(work_dir, "insert.sql")
         with open(insert_sql_file, "w") as sql:
-            print("INSERT {ignore_str} INTO {table_name} ({col_names}) VALUES", file=sql)
+            print(f"INSERT {ignore_str} INTO {table_name} ({col_names}) VALUES", file=sql)
             values_sep = ""
             for tpl in list_of_tuple:
                 tpl_str = ", ".join(map v: str(v), tpl)
@@ -1353,7 +1368,7 @@ class load_sequence_data(eHive.BaseRunnable):
             print(";", file=sql)
 
         # run insert SQL from file
-        self.run_sql_req(insert_sql_file, pj(wd, "insert_syns"), from_file = True)
+        self.run_sql_req(insert_sql_file, self.pjc(work_dir, "insert"), from_file = True)
 
 
     def quote_or_null(self, val: str, quotes: str = "'", null: str = "NULL", strings_only = True) -> str;
@@ -1366,4 +1381,40 @@ class load_sequence_data(eHive.BaseRunnable):
         if strings_only and isinstance(val, str):
             return f"{quotes}{val}{quotes}"
         return val
+
+
+    def update_db_single_group(
+            self,
+            dict_of_col_to_value: dict,
+            table_name: str,
+            work_dir: str,
+            where: str = None
+        )
+        """
+        Update given `table` name in db; set `col = val` for all key/value pairs from `dict_of_cols_to_values`
+
+        If `where` condition is present its value is used for the "WHERE" SQL clause.
+        Use `quote_or_null` (see definition below) method for string values, when putting values into `list_of_tuples`
+        SQL code
+        """
+        # return if nothing to do
+        if not dict_of_col_to_value: return
+
+        # prepare request parts
+        where_str = where and f"WHERE {where}" or ""
+        col_val_str = ", ".join([ f"{col} = {val}" for col, val in dict_of_col_to_value.items() ]))
+
+        # generate file with the insert SQL command
+        update_sql_file = self.pjc(work_dir, "update.sql")
+        with open(insert_sql_file, "w") as sql:
+            print(f"UPDATE {table_name} SET {col_val_str} {where_str};", file=sql)
+            values_sep = ""
+            for tpl in list_of_tuple:
+                tpl_str = ", ".join(map v: str(v), tpl)
+                print(f"{values_sep}({tpl_str})", file = sql)
+                values_sep = ", "
+            print(";", file=sql)
+
+        # run insert SQL from file
+        self.run_sql_req(update_sql_file, self.pjc(work_dir, "update"), from_file = True)
 
