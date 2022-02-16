@@ -1364,7 +1364,7 @@ class load_sequence_data(eHive.BaseRunnable):
         # generate file with the insert SQL command
         insert_sql_file = self.pjc(work_dir, "insert.sql")
         with open(insert_sql_file, "w") as sql:
-            print(f"INSERT {ignore_str} INTO {table_name} ({col_names}) VALUES", file=sql)
+            print(f"INSERT {ignore_str} INTO {table_name} ({cols_str}) VALUES", file=sql)
             values_sep = ""
             for tpl in list_of_tuples:
                 tpl_str = ", ".join(map(str, tpl))
