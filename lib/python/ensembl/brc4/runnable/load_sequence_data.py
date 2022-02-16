@@ -1459,8 +1459,8 @@ class load_sequence_data(eHive.BaseRunnable):
                    skip_header = False
                    continue
                (name, sr_id) = line.strip().split("\t")
-               syn_trios.append( (name, sr_id, "") )
+               sr_trios.append( (name, sr_id, "") )
 
-        return syn_trios
+        return sr_trios
 
 
