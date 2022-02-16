@@ -853,6 +853,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
+      -flow_into  => WHEN('#brc4_mode#', 'AddBRC4AndEBISeqRegionNameAttribs'),
     },
 
     {
@@ -875,6 +876,27 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
     },
+
+    {
+      # Add "(EBI|BRC4)_seq_region_name" seq_region_attrib(s) ("swap_gcf_gca" case)
+      -logic_name => 'AddBRC4AndEBISeqRegionNameAttribs',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        ebi_seq_region_name_attrib => 'EBI_seq_region_name',
+        brc4_seq_region_name_attrib => 'BRC4_seq_region_name',
+        sql     => [
+          'INSERT IGNORE INTO seq_region_attrib (seq_region_id, attrib_type_id, value) ' .
+          '  SELECT sr.seq_region_id, at.attrib_type_id, sr.name ' .
+          '    FROM seq_region sr, attrib_type at ' .
+          '    WHERE at.code in ("#ebi_seq_region_name_attrib#", "#brc4_seq_region_name_attrib#"); ',
+        ],
+      },
+      -analysis_capacity   => 1,
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
+    },
+
   ];
 }
 
