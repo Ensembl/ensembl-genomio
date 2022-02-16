@@ -102,7 +102,7 @@
       "additionalProperties": false,
       "description" : "Names of seq_regions (with the corresponding 'added_seq_accession' attribs) coming from the additional assemblies (i.e. apicoplasts, mitochondria, etc)",
       "properties" : {
-        "name" : {
+        "region_name" : {
           "oneOf" : [
             { "type" : "string" },
             { "type" : "array", "items" : { "type" : "string" } }

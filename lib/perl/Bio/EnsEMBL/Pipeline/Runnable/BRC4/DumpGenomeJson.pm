@@ -39,6 +39,7 @@ sub prepare_data {
     genebuild => [ qw(version method start_date) ],
     annotation => [ qw(provider_name provider_url) ],
     BRC4 => [ qw(organism_abbrev component) ],
+    added_seq => [ qw(region_name) ],
   );
   my %integer = map {$_ => 1} qw(species.taxonomy_id assembly.version);
 
