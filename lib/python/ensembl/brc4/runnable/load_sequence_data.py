@@ -633,7 +633,7 @@ class load_sequence_data(eHive.BaseRunnable):
             )
 
         # return resulting list of regions with bands trios
-        return seq_regions_with_karyotype_bands
+        return regions_with_ranks_from_assembly_metadata
 
 
     def add_karyotype_rank_for_chromosomes(self,
