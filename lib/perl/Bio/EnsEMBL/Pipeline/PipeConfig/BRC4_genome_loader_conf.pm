@@ -126,6 +126,9 @@ sub default_options {
     # defautl xref display_db
     xref_display_db_default => 'BRC4_Community_Annotation',
     xref_load_logic_name => 'brc4_import',
+
+    # add_sequence mode (instead of creating db from scratch)
+    add_sequence => 0,
   };
 }
 
