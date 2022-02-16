@@ -334,7 +334,7 @@ class load_sequence_data(eHive.BaseRunnable):
                     self.name_and_id_from_seq_region_item(seq_region, seq_region_map, try_unversion = unversion)
 
                 # iterate through properties
-                for prop_name in propeties_to_use:
+                for prop_name in properties_to_use:
                     if prop_name not in seq_region:
                         continue
                     # flattern path
