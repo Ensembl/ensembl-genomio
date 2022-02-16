@@ -1366,7 +1366,7 @@ class load_sequence_data(eHive.BaseRunnable):
         with open(insert_sql_file, "w") as sql:
             print(f"INSERT {ignore_str} INTO {table_name} ({col_names}) VALUES", file=sql)
             values_sep = ""
-            for tpl in list_of_tuple:
+            for tpl in list_of_tuples:
                 tpl_str = ", ".join(map(str, tpl))
                 print(f"{values_sep}({tpl_str})", file = sql)
                 values_sep = ", "
@@ -1413,7 +1413,7 @@ class load_sequence_data(eHive.BaseRunnable):
         with open(insert_sql_file, "w") as sql:
             print(f"UPDATE {table_name} SET {col_val_str} {where_str};", file=sql)
             values_sep = ""
-            for tpl in list_of_tuple:
+            for tpl in list_of_tuples:
                 tpl_str = ", ".join( map(str, tpl) )
                 print(f"{values_sep}({tpl_str})", file = sql)
                 values_sep = ", "
