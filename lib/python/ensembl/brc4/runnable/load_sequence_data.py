@@ -261,14 +261,14 @@ class load_sequence_data(eHive.BaseRunnable):
                         unversioned_name = re.sub(r"\.\d+$", "", synonym_name)
 
                     # put trios if names are not already seen in db 
-                    if synonym_name not in synonym_in_db:
+                    if synonym_name not in synonyms_in_db:
                         external_db_id = self.id_from_map_or_die(source, external_db_map, "external_db_map")
                         synonyms_from_json.append( (seq_region_id, self.quote_or_null(synonym_name), external_db_id) )
 
                     #   put additional unversioned synonyms if there's a sane one
                     if unversioned_name \
                       and unversioned_name != synonym_name \
-                      and unversioned_name not in synonym_in_db:
+                      and unversioned_name not in synonyms_in_db:
                         synonyms_from_json.append( (seq_region_id, self.quote_or_null(synonym_name), ensembl_internal_synonym_ext_db_id) )
 
         # run insertion SQL
