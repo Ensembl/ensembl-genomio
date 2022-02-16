@@ -655,7 +655,7 @@ class load_sequence_data(eHive.BaseRunnable):
         # resulting list of seq_region with karyotype_rank
         #   list of top level seq regions from the `chromosome_coord_system_name` 
         chromomes_seq_regions = self.get_toplevel_from_cs(chromosome_coord_system_name,
-                                                          self.pjc(work_dir, chromosome_seq_regions))
+                                                          self.pjc(work_dir, "chromosome_seq_regions"))
 
         if not chromomes_seq_regions:
             return chromomes_seq_regions
