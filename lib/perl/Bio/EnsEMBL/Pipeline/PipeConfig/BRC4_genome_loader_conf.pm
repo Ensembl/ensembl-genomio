@@ -828,6 +828,20 @@ sub pipeline_analyses {
       -analysis_capacity => 2,
       -rc_name    => 'default',
       -max_retry_count   => 0,
+      -flow_into  => {
+        '1->A' => 'UpdateSeqRegionNames',
+        'A->1' => 'UpdateMetaData',
+      },
+    },
+
+    {
+      -logic_name => 'UpdateSeqRegionNames',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity => 1,
+      -batch_size     => 50,
+      -max_retry_count   => 0,
       -flow_into => WHEN('#swap_gcf_gca#' => 'Swap_GCF_GCA',
                     ELSE 'Change_seq_region_name'
                     ),
@@ -890,6 +904,33 @@ sub pipeline_analyses {
           '  SELECT sr.seq_region_id, at.attrib_type_id, sr.name ' .
           '    FROM seq_region sr, attrib_type at ' .
           '    WHERE at.code in ("#ebi_seq_region_name_attrib#", "#brc4_seq_region_name_attrib#"); ',
+        ],
+      },
+      -analysis_capacity   => 1,
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
+    },
+
+    {
+      # Updating "added_seq.region_name" meta data
+      -logic_name => 'UpdateMetaData',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        ebi_seq_region_name_attrib => 'EBI_seq_region_name',
+        brc4_seq_region_name_attrib => 'BRC4_seq_region_name',
+        sql     => [
+          # delete exisiting "added_seq.region_name"
+          'DELETE FROM meta ' .
+          '  WHERE meta_key = "added_seq.region_name" AND species_id = 1; ',
+
+          # insert ignore "added_seq.region_name"
+          'INSERT IGNORE INTO meta (species_id, meta_key, meta_value) ' .
+          '  SELECT 1, "added_seq.region_name", sr.name ' .
+          '    FROM seq_region sr, seq_region_attrib sra, attrib_type at ' .
+          '    WHERE sr.seq_region_id = sra.seq_region_id ' .
+          '      AND sra.attrib_type_id = at.attrib_type_id ' .
+          '      AND at.code = "added_seq_accession"; ',
         ],
       },
       -analysis_capacity   => 1,
