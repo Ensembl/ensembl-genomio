@@ -281,11 +281,12 @@ class load_sequence_data(eHive.BaseRunnable):
         )
 
 
-    def add_sr_attribs(seq_region_file: str,
-            seq_region_map: dict,
-            attrib_type_map: dict,
-            work_dir,
-            unversion: bool = False):
+    def add_sr_attribs(self,
+                       seq_region_file: str,
+                       seq_region_map: dict,
+                       attrib_type_map: dict,
+                       work_dir,
+                       unversion: bool = False):
         """
         Add seq_region_attrib(s) from the seq_region_file meta data file. Explicit list is taken from "sr_attrib_types" module param.
 
