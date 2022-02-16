@@ -678,6 +678,8 @@ class load_sequence_data(eHive.BaseRunnable):
             ignore = True
         )
 
+        return chromomes_seq_regions
+
 
     def add_karyotype_rank_from_bands_info(self,
                                            regions_with_karyotype_bands: list, # [ (seq_region_name, seq_region_id, unversioned_name) ]
