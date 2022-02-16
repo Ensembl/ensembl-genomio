@@ -1434,7 +1434,7 @@ class load_sequence_data(eHive.BaseRunnable):
         SQL code
         """
         out_pfx = self.pjc(work_dir, f"toplevel_from_{coord_system_name}")
-        sql = f'''SELECT DISTINCT sr.name, sr.seq_region_id, "" as synonym
+        sql = f'''SELECT DISTINCT sr.name, sr.seq_region_id
                 FROM seq_region sr,
                      seq_region_attrib sra,
                      coord_system cs,
@@ -1458,7 +1458,7 @@ class load_sequence_data(eHive.BaseRunnable):
                if skip_header:
                    skip_header = False
                    continue
-               (name, sr_id, _) = line.strip().split("\t")
+               (name, sr_id) = line.strip().split("\t")
                syn_trios.append( (name, sr_id, "") )
 
         return syn_trios
