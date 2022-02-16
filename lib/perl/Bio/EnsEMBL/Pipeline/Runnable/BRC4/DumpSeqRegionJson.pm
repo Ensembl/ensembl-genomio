@@ -72,32 +72,31 @@ sub prepare_data {
       }
 
       # BRC4 name
-      my ($brc4_attrib) = @{$slice->get_all_Attributes('BRC4_seq_region_name')};
-      $seq_region->{BRC4_seq_region_name} = $brc4_attrib->value() if $brc4_attrib;
+      $self->update_from_attribute_single_val($slice, 'BRC4_seq_region_name', $seq_region, 'BRC4_seq_region_name');
 
       # EBI name
-      my ($ebi_attrib) = @{$slice->get_all_Attributes('EBI_seq_region_name')};
-      my $ebi_name = $ebi_attrib ? $ebi_attrib->value() : $slice->seq_region_name();
-      $seq_region->{EBI_seq_region_name} = $ebi_name;
+      $self->update_from_attribute_single_val($slice, 'EBI_seq_region_name', $seq_region, 'EBI_seq_region_name');
 
       # Is circular? Boolean
       $seq_region->{circular} = JSON::true if $slice->is_circular;
 
       # alternate codon table? integer
-      my ($codon_table) = @{$slice->get_all_Attributes('codon_table')};
-      $seq_region->{codon_table} = int($codon_table->value()) if $codon_table;
+      $self->update_from_attribute_single_val($slice, 'codon_table', $seq_region, 'codon_table');
 
       # non reference? Boolean
-      my ($non_ref) = @{$slice->get_all_Attributes('non_ref')};
+      my $non_ref = $self->get_attribute_single_val($slice, 'non_ref');
       $seq_region->{non_ref} = JSON::true if $non_ref;
 
       # Location? string
-      my ($location) = @{$slice->get_all_Attributes('sequence_location')};
-      $seq_region->{location} = $location->value() if $location;
+      $self->update_from_attribute_single_val($slice, 'sequence_location', $seq_region, 'location');
 
       # karyotype bands
       my $karyo_bands = $self->get_karyotype_bands($slice, $kba);
       $seq_region->{karyotype_bands} = $karyo_bands if (scalar(@$karyo_bands) > 0);
+
+      # added_sequence attributes
+      my $added_sequence = $self->get_added_sequence($slice);
+      $seq_region->{added_sequence} = $added_sequence if($added_sequence);
 
       push @seq_regions, $seq_region;
     }
@@ -184,6 +183,63 @@ sub load_external_db_map {
     close $mapfh;
   }
   $self->param('db_map', \%map);
+}
+
+sub get_attribute_single_val {
+  my ($self, $obj, $name) = @_;
+
+  return undef if (!$obj);
+
+  my ($attr) = @{ $obj->get_all_Attributes($name) };
+  return undef if (!$attr);
+
+  return $attr->value();
+}
+
+sub update_from_attribute_single_val {
+  my ($self, $from_obj, $attr_name, $to_dict, $to_path, $keep_any_defined) = @_;
+
+  return if (!$from_obj);
+  return if (!$to_dict);
+
+  my $val = $self->get_attribute_single_val($from_obj, $attr_name);
+  return if (!defined $val);
+  return if (!$val && !$keep_any_defined);
+
+  # adding vals based on path, creating intermediate hashes if needed
+  my $ptr = $to_dict;
+  my @splitted_path = split /\//, $to_path;
+  my $node = pop @splitted_path;
+  for my $part (@splitted_path) {
+    $ptr->{$part} = {} if (!exists $ptr->{$part});
+    $ptr = $ptr->{$part};
+  }
+  $ptr->{$node} = $val;
+}
+
+sub get_added_sequence {
+  my ($self, $slice) = @_;
+
+  my $added_seq_accession = $self->get_attribute_single_val($slice, 'added_seq_accession');
+  return undef if (!$added_seq_accession);
+
+  my $added_sequence = {
+    accession => $added_seq_accession,
+    assembly_provider => {},
+  };
+
+  # assembly_provider
+  $self->update_from_attribute_single_val($slice, 'added_seq_asm_pr_nam', $added_sequence, 'assembly_provider/name');
+  $self->update_from_attribute_single_val($slice, 'added_seq_asm_pr_url', $added_sequence, 'assembly_provider/url');
+
+  # annotation_provider
+  $self->update_from_attribute_single_val($slice, 'added_seq_ann_pr_nam', $added_sequence, 'annotation_provider/name');
+  $self->update_from_attribute_single_val($slice, 'added_seq_ann_pr_url', $added_sequence, 'annotation_provider/url');
+
+  # panic perhaps?
+  return undef if (!exists $added_sequence->{assembly_provider}->{name});
+
+  return $added_sequence;
 }
 
 1;
