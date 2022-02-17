@@ -269,7 +269,7 @@ class load_sequence_data(eHive.BaseRunnable):
                     if unversioned_name \
                       and unversioned_name != synonym_name \
                       and unversioned_name not in synonyms_in_db:
-                        synonyms_from_json.append( (seq_region_id, self.quote_or_null(synonym_name), ensembl_internal_synonym_ext_db_id) )
+                        synonyms_from_json.append( (seq_region_id, self.quote_or_null(unversioned_name), ensembl_internal_synonym_ext_db_id) )
 
         # run insertion SQL
         self.insert_to_db(
