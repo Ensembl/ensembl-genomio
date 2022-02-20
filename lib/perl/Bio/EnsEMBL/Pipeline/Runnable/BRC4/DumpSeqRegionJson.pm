@@ -80,8 +80,8 @@ sub prepare_data {
       # Is circular? Boolean
       $seq_region->{circular} = JSON::true if $slice->is_circular;
 
-      # alternate codon table? integer
-      $self->update_from_attribute_single_val($slice, 'codon_table', $seq_region, 'codon_table');
+      # alternate codon table? integer(! passing transformation function as argument)
+      $self->update_from_attribute_single_val($slice, 'codon_table', $seq_region, 'codon_table', sub { int(shift) } );
 
       # non reference? Boolean
       my $non_ref = $self->get_attribute_single_val($slice, 'non_ref');
@@ -197,7 +197,7 @@ sub get_attribute_single_val {
 }
 
 sub update_from_attribute_single_val {
-  my ($self, $from_obj, $attr_name, $to_dict, $to_path, $keep_any_defined) = @_;
+  my ($self, $from_obj, $attr_name, $to_dict, $to_path, $transform, $keep_any_defined) = @_;
 
   return if (!$from_obj);
   return if (!$to_dict);
@@ -205,6 +205,11 @@ sub update_from_attribute_single_val {
   my $val = $self->get_attribute_single_val($from_obj, $attr_name);
   return if (!defined $val);
   return if (!$val && !$keep_any_defined);
+
+  # transforming value if need to
+  if (defined $transform) {
+    $val = $transform->($val);
+  }
 
   # adding vals based on path, creating intermediate hashes if needed
   my $ptr = $to_dict;
