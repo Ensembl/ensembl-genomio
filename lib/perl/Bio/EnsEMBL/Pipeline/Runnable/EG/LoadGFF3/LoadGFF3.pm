@@ -1089,7 +1089,7 @@ sub new_transcript {
     # NB: we may need a control of what biotypes are known or not
     # there's a healthcheck: genes have at least one transcript with a matching biotype group
     #    see: ensembl-datacheck/lib/Bio/EnsEMBL/DataCheck/Checks/GeneBiotypes.pm
-    if (exists $transfer_biotype_tr2gene->{$biotype} || !$gene_type || lc($gene_type) eq "protein_coding" || lc($gene_type) eq "IG_V_gene" || lc($gene_type) eq "TR_V_gene" || lc($gene_type) eq "IG_C_gene"){
+    if (exists $transfer_biotype_tr2gene->{$biotype} || !$gene_type || lc($gene_type) eq "protein_coding"){
       $self->log_warning("Setting biotype to $biotype for non-coding: $stable_id (gene " . $gene->stable_id . ")");
       $gene->biotype($biotype);
     } else {
