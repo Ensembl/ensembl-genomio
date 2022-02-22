@@ -1065,23 +1065,20 @@ sub new_transcript {
   
   # Protein coding: if there are CDSs, don't rely on the biotype
   } elsif ($translatable) {
-    if($transcript_type eq "IG_V_gene"){
+    if ($transcript_type eq "IG_V_gene") {
       $biotype = "IG_V_gene";
       $self->log_warning("IG V gene: $stable_id");
-    }elsif ($transcript_type eq "TR_V_gene"){
+    } elsif ($transcript_type eq "TR_V_gene") {
       $biotype = "TR_V_gene";
       $self->log_warning("TR V gene: $stable_id");
-    }elsif ($transcript_type eq "IG_C_gene"){
+    } elsif ($transcript_type eq "IG_C_gene") {
       $biotype = "IG_C_gene";
       $self->log_warning("IG C gene: $stable_id");
-    }
-    else {
+    } else {
       $biotype = "protein_coding";
       $self->log_warning("Protein_coding: $stable_id");
     }
-  }
-  # Non protein coding
-   else {
+  } else { # Non protein coding 
     $biotype = $transcript_type;
     $biotype = $self->map_biotype_transcript($biotype, $gff_transcript);
     $self->log_warning("Non-protein_coding: $stable_id");
