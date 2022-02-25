@@ -369,6 +369,7 @@ sub pipeline_analyses {
       -language => 'python3',
       -parameters        => {
         work_dir => $self->o('pipeline_dir') . '/#db_name#/add_sequence',
+        load_additional_sequences => $self->o('add_sequence'),
       },
       -analysis_capacity   => 10,
       -rc_name         => 'default',

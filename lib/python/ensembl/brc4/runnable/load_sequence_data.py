@@ -90,6 +90,9 @@ class load_sequence_data(eHive.BaseRunnable):
                     'added_sequence/annotation_provider/url' :  'added_seq_ann_pr_url',
                 }, # added_sequence
             },
+
+            # loading additional sequences to the already exsisting core db
+            load_additional_sequences : 0,
         }
 
 
@@ -824,13 +827,14 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         # NB load_seq_region.pl and load_agp.pl are not failing on parameter errors (0 exit code)
         os.makedirs(dirname(log_pfx), exist_ok=True)
+        additional_load = bool(self.param("load_additional_sequences"))
         if seq_level:
-            self.load_seq_region(cs, rank, asm_v, src_file, log_pfx, seq_level)
+            self.load_seq_region(cs, rank, asm_v, src_file, log_pfx, seq_level, additional_load)
         elif loaded_regions is not None:
             new_regions = set()
             clean_file = src_file + ".regions_deduped"
             self.filter_already_loaded_regions_from_agp(src_file, clean_file, loaded_regions, new_regions)
-            self.load_seq_region(cs, rank, asm_v, clean_file, log_pfx, seq_level)
+            self.load_seq_region(cs, rank, asm_v, clean_file, log_pfx, seq_level, additional_load)
             loaded_regions.update(new_regions)
         if not seq_level:
             self.load_agp(pair, asm_v, src_file, log_pfx)
@@ -1025,15 +1029,15 @@ class load_sequence_data(eHive.BaseRunnable):
         return sp.run(cmd, shell=True, check=True)
 
 
-    def load_seq_region(self, cs: str, rank: str, asm_v: str, src_file: str, log_pfx: str, seq_level = False):
+    def load_seq_region(self, cs: str, rank: str, asm_v: str, src_file: str, log_pfx: str, seq_level = False, additional_load = False):
         """ensembl-analysis script (load_seq_region.pl) based utility for loading seq_regions FASTA sequences"""
         en_root = self.param_required("ensembl_root_dir")
-        cmd = (r'''{_loader} {_db_string} -coord_system_version {_asm_v} -default_version ''' +
+        cmd = (r'''{_loader} {_db_string} {_asm_v_flag} -default_version ''' +
                r'''    -rank {_rank} -coord_system_name {_cs} {_sl_flag} -{_tag}_file {_file}''' +
                r'''     > {_log}.stdout 2> {_log}.stderr''').format(
             _loader = "perl %s" % (self.pjc(en_root, r"ensembl-analysis/scripts/assembly_loading/load_seq_region.pl")),
             _db_string = self.db_string(),
-            _asm_v = asm_v,
+            _asm_v_flag = not additional_load and f"-coord_system_version {asm_v}" or "",
             _rank = rank,
             _cs = cs,
             _sl_flag = seq_level and "-sequence_level" or "",
