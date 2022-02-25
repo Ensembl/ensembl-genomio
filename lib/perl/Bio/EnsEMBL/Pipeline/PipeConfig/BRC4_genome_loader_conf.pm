@@ -871,7 +871,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
-      -flow_into  => WHEN('#brc4_mode#', 'AddBRC4AndEBISeqRegionNameAttribs'),
+      -flow_into  => WHEN('#brc4_mode#', 'AddBRC4SeqRegionAttr'),
     },
 
     {
@@ -897,7 +897,7 @@ sub pipeline_analyses {
 
     {
       # Add "(EBI|BRC4)_seq_region_name" seq_region_attrib(s) ("swap_gcf_gca" case)
-      -logic_name => 'AddBRC4AndEBISeqRegionNameAttribs',
+      -logic_name => 'AddBRC4SeqRegionAttr',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
       -parameters => {
         db_conn => $self->o('dbsrv_url') . '#db_name#',
