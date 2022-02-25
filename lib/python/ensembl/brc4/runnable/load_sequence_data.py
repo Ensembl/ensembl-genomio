@@ -92,7 +92,7 @@ class load_sequence_data(eHive.BaseRunnable):
             },
 
             # loading additional sequences to the already exsisting core db
-            load_additional_sequences : 0,
+            'load_additional_sequences' : 0,
         }
 
 
