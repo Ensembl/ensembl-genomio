@@ -1121,7 +1121,7 @@ class load_sequence_data(eHive.BaseRunnable):
         See ensembl-datacheck/lib/Bio/EnsEMBL/DataCheck/Checks/SeqRegionNamesINSDC.pm .
         SQL code.
         """
-        sql = r'''insert into seq_region_attrib (seq_region_id, attrib_type_id, value)
+        sql = r'''insert ignore into seq_region_attrib (seq_region_id, attrib_type_id, value)
                 select
                   sr.seq_region_id, at.attrib_type_id, "ENA"
                 from
