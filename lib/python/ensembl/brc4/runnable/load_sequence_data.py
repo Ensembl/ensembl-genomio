@@ -197,8 +197,9 @@ class load_sequence_data(eHive.BaseRunnable):
         # set toplevel seq_region attribute
         self.set_toplevel(self.pjc(work_dir, "set_toplevel"), self.param("not_toplevel_cs"))
 
-        # nullify contig version and update mappings strings accordingly
-        self.nullify_ctg_cs_version(self.pjc(work_dir, "asm_mapping", "nullify_cs_versions"))
+        # nullify contig version and update mappings strings accordingly; ignore for "load_additional_sequences" mode
+        if not self.param_bool("load_additional_sequences"):
+            self.nullify_ctg_cs_version(self.pjc(work_dir, "asm_mapping", "nullify_cs_versions"))
 
 
     def add_sr_synonyms(self,
