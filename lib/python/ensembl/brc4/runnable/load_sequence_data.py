@@ -827,7 +827,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         # NB load_seq_region.pl and load_agp.pl are not failing on parameter errors (0 exit code)
         os.makedirs(dirname(log_pfx), exist_ok=True)
-        additional_load = bool(self.param("load_additional_sequences"))
+        additional_load = self.param_bool("load_additional_sequences")
         if seq_level:
             self.load_seq_region(cs, rank, asm_v, src_file, log_pfx, seq_level, additional_load)
         elif loaded_regions is not None:
