@@ -1277,8 +1277,11 @@ class load_sequence_data(eHive.BaseRunnable):
         # load info
         cs_info = []
         with open(toplvl_pfx + ".stdout") as f:
-            header = next(f).strip().split("\t")
+            header = None
             for line in f:
+                if header is None:
+                    header = next(f).strip().split("\t")
+                    continue
                 cs_info.append(dict(zip(header, line.strip().split())))
         # choose cs rank threshold to start clearing version from
         seq_rank = max(map(lambda cs: int(cs["rank"]), cs_info))
