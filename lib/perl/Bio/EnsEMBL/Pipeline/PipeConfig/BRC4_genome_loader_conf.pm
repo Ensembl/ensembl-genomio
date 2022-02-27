@@ -129,6 +129,9 @@ sub default_options {
 
     # add_sequence mode (instead of creating db from scratch)
     add_sequence => 0,
+
+    # run ProdDBsync parts before adding ad-hoc sequences (add_sequence  mode on)
+    prod_db_sync_before_adding => 1,
   };
 }
 
@@ -185,6 +188,7 @@ sub pipeline_wide_parameters {
     external_db_map => $self->o('external_db_map'),
 
     add_sequence => $self->o('add_sequence'),
+    prod_db_sync_before_adding => $self->o('prod_db_sync_before_adding'),
   };
 }
 
@@ -359,8 +363,46 @@ sub pipeline_analyses {
       -analysis_capacity => 1,
       -batch_size     => 50,
       -flow_into  => {
-        '1' => WHEN('#add_sequence#', 'AddSequence', ELSE('CleanUpAndCreateDB')),
+        '1' => WHEN('#add_sequence#', 'ProdDbSyncAndAddSequence', ELSE('CleanUpAndCreateDB')),
       },
+    },
+
+    {
+      -logic_name => 'ProdDbSyncAndAddSequence',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity => 1,
+      -batch_size     => 50,
+      -flow_into  => {
+        '1' => WHEN('#prod_db_sync_before_adding#', 'UpdateAnalysisDescription', ELSE('AddSequence')),
+      },
+    },
+
+    {
+      -logic_name        => 'UpdateAnalysisDescription',
+      -module            => 'Bio::EnsEMBL::Production::Pipeline::ProductionDBSync::PopulateAnalysisDescription',
+      -parameters => {
+        species => '#expr( #genome_data#->{"species"}->{"production_name"} )expr#',
+        group => 'core',
+      },
+      -analysis_capacity => 2,
+      -rc_name    => 'default',
+      -max_retry_count   => 3,
+      -flow_into         => ['UpdateControlledTables'],
+    },
+
+    {
+      -logic_name        => 'UpdateControlledTables',
+      -module            => 'Bio::EnsEMBL::Production::Pipeline::ProductionDBSync::PopulateControlledTables',
+      -parameters => {
+        species => '#expr( #genome_data#->{"species"}->{"production_name"} )expr#',
+        group => 'core',
+      },
+      -analysis_capacity => 2,
+      -rc_name    => 'default',
+      -max_retry_count   => 3,
+      -flow_into         => ['AddSequence'],
     },
 
     {
