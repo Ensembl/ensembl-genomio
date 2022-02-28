@@ -52,12 +52,13 @@ def retrieve_genomes(redmine, output_dir, build=None):
     
         abbrev = genome["BRC4"]["organism_abbrev"]
         group = "other"
-        if "Load from INSDC" in extra["operations"] or "Load from RefSeq" in extra["operations"] or "Lo":
+        if "Load from INSDC" in extra["operations"] or "Load from RefSeq" in extra["operations"]:
             group = "new_genomes"
         if "Load from EnSEMBL" in extra["operations"]:
             group = "copy_ensembl"
         
-        ok_genomes.append({"issue" : issue, "desc" : abbrev})
+        if group == "new_genomes":
+            ok_genomes.append({"issue" : issue, "desc" : abbrev})
         groups[group].append(genome)
         
         if "Replacement" in extra:
@@ -357,8 +358,10 @@ def print_summary(summaries, description):
             desc = summary["desc"]
             issue = summary["issue"]
             operations = get_operations(issue)
+            replace = " +REPLACE" if is_replacement(issue) else ""
+            gff = " +GFF" if has_gff(issue) else ""
             ops = ",".join(operations)
-            desc = f"{desc} ({ops})"
+            desc = f"{desc} ({ops}{gff}{replace})"
             print(f"\t{desc:64}\t{issue.id:8}\t{issue.subject}")
 
 def get_operations(issue):
@@ -368,6 +371,20 @@ def get_operations(issue):
 def is_new_genome(issue):
     operations = get_operations(issue)
     if "Load from INSDC" in operations or "Load from RefSeq" in operations or "Load from EnsEMBL" in operations:
+        return True
+    else:
+        return False
+
+def is_replacement(issue):
+    customs = get_custom_fields(issue)
+    if customs["Replacement genome?"]["value"].startswith("Yes"):
+        return True
+    else:
+        return False
+
+def has_gff(issue):
+    customs = get_custom_fields(issue)
+    if customs["GFF 2 Load"]["value"]:
         return True
     else:
         return False
