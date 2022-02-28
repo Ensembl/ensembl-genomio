@@ -35,34 +35,52 @@ def retrieve_genomes(redmine, output_dir, build=None):
     failed_issues = []
     replacements = []
     have_gff = []
+    
+    groups = {
+            "new_genomes" : [],
+            "copy_ensembl": [],
+            "other": [],
+            }
 
     for issue in issues:
         genome, extra = parse_genome(issue)
-        if not genome:
-            failed_issues.append({"issue" : issue, "desc" : "No enough metadata"})
-            continue
+        failure = check_genome(genome, extra)
         
-        if not "BRC4" in genome or not "organism_abbrev" in genome["BRC4"]:
-            failed_issues.append({"issue" : issue, "desc" : "No organism_abbrev defined"})
+        if failure:
+            failed_issues.append({"issue" : issue, "desc" : failure})
             continue
-
+    
         abbrev = genome["BRC4"]["organism_abbrev"]
+        group = "other"
+        if "Load from INSDC" in extra["operations"] or "Load from RefSeq" in extra["operations"] or "Lo":
+            group = "new_genomes"
+        if "Load from EnSEMBL" in extra["operations"]:
+            group = "copy_ensembl"
+        
         ok_genomes.append({"issue" : issue, "desc" : abbrev})
+        groups[group].append(genome)
         
         if "Replacement" in extra:
             replacements.append({"issue" : issue, "desc" : abbrev})
         if "GFF" in extra:
             have_gff.append({"issue" : issue, "desc" : abbrev})
-
-        try:
-            organism = genome["BRC4"]["organism_abbrev"]
-            organism_file = output_dir + "/" + organism + ".json"
-            f = open(organism_file, "w")
-            json.dump(genome, f, indent=True)
-            f.close()
-        except Exception as error:
-            failed_issues.append({"issue" : issue, "desc" : str(error)})
-            pass
+    
+    # Write files
+    for group, genomes in groups.items():
+        if genomes:
+            group_dir = os.path.join(output_dir, group)
+            try:
+                os.makedirs(group_dir)
+            except FileExistsError:
+                pass
+                
+            
+            for genome in genomes:
+                organism = genome["BRC4"]["organism_abbrev"]
+                organism_file = os.path.join(group_dir, organism + ".json")
+                with open(organism_file, "w") as f:
+                    json.dump(genome, f, indent=True)
+            
 
     # Print summaries
     print_summary(failed_issues, "failed issues")
@@ -93,9 +111,14 @@ def parse_genome(issue):
     
     customs = get_custom_fields(issue)
     genome = {
-            "BRC4": {},
+            "BRC4": {
+                "component" : "",
+                "organism_abbrev" : "",
+                },
             "species": {},
-            "assembly": {},
+            "assembly": {
+                "accession" : ""
+                },
             "genebuild": {},
             }
     
@@ -105,11 +128,7 @@ def parse_genome(issue):
     if "GCA number" in customs:
         accession = customs["GCA number"]["value"]
         accession = check_accession(accession)
-        if not accession:
-            return (None, None)
         genome["assembly"]["accession"] = accession
-    else:
-        print("No accession for issue %d (%s)" % (issue.id, issue.subject))
 
     # Get BRC4 component
     if "Component DB" in customs:
@@ -118,8 +137,6 @@ def parse_genome(issue):
             genome["BRC4"]["component"] = components[0]
         elif len(components) > 1:
             raise Exception("More than 1 component for new genome " + str(issue.id))
-    else:
-        print("No component for issue %d (%s)" % (issue.id, issue.subject))
 
     # Get Organism abbrev
     try:
@@ -149,17 +166,43 @@ def parse_genome(issue):
     # Operations
     try:
         operations = customs["EBI operations"]["value"]
+        extra["operations"] = operations
         
-        if "Load from INSDC" in operations:
-            accession = genome["assembly"]["accession"]
-            if not accession.startswith("GCA"):
-                print("")
-                
-            
     except:
         pass
 
     return (genome, extra)
+
+def check_genome(genome, extra):
+    
+    if not genome:
+        return "No genome parsed"
+    
+    if not "organism_abbrev" in genome["BRC4"] or not genome["BRC4"]["organism_abbrev"]:
+        return "No organism_abbrev defined"
+    
+    operations = extra["operations"]
+    
+    if not operations:
+        return "No EBI operation defined"
+    else:
+        source_count = 0
+        if "Load from INSDC" in operations: source_count += 1
+        if "Load from RefSeq" in operations: source_count += 1
+        if "Load from EnsEMBL" in operations: source_count += 1
+        
+        if source_count > 1:
+            return f"Mix of {source_count} sources"
+        if source_count == 1:
+            if not "accession" in genome["assembly"] or not genome["assembly"]["accession"]:
+                return "No accession for assembly"
+        else:
+            # Other operations
+            if "Other" in "operations":
+                return ""
+            
+    
+    return ""
 
 def check_accession(accession):
     """
@@ -302,6 +345,10 @@ def print_summary(summaries, description):
         for summary in summaries:
             desc = summary["desc"]
             issue = summary["issue"]
+            customs = get_custom_fields(issue)
+            operations = customs["EBI operations"]["value"]
+            ops = ",".join(operations)
+            desc = f"{desc} ({ops})"
             print(f"\t{desc:64}\t{issue.id:8}\t{issue.subject}")
 
 def add_organism_to_issue(redmine, issue, new_abbrev, update=False):
