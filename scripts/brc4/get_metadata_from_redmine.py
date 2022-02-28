@@ -165,8 +165,7 @@ def parse_genome(issue):
 
     # Operations
     try:
-        operations = customs["EBI operations"]["value"]
-        extra["operations"] = operations
+        extra["operations"] = get_operations(issue)
         
     except:
         pass
@@ -286,6 +285,8 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
     warnings_replace = []
     warnings = []
     failed_issues = []
+    not_new_ok = []
+    not_new_fail = []
     
     for issue in issues:
         time.sleep(0.1)
@@ -294,8 +295,16 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
         if not genome:
             failed_issues.append({"issue": issue, "desc": "Not enough information to parse"})
             continue
-
+        
         cur_abbrev = custom["Organism Abbreviation"]["value"]
+
+        if not is_new_genome(issue):
+            if cur_abbrev:
+                not_new_ok.append({"issue": issue, "desc": f"Not a new genome ({cur_abbrev})"})
+            else:
+                not_new_fail.append({"issue": issue, "desc": "Please add organism_abbrev manually"})
+            continue
+
         try:
             accession = genome["assembly"]["accession"]
             full_name = custom["Experimental Organisms"]["value"]
@@ -337,6 +346,8 @@ def add_genome_organism_abbrev(redmine, build, abbrevs_file, update=False):
     print_summary(warnings_replace, "issues are replacement but without a previous organism_abbrev")
     print_summary(warnings, "issues with warnings")
     print_summary(failed_issues, "issues failed")
+    print_summary(not_new_ok, "not new genomes, with organism_abbrev")
+    print_summary(not_new_fail, "not new genomes, need organism_abbrev")
 
 def print_summary(summaries, description):
     if summaries:
@@ -345,11 +356,21 @@ def print_summary(summaries, description):
         for summary in summaries:
             desc = summary["desc"]
             issue = summary["issue"]
-            customs = get_custom_fields(issue)
-            operations = customs["EBI operations"]["value"]
+            operations = get_operations(issue)
             ops = ",".join(operations)
             desc = f"{desc} ({ops})"
             print(f"\t{desc:64}\t{issue.id:8}\t{issue.subject}")
+
+def get_operations(issue):
+    customs = get_custom_fields(issue)
+    return customs["EBI operations"]["value"]
+
+def is_new_genome(issue):
+    operations = get_operations(issue)
+    if "Load from INSDC" in operations or "Load from RefSeq" in operations or "Load from EnsEMBL" in operations:
+        return True
+    else:
+        return False
 
 def add_organism_to_issue(redmine, issue, new_abbrev, update=False):
     """
