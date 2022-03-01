@@ -31,10 +31,10 @@ def retrieve_genomes(redmine, output_dir, build=None):
     except:
         pass
     
-    ok_genomes = []
+    ok_new = []
+    ok_patch = []
+    ok_other = []
     failed_issues = []
-    replacements = []
-    have_gff = []
     
     groups = {
             "new_genomes" : [],
@@ -54,17 +54,18 @@ def retrieve_genomes(redmine, output_dir, build=None):
         group = "other"
         if "Load from INSDC" in extra["operations"] or "Load from RefSeq" in extra["operations"]:
             group = "new_genomes"
-        if "Load from EnSEMBL" in extra["operations"]:
+            ok_new.append({"issue" : issue, "desc" : abbrev})
+        elif "Load from EnSEMBL" in extra["operations"]:
             group = "copy_ensembl"
+            ok_new.append({"issue" : issue, "desc" : abbrev})
+        elif "Patch build" in extra["operations"]:
+            group = "patch_build"
+            ok_patch.append({"issue" : issue, "desc" : abbrev})
+        else:
+            group = "other"
+            ok_other.append({"issue" : issue, "desc" : abbrev})
         
-        if group == "new_genomes":
-            ok_genomes.append({"issue" : issue, "desc" : abbrev})
         groups[group].append(genome)
-        
-        if "Replacement" in extra:
-            replacements.append({"issue" : issue, "desc" : abbrev})
-        if "GFF" in extra:
-            have_gff.append({"issue" : issue, "desc" : abbrev})
     
     # Write files
     for group, genomes in groups.items():
@@ -85,9 +86,9 @@ def retrieve_genomes(redmine, output_dir, build=None):
 
     # Print summaries
     print_summary(failed_issues, "failed issues")
-    print_summary(ok_genomes, "genomes are ok to load (but do check that they are supposed to be new genomes to load from INSDC)")
-    print_summary(replacements, "genomes are replacement")
-    print_summary(have_gff, "genomes have a separate gff to load")
+    print_summary(ok_other, "other genome operations")
+    print_summary(ok_patch, "patch builds")
+    print_summary(ok_new, "new genomes")
 
 def get_all_genomes(redmine, build=None):
     """
@@ -358,10 +359,11 @@ def print_summary(summaries, description):
             desc = summary["desc"]
             issue = summary["issue"]
             operations = get_operations(issue)
-            replace = " +REPLACE" if is_replacement(issue) else ""
             gff = " +GFF" if has_gff(issue) else ""
+            stable_ids = " +STABLE_IDS" if has_stable_ids(issue) else ""
+            replace = " +REPLACE" if is_replacement(issue) else ""
             ops = ",".join(operations)
-            desc = f"{desc} ({ops}{gff}{replace})"
+            desc = f"{desc} ({ops}{gff}{stable_ids}{replace})"
             print(f"\t{desc:64}\t{issue.id:8}\t{issue.subject}")
 
 def get_operations(issue):
@@ -371,6 +373,13 @@ def get_operations(issue):
 def is_new_genome(issue):
     operations = get_operations(issue)
     if "Load from INSDC" in operations or "Load from RefSeq" in operations or "Load from EnsEMBL" in operations:
+        return True
+    else:
+        return False
+
+def is_patch_build(issue):
+    customs = get_custom_fields(issue)
+    if customs["Patch build"]["value"]:
         return True
     else:
         return False
@@ -385,6 +394,13 @@ def is_replacement(issue):
 def has_gff(issue):
     customs = get_custom_fields(issue)
     if customs["GFF 2 Load"]["value"]:
+        return True
+    else:
+        return False
+
+def has_stable_ids(issue):
+    operations = get_operations(issue)
+    if "Allocate stable ids" is operations:
         return True
     else:
         return False
