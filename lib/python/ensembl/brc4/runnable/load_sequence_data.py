@@ -1284,6 +1284,9 @@ class load_sequence_data(eHive.BaseRunnable):
                     header = next(f).strip().split("\t")
                     continue
                 cs_info.append(dict(zip(header, line.strip().split())))
+        # return if there's no coord_systems to nullify versions for
+        if not cs_info:
+            return
         # choose cs rank threshold to start clearing version from
         seq_rank = max(map(lambda cs: int(cs["rank"]), cs_info))
         nullify_cs_version_from = self.param("nullify_cs_version_from")
