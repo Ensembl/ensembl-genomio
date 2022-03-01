@@ -126,6 +126,12 @@ sub default_options {
     # defautl xref display_db
     xref_display_db_default => 'BRC4_Community_Annotation',
     xref_load_logic_name => 'brc4_import',
+
+    # add_sequence mode (instead of creating db from scratch)
+    add_sequence => 0,
+
+    # run ProdDBsync parts before adding ad-hoc sequences (add_sequence  mode on)
+    prod_db_sync_before_adding => 1,
   };
 }
 
@@ -182,6 +188,7 @@ sub pipeline_wide_parameters {
     external_db_map => $self->o('external_db_map'),
 
     add_sequence => $self->o('add_sequence'),
+    prod_db_sync_before_adding => $self->o('prod_db_sync_before_adding'),
   };
 }
 
@@ -356,8 +363,46 @@ sub pipeline_analyses {
       -analysis_capacity => 1,
       -batch_size     => 50,
       -flow_into  => {
-        '1' => WHEN('#add_sequence#', 'AddSequence', ELSE('CleanUpAndCreateDB')),
+        '1' => WHEN('#add_sequence#', 'ProdDbSyncAndAddSequence', ELSE('CleanUpAndCreateDB')),
       },
+    },
+
+    {
+      -logic_name => 'ProdDbSyncAndAddSequence',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity => 1,
+      -batch_size     => 50,
+      -flow_into  => {
+        '1' => WHEN('#prod_db_sync_before_adding#', 'UpdateAnalysisDescription', ELSE('AddSequence')),
+      },
+    },
+
+    {
+      -logic_name        => 'UpdateAnalysisDescription',
+      -module            => 'Bio::EnsEMBL::Production::Pipeline::ProductionDBSync::PopulateAnalysisDescription',
+      -parameters => {
+        species => '#expr( #genome_data#->{"species"}->{"production_name"} )expr#',
+        group => 'core',
+      },
+      -analysis_capacity => 2,
+      -rc_name    => 'default',
+      -max_retry_count   => 3,
+      -flow_into         => ['UpdateControlledTables'],
+    },
+
+    {
+      -logic_name        => 'UpdateControlledTables',
+      -module            => 'Bio::EnsEMBL::Production::Pipeline::ProductionDBSync::PopulateControlledTables',
+      -parameters => {
+        species => '#expr( #genome_data#->{"species"}->{"production_name"} )expr#',
+        group => 'core',
+      },
+      -analysis_capacity => 2,
+      -rc_name    => 'default',
+      -max_retry_count   => 3,
+      -flow_into         => ['AddSequence'],
     },
 
     {
@@ -366,6 +411,7 @@ sub pipeline_analyses {
       -language => 'python3',
       -parameters        => {
         work_dir => $self->o('pipeline_dir') . '/#db_name#/add_sequence',
+        load_additional_sequences => $self->o('add_sequence'),
       },
       -analysis_capacity   => 10,
       -rc_name         => 'default',
@@ -828,6 +874,20 @@ sub pipeline_analyses {
       -analysis_capacity => 2,
       -rc_name    => 'default',
       -max_retry_count   => 0,
+      -flow_into  => {
+        '1->A' => 'UpdateSeqRegionNames',
+        'A->1' => 'UpdateMetaData',
+      },
+    },
+
+    {
+      -logic_name => 'UpdateSeqRegionNames',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -rc_name    => 'default',
+      -meadow_type       => 'LSF',
+      -analysis_capacity => 1,
+      -batch_size     => 50,
+      -max_retry_count   => 0,
       -flow_into => WHEN('#swap_gcf_gca#' => 'Swap_GCF_GCA',
                     ELSE 'Change_seq_region_name'
                     ),
@@ -853,6 +913,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 1,
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
+      -flow_into  => WHEN('#brc4_mode#', 'AddBRC4SeqRegionAttr'),
     },
 
     {
@@ -875,6 +936,54 @@ sub pipeline_analyses {
       -meadow_type       => 'LSF',
       -rc_name    => 'default',
     },
+
+    {
+      # Add "(EBI|BRC4)_seq_region_name" seq_region_attrib(s) ("swap_gcf_gca" case)
+      -logic_name => 'AddBRC4SeqRegionAttr',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        ebi_seq_region_name_attrib => 'EBI_seq_region_name',
+        brc4_seq_region_name_attrib => 'BRC4_seq_region_name',
+        sql     => [
+          'INSERT IGNORE INTO seq_region_attrib (seq_region_id, attrib_type_id, value) ' .
+          '  SELECT sr.seq_region_id, at.attrib_type_id, sr.name ' .
+          '    FROM seq_region sr, attrib_type at ' .
+          '    WHERE at.code in ("#ebi_seq_region_name_attrib#", "#brc4_seq_region_name_attrib#"); ',
+        ],
+      },
+      -analysis_capacity   => 1,
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
+    },
+
+    {
+      # Updating "added_seq.region_name" meta data
+      -logic_name => 'UpdateMetaData',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -parameters => {
+        db_conn => $self->o('dbsrv_url') . '#db_name#',
+        ebi_seq_region_name_attrib => 'EBI_seq_region_name',
+        brc4_seq_region_name_attrib => 'BRC4_seq_region_name',
+        sql     => [
+          # delete exisiting "added_seq.region_name"
+          'DELETE FROM meta ' .
+          '  WHERE meta_key = "added_seq.region_name" AND species_id = 1; ',
+
+          # insert ignore "added_seq.region_name"
+          'INSERT IGNORE INTO meta (species_id, meta_key, meta_value) ' .
+          '  SELECT 1, "added_seq.region_name", sr.name ' .
+          '    FROM seq_region sr, seq_region_attrib sra, attrib_type at ' .
+          '    WHERE sr.seq_region_id = sra.seq_region_id ' .
+          '      AND sra.attrib_type_id = at.attrib_type_id ' .
+          '      AND at.code = "added_seq_accession"; ',
+        ],
+      },
+      -analysis_capacity   => 1,
+      -meadow_type       => 'LSF',
+      -rc_name    => 'default',
+    },
+
   ];
 }
 
