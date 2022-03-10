@@ -173,6 +173,7 @@ class SeqRegionConf:
       "GenBank-Accn" : "INSDC",
       "RefSeq-Accn" : "RefSeq",
       "UCSC-style-name" : "GenBank",
+      "Assigned-Molecule-Location/Type" : "_COORD_SYSTEM_TAG",
     }
 
     _open = asm_rep_file.endswith(".gz") and gzip.open or open
@@ -197,17 +198,22 @@ class SeqRegionConf:
           data_fields = line.split()
 
         sources_syns_raw = { src: data_fields[i].strip() for i, src in header_fixed.items() if i < len(data_fields) }
-        sources_syns = { src: nm for src, nm in sources_syns_raw.items() if nm and nm.lower() != "na" }
+        sources_syns = { src: nm
+                           for src, nm in sources_syns_raw.items()
+                             if nm and nm.lower() != "na" and src != "_COORD_SYSTEM_TAG" }
+        cs_tag = self.map_cs_tag(sources_syns_raw.get("_COORD_SYSTEM_TAG", None))
+
         # remove INSDC_submitted_name if it's equal to INSDC or RefSeq one
         major_syns = { src: nm for src, nm in sources_syns.items() if src in ["INSDC", "RefSeq"] }
         if "INSDC_submitted_name" in sources_syns:
           if sources_syns["INSDC_submitted_name"] in set(major_syns.values()):
             sources_syns.pop("INSDC_submitted_name")
 
-        # attach
+        # attach syns
         for src, syn in sources_syns.items():
           if src not in ["INSDC_submitted_name", "INSDC", "RefSeq"]:
             continue
+          # try to find out / get usable contig name to attach to (even try to use synonyms themselves)
           contig = syn
           if contig not in self.seq_regions:
             if unversion:
@@ -226,6 +232,9 @@ class SeqRegionConf:
             self.seq_regions[contig],
             synonyms = syns
           )
+          # update cs_tag
+          if cs_tag:
+            self.seq_regions[contig].coord_system_level = cs_tag
     return
 
   def unversion(self, name: str) -> str:
@@ -342,4 +351,21 @@ class SeqRegionConf:
       sr.synonyms = self.merge_syns(sr.synonyms, syns_from_tsv[can_use[0]])
 
     return
+
+  def map_cs_tag(self, location_type: Optional[str]) -> Optional[str]:
+    """
+      Turn 'Assigned-Molecule-Location/Type' from genbank reports to internal values
+    """
+    assigned_loc_type_map =  {
+      "contig" : "contig",
+      "superscaffold" : "superscaffold",
+      "linkagegroup" : "linkage_group",
+      "chromosome" : "chromosome",
+      "primaryassembly" : "primary_assembly",
+    }
+
+    if not location_type: return None
+
+    raw = location_type.strip().lower().replace(" ", "").replace("_", "")
+    return assigned_loc_type_map.get(raw, None)
 
