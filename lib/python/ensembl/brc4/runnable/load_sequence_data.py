@@ -529,8 +529,8 @@ class load_sequence_data(eHive.BaseRunnable):
                     seq_region_start = band["start"]
                     seq_region_end = band["end"]
                     # band_name and stain
-                    band_name = self.quote_or_null( band.get("name", None) )
-                    stain = self.quote_or_null( band.get("stain", None) )
+                    band_name = band.get("name", None)
+                    stain = band.get("stain", None)
                     # special cases for stain
                     structure = band.get("structure", None)
                     if structure == "telomere":
@@ -539,7 +539,7 @@ class load_sequence_data(eHive.BaseRunnable):
                         stain = "ACEN"
 
                     # append tuple
-                    band_tuples.append( (seq_region_id, eq_region_start, seq_region_end, self.quote_or_null(band_name), self.quote_or_null(stain)) )
+                    band_tuples.append( (seq_region_id, seq_region_start, seq_region_end, self.quote_or_null(band_name), self.quote_or_null(stain)) )
 
         # run insertion SQL
         self.insert_to_db(
