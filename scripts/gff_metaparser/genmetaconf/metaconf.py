@@ -197,7 +197,7 @@ class MetaConf:
       else:
         self.split_add(out, f, self.get(f))
     self.split_add(out, "assembly.version", self.get("assembly.version", tech=True))
-    self.split_add(out, "species.taxonomy_id", self.get("TAXON_ID", tech=True))
+    self.split_add(out, "species.taxonomy_id", int(self.get("TAXON_ID", tech=True)))
 
     # get chr aliases
     tk = self.tech_data.keys()
