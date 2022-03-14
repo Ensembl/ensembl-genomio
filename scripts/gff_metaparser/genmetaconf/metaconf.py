@@ -137,7 +137,7 @@ class MetaConf:
     self.update_from_dict(defaults, "assembly.version", tech = True)
     # species metadata
     self.update_from_dict(defaults, "species.division")
-    _sci_name = self.get("species.scientific_name")
+    _sci_name = self.get("species.scientific_name", default = "")
     _acc = str(asm_acc).replace("_","").replace(".","v")
     _strain = self.get("species.strain")
     _prod_name = _sci_name.strip().lower()
@@ -154,10 +154,11 @@ class MetaConf:
     self.update("species.url", _prod_name.capitalize())
     # syns
     syns = []
-    w = list(filter(None, _sci_name.split()))
-    syns.append(w[0][0] + ". " + w[1])
-    syns.append(w[0][0] + "." + w[1][:3])
-    syns.append((w[0][0] + w[1][:3]).lower())
+    sci_name_words = list(filter(None, _sci_name.split()))
+    if sci_name_words:
+      syns.append(sci_name_words[0][0] + ". " + sci_name_words[1])
+      syns.append(sci_name_words[0][0] + "." + sci_name_words[1][:3])
+      syns.append((sci_name_words[0][0] + sci_name_words[1][:3]).lower())
     if syns:
       self.update("species.alias", syns)
     # genebuild metadata
