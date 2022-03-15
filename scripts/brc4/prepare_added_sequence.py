@@ -6,6 +6,12 @@ import hashlib
 
 from Bio import SeqIO
 from Bio import GenBank
+
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+from BCBio import GFF
+
 import tempfile
 
 class FormattedFilesGenerator():
@@ -21,8 +27,17 @@ class FormattedFilesGenerator():
             "cyanelle" : "cyanelle_chromosome",
             "leucoplast" : "leucoplast_chromosome",
             }
+
+    allowed_feat_types = [
+            'gene',
+            'transcript',
+            'tRNA',
+            'rRNA',
+            'CDS',
+            ]
+
     
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, prefix=""):
         self.output_dir = output_dir
         try:
             os.mkdir(self.output_dir)
@@ -37,8 +52,15 @@ class FormattedFilesGenerator():
         self.dna_fasta = os.path.join(self.output_dir, 'dna.fasta')
         self.pep_fasta = os.path.join(self.output_dir, 'pep.fasta')
         self.genes_gff = os.path.join(self.output_dir, 'genes.gff')
-
+        self.prefix = prefix
         self.seqs = []
+    
+    def set_prefix(self, prefix):
+        """
+        Define a prefix to add to the feature IDs
+        """
+        if prefix:
+            self.prefix = prefix
         
     def parse_genbank(self, gb_file):
         """
@@ -57,6 +79,7 @@ class FormattedFilesGenerator():
                 self.seqs.append(record)
             
             self._write_genome_json()
+            self._write_genes_gff()
             self._write_seq_regions_json()
             self._write_dna_fasta()
             self._write_manifest()
@@ -79,6 +102,45 @@ class FormattedFilesGenerator():
     def _write_dna_fasta(self):
         with open(self.dna_fasta, "w") as fasta_fh:
             SeqIO.write(self.seqs, fasta_fh, "fasta")
+    
+    def _write_genes_gff(self):
+        with open(self.genes_gff, "w") as gff_fh:
+            recs = []
+            for seq in self.seqs:
+                feats = {}
+                
+                for feat in seq.features:
+                    if feat.type not in self.allowed_feat_types: continue
+                    gff_qualifiers = feat.qualifiers
+                    gff_feat = SeqFeature(
+                            location=feat.location,
+                            type=feat.type,
+                            strand=feat.location.strand,
+                            qualifiers=gff_qualifiers
+                            )
+                    
+                    if "gene" in gff_qualifiers:
+                        gene_id = gff_qualifiers["gene"][0]
+                        
+                        if feat.type == "gene":
+                            gff_feat.qualifiers["ID"] = self.prefix + gene_id
+                            gff_feat.qualifiers["Name"] = gene_id
+                            del gff_feat.qualifiers["gene"]
+                            feats[str(gene_id)] = gff_feat
+                        
+                        if feat.type == "CDS":
+                            feat_id = gene_id + "_t1"
+                            gff_feat.qualifiers["ID"] = self.prefix + feat_id
+                            gff_feat.qualifiers["Name"] = gene_id
+                            gff_feat.qualifiers["Parent"] = gene_id
+                            del gff_feat.qualifiers["gene"]
+                            feats[str(feat_id)] = gff_feat
+                
+                rec = SeqRecord(Seq("X"), "Sequence")
+                rec.features = feats.values()
+                recs.append(rec)
+
+            GFF.write(recs, gff_fh)
     
     def _write_manifest(self):
         """
@@ -173,7 +235,7 @@ class FormattedFilesGenerator():
             print(f"Warning: please add the relevant production_name for this genome in {self.genome_json}")
             
         ids = [ seq.id for seq in self.seqs]
-        genome_data["added_seq"]["name"] = ids
+        genome_data["added_seq"]["region_name"] = ids
         
         with open(self.genome_json, "w") as genome_fh:
             genome_fh.write(json.dumps(genome_data, indent=4))
@@ -186,10 +248,12 @@ def main():
                 help='Genbank file')
     parser.add_argument('--output_dir', type=str, required=True,
                 help='Output dir')
-
+    parser.add_argument('--prefix', type=str,
+                help='IDs prefix')
 
     args = parser.parse_args()
     formatter = FormattedFilesGenerator(args.output_dir)
+    formatter.set_prefix(args.prefix)
     formatter.parse_genbank(args.gb)
 
 if __name__ == "__main__":
