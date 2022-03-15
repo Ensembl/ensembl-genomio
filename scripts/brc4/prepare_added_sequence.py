@@ -200,17 +200,23 @@ class FormattedFilesGenerator():
         json_array = []
         
         for seq in self.seqs:
+            codon_table = self._get_codon_table(seq)
+            if not codon_table:
+                print(f"Warning: No codon table found. Make sure to change the codon table number in {self.seq_regions_json} manually if it is not the standard codon table")
+
+                codon_table = 1
             seq_obj = {
                     "name" : seq.id,
                     "coord_system_level" : "chromosome",
                     "circular" : (seq.annotations["topology"] == "circular"),
-                    "codon_table" : 1,
+                    "codon_table" : codon_table,
                     "length" : len(seq.seq),
                     }
             if seq.organelle:
                 seq_obj["location"] = self._prepare_location(seq.organelle)
-                print(f"Warning: '{seq.organelle}' is an organelle: make sure to change the codon table number in {self.seq_regions_json} manually if it is not the standard codon table")
-            
+                if not codon_table:
+                    print(f"Warning: '{seq.organelle}' is an organelle: make sure to change the codon table number in {self.seq_regions_json} manually if it is not the standard codon table")
+
             # Additional attributes for Ensembl
             seq_obj["added_sequence"] = {
                     "accession" : seq.id,
@@ -230,6 +236,19 @@ class FormattedFilesGenerator():
             json_array.append(seq_obj)
         with open(self.seq_regions_json, "w") as seq_fh:
             seq_fh.write(json.dumps(json_array, indent=4))
+
+    def _get_codon_table(self, seq):
+        """
+        Look at the CDS features to see if they have a codon table
+        """
+        for feat in seq.features:
+            if feat.type == "CDS":
+                quals = feat.qualifiers
+                if "transl_table" in quals:
+                    return quals["transl_table"][0]
+                else:
+                    return
+        return
 
     def _prepare_location(self, organelle):
         """
