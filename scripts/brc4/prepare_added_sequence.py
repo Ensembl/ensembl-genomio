@@ -135,12 +135,39 @@ class FormattedFilesGenerator():
                             gff_feat.qualifiers["Parent"] = gene_id
                             del gff_feat.qualifiers["gene"]
                             feats[str(feat_id)] = gff_feat
+                        
+                    elif feat.type in ("tRNA", "rRNA"):
+                            gene_id = gff_qualifiers["product"][0]
+
+                            feat_id = gene_id + "_t1"
+                            gff_feat.qualifiers["ID"] = self.prefix + feat_id
+                            gff_feat.qualifiers["Name"] = gene_id
+                            gff_feat.qualifiers["Parent"] = gene_id
+                            
+                            # Also create a parent gene for this transcript
+                            gene_qualifiers = {
+                                    "ID" : self.prefix + gene_id,
+                                    "Name" : gene_id
+                                    }
+                            gff_gene = SeqFeature(
+                                    location=feat.location,
+                                    type="gene",
+                                    strand=feat.location.strand,
+                                    qualifiers=gene_qualifiers
+                                    )
+                            feats[str(gene_id)] = gff_gene
+                            feats[str(feat_id)] = gff_feat
+                            
+                            
                 
                 rec = SeqRecord(Seq("X"), "Sequence")
                 rec.features = feats.values()
                 recs.append(rec)
 
             GFF.write(recs, gff_fh)
+            
+            # TODO: functional_annotation
+            # TODO: fasta pep
     
     def _write_manifest(self):
         """
