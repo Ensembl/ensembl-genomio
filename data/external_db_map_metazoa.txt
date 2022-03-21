@@ -47,7 +47,7 @@ APHIDBASE	APHIDBASE	gene
 BEEBASE	BEEBASE	gene
 LJMU	LJMU	gene
 NasoniaBase	NasoniaBase	gene
-
+I5KNAL	I5KNAL	gene
 
 
 # Transcript mappings
