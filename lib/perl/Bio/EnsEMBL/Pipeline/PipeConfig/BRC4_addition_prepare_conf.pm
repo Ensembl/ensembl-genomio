@@ -25,7 +25,7 @@ sub default_options {
   return {
     %{ $self->SUPER::default_options() },
     ## default LSF queue
-    queue_name => 'standard',
+    queue_name => 'short',
 
     ############################################
     # Config to be set by the user
@@ -109,7 +109,7 @@ sub pipeline_analyses {
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -input_ids  => [{}],
       -analysis_capacity   => 1,
-      -rc_name    => 'default',
+      -rc_name    => 'small',
       -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'Download_genbank',
@@ -127,7 +127,7 @@ sub pipeline_analyses {
       },
       -max_retry_count => 0,
       -analysis_capacity   => 1,
-      -rc_name    => 'default',
+      -rc_name    => 'small',
       -flow_into => {
         2 => "Extract_from_gb"
       }
@@ -145,7 +145,7 @@ sub pipeline_analyses {
       },
       -analysis_capacity => 1,
       -failed_job_tolerance => 0,
-      -rc_name        => 'default',
+      -rc_name        => 'small',
       -flow_into  => {
         2 => ['Process_gff3',
           { 'Check_json_schema' => { 'metadata_type' => 'genome', 'metadata_json' => '#genome_data#' } },
@@ -168,7 +168,7 @@ sub pipeline_analyses {
       -max_retry_count => 0,
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
-      -rc_name    => 'default',
+      -rc_name    => 'small',
       -meadow_type       => 'LSF',
       -flow_into  => {
           2 => 'GFF3_validation',
@@ -188,7 +188,7 @@ sub pipeline_analyses {
       -max_retry_count => 0,
      -analysis_capacity => 10,
      -batch_size        => 10,
-     -rc_name           => 'default',
+     -rc_name           => 'small',
      -flow_into  => '?accu_name=manifest_files&accu_address={file_name}&accu_input_variable=gff3',
    },
 
@@ -200,10 +200,11 @@ sub pipeline_analyses {
         json_schema => '#schemas#',
         hash_key => "#metadata_type#",
       },
+      -max_retry_count => 0,
       -analysis_capacity => 2,
       -failed_job_tolerance => 100,
       -batch_size     => 50,
-      -rc_name        => 'default',
+      -rc_name        => 'small',
       -flow_into  => { 1 => '?accu_name=manifest_files&accu_address={hash_key}&accu_input_variable=metadata_json' },
     },
 
@@ -213,7 +214,7 @@ sub pipeline_analyses {
       -language    => 'python3',
       -max_retry_count => 0,
       -analysis_capacity   => 5,
-      -rc_name         => 'default',
+      -rc_name         => 'small',
       -parameters     => {
         output_dir => $self->o('output_dir'),
         genome_name => $self->o('gb_accession'),
@@ -234,7 +235,7 @@ sub pipeline_analyses {
       -analysis_capacity => 2,
       -failed_job_tolerance => 100,
       -batch_size     => 50,
-      -rc_name        => 'default',
+      -rc_name        => 'small',
       -flow_into       => ['Integrity_check', "Manifest_stats"],
     },
 
@@ -247,7 +248,7 @@ sub pipeline_analyses {
       },
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
-      -rc_name         => 'default',
+      -rc_name         => 'small',
       -max_retry_count => 0,
 #      -flow_into       => 'Manifest_stats',
     },
@@ -256,7 +257,7 @@ sub pipeline_analyses {
       -module      => 'ensembl.brc4.runnable.manifest_stats',
       -language    => 'python3',
       -analysis_capacity   => 1,
-      -rc_name         => 'default',
+      -rc_name         => 'small',
       -max_retry_count => 0,
     },
   ];
@@ -266,12 +267,7 @@ sub resource_classes {
     my $self = shift;
     return {
       'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
-      '8GB'     => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 8000   -R "rusage[mem=8000]"'},
-      '15GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 15000  -R "rusage[mem=15000]"'},
-      '32GB '   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 32000  -R "rusage[mem=32000]"'},
-      '64GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 64000  -R "rusage[mem=64000]"'},
-      '128GB'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 128000 -R "rusage[mem=128000]"'},
-      '256GB  ' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 256000 -R "rusage[mem=256000]"'},
+      'small'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 100   -R "rusage[mem=100]"'},
     }
 }
 
