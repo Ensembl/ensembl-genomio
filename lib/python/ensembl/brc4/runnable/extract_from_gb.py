@@ -13,6 +13,7 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from BCBio import GFF
 
 import tempfile
+from collections import Counter
 
 class extract_from_gb(eHive.BaseRunnable):
 
@@ -130,6 +131,8 @@ class FormattedFilesGenerator():
         
         with open(self.genes_gff, "w") as gff_fh:
             recs = []
+            all_ids = []
+            
             for seq in self.seqs:
                 feats = {}
                 
@@ -152,6 +155,7 @@ class FormattedFilesGenerator():
                             gff_feat.qualifiers["Name"] = gene_name
                             del gff_feat.qualifiers["gene"]
                             feats[str(gene_id)] = gff_feat
+                            all_ids.append(str(gene_id))
                         
                         if feat.type == "CDS":
                             cds_id = gene_id + "_p1"
@@ -183,10 +187,16 @@ class FormattedFilesGenerator():
                                     )
                             feats[str(tr_id)] = gff_tr
                             feats[str(cds_id)] = gff_feat
+                            all_ids.append(str(tr_id))
+                            all_ids.append(str(cds_id))
                         
                     elif feat.type in ("tRNA", "rRNA"):
                             feat_name = gff_qualifiers["product"][0]
                             gene_id = self.prefix + feat_name
+                            parts = gene_id.split(" ")
+                            if len(parts) > 2:
+                                print(f"Shortening gene_id to {parts[0]}")
+                                gene_id = parts[0]
 
                             feat_id = gene_id + "_t1"
                             gff_feat.qualifiers["ID"] = feat_id
@@ -206,16 +216,27 @@ class FormattedFilesGenerator():
                                     )
                             feats[str(gene_id)] = gff_gene
                             feats[str(feat_id)] = gff_feat
+                            all_ids.append(str(gene_id))
+                            all_ids.append(str(feat_id))
                             
-                
                 rec = SeqRecord(seq.seq, seq.id)
                 rec.features = feats.values()
                 recs.append(rec)
-
+    
             GFF.write(recs, gff_fh)
 
             with open(self.fasta_pep, "w") as fasta_fh:
                 SeqIO.write(peptides, fasta_fh, "fasta")
+            
+            # Warn if some IDs are not unique
+            count = dict(Counter(all_ids))
+            num_duplicates = 0
+            for key in count:
+                if count[key] > 1:
+                    num_duplicates += 0
+                    print(f"ID {key} is duplicated {count[key]} times")
+            if num_duplicates > 0:
+                raise Exception(f"Some {num_duplicates} IDs are duplicated")
         
     def _write_seq_regions_json(self):
         json_array = []
