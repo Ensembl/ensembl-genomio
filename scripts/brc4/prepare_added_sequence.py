@@ -104,6 +104,9 @@ class FormattedFilesGenerator():
             SeqIO.write(self.seqs, fasta_fh, "fasta")
     
     def _write_genes_gff(self):
+        funcs = []
+        peptides = []
+        
         with open(self.genes_gff, "w") as gff_fh:
             recs = []
             for seq in self.seqs:
@@ -120,34 +123,78 @@ class FormattedFilesGenerator():
                             )
                     
                     if "gene" in gff_qualifiers:
-                        gene_id = gff_qualifiers["gene"][0]
+                        gene_name = gff_qualifiers["gene"][0]
+                        gene_id = self.prefix + gene_name
                         
                         if feat.type == "gene":
-                            gff_feat.qualifiers["ID"] = self.prefix + gene_id
-                            gff_feat.qualifiers["Name"] = gene_id
+                            gff_feat.qualifiers["ID"] = gene_id
+                            gff_feat.qualifiers["Name"] = gene_name
                             del gff_feat.qualifiers["gene"]
                             feats[str(gene_id)] = gff_feat
+                            
+                            gene_ann = {
+                                    "id" : gene_id,
+                                    "type" : "gene",
+                                    "synonyms" : [
+                                        { "default" : True, "id" : gene_name }
+                                        ]
+                                    }
+                            funcs.append(gene_ann)
                         
                         if feat.type == "CDS":
-                            feat_id = gene_id + "_t1"
-                            gff_feat.qualifiers["ID"] = self.prefix + feat_id
-                            gff_feat.qualifiers["Name"] = gene_id
-                            gff_feat.qualifiers["Parent"] = gene_id
+                            cds_id = gene_id + "_p1"
+                            tr_id = gene_id + "_t1"
+                            gff_feat.qualifiers["ID"] = cds_id
+                            gff_feat.qualifiers["Parent"] = tr_id
+                            gff_feat.qualifiers["Name"] = gene_name
                             del gff_feat.qualifiers["gene"]
-                            feats[str(feat_id)] = gff_feat
+
+                            trl_ann = {
+                                    "id" : cds_id,
+                                    "type" : "translation",
+                                    }
+                            funcs.append(trl_ann)
+                            
+                            # Add fasta to pep fasta file
+                            peptides.append({ "id" : cds_id, "sequence": feat.qualifiers["translation"] })
+
+                            # Also create a parent transcript for this translation
+                            tr_ann = {
+                                    "id" : tr_id,
+                                    "type" : "transcript",
+                                    "synonyms" : [
+                                        { "default" : True, "id" : gene_name }
+                                        ]
+                                    }
+                            funcs.append(tr_ann)
+
+                            tr_qualifiers = {
+                                    "ID" : tr_id,
+                                    "Name" : gene_name,
+                                    "Parent": gene_id
+                                    }
+                            gff_tr = SeqFeature(
+                                    location=feat.location,
+                                    type="mRNA",
+                                    strand=feat.location.strand,
+                                    qualifiers=tr_qualifiers
+                                    )
+                            feats[str(tr_id)] = gff_tr
+                            feats[str(cds_id)] = gff_feat
                         
                     elif feat.type in ("tRNA", "rRNA"):
-                            gene_id = gff_qualifiers["product"][0]
+                            feat_name = gff_qualifiers["product"][0]
+                            gene_id = self.prefix + feat_name
 
                             feat_id = gene_id + "_t1"
-                            gff_feat.qualifiers["ID"] = self.prefix + feat_id
-                            gff_feat.qualifiers["Name"] = gene_id
+                            gff_feat.qualifiers["ID"] = feat_id
+                            gff_feat.qualifiers["Name"] = feat_name
                             gff_feat.qualifiers["Parent"] = gene_id
                             
                             # Also create a parent gene for this transcript
                             gene_qualifiers = {
-                                    "ID" : self.prefix + gene_id,
-                                    "Name" : gene_id
+                                    "ID" : gene_id,
+                                    "Name" : feat_name,
                                     }
                             gff_gene = SeqFeature(
                                     location=feat.location,
@@ -157,6 +204,22 @@ class FormattedFilesGenerator():
                                     )
                             feats[str(gene_id)] = gff_gene
                             feats[str(feat_id)] = gff_feat
+
+                            gene_rna_ann = {
+                                    "id" : gene_id,
+                                    "type" : "gene",
+                                    "description" : feat_name,
+                                    "synonyms" : [
+                                        { "default" : True, "id" : feat_name }
+                                        ]
+                                    }
+                            funcs.append(gene_rna_ann)
+                            rna_ann = {
+                                    "id" : feat_id,
+                                    "type" : "transcript",
+                                    "description" : feat_name,
+                                    }
+                            funcs.append(rna_ann)
                             
                             
                 
@@ -166,8 +229,13 @@ class FormattedFilesGenerator():
 
             GFF.write(recs, gff_fh)
             
-            # TODO: functional_annotation
+            with open(self.functional_annotation_json, "w") as func_json:
+                func_json.write(json.dumps(funcs, indent=4))
             # TODO: fasta pep
+
+            with open(self.fasta_pep, "w") as fpep:
+                for seq in peptides:
+                    fpep.write(">" + seq["id"] + "\n" + seq["seq"])
     
     def _write_manifest(self):
         """
