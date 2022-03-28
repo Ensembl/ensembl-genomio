@@ -78,8 +78,8 @@ RefSeq_mRNA	RefSeq_mRNA	transcript	^NM|^XM
 RefSeq	RefSeq_ncRNA	transcript	^XR
 RefSeq_ncRNA	RefSeq_ncRNA	transcript	^XR
 
-RFAM	RFAM_trans_name	transript
-RFAM_trans_name	RFAM_trans_name	transript
+RFAM	RFAM_trans_name	transcript
+RFAM_trans_name	RFAM_trans_name	transcript
 
 RNACentral	RNACentral	transcript
 
