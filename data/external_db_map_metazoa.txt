@@ -20,6 +20,9 @@
 # Genes mqppings
 Ensembl_Metazoa	Ensembl_Metazoa	gene
 
+Community_Annotation	BRC4_Community_Annotation	gene
+BRC4_Community_Annotation	BRC4_Community_Annotation	gene
+
 EntrezGene	EntrezGene	gene
 
 flybase_annotation_id	flybase_annotation_id	gene
@@ -53,6 +56,11 @@ I5KNAL	I5KNAL	gene
 # Transcript mappings
 Ensembl_Metazoa	Ensembl_Metazoa_transcript	transcript
 Ensembl_Metazoa_transcript	Ensembl_Metazoa_transcript	transcript
+
+Community_Annotation	BRC4_Community_Annotation_transcript	transcript
+BRC4_Community_Annotation	BRC4_Community_Annotation_transcript	transcript
+Community_Annotation_transcript	BRC4_Community_Annotation_transcript	transcript
+BRC4_Community_Annotation_transcript	BRC4_Community_Annotation_transcript	transcript
 
 flybase_annotation_id	flybase_annotation_id_transcript	transcript
 FlyBase	flybase_annotation_id_transcript	transcript
@@ -91,6 +99,11 @@ LJMU_transcript	LJMU_transcript	transcript
 # Translation mappings
 Ensembl_Metazoa	Ensembl_Metazoa_translation	translation
 Ensembl_Metazoa_translation	Ensembl_Metazoa_translation	translation
+
+Community_Annotation	BRC4_Community_Annotation_translation	translation
+BRC4_Community_Annotation	BRC4_Community_Annotation_translation	translation
+Community_Annotation_translation	BRC4_Community_Annotation_translation	translation
+BRC4_Community_Annotation_translation	BRC4_Community_Annotation_translation	translation
 
 flybase_annotation_id	flybase_annotation_id_translation	translation
 FlyBase	flybase_annotation_id_translation	translation
@@ -146,7 +159,6 @@ RefSeq	RefSeq	seq_region
 
 
 # Any feature
-Community_Annotation	BRC4_Community_Annotation
 Community_Symbol	BRC4_Community_Symbol
 
 EPD	EPD
