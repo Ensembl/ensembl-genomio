@@ -69,6 +69,7 @@ sub param_defaults {
     # aux
     delete_existing    => 0,
     logic_rename       => undef,
+    keep_logic_name   => 0,
     linked_tables      => [],
   };
 }
@@ -79,7 +80,7 @@ sub fetch_input {
   my $logic_name = $self->param_required('logic_name');
   $self->param('program', $logic_name) unless $self->param_is_defined('program');
   
-  if (!$self->param('delete_existing')) {
+  if (not $self->param('delete_existing') and not $self->param('keep_logic_name')) {
     $self->param('logic_rename', "$logic_name\_bkp") unless $self->param_is_defined('logic_rename');
   }
 }
@@ -102,7 +103,7 @@ sub run {
         $sth->execute or throw("Failed to delete rows using '$sql': ".$sth->errstr);
       }
       $aa->remove($analysis);
-    } else {
+    } elsif (not $self->param('keep_logic_name')) {
       my $logic_rename = $self->param_required('logic_rename');
       my $renamed_analysis = $aa->fetch_by_logic_name($logic_rename);
       if (defined $renamed_analysis) {
