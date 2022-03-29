@@ -12,6 +12,7 @@
         "fasta_dna" : { "$ref" : "#/definitions/file_info" },
         "fasta_pep" : { "$ref" : "#/definitions/file_info" },
         "seq_region" : { "$ref" : "#/definitions/file_info" },
+        "seq_attrib" : { "$ref" : "#/definitions/file_info" },
         "genome" : { "$ref" : "#/definitions/file_info" },
         "functional_annotation" : { "$ref" : "#/definitions/file_info" },
         "agp" : { "$ref" : "#/definitions/agp_info" }
