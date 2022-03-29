@@ -230,7 +230,7 @@ sub seq_edits_from_protein {
   
   my $transcripts = $ta->fetch_all_by_logic_name($logic_name);
   
-  foreach my $transcript (sort { $a->stable_id cmp $b->stable_id } @transcripts) {
+  foreach my $transcript (sort { $a->stable_id cmp $b->stable_id } @$transcripts) {
     my $translation = $transcript->translation;
     
     if ($translation && exists $protein{$translation->stable_id}) {
