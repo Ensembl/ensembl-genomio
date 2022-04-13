@@ -244,7 +244,7 @@ class FormattedFilesGenerator():
             num_duplicates = 0
             for key in count:
                 if count[key] > 1:
-                    num_duplicates += 0
+                    num_duplicates += 1
                     print(f"ID {key} is duplicated {count[key]} times")
             if num_duplicates > 0:
                 raise Exception(f"Some {num_duplicates} IDs are duplicated")
