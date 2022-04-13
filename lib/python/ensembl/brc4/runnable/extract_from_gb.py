@@ -67,7 +67,7 @@ class FormattedFilesGenerator():
     def __init__(self, output_dir, prefix=""):
         self.output_dir = output_dir
         try:
-            os.mkdir(self.output_dir)
+            os.makedirs(self.output_dir)
         except FileExistsError:
             pass
             
