@@ -25,10 +25,12 @@ class extract_from_gb(eHive.BaseRunnable):
         accession = self.param_required('gb_accession')
         work_dir = self.param('work_dir')
         prefix = self.param('ids_prefix')
+        prod_name = self.param('production_name')
         gb_file = self.param('gb_file')
 
         formatter = FormattedFilesGenerator(work_dir)
         formatter.set_prefix(prefix)
+        formatter.set_production_name(prod_name)
         formatter.parse_genbank(gb_file)
 
         # Output the gff3 file
@@ -85,6 +87,13 @@ class FormattedFilesGenerator():
         """
         if prefix:
             self.prefix = prefix
+    
+    def set_production_name(self, prod_name):
+        """
+        Define a production_name for the genome
+        """
+        if prod_name:
+            self.prod_name = prod_name
         
     def parse_genbank(self, gb_file):
         """
@@ -309,9 +318,12 @@ class FormattedFilesGenerator():
         Only the production_name is needed, but the rest of the fields need to be given
         for the validation of the json file
         """
+        
+        prod_name = self.prod_name if self.prod_name else ""
+        
         genome_data = {
                 "species" : {
-                    "production_name" : "",
+                    "production_name" : prod_name,
                     "taxonomy_id" : 0,
                     },
                 "assembly" : {

@@ -33,6 +33,9 @@ sub default_options {
     
     # Gene ids prefix, to make sure we don't just use gene names
     ids_prefix => "",
+    
+    # Production_name (if any), for the loader to use afterwards
+    production_name => "",
 
     # Basic pipeline configuration
     pipeline_tag => '',
@@ -140,6 +143,7 @@ sub pipeline_analyses {
       -parameters     => {
         gb_file => '#gb_file#',
         ids_prefix => $self->o('ids_prefix'),
+        production_name => $self->o('production_name'),
         pepkey => 'fasta_pep',
         dnakey => 'fasta_dna',
       },
