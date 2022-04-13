@@ -202,10 +202,12 @@ class FormattedFilesGenerator():
                     elif feat.type in ("tRNA", "rRNA"):
                             feat_name = gff_qualifiers["product"][0]
                             gene_id = self.prefix + feat_name
+
                             parts = gene_id.split(" ")
                             if len(parts) > 2:
                                 print(f"Shortening gene_id to {parts[0]}")
                                 gene_id = parts[0]
+                            gene_id = self._uniquify_id(gene_id, all_ids)
 
                             feat_id = gene_id + "_t1"
                             gff_feat.qualifiers["ID"] = feat_id
@@ -246,6 +248,22 @@ class FormattedFilesGenerator():
                     print(f"ID {key} is duplicated {count[key]} times")
             if num_duplicates > 0:
                 raise Exception(f"Some {num_duplicates} IDs are duplicated")
+
+    def _uniquify_id(self, gene_id, all_ids):
+        """Ensure the gene id used is unique,
+        and append a number otherwise, starting at 2
+        """
+        
+        new_id = gene_id
+        num = 1
+        while new_id in all_ids:
+            print(f"{new_id} exists, update")
+            num += 1
+            new_id = f"{gene_id}_{num}"
+        print(f"Using {new_id}")
+        
+        return new_id
+        
         
     def _write_seq_regions_json(self):
         json_array = []
