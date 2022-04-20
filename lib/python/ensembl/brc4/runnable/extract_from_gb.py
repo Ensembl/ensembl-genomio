@@ -171,7 +171,6 @@ class FormattedFilesGenerator():
                             tr_id = gene_id + "_t1"
                             gff_feat.qualifiers["ID"] = cds_id
                             gff_feat.qualifiers["Parent"] = tr_id
-                            gff_feat.qualifiers["Name"] = gene_name
                             del gff_feat.qualifiers["gene"]
                             
                             # Add fasta to pep fasta file
