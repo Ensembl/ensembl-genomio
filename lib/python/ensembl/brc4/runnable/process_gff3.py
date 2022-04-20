@@ -542,6 +542,10 @@ class process_gff3(eHive.BaseRunnable):
                 feature_object["description"] = name
         
         # Synonyms?
+        if "Name" in feature.qualifiers:
+            feat_name = feature.qualifiers["Name"][0]
+            if feat_name != feature.id:
+                feature_object["synonyms"] = { "synonym": feat_name, "default" : True }
         
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):

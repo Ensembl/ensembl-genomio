@@ -359,6 +359,9 @@ sub pipeline_analyses {
       -logic_name => 'CreateDB',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
+      -parameters => {
+        has_gff3 => '#expr( #manifest_data#->{"gff3"} )expr#',
+      },
       -meadow_type       => 'LSF',
       -analysis_capacity => 1,
       -batch_size     => 50,
@@ -417,7 +420,7 @@ sub pipeline_analyses {
       -rc_name         => 'default',
       -max_retry_count => 0,
       -meadow_type       => 'LSF',
-      -flow_into  => WHEN('#has_gff#', 'Load_gene_models'),
+      -flow_into  => WHEN('#has_gff3#', 'Load_gene_models')
     },
 
     {
@@ -520,7 +523,6 @@ sub pipeline_analyses {
           -user => "#taxonomy_user#",
           -dbname => "#taxonomy_dbname#",
         },
-        has_gff3 => '#expr( #manifest_data#->{"gff3"} )expr#',
       },
       -rc_name    => 'default',
       -meadow_type       => 'LSF',
@@ -625,10 +627,11 @@ sub pipeline_analyses {
       -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::AnalysisSetup',
       -parameters        => {
         logic_name         => $self->o('gff3_load_logic_name'),
+        keep_logic_name    => "#add_sequence#",
         module             => $self->o('gff3_load_analysis_module'),
         db_url             => '#dbsrv_url#' . '#db_name#',
         production_lookup  => $self->o('gff3_load_production_lookup'),
-        delete_existing    => 1,
+        delete_existing    => "#expr(#add_sequence# ? 0 : 1)expr#",
       },
       -rc_name    => 'default',
       -meadow_type => 'LSF',

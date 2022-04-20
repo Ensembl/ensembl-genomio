@@ -27,28 +27,30 @@ class manifest(eHive.BaseRunnable):
 
         # Get BRC4 component, organism if any
         component = None
-        genome_name = None
-        if "BRC4" in genome_data:
-            if "component" in genome_data["BRC4"]:
-                component = genome_data["BRC4"]["component"]
-            if "organism_abbrev" in genome_data["BRC4"]:
-                genome_name = genome_data["BRC4"]["organism_abbrev"]
-
-        # RETROCOMPATIBILITY
-        if genome_name == None and "species" in genome_data and "BRC4_organism_abbrev" in genome_data["species"]:
-                genome_name = genome_data["species"]["BRC4_organism_abbrev"]
+        genome_name = self.param('genome_name')
+        species = self.param('species')
         
-        # Get the species name (production_name)
-        species = None
-        if "species" in genome_data and "production_name" in genome_data["species"]:
-            species = genome_data["species"]["production_name"]
+        if not genome_name:
+            if "BRC4" in genome_data:
+                if "component" in genome_data["BRC4"]:
+                    component = genome_data["BRC4"]["component"]
+                if "organism_abbrev" in genome_data["BRC4"]:
+                    genome_name = genome_data["BRC4"]["organism_abbrev"]
 
-        # Default species name
-        if genome_name == None:
-            if species != None:
-                genome_name = species
-            else:
-                raise Exception("No species")
+            # RETROCOMPATIBILITY
+            if genome_name == None and "species" in genome_data and "BRC4_organism_abbrev" in genome_data["species"]:
+                    genome_name = genome_data["species"]["BRC4_organism_abbrev"]
+                
+            # Get the species name (production_name)
+            if "species" in genome_data and "production_name" in genome_data["species"]:
+                species = genome_data["species"]["production_name"]
+
+            # Default species name
+            if genome_name == None:
+                if species != None:
+                    genome_name = species
+                else:
+                    raise Exception("No species")
 
         # Define genome directory
         dir_list = [output_dir]
@@ -61,9 +63,10 @@ class manifest(eHive.BaseRunnable):
             os.makedirs(genome_dir)
         except:
             print("Reuse directory")
-        print("Genome directory: " + genome_dir)
+        print(f"Genome directory: '{genome_dir}'")
 
         # Move all files to the output dir, with a new name
+        print(manifest_files)
         final_files = self.copy_files(genome_dir, manifest_files, species, genome_name)
         
         # Create th manifest file itself
