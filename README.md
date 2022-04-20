@@ -1,3 +1,6 @@
+# ensembl-genomio
+Pipelines to turn basic genomic data into Ensembl cores and back
+
 A set of ehive pipelines:
 
 * Genome dumper: dumps flat files from an Ensembl core database.
