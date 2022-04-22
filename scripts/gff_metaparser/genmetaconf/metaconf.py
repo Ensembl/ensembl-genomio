@@ -109,7 +109,12 @@ class MetaConf:
           gad = str_cmt["Genome-Assembly-Data"]
           ankey = list(filter(lambda x: "assembly" in x.lower() and "name" in x.lower(), gad.keys()))
           if ankey:
-            self.update("assembly.name", gad[ankey[0]])
+            asm_name = gad[ankey[0]].strip()
+            asm_name = re.sub(r'[^a-z0-9A-Z_\.]+', '_', asm_name)
+            asm_name = re.sub(r'_+', '_', asm_name)
+            asm_name = re.sub(r'^_+', '', asm_name)
+            asm_name = re.sub(r'_+$', '', asm_name)
+            self.update("assembly.name", asm_name)
 
   def update_from_dict(self, d, k, tech = False):
     if d is None:
@@ -122,7 +127,8 @@ class MetaConf:
 
   def update_derived_data(self, defaults = None, update_annotation_related = False):
     # assembly metadata
-    new_name = self.get("assembly.accession")
+    asm_acc = self.get("assembly.accession") 
+    new_name = str(asm_acc)
     if new_name:
       new_name = new_name.strip().replace("_","").replace(".","v")
       self.update("assembly.name", new_name)
@@ -131,24 +137,28 @@ class MetaConf:
     self.update_from_dict(defaults, "assembly.version", tech = True)
     # species metadata
     self.update_from_dict(defaults, "species.division")
-    _sci_name = self.get("species.scientific_name")
-    _acc = self.get("assembly.accession").replace("_","").replace(".","v")
+    _sci_name = self.get("species.scientific_name", default = "")
+    _acc = str(asm_acc).replace("_","").replace(".","v")
     _strain = self.get("species.strain")
     _prod_name = _sci_name.strip().lower()
     _prod_name = "_".join(re.sub(r'[^a-z0-9A-Z]+', '_', _prod_name).split("_")[:2])
     _prod_name = ("%s_%s" % (_prod_name, _acc)).lower().replace(" ","_")
     self.update("species.production_name", _prod_name)
+    _comm_name = self.get("species.common_name")
     _display_name = _sci_name
-    if _strain:
-      _display_name = ("%s (%s)" % (_sci_name, _strain))
+    if _strain or _comm_name:
+      _strain_comm_part = ", ".join(map(lambda s: str(s), filter(None, [_comm_name, _strain])))
+      _display_name += " (%s)" % _strain_comm_part
+    _display_name += " - " + asm_acc
     self.update("species.display_name", _display_name)
     self.update("species.url", _prod_name.capitalize())
     # syns
     syns = []
-    w = list(filter(None, _sci_name.split()))
-    syns.append(w[0][0] + ". " + w[1])
-    syns.append(w[0][0] + "." + w[1][:3])
-    syns.append((w[0][0] + w[1][:3]).lower())
+    sci_name_words = list(filter(None, _sci_name.split()))
+    if sci_name_words:
+      syns.append(sci_name_words[0][0] + ". " + sci_name_words[1])
+      syns.append(sci_name_words[0][0] + "." + sci_name_words[1][:3])
+      syns.append((sci_name_words[0][0] + sci_name_words[1][:3]).lower())
     if syns:
       self.update("species.alias", syns)
     # genebuild metadata
@@ -159,6 +169,8 @@ class MetaConf:
       today = datetime.datetime.today()
       self.update("genebuild.start_date",
                   "%s-%02d-%s" % (today.year, today.month, self.get("species.division")))
+      self.update("genebuild.initial_release_date", "%s-%02d" % (today.year, today.month))
+      self.update("genebuild.last_geneset_update", "%s-%02d" % (today.year, today.month))
 
   def dump_genome_conf(self, json_out):
     out = {}
@@ -185,7 +197,7 @@ class MetaConf:
       else:
         self.split_add(out, f, self.get(f))
     self.split_add(out, "assembly.version", self.get("assembly.version", tech=True))
-    self.split_add(out, "species.taxonomy_id", self.get("TAXON_ID", tech=True))
+    self.split_add(out, "species.taxonomy_id", int(self.get("TAXON_ID", tech=True)))
 
     # get chr aliases
     tk = self.tech_data.keys()

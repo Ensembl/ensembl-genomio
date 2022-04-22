@@ -13,6 +13,20 @@ from Bio import SeqIO
 from os import path
 from ensembl.brc4.runnable.parser import Parser
 
+class SeqGroup():
+    def __init__(self, sequence, identifier=None):
+        self.sequence = sequence
+        self.length = len(self.sequence)
+        self.ids = []
+        if identifier: self.add_id(identifier)
+        self.count = len(self.ids)
+    
+    def __str__(self):
+        return ", ".join(self.ids)
+    
+    def add_id(self, identifier):
+        self.ids.append(identifier)
+        self.count = len(self.ids)
 
 class SeqGroup():
     def __init__(self, sequence, identifier=None):
@@ -80,41 +94,40 @@ class compare_fasta(eHive.BaseRunnable):
         map_dna = self.get_map(map_dna_path)
         seq1 = self.get_fasta(fasta1, map_dna)
         seq2 = self.get_fasta(fasta2, map_dna)
-
+        
         (stats, diffs, seq_map) = self.compare_seqs(seq1, seq2)
         # Print mapping to a file (add report data)
         map_file = output_dir + "/" + species + "_" + name + ".map"
         self.print_map(seq_map, map_file, report)
-
+        
         # Print full list of results in a file
         output_file = output_dir + "/" + species + "_" + name + ".log"
         print("Write results in %s" % output_file)
         with open(output_file, "w") as out_fh:
             for line in diffs:
                 out_fh.write(line + "\n")
-
+                
         # Print the stats separately
         out = {
-            "species": species,
-            "stats": stats
-        }
+                "species" : species,
+                "stats" : stats
+                }
         self.dataflow(out, 2)
-
+        
     def print_map(self, seq_map, map_file, report_file):
-
+        
         report_parser = Parser()
         report_seq = report_parser.get_report_regions(report_file)
         report = self.add_report_to_map(seq_map, report_seq)
-
+        
         print("Write map in %s" % map_file)
         with open(map_file, "w") as out_fh:
             out_fh.write(json.dumps(report, sort_keys=True, indent=4))
-
+            
     def add_report_to_map(self, seq_map, report_seq):
-
+        
         accession_version = r'\.\d+$'
         report = []
-
         for insdc_name, old_name in seq_map.items():
             if insdc_name not in report_seq:
                 raise Exception("No INSDC %s found in report" % insdc_name)
@@ -128,30 +141,45 @@ class compare_fasta(eHive.BaseRunnable):
                 syns = [{
                     "source": "INSDC",
                     "name": insdc_name
-                }]
+                    }]
                 seqr["synonyms"] = syns
                 report.append(seqr)
 
         return report
-
+        
+            
     def get_map(self, map_path):
-
+        
         print("Read file %s" % map_path)
         data = self.get_json(map_path)
-
+        
         map_dna = {}
-
+        
         for seqr in data:
             if "synonyms" in seqr:
                 for syn in seqr["synonyms"]:
                     if syn["name"] == "INSDC":
                         map_dna[name] = syn["value"]
-
+        
         return map_dna
 
     def get_json(self, json_path):
         with open(json_path) as json_file:
             return json.load(json_file)
+        
+    def build_seq_dict(self, seqs):
+        """Build a seq dict taking duplicates into account"""
+        
+        seqs_dict = dict()
+        
+        for name, seq in seqs.items():
+            if seq in seqs_dict:
+                seqs_dict[seq].add_id(name)
+            else:
+                seqs_dict[seq] = SeqGroup(seq, name)
+        
+        return seqs_dict
+                
 
     def build_seq_dict(self, seqs):
         """Build a seq dict taking duplicates into account"""
@@ -166,11 +194,10 @@ class compare_fasta(eHive.BaseRunnable):
         return seqs_dict
 
     def get_fasta(self, fasta_path, map_dna):
-
+        
         print("Read file %s" % fasta_path)
         sequences = {}
-        _open = partial(gzip.open, mode='rt') if fasta_path.endswith(
-            '.gz') else open
+        _open = partial(gzip.open, mode='rt') if fasta_path.endswith('.gz') else open
         with _open(fasta_path) as fasta_fh:
             for rec in SeqIO.parse(fasta_fh, "fasta"):
                 name = rec.id
@@ -206,13 +233,10 @@ class compare_fasta(eHive.BaseRunnable):
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
-            comp.append("WARNING: Different number of sequences: %d vs %d" % (
-                len(seq1), len(seq2)))
-            value = "mismatch"
-            org_value = "identical"
+            comp.append("WARNING: Different number of sequences: %d vs %d" % (len(seq1), len(seq2)))
         else:
             comp.append("Same number of sequences: %d" % len(seq1))
-
+        
         # Compare sequences
         seqs1 = self.build_seq_dict(seq1)
         seqs2 = self.build_seq_dict(seq2)
@@ -367,72 +391,58 @@ class compare_fasta(eHive.BaseRunnable):
 
             if only1:
                 stats["max_only1"] = max(len(seq) for seq in only1.keys())
-
+                
                 # Only list sequences where the length is > 200
-                mini = {seq: name for seq, name in only1.items()
-                        if len(seq) <= 200}
-                maxi = {seq: name for seq, name in only1.items()
-                        if len(seq) > 200}
-
+                mini = {seq: name for seq, name in only1.items() if len(seq) <= 200}
+                maxi = {seq: name for seq, name in only1.items() if len(seq) > 200}
+                
                 if mini and len(mini) > 3000:
-                    comp.append(
-                        "WARNING: Ignoring %d sequences from 1 with length <= 200" % len(mini))
+                    comp.append("WARNING: Ignoring %d sequences from 1 with length <= 200" % len(mini))
                     only1 = maxi
-
+                
             if only1:
                 # Only list sequences where the length is > 1000
-                mini = {seq: name for seq, name in only1.items()
-                        if len(seq) <= 1000}
-                maxi = {seq: name for seq, name in only1.items()
-                        if len(seq) > 1000}
+                mini = {seq: name for seq, name in only1.items() if len(seq) <= 1000}
+                maxi = {seq: name for seq, name in only1.items() if len(seq) > 1000}
 
                 if mini and len(mini) > 3000:
-                    comp.append(
-                        "WARNING: Ignoring %d sequences from 1 with length <= 1000" % len(mini))
+                    comp.append("WARNING: Ignoring %d sequences from 1 with length <= 1000" % len(mini))
                     only1 = maxi
-
+            
             if only1:
                 total = sum([len(seq) for seq in only1.keys()])
-                comp.append("WARNING: Sequences only in 1: %d (%d)" %
-                            (len(only1), total))
+                comp.append("WARNING: Sequences only in 1: %d (%d)" % (len(only1), total))
                 only_seq1 = {name: len(seq) for seq, name in only1.items()}
                 for name, length in sorted(only_seq1.items(), key=lambda x: x[1]):
                     comp.append("\tOnly in 1: %s (%d)" % (name, length))
-
+                    
             if only2:
                 stats["max_only2"] = max(len(seq) for seq in only2.keys())
 
                 # Only list sequences where the length is > 200
-                mini = {seq: name for seq, name in only2.items()
-                        if len(seq) <= 200}
-                maxi = {seq: name for seq, name in only2.items()
-                        if len(seq) > 200}
-
+                mini = {seq: name for seq, name in only2.items() if len(seq) <= 200}
+                maxi = {seq: name for seq, name in only2.items() if len(seq) > 200}
+                
                 if mini and len(mini) > 3000:
-                    comp.append(
-                        "WARNING: Ignoring %d sequences from 2 with length <= 200" % len(mini))
+                    comp.append("WARNING: Ignoring %d sequences from 2 with length <= 200" % len(mini))
                     only2 = maxi
-
+                    
             if only2:
                 # Only list sequences where the length is > 1000
-                mini = {seq: name for seq, name in only2.items()
-                        if len(seq) <= 1000}
-                maxi = {seq: name for seq, name in only2.items()
-                        if len(seq) > 1000}
-
+                mini = {seq: name for seq, name in only2.items() if len(seq) <= 1000}
+                maxi = {seq: name for seq, name in only2.items() if len(seq) > 1000}
+                
                 if mini and len(mini) > 3000:
-                    comp.append(
-                        "WARNING: Ignoring %d sequences from 2 with length <= 1000" % len(mini))
+                    comp.append("WARNING: Ignoring %d sequences from 2 with length <= 1000" % len(mini))
                     only2 = maxi
 
             if only2:
                 total = sum([len(seq) for seq in only2.keys()])
-                comp.append("WARNING: Sequences only in 2: %d (%d)" %
-                            (len(only2), total))
+                comp.append("WARNING: Sequences only in 2: %d (%d)" % (len(only2), total))
                 only_seq2 = {name: len(seq) for seq, name in only2.items()}
                 for name, length in sorted(only_seq2.items(), key=lambda x: x[1]):
                     comp.append("\tOnly in 2: %s (%d)" % (name, length))
-
+        
         return (stats, comp, common)
 
     def find_common_groups(self, seqs1, seqs2, only1, only2):
@@ -444,7 +454,6 @@ class compare_fasta(eHive.BaseRunnable):
         for seq1, group1 in seqs1.items():
             if seq1 in seqs2:
                 group2 = seqs2[seq1]
-
                 # Check that the 2 groups have the same number of sequences
                 if group1.count == group2.count:
                     if group1.count == 1:

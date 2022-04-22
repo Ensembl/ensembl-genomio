@@ -87,12 +87,41 @@
           "type" : "integer",
           "minimum" : 1,
           "description" : "wikipedia: 33, https://www.ebi.ac.uk/ena/browse/translation-tables: 25"
-        }
+        },
+        "added_sequence" : { "$ref" : "#/definitions/added_sequence_info" }
       },
       "required" : [
         "name"
       ]
-    }
+    },
+    "provider_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name" : { "type" : "string" },
+        "url" : { "type" : "string", "format" : "url" }
+      },
+      "required" : [
+        "name"
+      ]
+    },
+    "added_sequence_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "description" : "Additionally imported sequences, not present in the main assembly (i.e. apicoplasts)",
+      "properties": {
+        "accession" : {
+          "type" : "string",
+          "description" : "Unique INSDC accession of the source assembly/sequence. (NB, no pattern yet)"
+        },
+        "assembly_provider" : { "$ref" : "#/definitions/provider_info" },
+        "annotation_provider" : { "$ref" : "#/definitions/provider_info" }
+      },
+      "required" : [
+        "accession",
+        "assembly_provider"
+      ]
+    } 
   },
 
   "oneOf" : [

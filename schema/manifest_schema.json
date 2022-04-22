@@ -6,18 +6,21 @@
   "definitions" : {
     "manifest_info" : {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "gff3" : { "$ref" : "#/definitions/file_info" },
         "fasta_dna" : { "$ref" : "#/definitions/file_info" },
         "fasta_pep" : { "$ref" : "#/definitions/file_info" },
-        "metadata_seq_region" : { "$ref" : "#/definitions/file_info" },
-        "metadata_genome" : { "$ref" : "#/definitions/file_info" },
-        "metadata_functional_annotation" : { "$ref" : "#/definitions/file_info" },
+        "seq_region" : { "$ref" : "#/definitions/file_info" },
+        "seq_attrib" : { "$ref" : "#/definitions/file_info" },
+        "genome" : { "$ref" : "#/definitions/file_info" },
+        "functional_annotation" : { "$ref" : "#/definitions/file_info" },
         "agp" : { "$ref" : "#/definitions/agp_info" }
       }
     },
     "file_info" : {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "file" : {"type" : "string" },
         "md5sum" : {"type" : "string" }
@@ -39,7 +42,7 @@
     "gff3" : { "file" : "filename.gff3", "md5sum" : "LOREMIPSUM1" },
     "fasta_dna" : { "file" : "filename_dna.fa", "md5sum" : "LOREMIPSUM2" },
     "fasta_pep" : { "file" : "filename_pep.fa", "md5sum" : "LOREMIPSUM2" },
-    "metadata_seq_region" : { "file" : "filename_pep.fa", "md5sum" : "LOREMIPSUM2" }
+    "seq_region" : { "file" : "filename_pep.fa", "md5sum" : "LOREMIPSUM2" }
   }
   ]
 }

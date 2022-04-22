@@ -8,7 +8,8 @@ import hashlib
 
 class download_assembly_data(eHive.BaseRunnable):
     
-    def param_defaults(self):
+    @staticmethod
+    def param_defaults():
         return {
             # Set this manually to a higher value if you want to allow assembly versions
             # higher than the one provided (it will fail if the version given is not the latest)
@@ -42,7 +43,7 @@ class download_assembly_data(eHive.BaseRunnable):
                 try:
                     self.download_files(accession, download_dir)
                     break
-                except:
+                except Exception:
                     print("Can't download files for %s" % accession)
 
             if not self.md5_files(download_dir):
@@ -57,8 +58,8 @@ class download_assembly_data(eHive.BaseRunnable):
         # Output all those named files + dir
         self.dataflow(files, 2)
 
-
-    def get_json(self, json_path):
+    @staticmethod
+    def get_json(json_path):
         """
         Retrieve the json data from a json file
         """
@@ -71,8 +72,6 @@ class download_assembly_data(eHive.BaseRunnable):
         Check all files checksums with the sums listed in a checksum file, if available.
         Return False if there is no checksum file, or a file is missing, or has a wrong checksum.
         """
-        files = os.listdir(dl_dir)
-
         md5_file = "md5checksums.txt"
 
         # Get checksums and compare
@@ -104,7 +103,8 @@ class download_assembly_data(eHive.BaseRunnable):
         print("All checksums OK")
         return True
     
-    def get_checksums(self, checksum_path):
+    @staticmethod
+    def get_checksums(checksum_path):
         """
         Get a dict of checksums from a file, with file names as keys and sums as values
         """
@@ -122,7 +122,8 @@ class download_assembly_data(eHive.BaseRunnable):
 
         return sums
 
-    def download_files(self, accession, dl_dir):
+    @staticmethod
+    def download_files(accession, dl_dir):
         """
         Given an INSDC accession, download all available files from the ftp to the download dir
         """
@@ -131,7 +132,6 @@ class download_assembly_data(eHive.BaseRunnable):
         part1 = match.group(2)
         part2 = match.group(3)
         part3 = match.group(4)
-        version = match.group(5)
         parts = (gca, part1, part2, part3)
 
         # Get the list of assemblies for this accession
@@ -140,15 +140,16 @@ class download_assembly_data(eHive.BaseRunnable):
         f.login()
         f.cwd("genomes/all/%s/%s/%s/%s" % parts)
 
-        files = []
         for (ftp_dir, entry) in f.mlsd():
             if re.match(accession, ftp_dir):
                 f.cwd(ftp_dir)
                 
                 # Get all the files
                 for (ftp_file, file_entry) in f.mlsd():
-                    if re.match("^\.", ftp_file): continue
-                    if file_entry["type"] != "file": continue
+                    if re.match("^\.", ftp_file):
+                        continue
+                    if file_entry["type"] == "dir":
+                        continue
 
                     # Copy the file locally
                     local_path = os.path.join(dl_dir, ftp_file)
@@ -177,8 +178,8 @@ class download_assembly_data(eHive.BaseRunnable):
         }
 
         root_name = self.get_root_name(dl_dir)
-        if root_name == None:
-            raise Exception("Could not determine the files root name in %s" % ftp_dir)
+        if root_name is None:
+            raise Exception("Could not determine the files root name in %s" % dl_dir)
 
         for dl_file in os.listdir(dl_dir):
             for end, name in file_ends.items():
@@ -187,7 +188,8 @@ class download_assembly_data(eHive.BaseRunnable):
                     files[name] = os.path.join(dl_dir, dl_file)
         return files
 
-    def get_root_name(self, dl_dir):
+    @staticmethod
+    def get_root_name(dl_dir):
         """Get root name for assembly files, using the report file as base"""
 
         for dl_file in os.listdir(dl_dir):

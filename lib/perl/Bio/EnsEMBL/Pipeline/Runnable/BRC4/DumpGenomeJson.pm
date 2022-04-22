@@ -39,6 +39,7 @@ sub prepare_data {
     genebuild => [ qw(version method start_date) ],
     annotation => [ qw(provider_name provider_url) ],
     BRC4 => [ qw(organism_abbrev component) ],
+    added_seq => [ qw(region_name) ],
   );
   my %integer = map {$_ => 1} qw(species.taxonomy_id assembly.version);
 
@@ -89,7 +90,15 @@ sub check_assembly_version {
     
     # There is a version but I can't get a number out of it
     } else {
-      die("Can't extract version number from assembly version: $version");
+      # Last resort: try to get the version from the assembly accession
+      my $acc = $assembly->{accession};
+      if ($acc and $acc =~ /\.(\d+$)/) {
+        my $version = $1;
+        $meta->{assembly}->{version} = $version;
+        return $meta;
+      } else {
+        die("Can't extract version number from assembly version: $version (accession = $acc)");
+      }
     }
   } else {
     use Data::Dumper;

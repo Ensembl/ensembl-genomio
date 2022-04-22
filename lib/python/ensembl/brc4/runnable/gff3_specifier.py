@@ -39,7 +39,8 @@ class gff3_specifier(eHive.BaseRunnable):
         return {
             # Ensembl adds a prefix to features because different
             # types can use the same id in EG (gene and transcript)
-            "ensembl_mode" : False
+            "ensembl_mode" : False,
+            "check_biotypes" : True
         }
 
     def run(self):
@@ -85,7 +86,7 @@ class gff3_specifier(eHive.BaseRunnable):
                 (chrom, source, biotype, start, end, col6, col7, col8, attribs) = line.split("\t")
 
                 # Filter biotype
-                if self.allowed_biotypes and biotype not in self.allowed_biotypes:
+                if self.param("check_biotypes") and self.allowed_biotypes and biotype not in self.allowed_biotypes:
                     if not (biotype.endswith("RNA") or biotype.endswith("RNA_gene")):
                         if biotype in self.ignored_biotypes:
                             if biotype not in skipped_known_biotypes:
