@@ -215,6 +215,7 @@ sub pipeline_analyses {
         2 => [
           '?accu_name=insdc_fasta_dna&accu_input_variable=fasta_dna',
           '?accu_name=insdc_report&accu_input_variable=report',
+	  '?accu_name=accession&accu_input_variable=accession',
         ],
       },
     },
@@ -228,7 +229,8 @@ sub pipeline_analyses {
         fasta1 => "#insdc_fasta_dna#",
         fasta2 => "#core_fasta_dna#",
         seq_regions => "#seq_region_json#",
-        comparison_name => "fasta_dna"
+        comparison_name => "fasta_dna",
+	accession => "#accession#",
       },
       -language => 'python3',
       -analysis_capacity => 5,

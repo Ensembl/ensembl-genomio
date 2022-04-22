@@ -75,6 +75,7 @@ class compare_fasta(eHive.BaseRunnable):
         output_dir = self.param_required("output_dir")
         species = self.param_required("species")
         name = self.param_required("comparison_name")
+        accession = self.param_required("accession")
 
         map_dna = self.get_map(map_dna_path)
         seq1 = self.get_fasta(fasta1, map_dna)
@@ -180,9 +181,10 @@ class compare_fasta(eHive.BaseRunnable):
 
     def compare_seqs(self, seq1, seq2):
         comp = []
+        accession = self.param_required("accession")
         diff = abs(len(seq1) - len(seq2))
         stats = {
-            "accession": None,
+            "accession": accession,
             "seq_count_1": len(seq1),
             "seq_count_2": len(seq2),
             "num_diff_seq": diff,
@@ -210,12 +212,6 @@ class compare_fasta(eHive.BaseRunnable):
             org_value = "identical"
         else:
             comp.append("Same number of sequences: %d" % len(seq1))
-
-        # get the accession
-        fasta1 = self.param_required("fasta1")
-        get_acc = fasta1
-        acc = get_acc.split('/')
-        accession = acc[4]
 
         # Compare sequences
         seqs1 = self.build_seq_dict(seq1)
@@ -270,7 +266,7 @@ class compare_fasta(eHive.BaseRunnable):
         data = self.get_json(map_dna_path)
         org, location = self.organellar(report_seq, data)
 
-        # check ids for all the matched ans unmatched sequences
+        # check ids for all the matched and mis-matched sequences
         All_id = {}
         for insdc, coredb_name in report_seq.items():
             All_id[insdc] = coredb_name["name"]
@@ -289,7 +285,6 @@ class compare_fasta(eHive.BaseRunnable):
                 if i == insdc and i != core:
                     comp.append("%s and %s match by id" %
                                 (i, core))
-
                 else:
                     pass
 
@@ -330,7 +325,7 @@ class compare_fasta(eHive.BaseRunnable):
                                 (i, location[index]))
                     org_value = "unknown_with_organellar"
 
-        # if the mistmatch is due to added organell
+        # if the mistmatch is due to added organellar sequences
         if len(seqs1) > len(seqs2):
             greater_len = len(seq1)
         else:
@@ -346,13 +341,12 @@ class compare_fasta(eHive.BaseRunnable):
         if count == 0:
             org_value = "no_organelles_present"
 
-        # checking if multiple entries of organellar chromosomes are present
+        # checking if multiple entries of organellar sequences are present
         if len(multi_org_acc) != len(unique_org_id):
             if unique_location > 1 or unique_apicoplast > 1:
                 org_value = "WARNING:Multiple_entry"
 
         # updating the stats
-        stats["accession"] = accession
         stats["num_diff_seq"] = diff
         stats["common"] = len(common)
         stats["only1"] = len(only1)
@@ -466,7 +460,7 @@ class compare_fasta(eHive.BaseRunnable):
                     comp.append(
                         f"Matched 2 different groups of sequences ({group1.count} vs {group2.count}): {group1} and {group2}")
 
-        # check the coredb sequences which has N insted on ATCG
+        # check the coredb sequences which has N instead on ATCG
         commonN = {}
 
         only1_Ncount = SeqGroup.N_count(only1)
@@ -475,16 +469,18 @@ class compare_fasta(eHive.BaseRunnable):
             length1 = details1["length"]
             for seq2, details2 in only2_Ncount.items():
                 if length1 == details2["length"]:
-                    pos = list(details2["pos"])
-                    sequence = seq1[pos[0]:pos[1]]
-                    diff_pos = pos[1]-pos[0]
-                    A = sequence.count('A')
-                    C = sequence.count('C')
-                    G = sequence.count('G')
-                    T = sequence.count('T')
-                    N = sequence.count('N')
+                    pos = list(details1["pos"])
+                    sequence_1 = seq1[pos[0]:pos[1]]
+                    sequence_2 = seq2[pos[0]:pos[1]]
+                    sequence1_N = sequence_1.count('N')
+                    sequence2_N = sequence_2.count('N')
+                    A = sequence_1.count('A')
+                    C = sequence_1.count('C')
+                    G = sequence_1.count('G')
+                    T = sequence_1.count('T')
+                    N = sequence_1.count('N')
                     sum = A+C+G+T+N
-                    if sum == diff_pos and sum != 0:
+                    if sequence1_N != sequence2_N:
                         comp.append(
                             f"Difference in N in sequence %s and %s" % (details1["name"], details2["name"]))
                         comp.append("total : %d" % sum)
@@ -493,7 +489,7 @@ class compare_fasta(eHive.BaseRunnable):
                         name = details1["name"]
                         commonN[name] = details2["name"]
                 else:
-                    pass
+                    continue
 
         # sequences which have extra N at the end
         for seq1, name1 in only1.items():
