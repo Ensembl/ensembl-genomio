@@ -415,7 +415,7 @@ def has_gff(issue):
 
 def has_stable_ids(issue):
     operations = get_operations(issue)
-    if "Allocate stable ids" is operations:
+    if "Allocate stable ids" in operations:
         return True
     else:
         return False
