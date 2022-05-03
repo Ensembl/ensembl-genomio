@@ -144,9 +144,15 @@ def parse_genome(issue):
     try:
         abbrev = customs["Organism Abbreviation"]["value"]
         if abbrev:
-            genome["BRC4"]["organism_abbrev"] = abbrev
-    except:
-        print("Can't get organism abbrev for %s" % issue.id)
+            # Check before loading
+            abbrev = abbrev.strip()
+            if not check_organism_abbrev(abbrev):
+                print(f"Invalid organism_abbrev in {issue.id}: {abbrev}")
+            else:
+                genome["BRC4"]["organism_abbrev"] = abbrev
+    except KeyError:
+        print(f"Can't get organism abbrev for {issue.id} because: missing organism_abbrev")
+        return
 
     # Warn to get GFF2Load
     try:
@@ -459,11 +465,19 @@ def make_organism_abbrev(name):
     
     genus = re.sub("[\[\]]", "", genus)
     strain_abbrev = re.sub(r"(isolate|strain|breed|str\.|subspecies|sp\.)", "", strain_abbrev, flags=re.IGNORECASE)
-    strain_abbrev = re.sub(r"[\/\(\)#:]", "", strain_abbrev)
+    strain_abbrev = re.sub(r"[\/\(\)#:-]", "", strain_abbrev)
     
     organism_abbrev = genus[0].lower() + species[0:3] + strain_abbrev
     return organism_abbrev
     
+def check_organism_abbrev(name):
+    """
+    Basic check for organism_abbrev format
+    """
+    if re.search("^([A-Za-z0-9_.-]+)$", name):
+        return True
+    else:
+        return False
 
 def main():
     # Parse command line arguments
