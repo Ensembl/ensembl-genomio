@@ -35,6 +35,7 @@ def retrieve_genomes(redmine, output_dir, build=None):
     ok_patch = []
     ok_other = []
     failed_issues = []
+    special = []
     
     groups = {}
 
@@ -48,18 +49,25 @@ def retrieve_genomes(redmine, output_dir, build=None):
     
         abbrev = genome["BRC4"]["organism_abbrev"]
         group = "other"
-        if has_gff(issue):
+        if "Reference change" in extra["operations"]:
+            group = "reference_change"
+            ok_other.append({"issue" : issue, "desc" : abbrev})
+        elif has_gff(issue):
             group = "load_from_files"
             ok_new.append({"issue" : issue, "desc" : abbrev})
+            special.append({"issue" : issue, "desc" : abbrev})
         elif is_new_genome(issue):
             group = "new_genomes"
             ok_new.append({"issue" : issue, "desc" : abbrev})
+            
+            if has_stable_ids(issue):
+                special.append({"issue" : issue, "desc" : abbrev})
         elif "Load from EnSEMBL" in extra["operations"]:
             group = "copy_ensembl"
-            ok_new.append({"issue" : issue, "desc" : abbrev})
+            ok_other.append({"issue" : issue, "desc" : abbrev})
         elif has_stable_ids(issue):
             group = "stable_ids"
-            ok_patch.append({"issue" : issue, "desc" : abbrev})
+            ok_other.append({"issue" : issue, "desc" : abbrev})
         elif is_patch_build(issue):
             group = "patch_build"
             ok_patch.append({"issue" : issue, "desc" : abbrev})
@@ -98,6 +106,7 @@ def retrieve_genomes(redmine, output_dir, build=None):
     print_summary(ok_other, "other genome operations")
     print_summary(ok_patch, "patch builds")
     print_summary(ok_new, "genomes to load")
+    print_summary(special, "genomes (among the genomes to load) with special requests")
 
 def get_all_genomes(redmine, build=None):
     """
@@ -387,7 +396,7 @@ def get_operations(issue):
 
 def is_new_genome(issue):
     operations = get_operations(issue)
-    if "Load from INSDC" in operations or "Load from RefSeq" in operations or "Load from EnsEMBL" in operations:
+    if "Load from INSDC" in operations or "Load from RefSeq" in operations:
         return True
     else:
         return False
