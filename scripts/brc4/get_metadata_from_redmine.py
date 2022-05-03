@@ -36,11 +36,7 @@ def retrieve_genomes(redmine, output_dir, build=None):
     ok_other = []
     failed_issues = []
     
-    groups = {
-            "new_genomes" : [],
-            "copy_ensembl": [],
-            "other": [],
-            }
+    groups = {}
 
     for issue in issues:
         genome, extra = parse_genome(issue)
@@ -52,19 +48,32 @@ def retrieve_genomes(redmine, output_dir, build=None):
     
         abbrev = genome["BRC4"]["organism_abbrev"]
         group = "other"
-        if "Load from INSDC" in extra["operations"] or "Load from RefSeq" in extra["operations"]:
+        if has_gff(issue):
+            group = "load_from_files"
+            ok_new.append({"issue" : issue, "desc" : abbrev})
+        elif is_new_genome(issue):
             group = "new_genomes"
             ok_new.append({"issue" : issue, "desc" : abbrev})
         elif "Load from EnSEMBL" in extra["operations"]:
             group = "copy_ensembl"
             ok_new.append({"issue" : issue, "desc" : abbrev})
-        elif "Patch build" in extra["operations"]:
+        elif has_stable_ids(issue):
+            group = "stable_ids"
+            ok_patch.append({"issue" : issue, "desc" : abbrev})
+        elif is_patch_build(issue):
             group = "patch_build"
             ok_patch.append({"issue" : issue, "desc" : abbrev})
-        else:
+        elif "Other" in extra["operations"]:
             group = "other"
             ok_other.append({"issue" : issue, "desc" : abbrev})
+            continue
+        else:
+            group = "unknown_operation"
+            failed_issues.append({"issue" : issue, "desc" : f"No operation"})
+            continue
         
+        if not group in groups:
+            groups[group] = []
         groups[group].append(genome)
     
     # Write files
@@ -88,17 +97,17 @@ def retrieve_genomes(redmine, output_dir, build=None):
     print_summary(failed_issues, "failed issues")
     print_summary(ok_other, "other genome operations")
     print_summary(ok_patch, "patch builds")
-    print_summary(ok_new, "new genomes")
+    print_summary(ok_new, "genomes to load")
 
 def get_all_genomes(redmine, build=None):
     """
-    Query Redmine to get all new genomes, with or without genes
+    Query Redmine to get all genomes, with or without genes
     """
     genomes_with_genes = get_issues(redmine, "Genome sequence and Annotation", build)
     genomes_without_genes = get_issues(redmine, "Assembled genome sequence without annotation", build)
 #    genomes_without_genes = []
-    print("%d issues for new genomes with genes found" % len(genomes_with_genes))
-    print("%d issues for new genomes without genes found" % len(genomes_without_genes))
+    print("%d issues for genomes with genes found" % len(genomes_with_genes))
+    print("%d issues for genomes without genes found" % len(genomes_without_genes))
     
     issues = genomes_with_genes + genomes_without_genes
     
@@ -138,7 +147,7 @@ def parse_genome(issue):
         if len(components) == 1:
             genome["BRC4"]["component"] = components[0]
         elif len(components) > 1:
-            raise Exception("More than 1 component for new genome " + str(issue.id))
+            raise Exception("More than 1 component for genome " + str(issue.id))
 
     # Get Organism abbrev
     try:
@@ -240,7 +249,7 @@ def get_custom_fields(issue):
 
 def get_issues(redmine, datatype, build=None):
     """
-    Retrieve all issue for new genomes, be they with or without gene sets
+    Retrieve all issue for genomes, be they with or without gene sets
     Return a Redmine ResourceSet
     """
     
@@ -384,8 +393,8 @@ def is_new_genome(issue):
         return False
 
 def is_patch_build(issue):
-    customs = get_custom_fields(issue)
-    if customs["Patch build"]["value"]:
+    operations = get_operations(issue)
+    if "Patch build" in operations:
         return True
     else:
         return False
