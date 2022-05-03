@@ -51,12 +51,9 @@ def retrieve_genomes(redmine, output_dir, build=None):
     ok_patch = []
     ok_other = []
     failed_issues = []
+    special = []
     
-    groups = {
-            "new_genomes" : [],
-            "copy_ensembl": [],
-            "other": [],
-            }
+    groups = {}
 
     for issue in issues:
         genome, extra = parse_genome(issue)
@@ -68,19 +65,39 @@ def retrieve_genomes(redmine, output_dir, build=None):
     
         abbrev = genome["BRC4"]["organism_abbrev"]
         group = "other"
-        if "Load from INSDC" in extra["operations"] or "Load from RefSeq" in extra["operations"]:
+        if "Reference change" in extra["operations"]:
+            group = "reference_change"
+            ok_other.append({"issue" : issue, "desc" : abbrev})
+        elif has_gff(issue):
+            group = "load_from_files"
+            ok_new.append({"issue" : issue, "desc" : abbrev})
+            special.append({"issue" : issue, "desc" : abbrev})
+        elif is_new_genome(issue):
             group = "new_genomes"
             ok_new.append({"issue" : issue, "desc" : abbrev})
+            
+            if has_stable_ids(issue):
+                special.append({"issue" : issue, "desc" : abbrev})
         elif "Load from EnSEMBL" in extra["operations"]:
             group = "copy_ensembl"
-            ok_new.append({"issue" : issue, "desc" : abbrev})
-        elif "Patch build" in extra["operations"]:
+            ok_other.append({"issue" : issue, "desc" : abbrev})
+        elif has_stable_ids(issue):
+            group = "stable_ids"
+            ok_other.append({"issue" : issue, "desc" : abbrev})
+        elif is_patch_build(issue):
             group = "patch_build"
             ok_patch.append({"issue" : issue, "desc" : abbrev})
-        else:
+        elif "Other" in extra["operations"]:
             group = "other"
             ok_other.append({"issue" : issue, "desc" : abbrev})
+            continue
+        else:
+            group = "unknown_operation"
+            failed_issues.append({"issue" : issue, "desc" : f"No operation"})
+            continue
         
+        if not group in groups:
+            groups[group] = []
         groups[group].append(genome)
     
     # Write files
@@ -104,17 +121,18 @@ def retrieve_genomes(redmine, output_dir, build=None):
     print_summary(failed_issues, "failed issues")
     print_summary(ok_other, "other genome operations")
     print_summary(ok_patch, "patch builds")
-    print_summary(ok_new, "new genomes")
+    print_summary(ok_new, "genomes to load")
+    print_summary(special, "genomes (among the genomes to load) with special requests")
 
 def get_all_genomes(redmine, build=None):
     """
-    Query Redmine to get all new genomes, with or without genes
+    Query Redmine to get all genomes, with or without genes
     """
     genomes_with_genes = get_issues(redmine, "Genome sequence and Annotation", build)
     genomes_without_genes = get_issues(redmine, "Assembled genome sequence without annotation", build)
 #    genomes_without_genes = []
-    print("%d issues for new genomes with genes found" % len(genomes_with_genes))
-    print("%d issues for new genomes without genes found" % len(genomes_without_genes))
+    print("%d issues for genomes with genes found" % len(genomes_with_genes))
+    print("%d issues for genomes without genes found" % len(genomes_without_genes))
     
     issues = genomes_with_genes + genomes_without_genes
     
@@ -154,15 +172,21 @@ def parse_genome(issue):
         if len(components) == 1:
             genome["BRC4"]["component"] = components[0]
         elif len(components) > 1:
-            raise Exception("More than 1 component for new genome " + str(issue.id))
+            raise Exception("More than 1 component for genome " + str(issue.id))
 
     # Get Organism abbrev
     try:
         abbrev = customs["Organism Abbreviation"]["value"]
         if abbrev:
-            genome["BRC4"]["organism_abbrev"] = abbrev
-    except:
-        print("Can't get organism abbrev for %s" % issue.id)
+            # Check before loading
+            abbrev = abbrev.strip()
+            if not check_organism_abbrev(abbrev):
+                print(f"Invalid organism_abbrev in {issue.id}: {abbrev}")
+            else:
+                genome["BRC4"]["organism_abbrev"] = abbrev
+    except KeyError:
+        print(f"Can't get organism abbrev for {issue.id} because: missing organism_abbrev")
+        return
 
     # Warn to get GFF2Load
     try:
@@ -250,7 +274,7 @@ def get_custom_fields(issue):
 
 def get_issues(redmine, datatype, build=None):
     """
-    Retrieve all issue for new genomes, be they with or without gene sets
+    Retrieve all issue for genomes, be they with or without gene sets
     Return a Redmine ResourceSet
     """
     
@@ -388,14 +412,14 @@ def get_operations(issue):
 
 def is_new_genome(issue):
     operations = get_operations(issue)
-    if "Load from INSDC" in operations or "Load from RefSeq" in operations or "Load from EnsEMBL" in operations:
+    if "Load from INSDC" in operations or "Load from RefSeq" in operations:
         return True
     else:
         return False
 
 def is_patch_build(issue):
-    customs = get_custom_fields(issue)
-    if customs["Patch build"]["value"]:
+    operations = get_operations(issue)
+    if "Patch build" in operations:
         return True
     else:
         return False
@@ -416,7 +440,7 @@ def has_gff(issue):
 
 def has_stable_ids(issue):
     operations = get_operations(issue)
-    if "Allocate stable ids" is operations:
+    if "Allocate stable ids" in operations:
         return True
     else:
         return False
@@ -475,11 +499,19 @@ def make_organism_abbrev(name):
     
     genus = re.sub("[\[\]]", "", genus)
     strain_abbrev = re.sub(r"(isolate|strain|breed|str\.|subspecies|sp\.)", "", strain_abbrev, flags=re.IGNORECASE)
-    strain_abbrev = re.sub(r"[\/\(\)#:]", "", strain_abbrev)
+    strain_abbrev = re.sub(r"[\/\(\)#:-]", "", strain_abbrev)
     
     organism_abbrev = genus[0].lower() + species[0:3] + strain_abbrev
     return organism_abbrev
     
+def check_organism_abbrev(name):
+    """
+    Basic check for organism_abbrev format
+    """
+    if re.search("^([A-Za-z0-9_.-]+)$", name):
+        return True
+    else:
+        return False
 
 def main():
     # Parse command line arguments
