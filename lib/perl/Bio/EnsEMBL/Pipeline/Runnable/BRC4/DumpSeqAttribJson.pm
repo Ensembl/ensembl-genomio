@@ -121,7 +121,7 @@ sub get_transcript_seq_attribs {
 
       # Merge attrib values
       %attrib = (%attrib, %$attrib_values);
-      push \@selected_attribs, \%attrib;
+      push @selected_attribs, \%attrib;
     }
   }
   return \@selected_attribs;
@@ -158,7 +158,7 @@ sub get_translation_seq_attribs {
 
       # Merge attrib values
       %attrib = (%attrib, %$attrib_values);
-      push \@selected_attribs, \%attrib;
+      push @selected_attribs, \%attrib;
     }
   }
   return \@selected_attribs;
