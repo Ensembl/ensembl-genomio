@@ -16,13 +16,15 @@
 
 
 
-import os, re, shutil
+import os, re
+from typing import Any, Dict, List, Tuple
 import eHive
 import gzip
-import csv, json
+import csv
+import json
 
 from Bio import SeqIO, SeqRecord
-import requests, sys
+import requests
 
 class process_seq_region(eHive.BaseRunnable):
 
@@ -93,7 +95,7 @@ class process_seq_region(eHive.BaseRunnable):
                 }
         self.dataflow(output, 2)
 
-    def exclude_seq_regions(self, seq_regions, to_exclude) -> list():
+    def exclude_seq_regions(self, seq_regions: List[Dict], to_exclude: List) -> List[Dict]:
         """
         Remove some seq_regions given as a list
         """
@@ -105,7 +107,7 @@ class process_seq_region(eHive.BaseRunnable):
                 new_seq_regions.append(seqr)
         return new_seq_regions
 
-    def guess_translation_table(self, seq_regions) -> None:
+    def guess_translation_table(self, seq_regions: List[Dict]) -> None:
         """
         Guess codon table based on location
         """
@@ -115,7 +117,7 @@ class process_seq_region(eHive.BaseRunnable):
             if "location" in seqr and seqr["location"] in location_codon:
                 seqr["codon_table"] = location_codon[seqr["location"]]
 
-    def add_brc4_ebi_name(self, seq_regions) -> None:
+    def add_brc4_ebi_name(self, seq_regions: List[Dict]) -> None:
         """
         Use INSDC name without version as default BRC4 and EBI names
         """
@@ -138,7 +140,7 @@ class process_seq_region(eHive.BaseRunnable):
 
                 raise Exception("Can't get INSDC id for sequence '%s', from accession %s in report %s. Please replace this value in the report (column GenBank-Accn) with a valid INSDC record (e.g. from the RefSeq page)" % (seqr["name"], accession, report_path))
 
-    def get_mitochondrial_codon_table(self, seq_regions, tax_id) -> None:
+    def get_mitochondrial_codon_table(self, seq_regions: List[Dict], tax_id: int) -> None:
         """
         Get codon table for mitochondria based on taxonomy
         """
@@ -152,34 +154,37 @@ class process_seq_region(eHive.BaseRunnable):
                     continue
                 seqr["codon_table"] = tax_codon_table
 
-    def get_mito_tax_codon_table(self, tax_id) -> int:
+    def get_mito_tax_codon_table(self, tax_id: int) -> int:
         """
         Get codon table for mitochondria based on taxonomy
         """
         server = "https://www.ebi.ac.uk"
         ext = "/ena/data/taxonomy/v1/taxon/tax-id/" + str(tax_id)
 
-        r = requests.get(server + ext, headers={ "Content-Type" : "application/json"})
+        gen_code: int = 0
 
-        if not r.ok:
-            r.raise_for_status()
-            sys.exit()
+        try:
+            r = requests.get(server + ext, headers={ "Content-Type" : "application/json"})
 
-        decoded = r.json()
-        if "mitochondrialGeneticCode" in decoded:
-            return int(decoded["mitochondrialGeneticCode"])
+            decoded = r.json()
+            if "mitochondrialGeneticCode" in decoded:
+                gen_code = int(decoded["mitochondrialGeneticCode"])
+        except KeyError as e:
+            print(f"No Mitochondria genetic code found for taxon {tax_id}")
+        
+        return gen_code
     
-    def print_json(self, path, data) -> None:
+    def print_json(self, path: str, data: Any) -> None:
         with open(path, "w") as json_out:
             json_out.write(json.dumps(data, sort_keys=True, indent=4))
     
-    def merge_regions(self, regions1, regions2) -> list:
+    def merge_regions(self, regions1: Dict[str, Dict], regions2: Dict[str, Dict]) -> List[Dict]:
         """
         Merge seq_regions from different sources
         Return a list of seq_regions
         """
-        if not regions1: regions1 = []
-        if not regions2: regions2 = []
+        if not regions1: regions1 = {}
+        if not regions2: regions2 = {}
         
         # Get all the names
         names1 = frozenset(regions1)
@@ -190,8 +195,8 @@ class process_seq_region(eHive.BaseRunnable):
         seq_regions = []
         for name in all_names:
             
-            seqr1 = None
-            seqr2 = None
+            seqr1 = {}
+            seqr2 = {}
             if name in names1:
                 seqr1 = regions1[name]
             if name in names2:
@@ -209,20 +214,20 @@ class process_seq_region(eHive.BaseRunnable):
         return seq_regions
                 
 
-    def get_gbff_regions(self, gbff_path) -> dict:
+    def get_gbff_regions(self, gbff_path: str) -> Dict[str, Dict]:
         """
         Get seq_region data from the gbff file
         Return a dict of seq_regions, with their name as the key
         """
         if not gbff_path:
-            return None
+            return {}
         
         seq_regions = {}
         _open = gbff_path.endswith(".gz") and gzip.open or open
         with _open(gbff_path, 'rt') as gbff_file:
 
             for record in SeqIO.parse(gbff_file, "genbank"):
-                seqr = {}
+                seqr: Dict[str, Any] = {}
                 
                 # Is the seq_region circular?
                 annotations = record.annotations
@@ -245,32 +250,37 @@ class process_seq_region(eHive.BaseRunnable):
                     
         return seq_regions
     
-    def get_genbank_from_comment(self, record) -> str:
+    def get_genbank_from_comment(self, record: SeqRecord) -> str:
         """
         Given a genbank record, find a Genbank ID in the comment (if refseq)
         """
+        genbank = ""
         if "comment" in record.annotations:
             comment = record.annotations["comment"]
             comment = re.sub("[ \n\r]+", " ", comment)
 
             match = re.search("The reference sequence was derived from ([^\.]+)\.", comment)
             if match:
-                return match.group(1)
-            else:
-                return
+                genbank =  match.group(1)
+                
+        return genbank
     
-    def get_codon_table(self, record) -> int:
+    def get_codon_table(self, record: SeqRecord) -> int:
         """
         Given a genbank record, seeks codon table features
         Returns a number if found
         """
+
+        table = 0
+
         for feat in record.features:
             if "transl_table" in feat.qualifiers:
-                return int(feat.qualifiers["transl_table"][0])
+                table = int(feat.qualifiers["transl_table"][0])
+                break
         
-        return
+        return table
 
-    def get_report_regions(self, report_path, use_refseq) -> dict:
+    def get_report_regions(self, report_path: str, use_refseq: bool) -> Dict[str, Dict]:
         """
         Get seq_region data from report file
         Return a dict of seq_regions, with their name as the key
@@ -296,12 +306,12 @@ class process_seq_region(eHive.BaseRunnable):
         
         return seq_regions
     
-    def make_seq_region(self, row, assembly_level, use_refseq) -> dict:
+    def make_seq_region(self, row: Dict, assembly_level: str, use_refseq: bool) -> Dict[str, Any]:
         """
         From a row of the report, create one seq_region
         Return a seq_region dict
         """
-        seq_region = {}
+        seq_region: Dict[str, Any] = {}
 
         # Map the fields to their synonym name
         synonym_map = self.param("synonym_map")
@@ -356,7 +366,7 @@ class process_seq_region(eHive.BaseRunnable):
             raise Exception("Unrecognized sequence role: %s" % seq_role)
         return seq_region
 
-    def report_to_csv(self, report_path) -> (str, dict):
+    def report_to_csv(self, report_path: str) -> Tuple[str, dict]:
         """
         Load an assembly report as a csv string
         Returns the csv as a string, and the head metadata as a dict
@@ -379,7 +389,7 @@ class process_seq_region(eHive.BaseRunnable):
                 else:
                     if last_head:
                         data += last_head[2:].strip() + "\n"
-                        last_head = None
+                        last_head = ""
                     data += line
             return data, metadata
 
