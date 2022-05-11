@@ -145,7 +145,7 @@ class SeqregionParser:
             if "GenBank-Accn" in row:
                 seq_region["name"] = row["GenBank-Accn"]
             else:
-                raise Exception("No INSDC name for {row['Sequence-Name']}")
+                raise Exception(f"No INSDC name for {row['Sequence-Name']}")
         
         # Coord system and location
         seq_role = row["Sequence-Role"]

@@ -15,11 +15,19 @@
 # limitations under the License.
 
 
-
 import eHive
 import json
 
 class read_json(eHive.BaseRunnable):
+    """Read a json data from a file, and flow it out for the pipeline to use.
+    
+    Args:
+        json_path: json to load
+        name: key of the dataflow object associated with the json data
+    
+    Dataflows:
+        2: one Dict record with the name as key, and the json data as value
+    """
 
     def run(self):
         json_path = self.param_required("json_path")
