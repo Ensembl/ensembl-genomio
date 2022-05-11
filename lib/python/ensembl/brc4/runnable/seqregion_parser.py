@@ -14,13 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
 import re
 import gzip
 import csv
+from typing import Any, Dict, Tuple
 
-class Parser:
+
+class SeqregionParser:
+    """Parser of a seq_region report from INSDC/RefSeq.
+
+    The main method of the Parser is get_report_regions, which returns a Dict of seq_regions,
+    where the keys are the names.
+    """
 
     synonym_map = {
             "Sequence-Name" : "INSDC_submitted_name",
@@ -38,10 +43,14 @@ class Parser:
             "kinetoplast" : "kinetoplast"
     }
     
-    def get_report_regions(self, report_path, use_refseq=False) -> dict:
-        """
-        Get seq_region data from report file
-        Return a dict of seq_regions, with their name as the key
+    def get_report_regions(self, report_path: str, use_refseq: bool = False) -> Dict[str, dict]:
+        """Get seq_region data from report file.
+
+        Args:
+            report_path: Path to the INSDC seq_region report.
+            use_refseq: Expect a RefSeq seq_region report.
+        Returns:
+            A dict of seq_regions dicts, with their name as the key
         """
         # Get the report in a CSV format, easier to manipulate
         report_csv, metadata = self.report_to_csv(report_path)
@@ -63,10 +72,13 @@ class Parser:
         
         return seq_regions
 
-    def report_to_csv(self, report_path) -> (str, dict):
-        """
-        Load an assembly report as a csv string
-        Returns the csv as a string, and the head metadata as a dict
+    def report_to_csv(self, report_path: str) -> Tuple[str, dict]:
+        """Load an assembly report as a csv string.
+
+        Args:
+            report_path: Path to the INSDC seq_region report.
+        Returns:
+            The csv as a string, and the head metadata as a dict.
         """
 
         _open = report_path.endswith(".gz") and gzip.open or open
@@ -86,16 +98,23 @@ class Parser:
                 else:
                     if last_head:
                         data += last_head[2:].strip() + "\n"
-                        last_head = None
+                        last_head = ""
                     data += line
             return data, metadata
     
-    def make_seq_region(self, row, assembly_level, use_refseq) -> dict:
+    def make_seq_region(self, row: Dict[str, str], assembly_level: str,
+                        use_refseq: bool) -> Dict[str, Any]:
+        """From a row of the report, create one seq_region dict.
+
+        Args:
+            row: A seq_region row from the INSDC report.
+            assembly_level: what level is the seq_region (chromosome, contig, etc.)
+            use_refseq: Expect a RefSeq seq_region report.
+        
+        Returns:
+            A seq_region dict.
         """
-        From a row of the report, create one seq_region
-        Return a seq_region dict
-        """
-        seq_region = {}
+        seq_region: Dict[str, Any] = {}
 
         # Map the fields to their synonym name
         synonym_map = self.synonym_map
@@ -113,21 +132,20 @@ class Parser:
         
         # Length
         field = "Sequence-Length"
-        name = "length"
         if field in row and row[field].lower() != "na":
-            seq_region[name] = int(row[field])
+            seq_region["length"] = int(row[field])
         
         if use_refseq:
             if "RefSeq-Accn" in row:
                 seq_region["name"] = row["RefSeq-Accn"]
             else:
-                raise Exception("No RefSeq name for %s" % row["Sequence-Name"])
+                raise Exception(f"No RefSeq name for {row['Sequence-Name']}")
             
         else:
             if "GenBank-Accn" in row:
                 seq_region["name"] = row["GenBank-Accn"]
             else:
-                raise Exception("No INSDC name for %s" % row["Sequence-Name"])
+                raise Exception("No INSDC name for {row['Sequence-Name']}")
         
         # Coord system and location
         seq_role = row["Sequence-Role"]
@@ -143,9 +161,10 @@ class Parser:
             
             # Get location metadata
             if location in molecule_location:
-                seq_region["location"] = molecule_location[location]
+                seq_location = molecule_location[location]
+                seq_region["location"] = seq_location
             else:
-                raise Exception("Unrecognized sequence location: %s (is %s)" % (location, str(molecule_location)))
+                raise Exception(f"Unrecognized sequence location: {location}")
         else:
-            raise Exception("Unrecognized sequence role: %s" % seq_role)
+            raise Exception(f"Unrecognized sequence role: {seq_role}")
         return seq_region
