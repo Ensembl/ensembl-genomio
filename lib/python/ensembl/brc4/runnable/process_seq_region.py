@@ -26,6 +26,8 @@ import json
 from Bio import SeqIO, SeqRecord
 import requests
 
+SeqRegion = Dict[str, Any]
+
 class process_seq_region(eHive.BaseRunnable):
 
     def param_defaults(self):
@@ -95,7 +97,7 @@ class process_seq_region(eHive.BaseRunnable):
                 }
         self.dataflow(output, 2)
 
-    def exclude_seq_regions(self, seq_regions: List[Dict], to_exclude: List) -> List[Dict]:
+    def exclude_seq_regions(self, seq_regions: List[SeqRegion], to_exclude: List) -> List[SeqRegion]:
         """
         Remove some seq_regions given as a list
         """
@@ -107,7 +109,7 @@ class process_seq_region(eHive.BaseRunnable):
                 new_seq_regions.append(seqr)
         return new_seq_regions
 
-    def guess_translation_table(self, seq_regions: List[Dict]) -> None:
+    def guess_translation_table(self, seq_regions: List[SeqRegion]) -> None:
         """
         Guess codon table based on location
         """
@@ -117,7 +119,7 @@ class process_seq_region(eHive.BaseRunnable):
             if "location" in seqr and seqr["location"] in location_codon:
                 seqr["codon_table"] = location_codon[seqr["location"]]
 
-    def add_brc4_ebi_name(self, seq_regions: List[Dict]) -> None:
+    def add_brc4_ebi_name(self, seq_regions: List[SeqRegion]) -> None:
         """
         Use INSDC name without version as default BRC4 and EBI names
         """
@@ -140,7 +142,7 @@ class process_seq_region(eHive.BaseRunnable):
 
                 raise Exception("Can't get INSDC id for sequence '%s', from accession %s in report %s. Please replace this value in the report (column GenBank-Accn) with a valid INSDC record (e.g. from the RefSeq page)" % (seqr["name"], accession, report_path))
 
-    def get_mitochondrial_codon_table(self, seq_regions: List[Dict], tax_id: int) -> None:
+    def get_mitochondrial_codon_table(self, seq_regions: List[SeqRegion], tax_id: int) -> None:
         """
         Get codon table for mitochondria based on taxonomy
         """
@@ -178,7 +180,9 @@ class process_seq_region(eHive.BaseRunnable):
         with open(path, "w") as json_out:
             json_out.write(json.dumps(data, sort_keys=True, indent=4))
     
-    def merge_regions(self, regions1: Dict[str, Dict], regions2: Dict[str, Dict]) -> List[Dict]:
+    def merge_regions(self,
+                      regions1: Dict[str, SeqRegion],
+                      regions2: Dict[str, SeqRegion]) -> List[SeqRegion]:
         """
         Merge seq_regions from different sources
         Return a list of seq_regions
@@ -214,7 +218,7 @@ class process_seq_region(eHive.BaseRunnable):
         return seq_regions
                 
 
-    def get_gbff_regions(self, gbff_path: str) -> Dict[str, Dict]:
+    def get_gbff_regions(self, gbff_path: str) -> Dict[str, SeqRegion]:
         """
         Get seq_region data from the gbff file
         Return a dict of seq_regions, with their name as the key
@@ -227,7 +231,7 @@ class process_seq_region(eHive.BaseRunnable):
         with _open(gbff_path, 'rt') as gbff_file:
 
             for record in SeqIO.parse(gbff_file, "genbank"):
-                seqr: Dict[str, Any] = {}
+                seqr: SeqRegion = {}
                 
                 # Is the seq_region circular?
                 annotations = record.annotations
@@ -280,7 +284,7 @@ class process_seq_region(eHive.BaseRunnable):
         
         return table
 
-    def get_report_regions(self, report_path: str, use_refseq: bool) -> Dict[str, Dict]:
+    def get_report_regions(self, report_path: str, use_refseq: bool) -> Dict[str, SeqRegion]:
         """
         Get seq_region data from report file
         Return a dict of seq_regions, with their name as the key
@@ -306,12 +310,12 @@ class process_seq_region(eHive.BaseRunnable):
         
         return seq_regions
     
-    def make_seq_region(self, row: Dict, assembly_level: str, use_refseq: bool) -> Dict[str, Any]:
+    def make_seq_region(self, row: Dict, assembly_level: str, use_refseq: bool) -> SeqRegion:
         """
         From a row of the report, create one seq_region
         Return a seq_region dict
         """
-        seq_region: Dict[str, Any] = {}
+        seq_region: SeqRegion = {}
 
         # Map the fields to their synonym name
         synonym_map = self.param("synonym_map")
