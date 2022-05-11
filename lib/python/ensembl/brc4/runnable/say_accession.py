@@ -15,12 +15,19 @@
 # limitations under the License.
 
 
-
 import eHive
-import json
 
 class say_accession(eHive.BaseRunnable):
+    """Simple runnable to bring out the accession value for the pipeline to use.
+    
+    Args:
+        genome_data: a dict from genome_data following the schema from schema/genome_schema.json
+    
+    Dataflows:
+        2: a single value named accession
+    """
 
     def run(self):
         genome_data = self.param_required("genome_data")
-        self.dataflow({ "accession" : genome_data["assembly"]["accession"] }, 2)
+        accession = genome_data["assembly"]["accession"]
+        self.dataflow({ "accession" : accession }, 2)
