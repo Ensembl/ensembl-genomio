@@ -41,7 +41,29 @@ class process_seq_region(eHive.BaseRunnable):
     """Runnable to load seq_regions metadata from INSDC/RefSeq reports and dump a json file
 
     The runnable does some checks, adds some things (like codon tables), and dumps the list of 
-    seq_regions in a json file that follows the schema defined in schema/seq_region_schema.json
+    seq_regions in a json file that follows the schema defined in schema/seq_region_schema.json.
+
+    Params:
+        genome_data: Genome data following the schema/genome_schema.json.
+        work_dir: Directory where the new file will be created. 
+        report: Path to the INSDC/RefSeq sequences report to parse.
+        gbff: Path to the INSDC/RefSeq gbff file to parse. 
+        brc4_mode: Activate BRC4 mode (default).
+        exclude_seq_regions: Array of seq_regions to not include in the new file.
+    
+    Predefined params:
+        synonym_map: Map from the INSDC report column names to the seq_region field names.
+        molecule_location: map the sequence type to an SO location.
+        location_codon: map a location to a codon table.
+    
+    Dataflows:
+        2: One dict with 2 keys:
+            metadata_type: 'seq_region'.
+            metadata_json: Path to the new seq_region json.
+    
+    Notes:
+        BRC4 mode does the following:
+            Add BRC4_seq_region_name and EBI_seq_region_name for each seq_region.
     """
 
     def param_defaults(self):
