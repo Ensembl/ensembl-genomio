@@ -127,7 +127,8 @@ class process_seq_region(eHive.BaseRunnable):
                 for syn in seqr["synonyms"]:
                     if syn["source"] == source:
                         insdc_name = syn["name"]
-                        flat_name, dot, version = insdc_name.partition(".")
+                        parts = insdc_name.partition(".")
+                        flat_name = parts[0]
                         seqr["BRC4_seq_region_name"] = flat_name
                         seqr["EBI_seq_region_name"] = flat_name
 
