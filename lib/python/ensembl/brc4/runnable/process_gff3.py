@@ -261,9 +261,9 @@ class process_gff3(eHive.BaseRunnable):
                         
                         # Transform gene - CDS to gene-transcript-exon-CDS
                         if gene.sub_features[0].type == "CDS":
-                            print("Insert transcript-exon for %s (%d CDSs)" % (gene.id, len(gene.sub_features)))
-                            transcript = self.gene_to_cds(gene)
-                            gene.sub_features = [transcript]
+                            print("Insert transcript-exon features for %s (%d CDSs)" % (gene.id, len(gene.sub_features)))
+                            transcripts = self.gene_to_cds(gene)
+                            gene.sub_features = transcripts
                         
                         # Move CDS from parent gene to parent mRNA
                         if len(gene.sub_features) == 2 and gene.sub_features[0].type == "mRNA" and gene.sub_features[1].type == "CDS":
@@ -475,22 +475,35 @@ class process_gff3(eHive.BaseRunnable):
         return transcript
         
     
-    def gene_to_cds(self, gene):
+    def gene_to_cds(self, gene) -> list:
         """Create a transcript - exon - cds chain"""
-        
-        transcript = SeqFeature(gene.location, type="mRNA")
-        transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
+
+        transcripts_dict = {}
 
         for cds in gene.sub_features:
             if cds.type != "CDS":
                 raise Exception("Can not create a chain 'transcript - exon - CDS' when the gene children are not all CDSs (%s of type %s is child of gene %s)" % (cds.id, cds.type, gene.id))
             exon = SeqFeature(cds.location, type="exon")
+
+            # Add to transcript or create a new one
+            if cds.id not in transcripts_dict:
+                print(f"Create new mRNA for {cds.id}")
+                transcript = self.build_transcript(gene)
+                transcripts_dict[cds.id] = transcript
             exon.qualifiers["source"] = gene.qualifiers["source"]
-            transcript.sub_features.append(exon)
-            transcript.sub_features.append(cds)
+            transcripts_dict[cds.id].sub_features.append(exon)
+            transcripts_dict[cds.id].sub_features.append(cds)
+
+        transcripts = list(transcripts_dict.values())
         
+        return transcripts
+    
+    def build_transcript(self, gene):
+        transcript = SeqFeature(gene.location, type="mRNA")
+        transcript.qualifiers["source"] = gene.qualifiers["source"]
+        transcript.sub_features = []
         return transcript
+
         
     def move_cds_to_mrna(self, gene):
         """Move a cds child of a gene, to the mRNA"""
