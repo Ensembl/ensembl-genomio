@@ -14,27 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
+from typing import Any, Dict
 import eHive
 import json
-import os, re
+import os
+import re
 import ftplib
 import hashlib
+
 
 class download_assembly_data(eHive.BaseRunnable):
     
     @staticmethod
-    def param_defaults():
+    def param_defaults() -> Dict[str, Any]:
         return {
             # Set this manually to a higher value if you want to allow assembly versions
             # higher than the one provided (it will fail if the version given is not the latest)
-            "max_increment" : 0,
+            "max_increment": 0,
         }
 
     def run(self):
         accession = self.param_required('accession')
-        main_download_dir = self.param('download_dir')
+        main_download_dir = self.param_required('download_dir')
         download_dir = main_download_dir + "/" + accession
 
         # Set and create dedicated dir for download
@@ -75,7 +76,7 @@ class download_assembly_data(eHive.BaseRunnable):
         self.dataflow(files, 2)
 
     @staticmethod
-    def get_json(json_path):
+    def get_json(json_path: str) -> Dict[str, Any]:
         """
         Retrieve the json data from a json file
         """
@@ -83,7 +84,7 @@ class download_assembly_data(eHive.BaseRunnable):
             json_data = json.load(json_file)
         return json_data
 
-    def md5_files(self, dl_dir):
+    def md5_files(self, dl_dir: str) -> bool:
         """
         Check all files checksums with the sums listed in a checksum file, if available.
         Return False if there is no checksum file, or a file is missing, or has a wrong checksum.
@@ -120,7 +121,7 @@ class download_assembly_data(eHive.BaseRunnable):
         return True
     
     @staticmethod
-    def get_checksums(checksum_path):
+    def get_checksums(checksum_path: str) -> Dict[str, str]:
         """
         Get a dict of checksums from a file, with file names as keys and sums as values
         """
@@ -139,11 +140,11 @@ class download_assembly_data(eHive.BaseRunnable):
         return sums
 
     @staticmethod
-    def download_files(accession, dl_dir):
+    def download_files(accession: str, dl_dir: str) -> None:
         """
         Given an INSDC accession, download all available files from the ftp to the download dir
         """
-        match = re.match("(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+        match = re.match(r'(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)', accession)
         gca = match.group(1)
         part1 = match.group(2)
         part2 = match.group(3)
@@ -162,7 +163,7 @@ class download_assembly_data(eHive.BaseRunnable):
                 
                 # Get all the files
                 for (ftp_file, file_entry) in f.mlsd():
-                    if re.match("^\.", ftp_file):
+                    if re.match(r'^\.', ftp_file):
                         continue
                     if file_entry["type"] == "dir":
                         continue
@@ -172,7 +173,7 @@ class download_assembly_data(eHive.BaseRunnable):
                     with open(local_path, 'wb') as fp:
                         f.retrbinary("RETR " + ftp_file, fp.write)
 
-    def get_files_selection(self, dl_dir):
+    def get_files_selection(self, dl_dir: str) -> Dict[str, str]:
         """
         Among all the files downloaded, only keep a subset for which we use a controlled name.
         Return a dict[name] = file_path
@@ -194,7 +195,7 @@ class download_assembly_data(eHive.BaseRunnable):
         }
 
         root_name = self.get_root_name(dl_dir)
-        if root_name is None:
+        if root_name == '':
             raise Exception("Could not determine the files root name in %s" % dl_dir)
 
         for dl_file in os.listdir(dl_dir):
@@ -205,11 +206,14 @@ class download_assembly_data(eHive.BaseRunnable):
         return files
 
     @staticmethod
-    def get_root_name(dl_dir):
+    def get_root_name(dl_dir: str) -> str:
         """Get root name for assembly files, using the report file as base"""
 
+        root_name = ''
         for dl_file in os.listdir(dl_dir):
             matches = re.search("^(.+_)assembly_report.txt", dl_file)
             if matches:
-                return matches.group(1)
-
+                root_name = matches.group(1)
+                break
+        
+        return root_name

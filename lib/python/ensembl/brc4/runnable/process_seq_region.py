@@ -15,7 +15,8 @@
 # limitations under the License.
 
 
-import os, re
+import os
+import re
 from typing import Any, Dict, List, Tuple
 import eHive
 import gzip
@@ -40,14 +41,14 @@ class MissingDataError(Exception):
 class process_seq_region(eHive.BaseRunnable):
     """Runnable to load seq_regions metadata from INSDC/RefSeq reports and dump a json file
 
-    The runnable does some checks, adds some things (like codon tables), and dumps the list of 
+    The runnable does some checks, adds some things (like codon tables), and dumps the list of
     seq_regions in a json file that follows the schema defined in schema/seq_region_schema.json.
 
     Params:
         genome_data: Genome data following the schema/genome_schema.json.
-        work_dir: Directory where the new file will be created. 
+        work_dir: Directory where the new file will be created.
         report: Path to the INSDC/RefSeq sequences report to parse.
-        gbff: Path to the INSDC/RefSeq gbff file to parse. 
+        gbff: Path to the INSDC/RefSeq gbff file to parse.
         brc4_mode: Activate BRC4 mode (default).
         exclude_seq_regions: Array of seq_regions to not include in the new file.
     
@@ -68,25 +69,25 @@ class process_seq_region(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {
-                "brc4_mode": True,
-                "synonym_map" : {
-                    "Sequence-Name" : "INSDC_submitted_name",
-                    "GenBank-Accn" : "INSDC",
-                    "RefSeq-Accn" : "RefSeq",
-                    "Assigned-Molecule" : "GenBank",
-                    },
+            "brc4_mode": True,
+            "synonym_map": {
+                "Sequence-Name": "INSDC_submitted_name",
+                "GenBank-Accn": "INSDC",
+                "RefSeq-Accn": "RefSeq",
+                "Assigned-Molecule": "GenBank",
+            },
 
-                "molecule_location" : {
-                    "chromosome" : "nuclear_chromosome",
-                    "mitochondrion" : "mitochondrial_chromosome",
-                    "apicoplast" : "apicoplast_chromosome",
-                    "plasmid" : "plasmid"
-                    },
-                "location_codon" : {
-                    "apicoplast_chromosome" : 4
-                    },
-                "exclude_seq_regions": [],
-                }
+            "molecule_location": {
+                "chromosome": "nuclear_chromosome",
+                "mitochondrion": "mitochondrial_chromosome",
+                "apicoplast": "apicoplast_chromosome",
+                "plasmid": "plasmid"
+            },
+            "location_codon": {
+                "apicoplast_chromosome": 4
+            },
+            "exclude_seq_regions": [],
+        }
 
     def run(self):
         genome_data = self.param('genome_data')
@@ -117,7 +118,8 @@ class process_seq_region(eHive.BaseRunnable):
             seq_regions = self.exclude_seq_regions(seq_regions, to_exclude)
         
         # Setup the BRC4_seq_region_name
-        if brc4_mode: self.add_brc4_ebi_name(seq_regions)
+        if brc4_mode:
+            self.add_brc4_ebi_name(seq_regions)
 
         # Guess translation table
         self.guess_translation_table(seq_regions)
@@ -128,9 +130,9 @@ class process_seq_region(eHive.BaseRunnable):
 
         # Flow out the file and type
         output = {
-                "metadata_type" : metadata_type,
-                "metadata_json": final_path
-                }
+            "metadata_type": metadata_type,
+            "metadata_json": final_path
+        }
         self.dataflow(output, 2)
 
     def exclude_seq_regions(self, seq_regions: List[SeqRegion],
@@ -159,7 +161,8 @@ class process_seq_region(eHive.BaseRunnable):
             seq_regions: List of current seq_regions.
         
         Note:
-            This relies on a map (location_codon) that gives the codon table, from a known location.
+            This relies on a map (location_codon) that gives the codon table,
+            from a known location.
             The codon_table data is directly added to the SeqRegion if found.
         """
         location_codon = self.param("location_codon")
@@ -189,13 +192,14 @@ class process_seq_region(eHive.BaseRunnable):
                         seqr["BRC4_seq_region_name"] = flat_name
                         seqr["EBI_seq_region_name"] = flat_name
 
-            if not "BRC4_seq_region_name" in seqr:
+            if "BRC4_seq_region_name" not in seqr:
                 report_path = self.param('report')
                 genome_data = self.param('genome_data')
                 accession = genome_data["assembly"]["accession"]
 
                 sname = seqr["name"]
-                msg = f"Replace GenBank-Accn for {sname} in the report with a valid INSDC accession"
+                msg = (f"Replace GenBank-Accn for {sname} in the report"
+                       " with a valid INSDC accession")
                 raise MissingDataError(report_path, accession, msg)
 
     def add_mitochondrial_codon_table(self, seq_regions: List[SeqRegion], tax_id: int) -> None:
@@ -230,18 +234,18 @@ class process_seq_region(eHive.BaseRunnable):
         server = "https://www.ebi.ac.uk"
         ext = "/ena/data/taxonomy/v1/taxon/tax-id/" + str(tax_id)
 
-        gen_code: int = 0
+        r = requests.get(
+            server + ext, headers={"Content-Type": "application/json"})
+        decoded = r.json()
 
+        genetic_code: int = 0
         try:
-            r = requests.get(server + ext, headers={ "Content-Type" : "application/json"})
-
-            decoded = r.json()
             if "mitochondrialGeneticCode" in decoded:
-                gen_code = int(decoded["mitochondrialGeneticCode"])
-        except KeyError as e:
+                genetic_code = int(decoded["mitochondrialGeneticCode"])
+        except KeyError:
             print(f"No Mitochondria genetic code found for taxon {tax_id}")
-        
-        return gen_code
+
+        return genetic_code
     
     def print_json(self, path: str, data: Any) -> None:
         """Generic data json dumper to a file.
@@ -266,8 +270,10 @@ class process_seq_region(eHive.BaseRunnable):
         Returns:
             Alist of SeqRegions.
         """
-        if not regions1: regions1 = {}
-        if not regions2: regions2 = {}
+        if not regions1:
+            regions1 = {}
+        if not regions2:
+            regions2 = {}
         
         # Get all the names
         names1 = frozenset(regions1)
@@ -295,7 +301,6 @@ class process_seq_region(eHive.BaseRunnable):
 
         seq_regions.sort(key=lambda x: x["name"])
         return seq_regions
-                
 
     def get_gbff_regions(self, gbff_path: str) -> Dict[str, SeqRegion]:
         """Get seq_region data from the gbff file.
@@ -329,7 +334,9 @@ class process_seq_region(eHive.BaseRunnable):
                 # Is there a comment stating the Genbank record this is based on?
                 genbank_id = self.get_genbank_from_comment(record)
                 if genbank_id:
-                    seqr["synonyms"] = [{ "source": "INSDC", "name": genbank_id}]
+                    seqr["synonyms"] = [
+                        {"source": "INSDC", "name": genbank_id}
+                    ]
                 
                 # Store the seq_region
                 if seqr:
@@ -349,11 +356,11 @@ class process_seq_region(eHive.BaseRunnable):
         genbank = ""
         if "comment" in record.annotations:
             comment = record.annotations["comment"]
-            comment = re.sub("[ \n\r]+", " ", comment)
+            comment = re.sub(r'[ \n\r]+', " ", comment)
 
-            match = re.search("The reference sequence was derived from ([^\.]+)\.", comment)
+            match = re.search(r'The reference sequence was derived from ([^\.]+)\.', comment)
             if match:
-                genbank =  match.group(1)
+                genbank = match.group(1)
                 
         return genbank
     
@@ -428,7 +435,7 @@ class process_seq_region(eHive.BaseRunnable):
         synonyms = []
         for field, source in synonym_map.items():
             if field in row and row[field].lower() != "na":
-                synonym = { "source" : source, "name" : row[field] }
+                synonym = {"source": source, "name": row[field]}
                 synonyms.append(synonym)
         if len(synonyms) > 0:
             synonyms.sort(key=lambda x: x["source"])
@@ -467,7 +474,7 @@ class process_seq_region(eHive.BaseRunnable):
             # Get location metadata
             try:
                 seq_region["location"] = molecule_location[location]
-            except KeyError as e:
+            except KeyError:
                 raise KeyError(f"Unrecognized sequence location: {location}")
         else:
             raise Exception("Unrecognized sequence role: %s" % seq_role)
