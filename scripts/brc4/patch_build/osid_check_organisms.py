@@ -14,47 +14,72 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+"""This script retrieves the organism metadata from an OSID server."""
 
 import argparse
+from typing import List
 import requests
 import json
 
-def get_organisms(url, user, key, species):
 
-    body = {
-            "organismName": "*",
-            }
-    if species:
-        body["organismName"] = species
+class OSIDClient:
+    """Client interface to an OSID server."""
+
+    organisms_page = "organisms"
+
+    def __init__(self, url: str, user: str, key: str) -> None:
+        self.url = url
+        self.user = user
+        self.key = key
     
-    get_org = url + "/organisms"
-    result = requests.get(get_org, auth=(user, key), params=body)
+    def get_organism_data(self, species: str) -> List[dict]:
+        """Retrieve the data for one or all organisms
+        
+        Args:
+            species: optional, to only select one species instead of all of them
+        
+        Returns:
+            List of dicts, one for each organism
+        """
+        organisms = []
 
-    if result and result.status_code == 200:
-        organisms = json.loads(result.content)
-        count = len(organisms)
-        print("%d Organisms in %s:" % (count, get_org))
-        print(json.dumps(organisms, indent=4, sort_keys=True))
-    else:
-        print("Error: " + str(result))
+        body = {
+            "organismName": "*",
+        }
+        if species:
+            body["organismName"] = species
+        
+        get_url = self.url + "/" + OSIDClient.organisms_page
+        result = requests.get(get_url, auth=(self.user, self.key), params=body)
+
+        if result and result.status_code == 200:
+            organisms = json.loads(result.content)
+        else:
+            raise Exception('Could not retrieve organism data from {get_url}')
+        return organisms
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Retrieve the list of organisms from an OSID server')
-    
+    parser = argparse.ArgumentParser(
+        description='Retrieve the list of organisms from an OSID server')
     parser.add_argument('--url', type=str, required=True,
-                help='OSID server url')
+                        help='OSID server url')
     parser.add_argument('--user', type=str, required=True,
-                help='OSID user')
+                        help='OSID user')
     parser.add_argument('--key', type=str, required=True,
-                help='OSID authentification key')
+                        help='OSID authentification key')
     parser.add_argument('--species', type=str,
-                help='A specific species to check')
-
+                        help='A specific species to check')
     args = parser.parse_args()
     
-    get_organisms(args.url, args.user, args.key, args.species)
+    # Get data
+    client = OSIDClient(args.url, args.user, args.key)
+    organisms = client.get_organism_data(args.species)
+
+    # Display results
+    print(f"{len(organisms)} Organisms in {args.url}:")
+    print(json.dumps(organisms, indent=4, sort_keys=True))
+
 
 if __name__ == "__main__":
     main()
