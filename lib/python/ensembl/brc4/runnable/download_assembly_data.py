@@ -178,6 +178,7 @@ class download_assembly_data(eHive.BaseRunnable):
         Among all the files downloaded, only keep a subset for which we use a controlled name.
         Return a dict[name] = file_path
         The file_path is relative to the download dir
+        
         Current names:
             report
             fasta_dna
