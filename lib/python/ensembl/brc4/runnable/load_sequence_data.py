@@ -167,7 +167,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
     def initial_sequence_loading(self, work_dir: str):
         """
-        initial preparation and loading of AGPs and fasta data
+        initial preparation and loading of AGPs and fasta data.
 
         initial preparation and loading of AGPs and fasta data using ensembl-analysis perl scripts
         """
@@ -230,6 +230,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         Add seq_region_synonym from the schema/seq_region_schema.json compatible meta data file.
         Merge with the already exinsting ones in the db.
+        
         If unversion is true:
           * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
           * the unversioned synonyms from the unversionable_sources_set will be added as well as the original ones
@@ -308,13 +309,17 @@ class load_sequence_data(eHive.BaseRunnable):
                        work_dir,
                        unversion: bool = False):
         """
-        Add seq_region_attrib(s) from the seq_region_file meta data file. Explicit list is taken from "sr_attrib_types" module param.
+        Add seq_region_attrib(s) from the seq_region_file meta data file. 
+
+        Explicit list is taken from "sr_attrib_types" module param.
 
         Add seq_region_attrib(s) from the schema/seq_region_schema.json compatible meta data file.
         Explicit list is taken from "sr_attrib_types" module param.
+        
         "sr_attrib_types" defines { json_property -> attrib_type.name } map. If the value is dict,
-           its keys are treated as "/"-delimetered "json_path" (i.e. "added_sequence/assembly_provider/name").
+        its keys are treated as "/"-delimetered "json_path" (i.e. "added_sequence/assembly_provider/name").
         No arrays can be processed. Only simple or "flattable" types.
+        
         If unversion is true:
           * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
 
@@ -417,6 +422,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         Add "(EBI|BRC4)_seq_region_name" seq_region_synonym from the schema/seq_region_schema.json compatible meta data file or from the original seq_region_names.
         A special case of attributes adding with default values derived from seq_region names.
+        
         If unversion is true:
           * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
 
@@ -985,9 +991,9 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Load map from the SQL output
 
-        Process input in_file with "key  value" pairs
-          and load then into the {key : value} map.
-        Skips header if skip_heade.
+        Process input in_file with "key  value" pairs and load then 
+        into the {key : value} map.
+        Skips header if skip_header.
         """
         data = dict()
         with open(in_file) as pairs_file:
