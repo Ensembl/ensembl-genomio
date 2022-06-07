@@ -15,34 +15,17 @@
 # limitations under the License.
 
 
-
 import eHive
 import gzip
 import json
-import io
 import re
-import sys
 import hashlib
 from functools import partial
 
 from Bio import SeqIO
 from os import path
-from ensembl.brc4.runnable.parser import Parser
+from ensembl.brc4.runnable.seqregion_parser import SeqregionParser
 
-class SeqGroup():
-    def __init__(self, sequence, identifier=None):
-        self.sequence = sequence
-        self.length = len(self.sequence)
-        self.ids = []
-        if identifier: self.add_id(identifier)
-        self.count = len(self.ids)
-    
-    def __str__(self):
-        return ", ".join(self.ids)
-    
-    def add_id(self, identifier):
-        self.ids.append(identifier)
-        self.count = len(self.ids)
 
 class SeqGroup():
     def __init__(self, sequence, identifier=None):
@@ -132,7 +115,7 @@ class compare_fasta(eHive.BaseRunnable):
         
     def print_map(self, seq_map, map_file, report_file):
         
-        report_parser = Parser()
+        report_parser = SeqregionParser()
         report_seq = report_parser.get_report_regions(report_file)
         report = self.add_report_to_map(seq_map, report_seq)
         
@@ -172,6 +155,7 @@ class compare_fasta(eHive.BaseRunnable):
         map_dna = {}
         
         for seqr in data:
+            name = seqr["name"]
             if "synonyms" in seqr:
                 for syn in seqr["synonyms"]:
                     if syn["name"] == "INSDC":
@@ -183,20 +167,6 @@ class compare_fasta(eHive.BaseRunnable):
         with open(json_path) as json_file:
             return json.load(json_file)
         
-    def build_seq_dict(self, seqs):
-        """Build a seq dict taking duplicates into account"""
-        
-        seqs_dict = dict()
-        
-        for name, seq in seqs.items():
-            if seq in seqs_dict:
-                seqs_dict[seq].add_id(name)
-            else:
-                seqs_dict[seq] = SeqGroup(seq, name)
-        
-        return seqs_dict
-                
-
     def build_seq_dict(self, seqs):
         """Build a seq dict taking duplicates into account"""
 
@@ -299,7 +269,7 @@ class compare_fasta(eHive.BaseRunnable):
             value = "mismatch"
         # Gathering the organellar sequences
         report = self.param_required("report")
-        report_parser = Parser()
+        report_parser = SeqregionParser()
         report_seq = report_parser.get_report_regions(report)
         report = self.add_report_to_map(common, report_seq)
         map_dna_path = self.param_required("seq_regions")

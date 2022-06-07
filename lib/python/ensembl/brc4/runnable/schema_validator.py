@@ -15,16 +15,21 @@
 # limitations under the License.
 
 
-
 import eHive
 import json
 from jsonschema import validate
 
 class schema_validator(eHive.BaseRunnable):
+    """Check a json file with a provided json schema.
 
-    def param_defaults(self):
-        return {
-        }
+    Args:
+        json_file: Path to the json to check.
+        json_schema: Dict of json schema paths.
+        metadata_type: Key to find to schema path to use from the json_schema.
+
+    Dataflows:
+        None
+    """
 
     def run(self):
         json_file = self.param_required("json_file")
@@ -34,7 +39,7 @@ class schema_validator(eHive.BaseRunnable):
         if metadata_type in json_schemas:
             json_schema = json_schemas[metadata_type]
         else:
-            raise Exception("Schema not defined: %s" % metadata_type)
+            raise Exception(f"Schema not defined: {metadata_type}")
         
         file = self.get_json(json_file)
         schema = self.get_json(json_schema)

@@ -15,13 +15,24 @@
 # limitations under the License.
 
 
-
 import eHive
-import json
 import shutil
 import gzip
 
 class ungzip(eHive.BaseRunnable):
+    """Simple runnable to uncompress a gzip file, and bring it as a parameter for the pipeline.
+    
+    Args:
+        input: Path to the gzipped file to uncompress.
+        output: Path to the final uncompressed file.
+        name: Key for the dataflow.
+    
+    Dataflows:
+        2: One single value for the uncompressed file, with key name.
+    
+    Note:
+        If the file is not gzipped, then it will only be renamed.
+    """
 
     def run(self):
         in_file = self.param_required("input")
@@ -33,6 +44,6 @@ class ungzip(eHive.BaseRunnable):
                 with open(out_file, 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
         else:
-            shutils.copy(in_file, out_file)
+            shutil.copy(in_file, out_file)
             
         self.dataflow({ name : out_file }, 2)

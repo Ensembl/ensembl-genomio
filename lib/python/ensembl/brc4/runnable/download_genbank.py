@@ -15,10 +15,14 @@
 # limitations under the License.
 
 
-
 import eHive
-import os, re
+import os
 import requests
+
+class DownloadError(Exception):
+    """In case a download failed."""
+    def __init__(self, msg):
+        self.msg = msg
 
 class download_genbank(eHive.BaseRunnable):
     
@@ -35,28 +39,30 @@ class download_genbank(eHive.BaseRunnable):
         if not os.path.isdir(download_dir):
             os.makedirs(download_dir)
 
-        # Download file
+        # Download the file
         gb_path = self.download_genbank(accession, download_dir)
         
-        output = { 'gb_file' : gb_path, 'gb_accession' : accession }
+        output = {'gb_file': gb_path, 'gb_accession': accession}
         self.dataflow(output, 2)
 
-
-    def download_genbank(self, accession, dl_dir):
+    @staticmethod
+    def download_genbank(accession: str, dl_dir: str) -> str:
         """
         Given a GenBank accession, download the corresponding file in GenBank format
         """
         dl_path = os.path.join(dl_dir, accession + '.gb')
+
+        # Don't redownload the file
         if os.path.exists(dl_path):
             return dl_path
 
         # Get the list of assemblies for this accession
         e_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
         e_params = {
-                "db" : "nuccore",
-                "rettype" : "gb",
-                "retmode" : "text",
-                }
+            "db": "nuccore",
+            "rettype": "gb",
+            "retmode": "text",
+        }
         e_params["id"] = accession
         
         result = requests.get(e_url, params=e_params)
@@ -67,5 +73,4 @@ class download_genbank(eHive.BaseRunnable):
             print(f"GFF file write to {dl_path}")
             return dl_path
         else:
-            print("Error: " + str(result))
-            
+            raise DownloadError(f"Could not download the genbank file: {result}")
