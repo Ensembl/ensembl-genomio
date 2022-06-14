@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Use setup.cfg based setuptools installation"""
-import setuptools
+"""setuptools based stub for the "editable" installations"""
+from setuptools import setup
 
 if __name__ == "__main__":
-    setuptools.setup()
+    setup()
+
