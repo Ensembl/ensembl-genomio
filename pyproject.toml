@@ -68,11 +68,17 @@ dependencies = [
 ] # see [project.optional-dependencies] for dev dependencies 
 
 [project.optional-dependencies]
-doc = [
+dev = [
     "mock",
     "Sphinx",
     "toml-validator",
 ]
+
+doc = [
+    "mock",
+    "Sphinx",
+]
+
 
 [project.urls]
 homepage = "https://www.ensembl.org"
