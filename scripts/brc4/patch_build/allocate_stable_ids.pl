@@ -316,7 +316,7 @@ sub allocate_genes {
           logic_name => 'ena',
           id => 7122,
         );
-        $dbentry->analysis($gnomon_an);
+        $dbentry->analysis($ena_an);
 
         $dbenta->store($dbentry, $gene->dbID, 'Gene');
       }
