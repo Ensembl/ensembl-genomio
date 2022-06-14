@@ -223,7 +223,7 @@ my $reg_path = $opt{registry};
 $registry->load_all($reg_path);
 
 my $osid;
-if ($opt{update}) {
+if ($opt{update} and not $opt{mock_osid}) {
   $osid = OSID_service->new(
     url  => $opt{osid_url},
     user => $opt{osid_user},
@@ -393,10 +393,10 @@ sub usage {
     Allocate stable ids for all genes in a given core db, from an OSID system.
 
     --registry <path> : Ensembl registry
-    --species <str>   : production_name of one species
     --osid_url <str>
     --osid_user <str>
     --osid_pass <str> : OSID connection details
+    --species <str>   : production_name of one species
 
     --organism <str>  : species name in OSID, if it is not the production_name
     
@@ -404,6 +404,8 @@ sub usage {
     --prefix <str>    : Only replace ids for genes with this prefix [optional]
     --xref_source <str>: Keep the old ids under this xref name, e.g. "RefSeq" [optional]
     
+    --mock_osid       : Get IDs from the Fake OSID server (for dev testing with update)
+
     --help            : show this help message
     --verbose         : show detailed progress
     --debug           : show even more information (for debugging purposes)
@@ -422,6 +424,7 @@ sub opt_check {
     "osid_user=s",
     "osid_pass=s",
     "update",
+    "mock_osid",
     "prefix:s",
     "xref_source:s",
     "help",
