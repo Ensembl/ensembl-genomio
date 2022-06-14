@@ -315,7 +315,8 @@ sub allocate_genes {
         my $dbentry = Bio::EnsEMBL::DBEntry->new(
           -adaptor => $dbenta,
           -dbname => $xref_source,
-          -primary_id => $old_gene_id
+          -primary_id => $old_gene_id,
+          -display_id => $old_gene_id
         );
         
         # Add analysis ENA for this
@@ -337,16 +338,33 @@ sub allocate_genes {
       if ($update) {
         my $old_tr_id = $tr->stable_id;
         $tr->stable_id($tran_id);
-        $tra->update($tr) if $update;
 
-        # Xref
-        if ($xref_source) {
-          my $dbentry = Bio::EnsEMBL::DBEntry->new(
-            -adaptor => $dbenta,
-            -dbname => $xref_source,
-            -primary_id => $old_tr_id
-          );
-          $dbenta->store($dbentry, $tr->dbID, 'Transcript');
+        if ($update) {
+        $tra->update($tr);
+
+          # Xref
+          if ($xref_source) {
+            my $tr_xref_source = $xref_source;
+            if ($xref_source eq 'RefSeq') {
+              if ($old_tr_id =~ /^[NX]M_/) {
+                $tr_xref_source = 'RefSeq_mRNA';
+              } else {
+                $tr_xref_source = '';
+              }
+            } elsif ($xref_source eq 'GenBank') {
+              $tr_xref_source = 'GenBank_transcript';
+            }
+
+            if ($tr_xref_source) {
+              my $dbentry = Bio::EnsEMBL::DBEntry->new(
+                -adaptor => $dbenta,
+                -dbname => $tr_xref_source,
+                -primary_id => $old_tr_id,
+                -display_id => $old_tr_id
+              );
+              $dbenta->store($dbentry, $tr->dbID, 'Transcript');
+            }
+          }
         }
       }
 
@@ -366,10 +384,17 @@ sub allocate_genes {
           
           # Xref
           if ($xref_source) {
+            my $tl_xref_source = $xref_source;
+            if ($xref_source eq 'RefSeq') {
+              $tl_xref_source = 'RefSeq_peptide';
+            } elsif ($xref_source eq 'GenBank') {
+              $tl_xref_source = 'GenBank_translation';
+            }
             my $dbentry = Bio::EnsEMBL::DBEntry->new(
               -adaptor => $dbenta,
-              -dbname => $xref_source,
-              -primary_id => $old_prot_id
+              -dbname => $tl_xref_source,
+              -primary_id => $old_prot_id,
+              -display_id => $old_prot_id
             );
             $dbenta->store($dbentry, $prot->dbID, 'Translation');
           }
