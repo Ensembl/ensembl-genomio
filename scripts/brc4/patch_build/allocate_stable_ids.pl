@@ -38,6 +38,9 @@ use LWP::UserAgent;
 use HTTP::Request;
 use JSON;
 
+my $default_analysis_name = 'brc4_import';
+
+
 {
   package OSID_service;
   
@@ -233,17 +236,21 @@ if ($opt{update} and not $opt{mock_osid}) {
   $osid = OSID_service_dev->new();
 }
 $osid->connect($opt{organism});
-allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{prefix});
+allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix});
 
 ###############################################################################
 
 sub allocate_genes {
-  my ($osid, $registry, $species, $update, $xref_source, $prefix) = @_;
+  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
   my $tra = $registry->get_adaptor($species, "core", "transcript");
   my $prota = $registry->get_adaptor($species, "core", "translation");
   my $dbenta = $registry->get_adaptor($species, "core", "dbentry");
+  my $analysa = $registry->get_adaptor($species, "core", "analysis");
+
+  my $import_an = $analysa->fetch_by_logic_name($analysis_name);
+  die if not $import_an;
   
   my $genes_count = 0;
   my $transcripts_count = 0;
@@ -312,11 +319,7 @@ sub allocate_genes {
         );
         
         # Add analysis ENA for this
-        my $ena_an = Bio::EnsEMBL::Analysis->new(
-          logic_name => 'ena',
-          id => 7122,
-        );
-        $dbentry->analysis($ena_an);
+        $dbentry->analysis($import_an);
 
         $dbenta->store($dbentry, $gene->dbID, 'Gene');
       }
@@ -389,7 +392,9 @@ sub usage {
   if ($error) {
     $help = "[ $error ]\n";
   }
-  $help .= <<'EOF';
+
+
+  $help .= <<"EOF";
     Allocate stable ids for all genes in a given core db, from an OSID system.
 
     --registry <path> : Ensembl registry
@@ -403,6 +408,7 @@ sub usage {
     --update          : Do the actual changes (default is no OSID call and no db changes)
     --prefix <str>    : Only replace ids for genes with this prefix [optional]
     --xref_source <str>: Keep the old ids under this xref name, e.g. "RefSeq" [optional]
+    --analysis_name <str>: Name of the analysis to use for the renamed xrefs (default: $default_analysis_name)
     
     --mock_osid       : Get IDs from the Fake OSID server (for dev testing with update)
 
@@ -427,10 +433,12 @@ sub opt_check {
     "mock_osid",
     "prefix:s",
     "xref_source:s",
+    "analysis_name:s",
     "help",
     "verbose",
     "debug",
   );
+  $opt{analysis_name} = $default_analysis_name if not $opt{analysis_name};
 
   usage("Registry needed") if not $opt{registry};
   usage("Species needed") if not $opt{species};
