@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pyproject.toml -- Ensembl Genome IO project configuration
-
+# pyproject.toml -- Ensembl GenomIO project configuration
 
 [build-system]
 requires = [
@@ -23,21 +22,17 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-# to use `poetry` replace with:
-#   requires = ["poetry-core>=1.0.0"]
-#   build-backend = "poetry.core.masonry.api"
-
 
 ## Generic configuration
-
 [project]
 name = "ensembl-genomio"
+requires-python = ">= 3.7"
 
 dynamic = [
     "version", # is taken from file, see [tool.setuptools.dynamic]
 ]
 
-description = "Ensembl Genome IO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
+description = "Ensembl GenomIO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
 readme = "README.md"
 
 authors = [ { name = "Ensembl", email = "dev@ensembl.org" } ]
@@ -62,7 +57,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
-requires-python = ">= 3.7"
 dependencies = [
     "bcbio-gff >= 0.6.6",
     "biopython >= 1.79",
@@ -77,7 +71,6 @@ dependencies = [
 doc = [
     "mock",
     "Sphinx",
-    "sphinx-agogo-theme",
     "toml-validator",
 ]
 
@@ -90,9 +83,11 @@ repository = "https://github.com/Ensembl/ensembl-genomio"
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
 
+[tool.setuptools]
+package-dir = {"" = "lib/python"}
+
 [tool.setuptools.packages.find]
 where = ["lib/python"]  # list of folders that contain the packages (["."] by default)
-namespaces = false  # to disable scanning PEP 420 namespaces (true by default)
 
 # For additional information on `setuptools` configuration see
 #    https://setuptools.pypa.io/en/latest/userguide/quickstart.html
