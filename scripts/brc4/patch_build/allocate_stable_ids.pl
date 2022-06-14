@@ -264,7 +264,7 @@ sub allocate_genes {
     my $nnew = scalar(@genes);
     $logger->info("Reduce list using prefix $prefix: from $nold genes to $nnew");
   }
-  $logger->info(scalar(@genes) . " genes that will have a new stable_id allocated");
+  $logger->info(scalar(@genes) . " genes will have a new stable_id allocated");
   
   # How to get all the ids
 
