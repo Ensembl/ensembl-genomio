@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """setuptools based stub for the "editable" installations"""
+
 from setuptools import setup
 
 if __name__ == "__main__":
