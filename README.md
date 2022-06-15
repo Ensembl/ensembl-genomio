@@ -30,7 +30,7 @@ If you need to install "editable" python package use '-e' option
 pip install -e ./ensembl-genomio
 ```
 
-To install additional dependencies (i.e. `[doc]` or `[dev]`) provide `[<tag>]` string. I.e.
+To install additional dependencies (e.g. `[doc]` or `[dev]`) provide `[<tag>]` string. I.e.
 ```
 pip install -e ./ensembl-genomio[dev]
 ```
