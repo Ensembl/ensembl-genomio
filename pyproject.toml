@@ -26,11 +26,8 @@ build-backend = "setuptools.build_meta"
 ## Generic configuration
 [project]
 name = "ensembl-genomio"
+version = "0.1" # should be assigned dynamically in the future
 requires-python = ">= 3.7"
-
-dynamic = [
-    "version", # is taken from file, see [tool.setuptools.dynamic]
-]
 
 description = "Ensembl GenomIO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
 readme = "README.md"
@@ -86,9 +83,6 @@ repository = "https://github.com/Ensembl/ensembl-genomio"
 
 
 ## `setuptools` related section
-[tool.setuptools.dynamic]
-version = {file = "VERSION"}
-
 [tool.setuptools]
 package-dir = {"" = "lib/python"}
 
