@@ -40,7 +40,7 @@ For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](.
 ### Docs generation
 Install python part with the `[doc]` or `[dev]` tag.
 Change into repo dir
-Run doc build sctipt.
+Run doc build script.
 
 ```
 git clone git@github.com:Ensembl/ensembl-genomio.git 
