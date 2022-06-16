@@ -1,0 +1,95 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# pyproject.toml -- Ensembl GenomIO project configuration
+
+[build-system]
+requires = [
+    "setuptools",
+    "setuptools-scm",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+
+## Generic configuration
+[project]
+name = "ensembl-genomio"
+version = "0.1" # should be assigned dynamically in the future
+requires-python = ">= 3.7"
+
+description = "Ensembl GenomIO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
+readme = "README.md"
+
+authors = [ { name = "Ensembl", email = "dev@ensembl.org" } ]
+license = { text = "Apache License 2.0" }
+# for urls see [project.urls] below 
+
+keywords = [
+    "genome_io",
+    "ensembl",
+    "bioinformatics",
+    "annotation",
+    "setup",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "bcbio-gff >= 0.6.6",
+    "biopython >= 1.79",
+    "jsonschema >= 4.6.0",
+    "intervaltree >= 3.1.0",
+    "mysql-connector-python >= 8.0.29",
+    "python-redmine >= 2.3.0",
+    "requests >= 2.28.0",
+] # see [project.optional-dependencies] for dev dependencies 
+
+[project.optional-dependencies]
+dev = [
+    "mock",
+    "Sphinx",
+    "toml-validator",
+]
+
+doc = [
+    "mock",
+    "Sphinx",
+]
+
+
+[project.urls]
+homepage = "https://www.ensembl.org"
+repository = "https://github.com/Ensembl/ensembl-genomio"
+
+
+## `setuptools` related section
+[tool.setuptools]
+package-dir = {"" = "lib/python"}
+
+[tool.setuptools.packages.find]
+where = ["lib/python"]  # list of folders that contain the packages (["."] by default)
+
+# For additional information on `setuptools` configuration see
+#    https://setuptools.pypa.io/en/latest/userguide/quickstart.html
+#    https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
+#    https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
