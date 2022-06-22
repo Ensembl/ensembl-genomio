@@ -1,6 +1,0 @@
-bcbio-gff==0.6.6
-biopython==1.79
-intervaltree==3.1.0
-numpy==1.21.2
-six==1.16.0
-sortedcontainers==2.4.0
