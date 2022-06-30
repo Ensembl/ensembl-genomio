@@ -61,7 +61,7 @@ class process_gff3(eHive.BaseRunnable):
                 "miRNA",
                 "ribozyme",
             ),
-            "ignored_types": (
+            "ignored_gene_types": (
                 "intron",
                 "region",
                 "gap",
@@ -78,6 +78,13 @@ class process_gff3(eHive.BaseRunnable):
                 "long_terminal_repeat",
                 "STS"
             ),
+            "ignored_transcript_types": (
+                    "antisense_RNA",
+                    "RNase_MRP_RNA",
+		            "3'UTR",
+                    "5'UTR",
+		            "misc_RNA"
+                    ),
             "skip_unrecognized": False,
             "merge_split_genes": False,
             "exclude_seq_regions": [],
@@ -210,7 +217,7 @@ class process_gff3(eHive.BaseRunnable):
         """
         
         allowed_gene_types = self.param("gene_types")
-        ignored_types = self.param("ignored_types")
+        ignored_gene_types = self.param("ignored_gene_types")
         ncRNA_gene_types = self.param("ncRNA_gene_types")
         skip_unrecognized = self.param("skip_unrecognized")
         to_exclude = self.param("exclude_seq_regions")
@@ -230,7 +237,7 @@ class process_gff3(eHive.BaseRunnable):
                 # GENES
                 for gene in record.features:
                     
-                    if gene.type in ignored_types:
+                    if gene.type in ignored_gene_types:
                         continue
                     
                     if gene.type in ncRNA_gene_types:
@@ -269,6 +276,7 @@ class process_gff3(eHive.BaseRunnable):
     def normalize_gene(self, gene, functional_annotation, fail_types):
 
         allowed_transcript_types = self.param("transcript_types")
+        ignored_transcript_types = self.param("ignored_transcript_types")
         skip_unrecognized = self.param("skip_unrecognized")
 
         # New gene ID
@@ -319,8 +327,8 @@ class process_gff3(eHive.BaseRunnable):
         # TRANSCRIPTS
         transcripts_to_delete = []
         for count, transcript in enumerate(gene.sub_features):
-
-            if transcript.type not in allowed_transcript_types:
+            
+            if transcript.type not in allowed_transcript_types and transcript.type not in ignored_transcript_types:
                 fail_types["transcript=" + transcript.type] = 1
                 message = (
                     f"Unrecognized transcript type: {transcript.type}"
@@ -381,13 +389,17 @@ class process_gff3(eHive.BaseRunnable):
                         "source": feat.qualifiers["source"]
                     }
                 else:
-                    fail_types["sub_transcript=" + feat.type] = 1
-                    message = (f"Unrecognized exon type for {feat.type}: {feat.id}"
-                               f" (for transcript {transcript.id} of type {transcript.type})")
-                    print(message)
-                    if skip_unrecognized:
+                    if feat.type in ignored_transcript_types:
                         exons_to_delete.append(tcount)
                         continue
+                    else:
+                        fail_types["sub_transcript=" + feat.type] = 1
+                        message = (f"Unrecognized exon type for {feat.type}: {feat.id}"
+                                   f" (for transcript {transcript.id} of type {transcript.type})")
+                        print(message)
+                        if skip_unrecognized:
+                            exons_to_delete.append(tcount)
+                            continue
             
             if exons_to_delete:
                 for elt in sorted(exons_to_delete, reverse=True):
