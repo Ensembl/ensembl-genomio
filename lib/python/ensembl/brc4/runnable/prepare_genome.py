@@ -98,6 +98,7 @@ class prepare_genome(eHive.BaseRunnable):
     def make_db_name(self, genome):
         
         prod_name = self.make_production_name(genome)
+        prod_name=prod_name.replace('.','')
         ensembl_version = str(self.param_required("ensembl_version"))
         release = str(self.param_required("release"))
         assembly_version = str(self.get_assembly_version(genome))
@@ -131,6 +132,7 @@ class prepare_genome(eHive.BaseRunnable):
                 ]
 
         db_name = "_".join(name_parts)
+        db_name=db_name.replace('.','')
         self.check_db_name_format(db_name)
 
         if db_prefix:
