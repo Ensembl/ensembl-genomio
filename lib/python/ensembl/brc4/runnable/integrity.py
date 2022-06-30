@@ -47,7 +47,7 @@ class integrity(eHive.BaseRunnable):
             Compare sequence length from fasta_dna file to seq_region.json metadata.
         
         Args:
-            manifest: Path to the manifest file
+            manifest: Path to the manifest file.
             It contains a set of files fasta, json metadata 
             and optional annotation files (gff, functional_annotation).
 
@@ -175,17 +175,17 @@ class integrity(eHive.BaseRunnable):
             raise Exception("Integrity test failed for %s:\n%s" % (manifest_path, errors_str))
 
     def check_md5sum(self, path, md5sum):
-        """Verify the integrity of the files in manifest.json 
+        """Verify the integrity of the files in manifest.json. 
         
             An MD5 hash is generated using the path provided which is then compared to the hash 
             in manifest.json.
 
         Args:
-            Path: The path for each file in the genome
-            md5sum: MD5 hash for the files
+            Path: The path for each file in the genome.
+            md5sum: MD5 hash for the files.
         
         Returns:
-            Error if the md5sum does not match
+            Error if the md5sum does not match.
         """
 
         errors = []
@@ -198,10 +198,10 @@ class integrity(eHive.BaseRunnable):
         return errors
 
     def get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
-        """Check if the fasta files have the correct ids and no stop codon
+        """Check if the fasta files have the correct ids and no stop codon.
 
         Args: 
-            fasta_path: Path to fasta_dna and fasta_pep files
+            fasta_path: Path to fasta_dna and fasta_pep files.
 
         Returns:
             Error if any empty ids, non-unique ids or stop codons are found in the fasta files.
@@ -245,16 +245,16 @@ class integrity(eHive.BaseRunnable):
             return json.load(json_file)
 
     def get_functional_annotation(self, json_path):
-        """Load the functional annotation file to retrieve the gene_id and translation id
+        """Load the functional annotation file to retrieve the gene_id and translation id.
             A functional annotation file contains information about a gene. 
             The functional annotation file is stored in a json format containing
             the description, id and object type (eg: "gene", "transcript", "translation").
 
         Args: 
-            json_path: Path to functional_annotation.json
+            json_path: Path to functional_annotation.json.
 
         Returns:
-            dict with gene and translation ids 
+            dict with gene and translation ids.
         """
 
         #Load the json file
@@ -284,14 +284,14 @@ class integrity(eHive.BaseRunnable):
 
     def parse_gff3(self, gff3_handle):
         """A GFF parser is used to retrieve information in the GFF file such as 
-           gene and CDS ids and their corresponding lengths
+           gene and CDS ids and their corresponding lengths.
         
         Args:
-            gff3_handle: Path to gff3 file
+            gff3_handle: Path to gff3 file.
 
         Returns:
             dict containing sequence ids, gene ids, transcript ids and translation ids 
-            are stored with their corresponding lengths 
+            are stored with their corresponding lengths.
         """
 
         ensembl_mode = self.param("ensembl_mode")
@@ -367,15 +367,15 @@ class integrity(eHive.BaseRunnable):
 
 
     def check_ids(self, list1, list2, name):
-        """Compare the ids in list1 and list2
+        """Compare the ids in list1 and list2.
         
         Args:
-            list1: dict containing sequence ids retrieved from functional.json
-            list2: dict containing length and id in the retrieved from the gff
+            list1: dict containing sequence ids retrieved from functional.json.
+            list2: dict containing length and id in the retrieved from the gff.
             name:  string
         
         Return:
-            Error if the ids in functional.json and gff do not match
+            Error if the ids in functional.json and gff do not match.
         """
 
         only1 = [];
@@ -402,23 +402,23 @@ class integrity(eHive.BaseRunnable):
         return errors
             
     def check_lengths(self, list1, list2, name, allowed_len_diff = None, special_diff = False):
-        """Check the difference in ids and length between list1 and list2
+        """Check the difference in ids and length between list1 and list2.
             There are a few special cases here where we allow a certain asymmetry 
             by changing the values of the arguments.
 
         Args:
-            list1: dict containing length and id of the sequence from fasta files
-            list2: dict containing length and id in the retrieved from the gff
+            list1: dict containing length and id of the sequence from fasta files.
+            list2: dict containing length and id in the retrieved from the gff.
             name:  string
     
         allowed_len_diff : set as None when we do not want to accept any difference in length between list1 and list2. 
             The value here can be changed based on how much difference in sequence length we are wanting to accept.
        
-        special_diff: set as False when no special length difference is expected between the lists
-                    This can be changed if we want to report common sequences with 1 BP difference
+        special_diff: set as False when no special length difference is expected between the lists.
+                    This can be changed if we want to report common sequences with 1 BP difference.
      
         Returns:
-            Error if there is a difference in length or ids between the lists
+            Error if there is a difference in length or ids between the lists.
         """
 
         # check list diffferences, checks if abs(values diff) < allowed_len_diff
@@ -473,13 +473,13 @@ class integrity(eHive.BaseRunnable):
             It contains sequence id, length, location and the synonyms for the sequence name from different sources.
 
         Args:
-            seqs: Sequence name and length retrieved from seq_region.json file
-            feats: Sequence name and length retrieved from the fasta and gff file
+            seqs: Sequence name and length retrieved from seq_region.json file.
+            feats: Sequence name and length retrieved from the fasta and gff file.
             name: String 
 
         Returns:
             Error if there are common sequences with difference in ids 
-            and if the sequence is not consistent between the files.
+            and if the sequences are not consistent in the files.
         """
 
         only_seqr = [];
