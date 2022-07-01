@@ -144,7 +144,7 @@ class integrity(eHive.BaseRunnable):
                     tr_errors = self.check_lengths(pep, gff["translations"], "Fasta translations vs gff", special_diff = True)
                     if len(tr_errors) > 0:
                         #The psuedo CDSs are included in this check
-                        #Psuedo CDSs are not translated,if the pseudo translation ids are not ignored in the gff it will give an error
+                        # Pseudo CDSs are not translated, if the pseudo translation ids are not ignored in the gff it will give an error
                         tr_errors = self.check_lengths(pep, gff["all_translations"], "Fasta translations vs gff (include pseudo CDS)", special_diff = True)
                         errors += tr_errors
 
