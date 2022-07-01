@@ -149,7 +149,7 @@ class integrity(eHive.BaseRunnable):
                         errors += tr_errors
 
                 #Check functional_annotation.json integrity
-                #Gene ids, translated CDS ids and translated CDSs including psuedogenes are compared to the gff                
+                #Gene ids, translated CDS ids and translated CDSs including pseudogenes are compared to the gff                
                 if func_ann:
                     errors += self.check_ids(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff")
                     tr_errors = self.check_ids(func_ann["translations"], gff["translations"], "Translation ids metadata vs gff")
