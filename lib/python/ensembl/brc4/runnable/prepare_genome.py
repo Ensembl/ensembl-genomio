@@ -132,7 +132,7 @@ class prepare_genome(eHive.BaseRunnable):
                 ]
 
         db_name = "_".join(name_parts)
-        db_name=db_name.replace('.','')
+        db_name = db_name.replace('.', '')
         self.check_db_name_format(db_name)
 
         if db_prefix:
