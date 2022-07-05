@@ -60,6 +60,7 @@ class process_gff3(eHive.BaseRunnable):
                 "ncRNA",
                 "miRNA",
                 "ribozyme",
+		"misc_RNA"
             ),
             "ignored_gene_types": (
                 "intron",
@@ -76,8 +77,7 @@ class process_gff3(eHive.BaseRunnable):
                 "tandem_repeat",
                 "cDNA_match",
                 "long_terminal_repeat",
-                "STS",
-		"misc_RNA"
+                "STS"
             ),
             "ignored_transcript_types": (
                     "antisense_RNA",
