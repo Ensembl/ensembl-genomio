@@ -31,6 +31,7 @@ import hashlib
 
 
 class integrity(eHive.BaseRunnable):
+    """Check the integrity of sequence and annotation files in the genome"""
 
     def param_defaults(self):
         return {
@@ -39,10 +40,24 @@ class integrity(eHive.BaseRunnable):
         }
 
     def run(self):
+        """Load files listed in the manifest.json and check the integrity.
+            Check if the files are correct by verifying the MD5 hash.
+            Check if translation, functional annotation and sequence region ids 
+            and lengths are consistent with the information in gff. 
+            Compare sequence length from fasta_dna file to seq_region.json metadata.
+        
+        Args:
+            manifest: Path to the manifest file.
+            It contains a set of files fasta, json metadata 
+            and optional annotation files (gff, functional_annotation).
+
+        Returns:
+            Error if any of the above checks fail.
+        """
+
         manifest_path = self.param_required("manifest")
-
         errors = []
-
+        #load the manisfest.json
         with open(manifest_path) as manifest_file:
             manifest = json.load(manifest_file)
             
@@ -51,7 +66,7 @@ class integrity(eHive.BaseRunnable):
                 if "file" in manifest[name]:
                     file_name = manifest[name]["file"]
                     file_name = path.join(path.dirname(manifest_path), file_name)
-
+                    #check if the md5sum is correct
                     md5sum = manifest[name]["md5sum"]
                     errors += self.check_md5sum(file_name, md5sum)
 
@@ -61,13 +76,13 @@ class integrity(eHive.BaseRunnable):
                         if "file" in manifest[name][f]:
                             file_name = manifest[name][f]["file"]
                             file_name = path.join(path.dirname(manifest_path), file_name)
-
+                            #check if the md5sum is correct
                             md5sum = manifest[name][f]["md5sum"]
                             errors += self.check_md5sum(file_name, md5sum)
 
                             manifest[name][f] = file_name
             
-            # Get content
+            # Get content from the manifest file and store it into following variables
             dna = {}
             pep = {}
             seq_regions = {}
@@ -82,11 +97,13 @@ class integrity(eHive.BaseRunnable):
                 gff = self.get_gff3(manifest["gff3"])
             if "fasta_dna" in manifest:
                 print("Got a fasta dna")
+                #Verify if the length and id for the sequence is unique
                 dna, dna_errors = self.get_fasta_lengths(manifest["fasta_dna"])
                 errors += dna_errors
             if "fasta_pep" in manifest:
                 print("Got a fasta pep")
                 ignore_final_stops = self.param("ignore_final_stops")
+                #Verify if the length and id for the sequence is unique
                 pep, pep_errors = self.get_fasta_lengths(manifest["fasta_pep"], ignore_final_stops = ignore_final_stops)
                 errors += pep_errors
             if "seq_region" in manifest:
@@ -94,6 +111,7 @@ class integrity(eHive.BaseRunnable):
                 seq_regions = self.get_json(manifest["seq_region"])
                 seqr_lengths = {}
                 seqr_seqlevel = {}
+                #Store the length as int
                 for seq in seq_regions:
                     seq_lengths[seq["name"]] = int(seq["length"])
                     if seq["coord_system_level"] == "contig":
@@ -108,7 +126,7 @@ class integrity(eHive.BaseRunnable):
                 print("Got a genome")
                 genome = self.get_json(manifest["genome"])
 
-            # Check genome
+            # Check if the accession is correct in genome.json 
             if genome:
                 if "assembly" in genome:
                     genome_ass = genome["assembly"]
@@ -119,18 +137,28 @@ class integrity(eHive.BaseRunnable):
 
             # Check gff3
             if gff:
+                #Check fasta_pep.fa integrity
+                #The sequence length and id retrieved from the fasta_pep file and compared to the translated CDS id and length in the gff
+                # We don't compare the peptide lengths because of seqedits
                 if pep:
-                    # We don't compare the peptide lengths because of seqedits
                     tr_errors = self.check_lengths(pep, gff["translations"], "Fasta translations vs gff", special_diff = True)
                     if len(tr_errors) > 0:
+                        #The pseudo CDSs are included in this check
+                        # Pseudo CDSs are not translated, if the pseudo translation ids are not ignored in the gff it will give an error
                         tr_errors = self.check_lengths(pep, gff["all_translations"], "Fasta translations vs gff (include pseudo CDS)", special_diff = True)
-                    errors += tr_errors
+                        errors += tr_errors
+
+                #Check functional_annotation.json integrity
+                #Gene ids, translated CDS ids and translated CDSs including pseudogenes are compared to the gff                
                 if func_ann:
-                    errors += self.check_lengths(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff", ok = "1in2")
-                    tr_errors = self.check_lengths(func_ann["translations"], gff["translations"], "Translation ids metadata vs gff", ok = "1in2")
+                    errors += self.check_ids(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff")
+                    tr_errors = self.check_ids(func_ann["translations"], gff["translations"], "Translation ids metadata vs gff")
                     if len(tr_errors) > 0:
-                        tr_errors = self.check_lengths(func_ann["translations"], gff["all_translations"], "Translation ids metadata vs gff (include pseudo CDS)", ok = "1in2")
-                    errors += tr_errors
+                        tr_errors = self.check_ids(func_ann["translations"], gff["all_translations"], "Translation ids metadata vs gff (include pseudo CDS)")
+                    errors += tr_errors   
+
+                #Check the seq.json intregrity
+                #Compare the length and id retrieved from seq.json to the gff
                 if seq_regions:
                     errors += self.check_seq_region_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff")
 
@@ -147,8 +175,20 @@ class integrity(eHive.BaseRunnable):
             raise Exception("Integrity test failed for %s:\n%s" % (manifest_path, errors_str))
 
     def check_md5sum(self, path, md5sum):
-        errors = []
+        """Verify the integrity of the files in manifest.json. 
+        
+            An MD5 hash is generated using the path provided which is then compared to the hash 
+            in manifest.json.
 
+        Args:
+            Path: The path for each file in the genome.
+            md5sum: MD5 hash for the files.
+        
+        Returns:
+            Error if the md5sum does not match.
+        """
+
+        errors = []
         with open(path, "rb") as f:
             bytes = f.read()
             readable_hash = hashlib.md5(bytes).hexdigest()
@@ -158,6 +198,15 @@ class integrity(eHive.BaseRunnable):
         return errors
 
     def get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
+        """Check if the fasta files have the correct ids and no stop codon.
+
+        Args: 
+            fasta_path: Path to fasta_dna and fasta_pep files.
+
+        Returns:
+            Error if any empty ids, non-unique ids or stop codons are found in the fasta files.
+        """
+
         data = {}
         non_unique = {}
         non_unique_count = 0
@@ -191,10 +240,24 @@ class integrity(eHive.BaseRunnable):
         return data, errors
 
     def get_json(self, json_path):
+        #Load the json files 
         with open(json_path) as json_file:
             return json.load(json_file)
 
     def get_functional_annotation(self, json_path):
+        """Load the functional annotation file to retrieve the gene_id and translation id.
+            A functional annotation file contains information about a gene. 
+            The functional annotation file is stored in a json format containing
+            the description, id and object type (eg: "gene", "transcript", "translation").
+
+        Args: 
+            json_path: Path to functional_annotation.json.
+
+        Returns:
+            dict with gene and translation ids.
+        """
+
+        #Load the json file
         with open(json_path) as json_file:
             data = json.load(json_file)
 
@@ -211,6 +274,7 @@ class integrity(eHive.BaseRunnable):
             return { "genes" : genes, "translations" : translations }
 
     def get_gff3(self, gff3_path):
+        #Load the gff file
         if gff3_path.endswith(".gz"):
             with io.TextIOWrapper(gzip.open(gff3_path, "r")) as gff3_handle:
                 return self.parse_gff3(gff3_handle)
@@ -219,6 +283,17 @@ class integrity(eHive.BaseRunnable):
                 return self.parse_gff3(gff3_handle)
 
     def parse_gff3(self, gff3_handle):
+        """A GFF parser is used to retrieve information in the GFF file such as 
+           gene and CDS ids and their corresponding lengths.
+        
+        Args:
+            gff3_handle: Path to gff3 file.
+
+        Returns:
+            dict containing sequence ids, gene ids, transcript ids and translation ids 
+            are stored with their corresponding lengths.
+        """
+
         ensembl_mode = self.param("ensembl_mode")
         seqs = {}
         genes = {}
@@ -230,13 +305,13 @@ class integrity(eHive.BaseRunnable):
             seqs[seq.id] = len(seq.seq)
             
             for feat in seq.features:
+                #Store gene id and length
                 if feat.type in ["gene", "ncRNA_gene", "pseudogene", "transposable_element"]:
                     gene_id = feat.id
                     if ensembl_mode:
                         gene_id = gene_id.replace("gene:", "")
-                    # Store gene length
                     genes[gene_id] = abs(feat.location.end - feat.location.start)
-                    # Get CDS
+                    # Get CDS id and length
                     for feat2 in feat.sub_features:
                         if feat2.type in ("mRNA", "pseudogenic_transcript"):
                             length = {}
@@ -259,6 +334,15 @@ class integrity(eHive.BaseRunnable):
         return { "seq_region": seqs, "genes": genes, "translations": peps, "all_translations": all_peps }
 
     def get_agp_seq_regions(self, agp_dict):
+        """AGP files describe the assembly of larger sequence objects using smaller objects.
+            Eg: describes the assembly of scaffolds from contigs.
+
+        Args:
+            agp_dict: dict containing the information about the sequence.
+
+        Note:
+            AGP file is only used in the older builds, not used for current processing.
+        """
 
         seqr = {}
         for agp in agp_dict:
@@ -267,6 +351,7 @@ class integrity(eHive.BaseRunnable):
             with open(agp_path, "r") as agph:
                 for line in agph:
                     (asm_id, asm_start, asm_end, asm_part, typ, cmp_id, cmp_start, cmp_end, cmp_strand) = line.split("\t")
+                    #Ignore WGS contig
                     if typ != "W":
                         continue
 
@@ -282,6 +367,17 @@ class integrity(eHive.BaseRunnable):
 
 
     def check_ids(self, list1, list2, name):
+        """Compare the ids in list1 and list2.
+        
+        Args:
+            list1: dict containing sequence ids retrieved from functional.json.
+            list2: dict containing length and id in the retrieved from the gff.
+            name:  string
+        
+        Return:
+            Error if the ids in functional.json and gff do not match.
+        """
+
         only1 = [];
         only2 = [];
         common = [];
@@ -304,21 +400,38 @@ class integrity(eHive.BaseRunnable):
             errors.append("%d only in second list in %s (first: %s)" % (len(only2), name, only2[0]))
 
         return errors
-
             
-    def check_lengths(self, list1, list2, name, allowed_len_diff = None, ok = None, special_diff = False):
+    def check_lengths(self, list1, list2, name, allowed_len_diff = None, special_diff = False):
+        """Check the difference in ids and length between list1 and list2.
+            There are a few special cases here where we allow a certain asymmetry 
+            by changing the values of the arguments.
+
+        Args:
+            list1: dict containing length and id of the sequence from fasta files.
+            list2: dict containing length and id in the retrieved from the gff.
+            name:  string
+    
+        allowed_len_diff : set as None when we do not want to accept any difference in length between list1 and list2. 
+            The value here can be changed based on how much difference in sequence length we are wanting to accept.
+       
+        special_diff: set as False when no special length difference is expected between the lists.
+                    This can be changed if we want to report common sequences with 1 BP difference.
+     
+        Returns:
+            Error if there is a difference in length or ids between the lists.
+        """
+
         # check list diffferences, checks if abs(values diff) < allowed_len_diff
-        #  use 'ok' set to "1in2" or "2in1" if it's ok to have asymmetry 
+        
         set1 = frozenset(list1)
         set2 = frozenset(list2)
-
         list1_2 = list(set1 - set2)
         list2_1 = list(set2 - set1)
 
         errors = []
-        if len(list1_2) > 0 and (ok != "2in1"):
+        if len(list1_2) > 0:
             errors.append("%s: %d from the first list only (i.e. %s)" % (name, len(list1_2),  list1_2[0]))
-        if len(list2_1) > 0 and (ok != "1in2"):
+        if len(list2_1) > 0:
             errors.append("%s: %d from the second list only (i.e. %s)" % (name, len(list2_1), list2_1[0]))
 
         common_len = 0
@@ -329,7 +442,7 @@ class integrity(eHive.BaseRunnable):
             diff_len_list = []
             diff_len_special_list = []
             for e in set1 & set2:
-                dl12 = list1[item_id] - list2[item_id]
+                dl12 = list1[e] - list2[e]
                 if abs(dl12) <= allowed_len_diff:
                     common_len += 1
                 else:
@@ -338,7 +451,7 @@ class integrity(eHive.BaseRunnable):
                     #   so assuming the stop codon is not included in the CDS (when it should be)
                     if dl12 == 1 and special_diff:
                         _dlist = diff_len_special_list
-                    _dlist.append("%s: %d vs %d" % (item_id, list1[item_id], list2[item_id]))
+                    _dlist.append("%s: %d vs %d" % (e, list1[e], list2[e]))
             if diff_len_special_list:
                 errors.append("%d common elements with one BP/AA length diff for %s (e.g. %s)" % (
                     len(diff_len_special_list), name, diff_len_special_list[0]
@@ -353,6 +466,22 @@ class integrity(eHive.BaseRunnable):
         return errors
 
     def check_seq_region_lengths(self, seqrs, feats, name):
+        """Check the integrity of seq_region.json file by comparing the length of the sequence 
+            to fasta files and the gff.
+
+            Seq_region file is in json format containing the metadata of the sequence.
+            It contains sequence id, length, location and the synonyms for the sequence name from different sources.
+
+        Args:
+            seqs: Sequence name and length retrieved from seq_region.json file.
+            feats: Sequence name and length retrieved from the fasta and gff file.
+            name: String 
+
+        Returns:
+            Error if there are common sequences with difference in ids 
+            and if the sequences are not consistent in the files.
+        """
+
         only_seqr = [];
         only_feat = [];
 
