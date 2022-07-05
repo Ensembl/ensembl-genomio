@@ -76,14 +76,14 @@ class process_gff3(eHive.BaseRunnable):
                 "tandem_repeat",
                 "cDNA_match",
                 "long_terminal_repeat",
-                "STS"
+                "STS",
+		"misc_RNA"
             ),
             "ignored_transcript_types": (
                     "antisense_RNA",
                     "RNase_MRP_RNA",
-		            "3'UTR",
-                    "5'UTR",
-		            "misc_RNA"
+		    "3'UTR",
+                    "5'UTR" 
                     ),
             "skip_unrecognized": False,
             "merge_split_genes": False,
