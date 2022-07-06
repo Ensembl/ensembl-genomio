@@ -60,6 +60,7 @@ class process_gff3(eHive.BaseRunnable):
                 "ncRNA",
                 "miRNA",
                 "ribozyme",
+                "piRNA",
             ),
             "ignored_types": (
                 "intron",

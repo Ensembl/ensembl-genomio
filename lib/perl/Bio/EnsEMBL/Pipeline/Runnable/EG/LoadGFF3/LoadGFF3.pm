@@ -80,7 +80,7 @@ sub param_defaults {
     mrna_types      => ['mRNA', 'transcript', 'misc_RNA', 'RNA',
                         'pseudogenic_transcript', 'pseudogenic_rRNA', 'pseudogenic_tRNA',
                         'ncRNA', 'lincRNA', 'miRNA', 'pre_miRNA',
-                        'lncRNA', 'lnc_RNA',
+                        'lncRNA', 'lnc_RNA', 'piRNA',
                         'RNase_MRP_RNA', 'RNAse_P_RNA', 'rRNA', 'snoRNA',
                         'snRNA', 'sRNA', 'SRP_RNA', 'tRNA', 'scRNA', 'guide_RNA',
                         'telomerase_RNA', 'antisense_RNA',
