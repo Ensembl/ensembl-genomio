@@ -111,7 +111,7 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 
 | Pipeline name | Description | Document | Comment | Module |
 | - | - | - | - | - |
-| BRC4_genome_loader | creates an [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) from a set of flat files or adds ad-hoc (ie organellas) sequences to the existing core  | [BRC4_genome_loader](docs/BRC4_genome_loader.md) | [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](lib/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
+| BRC4_genome_loader | creates an [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) from a set of flat files or adds ad-hoc (ie organellas) sequences to the existing core  | [BRC4_genome_loader](docs/BRC4_genome_loader.md) | | [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](lib/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
 | BRC4_genome_dumper | | | | |
 | | | | | |
 | BRC4_genome_prepare | | | | |
