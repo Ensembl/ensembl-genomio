@@ -764,7 +764,7 @@ class process_gff3(eHive.BaseRunnable):
         """Create a transcript ID based on a gene and the number of the transcript"""
         
         # Simply add a numbered suffix to the gene_id
-        transcript_id = "%s_t%d" (gene_id, transcript_number)
+        transcript_id = f"{gene_id}_t{transcript_number}"
 
         return transcript_id
 
