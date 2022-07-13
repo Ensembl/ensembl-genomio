@@ -87,6 +87,7 @@ class process_gff3(eHive.BaseRunnable):
                     "5'UTR" 
                     ),
             "skip_unrecognized": False,
+            "allow_pseudogene_with_CDS": False,
             "merge_split_genes": False,
             "exclude_seq_regions": [],
             "validate_gene_id": True,
@@ -412,7 +413,10 @@ class process_gff3(eHive.BaseRunnable):
         
         # PSEUDOGENE CDS IDs
         if gene.type == "pseudogene":
-            self.normalize_pseudogene_cds(gene)
+            if self.param('allow_pseudogene_with_cds'):
+                self.normalize_pseudogene_cds(gene)
+            else:
+                self.remove_cds_from_pseudogene(gene)
     
         return gene
 
@@ -743,6 +747,18 @@ class process_gff3(eHive.BaseRunnable):
                     if feat.id == "" or gene.id == feat.id:
                         feat.id = "%s_cds" % transcript.id
                         feat.qualifiers["ID"] = feat.id
+    
+    def remove_cds_from_pseudogene(self, gene) -> None:
+        """Remove CDS from a pseudogene
+        This assumes the CDSs are sub features of the transcript
+        """
+
+        for transcript in gene.sub_features:
+            new_subfeats = []
+            for feat in transcript.sub_features:
+                if not feat.type == "CDS":
+                    new_subfeats.append(feat)
+            transcript.sub_features = new_subfeats
     
     def make_transcript_id(self, gene_id, transcript_number) -> str:
         """Create a transcript ID based on a gene and the number of the transcript"""
