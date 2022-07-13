@@ -15,8 +15,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-=cut
+=head1 NAME
 
+Genome prepare pipeline for BRC/Metazoa.
+
+See full documentation in docs/BRC4_genome_preapre_conf.md
+
+=cut
 
 package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_prepare_conf;
 
