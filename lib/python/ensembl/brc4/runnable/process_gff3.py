@@ -87,6 +87,7 @@ class process_gff3(eHive.BaseRunnable):
                     "5'UTR" 
                     ),
             "skip_unrecognized": False,
+            "allow_pseudogene_with_CDS": False,
             "merge_split_genes": False,
             "exclude_seq_regions": [],
             "validate_gene_id": True,
@@ -321,9 +322,9 @@ class process_gff3(eHive.BaseRunnable):
             transcript = self.gene_to_exon(gene)
             gene.sub_features = [transcript]
 
-        # Store gene functional annotation
-        self.transfer_description(gene)
-        self.add_funcann_feature(functional_annotation, gene, "gene")
+        # Remove CDS from pseudogenes
+        if gene.type == 'pseudogene' and not self.param('allow_pseudogene_with_cds'):
+            self.remove_cds_from_pseudogene(gene)
         
         # TRANSCRIPTS
         transcripts_to_delete = []
@@ -411,8 +412,12 @@ class process_gff3(eHive.BaseRunnable):
                 gene.sub_features.pop(elt)
         
         # PSEUDOGENE CDS IDs
-        if gene.type == "pseudogene":
-            self.normalize_pseudogene_cds(gene)
+        if gene.type == "pseudogene" and self.param('allow_pseudogene_with_cds'):
+                self.normalize_pseudogene_cds(gene)
+
+        # Finally, store gene functional annotation
+        self.transfer_description(gene)
+        self.add_funcann_feature(functional_annotation, gene, "gene")
     
         return gene
 
@@ -744,11 +749,31 @@ class process_gff3(eHive.BaseRunnable):
                         feat.id = "%s_cds" % transcript.id
                         feat.qualifiers["ID"] = feat.id
     
+    def remove_cds_from_pseudogene(self, gene) -> None:
+        """Remove CDS from a pseudogene
+        This assumes the CDSs are sub features of the transcript or the gene
+        """
+
+        gene_subfeats = []
+        for transcript in gene.sub_features:
+            if transcript.type == "CDS":
+                print(f"Remove pseudo CDS {transcript.id}")
+                continue
+            new_subfeats = []
+            for feat in transcript.sub_features:
+                if feat.type == "CDS":
+                    print(f"Remove pseudo CDS {feat.id}")
+                    continue
+                new_subfeats.append(feat)
+            transcript.sub_features = new_subfeats
+            gene_subfeats.append(transcript)
+        gene.sub_features = gene_subfeats
+    
     def make_transcript_id(self, gene_id, transcript_number) -> str:
         """Create a transcript ID based on a gene and the number of the transcript"""
         
         # Simply add a numbered suffix to the gene_id
-        transcript_id = "%s_t%d" (gene_id, transcript_number)
+        transcript_id = f"{gene_id}_t{transcript_number}"
 
         return transcript_id
 
