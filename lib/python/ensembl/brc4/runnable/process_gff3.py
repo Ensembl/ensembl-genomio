@@ -88,7 +88,7 @@ class process_gff3(eHive.BaseRunnable):
                     "intron"
                     ),
             "skip_unrecognized": False,
-            "skip_transcript" : True,
+            "skip_transcript" : False,
             "allow_pseudogene_with_CDS": False,
             "merge_split_genes": False,
             "exclude_seq_regions": [],
