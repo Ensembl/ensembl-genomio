@@ -88,7 +88,7 @@ class process_gff3(eHive.BaseRunnable):
                     "intron"
                     ),
             "skip_unrecognized": False,
-            "skip_transcript" : False,
+            "gene_cds_skip_others" : False,
             "allow_pseudogene_with_CDS": False,
             "merge_split_genes": False,
             "exclude_seq_regions": [],
@@ -517,13 +517,13 @@ class process_gff3(eHive.BaseRunnable):
     
     def gene_to_cds(self, gene) -> list:
         """Create a transcript - exon - cds chain"""
-        skip_transcript = self.param("skip_transcript")
+        gene_cds_skip_others = self.param("gene_cds_skip_others")
         transcripts_dict = {}
         del_transcript = []
 
         for count, cds in enumerate(gene.sub_features):
             if cds.type != "CDS":
-                if skip_transcript:
+                if gene_cds_skip_others:
                     del_transcript.append(count)
                     continue
                 else:
