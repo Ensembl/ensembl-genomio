@@ -69,7 +69,7 @@ cd ./ensembl-genomio
 ### Initialising and running eHive-based pipelines
 
 Pipelines are derived from [`Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf`](https://github.com/Ensembl/ensembl-hive/blob/version/2.6/modules/Bio/EnsEMBL/Hive/PipeConfig/HiveGeneric_conf.pm),
-or from [`'Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf`](https://github.com/Ensembl/ensembl-hive/blob/version/2.6/modules/Bio/EnsEMBL/Hive/PipeConfig/EnsemblGeneric_conf.pm),
+or from [`Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf`](https://github.com/Ensembl/ensembl-hive/blob/version/2.6/modules/Bio/EnsEMBL/Hive/PipeConfig/EnsemblGeneric_conf.pm),
 of from [`Bio::EnsEMBL::EGPipeline::PipeConfig::EGGeneric_conf`](https://github.com/Ensembl/ensembl-production-imported/blob/main/lib/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/EGGeneric_conf.pm) (see [documentation](https://github.com/Ensembl/ensembl-production-imported/blob/main/docs/EGGeneric.md)).
 
 And the same perl class prefix used for every pipeline:
