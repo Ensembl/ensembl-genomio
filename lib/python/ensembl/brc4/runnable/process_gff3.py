@@ -240,8 +240,6 @@ class process_gff3(eHive.BaseRunnable):
                 
                 # GENES
                 for gene in record.features:
-                    
-                    
                     if gene.type in ignored_gene_types:
                         continue
                     
