@@ -1014,11 +1014,10 @@ class load_sequence_data(eHive.BaseRunnable):
         Throws exception if not able to get seq_region_id from "seq_region_map" and "throw_missing" is true.
         """
         #   get seq_region_id (perhaps, by using unversioned name)
-        unversion = self.param("unversion_scaffolds")
         seq_region_name = seq_region_item["name"]
         seq_region_id = seq_region_map.get(seq_region_name, None)
         unversioned_name = None
-        if seq_region_id is None and unversion:
+        if seq_region_id is None and try_unversion:
         # try to get seq_region_id for the unversioned name
             unversioned_name = re.sub(r"\.\d+$", "", seq_region_name)
             seq_region_id = seq_region_map.get(unversioned_name, "")
