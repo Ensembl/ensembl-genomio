@@ -83,10 +83,12 @@ class process_gff3(eHive.BaseRunnable):
             "ignored_transcript_types": (
                     "antisense_RNA",
                     "RNase_MRP_RNA",
-		    "3'UTR",
-                    "5'UTR" 
+                    "3'UTR",
+                    "5'UTR",
+                    "intron"
                     ),
             "skip_unrecognized": False,
+            "gene_cds_skip_others" : False,
             "allow_pseudogene_with_CDS": False,
             "merge_split_genes": False,
             "exclude_seq_regions": [],
@@ -238,7 +240,6 @@ class process_gff3(eHive.BaseRunnable):
                 
                 # GENES
                 for gene in record.features:
-                    
                     if gene.type in ignored_gene_types:
                         continue
                     
@@ -329,7 +330,6 @@ class process_gff3(eHive.BaseRunnable):
         # TRANSCRIPTS
         transcripts_to_delete = []
         for count, transcript in enumerate(gene.sub_features):
-            
             if transcript.type not in allowed_transcript_types and transcript.type not in ignored_transcript_types:
                 fail_types["transcript=" + transcript.type] = 1
                 message = (
@@ -515,16 +515,23 @@ class process_gff3(eHive.BaseRunnable):
     
     def gene_to_cds(self, gene) -> list:
         """Create a transcript - exon - cds chain"""
-
+        
+        gene_cds_skip_others = self.param("gene_cds_skip_others")
         transcripts_dict = {}
+        del_transcript = []
 
-        for cds in gene.sub_features:
+        for count, cds in enumerate(gene.sub_features):
             if cds.type != "CDS":
-                raise Exception(
-                    "Can not create a chain 'transcript - exon - CDS'"
-                    f" when the gene children are not all CDSs"
-                    f" ({cds.id} of type {cds.type} is child of gene {gene.id})"
-                )
+                if gene_cds_skip_others:
+                    del_transcript.append(count)
+                    continue
+                else:
+                    raise Exception(
+                        "Can not create a chain 'transcript - exon - CDS'"
+                        f" when the gene children are not all CDSs"
+                        f" ({cds.id} of type {cds.type} is child of gene {gene.id})"
+                    )
+     
             exon = SeqFeature(cds.location, type="exon")
 
             # Add to transcript or create a new one
@@ -535,6 +542,9 @@ class process_gff3(eHive.BaseRunnable):
             exon.qualifiers["source"] = gene.qualifiers["source"]
             transcripts_dict[cds.id].sub_features.append(exon)
             transcripts_dict[cds.id].sub_features.append(cds)
+
+        for elt in sorted(del_transcript, reverse=True):
+            gene.sub_features.pop(elt)
 
         transcripts = list(transcripts_dict.values())
         
