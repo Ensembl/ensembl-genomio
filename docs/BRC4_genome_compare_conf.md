@@ -1,7 +1,6 @@
 # **Compare genomes pipeline**
 *MODULE*: *[Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf](https://github.com/Ensembl/ensembl-genomio/blob/main/lib/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_compare_conf.pm)*
 
-
 ## **Overview**
 -----
 This pipeline is used for a sequence-level comparison of an assembly with INSDC and provides a detailed report on the discrepencies. The following steps are performed:
@@ -14,7 +13,6 @@ This pipeline is used for a sequence-level comparison of an assembly with INSDC 
        - MD5 check of the files
        - identify organellar sequences in both assemblies
   4. Report the results
-<br>
 
 ## **How to run**:
 ```
@@ -26,7 +24,6 @@ init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf \
   --tmp_dir temp/compare \
   --species acanthamoeba_astronyxis_gca000826245
 ```
-<br>
 
 ### **PARAMETERS**
 | Options | type | default value | mandatory |  description |
@@ -39,11 +36,9 @@ init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf \
 | `--species`         | str |                        | yes| species to process (production name) |
 | `--run_all`         | int |     0                   | yes| process all the species in the registry | 
 | `--email`           | str |  $USER.ebi.ac.uk                     | optional| a summary is emailed when the pipeline is complete | 
-<br>
 
 Note:
 Either use --species  to run one or multiple species separately or --run_all 1 for all the species in the database.
-<br>
 Currently this pipeline is only used to compare with Genbank assembly. 
 ## **RESULT**
 ---------------------------------------------------
