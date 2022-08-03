@@ -46,7 +46,7 @@ Currently this pipeline is only used to compare with Genbank assembly.
 ---------------------------------------------------
 Generates 3 files:
   - report.log: A tab-delimited file containing a summary of the compared sequences between the INSDC assembly/assemblies and the database(s)
-    - The compare genomes report file contains 13 columns: 
+    - The report contains 13 columns: 
       - species: name of the species 
       - accession: GCA accession
       - seq_count_1: total number of sequences in INSDC
