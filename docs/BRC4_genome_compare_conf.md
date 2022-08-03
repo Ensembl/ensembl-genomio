@@ -40,7 +40,7 @@ init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf \
 | `--email`           | str |  $USER.ebi.ac.uk                     | optional| a summary is emailed when the pipeline is complete | 
 
 Note:
-Either use --species  to run one or multiple species separately or --run_all 1 for all the species in the database.
+Either use ```--species``` to run one or multiple species separately or ```--run_all 1``` for all the species in the database.
 Currently this pipeline is only used to compare with Genbank assembly. 
 ## **RESULT**
 ---------------------------------------------------
