@@ -16,7 +16,8 @@ This pipeline is used for a sequence-level comparison of an assembly with INSDC 
 
 ## **Prerequisites**
 A [registry file](https://www.ensembl.org/info/docs/api/registry.html) to connect to the database.
-## **How to run**:
+
+## **Example of how to create the pipeline**
 ```
 init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf \
   --host $HOST --port $PORT --user $USER --pass $PASS \
