@@ -29,7 +29,7 @@ init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf \
 ```
 
 ### **PARAMETERS**
-| Options | type | default value | mandatory |  description |
+| Options | Type | Default value | Mandatory | Description |
 | - | - |  - |  - | - |
 | `--registry` | file |  | yes | service that connects to the database |
 | `--pipeline_name` | str | brc4_genome_compare |   optional| name of the hive pipeline |
