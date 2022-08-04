@@ -64,13 +64,3 @@ Generates 3 files:
   
   - species_fasta_dna.map: A [JSON schema](https://github.com/Ensembl/ensembl-genomio/blob/main/schema/seq_region_schema.json) file containing metadata of the common sequences
   - species_fasta_dna.log: Detailed report of mismatched sequences
-
-
-
-
-
-
-
-
-
-
