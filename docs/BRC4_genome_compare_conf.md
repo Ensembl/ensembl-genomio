@@ -33,7 +33,7 @@ init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf \
 | - | - |  - |  - | - |
 | `--registry` | file |  | yes | service that connects to the database |
 | `--pipeline_name` | str | brc4_genome_compare |   optional| name of the hive pipeline |
-| `--hive_force_init` | int |  | yes | drop and run the hive pipeline from scratch | 
+| `--hive_force_init` | int |  | yes | drop and create the hive pipeline from scratch | 
 | `--output_dir`      | dir |   ./output                     | optional| directory to store the result | 
 | `--tmp_dir`         | dir |   ./tmp                     | optional| temp directory for dowloaded files |
 | `--species`         | str |                        | yes| species (one or muliple) to process (production name) |
