@@ -50,7 +50,7 @@ sub fetch_input {
   }
   
   # Dump file
-  my $dump_file = $organism ? $organism . ".sql.gz" : $species . "sql.gz";
+  my $dump_file = $organism ? $organism . ".sql.gz" : $species . ".sql.gz";
   my $dump_path = catfile($output_dir, $dump_file);
   $self->param('output_file', $dump_path);
   
