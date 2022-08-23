@@ -80,6 +80,8 @@ sub default_options {
     
     # Enforce a strong gene ID pattern (replace by GeneID if available)
     validate_gene_id => 0,
+    # If no gene_id, generate an id for everything else
+    make_missing_stable_id => 0,
 
     ############################################
     # Config unlikely to be changed by the user
@@ -246,6 +248,7 @@ sub pipeline_analyses {
         in_gff3 => "#gff3_flat#",
         merge_split_genes => $self->o('merge_split_genes'),
         validate_gene_id => $self->o('validate_gene_id'),
+        make_missing_stable_id => $self->o('make_missing_stable_id'),
       },
       -max_retry_count => 0,
       -failed_job_tolerance => 100,
