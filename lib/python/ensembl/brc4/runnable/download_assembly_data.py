@@ -108,7 +108,7 @@ class download_assembly_data(eHive.BaseRunnable):
 
         print("File sums from %s: %d" % (md5_path, len(sums)))
         
-        for dl_file, checksum in sums.items():         
+        for dl_file, checksum in sums.items():
             file_path = os.path.join(dl_dir, dl_file)
             
             if not os.path.isfile(file_path):
