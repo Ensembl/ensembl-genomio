@@ -89,6 +89,7 @@ class compare_fasta(eHive.BaseRunnable):
         species = self.param_required("species")
         name = self.param_required("comparison_name")
         accession = self.param_required("accession")
+        
 
         map_dna = self.get_map(map_dna_path)
         seq1 = self.get_fasta(fasta1, map_dna)
