@@ -24,7 +24,15 @@ import hashlib
 
 
 class download_assembly_data(eHive.BaseRunnable):
-    
+    file_types = {
+                "assembly_report.txt": "report",
+                "genomic.fna.gz": "fasta_dna",
+                "protein.faa.gz": "fasta_pep",
+                "genomic.gff.gz": "gff3_raw",
+                "genomic.gbff.gz": "gbff",
+                "md5checksums.txt": "INSDC_md5sum"
+        }
+
     @staticmethod
     def param_defaults() -> Dict[str, Any]:
         return {
@@ -37,21 +45,13 @@ class download_assembly_data(eHive.BaseRunnable):
         accession = self.param_required('accession')
         main_download_dir = self.param_required('download_dir')
         download_dir = main_download_dir + "/" + accession
-        file_ends = {
-                "assembly_report.txt" : "report",
-                "genomic.fna.gz" : "fasta_dna",
-                "protein.faa.gz" : "fasta_pep",
-                "genomic.gff.gz" : "gff3_raw",
-                "genomic.gbff.gz" : "gbff",
-                "md5checksums.txt": "INSDC_md5sum"
-        }
-
+        
         # Set and create dedicated dir for download
         if not os.path.isdir(download_dir):
             os.makedirs(download_dir)
 
         # Download if files don't exist or fail checksum
-        if not self.md5_files(download_dir, file_ends):
+        if not self.md5_files(download_dir):
             print("Download the files")
             
             max_increment = self.param('max_increment')
@@ -66,16 +66,16 @@ class download_assembly_data(eHive.BaseRunnable):
                     if not os.path.isdir(download_dir):
                         os.makedirs(download_dir)
                 try:
-                    self.download_files(accession, download_dir, file_ends)
+                    self.download_files(accession, download_dir)
                     break
                 except Exception:
                     print("Can't download files for %s" % accession)
 
-            if not self.md5_files(download_dir, file_ends):
+            if not self.md5_files(download_dir):
                 raise Exception("Failed md5sum of downloaded files")
 
         # Select specific files and give them a name
-        files = self.get_files_selection(download_dir, file_ends)
+        files = self.get_files_selection(download_dir)
 
         if len(files) == 0:
             raise Exception("No file downloaded")
@@ -92,16 +92,15 @@ class download_assembly_data(eHive.BaseRunnable):
             json_data = json.load(json_file)
         return json_data
 
-    def md5_files(self, dl_dir: str, file_ends) -> bool:
+    def md5_files(self, dl_dir: str) -> bool:
         """
         Check all files checksums with the sums listed in a checksum file, if available.
         Return False if there is no checksum file, or a file is missing, or has a wrong checksum.
         """
         md5_file = "md5checksums.txt"
-
         # Get checksums and compare
         md5_path = os.path.join(dl_dir, md5_file)
-        sums = self.get_checksums(md5_path, file_ends)
+        sums = self.get_checksums(md5_path)
         
         if not sums:
             return
@@ -128,8 +127,7 @@ class download_assembly_data(eHive.BaseRunnable):
         print("All checksums OK")
         return True
     
-    @staticmethod
-    def get_checksums(checksum_path: str, file_ends: dict) -> Dict[str, str]:
+    def get_checksums(self,checksum_path: str) -> Dict[str, str]:
         """
         Get a dict of checksums from a file, with file names as keys and sums as values
         """
@@ -142,14 +140,13 @@ class download_assembly_data(eHive.BaseRunnable):
             for line in fh:
                 checksum, file_path = line.strip().split("  ")
                 file_path = file_path[2:]
-                if any(file_path.endswith(end) and "_from_" not in file_path for end in file_ends):
-                    if not file_path.find("/") >= 0:
+                if any(file_path.endswith(end) and "_from_" not in file_path for end in self.file_types):
+                    if "/" not in file_path:
                         sums[file_path] = checksum
                         
         return sums
 
-    @staticmethod
-    def download_files(accession: str, dl_dir: str, file_ends: dict) -> None:
+    def download_files(self,accession: str, dl_dir: str) -> None:
         """
         Given an INSDC accession, download all available files from the ftp to the download dir
         """
@@ -173,12 +170,12 @@ class download_assembly_data(eHive.BaseRunnable):
                 # Get all the files
                 for filename in f.nlst():
                     # Copy selected file locally
-                    if any(filename.endswith(end) and "_from_" not in filename for end in file_ends):
+                    if any(filename.endswith(end) and "_from_" not in filename for end in self.file_types):
                         local_path = os.path.join(dl_dir, filename)
                         with open(local_path, 'wb') as fp:
                             f.retrbinary("RETR " + filename, fp.write)
 
-    def get_files_selection(self, dl_dir: str, file_ends: dict) -> Dict[str, str]:
+    def get_files_selection(self, dl_dir: str) -> Dict[str, str]:
         """
         Among all the files downloaded, only keep a subset for which we use a controlled name.
         Return a dict[name] = file_path
@@ -198,7 +195,7 @@ class download_assembly_data(eHive.BaseRunnable):
             raise Exception("Could not determine the files root name in %s" % dl_dir)
 
         for dl_file in os.listdir(dl_dir):
-            for end, name in file_ends.items():
+            for end, name in self.file_types.items():
                 file_with_end = dl_file.endswith(end) and not dl_file.endswith("md5checksums" + end)
                 if root_name and dl_file == root_name + end or file_with_end:
                     files[name] = os.path.join(dl_dir, dl_file)
