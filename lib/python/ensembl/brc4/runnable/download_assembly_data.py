@@ -24,6 +24,14 @@ import hashlib
 
 
 class download_assembly_data(eHive.BaseRunnable):
+
+    file_ends = {
+            "assembly_report.txt" : "report",
+            "genomic.fna.gz" : "fasta_dna",
+            "protein.faa.gz" : "fasta_pep",
+            "genomic.gff.gz" : "gff3_raw",
+            "genomic.gbff.gz" : "gbff",
+    }
     
     @staticmethod
     def param_defaults() -> Dict[str, Any]:
@@ -57,11 +65,7 @@ class download_assembly_data(eHive.BaseRunnable):
                     download_dir = main_download_dir + "/" + accession
                     if not os.path.isdir(download_dir):
                         os.makedirs(download_dir)
-                try:
-                    self.download_files(accession, download_dir)
-                    break
-                except Exception:
-                    print("Can't download files for %s" % accession)
+                self.download_files(accession, download_dir)
 
             if not self.md5_files(download_dir):
                 raise Exception("Failed md5sum of downloaded files")
@@ -101,21 +105,24 @@ class download_assembly_data(eHive.BaseRunnable):
         print("File sums from %s: %d" % (md5_path, len(sums)))
         
         for dl_file, checksum in sums.items():
-            file_path = os.path.join(dl_dir, dl_file)
-            
-            if not os.path.isfile(file_path):
-                print("No file %s found" % file_path)
-                return False
-            
-            # Check the file checksum
-            with open(file_path, mode='rb') as f:
-                content = f.read()
-                file_sum = hashlib.md5(content).hexdigest()
-            if file_sum != checksum:
-                print("File %s checksum doesn't match" % file_path)
-                return False
-            else:
-                print("File checksum ok %s" % file_path)
+            for end in self.file_ends:
+                if dl_file.endswith(end):
+
+                    file_path = os.path.join(dl_dir, dl_file)
+                    
+                    if not os.path.isfile(file_path):
+                        print("No file %s found" % file_path)
+                        return False
+                    
+                    # Check the file checksum
+                    with open(file_path, mode='rb') as f:
+                        content = f.read()
+                        file_sum = hashlib.md5(content).hexdigest()
+                    if file_sum != checksum:
+                        print("File %s checksum doesn't match" % file_path)
+                        return False
+                    else:
+                        print("File checksum ok %s" % file_path)
 
         print("All checksums OK")
         return True
@@ -139,8 +146,7 @@ class download_assembly_data(eHive.BaseRunnable):
 
         return sums
 
-    @staticmethod
-    def download_files(accession: str, dl_dir: str) -> None:
+    def download_files(self, accession: str, dl_dir: str) -> None:
         """
         Given an INSDC accession, download all available files from the ftp to the download dir
         """
@@ -157,21 +163,56 @@ class download_assembly_data(eHive.BaseRunnable):
         f.login()
         f.cwd("genomes/all/%s/%s/%s/%s" % parts)
 
+        max_redo = 3
+
         for (ftp_dir, entry) in f.mlsd():
             if re.match(accession, ftp_dir):
                 f.cwd(ftp_dir)
+            
+                # First, get the md5sum file
+                md5_file = 'md5checksums.txt'
+                md5_path = os.path.join(dl_dir, md5_file)
+                with open(md5_path, "wb") as fp:
+                    f.retrbinary("RETR " + md5_file, fp.write)
+                md5_sums = self.get_checksums(md5_path)
                 
                 # Get all the files
                 for (ftp_file, file_entry) in f.mlsd():
-                    if re.match(r'^\.', ftp_file):
-                        continue
-                    if file_entry["type"] == "dir":
-                        continue
+                    for end in self.file_ends:
+                        if ftp_file.endswith(end):
+                            if not ftp_file in md5_sums:
+                                raise Exception(f"Missing file: {ftp_file} for {accession}")
+                            expected_sum = md5_sums[ftp_file]
+                            local_path = os.path.join(dl_dir, ftp_file)
 
-                    # Copy the file locally
-                    local_path = os.path.join(dl_dir, ftp_file)
-                    with open(local_path, 'wb') as fp:
-                        f.retrbinary("RETR " + ftp_file, fp.write)
+                            # File exists? Check md5sum before anything else
+                            if os.path.isfile(local_path):
+                                with open(local_path, mode='rb') as fp:
+                                    content = fp.read()
+                                    file_sum = hashlib.md5(content).hexdigest()
+                                    if file_sum == expected_sum:
+                                        print(f"File {local_path} is already downloaded properly")
+                                        continue
+
+                            file_sum = ''
+                            redo = 0
+                            while (file_sum != expected_sum and redo <= max_redo):
+                                redo += 1
+                                print(f"Downloading file {ftp_file}, try {redo}...")
+
+                                # Download the file
+                                with open(local_path, 'wb') as fp:
+                                    f.retrbinary("RETR " + ftp_file, fp.write)
+                                # Compute checksum
+                                with open(local_path, mode='rb') as fp:
+                                    content = fp.read()
+                                    file_sum = hashlib.md5(content).hexdigest()
+                            if expected_sum == file_sum:
+                                print(f"Downloaded file properly to {local_path}")
+                            else:
+                                raise Exception(f"Could not download file {ftp_file} properly after {redo} tries")
+                                
+
 
     def get_files_selection(self, dl_dir: str) -> Dict[str, str]:
         """
@@ -187,13 +228,7 @@ class download_assembly_data(eHive.BaseRunnable):
             gbff
         """
         files = {}
-        file_ends = {
-                "assembly_report.txt" : "report",
-                "genomic.fna.gz" : "fasta_dna",
-                "protein.faa.gz" : "fasta_pep",
-                "genomic.gff.gz" : "gff3_raw",
-                "genomic.gbff.gz" : "gbff",
-        }
+        file_ends = self.file_ends
 
         root_name = self.get_root_name(dl_dir)
         if root_name == '':
