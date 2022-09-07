@@ -39,6 +39,8 @@ class download_assembly_data(eHive.BaseRunnable):
             # Set this manually to a higher value if you want to allow assembly versions
             # higher than the one provided (it will fail if the version given is not the latest)
             "max_increment": 0,
+            # Set max number of times to retry downloading a file
+            "max_redo": 3,
         }
 
     def run(self):
@@ -163,7 +165,7 @@ class download_assembly_data(eHive.BaseRunnable):
         f.login()
         f.cwd("genomes/all/%s/%s/%s/%s" % parts)
 
-        max_redo = 3
+        max_redo = self.param("max_redo")
 
         for (ftp_dir, entry) in f.mlsd():
             if re.match(accession, ftp_dir):
