@@ -252,7 +252,10 @@ class process_gff3(eHive.BaseRunnable):
                     if gene.type == "CDS":
                         # Lone CDS: add a gene-transcript parent
                         print("Make a gene for lone cds %s" % (gene.id))
+                        is_pseudo = ("pseudo" in gene.qualifiers and gene.qualifiers["pseudo"][0] == "true")
                         gene = self.cds_gene(gene)
+                        if is_pseudo:
+                            gene.type = "pseudogene"
                         
                     if gene.type in allowed_gene_types:
                         gene = self.normalize_gene(gene, functional_annotation, fail_types)
