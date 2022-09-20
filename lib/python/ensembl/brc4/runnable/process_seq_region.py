@@ -121,7 +121,7 @@ class process_seq_region(eHive.BaseRunnable):
         
         # Setup the BRC4_seq_region_name
         if brc4_mode:
-            self.add_brc4_ebi_name(seq_regions)
+            seq_regions = self.add_brc4_ebi_name(seq_regions)
 
         # Guess translation table
         self.guess_translation_table(seq_regions)
@@ -173,7 +173,7 @@ class process_seq_region(eHive.BaseRunnable):
             if "location" in seqr and seqr["location"] in location_codon:
                 seqr["codon_table"] = location_codon[seqr["location"]]
 
-    def add_brc4_ebi_name(self, seq_regions: List[SeqRegion]) -> None:
+    def add_brc4_ebi_name(self, seq_regions: List[SeqRegion]) -> List[SeqRegion]:
         """Use the INSDC seq_region name without version as the default BRC4 and EBI names.
 
         Args:
@@ -184,6 +184,7 @@ class process_seq_region(eHive.BaseRunnable):
         """
         source = "INSDC"
         
+        new_seq_regions = []
         for seqr in seq_regions:
             if "synonyms" in seqr:
                 for syn in seqr["synonyms"]:
@@ -195,14 +196,9 @@ class process_seq_region(eHive.BaseRunnable):
                         seqr["EBI_seq_region_name"] = flat_name
 
             if "BRC4_seq_region_name" not in seqr:
-                report_path = self.param('report')
-                genome_data = self.param('genome_data')
-                accession = genome_data["assembly"]["accession"]
-
-                sname = seqr["name"]
-                msg = (f"Replace GenBank-Accn for {sname} in the report"
-                       " with a valid INSDC accession")
-                raise MissingDataError(report_path, accession, msg)
+                continue
+            new_seq_regions.append(seqr)
+        return new_seq_regions 
 
     def add_mitochondrial_codon_table(self, seq_regions: List[SeqRegion], tax_id: int) -> None:
         """Add the codon table for mitochondria based on taxonomy.

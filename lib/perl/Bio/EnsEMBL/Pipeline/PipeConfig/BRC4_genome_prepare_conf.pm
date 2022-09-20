@@ -222,6 +222,7 @@ sub pipeline_analyses {
         WHEN("#gff3_raw#", ['Ungzip_gff3', 'Process_fasta_pep']),
         'Process_seq_region',
         'Process_fasta_dna',
+        'Amend_genome_metadata',
       ],
     },
 
@@ -285,6 +286,22 @@ sub pipeline_analyses {
       -rc_name    => 'default',
       -parameters     => {
         file_name => "seq_region",
+      },
+      -max_retry_count => 0,
+      -failed_job_tolerance => 100,
+      -flow_into  => {
+        2 => 'Check_json_schema'
+      },
+    },
+
+    {
+      -logic_name => 'Amend_genome_metadata',
+      -module     => 'ensembl.brc4.runnable.amend_genome_metadata',
+      -language    => 'python3',
+      -analysis_capacity   => 5,
+      -rc_name    => 'default',
+      -parameters     => {
+        file_name => "genome",
       },
       -max_retry_count => 0,
       -failed_job_tolerance => 100,
