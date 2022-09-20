@@ -81,7 +81,9 @@ class process_seq_region(eHive.BaseRunnable):
                 "chromosome": "nuclear_chromosome",
                 "mitochondrion": "mitochondrial_chromosome",
                 "apicoplast": "apicoplast_chromosome",
-                "plasmid": "plasmid"
+                "plasmid": "plasmid",
+                "kinetoplast": "kinetoplast_chromosome",
+                "linkage group": "linkage_group"
             },
             "location_codon": {
                 "apicoplast_chromosome": 4
