@@ -93,7 +93,8 @@
         "added_sequence" : { "$ref" : "#/definitions/added_sequence_info" }
       },
       "required" : [
-        "name"
+        "name",
+        "length"
       ]
     },
     "provider_info" : {

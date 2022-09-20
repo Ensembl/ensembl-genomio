@@ -322,6 +322,8 @@ class process_seq_region(eHive.BaseRunnable):
 
             for record in SeqIO.parse(gbff_file, "genbank"):
                 seqr: SeqRegion = {}
+
+                seqr["length"] = len(record.seq)
                 
                 # Is the seq_region circular?
                 annotations = record.annotations
