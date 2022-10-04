@@ -172,6 +172,9 @@ class process_seq_region(eHive.BaseRunnable):
         location_codon = self.param("location_codon")
         
         for seqr in seq_regions:
+            # Don't overwrite the existing codon table
+            if "codon_table" in seqr:
+                continue
             if "location" in seqr and seqr["location"] in location_codon:
                 seqr["codon_table"] = location_codon[seqr["location"]]
 
@@ -245,12 +248,12 @@ class process_seq_region(eHive.BaseRunnable):
         """
         server = "https://www.ebi.ac.uk"
         ext = "/ena/data/taxonomy/v1/taxon/tax-id/" + str(tax_id)
+        genetic_code: int = 0
 
         r = requests.get(
             server + ext, headers={"Content-Type": "application/json"})
         decoded = r.json()
 
-        genetic_code: int = 0
         try:
             if "mitochondrialGeneticCode" in decoded:
                 genetic_code = int(decoded["mitochondrialGeneticCode"])
@@ -344,6 +347,11 @@ class process_seq_region(eHive.BaseRunnable):
                 codon_table = self.get_codon_table(record)
                 if codon_table:
                     seqr["codon_table"] = codon_table
+
+                # Is it an organelle?
+                location = self.get_organelle(record)
+                if location:
+                    seqr["location"] = location
                 
                 # Is there a comment stating the Genbank record this is based on?
                 genbank_id = self.get_genbank_from_comment(record)
@@ -396,6 +404,39 @@ class process_seq_region(eHive.BaseRunnable):
                 break
         
         return table
+    
+    def get_organelle(self, record: SeqRecord) -> str:
+        """Given a genbank record, look for an organelle field.
+
+        Args:
+            record: The GenBank record to look into.
+
+        Returns:
+            the organelle location (empty string if not found).
+        """
+
+        location = 0
+        molecule_location = self.param("molecule_location")
+
+        for feat in record.features:
+            if "organelle" in feat.qualifiers:
+                organelle = str(feat.qualifiers["organelle"][0])
+                if not organelle:
+                    break
+
+                # Remove plastid prefix
+                with_prefix = re.match(r'^(plastid|mitochondrion):(.+)$', organelle)
+                if with_prefix:
+                    organelle = with_prefix[2]
+
+                # Get controlled name
+                try:
+                    location = molecule_location[organelle]
+                except KeyError:
+                    raise KeyError(f"Unrecognized sequence location: {organelle}")
+                break
+        
+        return location
 
     def get_report_regions(self, report_path: str, use_refseq: bool) -> Dict[str, SeqRegion]:
         """Get seq_region data from report file.
