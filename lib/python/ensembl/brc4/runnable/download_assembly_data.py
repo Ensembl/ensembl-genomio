@@ -160,10 +160,12 @@ class download_assembly_data(eHive.BaseRunnable):
         parts = (gca, part1, part2, part3)
 
         # Get the list of assemblies for this accession
+        ftp_url = "ftp.ncbi.nlm.nih.gov"
+        sub_dir = f"genomes/all/{gca}/{part1}/{part2}/{part3}"
         f = ftplib.FTP()
-        f.connect("ftp.ncbi.nlm.nih.gov")
+        f.connect(ftp_url)
         f.login()
-        f.cwd("genomes/all/%s/%s/%s/%s" % parts)
+        f.cwd(sub_dir)
 
         max_redo = self.param("max_redo")
 
@@ -180,21 +182,28 @@ class download_assembly_data(eHive.BaseRunnable):
                 
                 # Get all the files
                 for (ftp_file, file_entry) in f.mlsd():
+                    has_md5 = True
+                    expected_sum = ''
                     for end in self.file_ends:
                         if ftp_file.endswith(end):
                             if not ftp_file in md5_sums:
-                                raise Exception(f"Missing file: {ftp_file} for {accession}")
-                            expected_sum = md5_sums[ftp_file]
+                                print(f"File not in {md5_file}: {ftp_file}")
+                                has_md5 = False
+                            else:
+                                expected_sum = md5_sums[ftp_file]
                             local_path = os.path.join(dl_dir, ftp_file)
 
                             # File exists? Check md5sum before anything else
                             if os.path.isfile(local_path):
-                                with open(local_path, mode='rb') as fp:
-                                    content = fp.read()
-                                    file_sum = hashlib.md5(content).hexdigest()
-                                    if file_sum == expected_sum:
-                                        print(f"File {local_path} is already downloaded properly")
-                                        continue
+                                if has_md5:
+                                    with open(local_path, mode='rb') as fp:
+                                        content = fp.read()
+                                        file_sum = hashlib.md5(content).hexdigest()
+                                        if file_sum == expected_sum:
+                                            print(f"File {local_path} is already downloaded properly")
+                                            continue
+                                else:
+                                    print(f"Can't check file (no md5sum), using it as is: {local_path}")
 
                             file_sum = ''
                             redo = 0
@@ -203,8 +212,16 @@ class download_assembly_data(eHive.BaseRunnable):
                                 print(f"Downloading file {ftp_file}, try {redo}...")
 
                                 # Download the file
-                                with open(local_path, 'wb') as fp:
-                                    f.retrbinary("RETR " + ftp_file, fp.write)
+                                try:
+                                    with open(local_path, 'wb') as fp:
+                                        f.retrbinary("RETR " + ftp_file, fp.write)
+                                except EOFError:
+                                    continue
+                                
+                                if not has_md5:
+                                    file_sum = ''
+                                    continue
+
                                 # Compute checksum
                                 with open(local_path, mode='rb') as fp:
                                     content = fp.read()
