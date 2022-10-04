@@ -481,6 +481,8 @@ class process_seq_region(eHive.BaseRunnable):
         seq_regions = {}
         for row in reader:
             seq_region = self.make_seq_region(row, assembly_level, use_refseq)
+            if not seq_region:
+                continue
             name = seq_region["name"]
             seq_regions[name] = seq_region
         
