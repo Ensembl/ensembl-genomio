@@ -36,9 +36,11 @@ use strict;
 use warnings;
 use feature 'say';
 
-use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
-
 use Path::Tiny qw(path);
+
+use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
+
+use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 
 sub run {
   my ($self) = @_;
@@ -223,56 +225,77 @@ sub extract_seq {
 sub seq_edits_from_protein {
   my ($self, $dba, $logic_name, $protein_fasta_file) = @_;
   
+  my $sa = $dba->get_adaptor('Slice');
   my $ta = $dba->get_adaptor('Transcript');
   my $aa = $dba->get_adaptor("Attribute");
   
   my %protein = $self->load_fasta($protein_fasta_file);
   
-  my $transcripts = $ta->fetch_all_by_logic_name($logic_name);
-  
-  foreach my $transcript (sort { $a->stable_id cmp $b->stable_id } @$transcripts) {
-    my $translation = $transcript->translation;
-    
-    if ($translation && exists $protein{$translation->stable_id}) {
-      my $db_seq   = $translation->seq;
-      my $file_seq = $protein{$translation->stable_id};
-      $file_seq =~ s/\*$//;
-      
-      # Do not want to consider an amino acid derived from a partial
-      # codon; but RefSeq do that, so need to lop off last amino acid
-      # in that case.
-      my $transcript_length = length($transcript->translateable_seq);
-      my $partial_codon = $transcript_length % 3;
-      if ($partial_codon && length($file_seq) == length($db_seq) + 1) {
-        $self->log_warning("WARNING: Loping off partial last codon for transcript " . $transcript->stable_id . " translation " . $translation->stable_id);
-        $file_seq =~ s/.$//;
-      }
-      
-      if ($db_seq ne $file_seq) {
-        my @file_seq = split(//, $file_seq);
-        my @atts;
-        
-        if (length($file_seq) == length($db_seq)) {
-          while ((my $pos = index($db_seq, '*')) >= 0) {
-            my $amino_acid = $file_seq[$pos];
-            $db_seq =~ s/\*/$amino_acid/;
-            
-            $pos += 1;      
-            my $att = $self->add_translation_seq_edit($translation, $pos, $pos, $amino_acid);
-            push @atts, $att;
+  my $slices = $sa->fetch_all( 'toplevel', undef, 0, 1 );
 
-            $self->log_warning("WARNING: replacing stop codon at $pos with $amino_acid  for transcript " . $transcript->stable_id . " translation " . $translation->stable_id);
+  # split up a list of slices into smaller slices
+  my $overlap    = 10000;
+  my $max_length = 1e6;
+  $slices     = split_Slices( $slices, $max_length, $overlap);
+  my %done_transcripts;
+
+  for my $slice (@$slices) {
+    my $transcripts = $ta->fetch_all_by_Slice($slice, 0, $logic_name);
+
+    foreach my $transcript (sort { $a->seq_region_start cmp $b->seq_region_start } @$transcripts) {
+      next if $done_transcripts{ $transcript->dbID }++;
+      my $translation = $transcript->translation;
+
+      if ($translation && exists $protein{$translation->stable_id}) {
+        my $db_seq   = $translation->seq;
+        my $file_seq = $protein{$translation->stable_id};
+        $file_seq =~ s/\*$//;
+
+        # Do not want to consider an amino acid derived from a partial
+        # codon; but RefSeq do that, so need to lop off last amino acid
+        # in that case.
+        my $transcript_length = length($transcript->translateable_seq);
+        my $partial_codon     = $transcript_length % 3;
+        if ($partial_codon && length($file_seq) == length($db_seq) + 1) {
+          $self->log_warning("WARNING: Loping off partial last codon for transcript "
+              . $transcript->stable_id
+              . " translation "
+              . $translation->stable_id);
+          $file_seq =~ s/.$//;
+        }
+
+        if ($db_seq ne $file_seq) {
+          my @file_seq = split(//, $file_seq);
+          my @atts;
+
+          if (length($file_seq) == length($db_seq)) {
+            while ((my $pos = index($db_seq, '*')) >= 0) {
+              my $amino_acid = $file_seq[$pos];
+              $db_seq =~ s/\*/$amino_acid/;
+
+              $pos += 1;
+              my $att = $self->add_translation_seq_edit($translation, $pos, $pos, $amino_acid);
+              push @atts, $att;
+
+              $self->log_warning(
+                    "WARNING: replacing stop codon at $pos with $amino_acid  for transcript "
+                  . $transcript->stable_id
+                  . " translation "
+                  . $translation->stable_id);
+            }
+
+            if ($db_seq eq $file_seq) {
+              $aa->store_on_Translation($translation, \@atts);
+            }
+          } else {
+            $self->log_warning(
+              'WARNING: Protein sequence length mismatch for ' . $translation->stable_id);
           }
-          
-          if ($db_seq eq $file_seq) {
-            $aa->store_on_Translation($translation, \@atts);
-          }
-        } else {
-          $self->log_warning('WARNING: Protein sequence length mismatch for '.$translation->stable_id);
         }
       }
     }
   }
+
 }
 
 sub add_transcript_seq_edit {

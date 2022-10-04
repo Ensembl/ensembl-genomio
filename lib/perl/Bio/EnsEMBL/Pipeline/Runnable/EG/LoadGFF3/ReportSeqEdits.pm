@@ -38,6 +38,8 @@ use warnings;
 use File::Basename qw(fileparse);
 use File::Path qw(make_path);
 
+use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
+
 use base qw(Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base);
 
 sub run {
@@ -176,6 +178,7 @@ sub seq_edit_tn_report {
 sub protein_seq_report {
   my ($self, $dba, $logic_name, $protein_fasta_file) = @_;
   
+  my $sa          = $dba->get_adaptor('Slice');
   my $ta          = $dba->get_adaptor('Transcript');
   my $transcripts = $ta->fetch_all_by_logic_name($logic_name);  
   my %protein     = $self->load_fasta($protein_fasta_file);
@@ -184,42 +187,61 @@ sub protein_seq_report {
   my @fixes;
   my %translations;
   
-  foreach my $transcript (@$transcripts) {
-    my $tt_id       = $transcript->stable_id;
-    my $translation = $transcript->translation;
-    
-    if ($translation) {
-      my $tn_id  = $translation->stable_id;
-      my $db_seq = $translation->seq;
-      
-      if (exists $protein{$tn_id}) {
-        $translations{$tn_id} = 1;
-        
-        my $file_seq = $protein{$tn_id};
-        $file_seq =~ s/(\*|\-)$//;
-        
-        if ($db_seq ne $file_seq) {
-          my $length = length($db_seq);
+  my $slices = $sa->fetch_all( 'toplevel', undef, 0, 1 );
 
-          # Initial methionine only?
-          (my $met_first_db_seq = $db_seq) =~ s/^./M/;
-          if ($met_first_db_seq eq $file_seq) {
-            push @results, [$tt_id, $tn_id, 'First amino acid in db changed to Met', $db_seq, $file_seq];
-            push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 170, '1 1 M' FROM translation WHERE stable_id = '$tn_id';";
-          } else {
-            push @results, [$tt_id, $tn_id, 'Sequences do not match', $db_seq, $file_seq];
-            push @fixes, "INSERT INTO translation_attrib SELECT translation_id, 144, '1 $length $file_seq' FROM translation WHERE stable_id = '$tn_id';";
+  # split up a list of slices into smaller slices
+  my $overlap    = 10000;
+  my $max_length = 1e6;
+  $slices     = split_Slices( $slices, $max_length, $overlap);
+  my %done_transcripts;
+
+  for my $slice (@$slices) {
+    my $transcripts = $ta->fetch_all_by_Slice($slice, 0, $logic_name);
+
+    foreach my $transcript (sort { $a->seq_region_start cmp $b->seq_region_start } @$transcripts) {
+      next if $done_transcripts{ $transcript->dbID }++;
+
+      my $tt_id       = $transcript->stable_id;
+      my $translation = $transcript->translation;
+
+      if ($translation) {
+        my $tn_id  = $translation->stable_id;
+        my $db_seq = $translation->seq;
+
+        if (exists $protein{$tn_id}) {
+          $translations{$tn_id} = 1;
+
+          my $file_seq = $protein{$tn_id};
+          $file_seq =~ s/(\*|\-)$//;
+
+          if ($db_seq ne $file_seq) {
+            my $length = length($db_seq);
+
+            # Initial methionine only?
+            (my $met_first_db_seq = $db_seq) =~ s/^./M/;
+            if ($met_first_db_seq eq $file_seq) {
+              push @results,
+                [$tt_id, $tn_id, 'First amino acid in db changed to Met', $db_seq, $file_seq];
+              push @fixes,
+"INSERT INTO translation_attrib SELECT translation_id, 170, '1 1 M' FROM translation WHERE stable_id = '$tn_id';";
+            } else {
+              push @results, [$tt_id, $tn_id, 'Sequences do not match', $db_seq, $file_seq];
+              push @fixes,
+"INSERT INTO translation_attrib SELECT translation_id, 144, '1 $length $file_seq' FROM translation WHERE stable_id = '$tn_id';";
+            }
+            if ($transcript->biotype ne 'pseudogene_with_CDS') {
+              push @fixes,
+"UPDATE gene INNER JOIN transcript USING (gene_id) SET gene.biotype = 'protein_coding', transcript.biotype = 'protein_coding' WHERE transcript.stable_id = '$tt_id';";
+            }
           }
-          if ($transcript->biotype ne 'pseudogene_with_CDS') {
-            push @fixes, "UPDATE gene INNER JOIN transcript USING (gene_id) SET gene.biotype = 'protein_coding', transcript.biotype = 'protein_coding' WHERE transcript.stable_id = '$tt_id';";
-          }
+
+        } else {
+          push @results, [$tt_id, $tn_id, 'Not in file', $db_seq, ''];
         }
-        
-      } else {
-        push @results, [$tt_id, $tn_id, 'Not in file', $db_seq, ''];
       }
     }
   }
+
   
   foreach my $id (keys %protein) {
     if (! exists $translations{$id}) {

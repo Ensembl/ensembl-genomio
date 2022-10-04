@@ -36,10 +36,12 @@ use strict;
 use warnings;
 use feature 'say';
 
-use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
-
 use List::Util qw(min);
 use Path::Tiny qw(path);
+
+use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
+
+use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 
 sub run {
   my ($self) = @_;
@@ -69,37 +71,52 @@ sub fix_models {
   # These two cases are considered independently; if a gene is affected
   # by both, it won't be fixed.
   
+  my $sa = $dba->get_adaptor('Slice');
   my $ta = $dba->get_adaptor('Transcript');
   
   my %protein = $self->load_fasta($protein_fasta_file);
   
-  my $transcripts = $ta->fetch_all_by_logic_name($logic_name);
-  
-  foreach my $transcript (@$transcripts) {
-    if ($transcript->biotype eq 'nontranslating_CDS') {
-      my $translation = $transcript->translation;
-    
-      if ($translation && exists $protein{$translation->stable_id}) {
-        my $db_seq   = $translation->seq;
-        my $file_seq = $protein{$translation->stable_id};
-        $file_seq =~ s/\*$//;
-        
-        if ($db_seq ne $file_seq) {
-          my $success = $self->shift_translation($dba, $transcript, $file_seq);
-          
-          if ($success) {
-            $self->log_warning('WARNING: Shifted translation (nontranslating_CDS) of '.$transcript->stable_id);
-          } else {
-            $success = $self->shift_gene($dba, $transcript, $file_seq);
-            
+  my $slices = $sa->fetch_all( 'toplevel', undef, 0, 1 );
+
+  # split up a list of slices into smaller slices
+  my $overlap    = 10000;
+  my $max_length = 1e6;
+  $slices     = split_Slices( $slices, $max_length, $overlap);
+  my %done_transcripts;
+
+  for my $slice (@$slices) {
+    my $transcripts = $ta->fetch_all_by_Slice($slice, 0, $logic_name);
+
+    foreach my $transcript (sort { $a->seq_region_start cmp $b->seq_region_start } @$transcripts) {
+      next if $done_transcripts{ $transcript->dbID }++;
+      if ($transcript->biotype eq 'nontranslating_CDS') {
+        my $translation = $transcript->translation;
+
+        if ($translation && exists $protein{$translation->stable_id}) {
+          my $db_seq   = $translation->seq;
+          my $file_seq = $protein{$translation->stable_id};
+          $file_seq =~ s/\*$//;
+
+          if ($db_seq ne $file_seq) {
+            my $success = $self->shift_translation($dba, $transcript, $file_seq);
+
             if ($success) {
-              $self->log_warning('WARNING: Shifted position (nontranslating_CDS) of '.$transcript->stable_id);
+              $self->log_warning(
+                'WARNING: Shifted translation (nontranslating_CDS) of ' . $transcript->stable_id);
+            } else {
+              $success = $self->shift_gene($dba, $transcript, $file_seq);
+
+              if ($success) {
+                $self->log_warning(
+                  'WARNING: Shifted position (nontranslating_CDS) of ' . $transcript->stable_id);
+              }
             }
           }
         }
       }
     }
   }
+
 }
 
 sub shift_translation {
