@@ -70,11 +70,13 @@ class process_seq_region(eHive.BaseRunnable):
     def param_defaults(self):
         return {
             "brc4_mode": True,
+            "brc4_synonym_source": "GenBank",
+            "brc4_synonym_source_alt": "RefSeq",
             "synonym_map": {
                 "Sequence-Name": "INSDC_submitted_name",
-                "GenBank-Accn": "INSDC",
+                "GenBank-Accn": "GenBank",
                 "RefSeq-Accn": "RefSeq",
-                "Assigned-Molecule": "GenBank",
+                "Assigned-Molecule": "INSDC",
             },
 
             "molecule_location": {
@@ -182,22 +184,34 @@ class process_seq_region(eHive.BaseRunnable):
         Note:
             The seq_region_names data are directly added to the SeqRegion if found.
         """
-        source = "INSDC"
+        source = self.param("brc4_synonym_source")
+        source_alt = self.param("brc4_synonym_source_alt")
         
         new_seq_regions = []
         for seqr in seq_regions:
+            main_name = ''
+            alt_name = ''
             if "synonyms" in seqr:
                 for syn in seqr["synonyms"]:
                     if syn["source"] == source:
-                        insdc_name = syn["name"]
-                        parts = insdc_name.partition(".")
-                        flat_name = parts[0]
-                        seqr["BRC4_seq_region_name"] = flat_name
-                        seqr["EBI_seq_region_name"] = flat_name
-
-            if "BRC4_seq_region_name" not in seqr:
-                continue
+                        main_name = syn["name"]
+                    if syn["source"] == source_alt:
+                        alt_name = syn["name"]
+            
+            name = ''
+            if main_name:
+                name = main_name
+            elif alt_name:
+                name = alt_name
+            else:
+                raise Exception(f"Can't set BRC4/EBI name for {seqr}")
+            
+            parts = name.partition(".")
+            flat_name = parts[0]
+            seqr["BRC4_seq_region_name"] = flat_name
+            seqr["EBI_seq_region_name"] = flat_name
             new_seq_regions.append(seqr)
+
         return new_seq_regions 
 
     def add_mitochondrial_codon_table(self, seq_regions: List[SeqRegion], tax_id: int) -> None:
@@ -341,7 +355,7 @@ class process_seq_region(eHive.BaseRunnable):
                 # Store the seq_region
                 if seqr:
                     seq_regions[record.id] = seqr
-                    
+        
         return seq_regions
     
     def get_genbank_from_comment(self, record: SeqRecord) -> str:
@@ -447,17 +461,29 @@ class process_seq_region(eHive.BaseRunnable):
         if field in row and row[field].lower() != "na":
             seq_region[name] = int(row[field])
         
+        refseq_id = ''
+        gb_id = ''
+        if "RefSeq-Accn" in row:
+            refseq_id = row["RefSeq-Accn"]
+            if refseq_id == "na":
+                refseq_id = ''
+
+        if "GenBank-Accn" in row:
+            gb_id = row["GenBank-Accn"]
+            if gb_id == "na":
+                gb_id = ''
+
         if use_refseq:
-            if "RefSeq-Accn" in row:
-                seq_region["name"] = row["RefSeq-Accn"]
+            if refseq_id:
+                seq_region["name"] = refseq_id
             else:
-                raise Exception("No RefSeq name for %s" % row["Sequence-Name"])
-            
+                print("No RefSeq name for %s" % row["Sequence-Name"])
+                return {}
+        elif gb_id:
+            seq_region["name"] = gb_id
         else:
-            if "GenBank-Accn" in row:
-                seq_region["name"] = row["GenBank-Accn"]
-            else:
-                raise Exception("No INSDC name for %s" % row["Sequence-Name"])
+            print("No Genbank name for %s" % row["Sequence-Name"])
+            return {}
         
         # Coord system and location
         seq_role = row["Sequence-Role"]
