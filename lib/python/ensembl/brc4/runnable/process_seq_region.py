@@ -305,17 +305,34 @@ class process_seq_region(eHive.BaseRunnable):
                 seqr1 = regions1[name]
             if name in names2:
                 seqr2 = regions2[name]
-            
+
+            final_seqr = {}
             if seqr1 and seqr2:
-                merged_seqr = {**seqr1, **seqr2}
-                seq_regions.append(merged_seqr)
+                final_seqr = self.merge_dicts(seqr1, seqr2)
             elif seqr1:
-                seq_regions.append(seqr1)
+                final_seqr = seqr1
+            elif seqr2:
+                final_seqr = seqr2
             else:
-                seq_regions.append(seqr2)
+                raise Exception(f"No seq_region found for {name}")
+
+            seq_regions.append(final_seqr)
 
         seq_regions.sort(key=lambda x: x["name"])
+
         return seq_regions
+    
+    def merge_dicts(self, dict1: dict, dict2: dict) -> dict:
+        """Merge 2 dicts. If they have the same key, the second dict overrides the value"""
+        new_dict = {}
+
+        for key in dict1:
+            new_dict[key] = dict1[key]
+        for key in dict2:
+            new_dict[key] = dict2[key]
+        
+        return new_dict
+
 
     def get_gbff_regions(self, gbff_path: str) -> Dict[str, SeqRegion]:
         """Get seq_region data from the gbff file.
