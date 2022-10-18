@@ -199,7 +199,7 @@ class MetaConf:
       _display_name += " (%s)" % _strain_comm_part
     _display_name += " - " + asm_acc
     # possibly add annotation source tag
-    _ann_source = self.get("species.annotation_source", default = "").strip()
+    _ann_source = self.get("species.annotation_source", default="").strip()
     _ann_source = self.normalise_asm_name(_ann_source)
     if _ann_source:
       self.update("species.annotation_source", _ann_source)
