@@ -183,7 +183,7 @@ class MetaConf:
     _prod_name = "_".join(re.sub(r'[^a-z0-9A-Z]+', '_', _prod_name).split("_")[:2])
     _prod_name = ("%s_%s" % (_prod_name, _acc)).lower().replace(" ","_")
     # possibly add annotation source suffix
-    _ann_source_sfx = self.get("ANNOTATION_SOURCE_SFX", tech = True, default = "").strip()
+    _ann_source_sfx = self.get("ANNOTATION_SOURCE_SFX", tech=True, default="").strip()
     _ann_source_sfx = self.normalise_asm_name(_ann_source_sfx).replace("_","").lower()[:2]
     if _ann_source_sfx:
       self.update("ANNOTATION_SOURCE_SFX", _ann_source_sfx, tech = True)
