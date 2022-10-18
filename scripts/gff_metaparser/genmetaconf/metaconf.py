@@ -94,6 +94,16 @@ class MetaConf:
     else:
       out[key].append(val)
 
+  def normalise_asm_name(self, asm_name):
+    if not asm_name:
+      return asm_name
+    asm_name = asm_name.strip()
+    asm_name = re.sub(r'[^a-z0-9A-Z_\.]+', '_', asm_name)
+    asm_name = re.sub(r'_+', '_', asm_name)
+    asm_name = re.sub(r'^_+', '', asm_name)
+    asm_name = re.sub(r'_+$', '', asm_name)
+    return asm_name
+
   def merge_from_gbff(self, gbff_file):
     if not gbff_file:
       return
@@ -125,12 +135,25 @@ class MetaConf:
           gad = str_cmt["Genome-Assembly-Data"]
           ankey = list(filter(lambda x: "assembly" in x.lower() and "name" in x.lower(), gad.keys()))
           if ankey:
-            asm_name = gad[ankey[0]].strip()
-            asm_name = re.sub(r'[^a-z0-9A-Z_\.]+', '_', asm_name)
-            asm_name = re.sub(r'_+', '_', asm_name)
-            asm_name = re.sub(r'^_+', '', asm_name)
-            asm_name = re.sub(r'_+$', '', asm_name)
+            asm_name = gad[ankey[0]]
+            asm_name = self.normalise_asm_name(asm_name)
             self.update("assembly.name", asm_name)
+
+  def merge_from_asm_rep(self, asm_rep_file):
+    if not asm_rep_file:
+      return
+
+    print("adding data from  %s" % asm_rep_file, file = sys.stderr)
+    _open = asm_rep_file.endswith(".gz") and gzip.open or open
+    with _open(asm_rep_file, 'rt') as asm_rep:
+      for line in asm_rep:
+        # # Assembly name:  cgigas_uk_roslin_v1
+        if re.match(r'#\s+Assembly name:', line):
+          (_tag, asm_name, *_rest) = line.split(sep = ":", maxsplit=1)
+          asm_name = self.normalise_asm_name(asm_name)
+          self.update("assembly.name", asm_name)
+          break
+    return
 
   def update_from_dict(self, d, k, tech = False):
     if d is None:
@@ -159,6 +182,15 @@ class MetaConf:
     _prod_name = _sci_name.strip().lower()
     _prod_name = "_".join(re.sub(r'[^a-z0-9A-Z]+', '_', _prod_name).split("_")[:2])
     _prod_name = ("%s_%s" % (_prod_name, _acc)).lower().replace(" ","_")
+    # possibly add annotation source suffix
+    _ann_source_sfx = self.get("ANNOTATION_SOURCE_SFX", tech = True, default = "").strip()
+    _ann_source_sfx = self.normalise_asm_name(_ann_source_sfx).replace("_","").lower()[:2]
+    if _ann_source_sfx:
+      self.update("ANNOTATION_SOURCE_SFX", _ann_source_sfx, tech = True)
+      _prod_name += _ann_source_sfx
+    # defaults
+    # "species.annotation_source" : args.annotation_source_name,
+    #"_species.annotation_source_sfx" : args.annotation_source_sfx,
     self.update("species.production_name", _prod_name)
     _comm_name = self.get("species.common_name")
     _display_name = _sci_name
@@ -166,6 +198,12 @@ class MetaConf:
       _strain_comm_part = ", ".join(map(lambda s: str(s), filter(None, [_comm_name, _strain])))
       _display_name += " (%s)" % _strain_comm_part
     _display_name += " - " + asm_acc
+    # possibly add annotation source tag
+    _ann_source = self.get("species.annotation_source", default = "").strip()
+    _ann_source = self.normalise_asm_name(_ann_source)
+    if _ann_source:
+      self.update("species.annotation_source", _ann_source)
+      _display_name = f"%s [%s annotation]" % (_display_name, _ann_source)
     self.update("species.display_name", _display_name)
     self.update("species.url", _prod_name.capitalize())
     # syns
@@ -180,6 +218,7 @@ class MetaConf:
     # genebuild metadata
     if update_annotation_related:
       self.update_from_dict(defaults, "genebuild.method")
+      self.update_from_dict(defaults, "genebuild.method_display")
       self.update_from_dict(defaults, "genebuild.level")
       self.update("genebuild.version", aname.replace("_", "").replace(".","v") + ".0")
       today = datetime.datetime.today()
@@ -198,9 +237,11 @@ class MetaConf:
       "assembly.accession",
       "assembly.name",
       "genebuild.method",
+      "genebuild.method_display",
       "genebuild.start_date",
       "genebuild.version",
       "*species.alias",
+      "species.annotation_source",
       "species.display_name",
       "species.division",
       "species.production_name",
