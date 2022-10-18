@@ -63,8 +63,8 @@ def get_args():
                       type=str, default = "EnsemblMetazoa", help="species.division default")
   parser.add_argument("--genebuild_method", metavar="import", required = False,
                       type=str, default = "import", help="genebuild.method default")
-  parser.add_argument("--genebuild_method_display", metavar="Import", required = False,
-                      type=str, default = "Import", help="genebuild.method_display default")
+  parser.add_argument("--genebuild_method_display", metavar="Import", required=False,
+                      type=str, default="Import", help="genebuild.method_display default")
   parser.add_argument("--genebuild_level", metavar="toplevel", required = False,
                       type=str, default = "toplevel", help="genebuild.level default")
   parser.add_argument("--syns_src", metavar="GenBank", required = False,
