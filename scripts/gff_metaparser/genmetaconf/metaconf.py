@@ -186,7 +186,7 @@ class MetaConf:
     _ann_source_sfx = self.get("ANNOTATION_SOURCE_SFX", tech=True, default="").strip()
     _ann_source_sfx = self.normalise_asm_name(_ann_source_sfx).replace("_","").lower()[:2]
     if _ann_source_sfx:
-      self.update("ANNOTATION_SOURCE_SFX", _ann_source_sfx, tech = True)
+      self.update("ANNOTATION_SOURCE_SFX", _ann_source_sfx, tech=True)
       _prod_name += _ann_source_sfx
     # defaults
     # "species.annotation_source" : args.annotation_source_name,
