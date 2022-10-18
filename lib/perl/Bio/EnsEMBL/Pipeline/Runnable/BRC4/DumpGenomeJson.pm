@@ -54,9 +54,9 @@ sub prepare_data {
   };
 
   my %meta_list = (
-    species => [ qw(taxonomy_id production_name scientific_name strain display_name division alias) ],
+    species => [ qw(taxonomy_id production_name scientific_name strain display_name division alias annotation_source) ],
     assembly => [ qw(accession date name version provider_name provider_url) ],
-    genebuild => [ qw(version method start_date) ],
+    genebuild => [ qw(version method start_date method_display) ],
     annotation => [ qw(provider_name provider_url) ],
     BRC4 => [ qw(organism_abbrev component) ],
     added_seq => [ qw(region_name) ],
