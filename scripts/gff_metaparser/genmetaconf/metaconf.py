@@ -188,9 +188,6 @@ class MetaConf:
     if _ann_source_sfx:
       self.update("ANNOTATION_SOURCE_SFX", _ann_source_sfx, tech=True)
       _prod_name += _ann_source_sfx
-    # defaults
-    # "species.annotation_source" : args.annotation_source_name,
-    #"_species.annotation_source_sfx" : args.annotation_source_sfx,
     self.update("species.production_name", _prod_name)
     _comm_name = self.get("species.common_name")
     _display_name = _sci_name
