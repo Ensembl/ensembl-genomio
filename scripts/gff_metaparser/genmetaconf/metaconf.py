@@ -203,7 +203,7 @@ class MetaConf:
     _ann_source = self.normalise_asm_name(_ann_source)
     if _ann_source:
       self.update("species.annotation_source", _ann_source)
-      _display_name = f"%s [%s annotation]" % (_display_name, _ann_source)
+      _display_name = f"{_display_name} [{_ann_source} annotation]"
     self.update("species.display_name", _display_name)
     self.update("species.url", _prod_name.capitalize())
     # syns
