@@ -135,6 +135,9 @@ class dump_stable_ids:
         return events
     
     def print_events(self, events: List[StableIdEvent], output_file: str) -> None:
+        if not events:
+            print("No events to print")
+            return
         with open(output_file, 'w') as out_fh:
             for event in events:
                 event_lines = event.brc_format()
@@ -267,7 +270,7 @@ def main():
     parser.add_argument('--user', type=str, required=True, help='Server user')
     parser.add_argument('--password', type=str, help='Server password')
     parser.add_argument('--dbname', type=str, required=True, help='Database name')
-    parser.add_argument('--output_dir', type=str, required=True, help='Output directory')
+    parser.add_argument('--output_file', type=str, required=True, help='Output file')
 
     # Optional
     args = parser.parse_args()
@@ -278,8 +281,7 @@ def main():
     factory.db.database = args.dbname
     dumper = dump_stable_ids(factory)
     events = dumper.get_history()
-    output_file = path.join(args.output_dir, f"{args.dbname}.tsv")
-    dumper.print_events(events, output_file)
+    dumper.print_events(events, args.output_file)
 
 
 if __name__ == "__main__":
