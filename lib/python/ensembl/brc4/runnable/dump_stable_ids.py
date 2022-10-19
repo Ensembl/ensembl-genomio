@@ -19,8 +19,7 @@
 import argparse
 from os import path
 from typing import Any, List, Dict
-import mysql.connector
-from mysql.connector.cursor import MySQLCursor
+from datetime import datetime
 
 from ensembl.brc4.runnable.core_server import core_server
 
@@ -30,10 +29,11 @@ class UnsupportedEvent(Exception):
 
 
 class StableIdEvent:
-    def __init__(self, from_list: List[str] = [], to_list: List[str] = [], release: str = '') -> None:
+    def __init__(self, from_list: List[str] = [], to_list: List[str] = [], release: str = '', date: datetime = '') -> None:
         self.from_list = from_list
         self.to_list = to_list
         self.release = release
+        self.date = date
         self.name = ""
         self._clean_lists()
     
@@ -48,6 +48,7 @@ class StableIdEvent:
         from_str = ",".join(self.from_list)
         to_str = ",".join(self.to_list)
         release = self.release
+        date = self.date.strftime('%Y-%m')
         name = self.get_name()
         line_list = []
         for id in self.from_list:
@@ -55,6 +56,7 @@ class StableIdEvent:
                 id,
                 name,
                 release,
+                date,
             ]
             if name in ("merge", "split", "mixed", "change"):
                 line.append(from_str)
@@ -69,6 +71,7 @@ class StableIdEvent:
                 new_id,
                 name,
                 release,
+                date,
                 "",
                 ""
             )
@@ -89,6 +92,9 @@ class StableIdEvent:
     
     def add_release(self, release: str) -> None:
         self.release = release
+    
+    def add_date(self, date: datetime) -> None:
+        self.date = date
     
     def name_event(self):
         if not self.from_list and len(self.to_list) == 1:
@@ -129,6 +135,7 @@ class dump_stable_ids:
             session_events = self.make_events(pairs)
             for event in session_events:
                 event.add_release(session["release"])
+                event.add_date(session["date"])
             events += session_events
         
         # Then analyse the pairs to make events
@@ -145,7 +152,7 @@ class dump_stable_ids:
                     out_fh.write(line + "\n")
     
     def get_mapping_sessions(self):
-        query = """SELECT mapping_session_id, new_release
+        query = """SELECT mapping_session_id, new_release, created
         FROM mapping_session
         """
         cursor = self.server.get_cursor()
@@ -153,7 +160,8 @@ class dump_stable_ids:
 
         sessions = []
         for db in cursor:
-            session = {"id": db[0], "release": db[1]}
+            date = db[2]
+            session = {"id": db[0], "release": db[1], "date": date}
             sessions.append(session)
         return sessions
 
