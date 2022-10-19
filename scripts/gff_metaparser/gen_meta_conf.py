@@ -63,6 +63,8 @@ def get_args():
                       type=str, default = "EnsemblMetazoa", help="species.division default")
   parser.add_argument("--genebuild_method", metavar="import", required = False,
                       type=str, default = "import", help="genebuild.method default")
+  parser.add_argument("--genebuild_method_display", metavar="Import", required=False,
+                      type=str, default="Import", help="genebuild.method_display default")
   parser.add_argument("--genebuild_level", metavar="toplevel", required = False,
                       type=str, default = "toplevel", help="genebuild.level default")
   parser.add_argument("--syns_src", metavar="GenBank", required = False,
@@ -79,10 +81,12 @@ def main():
   args = get_args()
 
   meta = MetaConf(args.raw_meta_conf)
+  meta.merge_from_asm_rep(args.asm_rep_file)
   meta.merge_from_gbff(args.gbff_file)
   meta.update_derived_data({
     "assembly.version" : args.assembly_version,
     "genebuild.method" : args.genebuild_method,
+    "genebuild.method_display" : args.genebuild_method_display,
     "genebuild.level" : args.genebuild_level,
     "species.division" : args.species_division,
   }, update_annotation_related = (args.gff_file is not None))
