@@ -22,9 +22,8 @@ import re
 from os import path
 from typing import List
 import mysql.connector
-from mysql.connector.cursor import MySQLCursor
 
-class DBFactory():
+class core_server():
 
     def __init__(self, host: str, port: str, user: str, password: str) -> None:
         self.host = host
@@ -32,6 +31,7 @@ class DBFactory():
         self.user = user
         self.password = password
         self.db = None
+        self.cursor = ''
     
     def connect(self):
         if not self.db:
@@ -57,11 +57,16 @@ class DBFactory():
 
         return dbs
     
+    def get_cursor(self):
+        if not self.cursor:
+            self.cursor = self.db.cursor()
+        return self.cursor
+    
     def get_all_cores(self):
 
         query = "SHOW DATABASES LIKE '%_core_%'"
 
-        cursor = self.db.cursor()
+        cursor = self.get_cursor()
         cursor.execute(query)
 
         dbs = []
@@ -86,7 +91,7 @@ def main():
     args = parser.parse_args()
 
     # Start
-    factory = DBFactory(host=args.host, port=args.port, user=args.user, password=args.password)
+    factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
     dbs = factory.get_dbs(prefix=args.prefix, build=args.build, version=args.version)
     if dbs:
         print("\n".join(dbs))
