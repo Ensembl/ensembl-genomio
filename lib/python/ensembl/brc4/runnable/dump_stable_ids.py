@@ -29,6 +29,9 @@ class UnsupportedEvent(Exception):
 
 
 class StableIdEvent:
+
+    date_brc4_start = datetime(2019, 9, 1)
+
     def __init__(self, from_list: List[str] = [], to_list: List[str] = [], release: str = '', date: datetime = '') -> None:
         self.from_list = from_list
         self.to_list = to_list
@@ -47,8 +50,11 @@ class StableIdEvent:
     def brc_format(self) -> List[str]:
         from_str = ",".join(self.from_list)
         to_str = ",".join(self.to_list)
-        release = self.release
-        date = self.date.strftime('%Y-%m')
+        release = self.get_full_release()
+        if self.date:
+            date = self.date.strftime('%Y-%m')
+        else:
+            date = "no_date"
         name = self.get_name()
         line_list = []
         for id in self.from_list:
@@ -95,6 +101,18 @@ class StableIdEvent:
     
     def add_date(self, date: datetime) -> None:
         self.date = date
+    
+    def get_full_release(self) -> str:
+        release = self.release
+        date = self.date
+
+        if date and date > self.date_brc4_start:
+                release = f"build {release}"
+        else:
+            release = f"pre-BRC4 {release}"
+        
+        return release
+
     
     def name_event(self):
         if not self.from_list and len(self.to_list) == 1:
