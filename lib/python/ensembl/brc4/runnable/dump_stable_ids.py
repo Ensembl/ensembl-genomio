@@ -44,6 +44,37 @@ class StableIdEvent:
         name = self.get_name()
         return f"From {from_str} to {to_str} = {name} in release {release}"
     
+    def brc_format(self) -> List[str]:
+        from_str = ",".join(self.from_list)
+        to_str = ",".join(self.to_list)
+        release = self.release
+        name = self.get_name()
+        line_list = []
+        for id in self.from_list:
+            line = [
+                id,
+                name,
+                release,
+            ]
+            if name in ("merge", "split", "mixed", "change"):
+                line.append(from_str)
+                line.append(to_str)
+            else:
+                line += ["", ""]
+            line_list.append("\t".join(line))
+        
+        if self.get_name() == "new":
+            new_id = self.to_list[0]
+            line = (
+                new_id,
+                name,
+                release,
+                "",
+                ""
+            )
+            line_list.append("\t".join(line))
+        return line_list
+    
     def _clean_lists(self):
         self.from_list = [id for id in self.from_list if id]
         self.to_list = [id for id in self.to_list if id]
@@ -65,7 +96,7 @@ class StableIdEvent:
         elif not self.to_list and len(self.from_list) == 1:
             self.name = "deletion"
         elif len(self.from_list) == 1 and len(self.to_list) == 1:
-            self.name = "update"
+            self.name = "change"
         elif len(self.from_list) == 1 and len(self.to_list) > 1:
             self.name = "split"
         elif len(self.from_list) > 1 and len(self.to_list) == 1:
@@ -100,11 +131,15 @@ class dump_stable_ids:
                 event.add_release(session["release"])
             events += session_events
         
-        for event in events:
-            print(event)
-        
         # Then analyse the pairs to make events
         return events
+    
+    def print_events(self, events: List[StableIdEvent], output_file: str) -> None:
+        with open(output_file, 'w') as out_fh:
+            for event in events:
+                event_lines = event.brc_format()
+                for line in event_lines:
+                    out_fh.write(line + "\n")
     
     def get_mapping_sessions(self):
         query = """SELECT mapping_session_id, new_release
@@ -243,6 +278,8 @@ def main():
     factory.db.database = args.dbname
     dumper = dump_stable_ids(factory)
     events = dumper.get_history()
+    output_file = path.join(args.output_dir, f"{args.dbname}.tsv")
+    dumper.print_events(events, output_file)
 
 
 if __name__ == "__main__":
