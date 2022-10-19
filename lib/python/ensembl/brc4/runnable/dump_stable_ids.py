@@ -172,7 +172,7 @@ class dump_stable_ids:
         for db in cursor:
             pair = {"old_id": db[0], "new_id": db[1]}
             pairs.append(pair)
-        print(f"{len(pairs)} pairs")
+        print(f"{len(pairs)} stable id events")
         return pairs
     
     def make_events(self, pairs):
@@ -225,7 +225,7 @@ class dump_stable_ids:
                 stats[name] += 1
         
         for stat in stats:
-            print(f"Stats {stat} = {stats[stat]}")
+            print(f"\t{stat} = {stats[stat]}")
 
         return events
     
