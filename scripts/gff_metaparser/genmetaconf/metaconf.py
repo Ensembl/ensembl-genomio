@@ -143,13 +143,13 @@ class MetaConf:
     if not asm_rep_file:
       return
 
-    print("adding data from  %s" % asm_rep_file, file = sys.stderr)
+    print(f"adding data from {asm_rep_file}", file=sys.stderr)
     _open = asm_rep_file.endswith(".gz") and gzip.open or open
     with _open(asm_rep_file, 'rt') as asm_rep:
       for line in asm_rep:
-        # # Assembly name:  cgigas_uk_roslin_v1
+        # Assembly name:  cgigas_uk_roslin_v1
         if re.match(r'#\s+Assembly name:', line):
-          (_tag, asm_name, *_rest) = line.split(sep = ":", maxsplit=1)
+          (_tag, asm_name, *_rest) = line.split(sep=":", maxsplit=1)
           asm_name = self.normalise_asm_name(asm_name)
           self.update("assembly.name", asm_name)
           break
