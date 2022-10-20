@@ -23,9 +23,28 @@ from os import path
 from typing import List
 import mysql.connector
 
-class core_server():
+class core_server:
+    """Basic interface to a Mysql server with core databases.
+    Allows to get a list of databases, and access to them.
 
-    def __init__(self, host: str, port: str, user: str, password: str) -> None:
+    Args:
+    host
+    port
+    user
+    password (optional)
+
+    Public methods:
+    connect() = connect to the server
+    get_all_cores() = List of db names that look like cores
+    get_cores() = Filtered list of db names
+
+    To connect to a specific database:
+    1) Create the core server object
+    2) Set the database with core_server.db.database = "dbname"
+    3) Retrieve a cursor with core_server.db.cursor
+    """
+
+    def __init__(self, host: str, port: str, user: str, password: str = '') -> None:
         self.host = host
         self.port = port
         self.user = user
@@ -33,7 +52,8 @@ class core_server():
         self.db = None
         self.cursor = ''
     
-    def connect(self):
+    def connect(self) -> None:
+        """Create a connection to the database, store it in the db attribute"""
         if not self.db:
             self.db = mysql.connector.connect(
                 user=self.user,
@@ -42,7 +62,29 @@ class core_server():
                 port=self.port
             )
     
-    def get_dbs(self, prefix: str, build: str, version: str) -> List[str]:
+    def get_all_cores(self) -> List[str]:
+        """Query the server and retrieve all databases that look like Ensembl cores."""
+
+        query = "SHOW DATABASES LIKE '%_core_%'"
+
+        cursor = self.db.cursor()
+        cursor.execute(query)
+
+        dbs = []
+        for db in cursor:
+            dbs.append(db[0])
+        return dbs
+    
+    def get_cores(self, prefix: str = '', build: str = '', version: str = '') -> List[str]:
+        """Provide a list of core databases, filtered if requested.
+        Args:
+        prefix: filter by prefix (automatically followed by _)
+        build: filter by build
+        version: filter by Ensembl version
+
+        Returns:
+        A list of database names
+        """
         dbs = []
 
         self.connect()
@@ -55,23 +97,6 @@ class core_server():
         if version:
             dbs = [db for db in dbs if re.search(f"_core_\d+_{version}_\d+$", db)]
 
-        return dbs
-    
-    def get_cursor(self):
-        if not self.cursor:
-            self.cursor = self.db.cursor()
-        return self.cursor
-    
-    def get_all_cores(self):
-
-        query = "SHOW DATABASES LIKE '%_core_%'"
-
-        cursor = self.get_cursor()
-        cursor.execute(query)
-
-        dbs = []
-        for db in cursor:
-            dbs.append(db[0])
         return dbs
 
 
@@ -91,8 +116,8 @@ def main():
     args = parser.parse_args()
 
     # Start
-    factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
-    dbs = factory.get_dbs(prefix=args.prefix, build=args.build, version=args.version)
+    factory = core_server(host=args.host, port=args.port, user=args.user, password=args.password)
+    dbs = factory.get_cores(prefix=args.prefix, build=args.build, version=args.version)
     if dbs:
         print("\n".join(dbs))
 

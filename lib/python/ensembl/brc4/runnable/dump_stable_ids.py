@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-
 import argparse
 from os import path
 from typing import Any, List, Dict
@@ -211,7 +210,7 @@ class dump_stable_ids:
         query = """SELECT mapping_session_id, new_release, created
         FROM mapping_session
         """
-        cursor = self.server.get_cursor()
+        cursor = self.server.db.cursor()
         cursor.execute(query)
 
         sessions = []
@@ -229,7 +228,7 @@ class dump_stable_ids:
             AND mapping_session_id=%s
         """
         values = (session_id,)
-        cursor = self.server.get_cursor()
+        cursor = self.server.db.cursor()
         cursor.execute(query, values)
 
         pairs = []
