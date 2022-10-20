@@ -38,6 +38,7 @@ class StableIdEvent:
         self.release = release
         self.date = date
         self.name = ""
+        self.pairs = []
         self._clean_lists()
     
     def __str__(self) -> str:
@@ -47,7 +48,7 @@ class StableIdEvent:
         name = self.get_name()
         return f"From {from_str} to {to_str} = {name} in release {release}"
     
-    def brc_format(self) -> List[str]:
+    def brc_format_1(self) -> List[str]:
         from_str = ",".join(self.from_list)
         to_str = ",".join(self.to_list)
         release = self.get_full_release()
@@ -84,6 +85,26 @@ class StableIdEvent:
             line_list.append("\t".join(line))
         return line_list
     
+    def brc_format_2(self) -> List[str]:
+        release = self.get_full_release()
+        if self.date:
+            date = self.date.strftime('%Y-%m')
+        else:
+            date = "no_date"
+        name = self.get_name()
+        line_list = []
+
+        for pair in self.pairs:
+            line = [
+                pair["old_id"],
+                pair["new_id"],
+                name,
+                release,
+                date,
+            ]
+            line_list.append("\t".join(line))
+        return line_list
+    
     def _clean_lists(self):
         self.from_list = [id for id in self.from_list if id]
         self.to_list = [id for id in self.to_list if id]
@@ -101,6 +122,13 @@ class StableIdEvent:
     
     def add_date(self, date: datetime) -> None:
         self.date = date
+    
+    def add_pair(self, pair) -> None:
+        if not pair["old_id"]:
+            pair["old_id"] = ""
+        if not pair["new_id"]:
+            pair["new_id"] = ""
+        self.pairs.append(pair)
     
     def get_full_release(self) -> str:
         release = self.release
@@ -133,6 +161,13 @@ class StableIdEvent:
     def get_name(self):
         self.name_event()
         return self.name
+    
+    def add_pairs(self, pairs):
+        for pair in pairs:
+            if (pair["old_id"] and pair["old_id"] in self.from_list) or (pair["new_id"] and pair["new_id"] in self.to_list):
+                if self.get_name != "deletion" and not pair["new_id"]:
+                    continue
+                self.add_pair(pair)
 
 class dump_stable_ids:
 
@@ -165,7 +200,7 @@ class dump_stable_ids:
             return
         with open(output_file, 'w') as out_fh:
             for event in events:
-                event_lines = event.brc_format()
+                event_lines = event.brc_format_2()
                 for line in event_lines:
                     out_fh.write(line + "\n")
     
@@ -234,12 +269,14 @@ class dump_stable_ids:
             if not old_id or old_id not in from_list: continue
             event = StableIdEvent([old_id], from_list[old_id])
             (event, from_list, to_list) = self.extend_event(event, from_list, to_list)
+            event.add_pairs(pairs)
             events.append(event)
         
         # Remaining events should only be new genes
         for new_id in to_list:
             if not new_id: continue
             event = StableIdEvent(to_list[new_id], [new_id])
+            event.add_pairs(pairs)
             events.append(event)
         
         stats = {}
