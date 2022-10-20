@@ -23,11 +23,38 @@ from datetime import datetime
 from ensembl.brc4.runnable.core_server import core_server
 
 
-class UnsupportedEvent(Exception):
+class UnsupportedEvent(ValueError):
     pass
 
 
 class StableIdEvent:
+    """Represents a stable id event from one gene set version to another one. Various events:
+    - new genes
+    - deleted genes
+    - merged genes (several genes to one)
+    - split genes (one gene to several)
+    - mixed (several genes to several)
+
+    Args:
+    from_list = List of genes the previous gene set
+    to_list = List of genes in the new gene set
+    release = new gene set release name
+    date = date of the new gene set
+
+    Any gene set before 2019-09 is dubbed pre-BRC4.
+
+    Methods:
+    brc_format_1: Draft representation of events for BRC4 v1
+    brc_format_2: Draft representation of events for BRC4 v2
+    add_from: add gene id to the from_list
+    add_to: add gene id to the to_list
+    set_release: set the release
+    set_date: set the release date
+    get_full_release: Retrieve the release name, pre-BRC4 or build
+    get_name: Get the name of the event determined from the from_list and to_list
+    add_pair: Add a pair of gene ids as part of the event
+    add_pairs: Store all the pairs of ids used for this event
+    """
 
     date_brc4_start = datetime(2019, 9, 1)
 
@@ -48,6 +75,18 @@ class StableIdEvent:
         return f"From {from_str} to {to_str} = {name} in release {release}"
     
     def brc_format_1(self) -> List[str]:
+        """Proposed export format to represent one event.
+        One line per initial id, tabulated data:
+        - old gene id
+        - event name
+        - release
+        - release date
+        - list of old gene ids in the event (comma-separated)
+        - list of new gene ids in the event (comma-separated)
+
+        Returns:
+        List of lines as strings
+        """
         from_str = ",".join(self.from_list)
         to_str = ",".join(self.to_list)
         release = self.get_full_release()
@@ -85,6 +124,18 @@ class StableIdEvent:
         return line_list
     
     def brc_format_2(self) -> List[str]:
+        """Proposed export format to represent one event.
+        One list for each combination of genes:
+        - old gene id
+        - new gene id
+        - event name
+        - release
+        - release date
+        NB: there are as many lines as there are combinations of old_id - new_ids
+
+        Returns:
+        List of lines as strings
+        """
         release = self.get_full_release()
         if self.date:
             date = self.date.strftime('%Y-%m')
@@ -104,25 +155,32 @@ class StableIdEvent:
             line_list.append("\t".join(line))
         return line_list
     
-    def _clean_lists(self):
+    def _clean_lists(self) -> None:
+        """Make sure the lists do not contain empty elements
+        """
         self.from_list = [id for id in self.from_list if id]
         self.to_list = [id for id in self.to_list if id]
     
-    def add_from(self, from_id):
-        self.from_list.append(from_id)
-        self._clean_lists()
+    def add_from(self, from_id: str) -> None:
+        """Store id in the from_list"""
+        if from_id:
+            self.from_list.append(from_id)
     
-    def add_to(self, to_id):
-        self.to_list.append(to_id)
-        self._clean_lists()
+    def add_to(self, to_id: str) -> None:
+        """Store id in the from_list"""
+        if to_id:
+            self.to_list.append(to_id)
     
-    def add_release(self, release: str) -> None:
+    def set_release(self, release: str) -> None:
         self.release = release
     
-    def add_date(self, date: datetime) -> None:
+    def set_date(self, date: datetime) -> None:
         self.date = date
     
     def add_pair(self, pair) -> None:
+        """Keep a record of this pair
+        NB: Change the value to empty string if it is None
+        """
         if not pair["old_id"]:
             pair["old_id"] = ""
         if not pair["new_id"]:
@@ -130,6 +188,8 @@ class StableIdEvent:
         self.pairs.append(pair)
     
     def get_full_release(self) -> str:
+        """Get the expanded release name, pre-BRC4 or BRC4 = build
+        """
         release = self.release
         date = self.date
 
@@ -140,8 +200,8 @@ class StableIdEvent:
         
         return release
 
-    
-    def name_event(self):
+    def _name_event(self) -> None:
+        """Identify the event name based on the old vs new id lists"""
         if not self.from_list and len(self.to_list) == 1:
             self.name = "new"
         elif not self.to_list and len(self.from_list) == 1:
@@ -157,11 +217,17 @@ class StableIdEvent:
         else:
             raise UnsupportedEvent(f"Event {self.from_list} to {self.to_list} is not supported")
     
-    def get_name(self):
-        self.name_event()
+    def get_name(self) -> str:
+        """Retrieve the name for this event, update it beforehand"""
+        self._name_event()
         return self.name
     
-    def add_pairs(self, pairs):
+    def add_pairs(self, pairs: List[Dict[str, str]]) -> None:
+        """Provided all the pairs, keep those that are used by this event.
+
+        Args:
+        pairs: list of pairs of ids {old_id:"", new_id:""} 
+        """
         for pair in pairs:
             if (pair["old_id"] and pair["old_id"] in self.from_list) or (pair["new_id"] and pair["new_id"] in self.to_list):
                 # Core db contains an empty line to signify that an old id has been removed
@@ -170,6 +236,7 @@ class StableIdEvent:
                 if name != "deletion" and not pair["new_id"]:
                     continue
                 self.add_pair(pair)
+
 
 class dump_stable_ids:
 
@@ -189,8 +256,8 @@ class dump_stable_ids:
             pairs = self.get_pairs(session["id"])
             session_events = self.make_events(pairs)
             for event in session_events:
-                event.add_release(session["release"])
-                event.add_date(session["date"])
+                event.set_release(session["release"])
+                event.set_date(session["date"])
             events += session_events
         
         # Then analyse the pairs to make events
