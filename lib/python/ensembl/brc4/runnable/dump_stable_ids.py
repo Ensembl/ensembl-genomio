@@ -165,7 +165,10 @@ class StableIdEvent:
     def add_pairs(self, pairs):
         for pair in pairs:
             if (pair["old_id"] and pair["old_id"] in self.from_list) or (pair["new_id"] and pair["new_id"] in self.to_list):
-                if self.get_name != "deletion" and not pair["new_id"]:
+                # Core db contains an empty line to signify that an old id has been removed
+                # in merge/split/mixed
+                name = self.get_name()
+                if name != "deletion" and not pair["new_id"]:
                     continue
                 self.add_pair(pair)
 
