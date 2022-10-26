@@ -145,7 +145,7 @@ sub pipeline_analyses {
       -input_ids  => [{}],
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
+      -meadow_type       => 'SLURM',
       -flow_into  => 'Genome_factory',
     },
 
@@ -160,7 +160,7 @@ sub pipeline_analyses {
       },
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
+      -meadow_type       => 'SLURM',
       -max_retry_count => 0,
       -flow_into => {
         '2' => { 'Process_genome_metadata' => { genome_json => '#_0#' } },
@@ -254,7 +254,6 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
       -rc_name    => '8GB',
-      -meadow_type       => 'LSF',
       -flow_into  => {
           2 => 'GFF3_validation',
           3 => "Check_json_schema",
@@ -389,15 +388,63 @@ sub pipeline_analyses {
 
 sub resource_classes {
     my $self = shift;
-    return {
-      'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
-      '8GB'     => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 8000   -R "rusage[mem=8000]"'},
-      '15GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 15000  -R "rusage[mem=15000]"'},
-      '32GB '   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 32000  -R "rusage[mem=32000]"'},
-      '64GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 64000  -R "rusage[mem=64000]"'},
-      '128GB'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 128000 -R "rusage[mem=128000]"'},
-      '256GB  ' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 256000 -R "rusage[mem=256000]"'},
+    
+    my %mems = (
+      'default'   =>  4_000,
+      '8GB'       =>  8_000,
+      '15GB'      =>  15_000,
+      '32GB'      =>  32_000,
+      '64GB'      =>  64_000,
+      '128GB'     =>  128_000,
+      '256GB'     =>  256_000,
+    );
+    
+    my $queue = $self->o('queue_name');
+    my $time  = '1:00:00';
+    
+    my %resource;
+    for my $name (keys %mems) {
+      my $mem = $mems{$name};
+      
+      $resource{$name} = {
+        'LSF' => lsf_resource($mem, $time, $queue),
+        'SLURM' => slurm_resource($mem, $time, $queue),
+      };
     }
+    
+    return \%resource;
+}
+
+sub lsf_resource {
+  my ($mem, $time, $queue) = @_;
+  
+  my @res_params = (
+    "-M $mem",
+    "-R \"rusage[mem=$mem]\"",
+    "-q $queue",
+  );
+  my $res_string = join(" ", @res_params);
+  return $res_string;
+}
+
+sub slurm_resource {
+  my ($mem, $time, $queue) = @_;
+  
+  my $rmem;
+  if ($mem > 1000) {
+    $mem = int($mem/1000);
+    $rmem = $mem . 'g';
+  } else {
+    $rmem = $mem . "m";
+  }
+  
+  my @res_params = (
+    "--mem=$rmem",
+    "--time=$time",
+    "--partition=$queue",
+  );
+  my $res_string = join(" ", @res_params);
+  return $res_string;
 }
 
 1;
