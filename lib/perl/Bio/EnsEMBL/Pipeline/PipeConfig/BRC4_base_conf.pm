@@ -46,13 +46,14 @@ sub _lsf_resource {
   my $queue = $conf->{queue};
   my $time = $conf->{time};
 
-  if ($time and $time =~ /(\d\d):(\d\d):(\d\d)/) {
+  if ($time and $time =~ /(\d+):(\d\d):(\d\d)/) {
     $time = "$1:$2";
   }
   
   my @res_params = ("-M $mem", "-R 'rusage[mem=$mem]'");
   push @res_params, "-q $queue" if $queue;
-  push @res_params, "-q $time" if $time;
+  push @res_params, "-We $time" if $time;
+  push @res_params, "-n $cpus" if $cpus;
   push @res_params, $conf->{slurm_params} if $conf->{slurm_params};
   my $res_string = join(" ", @res_params);
   return $res_string;
@@ -78,7 +79,7 @@ sub _slurm_resource {
   
   my @res_params = ("--mem=$rmem");
   push @res_params, "--time=$time" if $time;
-  push @res_params, "--cpus=$cpus" if $cpus;
+  push @res_params, "--n=$cpus" if $cpus;
   push @res_params, "--partition=$queue" if $queue;
   push @res_params, $conf->{lsf_params} if $conf->{lsf_params};
   my $res_string = join(" ", @res_params);
