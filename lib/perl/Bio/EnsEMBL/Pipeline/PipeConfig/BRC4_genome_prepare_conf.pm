@@ -28,7 +28,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_prepare_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
@@ -145,7 +145,6 @@ sub pipeline_analyses {
       -input_ids  => [{}],
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'SLURM',
       -flow_into  => 'Genome_factory',
     },
 
@@ -160,7 +159,6 @@ sub pipeline_analyses {
       },
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'SLURM',
       -max_retry_count => 0,
       -flow_into => {
         '2' => { 'Process_genome_metadata' => { genome_json => '#_0#' } },
@@ -406,45 +404,14 @@ sub resource_classes {
     for my $name (keys %mems) {
       my $mem = $mems{$name};
       
-      $resource{$name} = {
-        'LSF' => lsf_resource($mem, $time, $queue),
-        'SLURM' => slurm_resource($mem, $time, $queue),
-      };
+      $resource{$name} = $self->make_resource({
+        memory => $mem,
+        time => $time,
+        queue => $queue,
+      });
     }
     
     return \%resource;
-}
-
-sub lsf_resource {
-  my ($mem, $time, $queue) = @_;
-  
-  my @res_params = (
-    "-M $mem",
-    "-R \"rusage[mem=$mem]\"",
-    "-q $queue",
-  );
-  my $res_string = join(" ", @res_params);
-  return $res_string;
-}
-
-sub slurm_resource {
-  my ($mem, $time, $queue) = @_;
-  
-  my $rmem;
-  if ($mem > 1000) {
-    $mem = int($mem/1000);
-    $rmem = $mem . 'g';
-  } else {
-    $rmem = $mem . "m";
-  }
-  
-  my @res_params = (
-    "--mem=$rmem",
-    "--time=$time",
-    "--partition=$queue",
-  );
-  my $res_string = join(" ", @res_params);
-  return $res_string;
 }
 
 1;
