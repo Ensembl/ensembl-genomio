@@ -26,11 +26,11 @@ import hashlib
 class download_assembly_data(eHive.BaseRunnable):
 
     file_ends = {
-            "assembly_report.txt" : "report",
-            "genomic.fna.gz" : "fasta_dna",
-            "protein.faa.gz" : "fasta_pep",
-            "genomic.gff.gz" : "gff3_raw",
-            "genomic.gbff.gz" : "gbff",
+        "assembly_report.txt": "report",
+        "genomic.fna.gz": "fasta_dna",
+        "protein.faa.gz": "fasta_pep",
+        "genomic.gff.gz": "gff3_raw",
+        "genomic.gbff.gz": "gbff",
     }
     
     @staticmethod
