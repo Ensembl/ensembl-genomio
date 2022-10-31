@@ -121,7 +121,7 @@ class download_assembly_data(eHive.BaseRunnable):
                         content = f.read()
                         file_sum = hashlib.md5(content).hexdigest()
                     if file_sum != checksum:
-                        print("File %s checksum doesn't match" % file_path)
+                        print(f"File {file_path} checksum doesn't match")
                         return False
                     else:
                         print("File checksum ok %s" % file_path)
