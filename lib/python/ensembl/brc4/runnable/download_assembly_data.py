@@ -214,7 +214,7 @@ class download_assembly_data(eHive.BaseRunnable):
                                 # Download the file
                                 try:
                                     with open(local_path, 'wb') as fp:
-                                        f.retrbinary("RETR " + ftp_file, fp.write)
+                                        f.retrbinary(f"RETR {ftp_file}", fp.write)
                                 except EOFError:
                                     continue
                                 
