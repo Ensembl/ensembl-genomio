@@ -229,7 +229,7 @@ class download_assembly_data(eHive.BaseRunnable):
                             if expected_sum == file_sum:
                                 print(f"Downloaded file properly to {local_path}")
                             else:
-                                raise Exception(f"Could not download file {ftp_file} properly after {redo} tries")
+                                raise Exception(f"Could not download file {ftp_file} after {redo} tries")
                                 
 
 
