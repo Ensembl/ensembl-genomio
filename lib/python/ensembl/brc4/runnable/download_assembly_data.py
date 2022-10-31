@@ -124,7 +124,7 @@ class download_assembly_data(eHive.BaseRunnable):
                         print(f"File {file_path} checksum doesn't match")
                         return False
                     else:
-                        print("File checksum ok %s" % file_path)
+                        print(f"File checksum ok {file_path}")
 
         print("All checksums OK")
         return True
