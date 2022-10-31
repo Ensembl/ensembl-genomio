@@ -207,7 +207,7 @@ class download_assembly_data(eHive.BaseRunnable):
 
                             file_sum = ''
                             redo = 0
-                            while (file_sum != expected_sum and redo <= max_redo):
+                            while (file_sum != expected_sum) and (redo <= max_redo):
                                 redo += 1
                                 print(f"Downloading file {ftp_file}, try {redo}...")
 
