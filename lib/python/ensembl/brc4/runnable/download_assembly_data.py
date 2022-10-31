@@ -113,7 +113,7 @@ class download_assembly_data(eHive.BaseRunnable):
                     file_path = os.path.join(dl_dir, dl_file)
                     
                     if not os.path.isfile(file_path):
-                        print("No file %s found" % file_path)
+                        print(f"No file {file_path} found")
                         return False
                     
                     # Check the file checksum
