@@ -204,7 +204,7 @@ sub pipeline_analyses {
       -language => 'python3',
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
-      -rc_name        => 'default',
+      -rc_name        => 'download',
       -flow_into  => {
         '2->A' => 'Process_data',
         'A->2' => 'Manifest_maker',
@@ -279,7 +279,7 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.process_seq_region',
       -language    => 'python3',
       -analysis_capacity   => 5,
-      -rc_name    => 'default',
+      -rc_name    => '4GB',
       -parameters     => {
         file_name => "seq_region",
       },
@@ -310,7 +310,7 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.process_fasta',
       -language    => 'python3',
       -analysis_capacity   => 2,
-      -rc_name    => 'default',
+      -rc_name    => '4GB',
       -parameters     => {
         file_name => "fasta_dna",
       },
@@ -322,7 +322,7 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.process_fasta',
       -language    => 'python3',
       -analysis_capacity   => 2,
-      -rc_name    => 'default',
+      -rc_name    => '4GB',
       -parameters     => {
         file_name => "fasta_pep",
         in_genbank => '#gbff#',
@@ -337,7 +337,7 @@ sub pipeline_analyses {
       -language    => 'python3',
       -max_retry_count => 0,
       -analysis_capacity   => 5,
-      -rc_name         => 'default',
+      -rc_name         => '4GB',
       -parameters     => {
         output_dir => $self->o('output_dir'),
       },
@@ -378,7 +378,7 @@ sub pipeline_analyses {
       -module      => 'ensembl.brc4.runnable.manifest_stats',
       -language    => 'python3',
       -analysis_capacity   => 1,
-      -rc_name         => 'default',
+      -rc_name         => '4GB',
       -max_retry_count => 0,
     },
   ];
@@ -388,17 +388,13 @@ sub resource_classes {
     my $self = shift;
     
     my %mems = (
-      'default'   =>  4_000,
+      'default'   =>  1_000,
+      '4GB'       =>  4_000,
       '8GB'       =>  8_000,
-      '15GB'      =>  15_000,
-      '32GB'      =>  32_000,
-      '64GB'      =>  64_000,
-      '128GB'     =>  128_000,
-      '256GB'     =>  256_000,
     );
     
     my $queue = $self->o('queue_name');
-    my $time  = '1:00:00';
+    my $time  = '0:10:00';
     
     my %resource;
     for my $name (keys %mems) {
@@ -410,6 +406,13 @@ sub resource_classes {
         queue => $queue,
       });
     }
+
+    # Special download queue, can take a long time
+    $resource{download} = $self->make_resource({
+      memory => 4000,
+      time => '1:00:00',
+      queue => $queue,
+    });
     
     return \%resource;
 }
