@@ -357,7 +357,7 @@ sub pipeline_analyses_generic {
       -parameters        => {
                               synonym_external_db => $self->o('synonym_external_db'),
                             },
-      -rc_name           => '8Gb_mem',
+      -rc_name           => '8GB',
       -flow_into         => ['LoadGFF3_HighMem'],
     },
 
@@ -379,7 +379,7 @@ sub pipeline_analyses_generic {
                               min_intron_size => $self->o('min_intron_size'),
                               log             => catdir($self->o('pipeline_dir'), '#species#', 'load_gff3', 'gff3loader.log'),
                             },
-      -rc_name           => '8Gb_mem',
+      -rc_name           => '8GB',
       -flow_into         => {
                                '1' => WHEN('#fix_models#' =>
                                         ['FixModels'],
@@ -406,7 +406,7 @@ sub pipeline_analyses_generic {
                               min_intron_size => $self->o('min_intron_size'),
                               log             => catdir($self->o('pipeline_dir'), '#species#', 'gff3loader.log'),
                             },
-      -rc_name           => '16Gb_mem',
+      -rc_name           => '16GB',
       -flow_into         => {
                               '1' => WHEN('#fix_models#' =>
                                       ['FixModels'],
