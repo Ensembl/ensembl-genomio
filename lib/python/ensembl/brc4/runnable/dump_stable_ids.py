@@ -1,4 +1,4 @@
-#!env python3
+#!/usr/bin/env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -17,7 +17,7 @@
 
 import argparse
 from os import path
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
 from datetime import datetime
 
 from ensembl.brc4.runnable.core_server import core_server
@@ -35,30 +35,22 @@ class StableIdEvent:
     - split genes (one gene to several)
     - mixed (several genes to several)
 
-    Args:
-    from_list = List of genes the previous gene set
-    to_list = List of genes in the new gene set
-    release = new gene set release name
-    date = date of the new gene set
+    Attributes:
+        from_list: List of genes the previous gene set.
+        to_list: List of genes in the new gene set.
+        release: New gene set release name.
+        date: Date of the new gene set.
+        name: ...
+        pairs: ...
 
     Any gene set before 2019-09 is dubbed pre-BRC4.
 
-    Methods:
-    brc_format_1: Draft representation of events for BRC4 v1
-    brc_format_2: Draft representation of events for BRC4 v2
-    add_from: add gene id to the from_list
-    add_to: add gene id to the to_list
-    set_release: set the release
-    set_date: set the release date
-    get_full_release: Retrieve the release name, pre-BRC4 or build
-    get_name: Get the name of the event determined from the from_list and to_list
-    add_pair: Add a pair of gene ids as part of the event
-    add_pairs: Store all the pairs of ids used for this event
     """
 
     date_brc4_start = datetime(2019, 9, 1)
 
-    def __init__(self, from_list: List[str] = [], to_list: List[str] = [], release: str = '', date: datetime = '') -> None:
+    def __init__(self, from_list: List[str] = [], to_list: List[str] = [], release: Optional[int] = None,
+                 date: Optional[datetime] = None) -> None:
         self.from_list = from_list
         self.to_list = to_list
         self.release = release
@@ -70,13 +62,10 @@ class StableIdEvent:
     def __str__(self) -> str:
         from_str = ",".join(self.from_list)
         to_str = ",".join(self.to_list)
-        release = self.release
-        name = self.get_name()
-        return f"From {from_str} to {to_str} = {name} in release {release}"
+        return f"From {from_str} to {to_str} = {self.get_name()} in release {self.release}"
     
     def brc_format_1(self) -> List[str]:
-        """Proposed export format to represent one event.
-        One line per initial id, tabulated data:
+        """Returns a list events, one line per initial ID, in the following TSV format:
         - old gene id
         - event name
         - release
@@ -84,8 +73,6 @@ class StableIdEvent:
         - list of old gene ids in the event (comma-separated)
         - list of new gene ids in the event (comma-separated)
 
-        Returns:
-        List of lines as strings
         """
         from_str = ",".join(self.from_list)
         to_str = ",".join(self.to_list)
@@ -124,17 +111,14 @@ class StableIdEvent:
         return line_list
     
     def brc_format_2(self) -> List[str]:
-        """Proposed export format to represent one event.
-        One list for each combination of genes:
+        """Returns a list of combination of genes, one line per combination of old_id - new_ids, in the
+        following TSV format:
         - old gene id
         - new gene id
         - event name
         - release
         - release date
-        NB: there are as many lines as there are combinations of old_id - new_ids
 
-        Returns:
-        List of lines as strings
         """
         release = self.get_full_release()
         if self.date:
@@ -156,8 +140,7 @@ class StableIdEvent:
         return line_list
     
     def _clean_lists(self) -> None:
-        """Make sure the lists do not contain empty elements
-        """
+        """Removes any empty elements in ``from_list`` and ``to_list``."""
         self.from_list = [id for id in self.from_list if id]
         self.to_list = [id for id in self.to_list if id]
     
@@ -177,24 +160,28 @@ class StableIdEvent:
     def set_date(self, date: datetime) -> None:
         self.date = date
     
-    def add_pair(self, pair) -> None:
-        """Keep a record of this pair
-        NB: Change the value to empty string if it is None
+    def add_pair(self, pair: Dict) -> None:
+        """Keeps a record of this pair.
+        
+        Args:
+            pair: Dictionary of pairs to record, with keys "old_id" and "new_id".
+            
+        Raises:
+            ValueError: When no-empty value is provided for either "old_id" or "new_id".
         """
-        if not pair["old_id"]:
-            pair["old_id"] = ""
-        if not pair["new_id"]:
-            pair["new_id"] = ""
+        pair.setdefault("old_id", "")
+        pair.setdefault("new_id", "")
+        if not pair["old_id"] and not pair["new_id"]:
+            raise ValueError(f"Expected at least one value in the given pair {pair}")
         self.pairs.append(pair)
     
     def get_full_release(self) -> str:
-        """Get the expanded release name, pre-BRC4 or BRC4 = build
-        """
+        """Returns the expanded release name, pre-BRC4 or `BRC4 = build`."""
         release = self.release
         date = self.date
 
         if date and date > self.date_brc4_start:
-                release = f"build {release}"
+            release = f"build {release}"
         else:
             release = f"pre-BRC4 {release}"
         
@@ -226,7 +213,7 @@ class StableIdEvent:
         """Provided all the pairs, keep those that are used by this event.
 
         Args:
-        pairs: list of pairs of ids {old_id:"", new_id:""} 
+            pairs: list of pairs of ids {old_id:"", new_id:""} 
         """
         for pair in pairs:
             if (pair["old_id"] and pair["old_id"] in self.from_list) or (pair["new_id"] and pair["new_id"] in self.to_list):
@@ -238,12 +225,12 @@ class StableIdEvent:
                 self.add_pair(pair)
 
 
-class dump_stable_ids:
+class DumpStableIDs:
 
     def __init__(self, server: str) -> None:
         self.server = server
     
-    def dump_history_json(self, output_file: str):
+    def dump_history_json(self, output_file: str) -> None:
         pass
 
     def get_history(self) -> Any:
@@ -273,7 +260,7 @@ class dump_stable_ids:
                 for line in event_lines:
                     out_fh.write(line + "\n")
     
-    def get_mapping_sessions(self):
+    def get_mapping_sessions(self) -> List:
         query = """SELECT mapping_session_id, new_release, created
         FROM mapping_session
         """
@@ -287,7 +274,7 @@ class dump_stable_ids:
             sessions.append(session)
         return sessions
 
-    def get_pairs(self, session_id):
+    def get_pairs(self, session_id: int) -> List:
         query = """SELECT old_stable_id, new_stable_id
         FROM stable_id_event
         WHERE (old_stable_id != new_stable_id OR old_stable_id IS NULL OR new_stable_id IS NULL)
@@ -305,7 +292,7 @@ class dump_stable_ids:
         print(f"{len(pairs)} stable id events")
         return pairs
     
-    def make_events(self, pairs):
+    def make_events(self, pairs: List) -> List:
 
         from_list = {}
         to_list = {}
@@ -361,7 +348,8 @@ class dump_stable_ids:
 
         return events
     
-    def extend_event(self, event: StableIdEvent, from_list: Dict[str, List[str]], to_list: Dict[str, List[str]]):
+    def extend_event(self, event: StableIdEvent, from_list: Dict[str, List[str]], to_list: Dict[str, List[str]]
+        ) -> Tuple[StableIdEvent, List, List]:
         extended = True
 
         while(extended):
@@ -404,7 +392,6 @@ def main():
     parser.add_argument('--dbname', type=str, required=True, help='Database name')
     parser.add_argument('--output_file', type=str, required=True, help='Output file')
 
-    # Optional
     args = parser.parse_args()
 
     # Start

@@ -1,4 +1,4 @@
-#!env python3
+#!/usr/bin/env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -14,29 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
 import argparse
 import json
 import re
 from os import path
 from typing import List
-import mysql.connector
 
-class core_server:
-    """Basic interface to a Mysql server with core databases.
-    Allows to get a list of databases, and access to them.
+import mysql.connector
+class CoreServer:
+    """Basic interface to a MySQL server with core databases.
+
+    Allows to get a list of databases and provides access to them.
 
     Args:
     host
     port
     user
     password (optional)
-
-    Public methods:
-    connect() = connect to the server
-    get_all_cores() = List of db names that look like cores
-    get_cores() = Filtered list of db names
 
     To connect to a specific database:
     1) Create the core server object
@@ -53,14 +47,13 @@ class core_server:
         self.cursor = ''
     
     def connect(self) -> None:
-        """Create a connection to the database, store it in the db attribute"""
-        if not self.db:
-            self.db = mysql.connector.connect(
-                user=self.user,
-                passwd=self.password,
-                host=self.host,
-                port=self.port
-            )
+        """Create a connection to the database."""
+        self.db = mysql.connector.connect(
+            user=self.user,
+            passwd=self.password,
+            host=self.host,
+            port=self.port
+        )
     
     def get_all_cores(self) -> List[str]:
         """Query the server and retrieve all databases that look like Ensembl cores."""
@@ -116,10 +109,9 @@ def main():
     args = parser.parse_args()
 
     # Start
-    factory = core_server(host=args.host, port=args.port, user=args.user, password=args.password)
+    factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
     dbs = factory.get_cores(prefix=args.prefix, build=args.build, version=args.version)
-    if dbs:
-        print("\n".join(dbs))
+    print("\n".join(dbs))
 
 
 if __name__ == "__main__":
