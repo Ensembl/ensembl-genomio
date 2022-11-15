@@ -42,7 +42,8 @@ class compare_report(eHive.BaseRunnable):
         report = output_dir + "/report.log"
         print("Write report in %s" % report)
         
-        fields = ("species", "seq_count_1", "seq_count_2", "diff_length", "common", "only1", "only2", "max_only1", "max_only2")
+        fields = ("species", "accession", "seq_count_1", "seq_count_2", "num_diff_seq", "common",
+                    "only1", "only2", "max_only1", "max_only2", "other_locations", "summary", "organellar_summary", "Assembly_level_1", "Assembly_level_2")
         
         with open(report, "w") as out_fh:
             out_fh.write("#" + "\t".join(fields) + "\n")
@@ -56,4 +57,3 @@ class compare_report(eHive.BaseRunnable):
                     if f in stat:
                         line.append(str(stat[f]))
                 out_fh.write("\t".join(line) + "\n")
-                
