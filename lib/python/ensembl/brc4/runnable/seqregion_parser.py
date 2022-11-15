@@ -43,7 +43,7 @@ class SeqregionParser:
             "kinetoplast" : "kinetoplast"
     }
     
-    def get_report_regions(self, report_path: str, use_refseq: bool = False) -> Dict[str, dict]:
+    def get_report_regions(self, report_path: str, accession: str, use_refseq: bool = False) -> Dict[str, dict]:
         """Get seq_region data from report file.
 
         Args:
@@ -52,6 +52,8 @@ class SeqregionParser:
         Returns:
             A dict of seq_regions dicts, with their name as the key
         """
+        if accession.startswith('GCF'):
+            use_refseq = True
         # Get the report in a CSV format, easier to manipulate
         report_csv, metadata = self.report_to_csv(report_path)
         
