@@ -39,13 +39,9 @@ class SeqGroup():
     def __str__(self):
         return ", ".join(self.ids)
 
-    def get(self):
-        return ", ".join(self.ids)
-
     def add_id(self, identifier):
         self.ids.append(identifier)
         self.count = len(self.ids)
-
 
 class compare_fasta(eHive.BaseRunnable):
 
@@ -71,7 +67,7 @@ class compare_fasta(eHive.BaseRunnable):
         (stats, diffs, seq_map) = self.compare_seqs(seq1, seq2)
         # Print mapping to a file (add report data)
         map_file = output_dir + "/" + species + "_" + name + ".map"
-        self.print_map(seq_map, map_file, report)
+        self.print_map(seq_map, map_file, report, accession)
         
         # Print full list of results in a file
         output_file = output_dir + "/" + species + "_" + name + ".log"
@@ -79,7 +75,7 @@ class compare_fasta(eHive.BaseRunnable):
         with open(output_file, "w") as out_fh:
             for line in diffs:
                 out_fh.write(line + "\n")
-                
+
         # Print the stats separately
         out = {
                 "species" : species,
@@ -87,10 +83,10 @@ class compare_fasta(eHive.BaseRunnable):
                 }
         self.dataflow(out, 2)
         
-    def print_map(self, seq_map, map_file, report_file):
+    def print_map(self, seq_map, map_file, report_file, accession):
         
         report_parser = SeqregionParser()
-        report_seq = report_parser.get_report_regions(report_file)
+        report_seq = report_parser.get_report_regions(report_file, accession)
         report = self.add_report_to_map(seq_map, report_seq)
         
         print("Write map in %s" % map_file)
@@ -197,7 +193,7 @@ class compare_fasta(eHive.BaseRunnable):
         # Compare sequences
         seqs1 = self.build_seq_dict(seq1)
         seqs2 = self.build_seq_dict(seq2)
-
+       
         # Compare number of sequences
         if len(seq1) != len(seq2):
             comp.append("WARNING: Different number of sequences: %d vs %d" % (len(seq1), len(seq2)))
@@ -211,7 +207,7 @@ class compare_fasta(eHive.BaseRunnable):
 
         only2 = {seq: group for seq,
                  group in seqs2.items() if not seq in seqs1}
-
+        
         common, group_comp = self.find_common_groups(
             seqs1, seqs2)
         comp += group_comp
@@ -222,21 +218,15 @@ class compare_fasta(eHive.BaseRunnable):
         # Gathering the organellar sequences
         report = self.param_required("report")
         report_parser = SeqregionParser()
-        report_seq = report_parser.get_report_regions(report)
-        report = self.add_report_to_map(common, report_seq)
+        report_seq = report_parser.get_report_regions(report,accession)
         map_dna_path = self.param_required("seq_regions")
         seq_data = self.get_json(map_dna_path)
-        (org, location, INSDC_assembly_level, 
-                core_assembly_level) = self.organellar_assembly(report_seq, seq_data)
-
-        INSDC_assembly_level = ', '.join([str(assembly) for assembly in INSDC_assembly_level])
-        core_assembly_level = ', '.join([str(assembly) for assembly in core_assembly_level])
+        org_loc =self.organellar_assembly(report_seq, seq_data) 
+        INSDC_assembly_level, core_assembly_level = self.assembly_level(report_seq,seq_data)
 
         comp.append("Assembly level: %s vs %s" % (INSDC_assembly_level,core_assembly_level))
 
-        names_length={}
-        names_contig={}
-
+        names_length = {}
         # sequences which have extra N at the end
         if only1 and only2:
             for seq1, name1 in only1.items():
@@ -252,60 +242,66 @@ class compare_fasta(eHive.BaseRunnable):
                         if len(ignored_seq) == N:
                             comp.append(
                                 f"Please check extra Ns added in core in  %s and %s" % (name1, name2))
-                        elif len(ignored_seq) != 0 and N !=0:
-                            names_contig[name1] = name2
+                        else:
+                            comp.append(
+                                f"ALERT INSERTIONS at the end or diff assembly level  %s and %s" % (name1, name2))
                     elif len1 == len2:
-                        names_length[name1] = name2                           
-                    elif len1 == len2 and seq2_N > seq1_N:
-                        comp.append(
-                                f"Core has more Ns, check  %s and %s" % (name1, name2))          
+                        if seq2_N > seq1_N:
+                            comp.append(
+                                f"Core has more Ns, check  %s and %s" % (name1, name2))
+                        elif seq1_N > seq2_N:
+                            comp.append(
+                                f"INSDC has more Ns, check  %s and %s" % (name1, name2))
+                        else:
+                            names_length[name1] = name2                                  
                     else:
                         continue
+
         if names_length:
-            names1=[]
             length = len(names_length)
-            for k,v in names_length.items():
-                names1.append([k.get(), v.get()])
             comp.append(
-                    f"%d sequences have the same length %s" % (length,names1))
+                    f"%d sequences have the same length" % length)
+            for insdc, core in names_length.items():
+                comp.append(
+                        f"INSDC: %s and coredb : %s" % (insdc, core))
 
-        if names_contig:
-            for sequence2, name_2 in only2.items():
-                N2 = sequence2.count('N')
-                for sequence_1, name_1 in only1.items():
-                    N1 = sequence_1.count('N')
-                    if sequence_1 in sequence2 and N2 > N1:
-                        comp.append(
-                                f"contigs are joined into scaffold, check  %s and %s" % (name_2, name_1))
-
+        # Remove the duplicates
+        for org_name in list(org_loc.keys()):
+            for insdc_id,core_id in common.items():
+                if org_name == core_id:
+                    org_loc.pop(org_name)           
+        
         # checking for multiple entries of organellar seq
-        multi_org = [name.split('.')[0] for name in org]
+        multi_org = [name.split('.')[0] for name in org_loc.keys()]
         multi_org_acc = [j[:-1] for j in multi_org]  # similar accession
         unique_org_id = list(set(multi_org_acc))
+        location = [location for location in org_loc.values()]
         unique_location = location.count("mitochondrial_chromosome")
         unique_apicoplast = location.count("apicoplast_chromosome")
 
+        only1_id=[str(id1) for id1 in only1.values()]
+
         # comparing organellar sequences with common, only1 and only2
         count = 0
-        for index, i in enumerate(org):
-            if i == 'na':
+        for org_name, loc in org_loc.items():
+            if org_name == 'na':
                 comp.append("MISSING accession in the report (na)")
             else:
-                if i in common:
+                if org_name in common.keys():
                     count = count+1
                     comp.append("%s (both) in location: %s" %
-                                (i, location[index]))
+                                (org_name, loc))
                     if count > 0:
                         org_value = "identical"
-                elif i in only1:
+                elif org_name in only1_id:
                     count = count+1
                     comp.append("%s (only1) in  location: %s" %
-                                (i, location[index]))
+                                (org_name, loc))
                     org_value = "unknown_with_organellar"
                 else:
                     count = count+1
                     comp.append("%s (only2) in location: %s" %
-                                (i, location[index]))
+                                (org_name, loc))
                     org_value = "unknown_with_organellar"
 
         # if the mistmatch is due to added organellar sequences
@@ -423,33 +419,17 @@ class compare_fasta(eHive.BaseRunnable):
         return common, comp
 
     def organellar_assembly(self, report_seq, data):
-        org = []
-        org1 = []
+        org_name = {}
+        org_loc = {}
         org2 = []
         org3 = []
-        INSDC_assembly_level=[]
-        core_assembly_level=[]
-        scaffold_INSDC = 0
-        chromosome_INSDC = 0
-        scaffold_core = 0
-        chromosome_core = 0
-        contig_core = 0
-
+        
         # Gathering data from the INSDC report file and storing it into a list
         for name1, details1 in report_seq.items():
-            if details1['coord_system_level']== 'scaffold':
-                scaffold_INSDC+=1
-            
-            elif details1['coord_system_level']== 'chromosome':
-                chromosome_INSDC+=1
-                
             if "location" in details1:
                 if details1['location'] not in ("chromosome", "nuclear_chromosome", "linkage_group"):
                     loc = details1['location']
-                    org1.append(loc)
-                    org.append(name1)
-
-        INSDC_assembly_level.extend([scaffold_INSDC,chromosome_INSDC])
+                    org_loc[name1]=loc
 
         # Gathering data from Seq_json file and storing it into a list
         for rep in data:
@@ -457,28 +437,43 @@ class compare_fasta(eHive.BaseRunnable):
                 if "location" in name2:
                     if details2 not in ("chromosome", "nuclear_chromosome", "linkage_group"):
                         name = rep['BRC4_seq_region_name']
-                        org3.append(details2)
-                        org2.append(name)
-                if 'coord_system_level' in name2:
-                    if details2 in ('contig','Contig'):
-                        contig_core+=1
-                    elif details2 not in ('chromosome', 'nuclear_chromosome'):
-                        scaffold_core+=1
-                    else: 
-                        chromosome_core+=1
-
-        core_assembly_level.extend([contig_core,scaffold_core,chromosome_core])           
+                        org_loc[name] = details2
         
-        # checking for INSDC names for organellar sequences found in core
-        for i in range(0, len(org2)):
-            for name, rep in report_seq.items():
-                if rep['name'] == org2[i]:
-                    org2[i] = name
-        for index, i in enumerate(org2):
-            if i not in org:
-                org.append(i)
-                org1.append(org3[index])
-            else:
-                print("you have duplicates")
+        return org_loc
 
-        return org, org1, INSDC_assembly_level, core_assembly_level
+    def assembly_level(self, report_seq, core_data):
+
+        INSDC_assembly_level=[]
+        core_assembly_level=[]
+        core_assembly = {}
+        scaffold_INSDC = 0
+        chromosome_INSDC = 0
+        scaffold_core = 0
+        chromosome_core = 0
+        
+    
+        for name, insdc_rep in report_seq.items():
+            if insdc_rep['coord_system_level'] not in ("chromosome", "nuclear_chromosome"):
+                scaffold_INSDC+=1
+            else:
+                chromosome_INSDC+=1
+    
+        INSDC_assembly_level.extend([scaffold_INSDC,chromosome_INSDC])
+    
+        for core_details in core_data:
+            name = core_details['BRC4_seq_region_name']
+            coord_system_level = core_details ['coord_system_level']
+            core_assembly[name] = coord_system_level
+        
+        for name,coord_level in core_assembly.items():
+            if coord_level not in ("chromosome", "nuclear_chromosome"):
+                scaffold_core+=1
+            else:
+                chromosome_core+=1
+                    
+        core_assembly_level.extend([scaffold_core,chromosome_core])
+
+        INSDC_assembly_level = ', '.join([str(assembly) for assembly in INSDC_assembly_level])
+        core_assembly_level = ', '.join([str(assembly) for assembly in core_assembly_level])
+
+        return INSDC_assembly_level,core_assembly_level     
