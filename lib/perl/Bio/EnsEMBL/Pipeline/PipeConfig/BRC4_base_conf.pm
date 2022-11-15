@@ -86,4 +86,32 @@ sub _slurm_resource {
   return $res_string;
 }
 
+sub resource_classes {
+  my ($self) = @_;
+
+  my $data_queue = $self->o('datamove_queue_name');
+  my $queue = $self->o('queue_name');
+  my $short = "1:00:00";
+  my $long = "24:00:00";
+
+  my %resources = (
+    'default'  => $self->make_resource({"queue" => $queue, "memory" => 4_000, "time" => $short}),
+    'normal'   => $self->make_resource({"queue" => $queue, "memory" => 4_000, "time" => $long}),
+    'small'    => $self->make_resource({"queue" => $queue, "memory" => 100, "time" => $short}),
+    'datamove' => $self->make_resource({"queue" => $data_queue, "time" => $short}),
+  );
+
+  # Additional names in the form xGB e.g. "2GB"
+  # From 2GB to 64GB
+  my @mems = (2, 4, 8, 12, 16, 32, 64);
+  my $time = $long;
+
+  for my $mem (@mems) {
+    my $name = "${mem}GB";
+    $resources{$name} = $self->make_resource({"queue" => $queue, "memory" => $mem * 1000, "time" => $time});
+  }
+
+  return \%resources;
+}
+
 1;

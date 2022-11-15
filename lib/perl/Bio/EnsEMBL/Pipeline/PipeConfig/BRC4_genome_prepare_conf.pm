@@ -204,7 +204,7 @@ sub pipeline_analyses {
       -language => 'python3',
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
-      -rc_name        => 'download',
+      -rc_name        => 'normal',
       -flow_into  => {
         '2->A' => 'Process_data',
         'A->2' => 'Manifest_maker',
@@ -382,39 +382,6 @@ sub pipeline_analyses {
       -max_retry_count => 0,
     },
   ];
-}
-
-sub resource_classes {
-    my $self = shift;
-    
-    my %mems = (
-      'default'   =>  1_000,
-      '4GB'       =>  4_000,
-      '8GB'       =>  8_000,
-    );
-    
-    my $queue = $self->o('queue_name');
-    my $time  = '0:10:00';
-    
-    my %resource;
-    for my $name (keys %mems) {
-      my $mem = $mems{$name};
-      
-      $resource{$name} = $self->make_resource({
-        memory => $mem,
-        time => $time,
-        queue => $queue,
-      });
-    }
-
-    # Special download queue, can take a long time
-    $resource{download} = $self->make_resource({
-      memory => 4000,
-      time => '1:00:00',
-      queue => $queue,
-    });
-    
-    return \%resource;
 }
 
 1;

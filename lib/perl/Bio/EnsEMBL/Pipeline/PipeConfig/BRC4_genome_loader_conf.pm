@@ -972,37 +972,4 @@ sub pipeline_analyses {
   ];
 }
 
-sub resource_classes {
-    my $self = shift;
-    
-    my $queue = $self->o('queue_name');
-    
-    my %resource;
-
-    # Create a default resource first
-    $resource{default} = $self->make_resource({
-      memory => 1_000,
-      time => '0:30:00',
-      queue => $queue,
-    });
-
-    # Create various levels of memory resources
-    my %mems = (
-      '4GB'       =>  4_000,
-      '8GB'       =>  8_000,
-      '16GB'       =>  16_000,
-    );
-    my $time  = '10:00:00';
-    for my $name (keys %mems) {
-      my $mem = $mems{$name};
-      
-      $resource{$name} = $self->make_resource({
-        memory => $mem,
-        time => $time,
-        queue => $queue,
-      });
-    }
-    return \%resource;
-}
-
 1;

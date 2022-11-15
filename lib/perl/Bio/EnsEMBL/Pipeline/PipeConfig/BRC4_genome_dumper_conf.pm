@@ -46,7 +46,7 @@ my $root_dir = "$package_dir/../../../../../..";
 my $schema_dir = "$root_dir/schema";
 my $data_dir = "$root_dir/data";
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
+use base ('Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf');
 
 sub default_options {
 	my ($self) = @_;
@@ -476,19 +476,6 @@ sub pipeline_analyses {
       -rc_name         => 'default',
     },
   ];
-}
-
-sub resource_classes {
-    my $self = shift;
-    return {
-      'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
-      '8GB'     => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 8000   -R "rusage[mem=8000]"'},
-      '15GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 15000  -R "rusage[mem=15000]"'},
-      '32GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 32000  -R "rusage[mem=32000]"'},
-      '64GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 64000  -R "rusage[mem=64000]"'},
-      '128GB'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 128000 -R "rusage[mem=128000]"'},
-      '256GB  ' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 256000 -R "rusage[mem=256000]"'},
-    }
 }
 
 1;
