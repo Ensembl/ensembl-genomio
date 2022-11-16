@@ -45,6 +45,7 @@ MIR	miRBase	gene	!^MIMAT
 RefSeq	RefSeq	gene
 
 RFAM	RFAM	gene
+DRscDB	DRscDB	gene
 
 APHIDBASE	APHIDBASE	gene
 BEEBASE	BEEBASE	gene

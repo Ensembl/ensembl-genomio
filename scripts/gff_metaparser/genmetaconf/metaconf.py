@@ -202,7 +202,10 @@ class MetaConf:
       self.update("species.annotation_source", _ann_source)
       _display_name = f"{_display_name} [{_ann_source} annotation]"
     self.update("species.display_name", _display_name)
-    self.update("species.url", _prod_name.capitalize())
+    # back to using "Binomial_name_GCA_000001.1rs" names, only for GenBank ('GCA') accessions
+    _species_url = _prod_name.capitalize()
+    _species_url = re.sub(r"_gca(\d+)v(\d+)", r"_GCA_\1.\2", _species_url, flags=re.I)
+    self.update("species.url", _species_url)
     # syns
     syns = []
     sci_name_words = list(filter(None, _sci_name.split()))
