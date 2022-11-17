@@ -81,7 +81,7 @@ sub _slurm_resource {
   push @res_params, "--time=$time" if $time;
   push @res_params, "-c $cpus" if $cpus;
   push @res_params, "--partition=$queue" if $queue;
-  push @res_params, $conf->{lsf_params} if $conf->{lsf_params};
+  push @res_params, $conf->{slurm_params} if $conf->{slurm_params};
   my $res_string = join(" ", @res_params);
   return $res_string;
 }
