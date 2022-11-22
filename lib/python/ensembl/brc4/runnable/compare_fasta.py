@@ -333,7 +333,7 @@ class compare_fasta(eHive.BaseRunnable):
         print(stats)
 
         if only1:
-            stats["max_only1"] = max(len(seq) for seq in only1.keys())
+            stats["max_only1"] = max(only1, key=lambda k: len(k))
             # Only list sequences where the length is > 200
             mini = {seq: name for seq, name in only1.items() if len(seq) <= 200}
             maxi = {seq: name for seq, name in only1.items() if len(seq) > 200}
