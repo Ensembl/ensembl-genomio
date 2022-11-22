@@ -15,12 +15,12 @@
 # limitations under the License.
 
 import argparse
-import json
 import re
-from os import path
 from typing import List
 
 import mysql.connector
+
+
 class CoreServer:
     """Basic interface to a MySQL server with core databases.
 

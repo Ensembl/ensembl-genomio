@@ -16,7 +16,6 @@
 
 
 import argparse
-from os import path
 from typing import Any, List, Dict, Optional, Tuple
 from datetime import datetime
 
