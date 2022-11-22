@@ -44,7 +44,6 @@ class CoreServer:
         self.user = user
         self.password = password
         self._connector = None
-        self.cursor = ''
 
         # Start a connection directly
         self.connect()
