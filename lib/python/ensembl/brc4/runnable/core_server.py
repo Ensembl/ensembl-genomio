@@ -45,6 +45,9 @@ class CoreServer:
         self.password = password
         self.db = None
         self.cursor = ''
+
+        # Start a connection directly
+        self.connect()
     
     def connect(self) -> None:
         """Create a connection to the database."""
@@ -80,7 +83,6 @@ class CoreServer:
         """
         dbs = []
 
-        self.connect()
         dbs = self.get_all_cores()
 
         if prefix:

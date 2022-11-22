@@ -396,7 +396,6 @@ if __name__ == "__main__":
 
     # Start
     factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
-    factory.connect()
     factory.db.database = args.dbname
     dumper = DumpStableIDs(factory)
     events = dumper.get_history()
