@@ -93,7 +93,7 @@ class CoreServer:
         return dbs
 
 
-def main():
+if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Get a list of Ensembl databases')
 
@@ -112,7 +112,3 @@ def main():
     factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
     dbs = factory.get_cores(prefix=args.prefix, build=args.build, version=args.version)
     print("\n".join(dbs))
-
-
-if __name__ == "__main__":
-    main()

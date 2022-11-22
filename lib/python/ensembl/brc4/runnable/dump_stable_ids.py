@@ -382,7 +382,7 @@ class DumpStableIDs:
         return (event, from_list, to_list)
 
 
-def main():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Dump the stable ids history from a core db')
 
     parser.add_argument('--host', type=str, required=True, help='Server hostname')
@@ -401,7 +401,3 @@ def main():
     dumper = DumpStableIDs(factory)
     events = dumper.get_history()
     dumper.print_events(events, args.output_file)
-
-
-if __name__ == "__main__":
-    main()
