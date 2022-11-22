@@ -20,7 +20,7 @@ from os import path
 from typing import Any, List, Dict, Optional
 from datetime import datetime
 
-from ensembl.brc4.runnable.core_server import core_server
+from ensembl.brc4.runnable.core_server import CoreServer
 
 
 class UnsupportedEvent(ValueError):
@@ -395,10 +395,10 @@ def main():
     args = parser.parse_args()
 
     # Start
-    factory = core_server(host=args.host, port=args.port, user=args.user, password=args.password)
+    factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
     factory.connect()
     factory.db.database = args.dbname
-    dumper = dump_stable_ids(factory)
+    dumper = DumpStableIDs(factory)
     events = dumper.get_history()
     dumper.print_events(events, args.output_file)
 
