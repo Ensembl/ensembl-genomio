@@ -98,7 +98,7 @@ sub resource_classes {
     'default'  => $self->make_resource({"queue" => $queue, "memory" => 4_000, "time" => $short}),
     'normal'   => $self->make_resource({"queue" => $queue, "memory" => 4_000, "time" => $long}),
     'small'    => $self->make_resource({"queue" => $queue, "memory" => 100, "time" => $short}),
-    'datamove' => $self->make_resource({"queue" => $data_queue, "time" => $short}),
+    'datamove' => $self->make_resource({"queue" => $data_queue, "memory" => 100, "time" => $short}),
   );
 
   # Additional names in the form xGB e.g. "2GB"
