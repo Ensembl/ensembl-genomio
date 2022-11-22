@@ -216,7 +216,7 @@ sub pipeline_analyses {
         2 => [
           '?accu_name=insdc_fasta_dna&accu_input_variable=fasta_dna',
           '?accu_name=insdc_report&accu_input_variable=report',
-	        '?accu_name=accession&accu_input_variable=accession',
+	  '?accu_name=accession&accu_input_variable=accession',
         ],
       },
     },
