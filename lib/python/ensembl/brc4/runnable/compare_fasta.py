@@ -287,7 +287,7 @@ class compare_fasta(eHive.BaseRunnable):
             else:
                 if org_name in common.keys():
                     count = count + 1
-                    comp.append("%s (both) in location: %s" % (org_name, loc))
+                    comp.append(f"{org_name} (both) in location: {loc}")
                     if count > 0:
                         org_value = "identical"
                 elif org_name in only1_id:
