@@ -51,13 +51,12 @@ class StableIdEvent:
 
     def __init__(self, from_list: List[str] = [], to_list: List[str] = [], release: Optional[int] = None,
                  date: Optional[datetime] = None) -> None:
-        self.from_list = from_list
-        self.to_list = to_list
+        self.from_list = self.clean_list(from_list)
+        self.to_list = self.clean_list(to_list)
         self.release = release
         self.date = date
         self.name = ""
         self.pairs = []
-        self._clean_lists()
     
     def __str__(self) -> str:
         from_str = ",".join(self.from_list)
@@ -139,10 +138,10 @@ class StableIdEvent:
             line_list.append("\t".join(line))
         return line_list
     
-    def _clean_lists(self) -> None:
-        """Removes any empty elements in ``from_list`` and ``to_list``."""
-        self.from_list = [id for id in self.from_list if id]
-        self.to_list = [id for id in self.to_list if id]
+    @staticmethod
+    def clean_list(this_list: List) -> List:
+        """Removes any empty elements from a list."""
+        return [id for id in this_list if id]
     
     def add_from(self, from_id: str) -> None:
         """Store id in the from_list"""
@@ -312,13 +311,9 @@ class DumpStableIDs:
         
         # Remove empty elements
         for from_id in from_list:
-            from_id_list = from_list[from_id]
-            from_id_list = [id for id in from_id_list if id]
-            from_list[from_id] = from_id_list
+            from_list[from_id] = StableIdEvent.clean_list(from_list[from_id])
         for to_id in to_list:
-            to_id_list = to_list[to_id]
-            to_id_list = [id for id in to_id_list if id]
-            to_list[to_id] = to_id_list
+            to_list[to_id] = StableIdEvent.clean_list(to_list[to_id])
         
         events = []
         for old_id in from_list:
