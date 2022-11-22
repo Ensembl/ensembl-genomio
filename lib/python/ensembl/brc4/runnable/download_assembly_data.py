@@ -22,17 +22,17 @@ import re
 import ftplib
 import hashlib
 
+FILE_ENDS = {
+    "assembly_report.txt": "report",
+    "genomic.fna.gz": "fasta_dna",
+    "protein.faa.gz": "fasta_pep",
+    "genomic.gff.gz": "gff3_raw",
+    "genomic.gbff.gz": "gbff",
+}
+    
 
 class download_assembly_data(eHive.BaseRunnable):
 
-    file_ends = {
-        "assembly_report.txt": "report",
-        "genomic.fna.gz": "fasta_dna",
-        "protein.faa.gz": "fasta_pep",
-        "genomic.gff.gz": "gff3_raw",
-        "genomic.gbff.gz": "gbff",
-    }
-    
     @staticmethod
     def param_defaults() -> Dict[str, Any]:
         return {
@@ -107,7 +107,7 @@ class download_assembly_data(eHive.BaseRunnable):
         print("File sums from %s: %d" % (md5_path, len(sums)))
         
         for dl_file, checksum in sums.items():
-            for end in self.file_ends:
+            for end in FILE_ENDS:
                 if dl_file.endswith(end):
 
                     file_path = os.path.join(dl_dir, dl_file)
@@ -184,7 +184,7 @@ class download_assembly_data(eHive.BaseRunnable):
                 for (ftp_file, file_entry) in f.mlsd():
                     has_md5 = True
                     expected_sum = ''
-                    for end in self.file_ends:
+                    for end in FILE_ENDS:
                         if ftp_file.endswith(end):
                             if not ftp_file in md5_sums:
                                 print(f"File not in {md5_file}: {ftp_file}")
@@ -233,7 +233,7 @@ class download_assembly_data(eHive.BaseRunnable):
                                 
 
 
-    def get_files_selection(self, dl_dir: str) -> Dict[str, str]:
+    def get_files_selection(self, dl_dir: Path) -> Dict[str, str]:
         """
         Among all the files downloaded, only keep a subset for which we use a controlled name.
         Return a dict[name] = file_path
@@ -247,14 +247,13 @@ class download_assembly_data(eHive.BaseRunnable):
             gbff
         """
         files = {}
-        file_ends = self.file_ends
 
         root_name = self.get_root_name(dl_dir)
         if root_name == '':
             raise Exception("Could not determine the files root name in %s" % dl_dir)
 
-        for dl_file in os.listdir(dl_dir):
-            for end, name in file_ends.items():
+        for dl_file in dl_dir.iterdir():
+            for end, name in FILE_ENDS.items():
                 file_with_end = dl_file.endswith(end) and not dl_file.endswith("_from_" + end)
                 if root_name and dl_file == root_name + end or file_with_end:
                     files[name] = os.path.join(dl_dir, dl_file)
