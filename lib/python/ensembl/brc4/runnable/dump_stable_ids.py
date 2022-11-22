@@ -221,7 +221,7 @@ class StableIdEvent:
                 # Core db contains an empty line to signify that an old id has been removed
                 # in merge/split/mixed
                 name = self.get_name()
-                if name != "deletion" and not pair["new_id"]:
+                if (name != "deletion") and not pair["new_id"]:
                     continue
                 self.add_pair(pair)
 
