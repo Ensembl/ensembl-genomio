@@ -23,6 +23,9 @@ from datetime import datetime
 from ensembl.brc4.runnable.core_server import CoreServer
 
 
+BRC4_START_DATE = datetime(2019, 9, 1)
+
+
 class UnsupportedEvent(ValueError):
     pass
 
@@ -46,8 +49,6 @@ class StableIdEvent:
     Any gene set before 2019-09 is dubbed pre-BRC4.
 
     """
-
-    date_brc4_start = datetime(2019, 9, 1)
 
     def __init__(self, from_list: List[str] = [], to_list: List[str] = [], release: Optional[int] = None,
                  date: Optional[datetime] = None) -> None:
@@ -180,7 +181,7 @@ class StableIdEvent:
         release = self.release
         date = self.date
 
-        if date and date > self.date_brc4_start:
+        if date and date > BRC4_START_DATE:
             release = f"build {release}"
         else:
             release = f"pre-BRC4 {release}"
