@@ -50,7 +50,7 @@ class download_assembly_data(eHive.BaseRunnable):
         download_dir = Path(main_download_dir, accession)
 
         # Set and create dedicated dir for download
-        if not download_dir.exists():
+        if not download_dir.is_dir():
             os.makedirs(download_dir)
 
         # Download if files don't exist or fail checksum
