@@ -264,7 +264,7 @@ class DumpStableIDs:
         query = """SELECT mapping_session_id, new_release, created
         FROM mapping_session
         """
-        cursor = self.server.db.cursor()
+        cursor = self.server.get_cursor()
         cursor.execute(query)
 
         sessions = []
@@ -282,7 +282,7 @@ class DumpStableIDs:
             AND mapping_session_id=%s
         """
         values = (session_id,)
-        cursor = self.server.db.cursor()
+        cursor = self.server.get_cursor()
         cursor.execute(query, values)
 
         pairs = []
@@ -396,7 +396,7 @@ if __name__ == "__main__":
 
     # Start
     factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
-    factory.db.database = args.dbname
+    factory.set_database(args.dbname)
     dumper = DumpStableIDs(factory)
     events = dumper.get_history()
     dumper.print_events(events, args.output_file)

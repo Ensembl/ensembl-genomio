@@ -34,8 +34,8 @@ class CoreServer:
 
     To connect to a specific database:
     1) Create the core server object
-    2) Set the database with core_server.db.database = "dbname"
-    3) Retrieve a cursor with core_server.db.cursor
+    2) Set the database with core_server.set_database("dbname")
+    3) Retrieve a cursor with core_server.get_cursor()
     """
 
     def __init__(self, host: str, port: str, user: str, password: str = '') -> None:
@@ -43,7 +43,7 @@ class CoreServer:
         self.port = port
         self.user = user
         self.password = password
-        self.db = None
+        self._connector = None
         self.cursor = ''
 
         # Start a connection directly
@@ -51,19 +51,25 @@ class CoreServer:
     
     def connect(self) -> None:
         """Create a connection to the database."""
-        self.db = mysql.connector.connect(
+        self._connector = mysql.connector.connect(
             user=self.user,
             passwd=self.password,
             host=self.host,
             port=self.port
         )
     
+    def set_database(self, db_name: str) -> None:
+        self._connector.database = db_name
+    
+    def get_cursor(self):
+        return self._connector.cursor()
+    
     def get_all_cores(self) -> List[str]:
         """Query the server and retrieve all databases that look like Ensembl cores."""
 
         query = "SHOW DATABASES LIKE '%_core_%'"
 
-        cursor = self.db.cursor()
+        cursor = self.get_cursor()
         cursor.execute(query)
 
         dbs = []
