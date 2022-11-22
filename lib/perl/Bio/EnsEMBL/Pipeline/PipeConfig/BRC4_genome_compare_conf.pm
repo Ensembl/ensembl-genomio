@@ -238,8 +238,8 @@ sub pipeline_analyses {
       -failed_job_tolerance => 0,
       -rc_name        => '8GB',
        -flow_into      => {
-        '2' => '?accu_name=stats&accu_address={species}'
-      }
+         '2' => '?accu_name=stats&accu_address={species}'
+        }
     },
 
     # Report comparisons
