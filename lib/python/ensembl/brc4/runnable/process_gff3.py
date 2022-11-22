@@ -69,7 +69,6 @@ class process_gff3(eHive.BaseRunnable):
                 "gap",
                 "sequence_feature",
                 "sequence_uncertainty",
-                "mobile_genetic_element",
                 "microsatellite",
                 "satellite_DNA",
                 "cDNA_match",
