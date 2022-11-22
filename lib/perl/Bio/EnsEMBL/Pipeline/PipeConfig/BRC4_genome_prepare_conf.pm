@@ -110,8 +110,8 @@ sub pipeline_wide_parameters {
     pipeline_dir   => $self->o('pipeline_dir'),
     exclude_seq_regions   => $self->o('exclude_seq_regions'),
 
-    download_dir   => catdir($self->o('pipeline_dir'), "download", '#accession#'),
-    work_dir       => catdir($self->o('pipeline_dir'), "process_files", "#accession#"),
+    download_dir   => catdir($self->o('pipeline_dir'), "download"),
+    work_dir       => catdir($self->o('pipeline_dir'), "process_files"),
   };
 }
 sub hive_meta_table {
