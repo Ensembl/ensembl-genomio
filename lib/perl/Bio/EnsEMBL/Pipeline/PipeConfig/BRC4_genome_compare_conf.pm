@@ -231,7 +231,7 @@ sub pipeline_analyses {
         fasta2 => "#core_fasta_dna#",
         seq_regions => "#seq_region_json#",
         comparison_name => "fasta_dna",
-	      accession => "#accession#",
+	accession => "#accession#",
       },
       -language => 'python3',
       -analysis_capacity => 5,
