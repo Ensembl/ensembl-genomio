@@ -17,7 +17,7 @@
 
 import argparse
 from os import path
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Dict, Optional, Tuple
 from datetime import datetime
 
 from ensembl.brc4.runnable.core_server import CoreServer
