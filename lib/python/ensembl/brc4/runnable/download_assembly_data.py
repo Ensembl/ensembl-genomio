@@ -105,11 +105,11 @@ class download_assembly_data(eHive.BaseRunnable):
         if not sums:
             return
 
-        print("File sums from %s: %d" % (md5_path, len(sums)))
+        print(f"File sums from {md5_path}: {len(sums)}")
         
         for dl_file, checksum in sums.items():
             for end in FILE_ENDS:
-                if dl_file.endswith(end):
+                if dl_file.endswith(end) and not dl_file.endswith(f"_from_{end}"):
 
                     file_path = Path(dl_dir, dl_file)
                     
@@ -186,7 +186,7 @@ class download_assembly_data(eHive.BaseRunnable):
                     has_md5 = True
                     expected_sum = ''
                     for end in FILE_ENDS:
-                        if ftp_file.endswith(end):
+                        if ftp_file.endswith(end) and not ftp_file.endswith(f"_from_{end}"):
                             if not ftp_file in md5_sums:
                                 print(f"File not in {md5_file}: {ftp_file}")
                                 has_md5 = False
@@ -240,12 +240,7 @@ class download_assembly_data(eHive.BaseRunnable):
         Return a dict[name] = file_path
         The file_path is relative to the download dir
         
-        Current names:
-            report
-            fasta_dna
-            fasta_pep
-            gff3
-            gbff
+        Current names are defined in FILE_ENDS
         """
         files = {}
 
