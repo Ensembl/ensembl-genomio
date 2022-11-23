@@ -95,7 +95,12 @@ class amend_genome_metadata(eHive.BaseRunnable):
         self.dataflow(output, 2)
     
     def get_additions(self, report_path: str, gbff_path: str) -> List[str]:
-        """Get all seq_regions that are mentioned in the report but that are not in the data
+        """Returns all `seq_regions` that are mentioned in the report but that are not in the data.
+        
+        Args:
+            report_path: Path to the report file.
+            gbff_path: Path to the GBFF file.
+            
         """
         gbff_regions = set(self.get_gbff_regions(gbff_path))
         report_regions = set(self.get_report_regions(report_path))
@@ -104,13 +109,11 @@ class amend_genome_metadata(eHive.BaseRunnable):
         return additions
 
     def get_gbff_regions(self, gbff_path: str) -> List[str]:
-        """Get seq_region data from the gbff file.
+        """Returns the `seq_region` data from the GBFF file.
 
         Args:
             gbff_path: Gbff file path to use.
-        
-        Returns:
-            A list of names.
+
         """
         if not gbff_path:
             return []
@@ -125,13 +128,11 @@ class amend_genome_metadata(eHive.BaseRunnable):
         return seq_regions
     
     def report_to_csv(self, report_path: str) -> Tuple[str, dict]:
-        """Load an assembly report as a csv string.
+        """Returns an assembly report as a CSV string, and the head metadata as a dict.
 
         Args:
-            report_path: path to a seq_region file from INSDC/RefSeq
-        
-        Returns:
-            The data as a string in csv format, and the head metadata as a dict.
+            report_path: Path to a `seq_region` file from INSDC/RefSeq.
+
         """
 
         _open = report_path.endswith(".gz") and gzip.open or open
@@ -156,14 +157,11 @@ class amend_genome_metadata(eHive.BaseRunnable):
             return data, metadata
     
     def get_report_regions(self, report_path: str) -> List[str]:
-        """Get seq_region data from report file.
+        """Returns a list of `seq_region` names from the report file.
 
         Args:
             report_path: Path to the seq_regions report from INSDC/RefSeq.
-            use_refseq: True if using RefSeq, False if INSDC.
-        
-        Returns:
-            A list of SeqRegion names.
+
         """
 
         # Get the report in a CSV format, easier to manipulate

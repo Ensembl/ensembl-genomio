@@ -423,13 +423,11 @@ class process_seq_region(eHive.BaseRunnable):
         return table
     
     def get_organelle(self, record: SeqRecord) -> str:
-        """Given a genbank record, look for an organelle field.
+        """Returns the organelle location from the given GenBank record, or an empty string if not found.
 
         Args:
             record: The GenBank record to look into.
 
-        Returns:
-            the organelle location (empty string if not found).
         """
 
         location = 0
