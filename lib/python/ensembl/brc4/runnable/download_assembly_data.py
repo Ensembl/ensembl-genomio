@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Any, Dict
 import eHive
-import json
 import os
 import re
 import ftplib
@@ -35,11 +35,11 @@ class download_assembly_data(eHive.BaseRunnable):
 
     def run(self):
         accession = self.param_required('accession')
-        main_download_dir = self.param_required('download_dir')
-        download_dir = main_download_dir + "/" + accession
+        main_download_dir = Path(self.param_required('download_dir'))
+        download_dir = main_download_dir / accession
 
         # Set and create dedicated dir for download
-        if not os.path.isdir(download_dir):
+        if not download_dir.is_dir():
             os.makedirs(download_dir)
 
         # Download if files don't exist or fail checksum
@@ -50,18 +50,18 @@ class download_assembly_data(eHive.BaseRunnable):
 
             for increment in range(0, max_increment + 1):
                 if increment > 0:
-                    print("Increment accession version once from %s" % accession)
+                    print(f"Increment accession version once from {accession}")
                     version = int(accession[-1])
                     version += 1
                     accession = accession[:-1] + str(version)
-                    download_dir = main_download_dir + "/" + accession
+                    download_dir = main_download_dir / accession
                     if not os.path.isdir(download_dir):
                         os.makedirs(download_dir)
                 try:
                     self.download_files(accession, download_dir)
                     break
                 except Exception:
-                    print("Can't download files for %s" % accession)
+                    print(f"Can't download files for {accession}")
 
             if not self.md5_files(download_dir):
                 raise Exception("Failed md5sum of downloaded files")
@@ -76,7 +76,7 @@ class download_assembly_data(eHive.BaseRunnable):
         self.dataflow(files, 2)
 
 
-    def md5_files(self, dl_dir: str) -> bool:
+    def md5_files(self, dl_dir: Path) -> bool:
         """
         Check all files checksums with the sums listed in a checksum file, if available.
         Return False if there is no checksum file, or a file is missing, or has a wrong checksum.
@@ -84,45 +84,45 @@ class download_assembly_data(eHive.BaseRunnable):
         md5_file = "md5checksums.txt"
 
         # Get checksums and compare
-        md5_path = os.path.join(dl_dir, md5_file)
+        md5_path = dl_dir / md5_file
         sums = self.get_checksums(md5_path)
         
         if not sums:
             return
 
-        print("File sums from %s: %d" % (md5_path, len(sums)))
+        print(f"File sums from {md5_path}:, {len(sums)}")
         
         for dl_file, checksum in sums.items():
-            file_path = os.path.join(dl_dir, dl_file)
+            file_path = dl_dir / dl_file
             
-            if not os.path.isfile(file_path):
-                print("No file %s found" % file_path)
+            if not file_path.is_file():
+                print(f"No file {file_path} found")
                 return False
             
             # Check the file checksum
-            with open(file_path, mode='rb') as f:
+            with file_path.open(mode='rb') as f:
                 content = f.read()
                 file_sum = hashlib.md5(content).hexdigest()
             if file_sum != checksum:
-                print("File %s checksum doesn't match" % file_path)
+                print(f"File {file_path} checksum doesn't match")
                 return False
             else:
-                print("File checksum ok %s" % file_path)
+                print(f"File checksum ok {file_path}")
 
         print("All checksums OK")
         return True
     
     @staticmethod
-    def get_checksums(checksum_path: str) -> Dict[str, str]:
+    def get_checksums(checksum_path: Path) -> Dict[str, str]:
         """
         Get a dict of checksums from a file, with file names as keys and sums as values
         """
 
-        if not os.path.isfile(checksum_path):
+        if not checksum_path.is_file():
             return
         
         sums = {}
-        with open(checksum_path, mode='r') as fh:
+        with checksum_path.open(mode='r') as fh:
             for line in fh:
                 checksum, file_path = line.strip().split("  ")
                 file_path = file_path[2:]
@@ -132,7 +132,7 @@ class download_assembly_data(eHive.BaseRunnable):
         return sums
 
     @staticmethod
-    def download_files(accession: str, dl_dir: str) -> None:
+    def download_files(accession: str, dl_dir: Path) -> None:
         """
         Given an INSDC accession, download all available files from the ftp to the download dir
         """
@@ -161,11 +161,11 @@ class download_assembly_data(eHive.BaseRunnable):
                         continue
 
                     # Copy the file locally
-                    local_path = os.path.join(dl_dir, ftp_file)
-                    with open(local_path, 'wb') as fp:
+                    local_path = dl_dir / ftp_file
+                    with local_path.open('wb') as fp:
                         f.retrbinary("RETR " + ftp_file, fp.write)
 
-    def get_files_selection(self, dl_dir: str) -> Dict[str, str]:
+    def get_files_selection(self, dl_dir: Path) -> Dict[str, str]:
         """
         Among all the files downloaded, only keep a subset for which we use a controlled name.
         Return a dict[name] = file_path
@@ -189,7 +189,7 @@ class download_assembly_data(eHive.BaseRunnable):
 
         root_name = self.get_root_name(dl_dir)
         if root_name == '':
-            raise Exception("Could not determine the files root name in %s" % dl_dir)
+            raise Exception(f"Could not determine the files root name in {dl_dir}")
 
         for dl_file in os.listdir(dl_dir):
             for end, name in file_ends.items():
@@ -199,12 +199,12 @@ class download_assembly_data(eHive.BaseRunnable):
         return files
 
     @staticmethod
-    def get_root_name(dl_dir: str) -> str:
+    def get_root_name(dl_dir: Path) -> str:
         """Get root name for assembly files, using the report file as base"""
 
         root_name = ''
-        for dl_file in os.listdir(dl_dir):
-            matches = re.search("^(.+_)assembly_report.txt", dl_file)
+        for dl_file in dl_dir.iterdir():
+            matches = re.search("^(.+_)assembly_report.txt", dl_file.name)
             if matches:
                 root_name = matches.group(1)
                 break
