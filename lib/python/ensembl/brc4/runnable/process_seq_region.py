@@ -16,15 +16,17 @@
 
 
 import os
+from pathlib import Path
 import re
 from typing import Any, Dict, List, Tuple
 import eHive
 import gzip
 import csv
-import json
 
 from Bio import SeqIO, SeqRecord
 import requests
+from ensembl.brc4.runnable.utils import Utils
+
 
 SeqRegion = Dict[str, Any]
 
@@ -107,7 +109,7 @@ class process_seq_region(eHive.BaseRunnable):
         # Final file name
         metadata_type = "seq_region"
         new_file_name = metadata_type + ".json"
-        final_path = os.path.join(work_dir, new_file_name)
+        final_path = Path(work_dir, new_file_name)
         
         use_refseq = self.param('accession').startswith("GCF_")
 
@@ -130,12 +132,12 @@ class process_seq_region(eHive.BaseRunnable):
         self.add_mitochondrial_codon_table(seq_regions, genome_data["species"]["taxonomy_id"])
 
         # Print out the file
-        self.print_json(final_path, seq_regions)
+        Utils.print_json(final_path, seq_regions)
 
         # Flow out the file and type
         output = {
             "metadata_type": metadata_type,
-            "metadata_json": final_path
+            "metadata_json": str(final_path)
         }
         self.dataflow(output, 2)
 
@@ -261,16 +263,6 @@ class process_seq_region(eHive.BaseRunnable):
             print(f"No Mitochondria genetic code found for taxon {tax_id}")
 
         return genetic_code
-    
-    def print_json(self, path: str, data: Any) -> None:
-        """Generic data json dumper to a file.
-        
-        Args:
-            path: Path to the json to create.
-            data: Any data to store.
-         """
-        with open(path, "w") as json_out:
-            json_out.write(json.dumps(data, sort_keys=True, indent=4))
     
     def merge_regions(self,
                       regions1: Dict[str, SeqRegion],

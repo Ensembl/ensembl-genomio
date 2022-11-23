@@ -16,6 +16,8 @@
 
 
 
+from pathlib import Path
+from typing import List
 import eHive
 import gzip
 import sys, io, re, os
@@ -23,6 +25,8 @@ import json
 from statistics import mean
 from BCBio import GFF
 from collections import OrderedDict
+
+from ensembl.brc4.runnable.utils import Utils
 
 class manifest_stats(eHive.BaseRunnable):
 
@@ -34,7 +38,7 @@ class manifest_stats(eHive.BaseRunnable):
         if "gff3" in manifest:
             stats += self.get_gff3_stats(manifest["gff3"])
         if "seq_region" in manifest:
-            stats += self.get_seq_region_stats(manifest["seq_region"])
+            stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
         
         stats_path = os.path.join(os.path.dirname(manifest_path), "stats.txt")
         print(stats_path)
@@ -61,9 +65,9 @@ class manifest_stats(eHive.BaseRunnable):
             
             return manifest
 
-    def get_seq_region_stats(self, seq_region_path):
+    def get_seq_region_stats(self, seq_region_path: Path) -> List:
         
-        seq_regions = self.get_json(seq_region_path)
+        seq_regions = Utils.get_json(seq_region_path)
         
         # Get basic data
         coord_systems = {}
@@ -121,10 +125,6 @@ class manifest_stats(eHive.BaseRunnable):
         stats.append("\n")
 
         return stats
-
-    def get_json(self, json_path):
-        with open(json_path) as json_file:
-            return json.load(json_file)
 
     def get_gff3_stats(self, gff3_path):
         

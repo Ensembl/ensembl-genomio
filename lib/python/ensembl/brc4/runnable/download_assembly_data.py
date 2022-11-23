@@ -75,14 +75,6 @@ class download_assembly_data(eHive.BaseRunnable):
         # Output all those named files + dir
         self.dataflow(files, 2)
 
-    @staticmethod
-    def get_json(json_path: str) -> Dict[str, Any]:
-        """
-        Retrieve the json data from a json file
-        """
-        with open(json_path) as json_file:
-            json_data = json.load(json_file)
-        return json_data
 
     def md5_files(self, dl_dir: str) -> bool:
         """

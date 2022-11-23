@@ -16,15 +16,15 @@
 
 
 
-import os, re, shutil
-import eHive
-import gzip
-import csv, json
+import os
 import datetime
+from pathlib import Path
 
-from Bio import SeqIO, SeqRecord
+import eHive
 import requests
 import xml.etree.ElementTree as ET
+
+from ensembl.brc4.runnable.utils import Utils
 
 class process_genome_data(eHive.BaseRunnable):
 
@@ -57,9 +57,9 @@ class process_genome_data(eHive.BaseRunnable):
         
 
     def run(self):
-        json_path = self.param_required("json_path")
+        json_path = Path(self.param_required("json_path"))
         
-        genome_data = self.get_json(json_path)
+        genome_data = Utils.get_json(json_path)
 
         # Amend metadata
         self.add_provider(genome_data)
@@ -70,34 +70,25 @@ class process_genome_data(eHive.BaseRunnable):
         # Create dedicated work dir
         accession = genome_data["assembly"]["accession"]
         self.param("accession", accession)
-        work_dir = self.param('work_dir')
-        if not os.path.isdir(work_dir):
+        work_dir = Path(self.param('work_dir'))
+        if not work_dir.is_dir():
             os.makedirs(work_dir)
 
         # Final file name
         metadata_type = "genome"
         new_file_name = metadata_type + ".json"
-        final_path = os.path.join(work_dir, new_file_name)
+        final_path = work_dir / new_file_name
 
         # Print out the file
-        self.print_json(final_path, genome_data)
+        Utils.print_json(final_path, genome_data)
 
         # Flow out the file and type
         output = {
-                "genome_json" : final_path,
+                "genome_json" : str(final_path),
                 "genome_data" : genome_data,
                 "accession" : accession
                 }
         self.dataflow(output, 2)
-    
-    def get_json(self, json_path) -> dict:
-        with open(json_path) as json_file:
-            data = json.load(json_file)
-            return data
-    
-    def print_json(self, path, data) -> None:
-        with open(path, "w") as json_out:
-            json_out.write(json.dumps(data, sort_keys=True, indent=4))
     
     def add_provider(self, genome_data):
         """Add default provider metadata for assembly and gene models"""

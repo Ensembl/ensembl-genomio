@@ -16,14 +16,15 @@
 
 
 import os
+from pathlib import Path
 import re
 from typing import Any, Dict, List, Tuple
 import eHive
 import gzip
 import csv
-import json
 
 from Bio import SeqIO
+from ensembl.brc4.runnable.utils import Utils
 
 
 class MissingDataError(Exception):
@@ -74,7 +75,7 @@ class amend_genome_metadata(eHive.BaseRunnable):
         # Final file name
         metadata_type = "genome"
         new_file_name = f"{metadata_type}_amended.json"
-        final_path = os.path.join(work_dir, new_file_name)
+        final_path = Path(work_dir, new_file_name)
         
         use_refseq = self.param('accession').startswith("GCF_")
         
@@ -85,12 +86,12 @@ class amend_genome_metadata(eHive.BaseRunnable):
             genome_data["added_seq"] = {"region_name": additions}
 
         # Print out the file
-        self.print_json(final_path, genome_data)
+        Utils.print_json(final_path, genome_data)
 
         # Flow out the file and type
         output = {
             "metadata_type": metadata_type,
-            "metadata_json": final_path
+            "metadata_json": str(final_path)
         }
         self.dataflow(output, 2)
     
@@ -184,13 +185,3 @@ class amend_genome_metadata(eHive.BaseRunnable):
                 seq_regions.append(name)
         
         return seq_regions
-
-    def print_json(self, path: str, data: Any) -> None:
-        """Generic data json dumper to a file.
-        
-        Args:
-            path: Path to the json to create.
-            data: Any data to store.
-         """
-        with open(path, "w") as json_out:
-            json_out.write(json.dumps(data, sort_keys=True, indent=4))
