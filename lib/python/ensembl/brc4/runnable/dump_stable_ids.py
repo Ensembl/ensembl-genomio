@@ -300,6 +300,10 @@ class DumpStableIDs:
         for pair in pairs:
             old_id = pair["old_id"]
             new_id = pair["new_id"]
+            if old_id == None:
+                old_id = ""
+            if new_id == None:
+                new_id = ""
 
             if old_id in from_list:
                 from_list[old_id].append(new_id)
