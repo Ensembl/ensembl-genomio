@@ -18,6 +18,7 @@
 import argparse
 from typing import Any, List, Dict, Optional, Set, Tuple
 from datetime import datetime
+from pathlib import Path
 
 from ensembl.brc4.runnable.core_server import CoreServer
 
@@ -251,11 +252,18 @@ class DumpStableIDs:
         # Then analyse the pairs to make events
         return events
     
-    def print_events(self, events: List[StableIdEvent], output_file: str) -> None:
+    def print_events(self, events: List[StableIdEvent], output_file: Path) -> None:
+        """Print events in a format for BRC.
+        
+        Args:
+            events: list of events for a given genome.
+            output_file: where the events will be printed.
+        
+        """
         if not events:
             print("No events to print")
             return
-        with open(output_file, 'w') as out_fh:
+        with output_file.open('w') as out_fh:
             for event in events:
                 event_lines = event.brc_format_2()
                 for line in event_lines:
@@ -400,4 +408,4 @@ if __name__ == "__main__":
     factory.set_database(args.dbname)
     dumper = DumpStableIDs(factory)
     events = dumper.get_history()
-    dumper.print_events(events, args.output_file)
+    dumper.print_events(events, Path(args.output_file))
