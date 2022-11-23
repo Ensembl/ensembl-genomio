@@ -141,16 +141,24 @@ class StableIdEvent:
     
     @staticmethod
     def clean_set(this_list: Set) -> Set:
-        """Removes any empty elements from a list."""
+        """Removes any empty elements from a list.
+        
+        Args:
+            this_list: list of items, so of which can be empty/None.
+        
+        Returns:
+            The cleaned list.
+            
+        """
         return set([id for id in this_list if id])
     
     def add_from(self, from_id: str) -> None:
-        """Store id in the from_list"""
+        """Store an id in the from_set."""
         if from_id:
             self.from_set.add(from_id)
     
     def add_to(self, to_id: str) -> None:
-        """Store id in the from_list"""
+        """Store an id in the from_set."""
         if to_id:
             self.to_set.add(to_id)
     
@@ -168,6 +176,7 @@ class StableIdEvent:
             
         Raises:
             ValueError: When no-empty value is provided for either "old_id" or "new_id".
+        
         """
         if "old_id" in pair and pair["old_id"] == None:
             pair["old_id"] = ""
@@ -190,7 +199,7 @@ class StableIdEvent:
         return release
 
     def _name_event(self) -> None:
-        """Identify the event name based on the old vs new id lists"""
+        """Identify the event name based on the old vs new id lists."""
         if not self.from_set and len(self.to_set) == 1:
             self.name = "new"
         elif not self.to_set and len(self.from_set) == 1:
@@ -207,7 +216,7 @@ class StableIdEvent:
             raise UnsupportedEvent(f"Event {self.from_set} to {self.to_set} is not supported")
     
     def get_name(self) -> str:
-        """Retrieve the name for this event, update it beforehand"""
+        """Retrieve the name for this event, update it beforehand."""
         self._name_event()
         return self.name
     
@@ -215,7 +224,8 @@ class StableIdEvent:
         """Provided all the pairs, keep those that are used by this event.
 
         Args:
-            pairs: list of pairs of ids {old_id:"", new_id:""} 
+            pairs: list of pairs of ids {old_id:"", new_id:""}.
+        
         """
         for pair in pairs:
             if (pair["old_id"] and pair["old_id"] in self.from_set) or (pair["new_id"] and pair["new_id"] in self.to_set):
@@ -228,14 +238,23 @@ class StableIdEvent:
 
 
 class DumpStableIDs:
-
-    def __init__(self, server: str) -> None:
-        self.server = server
+    """An processor that create events from pairs of ids and can print those events out.
     
-    def dump_history_json(self, output_file: str) -> None:
-        pass
+    Attributes:
+        server: a core server set to a database, to retrieve the data from.
+    
+    """
 
-    def get_history(self) -> Any:
+    def __init__(self, server: CoreServer) -> None:
+        self.server = server
+
+    def get_history(self) -> List:
+        """Retrieve all events from a database.
+        
+        Returns:
+            A list of all events.
+        
+        """
         
         sessions = self.get_mapping_sessions()
 
@@ -269,7 +288,13 @@ class DumpStableIDs:
                 for line in event_lines:
                     out_fh.write(line + "\n")
     
-    def get_mapping_sessions(self) -> List:
+    def get_mapping_sessions(self) -> List[Dict]:
+        """Retrieve the mapping sessions from the connected database.
+
+        Returns:
+            A list of sessions, as dicts: {'id: str, 'release': str, 'date': str}.
+
+        """
         query = """SELECT mapping_session_id, new_release, created
         FROM mapping_session
         """
@@ -283,7 +308,16 @@ class DumpStableIDs:
             sessions.append(session)
         return sessions
 
-    def get_pairs(self, session_id: int) -> List:
+    def get_pairs(self, session_id: int) -> List[Dict]:
+        """Retrieve all pair of ids for a given session.
+
+        Args:
+            session_id: id of a session from the connected database.
+        
+        Returns:
+            A list of all pairs of ids, as dicts: {'old_id': str, 'new_id': str}.
+
+        """
         query = """SELECT old_stable_id, new_stable_id
         FROM stable_id_event
         WHERE (old_stable_id != new_stable_id OR old_stable_id IS NULL OR new_stable_id IS NULL)
@@ -302,6 +336,15 @@ class DumpStableIDs:
         return pairs
     
     def make_events(self, pairs: List) -> List:
+        """Given a list of pairs, create events.
+
+        Args:
+            pairs: list of dicts {'old_id': str, 'new_id': str}.
+        
+        Return:
+            A list of events.
+
+        """
 
         from_list = {}
         to_list = {}
@@ -359,6 +402,20 @@ class DumpStableIDs:
     
     def extend_event(self, event: StableIdEvent, from_list: Dict[str, List[str]], to_list: Dict[str, List[str]]
         ) -> Tuple[StableIdEvent, List, List]:
+        """Given an event, add ids in to from and to sets, as long as they are connected either in
+        a from_list or a to_list.
+
+        Args:
+            event: the event to extend.
+            from_list: A dict a the from ids, and their corresponding to ids.
+            to_list: A dict of the to ids, and their corresponding from ids.
+        
+        Returns:
+            A tuple of the extended event, and the from_list and to_list from which the ids that
+            have been added to the event have been removed.
+
+        """
+
         extended = True
 
         while(extended):
