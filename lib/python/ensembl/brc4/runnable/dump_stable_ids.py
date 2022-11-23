@@ -168,8 +168,10 @@ class StableIdEvent:
         Raises:
             ValueError: When no-empty value is provided for either "old_id" or "new_id".
         """
-        pair.setdefault("old_id", "")
-        pair.setdefault("new_id", "")
+        if "old_id" in pair and pair["old_id"] == None:
+            pair["old_id"] = ""
+        if "new_id" in pair and pair["new_id"] == None:
+            pair["new_id"] = ""
         if not pair["old_id"] and not pair["new_id"]:
             raise ValueError(f"Expected at least one value in the given pair {pair}")
         self.pairs.append(pair)
