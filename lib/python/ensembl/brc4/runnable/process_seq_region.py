@@ -248,7 +248,7 @@ class process_seq_region(eHive.BaseRunnable):
         """
         server = "https://www.ebi.ac.uk"
         ext = "/ena/data/taxonomy/v1/taxon/tax-id/" + str(tax_id)
-        genetic_code: int = 0
+        genetic_code = 0
 
         r = requests.get(
             server + ext, headers={"Content-Type": "application/json"})
@@ -519,28 +519,24 @@ class process_seq_region(eHive.BaseRunnable):
         if field in row and row[field].lower() != "na":
             seq_region[name] = int(row[field])
         
-        refseq_id = ''
-        gb_id = ''
-        if "RefSeq-Accn" in row:
-            refseq_id = row["RefSeq-Accn"]
-            if refseq_id == "na":
-                refseq_id = ''
+        refseq_id = row.get("RefSeq-Accn", "")
+        if refseq_id == "na":
+            refseq_id = ""
 
-        if "GenBank-Accn" in row:
-            gb_id = row["GenBank-Accn"]
-            if gb_id == "na":
-                gb_id = ''
+        gb_id = row.get("GenBank-Accn", "")
+        if gb_id == "na":
+            gb_id = ""
 
         if use_refseq:
             if refseq_id:
                 seq_region["name"] = refseq_id
             else:
-                print("No RefSeq name for %s" % row["Sequence-Name"])
+                print(f'No RefSeq name for {row["Sequence-Name"]}')
                 return {}
         elif gb_id:
             seq_region["name"] = gb_id
         else:
-            print("No Genbank name for %s" % row["Sequence-Name"])
+            print(f'No Genbank name for {row["Sequence-Name"]}')
             return {}
         
         # Coord system and location

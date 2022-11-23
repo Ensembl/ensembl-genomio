@@ -46,7 +46,7 @@ class fill_metadata(eHive.BaseRunnable):
         if "species" in genome_data:
             sd = genome_data["species"]
             # Add division, but not needed for BRC4
-            if "division" not in sd and not brc4_mode:
+            if ("division" not in sd) and not brc4_mode:
                 sd["division"] = division
             if "url" not in sd:
                 if "production_name" in sd:
