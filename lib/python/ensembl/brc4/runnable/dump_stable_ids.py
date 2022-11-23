@@ -16,7 +16,7 @@
 
 
 import argparse
-from typing import Any, List, Dict, Optional, Tuple
+from typing import Any, List, Dict, Optional, Set, Tuple
 from datetime import datetime
 
 from ensembl.brc4.runnable.core_server import CoreServer
@@ -49,18 +49,18 @@ class StableIdEvent:
 
     """
 
-    def __init__(self, from_list: List[str] = [], to_list: List[str] = [], release: Optional[int] = None,
+    def __init__(self, from_list: Set[str] = [], to_list: Set[str] = [], release: Optional[int] = None,
                  date: Optional[datetime] = None) -> None:
-        self.from_list = self.clean_list(from_list)
-        self.to_list = self.clean_list(to_list)
+        self.from_set = self.clean_set(from_list)
+        self.to_set = self.clean_set(to_list)
         self.release = release
         self.date = date
         self.name = ""
         self.pairs = []
     
     def __str__(self) -> str:
-        from_str = ",".join(self.from_list)
-        to_str = ",".join(self.to_list)
+        from_str = ",".join(self.from_set)
+        to_str = ",".join(self.to_set)
         return f"From {from_str} to {to_str} = {self.get_name()} in release {self.release}"
     
     def brc_format_1(self) -> List[str]:
@@ -73,8 +73,8 @@ class StableIdEvent:
         - list of new gene ids in the event (comma-separated)
 
         """
-        from_str = ",".join(self.from_list)
-        to_str = ",".join(self.to_list)
+        from_str = ",".join(self.from_set)
+        to_str = ",".join(self.to_set)
         release = self.get_full_release()
         if self.date:
             date = self.date.strftime('%Y-%m')
@@ -82,7 +82,7 @@ class StableIdEvent:
             date = "no_date"
         name = self.get_name()
         line_list = []
-        for id in self.from_list:
+        for id in self.from_set:
             line = [
                 id,
                 name,
@@ -97,7 +97,7 @@ class StableIdEvent:
             line_list.append("\t".join(line))
         
         if self.get_name() == "new":
-            new_id = self.to_list[0]
+            new_id = self.to_set[0]
             line = (
                 new_id,
                 name,
@@ -139,19 +139,19 @@ class StableIdEvent:
         return line_list
     
     @staticmethod
-    def clean_list(this_list: List) -> List:
+    def clean_set(this_list: Set) -> Set:
         """Removes any empty elements from a list."""
-        return [id for id in this_list if id]
+        return set([id for id in this_list if id])
     
     def add_from(self, from_id: str) -> None:
         """Store id in the from_list"""
         if from_id:
-            self.from_list.append(from_id)
+            self.from_set.add(from_id)
     
     def add_to(self, to_id: str) -> None:
         """Store id in the from_list"""
         if to_id:
-            self.to_list.append(to_id)
+            self.to_set.add(to_id)
     
     def set_release(self, release: str) -> None:
         self.release = release
@@ -190,20 +190,20 @@ class StableIdEvent:
 
     def _name_event(self) -> None:
         """Identify the event name based on the old vs new id lists"""
-        if not self.from_list and len(self.to_list) == 1:
+        if not self.from_set and len(self.to_set) == 1:
             self.name = "new"
-        elif not self.to_list and len(self.from_list) == 1:
+        elif not self.to_set and len(self.from_set) == 1:
             self.name = "deletion"
-        elif len(self.from_list) == 1 and len(self.to_list) == 1:
+        elif len(self.from_set) == 1 and len(self.to_set) == 1:
             self.name = "change"
-        elif len(self.from_list) == 1 and len(self.to_list) > 1:
+        elif len(self.from_set) == 1 and len(self.to_set) > 1:
             self.name = "split"
-        elif len(self.from_list) > 1 and len(self.to_list) == 1:
+        elif len(self.from_set) > 1 and len(self.to_set) == 1:
             self.name = "merge"
-        elif len(self.from_list) > 1 and len(self.to_list) > 1:
+        elif len(self.from_set) > 1 and len(self.to_set) > 1:
             self.name = "mixed"
         else:
-            raise UnsupportedEvent(f"Event {self.from_list} to {self.to_list} is not supported")
+            raise UnsupportedEvent(f"Event {self.from_set} to {self.to_set} is not supported")
     
     def get_name(self) -> str:
         """Retrieve the name for this event, update it beforehand"""
@@ -217,7 +217,7 @@ class StableIdEvent:
             pairs: list of pairs of ids {old_id:"", new_id:""} 
         """
         for pair in pairs:
-            if (pair["old_id"] and pair["old_id"] in self.from_list) or (pair["new_id"] and pair["new_id"] in self.to_list):
+            if (pair["old_id"] and pair["old_id"] in self.from_set) or (pair["new_id"] and pair["new_id"] in self.to_set):
                 # Core db contains an empty line to signify that an old id has been removed
                 # in merge/split/mixed
                 name = self.get_name()
@@ -306,20 +306,20 @@ class DumpStableIDs:
                 new_id = ""
 
             if old_id in from_list:
-                from_list[old_id].append(new_id)
+                from_list[old_id].add(new_id)
             else:
-                from_list[old_id] = [new_id]
+                from_list[old_id] = set(new_id)
 
             if new_id in to_list:
-                to_list[new_id].append(old_id)
+                to_list[new_id].add(old_id)
             else:
-                to_list[new_id] = [old_id]
+                to_list[new_id] = set(old_id)
         
         # Remove empty elements
         for from_id in from_list:
-            from_list[from_id] = StableIdEvent.clean_list(from_list[from_id])
+            from_list[from_id] = StableIdEvent.clean_set(from_list[from_id])
         for to_id in to_list:
-            to_list[to_id] = StableIdEvent.clean_list(to_list[to_id])
+            to_list[to_id] = StableIdEvent.clean_set(to_list[to_id])
         
         events = []
         for old_id in from_list:
@@ -357,28 +357,28 @@ class DumpStableIDs:
             extended = False
             
             # Extend the group in the to ids
-            for to_id in event.to_list:
+            for to_id in event.to_set:
                 if to_id in to_list:
                     to_from_ids = to_list[to_id]
                     # Add to the from list?
                     for to_from_id in to_from_ids:
-                        if not to_from_id in event.from_list:
+                        if not to_from_id in event.from_set:
                             event.add_from(to_from_id)
                             extended = True
             
             # Extend the group in the from ids
-            for from_id in event.from_list:
+            for from_id in event.from_set:
                 if from_id in from_list:
                     from_to_ids = from_list[from_id]
                     # Add to the to list?
                     for from_to_id in from_to_ids:
-                        if not from_to_id in event.to_list:
+                        if not from_to_id in event.to_set:
                             event.add_to(from_to_id)
                             extended = True
             
             # Clean up
-            from_list = {from_id: from_list[from_id] for from_id in from_list if from_id not in event.from_list}
-            to_list = {to_id: to_list[to_id] for to_id in to_list if to_id not in event.to_list}
+            from_list = {from_id: from_list[from_id] for from_id in from_list if from_id not in event.from_set}
+            to_list = {to_id: to_list[to_id] for to_id in to_list if to_id not in event.to_set}
         
         return (event, from_list, to_list)
 
