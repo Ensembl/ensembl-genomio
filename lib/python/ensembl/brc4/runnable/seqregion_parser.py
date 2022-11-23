@@ -60,9 +60,7 @@ class SeqregionParser:
         report_csv, metadata = self.report_to_csv(report_path)
 
         # Feed the csv string to the CSV reader
-        reader = csv.DictReader(
-            report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE
-        )
+        reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
 
         # Metadata
         assembly_level = "contig"
@@ -108,9 +106,7 @@ class SeqregionParser:
                     data += line
             return data, metadata
 
-    def make_seq_region(
-        self, row: Dict[str, str], assembly_level: str, use_refseq: bool
-    ) -> Dict[str, Any]:
+    def make_seq_region(self, row: Dict[str, str], assembly_level: str, use_refseq: bool) -> Dict[str, Any]:
         """From a row of the report, create one seq_region dict.
 
         Args:

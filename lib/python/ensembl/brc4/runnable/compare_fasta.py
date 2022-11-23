@@ -187,10 +187,7 @@ class compare_fasta(eHive.BaseRunnable):
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
-            comp.append(
-                "WARNING: Different number of sequences: %d vs %d"
-                % (len(seq1), len(seq2))
-            )
+            comp.append("WARNING: Different number of sequences: %d vs %d" % (len(seq1), len(seq2)))
         else:
             comp.append("Same number of sequences: %d" % len(seq1))
 
@@ -212,13 +209,9 @@ class compare_fasta(eHive.BaseRunnable):
         map_dna_path = self.param_required("seq_regions")
         seq_data = self.get_json(map_dna_path)
         org_loc = self.organellar_assembly(report_seq, seq_data)
-        INSDC_assembly_level, core_assembly_level = self.assembly_level(
-            report_seq, seq_data
-        )
+        INSDC_assembly_level, core_assembly_level = self.assembly_level(report_seq, seq_data)
 
-        comp.append(
-            "Assembly level: %s vs %s" % (INSDC_assembly_level, core_assembly_level)
-        )
+        comp.append("Assembly level: %s vs %s" % (INSDC_assembly_level, core_assembly_level))
 
         names_length = {}
         # sequences which have extra N at the end
@@ -234,10 +227,7 @@ class compare_fasta(eHive.BaseRunnable):
                         ignored_seq = seq2[len1:]
                         N = ignored_seq.count("N")
                         if len(ignored_seq) == N:
-                            comp.append(
-                                f"Please check extra Ns added in core in  %s and %s"
-                                % (name1, name2)
-                            )
+                            comp.append(f"Please check extra Ns added in core in  %s and %s" % (name1, name2))
                         else:
                             comp.append(
                                 f"ALERT INSERTIONS at the end or diff assembly level  %s and %s"
@@ -245,13 +235,9 @@ class compare_fasta(eHive.BaseRunnable):
                             )
                     elif len1 == len2:
                         if seq2_N > seq1_N:
-                            comp.append(
-                                f"Core has more Ns, check  %s and %s" % (name1, name2)
-                            )
+                            comp.append(f"Core has more Ns, check  %s and %s" % (name1, name2))
                         elif seq1_N > seq2_N:
-                            comp.append(
-                                f"INSDC has more Ns, check  %s and %s" % (name1, name2)
-                            )
+                            comp.append(f"INSDC has more Ns, check  %s and %s" % (name1, name2))
                         else:
                             names_length[name1] = name2
                     else:
@@ -339,10 +325,7 @@ class compare_fasta(eHive.BaseRunnable):
             maxi = {seq: name for seq, name in only1.items() if len(seq) > 200}
 
             if mini and len(mini) > 3000:
-                comp.append(
-                    "WARNING: Ignoring %d sequences from 1 with length <= 200"
-                    % len(mini)
-                )
+                comp.append("WARNING: Ignoring %d sequences from 1 with length <= 200" % len(mini))
                 only1 = maxi
 
         if only1:
@@ -350,10 +333,7 @@ class compare_fasta(eHive.BaseRunnable):
             mini = {seq: name for seq, name in only1.items() if len(seq) <= 1000}
             maxi = {seq: name for seq, name in only1.items() if len(seq) > 1000}
             if mini and len(mini) > 3000:
-                comp.append(
-                    "WARNING: Ignoring %d sequences from 1 with length <= 1000"
-                    % len(mini)
-                )
+                comp.append("WARNING: Ignoring %d sequences from 1 with length <= 1000" % len(mini))
                 only1 = maxi
 
         if only1:
@@ -370,10 +350,7 @@ class compare_fasta(eHive.BaseRunnable):
             maxi = {seq: name for seq, name in only2.items() if len(seq) > 200}
 
             if mini and len(mini) > 3000:
-                comp.append(
-                    "WARNING: Ignoring %d sequences from 2 with length <= 200"
-                    % len(mini)
-                )
+                comp.append("WARNING: Ignoring %d sequences from 2 with length <= 200" % len(mini))
                 only2 = maxi
 
         if only2:
@@ -382,10 +359,7 @@ class compare_fasta(eHive.BaseRunnable):
             maxi = {seq: name for seq, name in only2.items() if len(seq) > 1000}
 
             if mini and len(mini) > 3000:
-                comp.append(
-                    "WARNING: Ignoring %d sequences from 2 with length <= 1000"
-                    % len(mini)
-                )
+                comp.append("WARNING: Ignoring %d sequences from 2 with length <= 1000" % len(mini))
                 only2 = maxi
 
         if only2:
@@ -411,9 +385,7 @@ class compare_fasta(eHive.BaseRunnable):
                     if group1.count == 1:
                         common[group1.ids[0]] = group2.ids[0]
                     else:
-                        comp.append(
-                            f"Matched 2 identical groups of sequences: {group1} and {group2}"
-                        )
+                        comp.append(f"Matched 2 identical groups of sequences: {group1} and {group2}")
                         possible_id2 = " OR ".join(group2.ids)
                         for id1 in group1.ids:
                             common[id1] = possible_id2
@@ -492,11 +464,7 @@ class compare_fasta(eHive.BaseRunnable):
 
         core_assembly_level.extend([scaffold_core, chromosome_core])
 
-        INSDC_assembly_level = ", ".join(
-            [str(assembly) for assembly in INSDC_assembly_level]
-        )
-        core_assembly_level = ", ".join(
-            [str(assembly) for assembly in core_assembly_level]
-        )
+        INSDC_assembly_level = ", ".join([str(assembly) for assembly in INSDC_assembly_level])
+        core_assembly_level = ", ".join([str(assembly) for assembly in core_assembly_level])
 
         return INSDC_assembly_level, core_assembly_level
