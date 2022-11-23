@@ -93,3 +93,7 @@ where = ["lib/python"]  # list of folders that contain the packages (["."] by de
 #    https://setuptools.pypa.io/en/latest/userguide/quickstart.html
 #    https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
 #    https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
+
+
+[tool.black]
+line-length = 110
