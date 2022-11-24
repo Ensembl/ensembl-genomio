@@ -103,7 +103,7 @@ sub pipeline_wide_parameters {
             'pipeline_name' => $self->o('pipeline_name'), #This must be defined for the beekeeper to work properly
             'base_path'     => $self->o('tmp_dir'),
             'output_dir'     => $self->o('output_dir'),
-            download_dir   => catdir($self->o('tmp_dir'), "download", '#species#'),    
+            download_dir   => catdir($self->o('tmp_dir'), "download", '#species#'),
     };
 }
 
@@ -152,7 +152,6 @@ sub pipeline_analyses {
          ]
        }
      },
-
 
     { -logic_name  => 'Fasta_DNA',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFastaDNA',
@@ -216,7 +215,7 @@ sub pipeline_analyses {
         2 => [
           '?accu_name=insdc_fasta_dna&accu_input_variable=fasta_dna',
           '?accu_name=insdc_report&accu_input_variable=report',
-	  '?accu_name=accession&accu_input_variable=accession',
+          '?accu_name=accession&accu_input_variable=accession',
         ],
       },
     },
@@ -231,13 +230,13 @@ sub pipeline_analyses {
         fasta2 => "#core_fasta_dna#",
         seq_regions => "#seq_region_json#",
         comparison_name => "fasta_dna",
-	accession => "#accession#",
+        accession => "#accession#",
       },
       -language => 'python3',
       -analysis_capacity => 5,
       -failed_job_tolerance => 0,
       -rc_name        => '8GB',
-       -flow_into      => {
+      -flow_into      => {
          '2' => '?accu_name=stats&accu_address={species}'
         }
     },

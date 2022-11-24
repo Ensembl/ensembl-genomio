@@ -15,6 +15,7 @@
 # limitations under the License.
 
 
+from typing import Any, Dict, List, Tuple
 import eHive
 import gzip
 import json
@@ -28,7 +29,7 @@ from ensembl.brc4.runnable.seqregion_parser import SeqregionParser
 
 
 class SeqGroup:
-    def __init__(self, sequence, identifier=None):
+    def __init__(self, sequence, identifier=None) -> None:
         self.sequence = sequence
         self.length = len(self.sequence)
         self.ids = []
@@ -36,10 +37,10 @@ class SeqGroup:
             self.add_id(identifier)
         self.count = len(self.ids)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ", ".join(self.ids)
 
-    def add_id(self, identifier):
+    def add_id(self, identifier) -> None:
         self.ids.append(identifier)
         self.count = len(self.ids)
 
@@ -48,7 +49,7 @@ class compare_fasta(eHive.BaseRunnable):
     def param_defaults(self):
         return {}
 
-    def run(self):
+    def run(self) -> None:
         report = self.param_required("report")
         fasta1 = self.param_required("fasta1")
         fasta2 = self.param_required("fasta2")
@@ -69,7 +70,7 @@ class compare_fasta(eHive.BaseRunnable):
 
         # Print full list of results in a file
         output_file = output_dir + "/" + species + "_" + name + ".log"
-        print("Write results in %s" % output_file)
+        print(f"Write results in {output_file}")
         with open(output_file, "w") as out_fh:
             for line in diffs:
                 out_fh.write(line + "\n")
@@ -78,17 +79,17 @@ class compare_fasta(eHive.BaseRunnable):
         out = {"species": species, "stats": stats}
         self.dataflow(out, 2)
 
-    def print_map(self, seq_map, map_file, report_file, accession):
+    def print_map(self, seq_map: dict, map_file: str, report_file: str, accession: str) -> None:
 
         report_parser = SeqregionParser()
         report_seq = report_parser.get_report_regions(report_file, accession)
         report = self.add_report_to_map(seq_map, report_seq)
 
-        print("Write map in %s" % map_file)
+        print(f"Write map in {map_file}")
         with open(map_file, "w") as out_fh:
             out_fh.write(json.dumps(report, sort_keys=True, indent=4))
 
-    def add_report_to_map(self, seq_map, report_seq):
+    def add_report_to_map(self, seq_map: dict, report_seq: dict) -> List[Any]:
 
         accession_version = r"\.\d+$"
         report = []
@@ -108,9 +109,9 @@ class compare_fasta(eHive.BaseRunnable):
 
         return report
 
-    def get_map(self, map_path):
+    def get_map(self, map_path: str) -> dict:
 
-        print("Read file %s" % map_path)
+        print(f"Read file {map_path}")
         data = self.get_json(map_path)
 
         map_dna = {}
@@ -124,11 +125,12 @@ class compare_fasta(eHive.BaseRunnable):
 
         return map_dna
 
-    def get_json(self, json_path):
+    def get_json(self, json_path: str) -> dict:
+
         with open(json_path) as json_file:
             return json.load(json_file)
 
-    def build_seq_dict(self, seqs):
+    def build_seq_dict(self, seqs: dict) -> dict:
         """Build a seq dict taking duplicates into account"""
 
         seqs_dict = dict()
@@ -140,9 +142,9 @@ class compare_fasta(eHive.BaseRunnable):
 
         return seqs_dict
 
-    def get_fasta(self, fasta_path, map_dna):
-
-        print("Read file %s" % fasta_path)
+    def get_fasta(self, fasta_path: str, map_dna: dict) -> dict:
+        
+        print(f"Read file {fasta_path}")
         sequences = {}
         _open = partial(gzip.open, mode="rt") if fasta_path.endswith(".gz") else open
         with _open(fasta_path) as fasta_fh:
@@ -153,7 +155,7 @@ class compare_fasta(eHive.BaseRunnable):
                 sequences[name] = re.sub(r"[^CGTA]", "N", str(rec.seq.upper()))
         return sequences
 
-    def compare_seqs(self, seq1, seq2):
+    def compare_seqs(self, seq1: dict, seq2: dict) -> Tuple[dict, list, dict]:
 
         comp = []
         accession = self.param_required("accession")
@@ -187,9 +189,9 @@ class compare_fasta(eHive.BaseRunnable):
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
-            comp.append("WARNING: Different number of sequences: %d vs %d" % (len(seq1), len(seq2)))
+            comp.append(f"WARNING: Different number of sequences: {len(seq1)} vs {len(seq2)}")
         else:
-            comp.append("Same number of sequences: %d" % len(seq1))
+            comp.append(f"Same number of sequences: {len(seq1)}")
 
         # Sequences that are not common
         only1 = {seq: group for seq, group in seqs1.items() if not seq in seqs2}
@@ -211,33 +213,32 @@ class compare_fasta(eHive.BaseRunnable):
         org_loc = self.organellar_assembly(report_seq, seq_data)
         INSDC_assembly_level, core_assembly_level = self.assembly_level(report_seq, seq_data)
 
-        comp.append("Assembly level: %s vs %s" % (INSDC_assembly_level, core_assembly_level))
+        comp.append(f"Assembly level: {INSDC_assembly_level} vs {core_assembly_level}")
 
         names_length = {}
         # sequences which have extra N at the end
         if only1 and only2:
-            for seq1, name1 in only1.items():
-                len1 = len(seq1)
-                seq1_N = seq1.count("N")
-                for seq2, name2 in only2.items():
-                    len2 = len(seq2)
-                    seq2_N = seq2.count("N")
-                    sequence_2 = seq2[:len1]
-                    if sequence_2 == seq1:
-                        ignored_seq = seq2[len1:]
+            for seq_1, name1 in only1.items():
+                len1 = len(seq_1)
+                seq1_N = seq_1.count("N")
+                for seq_2, name2 in only2.items():
+                    len2 = len(seq_2)
+                    seq2_N = seq_2.count("N")
+                    sequence_2 = seq_2[:len1]
+                    if sequence_2 == seq_1:
+                        ignored_seq = seq_2[len1:]
                         N = ignored_seq.count("N")
                         if len(ignored_seq) == N:
-                            comp.append(f"Please check extra Ns added in core in  %s and %s" % (name1, name2))
+                            comp.append(f"Please check extra Ns added in core in {name1} and {name2}")
                         else:
                             comp.append(
-                                f"ALERT INSERTIONS at the end or diff assembly level  %s and %s"
-                                % (name1, name2)
+                                f"ALERT INSERTIONS at the end or diff assembly level {name1} and {name2}"
                             )
                     elif len1 == len2:
                         if seq2_N > seq1_N:
-                            comp.append(f"Core has more Ns, check  %s and %s" % (name1, name2))
+                            comp.append(f"Core has more Ns, check {name1} and {name2}")
                         elif seq1_N > seq2_N:
-                            comp.append(f"INSDC has more Ns, check  %s and %s" % (name1, name2))
+                            comp.append(f"INSDC has more Ns, check {name1} and {name2}")
                         else:
                             names_length[name1] = name2
                     else:
@@ -245,9 +246,9 @@ class compare_fasta(eHive.BaseRunnable):
 
         if names_length:
             length = len(names_length)
-            comp.append(f"%d sequences have the same length" % length)
+            comp.append(f"{length} sequences have the same length")
             for insdc, core in names_length.items():
-                comp.append(f"INSDC: %s and coredb : %s" % (insdc, core))
+                comp.append(f"INSDC: {insdc} and coredb : {core}")
 
         # Remove the duplicates
         for org_name in list(org_loc.keys()):
@@ -278,11 +279,11 @@ class compare_fasta(eHive.BaseRunnable):
                         org_value = "identical"
                 elif org_name in only1_id:
                     count = count + 1
-                    comp.append("%s (only1) in  location: %s" % (org_name, loc))
+                    comp.append(f"{org_name} (only1) in  location: {loc}")
                     org_value = "unknown_with_organellar"
                 else:
                     count = count + 1
-                    comp.append("%s (only2) in location: %s" % (org_name, loc))
+                    comp.append(f"{org_name} (only2) in location: {loc}")
                     org_value = "unknown_with_organellar"
 
         # if the mistmatch is due to added organellar sequences
@@ -319,13 +320,13 @@ class compare_fasta(eHive.BaseRunnable):
         print(stats)
 
         if only1:
-            stats["max_only1"] = max(only1, key=lambda k: len(k))
+            stats["max_only1"] = len(max(only1, key=lambda k: len(k)))
             # Only list sequences where the length is > 200
             mini = {seq: name for seq, name in only1.items() if len(seq) <= 200}
             maxi = {seq: name for seq, name in only1.items() if len(seq) > 200}
 
             if mini and len(mini) > 3000:
-                comp.append("WARNING: Ignoring %d sequences from 1 with length <= 200" % len(mini))
+                comp.append(f"WARNING: Ignoring {len(mini)} sequences from 1 with length <= 200")
                 only1 = maxi
 
         if only1:
@@ -333,24 +334,24 @@ class compare_fasta(eHive.BaseRunnable):
             mini = {seq: name for seq, name in only1.items() if len(seq) <= 1000}
             maxi = {seq: name for seq, name in only1.items() if len(seq) > 1000}
             if mini and len(mini) > 3000:
-                comp.append("WARNING: Ignoring %d sequences from 1 with length <= 1000" % len(mini))
+                comp.append(f"WARNING: Ignoring {len(mini)} sequences from 1 with length <= 1000")
                 only1 = maxi
 
         if only1:
             total = sum([len(seq) for seq in only1.keys()])
-            comp.append("WARNING: Sequences only in 1: %d (%d)" % (len(only1), total))
+            comp.append(f"WARNING: Sequences only in 1: {len(only1)} ({total})")
             only_seq1 = {name: len(seq) for seq, name in only1.items()}
             for name, length in sorted(only_seq1.items(), key=lambda x: x[1]):
-                comp.append("\tOnly in 1: %s (%d)" % (name, length))
+                comp.append(f"\tOnly in 1: {name} ({length})")
 
         if only2:
-            stats["max_only2"] = max(len(seq) for seq in only2.keys())
+            stats["max_only2"] = len(max(only2, key=lambda k: len(k)))
             # Only list sequences where the length is > 200
             mini = {seq: name for seq, name in only2.items() if len(seq) <= 200}
             maxi = {seq: name for seq, name in only2.items() if len(seq) > 200}
 
             if mini and len(mini) > 3000:
-                comp.append("WARNING: Ignoring %d sequences from 2 with length <= 200" % len(mini))
+                comp.append(f"WARNING: Ignoring {len(mini)} sequences from 2 with length <= 200")
                 only2 = maxi
 
         if only2:
@@ -359,19 +360,19 @@ class compare_fasta(eHive.BaseRunnable):
             maxi = {seq: name for seq, name in only2.items() if len(seq) > 1000}
 
             if mini and len(mini) > 3000:
-                comp.append("WARNING: Ignoring %d sequences from 2 with length <= 1000" % len(mini))
+                comp.append(f"WARNING: Ignoring {len(mini)} sequences from 2 with length <= 1000")
                 only2 = maxi
 
         if only2:
             total = sum([len(seq) for seq in only2.keys()])
-            comp.append("WARNING: Sequences only in 2: %d (%d)" % (len(only2), total))
+            comp.append(f"WARNING: Sequences only in 2: {len(only2)} ({total})")
             only_seq2 = {name: len(seq) for seq, name in only2.items()}
             for name, length in sorted(only_seq2.items(), key=lambda x: x[1]):
-                comp.append("\tOnly in 2: %s (%d)" % (name, length))
+                comp.append(f"\tOnly in 2: {name} ({length})")
 
         return (stats, comp, common)
 
-    def find_common_groups(self, seqs1, seqs2):
+    def find_common_groups(self, seqs1: dict, seqs2: dict) -> Tuple[dict, List[Any]]:
 
         print(len(seqs1))
         print(len(seqs2))
@@ -395,15 +396,11 @@ class compare_fasta(eHive.BaseRunnable):
                         f"Matched 2 different groups of sequences ({group1.count} vs {group2.count}): {group1} and {group2}"
                     )
 
-        print(comp)
         print(len(common))
         return common, comp
 
-    def organellar_assembly(self, report_seq, data):
-        org_name = {}
+    def organellar_assembly(self, report_seq: dict, data: List[dict]) -> dict:
         org_loc = {}
-        org2 = []
-        org3 = []
 
         # Gathering data from the INSDC report file and storing it into a list
         for name1, details1 in report_seq.items():
@@ -430,7 +427,7 @@ class compare_fasta(eHive.BaseRunnable):
 
         return org_loc
 
-    def assembly_level(self, report_seq, core_data):
+    def assembly_level(self, report_seq: dict, core_data: list) -> Tuple[str, str]:
 
         INSDC_assembly_level = []
         core_assembly_level = []
