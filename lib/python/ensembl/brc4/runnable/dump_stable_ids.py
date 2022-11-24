@@ -43,8 +43,8 @@ class StableIdEvent:
         to_list: List of genes in the new gene set.
         release: New gene set release name.
         date: Date of the new gene set.
-        name: ...
-        pairs: ...
+        name: Name of the event (will be updated automatically).
+        pairs: All pair of ids for this event.
 
     Any gene set before 2019-09 is dubbed pre-BRC4.
 
@@ -402,8 +402,7 @@ class DumpStableIDs:
     
     def extend_event(self, event: StableIdEvent, from_list: Dict[str, List[str]], to_list: Dict[str, List[str]]
         ) -> Tuple[StableIdEvent, List, List]:
-        """Given an event, add ids in to from and to sets, as long as they are connected either in
-        a from_list or a to_list.
+        """Given an event, aggregate ids in the 'from' and 'to' sets, to connect the whole group.
 
         Args:
             event: the event to extend.
