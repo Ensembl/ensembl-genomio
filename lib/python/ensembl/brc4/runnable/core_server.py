@@ -26,11 +26,11 @@ class CoreServer:
 
     Allows to get a list of databases and provides access to them.
 
-    Args:
-    host
-    port
-    user
-    password (optional)
+    Attributes:
+        host
+        port
+        user
+        password (optional)
 
     To connect to a specific database:
     1) Create the core server object
@@ -79,12 +79,12 @@ class CoreServer:
     def get_cores(self, prefix: str = '', build: str = '', version: str = '') -> List[str]:
         """Provide a list of core databases, filtered if requested.
         Args:
-        prefix: filter by prefix (automatically followed by _)
-        build: filter by build
-        version: filter by Ensembl version
+            prefix: filter by prefix (automatically followed by _)
+            build: filter by build
+            version: filter by Ensembl version
 
         Returns:
-        A list of database names
+            A list of database names
         """
         dbs = []
 
