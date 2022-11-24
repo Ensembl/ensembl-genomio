@@ -1,4 +1,4 @@
-#!env python3
+#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -15,21 +15,22 @@
 # limitations under the License.
 
 
+import csv
+import gzip
 import os
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Tuple
-import eHive
-import gzip
-import csv
 
 from Bio import SeqIO
+import eHive
+
 from ensembl.brc4.runnable.utils import Utils
 
 
 class MissingDataError(Exception):
     """Used if some data is missing from the report file."""
-    def __init__(self, report_path: str, accession: str, msg):
+    def __init__(self, report_path: str, accession: str, msg: str):
         report_msg = f"Can't get data for {accession} in report {report_path}"
         if msg:
             report_msg = f"{report_msg}: {msg}"

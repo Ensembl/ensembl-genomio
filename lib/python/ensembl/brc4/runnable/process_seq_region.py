@@ -408,9 +408,6 @@ class process_seq_region(eHive.BaseRunnable):
         Args:
             record: The GenBank record to look into.
 
-        Returns:
-            the organelle location.
-        
         Raises:
             KeyError: If the location is not part of the controlled vocabulary.
         """
