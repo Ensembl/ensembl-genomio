@@ -16,13 +16,14 @@
 
 
 
-import os
-import eHive
-import gzip
-import shutil
-from Bio import SeqIO
 from functools import partial
+import gzip
 from mimetypes import guess_type
+import os
+
+from Bio import SeqIO
+import eHive
+
 
 class process_fasta(eHive.BaseRunnable):
 

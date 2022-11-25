@@ -16,19 +16,19 @@
 
 
 
-from pathlib import Path
-import eHive
 import gzip
+import hashlib
 import io
 import json
+from math import floor
+from os import path
+from pathlib import Path
 import re
 import sys
 
 from BCBio import GFF
 from Bio import SeqIO
-from os import path
-from math import floor
-import hashlib
+import eHive
 
 from ensembl.brc4.runnable.utils import get_json
 

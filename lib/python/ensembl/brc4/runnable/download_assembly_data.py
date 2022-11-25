@@ -14,14 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
-from typing import Any, Dict
-import eHive
-import os
-import re
 import ftplib
 import hashlib
 from pathlib import Path
+import re
+from typing import Any, Dict
+
+import eHive
 
 FILE_ENDS = {
     "assembly_report.txt": "report",
@@ -51,7 +50,7 @@ class download_assembly_data(eHive.BaseRunnable):
 
         # Set and create dedicated dir for download
         if not download_dir.is_dir():
-            os.makedirs(download_dir)
+            download_dir.mkdir(parents=True)
 
         # Download if files don't exist or fail checksum
         if not self.md5_files(download_dir):

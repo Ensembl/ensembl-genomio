@@ -16,8 +16,8 @@
 
 
 from pathlib import Path
+
 import eHive
-import json
 from jsonschema import validate
 
 from ensembl.brc4.runnable.utils import get_json

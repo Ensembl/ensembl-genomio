@@ -15,18 +15,20 @@
 # limitations under the License.
 
 
-
-from pathlib import Path
-from typing import List
-import eHive
-import gzip
-import sys, io, re, os
-import json
-from statistics import mean
-from BCBio import GFF
 from collections import OrderedDict
+import gzip
+import io
+import json
+import os
+from pathlib import Path
+from statistics import mean
+from typing import List
+
+from BCBio import GFF
+import eHive
 
 from ensembl.brc4.runnable.utils import get_json
+
 
 class manifest_stats(eHive.BaseRunnable):
 

@@ -15,16 +15,17 @@
 # limitations under the License.
 
 
+import csv
+import gzip
 import os
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Tuple
-import eHive
-import gzip
-import csv
 
 from Bio import SeqIO, SeqRecord
+import eHive
 import requests
+
 from ensembl.brc4.runnable.utils import print_json
 
 

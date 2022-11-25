@@ -15,13 +15,13 @@
 # limitations under the License.
 
 
+import hashlib
+import json
+import os
+import shutil
 
 import eHive
-import os
-import sys
-import shutil
-import json
-import hashlib
+
 
 class manifest(eHive.BaseRunnable):
 

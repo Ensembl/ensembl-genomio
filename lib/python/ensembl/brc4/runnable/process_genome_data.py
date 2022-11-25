@@ -15,16 +15,16 @@
 # limitations under the License.
 
 
-
-import os
 import datetime
+import os
 from pathlib import Path
-
-import eHive
 import requests
 import xml.etree.ElementTree as ET
 
+import eHive
+
 from ensembl.brc4.runnable.utils import print_json, get_json
+
 
 class process_genome_data(eHive.BaseRunnable):
 
