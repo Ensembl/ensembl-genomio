@@ -17,7 +17,6 @@
 
 import csv
 import gzip
-import os
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Tuple
@@ -98,19 +97,19 @@ class process_seq_region(eHive.BaseRunnable):
 
     def run(self):
         genome_data = self.param('genome_data')
-        work_dir = self.param('work_dir')
+        work_dir = Path(self.param('work_dir'))
         report_path = self.param('report')
         gbff_path = self.param('gbff')
         brc4_mode = self.param('brc4_mode')
 
         # Create dedicated work dir
-        if not os.path.isdir(work_dir):
-            os.makedirs(work_dir)
+        if not work_dir.is_dir():
+            work_dir.mkdir(parents=True)
 
         # Final file name
         metadata_type = "seq_region"
         new_file_name = metadata_type + ".json"
-        final_path = Path(work_dir, new_file_name)
+        final_path = work_dir / new_file_name
         
         use_refseq = self.param('accession').startswith("GCF_")
 

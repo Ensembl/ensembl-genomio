@@ -18,11 +18,9 @@
 from collections import OrderedDict
 import gzip
 import io
-import json
-import os
 from pathlib import Path
 from statistics import mean
-from typing import List
+from typing import Dict, List, TextIO
 
 from BCBio import GFF
 import eHive
@@ -33,39 +31,38 @@ from ensembl.brc4.runnable.utils import get_json
 class manifest_stats(eHive.BaseRunnable):
 
     def run(self):
-        manifest_path = self.param_required("manifest")
+        manifest_path = Path(self.param_required("manifest"))
         manifest = self.get_manifest(manifest_path)
         
         stats = []
         if "gff3" in manifest:
-            stats += self.get_gff3_stats(manifest["gff3"])
+            stats += self.get_gff3_stats(Path(manifest["gff3"]))
         if "seq_region" in manifest:
             stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
         
-        stats_path = os.path.join(os.path.dirname(manifest_path), "stats.txt")
+        stats_path = manifest_path.parent / "stats.txt"
         print(stats_path)
-        with open(stats_path, "w") as stats_out:
+        with stats_path.open("w") as stats_out:
             stats_out.write("\n".join(stats))
         
-    def get_manifest(self, manifest_path):
-
-        with open(manifest_path) as manifest_file:
-            manifest = json.load(manifest_file)
-            
-            # Use dir name from the manifest
-            for name in manifest:
-                if "file" in manifest[name]:
-                    file_name = manifest[name]["file"]
-                    file_name = os.path.join(os.path.dirname(manifest_path), file_name)
-                    manifest[name] = file_name
-                else:
-                    for f in manifest[name]:
-                        if "file" in manifest[name][f]:
-                            file_name = manifest[name][f]["file"]
-                            file_name = os.path.join(os.path.dirname(manifest_path), file_name)
-                            manifest[name][f] = file_name
-            
-            return manifest
+    def get_manifest(self, manifest_path: Path) -> Dict:
+        manifest = get_json(manifest_path)
+        manifest_root = manifest_path.parent
+        
+        # Use dir name from the manifest
+        for name in manifest:
+            if "file" in manifest[name]:
+                file_name = manifest[name]["file"]
+                file_name = manifest_root / file_name
+                manifest[name] = file_name
+            else:
+                for f in manifest[name]:
+                    if "file" in manifest[name][f]:
+                        file_name = manifest[name][f]["file"]
+                        file_name = manifest_root, file_name
+                        manifest[name][f] = file_name
+        
+        return manifest
 
     def get_seq_region_stats(self, seq_region_path: Path) -> List:
         
@@ -95,7 +92,7 @@ class manifest_stats(eHive.BaseRunnable):
         
         # Stats
         stats = []
-        stats.append(os.path.basename(seq_region_path))
+        stats.append(seq_region_path.name)
         stats.append("Total coord_systems %d" % len(coord_systems))
         for coord_name, lengths in coord_systems.items():
             stats.append("\nCoord_system: %s" % coord_name)
@@ -128,21 +125,21 @@ class manifest_stats(eHive.BaseRunnable):
 
         return stats
 
-    def get_gff3_stats(self, gff3_path):
+    def get_gff3_stats(self, gff3_path: Path) -> List:
         
         stats = []
-        stats.append(os.path.basename(gff3_path))
-        if gff3_path.endswith(".gz"):
+        stats.append(gff3_path.name)
+        if gff3_path.name.endswith(".gz"):
             with io.TextIOWrapper(gzip.open(gff3_path, "r")) as gff3_handle:
                 stats += self.parse_gff3(gff3_handle)
         else:
-            with open(gff3_path, "r") as gff3_handle:
+            with gff3_path.open("r") as gff3_handle:
                 stats += self.parse_gff3(gff3_handle)
         stats.append("\n")
         
         return stats
 
-    def parse_gff3(self, gff3_handle):
+    def parse_gff3(self, gff3_handle: TextIO) -> List:
         biotypes = {}
 
         for rec in GFF.parse(gff3_handle):
@@ -162,7 +159,7 @@ class manifest_stats(eHive.BaseRunnable):
         
         return stats
 
-    def increment_biotype(self, biotypes, feature):
+    def increment_biotype(self, biotypes: Dict, feature) -> None:
         biotype = feature.type
         if not biotype in biotypes:
             biotypes[biotype] = { "count" : 0, "example" : feature.id }

@@ -16,7 +16,6 @@
 
 
 import datetime
-import os
 from pathlib import Path
 import requests
 import xml.etree.ElementTree as ET
@@ -72,7 +71,7 @@ class process_genome_data(eHive.BaseRunnable):
         self.param("accession", accession)
         work_dir = Path(self.param('work_dir'))
         if not work_dir.is_dir():
-            os.makedirs(work_dir)
+            work_dir.mkdir(parents=True)
 
         # Final file name
         metadata_type = "genome"

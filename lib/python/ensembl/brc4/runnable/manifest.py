@@ -16,18 +16,20 @@
 
 
 import hashlib
-import json
-import os
+from pathlib import Path
 import shutil
+from typing import Dict
 
 import eHive
+
+from ensembl.brc4.runnable.utils import print_json, get_json
 
 
 class manifest(eHive.BaseRunnable):
 
     def run(self):
         manifest_files = self.param_required('manifest_files')
-        output_dir = self.param_required('output_dir')
+        output_dir = Path(self.param_required('output_dir'))
 
         # Assume there is a genome file and get metadata from it
         if not "genome" in manifest_files:
@@ -69,16 +71,13 @@ class manifest(eHive.BaseRunnable):
                     raise Exception("No species")
 
         # Define genome directory
-        dir_list = [output_dir]
+        genome_dir = output_dir
         if component != None:
-            dir_list.append(component)
-        dir_list.append(genome_name)
-        genome_dir = os.path.join(*dir_list)
+            genome_dir = genome_dir / component
+        genome_dir = genome_dir / genome_name
 
-        try:
-            os.makedirs(genome_dir)
-        except:
-            print("Reuse directory")
+        if not genome_dir.is_dir():
+            genome_dir.mkdir(parents=True)
         print(f"Genome directory: '{genome_dir}'")
 
         # Move all files to the output dir, with a new name
@@ -88,16 +87,15 @@ class manifest(eHive.BaseRunnable):
         # Create th manifest file itself
         manifest_path = self.create_manifest(genome_dir, final_files)
 
-        self.dataflow({ "manifest" : manifest_path }, 2)
+        self.dataflow({ "manifest" : str(manifest_path) }, 2)
 
     def get_genome_data(self, files):
         if "genome" in files:
-            with open(files["genome"]) as json_file:
-                return json.load(json_file)
+            return get_json(Path(files["genome"]))
         else:
             raise Exception("No genome file")
 
-    def copy_files(self, genome_dir, files, species, genome_name):
+    def copy_files(self, genome_dir: Path, files: Dict, species: str, genome_name: str) -> Dict:
         final_files = {}
         for name, value in files.items():
             final_files[name] = {}
@@ -105,13 +103,15 @@ class manifest(eHive.BaseRunnable):
             # Nested files
             if isinstance(value, dict):
                 for subname, subvalue in files[name].items():
-                    final_file = self.copy_file(subvalue, genome_dir, species, genome_name)
+                    file_path = Path(subvalue)
+                    final_file = self.copy_file(file_path, genome_dir, species, genome_name)
                     if final_file:
                         final_files[name][subname] = final_file
 
             # Not nested files
             else:
-                final_file = self.copy_file(value, genome_dir, species, genome_name)
+                file_path = Path(value)
+                final_file = self.copy_file(file_path, genome_dir, species, genome_name)
                 if final_file:
                     final_files[name] = final_file
 
@@ -120,16 +120,16 @@ class manifest(eHive.BaseRunnable):
                     
         return final_files
 
-    def copy_file(self, origin_path, dir_path, species, genome_name):
-        if origin_path == None:
+    def copy_file(self, origin_path: Path, dir_path: Path, species: str, genome_name: str) -> Dict:
+        if not origin_path:
             return None
 
         # Define the new file name
-        file_name = os.path.basename(origin_path)
+        file_name = origin_path.name
         if species != None and genome_name != None:
             file_name = file_name.replace(species, genome_name)
-        final_path = os.path.join(dir_path, file_name)
-        print("%s -> %s (%s)" % (origin_path, final_path, dir_path))
+        final_path = dir_path / file_name
+        print(f"{origin_path} -> {final_path} ({dir_path})")
 
         # Copy file
         shutil.copyfile(origin_path, final_path)
@@ -144,13 +144,12 @@ class manifest(eHive.BaseRunnable):
 
         return file_data
 
-    def get_md5sum(self, path):
-        with open(path, "rb") as f:
+    def get_md5sum(self, file_path: Path) -> str:
+        with file_path.open("rb") as f:
             bytes = f.read()
             return hashlib.md5(bytes).hexdigest()
 
-    def create_manifest(self, genome_dir, files):
-        manifest_path = os.path.join(genome_dir, "manifest.json")
-        with open(manifest_path, "w") as out:
-            out.write(json.dumps(files, sort_keys=True, indent=4))
+    def create_manifest(self, genome_dir: Path, files: Dict) -> Path:
+        manifest_path = genome_dir / "manifest.json"
+        print_json(manifest_path, files)
         return manifest_path

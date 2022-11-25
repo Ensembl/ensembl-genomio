@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-import os
 from pathlib import Path
 import re
 import tempfile
@@ -107,7 +106,7 @@ class process_gff3(eHive.BaseRunnable):
 
         # Create dedicated work dir
         if not work_dir.is_dir():
-            os.makedirs(work_dir)
+            work_dir.mkdir(parents=True)
 
         # Final files
         out_gff_path = work_dir / "gene_models.gff3"
