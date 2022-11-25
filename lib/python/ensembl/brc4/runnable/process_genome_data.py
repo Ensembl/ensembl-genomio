@@ -24,7 +24,7 @@ import eHive
 import requests
 import xml.etree.ElementTree as ET
 
-from ensembl.brc4.runnable.utils import Utils
+from ensembl.brc4.runnable.utils import print_json, get_json
 
 class process_genome_data(eHive.BaseRunnable):
 
@@ -59,7 +59,7 @@ class process_genome_data(eHive.BaseRunnable):
     def run(self):
         json_path = Path(self.param_required("json_path"))
         
-        genome_data = Utils.get_json(json_path)
+        genome_data = get_json(json_path)
 
         # Amend metadata
         self.add_provider(genome_data)
@@ -80,7 +80,7 @@ class process_genome_data(eHive.BaseRunnable):
         final_path = work_dir / new_file_name
 
         # Print out the file
-        Utils.print_json(final_path, genome_data)
+        print_json(final_path, genome_data)
 
         # Flow out the file and type
         output = {

@@ -20,7 +20,7 @@ import eHive
 import json
 from jsonschema import validate
 
-from ensembl.brc4.runnable.utils import Utils
+from ensembl.brc4.runnable.utils import get_json
 
 
 class schema_validator(eHive.BaseRunnable):
@@ -45,7 +45,7 @@ class schema_validator(eHive.BaseRunnable):
         else:
             raise Exception(f"Schema not defined: {metadata_type}")
         
-        file = Utils.get_json(json_file)
-        schema = Utils.get_json(json_schema)
+        file = get_json(json_file)
+        schema = get_json(json_schema)
         
         validate(instance=file, schema=schema)

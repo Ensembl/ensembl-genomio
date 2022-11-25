@@ -30,7 +30,7 @@ from os import path
 from math import floor
 import hashlib
 
-from ensembl.brc4.runnable.utils import Utils
+from ensembl.brc4.runnable.utils import get_json
 
 
 class integrity(eHive.BaseRunnable):
@@ -111,7 +111,7 @@ class integrity(eHive.BaseRunnable):
                 errors += pep_errors
             if "seq_region" in manifest:
                 print("Got a seq_regions")
-                seq_regions = Utils.get_json(Path(manifest["seq_region"]))
+                seq_regions = get_json(Path(manifest["seq_region"]))
                 seqr_lengths = {}
                 seqr_seqlevel = {}
                 #Store the length as int
@@ -127,7 +127,7 @@ class integrity(eHive.BaseRunnable):
                 agp_seqr = self.get_agp_seq_regions(manifest['agp'])
             if "genome" in manifest:
                 print("Got a genome")
-                genome = Utils.get_json(Path(manifest["genome"]))
+                genome = get_json(Path(manifest["genome"]))
 
             # Check if the accession is correct in genome.json 
             if genome:

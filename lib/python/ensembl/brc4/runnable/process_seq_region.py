@@ -25,7 +25,7 @@ import csv
 
 from Bio import SeqIO, SeqRecord
 import requests
-from ensembl.brc4.runnable.utils import Utils
+from ensembl.brc4.runnable.utils import print_json
 
 
 SeqRegion = Dict[str, Any]
@@ -132,7 +132,7 @@ class process_seq_region(eHive.BaseRunnable):
         self.add_mitochondrial_codon_table(seq_regions, genome_data["species"]["taxonomy_id"])
 
         # Print out the file
-        Utils.print_json(final_path, seq_regions)
+        print_json(final_path, seq_regions)
 
         # Flow out the file and type
         output = {

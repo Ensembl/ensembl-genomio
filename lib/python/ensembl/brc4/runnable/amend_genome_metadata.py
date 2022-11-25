@@ -17,7 +17,6 @@
 
 import csv
 import gzip
-import os
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Tuple
@@ -25,7 +24,7 @@ from typing import Any, Dict, List, Tuple
 from Bio import SeqIO
 import eHive
 
-from ensembl.brc4.runnable.utils import Utils
+from ensembl.brc4.runnable.utils import print_json
 
 
 class MissingDataError(Exception):
@@ -87,7 +86,7 @@ class amend_genome_metadata(eHive.BaseRunnable):
             genome_data["added_seq"] = {"region_name": additions}
 
         # Print out the file
-        Utils.print_json(final_path, genome_data)
+        print_json(final_path, genome_data)
 
         # Flow out the file and type
         output = {

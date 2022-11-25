@@ -26,7 +26,7 @@ from statistics import mean
 from BCBio import GFF
 from collections import OrderedDict
 
-from ensembl.brc4.runnable.utils import Utils
+from ensembl.brc4.runnable.utils import get_json
 
 class manifest_stats(eHive.BaseRunnable):
 
@@ -67,7 +67,7 @@ class manifest_stats(eHive.BaseRunnable):
 
     def get_seq_region_stats(self, seq_region_path: Path) -> List:
         
-        seq_regions = Utils.get_json(seq_region_path)
+        seq_regions = get_json(seq_region_path)
         
         # Get basic data
         coord_systems = {}

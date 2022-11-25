@@ -26,7 +26,7 @@ from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.brc4.runnable.utils import Utils
+from ensembl.brc4.runnable.utils import print_json
 
 
 class process_gff3(eHive.BaseRunnable):
@@ -280,7 +280,7 @@ class process_gff3(eHive.BaseRunnable):
         
         # Write functional annotation
         functional_annotation = self.clean_functional_annotations(functional_annotation)
-        Utils.print_json(out_funcann_path, functional_annotation)
+        print_json(out_funcann_path, functional_annotation)
 
     def normalize_gene(self, gene, functional_annotation, fail_types):
 
