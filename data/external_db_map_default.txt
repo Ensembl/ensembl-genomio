@@ -15,6 +15,8 @@
 # drop duplicating flybase_annotation_id if corresponding flybase_{gene,transcript,translation}_id exist
 # drop duplicating flybase_annotation_id if corresponding FlyBaseName_{gene,transcript,translation} exist
 
+# Hint: get list of xrefs from metadata/functional_annotation.json
+#  cat metadata/functional_annotation.json | grep '"dbname":' | cut -f 4 -d '"' | sort | uniq -c
 
 
 # Genes mqppings
@@ -22,6 +24,11 @@ Ensembl_Metazoa	Ensembl_Metazoa	gene
 
 Community_Annotation	BRC4_Community_Annotation	gene
 BRC4_Community_Annotation	BRC4_Community_Annotation	gene
+
+AlphaFold_DB	AlphaFold_DB_gene	gene
+AlphaFold_DB_gene	AlphaFold_DB_gene	gene
+
+DRscDB	DRscDB	gene	gene
 
 EntrezGene	EntrezGene	gene
 
@@ -51,6 +58,9 @@ BEEBASE	BEEBASE	gene
 LJMU	LJMU	gene
 NasoniaBase	NasoniaBase	gene
 I5KNAL	I5KNAL	gene
+
+UniProt/GCRP	Uniprot/GCRP_gene	gene
+Uniprot/GCRP_gene	Uniprot/GCRP_gene	gene
 
 
 # Transcript mappings
@@ -95,7 +105,6 @@ LJMU	LJMU_transcript	transcript
 LJMU_transcript	LJMU_transcript	transcript
 
 
-
 # Translation mappings
 Ensembl_Metazoa	Ensembl_Metazoa_translation	translation
 Ensembl_Metazoa_translation	Ensembl_Metazoa_translation	translation
@@ -104,6 +113,8 @@ Community_Annotation	BRC4_Community_Annotation_translation	translation
 BRC4_Community_Annotation	BRC4_Community_Annotation_translation	translation
 Community_Annotation_translation	BRC4_Community_Annotation_translation	translation
 BRC4_Community_Annotation_translation	BRC4_Community_Annotation_translation	translation
+
+AlphaFold_DB	AlphaFold_DB	translation
 
 flybase_annotation_id	flybase_annotation_id_translation	translation
 FlyBase	flybase_annotation_id_translation	translation
@@ -133,6 +144,9 @@ GenPept	protein_id	translation
 
 RefSeq	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
 RefSeq_peptide	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
+
+UniProt/GCRP	Uniprot/GCRP	translation
+Uniprot/GCRP	Uniprot/GCRP	translation
 
 UniProt/TrEMBL	Uniprot/SPTREMBL	translation
 Uniprot/SPTREMBL	Uniprot/SPTREMBL	translation
@@ -179,13 +193,24 @@ GO	_IGNORE_
 !GO	_IGNORE_
 
 BDGP_clone	_IGNORE_
+FlyAtlas	_IGNORE_
+FlyAtlas2	_IGNORE_
 Fly-FISH	_IGNORE_
 GI	_IGNORE_
 GLEANR	_IGNORE_
 GNOMON	_IGNORE_
 iBeetle-Base	_IGNORE_
+InParanoid	_IGNORE_
 KEGG_GENES	_IGNORE_
+MARRVEL_MODEL	_IGNORE_
 NRL_3D	_IGNORE_
 SignaLink	_IGNORE_
 TF	_IGNORE_
 # TransFac?
+
+# ignoring versioned OrthoDB, no robust search method
+OrthoDB9_1_Arthropoda	_IGNORE_
+OrthoDB9_1_Diptera	_IGNORE_
+OrthoDB9_1_Drosophila	_IGNORE_
+OrthoDB9_1_Insecta	_IGNORE_
+OrthoDB9_1_Metazoa	_IGNORE_
