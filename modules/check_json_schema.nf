@@ -15,8 +15,7 @@
 
 process CHECK_JSON_SCHEMA {
     tag "$json_file.name"
-    label 'rc_default'
-    // debug true
+    label 'default'
 
     input:
         path json_file

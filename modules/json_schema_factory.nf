@@ -15,8 +15,7 @@
 
 process JSON_SCHEMA_FACTORY {
     tag "$manifest_dir.name"
-    label 'rc_default'
-    // debug true
+    label 'default'
 
     input:
         path manifest_dir
