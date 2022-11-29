@@ -13,19 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Import modules/subworkflows
-include { JSON_SCHEMA_FACTORY } from '../modules/json_schema_factory.nf'
-include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
-
-
-workflow MY_NF_WORKFLOW {
-    take:
-    ch_manifest_dir
-
-    main:
-    JSON_SCHEMA_FACTORY(ch_manifest_dir)
-    CHECK_JSON_SCHEMA(JSON_SCHEMA_FACTORY.out.flatten())
-
-    // emit:
-    // Nothing to emit
+def get_key_list(dict) {
+    // Add quotes around each key of the dictionary to make the list compatible with Bash
+    return "['" + dict.keySet().join("','") + "']"
 }

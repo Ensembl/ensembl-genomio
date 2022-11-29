@@ -16,17 +16,17 @@
 
 // Check mandatory parameters
 if (params.manifest_dir) {
-    ch_manifest_dir = file(params.manifest_dir, checkIfExists: true)
+    ch_manifest_dir = file(params.manifest_dir, checkIfExists: true)  // equivalent to: Channel.fromPath(...)
 } else {
     exit 1, 'Manifest directory not specified!'
 }
 
 
 // Import modules/subworkflows
-include { MY_NF_WORKFLOW } from '../../subworkflows/mynf_workflow.nf'
+include { MY_SUBWORKFLOW } from '../../subworkflows/my_subworkflow.nf'
 
 
 // Run main workflow
 workflow {
-    MY_NF_WORKFLOW(ch_manifest_dir)
+    MY_SUBWORKFLOW(ch_manifest_dir)
 }

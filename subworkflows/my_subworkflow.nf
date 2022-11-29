@@ -13,17 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
-    label 'rc_default'
-    // debug true
+// Import modules/subworkflows
+include { JSON_SCHEMA_FACTORY } from '../modules/json_schema_factory.nf'
+include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
 
-    input:
-        path json_file
 
-    script:
-        schema = params.json_schemas[json_file.baseName]
-        """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
-        """
+// Import utility functions
+include { get_key_list } from '../modules/utils.nf'
+
+
+workflow MY_SUBWORKFLOW {
+    take:
+        ch_manifest_dir
+
+    // emit:
+    //     Nothing to emit
+
+    main:
+        metadata_types = get_key_list(params.json_schemas)
+        JSON_SCHEMA_FACTORY(ch_manifest_dir, metadata_types)
+        CHECK_JSON_SCHEMA(JSON_SCHEMA_FACTORY.out.flatten())
 }
