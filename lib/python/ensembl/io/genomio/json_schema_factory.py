@@ -30,21 +30,25 @@ import argschema
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
-    manifest = argschema.fields.InputDir(required=True, description="Manifest JSON file to check")
-    metadata_types = argschema.fields.String(required=True, description="Metadata types to extract")
+    manifest_dir = argschema.fields.InputDir(
+        required=True, description="Folder containing the 'manifest.json' file to check"
+    )
+    metadata_types = argschema.fields.String(
+        required=True, description="Metadata types to extract (in a list-like string)"
+    )
 
 
-def json_schema_factory(manifest: Union[str, Path], metadata_types: List[str]) -> None:
+def json_schema_factory(manifest_dir: Union[str, Path], metadata_types: List[str]) -> None:
     """Generates one JSON file per metadata type inside `manifest`, including "manifest.json" itself.
 
     Each JSON file will have the file name of the metadata type, e.g. "seq_region.json".
 
     Args:
-        manifest: Path to the folder with the manifest JSON file to check.
+        manifest_dir: Path to the folder with the manifest JSON file to check.
         metadata_types: Metadata types to extract from `manifest` as JSON files.
 
     """
-    manifest_path = Path(manifest) / "manifest.json"
+    manifest_path = Path(manifest_dir, "manifest.json")
     with manifest_path.open() as manifest_file:
         content = json.load(manifest_file)
         shutil.copyfile(manifest_path, "manifest.json")
@@ -67,9 +71,10 @@ def json_schema_factory(manifest: Union[str, Path], metadata_types: List[str]) -
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
+    # mod.args["metadata_types"] will be a list-like string that needs to be parsed to List[str]
     metadata_types = ast.literal_eval(mod.args["metadata_types"])
-    json_schema_factory(mod.args["manifest"], metadata_types)
+    json_schema_factory(mod.args["manifest_dir"], metadata_types)
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

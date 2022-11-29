@@ -52,5 +52,5 @@ def main() -> None:
     schema_validator(mod.args["json_file"], mod.args["json_schema"])
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
