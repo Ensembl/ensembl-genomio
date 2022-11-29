@@ -198,6 +198,7 @@ sub load_external_db_map {
       next if $line =~ /^\s*$/ or $line =~ /^#/;
       # We use the mapping in reverse order because we dump
       my ($to, $from) = split("\t", $line);
+      die("Incorrect external db map: $line") if not defined($to) and not defined($from);
       $map{$from} = $to;
     }
     close $mapfh;
