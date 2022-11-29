@@ -23,7 +23,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
@@ -47,7 +47,7 @@ sub default_options {
   return {
     %{ $self->SUPER::default_options() },
 
-    ## default LSF queue nane 
+    ## default LSF/Slurm queue name 
     queue_name => "standard",
 
     ############################################
@@ -251,7 +251,6 @@ sub pipeline_analyses {
       -input_ids  => [{}],
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -flow_into  => {
         '1' => 'FillDBParams',
       },
@@ -267,7 +266,6 @@ sub pipeline_analyses {
           taxonomy => '#taxonomy_url#',
         },
       },
-      -meadow_type       => 'LSF',
       -rc_name    => 'default',
       -flow_into => {
         '1' => 'Manifest_factory',
@@ -285,7 +283,6 @@ sub pipeline_analyses {
       },
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -max_retry_count => 0,
       -flow_into => {
         2 => WHEN('#check_manifest#', {
@@ -301,7 +298,6 @@ sub pipeline_analyses {
       -logic_name => 'Manifest_check',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity => 1,
       -batch_size     => 50,
       -flow_into  => {
@@ -315,7 +311,6 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.json_schema_factory',
       -language => 'python3',
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity => 1,
       -batch_size     => 50,
       -flow_into  => {
@@ -368,7 +363,6 @@ sub pipeline_analyses {
       -max_retry_count => 0,
       -failed_job_tolerance => 100,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -flow_into  => {
         '2->A' => 'CreateDB',
         'A->2' => 'Finalize_database',
@@ -382,7 +376,6 @@ sub pipeline_analyses {
       -parameters => {
         has_gff3 => '#expr( #manifest_data#->{"gff3"} )expr#',
       },
-      -meadow_type       => 'LSF',
       -analysis_capacity => 1,
       -batch_size     => 50,
       -flow_into  => {
@@ -394,7 +387,6 @@ sub pipeline_analyses {
       -logic_name => 'ProdDbSyncAndAddSequence',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity => 1,
       -batch_size     => 50,
       -flow_into  => {
@@ -439,7 +431,6 @@ sub pipeline_analyses {
       -analysis_capacity   => 10,
       -rc_name         => 'default',
       -max_retry_count => 0,
-      -meadow_type       => 'LSF',
       -flow_into  => WHEN('#has_gff3#', 'Load_gene_models')
     },
 
@@ -455,7 +446,6 @@ sub pipeline_analyses {
         ],
       },
       -analysis_capacity   => 1,
-      -meadow_type       => 'LSF',
       -rc_name    => 'default',
       -flow_into => 'LoadDBSchema',
     },
@@ -468,7 +458,6 @@ sub pipeline_analyses {
         input_file => $self->o('ensembl_root_dir') . '/ensembl/sql/table.sql',
       },
       -analysis_capacity   => 1,
-      -meadow_type       => 'LSF',
       -rc_name    => 'default',
       -flow_into  => 'FillMetadata',
     },
@@ -486,7 +475,6 @@ sub pipeline_analyses {
       -max_retry_count => 0,
       -analysis_capacity   => 10,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -flow_into  => 'PopulateControlledTables',
     },
     
@@ -521,7 +509,6 @@ sub pipeline_analyses {
       -analysis_capacity   => 10,
       -rc_name         => '8GB',
       -max_retry_count => 0,
-      -meadow_type       => 'LSF',
       -flow_into  => 'FillTaxonomy',
     },
 
@@ -545,7 +532,6 @@ sub pipeline_analyses {
         },
       },
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity   => 10,
       -flow_into  => WHEN('#has_gff3#' => 'Load_gene_models'),
     },
@@ -557,7 +543,6 @@ sub pipeline_analyses {
         'has_func_annotation' => '#expr( #manifest_data#->{"functional_annotation"} )expr#',
       },
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'GFF3CleanIgnored',
         'A->1' => WHEN('#has_func_annotation#', 'LoadFunctionalAnnotation', ELSE 'Finalize_gene_models'),
@@ -581,7 +566,6 @@ sub pipeline_analyses {
         'gff3_ignore_pat' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/clean/gff3.ignore.pat',
       },
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity   => 10,
       -flow_into => 'GFF3Tidy',
     },
@@ -598,7 +582,6 @@ sub pipeline_analyses {
         'gff3_tidy_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
       },
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity   => 10,
       -flow_into => [ 'GFF3Validate' ],
     },
@@ -615,7 +598,6 @@ sub pipeline_analyses {
         'gff3_tidy_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/tidy/tidy.gff3',
       },
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity   => 10,
       -flow_into => [ 'DNAFastaGetTopLevel' ],
     },
@@ -636,8 +618,7 @@ sub pipeline_analyses {
         'dna_fasta_file' => $self->o('pipeline_dir') . '/#db_name#/load_gff3/dna_fasta/toplevel.fasta',
         'dumper' => "$scripts_dir/get_dna_fasta_for.pl",
       },
-      -rc_name    => 'default',
-      -meadow_type       => 'LSF',
+      -rc_name    => '4GB',
       -analysis_capacity   => 10,
       -flow_into => 'LoadGFF3AnalysisSetup',
     },
@@ -654,7 +635,6 @@ sub pipeline_analyses {
         delete_existing    => "#expr(#add_sequence# ? 0 : 1)expr#",
       },
       -rc_name    => 'default',
-      -meadow_type => 'LSF',
       -analysis_capacity => 10,
       -max_retry_count   => 0,
       -flow_into => [ 'LoadGFF3' ],
@@ -681,8 +661,7 @@ sub pipeline_analyses {
       },
       -failed_job_tolerance => 10,
       -max_retry_count   => 0,
-      -rc_name    => '15GB',
-      -meadow_type       => 'LSF',
+      -rc_name    => '16GB',
       -analysis_capacity   => 10,
       -flow_into => WHEN('#has_fasta_peptide#' => [ 'FixModels' ]),
     },
@@ -697,8 +676,7 @@ sub pipeline_analyses {
         log             => $self->o('pipeline_dir') . '/#db_name#/load_gff3/fix_models.log',
       },
       -max_retry_count   => 0,
-      -rc_name    => '15GB',
-      -meadow_type       => 'LSF',
+      -rc_name    => '16GB',
       -analysis_capacity   => 10,
       -flow_into => [ 'ApplySeqEdits' ],
     },
@@ -713,8 +691,7 @@ sub pipeline_analyses {
         log             => $self->o('pipeline_dir') . '/#db_name#/load_gff3/apply_seq_edits.log',
       },
       -max_retry_count   => 0,
-      -rc_name    => '15GB',
-      -meadow_type       => 'LSF',
+      -rc_name    => '16GB',
       -analysis_capacity   => 10,
       -flow_into => [ 'ReportSeqEdits' ],
     },
@@ -733,8 +710,7 @@ sub pipeline_analyses {
           protein_seq_fixes_filename   => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins_fixes.txt',
       },
       -max_retry_count   => 0,
-      -rc_name    => '15GB',
-      -meadow_type       => 'LSF',
+      -rc_name    => '16GB',
       -analysis_capacity   => 10,
       -flow_into => WHEN('#gff3_autoapply_manual_seq_edits#' => [ 'ApplyPatches' ]),
     },
@@ -748,7 +724,6 @@ sub pipeline_analyses {
       },
       -rc_name    => 'default',
       -analysis_capacity   => 10,
-      -meadow_type       => 'LSF',
     },
 
     {
@@ -773,7 +748,6 @@ sub pipeline_analyses {
         'default_db_display' => '#expr( #xref_display_db_default# ? "-display_db_default ".#xref_display_db_default# : "" )expr#',
       },
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity   => 5,
       -flow_into => 'Finalize_gene_models',
     },
@@ -783,7 +757,6 @@ sub pipeline_analyses {
       -logic_name => 'Finalize_gene_models',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -flow_into => WHEN('#no_feature_version_defaults#' => 'MetaCoord',
                     ELSE 'FixFeatureVersion'
       ),
@@ -802,7 +775,6 @@ sub pipeline_analyses {
           'UPDATE exon SET version = #default_feature_version# WHERE version IS NULL;',
         ],
       },
-      -meadow_type       => 'LSF',
       -rc_name    => 'default',
       -flow_into => 'MetaCoord',
     },
@@ -822,7 +794,6 @@ sub pipeline_analyses {
             . ' ; cd -',
       },
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity   => 1,
       -flow_into => 'Frameshifts',
     },
@@ -836,7 +807,6 @@ sub pipeline_analyses {
             . ' --dbhost #dbsrv_host# --dbport #dbsrv_port# --dbuser #dbsrv_user# --dbpass #dbsrv_pass# --dbpattern #db_name# ',
       },
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity   => 2,
       -flow_into => 'CanonicalTranscripts',
     },
@@ -855,7 +825,6 @@ sub pipeline_analyses {
         'dump_path' => $self->o('pipeline_dir') . '/#db_name#/canonical_transcripts',
       },
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity   => 2,
       -flow_into => 'CanonicalTranscriptsAttribs',
     },
@@ -874,7 +843,6 @@ sub pipeline_analyses {
         ],
       },
       -analysis_capacity   => 1,
-      -meadow_type       => 'LSF',
       -rc_name    => 'default',
     },
 
@@ -883,7 +851,6 @@ sub pipeline_analyses {
       -logic_name => 'Finalize_database',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -flow_into  => "PopulateAnalysis",
     },
 
@@ -907,7 +874,6 @@ sub pipeline_analyses {
       -logic_name => 'UpdateSeqRegionNames',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -analysis_capacity => 1,
       -batch_size     => 50,
       -max_retry_count   => 0,
@@ -934,7 +900,6 @@ sub pipeline_analyses {
         ],
       },
       -analysis_capacity   => 1,
-      -meadow_type       => 'LSF',
       -rc_name    => 'default',
       -flow_into  => WHEN('#brc4_mode#', 'AddBRC4SeqRegionAttr'),
     },
@@ -956,7 +921,6 @@ sub pipeline_analyses {
         ],
       },
       -analysis_capacity   => 1,
-      -meadow_type       => 'LSF',
       -rc_name    => 'default',
     },
 
@@ -976,7 +940,6 @@ sub pipeline_analyses {
         ],
       },
       -analysis_capacity   => 1,
-      -meadow_type       => 'LSF',
       -rc_name    => 'default',
     },
 
@@ -1003,24 +966,10 @@ sub pipeline_analyses {
         ],
       },
       -analysis_capacity   => 1,
-      -meadow_type       => 'LSF',
       -rc_name    => 'default',
     },
 
   ];
-}
-
-sub resource_classes {
-    my $self = shift;
-    return {
-      'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
-      '8GB'     => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 8000   -R "rusage[mem=8000]"'},
-      '15GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 15000  -R "rusage[mem=15000]"'},
-      '32GB '   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 32000  -R "rusage[mem=32000]"'},
-      '64GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 64000  -R "rusage[mem=64000]"'},
-      '128GB'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 128000 -R "rusage[mem=128000]"'},
-      '256GB  ' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 256000 -R "rusage[mem=256000]"'},
-    }
 }
 
 1;

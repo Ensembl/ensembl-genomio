@@ -23,7 +23,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_addition_prepare_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
@@ -285,14 +285,6 @@ sub pipeline_analyses {
       -max_retry_count => 0,
     },
   ];
-}
-
-sub resource_classes {
-    my $self = shift;
-    return {
-      'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
-      'small'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 100   -R "rusage[mem=100]"'},
-    }
 }
 
 1;

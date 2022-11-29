@@ -28,7 +28,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_prepare_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
@@ -145,7 +145,6 @@ sub pipeline_analyses {
       -input_ids  => [{}],
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -flow_into  => 'Genome_factory',
     },
 
@@ -160,7 +159,6 @@ sub pipeline_analyses {
       },
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -max_retry_count => 0,
       -flow_into => {
         '2' => { 'Process_genome_metadata' => { genome_json => '#_0#' } },
@@ -206,7 +204,7 @@ sub pipeline_analyses {
       -language => 'python3',
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
-      -rc_name        => 'default',
+      -rc_name        => 'normal',
       -flow_into  => {
         '2->A' => 'Process_data',
         'A->2' => 'Manifest_maker',
@@ -254,7 +252,6 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
       -rc_name    => '8GB',
-      -meadow_type       => 'LSF',
       -flow_into  => {
           2 => 'GFF3_validation',
           3 => "Check_json_schema",
@@ -282,7 +279,7 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.process_seq_region',
       -language    => 'python3',
       -analysis_capacity   => 5,
-      -rc_name    => 'default',
+      -rc_name    => '4GB',
       -parameters     => {
         file_name => "seq_region",
       },
@@ -313,7 +310,7 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.process_fasta',
       -language    => 'python3',
       -analysis_capacity   => 2,
-      -rc_name    => 'default',
+      -rc_name    => '4GB',
       -parameters     => {
         file_name => "fasta_dna",
       },
@@ -325,7 +322,7 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.process_fasta',
       -language    => 'python3',
       -analysis_capacity   => 2,
-      -rc_name    => 'default',
+      -rc_name    => '4GB',
       -parameters     => {
         file_name => "fasta_pep",
         in_genbank => '#gbff#',
@@ -340,7 +337,7 @@ sub pipeline_analyses {
       -language    => 'python3',
       -max_retry_count => 0,
       -analysis_capacity   => 5,
-      -rc_name         => 'default',
+      -rc_name         => '4GB',
       -parameters     => {
         output_dir => $self->o('output_dir'),
       },
@@ -381,23 +378,10 @@ sub pipeline_analyses {
       -module      => 'ensembl.brc4.runnable.manifest_stats',
       -language    => 'python3',
       -analysis_capacity   => 1,
-      -rc_name         => 'default',
+      -rc_name         => '4GB',
       -max_retry_count => 0,
     },
   ];
-}
-
-sub resource_classes {
-    my $self = shift;
-    return {
-      'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
-      '8GB'     => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 8000   -R "rusage[mem=8000]"'},
-      '15GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 15000  -R "rusage[mem=15000]"'},
-      '32GB '   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 32000  -R "rusage[mem=32000]"'},
-      '64GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 64000  -R "rusage[mem=64000]"'},
-      '128GB'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 128000 -R "rusage[mem=128000]"'},
-      '256GB  ' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 256000 -R "rusage[mem=256000]"'},
-    }
 }
 
 1;
