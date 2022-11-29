@@ -26,65 +26,8 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::EGPipeline::PipeConfig::EGGeneric_conf');
 
-sub make_resource {
-  my ($self, $conf) = @_;
-
-  my $res = {
-    'LSF' => _lsf_resource($conf),
-    'SLURM' => _slurm_resource($conf),
-  };
-  return $res;
-}
-
-sub _lsf_resource {
-  my ($conf) = @_;
-
-  my $mem = $conf->{memory};
-  my $cpus = $conf->{cpus};
-  my $queue = $conf->{queue};
-  my $time = $conf->{time};
-
-  if ($time and $time =~ /(\d+):(\d\d):(\d\d)/) {
-    $time = "$1:$2";
-  }
-  
-  my @res_params = ("-M $mem", "-R 'rusage[mem=$mem]'");
-  push @res_params, "-q $queue" if $queue;
-  push @res_params, "-We $time" if $time;
-  push @res_params, "-n $cpus" if $cpus;
-  push @res_params, $conf->{lsf_params} if $conf->{lsf_params};
-  my $res_string = join(" ", @res_params);
-  return $res_string;
-}
-
-sub _slurm_resource {
-  my ($conf) = @_;
-
-  my $mem = $conf->{memory};
-  my $cpus = $conf->{cpus};
-  my $queue = $conf->{queue};
-  my $time = $conf->{time};
-
-  # Prepare memory string
-  die("Memory needed for resource") if not $mem;
-  my $rmem;
-  if ($mem > 1000) {
-    $mem = int($mem/1000);
-    $rmem = $mem . 'g';
-  } else {
-    $rmem = $mem . "m";
-  }
-  
-  my @res_params = ("--mem=$rmem");
-  push @res_params, "--time=$time" if $time;
-  push @res_params, "-c $cpus" if $cpus;
-  push @res_params, "--partition=$queue" if $queue;
-  push @res_params, $conf->{slurm_params} if $conf->{slurm_params};
-  my $res_string = join(" ", @res_params);
-  return $res_string;
-}
 
 sub resource_classes {
   my ($self) = @_;
@@ -95,10 +38,8 @@ sub resource_classes {
   my $long = "24:00:00";
 
   my %resources = (
-    'default'  => $self->make_resource({"queue" => $queue, "memory" => 4_000, "time" => $short}),
-    'normal'   => $self->make_resource({"queue" => $queue, "memory" => 4_000, "time" => $long}),
+    %{$self->SUPER::resource_classes},
     'small'    => $self->make_resource({"queue" => $queue, "memory" => 100, "time" => $short}),
-    'datamove' => $self->make_resource({"queue" => $data_queue, "memory" => 100, "time" => $short}),
   );
 
   # Additional names in the form xGB e.g. "2GB"
