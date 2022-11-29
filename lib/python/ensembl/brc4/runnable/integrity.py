@@ -16,18 +16,21 @@
 
 
 
-import eHive
 import gzip
+import hashlib
 import io
 import json
+from math import floor
+from os import path
+from pathlib import Path
 import re
 import sys
 
 from BCBio import GFF
 from Bio import SeqIO
-from os import path
-from math import floor
-import hashlib
+import eHive
+
+from ensembl.brc4.runnable.utils import get_json
 
 
 class integrity(eHive.BaseRunnable):
@@ -108,7 +111,7 @@ class integrity(eHive.BaseRunnable):
                 errors += pep_errors
             if "seq_region" in manifest:
                 print("Got a seq_regions")
-                seq_regions = self.get_json(manifest["seq_region"])
+                seq_regions = get_json(Path(manifest["seq_region"]))
                 seqr_lengths = {}
                 seqr_seqlevel = {}
                 #Store the length as int
@@ -124,7 +127,7 @@ class integrity(eHive.BaseRunnable):
                 agp_seqr = self.get_agp_seq_regions(manifest['agp'])
             if "genome" in manifest:
                 print("Got a genome")
-                genome = self.get_json(manifest["genome"])
+                genome = get_json(Path(manifest["genome"]))
 
             # Check if the accession is correct in genome.json 
             if genome:
@@ -238,11 +241,6 @@ class integrity(eHive.BaseRunnable):
         if contains_stop_codon > 0:
             errors.append("%d sequences with stop codons in %s" % (contains_stop_codon, fasta_path))
         return data, errors
-
-    def get_json(self, json_path):
-        #Load the json files 
-        with open(json_path) as json_file:
-            return json.load(json_file)
 
     def get_functional_annotation(self, json_path):
         """Load the functional annotation file to retrieve the gene_id and translation id.

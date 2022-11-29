@@ -14,14 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
-import eHive
-import json
-import os
-import re
 import ftplib
 import hashlib
 from pathlib import Path
+import re
+from typing import Any, Dict
+
+import eHive
 
 FILE_ENDS = {
     "assembly_report.txt": "report",
@@ -46,12 +45,12 @@ class download_assembly_data(eHive.BaseRunnable):
 
     def run(self):
         accession = self.param_required('accession')
-        main_download_dir = self.param_required('download_dir')
-        download_dir = Path(main_download_dir, accession)
+        main_download_dir = Path(self.param_required('download_dir'))
+        download_dir = main_download_dir / accession
 
         # Set and create dedicated dir for download
         if not download_dir.is_dir():
-            os.makedirs(download_dir)
+            download_dir.mkdir(parents=True)
 
         # Download if files don't exist or fail checksum
         if not self.md5_files(download_dir):
@@ -61,13 +60,13 @@ class download_assembly_data(eHive.BaseRunnable):
 
             for increment in range(0, max_increment + 1):
                 if increment > 0:
-                    print("Increment accession version once from %s" % accession)
+                    print(f"Increment accession version once from {accession}")
                     version = int(accession[-1])
                     version += 1
                     accession = accession[:-1] + str(version)
-                    download_dir = Path(main_download_dir, accession)
-                    if not download_dir.exists():
-                        os.makedirs(download_dir)
+                    download_dir = main_download_dir / accession
+                    if not download_dir.is_dir():
+                        download_dir.mkdir(parents=True)
                 self.download_files(accession, download_dir)
 
             if not self.md5_files(download_dir):
@@ -82,15 +81,6 @@ class download_assembly_data(eHive.BaseRunnable):
         # Output all those named files + dir
         self.dataflow(files, 2)
 
-    @staticmethod
-    def get_json(json_path: Path) -> Dict[str, Any]:
-        """
-        Retrieve the json data from a json file
-        """
-        with json_path.open() as json_file:
-            json_data = json.load(json_file)
-        return json_data
-
     def md5_files(self, dl_dir: Path) -> bool:
         """
         Check all files checksums with the sums listed in a checksum file, if available.
@@ -99,7 +89,7 @@ class download_assembly_data(eHive.BaseRunnable):
         md5_file = "md5checksums.txt"
 
         # Get checksums and compare
-        md5_path = Path(dl_dir, md5_file)
+        md5_path = dl_dir / md5_file
         sums = self.get_checksums(md5_path)
         
         if not sums:
@@ -110,8 +100,7 @@ class download_assembly_data(eHive.BaseRunnable):
         for dl_file, checksum in sums.items():
             for end in FILE_ENDS:
                 if dl_file.endswith(end) and not dl_file.endswith(f"_from_{end}"):
-
-                    file_path = Path(dl_dir, dl_file)
+                    file_path = dl_dir / dl_file
                     
                     if not file_path.is_file():
                         print(f"No file {file_path} found")
@@ -136,7 +125,7 @@ class download_assembly_data(eHive.BaseRunnable):
         Get a dict of checksums from a file, with file names as keys and sums as values
         """
 
-        if not os.path.isfile(checksum_path):
+        if not checksum_path.is_file():
             return
         
         sums = {}
@@ -231,7 +220,6 @@ class download_assembly_data(eHive.BaseRunnable):
                                 print(f"Downloaded file properly to {local_path}")
                             else:
                                 raise Exception(f"Could not download file {ftp_file} after {redo} tries")
-                                
 
 
     def get_files_selection(self, dl_dir: Path) -> Dict[str, str]:

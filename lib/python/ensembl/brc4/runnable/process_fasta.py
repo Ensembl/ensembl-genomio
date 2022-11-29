@@ -16,13 +16,14 @@
 
 
 
-import os
-import eHive
-import gzip
-import shutil
-from Bio import SeqIO
 from functools import partial
+import gzip
 from mimetypes import guess_type
+from pathlib import Path
+
+from Bio import SeqIO
+import eHive
+
 
 class process_fasta(eHive.BaseRunnable):
 
@@ -33,10 +34,9 @@ class process_fasta(eHive.BaseRunnable):
                 }
 
     def run(self):
-        genome_data = self.param('genome_data')
         file_name = self.param("file_name")
         file_path = self.param(file_name)
-        work_dir = self.param('work_dir')
+        work_dir = Path(self.param('work_dir'))
         seqr_to_exclude = self.param("exclude_seq_regions")
         
         if self.param("peptide"):
@@ -48,15 +48,14 @@ class process_fasta(eHive.BaseRunnable):
         if not self.param_exists(file_name):
             return
 
-        if not os.path.isdir(work_dir):
-            os.makedirs(work_dir)
+        if not work_dir.is_dir():
+            work_dir.mkdir(parents=True)
 
         # Final file name
         new_file_name = file_name + ".fa"
 
         # Final path
-        head, tail = os.path.split(file_path)
-        final_path = os.path.join(work_dir, new_file_name)
+        final_path = work_dir / new_file_name
 
         # Copy and filter
         records = []
@@ -70,11 +69,11 @@ class process_fasta(eHive.BaseRunnable):
                 else:
                     records.append(record)
 
-        with open(final_path, "w") as out_fasta:
+        with final_path.open("w") as out_fasta:
             SeqIO.write(records, out_fasta, "fasta")
 
         # No other operation
-        self.dataflow({ file_name : final_path }, 2)
+        self.dataflow({ file_name : str(final_path) }, 2)
     
     def peptides_to_exclude(self, genbank_path, seqr_to_exclude) -> dict():
         """

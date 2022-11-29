@@ -15,15 +15,17 @@
 # limitations under the License.
 
 
-import os
+from pathlib import Path
 import re
-import eHive
-import json
 import tempfile
+from typing import TextIO
 
+import eHive
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
+
+from ensembl.brc4.runnable.utils import print_json
 
 
 class process_gff3(eHive.BaseRunnable):
@@ -69,16 +71,17 @@ class process_gff3(eHive.BaseRunnable):
                 "gap",
                 "sequence_feature",
                 "sequence_uncertainty",
-                "repeat_region",
-                "mobile_genetic_element",
                 "microsatellite",
                 "satellite_DNA",
-                "inverted_repeat",
-                "telomere",
-                "tandem_repeat",
                 "cDNA_match",
+                "STS",
+                "telomere",
+                "centromere",
+                "repeat_region",
+                "inverted_repeat",
+                "tandem_repeat",
                 "long_terminal_repeat",
-                "STS"
+                "dispersed_repeat",
             ),
             "ignored_transcript_types": (
                     "antisense_RNA",
@@ -98,52 +101,51 @@ class process_gff3(eHive.BaseRunnable):
         }
 
     def run(self):
-        genome_data = self.param('genome_data')
-        work_dir = self.param('work_dir')
-        in_gff_path = self.param('in_gff3')
+        work_dir = Path(self.param('work_dir'))
+        in_gff_path = Path(self.param('in_gff3'))
 
         # Create dedicated work dir
-        if not os.path.isdir(work_dir):
-            os.makedirs(work_dir)
+        if not work_dir.is_dir():
+            work_dir.mkdir(parents=True)
 
         # Final files
-        out_gff_path = os.path.join(work_dir, "gene_models.gff3")
-        out_funcann_path = os.path.join(work_dir, "functional_annotation.json")
+        out_gff_path = work_dir / "gene_models.gff3"
+        out_funcann_path = work_dir / "functional_annotation.json"
 
         # Merge multiline gene features
-        interm_gff = tempfile.TemporaryFile(mode="w+")
-        self.merge_genes_gff(in_gff_path, interm_gff)
-        interm_gff.seek(0)
+        interim_gff_fh = tempfile.TemporaryFile(mode="w+")
+        self.merge_genes_gff(in_gff_path, interim_gff_fh)
+        interim_gff_fh.seek(0)
 
         # Load gff3 data and write a simpler version that follows our specifications
-        self.simpler_gff3(interm_gff, out_gff_path, out_funcann_path)
+        self.simpler_gff3(interim_gff_fh, out_gff_path, out_funcann_path)
 
         # Output the gff3 file
         output = {
-            "gff3": out_gff_path
+            "gff3": str(out_gff_path)
         }
         self.dataflow(output, 2)
         
         # Output the functional annotation file
         output = {
             "metadata_type": "functional_annotation",
-            "metadata_json": out_funcann_path
+            "metadata_json": str(out_funcann_path)
         }
         self.dataflow(output, 3)
 
-    def merge_genes_gff(self, in_gff_path, out_gff) -> None:
+    def merge_genes_gff(self, in_gff_path: Path, out_gff_fh: TextIO) -> None:
         """
         Merge genes in a gff that are split in multiple lines
         """
         tomerge = []
         merged = []
         
-        with open(in_gff_path, "r") as gff3_in:
+        with in_gff_path.open("r") as gff3_in:
             for line in gff3_in:
 
                 # Skip comments
                 if line.startswith("#"):
-                    out_gff.write(line)
+                    out_gff_fh.write(line)
                 else:
                     # Parse one line
                     line = line.rstrip()
@@ -170,9 +172,9 @@ class process_gff3(eHive.BaseRunnable):
                             merged.append("\n".join(merged_str) + "\n")
 
                             new_line = self.merge_genes(tomerge)
-                            out_gff.write(new_line)
+                            out_gff_fh.write(new_line)
                             tomerge = []
-                        out_gff.write(line + "\n")
+                        out_gff_fh.write(line + "\n")
 
             # Print last merged gene if there is one
             if tomerge:
@@ -182,7 +184,7 @@ class process_gff3(eHive.BaseRunnable):
                 merged.append("\n".join(merged_str) + "\n")
 
                 new_line = self.merge_genes(tomerge)
-                out_gff.write(new_line)
+                out_gff_fh.write(new_line)
         
         if merged and not self.param("merge_split_genes"):
             count = len(merged)
@@ -214,7 +216,7 @@ class process_gff3(eHive.BaseRunnable):
         
         return "\t".join(new_gene) + "\n"
 
-    def simpler_gff3(self, gff3_in, out_gff_path, out_funcann_path) -> None:
+    def simpler_gff3(self, gff3_in: TextIO, out_gff_path: Path, out_funcann_path: Path) -> None:
         """
         Load a GFF3 from INSDC, and rewrite it in a simpler version,
         and also write a functional_annotation file
@@ -228,7 +230,7 @@ class process_gff3(eHive.BaseRunnable):
         
         functional_annotation = []
         
-        with open(out_gff_path, "w") as gff3_out:
+        with out_gff_path.open("w") as gff3_out:
             new_records = []
             fail_types = {}
             
@@ -250,7 +252,10 @@ class process_gff3(eHive.BaseRunnable):
                     if gene.type == "CDS":
                         # Lone CDS: add a gene-transcript parent
                         print("Make a gene for lone cds %s" % (gene.id))
+                        is_pseudo = ("pseudo" in gene.qualifiers and gene.qualifiers["pseudo"][0] == "true")
                         gene = self.cds_gene(gene)
+                        if is_pseudo:
+                            gene.type = "pseudogene"
                         
                     if gene.type in allowed_gene_types:
                         gene = self.normalize_gene(gene, functional_annotation, fail_types)
@@ -274,7 +279,7 @@ class process_gff3(eHive.BaseRunnable):
         
         # Write functional annotation
         functional_annotation = self.clean_functional_annotations(functional_annotation)
-        self.print_json(out_funcann_path, functional_annotation)
+        print_json(out_funcann_path, functional_annotation)
 
     def normalize_gene(self, gene, functional_annotation, fail_types):
 
@@ -597,12 +602,6 @@ class process_gff3(eHive.BaseRunnable):
         
         return transcript
         
-    def print_json(self, path, data) -> None:
-        """Dump an object to a json file"""
-        
-        with open(path, "w") as json_out:
-            json_out.write(json.dumps(data, sort_keys=True, indent=4))
-    
     def add_funcann_feature(self, funcann, feature, name):
         """Append a feature object following the specifications"""
         

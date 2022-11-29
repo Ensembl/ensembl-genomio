@@ -55,6 +55,7 @@
           "description" : "SO_term attribute to account for mitochondria, apicoplasts, etc.",
           "enum" : [
             "apicoplast_chromosome",
+            "kinetoplast_chromosome",
             "chloroplast_chromosome",
             "chromoplast_chromosome",
             "cyanelle_chromosome",
@@ -64,7 +65,8 @@
             "mitochondrial_chromosome",
             "nuclear_chromosome",
             "plasmid",
-            "maxicircle"
+            "maxicircle",
+            "linkage_group"
           ]
         },
         "karyotype_bands" : {
@@ -91,7 +93,8 @@
         "added_sequence" : { "$ref" : "#/definitions/added_sequence_info" }
       },
       "required" : [
-        "name"
+        "name",
+        "length"
       ]
     },
     "provider_info" : {

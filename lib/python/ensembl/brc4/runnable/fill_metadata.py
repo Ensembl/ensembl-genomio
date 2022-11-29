@@ -37,6 +37,7 @@ class fill_metadata(eHive.BaseRunnable):
         # params
         wd = self.param_required("work_dir")
         division = self.param("division")
+        brc4_mode = self.param("brc4_mode")
         ignore = self.param("ignore")
         copy = self.param("copy")
         genome_data = self.param_required("genome_data")
@@ -44,7 +45,8 @@ class fill_metadata(eHive.BaseRunnable):
         # update division and url
         if "species" in genome_data:
             sd = genome_data["species"]
-            if "division" not in sd:
+            # Add division, but not needed for BRC4
+            if ("division" not in sd) and not brc4_mode:
                 sd["division"] = division
             if "url" not in sd:
                 if "production_name" in sd:
