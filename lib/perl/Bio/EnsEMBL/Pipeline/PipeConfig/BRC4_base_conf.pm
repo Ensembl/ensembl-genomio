@@ -44,7 +44,7 @@ sub resource_classes {
 
   # Additional names in the form xGB e.g. "2GB"
   # From 2GB to 64GB
-  my @mems = (2, 4, 8, 12, 16, 32, 64);
+  my @mems = (2, 4, 8, 12, 16, 32, 64, 128, 256);
   my $time = $long;
 
   for my $mem (@mems) {
