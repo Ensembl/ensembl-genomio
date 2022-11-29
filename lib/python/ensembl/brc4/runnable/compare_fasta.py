@@ -15,20 +15,21 @@
 # limitations under the License.
 
 
+from typing import Any, Dict, List, Tuple
 import eHive
 import gzip
 import json
 import re
 import hashlib
-from functools import partial
 
+from functools import partial
 from Bio import SeqIO
 from os import path
 from ensembl.brc4.runnable.seqregion_parser import SeqregionParser
 
 
-class SeqGroup():
-    def __init__(self, sequence, identifier=None):
+class SeqGroup:
+    def __init__(self, sequence, identifier=None) -> None:
         self.sequence = sequence
         self.length = len(self.sequence)
         self.ids = []
@@ -36,51 +37,19 @@ class SeqGroup():
             self.add_id(identifier)
         self.count = len(self.ids)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ", ".join(self.ids)
 
-    def add_id(self, identifier):
+    def add_id(self, identifier) -> None:
         self.ids.append(identifier)
         self.count = len(self.ids)
 
-    def md5(seqs):
-        md5_check = {}
-        for seq, name in seqs.items():
-            name = str(name)
-            sequence = seq
-            sequence = sequence.strip()
-            md5_hash = hashlib.md5(json.dumps(
-                sequence, sort_keys=True).encode('utf-8')).hexdigest()
-            md5_check[name] = md5_hash
-        return md5_check
-
-    def N_count(seqs):
-        count_N = {}
-        for seq, name in seqs.items():
-            sequence = seq
-            sequence = sequence.strip()
-            length = len(sequence)
-            N = sequence.count('N')
-            start_N = sequence.find('N')
-            end_N = sequence.rfind('N')+1
-            details = {
-                "length": length,
-                "name": name,
-                "N": N,
-                "pos": [start_N, end_N]
-            }
-            count_N[seq] = details
-
-        return count_N
-
 
 class compare_fasta(eHive.BaseRunnable):
-
     def param_defaults(self):
-        return {
-        }
+        return {}
 
-    def run(self):
+    def run(self) -> None:
         report = self.param_required("report")
         fasta1 = self.param_required("fasta1")
         fasta2 = self.param_required("fasta2")
@@ -93,39 +62,36 @@ class compare_fasta(eHive.BaseRunnable):
         map_dna = self.get_map(map_dna_path)
         seq1 = self.get_fasta(fasta1, map_dna)
         seq2 = self.get_fasta(fasta2, map_dna)
-        
+
         (stats, diffs, seq_map) = self.compare_seqs(seq1, seq2)
         # Print mapping to a file (add report data)
         map_file = output_dir + "/" + species + "_" + name + ".map"
-        self.print_map(seq_map, map_file, report)
-        
+        self.print_map(seq_map, map_file, report, accession)
+
         # Print full list of results in a file
         output_file = output_dir + "/" + species + "_" + name + ".log"
-        print("Write results in %s" % output_file)
+        print(f"Write results in {output_file}")
         with open(output_file, "w") as out_fh:
             for line in diffs:
                 out_fh.write(line + "\n")
-                
+
         # Print the stats separately
-        out = {
-                "species" : species,
-                "stats" : stats
-                }
+        out = {"species": species, "stats": stats}
         self.dataflow(out, 2)
-        
-    def print_map(self, seq_map, map_file, report_file):
-        
+
+    def print_map(self, seq_map: dict, map_file: str, report_file: str, accession: str) -> None:
+
         report_parser = SeqregionParser()
-        report_seq = report_parser.get_report_regions(report_file)
+        report_seq = report_parser.get_report_regions(report_file, accession)
         report = self.add_report_to_map(seq_map, report_seq)
-        
-        print("Write map in %s" % map_file)
+
+        print(f"Write map in {map_file}")
         with open(map_file, "w") as out_fh:
             out_fh.write(json.dumps(report, sort_keys=True, indent=4))
-            
-    def add_report_to_map(self, seq_map, report_seq):
-        
-        accession_version = r'\.\d+$'
+
+    def add_report_to_map(self, seq_map: dict, report_seq: dict) -> List[Any]:
+
+        accession_version = r"\.\d+$"
         report = []
         for insdc_name, old_name in seq_map.items():
             if insdc_name not in report_seq:
@@ -135,39 +101,36 @@ class compare_fasta(eHive.BaseRunnable):
                 seqr["name"] = old_name
                 seqr["EBI_seq_region_name"] = old_name
                 brc4_name = insdc_name
-                brc4_name = re.sub(accession_version, '', brc4_name)
+                brc4_name = re.sub(accession_version, "", brc4_name)
                 seqr["BRC4_seq_region_name"] = brc4_name
-                syns = [{
-                    "source": "INSDC",
-                    "name": insdc_name
-                    }]
+                syns = [{"source": "INSDC", "name": insdc_name}]
                 seqr["synonyms"] = syns
                 report.append(seqr)
 
         return report
-        
-            
-    def get_map(self, map_path):
-        
-        print("Read file %s" % map_path)
+
+    def get_map(self, map_path: str) -> dict:
+
+        print(f"Read file {map_path}")
         data = self.get_json(map_path)
-        
+
         map_dna = {}
-        
+
         for seqr in data:
             name = seqr["name"]
             if "synonyms" in seqr:
                 for syn in seqr["synonyms"]:
                     if syn["name"] == "INSDC":
                         map_dna[name] = syn["value"]
-        
+
         return map_dna
 
-    def get_json(self, json_path):
+    def get_json(self, json_path: str) -> dict:
+
         with open(json_path) as json_file:
             return json.load(json_file)
-        
-    def build_seq_dict(self, seqs):
+
+    def build_seq_dict(self, seqs: dict) -> dict:
         """Build a seq dict taking duplicates into account"""
 
         seqs_dict = dict()
@@ -179,11 +142,11 @@ class compare_fasta(eHive.BaseRunnable):
 
         return seqs_dict
 
-    def get_fasta(self, fasta_path, map_dna):
+    def get_fasta(self, fasta_path: str, map_dna: dict) -> dict:
         
-        print("Read file %s" % fasta_path)
+        print(f"Read file {fasta_path}")
         sequences = {}
-        _open = partial(gzip.open, mode='rt') if fasta_path.endswith('.gz') else open
+        _open = partial(gzip.open, mode="rt") if fasta_path.endswith(".gz") else open
         with _open(fasta_path) as fasta_fh:
             for rec in SeqIO.parse(fasta_fh, "fasta"):
                 name = rec.id
@@ -192,7 +155,8 @@ class compare_fasta(eHive.BaseRunnable):
                 sequences[name] = re.sub(r"[^CGTA]", "N", str(rec.seq.upper()))
         return sequences
 
-    def compare_seqs(self, seq1, seq2):
+    def compare_seqs(self, seq1: dict, seq2: dict) -> Tuple[dict, list, dict]:
+
         comp = []
         accession = self.param_required("accession")
         diff = abs(len(seq1) - len(seq2))
@@ -212,127 +176,114 @@ class compare_fasta(eHive.BaseRunnable):
             "only2_1000": 0,
             "other_locations": 0,
             "summary": None,
-            "organellar_summary": None
+            "organellar_summary": None,
+            "Assembly_level_1": None,
+            "Assembly_level_2": None,
         }
-        value = None  # variable used for summary
-        org_value = "no_organelles_present"   # variable used for organellar_summary
+        value = "identical"  # variable used for summary
+        org_value = "no_organelles_present"  # variable used for organellar_summary
 
-        # Compare number of sequences
-        if len(seq1) != len(seq2):
-            comp.append("WARNING: Different number of sequences: %d vs %d" % (len(seq1), len(seq2)))
-        else:
-            comp.append("Same number of sequences: %d" % len(seq1))
-        
         # Compare sequences
         seqs1 = self.build_seq_dict(seq1)
         seqs2 = self.build_seq_dict(seq2)
 
-        # find out the checksum
-        md5_check_1 = SeqGroup.md5(seqs1)
-
-        md5_check_2 = SeqGroup.md5(seqs2)
+        # Compare number of sequences
+        if len(seq1) != len(seq2):
+            comp.append(f"WARNING: Different number of sequences: {len(seq1)} vs {len(seq2)}")
+        else:
+            comp.append(f"Same number of sequences: {len(seq1)}")
 
         # Sequences that are not common
-        only1 = {seq: group for seq,
-                 group in seqs1.items() if not seq in seqs2}
+        only1 = {seq: group for seq, group in seqs1.items() if not seq in seqs2}
 
-        only2 = {seq: group for seq,
-                 group in seqs2.items() if not seq in seqs1}
+        only2 = {seq: group for seq, group in seqs2.items() if not seq in seqs1}
 
-        only1_checksum = {name: checksum for name,
-                          checksum in md5_check_1.items() if not checksum in md5_check_2.values()}
-
-        only2_checksum = {name: checksum for name,
-                          checksum in md5_check_2.items() if not checksum in md5_check_1.values()}
-
-        common, group_comp = self.find_common_groups(
-            seqs1, seqs2, only1, only2)
+        common, group_comp = self.find_common_groups(seqs1, seqs2)
         comp += group_comp
 
-        # Remove the identifiers from only1 and only2 which differed due to N
-        for insdc, core in common.items():
-            for seq_1, name1 in list(only1.items()):
-                name1 = str(name1)
-                if insdc == name1:
-                    del only1[seq_1]
-                    only1_checksum.pop(name1)
-            for seq_2, name2 in list(only2.items()):
-                name2 = str(name2)
-                if core == name2:
-                    del only2[seq_2]
-                    del only2_checksum[name2]
-
-        if len(seq1) == len(seq2) and len(common) == len(seq1):
-            if len(only1) == 0 and len(only2) == 0:
-                value = "identical"
-        else:
+        if only1 or only2:
             value = "mismatch"
+
         # Gathering the organellar sequences
         report = self.param_required("report")
         report_parser = SeqregionParser()
-        report_seq = report_parser.get_report_regions(report)
-        report = self.add_report_to_map(common, report_seq)
+        report_seq = report_parser.get_report_regions(report, accession)
         map_dna_path = self.param_required("seq_regions")
-        data = self.get_json(map_dna_path)
-        org, location = self.organellar(report_seq, data)
+        seq_data = self.get_json(map_dna_path)
+        org_loc = self.organellar_assembly(report_seq, seq_data)
+        INSDC_assembly_level, core_assembly_level = self.assembly_level(report_seq, seq_data)
 
-        # check ids for all the matched and mis-matched sequences
-        All_id = {}
-        for insdc, coredb_name in report_seq.items():
-            All_id[insdc] = coredb_name["name"]
-        for insdc1, core2 in common.items():
-            if insdc1 in All_id and core2 in All_id.values():
-                pass
-            else:
-                comp.append("%s do not match in common" % insdc)
+        comp.append(f"Assembly level: {INSDC_assembly_level} vs {core_assembly_level}")
 
-        only1_id = [name for seq, name in only1.items()]
-        only2_id = [name for seq, name in only2.items()]
+        names_length = {}
+        # sequences which have extra N at the end
+        if only1 and only2:
+            for seq_1, name1 in only1.items():
+                len1 = len(seq_1)
+                seq1_N = seq_1.count("N")
+                for seq_2, name2 in only2.items():
+                    len2 = len(seq_2)
+                    seq2_N = seq_2.count("N")
+                    sequence_2 = seq_2[:len1]
+                    if sequence_2 == seq_1:
+                        ignored_seq = seq_2[len1:]
+                        N = ignored_seq.count("N")
+                        if len(ignored_seq) == N:
+                            comp.append(f"Please check extra Ns added in core in {name1} and {name2}")
+                        else:
+                            comp.append(
+                                f"ALERT INSERTIONS at the end or diff assembly level {name1} and {name2}"
+                            )
+                    elif len1 == len2:
+                        if seq2_N > seq1_N:
+                            comp.append(f"Core has more Ns, check {name1} and {name2}")
+                        elif seq1_N > seq2_N:
+                            comp.append(f"INSDC has more Ns, check {name1} and {name2}")
+                        else:
+                            names_length[name1] = name2
+                    else:
+                        continue
 
-        for i in only1_id:
-            i = str(i)
-            for insdc, core in All_id.items():
-                if i == insdc and i != core:
-                    comp.append("%s and %s match by id" %
-                                (i, core))
-                else:
-                    pass
+        if names_length:
+            length = len(names_length)
+            comp.append(f"{length} sequences have the same length")
+            for insdc, core in names_length.items():
+                comp.append(f"INSDC: {insdc} and coredb : {core}")
 
-        for id in only2_id:
-            id = str(id)
-            if id in All_id.values():
-                comp.append("%s and %s match by id" % (i, All_id[i]))
-            else:
-                pass
+        # Remove the duplicates
+        for org_name in list(org_loc.keys()):
+            for insdc_id, core_id in common.items():
+                if org_name == core_id:
+                    org_loc.pop(org_name)
 
         # checking for multiple entries of organellar seq
-        multi_org = [name.split('.')[0] for name in org]
+        multi_org = [name.split(".")[0] for name in org_loc.keys()]
         multi_org_acc = [j[:-1] for j in multi_org]  # similar accession
         unique_org_id = list(set(multi_org_acc))
+        location = [location for location in org_loc.values()]
         unique_location = location.count("mitochondrial_chromosome")
         unique_apicoplast = location.count("apicoplast_chromosome")
 
+        only1_id = [str(id1) for id1 in only1.values()]
+
         # comparing organellar sequences with common, only1 and only2
         count = 0
-        for index, i in enumerate(org):
-            if i == 'na':
+        for org_name, loc in org_loc.items():
+            if org_name == "na":
                 comp.append("MISSING accession in the report (na)")
             else:
-                if i in common:
-                    count = count+1
-                    comp.append("%s (both) in location: %s" %
-                                (i, location[index]))
+                if org_name in common.keys():
+                    count = count + 1
+                    comp.append(f"{org_name} (both) in location: {loc}")
                     if count > 0:
                         org_value = "identical"
-                elif i in only1:
-                    count = count+1
-                    comp.append("%s (only1) in  location: %s" %
-                                (i, location[index]))
+                elif org_name in only1_id:
+                    count = count + 1
+                    comp.append(f"{org_name} (only1) in  location: {loc}")
                     org_value = "unknown_with_organellar"
                 else:
-                    count = count+1
-                    comp.append("%s (only2) in location: %s" %
-                                (i, location[index]))
+                    count = count + 1
+                    comp.append(f"{org_name} (only2) in location: {loc}")
                     org_value = "unknown_with_organellar"
 
         # if the mistmatch is due to added organellar sequences
@@ -364,74 +315,64 @@ class compare_fasta(eHive.BaseRunnable):
         stats["other_locations"] = count
         stats["summary"] = value
         stats["organellar_summary"] = org_value
+        stats["Assembly_level_1"] = INSDC_assembly_level
+        stats["Assembly_level_2"] = core_assembly_level
         print(stats)
 
-        if len(only1) > 0 or len(only2) > 0:
-            comp.append("\nCommon sequences: %d" % len(common))
+        if only1:
+            stats["max_only1"] = len(max(only1, key=lambda k: len(k)))
+            # Only list sequences where the length is > 200
+            mini = {seq: name for seq, name in only1.items() if len(seq) <= 200}
+            maxi = {seq: name for seq, name in only1.items() if len(seq) > 200}
 
-            if len(only1) != len(only1_checksum):
-                comp.append("Please check the checksum in only1")
+            if mini and len(mini) > 3000:
+                comp.append(f"WARNING: Ignoring {len(mini)} sequences from 1 with length <= 200")
+                only1 = maxi
 
-            if len(only2) != len(only2_checksum):
-                comp.append("Please check the checksum in only2")
+        if only1:
+            # Only list sequences where the length is > 1000
+            mini = {seq: name for seq, name in only1.items() if len(seq) <= 1000}
+            maxi = {seq: name for seq, name in only1.items() if len(seq) > 1000}
+            if mini and len(mini) > 3000:
+                comp.append(f"WARNING: Ignoring {len(mini)} sequences from 1 with length <= 1000")
+                only1 = maxi
 
-            if only1:
-                stats["max_only1"] = max(len(seq) for seq in only1.keys())
-                
-                # Only list sequences where the length is > 200
-                mini = {seq: name for seq, name in only1.items() if len(seq) <= 200}
-                maxi = {seq: name for seq, name in only1.items() if len(seq) > 200}
-                
-                if mini and len(mini) > 3000:
-                    comp.append("WARNING: Ignoring %d sequences from 1 with length <= 200" % len(mini))
-                    only1 = maxi
-                
-            if only1:
-                # Only list sequences where the length is > 1000
-                mini = {seq: name for seq, name in only1.items() if len(seq) <= 1000}
-                maxi = {seq: name for seq, name in only1.items() if len(seq) > 1000}
+        if only1:
+            total = sum([len(seq) for seq in only1.keys()])
+            comp.append(f"WARNING: Sequences only in 1: {len(only1)} ({total})")
+            only_seq1 = {name: len(seq) for seq, name in only1.items()}
+            for name, length in sorted(only_seq1.items(), key=lambda x: x[1]):
+                comp.append(f"\tOnly in 1: {name} ({length})")
 
-                if mini and len(mini) > 3000:
-                    comp.append("WARNING: Ignoring %d sequences from 1 with length <= 1000" % len(mini))
-                    only1 = maxi
-            
-            if only1:
-                total = sum([len(seq) for seq in only1.keys()])
-                comp.append("WARNING: Sequences only in 1: %d (%d)" % (len(only1), total))
-                only_seq1 = {name: len(seq) for seq, name in only1.items()}
-                for name, length in sorted(only_seq1.items(), key=lambda x: x[1]):
-                    comp.append("\tOnly in 1: %s (%d)" % (name, length))
-                    
-            if only2:
-                stats["max_only2"] = max(len(seq) for seq in only2.keys())
+        if only2:
+            stats["max_only2"] = len(max(only2, key=lambda k: len(k)))
+            # Only list sequences where the length is > 200
+            mini = {seq: name for seq, name in only2.items() if len(seq) <= 200}
+            maxi = {seq: name for seq, name in only2.items() if len(seq) > 200}
 
-                # Only list sequences where the length is > 200
-                mini = {seq: name for seq, name in only2.items() if len(seq) <= 200}
-                maxi = {seq: name for seq, name in only2.items() if len(seq) > 200}
-                
-                if mini and len(mini) > 3000:
-                    comp.append("WARNING: Ignoring %d sequences from 2 with length <= 200" % len(mini))
-                    only2 = maxi
-                    
-            if only2:
-                # Only list sequences where the length is > 1000
-                mini = {seq: name for seq, name in only2.items() if len(seq) <= 1000}
-                maxi = {seq: name for seq, name in only2.items() if len(seq) > 1000}
-                
-                if mini and len(mini) > 3000:
-                    comp.append("WARNING: Ignoring %d sequences from 2 with length <= 1000" % len(mini))
-                    only2 = maxi
+            if mini and len(mini) > 3000:
+                comp.append(f"WARNING: Ignoring {len(mini)} sequences from 2 with length <= 200")
+                only2 = maxi
 
-            if only2:
-                total = sum([len(seq) for seq in only2.keys()])
-                comp.append("WARNING: Sequences only in 2: %d (%d)" % (len(only2), total))
-                only_seq2 = {name: len(seq) for seq, name in only2.items()}
-                for name, length in sorted(only_seq2.items(), key=lambda x: x[1]):
-                    comp.append("\tOnly in 2: %s (%d)" % (name, length))
-        
+        if only2:
+            # Only list sequences where the length is > 1000
+            mini = {seq: name for seq, name in only2.items() if len(seq) <= 1000}
+            maxi = {seq: name for seq, name in only2.items() if len(seq) > 1000}
+
+            if mini and len(mini) > 3000:
+                comp.append(f"WARNING: Ignoring {len(mini)} sequences from 2 with length <= 1000")
+                only2 = maxi
+
+        if only2:
+            total = sum([len(seq) for seq in only2.keys()])
+            comp.append(f"WARNING: Sequences only in 2: {len(only2)} ({total})")
+            only_seq2 = {name: len(seq) for seq, name in only2.items()}
+            for name, length in sorted(only_seq2.items(), key=lambda x: x[1]):
+                comp.append(f"\tOnly in 2: {name} ({length})")
+
         return (stats, comp, common)
 
-    def find_common_groups(self, seqs1, seqs2, only1, only2):
+    def find_common_groups(self, seqs1: dict, seqs2: dict) -> Tuple[dict, List[Any]]:
 
         print(len(seqs1))
         print(len(seqs2))
@@ -445,107 +386,82 @@ class compare_fasta(eHive.BaseRunnable):
                     if group1.count == 1:
                         common[group1.ids[0]] = group2.ids[0]
                     else:
-                        comp.append(
-                            f"Matched 2 identical groups of sequences: {group1} and {group2}")
+                        comp.append(f"Matched 2 identical groups of sequences: {group1} and {group2}")
                         possible_id2 = " OR ".join(group2.ids)
                         for id1 in group1.ids:
                             common[id1] = possible_id2
 
                 else:
                     comp.append(
-                        f"Matched 2 different groups of sequences ({group1.count} vs {group2.count}): {group1} and {group2}")
+                        f"Matched 2 different groups of sequences ({group1.count} vs {group2.count}): {group1} and {group2}"
+                    )
 
-        # check the coredb sequences which has N instead on ATCG
-        commonN = {}
-
-        only1_Ncount = SeqGroup.N_count(only1)
-        only2_Ncount = SeqGroup.N_count(only2)
-        for seq1, details1 in only1_Ncount.items():
-            length1 = details1["length"]
-            for seq2, details2 in only2_Ncount.items():
-                if length1 == details2["length"]:
-                    pos = list(details1["pos"])
-                    sequence_1 = seq1[pos[0]:pos[1]]
-                    sequence_2 = seq2[pos[0]:pos[1]]
-                    sequence1_N = sequence_1.count('N')
-                    sequence2_N = sequence_2.count('N')
-                    A = sequence_1.count('A')
-                    C = sequence_1.count('C')
-                    G = sequence_1.count('G')
-                    T = sequence_1.count('T')
-                    N = sequence_1.count('N')
-                    sum = A+C+G+T+N
-                    if sequence1_N != sequence2_N:
-                        comp.append(
-                            f"Difference in N in sequence %s and %s" % (details1["name"], details2["name"]))
-                        comp.append("total : %d" % sum)
-                        comp.append(
-                            "INDIVIDUAL BREAKDOWN A : %d C : %d  G : %d  T: %d and N: %d" % (A, C, G, T, N))
-                        name = details1["name"]
-                        commonN[name] = details2["name"]
-                else:
-                    continue
-
-        # sequences which have extra N at the end
-        for seq1, name1 in only1.items():
-            len1 = len(seq1)
-            for seq2, name2 in only2.items():
-                sequence = seq2[:len1]
-                ignored_seq = seq2[len1:]
-                N = ignored_seq.count('N')
-                if len(ignored_seq) != N:
-                    pass
-                else:
-                    if sequence == seq1:
-                        commonN[name1] = name2
-                        comp.append(
-                            f"Please check an exta N added in core in  %s and %s" % (name1, name2))
-
-        for name1, name2 in commonN.items():
-            name1 = str(name1)
-            name2 = str(name2)
-            common[name1] = name2
-        print(comp)
         print(len(common))
         return common, comp
 
-    def organellar(self, report_seq, data):
-        org = []
-        org1 = []
-        org2 = []
-        org3 = []
+    def organellar_assembly(self, report_seq: dict, data: List[dict]) -> dict:
+        org_loc = {}
 
         # Gathering data from the INSDC report file and storing it into a list
         for name1, details1 in report_seq.items():
             if "location" in details1:
-                if details1['location'] not in ("chromosome", "nuclear_chromosome", "linkage_group"):
-                    loc = details1['location']
-                    org1.append(loc)
-                    org.append(name1)
-            else:
-                pass
+                if details1["location"] not in (
+                    "chromosome",
+                    "nuclear_chromosome",
+                    "linkage_group",
+                ):
+                    loc = details1["location"]
+                    org_loc[name1] = loc
 
         # Gathering data from Seq_json file and storing it into a list
-        for i in data:
-            for name2, details2 in i.items():
+        for rep in data:
+            for name2, details2 in rep.items():
                 if "location" in name2:
-                    if details2 not in ("chromosome", "nuclear_chromosome", "linkage_group"):
-                        name = i['EBI_seq_region_name']
-                        org3.append(details2)
-                        org2.append(name)
-                else:
-                    pass
+                    if details2 not in (
+                        "chromosome",
+                        "nuclear_chromosome",
+                        "linkage_group",
+                    ):
+                        name = rep["BRC4_seq_region_name"]
+                        org_loc[name] = details2
 
-        # checking for INSDC names for organellar sequences found in core
-        for i in range(0, len(org2)):
-            for name, rep in report_seq.items():
-                if rep['name'] == org2[i]:
-                    org2[i] = name
-        for index, i in enumerate(org2):
-            if i not in org:
-                org.append(i)
-                org1.append(org3[index])
+        return org_loc
+
+    def assembly_level(self, report_seq: dict, core_data: list) -> Tuple[str, str]:
+
+        INSDC_assembly_level = []
+        core_assembly_level = []
+        core_assembly = {}
+        scaffold_INSDC = 0
+        chromosome_INSDC = 0
+        scaffold_core = 0
+        chromosome_core = 0
+
+        for name, insdc_rep in report_seq.items():
+            if insdc_rep["coord_system_level"] not in (
+                "chromosome",
+                "nuclear_chromosome",
+            ):
+                scaffold_INSDC += 1
             else:
-                print("you have duplicates")
+                chromosome_INSDC += 1
 
-        return org, org1
+        INSDC_assembly_level.extend([scaffold_INSDC, chromosome_INSDC])
+
+        for core_details in core_data:
+            name = core_details["BRC4_seq_region_name"]
+            coord_system_level = core_details["coord_system_level"]
+            core_assembly[name] = coord_system_level
+
+        for name, coord_level in core_assembly.items():
+            if coord_level not in ("chromosome", "nuclear_chromosome"):
+                scaffold_core += 1
+            else:
+                chromosome_core += 1
+
+        core_assembly_level.extend([scaffold_core, chromosome_core])
+
+        INSDC_assembly_level = ", ".join([str(assembly) for assembly in INSDC_assembly_level])
+        core_assembly_level = ", ".join([str(assembly) for assembly in core_assembly_level])
+
+        return INSDC_assembly_level, core_assembly_level
