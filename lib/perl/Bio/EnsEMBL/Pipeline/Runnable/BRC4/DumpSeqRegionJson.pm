@@ -195,9 +195,10 @@ sub load_external_db_map {
     open my $mapfh, "<", $map_path or die "$!";
     while (my $line = readline $mapfh) {
       chomp $line;
-      next if $line =~ /^\*$/ or $line =~ /^#/;
+      next if $line =~ /^\s*$/ or $line =~ /^#/;
       # We use the mapping in reverse order because we dump
       my ($to, $from) = split("\t", $line);
+      die("Incorrect external db map: $line") if not defined($to) and not defined($from);
       $map{$from} = $to;
     }
     close $mapfh;
