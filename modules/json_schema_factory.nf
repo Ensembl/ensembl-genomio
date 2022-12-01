@@ -26,6 +26,6 @@ process JSON_SCHEMA_FACTORY {
 
     script:
         """
-        json_schema_factory --manifest ${manifest_dir} --metadata_types "${metadata_types}"
+        json_schema_factory --manifest_dir ${manifest_dir} --metadata_types "${metadata_types}"
         """
 }
