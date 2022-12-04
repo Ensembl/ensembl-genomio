@@ -99,7 +99,7 @@ sub default_options {
     ensembl_version => software_version(),
 
     # Coordinate system order
-    cs_order => 'chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome',
+    cs_order => 'ensembl_internal,chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome',
     prune_agp => 0,
     unversion_scaffolds => 0,
     sr_syn_src_name  => 'ensembl_internal_synonym', # 50803
@@ -152,6 +152,15 @@ sub default_options {
 
     # run ProdDBsync parts before adding ad-hoc sequences (add_sequence  mode on)
     prod_db_sync_before_adding => 1,
+
+    # default rc class name for Manifest_integrity
+    manifest_integrity_rc_name => '8GB',
+    load_sequence_data_rc_name => '8GB',
+    
+    # size of chunks to split contigs into (0 -- no splitting)
+    sequence_data_chunck => 0,
+    # coord system name for chunks
+    chunk_cs_name => 'ensembl_internal',
   };
 }
 
@@ -209,6 +218,12 @@ sub pipeline_wide_parameters {
 
     add_sequence => $self->o('add_sequence'),
     prod_db_sync_before_adding => $self->o('prod_db_sync_before_adding'),
+
+    manifest_integrity_rc_name => $self->o('manifest_integrity_rc_name'),
+    load_sequence_data_rc_name => $self->o('load_sequence_data_rc_name'),
+
+    sequence_data_chunck => $self->o('sequence_data_chunck'),
+    chunk_cs_name        => $self->o('chunk_cs_name'),
   };
 }
 
@@ -340,7 +355,7 @@ sub pipeline_analyses {
         ignore_final_stops => $self->o('ignore_final_stops'),
       },
       -analysis_capacity   => 10,
-      -rc_name         => '8GB',
+      -rc_name         => $self->o('manifest_integrity_rc_name'),
       -max_retry_count => 0,
       -failed_job_tolerance => 100,
       -flow_into => 'Prepare_genome',
@@ -427,9 +442,12 @@ sub pipeline_analyses {
       -parameters        => {
         work_dir => $self->o('pipeline_dir') . '/#db_name#/add_sequence',
         load_additional_sequences => $self->o('add_sequence'),
+        # N.B. chunking will work correctly only if it was used for initial loading
+        sequence_data_chunck => $self->o('sequence_data_chunck'),
+        chunk_cs_name        => $self->o('chunk_cs_name'),
       },
       -analysis_capacity   => 10,
-      -rc_name         => 'default',
+      -rc_name         => $self->o('load_sequence_data_rc_name'),
       -max_retry_count => 0,
       -flow_into  => WHEN('#has_gff3#', 'Load_gene_models')
     },
@@ -505,9 +523,11 @@ sub pipeline_analyses {
         cs_tag_for_ordered => $self->o('cs_tag_for_ordered'),
         no_contig_ena_attrib => $self->o('no_contig_ena_attrib'),
         swap_gcf_gca => $self->o('swap_gcf_gca'),
+        sequence_data_chunck => $self->o('sequence_data_chunck'),
+        chunk_cs_name        => $self->o('chunk_cs_name'),
       },
       -analysis_capacity   => 10,
-      -rc_name         => '8GB',
+      -rc_name         => $self->o('load_sequence_data_rc_name'),
       -max_retry_count => 0,
       -flow_into  => 'FillTaxonomy',
     },
