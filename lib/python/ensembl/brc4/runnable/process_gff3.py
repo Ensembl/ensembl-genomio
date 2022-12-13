@@ -282,13 +282,7 @@ class process_gff3(eHive.BaseRunnable):
 
         # New gene ID
         gene.id = self.normalize_gene_id(gene)
-        
-        # replace qualifiers
-        old_gene_qualifiers = gene.qualifiers
-        gene.qualifiers = {
-            "ID": gene.id,
-            "source": old_gene_qualifiers["source"]
-        }
+        self.transfer_description(gene)
         
         # Gene with no subfeatures: need to create a transcript at least
         if len(gene.sub_features) == 0:
@@ -414,8 +408,14 @@ class process_gff3(eHive.BaseRunnable):
                 self.normalize_pseudogene_cds(gene)
 
         # Finally, store gene functional annotation
-        self.transfer_description(gene)
         self.add_funcann_feature(functional_annotation, gene, "gene")
+        
+        # replace qualifiers
+        old_gene_qualifiers = gene.qualifiers
+        gene.qualifiers = {
+            "ID": gene.id,
+            "source": old_gene_qualifiers["source"]
+        }
     
         return gene
 
