@@ -34,16 +34,10 @@ class process_gff3(eHive.BaseRunnable):
         return {
             "gene_types": (
                 "gene",
+                "pseudogene",
+                "transposable_element_gene",
+                "transposable_element_pseudogene",
                 "ncRNA_gene",
-                "pseudogene"
-            ),
-            "ncRNA_gene_types": (
-                "tRNA",
-                "rRNA",
-                "pseudogenic_tRNA",
-                "pseudogenic_rRNA",
-                "transcript",
-                "misc_RNA"
             ),
             "transcript_types": (
                 "transcript",
@@ -84,12 +78,12 @@ class process_gff3(eHive.BaseRunnable):
                 "dispersed_repeat",
             ),
             "ignored_transcript_types": (
-                    "antisense_RNA",
-                    "RNase_MRP_RNA",
-                    "3'UTR",
-                    "5'UTR",
-                    "intron"
-                    ),
+                "antisense_RNA",
+                "RNase_MRP_RNA",
+                "3'UTR",
+                "5'UTR",
+                "intron"
+            ),
             "skip_unrecognized": False,
             "gene_cds_skip_others" : False,
             "allow_pseudogene_with_CDS": False,
@@ -224,7 +218,7 @@ class process_gff3(eHive.BaseRunnable):
         
         allowed_gene_types = self.param("gene_types")
         ignored_gene_types = self.param("ignored_gene_types")
-        ncRNA_gene_types = self.param("ncRNA_gene_types")
+        transcript_types = self.param("transcript_types")
         skip_unrecognized = self.param("skip_unrecognized")
         to_exclude = self.param("exclude_seq_regions")
         
@@ -237,38 +231,31 @@ class process_gff3(eHive.BaseRunnable):
             for record in GFF.parse(gff3_in):
                 new_record = SeqRecord(record.seq, id=record.id)
                 if record.id in to_exclude:
-                    print("Skip seq_region %s" % record.id)
+                    print(f"Skip seq_region {record.id}")
                     continue
                 
-                # GENES
-                for gene in record.features:
-                    if gene.type in ignored_gene_types:
+                # Root features (usually genes)
+                for feat in record.features:
+                    # Skip or format depending on the feature type
+                    if feat.type in ignored_gene_types:
                         continue
+                    elif feat.type in transcript_types:
+                        feat = self.transcript_gene(feat)
+                    elif feat.type == "CDS":
+                        feat = self.cds_gene(feat)
                     
-                    if gene.type in ncRNA_gene_types:
-                        # Transcript-level gene: add a gene parent
-                        gene = self.ncrna_gene(gene)
-
-                    if gene.type == "CDS":
-                        # Lone CDS: add a gene-transcript parent
-                        print("Make a gene for lone cds %s" % (gene.id))
-                        is_pseudo = ("pseudo" in gene.qualifiers and gene.qualifiers["pseudo"][0] == "true")
-                        gene = self.cds_gene(gene)
-                        if is_pseudo:
-                            gene.type = "pseudogene"
-                        
-                    if gene.type in allowed_gene_types:
-                        gene = self.normalize_gene(gene, functional_annotation, fail_types)
-                    
+                    # Normalize the gene structure
+                    if feat.type in allowed_gene_types:
+                        feat = self.normalize_gene(feat, functional_annotation, fail_types)
                     else:
-                        fail_types["gene=" + gene.type] = 1
-                        message = "Unrecognized gene type: %s (for %s)" % (gene.type, gene.id)
+                        fail_types["gene=" + feat.type] = 1
+                        message = "Unrecognized gene type: %s (for %s)" % (feat.type, feat.id)
                         print(message)
                         if skip_unrecognized:
-                            del gene
+                            del feat
                             continue
 
-                    new_record.features.append(gene)
+                    new_record.features.append(feat)
                 new_records.append(new_record)
             
             if fail_types and not skip_unrecognized:
@@ -466,24 +453,28 @@ class process_gff3(eHive.BaseRunnable):
                 if tran.type in allowed_transcript_types:
                     if "product" in tran.qualifiers:
                         description = tran.qualifiers["product"][0]
+                        print(f"Tranfer description '{description}' from transcript to gene")
                         gene.qualifiers["product"] = [description]
                         return
                     
                     # No transcript product, but a CDS product? Copy it to both transcript and gene
                     else:
                         for cds in tran.sub_features:
-                            if "product" in cds.qualifiers:
+                            if cds.type == 'CDS' and "product" in cds.qualifiers:
                                 description = cds.qualifiers["product"][0]
+                                print(f"Tranfer description '{description}' to transcript and gene")
                                 tran.qualifiers["product"] = [description]
                                 gene.qualifiers["product"] = [description]
                         # Continue transfering the translation products to the transcripts
     
-    def ncrna_gene(self, ncrna):
-        """Create a gene for ncRNAs"""
+    def transcript_gene(self, ncrna):
+        """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
+        """
         
         new_type = "ncRNA_gene"
         if ncrna.type in ('tRNA', 'rRNA'):
             new_type = 'gene'
+        print(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
         gene = SeqFeature(ncrna.location, type=new_type)
         gene.qualifiers["source"] = ncrna.qualifiers["source"]
         gene.sub_features = [ncrna]
@@ -493,6 +484,8 @@ class process_gff3(eHive.BaseRunnable):
         
     def cds_gene(self, cds):
         """Create a gene for a lone CDS"""
+
+        print(f"Put the lone CDS in gene-mRNA parent features")
 
         # Create a transcript, add the CDS
         transcript = SeqFeature(cds.location, type="mRNA")
@@ -505,7 +498,10 @@ class process_gff3(eHive.BaseRunnable):
         transcript.sub_features.append(exon)
         
         # Create a gene, add the transcript
-        gene = SeqFeature(cds.location, type="gene")
+        gene_type = "gene"
+        if("pseudo" in cds.qualifiers and cds.qualifiers["pseudo"][0] == "true"):
+            gene_type = "pseudogene"
+        gene = SeqFeature(cds.location, type=gene_type)
         gene.qualifiers["source"] = cds.qualifiers["source"]
         gene.sub_features = [transcript]
         gene.id = self.generate_stable_id()
