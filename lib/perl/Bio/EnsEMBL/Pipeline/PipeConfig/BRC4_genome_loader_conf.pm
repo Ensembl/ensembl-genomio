@@ -528,6 +528,7 @@ sub pipeline_analyses {
           -host => "#taxonomy_host#",
           -port => "#taxonomy_port#",
           -user => "#taxonomy_user#",
+          -pass => "#taxonomy_pass#",
           -dbname => "#taxonomy_dbname#",
         },
       },
