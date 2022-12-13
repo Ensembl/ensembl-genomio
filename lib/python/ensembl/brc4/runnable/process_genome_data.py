@@ -69,7 +69,7 @@ class process_genome_data(eHive.BaseRunnable):
         # Create dedicated work dir
         accession = genome_data["assembly"]["accession"]
         self.param("accession", accession)
-        work_dir = Path(self.param('work_dir'))
+        work_dir = Path(self.param('root_work_dir'), accession)
         if not work_dir.is_dir():
             work_dir.mkdir(parents=True)
 
@@ -85,6 +85,7 @@ class process_genome_data(eHive.BaseRunnable):
         output = {
                 "genome_json" : str(final_path),
                 "genome_data" : genome_data,
+                "work_dir" : str(work_dir),
                 "accession" : accession
                 }
         self.dataflow(output, 2)
