@@ -57,6 +57,7 @@ class process_gff3(eHive.BaseRunnable):
                 "miRNA",
                 "ribozyme",
                 "piRNA",
+                "RNase_MRP_RNA",
                 "misc_RNA"
             ),
             "ignored_gene_types": (
@@ -79,7 +80,6 @@ class process_gff3(eHive.BaseRunnable):
             ),
             "ignored_transcript_types": (
                 "antisense_RNA",
-                "RNase_MRP_RNA",
                 "3'UTR",
                 "5'UTR",
                 "intron"
