@@ -481,7 +481,10 @@ class process_gff3(eHive.BaseRunnable):
     def ncrna_gene(self, ncrna):
         """Create a gene for ncRNAs"""
         
-        gene = SeqFeature(ncrna.location, type="ncRNA_gene")
+        new_type = "ncRNA_gene"
+        if ncrna.type in ('tRNA', 'rRNA'):
+            new_type = 'gene'
+        gene = SeqFeature(ncrna.location, type=new_type)
         gene.qualifiers["source"] = ncrna.qualifiers["source"]
         gene.sub_features = [ncrna]
         gene.id = ncrna.id
