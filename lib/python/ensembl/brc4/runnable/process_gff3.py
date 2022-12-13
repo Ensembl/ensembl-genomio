@@ -269,6 +269,12 @@ class process_gff3(eHive.BaseRunnable):
         print_json(out_funcann_path, functional_annotation)
 
     def normalize_gene(self, gene, functional_annotation, fail_types):
+        """Returns a normalized gene structure, separate from the functional elements.
+
+        The functional annotations are appended to the list provided.
+        
+        If some children features are not supported, they are added to the fail_type list provided.
+        """
 
         allowed_transcript_types = self.param("transcript_types")
         ignored_transcript_types = self.param("ignored_transcript_types")
@@ -278,10 +284,10 @@ class process_gff3(eHive.BaseRunnable):
         gene.id = self.normalize_gene_id(gene)
         
         # replace qualifiers
-        old_qualifiers = gene.qualifiers
+        old_gene_qualifiers = gene.qualifiers
         gene.qualifiers = {
             "ID": gene.id,
-            "source": old_qualifiers["source"]
+            "source": old_gene_qualifiers["source"]
         }
         
         # Gene with no subfeatures: need to create a transcript at least
@@ -342,13 +348,13 @@ class process_gff3(eHive.BaseRunnable):
                 functional_annotation, transcript, "transcript")
             
             # Replace qualifiers
-            old_qualifiers = transcript.qualifiers
+            old_tran_qualifiers = transcript.qualifiers
             transcript.qualifiers = {
                 "ID": transcript.id,
                 "Parent": gene.id,
             }
-            if "source" in old_qualifiers:
-                transcript.qualifiers["source"] = old_qualifiers["source"]
+            if "source" in old_tran_qualifiers:
+                transcript.qualifiers["source"] = old_tran_qualifiers["source"]
 
             # EXONS AND CDS
             cds_found = False
@@ -357,12 +363,12 @@ class process_gff3(eHive.BaseRunnable):
                 
                 if feat.type == "exon":
                     # Replace qualifiers
-                    old_qualifiers = feat.qualifiers
+                    old_exon_qualifiers = feat.qualifiers
                     feat.qualifiers = {
                         "Parent": transcript.id,
                     }
-                    if "source" in old_qualifiers:
-                        feat.qualifiers["source"] = old_qualifiers["source"]
+                    if "source" in old_exon_qualifiers:
+                        feat.qualifiers["source"] = old_exon_qualifiers["source"]
                 elif feat.type == "CDS":
                     # New CDS ID
                     feat.id = self.normalize_cds_id(feat.id)
