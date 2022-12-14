@@ -252,8 +252,8 @@ class process_gff3(eHive.BaseRunnable):
                         feat = self.transcript_gene(feat)
                     elif feat.type == "CDS":
                         feat = self.cds_gene(feat)
-                    elif feat.type == 'mobile_genetic_element':
-                        feat = self.format_mobile_element(feat)
+                    elif feat.type in ('mobile_genetic_element', 'transposable_element'):
+                        feat = self.format_mobile_element(feat, functional_annotation)
                     
                     # Normalize the gene structure
                     if feat.type in allowed_gene_types:
@@ -278,18 +278,32 @@ class process_gff3(eHive.BaseRunnable):
         functional_annotation = self.clean_functional_annotations(functional_annotation)
         print_json(out_funcann_path, functional_annotation)
 
-    def format_mobile_element(self, feat):
+    def format_mobile_element(self, feat, functional_annotation):
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
         quals = feat.qualifiers
 
-        element_type = feat.qualifiers.get("mobile_element_type")
-        if element_type:
-            if element_type[0].startswith("transposon"):
-                feat.type = 'transposable_element'
-            else:    
-                print(f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}")
-        else:
-            print("Mobile genetic element does not have a 'mobile_element_type' tag")
+        if feat.type == 'mobile_genetic_element':
+            mobile_element_type = feat.qualifiers.get("mobile_element_type", [])
+            if mobile_element_type:
+                element_type, transposon_type = mobile_element_type[0].split(':')
+                if element_type == "transposon":
+                    feat.type = 'transposable_element'
+                    if not feat.qualifiers.get("product"):
+                        feat.qualifiers["product"] = [transposon_type]
+                else:    
+                    print(f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}")
+            else:
+                print("Mobile genetic element does not have a 'mobile_element_type' tag")
+        elif feat.type != "transposable_element":
+            print(f"Feature {feat.id} is not a supported TE feature {feat.type}")
+            return feat
+        
+        # Also generate an ID if needed
+        feat.id = self.normalize_gene_id(feat)
+        self.add_funcann_feature(functional_annotation, feat, "transposable_element")
+        feat.qualifiers = {
+            "ID": feat.id
+        }
 
         return feat
 
