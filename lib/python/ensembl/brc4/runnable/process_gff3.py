@@ -77,6 +77,7 @@ class process_gff3(eHive.BaseRunnable):
                 "tandem_repeat",
                 "long_terminal_repeat",
                 "dispersed_repeat",
+                "terminal%2Cinverted",
             ),
             "ignored_transcript_types": (
                 "antisense_RNA",
