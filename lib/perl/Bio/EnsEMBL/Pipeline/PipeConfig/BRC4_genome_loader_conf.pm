@@ -64,6 +64,7 @@ sub default_options {
     # Registry must contain the production db and taxonomy db
     # as well as the newly created dbs (e.g. via a prefix)
     registry      => $self->o('registry'),
+    taxonomy_pass => '',
 
     # Working directory
     pipeline_dir => 'genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
