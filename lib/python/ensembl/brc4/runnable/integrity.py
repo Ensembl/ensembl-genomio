@@ -159,6 +159,7 @@ class integrity(eHive.BaseRunnable):
                     if len(tr_errors) > 0:
                         tr_errors = self.check_ids(func_ann["translations"], gff["all_translations"], "Translation ids metadata vs gff (include pseudo CDS)")
                     errors += tr_errors   
+                    errors += self.check_ids(func_ann["transposable_elements"], gff["transposable_elements"], "TE ids metadata vs gff")
 
                 #Check the seq.json intregrity
                 #Compare the length and id retrieved from seq.json to the gff
@@ -262,14 +263,17 @@ class integrity(eHive.BaseRunnable):
             # Get gene ids and translation ids
             genes = {}
             translations = {}
+            tes = {}
 
             for item in data:
                 if item["object_type"] == "gene":
                     genes[item["id"]] = 1
                 elif item["object_type"] == "translation":
                     translations[item["id"]] = 1
+                if item["object_type"] == "transposable_element":
+                    tes[item["id"]] = 1
 
-            return { "genes" : genes, "translations" : translations }
+            return { "genes" : genes, "translations" : translations, "transposable_elements": tes }
 
     def get_gff3(self, gff3_path):
         #Load the gff file
@@ -297,17 +301,19 @@ class integrity(eHive.BaseRunnable):
         genes = {}
         peps = {}
         all_peps = {}
+        tes = {}
 
         gff = GFF.parse(gff3_handle)
         for seq in gff:
             seqs[seq.id] = len(seq.seq)
             
             for feat in seq.features:
+                feat_length = abs(feat.location.end - feat.location.start)
                 #Store gene id and length
-                if feat.type in ["gene", "ncRNA_gene", "pseudogene", "transposable_element"]:
+                if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
                     gene_id = feat.id
                     if ensembl_mode:
-                        gene_id = gene_id.replace("gene:", "")
+                        gene_id = feat_length
                     genes[gene_id] = abs(feat.location.end - feat.location.start)
                     # Get CDS id and length
                     for feat2 in feat.sub_features:
@@ -327,9 +333,17 @@ class integrity(eHive.BaseRunnable):
                                 if feat.type != "pseudogene":
                                     peps[pep_id] = pep_length
                                 all_peps[pep_id] = pep_length
+                if feat.type == 'transposable_element':
+                    tes[feat.id] = feat_length
 
-
-        return { "seq_region": seqs, "genes": genes, "translations": peps, "all_translations": all_peps }
+        stats = {
+            "seq_region": seqs,
+            "genes": genes,
+            "translations": peps,
+            "all_translations": all_peps,
+            "transposable_elements": tes    
+        }
+        return stats
 
     def get_agp_seq_regions(self, agp_dict):
         """AGP files describe the assembly of larger sequence objects using smaller objects.
