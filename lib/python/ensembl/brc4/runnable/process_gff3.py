@@ -453,12 +453,14 @@ class process_gff3(eHive.BaseRunnable):
         Transfer the translation product description as well
         """
         allowed_transcript_types = self.param("transcript_types")
+        skip_re = r"^(conserved )?(hypothetical|putative) protein$"
         
         if "product" not in gene.qualifiers:
             for tran in gene.sub_features:
                 if tran.type in allowed_transcript_types:
                     if "product" in tran.qualifiers:
                         description = tran.qualifiers["product"][0]
+                        if not re.match(skip_re, description):
                         print(f"Tranfer description '{description}' from transcript to gene")
                         gene.qualifiers["product"] = [description]
                         return
@@ -468,6 +470,7 @@ class process_gff3(eHive.BaseRunnable):
                         for cds in tran.sub_features:
                             if cds.type == 'CDS' and "product" in cds.qualifiers:
                                 description = cds.qualifiers["product"][0]
+                                if not re.match(skip_re, description):
                                 print(f"Tranfer description '{description}' to transcript and gene")
                                 tran.qualifiers["product"] = [description]
                                 gene.qualifiers["product"] = [description]
