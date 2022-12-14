@@ -317,6 +317,7 @@ sub pipeline_analyses {
         hash_key => "#metadata_type#",
       },
       -analysis_capacity => 2,
+      -max_retry_count => 0,
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
@@ -329,6 +330,8 @@ sub pipeline_analyses {
       -language    => 'python3',
       -analysis_capacity   => 2,
       -rc_name    => '4GB',
+      -max_retry_count => 0,
+      -failed_job_tolerance => 100,
       -parameters     => {
         file_name => "fasta_dna",
       },
@@ -341,6 +344,7 @@ sub pipeline_analyses {
       -language    => 'python3',
       -analysis_capacity   => 2,
       -rc_name    => '4GB',
+      -max_retry_count => 0,
       -parameters     => {
         file_name => "fasta_pep",
         in_genbank => '#gbff#',
