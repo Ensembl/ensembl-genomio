@@ -286,10 +286,10 @@ class process_gff3(eHive.BaseRunnable):
             mobile_element_type = feat.qualifiers.get("mobile_element_type", [])
             if mobile_element_type:
                 element_type, transposon_type = mobile_element_type[0].split(':')
-                if element_type == "transposon":
+                if element_type in ("transposon", "retrotransposon"):
                     feat.type = 'transposable_element'
                     if not feat.qualifiers.get("product"):
-                        feat.qualifiers["product"] = [transposon_type]
+                        feat.qualifiers["product"] = [f"{element_type} {transposon_type}"]
                 else:    
                     print(f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}")
             else:
