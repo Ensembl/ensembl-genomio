@@ -64,6 +64,7 @@ sub default_options {
     # Registry must contain the production db and taxonomy db
     # as well as the newly created dbs (e.g. via a prefix)
     registry      => $self->o('registry'),
+    taxonomy_pass => '',
 
     # Working directory
     pipeline_dir => 'genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
@@ -167,6 +168,7 @@ sub pipeline_wide_parameters {
     ensembl_root_dir => $self->o('ensembl_root_dir'),
 
     taxonomy_url => $self->o('taxonomy_url'),
+    taxonomy_pass => $self->o('taxonomy_pass'),
     dbsrv_url    => $self->o('dbsrv_url'),
 
     cs_order     => $self->o('cs_order'),
@@ -528,6 +530,7 @@ sub pipeline_analyses {
           -host => "#taxonomy_host#",
           -port => "#taxonomy_port#",
           -user => "#taxonomy_user#",
+          -pass => "#taxonomy_pass#",
           -dbname => "#taxonomy_dbname#",
         },
       },

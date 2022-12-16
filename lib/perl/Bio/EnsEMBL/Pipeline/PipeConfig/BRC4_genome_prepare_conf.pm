@@ -113,9 +113,10 @@ sub pipeline_wide_parameters {
     exclude_seq_regions   => $self->o('exclude_seq_regions'),
 
     download_dir   => catdir($self->o('pipeline_dir'), "download"),
-    work_dir       => catdir($self->o('pipeline_dir'), "process_files"),
+    root_work_dir  => catdir($self->o('pipeline_dir'), "process_files"),
   };
 }
+
 sub hive_meta_table {
   my ($self) = @_;
   return {
@@ -316,6 +317,7 @@ sub pipeline_analyses {
         hash_key => "#metadata_type#",
       },
       -analysis_capacity => 2,
+      -max_retry_count => 0,
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
@@ -328,6 +330,8 @@ sub pipeline_analyses {
       -language    => 'python3',
       -analysis_capacity   => 2,
       -rc_name    => '4GB',
+      -max_retry_count => 0,
+      -failed_job_tolerance => 100,
       -parameters     => {
         file_name => "fasta_dna",
       },
@@ -340,6 +344,7 @@ sub pipeline_analyses {
       -language    => 'python3',
       -analysis_capacity   => 2,
       -rc_name    => '4GB',
+      -max_retry_count => 0,
       -parameters     => {
         file_name => "fasta_pep",
         in_genbank => '#gbff#',
