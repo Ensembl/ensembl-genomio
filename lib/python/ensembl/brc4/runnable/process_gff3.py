@@ -443,17 +443,14 @@ class process_gff3(eHive.BaseRunnable):
             True only if the string is valid, False otherwise.
 
         """
-        
-        no_product_names = [
-            "uncharacterized protein",
-            "putative protein",
-            "putative uncharacterized protein",
-            "hypothetical protein",
-            "protein of unknown function",
-            "predicted protein",
-        ]
-        
-        if product.lower() in no_product_names:
+        excluded_names = re.compile(r"^(uncharacterized|putative|hypothetical|predicted)"
+                                    r"( uncharacterized)?"
+                                    r" protein"
+                                    r"( of unknown function)?"
+                                    r"( \(fragment\))?$"
+                                    )
+
+        if excluded_names.match(product.lower()):
             return False
         return True
     
@@ -468,15 +465,13 @@ class process_gff3(eHive.BaseRunnable):
 
         """
         allowed_transcript_types = self.param("transcript_types")
-        skip_re = r"^(conserved )?(hypothetical|putative) protein$"
         
         if "product" not in gene.qualifiers:
             for tran in gene.sub_features:
                 if tran.type in allowed_transcript_types:
                     if "product" in tran.qualifiers:
                         description = tran.qualifiers["product"][0]
-                        if not re.match(skip_re, description):
-                            print(f"Tranfer description '{description}' from transcript to gene")
+                        print(f"Tranfer description '{description}' from transcript to gene")
                         gene.qualifiers["product"] = [description]
                         return
                     
@@ -485,8 +480,7 @@ class process_gff3(eHive.BaseRunnable):
                         for cds in tran.sub_features:
                             if cds.type == 'CDS' and "product" in cds.qualifiers:
                                 description = cds.qualifiers["product"][0]
-                                if not re.match(skip_re, description):
-                                    print(f"Tranfer description '{description}' to transcript and gene")
+                                print(f"Transfer description '{description}' to transcript and gene")
                                 tran.qualifiers["product"] = [description]
                                 gene.qualifiers["product"] = [description]
                         # Continue transfering the translation products to the transcripts
