@@ -248,7 +248,7 @@ class process_gff3(eHive.BaseRunnable):
                         feat = self.normalize_gene(feat, functional_annotation, fail_types)
                     else:
                         fail_types["gene=" + feat.type] = 1
-                        message = "Unrecognized gene type: %s (for %s)" % (feat.type, feat.id)
+                        message = f"Unrecognized gene type: {feat.type} (for {feat.id})"
                         print(message)
                         if skip_unrecognized:
                             del feat
@@ -460,7 +460,7 @@ class process_gff3(eHive.BaseRunnable):
                     if "product" in tran.qualifiers:
                         description = tran.qualifiers["product"][0]
                         if not re.match(skip_re, description):
-                        print(f"Tranfer description '{description}' from transcript to gene")
+                            print(f"Tranfer description '{description}' from transcript to gene")
                         gene.qualifiers["product"] = [description]
                         return
                     
@@ -470,7 +470,7 @@ class process_gff3(eHive.BaseRunnable):
                             if cds.type == 'CDS' and "product" in cds.qualifiers:
                                 description = cds.qualifiers["product"][0]
                                 if not re.match(skip_re, description):
-                                print(f"Tranfer description '{description}' to transcript and gene")
+                                    print(f"Tranfer description '{description}' to transcript and gene")
                                 tran.qualifiers["product"] = [description]
                                 gene.qualifiers["product"] = [description]
                         # Continue transfering the translation products to the transcripts
@@ -493,7 +493,7 @@ class process_gff3(eHive.BaseRunnable):
     def cds_gene(self, cds):
         """Create a gene for a lone CDS"""
 
-        print(f"Put the lone CDS in gene-mRNA parent features")
+        print("Put the lone CDS in gene-mRNA parent features")
 
         # Create a transcript, add the CDS
         transcript = SeqFeature(cds.location, type="mRNA")
