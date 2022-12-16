@@ -168,6 +168,7 @@ sub pipeline_wide_parameters {
     ensembl_root_dir => $self->o('ensembl_root_dir'),
 
     taxonomy_url => $self->o('taxonomy_url'),
+    taxonomy_pass => $self->o('taxonomy_pass'),
     dbsrv_url    => $self->o('dbsrv_url'),
 
     cs_order     => $self->o('cs_order'),
