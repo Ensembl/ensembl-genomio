@@ -81,7 +81,7 @@ class process_gff3(eHive.BaseRunnable):
                 "antisense_RNA",
                 "3'UTR",
                 "5'UTR",
-                "intron"
+                "intron",
             ),
             "skip_unrecognized": False,
             "gene_cds_skip_others" : False,
