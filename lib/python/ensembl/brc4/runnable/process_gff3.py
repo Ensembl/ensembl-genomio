@@ -836,13 +836,6 @@ class process_gff3(eHive.BaseRunnable):
             gene_subfeats.append(transcript)
         gene.sub_features = gene_subfeats
     
-    def make_transcript_id(self, gene_id, transcript_number) -> str:
-        """Create a transcript ID based on a gene and the number of the transcript"""
-        
-        # Simply add a numbered suffix to the gene_id
-        transcript_id = f"{gene_id}_t{transcript_number}"
-
-        return transcript_id
 
     def remove_prefixes(self, identifier: str, prefixes: List[str]) -> str:
         """
