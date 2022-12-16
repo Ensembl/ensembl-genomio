@@ -349,13 +349,13 @@ class process_gff3(eHive.BaseRunnable):
                 functional_annotation, transcript, "transcript")
             
             # Replace qualifiers
-            old_tran_qualifiers = transcript.qualifiers
+            old_transcript_qualifiers = transcript.qualifiers
             transcript.qualifiers = {
                 "ID": transcript.id,
                 "Parent": gene.id,
             }
-            if "source" in old_tran_qualifiers:
-                transcript.qualifiers["source"] = old_tran_qualifiers["source"]
+            if "source" in old_transcript_qualifiers:
+                transcript.qualifiers["source"] = old_transcript_qualifiers["source"]
 
             # EXONS AND CDS
             cds_found = False
