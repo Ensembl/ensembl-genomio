@@ -307,7 +307,7 @@ class process_gff3(eHive.BaseRunnable):
 
         return feat
 
-    def normalize_gene(self, gene, functional_annotation, fail_types):
+    def normalize_gene(self, gene: SeqFeature, functional_annotation: List, fail_types: List) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
         Args:
