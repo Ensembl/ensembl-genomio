@@ -35,8 +35,6 @@ class process_gff3(eHive.BaseRunnable):
             "gene_types": (
                 "gene",
                 "pseudogene",
-                "transposable_element_gene",
-                "transposable_element_pseudogene",
                 "ncRNA_gene",
             ),
             "transcript_types": (
