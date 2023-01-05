@@ -285,20 +285,30 @@ class process_gff3(eHive.BaseRunnable):
         if feat.type == 'mobile_genetic_element':
             mobile_element_type = feat.qualifiers.get("mobile_element_type", [])
             if mobile_element_type:
-                element_type, transposon_type = mobile_element_type[0].split(':')
+                # Get the type (and name) from the attrib
+                if ":" in mobile_element_type:
+                    element_type, element_name = mobile_element_type[0].split(':')
+                    description = f"{element_type} ({element_name})"
+                else:
+                    element_type = mobile_element_type[0]
+                    description = element_type
+
+                # Keep the metdata in the description if the type is known
                 if element_type in ("transposon", "retrotransposon"):
                     feat.type = 'transposable_element'
                     if not feat.qualifiers.get("product"):
-                        feat.qualifiers["product"] = [f"{element_type} {transposon_type}"]
+                        feat.qualifiers["product"] = [description]
                 else:    
                     print(f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}")
             else:
                 print("Mobile genetic element does not have a 'mobile_element_type' tag")
-        elif feat.type != "transposable_element":
+        
+        # At this point, if it is valid it should be a transposable_element feature
+        if feat.type != "transposable_element":
             print(f"Feature {feat.id} is not a supported TE feature {feat.type}")
             return feat
         
-        # Also generate an ID if needed
+        # Generate ID if needed and add it to the functional annotation
         feat.id = self.normalize_gene_id(feat)
         self.add_funcann_feature(functional_annotation, feat, "transposable_element")
         feat.qualifiers = {
