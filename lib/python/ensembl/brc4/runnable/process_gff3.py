@@ -258,7 +258,9 @@ class process_gff3(eHive.BaseRunnable):
                     # Normalize the gene structure
                     if feat.type in allowed_gene_types:
                         feat = self.normalize_gene(feat, functional_annotation, fail_types)
-                    elif feat.type not in allowed_non_gene_types:
+                    elif feat.type in allowed_non_gene_types:
+                        pass
+                    else:
                         fail_types["gene=" + feat.type] = 1
                         message = f"Unsupported feature type: {feat.type} (for {feat.id})"
                         print(message)
