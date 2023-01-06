@@ -288,7 +288,7 @@ class process_gff3(eHive.BaseRunnable):
             mobile_element_type = feat.qualifiers.get("mobile_element_type", [])
             if mobile_element_type:
                 # Get the type (and name) from the attrib
-                if ":" in mobile_element_type:
+                if ":" in mobile_element_type[0]:
                     element_type, element_name = mobile_element_type[0].split(':')
                     description = f"{element_type} ({element_name})"
                 else:
