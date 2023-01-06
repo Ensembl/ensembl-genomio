@@ -284,6 +284,7 @@ class process_gff3(eHive.BaseRunnable):
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
         quals = feat.qualifiers
 
+        # Change mobile_genetic_element into a transposable_element feature
         if feat.type == 'mobile_genetic_element':
             mobile_element_type = feat.qualifiers.get("mobile_element_type", [])
             if mobile_element_type:
@@ -302,11 +303,13 @@ class process_gff3(eHive.BaseRunnable):
                         feat.qualifiers["product"] = [description]
                 else:    
                     print(f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}")
+                    return feat
             else:
                 print("Mobile genetic element does not have a 'mobile_element_type' tag")
-        
-        # At this point, if it is valid it should be a transposable_element feature
-        if feat.type != "transposable_element":
+                return feat
+        elif feat.type == "transposable_element":
+            pass
+        else:
             print(f"Feature {feat.id} is not a supported TE feature {feat.type}")
             return feat
         
