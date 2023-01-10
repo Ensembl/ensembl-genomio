@@ -520,7 +520,7 @@ class process_gff3(eHive.BaseRunnable):
                 if tran.type in allowed_transcript_types:
                     if "product" in tran.qualifiers:
                         description = tran.qualifiers["product"][0]
-                        print(f"Tranfer description '{description}' from transcript to gene")
+                        #print(f"Transfer description '{description}' from transcript to gene")
                         gene.qualifiers["product"] = [description]
                         return
                     
