@@ -37,6 +37,9 @@ class process_gff3(eHive.BaseRunnable):
                 "pseudogene",
                 "ncRNA_gene",
             ),
+            "non_gene_types": (
+                "transposable_element",
+            ),
             "transcript_types": (
                 "transcript",
                 "mRNA",
@@ -225,6 +228,7 @@ class process_gff3(eHive.BaseRunnable):
         ignored_gene_types = self.param("ignored_gene_types")
         transcript_types = self.param("transcript_types")
         skip_unrecognized = self.param("skip_unrecognized")
+        allowed_non_gene_types = self.param("non_gene_types")
         to_exclude = self.param("exclude_seq_regions")
         
         functional_annotation = []
@@ -248,13 +252,17 @@ class process_gff3(eHive.BaseRunnable):
                         feat = self.transcript_gene(feat)
                     elif feat.type == "CDS":
                         feat = self.cds_gene(feat)
+                    elif feat.type in ('mobile_genetic_element', 'transposable_element'):
+                        feat = self.format_mobile_element(feat, functional_annotation)
                     
                     # Normalize the gene structure
                     if feat.type in allowed_gene_types:
                         feat = self.normalize_gene(feat, functional_annotation, fail_types)
+                    elif feat.type in allowed_non_gene_types:
+                        pass
                     else:
                         fail_types["gene=" + feat.type] = 1
-                        message = f"Unrecognized gene type: {feat.type} (for {feat.id})"
+                        message = f"Unsupported feature type: {feat.type} (for {feat.id})"
                         print(message)
                         if skip_unrecognized:
                             del feat
@@ -264,14 +272,55 @@ class process_gff3(eHive.BaseRunnable):
                 new_records.append(new_record)
             
             if fail_types and not skip_unrecognized:
-                raise Exception("Unrecognized types found (%s): fail" %
-                                (" ".join(fail_types.keys())))
+                raise Exception(f"Unrecognized types found ({' '.join(fail_types.keys())}): fail")
             
             GFF.write(new_records, gff3_out)
         
         # Write functional annotation
         functional_annotation = self.clean_functional_annotations(functional_annotation)
         print_json(out_funcann_path, functional_annotation)
+
+    def format_mobile_element(self, feat, functional_annotation):
+        """Given a mobile_genetic_element feature, transform it into a transposable_element"""
+        quals = feat.qualifiers
+
+        # Change mobile_genetic_element into a transposable_element feature
+        if feat.type == 'mobile_genetic_element':
+            mobile_element_type = feat.qualifiers.get("mobile_element_type", [])
+            if mobile_element_type:
+                # Get the type (and name) from the attrib
+                if ":" in mobile_element_type[0]:
+                    element_type, element_name = mobile_element_type[0].split(':')
+                    description = f"{element_type} ({element_name})"
+                else:
+                    element_type = mobile_element_type[0]
+                    description = element_type
+
+                # Keep the metdata in the description if the type is known
+                if element_type in ("transposon", "retrotransposon"):
+                    feat.type = 'transposable_element'
+                    if not feat.qualifiers.get("product"):
+                        feat.qualifiers["product"] = [description]
+                else:    
+                    print(f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}")
+                    return feat
+            else:
+                print("Mobile genetic element does not have a 'mobile_element_type' tag")
+                return feat
+        elif feat.type == "transposable_element":
+            pass
+        else:
+            print(f"Feature {feat.id} is not a supported TE feature {feat.type}")
+            return feat
+        
+        # Generate ID if needed and add it to the functional annotation
+        feat.id = self.normalize_gene_id(feat)
+        self.add_funcann_feature(functional_annotation, feat, "transposable_element")
+        feat.qualifiers = {
+            "ID": feat.id
+        }
+
+        return feat
 
     def normalize_gene(self, gene: SeqFeature, functional_annotation: List, fail_types: List) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.

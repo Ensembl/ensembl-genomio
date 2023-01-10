@@ -168,6 +168,9 @@ my $extdb_map = load_external_db_map($external_db_map);
 for my $it (@$data) {
   my $do_update = 0;
   my ($id, $type) = map {$it->{$_}} qw/ id object_type /;
+  if ($type eq 'transposable_element') {
+    $type = 'gene';
+  }
   my $lc_type = lc($type);
 
   my $adaptor = get_adaptor($dba, $type);

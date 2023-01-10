@@ -46,7 +46,8 @@
           "enum" : [
             "gene",
             "transcript",
-            "translation"
+            "translation",
+            "transposable_element"
           ]
         },
         "description" : { "type" : "string" },
