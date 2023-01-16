@@ -346,23 +346,32 @@ class process_gff3(eHive.BaseRunnable):
             print("Insert transcript for lone gene %s" % (gene.id))
             transcript = self.transcript_for_gene(gene)
             gene.sub_features = [transcript]
+
+        # Count features
+        fcounter = Counter([ feat.type for feat in gene.sub_features ])
         
         # Transform gene - CDS to gene-transcript-exon-CDS
-        if gene.sub_features[0].type == "CDS":
-            num_subs = len(gene.sub_features)
-            print(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
-            transcripts = self.gene_to_cds(gene)
-            gene.sub_features = transcripts
-        
-        # Move CDS(s) from parent gene to parent mRNA if needed
-        gene = self.move_cds_to_mrna(gene)
+        if len(fcounter) == 1:
+            if fcounter.get("CDS"):
+                num_subs = len(gene.sub_features)
+                print(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
+                transcripts = self.gene_to_cds(gene)
+                gene.sub_features = transcripts
 
-        # Transform gene - exon to gene-transcript-exon
-        if gene.sub_features[0].type == "exon":
-            num_subs = len(gene.sub_features)
-            print(f"Insert transcript for {gene.id} ({num_subs} exons)")
-            transcript = self.gene_to_exon(gene)
-            gene.sub_features = [transcript]
+            # Transform gene - exon to gene-transcript-exon
+            elif fcounter.get("exon"):
+                num_subs = len(gene.sub_features)
+                print(f"Insert transcript for {gene.id} ({num_subs} exons)")
+                transcript = self.gene_to_exon(gene)
+                gene.sub_features = [transcript]
+        else:
+            # Check that we don't mix
+            if fcounter.get("mRNA") and fcounter.get("CDS"):
+                # Move CDS(s) from parent gene to parent mRNA if needed
+                gene = self.move_cds_to_mrna(gene)
+            if fcounter.get("mRNA") and fcounter.get("exon"):
+                # Special case with extra exons
+                gene = self.clean_extra_exons(gene)
 
         # Remove CDS from pseudogenes
         if gene.type == 'pseudogene' and not self.param('allow_pseudogene_with_cds'):
@@ -513,7 +522,6 @@ class process_gff3(eHive.BaseRunnable):
                 if tran.type in allowed_transcript_types:
                     if "product" in tran.qualifiers:
                         description = tran.qualifiers["product"][0]
-                        #print(f"Transfer description '{description}' from transcript to gene")
                         gene.qualifiers["product"] = [description]
                         return
                     
@@ -522,7 +530,6 @@ class process_gff3(eHive.BaseRunnable):
                         for cds in tran.sub_features:
                             if cds.type == 'CDS' and "product" in cds.qualifiers:
                                 description = cds.qualifiers["product"][0]
-                                print(f"Transfer description '{description}' to transcript and gene")
                                 tran.qualifiers["product"] = [description]
                                 gene.qualifiers["product"] = [description]
                         # Continue transfering the translation products to the transcripts
@@ -697,6 +704,40 @@ class process_gff3(eHive.BaseRunnable):
         # And remove them from the gene
         gene.sub_features = gene_subf_clean
         gene.sub_features.append(mrna)
+        
+        return gene
+    
+    def clean_extra_exons(self, gene: SeqFeature) -> SeqFeature:
+        """Remove extra exons, already existing in the mRNA.
+
+        This is a special case where a gene contains proper mRNAs etc. but also
+        extra exons for the same features. Those exons usually have an ID starting with
+        "id-", so that's what we use to detect them.
+        """
+        exons = []
+        mrnas = []
+        others = []
+        for subf in gene.sub_features:
+            if subf.type == "exon":
+                exons.append(subf)
+            elif subf.type == "mRNA":
+                mrnas.append(subf)
+            else:
+                others.append(subf)
+        
+        if exons and mrnas:
+            exon_has_id = 0
+            # Check if the exon ids start with id-, which is an indication that they do not belong here
+            for exon in exons:
+                if exon.id.startswith("id-"):
+                    exon_has_id += 1
+            if exon_has_id:
+                if exon_has_id == len(exons):
+                    print(f"Remove {exon_has_id} extra exons from {gene.id}")
+                    gene.sub_features = mrnas
+                    gene.sub_features += others
+                else:
+                    raise Exception(f"Can't remove extra exons for {gene.id}, some have gene id-, others do not")
         
         return gene
         
