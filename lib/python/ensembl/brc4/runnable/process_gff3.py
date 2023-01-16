@@ -15,6 +15,7 @@
 # limitations under the License.
 
 
+from collections import Counter
 from pathlib import Path
 import re
 import tempfile
@@ -353,16 +354,8 @@ class process_gff3(eHive.BaseRunnable):
             transcripts = self.gene_to_cds(gene)
             gene.sub_features = transcripts
         
-        # Move CDS from parent gene to parent mRNA
-        if (
-            len(gene.sub_features) == 2
-            and gene.sub_features[0].type == "mRNA"
-            and gene.sub_features[1].type == "CDS"
-        ):
-            num_subs = len(gene.sub_features)
-            print(f"Move CDS to mRNA for {gene.id} ({num_subs} CDSs)")
-            transcript = self.move_cds_to_mrna(gene)
-            gene.sub_features = [transcript]
+        # Move CDS(s) from parent gene to parent mRNA if needed
+        gene = self.move_cds_to_mrna(gene)
 
         # Transform gene - exon to gene-transcript-exon
         if gene.sub_features[0].type == "exon":
@@ -636,42 +629,71 @@ class process_gff3(eHive.BaseRunnable):
         return transcript
 
     def move_cds_to_mrna(self, gene: SeqFeature) -> SeqFeature:
-        """Move a CDS child of a gene, to the mRNA.
+        """Move CDS child features of a gene, to the mRNA.
 
-        Raises an exception if there is not exactly 1 mRNA and 1 CDS.
+        This is to fix the case where we have the following structure:
+        gene -> [ mRNA, CDSs ]
+        and change it to 
+        gene -> [ mNRA -> [ CDSs ] ]
+        The mRNA might have exons, in which case check that they match the CDS coordinates
+
+        Raises an exception if the feature structure is not recognized.
         
         Args:
-            A gene with both one mRNA and one CDS child.
+            A gene with only one transcript, to check and fix.
         Returns:
-            A transcript where the CDS child has been moved under.
+            The gene where the CDSs have been moved, if needed.
 
         """
-        
-        # This is assuming there is 1 CDS and 1 mRNA without CDS
-        cdss = []
+        # First, count the types
+        feats = []
         mrnas = []
+        cdss = []
+
+        gene_subf_clean = []
         for subf in gene.sub_features:
-            if subf.type == "CDS":
-                cdss.append(subf)
             if subf.type == "mRNA":
                 mrnas.append(subf)
-        
-        if len(cdss) != 1 or len(mrnas) != 1:
-            raise Exception(
-                f"Can't move CDS to mRNA children: several CDS or mRNA possible for {gene.id}")
-        cds = cdss[0]
-        mrna = mrnas[0]
+            elif subf.type == "CDS":
+                cdss.append(subf)
+            else:
+                gene_subf_clean.append(subf)
 
-        # Check that the mRNA does not have CDSs
-        for subm in mrna.sub_features:
-            if subm.type == "CDS":
-                raise Exception(
-                    "Can't move CDS child from gene to mRNA"
-                    f" if mRNA already have some CDS for gene {gene.id}"
-                )
-        mrna.sub_features.append(cds)
+        if len(cdss) > 0:
+            if len(mrnas) > 1:
+                raise Exception(f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene")
+        else:
+            # Nothing to fix here, no CDSs to move
+            return gene
         
-        return mrna
+        print(f"Gene {gene.id} needs fixing")
+        mrna = mrnas[0]
+        
+        # Check if there are exons (or CDSs) under the mRNA
+        sub_exons = []
+        sub_cdss = []
+        for subf in mrna.sub_features:
+            if subf.type == "CDS":
+                sub_cdss.append(subf)
+            elif subf.type == "exon":
+                sub_exons.append(subf)
+        
+        if len(sub_cdss) > 0:
+            raise Exception(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
+        if len(sub_exons) > 0:
+            # Check that they match the CDS outside
+            if len(sub_exons) == len(cdss):
+                print(f"Same number of exons and CDSs to move in {gene.id}")
+            else:
+                raise Exception(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
+
+        # No more issues? move the CDSs
+        mrna.sub_features += cdss
+        # And remove them from the gene
+        gene.sub_features = gene_subf_clean
+        gene.sub_features.append(mrna)
+        
+        return gene
         
     def gene_to_exon(self, gene: SeqFeature) -> SeqFeature:
         """Returns an intermediary transcript for a gene with direct exon children."""
