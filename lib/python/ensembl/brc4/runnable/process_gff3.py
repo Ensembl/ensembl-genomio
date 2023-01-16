@@ -666,7 +666,6 @@ class process_gff3(eHive.BaseRunnable):
             # Nothing to fix here, no CDSs to move
             return gene
         
-        print(f"Gene {gene.id} needs fixing")
         mrna = mrnas[0]
         
         # Check if there are exons (or CDSs) under the mRNA
@@ -683,10 +682,16 @@ class process_gff3(eHive.BaseRunnable):
         if len(sub_exons) > 0:
             # Check that they match the CDS outside
             if len(sub_exons) == len(cdss):
-                print(f"Same number of exons and CDSs to move in {gene.id}")
-            else:
-                raise Exception(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
+                # Now that all coordinates are the same
+                coord_exons = [ f"{exon.location}" for exon in sub_exons ]
+                coord_cdss = [ f"{cds.location}" for cds in cdss ]
 
+                if coord_exons != coord_cdss:
+                    raise Exception(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
+            else:
+                raise Exception(f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)")
+
+        print(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
         # No more issues? move the CDSs
         mrna.sub_features += cdss
         # And remove them from the gene
