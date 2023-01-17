@@ -41,7 +41,9 @@ class manifest_stats(eHive.BaseRunnable):
         manifest_path = Path(self.param_required("manifest"))
         manifest = self.get_manifest(manifest_path)
         
-        stats = []
+        stats = [self.param('accession')]
+
+        self.param("error", False)
         if "gff3" in manifest:
             stats += self.get_gff3_stats(Path(manifest["gff3"]))
         if "seq_region" in manifest:
@@ -51,6 +53,10 @@ class manifest_stats(eHive.BaseRunnable):
         print(stats_path)
         with stats_path.open("w") as stats_out:
             stats_out.write("\n".join(stats))
+
+        # Flow out if errors in stats comparison
+        if self.param('error'):
+            raise Exception(f"Stats count errors, check the file {stats_path}")
         
     def get_manifest(self, manifest_path: Path) -> Dict:
         manifest = get_json(manifest_path)
@@ -234,6 +240,7 @@ class manifest_stats(eHive.BaseRunnable):
             if prep_count != ncbi_count:
                 diff = prep_count - ncbi_count
                 stats.append(f"DIFF gene count for {map}: {prep_count} - {ncbi_count} = {diff}")
+                self.param('error', True)
             else:
                 stats.append(f"Same count for {map}: {prep_count}")
 
