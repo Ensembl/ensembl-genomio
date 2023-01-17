@@ -157,20 +157,33 @@ class manifest_stats(eHive.BaseRunnable):
 
         for rec in GFF.parse(gff3_handle):
             for feat1 in rec.features:
+                # Check if the gene contains proteins (CDSs),
+                # and keep a count of all hierarchies (e.g. gene-mRNA-CDS)
                 is_protein = False
                 for feat2 in feat1.sub_features:
                     if feat2.type == "mRNA":
-                        is_protein = True
+                        types2 = set([f.type for f in feat2.sub_features])
+                        if "CDS" in types2:
+                            is_protein = True
                     manifest_stats.increment_biotype(biotypes, feat2.id,  f"{feat1.type}-{feat2.type}")
                     for feat3 in feat2.sub_features:
                         if feat3.type == 'exon':
                             continue
                         manifest_stats.increment_biotype(biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}")
-                if is_protein:
+                
+                # Main categories counts
+                if feat1.type == 'pseudogene':
+                    manifest_stats.increment_biotype(biotypes, feat1.id, f"pseudogene")
+                elif is_protein:
                     manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
                 else:
-                    manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
+                    # Special case, undefined gene-transcript
+                    if feat1.type == "gene" and feat1.sub_features and feat1.sub_features[0].type == "transcript":
+                        manifest_stats.increment_biotype(biotypes, feat1.id, f"OTHER")
+                    else:
+                        manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
                 
+                # Total
                 if feat1.type in ("gene", "pseudogene"):
                     manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
                 
@@ -208,8 +221,6 @@ class manifest_stats(eHive.BaseRunnable):
             if "annotation_info" in genome and "stats" in genome["annotation_info"]:
                 ncbi_stats = genome["annotation_info"]["stats"]
 
-                print(ncbi_stats)
-
                 if "gene_counts" in ncbi_stats:
                     counts = ncbi_stats["gene_counts"]
                     stats += self.compare_ncbi_counts(biotypes, counts)
@@ -222,20 +233,15 @@ class manifest_stats(eHive.BaseRunnable):
         maps = [
             ["total", "ALL_GENES"],
             ["protein_coding", "PROT_gene"],
-            ["pseudogene", "NONPROT_pseudogene"],
+            ["pseudogene", "pseudogene"],
             ["non_coding", "NONPROT_gene"],
-            # Other?
+            ["other", "OTHER"],
         ]
-        print(ncbi)
 
         for map in maps:
             ncbi_name, prep_name = map
             ncbi_count = ncbi.get(ncbi_name, 0)
             prep_count = prepared.get(prep_name, {}).get("count", 0)
-            print(ncbi_name)
-            print(ncbi_count)
-            print(prep_name)
-            print(prep_count)
 
             if prep_count != ncbi_count:
                 diff = prep_count - ncbi_count
