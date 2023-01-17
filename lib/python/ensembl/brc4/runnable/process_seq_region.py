@@ -72,8 +72,8 @@ class process_seq_region(eHive.BaseRunnable):
     def param_defaults(self):
         return {
             "brc4_mode": True,
-            "brc4_synonym_source": "GenBank",
-            "brc4_synonym_source_alt": "RefSeq",
+            "brc4_synonym_sources": ["GenBank", "INSDC"],
+            "brc4_synonym_sources_alt": ["RefSeq"],
             "synonym_map": {
                 "Sequence-Name": "INSDC_submitted_name",
                 "GenBank-Accn": "GenBank",
@@ -189,8 +189,8 @@ class process_seq_region(eHive.BaseRunnable):
         Note:
             The seq_region_names data are directly added to the SeqRegion if found.
         """
-        source = self.param("brc4_synonym_source")
-        source_alt = self.param("brc4_synonym_source_alt")
+        sources = self.param("brc4_synonym_sources")
+        sources_alt = self.param("brc4_synonym_sources_alt")
         
         new_seq_regions = []
         for seqr in seq_regions:
@@ -198,9 +198,9 @@ class process_seq_region(eHive.BaseRunnable):
             alt_name = ''
             if "synonyms" in seqr:
                 for syn in seqr["synonyms"]:
-                    if syn["source"] == source:
+                    if syn["source"] in sources:
                         main_name = syn["name"]
-                    if syn["source"] == source_alt:
+                    if syn["source"] in sources_alt:
                         alt_name = syn["name"]
             
             name = ''
