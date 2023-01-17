@@ -20,7 +20,10 @@ import io
 from pathlib import Path
 from statistics import mean
 from typing import Dict, List, TextIO
+import subprocess
+import json
 
+from shutil import which
 from BCBio import GFF
 import eHive
 
@@ -28,6 +31,11 @@ from ensembl.brc4.runnable.utils import get_json
 
 
 class manifest_stats(eHive.BaseRunnable):
+
+    def param_defaults(self):
+        return {
+            "datasets_path" : 'datasets',
+        }
 
     def run(self):
         manifest_path = Path(self.param_required("manifest"))
@@ -168,8 +176,69 @@ class manifest_stats(eHive.BaseRunnable):
             sorted_biotypes[name] = data
         
         stats = [f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}" for (biotype, data) in sorted_biotypes.items()]
+
+        # Check against NCBI stats
+        stats += self.check_ncbi_stats(biotypes,self.param('accession'))
         
         return stats
+    
+    def check_ncbi_stats(self, biotypes: Dict, accession: str) -> List:
+        """Use the dataset tool from NCBI to get stats and compare with what we have"""
+
+        stats = []
+
+        datasets_bin = self.param('datasets_path')
+        if not which(datasets_bin):
+            return stats
+        
+        # Get the dataset summary from NCBI
+        command = [datasets_bin, "summary", "genome", "accession", accession]
+        result_out = subprocess.run(command, stdout=subprocess.PIPE)
+        result = json.loads(result_out.stdout)
+
+        # Get stats
+        if "reports" in result:
+            genome = result["reports"][0]
+            if "annotation_info" in genome and "stats" in genome["annotation_info"]:
+                ncbi_stats = genome["annotation_info"]["stats"]
+
+                print(ncbi_stats)
+
+                if "gene_counts" in ncbi_stats:
+                    counts = ncbi_stats["gene_counts"]
+                    stats += self.compare_ncbi_counts(biotypes, counts)
+        return stats
+
+    def compare_ncbi_counts(self, prepared: Dict, ncbi: Dict) -> List:
+        """Compare specific gene stats from NCBI"""
+        stats = []
+
+        maps = [
+            ["total", "ALL_GENES"],
+            ["protein_coding", "PROT_gene"],
+            ["pseudogene", "NONPROT_pseudogene"],
+            ["non_coding", "NONPROT_gene"],
+            # Other?
+        ]
+        print(ncbi)
+
+        for map in maps:
+            ncbi_name, prep_name = map
+            ncbi_count = ncbi.get(ncbi_name, 0)
+            prep_count = prepared.get(prep_name, {}).get("count", 0)
+            print(ncbi_name)
+            print(ncbi_count)
+            print(prep_name)
+            print(prep_count)
+
+            if prep_count != ncbi_count:
+                diff = prep_count - ncbi_count
+                stats.append(f"DIFF gene count for {map}: {prep_count} - {ncbi_count} = {diff}")
+            else:
+                stats.append(f"Same count for {map}: {prep_count}")
+
+        return stats
+
 
     @staticmethod
     def increment_biotype(biotypes: Dict, feature_id: str, feature_biotype: str) -> None:
