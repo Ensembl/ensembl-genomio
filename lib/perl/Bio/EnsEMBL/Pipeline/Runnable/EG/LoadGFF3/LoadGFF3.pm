@@ -83,6 +83,7 @@ sub param_defaults {
                         'lncRNA', 'lnc_RNA', 'piRNA',
                         'RNase_MRP_RNA', 'RNAse_P_RNA', 'rRNA', 'snoRNA',
                         'snRNA', 'sRNA', 'SRP_RNA', 'tRNA', 'scRNA', 'guide_RNA',
+                        'tmRNA',
                         'telomerase_RNA', 'antisense_RNA',
                         'transposable_element',
                         'TR_V_gene','TR_C_gene',
