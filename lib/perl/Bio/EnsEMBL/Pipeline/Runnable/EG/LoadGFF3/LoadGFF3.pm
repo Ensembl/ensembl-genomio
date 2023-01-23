@@ -506,11 +506,13 @@ sub get_stable_id {
 
   if ($self->param('find_multifeature_commmon_name') && @all_ids) {
     my $new_stable_id = $self->common_prefix(@all_ids);
-    $new_stable_id =~ s/[-\.]+$//; # remove trailing hyphens and dots
-    if ($new_stable_id) {
-      $self->log_warning("using common prefix $new_stable_id as multifeature stable_id for $stable_id");
-      # we assume uniquness among multifeature (CDS) prefices: same prefix -- for same CDS only
-      $stable_id = $new_stable_id;
+    if ($new_stable_id ne $stable_id) {
+      $new_stable_id =~ s/[-\.]$//; # remove trailing hyphen or dot
+      if ($new_stable_id) {
+        $self->log_warning("using common prefix $new_stable_id as multifeature stable_id for $stable_id");
+        # we assume uniquness among multifeature (CDS) prefices: same prefix -- for same CDS only
+        $stable_id = $new_stable_id;
+      }
     }
   }
 
