@@ -71,6 +71,9 @@ def get_args():
                       type=str, default = "GenBank", help="seq region syns source default")
   parser.add_argument("--default_genetic_code", metavar = "1", required = False,
                       type=int, default = 1, help="default genetic code variant")
+  parser.add_argument("--default_circular", action="store_true", required = False,
+                      default = False,
+                      help="assume contigs are circular by default")
   #
   args = parser.parse_args()
   return args
@@ -100,7 +103,8 @@ def main():
                             seq_region_genbank = args.seq_region_genbank,
                             seq_region_syns = args.seq_region_syns,
                             syns_src = args.syns_src,
-                            default_genetic_code = args.default_genetic_code)
+                            default_genetic_code = args.default_genetic_code,
+                            default_circular = args.default_circular)
   # gen manifest
   manifest = Manifest({
     "fasta_dna" : args.fasta_dna,
