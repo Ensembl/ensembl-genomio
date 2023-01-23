@@ -186,7 +186,6 @@ sub log_warning {
   }
 
   $self->log($msg . $caller_sfx);
-  $self->warning($msg . $caller_sfx);
 }
 
 sub log_throw {
