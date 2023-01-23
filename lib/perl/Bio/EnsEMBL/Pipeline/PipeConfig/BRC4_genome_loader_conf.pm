@@ -154,10 +154,15 @@ sub default_options {
     # run ProdDBsync parts before adding ad-hoc sequences (add_sequence  mode on)
     prod_db_sync_before_adding => 1,
 
-    # default rc class name for Manifest_integrity
+    # default resoutce class name for Manifest_integrity
     manifest_integrity_rc_name => '8GB',
+
+    # default resource class for 'LoadSequenceData' and 'AddSequence' steps
     load_sequence_data_rc_name => '8GB',
-    
+
+    # defaul resource class for LoadFunctionalAnnotation step
+    load_func_ann_rc_name => '8GB',
+
     # size of chunks to split contigs into (0 -- no splitting)
     sequence_data_chunck => 0,
     # coord system name for chunks
@@ -223,6 +228,7 @@ sub pipeline_wide_parameters {
 
     manifest_integrity_rc_name => $self->o('manifest_integrity_rc_name'),
     load_sequence_data_rc_name => $self->o('load_sequence_data_rc_name'),
+    load_func_ann_rc_name => $self->o('load_func_ann_rc_name'),
 
     sequence_data_chunck => $self->o('sequence_data_chunck'),
     chunk_cs_name        => $self->o('chunk_cs_name'),
@@ -770,7 +776,7 @@ sub pipeline_analyses {
         'default_feat_v' => '#expr( #no_feature_version_defaults# ? "": "-feature_version_default ".#default_feature_version# )expr#',
         'default_db_display' => '#expr( #xref_display_db_default# ? "-display_db_default ".#xref_display_db_default# : "" )expr#',
       },
-      -rc_name    => 'default',
+      -rc_name    => $self->o('load_func_ann_rc_name'),
       -analysis_capacity   => 5,
       -flow_into => 'Finalize_gene_models',
     },
