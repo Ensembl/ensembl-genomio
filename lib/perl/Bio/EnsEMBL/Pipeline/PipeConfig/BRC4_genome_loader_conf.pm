@@ -776,6 +776,7 @@ sub pipeline_analyses {
         'default_feat_v' => '#expr( #no_feature_version_defaults# ? "": "-feature_version_default ".#default_feature_version# )expr#',
         'default_db_display' => '#expr( #xref_display_db_default# ? "-display_db_default ".#xref_display_db_default# : "" )expr#',
       },
+      -max_retry_count   => 0,
       -rc_name    => $self->o('load_func_ann_rc_name'),
       -analysis_capacity   => 5,
       -flow_into => 'Finalize_gene_models',
