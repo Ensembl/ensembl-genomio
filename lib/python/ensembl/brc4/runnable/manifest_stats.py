@@ -148,18 +148,18 @@ class manifest_stats(eHive.BaseRunnable):
                 for feat2 in feat1.sub_features:
                     if feat2.type == "mRNA":
                         is_protein = True
-                    self.increment_biotype(biotypes, feat2.id,  f"{feat1.type}-{feat2.type}")
+                    manifest_stats.increment_biotype(biotypes, feat2.id,  f"{feat1.type}-{feat2.type}")
                     for feat3 in feat2.sub_features:
                         if feat3.type == 'exon':
                             continue
-                        self.increment_biotype(biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}")
+                        manifest_stats.increment_biotype(biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}")
                 if is_protein:
-                    self.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
+                    manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
                 else:
-                    self.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
+                    manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
                 
                 if feat1.type in ("gene", "pseudogene"):
-                    self.increment_biotype(biotypes, feat1.id, "ALL_GENES")
+                    manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
                 
         # Order
         sorted_biotypes = dict()
@@ -173,7 +173,8 @@ class manifest_stats(eHive.BaseRunnable):
         
         return stats
 
-    def increment_biotype(self, biotypes: Dict, feature_id: str, feature_biotype: str) -> None:
+    @staticmethod
+    def increment_biotype(biotypes: Dict, feature_id: str, feature_biotype: str) -> None:
         if not feature_biotype in biotypes:
             biotypes[feature_biotype] = { "count" : 0, "ids": [], "example" : feature_id }
         biotypes[feature_biotype]["count"] += 1
