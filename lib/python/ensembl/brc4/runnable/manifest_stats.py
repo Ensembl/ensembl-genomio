@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-from collections import OrderedDict
 import gzip
 import io
 from pathlib import Path
@@ -97,7 +96,7 @@ class manifest_stats(eHive.BaseRunnable):
         for coord_name, lengths in coord_systems.items():
             stats.append("\nCoord_system: %s" % coord_name)
             
-            stat_counts = OrderedDict()
+            stat_counts = dict()
             stat_counts["Number of sequences"] = len(lengths)
             stat_counts["Sequence length sum"] = sum(lengths)
             stat_counts["Sequence length minimum"] = min(lengths)
@@ -143,25 +142,39 @@ class manifest_stats(eHive.BaseRunnable):
         biotypes = {}
 
         for rec in GFF.parse(gff3_handle):
-            for feat in rec.features:
-                self.increment_biotype(biotypes, feat)
-                for feat2 in feat.sub_features:
-                    self.increment_biotype(biotypes, feat2)
+            for feat1 in rec.features:
+                is_protein = False
+                for feat2 in feat1.sub_features:
+                    if feat2.type == "mRNA":
+                        is_protein = True
+                    manifest_stats.increment_biotype(biotypes, feat2.id,  f"{feat1.type}-{feat2.type}")
                     for feat3 in feat2.sub_features:
-                        self.increment_biotype(biotypes, feat3)
+                        if feat3.type == 'exon':
+                            continue
+                        manifest_stats.increment_biotype(biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}")
+                if is_protein:
+                    manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
+                else:
+                    manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
+                
+                if feat1.type in ("gene", "pseudogene"):
+                    manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
                 
         # Order
-        sorted_biotypes = OrderedDict()
+        sorted_biotypes = dict()
         for name in sorted(biotypes.keys()):
-            sorted_biotypes[name] = biotypes[name]
+            data = biotypes[name]
+            data["unique_count"] = len(data["ids"])
+            sorted_biotypes[name] = data
         
-        stats = ["%9d\t%20s\tID = %s" % (data["count"], biotype, data["example"]) for (biotype, data) in sorted_biotypes.items()]
+        stats = [f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}" for (biotype, data) in sorted_biotypes.items()]
         
         return stats
 
-    def increment_biotype(self, biotypes: Dict, feature) -> None:
-        biotype = feature.type
-        if not biotype in biotypes:
-            biotypes[biotype] = { "count" : 0, "example" : feature.id }
-        biotypes[biotype]["count"] += 1
+    @staticmethod
+    def increment_biotype(biotypes: Dict, feature_id: str, feature_biotype: str) -> None:
+        if not feature_biotype in biotypes:
+            biotypes[feature_biotype] = { "count" : 0, "ids": set(), "example" : feature_id }
+        biotypes[feature_biotype]["count"] += 1
+        biotypes[feature_biotype]["ids"].add(feature_id)
         
