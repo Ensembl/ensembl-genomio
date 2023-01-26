@@ -642,7 +642,7 @@ class process_gff3(eHive.BaseRunnable):
         gene -> [ mRNA, CDSs ]
         and change it to 
         gene -> [ mNRA -> [ CDSs ] ]
-        The mRNA might have exons, in which case check that they match the CDS coordinates
+        The mRNA might have exons, in which case check that they match the CDS coordinates.
 
         Raises an exception if the feature structure is not recognized.
         
@@ -666,12 +666,11 @@ class process_gff3(eHive.BaseRunnable):
             else:
                 gene_subf_clean.append(subf)
 
-        if len(cdss) > 0:
-            if len(mrnas) > 1:
-                raise Exception(f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene")
-        else:
+        if len(cdss) == 0:
             # Nothing to fix here, no CDSs to move
             return gene
+        if len(mrnas) > 1:
+            raise Exception(f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene")
         
         mrna = mrnas[0]
         
@@ -710,7 +709,7 @@ class process_gff3(eHive.BaseRunnable):
     def clean_extra_exons(self, gene: SeqFeature) -> SeqFeature:
         """Remove extra exons, already existing in the mRNA.
 
-        This is a special case where a gene contains proper mRNAs etc. but also
+        This is a special case where a gene contains proper mRNAs, etc. but also
         extra exons for the same features. Those exons usually have an ID starting with
         "id-", so that's what we use to detect them.
         """
@@ -727,7 +726,7 @@ class process_gff3(eHive.BaseRunnable):
         
         if exons and mrnas:
             exon_has_id = 0
-            # Check if the exon ids start with id-, which is an indication that they do not belong here
+            # Check if the exon ids start with "id-", which is an indication that they do not belong here
             for exon in exons:
                 if exon.id.startswith("id-"):
                     exon_has_id += 1
@@ -737,7 +736,7 @@ class process_gff3(eHive.BaseRunnable):
                     gene.sub_features = mrnas
                     gene.sub_features += others
                 else:
-                    raise Exception(f"Can't remove extra exons for {gene.id}, some have gene id-, others do not")
+                    raise Exception(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
         
         return gene
         
