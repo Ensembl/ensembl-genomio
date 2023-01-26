@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-from collections import Counter, OrderedDict
+from collections import Counter
 import gzip
 import io
 from pathlib import Path
@@ -97,7 +97,7 @@ class manifest_stats(eHive.BaseRunnable):
         for coord_name, lengths in coord_systems.items():
             stats.append("\nCoord_system: %s" % coord_name)
             
-            stat_counts = OrderedDict()
+            stat_counts = dict()
             stat_counts["Number of sequences"] = len(lengths)
             stat_counts["Sequence length sum"] = sum(lengths)
             stat_counts["Sequence length minimum"] = min(lengths)
@@ -162,7 +162,7 @@ class manifest_stats(eHive.BaseRunnable):
                     self.increment_biotype(biotypes, feat1.id, "ALL_GENES")
                 
         # Order
-        sorted_biotypes = OrderedDict()
+        sorted_biotypes = dict()
         for name in sorted(biotypes.keys()):
             data = biotypes[name]
             counter = Counter(data["ids"])
