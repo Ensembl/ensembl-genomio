@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-from collections import Counter
 import gzip
 import io
 from pathlib import Path
@@ -165,8 +164,7 @@ class manifest_stats(eHive.BaseRunnable):
         sorted_biotypes = dict()
         for name in sorted(biotypes.keys()):
             data = biotypes[name]
-            counter = Counter(data["ids"])
-            data["unique_count"] = len(counter.keys())
+            data["unique_count"] = len(data["ids"])
             sorted_biotypes[name] = data
         
         stats = [f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}" for (biotype, data) in sorted_biotypes.items()]
@@ -176,8 +174,7 @@ class manifest_stats(eHive.BaseRunnable):
     @staticmethod
     def increment_biotype(biotypes: Dict, feature_id: str, feature_biotype: str) -> None:
         if not feature_biotype in biotypes:
-            biotypes[feature_biotype] = { "count" : 0, "ids": [], "example" : feature_id }
+            biotypes[feature_biotype] = { "count" : 0, "ids": set(), "example" : feature_id }
         biotypes[feature_biotype]["count"] += 1
-        # Only count IDs once!
-        biotypes[feature_biotype]["ids"].append(feature_id)
+        biotypes[feature_biotype]["ids"].add(feature_id)
         
