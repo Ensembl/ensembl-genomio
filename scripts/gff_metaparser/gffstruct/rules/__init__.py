@@ -31,4 +31,3 @@ from .gff import GffSubRule
 
 from .json import JsonRule
 from .json import JsonSubRule
-

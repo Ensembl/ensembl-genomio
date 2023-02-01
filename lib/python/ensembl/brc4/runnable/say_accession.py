@@ -17,12 +17,13 @@
 
 import eHive
 
+
 class say_accession(eHive.BaseRunnable):
     """Simple runnable to bring out the accession value for the pipeline to use.
-    
+
     Args:
         genome_data: a dict from genome_data following the schema from schema/genome_schema.json
-    
+
     Dataflows:
         2: a single value named accession
     """
@@ -30,4 +31,4 @@ class say_accession(eHive.BaseRunnable):
     def run(self):
         genome_data = self.param_required("genome_data")
         accession = genome_data["assembly"]["accession"]
-        self.dataflow({ "accession" : accession }, 2)
+        self.dataflow({"accession": accession}, 2)

@@ -39,13 +39,13 @@ class schema_validator(eHive.BaseRunnable):
         json_file = Path(self.param_required("json_file"))
         json_schemas = self.param_required("json_schema")
         metadata_type = self.param_required("metadata_type")
-        
+
         if metadata_type in json_schemas:
             json_schema = Path(json_schemas[metadata_type])
         else:
             raise Exception(f"Schema not defined: {metadata_type}")
-        
+
         file = get_json(json_file)
         schema = get_json(json_schema)
-        
+
         validate(instance=file, schema=schema)

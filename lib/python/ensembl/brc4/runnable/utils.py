@@ -22,7 +22,7 @@ from typing import Any
 
 def print_json(path: Path, data: Any) -> None:
     """Generic data json dumper to a file.
-    
+
     Args:
         path: Path to the json to create.
         data: Any data to store.
@@ -30,11 +30,12 @@ def print_json(path: Path, data: Any) -> None:
     with path.open("w") as json_out:
         json_out.write(json.dumps(data, sort_keys=True, indent=4))
 
+
 def get_json(json_path: Path) -> Any:
     """Generic data json loader.
-    
+
     Args:
         path: Path to the json file to load.
     """
-    with json_path.open('r') as json_file:
+    with json_path.open("r") as json_file:
         return json.load(json_file)
