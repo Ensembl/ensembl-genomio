@@ -151,6 +151,7 @@ class StableIdEvent:
             
         """
         return set([id for id in this_list if id])
+        
     
     def add_from(self, from_id: str) -> None:
         """Store an id in the from_set."""
@@ -359,12 +360,12 @@ class DumpStableIDs:
             if old_id in from_list:
                 from_list[old_id].add(new_id)
             else:
-                from_list[old_id] = set(new_id)
+                from_list[old_id] = set([new_id])
 
             if new_id in to_list:
                 to_list[new_id].add(old_id)
             else:
-                to_list[new_id] = set(old_id)
+                to_list[new_id] = set([old_id])
         
         # Remove empty elements
         for from_id in from_list:
@@ -423,7 +424,7 @@ class DumpStableIDs:
             # Extend the group in the to ids
             for to_id in event.to_set:
                 if to_id in to_list:
-                    to_from_ids = to_list[to_id]
+                    to_from_ids: List[str] = to_list[to_id]
                     # Add to the from list?
                     for to_from_id in to_from_ids:
                         if not to_from_id in event.from_set:
@@ -439,6 +440,7 @@ class DumpStableIDs:
                         if not from_to_id in event.to_set:
                             event.add_to(from_to_id)
                             extended = True
+            
             
             # Clean up
             from_list = {from_id: from_list[from_id] for from_id in from_list if from_id not in event.from_set}
