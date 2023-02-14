@@ -34,14 +34,14 @@ class manifest_stats(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {
-            "datasets_path" : 'datasets',
+            "datasets_path" : "datasets",
         }
 
     def run(self):
         manifest_path = Path(self.param_required("manifest"))
         manifest = self.get_manifest(manifest_path)
         
-        stats = [self.param('accession')]
+        stats = [self.param("accession")]
 
         self.param("error", False)
         if "gff3" in manifest:
@@ -55,7 +55,7 @@ class manifest_stats(eHive.BaseRunnable):
             stats_out.write("\n".join(stats))
 
         # Flow out if errors in stats comparison
-        if self.param('error'):
+        if self.param("error"):
             raise Exception(f"Stats count errors, check the file {stats_path}")
         
     def get_manifest(self, manifest_path: Path) -> Dict:
@@ -167,12 +167,12 @@ class manifest_stats(eHive.BaseRunnable):
                             is_protein = True
                     manifest_stats.increment_biotype(biotypes, feat2.id,  f"{feat1.type}-{feat2.type}")
                     for feat3 in feat2.sub_features:
-                        if feat3.type == 'exon':
+                        if feat3.type == "exon":
                             continue
                         manifest_stats.increment_biotype(biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}")
                 
                 # Main categories counts
-                if feat1.type == 'pseudogene':
+                if feat1.type == "pseudogene":
                     manifest_stats.increment_biotype(biotypes, feat1.id, f"pseudogene")
                 elif is_protein:
                     manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
@@ -197,7 +197,7 @@ class manifest_stats(eHive.BaseRunnable):
         stats = [f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}" for (biotype, data) in sorted_biotypes.items()]
 
         # Check against NCBI stats
-        stats += self.check_ncbi_stats(biotypes,self.param('accession'))
+        stats += self.check_ncbi_stats(biotypes,self.param("accession"))
         
         return stats
     
@@ -206,7 +206,7 @@ class manifest_stats(eHive.BaseRunnable):
 
         stats = []
 
-        datasets_bin = self.param('datasets_path')
+        datasets_bin = self.param("datasets_path")
         if not which(datasets_bin):
             return stats
         
@@ -246,7 +246,7 @@ class manifest_stats(eHive.BaseRunnable):
             if prep_count != ncbi_count:
                 diff = prep_count - ncbi_count
                 stats.append(f"DIFF gene count for {map}: {prep_count} - {ncbi_count} = {diff}")
-                self.param('error', True)
+                self.param("error", True)
             else:
                 stats.append(f"Same count for {map}: {prep_count}")
 
