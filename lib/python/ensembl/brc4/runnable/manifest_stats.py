@@ -34,7 +34,7 @@ class manifest_stats(eHive.BaseRunnable):
 
     def param_defaults(self):
         return {
-            "datasets_path" : "datasets",
+            "datasets_bin" : "datasets",
         }
 
     def run(self):
@@ -206,7 +206,7 @@ class manifest_stats(eHive.BaseRunnable):
 
         stats = []
 
-        datasets_bin = self.param("datasets_path")
+        datasets_bin = self.param("datasets_bin")
         if not which(datasets_bin):
             return stats
         
