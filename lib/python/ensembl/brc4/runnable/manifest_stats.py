@@ -17,8 +17,11 @@
 
 import gzip
 import io
+import json
 from pathlib import Path
+from shutil import which
 from statistics import mean
+import subprocess
 from typing import Dict, List, TextIO
 
 from BCBio import GFF
@@ -29,11 +32,18 @@ from ensembl.brc4.runnable.utils import get_json
 
 class manifest_stats(eHive.BaseRunnable):
 
+    def param_defaults(self):
+        return {
+            "datasets_bin" : "datasets",
+        }
+
     def run(self):
         manifest_path = Path(self.param_required("manifest"))
         manifest = self.get_manifest(manifest_path)
         
-        stats = []
+        stats = [self.param("accession")]
+
+        self.param("error", False)
         if "gff3" in manifest:
             stats += self.get_gff3_stats(Path(manifest["gff3"]))
         if "seq_region" in manifest:
@@ -43,6 +53,10 @@ class manifest_stats(eHive.BaseRunnable):
         print(stats_path)
         with stats_path.open("w") as stats_out:
             stats_out.write("\n".join(stats))
+
+        # Flow out if errors in stats comparison
+        if self.param("error"):
+            raise Exception(f"Stats count errors, check the file {stats_path}")
         
     def get_manifest(self, manifest_path: Path) -> Dict:
         manifest = get_json(manifest_path)
@@ -143,20 +157,33 @@ class manifest_stats(eHive.BaseRunnable):
 
         for rec in GFF.parse(gff3_handle):
             for feat1 in rec.features:
+                # Check if the gene contains proteins (CDSs),
+                # and keep a count of all hierarchies (e.g. gene-mRNA-CDS)
                 is_protein = False
                 for feat2 in feat1.sub_features:
                     if feat2.type == "mRNA":
-                        is_protein = True
+                        types2 = {f.type for f in feat2.sub_features}
+                        if "CDS" in types2:
+                            is_protein = True
                     manifest_stats.increment_biotype(biotypes, feat2.id,  f"{feat1.type}-{feat2.type}")
                     for feat3 in feat2.sub_features:
-                        if feat3.type == 'exon':
+                        if feat3.type == "exon":
                             continue
                         manifest_stats.increment_biotype(biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}")
-                if is_protein:
+                
+                # Main categories counts
+                if feat1.type == "pseudogene":
+                    manifest_stats.increment_biotype(biotypes, feat1.id, f"pseudogene")
+                elif is_protein:
                     manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
                 else:
-                    manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
+                    # Special case, undefined gene-transcript
+                    if feat1.type == "gene" and feat1.sub_features and feat1.sub_features[0].type == "transcript":
+                        manifest_stats.increment_biotype(biotypes, feat1.id, f"OTHER")
+                    else:
+                        manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
                 
+                # Total
                 if feat1.type in ("gene", "pseudogene"):
                     manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
                 
@@ -168,8 +195,63 @@ class manifest_stats(eHive.BaseRunnable):
             sorted_biotypes[name] = data
         
         stats = [f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}" for (biotype, data) in sorted_biotypes.items()]
+
+        # Check against NCBI stats
+        stats += self.check_ncbi_stats(biotypes, self.param("accession"))
         
         return stats
+    
+    def check_ncbi_stats(self, biotypes: Dict, accession: str) -> List:
+        """Use the dataset tool from NCBI to get stats and compare with what we have"""
+
+        stats = []
+
+        datasets_bin = self.param("datasets_bin")
+        if not which(datasets_bin):
+            return stats
+        
+        # Get the dataset summary from NCBI
+        command = [datasets_bin, "summary", "genome", "accession", accession]
+        result_out = subprocess.run(command, stdout=subprocess.PIPE)
+        result = json.loads(result_out.stdout)
+
+        # Get stats
+        if "reports" in result:
+            genome = result["reports"][0]
+            if "annotation_info" in genome and "stats" in genome["annotation_info"]:
+                ncbi_stats = genome["annotation_info"]["stats"]
+
+                if "gene_counts" in ncbi_stats:
+                    counts = ncbi_stats["gene_counts"]
+                    stats = self.compare_ncbi_counts(biotypes, counts)
+        return stats
+
+    def compare_ncbi_counts(self, prepared: Dict, ncbi: Dict) -> List:
+        """Compare specific gene stats from NCBI"""
+        stats = []
+
+        maps = [
+            ["total", "ALL_GENES"],
+            ["protein_coding", "PROT_gene"],
+            ["pseudogene", "pseudogene"],
+            ["non_coding", "NONPROT_gene"],
+            ["other", "OTHER"],
+        ]
+
+        for map in maps:
+            ncbi_name, prep_name = map
+            ncbi_count = ncbi.get(ncbi_name, 0)
+            prep_count = prepared.get(prep_name, {}).get("count", 0)
+
+            if prep_count != ncbi_count:
+                diff = prep_count - ncbi_count
+                stats.append(f"DIFF gene count for {map}: {prep_count} - {ncbi_count} = {diff}")
+                self.param("error", True)
+            else:
+                stats.append(f"Same count for {map}: {prep_count}")
+
+        return stats
+
 
     @staticmethod
     def increment_biotype(biotypes: Dict, feature_id: str, feature_biotype: str) -> None:

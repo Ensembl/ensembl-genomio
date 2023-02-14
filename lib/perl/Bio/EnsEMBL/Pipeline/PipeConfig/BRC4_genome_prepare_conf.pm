@@ -264,11 +264,12 @@ sub pipeline_analyses {
      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
      -parameters     => {
        temp_gff3 => "#gff3#" . ".tmp",
-       cmd => "mv #gff3# #temp_gff3#" .
+       cmd => "cp #gff3# #temp_gff3#" .
        " && " . $self->o('gff3_tidy') . " -o #gff3# #temp_gff3#" .
        " && " . $self->o('gff3_validate') . ' #gff3#',
        file_name => "gff3",
      },
+      -failed_job_tolerance => 100,
       -max_retry_count => 0,
      -analysis_capacity => 10,
      -batch_size        => 10,
@@ -399,7 +400,8 @@ sub pipeline_analyses {
       -logic_name  => 'Manifest_stats',
       -module      => 'ensembl.brc4.runnable.manifest_stats',
       -language    => 'python3',
-      -analysis_capacity   => 1,
+      -failed_job_tolerance => 100,
+      -analysis_capacity   => 2,
       -rc_name         => '4GB',
       -max_retry_count => 0,
     },

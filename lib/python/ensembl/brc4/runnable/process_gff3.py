@@ -584,7 +584,7 @@ class process_gff3(eHive.BaseRunnable):
     def transcript_for_gene(self, gene: SeqFeature) -> SeqFeature:
         """Returns a transcript, from a gene without one."""
         
-        transcript = SeqFeature(gene.location, type="mRNA")
+        transcript = SeqFeature(gene.location, type="transcript")
         transcript.qualifiers["source"] = gene.qualifiers["source"]
         transcript.sub_features = []
         
