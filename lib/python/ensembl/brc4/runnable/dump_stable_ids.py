@@ -324,6 +324,7 @@ class DumpStableIDs:
         WHERE (old_stable_id != new_stable_id OR old_stable_id IS NULL OR new_stable_id IS NULL)
             AND type="gene"
             AND mapping_session_id=%s
+        GROUP BY old_stable_id, new_stable_id, mapping_session_id
         """
         values = (session_id,)
         cursor = self.server.get_cursor()
