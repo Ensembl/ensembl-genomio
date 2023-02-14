@@ -216,6 +216,19 @@ class StableIdEvent:
         else:
             raise UnsupportedEvent(f"Event {self.from_set} to {self.to_set} is not supported")
     
+    def clean_pairs(self) -> None:
+        """Remove the empty old pairs when the event is not 'new'."""
+        if not self.name:
+            self._name_event()
+        
+        if self.name != "new":
+            new_pairs = []
+            for pair in self.pairs:
+                if pair["old_id"] == "":
+                    continue
+                new_pairs.append(pair)
+            self.pairs = new_pairs
+    
     def get_name(self) -> str:
         """Retrieve the name for this event, update it beforehand."""
         self._name_event()
@@ -374,7 +387,7 @@ class DumpStableIDs:
         for to_id in to_list:
             to_list[to_id] = StableIdEvent.clean_set(to_list[to_id])
         
-        events = []
+        events: List[StableIdEvent] = []
         for old_id in from_list:
             if not old_id or old_id not in from_list: continue
             event = StableIdEvent([old_id], from_list[old_id])
@@ -392,6 +405,7 @@ class DumpStableIDs:
         stats = {}
         for event in events:
             name = event.get_name()
+            event.clean_pairs()
             if not name in stats:
                 stats[name] = 1
             else:
