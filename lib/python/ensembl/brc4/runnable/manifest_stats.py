@@ -197,7 +197,7 @@ class manifest_stats(eHive.BaseRunnable):
         stats = [f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}" for (biotype, data) in sorted_biotypes.items()]
 
         # Check against NCBI stats
-        stats += self.check_ncbi_stats(biotypes,self.param("accession"))
+        stats += self.check_ncbi_stats(biotypes, self.param("accession"))
         
         return stats
     
