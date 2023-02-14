@@ -17,13 +17,13 @@
 
 import gzip
 import io
-from pathlib import Path
-from statistics import mean
-from typing import Dict, List, TextIO
-import subprocess
 import json
-
+from pathlib import Path
 from shutil import which
+from statistics import mean
+import subprocess
+from typing import Dict, List, TextIO
+
 from BCBio import GFF
 import eHive
 
