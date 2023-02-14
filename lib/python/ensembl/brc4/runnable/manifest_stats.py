@@ -162,7 +162,7 @@ class manifest_stats(eHive.BaseRunnable):
                 is_protein = False
                 for feat2 in feat1.sub_features:
                     if feat2.type == "mRNA":
-                        types2 = set([f.type for f in feat2.sub_features])
+                        types2 = {f.type for f in feat2.sub_features}
                         if "CDS" in types2:
                             is_protein = True
                     manifest_stats.increment_biotype(biotypes, feat2.id,  f"{feat1.type}-{feat2.type}")
@@ -223,7 +223,7 @@ class manifest_stats(eHive.BaseRunnable):
 
                 if "gene_counts" in ncbi_stats:
                     counts = ncbi_stats["gene_counts"]
-                    stats += self.compare_ncbi_counts(biotypes, counts)
+                    stats = self.compare_ncbi_counts(biotypes, counts)
         return stats
 
     def compare_ncbi_counts(self, prepared: Dict, ncbi: Dict) -> List:
