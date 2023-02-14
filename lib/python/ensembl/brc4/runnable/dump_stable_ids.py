@@ -441,11 +441,10 @@ class DumpStableIDs:
                         if not from_to_id in event.to_set:
                             event.add_to(from_to_id)
                             extended = True
-            
-            
-            # Clean up
-            from_list = {from_id: from_list[from_id] for from_id in from_list if from_id not in event.from_set}
-            to_list = {to_id: to_list[to_id] for to_id in to_list if to_id not in event.to_set}
+        
+        # Clean up
+        from_list = {from_id: from_list[from_id] for from_id in from_list if from_id not in event.from_set}
+        to_list = {to_id: to_list[to_id] for to_id in to_list if to_id not in event.to_set}
         
         return (event, from_list, to_list)
 
