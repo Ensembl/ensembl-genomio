@@ -23,7 +23,7 @@ from typing import Any, List, Dict, Optional, Set, Tuple
 from ensembl.brc4.runnable.core_server import CoreServer
 
 
-BRC4_START_DATE = datetime(2019, 9, 1)
+BRC4_START_DATE = datetime(2020, 5, 1)
 
 
 class UnsupportedEvent(ValueError):
