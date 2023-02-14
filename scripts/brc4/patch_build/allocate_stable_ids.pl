@@ -396,7 +396,8 @@ sub allocate_genes {
               -primary_id => $old_prot_id,
               -display_id => $old_prot_id
             );
-            $dbenta->store($dbentry, $prot->dbID, 'Translation');
+            my $ignore_release = 1;
+            $dbenta->store($dbentry, $prot->dbID, 'Translation', $ignore_release);
           }
         }
       }
