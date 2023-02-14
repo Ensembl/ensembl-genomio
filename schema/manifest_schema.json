@@ -15,7 +15,8 @@
         "seq_attrib" : { "$ref" : "#/definitions/file_info" },
         "genome" : { "$ref" : "#/definitions/file_info" },
         "functional_annotation" : { "$ref" : "#/definitions/file_info" },
-        "agp" : { "$ref" : "#/definitions/agp_info" }
+        "agp" : { "$ref" : "#/definitions/agp_info" },
+        "events" : { "$ref" : "#/definitions/file_info" }
       }
     },
     "file_info" : {
