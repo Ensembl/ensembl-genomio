@@ -224,7 +224,7 @@ class StableIdEvent:
         if self.name != "new":
             new_pairs = []
             for pair in self.pairs:
-                if pair["old_id"] == "":
+                if pair.get("old_id", "") == "":
                     continue
                 new_pairs.append(pair)
             self.pairs = new_pairs
