@@ -54,7 +54,7 @@ sub run {
   for my $name (keys %$manifest) {
 
     if (ref($manifest->{$name}) eq 'HASH') {
-      foreach my $subname (sort keys %{ $manifest->{$name} }) {
+      foreach my $subname (keys %{ $manifest->{$name} }) {
         my $file = prepare_file($manifest->{$name}->{$subname}, $dir, $species, $species_abbrev);
         $final_manifest{$name}{$subname} = $file if $file;
       }
@@ -86,7 +86,7 @@ sub manifest_has_files {
   for my $name (keys %$manifest) {
 
     if (ref($manifest->{$name}) eq 'HASH') {
-      foreach my $subname (sort keys %{ $manifest->{$name} }) {
+      foreach my $subname (keys %{ $manifest->{$name} }) {
         my $file = $manifest->{$name}->{$subname};
         $has_files++ if -s $file;
       }
