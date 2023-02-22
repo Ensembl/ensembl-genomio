@@ -23,7 +23,7 @@ from typing import Any, List, Dict, Optional, Set, Tuple
 from ensembl.brc4.runnable.core_server import CoreServer
 
 
-BRC4_START_DATE = datetime(2019, 9, 1)
+BRC4_START_DATE = datetime(2020, 5, 1)
 
 
 class UnsupportedEvent(ValueError):
@@ -151,6 +151,7 @@ class StableIdEvent:
             
         """
         return set([id for id in this_list if id])
+        
     
     def add_from(self, from_id: str) -> None:
         """Store an id in the from_set."""
@@ -214,6 +215,19 @@ class StableIdEvent:
             self.name = "mixed"
         else:
             raise UnsupportedEvent(f"Event {self.from_set} to {self.to_set} is not supported")
+    
+    def clean_pairs(self) -> None:
+        """Remove the empty old pairs when the event is not 'new'."""
+        if not self.name:
+            self._name_event()
+        
+        if self.name != "new":
+            new_pairs = []
+            for pair in self.pairs:
+                if pair.get("old_id", "") == "":
+                    continue
+                new_pairs.append(pair)
+            self.pairs = new_pairs
     
     def get_name(self) -> str:
         """Retrieve the name for this event, update it beforehand."""
@@ -323,6 +337,7 @@ class DumpStableIDs:
         WHERE (old_stable_id != new_stable_id OR old_stable_id IS NULL OR new_stable_id IS NULL)
             AND type="gene"
             AND mapping_session_id=%s
+        GROUP BY old_stable_id, new_stable_id, mapping_session_id
         """
         values = (session_id,)
         cursor = self.server.get_cursor()
@@ -359,12 +374,12 @@ class DumpStableIDs:
             if old_id in from_list:
                 from_list[old_id].add(new_id)
             else:
-                from_list[old_id] = set(new_id)
+                from_list[old_id] = set([new_id])
 
             if new_id in to_list:
                 to_list[new_id].add(old_id)
             else:
-                to_list[new_id] = set(old_id)
+                to_list[new_id] = set([old_id])
         
         # Remove empty elements
         for from_id in from_list:
@@ -372,7 +387,7 @@ class DumpStableIDs:
         for to_id in to_list:
             to_list[to_id] = StableIdEvent.clean_set(to_list[to_id])
         
-        events = []
+        events: List[StableIdEvent] = []
         for old_id in from_list:
             if not old_id or old_id not in from_list: continue
             event = StableIdEvent([old_id], from_list[old_id])
@@ -390,6 +405,7 @@ class DumpStableIDs:
         stats = {}
         for event in events:
             name = event.get_name()
+            event.clean_pairs()
             if not name in stats:
                 stats[name] = 1
             else:
@@ -423,7 +439,7 @@ class DumpStableIDs:
             # Extend the group in the to ids
             for to_id in event.to_set:
                 if to_id in to_list:
-                    to_from_ids = to_list[to_id]
+                    to_from_ids: List[str] = to_list[to_id]
                     # Add to the from list?
                     for to_from_id in to_from_ids:
                         if not to_from_id in event.from_set:
@@ -439,10 +455,10 @@ class DumpStableIDs:
                         if not from_to_id in event.to_set:
                             event.add_to(from_to_id)
                             extended = True
-            
-            # Clean up
-            from_list = {from_id: from_list[from_id] for from_id in from_list if from_id not in event.from_set}
-            to_list = {to_id: to_list[to_id] for to_id in to_list if to_id not in event.to_set}
+        
+        # Clean up
+        from_list = {from_id: from_list[from_id] for from_id in from_list if from_id not in event.from_set}
+        to_list = {to_id: to_list[to_id] for to_id in to_list if to_id not in event.to_set}
         
         return (event, from_list, to_list)
 
