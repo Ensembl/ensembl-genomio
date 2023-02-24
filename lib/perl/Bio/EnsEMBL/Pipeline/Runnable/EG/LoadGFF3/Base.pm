@@ -186,7 +186,6 @@ sub log_warning {
   }
 
   $self->log($msg . $caller_sfx);
-  $self->warning($msg . $caller_sfx);
 }
 
 sub log_throw {
@@ -215,9 +214,11 @@ sub dump_log {
     make_path($dir) or $self->throw("Failed to create directory '$dir'");
   }
 
-  open( my $fh, ">", "$path")
-    or die "Can't open > $path: $!";
-  print $fh join("\n", @{ $self->{_local_log} // [] });
+  open( my $fh, ">:gzip", "${path}.gz")
+    or die "Can't open >:gzip ${path}.gz: $!";
+  for my $msg (@{ $self->{_local_log} // [] }) {
+    print $fh $msg, "\n";
+  }
   close($fh)
 }
 

@@ -28,22 +28,24 @@ class SeqregionParser:
     """
 
     synonym_map = {
-            "Sequence-Name" : "INSDC_submitted_name",
-            "GenBank-Accn" : "INSDC",
-            "RefSeq-Accn" : "RefSeq",
-            "Assigned-Molecule" : "GenBank",
-            }
+        "Sequence-Name": "INSDC_submitted_name",
+        "GenBank-Accn": "INSDC",
+        "RefSeq-Accn": "RefSeq",
+        "Assigned-Molecule": "GenBank",
+    }
 
     molecule_location = {
-            "chromosome" : "nuclear_chromosome",
-            "mitochondrion" : "mitochondrial_chromosome",
-            "apicoplast" : "apicoplast_chromosome",
-            "plasmid" : "plasmid",
-            "linkage group" : "linkage_group", 
-            "kinetoplast" : "kinetoplast"
+        "chromosome": "nuclear_chromosome",
+        "mitochondrion": "mitochondrial_chromosome",
+        "apicoplast": "apicoplast_chromosome",
+        "plasmid": "plasmid",
+        "linkage group": "linkage_group",
+        "kinetoplast": "kinetoplast",
     }
-    
-    def get_report_regions(self, report_path: str, use_refseq: bool = False) -> Dict[str, dict]:
+
+    def get_report_regions(
+        self, report_path: str, accession: str, use_refseq: bool = False
+    ) -> Dict[str, dict]:
         """Get seq_region data from report file.
 
         Args:
@@ -52,24 +54,26 @@ class SeqregionParser:
         Returns:
             A dict of seq_regions dicts, with their name as the key
         """
+        if accession.startswith("GCF"):
+            use_refseq = True
         # Get the report in a CSV format, easier to manipulate
         report_csv, metadata = self.report_to_csv(report_path)
-        
+
         # Feed the csv string to the CSV reader
         reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
-        
+
         # Metadata
         assembly_level = "contig"
         if "Assembly level" in metadata:
             assembly_level = metadata["Assembly level"].lower()
-        
+
         # Create the seq_regions
         seq_regions = {}
         for row in reader:
             seq_region = self.make_seq_region(row, assembly_level, use_refseq)
             name = seq_region["name"]
             seq_regions[name] = seq_region
-        
+
         return seq_regions
 
     def report_to_csv(self, report_path: str) -> Tuple[str, dict]:
@@ -82,7 +86,7 @@ class SeqregionParser:
         """
 
         _open = report_path.endswith(".gz") and gzip.open or open
-        with _open(report_path, 'rt') as report:
+        with _open(report_path, "rt") as report:
             data = ""
             metadata = {}
             last_head = ""
@@ -101,16 +105,15 @@ class SeqregionParser:
                         last_head = ""
                     data += line
             return data, metadata
-    
-    def make_seq_region(self, row: Dict[str, str], assembly_level: str,
-                        use_refseq: bool) -> Dict[str, Any]:
+
+    def make_seq_region(self, row: Dict[str, str], assembly_level: str, use_refseq: bool) -> Dict[str, Any]:
         """From a row of the report, create one seq_region dict.
 
         Args:
             row: A seq_region row from the INSDC report.
             assembly_level: what level is the seq_region (chromosome, contig, etc.)
             use_refseq: Expect a RefSeq seq_region report.
-        
+
         Returns:
             A seq_region dict.
         """
@@ -124,41 +127,41 @@ class SeqregionParser:
         synonyms = []
         for field, source in synonym_map.items():
             if field in row and row[field].lower() != "na":
-                synonym = { "source" : source, "name" : row[field] }
+                synonym = {"source": source, "name": row[field]}
                 synonyms.append(synonym)
         if len(synonyms) > 0:
             synonyms.sort(key=lambda x: x["source"])
             seq_region["synonyms"] = synonyms
-        
+
         # Length
         field = "Sequence-Length"
         if field in row and row[field].lower() != "na":
             seq_region["length"] = int(row[field])
-        
+
         if use_refseq:
             if "RefSeq-Accn" in row:
                 seq_region["name"] = row["RefSeq-Accn"]
             else:
                 raise Exception(f"No RefSeq name for {row['Sequence-Name']}")
-            
+
         else:
             if "GenBank-Accn" in row:
                 seq_region["name"] = row["GenBank-Accn"]
             else:
                 raise Exception(f"No INSDC name for {row['Sequence-Name']}")
-        
+
         # Coord system and location
         seq_role = row["Sequence-Role"]
-        
+
         # Scaffold?
-        if seq_role in ("unplaced-scaffold", "unlocalized-scaffold","alt-scaffold"):
+        if seq_role in ("unplaced-scaffold", "unlocalized-scaffold", "alt-scaffold"):
             seq_region["coord_system_level"] = "scaffold"
-        
+
         # Chromosome? Check location
         elif seq_role == "assembled-molecule":
             seq_region["coord_system_level"] = "chromosome"
             location = row["Assigned-Molecule-Location/Type"].lower()
-            
+
             # Get location metadata
             if location in molecule_location:
                 seq_location = molecule_location[location]

@@ -15,15 +15,18 @@
 # limitations under the License.
 
 
-import os
+from collections import Counter
+from pathlib import Path
 import re
-import eHive
-import json
 import tempfile
+from typing import List, TextIO
 
+import eHive
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
+
+from ensembl.brc4.runnable.utils import print_json
 
 
 class process_gff3(eHive.BaseRunnable):
@@ -32,16 +35,11 @@ class process_gff3(eHive.BaseRunnable):
         return {
             "gene_types": (
                 "gene",
+                "pseudogene",
                 "ncRNA_gene",
-                "pseudogene"
             ),
-            "ncRNA_gene_types": (
-                "tRNA",
-                "rRNA",
-                "pseudogenic_tRNA",
-                "pseudogenic_rRNA",
-                "transcript",
-                "misc_RNA"
+            "non_gene_types": (
+                "transposable_element",
             ),
             "transcript_types": (
                 "transcript",
@@ -61,6 +59,7 @@ class process_gff3(eHive.BaseRunnable):
                 "miRNA",
                 "ribozyme",
                 "piRNA",
+                "RNase_MRP_RNA",
                 "misc_RNA"
             ),
             "ignored_gene_types": (
@@ -69,24 +68,25 @@ class process_gff3(eHive.BaseRunnable):
                 "gap",
                 "sequence_feature",
                 "sequence_uncertainty",
-                "repeat_region",
-                "mobile_genetic_element",
                 "microsatellite",
                 "satellite_DNA",
-                "inverted_repeat",
-                "telomere",
-                "tandem_repeat",
                 "cDNA_match",
+                "STS",
+                "telomere",
+                "centromere",
+                "repeat_region",
+                "inverted_repeat",
+                "tandem_repeat",
                 "long_terminal_repeat",
-                "STS"
+                "dispersed_repeat",
+                "terminal%2Cinverted",
             ),
             "ignored_transcript_types": (
-                    "antisense_RNA",
-                    "RNase_MRP_RNA",
-                    "3'UTR",
-                    "5'UTR",
-                    "intron"
-                    ),
+                "antisense_RNA",
+                "3'UTR",
+                "5'UTR",
+                "intron",
+            ),
             "skip_unrecognized": False,
             "gene_cds_skip_others" : False,
             "allow_pseudogene_with_CDS": False,
@@ -98,52 +98,51 @@ class process_gff3(eHive.BaseRunnable):
         }
 
     def run(self):
-        genome_data = self.param('genome_data')
-        work_dir = self.param('work_dir')
-        in_gff_path = self.param('in_gff3')
+        work_dir = Path(self.param('work_dir'))
+        in_gff_path = Path(self.param('in_gff3'))
 
         # Create dedicated work dir
-        if not os.path.isdir(work_dir):
-            os.makedirs(work_dir)
+        if not work_dir.is_dir():
+            work_dir.mkdir(parents=True)
 
         # Final files
-        out_gff_path = os.path.join(work_dir, "gene_models.gff3")
-        out_funcann_path = os.path.join(work_dir, "functional_annotation.json")
+        out_gff_path = work_dir / "gene_models.gff3"
+        out_funcann_path = work_dir / "functional_annotation.json"
 
         # Merge multiline gene features
-        interm_gff = tempfile.TemporaryFile(mode="w+")
-        self.merge_genes_gff(in_gff_path, interm_gff)
-        interm_gff.seek(0)
+        interim_gff_fh = tempfile.TemporaryFile(mode="w+")
+        self.merge_genes_gff(in_gff_path, interim_gff_fh)
+        interim_gff_fh.seek(0)
 
         # Load gff3 data and write a simpler version that follows our specifications
-        self.simpler_gff3(interm_gff, out_gff_path, out_funcann_path)
+        self.simpler_gff3(interim_gff_fh, out_gff_path, out_funcann_path)
 
         # Output the gff3 file
         output = {
-            "gff3": out_gff_path
+            "gff3": str(out_gff_path)
         }
         self.dataflow(output, 2)
         
         # Output the functional annotation file
         output = {
             "metadata_type": "functional_annotation",
-            "metadata_json": out_funcann_path
+            "metadata_json": str(out_funcann_path)
         }
         self.dataflow(output, 3)
 
-    def merge_genes_gff(self, in_gff_path, out_gff) -> None:
+    def merge_genes_gff(self, in_gff_path: Path, out_gff_fh: TextIO) -> None:
         """
         Merge genes in a gff that are split in multiple lines
         """
         tomerge = []
         merged = []
         
-        with open(in_gff_path, "r") as gff3_in:
+        with in_gff_path.open("r") as gff3_in:
             for line in gff3_in:
 
                 # Skip comments
                 if line.startswith("#"):
-                    out_gff.write(line)
+                    out_gff_fh.write(line)
                 else:
                     # Parse one line
                     line = line.rstrip()
@@ -170,9 +169,9 @@ class process_gff3(eHive.BaseRunnable):
                             merged.append("\n".join(merged_str) + "\n")
 
                             new_line = self.merge_genes(tomerge)
-                            out_gff.write(new_line)
+                            out_gff_fh.write(new_line)
                             tomerge = []
-                        out_gff.write(line + "\n")
+                        out_gff_fh.write(line + "\n")
 
             # Print last merged gene if there is one
             if tomerge:
@@ -182,14 +181,20 @@ class process_gff3(eHive.BaseRunnable):
                 merged.append("\n".join(merged_str) + "\n")
 
                 new_line = self.merge_genes(tomerge)
-                out_gff.write(new_line)
+                out_gff_fh.write(new_line)
         
         if merged and not self.param("merge_split_genes"):
             count = len(merged)
             raise Exception("%s merged genes:\n%s\n" % (count, "\n".join(merged)))
 
-    def merge_genes(self, tomerge) -> str:
-        print("Merge gene in %d parts" % len(tomerge))
+    def merge_genes(self, tomerge: List) -> str:
+        """Returns a single gene gff3 line merged from separate parts.
+
+        Args:
+            tomerge: List of gff3 lines with gene parts.
+
+        """
+        print(f"Merge gene in {len(tomerge)} parts")
         min_start = -1
         max_end = -1
         for gene in tomerge:
@@ -214,7 +219,7 @@ class process_gff3(eHive.BaseRunnable):
         
         return "\t".join(new_gene) + "\n"
 
-    def simpler_gff3(self, gff3_in, out_gff_path, out_funcann_path) -> None:
+    def simpler_gff3(self, gff3_in: TextIO, out_gff_path: Path, out_funcann_path: Path) -> None:
         """
         Load a GFF3 from INSDC, and rewrite it in a simpler version,
         and also write a functional_annotation file
@@ -222,61 +227,111 @@ class process_gff3(eHive.BaseRunnable):
         
         allowed_gene_types = self.param("gene_types")
         ignored_gene_types = self.param("ignored_gene_types")
-        ncRNA_gene_types = self.param("ncRNA_gene_types")
+        transcript_types = self.param("transcript_types")
         skip_unrecognized = self.param("skip_unrecognized")
+        allowed_non_gene_types = self.param("non_gene_types")
         to_exclude = self.param("exclude_seq_regions")
         
         functional_annotation = []
         
-        with open(out_gff_path, "w") as gff3_out:
+        with out_gff_path.open("w") as gff3_out:
             new_records = []
             fail_types = {}
             
             for record in GFF.parse(gff3_in):
                 new_record = SeqRecord(record.seq, id=record.id)
                 if record.id in to_exclude:
-                    print("Skip seq_region %s" % record.id)
+                    print(f"Skip seq_region {record.id}")
                     continue
                 
-                # GENES
-                for gene in record.features:
-                    if gene.type in ignored_gene_types:
+                # Root features (usually genes)
+                for feat in record.features:
+                    # Skip or format depending on the feature type
+                    if feat.type in ignored_gene_types:
                         continue
+                    elif feat.type in transcript_types:
+                        feat = self.transcript_gene(feat)
+                    elif feat.type == "CDS":
+                        feat = self.cds_gene(feat)
+                    elif feat.type in ('mobile_genetic_element', 'transposable_element'):
+                        feat = self.format_mobile_element(feat, functional_annotation)
                     
-                    if gene.type in ncRNA_gene_types:
-                        # Transcript-level gene: add a gene parent
-                        gene = self.ncrna_gene(gene)
-
-                    if gene.type == "CDS":
-                        # Lone CDS: add a gene-transcript parent
-                        print("Make a gene for lone cds %s" % (gene.id))
-                        gene = self.cds_gene(gene)
-                        
-                    if gene.type in allowed_gene_types:
-                        gene = self.normalize_gene(gene, functional_annotation, fail_types)
-                    
+                    # Normalize the gene structure
+                    if feat.type in allowed_gene_types:
+                        feat = self.normalize_gene(feat, functional_annotation, fail_types)
+                    elif feat.type in allowed_non_gene_types:
+                        pass
                     else:
-                        fail_types["gene=" + gene.type] = 1
-                        message = "Unrecognized gene type: %s (for %s)" % (gene.type, gene.id)
+                        fail_types["gene=" + feat.type] = 1
+                        message = f"Unsupported feature type: {feat.type} (for {feat.id})"
                         print(message)
                         if skip_unrecognized:
-                            del gene
+                            del feat
                             continue
 
-                    new_record.features.append(gene)
+                    new_record.features.append(feat)
                 new_records.append(new_record)
             
             if fail_types and not skip_unrecognized:
-                raise Exception("Unrecognized types found (%s): fail" %
-                                (" ".join(fail_types.keys())))
+                raise Exception(f"Unrecognized types found ({' '.join(fail_types.keys())}): fail")
             
             GFF.write(new_records, gff3_out)
         
         # Write functional annotation
         functional_annotation = self.clean_functional_annotations(functional_annotation)
-        self.print_json(out_funcann_path, functional_annotation)
+        print_json(out_funcann_path, functional_annotation)
 
-    def normalize_gene(self, gene, functional_annotation, fail_types):
+    def format_mobile_element(self, feat, functional_annotation):
+        """Given a mobile_genetic_element feature, transform it into a transposable_element"""
+        quals = feat.qualifiers
+
+        # Change mobile_genetic_element into a transposable_element feature
+        if feat.type == 'mobile_genetic_element':
+            mobile_element_type = feat.qualifiers.get("mobile_element_type", [])
+            if mobile_element_type:
+                # Get the type (and name) from the attrib
+                if ":" in mobile_element_type[0]:
+                    element_type, element_name = mobile_element_type[0].split(':')
+                    description = f"{element_type} ({element_name})"
+                else:
+                    element_type = mobile_element_type[0]
+                    description = element_type
+
+                # Keep the metdata in the description if the type is known
+                if element_type in ("transposon", "retrotransposon"):
+                    feat.type = 'transposable_element'
+                    if not feat.qualifiers.get("product"):
+                        feat.qualifiers["product"] = [description]
+                else:    
+                    print(f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}")
+                    return feat
+            else:
+                print("Mobile genetic element does not have a 'mobile_element_type' tag")
+                return feat
+        elif feat.type == "transposable_element":
+            pass
+        else:
+            print(f"Feature {feat.id} is not a supported TE feature {feat.type}")
+            return feat
+        
+        # Generate ID if needed and add it to the functional annotation
+        feat.id = self.normalize_gene_id(feat)
+        self.add_funcann_feature(functional_annotation, feat, "transposable_element")
+        feat.qualifiers = {
+            "ID": feat.id
+        }
+
+        return feat
+
+    def normalize_gene(self, gene: SeqFeature, functional_annotation: List, fail_types: List) -> SeqFeature:
+        """Returns a normalized gene structure, separate from the functional elements.
+
+        Args:
+            gene: Gene object to normalize.
+            functional_annotation: List of feature annotations (appended by this method).
+            fail_types: List of feature types that are not supported (appended by this method).
+
+        """
 
         allowed_transcript_types = self.param("transcript_types")
         ignored_transcript_types = self.param("ignored_transcript_types")
@@ -284,44 +339,39 @@ class process_gff3(eHive.BaseRunnable):
 
         # New gene ID
         gene.id = self.normalize_gene_id(gene)
-        
-        # replace qualifiers
-        old_qualifiers = gene.qualifiers
-        gene.qualifiers = {
-            "ID": gene.id,
-            "source": old_qualifiers["source"]
-        }
+        self.transfer_description(gene)
         
         # Gene with no subfeatures: need to create a transcript at least
         if len(gene.sub_features) == 0:
             print("Insert transcript for lone gene %s" % (gene.id))
             transcript = self.transcript_for_gene(gene)
             gene.sub_features = [transcript]
+
+        # Count features
+        fcounter = Counter([ feat.type for feat in gene.sub_features ])
         
         # Transform gene - CDS to gene-transcript-exon-CDS
-        if gene.sub_features[0].type == "CDS":
-            num_subs = len(gene.sub_features)
-            print(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
-            transcripts = self.gene_to_cds(gene)
-            gene.sub_features = transcripts
-        
-        # Move CDS from parent gene to parent mRNA
-        if (
-            len(gene.sub_features) == 2
-            and gene.sub_features[0].type == "mRNA"
-            and gene.sub_features[1].type == "CDS"
-        ):
-            num_subs = len(gene.sub_features)
-            print(f"Move CDS to mRNA for {gene.id} ({num_subs} CDSs)")
-            transcript = self.move_cds_to_mrna(gene)
-            gene.sub_features = [transcript]
+        if len(fcounter) == 1:
+            if fcounter.get("CDS"):
+                num_subs = len(gene.sub_features)
+                print(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
+                transcripts = self.gene_to_cds(gene)
+                gene.sub_features = transcripts
 
-        # Transform gene - exon to gene-transcript-exon
-        if gene.sub_features[0].type == "exon":
-            num_subs = len(gene.sub_features)
-            print(f"Insert transcript for {gene.id} ({num_subs} exons)")
-            transcript = self.gene_to_exon(gene)
-            gene.sub_features = [transcript]
+            # Transform gene - exon to gene-transcript-exon
+            elif fcounter.get("exon"):
+                num_subs = len(gene.sub_features)
+                print(f"Insert transcript for {gene.id} ({num_subs} exons)")
+                transcript = self.gene_to_exon(gene)
+                gene.sub_features = [transcript]
+        else:
+            # Check that we don't mix
+            if fcounter.get("mRNA") and fcounter.get("CDS"):
+                # Move CDS(s) from parent gene to parent mRNA if needed
+                gene = self.move_cds_to_mrna(gene)
+            if fcounter.get("mRNA") and fcounter.get("exon"):
+                # Special case with extra exons
+                gene = self.clean_extra_exons(gene)
 
         # Remove CDS from pseudogenes
         if gene.type == 'pseudogene' and not self.param('allow_pseudogene_with_cds'):
@@ -350,13 +400,13 @@ class process_gff3(eHive.BaseRunnable):
                 functional_annotation, transcript, "transcript")
             
             # Replace qualifiers
-            old_qualifiers = transcript.qualifiers
+            old_transcript_qualifiers = transcript.qualifiers
             transcript.qualifiers = {
                 "ID": transcript.id,
                 "Parent": gene.id,
             }
-            if "source" in old_qualifiers:
-                transcript.qualifiers["source"] = old_qualifiers["source"]
+            if "source" in old_transcript_qualifiers:
+                transcript.qualifiers["source"] = old_transcript_qualifiers["source"]
 
             # EXONS AND CDS
             cds_found = False
@@ -365,12 +415,12 @@ class process_gff3(eHive.BaseRunnable):
                 
                 if feat.type == "exon":
                     # Replace qualifiers
-                    old_qualifiers = feat.qualifiers
+                    old_exon_qualifiers = feat.qualifiers
                     feat.qualifiers = {
                         "Parent": transcript.id,
                     }
-                    if "source" in old_qualifiers:
-                        feat.qualifiers["source"] = old_qualifiers["source"]
+                    if "source" in old_exon_qualifiers:
+                        feat.qualifiers["source"] = old_exon_qualifiers["source"]
                 elif feat.type == "CDS":
                     # New CDS ID
                     feat.id = self.normalize_cds_id(feat.id)
@@ -416,43 +466,54 @@ class process_gff3(eHive.BaseRunnable):
                 self.normalize_pseudogene_cds(gene)
 
         # Finally, store gene functional annotation
-        self.transfer_description(gene)
         self.add_funcann_feature(functional_annotation, gene, "gene")
+        
+        # replace qualifiers
+        old_gene_qualifiers = gene.qualifiers
+        gene.qualifiers = {
+            "ID": gene.id,
+            "source": old_gene_qualifiers["source"]
+        }
     
         return gene
 
-    def clean_functional_annotations(self, functional_annotation):
-        """
-        Check all products and remove putative/uncharacterized etc.
-        """
+    def clean_functional_annotations(self, functional_annotation: List) -> List:
+        """Returns the functional annotations list without putative product descriptions."""
         for feat in functional_annotation:
             if "description" in feat and not self.check_product(feat["description"]):
                 del feat["description"]
         return functional_annotation
     
-    def check_product(self, product):
+    def check_product(self, product: str) -> bool:
+        """Check a product string.
+
+        Args:
+            product: a product name.
+
+        Returns:
+            True only if the string is valid, False otherwise.
+
         """
-        Check a product string
-        Return True only if the string is valid
-        """
-        
-        no_product_names = [
-            "uncharacterized protein",
-            "putative protein",
-            "putative uncharacterized protein",
-            "hypothetical protein",
-            "protein of unknown function",
-            "predicted protein",
-        ]
-        
-        if product.lower() in no_product_names:
+        excluded_names = re.compile(r"^(uncharacterized|putative|hypothetical|predicted)"
+                                    r"( uncharacterized)?"
+                                    r" protein"
+                                    r"( of unknown function)?"
+                                    r"( \(fragment\))?$"
+                                    )
+
+        if excluded_names.match(product.lower()):
             return False
         return True
     
-    def transfer_description(self, gene):
-        """
-        Transfer the transcript product description to the gene if it doesn't have any
-        Transfer the translation product description as well
+    def transfer_description(self, gene: SeqFeature) -> None:
+        """Transfer descriptions from transcripts/translations to gene/transcripts.
+
+        If a gene has no description but the transcript has one, transfer it to the gene.
+        Otherwise, if the translation has a description, transfer it to the transcript and gene.
+
+        Args:
+            gene: Gene to transfer descriptions.
+
         """
         allowed_transcript_types = self.param("transcript_types")
         
@@ -467,24 +528,37 @@ class process_gff3(eHive.BaseRunnable):
                     # No transcript product, but a CDS product? Copy it to both transcript and gene
                     else:
                         for cds in tran.sub_features:
-                            if "product" in cds.qualifiers:
+                            if cds.type == 'CDS' and "product" in cds.qualifiers:
                                 description = cds.qualifiers["product"][0]
                                 tran.qualifiers["product"] = [description]
                                 gene.qualifiers["product"] = [description]
                         # Continue transfering the translation products to the transcripts
     
-    def ncrna_gene(self, ncrna):
-        """Create a gene for ncRNAs"""
+    def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
+        """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
+
+        Args:
+            ncrna: the transcript for which we want to create a gene.
         
-        gene = SeqFeature(ncrna.location, type="ncRNA_gene")
+        Returns:
+            The gene that contains the transcript.
+
+        """
+        new_type = "ncRNA_gene"
+        if ncrna.type in ('tRNA', 'rRNA'):
+            new_type = 'gene'
+        print(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
+        gene = SeqFeature(ncrna.location, type=new_type)
         gene.qualifiers["source"] = ncrna.qualifiers["source"]
         gene.sub_features = [ncrna]
         gene.id = ncrna.id
 
         return gene
         
-    def cds_gene(self, cds):
-        """Create a gene for a lone CDS"""
+    def cds_gene(self, cds: SeqFeature) -> SeqFeature:
+        """Returns a gene created for a lone CDS."""
+
+        print("Put the lone CDS in gene-mRNA parent features")
 
         # Create a transcript, add the CDS
         transcript = SeqFeature(cds.location, type="mRNA")
@@ -497,24 +571,27 @@ class process_gff3(eHive.BaseRunnable):
         transcript.sub_features.append(exon)
         
         # Create a gene, add the transcript
-        gene = SeqFeature(cds.location, type="gene")
+        gene_type = "gene"
+        if("pseudo" in cds.qualifiers and cds.qualifiers["pseudo"][0] == "true"):
+            gene_type = "pseudogene"
+        gene = SeqFeature(cds.location, type=gene_type)
         gene.qualifiers["source"] = cds.qualifiers["source"]
         gene.sub_features = [transcript]
         gene.id = self.generate_stable_id()
 
         return gene
         
-    def transcript_for_gene(self, gene):
-        """Create a transcript for a lone gene"""
+    def transcript_for_gene(self, gene: SeqFeature) -> SeqFeature:
+        """Returns a transcript, from a gene without one."""
         
-        transcript = SeqFeature(gene.location, type="mRNA")
+        transcript = SeqFeature(gene.location, type="transcript")
         transcript.qualifiers["source"] = gene.qualifiers["source"]
         transcript.sub_features = []
         
         return transcript
     
-    def gene_to_cds(self, gene) -> list:
-        """Create a transcript - exon - cds chain"""
+    def gene_to_cds(self, gene: SeqFeature) -> List[SeqFeature]:
+        """Returns a list of transcripts (with exons), from a gene with only CDS children."""
         
         gene_cds_skip_others = self.param("gene_cds_skip_others")
         transcripts_dict = {}
@@ -550,43 +627,121 @@ class process_gff3(eHive.BaseRunnable):
         
         return transcripts
     
-    def build_transcript(self, gene):
+    def build_transcript(self, gene: SeqFeature) -> SeqFeature:
+        """Returns a transcript with same metadata as the gene provided."""
+
         transcript = SeqFeature(gene.location, type="mRNA")
         transcript.qualifiers["source"] = gene.qualifiers["source"]
         transcript.sub_features = []
         return transcript
 
-    def move_cds_to_mrna(self, gene):
-        """Move a cds child of a gene, to the mRNA"""
+    def move_cds_to_mrna(self, gene: SeqFeature) -> SeqFeature:
+        """Move CDS child features of a gene, to the mRNA.
+
+        This is to fix the case where we have the following structure:
+        gene -> [ mRNA, CDSs ]
+        and change it to 
+        gene -> [ mNRA -> [ CDSs ] ]
+        The mRNA might have exons, in which case check that they match the CDS coordinates.
+
+        Raises an exception if the feature structure is not recognized.
         
-        # This is assuming there is 1 CDS and 1 mRNA without CDS
-        cdss = []
+        Args:
+            A gene with only one transcript, to check and fix.
+        Returns:
+            The gene where the CDSs have been moved, if needed.
+
+        """
+        # First, count the types
+        feats = []
         mrnas = []
+        cdss = []
+
+        gene_subf_clean = []
         for subf in gene.sub_features:
-            if subf.type == "CDS":
-                cdss.append(subf)
             if subf.type == "mRNA":
                 mrnas.append(subf)
-        
-        if len(cdss) != 1 or len(mrnas) != 1:
-            raise Exception(
-                f"Can't move CDS to mRNA children: several CDS or mRNA possible for {gene.id}")
-        cds = cdss[0]
-        mrna = mrnas[0]
+            elif subf.type == "CDS":
+                cdss.append(subf)
+            else:
+                gene_subf_clean.append(subf)
 
-        # Check that the mRNA does not have CDSs
-        for subm in mrna.sub_features:
-            if subm.type == "CDS":
-                raise Exception(
-                    "Can't move CDS child from gene to mRNA"
-                    f" if mRNA already have some CDS for gene {gene.id}"
-                )
-        mrna.sub_features.append(cds)
+        if len(cdss) == 0:
+            # Nothing to fix here, no CDSs to move
+            return gene
+        if len(mrnas) > 1:
+            raise Exception(f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene")
         
-        return mrna
+        mrna = mrnas[0]
         
-    def gene_to_exon(self, gene):
-        """Create a transcript - exon chain"""
+        # Check if there are exons (or CDSs) under the mRNA
+        sub_exons = []
+        sub_cdss = []
+        for subf in mrna.sub_features:
+            if subf.type == "CDS":
+                sub_cdss.append(subf)
+            elif subf.type == "exon":
+                sub_exons.append(subf)
+        
+        if len(sub_cdss) > 0:
+            raise Exception(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
+        if len(sub_exons) > 0:
+            # Check that they match the CDS outside
+            if len(sub_exons) == len(cdss):
+                # Now that all coordinates are the same
+                coord_exons = [ f"{exon.location}" for exon in sub_exons ]
+                coord_cdss = [ f"{cds.location}" for cds in cdss ]
+
+                if coord_exons != coord_cdss:
+                    raise Exception(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
+            else:
+                raise Exception(f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)")
+
+        print(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
+        # No more issues? move the CDSs
+        mrna.sub_features += cdss
+        # And remove them from the gene
+        gene.sub_features = gene_subf_clean
+        gene.sub_features.append(mrna)
+        
+        return gene
+    
+    def clean_extra_exons(self, gene: SeqFeature) -> SeqFeature:
+        """Remove extra exons, already existing in the mRNA.
+
+        This is a special case where a gene contains proper mRNAs, etc. but also
+        extra exons for the same features. Those exons usually have an ID starting with
+        "id-", so that's what we use to detect them.
+        """
+        exons = []
+        mrnas = []
+        others = []
+        for subf in gene.sub_features:
+            if subf.type == "exon":
+                exons.append(subf)
+            elif subf.type == "mRNA":
+                mrnas.append(subf)
+            else:
+                others.append(subf)
+        
+        if exons and mrnas:
+            exon_has_id = 0
+            # Check if the exon ids start with "id-", which is an indication that they do not belong here
+            for exon in exons:
+                if exon.id.startswith("id-"):
+                    exon_has_id += 1
+            if exon_has_id:
+                if exon_has_id == len(exons):
+                    print(f"Remove {exon_has_id} extra exons from {gene.id}")
+                    gene.sub_features = mrnas
+                    gene.sub_features += others
+                else:
+                    raise Exception(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
+        
+        return gene
+        
+    def gene_to_exon(self, gene: SeqFeature) -> SeqFeature:
+        """Returns an intermediary transcript for a gene with direct exon children."""
         
         transcript = SeqFeature(gene.location, type="mRNA")
         transcript.qualifiers["source"] = gene.qualifiers["source"]
@@ -597,17 +752,18 @@ class process_gff3(eHive.BaseRunnable):
         
         return transcript
         
-    def print_json(self, path, data) -> None:
-        """Dump an object to a json file"""
+    def add_funcann_feature(self, funcann: List, feature: SeqFeature, feat_type: str) -> None:
+        """Append a feature object following the specifications.
         
-        with open(path, "w") as json_out:
-            json_out.write(json.dumps(data, sort_keys=True, indent=4))
-    
-    def add_funcann_feature(self, funcann, feature, name):
-        """Append a feature object following the specifications"""
+        Args:
+            funcann: The list to which the feature object are appended.
+            feature: The SeqFeature to add to the list.
+            feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
+        
+        """
         
         feature_object = {
-            "object_type": name,
+            "object_type": feat_type,
             "id": feature.id
         }
         
@@ -637,10 +793,17 @@ class process_gff3(eHive.BaseRunnable):
         
         funcann.append(feature_object)
     
-    def normalize_gene_id(self, gene) -> str:
-        """
-        Remove any unnecessary prefixes around the gene ID
-        Generate a new stable id if it is not recognized as valid
+    def normalize_gene_id(self, gene: SeqFeature) -> str:
+        """Remove any unnecessary prefixes around the gene ID.
+
+        Generate a new stable id if it is not recognized as valid.
+
+        Args:
+            gene: Gene feature to normalize.
+        
+        Returns:
+            A normalized gene id.
+
         """
 
         prefixes = ("gene-", "gene:")
@@ -662,16 +825,20 @@ class process_gff3(eHive.BaseRunnable):
             # Make a new stable_id
             if self.param("make_missing_stable_id"):
                 new_id = self.generate_stable_id()
-                print("New id: %s -> %s" % (new_gene_id, new_id))
+                print(f"New id: {new_gene_id} -> {new_id}")
                 return new_id
             else:
-                raise Exception("Can't use invalid gene id for %s" % gene)
+                raise Exception(f"Can't use invalid gene id for {gene}")
         
         return new_gene_id
     
-    def generate_stable_id(self):
-        """
-        Create a gene stable id
+    def generate_stable_id(self) -> str:
+        """Returns a new unique gene stable_id with a prefix.
+
+        The id is made up of a prefix and a number, which is auto incremented.
+        Define the prefix with the param "stable_id_prefix",
+        or use the genome organism_abbrev and prepend "TMP_" to it.
+
         """
         if self.param_exists("stable_id_prefix"):
             prefix = self.param("stable_id_prefix")
@@ -692,8 +859,8 @@ class process_gff3(eHive.BaseRunnable):
         
         return new_id
     
-    def valid_id(self, name):
-        """Check a stable id format"""
+    def valid_id(self, name: str) -> bool:
+        """Check that the format of a stable id is valid."""
         
         if not self.param("validate_gene_id"):
             return True
@@ -722,13 +889,13 @@ class process_gff3(eHive.BaseRunnable):
         else:
             return True
     
-    def normalize_transcript_id(self, gene_id, number) -> str:
-        """Use a gene ID and a number to make a formatted transcript ID"""
+    def normalize_transcript_id(self, gene_id: str, number: int) -> str:
+        """Use a gene ID and a number to make a formatted transcript ID."""
 
-        transcript_id = "%s_t%d" % (gene_id, number)
+        transcript_id = f"{gene_id}_t{number}"
         return transcript_id
 
-    def normalize_cds_id(self, cds_id) -> str:
+    def normalize_cds_id(self, cds_id: str) -> str:
         """
         Check the CDS ID is proper:
         - Remove any unnecessary prefixes around the CDS ID
@@ -745,7 +912,7 @@ class process_gff3(eHive.BaseRunnable):
         
         return cds_id
     
-    def normalize_pseudogene_cds(self, gene):
+    def normalize_pseudogene_cds(self, gene: SeqFeature) -> None:
         """Ensure CDS from a pseudogene have a proper ID
         - different from the gene
         - derived from the gene if it is not proper
@@ -759,7 +926,7 @@ class process_gff3(eHive.BaseRunnable):
                         feat.id = "%s_cds" % transcript.id
                         feat.qualifiers["ID"] = feat.id
     
-    def remove_cds_from_pseudogene(self, gene) -> None:
+    def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
         """Remove CDS from a pseudogene
         This assumes the CDSs are sub features of the transcript or the gene
         """
@@ -779,15 +946,8 @@ class process_gff3(eHive.BaseRunnable):
             gene_subfeats.append(transcript)
         gene.sub_features = gene_subfeats
     
-    def make_transcript_id(self, gene_id, transcript_number) -> str:
-        """Create a transcript ID based on a gene and the number of the transcript"""
-        
-        # Simply add a numbered suffix to the gene_id
-        transcript_id = f"{gene_id}_t{transcript_number}"
 
-        return transcript_id
-
-    def remove_prefixes(self, identifier, prefixes) -> str:
+    def remove_prefixes(self, identifier: str, prefixes: List[str]) -> str:
         """
         Remove prefixes from an identifier if they are found
         Return the unaltered identifier otherwise

@@ -15,14 +15,13 @@
 # limitations under the License.
 
 
-
-import eHive
 import json
-import mysql.connector
+from os import path
 import re
 import sys
 
-from os import path
+import eHive
+import mysql.connector
 
 
 class prepare_genome(eHive.BaseRunnable):

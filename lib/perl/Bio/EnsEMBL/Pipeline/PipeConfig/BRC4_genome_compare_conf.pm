@@ -153,7 +153,6 @@ sub pipeline_analyses {
        }
      },
 
-
     { -logic_name  => 'Fasta_DNA',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFastaDNA',
       -parameters => {
@@ -187,6 +186,7 @@ sub pipeline_analyses {
     { -logic_name  => 'Get_accession',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::GetMetaValue',
       -parameters => {
+        provider => "assembly.provider_name",
         param_name => "accession",
         param_key => "assembly.accession",
       },
@@ -215,7 +215,7 @@ sub pipeline_analyses {
         2 => [
           '?accu_name=insdc_fasta_dna&accu_input_variable=fasta_dna',
           '?accu_name=insdc_report&accu_input_variable=report',
-	  '?accu_name=accession&accu_input_variable=accession',
+          '?accu_name=accession&accu_input_variable=accession',
         ],
       },
     },
@@ -230,13 +230,13 @@ sub pipeline_analyses {
         fasta2 => "#core_fasta_dna#",
         seq_regions => "#seq_region_json#",
         comparison_name => "fasta_dna",
-	accession => "#accession#",
+        accession => "#accession#",
       },
       -language => 'python3',
       -analysis_capacity => 5,
       -failed_job_tolerance => 0,
       -rc_name        => '8GB',
-       -flow_into      => {
+      -flow_into      => {
          '2' => '?accu_name=stats&accu_address={species}'
         }
     },
@@ -253,18 +253,4 @@ sub pipeline_analyses {
   ];
 }
 
-sub resource_classes {
-    my $self = shift;
-    return {
-      'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
-      '8GB'     => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 8000   -R "rusage[mem=8000]"'},
-      '15GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 15000  -R "rusage[mem=15000]"'},
-      '32GB '   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 32000  -R "rusage[mem=32000]"'},
-      '64GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 64000  -R "rusage[mem=64000]"'},
-      '128GB'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 128000 -R "rusage[mem=128000]"'},
-      '256GB  ' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 256000 -R "rusage[mem=256000]"'},
-    }
-}
-
 1;
-

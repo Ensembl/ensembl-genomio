@@ -45,7 +45,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         return {
             # relative order of the coord_systems types to infer their rank from
-            'cs_order' : 'chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome',
+            'cs_order' : 'ensembl_internal,chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome',
 
             'IUPAC' : 'RYKMSWBDHV',    # symbols to be replaced with N in the DNA sequences (ensembl core(107) doesn't support the whole IUPAC alphabet for DNA)
 
@@ -109,6 +109,13 @@ class load_sequence_data(eHive.BaseRunnable):
 
             # loading additional sequences to the already exsisting core db
             'load_additional_sequences' : 0,
+
+            # size of the sequence data chunk, if 0 (default), no chunking is performed
+            'sequence_data_chunck' : 0,
+            #   min size of the sequence chunk, no chunking is done if 'sequence_data_chunck' < 'sequence_data_chunck_min'
+            'sequence_data_chunck_min_len' : 50_000,
+            # coord system name for chunks
+            'chunk_cs_name' : 'ensembl_internal',
         }
 
 
@@ -180,11 +187,10 @@ class load_sequence_data(eHive.BaseRunnable):
         # start coord system ranking and agps processing
         agps = self.from_param("manifest_data", "agp", not_throw = True)
 
-        # rank cs_names, met in agps.keys ("-" separated, i.e. "scaffold-contig") based on cs_order
+        # get the deafult coord_system order
         #   use noagp_cs_name_default for "noagp" assemblies
         cs_order = self.coord_sys_order(self.param("cs_order"))
         noagps_cs = self.param("noagp_cs_name_default")
-        cs_rank = self.used_cs_ranks(agps, cs_order, noagps_cs)
 
         # remove gaps and lower_level mappings if the are coveres by higher level ones
         #   i.e.: remove 'contigN to chromosomeZ', if 'contigN to scaffoldM' and 'scaffoldM to chromosomeZ' are in place
@@ -192,12 +198,27 @@ class load_sequence_data(eHive.BaseRunnable):
         agps_pruned_dir = self.pjc(work_dir, "agps_pruned")
         agps_pruned = self.prune_agps(agps, cs_order, agps_pruned_dir, self.param_bool("prune_agp"))
 
+        # order 
+        # rank cs_names, met in agps.keys ("-" separated, i.e. "scaffold-contig") based on cs_order
+        cs_rank = self.used_cs_ranks(agps_pruned, cs_order, noagps_cs)
+
+        # chunk sequence data if needed
+        #   no chunking if chunk_size < 50k
+        chunk_size = int(self.param("sequence_data_chunck"))
+        chunk_cs_name = self.param("chunk_cs_name")
+        fasta_clean, cs_rank, agps_pruned = self.chunk_contigs(fasta_clean, cs_rank, agps_pruned,
+                                                               pj(work_dir, "chuncking"),
+                                                               chunk_size = chunk_size,
+                                                               chunks_cs_name = chunk_cs_name)
+
         # empty agps_pruned ignored
         self.load_seq_data(fasta_clean, agps_pruned, cs_rank, self.pjc(work_dir, "load"))
 
         # mark all the "contig"s or noagp_cs as being sourced from ENA
         if not self.param_bool("no_contig_ena_attrib"):
-            if agps is None:
+            # NB using original "agps" parameter (with no chuncking data added)
+            agps_raw = self.from_param("manifest_data", "agp", not_throw = True)
+            if agps_raw is None:
                 self.add_contig_ena_attrib(self.pjc(work_dir, "load", "set_ena"), cs_name = noagps_cs)
             else:
                 self.add_contig_ena_attrib(self.pjc(work_dir, "load", "set_ena"))
@@ -215,7 +236,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         # nullify contig version and update mappings strings accordingly; ignore for "load_additional_sequences" mode
         if not self.param_bool("load_additional_sequences"):
-            self.nullify_ctg_cs_version(self.pjc(work_dir, "asm_mapping", "nullify_cs_versions"))
+            self.nullify_ctg_cs_version(cs_order, self.pjc(work_dir, "asm_mapping", "nullify_cs_versions"))
 
 
     def add_sr_synonyms(self,
@@ -791,25 +812,54 @@ class load_sequence_data(eHive.BaseRunnable):
         return { e:i for i,e in enumerate(sorted(cs_used_set,key=lambda x:-cs_order[x]), start=1) }
 
 
+    def chunk_contigs(self, fasta, cs_ranks, agps, work_dir, chunk_size = 0, chunks_cs_name = "ensembl_internal"):
+        """
+        chunk dna sequence fasta
+          no chunking if chunk_size < 50k
+        """
+        chunk_size_min_len = self.param_required("sequence_data_chunck_min_len")
+        if chunk_size < chunk_size_min_len:
+            return fasta, cs_ranks, agps
+
+        # split using script
+        en_root = self.param_required("ensembl_root_dir")
+        _splitter = pj(en_root, r"ensembl-genomio/scripts/chunk_fasta.py")
+
+        os.makedirs(work_dir, exist_ok=True)
+
+        _stderr = f"{work_dir}/chunking.stderr"
+        _out_agp = f"{work_dir}/chunks.agp"
+        _out_fasta = f"{work_dir}/chunks.fasta"
+        split_cmd = f"python {_splitter} --chunk_size {chunk_size} --agp_out {_out_agp} --out {_out_fasta} {fasta} 2> {_stderr}"
+
+        print(f"running {split_cmd}", file = sys.stderr)
+        # NB throws CalledProcessError if failed  
+        sp.run(split_cmd, shell=True, check=True)
+
+        # add rank for chunks
+        _cs_name, _cs_rank = sorted(cs_ranks.items(), key=lambda k:k[1])[-1]
+        cs_ranks[chunks_cs_name] = _cs_rank + 1
+
+        # add agps entry
+        if agps is None: agps = dict()
+        agps[f"{_cs_name}-{chunks_cs_name}"] = _out_agp
+
+        return _out_fasta, cs_ranks, agps
+
+
     def prune_agps(self, agps, cs_order, agps_pruned_dir, pruning = True):
         # when loading agp sort by:
         #   highest component (cmp) cs level (lowest rank)
         #   lowest difference between cs ranks (asm - cmp)
         #   i.e: chromosome-scaffold scaffold-chunk chromosome-chunk
         #   if no agps return empty pruned result
-        if agps is None: return None
 
-        agp_cs_pairs = list(map(lambda x: [x]+x.split("-"), agps.keys()))
+        if not agps: return None
 
-        agp_levels = [ (x[0], cs_order[x[1]], cs_order[x[2]]) for x in agp_cs_pairs ]
-        bad_agps = list(filter(lambda x: x[1] < x[2], agp_levels))
-        if (len(bad_agps) > 0):
-            raise Exception("component cs has higher order than assembled cs %s" % (str(bad_agps)))
-
-        agp_levels_sorted = [ e[0] for e in sorted(agp_levels, key=lambda x:(-x[2], x[1]-x[2])) ]
+        agp_levels_sorted = self.order_agp_levels(agps, cs_order)
 
         #prune agps
-        agps_pruned = {}
+        agps_pruned = dict()
         used_components = set()
         if not pruning:
             used_components = None
@@ -820,6 +870,23 @@ class load_sequence_data(eHive.BaseRunnable):
                 agps_pruned[asm_cmp] = agp_file_dst
         return agps_pruned
 
+    def order_agp_levels(self, agps, cs_order):
+        # sort agp for loading by:
+        #   highest component (cmp) cs level (lowest rank)
+        #   lowest difference between cs ranks (asm - cmp)
+        #   i.e: chromosome-scaffold scaffold-chunk chromosome-chunk
+        if not agps:
+          return []
+
+        agp_cs_pairs = list(map(lambda x: [x]+x.split("-"), agps.keys()))
+        agp_levels = [ (x[0], cs_order[x[1]], cs_order[x[2]]) for x in agp_cs_pairs ]
+
+        bad_agps = list(filter(lambda x: x[1] < x[2], agp_levels))
+        if (len(bad_agps) > 0):
+            raise Exception("component cs has higher order than assembled cs %s" % (str(bad_agps)))
+
+        agp_levels_sorted = [ e[0] for e in sorted(agp_levels, key=lambda x:(-x[2], x[1]-x[2])) ]
+        return agp_levels_sorted
 
     def load_seq_data(self, fasta, agps, cs_rank, log_pfx):
         """loads sequence data for various coordinate systems accordingly with their rank"""
@@ -1272,7 +1339,7 @@ class load_sequence_data(eHive.BaseRunnable):
         return self.run_sql_req(sql, log_pfx)
 
 
-    def nullify_ctg_cs_version(self, log_pfx: str):
+    def nullify_ctg_cs_version(self, cs_order, log_pfx: str):
         """
         Nullify every CS version with rank larger than that of "contig", but don't nullify toplevel ones.
 
@@ -1303,19 +1370,23 @@ class load_sequence_data(eHive.BaseRunnable):
             header = None
             for line in f:
                 if header is None:
-                    header = next(f).strip().split("\t")
+                    header = line.strip().split("\t")
                     continue
                 cs_info.append(dict(zip(header, line.strip().split())))
         # return if there's no coord_systems to nullify versions for
         if not cs_info:
             return
-        # choose cs rank threshold to start clearing version from
-        seq_rank = max(map(lambda cs: int(cs["rank"]), cs_info))
+        # get list of known cs from cs_order to clean version from
         nullify_cs_version_from = self.param("nullify_cs_version_from")
-        ctg_lst = list(filter(lambda cs: cs["name"] == nullify_cs_version_from, cs_info))
-        clear_thr = ctg_lst and int(ctg_lst[0]["rank"]) or seq_rank
+        if not nullify_cs_version_from or nullify_cs_version_from not in cs_order:
+          return
+        cs_thr_index = cs_order[nullify_cs_version_from]
+        cs_names_to_keep_ver = frozenset([nm for (nm, ind) in cs_order.items() if ind > cs_thr_index])
+        
+        # choose cs rank threshold to start clearing version from
         clear_lst = [ (cs["coord_system_id"], cs["name"]) for cs in cs_info
-                        if (bool(int(cs["no_toplevel"])) and int(cs["rank"]) >= clear_thr) ]
+                        if (bool(int(cs["no_toplevel"])) and cs["name"] not in cs_names_to_keep_ver) ]
+
         # run sql
         if clear_lst:
             clear_pfx = self.pjc(log_pfx, "clear")

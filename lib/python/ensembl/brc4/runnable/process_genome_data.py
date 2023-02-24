@@ -15,16 +15,15 @@
 # limitations under the License.
 
 
-
-import os, re, shutil
-import eHive
-import gzip
-import csv, json
 import datetime
-
-from Bio import SeqIO, SeqRecord
+from pathlib import Path
 import requests
 import xml.etree.ElementTree as ET
+
+import eHive
+
+from ensembl.brc4.runnable.utils import print_json, get_json
+
 
 class process_genome_data(eHive.BaseRunnable):
 
@@ -57,54 +56,39 @@ class process_genome_data(eHive.BaseRunnable):
         
 
     def run(self):
-        json_path = self.param_required("json_path")
+        json_path = Path(self.param_required("json_path"))
         
-        genome_data = self.get_json(json_path)
+        genome_data = get_json(json_path)
 
         # Amend metadata
         self.add_provider(genome_data)
         self.add_assembly_version(genome_data)
         self.add_genebuild_metadata(genome_data)
         self.add_species_metadata(genome_data)
-        self.add_brc4_division(genome_data)
         
         # Create dedicated work dir
         accession = genome_data["assembly"]["accession"]
         self.param("accession", accession)
-        work_dir = self.param('work_dir')
-        if not os.path.isdir(work_dir):
-            os.makedirs(work_dir)
+        work_dir = Path(self.param('root_work_dir'), accession)
+        if not work_dir.is_dir():
+            work_dir.mkdir(parents=True)
 
         # Final file name
         metadata_type = "genome"
         new_file_name = metadata_type + ".json"
-        final_path = os.path.join(work_dir, new_file_name)
+        final_path = work_dir / new_file_name
 
         # Print out the file
-        self.print_json(final_path, genome_data)
+        print_json(final_path, genome_data)
 
         # Flow out the file and type
         output = {
-                "genome_json" : final_path,
+                "genome_json" : str(final_path),
                 "genome_data" : genome_data,
+                "work_dir" : str(work_dir),
                 "accession" : accession
                 }
         self.dataflow(output, 2)
-    
-    def get_json(self, json_path) -> dict:
-        with open(json_path) as json_file:
-            data = json.load(json_file)
-            return data
-    
-    def print_json(self, path, data) -> None:
-        with open(path, "w") as json_out:
-            json_out.write(json.dumps(data, sort_keys=True, indent=4))
-    
-    def add_brc4_division(self, genome_data):
-        """Add default division for BRC4 as the BRC4 component"""
-        if "BRC4" in genome_data and "component" in genome_data["BRC4"]:
-            component = genome_data["BRC4"]["component"]
-            genome_data["species"]["division"] = component
     
     def add_provider(self, genome_data):
         """Add default provider metadata for assembly and gene models"""

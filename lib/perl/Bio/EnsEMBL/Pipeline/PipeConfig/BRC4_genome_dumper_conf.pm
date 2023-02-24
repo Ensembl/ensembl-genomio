@@ -31,7 +31,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_dumper_conf;
 
 use strict;
 use warnings;
-use File::Spec::Functions qw/catfile/;
+use File::Spec::Functions qw/catfile catdir/;
 use Data::Dumper;
 use Bio::EnsEMBL::Hive::Version 2.4;
 use Bio::EnsEMBL::ApiVersion qw/software_version/;
@@ -45,8 +45,9 @@ my $root_dir = "$package_dir/../../../../../..";
 
 my $schema_dir = "$root_dir/schema";
 my $data_dir = "$root_dir/data";
+my $runnables_dir = "$root_dir/lib/python/ensembl/brc4/runnable";
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
+use base ('Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf');
 
 sub default_options {
 	my ($self) = @_;
@@ -76,6 +77,7 @@ sub default_options {
        'do_fasta_pep' => $self->o('dump_all'),
        'do_gff' => $self->o('dump_all'),
        'do_agp' => $self->o('dump_all'),
+       'do_events' => $self->o('dump_all'),
        # Json meta
         'do_func' => $self->o('dump_all'),
         'do_genome' => $self->o('dump_all'),
@@ -178,6 +180,7 @@ sub pipeline_wide_parameters {
             'do_gff'      => $self->o('do_gff'),
             'do_agp'      => $self->o('do_agp'),
             'do_gff'      => $self->o('do_gff'),
+            'do_events'      => $self->o('do_events'),
             'do_genome'      => $self->o('do_genome'),
             'do_func'      => $self->o('do_func'),
             'do_seq_reg'      => $self->o('do_seq_reg'),
@@ -266,8 +269,45 @@ sub pipeline_analyses {
            'Metadata_makers',
            WHEN('#do_gff#', 'GFF3_maker'),
            WHEN('#do_agp#', 'AGP_maker'),
+           WHEN('#do_events#', 'Extract_connection'),
          ] }
      },
+
+### Ids events
+    {
+      -logic_name => 'Extract_connection',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::ExtractConnection',
+      -max_retry_count => 0,
+      -hive_capacity   => 20,
+      -priority        => 5,
+      -rc_name         => 'default',
+      -flow_into  => { 2 => 'Events_dumper' },
+    },
+
+    {
+      -logic_name      => 'Events_dumper',
+      -module          => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters      => {
+        events_dir => catdir('#base_path#', 'events', '#species#'),
+        output_file => catfile('#events_dir#', 'ids_events.tab'),
+        hash_key => 'events',
+        cmd => "mkdir -p #events_dir#;"
+          . " python $runnables_dir/dump_stable_ids.py"
+          . " --host #host# "
+          . " --port #port# "
+          . " --user #user# "
+          . " --password '#password#' "
+          . " --dbname #dbname# "
+          . " --output_file #output_file#",
+      },
+      -max_retry_count => 0,
+      -analysis_capacity => 2,
+      -rc_name         => 'default',
+      -flow_into       => {
+        1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=output_file'
+      },
+    },
+
 
 ### GFF3
      { -logic_name     => 'GFF3_maker',
@@ -476,19 +516,6 @@ sub pipeline_analyses {
       -rc_name         => 'default',
     },
   ];
-}
-
-sub resource_classes {
-    my $self = shift;
-    return {
-      'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
-      '8GB'     => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 8000   -R "rusage[mem=8000]"'},
-      '15GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 15000  -R "rusage[mem=15000]"'},
-      '32GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 32000  -R "rusage[mem=32000]"'},
-      '64GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 64000  -R "rusage[mem=64000]"'},
-      '128GB'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 128000 -R "rusage[mem=128000]"'},
-      '256GB  ' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 256000 -R "rusage[mem=256000]"'},
-    }
 }
 
 1;

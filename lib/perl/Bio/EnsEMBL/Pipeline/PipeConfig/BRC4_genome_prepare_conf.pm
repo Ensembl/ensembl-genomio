@@ -28,7 +28,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_prepare_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
@@ -113,9 +113,10 @@ sub pipeline_wide_parameters {
     exclude_seq_regions   => $self->o('exclude_seq_regions'),
 
     download_dir   => catdir($self->o('pipeline_dir'), "download"),
-    work_dir       => catdir($self->o('pipeline_dir'), "process_files"),
+    root_work_dir  => catdir($self->o('pipeline_dir'), "process_files"),
   };
 }
+
 sub hive_meta_table {
   my ($self) = @_;
   return {
@@ -145,7 +146,6 @@ sub pipeline_analyses {
       -input_ids  => [{}],
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -flow_into  => 'Genome_factory',
     },
 
@@ -160,7 +160,6 @@ sub pipeline_analyses {
       },
       -analysis_capacity   => 1,
       -rc_name    => 'default',
-      -meadow_type       => 'LSF',
       -max_retry_count => 0,
       -flow_into => {
         '2' => { 'Process_genome_metadata' => { genome_json => '#_0#' } },
@@ -206,7 +205,7 @@ sub pipeline_analyses {
       -language => 'python3',
       -analysis_capacity => 1,
       -failed_job_tolerance => 100,
-      -rc_name        => 'default',
+      -rc_name        => 'normal',
       -flow_into  => {
         '2->A' => 'Process_data',
         'A->2' => 'Manifest_maker',
@@ -222,6 +221,7 @@ sub pipeline_analyses {
         WHEN("#gff3_raw#", ['Ungzip_gff3', 'Process_fasta_pep']),
         'Process_seq_region',
         'Process_fasta_dna',
+        'Amend_genome_metadata',
       ],
     },
 
@@ -254,7 +254,6 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
       -rc_name    => '8GB',
-      -meadow_type       => 'LSF',
       -flow_into  => {
           2 => 'GFF3_validation',
           3 => "Check_json_schema",
@@ -265,11 +264,12 @@ sub pipeline_analyses {
      -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
      -parameters     => {
        temp_gff3 => "#gff3#" . ".tmp",
-       cmd => "mv #gff3# #temp_gff3#" .
+       cmd => "cp #gff3# #temp_gff3#" .
        " && " . $self->o('gff3_tidy') . " -o #gff3# #temp_gff3#" .
        " && " . $self->o('gff3_validate') . ' #gff3#',
        file_name => "gff3",
      },
+      -failed_job_tolerance => 100,
       -max_retry_count => 0,
      -analysis_capacity => 10,
      -batch_size        => 10,
@@ -282,9 +282,25 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.process_seq_region',
       -language    => 'python3',
       -analysis_capacity   => 5,
-      -rc_name    => 'default',
+      -rc_name    => '4GB',
       -parameters     => {
         file_name => "seq_region",
+      },
+      -max_retry_count => 0,
+      -failed_job_tolerance => 100,
+      -flow_into  => {
+        2 => 'Check_json_schema'
+      },
+    },
+
+    {
+      -logic_name => 'Amend_genome_metadata',
+      -module     => 'ensembl.brc4.runnable.amend_genome_metadata',
+      -language    => 'python3',
+      -analysis_capacity   => 5,
+      -rc_name    => 'default',
+      -parameters     => {
+        file_name => "genome",
       },
       -max_retry_count => 0,
       -failed_job_tolerance => 100,
@@ -302,6 +318,7 @@ sub pipeline_analyses {
         hash_key => "#metadata_type#",
       },
       -analysis_capacity => 2,
+      -max_retry_count => 0,
       -failed_job_tolerance => 100,
       -batch_size     => 50,
       -rc_name        => 'default',
@@ -313,7 +330,9 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.process_fasta',
       -language    => 'python3',
       -analysis_capacity   => 2,
-      -rc_name    => 'default',
+      -rc_name    => '4GB',
+      -max_retry_count => 0,
+      -failed_job_tolerance => 100,
       -parameters     => {
         file_name => "fasta_dna",
       },
@@ -325,7 +344,8 @@ sub pipeline_analyses {
       -module     => 'ensembl.brc4.runnable.process_fasta',
       -language    => 'python3',
       -analysis_capacity   => 2,
-      -rc_name    => 'default',
+      -rc_name    => '4GB',
+      -max_retry_count => 0,
       -parameters     => {
         file_name => "fasta_pep",
         in_genbank => '#gbff#',
@@ -340,7 +360,7 @@ sub pipeline_analyses {
       -language    => 'python3',
       -max_retry_count => 0,
       -analysis_capacity   => 5,
-      -rc_name         => 'default',
+      -rc_name         => '4GB',
       -parameters     => {
         output_dir => $self->o('output_dir'),
       },
@@ -380,24 +400,12 @@ sub pipeline_analyses {
       -logic_name  => 'Manifest_stats',
       -module      => 'ensembl.brc4.runnable.manifest_stats',
       -language    => 'python3',
-      -analysis_capacity   => 1,
-      -rc_name         => 'default',
+      -failed_job_tolerance => 100,
+      -analysis_capacity   => 2,
+      -rc_name         => '4GB',
       -max_retry_count => 0,
     },
   ];
-}
-
-sub resource_classes {
-    my $self = shift;
-    return {
-      'default' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 4000   -R "rusage[mem=4000]"'},
-      '8GB'     => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 8000   -R "rusage[mem=8000]"'},
-      '15GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 15000  -R "rusage[mem=15000]"'},
-      '32GB '   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 32000  -R "rusage[mem=32000]"'},
-      '64GB'    => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 64000  -R "rusage[mem=64000]"'},
-      '128GB'   => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 128000 -R "rusage[mem=128000]"'},
-      '256GB  ' => {'LSF' => '-q ' . $self->o("queue_name") . ' -M 256000 -R "rusage[mem=256000]"'},
-    }
 }
 
 1;

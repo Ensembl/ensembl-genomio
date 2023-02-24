@@ -35,9 +35,13 @@ use v5.14;
 sub run {
   my ($self) = @_;
 
-  my $manifest = $self->param_required('manifest');
-  my $output_dir = $self->param_required('output_dir');
   my $species = $self->param_required('species');
+  my $manifest = $self->param('manifest');
+  if (not manifest_has_files($manifest)) {
+    say("No manifest data for $species");
+    return;
+  }
+  my $output_dir = $self->param_required('output_dir');
   my $species_component = $self->get_meta_value('BRC4.component');
   my $species_abbrev = $self->get_meta_value('BRC4.organism_abbrev');
   my $species_name = $species_abbrev // $species;
@@ -50,7 +54,7 @@ sub run {
   for my $name (keys %$manifest) {
 
     if (ref($manifest->{$name}) eq 'HASH') {
-      foreach my $subname (sort keys %{ $manifest->{$name} }) {
+      foreach my $subname (keys %{ $manifest->{$name} }) {
         my $file = prepare_file($manifest->{$name}->{$subname}, $dir, $species, $species_abbrev);
         $final_manifest{$name}{$subname} = $file if $file;
       }
@@ -73,6 +77,26 @@ sub run {
   $self->dataflow_output_id({ "manifest" => $manifest_path }, 2);
 
   return;
+}
+
+sub manifest_has_files {
+  my ($manifest) = @_;
+
+  my $has_files = 0;
+  for my $name (keys %$manifest) {
+
+    if (ref($manifest->{$name}) eq 'HASH') {
+      foreach my $subname (keys %{ $manifest->{$name} }) {
+        my $file = $manifest->{$name}->{$subname};
+        $has_files++ if -s $file;
+      }
+    } else {
+      my $file = $manifest->{$name};
+      $has_files++ if -s $file;
+    }
+  }
+  
+  return $has_files;
 }
 
 sub get_meta_value {
