@@ -33,7 +33,7 @@ class InputSchema(argschema.ArgSchema):
     host = argschema.fields.String(metadata={
         "required": True, "description": "Host to the server with EnsEMBL databases"
     })
-    port = argschema.fields.String(metadata={
+    port = argschema.fields.Integer(metadata={
         "required": True, "description": "Port to use"
     })
     host = argschema.fields.String(metadata={
