@@ -16,7 +16,7 @@
 
 import argparse
 import re
-from typing import List
+from typing import Dict, List
 
 import mysql.connector
 
@@ -98,6 +98,28 @@ class CoreServer:
             dbs = [db for db in dbs if re.search(f"_core_\d+_{version}_\d+$", db)]
 
         return dbs
+
+    def get_db_metadata(self) -> Dict[str, List]:
+        """Retrieve all metadata from a database.
+
+        Returns:
+            A dict of with key meta_key, and value=List of meta_value.
+
+        """
+        query = """SELECT meta_key, meta_value FROM meta
+        """
+        cursor = self.get_cursor()
+        cursor.execute(query)
+
+        metadata = {}
+        for row in cursor:
+            meta_key, meta_value = row
+            if meta_key in metadata:
+                metadata[meta_key].append(meta_value)
+            else:
+                metadata[meta_key] = [meta_value]
+
+        return metadata
 
 
 if __name__ == "__main__":
