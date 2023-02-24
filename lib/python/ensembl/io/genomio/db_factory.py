@@ -20,6 +20,7 @@ Can be imported as a module and called as a script as well, with the same parame
 
 import json
 from pathlib import Path
+from typing import Dict, List
 
 import argschema
 
@@ -56,6 +57,45 @@ class InputSchema(argschema.ArgSchema):
     version = argschema.fields.String(metadata={
         "required": False, "description": "EnsEMBL version to filter the databases"
     })
+    brc_mode = argschema.fields.Boolean(metadata={
+        "required": False, "description": "BRC4 mode: use organism_abbrev for species, component for division"
+    })
+
+
+def format_db_data(server: CoreServer, dbs: List[str], brc_mode: False) -> List[Dict]:
+    db_datas = list()
+    for db in dbs:
+        server.set_database(db)
+        metadata = server.get_db_metadata()
+
+        species = get_metadata_value(metadata, "species.production_name")
+        division = get_metadata_value(metadata, "species.division")
+
+        if brc_mode:
+            brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
+            brc_component = get_metadata_value(metadata, "BRC4.component")
+            if brc_organism:
+                species = brc_organism
+            if brc_component:
+                division = brc_component
+        db_data = {
+            "server_host": server.host,
+            "server_port": server.port,
+            "server_user": server.user,
+            "server_password": server.password,
+            "database": db,
+            "species": species,
+            "division": division,
+        }
+        db_datas.append(db_data)
+    return db_datas
+
+
+def get_metadata_value(metadata, key) -> str:
+    if key in metadata and len(metadata[key]) > 0:
+        return metadata[key][0]
+    else:
+        return None
 
 
 def main() -> None:
@@ -74,10 +114,13 @@ def main() -> None:
     version = mod.args.get("version")
     dbs = server.get_cores(prefix=prefix, build=build, version=version)
 
+    brc_mode = mod.args.get("brc_mode")
+    dbs_data = format_db_data(server, dbs, brc_mode)
+
     if mod.args.get("output_json"):
         output_file = Path(mod.args.get("output_json"))
         with output_file.open("w") as output_fh:
-            output_fh.write(json.dumps(dbs, indent=2))
+            output_fh.write(json.dumps(dbs_data, indent=2))
     else:
         print(dbs)
 
