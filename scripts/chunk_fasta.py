@@ -19,6 +19,7 @@
 import argparse
 import gzip
 import sys
+import re
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -42,12 +43,25 @@ def get_args():
                       type=int, default = 100_000_000, help="maximum chunk size (should be greater then 50k)")
   parser.add_argument("--chunk_sfx", metavar="ens_chunk", required = False,
                       type=str, default = "ens_chunk", help="added to contig id before chunk number")
+  parser.add_argument("--n_seq", action="store_true",
+                      help="split the fasta file into chunks at the positions of N sequences")
+  parser.add_argument("--minimum_ns", action="store_true", default=1,
+                      help="Minimum length of N sequences to perform splitting using the n_seq option. Default=1")
   #
   args = parser.parse_args()
   if args.chunk_size < 50_000:
     parser.error(f"wrong '--chunk_size' value: '{args.chunk_size}'. should be greater then 50_000. exiting...")
   return args
 
+
+def split_by_n(seq, n):
+    """Split a string into chunks at the positions of N sequences"""
+    pattern = f"(N{{{n},}})"
+    regex = re.compile(pattern)
+    split_points = [m.end() for m in regex.finditer(seq)]
+    split_points.insert(0, 0)
+    split_points.append(len(seq))
+    return [(split_points[i], split_points[i+1]) for i in range(len(split_points)-1)]
 
 ## MAIN ##
 def main():
@@ -57,19 +71,31 @@ def main():
   _open = fasta_file.endswith(".gz") and gzip.open or open
   with _open(fasta_file, 'rt') as fasta:
     agp_lines = []
-    print(f"spliting sequences from '{fasta_file}', chunk size {args.chunk_size:_}", file=sys.stderr)
+    if not args.n_seq:
+        print(f"spliting sequences from '{fasta_file}', chunk size {args.chunk_size:_}", file=sys.stderr)
     fasta_parser = SeqIO.parse(fasta, "fasta")
     for rec in fasta_parser:
       rec_len = len(rec)
       rec_name = str(rec.name)
-      chunks = rec_len // args.chunk_size + (rec_len % args.chunk_size > 0)
-      print(f"spliting {rec_name} ({rec_len:_} bp) into {chunks} chunks", file=sys.stderr)
-      #
-      rec_from, rec_to, chunk_len = 1, args.chunk_size, args.chunk_size
-      for chunk in range(1, chunks+1):
-        if rec_to > rec_len:
-          rec_to = rec_len
-          chunk_len = rec_len - rec_from + 1
+      if args.n_seq:
+        chunks_list = split_by_n(str(rec.seq), int(args.minimum_ns))
+        print(f"spliting {rec_name} ({rec_len:_} bp) into {len(chunks_list)} chunks on N sequences.", file=sys.stderr)
+      else:
+        chunks = rec_len // args.chunk_size + (rec_len % args.chunk_size > 0)
+        print(f"spliting {rec_name} ({rec_len:_} bp) into {chunks} chunks", file=sys.stderr)
+        rec_from, rec_to, chunk_len = 1, args.chunk_size, args.chunk_size
+        chunks_list=[]
+        for chunk in range(1, chunks+1):
+            if rec_to > rec_len:
+                rec_to = rec_len
+            chunks_list.append((rec_from, rec_to))
+            rec_from += chunk_len
+            rec_to += chunk_len
+      for chunk, chunk_set in enumerate(chunks_list):
+        chunk+=1
+        chunk_len = chunk_set[1] - chunk_set[0] + 1
+        rec_from = chunk_set[0] + (1 if args.n_seq else 0)
+        rec_to = chunk_set[1]
         chunk_name = f"{rec_name}_{args.chunk_sfx}_{chunk:03d}"
         agp_line = f"{rec_name}\t{rec_from}\t{rec_to}\t{chunk}\tW\t{chunk_name}\t1\t{chunk_len}\t+"
         agp_lines.append(agp_line)
@@ -80,8 +106,6 @@ def main():
         args.out.write(tmp_record.format("fasta"))
         del tmp_record
         #
-        rec_from += chunk_len
-        rec_to += chunk_len
     if args.agp_out:
       print("\n".join(agp_lines), file = args.agp_out)
   # main end
@@ -89,4 +113,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
