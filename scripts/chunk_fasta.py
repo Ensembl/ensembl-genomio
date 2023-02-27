@@ -43,16 +43,22 @@ def get_args():
                       type=int, default = 100_000_000, help="maximum chunk size (should be greater then 50k)")
   parser.add_argument("--chunk_sfx", metavar="ens_chunk", required = False,
                       type=str, default = "ens_chunk", help="added to contig id before chunk number")
-  parser.add_argument("--n_seq", action="store_true",
-                      help="split the fasta file into chunks at the positions of N sequences")
-  parser.add_argument("--minimum_ns", action="store_true", default=1,
-                      help="Minimum length of N sequences to perform splitting using the n_seq option. Default=1")
-  #
+  parser.add_argument("--chunk_tolerance", metavar="ens_chunk", required=False,
+                      type=int, default=0, help="chunk size tolerance percentage. If the to-be-written chunk is longer "
+                                                "than the defined chunk size (--chunk_size) by less than the specified "
+                                                "tolerance percentage, it will not be split.")
+  parser.add_argument("--n_seq", required = False, default = 0,
+                      type=int, help="The fasta file will be split into chunks at positions of at least n N sequences. n number is specified here.")
+  parser.add_argument("--add_offset", required = False, action="store_true",
+                      help="0 based offset")
+
   args = parser.parse_args()
   if args.chunk_size < 50_000:
     parser.error(f"wrong '--chunk_size' value: '{args.chunk_size}'. should be greater then 50_000. exiting...")
   return args
 
+def flatten(t):
+    return [item for sublist in t for item in sublist]
 
 def split_by_n(seq, n):
     """Split a string into chunks at the positions of N sequences"""
@@ -62,6 +68,21 @@ def split_by_n(seq, n):
     split_points.insert(0, 0)
     split_points.append(len(seq))
     return [(split_points[i], split_points[i+1]) for i in range(len(split_points)-1)]
+
+def split_record_by_chunksize(starting_position, rec_len, chunk_size, tolerance):
+    """Split a a range defined by a starting position and a range length (starting_position, rec_len)
+    into chunks by a defined chunksize"""
+    chunks = rec_len // chunk_size + (rec_len % chunk_size > 0)
+    rec_from, rec_to, chunk_len = starting_position, starting_position+chunk_size, chunk_size
+    chunks_list = []
+    for chunk in range(1, chunks + 1):
+        if (rec_to - starting_position) >= rec_len * (1 + tolerance/100):
+            rec_to = starting_position + rec_len
+        chunks_list.append((rec_from, rec_to))
+        rec_from += chunk_len
+        rec_to += chunk_len
+    print(chunks_list)
+    return chunks_list
 
 ## MAIN ##
 def main():
@@ -77,29 +98,22 @@ def main():
     for rec in fasta_parser:
       rec_len = len(rec)
       rec_name = str(rec.name)
-      if args.n_seq:
-        chunks_list = split_by_n(str(rec.seq), int(args.minimum_ns))
-        print(f"spliting {rec_name} ({rec_len:_} bp) into {len(chunks_list)} chunks on N sequences.", file=sys.stderr)
+      if args.n_seq != 0:
+        n_chunks_list = split_by_n(str(rec.seq), int(args.n_seq))
+        chunks_list = flatten([split_record_by_chunksize(x[0],(x[1]-x[0]),args.chunk_size, args.chunk_tolerance) for x in n_chunks_list])
+        print(f"spliting {rec_name} ({rec_len:_} bp) into {len(chunks_list)} chunks on N sequences and specified chunk size.", file=sys.stderr)
       else:
-        chunks = rec_len // args.chunk_size + (rec_len % args.chunk_size > 0)
-        print(f"spliting {rec_name} ({rec_len:_} bp) into {chunks} chunks", file=sys.stderr)
-        rec_from, rec_to, chunk_len = 1, args.chunk_size, args.chunk_size
-        chunks_list=[]
-        for chunk in range(1, chunks+1):
-            if rec_to > rec_len:
-                rec_to = rec_len
-            chunks_list.append((rec_from, rec_to))
-            rec_from += chunk_len
-            rec_to += chunk_len
+        chunks_list = split_record_by_chunksize(0, rec_len, args.chunk_size, args.chunk_tolerance)
+        print(f"spliting {rec_name} ({rec_len:_} bp) into {len(chunks_list)} chunks", file=sys.stderr)
       for chunk, chunk_set in enumerate(chunks_list):
         chunk+=1
-        chunk_len = chunk_set[1] - chunk_set[0] + 1
-        rec_from = chunk_set[0] + (1 if args.n_seq else 0)
+        chunk_len = chunk_set[1] - chunk_set[0]
+        rec_from = chunk_set[0] + 1
         rec_to = chunk_set[1]
         chunk_name = f"{rec_name}_{args.chunk_sfx}_{chunk:03d}"
+        if (args.add_offset): chunk_name += f"_off_{rec_from - 1}"
         agp_line = f"{rec_name}\t{rec_from}\t{rec_to}\t{chunk}\tW\t{chunk_name}\t1\t{chunk_len}\t+"
         agp_lines.append(agp_line)
-        #
         agp_line = agp_line.replace("\t", " ")
         print(f"dumping {chunk_name} AGP {agp_line}", file = sys.stderr)
         tmp_record = SeqRecord(Seq(rec.seq[rec_from-1:rec_to]), id=chunk_name, description=f"AGP {agp_line}", name="")
