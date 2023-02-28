@@ -18,6 +18,7 @@
 
 import argparse
 import gzip
+import os
 import sys
 import re
 
@@ -32,9 +33,12 @@ def get_args():
   parser.add_argument("fasta_dna", metavar="input.fna[.gz]", type=str,
                       help="fasta (possibly gzipped) file with dna sequences to split")
   # out
-  parser.add_argument("--out", metavar="chunks.fna", required = False,
-                      type=argparse.FileType('w',  encoding='UTF-8'), default=sys.stdout,
+  parser.add_argument("--out", metavar="chunks.fna", required = False, default = None,
+                      type=str,
                       help="chunks output [STDOUT]")
+  parser.add_argument("--individual_out_dir", required = False, default = None,
+                      type=str,
+                      help="AGP file with chunks to contigs mapping (optional)")
   parser.add_argument("--agp_out", metavar="chunks_contigs.agp", required = False,
                       type=argparse.FileType('w',  encoding='UTF-8'),
                       help="AGP file with chunks to contigs mapping (optional)")
@@ -44,7 +48,7 @@ def get_args():
   parser.add_argument("--chunk_sfx", metavar="ens_chunk", required = False,
                       type=str, default = "ens_chunk", help="added to contig id before chunk number")
   parser.add_argument("--chunk_tolerance", metavar="ens_chunk", required=False,
-                      type=int, default=0, help="chunk size tolerance percentage. If the to-be-written chunk is longer "
+                      type=int, default=0, help="chunk size tolerance percentage (int). If the to-be-written chunk is longer "
                                                 "than the defined chunk size (--chunk_size) by less than the specified "
                                                 "tolerance percentage, it will not be split.")
   parser.add_argument("--n_seq", required = False, default = 0,
@@ -53,75 +57,119 @@ def get_args():
                       help="0 based offset")
 
   args = parser.parse_args()
-  if args.chunk_size < 50_000:
+  if False and args.chunk_size < 50_000:
     parser.error(f"wrong '--chunk_size' value: '{args.chunk_size}'. should be greater then 50_000. exiting...")
+  if args.chunk_tolerance < 0:
+    parser.error(f"wrong '--chunk_tolerance' value: '{args.chunk_tolerance}'. can't be less then 0. exiting...")
   return args
 
-def flatten(t):
-    return [item for sublist in t for item in sublist]
 
-def split_by_n(seq, n):
-    """Split a string into chunks at the positions of N sequences"""
-    pattern = f"(N{{{n},}})"
-    regex = re.compile(pattern)
-    split_points = [m.end() for m in regex.finditer(seq)]
-    split_points.insert(0, 0)
-    split_points.append(len(seq))
-    return [(split_points[i], split_points[i+1]) for i in range(len(split_points)-1)]
+def split_by_n(seq, split_re):
+    """Split a string into chunks at the positions of N sequences.
+         (return [ len(seq) ] if no split_re)"""
+    seq_len = len(seq)
+    if not split_re:
+       return [ seq_len ]
+    split_points = [ m.end() for m in split_re.finditer(seq) ]
+    if split_points and split_points[-1] != seq_len:
+        split_points.append( seq_len )
+    return split_points
 
-def split_record_by_chunksize(starting_position, rec_len, chunk_size, tolerance):
-    """Split a a range defined by a starting position and a range length (starting_position, rec_len)
-    into chunks by a defined chunksize"""
-    chunks = rec_len // chunk_size + (rec_len % chunk_size > 0)
-    rec_from, rec_to, chunk_len = starting_position, starting_position+chunk_size, chunk_size
-    chunks_list = []
-    for chunk in range(1, chunks + 1):
-        if (rec_to - starting_position) >= rec_len * (1 + tolerance/100):
-            rec_to = starting_position + rec_len
-        chunks_list.append((rec_from, rec_to))
-        rec_from += chunk_len
-        rec_to += chunk_len
-    print(chunks_list)
-    return chunks_list
+
+def split_by_chunk_size(ends, chunk_size, tolerated_chunk_len = None):
+    """Split array of end coordinates, to form chunks not longer then chunk_size (tolerated_chunk_len if speciefied)"""
+    if tolerated_chunk_len is None or tolerated_chunk_len < chunk_size:
+      tolerated_chunk_len = chunk_size
+    result = []
+    offset = 0
+    for chunk_end in ends:
+        chunk_len = chunk_end - offset
+        if chunk_len > tolerated_chunk_len:
+            # exclude starts, as they are 0 or pushed as previous chunk_ends
+            result += list( range(offset, chunk_end, chunk_size) )[1:]
+        result.append( chunk_end )
+        offset = chunk_end
+    return result
+
 
 ## MAIN ##
 def main():
   args = get_args()
 
+  tolerated_chunk_len = args.chunk_size
+  tolerated_chunk_len += args.chunk_size * args.chunk_tolerance // 100
+
+  # make sure not used for args.n_seq <= 0
+  n_split_regex = None
+  if args.n_seq > 0:
+    pattern = f"(N{{{args.n_seq},}})"
+    n_split_regex = re.compile(pattern)
+
+  # output_file to write sequences to
+  file_prefix = ""
+  if args.individual_out_dir:
+      if not args.out:
+        args.out = os.path.basename(args.fasta_dna)
+      os.makedirs(args.individual_out_dir, exist_ok=True)
+      file_prefix = os.path.join(args.individual_out_dir, args.out)
+  else:
+      out_file = open(args.out, "wt")
+
+  # process input fasta
   fasta_file = args.fasta_dna
   _open = fasta_file.endswith(".gz") and gzip.open or open
   with _open(fasta_file, 'rt') as fasta:
     agp_lines = []
-    if not args.n_seq:
-        print(f"spliting sequences from '{fasta_file}', chunk size {args.chunk_size:_}", file=sys.stderr)
+    print(f"spliting sequences from '{fasta_file}', chunk size {args.chunk_size:_}, splitting on {args.n_seq} Ns (0 -- disabled)", file=sys.stderr)
+
+
     fasta_parser = SeqIO.parse(fasta, "fasta")
-    for rec in fasta_parser:
-      rec_len = len(rec)
+    for rec_count, rec in enumerate(fasta_parser, start = 1):
       rec_name = str(rec.name)
-      if args.n_seq != 0:
-        n_chunks_list = split_by_n(str(rec.seq), int(args.n_seq))
-        chunks_list = flatten([split_record_by_chunksize(x[0],(x[1]-x[0]),args.chunk_size, args.chunk_tolerance) for x in n_chunks_list])
-        print(f"spliting {rec_name} ({rec_len:_} bp) into {len(chunks_list)} chunks on N sequences and specified chunk size.", file=sys.stderr)
-      else:
-        chunks_list = split_record_by_chunksize(0, rec_len, args.chunk_size, args.chunk_tolerance)
-        print(f"spliting {rec_name} ({rec_len:_} bp) into {len(chunks_list)} chunks", file=sys.stderr)
-      for chunk, chunk_set in enumerate(chunks_list):
-        chunk+=1
-        chunk_len = chunk_set[1] - chunk_set[0]
-        rec_from = chunk_set[0] + 1
-        rec_to = chunk_set[1]
+      rec_len = len(rec)
+
+      ends = split_by_n(str(rec.seq), n_split_regex) # returns [ len(req.seq) ] if no regexp
+      ends = split_by_chunk_size(ends, args.chunk_size, tolerated_chunk_len)
+
+      offset = 0
+      for chunk, chunk_end in enumerate(ends, start = 1):
         chunk_name = f"{rec_name}_{args.chunk_sfx}_{chunk:03d}"
-        if (args.add_offset): chunk_name += f"_off_{rec_from - 1}"
+        chunk_file_name = f"{file_prefix}.{rec_count:03d}.{chunk:03d}.fa"
+        if (args.add_offset): chunk_name += f"_off_{offset}"
+
+        rec_from = offset + 1
+        rec_to = chunk_end
+        chunk_len = chunk_end - offset
+
+        # form agp lines
         agp_line = f"{rec_name}\t{rec_from}\t{rec_to}\t{chunk}\tW\t{chunk_name}\t1\t{chunk_len}\t+"
         agp_lines.append(agp_line)
+
+        # use agp lines as fasta description
         agp_line = agp_line.replace("\t", " ")
         print(f"dumping {chunk_name} AGP {agp_line}", file = sys.stderr)
-        tmp_record = SeqRecord(Seq(rec.seq[rec_from-1:rec_to]), id=chunk_name, description=f"AGP {agp_line}", name="")
-        args.out.write(tmp_record.format("fasta"))
+
+        # get slice and put it out
+        tmp_record = SeqRecord(Seq(rec.seq[offset:chunk_end]), id=chunk_name, description=f"AGP {agp_line}", name="")
+
+        # if args.individual_files:
+        #   ...
+        if args.individual_out_dir:
+            with open(chunk_file_name, "wt") as out_file:
+                out_file.write(tmp_record.format("fasta"))
+        else:
+            out_file.write(tmp_record.format("fasta"))
+
         del tmp_record
         #
+        offset = chunk_end
+
+    # dump AGP
     if args.agp_out:
       print("\n".join(agp_lines), file = args.agp_out)
+
+    if not args.individual_out_dir:
+        out_file.close()
   # main end
 
 
