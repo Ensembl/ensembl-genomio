@@ -71,7 +71,7 @@ def split_by_n(seq, split_re):
     if not split_re:
        return [ seq_len ]
     split_points = [ m.end() for m in split_re.finditer(seq) ]
-    if split_points and split_points[-1] != seq_len:
+    if split_points[-1] != seq_len:
         split_points.append( seq_len )
     return split_points
 
