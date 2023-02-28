@@ -72,8 +72,7 @@ class process_seq_region(eHive.BaseRunnable):
     def param_defaults(self):
         return {
             "brc4_mode": True,
-            "brc4_synonym_sources": ["GenBank", "INSDC"],
-            "brc4_synonym_sources_alt": ["RefSeq"],
+            "brc4_synonym_sources": ["GenBank", "RefSeq", "INSDC"],
             "synonym_map": {
                 "Sequence-Name": "INSDC_submitted_name",
                 "GenBank-Accn": "GenBank",
@@ -190,34 +189,31 @@ class process_seq_region(eHive.BaseRunnable):
             The seq_region_names data are directly added to the SeqRegion if found.
         """
         sources = self.param("brc4_synonym_sources")
-        sources_alt = self.param("brc4_synonym_sources_alt")
         
         new_seq_regions = []
         for seqr in seq_regions:
-            main_name = ''
-            alt_name = ''
+            names = dict()
             if "synonyms" in seqr:
                 for syn in seqr["synonyms"]:
-                    if syn["source"] in sources:
-                        main_name = syn["name"]
-                    if syn["source"] in sources_alt:
-                        alt_name = syn["name"]
+                    names[syn["source"]] = syn["name"]
             
-            name = ''
-            if main_name:
-                name = main_name
-            elif alt_name:
-                name = alt_name
-            else:
+            # Choose the synonym to use as the BRC name
+            # Use the first valid name from the source list
+            brc_name = ''
+            for source_name in sources:
+                if source_name in names:
+                    brc_name = names[source_name]
+                    break
+            
+            if not brc_name:
                 raise Exception(f"Can't set BRC4/EBI name for {seqr}")
             
-            parts = name.partition(".")
-            flat_name = parts[0]
-            seqr["BRC4_seq_region_name"] = flat_name
-            seqr["EBI_seq_region_name"] = flat_name
+            brc_name = brc_name.partition(".")[0]
+            seqr["BRC4_seq_region_name"] = brc_name
+            seqr["EBI_seq_region_name"] = seqr["name"]
             new_seq_regions.append(seqr)
 
-        return new_seq_regions 
+        return new_seq_regions
 
     def add_mitochondrial_codon_table(self, seq_regions: List[SeqRegion], tax_id: int) -> None:
         """Add the codon table for mitochondria based on taxonomy.
