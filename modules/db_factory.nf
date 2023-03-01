@@ -18,7 +18,8 @@ process DB_FACTORY {
     label 'default'
 
     input:
-        val server_map
+        val server
+        val filter_map
 
     output:
         path "*.json"
@@ -26,9 +27,9 @@ process DB_FACTORY {
     script:
         """
         brc_mode=''
-        if [ $server_map.brc_mode == 1 ]; then
+        if [ $filter_map.brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
-        db_factory --host '${server_map.host}' --port '${server_map.port}' --user '${server_map.user}' --password '${server_map.password}' --prefix '${server_map.prefix}' \$brc_mode --output_json dbs.json
+        db_factory --host '${server.host}' --port '${server.port}' --user '${server.user}' --password '${server.password}' --prefix '${filter_map.prefix}' \$brc_mode --output_json dbs.json
         """
 }

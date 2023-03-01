@@ -83,10 +83,6 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: False) -> List[
             division = 'all'
         
         db_data = {
-            "server_host": server.host,
-            "server_port": server.port,
-            "server_user": server.user,
-            "server_password": server.password,
             "database": db,
             "species": species,
             "division": division,

@@ -14,27 +14,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-def create_server_map(params) {
-    server_map = [
+def create_server(params) {
+    server = [
         "host": params.host,
         "port": params.port,
         "user": params.user,
         "password": ""
     ]
     if (params.password) {
-        server_map["password"] = params.password
+        server["password"] = params.password
     }
+    return server
+}
+
+def create_filter_map(params) {
+    filter_map = [
+        "brc_mode": 0,
+        "prefix": ""
+    ]
     if (params.brc_mode) {
-        server_map["brc_mode"] = 1
+        filter_map["brc_mode"] = 1
     }
     if (params.prefix) {
-        server_map["prefix"] = params.prefix
+        filter_map["prefix"] = params.prefix
     }
-    return server_map
+    return filter_map
 }
 
 if (params.host && params.port && params.user && params.out_dir) {
-    server_map = create_server_map(params)
+    server = create_server(params)
+    filter_map = create_filter_map(params)
 } else {
     exit 1, "Missing server parameters"
 }
@@ -43,5 +52,5 @@ include { DUMP_SQL } from '../../subworkflows/dump_sql.nf'
 
 // Run main workflow
 workflow {
-    DUMP_SQL(server_map, params.out_dir)
+    DUMP_SQL(server, filter_map, params.out_dir)
 }

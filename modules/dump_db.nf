@@ -19,6 +19,7 @@ process DUMP_DB {
     label 'default'
 
     input:
+        val server
         val db
         val out_dir
 
@@ -28,9 +29,9 @@ process DUMP_DB {
     script:
         """
         db_pass=''
-        if [ ${db.server_password} = '' ]; then
-            db_pass=${db.server_password}
+        if [ ${server.password} = '' ]; then
+            db_pass=${server.password}
         fi
-        mysqldump '${db.database}' --host '${db.server_host}' --port '${db.server_port}' --user '${db.server_user}' \$db_pass | gzip > ${db.species}.sql.gz
+        mysqldump '${db.database}' --host '${server.host}' --port '${server.port}' --user '${server.user}' \$db_pass | gzip > ${db.species}.sql.gz
         """
 }

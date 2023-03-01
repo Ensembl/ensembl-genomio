@@ -19,18 +19,17 @@ include { read_json } from '../modules/utils.nf'
 
 workflow DUMP_SQL {
     take:
-        ch_server
+        server
+        filter_map
         out_dir
 
     emit:
         dbs
 
     main:
-        dbs = DB_FACTORY(ch_server)
+        dbs = DB_FACTORY(server, filter_map)
             .map(it -> read_json(it))
             .flatten()
         
-        //dbs.view()
-        
-        DUMP_DB(dbs, out_dir)
+        DUMP_DB(server, dbs, out_dir)
 }
