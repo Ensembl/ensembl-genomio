@@ -17,6 +17,7 @@ process DUMP_DB {
     publishDir "$out_dir/$db.division", mode: 'move'
     tag "Dump_$db.species"
     label 'default'
+    time '1h'
 
     input:
         val server

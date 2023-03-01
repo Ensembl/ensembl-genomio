@@ -16,6 +16,7 @@
 process DB_FACTORY {
     tag "DB_factory"
     label 'default'
+    time '5min'
 
     input:
         val server
