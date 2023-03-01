@@ -18,6 +18,7 @@ def get_key_list(dict) {
     // Add quotes around each key of the dictionary to make the list compatible with Bash
     return "['" + dict.keySet().join("','") + "']"
 }
+
 def read_json(json_path) {
     slurp = new JsonSlurper()
     json_file = file(json_path)
