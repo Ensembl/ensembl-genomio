@@ -79,7 +79,7 @@ class CoreServer:
     def get_cores(self, prefix: str = '', build: str = '', version: str = '') -> List[str]:
         """Provide a list of core databases, filtered if requested.
         Args:
-            prefix: filter by prefix (automatically followed by _)
+            prefix: filter by prefix (no _ is added automatically)
             build: filter by build
             version: filter by Ensembl version
 
@@ -91,7 +91,7 @@ class CoreServer:
         dbs = self.get_all_cores()
 
         if prefix:
-            dbs = [db for db in dbs if db.startswith(f"{prefix}_")]
+            dbs = [db for db in dbs if db.startswith(f"{prefix}")]
         if build:
             dbs = [db for db in dbs if re.search(f"_core_{build}_\d+_\d+$", db)]
         if version:
