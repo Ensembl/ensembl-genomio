@@ -78,6 +78,10 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: False) -> List[
                 species = brc_organism
             if brc_component:
                 division = brc_component
+        
+        if not division:
+            division = 'all'
+        
         db_data = {
             "server_host": server.host,
             "server_port": server.port,
