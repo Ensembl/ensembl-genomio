@@ -18,6 +18,7 @@ process DUMP_DB {
     tag "Dump_$db.species"
     label 'default'
     time '1h'
+    maxForks 10
 
     input:
         val server
