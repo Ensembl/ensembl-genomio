@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process DUMP_DB {
-    publishDir "$out_dir/$db.division", mode: 'move'
+    publishDir "$out_dir/coredb/$db.division", mode: 'move'
     tag "Dump_$db.species"
     label 'default'
     time '1h'
