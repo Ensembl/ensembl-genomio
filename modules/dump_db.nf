@@ -29,10 +29,16 @@ process DUMP_DB {
 
     script:
         """
-        db_pass=''
-        if [ ${server.password} = '' ]; then
-            db_pass=${server.password}
+        db_pass=""
+        if [ ${server.password} != "" ]; then
+            db_pass="--password '${server.password}'"
         fi
-        mysqldump '${db.database}' --host '${server.host}' --port '${server.port}' --user '${server.user}' \$db_pass | gzip > ${db.species}.sql.gz
+
+        mysqldump '${db.database}' \
+            --host '${server.host}' \
+            --port '${server.port}' \
+            --user '${server.user}' \
+            \$db_pass \
+            gzip > ${db.species}.sql.gz
         """
 }
