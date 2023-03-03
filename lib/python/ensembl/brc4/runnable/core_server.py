@@ -106,8 +106,7 @@ class CoreServer:
             A dict of with key meta_key, and value=List of meta_value.
 
         """
-        query = """SELECT meta_key, meta_value FROM meta
-        """
+        query = "SELECT meta_key, meta_value FROM meta"
         cursor = self.get_cursor()
         cursor.execute(query)
 
@@ -120,6 +119,27 @@ class CoreServer:
                 metadata[meta_key] = [meta_value]
 
         return metadata
+
+    def get_table_data(self, table: str, fields: List[str], constraints: str = "") -> List[Dict]:
+        """Retrieve all rows from a table.
+
+        Returns:
+            A List containing a dict for each row.
+
+        """
+        fields_str = ", ".join(fields)
+        query = f"SELECT {fields_str} FROM {table}"
+        if constraints:
+            query = f"{query} WHERE {constraints}"
+        cursor = self.get_cursor()
+        cursor.execute(query)
+
+        rows = []
+        for row in cursor:
+            row_data = dict(zip(fields, list(row)))
+            rows.append(row_data)
+
+        return rows
 
 
 if __name__ == "__main__":
