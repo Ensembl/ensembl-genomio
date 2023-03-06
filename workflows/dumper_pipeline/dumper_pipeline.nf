@@ -49,8 +49,15 @@ if (params.host && params.port && params.user && params.out_dir) {
 }
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql.nf'
+include { DUMP_METADATA } from '../../subworkflows/dump_metadata.nf'
+include { DB_FACTORY } from '../../modules/db_factory.nf'
+include { read_json } from '../../modules/utils.nf'
 
 // Run main workflow
 workflow {
-    DUMP_SQL(server, filter_map, params.out_dir)
+    dbs = DB_FACTORY(server, filter_map)
+        .map(it -> read_json(it))
+        .flatten()
+    DUMP_SQL(server, dbs, filter_map, params.out_dir)
+    DUMP_METADATA(server, dbs, filter_map, params.out_dir)
 }

@@ -13,13 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-include { DB_FACTORY } from '../modules/db_factory.nf'
 include { DUMP_DB } from '../modules/dump_db.nf'
-include { read_json } from '../modules/utils.nf'
 
 workflow DUMP_SQL {
     take:
         server
+        dbs
         filter_map
         out_dir
 
@@ -27,9 +26,5 @@ workflow DUMP_SQL {
         dbs
 
     main:
-        dbs = DB_FACTORY(server, filter_map)
-            .map(it -> read_json(it))
-            .flatten()
-        
         DUMP_DB(server, dbs, out_dir)
 }

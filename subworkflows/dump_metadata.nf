@@ -13,30 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DB_FACTORY {
-    tag "DB_factory"
-    label 'default'
-    time '5min'
+include { DUMP_SEQ_REGIONS } from '../modules/dump_seq_regions.nf'
 
-    input:
-        val server
-        val filter_map
+workflow DUMP_METADATA {
+    take:
+        server
+        dbs
+        filter_map
+        out_dir
 
-    output:
-        path "dbs.json"
+    emit:
+        dbs
 
-    script:
-        """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
-        db_factory --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
-            --password '${server.password}' \
-            --prefix '${filter_map.prefix}' \
-            \$brc_mode \
-            --output_json dbs.json
-        """
+    main:
+        DUMP_SEQ_REGIONS(server, dbs, filter_map, out_dir)
 }

@@ -13,17 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DB_FACTORY {
-    tag "DB_factory"
+process DUMP_SEQ_REGIONS {
+    publishDir "$out_dir/metadata/$db.division/$db.species", mode: 'move'
+    tag "Dump_seq_regions"
     label 'default'
-    time '5min'
+    time '1h'
 
     input:
         val server
+        val db
         val filter_map
+        val out_dir
 
     output:
-        path "dbs.json"
+        path "seq_regions.json"
 
     script:
         """
@@ -31,12 +34,12 @@ process DB_FACTORY {
         if [ $filter_map.brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
-        db_factory --host '${server.host}' \
+        seq_region_dumper --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \
-            --prefix '${filter_map.prefix}' \
+            --database '${db.database}' \
             \$brc_mode \
-            --output_json dbs.json
+            --output_json seq_regions.json
         """
 }

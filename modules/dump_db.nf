@@ -31,7 +31,7 @@ process DUMP_DB {
     script:
         """
         db_pass=""
-        if [ ${server.password} != "" ]; then
+        if [ "${server.password}" != "" ]; then
             db_pass="--password '${server.password}'"
         fi
 
@@ -40,6 +40,6 @@ process DUMP_DB {
             --port '${server.port}' \
             --user '${server.user}' \
             \$db_pass \
-            gzip > ${db.species}.sql.gz
+            | gzip > ${db.species}.sql.gz
         """
 }
