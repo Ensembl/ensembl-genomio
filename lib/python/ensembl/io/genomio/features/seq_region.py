@@ -43,13 +43,13 @@ class KaryotypeBand:
 
 @dataclass
 class SeqRegion:
-    _seq_region_id: int
     name: str
     length: int
+    seq_region_id: int = 0
     coord_system_level: str = ""
     synonyms: List[SeqRegionSynonym] = field(default_factory=list)
     attributes: List[SeqRegionAttribute] = field(default_factory=list)
     karyotype_bands: List[KaryotypeBand] = field(default_factory=list)
 
     def get_seq_region_id(self):
-        return self._seq_region_id
+        return self.seq_region_id

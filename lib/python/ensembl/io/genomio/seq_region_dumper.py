@@ -122,7 +122,7 @@ def get_seq_regions(server: CoreServer, database: str) -> List[SeqRegion]:
 
     seq_regions = []
     for seqr_row in seqr_data:
-        seqr = SeqRegion(_seq_region_id=seqr_row["seq_region_id"], name=seqr_row["name"], length=seqr_row["length"])
+        seqr = SeqRegion(seq_region_id=seqr_row["seq_region_id"], name=seqr_row["name"], length=seqr_row["length"])
         seq_regions.append(seqr)
     return seq_regions
 
