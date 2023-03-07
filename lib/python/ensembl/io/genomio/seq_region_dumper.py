@@ -61,9 +61,11 @@ class InputSchema(argschema.ArgSchema):
     brc_mode = argschema.fields.Boolean(required=False, metadata={
         "description": "BRC4 mode: use organism_abbrev for species, component for division"
     })
-    external_db_map = argschema.fields.files.InputFile(required=False, dump_default=str(DEFAULT_MAP), metadata={
-        "description": "File with external_db mapping"
-    })
+    external_db_map = argschema.fields.files.InputFile(
+        required=False,
+        dump_default=str(DEFAULT_MAP),
+        metadata={"description": "File with external_db mapping"}
+    )
 
 
 def get_all_seq_regions(server: CoreServer, database: str) -> List[SeqRegion]:
