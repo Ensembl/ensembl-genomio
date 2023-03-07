@@ -47,7 +47,6 @@ class KaryotypeBand:
     seq_region_start: int
     seq_region_end: int
     stain: str
-    structure: str = ""
 
     def _get_structure(self):
         struct_dict = {
@@ -67,6 +66,19 @@ class KaryotypeBand:
             kar_dict["structure"] = self._get_structure()
 
         return kar_dict
+
+
+@dataclass
+class Provider:
+    name: str
+    url: str
+
+
+@dataclass
+class AddedSequence:
+    accession: str
+    assembly_provider: Provider
+    annotation_provider: Provider
 
 
 @dataclass
@@ -98,6 +110,25 @@ class SeqRegion:
 
         return coord_level
 
+    def _get_added_sequence(self) -> AddedSequence:
+        attrib_dict = self._get_attrib_dict()
+        accession = attrib_dict.get("added_seq_accession")
+        if accession:
+            assembly_provider = Provider(
+                name=attrib_dict.get("added_seq_asm_pr_nam"),
+                url=attrib_dict.get("added_seq_asm_pr_url")
+            )
+            annotation_provider = Provider(
+                name=attrib_dict.get("added_seq_ann_pr_nam"),
+                url=attrib_dict.get("added_seq_ann_pr_url")
+            )
+            added_seq = AddedSequence(
+                accession=accession,
+                assembly_provider=assembly_provider,
+                annotation_provider=annotation_provider
+            )
+            return added_seq
+
     def to_brc_dict(self) -> Dict:
         seqr_dict = {
             "name": self.name,
@@ -109,6 +140,10 @@ class SeqRegion:
 
         if self.karyotype_bands:
             seqr_dict["karyotype"] = [band.to_brc_dict() for band in self.karyotype_bands]
+
+        added_seq = self._get_added_sequence()
+        if added_seq:
+            seqr_dict["added_sequence"] = added_seq
 
         attrib_dict = self._get_attrib_dict()
 
