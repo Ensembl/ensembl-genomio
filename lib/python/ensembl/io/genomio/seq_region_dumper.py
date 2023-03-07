@@ -26,7 +26,13 @@ from typing import Dict, List
 import argschema
 
 from ensembl.brc4.runnable.core_server import CoreServer
-from ensembl.io.genomio.features.seq_region import CoordSystem, SeqRegion, SeqRegionAttribute, SeqRegionSynonym, KaryotypeBand
+from ensembl.io.genomio.features.seq_region import (
+    CoordSystem,
+    SeqRegion,
+    SeqRegionAttribute,
+    SeqRegionSynonym,
+    KaryotypeBand
+)
 
 
 class InputSchema(argschema.ArgSchema):
