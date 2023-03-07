@@ -54,42 +54,6 @@ class InputSchema(argschema.ArgSchema):
     })
 
 
-def format_db_data(server: CoreServer, dbs: List[str], brc_mode: False) -> List[Dict]:
-    db_datas = list()
-    for db in dbs:
-        server.set_database(db)
-        metadata = server.get_db_metadata()
-
-        species = get_metadata_value(metadata, "species.production_name")
-        division = get_metadata_value(metadata, "species.division")
-
-        if brc_mode:
-            brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
-            brc_component = get_metadata_value(metadata, "BRC4.component")
-            if brc_organism:
-                species = brc_organism
-            if brc_component:
-                division = brc_component
-
-        if not division:
-            division = 'all'
-
-        db_data = {
-            "database": db,
-            "species": species,
-            "division": division,
-        }
-        db_datas.append(db_data)
-    return db_datas
-
-
-def get_metadata_value(metadata, key) -> str:
-    if key in metadata and len(metadata[key]) > 0:
-        return metadata[key][0]
-    else:
-        return None
-
-
 def get_all_seq_regions(server: CoreServer, database: str) -> List[SeqRegion]:
 
     seq_regions = get_seq_regions(server, database)
@@ -178,7 +142,10 @@ def main() -> None:
         password=args.get("password")
     )
     seq_regions = get_all_seq_regions(server, args["database"])
-    seq_regions_struct = [asdict(seqr) for seqr in seq_regions]
+    if mod.args.get("brc_mode", 0):
+        seq_regions_struct = [seqr.to_brc_dict() for seqr in seq_regions]
+    else:
+        seq_regions_struct = [asdict(seqr) for seqr in seq_regions]
 
     if args.get("output_json"):
         output_file = Path(args.get("output_json"))

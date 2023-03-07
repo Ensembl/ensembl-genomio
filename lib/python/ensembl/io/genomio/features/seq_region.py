@@ -16,8 +16,8 @@
 """Simple representation of a seq_region from an EnsEMBL database
 """
 
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import asdict, dataclass, field
+from typing import Dict, List
 
 
 @dataclass
@@ -53,3 +53,28 @@ class SeqRegion:
 
     def get_seq_region_id(self):
         return self.seq_region_id
+    
+    def to_brc_dict(self) -> Dict:
+        seqr_dict = {
+            "name": self.name,
+            "length": self.length,
+            "coord_system_level": self.coord_system_level,
+            "synonyms": [asdict(syn) for syn in self.synonyms],
+            #"karyotype": asdict(band) for band in self.karyotype_bands)
+        }
+        attrib_dict = {attrib.code: attrib.value for attrib in self.attributes}
+        
+        attribs_to_add = {
+            'BRC4_seq_region_name': 'BRC4_seq_region_name',
+            'EBI_seq_region_name': 'EBI_seq_region_name',
+            'coord_system_tag': 'coord_system_level',
+            'sequence_location': 'location',
+            'codon_table': 'codon_table',
+            'circular_serq': 'circular',
+        }
+        for key, name in attribs_to_add.items():
+            if key in attrib_dict:
+                value = attrib_dict[key]
+                seqr_dict[name] = value
+        
+        return seqr_dict
