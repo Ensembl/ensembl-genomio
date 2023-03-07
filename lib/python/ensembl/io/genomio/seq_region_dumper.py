@@ -26,7 +26,7 @@ from typing import Dict, List
 import argschema
 
 from ensembl.brc4.runnable.core_server import CoreServer
-from ensembl.io.genomio.features.seq_region import SeqRegion, SeqRegionAttribute, SeqRegionSynonym
+from ensembl.io.genomio.features.seq_region import CoordSystem, SeqRegion, SeqRegionAttribute, SeqRegionSynonym
 
 
 class InputSchema(argschema.ArgSchema):
@@ -56,12 +56,13 @@ class InputSchema(argschema.ArgSchema):
 
 def get_all_seq_regions(server: CoreServer, database: str) -> List[SeqRegion]:
 
-    seq_regions = get_seq_regions(server, database)
-    seqr_attribs: dict = get_seq_region_attribs(server, database)
-    seqr_syns: dict = get_seq_region_synonyms(server, database)
-
+    coord_systems = get_coord_systems(server, database)
+    print(f"Got {len(coord_systems)} coord_systems")
+    seq_regions = get_seq_regions(server, database, coord_systems)
     print(f"Got {len(seq_regions)} seq_regions")
+    seqr_attribs: dict = get_seq_region_attribs(server, database)
     print(f"Got {len(seqr_attribs)} seqr_attribs")
+    seqr_syns: dict = get_seq_region_synonyms(server, database)
     print(f"Got {len(seqr_syns)} seqr_syns")
 
     for seqr in seq_regions:
@@ -72,21 +73,67 @@ def get_all_seq_regions(server: CoreServer, database: str) -> List[SeqRegion]:
         syns = seqr_syns.get(seq_id)
         if syns:
             seqr.synonyms += syns
+        coord_id = seqr.coord_system_id
+        coord = coord_systems.get(coord_id)
+        if coord:
+            seqr.coord_system = coord
+        else:
+            print(f"Seq region {seqr.name} has not coord_system {asdict(seqr)}")
 
     return seq_regions
 
 
-def get_seq_regions(server: CoreServer, database: str) -> List[SeqRegion]:
+def get_coord_systems(server: CoreServer, database: str) -> Dict[str, CoordSystem]:
     server.set_database(database)
+
+    seqr_data = server.get_table_data(
+        table='coord_system',
+        fields=['coord_system_id', 'species_id', 'name', 'version', 'attrib'],
+    )
+
+    coord_systems = {}
+    for seqr_row in seqr_data:
+        attrib = seqr_row.get("attrib")
+        if not attrib:
+            attrib = []
+        else:
+            attrib = list(attrib)
+        if not seqr_row["version"]:
+            seqr_row["version"] = ""
+        if "default_version" in attrib:
+            coord = CoordSystem(
+                coord_system_id=seqr_row["coord_system_id"],
+                species_id=seqr_row["species_id"],
+                name=seqr_row["name"],
+                version=seqr_row["version"],
+                attrib=attrib,
+            )
+            coord_systems[coord.coord_system_id] = coord
+    return coord_systems
+
+
+def get_seq_regions(
+        server: CoreServer, database: str, coord_systems: Dict[str, CoordSystem]) -> List[SeqRegion]:
+    server.set_database(database)
+
+    coords = ", ".join([str(c.coord_system_id) for c in coord_systems.values()])
+    if coords:
+        constraints = f"coord_system_id IN ({coords})"
 
     seqr_data = server.get_table_data(
         table='seq_region',
         fields=['seq_region_id', 'name', 'length', 'coord_system_id'],
+        constraints=constraints
     )
 
     seq_regions = []
     for seqr_row in seqr_data:
-        seqr = SeqRegion(seq_region_id=seqr_row["seq_region_id"], name=seqr_row["name"], length=seqr_row["length"])
+        seqr = SeqRegion(
+            seq_region_id=seqr_row["seq_region_id"],
+            name=seqr_row["name"],
+            length=seqr_row["length"],
+            coord_system_id=seqr_row["coord_system_id"]
+        )
         seq_regions.append(seqr)
     return seq_regions
 
