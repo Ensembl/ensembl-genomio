@@ -17,6 +17,7 @@
 """
 
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Dict, List
 
 
@@ -33,6 +34,29 @@ class CoordSystem:
 class SeqRegionSynonym:
     synonym: str = ""
     source: str = ""
+
+    def __post_init__(self):
+        self._update_source()
+
+    def _update_source(self) -> None:
+        """Using an external map, update the source name"""
+        if self._db_map and self.source in self._db_map:
+            self.source = self._db_map[self.source]
+
+    @classmethod
+    def set_map(cls, map_file: Path) -> None:
+        """Class method, set up the map for all SeqRegion objects"""
+        cls._db_map = dict()
+        with map_file.open("r") as map_fh:
+            for line in map_fh:
+                line = line.rstrip()
+                if line.startswith("#") or line.startswith(" ") or line == "":
+                    continue
+                parts = line.split("\t")
+                if not parts[0] or not parts[1]:
+                    raise Exception(f"External db file is not formatted correctly for: {line}")
+                else:
+                    cls._db_map[parts[1]] = parts[0]
 
 
 @dataclass

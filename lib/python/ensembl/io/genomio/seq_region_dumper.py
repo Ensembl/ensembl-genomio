@@ -34,6 +34,9 @@ from ensembl.io.genomio.features.seq_region import (
     KaryotypeBand
 )
 
+ROOT_DIR = Path(__file__).parent / "../../../../.."
+DEFAULT_MAP = ROOT_DIR / "data/external_db_map_default.txt"
+
 
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
@@ -57,6 +60,9 @@ class InputSchema(argschema.ArgSchema):
 
     brc_mode = argschema.fields.Boolean(required=False, metadata={
         "description": "BRC4 mode: use organism_abbrev for species, component for division"
+    })
+    external_db_map = argschema.fields.files.InputFile(required=False, dump_default=str(DEFAULT_MAP), metadata={
+        "description": "File with external_db mapping"
     })
 
 
@@ -235,6 +241,10 @@ def main() -> None:
         user=args["user"],
         password=args.get("password")
     )
+
+    external_map = Path(mod.args.get("external_db_map"))
+    if external_map:
+        SeqRegionSynonym.set_map(external_map)
     seq_regions = get_all_seq_regions(server, args["database"])
     if mod.args.get("brc_mode", 0):
         seq_regions_struct = [seqr.to_brc_dict() for seqr in seq_regions]
