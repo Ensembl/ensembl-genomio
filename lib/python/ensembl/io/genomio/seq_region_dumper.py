@@ -26,7 +26,7 @@ from typing import Dict, List
 import argschema
 
 from ensembl.brc4.runnable.core_server import CoreServer
-from ensembl.io.genomio.features.seq_region import CoordSystem, SeqRegion, SeqRegionAttribute, SeqRegionSynonym
+from ensembl.io.genomio.features.seq_region import CoordSystem, SeqRegion, SeqRegionAttribute, SeqRegionSynonym, KaryotypeBand
 
 
 class InputSchema(argschema.ArgSchema):
@@ -64,21 +64,31 @@ def get_all_seq_regions(server: CoreServer, database: str) -> List[SeqRegion]:
     print(f"Got {len(seqr_attribs)} seqr_attribs")
     seqr_syns: dict = get_seq_region_synonyms(server, database)
     print(f"Got {len(seqr_syns)} seqr_syns")
+    karyotypes: dict = get_karyotypes(server, database)
+    print(f"Got {len(karyotypes)} karyotypes")
 
     for seqr in seq_regions:
-        seq_id = seqr.get_seq_region_id()
-        attribs = seqr_attribs.get(seq_id)
-        if attribs:
-            seqr.attributes += attribs
-        syns = seqr_syns.get(seq_id)
-        if syns:
-            seqr.synonyms += syns
+        # Add Coord system id
         coord_id = seqr.coord_system_id
         coord = coord_systems.get(coord_id)
         if coord:
             seqr.coord_system = coord
-        else:
-            print(f"Seq region {seqr.name} has not coord_system {asdict(seqr)}")
+
+        # Add attribs
+        seq_id = seqr.get_seq_region_id()
+        attribs = seqr_attribs.get(seq_id)
+        if attribs:
+            seqr.attributes += attribs
+
+        # Add Synonyms
+        syns = seqr_syns.get(seq_id)
+        if syns:
+            seqr.synonyms += syns
+
+        # Add Karyotypes
+        kars = karyotypes.get(seq_id)
+        if kars:
+            seqr.karyotype_bands += kars
 
     return seq_regions
 
@@ -175,6 +185,30 @@ def get_seq_region_synonyms(server: CoreServer, database: str) -> Dict[str, List
         else:
             seqr_syns[seq_id] = [seqr_syn]
     return seqr_syns
+
+
+def get_karyotypes(server: CoreServer, database: str) -> Dict[str, List[KaryotypeBand]]:
+    server.set_database(database)
+
+    kar_data = server.get_table_data(
+        table='karyotype',
+        fields=['seq_region_id', 'seq_region_start', 'seq_region_end', 'band', 'stain'],
+    )
+
+    karyotype = dict()
+    for row in kar_data:
+        kar = KaryotypeBand(
+            band=row["band"],
+            seq_region_start=row["seq_region_start"],
+            seq_region_end=row["seq_region_end"],
+            stain=row["stain"],
+        )
+        seq_id = row["seq_region_id"]
+        if seq_id in karyotype:
+            karyotype[seq_id].append(kar)
+        else:
+            karyotype[seq_id] = [kar]
+    return karyotype
 
 
 def main() -> None:
