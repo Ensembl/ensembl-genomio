@@ -43,11 +43,30 @@ class SeqRegionAttribute:
 
 @dataclass
 class KaryotypeBand:
-    start: int
-    end: int
-    name: str
+    band: str
+    seq_region_start: int
+    seq_region_end: int
     stain: str
-    structure: str
+    structure: str = ""
+
+    def _get_structure(self):
+        struct_dict = {
+            "TEL": "telomere",
+            "ACEN": "centromere"
+        }
+        return struct_dict.get(self.stain, "")
+
+    def to_brc_dict(self):
+        kar_dict = {
+            "name": self.band,
+            "start": self.seq_region_start,
+            "end": self.seq_region_end
+        }
+        if self.stain:
+            kar_dict["stain"] = self.stain
+            kar_dict["structure"] = self._get_structure()
+
+        return kar_dict
 
 
 @dataclass
@@ -84,9 +103,12 @@ class SeqRegion:
             "name": self.name,
             "length": self.length,
             "coord_system_level": self._get_coord_system_level(),
-            "synonyms": [asdict(syn) for syn in self.synonyms],
-            "karyotype": [asdict(band) for band in self.karyotype_bands]
         }
+        if self.synonyms:
+            seqr_dict["synonyms"] = [asdict(syn) for syn in self.synonyms]
+
+        if self.karyotype_bands:
+            seqr_dict["karyotype"] = [band.to_brc_dict() for band in self.karyotype_bands]
 
         attrib_dict = self._get_attrib_dict()
 
