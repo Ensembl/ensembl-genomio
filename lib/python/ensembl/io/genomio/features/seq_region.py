@@ -143,7 +143,7 @@ class SeqRegion:
 
         added_seq = self._get_added_sequence()
         if added_seq:
-            seqr_dict["added_sequence"] = added_seq
+            seqr_dict["added_sequence"] = asdict(added_seq)
 
         attrib_dict = self._get_attrib_dict()
 
