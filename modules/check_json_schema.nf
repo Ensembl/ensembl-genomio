@@ -13,16 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import java.io.File
+
 process CHECK_JSON_SCHEMA {
     tag "$json_file.name"
     label 'default'
 
     input:
         path json_file
+        val schema
+    
+    output:
+        path json_file
 
     script:
-        schema = params.json_schemas[json_file.baseName]
+        script_dir = workflow.projectDir.toString()
+        schema_path = new File(script_dir + "/../../schema", schema + "_schema.json")
         """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
+        check_json_schema --json_file ${json_file} --json_schema ${schema_path}
         """
 }

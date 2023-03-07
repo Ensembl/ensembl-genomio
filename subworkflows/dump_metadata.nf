@@ -14,6 +14,8 @@
 // limitations under the License.
 
 include { DUMP_SEQ_REGIONS } from '../modules/dump_seq_regions.nf'
+include { COLLECT_META_FILE } from '../modules/collect_files.nf'
+include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
 
 workflow DUMP_METADATA {
     take:
@@ -26,5 +28,7 @@ workflow DUMP_METADATA {
         dbs
 
     main:
-        DUMP_SEQ_REGIONS(server, dbs, filter_map, out_dir)
+        seq_regions = DUMP_SEQ_REGIONS(server, dbs, filter_map, out_dir)
+        seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions, "seq_region")
+        COLLECT_META_FILE(seq_regions_checked)
 }

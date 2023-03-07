@@ -13,32 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DUMP_SEQ_REGIONS {
-    tag "Dump_seq_regions"
+process COLLECT_META_FILE {
+    publishDir "$out_dir/metadata/$db.division/$db.species", mode: 'move'
+    tag "Collect_file"
     label 'default'
-    time '1h'
+    time '5min'
 
     input:
-        val server
-        val db
-        val filter_map
-        val out_dir
-
+        path meta_file
+    
     output:
-        path "seq_region.json"
-
+        path meta_file
+    
     script:
         """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
-        seq_region_dumper --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
-            --password '${server.password}' \
-            --database '${db.database}' \
-            \$brc_mode \
-            --output_json seq_region.json
+        echo "Collecting file ${meta_file}"
         """
 }
