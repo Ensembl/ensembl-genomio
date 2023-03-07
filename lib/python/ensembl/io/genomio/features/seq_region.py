@@ -129,3 +129,9 @@ class SeqRegion:
                 seqr_dict[name] = value
 
         return seqr_dict
+
+    def is_top_level(self):
+        for attrib in self.attributes:
+            if attrib.code == "toplevel" and attrib.value == "1":
+                return True
+        return False

@@ -67,6 +67,7 @@ def get_all_seq_regions(server: CoreServer, database: str) -> List[SeqRegion]:
     karyotypes: dict = get_karyotypes(server, database)
     print(f"Got {len(karyotypes)} karyotypes")
 
+    final_seq_regions = []
     for seqr in seq_regions:
         # Add Coord system id
         coord_id = seqr.coord_system_id
@@ -89,8 +90,16 @@ def get_all_seq_regions(server: CoreServer, database: str) -> List[SeqRegion]:
         kars = karyotypes.get(seq_id)
         if kars:
             seqr.karyotype_bands += kars
+        
+        # Filtering
+        for attrib in attribs:
+            if attrib.code == "toplevel" and attrib.value == "1":
+                final_seq_regions.append(seqr)
+                break
 
-    return seq_regions
+    print(f"Got {len(final_seq_regions)} seq_regions dumped")
+
+    return final_seq_regions
 
 
 def get_coord_systems(server: CoreServer, database: str) -> Dict[str, CoordSystem]:
