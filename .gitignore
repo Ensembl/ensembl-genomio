@@ -4,3 +4,4 @@
 **/build
 **/.nextflow*
 **/.coverage
+**/htmlcov

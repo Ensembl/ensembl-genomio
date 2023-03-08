@@ -60,7 +60,6 @@ dev = [
     "Sphinx",
     "toml-validator",
     "ensembl-py @ git+ssh://git@github.com/Ensembl/ensembl-py",
-    "pytest-cov",
 ]
 doc = [
     "mock",
@@ -103,7 +102,13 @@ line-length = 110
 [tool.pytest.ini_options]
 addopts = "-v --tb=native --server=sqlite:///"
 testpaths = ["lib/python/tests"]
-norecursedirs = ["data", "tmp*", "env", "docs", "apps", "basic_modules", "*.egg_info"]
+norecursedirs = ["data", "docs", "*.egg_info"]
 filterwarnings = [
     "ignore::DeprecationWarning:argschema",
+]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "lib/python/ensembl"
 ]
