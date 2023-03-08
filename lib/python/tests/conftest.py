@@ -14,7 +14,7 @@
 # limitations under the License.
 """Local directory-specific hook implementations.
 
-Since this file is located at the root of all ensembl-compara tests, every test in every subfolder will have
+Since this file is located at the root of all ensembl-genomio tests, every test in every subfolder will have
 access to the plugins, hooks and fixtures defined here.
 
 """
@@ -22,9 +22,6 @@ access to the plugins, hooks and fixtures defined here.
 from pathlib import Path
 
 import pytest
-
-
-pytest_plugins = ("ensembl.plugins.pytest_unittest",)
 
 
 def pytest_configure() -> None:
