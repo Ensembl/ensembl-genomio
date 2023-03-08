@@ -24,8 +24,8 @@ Typical usage example::
 """
 
 from contextlib import nullcontext as does_not_raise
+from os import PathLike
 from pathlib import Path
-import shutil
 from typing import ContextManager, List
 
 from jsonschema.exceptions import ValidationError
@@ -48,12 +48,11 @@ class TestSchemas:
             (["new_metadata"], ["manifest.json"]),
             (
                 ["functional_annotation", "seq_region"],
-                ["manifest.json", "functional_annotation.json", "seq_region.json"],
+                ["manifest.json", "functional_annotation_test.json", "seq_region.json"],
             ),
         ],
     )
-    @pytest.mark.dependency(name="test_json_schema_factory", scope="class")
-    def test_json_schema_factory(self, metadata_types: List[str], output: List[str]) -> None:
+    def test_json_schema_factory(self, metadata_types: List[str], output: List[PathLike]) -> None:
         """Tests :meth:`schemas.json_schema_factory()` method.
 
         Args:
@@ -69,11 +68,10 @@ class TestSchemas:
     @pytest.mark.parametrize(
         "json_file, json_schema, expected",
         [
-            ("functional_annotation.json", "functional_annotation_schema.json", does_not_raise()),
-            ("functional_annotation.json", "seq_region_schema.json", raises(ValidationError)),
+            ("seq_region.json", "seq_region_schema.json", does_not_raise()),
+            ("seq_region.json", "functional_annotation_schema.json", raises(ValidationError)),
         ],
     )
-    @pytest.mark.dependency(depends=["test_json_schema_factory"], scope="class")
     def test_validate_json_schema(self, json_file: str, json_schema: str, expected: ContextManager) -> None:
         """Tests :meth:`schemas.validate_json_schema()` method.
 

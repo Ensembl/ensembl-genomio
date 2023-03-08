@@ -1,7 +1,12 @@
 {
     "functional_annotation": {
-        "file": "functional_annotation.json",
-        "md5sum": "7be40a688138a6e0f72d9dbcd29868fb"
+        "test": {
+            "file": "functional_annotation.json",
+            "md5sum": "7be40a688138a6e0f72d9dbcd29868fb"
+        },
+        "exclude": {
+            "description": "test entry"
+        }
     },
     "seq_region": {
         "file": "seq_region.json",
