@@ -52,6 +52,7 @@ class TestSchemas:
             ),
         ],
     )
+    @pytest.mark.dependency(name="test_json_schema_factory", scope="class")
     def test_json_schema_factory(self, metadata_types: List[str], output: List[str]) -> None:
         """Tests :meth:`schemas.json_schema_factory()` method.
 
@@ -72,6 +73,7 @@ class TestSchemas:
             ("functional_annotation.json", "seq_region_schema.json", raises(ValidationError)),
         ],
     )
+    @pytest.mark.dependency(depends=["test_json_schema_factory"], scope="class")
     def test_validate_json_schema(self, json_file: str, json_schema: str, expected: ContextManager) -> None:
         """Tests :meth:`schemas.validate_json_schema()` method.
 
