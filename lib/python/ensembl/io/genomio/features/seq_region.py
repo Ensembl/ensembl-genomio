@@ -70,11 +70,16 @@ class SeqRegionSynonym:
 class SeqRegionAttribute:
     value: str = ""
     code: str = ""
-    integer_fields: ClassVar[Set] = {"codon_table", "circular_seq", "non_ref"}
+    integer_fields: ClassVar[Set] = {"codon_table"}
+    bool_fields: ClassVar[Set] = {"circular_seq", "non_ref"}
 
     @classmethod
     def is_integer_field(cls, key: str) -> bool:
         return (key in cls.integer_fields)
+
+    @classmethod
+    def is_bool_field(cls, key: str) -> bool:
+        return (key in cls.bool_fields)
 
 
 @dataclass
@@ -200,6 +205,13 @@ class SeqRegion:
                         value = int(value)
                     else:
                         raise ValueError(f"Integer expected for field '{key}', got: '{value}'")
+
+                if SeqRegionAttribute.is_bool_field(key):
+                    if value:
+                        value = True
+                    else:
+                        value = False
+
                 seqr_dict[name] = value
 
         return seqr_dict
