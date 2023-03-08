@@ -30,6 +30,6 @@ process CHECK_JSON_SCHEMA {
         script_dir = workflow.projectDir.toString()
         schema_path = new File(script_dir + "/../../schema", schema + "_schema.json")
         """
-        check_json_schema --json_file ${json_file} --json_schema ${schema_path}
+        check-jsonschema ${json_file} --schemafile ${schema_path}
         """
 }
