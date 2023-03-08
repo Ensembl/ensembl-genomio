@@ -57,6 +57,14 @@ class SeqRegionSynonym:
                     raise Exception(f"External db file is not formatted correctly for: {line}")
                 else:
                     cls._db_map[parts[1]] = parts[0]
+    
+    def to_brc_dict(self):
+        syn_dict = {
+            "name": self.synonym,
+            "source": self.source
+        }
+        return syn_dict
+
 
 
 @dataclass
@@ -160,7 +168,7 @@ class SeqRegion:
             "coord_system_level": self._get_coord_system_level(),
         }
         if self.synonyms:
-            seqr_dict["synonyms"] = [asdict(syn) for syn in self.synonyms]
+            seqr_dict["synonyms"] = [syn.to_brc_dict() for syn in self.synonyms]
 
         if self.karyotype_bands:
             seqr_dict["karyotype"] = [band.to_brc_dict() for band in self.karyotype_bands]
@@ -183,8 +191,8 @@ class SeqRegion:
         for key, name in attribs_to_add.items():
             if key in attrib_dict:
                 value = attrib_dict[key]
-                if value.isdigit():
-                    value = int(value)
+                #if value.isdigit():
+                #    value = int(value)
                 seqr_dict[name] = value
 
         return seqr_dict
