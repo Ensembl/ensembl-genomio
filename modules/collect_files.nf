@@ -15,12 +15,12 @@
 
 process COLLECT_META_FILE {
     publishDir "$out_dir/metadata/$db.division/$db.species", mode: 'copy'
-    tag "Collect_file"
+    tag "Collect_file_${name}"
     label 'default'
     time '5min'
 
     input:
-        path meta_file
+        tuple val(name), path(meta_file)
         val db
         val out_dir
     

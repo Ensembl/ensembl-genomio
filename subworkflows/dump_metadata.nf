@@ -29,8 +29,8 @@ workflow DUMP_METADATA {
 
     main:
         seq_regions = DUMP_SEQ_REGIONS(server, db, filter_map, out_dir)
-        seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions, "seq_region")
+        seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
 
-        json_files = seq_regions_checked.merge().flatten()
+        json_files = seq_regions_checked.merge()
         COLLECT_META_FILE(json_files, db, out_dir)
 }

@@ -21,15 +21,14 @@ process CHECK_JSON_SCHEMA {
     errorStrategy 'finish'
 
     input:
-        path json_file
-        val schema
+        tuple val(schema_name), path(json_file)
     
     output:
-        path json_file
+        tuple val(schema_name), path(json_file)
 
     script:
         script_dir = workflow.projectDir.toString()
-        schema_path = new File(script_dir + "/../../schema", schema + "_schema.json")
+        schema_path = new File(script_dir + "/../../schema", schema_name + "_schema.json")
         """
         check_json_schema --json_file ${json_file} --json_schema ${schema_path}
         """

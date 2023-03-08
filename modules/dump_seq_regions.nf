@@ -25,7 +25,7 @@ process DUMP_SEQ_REGIONS {
         val out_dir
 
     output:
-        path "seq_region.json"
+        tuple val("seq_region"), path("seq_region.json")
 
     script:
         """
