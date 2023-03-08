@@ -1,7 +1,7 @@
 # ensembl-genomio
 Pipelines to turn basic genomic data into Ensembl cores and back
 
-This is a mulitlanguage (Perl, Python) repo providing eHive pipelines
+This is a multilanguage (Perl, Python) repo providing eHive pipelines
 and various scripts (see below) to prepare genomic data and load it as [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) or to dump such core databases as file bundles.
 
 Bundles themselves consist of genomic data in various formats (e.g. fasta, gff3, json) and should follow the corresponding [specification](docs/BRC4_genome_loader.md#input-data).
@@ -49,7 +49,7 @@ pip install -e ./ensembl-genomio[dev]
 For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](./pyproject.toml). 
 
 
-### Additional steps to use automated genertaion of the documentation (part of it)
+### Additional steps to use automated generation of the documentation (part of it)
 Install python part with the `[doc]` or `[dev]` tag.
 Change into repo dir
 Run doc build script.
