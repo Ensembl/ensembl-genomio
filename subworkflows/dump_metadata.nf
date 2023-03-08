@@ -14,6 +14,7 @@
 // limitations under the License.
 
 include { DUMP_SEQ_REGIONS } from '../modules/dump_seq_regions.nf'
+include { DUMP_EVENTS } from '../modules/dump_events.nf'
 include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
 include { COLLECT_META_FILE } from '../modules/collect_files.nf'
 include { PUBLISH_DIR } from '../modules/collect_files.nf'
@@ -29,10 +30,14 @@ workflow DUMP_METADATA {
         db
 
     main:
-        seq_regions = DUMP_SEQ_REGIONS(server, db, filter_map, out_dir)
-        seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
+        seq_regions = DUMP_SEQ_REGIONS(server, db, filter_map)
+        events = DUMP_EVENTS(server, db, filter_map)
 
-        json_files = seq_regions_checked.merge()
-        collect_dir = COLLECT_META_FILE(json_files, db)
+        // Check files
+        jsons_checked = CHECK_JSON_SCHEMA(seq_regions)
+
+        // Collect all
+        all_files = jsons_checked.concat(events).view()
+        collect_dir = COLLECT_META_FILE(all_files, db)
         PUBLISH_DIR(collect_dir, db, out_dir)
 }

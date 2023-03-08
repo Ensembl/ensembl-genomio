@@ -13,8 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DUMP_SEQ_REGIONS {
-    tag "Dump_seq_regions:${db.species}"
+
+process DUMP_EVENTS {
+    tag "Dump_events:${db.species}"
     label 'default'
     time '1h'
 
@@ -24,7 +25,7 @@ process DUMP_SEQ_REGIONS {
         val filter_map
 
     output:
-        tuple val("seq_region"), path("seq_region.json")
+        tuple val("events"), path("events.txt"), optional: true
 
     script:
         """
@@ -32,12 +33,11 @@ process DUMP_SEQ_REGIONS {
         if [ $filter_map.brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
-        seq_region_dumper --host '${server.host}' \
+        events_dumper --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            \$brc_mode \
-            --output_json seq_region.json
+            --output_file "events.txt"
         """
 }
