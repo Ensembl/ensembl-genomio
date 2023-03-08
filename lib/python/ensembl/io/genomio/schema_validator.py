@@ -18,17 +18,21 @@
 Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
 """
 
+__all__ = ["schema_validator"]
+
 import json
-import jsonschema
 
 import argschema
+import jsonschema
 
 
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
-    json_file = argschema.fields.InputFile(required=True, description="JSON file to check")
-    json_schema = argschema.fields.InputFile(required=True, description="JSON schema to validate against")
+    json_file = argschema.fields.InputFile(required=True, metadata={"description": "JSON file to check"})
+    json_schema = argschema.fields.InputFile(
+        required=True, metadata={"description": "JSON schema to validate against"}
+    )
 
 
 def schema_validator(json_file: str, json_schema: str) -> None:
@@ -50,7 +54,3 @@ def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     schema_validator(mod.args["json_file"], mod.args["json_schema"])
-
-
-# if __name__ == "__main__":
-#     main()

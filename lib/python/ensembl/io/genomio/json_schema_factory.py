@@ -18,6 +18,8 @@
 Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
 """
 
+__all__ = ["json_schema_factory"]
+
 import ast
 import json
 import shutil
@@ -31,14 +33,19 @@ class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
     manifest_dir = argschema.fields.InputDir(
-        required=True, description="Folder containing the 'manifest.json' file to check"
+        required=True, metadata={"description": "Folder containing the 'manifest.json' file to check"}
     )
     metadata_types = argschema.fields.String(
-        required=True, description="Metadata types to extract (in a list-like string)"
+        required=True, metadata={"description": "Metadata types to extract (in a list-like string)"}
+    )
+    output_dir = argschema.fields.InputDir(
+        required=False, dump_default=".", metadata={"description": "Folder to store the produced files"}
     )
 
 
-def json_schema_factory(manifest_dir: Union[str, Path], metadata_types: List[str]) -> None:
+def json_schema_factory(
+    manifest_dir: Union[str, Path], metadata_types: List[str], output_dir: Union[str, Path]
+) -> None:
     """Generates one JSON file per metadata type inside `manifest`, including "manifest.json" itself.
 
     Each JSON file will have the file name of the metadata type, e.g. "seq_region.json".
@@ -46,12 +53,13 @@ def json_schema_factory(manifest_dir: Union[str, Path], metadata_types: List[str
     Args:
         manifest_dir: Path to the folder with the manifest JSON file to check.
         metadata_types: Metadata types to extract from `manifest` as JSON files.
+        output_dir: Path to the folder where to generate the JSON files.
 
     """
     manifest_path = Path(manifest_dir, "manifest.json")
     with manifest_path.open() as manifest_file:
         content = json.load(manifest_file)
-        shutil.copyfile(manifest_path, "manifest.json")
+        shutil.copyfile(manifest_path, Path(output_dir, "manifest.json"))
         # Use dir name from the manifest
         for name in content:
             if "file" in content[name]:
@@ -65,7 +73,7 @@ def json_schema_factory(manifest_dir: Union[str, Path], metadata_types: List[str
         # Check the other JSON schemas
         for metadata_key in metadata_types:
             if metadata_key in content:
-                shutil.copyfile(content[metadata_key], f"{metadata_key}.json")
+                shutil.copyfile(content[metadata_key], Path(output_dir, f"{metadata_key}.json"))
 
 
 def main() -> None:
@@ -73,8 +81,4 @@ def main() -> None:
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     # mod.args["metadata_types"] will be a list-like string that needs to be parsed to List[str]
     metadata_types = ast.literal_eval(mod.args["metadata_types"])
-    json_schema_factory(mod.args["manifest_dir"], metadata_types)
-
-
-# if __name__ == "__main__":
-#     main()
+    json_schema_factory(mod.args["manifest_dir"], metadata_types, mod.args["output_dir"])
