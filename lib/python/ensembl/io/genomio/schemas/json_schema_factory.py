@@ -18,8 +18,9 @@ __all__ = ["json_schema_factory"]
 
 import ast
 import json
-import shutil
+from os import PathLike
 from pathlib import Path
+import shutil
 from typing import List, Union
 
 import argschema
@@ -39,9 +40,7 @@ class InputSchema(argschema.ArgSchema):
     )
 
 
-def json_schema_factory(
-    manifest_dir: Union[str, Path], metadata_types: List[str], output_dir: Union[str, Path]
-) -> None:
+def json_schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir: PathLike) -> None:
     """Generates one JSON file per metadata type inside `manifest`, including "manifest.json" itself.
 
     Each JSON file will have the file name of the metadata type, e.g. "seq_region.json".
@@ -56,20 +55,25 @@ def json_schema_factory(
     with manifest_path.open() as manifest_file:
         content = json.load(manifest_file)
         shutil.copyfile(manifest_path, Path(output_dir, "manifest.json"))
+        json_files = {}
         # Use dir name from the manifest
         for name in content:
             if "file" in content[name]:
                 file_name = content[name]["file"]
-                content[name] = str(manifest_path.parent / file_name)
+                json_files[name] = manifest_path.parent / file_name
             else:
                 for key in content[name]:
                     if "file" in content[name][key]:
                         file_name = content[name][key]["file"]
-                        content[name][key] = str(manifest_path.parent / file_name)
+                        json_files[name] = {key: manifest_path.parent / file_name}
         # Check the other JSON schemas
         for metadata_key in metadata_types:
-            if metadata_key in content:
-                shutil.copyfile(content[metadata_key], Path(output_dir, f"{metadata_key}.json"))
+            if metadata_key in json_files:
+                if type(json_files[metadata_key]) is dict:
+                    for key, filepath in json_files[metadata_key].items():
+                        shutil.copyfile(filepath, Path(output_dir, f"{metadata_key}_{key}.json"))
+                else:
+                    shutil.copyfile(json_files[metadata_key], Path(output_dir, f"{metadata_key}.json"))
 
 
 def main() -> None:
