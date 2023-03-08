@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process DUMP_SEQ_REGIONS {
-    tag "Dump_seq_regions"
+    tag "Dump_seq_regions:${db.species}"
     label 'default'
     time '1h'
 
