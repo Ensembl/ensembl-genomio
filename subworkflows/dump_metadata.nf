@@ -14,8 +14,9 @@
 // limitations under the License.
 
 include { DUMP_SEQ_REGIONS } from '../modules/dump_seq_regions.nf'
-include { COLLECT_META_FILE } from '../modules/collect_files.nf'
 include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
+include { COLLECT_META_FILE } from '../modules/collect_files.nf'
+include { PUBLISH_DIR } from '../modules/collect_files.nf'
 
 workflow DUMP_METADATA {
     take:
@@ -32,5 +33,6 @@ workflow DUMP_METADATA {
         seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
 
         json_files = seq_regions_checked.merge()
-        COLLECT_META_FILE(json_files, db, out_dir)
+        collect_dir = COLLECT_META_FILE(json_files, db)
+        PUBLISH_DIR(collect_dir, db, out_dir)
 }

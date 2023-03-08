@@ -13,22 +13,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 process COLLECT_META_FILE {
-    publishDir "$out_dir/metadata/$db.division/$db.species", mode: 'copy'
-    tag "Collect_file_${name}"
+    tag "Collect_files_${db.species}"
     label 'default'
     time '5min'
 
     input:
         tuple val(name), path(meta_file)
         val db
-        val out_dir
     
     output:
-        path meta_file
+        path "${db.species}/"
     
     script:
         """
-        echo "Copy final file ${meta_file}"
+        mkdir -p ${db.species}/
+        cp ${meta_file} "${db.species}/${name}.${meta_file.getExtension()}"
+        manifest_maker --manifest_dir ${db.species}
+        """
+}
+
+process PUBLISH_DIR {
+    publishDir "$out_dir/metadata/$db.division", mode: 'copy'
+    tag "Publish_${db.species}"
+    label 'default'
+    time '5min'
+
+    input:
+        path data_dir
+        val db
+        val out_dir
+    
+    output:
+        path data_dir
+    
+    script:
+        """
+        echo "Just copy over the finished files"
         """
 }
