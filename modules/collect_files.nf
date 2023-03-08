@@ -29,6 +29,6 @@ process COLLECT_META_FILE {
     
     script:
         """
-        echo "Copy final file ${$meta_file}"
+        echo "Copy final file ${meta_file}"
         """
 }
