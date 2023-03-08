@@ -63,7 +63,7 @@ class TestSchemas:
         """
         schemas.json_schema_factory(self.test_data_dir, metadata_types, self.tmp_dir)
         for file_name in output:
-            assert Path(self.tmp_dir, file_name).exists()
+            assert (self.tmp_dir / file_name).exists()
 
     @pytest.mark.parametrize(
         "json_file, json_schema, expected",
@@ -83,4 +83,4 @@ class TestSchemas:
 
         """
         with expected:
-            schemas.validate_json_schema(self.tmp_dir / json_file, self.test_data_dir / json_schema)
+            schemas.validate_json_schema(self.test_data_dir / json_file, self.test_data_dir / json_schema)
