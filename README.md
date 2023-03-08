@@ -128,8 +128,19 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 ## Various docs
 See [docs](docs)
 
-## TODO
-Tests, tests, tests...
+## Unit testing
+The Python part of the codebase has now unit tests available to test each module. Make sure you have installed this repository's `[dev]` dependencies (via `pip install ensembl-genomio[dev]`) before continuing.
+
+Running all the tests in one go is as easy as running `pytest` **from the root of the repository**. If you also want to measure, collect and report the code coverage, you can do:
+```bash
+coverage run -m pytest
+coverage report
+```
+
+You can also run specific tests by supplying the path to the specific test file/subfolder, e.g.:
+```bash
+pytest lib/python/tests/test_schema.py
+```
 
 ## Acknowledgements
 Some of this code and documentation is inherited from the [EnsemblGenomes](https://github.com/EnsemblGenomes) and other [Ensembl](https://github.com/Ensembl) projects.
