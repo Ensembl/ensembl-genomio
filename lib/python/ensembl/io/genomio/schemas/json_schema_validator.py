@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -13,12 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Validates a JSON file with the provided JSON schema.
+"""Validates a JSON file with the provided JSON schema."""
 
-Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
-"""
-
-__all__ = ["schema_validator"]
+__all__ = ["validate_json_schema"]
 
 import json
 
@@ -35,7 +31,7 @@ class InputSchema(argschema.ArgSchema):
     )
 
 
-def schema_validator(json_file: str, json_schema: str) -> None:
+def validate_json_schema(json_file: str, json_schema: str) -> None:
     """Validates a JSON file with the provided JSON schema.
 
     Args:
@@ -53,4 +49,4 @@ def schema_validator(json_file: str, json_schema: str) -> None:
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    schema_validator(mod.args["json_file"], mod.args["json_schema"])
+    validate_json_schema(mod.args["json_file"], mod.args["json_schema"])

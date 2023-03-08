@@ -70,8 +70,8 @@ homepage = "https://www.ensembl.org"
 repository = "https://github.com/Ensembl/ensembl-genomio"
 
 [project.scripts]
-json_schema_factory = "ensembl.io.genomio.json_schema_factory:main"
-check_json_schema = "ensembl.io.genomio.schema_validator:main"
+json_schema_factory = "ensembl.io.genomio.schemas.json_schema_factory:main"
+check_json_schema = "ensembl.io.genomio.schemas.json_schema_validator:main"
 
 [tool.setuptools]
 package-dir = {"" = "lib/python"}

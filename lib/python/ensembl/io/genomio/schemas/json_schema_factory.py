@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -13,10 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates one JSON file per metadata type inside `manifest`, including the manifest itself.
-
-Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
-"""
+"""Generates one JSON file per metadata type inside `manifest`, including the manifest itself."""
 
 __all__ = ["json_schema_factory"]
 
