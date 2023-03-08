@@ -18,6 +18,7 @@ import java.io.File
 process CHECK_JSON_SCHEMA {
     tag "$json_file.name"
     label 'default'
+    errorStrategy 'finish'
 
     input:
         path json_file
