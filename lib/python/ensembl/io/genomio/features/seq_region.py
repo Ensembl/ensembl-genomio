@@ -18,7 +18,7 @@
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, List
+from typing import ClassVar, Dict, List, Set
 
 
 @dataclass
@@ -57,7 +57,7 @@ class SeqRegionSynonym:
                     raise Exception(f"External db file is not formatted correctly for: {line}")
                 else:
                     cls._db_map[parts[1]] = parts[0]
-    
+
     def to_brc_dict(self):
         syn_dict = {
             "name": self.synonym,
@@ -66,11 +66,15 @@ class SeqRegionSynonym:
         return syn_dict
 
 
-
 @dataclass
 class SeqRegionAttribute:
     value: str = ""
     code: str = ""
+    integer_fields: ClassVar[Set] = {"codon_table", "circular_seq", "non_ref"}
+
+    @classmethod
+    def is_integer_field(cls, key: str) -> bool:
+        return (key in cls.integer_fields)
 
 
 @dataclass
@@ -191,8 +195,11 @@ class SeqRegion:
         for key, name in attribs_to_add.items():
             if key in attrib_dict:
                 value = attrib_dict[key]
-                #if value.isdigit():
-                #    value = int(value)
+                if SeqRegionAttribute.is_integer_field(key):
+                    if value.isdigit():
+                        value = int(value)
+                    else:
+                        raise ValueError(f"Integer expected for field '{key}', got: '{value}'")
                 seqr_dict[name] = value
 
         return seqr_dict
