@@ -20,15 +20,17 @@ include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
 workflow DUMP_METADATA {
     take:
         server
-        dbs
+        db
         filter_map
         out_dir
 
     emit:
-        dbs
+        db
 
     main:
-        seq_regions = DUMP_SEQ_REGIONS(server, dbs, filter_map, out_dir)
+        seq_regions = DUMP_SEQ_REGIONS(server, db, filter_map, out_dir)
         seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions, "seq_region")
-        COLLECT_META_FILE(seq_regions_checked)
+
+        json_files = seq_regions_checked.merge().flatten()
+        COLLECT_META_FILE(json_files, db, out_dir)
 }

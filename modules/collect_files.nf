@@ -14,19 +14,21 @@
 // limitations under the License.
 
 process COLLECT_META_FILE {
-    publishDir "$out_dir/metadata/$db.division/$db.species", mode: 'move'
+    publishDir "$out_dir/metadata/$db.division/$db.species", mode: 'copy'
     tag "Collect_file"
     label 'default'
     time '5min'
 
     input:
         path meta_file
+        val db
+        val out_dir
     
     output:
         path meta_file
     
     script:
         """
-        echo "Collecting file ${meta_file}"
+        echo "Copy final file ${$meta_file}"
         """
 }
