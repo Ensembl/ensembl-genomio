@@ -75,6 +75,7 @@ json_schema_factory = "ensembl.io.genomio.json_schema_factory:main"
 check_json_schema = "ensembl.io.genomio.schema_validator:main"
 db_factory = "ensembl.io.genomio.db_factory:main"
 seq_region_dumper = "ensembl.io.genomio.seq_region_dumper:main"
+manifest_maker = "ensembl.io.genomio.manifest_maker:main"
 
 [tool.setuptools]
 package-dir = {"" = "lib/python"}
