@@ -1,0 +1,50 @@
+# [trf_split_run.bash](scripts/trf_split_run.bash)
+
+A trf wrapper with chunking support to be used with
+[ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/lib/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [doc](docs/trf_split_run.md))
+Compatible compatible with input/output format of trf invocation from [Bio::EnsEMBL::Analysis::Runnable::TRF](https://github.com/Ensembl/ensembl-analysis/blob/main/modules/Bio/EnsEMBL/Analysis/Runnable/TRF.pm).
+And can be used as a hack to allow TRF stage to be accomplished at the cost of splitting
+ long repeat into several adjacent ones  (with possible losses).
+
+## Options
+Use environment variable to control scipt run
+* `DNA_FEATURES_TRF_SPLIT_NO_SPLITTING` -- set to `YES` to skip splitting stage
+* `DNA_FEATURES_TRF_SPLIT_NO_TRF` -- set to `YES` to skip trf stage
+* `DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE` -- chunk size [`1_000_000`]
+* `DNA_FEATURES_TRF_SPLIT_SPLITTER_OPTIONS` -- for a finer control [`--n_seq 1 --chunk_tolerance 10 --chunk_size ${DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE}`] 
+* `DNA_FEATURES_TRF_SPLIT_TRF_EXE` -- trf executrable (or abs path to be used) [`trf`]
+
+## Usage examples
+### A standalone run
+```
+trf_split_run.bash /writable/path_to/dna.fasta 2 5 7 80 10 40 500 -d -h
+```
+
+### As a substitution for the "trf_exe" to be used with the `TRF` stage of the `DNAFeatures` pipeline:
+```
+# change TRF "program" parameter
+tweak_pipeline.pl -url "$DNA_FEATURES_EHIVE_DB_URL" -tweak 'analysis[TRF].param[parameters_hash]={program=>"#ensembl_cvs_root_dir#/ensembl-genomio/scripts/trf_split_run.bash"}'
+```
+```
+# set envitonment variables if you need to, i.e.
+export DNA_FEATURES_TRF_SPLIT_TRF_EXE=trf.4.09.1 
+```
+```
+runWorker.pl ... 
+# or
+beekeeper.pl ... -loop
+```
+```
+# revert back (if you need to)
+tweak_pipeline.pl -url $DNA_FEATURES_EHIVE_DB_URL  -tweak 'analysis[TRF].param[parameters_hash]={}'
+```
+```
+# revert env settings
+unset DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE
+unset DNA_FEATURES_TRF_SPLIT_SPLITTER_OPTIONS
+unset DNA_FEATURES_TRF_SPLIT_TRF_EXE
+#   script stages
+unset DNA_FEATURES_TRF_SPLIT_NO_SPLITTING
+unset DNA_FEATURES_TRF_SPLIT_NO_TRF
+```
+
