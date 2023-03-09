@@ -19,6 +19,7 @@ include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
 
 include { COLLECT_FILES } from '../modules/collect_files.nf'
 include { MANIFEST } from '../modules/collect_files.nf'
+include { CHECK_INTEGRITY } from '../modules/check_integrity.nf'
 include { PUBLISH_DIR } from '../modules/collect_files.nf'
 
 workflow DUMP_METADATA {
@@ -46,7 +47,7 @@ workflow DUMP_METADATA {
 
         // Collect, create manifest, and publish
         collect_dir = COLLECT_FILES(db_files)
-        collect_dir.view()
         manifested_dir = MANIFEST(collect_dir, db)
-        PUBLISH_DIR(manifested_dir, db, out_dir)
+        manifest_checked = CHECK_INTEGRITY(manifested_dir, filter_map)
+        PUBLISH_DIR(manifest_checked, db, out_dir)
 }
