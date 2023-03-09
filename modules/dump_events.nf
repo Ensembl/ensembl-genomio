@@ -25,7 +25,7 @@ process DUMP_EVENTS {
         val filter_map
 
     output:
-        tuple val("events"), path("events.txt")
+        tuple val(db), val("events"), path("events.txt")
 
     script:
         """

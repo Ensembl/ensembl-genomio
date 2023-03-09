@@ -24,7 +24,7 @@ process DUMP_SEQ_REGIONS {
         val filter_map
 
     output:
-        tuple val("seq_region"), path("seq_region.json")
+        tuple val(db), val("seq_region"), path("seq_region.json")
 
     script:
         """

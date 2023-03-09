@@ -20,20 +20,20 @@ process COLLECT_FILES {
     time '5min'
 
     input:
-        val db
-        path seq_regions
-        path events
+        tuple val(db), path(file_name)
     
     output:
-        path "${db.species}/"
+        path "${db.species}"
     
     script:
         """
-        mkdir ${db.species}/
+        DBDIR=${db.species}/
+        mkdir \$DBDIR
 
-        for FILE in ${seq_regions} ${events}; do
+        echo ${file_name}
+        for FILE in ${file_name}; do
             if [ -s \$FILE ]; then
-                mv \$FILE ${db.species}/
+                mv \$FILE \$DBDIR
             fi
         done
         """

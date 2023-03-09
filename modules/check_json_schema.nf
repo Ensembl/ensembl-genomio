@@ -21,10 +21,10 @@ process CHECK_JSON_SCHEMA {
     errorStrategy 'finish'
 
     input:
-        tuple val(schema_name), path(json_file)
+        tuple val(db), val(schema_name), path(json_file)
     
     output:
-        tuple val(schema_name), path(json_file)
+        tuple val(db), val(schema_name), path(json_file)
 
     script:
         script_dir = workflow.projectDir.toString()
