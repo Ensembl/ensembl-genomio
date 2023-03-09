@@ -32,6 +32,7 @@ process DUMP_SEQ_REGIONS {
         if [ $filter_map.brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
+        touch seq_region.json
         seq_region_dumper --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \

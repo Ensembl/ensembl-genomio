@@ -32,19 +32,13 @@ workflow DUMP_METADATA {
         db
 
     main:
+        // Generate files
         seq_regions = DUMP_SEQ_REGIONS(server, db, filter_map)
-        events = DUMP_EVENTS(server, db, filter_map)
+        seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions).map{ it[1] }
+        events = DUMP_EVENTS(server, db, filter_map).map{ it[1] }
 
-        // Check files
-        jsons_checked = CHECK_JSON_SCHEMA(seq_regions)
-
-        // Collect all
-        all_files = jsons_checked
-            .concat(events)
-            .map{ it[1] }
-            .collate(5)
-            .view()
-        collect_dir = COLLECT_FILES(all_files, db)
+        // Collect, create manifest, and publish
+        collect_dir = COLLECT_FILES(db, seq_regions_checked, events)
         manifested_dir = MANIFEST(collect_dir, db)
         PUBLISH_DIR(manifested_dir, db, out_dir)
 }

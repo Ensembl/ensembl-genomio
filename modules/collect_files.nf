@@ -20,16 +20,22 @@ process COLLECT_FILES {
     time '5min'
 
     input:
-        path(file_name)
         val db
+        path seq_regions
+        path events
     
     output:
         path "${db.species}/"
     
     script:
         """
-        mkdir -p ${db.species}/
-        mv ${file_name} ${db.species}/
+        mkdir ${db.species}/
+
+        for FILE in ${seq_regions} ${events}; do
+            if [ -s \$FILE ]; then
+                mv \$FILE ${db.species}/
+            fi
+        done
         """
 }
 
