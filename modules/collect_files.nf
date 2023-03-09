@@ -14,13 +14,13 @@
 // limitations under the License.
 
 
-process COLLECT_META_FILE {
+process COLLECT_FILES {
     tag "Collect_files_${db.species}"
     label 'default'
     time '5min'
 
     input:
-        tuple val(name), path(meta_file)
+        path(file_name)
         val db
     
     output:
@@ -29,8 +29,25 @@ process COLLECT_META_FILE {
     script:
         """
         mkdir -p ${db.species}/
-        cp ${meta_file} "${db.species}/${name}.${meta_file.getExtension()}"
-        manifest_maker --manifest_dir ${db.species}
+        mv ${file_name} ${db.species}/
+        """
+}
+
+process MANIFEST {
+    tag "Manifest_${db.species}"
+    label 'default'
+    time '5min'
+
+    input:
+        path collect_dir
+        val db
+    
+    output:
+        path collect_dir
+    
+    script:
+        """
+        manifest_maker --manifest_dir ${collect_dir}
         """
 }
 

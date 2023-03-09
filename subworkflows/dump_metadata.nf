@@ -16,7 +16,9 @@
 include { DUMP_SEQ_REGIONS } from '../modules/dump_seq_regions.nf'
 include { DUMP_EVENTS } from '../modules/dump_events.nf'
 include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
-include { COLLECT_META_FILE } from '../modules/collect_files.nf'
+
+include { COLLECT_FILES } from '../modules/collect_files.nf'
+include { MANIFEST } from '../modules/collect_files.nf'
 include { PUBLISH_DIR } from '../modules/collect_files.nf'
 
 workflow DUMP_METADATA {
@@ -37,7 +39,12 @@ workflow DUMP_METADATA {
         jsons_checked = CHECK_JSON_SCHEMA(seq_regions)
 
         // Collect all
-        all_files = jsons_checked.concat(events).view()
-        collect_dir = COLLECT_META_FILE(all_files, db)
-        PUBLISH_DIR(collect_dir, db, out_dir)
+        all_files = jsons_checked
+            .concat(events)
+            .map{ it[1] }
+            .collate(5)
+            .view()
+        collect_dir = COLLECT_FILES(all_files, db)
+        manifested_dir = MANIFEST(collect_dir, db)
+        PUBLISH_DIR(manifested_dir, db, out_dir)
 }
