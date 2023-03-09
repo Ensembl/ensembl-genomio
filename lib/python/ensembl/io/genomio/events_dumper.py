@@ -242,8 +242,8 @@ class StableIdEvent:
         
         """
         for pair in pairs:
-            if (
-                (pair["old_id"] and pair["old_id"] in self.from_set) or (pair["new_id"] and pair["new_id"] in self.to_set)):
+            if ((pair["old_id"] and pair["old_id"] in self.from_set)
+                    or (pair["new_id"] and pair["new_id"] in self.to_set)):
                 # Core db contains an empty line to signify that an old id has been removed
                 # in merge/split/mixed
                 name = self.get_name()
@@ -419,7 +419,8 @@ class DumpStableIDs:
 
         return events
     
-    def extend_event(self, event: StableIdEvent, from_list: Dict[str, List[str]], to_list: Dict[str, List[str]]) -> Tuple[StableIdEvent, List, List]:
+    def extend_event(self, event: StableIdEvent, from_list: Dict[str, List[str]],
+                     to_list: Dict[str, List[str]]) -> Tuple[StableIdEvent, List, List]:
         """Given an event, aggregate ids in the 'from' and 'to' sets, to connect the whole group.
 
         Args:
