@@ -25,39 +25,31 @@ from pathlib import Path
 import re
 import sys
 
+import argschema
 from BCBio import GFF
 from Bio import SeqIO
-import eHive
 
 from ensembl.brc4.runnable.utils import get_json
 
 
-class integrity(eHive.BaseRunnable):
+class IntegrityTool:
     """Check the integrity of sequence and annotation files in the genome"""
 
-    def param_defaults(self):
-        return {
-            "ensembl_mode": False,
-            "ignore_final_stops": False,
-        }
+    def __init__(self, manifest_file: Path, brc_mode: bool = False,
+                 ignore_final_stops: bool = False) -> None:
+        self.manifest_file = manifest_file
+        self.brc_mode = brc_mode
+        self.ignore_final_stop = ignore_final_stops
 
-    def run(self):
+    def check_integrity(self):
         """Load files listed in the manifest.json and check the integrity.
             Check if the files are correct by verifying the MD5 hash.
             Check if translation, functional annotation and sequence region ids
             and lengths are consistent with the information in gff.
             Compare sequence length from fasta_dna file to seq_region.json metadata.
-
-        Args:
-            manifest: Path to the manifest file.
-            It contains a set of files fasta, json metadata
-            and optional annotation files (gff, functional_annotation).
-
-        Returns:
-            Error if any of the above checks fail.
         """
 
-        manifest_path = self.param_required("manifest")
+        manifest_path = self.manifest_file
         errors = []
         # load the manisfest.json
         with open(manifest_path) as manifest_file:
@@ -104,10 +96,9 @@ class integrity(eHive.BaseRunnable):
                 errors += dna_errors
             if "fasta_pep" in manifest:
                 print("Got a fasta pep")
-                ignore_final_stops = self.param("ignore_final_stops")
                 # Verify if the length and id for the sequence is unique
                 pep, pep_errors = self.get_fasta_lengths(
-                    manifest["fasta_pep"], ignore_final_stops=ignore_final_stops
+                    manifest["fasta_pep"], ignore_final_stops=self.ignore_final_stops
                 )
                 errors += pep_errors
             if "seq_region" in manifest:
@@ -318,7 +309,6 @@ class integrity(eHive.BaseRunnable):
             are stored with their corresponding lengths.
         """
 
-        ensembl_mode = self.param("ensembl_mode")
         seqs = {}
         genes = {}
         peps = {}
@@ -334,7 +324,7 @@ class integrity(eHive.BaseRunnable):
                 # Store gene id and length
                 if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
                     gene_id = feat.id
-                    if ensembl_mode:
+                    if not self.brc_mode:
                         gene_id = feat_length
                     genes[gene_id] = abs(feat.location.end - feat.location.start)
                     # Get CDS id and length
@@ -344,7 +334,7 @@ class integrity(eHive.BaseRunnable):
                             for feat3 in feat2.sub_features:
                                 if feat3.type == "CDS":
                                     pep_id = feat3.id
-                                    if ensembl_mode:
+                                    if not self.brc_mode:
                                         pep_id = pep_id.replace("CDS:", "")
                                     if pep_id not in length:
                                         length[pep_id] = 0
@@ -563,3 +553,30 @@ class integrity(eHive.BaseRunnable):
             errors.append("%d only in second list in %s (first: %s)" % (len(only_feat), name, only_feat[0]))
 
         return errors
+
+
+class InputSchema(argschema.ArgSchema):
+    """Input arguments expected by this script."""
+
+    # Server parameters
+    manifest_file = argschema.fields.InputFile(required=True, metadata={
+        "description": "Manifest file for the data to check"
+    })
+    brc_mode = argschema.fields.Boolean(required=False, metadata={
+        "description": "BRC mode"
+    })
+
+
+def main() -> None:
+    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
+
+    # Start
+    inspector = IntegrityTool(mod.args["manifest_file"])
+    if mod.args.get("brc_mode"):
+        inspector.brc_mode = True
+    
+    inspector.check_integrity()
+
+
+if __name__ == "__main__":
+    main()
