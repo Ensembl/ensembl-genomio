@@ -33,4 +33,5 @@ def pytest_configure() -> None:
     """
     test_data_dir = Path(__file__).parent
     pytest.dbs_dir = test_data_dir / "databases"
-    pytest.files_dir = test_data_dir / "flatfiles"
+    pytest.flat_files_dir = test_data_dir / "flatfiles"
+    pytest.manifest_data = pytest.flat_files_dir / "manifest_data"
