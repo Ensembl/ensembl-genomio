@@ -38,7 +38,8 @@ def get_args():
                       help="chunks output [STDOUT]")
   parser.add_argument("--individual_out_dir", required = False, default = None,
                       type=str,
-                      help="AGP file with chunks to contigs mapping (optional)")
+                      help="output directory for writing files with individual chunks to (optional), " \
+                           "if provided,`--out` value used as a filename prefix")
   parser.add_argument("--agp_out", metavar="chunks_contigs.agp", required = False,
                       type=argparse.FileType('w',  encoding='UTF-8'),
                       help="AGP file with chunks to contigs mapping (optional)")

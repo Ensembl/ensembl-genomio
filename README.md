@@ -124,6 +124,8 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 
 ### Scripts
 
+* [trf_split_run.bash](scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/lib/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [doc](docs/trf_split_run.md))
+
 
 ## Various docs
 See [docs](docs)
