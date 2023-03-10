@@ -49,12 +49,8 @@ def validate_json_schema(json_file: str, json_schema: str) -> None:
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-<<<<<<< HEAD:lib/python/ensembl/io/genomio/schema_validator.py
-    schema_validator(mod.args["json_file"], mod.args["json_schema"])
+    validate_json_schema(mod.args["json_file"], mod.args["json_schema"])
 
 
 if __name__ == "__main__":
     main()
-=======
-    validate_json_schema(mod.args["json_file"], mod.args["json_schema"])
->>>>>>> jalvarez/nextflow_template:lib/python/ensembl/io/genomio/schemas/json_schema_validator.py
