@@ -39,8 +39,8 @@ my $package_dir = dirname($package_path);
 my $root_dir = "$package_dir/../../../../../..";
 
 my $scripts_dir = "$root_dir/scripts";
-my $schema_dir = "$root_dir/schema";
-my $data_dir = "$root_dir/data";
+my $schema_dir = "$root_dir/schemas";
+my $config_dir = "$root_dir/data";
 
 sub default_options {
   my ($self) = @_;
@@ -70,7 +70,7 @@ sub default_options {
     pipeline_dir => 'genome_loader_' . $self->o('release') . '_' . $self->o('ensembl_version'),
 
     # Meta configuration directory
-    data_dir => $self->o('data_dir'),
+    config_dir => $self->o('config_dir'),
 
     # Skip manifest checking (only if you know the checks are passed)
     check_manifest => 1,
@@ -87,8 +87,8 @@ sub default_options {
     },
     
     # External_db name map file
-    external_db_map_name => 'external_db_map_default.txt',
-    external_db_map => catfile($data_dir, $self->o('external_db_map_name')),
+    external_db_map_name => 'default.txt',
+    external_db_map => catfile($config_dir, 'external_db_map', $self->o('external_db_map_name')),
 
     # Do not load xrefs that we generate ourselves
     skip_ensembl_xrefs => 1,

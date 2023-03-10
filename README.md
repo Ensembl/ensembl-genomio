@@ -31,7 +31,7 @@ python -c 'import ensembl.brc4.runnable.read_json'
 
 Update your perl envs (if you need to)
 ```
-export PERL5LIB=$(pwd)/ensembl-genomio/lib/perl:$PERL5LIB
+export PERL5LIB=$(pwd)/ensembl-genomio/src/perl:$PERL5LIB
 export PATH=$(pwd)/ensembl-genomio/scripts:$PATH
 ```
 
@@ -70,7 +70,7 @@ cd ./ensembl-genomio
 
 Pipelines are derived from [`Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf`](https://github.com/Ensembl/ensembl-hive/blob/version/2.6/modules/Bio/EnsEMBL/Hive/PipeConfig/HiveGeneric_conf.pm),
 or from [`Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf`](https://github.com/Ensembl/ensembl-hive/blob/version/2.6/modules/Bio/EnsEMBL/Hive/PipeConfig/EnsemblGeneric_conf.pm),
-of from [`Bio::EnsEMBL::EGPipeline::PipeConfig::EGGeneric_conf`](https://github.com/Ensembl/ensembl-production-imported/blob/main/lib/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/EGGeneric_conf.pm) (see [documentation](https://github.com/Ensembl/ensembl-production-imported/blob/main/docs/EGGeneric.md)).
+of from [`Bio::EnsEMBL::EGPipeline::PipeConfig::EGGeneric_conf`](https://github.com/Ensembl/ensembl-production-imported/blob/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/EGGeneric_conf.pm) (see [documentation](https://github.com/Ensembl/ensembl-production-imported/blob/main/docs/EGGeneric.md)).
 
 And the same perl class prefix used for every pipeline:
   `Bio::EnsEMBL::EGPipeline::PipeConfig::` .
@@ -111,7 +111,7 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 
 | Pipeline name | Description | Document | Comment | Module |
 | - | - | - | - | - |
-| BRC4_genome_loader | creates an [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) from a set of flat files or adds ad-hoc (ie organellas) sequences to the existing core  | [BRC4_genome_loader](docs/BRC4_genome_loader.md) | | [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](lib/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
+| BRC4_genome_loader | creates an [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) from a set of flat files or adds ad-hoc (ie organellas) sequences to the existing core  | [BRC4_genome_loader](docs/BRC4_genome_loader.md) | | [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](src/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
 | BRC4_genome_dumper | | | | |
 | | | | | |
 | BRC4_genome_prepare | | | | |
@@ -124,7 +124,7 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 
 ### Scripts
 
-* [trf_split_run.bash](scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/lib/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [doc](docs/trf_split_run.md))
+* [trf_split_run.bash](scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [doc](docs/trf_split_run.md))
 
 
 ## Various docs

@@ -43,9 +43,9 @@ my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
 my $package_dir = dirname($package_path);
 my $root_dir = "$package_dir/../../../../../..";
 
-my $schema_dir = "$root_dir/schema";
-my $data_dir = "$root_dir/data";
-my $runnables_dir = "$root_dir/lib/python/ensembl/brc4/runnable";
+my $schema_dir = "$root_dir/schemas";
+my $config_dir = "$root_dir/config";
+my $runnables_dir = "$root_dir/src/python/ensembl/brc4/runnable";
 
 use base ('Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf');
 
@@ -135,7 +135,7 @@ sub default_options {
         'manifest' => catfile($schema_dir, "manifest_schema.json"),
       },
       # Map back the external db names
-      external_db_map => catfile($data_dir, 'external_db_map_default.txt'),
+      external_db_map => catfile($config_dir, 'external_db_map', 'default.txt'),
 	};
 }
 

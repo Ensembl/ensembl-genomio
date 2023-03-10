@@ -5,7 +5,7 @@ This pipeline dumps files from Ensembl core databases following the specificatio
 
 ### Init command
 init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_dumper_conf \
-  --schema_dir .../new-genome-loader/schema \
+  --schema_dir .../ensembl-genomio/schemas \
   $($SERVER details hive) \
   --release 99 \
   --output_dir $OUTPUT \

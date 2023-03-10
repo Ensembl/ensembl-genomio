@@ -44,10 +44,10 @@ class process_seq_region(eHive.BaseRunnable):
     """Runnable to load seq_regions metadata from INSDC/RefSeq reports and dump a json file
 
     The runnable does some checks, adds some things (like codon tables), and dumps the list of
-    seq_regions in a json file that follows the schema defined in schema/seq_region_schema.json.
+    seq_regions in a json file that follows the schema defined in schemas/seq_region_schema.json.
 
     Params:
-        genome_data: Genome data following the schema/genome_schema.json.
+        genome_data: Genome data following the schemas/genome_schema.json.
         work_dir: Directory where the new file will be created.
         report: Path to the INSDC/RefSeq sequences report to parse.
         gbff: Path to the INSDC/RefSeq gbff file to parse.
