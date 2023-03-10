@@ -113,8 +113,10 @@ if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_TRF" -o x"$DNA_FEATURES_TRF_SPLIT_NO_TRF" !=
   pushd "$PARTS_DIR"
     ls -1 part.*.fa |
       sort -k2,2n -k3,3n -t . |
-      xargs -n 1 -I XXX \
-        "$DNA_FEATURES_TRF_SPLIT_TRF_EXE" "XXX" $PARAMS
+      xargs -r -n 1 -I XXX sh -c "
+        echo running '\"$DNA_FEATURES_TRF_SPLIT_TRF_EXE\" \"XXX\" $PARAMS' >> /dev/stderr
+        \"$DNA_FEATURES_TRF_SPLIT_TRF_EXE\" \"XXX\" $PARAMS 2 >> /dev/stderr || [ $(($? % 256)) -eq 0 ]
+      "
   popd
 
 fi # DNA_FEATURES_TRF_SPLIT_NO_TRF
