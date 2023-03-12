@@ -33,8 +33,8 @@
 #    trf_split_run.bash /writable/path_to/dna.fasta 2 5 7 80 10 40 500 -d -h
 #
 #  * As a substitution for the "trf_exe" to be used with the `TRF` stage of the `DNAFeatures` pipeline:
-#    # change TRF "program" parameter
-#    tweak_pipeline.pl -url "$DNA_FEATURES_EHIVE_DB_URL" -tweak 'analysis[TRF].param[parameters_hash]={program=>"#ensembl_cvs_root_dir#/ensembl-genomio/scripts/trf_split_run.bash"}'
+#    # change TRF "program" parameter, you should have ENSEMBL_ROOT_DIR env defined
+#    tweak_pipeline.pl -url "$DNA_FEATURES_EHIVE_DB_URL" -tweak 'analysis[TRF].param[parameters_hash]={program=>"'${ENSEMBL_ROOT_DIR}'/ensembl-genomio/scripts/trf_split_run.bash"}'
 #    # set envitonment variables if you need to, i.e.
 #    export DNA_FEATURES_TRF_SPLIT_TRF_EXE=trf.4.09.1 
 #    runWorker.pl ... or beekeeper.pl ...
