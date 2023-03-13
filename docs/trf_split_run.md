@@ -13,6 +13,7 @@ Use environment variable to control scipt run
 * `DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE` -- chunk size [`1_000_000`]
 * `DNA_FEATURES_TRF_SPLIT_SPLITTER_OPTIONS` -- for a finer control [`--n_seq 1 --chunk_tolerance 10 --chunk_size ${DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE}`] 
 * `DNA_FEATURES_TRF_SPLIT_TRF_EXE` -- trf executrable (or abs path to be used) [`trf`]
+* `DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS` -- addtitional options for TRF (like `-l 10`) []
 
 ## Usage examples
 ### A standalone run
@@ -28,6 +29,8 @@ tweak_pipeline.pl -url "$DNA_FEATURES_EHIVE_DB_URL" -tweak 'analysis[TRF].param[
 ```
 # set envitonment variables if you need to, i.e.
 export DNA_FEATURES_TRF_SPLIT_TRF_EXE=trf.4.09.1 
+export DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS='-l 10' # N.B. "l" correlated with the chunk size (-l chunk_size / 10^6)
+export DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE=10_000_000'
 ```
 ```
 runWorker.pl ... 
@@ -43,6 +46,7 @@ tweak_pipeline.pl -url $DNA_FEATURES_EHIVE_DB_URL  -tweak 'analysis[TRF].param[p
 unset DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE
 unset DNA_FEATURES_TRF_SPLIT_SPLITTER_OPTIONS
 unset DNA_FEATURES_TRF_SPLIT_TRF_EXE
+unset DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS
 #   script stages
 unset DNA_FEATURES_TRF_SPLIT_NO_SPLITTING
 unset DNA_FEATURES_TRF_SPLIT_NO_TRF
