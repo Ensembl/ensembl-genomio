@@ -20,6 +20,8 @@
 #       (https://github.com/Ensembl/ensembl-analysis/blob/main/modules/Bio/EnsEMBL/Analysis/Runnable/TRF.pm)
 #   can be used as a hack to allow TRF stage to be accomplished at the cost of splitting long repeat into several adjacent ones
 #   (with possible losses)
+#   N.B. you should have Biopython installed and available in your environmnent. You may check this with:
+#     python -c 'from Bio import SeqIO' || echo "no biopython" >> /dev/stderr
 # usage:
 #   use env vairable to control script run:
 #    * "DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" -- set to "YES" to skip splitting stage
