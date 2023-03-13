@@ -6,6 +6,13 @@ Compatible compatible with input/output format of trf invocation from [Bio::EnsE
 And can be used as a hack to allow TRF stage to be accomplished at the cost of splitting
  long repeat into several adjacent ones  (with possible losses).
 
+## Prerequisites
+You should have [Biopython](https://biopython.org) installed and available in your environmnent.
+You may check this with
+```
+python -c 'from Bio import SeqIO' || echo "no biopython" >> /dev/stderr
+```
+
 ## Options
 Use environment variable to control scipt run
 * `DNA_FEATURES_TRF_SPLIT_NO_SPLITTING` -- set to `YES` to skip splitting stage
