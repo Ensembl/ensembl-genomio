@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/schema#",
+  "$schema": "http://json-schema.org/draft-07/schema",
   "$id": "https://.../.../schema/v0.0.0/seq_attrib_schema.json",
   "description" : "JSON schema for exchanging meta information for sequence attributes",
 
