@@ -20,6 +20,8 @@
 #       (https://github.com/Ensembl/ensembl-analysis/blob/main/modules/Bio/EnsEMBL/Analysis/Runnable/TRF.pm)
 #   can be used as a hack to allow TRF stage to be accomplished at the cost of splitting long repeat into several adjacent ones
 #   (with possible losses)
+#   N.B. you should have Biopython installed and available in your environmnent. You may check this with:
+#     python -c 'from Bio import SeqIO' || echo "no biopython" >> /dev/stderr
 # usage:
 #   use env vairable to control script run:
 #    * "DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" -- set to "YES" to skip splitting stage
@@ -27,14 +29,15 @@
 #    * "DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE" -- chunk size [1_000_000]
 #    * "DNA_FEATURES_TRF_SPLIT_SPLITTER_OPTIONS" -- for a finer control [--n_seq 1 --chunk_tolerance 10 --chunk_size ${DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE}] 
 #    * "DNA_FEATURES_TRF_SPLIT_TRF_EXE" -- trf executrable (or abs path to be used) [trf]
+#    * "DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS" -- addtitional options for TRF (like "-l 10", N.B. "-l chunk_size / 10^6") []
 #
 # examples
 #  * standalone run
-#    trf_split_run.bash /writable/path_to/dna.fasta 2 5 7 80 10 40 500 -d -h
+#    trf_split_run.bash /writable/path_to/dna.fasta 2 5 7 80 10 40 500 -d -h -l 10
 #
 #  * As a substitution for the "trf_exe" to be used with the `TRF` stage of the `DNAFeatures` pipeline:
-#    # change TRF "program" parameter
-#    tweak_pipeline.pl -url "$DNA_FEATURES_EHIVE_DB_URL" -tweak 'analysis[TRF].param[parameters_hash]={program=>"#ensembl_cvs_root_dir#/ensembl-genomio/scripts/trf_split_run.bash"}'
+#    # change TRF "program" parameter, you should have ENSEMBL_ROOT_DIR env defined
+#    tweak_pipeline.pl -url "$DNA_FEATURES_EHIVE_DB_URL" -tweak 'analysis[TRF].param[parameters_hash]={program=>"'${ENSEMBL_ROOT_DIR}'/ensembl-genomio/scripts/trf_split_run.bash"}'
 #    # set envitonment variables if you need to, i.e.
 #    export DNA_FEATURES_TRF_SPLIT_TRF_EXE=trf.4.09.1 
 #    runWorker.pl ... or beekeeper.pl ...
@@ -46,6 +49,7 @@
 #    unset DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE
 #    unset DNA_FEATURES_TRF_SPLIT_SPLITTER_OPTIONS
 #    unset DNA_FEATURES_TRF_SPLIT_TRF_EXE
+#    unset DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS
 #
 #    # script stages
 #    unset DNA_FEATURES_TRF_SPLIT_NO_SPLITTING
@@ -101,6 +105,12 @@ if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" -o x"$DNA_FEATURES_TRF_SPLIT_NO_S
   echo "Running \"$SPLIT_CMD\"" >> /dev/stderr
   python "$SPLITTER_SCRIPT" $SPLITTER_OPTIONS --chunk_sfx "${DEFAULT_CHUNK_SFX}" --add_offset --individual_out_dir "$PARTS_DIR" --out part "$FILE_NAME"
 fi # DNA_FEATURES_TRF_SPLIT_NO_SPLITTING
+
+# APPENDING OPTIONS
+if [ -n "DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS" ]; then
+  echo "appending '$DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS' to trf params" >> /dev/stderr
+  PARAMS="$PARAMS $DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS"
+fi
 
 # RUN TRF
 if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_TRF" -o x"$DNA_FEATURES_TRF_SPLIT_NO_TRF" != x"YES" ]; then
