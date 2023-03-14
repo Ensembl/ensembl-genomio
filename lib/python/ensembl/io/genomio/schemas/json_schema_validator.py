@@ -17,6 +17,7 @@
 __all__ = ["validate_json_schema"]
 
 import json
+from pathlib import Path
 
 import argschema
 import jsonschema
@@ -31,7 +32,7 @@ class InputSchema(argschema.ArgSchema):
     )
 
 
-def validate_json_schema(json_file: str, json_schema: str) -> None:
+def validate_json_schema(json_file: Path, json_schema: Path) -> None:
     """Validates a JSON file with the provided JSON schema.
 
     Args:
@@ -39,10 +40,11 @@ def validate_json_schema(json_file: str, json_schema: str) -> None:
         json_schema: JSON schema to validate `json_file` against.
 
     """
-    with open(json_file) as fh:
+    with json_file.open() as fh:
         content = json.load(fh)
-    with open(json_schema) as fh:
+    with json_schema.open() as fh:
         schema = json.load(fh)
+    print(f"Testing json {json_file} against schema {json_schema}")
     jsonschema.validate(instance=content, schema=schema)
 
 
