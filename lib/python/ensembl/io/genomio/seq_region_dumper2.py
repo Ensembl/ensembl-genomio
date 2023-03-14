@@ -78,8 +78,8 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
 
 def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
     synonyms = seq_region.seq_region_synonym
+    syns = []
     if synonyms:
-        syns = []
         for syn in synonyms:
             source = syn.external_db.db_name
             if source in external_db_map:
@@ -89,13 +89,13 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
                 "source": source
             }
             syns.append(syn_obj)
-        return syns
+    return syns
 
 
 def get_attribs(seq_region: SeqRegion) -> List:
     attribs = seq_region.seq_region_attrib
+    atts = []
     if attribs:
-        atts = []
         for attrib in attribs:
             att_obj = {
                 "value": attrib.value,
