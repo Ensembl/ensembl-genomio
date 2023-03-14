@@ -59,33 +59,46 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
             "name": seqr.name,
             "length": seqr.length
         }
-        synonyms = seqr.seq_region_synonym
+        synonyms = get_synonyms(seqr, external_db_map)
         if synonyms:
-            syns = []
-            for syn in synonyms:
-                source = syn.external_db.db_name
-                if source in external_db_map:
-                    source = external_db_map[source]
-                syn_obj = {
-                    "synonym": syn.synonym,
-                    "source": source
-                }
-                syns.append(syn_obj)
-            seq_region["synonyms"] = syns
+            seq_region["synonyms"] = synonyms
 
-        attribs = seqr.seq_region_attrib
+        attribs = get_attribs(seqr)
         if attribs:
-            atts = []
-            for attrib in attribs:
-                att_obj = {
-                    "value": attrib.value,
-                    "source": attrib.attrib_type.code
-                }
-                atts.append(att_obj)
-            seq_region["attribs"] = atts
+            seq_region["attribs"] = attribs
 
         seq_regions.append(seq_region)
+
     return seq_regions
+
+
+def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
+    synonyms = seq_region.seq_region_synonym
+    if synonyms:
+        syns = []
+        for syn in synonyms:
+            source = syn.external_db.db_name
+            if source in external_db_map:
+                source = external_db_map[source]
+            syn_obj = {
+                "synonym": syn.synonym,
+                "source": source
+            }
+            syns.append(syn_obj)
+        return syns
+
+
+def get_attribs(seq_region: SeqRegion) -> List:
+    attribs = seq_region.seq_region_attrib
+    if attribs:
+        atts = []
+        for attrib in attribs:
+            att_obj = {
+                "value": attrib.value,
+                "source": attrib.attrib_type.code
+            }
+            atts.append(att_obj)
+    return atts
 
 
 class InputSchema(argschema.ArgSchema):
