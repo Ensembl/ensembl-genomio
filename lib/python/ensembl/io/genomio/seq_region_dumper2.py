@@ -18,17 +18,16 @@
 Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
 """
 
-from dataclasses import asdict
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 
 import argschema
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ensembl.database import DBConnection
-from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
+from ensembl.core.models import SeqRegion
 
 ROOT_DIR = Path(__file__).parent / "../../../../.."
 DEFAULT_MAP = ROOT_DIR / "data/external_db_map_default.txt"
@@ -37,14 +36,35 @@ DEFAULT_MAP = ROOT_DIR / "data/external_db_map_default.txt"
 def get_seq_regions(session: Session) -> List[SeqRegion]:
     seqr_stmt = select(SeqRegion)
     seq_regions = []
-    for row in session.execute(seqr_stmt):
+    for row in session.execute(seqr_stmt).unique().all():
         seqr: SeqRegion = row[0]
         seq_region = dict()
         seq_region = {
             "name": seqr.name,
             "length": seqr.length
         }
-        synonyms = seqr.synonyms
+        synonyms = seqr.seq_region_synonym
+        if synonyms:
+            syns = []
+            for syn in synonyms:
+                syn_obj = {
+                    "synonym": syn.synonym,
+                    "source": syn.external_db.db_name
+                }
+                syns.append(syn_obj)
+            seq_region["synonyms"] = syns
+
+        attribs = seqr.seq_region_attrib
+        if attribs:
+            atts = []
+            for attrib in attribs:
+                att_obj = {
+                    "value": attrib.value,
+                    "source": attrib.attrib_type.code
+                }
+                atts.append(att_obj)
+            seq_region["attribs"] = atts
+
         seq_regions.append(seq_region)
     return seq_regions
 
