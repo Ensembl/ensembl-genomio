@@ -67,6 +67,10 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
         if attribs:
             seq_region["attribs"] = attribs
 
+        karyotype = get_karyotype(seqr)
+        if karyotype:
+            seq_region["karyotype"] = karyotype
+
         seq_regions.append(seq_region)
 
     return seq_regions
@@ -99,6 +103,23 @@ def get_attribs(seq_region: SeqRegion) -> List:
             }
             atts.append(att_obj)
     return atts
+
+
+def get_karyotype(seq_region: SeqRegion) -> List:
+    bands = seq_region.karyotype
+    kars = []
+    if bands:
+        for band in bands:
+            kar = {
+                "start": band.seq_region_start,
+                "end": band.seq_region_end
+            }
+            if band.band:
+                kar["band"] = band.band
+            if band.stain:
+                kar["stain"] = band.stain
+            kars.append(kar)
+    return kars
 
 
 class InputSchema(argschema.ArgSchema):
