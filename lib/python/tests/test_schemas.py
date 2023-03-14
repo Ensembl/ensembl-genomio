@@ -39,7 +39,8 @@ class TestSchemas:
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, tmp_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
-        type(self).test_data_dir = pytest.files_dir / "schemas"
+        type(self).test_data_dir = pytest.manifest_dir / "data1"
+        type(self).schema_dir = pytest.schema_dir
         type(self).tmp_dir = tmp_dir
 
     @pytest.mark.parametrize(
@@ -48,7 +49,7 @@ class TestSchemas:
             (["new_metadata"], ["manifest.json"]),
             (
                 ["functional_annotation", "seq_region"],
-                ["manifest.json", "functional_annotation_test.json", "seq_region.json"],
+                ["manifest.json", "functional_annotation.json", "seq_region.json"],
             ),
         ],
     )
@@ -63,12 +64,15 @@ class TestSchemas:
         """
         schemas.json_schema_factory(self.test_data_dir, metadata_types, self.tmp_dir)
         for file_name in output:
+            print(f"Check {file_name} in {self.tmp_dir}")
             assert (self.tmp_dir / file_name).exists()
 
     @pytest.mark.parametrize(
         "json_file, json_schema, expected",
         [
+            ("manifest.json", "manifest_schema.json", does_not_raise()),
             ("seq_region.json", "seq_region_schema.json", does_not_raise()),
+            ("functional_annotation.json", "functional_annotation_schema.json", does_not_raise()),
             ("seq_region.json", "functional_annotation_schema.json", raises(ValidationError)),
         ],
     )
@@ -82,5 +86,7 @@ class TestSchemas:
                 exception is raised. Use :class:`~contextlib.nullcontext` if no exception is expected.
 
         """
+        json_path = self.test_data_dir / json_file
+        schema_path = self.schema_dir / json_schema
         with expected:
-            schemas.validate_json_schema(self.test_data_dir / json_file, self.test_data_dir / json_schema)
+            schemas.validate_json_schema(json_path, schema_path)
