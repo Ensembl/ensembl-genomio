@@ -20,7 +20,7 @@ Can be imported as a module and called as a script as well, with the same parame
 
 import json
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import argschema
 from sqlalchemy import select
@@ -33,7 +33,23 @@ ROOT_DIR = Path(__file__).parent / "../../../../.."
 DEFAULT_MAP = ROOT_DIR / "data/external_db_map_default.txt"
 
 
-def get_seq_regions(session: Session) -> List[SeqRegion]:
+def get_external_db_map(map_file: Path) -> Dict:
+    """Class method, set up the map for all SeqRegion objects"""
+    db_map = dict()
+    with map_file.open("r") as map_fh:
+        for line in map_fh:
+            line = line.rstrip()
+            if line.startswith("#") or line.startswith(" ") or line == "":
+                continue
+            parts = line.split("\t")
+            if not parts[0] or not parts[1]:
+                raise Exception(f"External db file is not formatted correctly for: {line}")
+            else:
+                db_map[parts[1]] = parts[0]
+    return db_map
+
+
+def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
     seqr_stmt = select(SeqRegion)
     seq_regions = []
     for row in session.execute(seqr_stmt).unique().all():
@@ -47,9 +63,12 @@ def get_seq_regions(session: Session) -> List[SeqRegion]:
         if synonyms:
             syns = []
             for syn in synonyms:
+                source = syn.external_db.db_name
+                if source in external_db_map:
+                    source = external_db_map[source]
                 syn_obj = {
                     "synonym": syn.synonym,
-                    "source": syn.external_db.db_name
+                    "source": source
                 }
                 syns.append(syn_obj)
             seq_region["synonyms"] = syns
@@ -125,10 +144,11 @@ def main() -> None:
     )
     dbc = DBConnection(db_url)
 
-    external_map = Path(mod.args.get("external_db_map"))
+    external_map_path = Path(mod.args.get("external_db_map"))
+    external_map = get_external_db_map(external_map_path)
 
     with dbc.session_scope() as session:
-        seq_regions = get_seq_regions(session)
+        seq_regions = get_seq_regions(session, external_map)
 
     if args.get("output_json"):
         output_file = Path(args.get("output_json"))
