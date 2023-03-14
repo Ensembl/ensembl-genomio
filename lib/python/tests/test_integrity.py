@@ -37,7 +37,6 @@ class TestSchemas:
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, tmp_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
-        type(self).manifest_data = pytest.manifest_data
         type(self).tmp_dir = tmp_dir
 
     def test_integrity_empty(self) -> None:
@@ -49,7 +48,7 @@ class TestSchemas:
         "manifest_dir, brc_mode, ignore_false_stops, expected",
         [
             (
-                [pytest.manifest_data / "data1/manifest.json"],
+                [pytest.manifest_dir / "data1/manifest.json"],
                 [None, True, False],
                 [None, True, False],
                 does_not_raise()
@@ -72,7 +71,7 @@ class TestSchemas:
     @pytest.mark.parametrize(
         "manifest_dir, expected",
         [
-            (pytest.manifest_data / "data1/manifest.json", does_not_raise()),
+            (pytest.manifest_dir / "data1/manifest.json", does_not_raise()),
         ],
     )
     def test_get_manifest(self, manifest_dir: Path, expected: ContextManager) -> None:
