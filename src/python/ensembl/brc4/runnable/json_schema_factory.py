@@ -15,13 +15,12 @@
 # limitations under the License.
 
 
-
 import eHive
 import json
 from os import path
 
-class json_schema_factory(eHive.BaseRunnable):
 
+class json_schema_factory(eHive.BaseRunnable):
     def run(self):
         manifest_path = self.param_required("manifest")
 
@@ -32,7 +31,7 @@ class json_schema_factory(eHive.BaseRunnable):
 
             # Check the manifest schema itself
             self.dataflow_json("manifest", manifest_path)
-            
+
             # Use dir name from the manifest
             for name in manifest:
                 if "file" in manifest[name]:
@@ -50,8 +49,4 @@ class json_schema_factory(eHive.BaseRunnable):
                     self.dataflow_json(metadata_type, manifest[metadata_type])
 
     def dataflow_json(self, metadata_type, metadata_json):
-        self.dataflow(
-                {
-                    "metadata_type": metadata_type,
-                    "metadata_json": metadata_json
-                    }, 2)
+        self.dataflow({"metadata_type": metadata_type, "metadata_json": metadata_json}, 2)

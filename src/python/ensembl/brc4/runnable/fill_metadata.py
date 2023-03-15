@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-
 import eHive
 import os
 import subprocess as sp
@@ -23,15 +22,14 @@ import sys
 
 from os.path import dirname, join as pj
 
-class fill_metadata(eHive.BaseRunnable):
 
+class fill_metadata(eHive.BaseRunnable):
     def param_defaults(self):
         return {
-            'division' : '',
-            'ignore' : [],
-            'copy' : {},
+            "division": "",
+            "ignore": [],
+            "copy": {},
         }
-
 
     def run(self):
         # params
@@ -61,7 +59,7 @@ class fill_metadata(eHive.BaseRunnable):
             if "url" in prov and not "provider_url" in genome_data["assembly"]:
                 genome_data["assembly"]["provider_url"] = prov["url"]
             del genome_data["provider"]
-        
+
         # BRC4 organism abbrev: move from species to BRC4 namespace
         if "species" in genome_data:
             sd = genome_data["species"]
@@ -81,7 +79,7 @@ class fill_metadata(eHive.BaseRunnable):
 
         # flattern and dump
         flat = self.flattern(genome_data, ignore)
-        flat += list(map( lambda p: ( copy[p[0]], p[1] ), filter(lambda x: x[0] in copy, flat) ))
+        flat += list(map(lambda p: (copy[p[0]], p[1]), filter(lambda x: x[0] in copy, flat)))
         flat = list(filter(lambda x: x[0] not in ignore, flat))
         if len(flat) <= 0:
             return
@@ -97,17 +95,16 @@ class fill_metadata(eHive.BaseRunnable):
                     _val = int(_val)
                 if isinstance(_val, str):
                     _val = '"%s"' % (_val)
-                print ('%s (1, "%s", %s)' % (c, str(_key), str(_val)), file = sql)
+                print('%s (1, "%s", %s)' % (c, str(_key), str(_val)), file=sql)
                 c = ","
             print(";", file=sql)
         # run insert sql
-        self.run_sql_req(sql_file, log_pfx = sql_file, from_file = True)
+        self.run_sql_req(sql_file, log_pfx=sql_file, from_file=True)
 
-
-    def flattern(self, data, ignore_lst, pfx = None):
+    def flattern(self, data, ignore_lst, pfx=None):
         # vectors with values only
         if isinstance(data, list):
-            return [ ( pfx, v ) for v in data ]
+            return [(pfx, v) for v in data]
         elif isinstance(data, dict):
             ignore_lst = frozenset(ignore_lst)
             res = []
@@ -115,34 +112,32 @@ class fill_metadata(eHive.BaseRunnable):
                 new_pfx = ".".join(filter(lambda p: p != None, [pfx, k]))
                 res.append(self.flattern(v, ignore_lst, new_pfx))
             return sum(res, [])
-        return data != None and [ (pfx, data) ] or []
+        return data != None and [(pfx, data)] or []
 
-
-    def run_sql_req(self, sql, log_pfx, from_file = False):
+    def run_sql_req(self, sql, log_pfx, from_file=False):
         os.makedirs(dirname(log_pfx), exist_ok=True)
         en_root = self.param_required("ensembl_root_dir")
 
-        sql_option = r''' -sql '{_sql}' '''.format(_sql = sql)
+        sql_option = r""" -sql '{_sql}' """.format(_sql=sql)
         if from_file:
-            sql_option = r''' < '{_sql}' '''.format(_sql = sql)
+            sql_option = r""" < '{_sql}' """.format(_sql=sql)
 
-        cmd = r'''{_dbcmd} -url "{_srv}{_dbname}" {_sql_option} > {_out} 2> {_err}'''.format(
-            _dbcmd = 'perl %s/ensembl-hive/scripts/db_cmd.pl' %(en_root),
-            _srv = self.param("dbsrv_url"),
-            _dbname = self.param("db_name"),
-            _sql_option = sql_option,
-            _out = log_pfx + ".stdout",
-            _err = log_pfx + ".stderr"
+        cmd = r"""{_dbcmd} -url "{_srv}{_dbname}" {_sql_option} > {_out} 2> {_err}""".format(
+            _dbcmd="perl %s/ensembl-hive/scripts/db_cmd.pl" % (en_root),
+            _srv=self.param("dbsrv_url"),
+            _dbname=self.param("db_name"),
+            _sql_option=sql_option,
+            _out=log_pfx + ".stdout",
+            _err=log_pfx + ".stderr",
         )
-        print("running %s" % (cmd), file = sys.stderr)
+        print("running %s" % (cmd), file=sys.stderr)
         return sp.run(cmd, shell=True, check=True)
-
 
     def db_string(self):
         return "-dbhost {host_} -dbport {port_} -dbuser {user_} -dbpass {pass_} -dbname {dbname_} ".format(
-            host_ = self.param("dbsrv_host"),
-            port_ = self.param("dbsrv_port"),
-            user_ = self.param("dbsrv_user"),
-            pass_ = self.param("dbsrv_pass"),
-            dbname_ = self.param("db_name")
+            host_=self.param("dbsrv_host"),
+            port_=self.param("dbsrv_port"),
+            user_=self.param("dbsrv_user"),
+            pass_=self.param("dbsrv_pass"),
+            dbname_=self.param("db_name"),
         )

@@ -143,7 +143,7 @@ class compare_fasta(eHive.BaseRunnable):
         return seqs_dict
 
     def get_fasta(self, fasta_path: str, map_dna: dict) -> dict:
-        
+
         print(f"Read file {fasta_path}")
         sequences = {}
         _open = partial(gzip.open, mode="rt") if fasta_path.endswith(".gz") else open

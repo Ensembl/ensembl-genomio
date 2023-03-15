@@ -25,13 +25,11 @@ from .rules import *
 
 
 class MetaParserStructures(BaseStructures):
-  # ugly class names, rename to something more meaningful
-  KNOWN_RULES = [
-    AliasRule,
-    GffRule,
-    GffSubRule,
-
-    JsonRule,
-    JsonSubRule,
-  ]
-
+    # ugly class names, rename to something more meaningful
+    KNOWN_RULES = [
+        AliasRule,
+        GffRule,
+        GffSubRule,
+        JsonRule,
+        JsonSubRule,
+    ]
