@@ -38,7 +38,7 @@ my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
 my $package_dir = dirname($package_path);
 my $root_dir = "$package_dir/../../../../../..";
 
-my $schema_dir = "$root_dir/schema";
+my $schema_dir = "$root_dir/schemas";
 
 sub default_options {
   my ($self) = @_;

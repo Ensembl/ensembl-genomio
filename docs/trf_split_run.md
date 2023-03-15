@@ -1,7 +1,7 @@
 # [trf_split_run.bash](scripts/trf_split_run.bash)
 
 A trf wrapper with chunking support to be used with
-[ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/lib/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [doc](docs/trf_split_run.md))
+[ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [doc](docs/trf_split_run.md))
 Compatible compatible with input/output format of trf invocation from [Bio::EnsEMBL::Analysis::Runnable::TRF](https://github.com/Ensembl/ensembl-analysis/blob/main/modules/Bio/EnsEMBL/Analysis/Runnable/TRF.pm).
 And can be used as a hack to allow TRF stage to be accomplished at the cost of splitting
  long repeat into several adjacent ones  (with possible losses).

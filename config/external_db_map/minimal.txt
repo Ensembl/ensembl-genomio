@@ -1,4 +1,4 @@
-# for the file format see external_db_map_metazoa.txt 
+# for the file format see config/external_db_map/default.txt 
 # use `-skip_unknown_xref_source 1` with this map
 
 # Genes mqppings

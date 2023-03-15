@@ -1,5 +1,5 @@
 # **Compare genomes pipeline**
-*MODULE*: *[Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf](https://github.com/Ensembl/ensembl-genomio/blob/main/lib/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_compare_conf.pm)*
+*MODULE*: *[Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf](https://github.com/Ensembl/ensembl-genomio/blob/main/src/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_compare_conf.pm)*
 
 ## **Overview**
 -----
@@ -62,5 +62,5 @@ Generates 3 files:
       - summary (mismatch or identical)
       - organellar_summary
   
-  - species_fasta_dna.map: A [JSON schema](https://github.com/Ensembl/ensembl-genomio/blob/main/schema/seq_region_schema.json) file containing metadata of the common sequences
+  - species_fasta_dna.map: A [JSON schema](https://github.com/Ensembl/ensembl-genomio/blob/main/schemas/seq_region_schema.json) file containing metadata of the common sequences
   - species_fasta_dna.log: Detailed report of mismatched sequences
