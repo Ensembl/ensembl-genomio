@@ -37,7 +37,7 @@ init_pipeline.pl Bio::EnsEMBL::EGPipeline::PipeConfig::BRC4_genome_prepare_conf 
 | - | - | - |
 | `--pipeline_name` | brc4_genome_prepare | name of the hive pipeline
 | `--pipeline_dir` | | temp directory for this pipeline run
-| `--data_dir` | | directory with json files for each genome to prepare, following the format set by schema/genome_schema.json
+| `--data_dir` | | directory with json files for each genome to prepare, following the format set by schemas/genome_schema.json
 | `--output_dir` | | directory where the prepared files are to be stored
 | `--merge_split_genes` | 0 | Sometimes the gene features are split in a gff file. Ensembl expects genes to be contiguous, so this option merge the parts into 1.
 | `--exclude_seq_regions` |  | Do not include those seq_regions (apply to all genomes, this should be seldom used)

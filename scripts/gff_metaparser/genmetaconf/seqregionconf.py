@@ -204,6 +204,7 @@ class SeqRegionConf:
             "RefSeq-Accn": "RefSeq",
             "UCSC-style-name": "GenBank",
             "Assigned-Molecule-Location/Type": "_COORD_SYSTEM_TAG",
+            "Sequence-Role": "_SEQUENCE_ROLE",
         }
 
         _open = asm_rep_file.endswith(".gz") and gzip.open or open
@@ -235,9 +236,14 @@ class SeqRegionConf:
                 sources_syns = {
                     src: nm
                     for src, nm in sources_syns_raw.items()
-                    if nm and nm.lower() != "na" and src != "_COORD_SYSTEM_TAG"
+                    if nm and nm.lower() != "na" and src not in ["_COORD_SYSTEM_TAG", "_SEQUENCE_ROLE"]
                 }
-                cs_tag = self.map_cs_tag(sources_syns_raw.get("_COORD_SYSTEM_TAG", None))
+
+                # fill cs_tag from "Assigned-Molecule-Location/Type" only if "Sequence-Role" is ""assembled-molecule"
+                cs_tag = None
+                _seq_role = sources_syns_raw.get("_SEQUENCE_ROLE", "")
+                if _seq_role.lower() == "assembled-molecule":
+                    cs_tag = self.map_cs_tag(sources_syns_raw.get("_COORD_SYSTEM_TAG", None))
 
                 # remove INSDC_submitted_name if it's equal to INSDC or RefSeq one
                 major_syns = {src: nm for src, nm in sources_syns.items() if src in ["INSDC", "RefSeq"]}

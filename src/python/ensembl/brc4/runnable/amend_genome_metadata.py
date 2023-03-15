@@ -41,7 +41,7 @@ class amend_genome_metadata(eHive.BaseRunnable):
     """Runnable to add things to the genome metadata, if any.
 
     Params:
-        genome_data: Genome data following the schema/genome_schema.json.
+        genome_data: Genome data following the schemas/genome_schema.json.
         work_dir: Directory where the new file will be created.
         report: Path to the INSDC/RefSeq sequences report to parse.
         gbff: Path to the INSDC/RefSeq gbff file to parse.
