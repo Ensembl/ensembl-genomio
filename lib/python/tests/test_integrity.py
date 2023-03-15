@@ -51,12 +51,13 @@ class TestSchemas:
                 [pytest.manifest_dir / "data1/manifest.json"],
                 [None, True, False],
                 [None, True, False],
-                does_not_raise()
+                does_not_raise(),
             ),
         ],
     )
-    def test_integrity(self, manifest_dir: Path, brc_mode: bool, ignore_false_stops: bool,
-                       expected: ContextManager) -> None:
+    def test_integrity(
+        self, manifest_dir: Path, brc_mode: bool, ignore_false_stops: bool, expected: ContextManager
+    ) -> None:
         """Tests `integrity:IntegrityTool` method.
 
         Args:
@@ -75,9 +76,7 @@ class TestSchemas:
         ],
     )
     def test_get_manifest(self, manifest_dir: Path, expected: ContextManager) -> None:
-        """Tests `integrity:IntegrityTool:get_manifest()` method.
-
-        """
+        """Tests `integrity:IntegrityTool:get_manifest()` method."""
         with expected:
             integrity = IntegrityTool(manifest_dir)
             manifest = integrity.get_manifest()

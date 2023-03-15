@@ -59,10 +59,7 @@ class SeqRegionSynonym:
                     cls._db_map[parts[1]] = parts[0]
 
     def to_brc_dict(self):
-        syn_dict = {
-            "name": self.synonym,
-            "source": self.source
-        }
+        syn_dict = {"name": self.synonym, "source": self.source}
         return syn_dict
 
 
@@ -75,11 +72,11 @@ class SeqRegionAttribute:
 
     @classmethod
     def is_integer_field(cls, key: str) -> bool:
-        return (key in cls.integer_fields)
+        return key in cls.integer_fields
 
     @classmethod
     def is_bool_field(cls, key: str) -> bool:
-        return (key in cls.bool_fields)
+        return key in cls.bool_fields
 
 
 @dataclass
@@ -90,18 +87,11 @@ class KaryotypeBand:
     stain: str
 
     def _get_structure(self):
-        struct_dict = {
-            "TEL": "telomere",
-            "ACEN": "centromere"
-        }
+        struct_dict = {"TEL": "telomere", "ACEN": "centromere"}
         return struct_dict.get(self.stain, "")
 
     def to_brc_dict(self):
-        kar_dict = {
-            "name": self.band,
-            "start": self.seq_region_start,
-            "end": self.seq_region_end
-        }
+        kar_dict = {"name": self.band, "start": self.seq_region_start, "end": self.seq_region_end}
         if self.stain:
             kar_dict["stain"] = self.stain
             kar_dict["structure"] = self._get_structure()
@@ -141,7 +131,7 @@ class SeqRegion:
 
     def _get_coord_system_level(self):
         coord_level = self.coord_system.name
-        if coord_level == 'primary_assembly':
+        if coord_level == "primary_assembly":
             attrib = self._get_attrib_dict()
             coord_tag = attrib.get("coord_system_tag")
             if coord_tag:
@@ -156,17 +146,15 @@ class SeqRegion:
         accession = attrib_dict.get("added_seq_accession")
         if accession:
             assembly_provider = Provider(
-                name=attrib_dict.get("added_seq_asm_pr_nam"),
-                url=attrib_dict.get("added_seq_asm_pr_url")
+                name=attrib_dict.get("added_seq_asm_pr_nam"), url=attrib_dict.get("added_seq_asm_pr_url")
             )
             annotation_provider = Provider(
-                name=attrib_dict.get("added_seq_ann_pr_nam"),
-                url=attrib_dict.get("added_seq_ann_pr_url")
+                name=attrib_dict.get("added_seq_ann_pr_nam"), url=attrib_dict.get("added_seq_ann_pr_url")
             )
             added_seq = AddedSequence(
                 accession=accession,
                 assembly_provider=assembly_provider,
-                annotation_provider=annotation_provider
+                annotation_provider=annotation_provider,
             )
             return added_seq
 
@@ -189,13 +177,13 @@ class SeqRegion:
         attrib_dict = self._get_attrib_dict()
 
         attribs_to_add = {
-            'BRC4_seq_region_name': 'BRC4_seq_region_name',
-            'EBI_seq_region_name': 'EBI_seq_region_name',
-            'coord_system_tag': 'coord_system_level',
-            'sequence_location': 'location',
-            'codon_table': 'codon_table',
-            'circular_seq': 'circular',
-            'non_ref': 'non_ref',
+            "BRC4_seq_region_name": "BRC4_seq_region_name",
+            "EBI_seq_region_name": "EBI_seq_region_name",
+            "coord_system_tag": "coord_system_level",
+            "sequence_location": "location",
+            "codon_table": "codon_table",
+            "circular_seq": "circular",
+            "non_ref": "non_ref",
         }
         for key, name in attribs_to_add.items():
             if key in attrib_dict:

@@ -26,10 +26,9 @@ from ensembl.brc4.runnable.utils import print_json, get_json
 
 
 class manifest(eHive.BaseRunnable):
-
     def run(self):
-        manifest_files = self.param_required('manifest_files')
-        output_dir = Path(self.param_required('output_dir'))
+        manifest_files = self.param_required("manifest_files")
+        output_dir = Path(self.param_required("output_dir"))
 
         # Assume there is a genome file and get metadata from it
         if not "genome" in manifest_files:
@@ -38,16 +37,16 @@ class manifest(eHive.BaseRunnable):
                 manifest_files["genome"] = genome_file
             else:
                 raise Exception("Processed genome metadata file is missing")
-        
+
         # to configure the file names
         genome_data = self.get_genome_data(manifest_files)
         print(genome_data)
 
         # Get BRC4 component, organism if any
         component = None
-        genome_name = self.param('genome_name')
-        species = self.param('species')
-        
+        genome_name = self.param("genome_name")
+        species = self.param("species")
+
         if not genome_name:
             if "BRC4" in genome_data:
                 if "component" in genome_data["BRC4"]:
@@ -56,9 +55,13 @@ class manifest(eHive.BaseRunnable):
                     genome_name = genome_data["BRC4"]["organism_abbrev"]
 
             # RETROCOMPATIBILITY
-            if genome_name == None and "species" in genome_data and "BRC4_organism_abbrev" in genome_data["species"]:
-                    genome_name = genome_data["species"]["BRC4_organism_abbrev"]
-                
+            if (
+                genome_name == None
+                and "species" in genome_data
+                and "BRC4_organism_abbrev" in genome_data["species"]
+            ):
+                genome_name = genome_data["species"]["BRC4_organism_abbrev"]
+
             # Get the species name (production_name)
             if "species" in genome_data and "production_name" in genome_data["species"]:
                 species = genome_data["species"]["production_name"]
@@ -83,11 +86,11 @@ class manifest(eHive.BaseRunnable):
         # Move all files to the output dir, with a new name
         print(manifest_files)
         final_files = self.copy_files(genome_dir, manifest_files, species, genome_name)
-        
+
         # Create th manifest file itself
         manifest_path = self.create_manifest(genome_dir, final_files)
 
-        self.dataflow({ "manifest" : str(manifest_path) }, 2)
+        self.dataflow({"manifest": str(manifest_path)}, 2)
 
     def get_genome_data(self, files):
         if "genome" in files:
@@ -117,7 +120,7 @@ class manifest(eHive.BaseRunnable):
 
             if len(final_files[name]) == 0:
                 del final_files[name]
-                    
+
         return final_files
 
     def copy_file(self, origin_path: Path, dir_path: Path, species: str, genome_name: str) -> Dict:
@@ -138,9 +141,9 @@ class manifest(eHive.BaseRunnable):
         md5sum = self.get_md5sum(final_path)
 
         file_data = {
-                "file": file_name,
-                "md5sum" : md5sum
-                }
+            "file": file_name,
+            "md5sum": md5sum,
+        }
 
         return file_data
 

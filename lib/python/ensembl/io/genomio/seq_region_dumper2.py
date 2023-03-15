@@ -55,10 +55,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
     for row in session.execute(seqr_stmt).unique().all():
         seqr: SeqRegion = row[0]
         seq_region = dict()
-        seq_region = {
-            "name": seqr.name,
-            "length": seqr.length
-        }
+        seq_region = {"name": seqr.name, "length": seqr.length}
         synonyms = get_synonyms(seqr, external_db_map)
         if synonyms:
             seq_region["synonyms"] = synonyms
@@ -84,10 +81,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
             source = syn.external_db.db_name
             if source in external_db_map:
                 source = external_db_map[source]
-            syn_obj = {
-                "synonym": syn.synonym,
-                "source": source
-            }
+            syn_obj = {"synonym": syn.synonym, "source": source}
             syns.append(syn_obj)
     return syns
 
@@ -97,10 +91,7 @@ def get_attribs(seq_region: SeqRegion) -> List:
     atts = []
     if attribs:
         for attrib in attribs:
-            att_obj = {
-                "value": attrib.value,
-                "source": attrib.attrib_type.code
-            }
+            att_obj = {"value": attrib.value, "source": attrib.attrib_type.code}
             atts.append(att_obj)
     return atts
 
@@ -110,10 +101,7 @@ def get_karyotype(seq_region: SeqRegion) -> List:
     kars = []
     if bands:
         for band in bands:
-            kar = {
-                "start": band.seq_region_start,
-                "end": band.seq_region_end
-            }
+            kar = {"start": band.seq_region_start, "end": band.seq_region_end}
             if band.band:
                 kar["band"] = band.band
             if band.stain:
@@ -126,25 +114,17 @@ class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
     # Server parameters
-    host = argschema.fields.String(required=True, metadata={
-        "description": "Host to the server with EnsEMBL databases"
-    })
-    port = argschema.fields.Integer(required=True, metadata={
-        "description": "Port to use"
-    })
-    user = argschema.fields.String(required=True, metadata={
-        "description": "User to use"
-    })
-    password = argschema.fields.String(required=False, metadata={
-        "description": "Password to use"
-    })
-    database = argschema.fields.String(required=True, metadata={
-        "description": "Database to use"
-    })
+    host = argschema.fields.String(
+        required=True, metadata={"description": "Host to the server with EnsEMBL databases"}
+    )
+    port = argschema.fields.Integer(required=True, metadata={"description": "Port to use"})
+    user = argschema.fields.String(required=True, metadata={"description": "User to use"})
+    password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
+    database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
     external_db_map = argschema.fields.files.InputFile(
         required=False,
         dump_default=str(DEFAULT_MAP),
-        metadata={"description": "File with external_db mapping"}
+        metadata={"description": "File with external_db mapping"},
     )
 
 

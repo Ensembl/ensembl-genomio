@@ -60,7 +60,7 @@ class ManifestMaker:
                     md5 = self._get_md5sum(subfile)
                     file_obj = {"file": subfile.name, "md5sum": md5}
                     if name in manifest_files:
-                        if type(manifest_files[name]) == 'list':
+                        if type(manifest_files[name]) == "list":
                             manifest_files[name].append(file_obj)
                         else:
                             # Convert to a list
@@ -86,8 +86,7 @@ class InputSchema(argschema.ArgSchema):
 
     # Server parameters
     manifest_dir = argschema.fields.files.InputDir(
-        required=True,
-        metadata={"description": "Folder where to create a manifest file."}
+        required=True, metadata={"description": "Folder where to create a manifest file."}
     )
 
 
@@ -99,7 +98,7 @@ def main() -> None:
 
     if mod.args.get("output_json"):
         out_data = {"manifest_path": str(manifest_path)}
-        with Path(mod.args['output_json']).open('w') as output_fh:
+        with Path(mod.args["output_json"]).open("w") as output_fh:
             output_fh.write(json.dumps(out_data))
 
 

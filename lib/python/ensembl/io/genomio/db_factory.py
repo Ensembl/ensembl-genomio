@@ -31,35 +31,30 @@ class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
     # Server parameters
-    host = argschema.fields.String(metadata={
-        "required": True, "description": "Host to the server with EnsEMBL databases"
-    })
-    port = argschema.fields.Integer(metadata={
-        "required": True, "description": "Port to use"
-    })
-    host = argschema.fields.String(metadata={
-        "required": True, "description": "Host to use"
-    })
-    user = argschema.fields.String(metadata={
-        "required": True, "description": "User to use"
-    })
-    password = argschema.fields.String(metadata={
-        "required": False, "description": "Password to use"
-    })
+    host = argschema.fields.String(
+        metadata={"required": True, "description": "Host to the server with EnsEMBL databases"}
+    )
+    port = argschema.fields.Integer(metadata={"required": True, "description": "Port to use"})
+    host = argschema.fields.String(metadata={"required": True, "description": "Host to use"})
+    user = argschema.fields.String(metadata={"required": True, "description": "User to use"})
+    password = argschema.fields.String(metadata={"required": False, "description": "Password to use"})
 
     # Filters
-    prefix = argschema.fields.String(metadata={
-        "required": False, "description": "Prefix to filter the databases"
-    })
-    build = argschema.fields.String(metadata={
-        "required": False, "description": "Build to filter the databases"
-    })
-    version = argschema.fields.String(metadata={
-        "required": False, "description": "EnsEMBL version to filter the databases"
-    })
-    brc_mode = argschema.fields.Boolean(metadata={
-        "required": False, "description": "BRC4 mode: use organism_abbrev for species, component for division"
-    })
+    prefix = argschema.fields.String(
+        metadata={"required": False, "description": "Prefix to filter the databases"}
+    )
+    build = argschema.fields.String(
+        metadata={"required": False, "description": "Build to filter the databases"}
+    )
+    version = argschema.fields.String(
+        metadata={"required": False, "description": "EnsEMBL version to filter the databases"}
+    )
+    brc_mode = argschema.fields.Boolean(
+        metadata={
+            "required": False,
+            "description": "BRC4 mode: use organism_abbrev for species, component for division",
+        }
+    )
 
 
 def format_db_data(server: CoreServer, dbs: List[str], brc_mode: False) -> List[Dict]:
@@ -78,10 +73,10 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: False) -> List[
                 species = brc_organism
             if brc_component:
                 division = brc_component
-        
+
         if not division:
-            division = 'all'
-        
+            division = "all"
+
         db_data = {
             "database": db,
             "species": species,
@@ -103,10 +98,7 @@ def main() -> None:
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
 
     server = CoreServer(
-        host=mod.args["host"],
-        port=mod.args["port"],
-        user=mod.args["user"],
-        password=mod.args.get("password")
+        host=mod.args["host"], port=mod.args["port"], user=mod.args["user"], password=mod.args.get("password")
     )
 
     prefix = mod.args.get("prefix")

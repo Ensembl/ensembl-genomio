@@ -36,16 +36,15 @@ from ensembl.brc4.runnable.utils import get_json
 class IntegrityTool:
     """Check the integrity of sequence and annotation files in the genome"""
 
-    def __init__(self, manifest_file: Path, brc_mode: bool = False,
-                 ignore_final_stops: bool = False) -> None:
+    def __init__(self, manifest_file: Path, brc_mode: bool = False, ignore_final_stops: bool = False) -> None:
         self.manifest_file = manifest_file
         self.brc_mode = brc_mode
         self.ignore_final_stop = ignore_final_stops
         self.errors = list()
-    
+
     def add_error(self, error_str: str) -> None:
         self.errors += error_str
-    
+
     def get_manifest(self) -> Dict:
         with open(self.manifest_file) as manifest_fh:
             manifest = json.load(manifest_fh)
@@ -74,10 +73,10 @@ class IntegrityTool:
 
     def check_integrity(self):
         """Load files listed in the manifest.json and check the integrity.
-            Check if the files are correct by verifying the MD5 hash.
-            Check if translation, functional annotation and sequence region ids
-            and lengths are consistent with the information in gff.
-            Compare sequence length from fasta_dna file to seq_region.json metadata.
+        Check if the files are correct by verifying the MD5 hash.
+        Check if translation, functional annotation and sequence region ids
+        and lengths are consistent with the information in gff.
+        Compare sequence length from fasta_dna file to seq_region.json metadata.
         """
 
         manifest = self.get_manifest()
@@ -561,12 +560,10 @@ class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
     # Server parameters
-    manifest_file = argschema.fields.InputFile(required=True, metadata={
-        "description": "Manifest file for the data to check"
-    })
-    brc_mode = argschema.fields.Boolean(required=False, metadata={
-        "description": "BRC mode"
-    })
+    manifest_file = argschema.fields.InputFile(
+        required=True, metadata={"description": "Manifest file for the data to check"}
+    )
+    brc_mode = argschema.fields.Boolean(required=False, metadata={"description": "BRC mode"})
 
 
 def main() -> None:
@@ -576,7 +573,7 @@ def main() -> None:
     inspector = IntegrityTool(mod.args["manifest_file"])
     if mod.args.get("brc_mode"):
         inspector.brc_mode = True
-    
+
     inspector.check_integrity()
 
 

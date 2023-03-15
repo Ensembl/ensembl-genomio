@@ -31,7 +31,7 @@ from ensembl.io.genomio.features.seq_region import (
     SeqRegion,
     SeqRegionAttribute,
     SeqRegionSynonym,
-    KaryotypeBand
+    KaryotypeBand,
 )
 
 ROOT_DIR = Path(__file__).parent / "../../../../.."
@@ -42,29 +42,22 @@ class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
     # Server parameters
-    host = argschema.fields.String(required=True, metadata={
-        "description": "Host to the server with EnsEMBL databases"
-    })
-    port = argschema.fields.Integer(required=True, metadata={
-        "description": "Port to use"
-    })
-    user = argschema.fields.String(required=True, metadata={
-        "description": "User to use"
-    })
-    password = argschema.fields.String(required=False, metadata={
-        "description": "Password to use"
-    })
-    database = argschema.fields.String(required=True, metadata={
-        "description": "Database to use"
-    })
+    host = argschema.fields.String(
+        required=True, metadata={"description": "Host to the server with EnsEMBL databases"}
+    )
+    port = argschema.fields.Integer(required=True, metadata={"description": "Port to use"})
+    user = argschema.fields.String(required=True, metadata={"description": "User to use"})
+    password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
+    database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
 
-    brc_mode = argschema.fields.Boolean(required=False, metadata={
-        "description": "BRC4 mode: use organism_abbrev for species, component for division"
-    })
+    brc_mode = argschema.fields.Boolean(
+        required=False,
+        metadata={"description": "BRC4 mode: use organism_abbrev for species, component for division"},
+    )
     external_db_map = argschema.fields.files.InputFile(
         required=False,
         dump_default=str(DEFAULT_MAP),
-        metadata={"description": "File with external_db mapping"}
+        metadata={"description": "File with external_db mapping"},
     )
 
 
@@ -118,8 +111,8 @@ def get_coord_systems(server: CoreServer, database: str) -> Dict[str, CoordSyste
     server.set_database(database)
 
     seqr_data = server.get_table_data(
-        table='coord_system',
-        fields=['coord_system_id', 'species_id', 'name', 'version', 'attrib'],
+        table="coord_system",
+        fields=["coord_system_id", "species_id", "name", "version", "attrib"],
     )
 
     coord_systems = {}
@@ -144,7 +137,8 @@ def get_coord_systems(server: CoreServer, database: str) -> Dict[str, CoordSyste
 
 
 def get_seq_regions(
-        server: CoreServer, database: str, coord_systems: Dict[str, CoordSystem]) -> List[SeqRegion]:
+    server: CoreServer, database: str, coord_systems: Dict[str, CoordSystem]
+) -> List[SeqRegion]:
     server.set_database(database)
 
     coords = ", ".join([str(c.coord_system_id) for c in coord_systems.values()])
@@ -152,9 +146,9 @@ def get_seq_regions(
         constraints = f"coord_system_id IN ({coords})"
 
     seqr_data = server.get_table_data(
-        table='seq_region',
-        fields=['seq_region_id', 'name', 'length', 'coord_system_id'],
-        constraints=constraints
+        table="seq_region",
+        fields=["seq_region_id", "name", "length", "coord_system_id"],
+        constraints=constraints,
     )
 
     seq_regions = []
@@ -163,7 +157,7 @@ def get_seq_regions(
             seq_region_id=seqr_row["seq_region_id"],
             name=seqr_row["name"],
             length=seqr_row["length"],
-            coord_system_id=seqr_row["coord_system_id"]
+            coord_system_id=seqr_row["coord_system_id"],
         )
         seq_regions.append(seqr)
     return seq_regions
@@ -173,8 +167,8 @@ def get_seq_region_attribs(server: CoreServer, database: str) -> Dict[str, List[
     server.set_database(database)
 
     seqra_data = server.get_table_data(
-        table='seq_region_attrib LEFT JOIN attrib_type USING(attrib_type_id)',
-        fields=['seq_region_id', 'code', 'value'],
+        table="seq_region_attrib LEFT JOIN attrib_type USING(attrib_type_id)",
+        fields=["seq_region_id", "code", "value"],
     )
 
     seqr_attribs = dict()
@@ -192,9 +186,9 @@ def get_seq_region_synonyms(server: CoreServer, database: str) -> Dict[str, List
     server.set_database(database)
 
     seqra_data = server.get_table_data(
-        table='seq_region_synonym LEFT JOIN external_db USING(external_db_id)',
-        fields=['seq_region_id', 'synonym', 'db_name'],
-        constraints="synonym IS NOT NULL"
+        table="seq_region_synonym LEFT JOIN external_db USING(external_db_id)",
+        fields=["seq_region_id", "synonym", "db_name"],
+        constraints="synonym IS NOT NULL",
     )
 
     seqr_syns = dict()
@@ -212,8 +206,8 @@ def get_karyotypes(server: CoreServer, database: str) -> Dict[str, List[Karyotyp
     server.set_database(database)
 
     kar_data = server.get_table_data(
-        table='karyotype',
-        fields=['seq_region_id', 'seq_region_start', 'seq_region_end', 'band', 'stain'],
+        table="karyotype",
+        fields=["seq_region_id", "seq_region_start", "seq_region_end", "band", "stain"],
     )
 
     karyotype = dict()
@@ -238,10 +232,7 @@ def main() -> None:
     args = mod.args
 
     server = CoreServer(
-        host=mod.args["host"],
-        port=args["port"],
-        user=args["user"],
-        password=args.get("password")
+        host=mod.args["host"], port=args["port"], user=args["user"], password=args.get("password")
     )
 
     external_map = Path(mod.args.get("external_db_map"))
