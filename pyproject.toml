@@ -107,7 +107,7 @@ line-length = 110
 
 [tool.pytest.ini_options]
 addopts = "-v --tb=native --server=sqlite:///"
-testpaths = ["lib/python/tests"]
+testpaths = ["src/python/tests"]
 norecursedirs = ["data", "docs", "*.egg_info"]
 filterwarnings = [
     "ignore::DeprecationWarning:argschema",
@@ -116,5 +116,5 @@ filterwarnings = [
 [tool.coverage.run]
 branch = true
 source = [
-    "lib/python/ensembl"
+    "src/python/ensembl"
 ]
