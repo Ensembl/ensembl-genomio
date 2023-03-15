@@ -23,13 +23,13 @@ from .rules import *
 
 # VALID STRUCTURES class
 
-class ValidStructures(BaseStructures):
-  KNOWN_RULES = [
-    AliasRule,
-    IgnoreRule,
-    ValidRule,
-    ValidIfRule,
-    SubRule,
-    SpellRule,
-  ]
 
+class ValidStructures(BaseStructures):
+    KNOWN_RULES = [
+        AliasRule,
+        IgnoreRule,
+        ValidRule,
+        ValidIfRule,
+        SubRule,
+        SpellRule,
+    ]

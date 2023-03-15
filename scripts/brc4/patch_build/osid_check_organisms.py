@@ -31,13 +31,13 @@ class OSIDClient:
         self.url = url
         self.user = user
         self.key = key
-    
+
     def get_organism_data(self, species: str) -> List[dict]:
         """Retrieve the data for one or all organisms
-        
+
         Args:
             species: optional, to only select one species instead of all of them
-        
+
         Returns:
             List of dicts, one for each organism
         """
@@ -48,30 +48,25 @@ class OSIDClient:
         }
         if species:
             body["organismName"] = species
-        
+
         get_url = self.url + "/" + OSIDClient.organisms_page
         result = requests.get(get_url, auth=(self.user, self.key), params=body)
 
         if result and result.status_code == 200:
             organisms = json.loads(result.content)
         else:
-            raise Exception('Could not retrieve organism data from {get_url}')
+            raise Exception("Could not retrieve organism data from {get_url}")
         return organisms
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Retrieve the list of organisms from an OSID server')
-    parser.add_argument('--url', type=str, required=True,
-                        help='OSID server url')
-    parser.add_argument('--user', type=str, required=True,
-                        help='OSID user')
-    parser.add_argument('--key', type=str, required=True,
-                        help='OSID authentification key')
-    parser.add_argument('--species', type=str,
-                        help='A specific species to check')
+    parser = argparse.ArgumentParser(description="Retrieve the list of organisms from an OSID server")
+    parser.add_argument("--url", type=str, required=True, help="OSID server url")
+    parser.add_argument("--user", type=str, required=True, help="OSID user")
+    parser.add_argument("--key", type=str, required=True, help="OSID authentification key")
+    parser.add_argument("--species", type=str, help="A specific species to check")
     args = parser.parse_args()
-    
+
     # Get data
     client = OSIDClient(args.url, args.user, args.key)
     organisms = client.get_organism_data(args.species)

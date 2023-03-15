@@ -38,7 +38,7 @@ class CoreServer:
     3) Retrieve a cursor with core_server.get_cursor()
     """
 
-    def __init__(self, host: str, port: str, user: str, password: str = '') -> None:
+    def __init__(self, host: str, port: str, user: str, password: str = "") -> None:
         self.host = host
         self.port = port
         self.user = user
@@ -47,22 +47,19 @@ class CoreServer:
 
         # Start a connection directly
         self.connect()
-    
+
     def connect(self) -> None:
         """Create a connection to the database."""
         self._connector = mysql.connector.connect(
-            user=self.user,
-            passwd=self.password,
-            host=self.host,
-            port=self.port
+            user=self.user, passwd=self.password, host=self.host, port=self.port
         )
-    
+
     def set_database(self, db_name: str) -> None:
         self._connector.database = db_name
-    
+
     def get_cursor(self):
         return self._connector.cursor()
-    
+
     def get_all_cores(self) -> List[str]:
         """Query the server and retrieve all databases that look like Ensembl cores."""
 
@@ -75,8 +72,8 @@ class CoreServer:
         for db in cursor:
             dbs.append(db[0])
         return dbs
-    
-    def get_cores(self, prefix: str = '', build: str = '', version: str = '') -> List[str]:
+
+    def get_cores(self, prefix: str = "", build: str = "", version: str = "") -> List[str]:
         """Provide a list of core databases, filtered if requested.
         Args:
             prefix: filter by prefix (automatically followed by _)
@@ -102,17 +99,17 @@ class CoreServer:
 
 if __name__ == "__main__":
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Get a list of Ensembl databases')
+    parser = argparse.ArgumentParser(description="Get a list of Ensembl databases")
 
-    parser.add_argument('--host', type=str, required=True, help='Server hostname')
-    parser.add_argument('--port', type=str, required=True, help='Server port')
-    parser.add_argument('--user', type=str, required=True, help='Server user')
-    parser.add_argument('--password', type=str, help='Server password')
+    parser.add_argument("--host", type=str, required=True, help="Server hostname")
+    parser.add_argument("--port", type=str, required=True, help="Server port")
+    parser.add_argument("--user", type=str, required=True, help="Server user")
+    parser.add_argument("--password", type=str, help="Server password")
 
     # Optional
-    parser.add_argument('--prefix', type=str, help='Prefix for the databases')
-    parser.add_argument('--build', type=str, help='Build of the databases')
-    parser.add_argument('--version', type=str, help='Ensembl version of the databases')
+    parser.add_argument("--prefix", type=str, help="Prefix for the databases")
+    parser.add_argument("--build", type=str, help="Build of the databases")
+    parser.add_argument("--version", type=str, help="Ensembl version of the databases")
     args = parser.parse_args()
 
     # Start

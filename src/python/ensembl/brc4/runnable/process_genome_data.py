@@ -26,38 +26,36 @@ from ensembl.brc4.runnable.utils import print_json, get_json
 
 
 class process_genome_data(eHive.BaseRunnable):
-
     def param_defaults(self):
         return {
-                "provider" : {
-                    'GenBank' : {
-                        "assembly" : {
-                            "provider_name" : "GenBank",
-                            "provider_url" : "https://www.ncbi.nlm.nih.gov/assembly",
-                            },
-                        "annotation" : {
-                            "provider_name" : "GenBank",
-                            "provider_url" : "https://www.ncbi.nlm.nih.gov/assembly",
-                            },
-                        },
-                    'RefSeq' : {
-                        "assembly" : {
-                            "provider_name" : "RefSeq",
-                            "provider_url" : "https://www.ncbi.nlm.nih.gov/refseq",
-                            },
-                        "annotation" : {
-                            "provider_name" : "RefSeq",
-                            "provider_url" : "https://www.ncbi.nlm.nih.gov/refseq",
-                            },
-                        },
+            "provider": {
+                "GenBank": {
+                    "assembly": {
+                        "provider_name": "GenBank",
+                        "provider_url": "https://www.ncbi.nlm.nih.gov/assembly",
                     },
-                'accession_api_url' : "https://www.ebi.ac.uk/ena/browser/api/xml/%s",
-                }
-        
+                    "annotation": {
+                        "provider_name": "GenBank",
+                        "provider_url": "https://www.ncbi.nlm.nih.gov/assembly",
+                    },
+                },
+                "RefSeq": {
+                    "assembly": {
+                        "provider_name": "RefSeq",
+                        "provider_url": "https://www.ncbi.nlm.nih.gov/refseq",
+                    },
+                    "annotation": {
+                        "provider_name": "RefSeq",
+                        "provider_url": "https://www.ncbi.nlm.nih.gov/refseq",
+                    },
+                },
+            },
+            "accession_api_url": "https://www.ebi.ac.uk/ena/browser/api/xml/%s",
+        }
 
     def run(self):
         json_path = Path(self.param_required("json_path"))
-        
+
         genome_data = get_json(json_path)
 
         # Amend metadata
@@ -65,11 +63,11 @@ class process_genome_data(eHive.BaseRunnable):
         self.add_assembly_version(genome_data)
         self.add_genebuild_metadata(genome_data)
         self.add_species_metadata(genome_data)
-        
+
         # Create dedicated work dir
         accession = genome_data["assembly"]["accession"]
         self.param("accession", accession)
-        work_dir = Path(self.param('root_work_dir'), accession)
+        work_dir = Path(self.param("root_work_dir"), accession)
         if not work_dir.is_dir():
             work_dir.mkdir(parents=True)
 
@@ -83,16 +81,16 @@ class process_genome_data(eHive.BaseRunnable):
 
         # Flow out the file and type
         output = {
-                "genome_json" : str(final_path),
-                "genome_data" : genome_data,
-                "work_dir" : str(work_dir),
-                "accession" : accession
-                }
+            "genome_json": str(final_path),
+            "genome_data": genome_data,
+            "work_dir": str(work_dir),
+            "accession": accession,
+        }
         self.dataflow(output, 2)
-    
+
     def add_provider(self, genome_data):
         """Add default provider metadata for assembly and gene models"""
-        
+
         # Provider = GenBank or RefSeq
         accession = genome_data["assembly"]["accession"]
         provider_data = self.param("provider")
@@ -109,7 +107,7 @@ class process_genome_data(eHive.BaseRunnable):
             assembly["provider_name"] = provider["assembly"]["provider_name"]
             assembly["provider_url"] = provider["assembly"]["provider_url"]
         genome_data["assembly"] = assembly
-        
+
         # Annotation provider, if there are gene models
         if self.param("gff3_raw"):
             annotation = {}
@@ -119,12 +117,12 @@ class process_genome_data(eHive.BaseRunnable):
                 annotation["provider_name"] = provider["annotation"]["provider_name"]
                 annotation["provider_url"] = provider["annotation"]["provider_url"]
             genome_data["annotation"] = annotation
-             
+
     def add_assembly_version(self, genome_data):
         """Add version number to assembly"""
-        
+
         assembly = genome_data["assembly"]
-        
+
         if not "version" in assembly:
             accession = assembly["accession"]
             values = accession.split(".")
@@ -133,10 +131,10 @@ class process_genome_data(eHive.BaseRunnable):
 
     def add_genebuild_metadata(self, genome_data):
         """Add metadata to genebuild"""
-        
+
         assembly = genome_data["assembly"]
         genebuild = genome_data["genebuild"]
-        
+
         current_date = datetime.date.today().isoformat()
         if not "version" in genebuild:
             genebuild["version"] = current_date
@@ -145,53 +143,53 @@ class process_genome_data(eHive.BaseRunnable):
 
     def add_species_metadata(self, genome_data):
         """Add species metadata from the accession"""
-        
+
         species = genome_data["species"]
         accession = genome_data["assembly"]["accession"]
-        
+
         if not "taxonomy_id" in species:
             taxonomy = self.get_taxonomy_from_accession(accession)
             species["taxonomy_id"] = taxonomy["taxon_id"]
-            
+
             if (not "strain" in species) and "strain" in taxonomy:
                 species["strain"] = taxonomy["strain"]
-            
-            if not"scientific_name" in species:
+
+            if not "scientific_name" in species:
                 species["scientific_name"] = taxonomy["scientific_name"]
-    
+
     def get_taxonomy_from_accession(self, accession):
         """Provided an accession, get the associated taxonomy metadata"""
-        
+
         url = self.param("accession_api_url")
-        
+
         # Use the GenBank accession without version
         gb_accession = accession.replace("GCF", "GCA")
         gb_accession = gb_accession.split(".")[0]
 
         response = requests.get(url % gb_accession)
         entry_xml = response.text
-        
+
         entry = ET.fromstring(entry_xml)
         taxon_node = entry.find(".//TAXON")
-        
+
         taxon_id = self.get_node_text(taxon_node, "TAXON_ID")
         strain = self.get_node_text(taxon_node, "STRAIN")
         scientific_name = self.get_node_text(taxon_node, "SCIENTIFIC_NAME")
-        
+
         if not taxon_id:
             raise Exception("No taxon_id found for accession %s" % accession)
         if not scientific_name:
             raise Exception("No scientific_name found for accession %s" % accession)
-        
+
         taxonomy = {
-                'taxon_id' : int(taxon_id),
-                'scientific_name' : scientific_name,
-                }
+            "taxon_id": int(taxon_id),
+            "scientific_name": scientific_name,
+        }
         if strain:
-            taxonomy['strain'] = strain
-        
+            taxonomy["strain"] = strain
+
         return taxonomy
-    
+
     def get_node_text(self, node, tag):
         try:
             return node.find(tag).text

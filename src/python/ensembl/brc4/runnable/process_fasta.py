@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-
 from functools import partial
 import gzip
 from mimetypes import guess_type
@@ -26,21 +25,20 @@ import eHive
 
 
 class process_fasta(eHive.BaseRunnable):
-
     def param_defaults(self):
         return {
-                "exclude_seq_regions": [],
-                "peptide" : False,
-                }
+            "exclude_seq_regions": [],
+            "peptide": False,
+        }
 
     def run(self):
         file_name = self.param("file_name")
         file_path = self.param(file_name)
-        work_dir = Path(self.param('work_dir'))
+        work_dir = Path(self.param("work_dir"))
         seqr_to_exclude = self.param("exclude_seq_regions")
-        
+
         if self.param("peptide"):
-            genbank_path = self.param('in_genbank')
+            genbank_path = self.param("in_genbank")
             to_exclude = self.peptides_to_exclude(genbank_path, seqr_to_exclude)
         else:
             to_exclude = seqr_to_exclude
@@ -60,8 +58,8 @@ class process_fasta(eHive.BaseRunnable):
         # Copy and filter
         records = []
         encoding = guess_type(file_path)[1]
-        _open = partial(gzip.open, mode='rt') if encoding == 'gzip' else open
-        
+        _open = partial(gzip.open, mode="rt") if encoding == "gzip" else open
+
         with _open(file_path) as in_fasta:
             for record in SeqIO.parse(in_fasta, "fasta"):
                 if record.id in to_exclude:
@@ -73,15 +71,15 @@ class process_fasta(eHive.BaseRunnable):
             SeqIO.write(records, out_fasta, "fasta")
 
         # No other operation
-        self.dataflow({ file_name : str(final_path) }, 2)
-    
+        self.dataflow({file_name: str(final_path)}, 2)
+
     def peptides_to_exclude(self, genbank_path, seqr_to_exclude) -> dict():
         """
         Extract peptide IDs from a genbank file that are in a given list of seq regions
         """
         encoding = guess_type(genbank_path)[1]
-        _open = partial(gzip.open, mode='rt') if encoding == 'gzip' else open
-        
+        _open = partial(gzip.open, mode="rt") if encoding == "gzip" else open
+
         peptides_to_exclude = dict()
         with _open(genbank_path) as in_genbank:
             for record in SeqIO.parse(in_genbank, "genbank"):
@@ -94,5 +92,5 @@ class process_fasta(eHive.BaseRunnable):
                                 peptides_to_exclude[feat_id[0]] = True
                             else:
                                 raise Exception("Peptide without peptide ID %s" % feat)
-        
+
         return peptides_to_exclude

@@ -19,20 +19,21 @@ import eHive
 import os
 import requests
 
+
 class DownloadError(Exception):
     """In case a download failed."""
+
     def __init__(self, msg):
         self.msg = msg
 
+
 class download_genbank(eHive.BaseRunnable):
-    
     def param_defaults(self):
-        return {
-        }
+        return {}
 
     def run(self):
-        accession = self.param_required('gb_accession')
-        main_download_dir = self.param('download_dir')
+        accession = self.param_required("gb_accession")
+        main_download_dir = self.param("download_dir")
         download_dir = main_download_dir + "/" + accession
 
         # Set and create dedicated dir for download
@@ -41,8 +42,8 @@ class download_genbank(eHive.BaseRunnable):
 
         # Download the file
         gb_path = self.download_genbank(accession, download_dir)
-        
-        output = {'gb_file': gb_path, 'gb_accession': accession}
+
+        output = {"gb_file": gb_path, "gb_accession": accession}
         self.dataflow(output, 2)
 
     @staticmethod
@@ -50,7 +51,7 @@ class download_genbank(eHive.BaseRunnable):
         """
         Given a GenBank accession, download the corresponding file in GenBank format
         """
-        dl_path = os.path.join(dl_dir, accession + '.gb')
+        dl_path = os.path.join(dl_dir, accession + ".gb")
 
         # Don't redownload the file
         if os.path.exists(dl_path):
@@ -64,9 +65,9 @@ class download_genbank(eHive.BaseRunnable):
             "retmode": "text",
         }
         e_params["id"] = accession
-        
+
         result = requests.get(e_url, params=e_params)
-        
+
         if result and result.status_code == 200:
             with open(dl_path, "wb") as gff:
                 gff.write(result.content)
