@@ -1,5 +1,5 @@
 ## BRC4_genome_loader
-### Module: [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](../lib/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
+### Module: [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](../src/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
 
 Creates an [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html)
 from a set of flat files

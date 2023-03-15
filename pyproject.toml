@@ -55,8 +55,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "bcbio-gff >= 0.6.6",
-    "biopython >= 1.79",
+    "bcbio-gff == 0.6.7",
+    "biopython == 1.80",
     "jsonschema >= 4.6.0",
     "intervaltree >= 3.1.0",
     "mysql-connector-python >= 8.0.29",
@@ -84,10 +84,10 @@ repository = "https://github.com/Ensembl/ensembl-genomio"
 
 ## `setuptools` related section
 [tool.setuptools]
-package-dir = {"" = "lib/python"}
+package-dir = {"" = "src/python"}
 
 [tool.setuptools.packages.find]
-where = ["lib/python"]  # list of folders that contain the packages (["."] by default)
+where = ["src/python"]  # list of folders that contain the packages (["."] by default)
 
 # For additional information on `setuptools` configuration see
 #    https://setuptools.pypa.io/en/latest/userguide/quickstart.html

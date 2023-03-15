@@ -21,7 +21,7 @@ class say_accession(eHive.BaseRunnable):
     """Simple runnable to bring out the accession value for the pipeline to use.
     
     Args:
-        genome_data: a dict from genome_data following the schema from schema/genome_schema.json
+        genome_data: a dict from genome_data following the schema from schemas/genome_schema.json
     
     Dataflows:
         2: a single value named accession
