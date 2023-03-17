@@ -40,7 +40,7 @@ my $root_dir = "$package_dir/../../../../../..";
 
 my $scripts_dir = "$root_dir/scripts";
 my $schema_dir = "$root_dir/schemas";
-my $config_dir = "$root_dir/data";
+my $config_dir = "$root_dir/config";
 
 sub default_options {
   my ($self) = @_;
