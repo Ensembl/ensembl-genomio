@@ -68,7 +68,6 @@ dependencies = [
 dev = [
     "mock",
     "Sphinx",
-    "toml-validator",
 ]
 
 doc = [
