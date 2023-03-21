@@ -158,6 +158,6 @@ if __name__ == "__main__":
     # execute only if run as a script
     main()
 
-# zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --processed_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype --conf new-genome-loader/scripts/gff_metaparser/conf/valid_structures.conf -
+# zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --processed_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype --conf new-genome-loader/config/gff_metaparser/valid_structures.conf -
 
 # zcat data/pfal/Pfalciparum.gff.gz | python new-genome-loader/scripts/gff_metaparser/gff_stats.py  --stats-only --processed_qualifiers source,name,parent,dbxref,phase,product,protein_id,biotype -
