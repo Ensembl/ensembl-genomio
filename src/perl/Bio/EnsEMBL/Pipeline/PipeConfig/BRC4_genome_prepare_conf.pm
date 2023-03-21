@@ -44,6 +44,7 @@ my $package_dir = dirname($package_path);
 my $root_dir = "$package_dir/../../../../../..";
 
 my $schema_dir = "$root_dir/schemas";
+my $config_dir = "$root_dir/config";
 my $metazoa_script_dir = "$root_dir/scripts/gff_metaparser";
 
 sub default_options {
@@ -69,8 +70,8 @@ sub default_options {
 
     debug => 0,
     ensembl_mode => 0,
-    parser_conf => catfile($metazoa_script_dir, "conf/gff_metaparser.conf"),
-    parser_patch => catfile($metazoa_script_dir, "conf/gff_metaparser/brc4.patch"),
+    parser_conf => catfile($config_dir, "gff_metaparser/metaparser.conf"),
+    parser_patch => catfile($config_dir, "gff_metaparser/metaparser/xref2gene.patch"),
 
     # If the genes appear to be split (multiple parts), merge them as one region
     merge_split_genes => 0,

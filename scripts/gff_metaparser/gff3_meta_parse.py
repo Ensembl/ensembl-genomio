@@ -157,4 +157,4 @@ if __name__ == "__main__":
     main()
 
 
-# cat tcal.gff3 | python ./new-genome-loader/scripts/gff_metaparser/gff3_meta_parse.py --conf ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser.conf --pfx_trims 'ANY!:.+\|,ANY:gene-,cds:cds-,exon:exon-' --conf_patch ./new-genome-loader/scripts/gff_metaparser/conf/gff_metaparser/xref2gene.patch --fann_out t.json --seq_region_out sr.json - > t.gff3
+# cat tcal.gff3 | python ./new-genome-loader/scripts/gff_metaparser/gff3_meta_parse.py --conf ./new-genome-loader/config/gff_metaparser/metaparser.conf --pfx_trims 'ANY!:.+\|,ANY:gene-,cds:cds-,exon:exon-' --conf_patch ./new-genome-loader/config/gff_metaparser/metaparser/xref2gene.patch --fann_out t.json --seq_region_out sr.json - > t.gff3
