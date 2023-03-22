@@ -24,7 +24,7 @@ process extract_from_gb {
 
     input:
     val prefix
-    val prod_name
+    val production_name
     path gb_file 
 
     output:
@@ -36,7 +36,7 @@ process extract_from_gb {
 
     script:
     """
-    extract_from_gb --prefix ${prefix} --prod_name ${prod_name} --gb_file ${gb_file}
+    extract_from_gb --prefix ${prefix} --prod_name ${production_name} --gb_file ${gb_file}
     """
 }
 

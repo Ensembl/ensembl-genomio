@@ -25,12 +25,12 @@ workflow additional_seq_prepare {
     take:
         prefix
         accession
-        PROD_NAME
+        production_name
         brc_mode
 
     main:
         gb_file_ch = download_genbank(accession)
-        extract_from_gb(prefix, PROD_NAME, gb_file_ch)
+        extract_from_gb(prefix, production_name, gb_file_ch)
         annotation = process_gff3(extract_from_gb.out.gene_gff, extract_from_gb.out.genome)
         gff3_validation(process_gff3.out.gene_models)
         json_files = extract_from_gb.out.genome.concat(extract_from_gb.out.seq_regions, process_gff3.out.functional_annotation)
