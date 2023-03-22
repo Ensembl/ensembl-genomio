@@ -4,6 +4,7 @@ nextflow.enable.dsl=2
 process download_genbank {
     label "Sequence_genbank_file"
     tag "${accession}"
+    label 'default'
 
     input:
         val accession
@@ -19,6 +20,7 @@ process download_genbank {
 
 process extract_from_gb {
     tag "$gb_file"
+    label 'default'
 
     input:
     val prefix

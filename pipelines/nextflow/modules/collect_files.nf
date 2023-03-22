@@ -39,6 +39,7 @@ process COLLECT_FILES {
 
 process MANIFEST {
     tag 'manifest.json'
+    label 'default'
     
     input:
         path out_dir

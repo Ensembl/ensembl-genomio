@@ -4,6 +4,7 @@ params.merge_split_genes="False"
 
 process process_gff3 {
     tag "${gff3}"
+    label 'default'
 
     input:
         path gff3
@@ -22,6 +23,7 @@ process process_gff3 {
 process gff3_validation {
 
   beforeScript 'module load libffi-3.3-gcc-9.3.0-cgokng6'
+  label 'default'
 
   input:
     path gene_models
