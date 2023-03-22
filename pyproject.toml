@@ -76,7 +76,7 @@ check_json_schema = "ensembl.io.genomio.schemas.json_schema_validator:main"
 download_genbank = "ensembl.io.genomio.download_genbank:main"
 extract_from_gb = "ensembl.io.genomio.extract_from_gb:main"
 process_gff3 = "ensembl.io.genomio.process_gff3:main"
-manifest_marker = "ensembl.io.genomio.manifest_marker:main"
+manifest_maker = "ensembl.io.genomio.manifest_maker:main"
 check_integrity = "ensembl.io.genomio.integrity:main"
 
 

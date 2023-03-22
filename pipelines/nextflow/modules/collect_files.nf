@@ -50,7 +50,7 @@ process MANIFEST {
     
     script:
         """
-        manifest_marker --manifest_dir ${out_dir}
+        manifest_maker --manifest_dir ${out_dir}
         """
 }
 

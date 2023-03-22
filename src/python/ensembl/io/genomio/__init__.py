@@ -17,5 +17,5 @@ __version__ = "0.1"
 from .download_genbank import *
 from .extract_from_gb import *
 from .process_gff3 import *
-from .manifest_marker import *
+from .manifest_maker import *
 from .integrity import *
