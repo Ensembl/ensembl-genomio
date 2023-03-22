@@ -1,0 +1,44 @@
+// See the NOTICE file distributed with this work for additional information
+// regarding copyright ownership.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Import modules/subworkflows
+include { download_genbank; extract_from_gb} from '../modules/download_genbank.nf'
+include { process_gff3; gff3_validation } from '../modules/process_gff3.nf'
+include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
+include { JSON_SCHEMA_FACTORY } from '../modules/json_schema_factory.nf'
+include { COLLECT_FILES; MANIFEST; PUBLISH_DIR } from '../modules/collect_files.nf'
+include { CHECK_INTEGRITY } from '../modules/integrity.nf'
+
+workflow additional_seq_prepare {
+    main:
+        gb_file_ch = download_genbank(params.accession)
+        extract_from_gb(params.prefix, params.PROD_NAME, gb_file_ch)
+        annotation = process_gff3(extract_from_gb.out.gene_gff, extract_from_gb.out.genome)
+        gff3_validation(process_gff3.out.gene_models)
+        json_files = extract_from_gb.out.genome.concat(extract_from_gb.out.seq_regions, process_gff3.out.functional_annotation)
+        json_files_checked = CHECK_JSON_SCHEMA(json_files)
+        all_files = json_files_checked
+                        .concat(extract_from_gb.out.dna_fasta, extract_from_gb.out.pep_fasta)
+                        .map{it -> [params.accession, it]}
+                        .groupTuple()
+        collect_dir = COLLECT_FILES(all_files)
+        manifested_dir = MANIFEST(collect_dir, params.accession)
+        manifest_checked = CHECK_INTEGRITY(manifested_dir, params.brc_mode)
+        manifest_checked.view()
+        PUBLISH_DIR(manifest_checked, params.accession)
+        //manifest_dir = path = params.outdir + '/' + params.accession
+        //manifested_dir = MANIFEST(manifest_dir)
+        //CHECK_INTEGRITY(manifested_dir, params.brc_mode)
+}
