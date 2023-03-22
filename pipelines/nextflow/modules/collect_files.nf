@@ -19,14 +19,14 @@ process COLLECT_FILES {
     time '5min'
 
     input:
-        tuple val(db), path(file_name)
+        tuple val(accession), path(file_name)
     
     output:
-        path "${params.accession}"
+        path "${accession}"
     
     script:
         """
-        DBDIR=${params.accession}/
+        DBDIR=${accession}/
         mkdir \$DBDIR
         echo ${file_name}
         for FILE in ${file_name}; do
@@ -38,7 +38,8 @@ process COLLECT_FILES {
 }
 
 process MANIFEST {
-
+    tag 'manifest.json'
+    
     input:
         path out_dir
         val accession
@@ -53,14 +54,14 @@ process MANIFEST {
 }
 
 process PUBLISH_DIR {
-    publishDir "$params.outdir", mode: 'copy'
-    tag "Publish_$params.accession"
+    publishDir "$params.outdir/results", mode: 'copy', overwrite: false
+    tag "Publish_$accession"
     label 'default'
     time '5min'
 
     input:
         path data_dir
-        val db
+        val accession
     
     output:
         path data_dir

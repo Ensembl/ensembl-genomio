@@ -18,19 +18,19 @@ process download_genbank {
 }
 
 process extract_from_gb {
-    tag "${params.accession}.gb"
+    tag "$gb_file"
 
     input:
     val prefix
     val prod_name
-    path gb_file
+    path gb_file 
 
     output:
     path "*.gff", emit: gene_gff
     path "genome.json", emit: genome
     path "seq_region.json", emit: seq_regions
     path "dna.fasta", emit: dna_fasta
-    path "pep.fasta", emit: pep_fasta
+    path "pep.fasta", emit: pep_fasta   //is this optional?
 
     script:
     """

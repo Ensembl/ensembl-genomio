@@ -16,7 +16,7 @@
 // limitations under the License.
 
 process CHECK_INTEGRITY {
-    tag "Integrity_${manifest_dir}"
+    tag "Integrity_${manifest_dir}/manifest.json"
     label 'default'
     errorStrategy 'finish'
     time '1h'
