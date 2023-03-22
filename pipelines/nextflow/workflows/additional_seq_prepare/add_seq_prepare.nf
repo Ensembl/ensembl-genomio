@@ -1,0 +1,64 @@
+// See the NOTICE file distributed with this work for additional information
+// regarding copyright ownership.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+nextflow.enable.dsl=2
+
+//default params
+params.help = false
+params.brc_mode = 1
+
+// mandatory params
+params.accession = null
+params.prefix = null
+params.PROD_NAME = null
+
+
+
+// Print usage
+def helpMessage() {
+  log.info """
+        Usage:
+        The typical command for running the pipeline is as follows:
+        nextflow run add_seq_prepare.nf --acession  --prefix "PREFIX_" --PROD_NAME "productionname"
+
+        Mandatory arguments:
+        --accession                    A GenBank accession of the sequence you are adding
+        --prefix                       Required a string to add to the gene ids, to ensure that they are unique (include  PREFIX_)
+        --PROD_NAME                    Production name of the species
+
+       Optional arguments:
+        --outdir                       Output directory to place final output
+        --help                         This usage statement.
+        --brc_mode                     By default it is set to 1, set it to 0 if you are not using it for brc
+        """
+}
+
+// Show help message
+if (params.help) {
+    helpMessage()
+    exit 0
+}
+
+assert params.acession, "Parameter 'acession' is not specified"
+assert params.prefix, "Parameter 'prefix' is not specified"
+assert params.PROD_NAME, "Parameter 'PROD_NAME' is not specified"
+
+// Import modules/subworkflows
+include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepare.nf'
+
+// Run main workflow
+workflow {
+    main:
+    additional_seq_prepare(params.prefix,params.acession,params.PROD_NAME, params.brc_mode)
+}
