@@ -30,12 +30,12 @@ def helpMessage() {
   log.info """
         Usage:
         The typical command for running the pipeline is as follows:
-        nextflow run add_seq_prepare.nf --acession  --prefix "PREFIX_" --PROD_NAME "productionname"
+        nextflow run add_seq_prepare.nf --accession  --prefix "PREFIX_" --PROD_NAME "productionname"
 
         Mandatory arguments:
         --accession                    A GenBank accession of the sequence you are adding
         --prefix                       Required a string to add to the gene ids, to ensure that they are unique (include  PREFIX_)
-        --PROD_NAME                    Production name of the species
+        --production_name              Production name of the species
 
        Optional arguments:
         --outdir                       Output directory to place final output
@@ -50,9 +50,9 @@ if (params.help) {
     exit 0
 }
 
-assert params.acession, "Parameter 'acession' is not specified"
+assert params.accession, "Parameter 'acession' is not specified"
 assert params.prefix, "Parameter 'prefix' is not specified"
-assert params.PROD_NAME, "Parameter 'PROD_NAME' is not specified"
+assert params.production_name, "Parameter 'production_name' is not specified"
 
 // Import modules/subworkflows
 include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepare.nf'
@@ -60,5 +60,5 @@ include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepa
 // Run main workflow
 workflow {
     main:
-    additional_seq_prepare(params.prefix,params.acession,params.PROD_NAME, params.brc_mode)
+    additional_seq_prepare(params.prefix, params.accession, params.production_name, params.brc_mode)
 }

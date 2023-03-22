@@ -81,13 +81,13 @@ check_integrity = "ensembl.io.genomio.integrity:main"
 
 
 [tool.setuptools]
-package-dir = {"" = "lib/python"}
+package-dir = {"" = "src/python"}
 
 [tool.setuptools.dynamic]
 version = {attr = "ensembl.io.genomio.__version__"}
 
 [tool.setuptools.packages.find]
-where = ["lib/python"]  # list of folders that contain the packages (["."] by default)
+where = ["src/python"]  # list of folders that contain the packages (["."] by default)
 
 # For additional information on `setuptools` configuration see:
 #    https://setuptools.pypa.io/en/latest/userguide/quickstart.html
@@ -107,7 +107,7 @@ line-length = 110
 
 [tool.pytest.ini_options]
 addopts = "-v --tb=native --server=sqlite:///"
-testpaths = ["lib/python/tests"]
+testpaths = ["src/python/tests"]
 norecursedirs = ["data", "docs", "*.egg_info"]
 filterwarnings = [
     "ignore::DeprecationWarning:argschema",
@@ -116,5 +116,5 @@ filterwarnings = [
 [tool.coverage.run]
 branch = true
 source = [
-    "lib/python/ensembl"
+    "src/python/ensembl"
 ]
