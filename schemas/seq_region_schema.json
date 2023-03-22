@@ -10,7 +10,8 @@
       "properties": {
         "name" : { "type" : "string" },
         "source": { "type" : "string" }
-      }
+      },
+      "required" : [ "name" ]
     },
     "seq_region_info" : {
       "type": "object",
