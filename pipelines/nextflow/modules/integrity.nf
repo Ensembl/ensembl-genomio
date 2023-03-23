@@ -1,5 +1,3 @@
-
-
 // See the NOTICE file distributed with this work for additional information
 // regarding copyright ownership.
 //
@@ -15,8 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 process CHECK_INTEGRITY {
-    tag "Integrity: ${manifest_dir}/manifest.json"
+    tag "${manifest_dir}"
     label 'default'
     errorStrategy 'finish'
     time '1h'
@@ -31,7 +30,7 @@ process CHECK_INTEGRITY {
     script:
         """
         brc_mode=''
-        if [ brc_mode == 1 ]; then
+        if [ $filter_map.brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
         check_integrity --manifest_file ${manifest_dir}/manifest.json \
