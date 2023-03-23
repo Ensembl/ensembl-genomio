@@ -78,7 +78,9 @@ extract_from_gb = "ensembl.io.genomio.extract_from_gb:main"
 process_gff3 = "ensembl.io.genomio.process_gff3:main"
 manifest_maker = "ensembl.io.genomio.manifest_maker:main"
 check_integrity = "ensembl.io.genomio.integrity:main"
-
+db_factory = "ensembl.io.genomio.db_factory:main"
+seq_region_dumper = "ensembl.io.genomio.seq_region_dumper:main"
+events_dumper = "ensembl.io.genomio.events_dumper:main"
 
 [tool.setuptools]
 package-dir = {"" = "src/python"}
