@@ -1142,9 +1142,9 @@ sub circulise_coord {
   if ($coord > $length && !$circular) {
     $self->log_throw("coord behind the non-circular slice end: $msg");
   } else {
-    $self->log_warning("coord behind the non-circular slice end, circulising ( mod $length, " .int($coord % $length). "): $msg");
+    $self->log_warning("coord behind the non-circular slice end, circulising ( mod ($length + 1), " .int($coord % ($length + 1)). "): $msg");
   }
-  return $coord % $length;
+  return $coord % ($length + 1);
 }
 
 
@@ -1163,8 +1163,11 @@ sub new_exon {
 
   $self->log_throw("not a valid strand for $msg") if ($exon_strand != 1 && $exon_strand != -1);
 
-  $exon_start = $self->circulise_coord($exon_start, $slice_len, $is_circular, $msg);
-  $exon_end = $self->circulise_coord($exon_end, $slice_len, $is_circular, $msg);
+  # circulise only if seq_ergion start is not withing exon (exon[ | ]exon)
+  if ($exon_start > $slice_len) {
+    $exon_start = $self->circulise_coord($exon_start, $slice_len, $is_circular, $msg);
+    $exon_end = $self->circulise_coord($exon_end, $slice_len, $is_circular, $msg);
+  }
   
   my $exon = Bio::EnsEMBL::Exon->new(
     -stable_id     => $exon_id,
