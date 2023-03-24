@@ -1058,7 +1058,7 @@ sub new_transcript {
     
     # Other kinds of pseudogenes?
     } else {
-      die("Unrecognized pseudogene biotype: $transcript_type (gene: $gene_type)");
+      $self->log_throw("Unrecognized pseudogene biotype: $transcript_type (gene: $gene_type)");
     }
     
   # transposable_element
@@ -1136,15 +1136,42 @@ sub new_predicted_transcript {
   return $transcript;
 }
 
+
+sub circulise_coord {
+  my ($self, $coord, $length, $circular, $msg) = @_;
+  if ($coord > $length && !$circular) {
+    $self->log_throw("coord behind the non-circular slice end: $msg");
+  } else {
+    $self->log_warning("coord behind the non-circular slice end, circulising ( mod $length, " .int($coord % $length). "): $msg");
+  }
+  return $coord % $length;
+}
+
+
 sub new_exon {
   my ($self, $gff_exon, $transcript, $exon_id) = @_;
+
+  my $exon_start = $gff_exon->start;
+  my $exon_end = $gff_exon->end;
+  my $exon_strand = $gff_exon->strand;
+
+  my $is_circular = $transcript->slice->is_circular(); 
+  my $slice_len = $transcript->slice->length(); 
+  my $slice_name= $transcript->slice->name(); 
+
+  my $msg = "exon $exon_id (start $exon_start, end $exon_end, strand $exon_strand) on slice $slice_name";
+
+  $self->log_throw("not a valid strand for $msg") if ($exon_strand != 1 || $exon_strand != -1);
+
+  $exon_start = $self->circulise_coord($exon_start, $slice_len, $is_circular, $msg);
+  $exon_end = $self->circulise_coord($exon_end, $slice_len, $is_circular, $msg);
   
   my $exon = Bio::EnsEMBL::Exon->new(
     -stable_id     => $exon_id,
     -slice         => $transcript->slice,
-    -start         => $gff_exon->start,
-    -end           => $gff_exon->end,
-    -strand        => $gff_exon->strand,
+    -start         => $exon_start,
+    -end           => $exon_end,
+    -strand        => $exon_strand,
     -phase         => -1,
     -end_phase     => -1,
     -created_date  => time,
