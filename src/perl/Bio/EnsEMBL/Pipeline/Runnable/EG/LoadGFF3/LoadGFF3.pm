@@ -1161,7 +1161,7 @@ sub new_exon {
 
   my $msg = "exon $exon_id (start $exon_start, end $exon_end, strand $exon_strand) on slice $slice_name";
 
-  $self->log_throw("not a valid strand for $msg") if ($exon_strand != 1 || $exon_strand != -1);
+  $self->log_throw("not a valid strand for $msg") if ($exon_strand != 1 && $exon_strand != -1);
 
   $exon_start = $self->circulise_coord($exon_start, $slice_len, $is_circular, $msg);
   $exon_end = $self->circulise_coord($exon_end, $slice_len, $is_circular, $msg);
