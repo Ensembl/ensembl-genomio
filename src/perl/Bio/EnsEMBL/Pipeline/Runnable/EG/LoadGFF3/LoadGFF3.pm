@@ -1148,8 +1148,11 @@ sub circulise_coord {
 }
 
 
-sub new_exon {
+sub exon_coords {
   my ($self, $gff_exon, $transcript, $exon_id) = @_;
+  # gets coords from $gff_exon, wraps them for circular seq_regions
+  #   throws error for non-circular seq_regions behind the seq_region length
+  #   returns ($exon_start, $exon_end, $exon_strand)
 
   my $exon_start = $gff_exon->start;
   my $exon_end = $gff_exon->end;
@@ -1168,6 +1171,15 @@ sub new_exon {
     $exon_start = $self->circulise_coord($exon_start, $slice_len, $is_circular, $msg);
     $exon_end = $self->circulise_coord($exon_end, $slice_len, $is_circular, $msg);
   }
+
+  return ($exon_start, $exon_end, $exon_strand);
+}
+
+
+sub new_exon {
+  my ($self, $gff_exon, $transcript, $exon_id) = @_;
+
+  my ($exon_start, $exon_end, $exon_strand) = $self->exon_coords($gff_exon, $transcript, $exon_id);
   
   my $exon = Bio::EnsEMBL::Exon->new(
     -stable_id     => $exon_id,
@@ -1191,12 +1203,14 @@ sub new_predicted_exon {
   my %atts    = $gff_exon->attributes;
   my $att     = $atts{'p_value'};
   my $p_value = $$att[0];
+
+  my ($exon_start, $exon_end, $exon_strand) = $self->exon_coords($gff_exon, $transcript, "predicted");
   
   my $exon = Bio::EnsEMBL::PredictionExon->new(
     -slice   => $transcript->slice,
-    -start   => $gff_exon->start,
-    -end     => $gff_exon->end,
-    -strand  => $gff_exon->strand,
+    -start   => $exon_start,
+    -end     => $exon_end,
+    -strand  => $exon_strand,
     -phase   => -1,
     -score   => $gff_exon->score,
     -p_value => $p_value,
