@@ -14,28 +14,19 @@
 
 # pyproject.toml -- Ensembl GenomIO project configuration
 
-[build-system]
-requires = [
-    "setuptools",
-    "setuptools-scm",
-    "wheel"
-]
-build-backend = "setuptools.build_meta"
-
-
 ## Generic configuration
 [project]
 name = "ensembl-genomio"
-version = "0.1" # should be assigned dynamically in the future
-requires-python = ">= 3.7"
-
+dynamic = [
+    "version",
+]
+requires-python = ">= 3.8"
 description = "Ensembl GenomIO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
 readme = "README.md"
-
-authors = [ { name = "Ensembl", email = "dev@ensembl.org" } ]
-license = { text = "Apache License 2.0" }
-# for urls see [project.urls] below 
-
+authors = [
+    {name = "Ensembl", email = "dev@ensembl.org"},
+]
+license = {text = "Apache License 2.0"}
 keywords = [
     "genome_io",
     "ensembl",
@@ -53,8 +44,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-
 dependencies = [
+    "argschema >= 3.0.4",
     "bcbio-gff == 0.6.7",
     "biopython == 1.80",
     "jsonschema >= 4.6.0",
@@ -62,37 +53,59 @@ dependencies = [
     "mysql-connector-python >= 8.0.29",
     "python-redmine >= 2.3.0",
     "requests >= 2.28.0",
-] # see [project.optional-dependencies] for dev dependencies 
+]
 
 [project.optional-dependencies]
 dev = [
     "mock",
     "Sphinx",
+    "ensembl-py @ git+ssh://git@github.com/Ensembl/ensembl-py",
 ]
-
 doc = [
     "mock",
     "Sphinx",
 ]
-
 
 [project.urls]
 homepage = "https://www.ensembl.org"
 repository = "https://github.com/Ensembl/ensembl-genomio"
 
 
-## `setuptools` related section
 [tool.setuptools]
 package-dir = {"" = "src/python"}
+
+[tool.setuptools.dynamic]
+version = {attr = "ensembl.io.genomio.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src/python"]  # list of folders that contain the packages (["."] by default)
 
-# For additional information on `setuptools` configuration see
+# For additional information on `setuptools` configuration see:
 #    https://setuptools.pypa.io/en/latest/userguide/quickstart.html
 #    https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
 #    https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
 
+[build-system]
+requires = [
+    "setuptools",
+    "setuptools-scm",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 110
+
+[tool.pytest.ini_options]
+addopts = "-v --tb=native --server=sqlite:///"
+testpaths = ["src/python/tests"]
+norecursedirs = ["data", "docs", "*.egg_info"]
+filterwarnings = [
+    "ignore::DeprecationWarning:argschema",
+]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "src/python/ensembl"
+]
