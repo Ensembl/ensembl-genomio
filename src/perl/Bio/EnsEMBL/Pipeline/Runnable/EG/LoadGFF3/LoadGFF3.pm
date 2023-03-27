@@ -35,6 +35,7 @@ package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3;
 use strict;
 use warnings;
 use feature 'say';
+use List::Util qw/sum0/;
 
 use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 
@@ -401,9 +402,18 @@ sub add_pseudogenic_transcript {
 sub add_exons {
   my ($self, $gff_exons, $transcript, $prediction) = @_;
   
+  # force exon ranking for strange cases like transplacing or for coords > seq_region length (on circular)
+  my @outlayers = grep { $_ ->start > $transcript->slice->length } @$gff_exons;
+  my @strands = map {$_->strand} @$gff_exons;
+  my $different_strands = scalar(keys %{{ map { $_=>1 } @strands }});
+  my $force_ranking = ($different_strands > 1 || scalar(@outlayers) > 0) ? 1 : 0;
+
+  # get major trandness to deal with transspliced
+  my $strandness = sum0 @strands;
+  my $sorting = ($strandness > 0)? \&sort_genomic : \&sort_genomic_desc;
+
   my $n = 1;
-  
-  foreach my $gff_exon (sort sort_coding @$gff_exons) {
+  foreach my $gff_exon (sort $sorting @$gff_exons) {
     my $exon_id = $transcript->stable_id.'-E'.$n++;
     my $exon;
     if ($prediction) {
@@ -411,7 +421,7 @@ sub add_exons {
     } else {
       $exon = $self->new_exon($gff_exon, $transcript, $exon_id);
     }
-    $transcript->add_Exon($exon);
+    $transcript->add_Exon($exon, ($force_ranking ? $n-1 : undef));
   }
 }
 
@@ -1163,7 +1173,6 @@ sub exon_coords {
   my $slice_name= $transcript->slice->name(); 
 
   my $msg = "exon $exon_id (start $exon_start, end $exon_end, strand $exon_strand) on slice $slice_name";
-
   $self->log_throw("not a valid strand for $msg") if ($exon_strand != 1 && $exon_strand != -1);
 
   # circulise only if seq_ergion start is not withing exon (exon[ | ]exon)
@@ -1276,6 +1285,10 @@ sub sort_coding {
 
 sub sort_genomic {  
   return $a->start <=> $b->start;
+}
+
+sub sort_genomic_desc {
+  return $b->start <=> $a->start;
 }
 
 1;
