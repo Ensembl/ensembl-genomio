@@ -22,8 +22,9 @@ process process_gff3 {
 
 process gff3_validation {
 
-  beforeScript 'module load libffi-3.3-gcc-9.3.0-cgokng6'
+  //beforeScript 'module load libffi-3.3-gcc-9.3.0-cgokng6'
   label 'default'
+  container "biocontainers/genometools:v1.5.10ds-3-deb_cv1"
 
   input:
     path gene_models
