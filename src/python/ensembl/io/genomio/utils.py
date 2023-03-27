@@ -13,29 +13,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""TODO"""
 
 import json
+from os import PathLike
 from pathlib import Path
 from typing import Any
 
 
-def print_json(path: Path, data: Any) -> None:
-    """Generic data json dumper to a file.
+def print_json(json_path: PathLike, data: Any) -> None:
+    """Generic data JSON dumper to a file.
 
     Args:
-        path: Path to the json to create.
-        data: Any data to store.
+        path: Path to the JSON to create.
+        data: Any data to store into the file.
+
     """
-    with path.open("w") as json_out:
-        json_out.write(json.dumps(data, sort_keys=True, indent=4))
+    with Path(json_path).open("w") as json_file:
+        json_file.write(json.dumps(data, sort_keys=True, indent=4))
 
 
-def get_json(json_path: Path) -> Any:
-    """Generic data json loader.
+def get_json(json_path: PathLike) -> Any:
+    """Generic data JSON loader.
 
     Args:
-        path: Path to the json file to load.
+        path: Path to the JSON file to load.
+
     """
-    with json_path.open("r") as json_file:
+    with Path(json_path).open("r") as json_file:
         return json.load(json_file)
