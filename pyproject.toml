@@ -70,6 +70,8 @@ doc = [
 homepage = "https://www.ensembl.org"
 repository = "https://github.com/Ensembl/ensembl-genomio"
 
+[project.scripts]
+prepare_genome_metadata = "ensembl.io.genomio.metadata.prepare_genome:main"
 
 [tool.setuptools]
 package-dir = {"" = "src/python"}
