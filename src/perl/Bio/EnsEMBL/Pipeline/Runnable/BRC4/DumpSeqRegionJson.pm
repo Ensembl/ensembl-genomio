@@ -87,7 +87,7 @@ sub prepare_data {
           if ($db_map and $db_map->{$dbname}) {
             $dbname = $db_map->{$dbname};
           }
-          push @{$seq_region->{synonyms}}, { name => $syn->name, source => $dbname } if $syn->name and $syn->dbname;
+          push @{$seq_region->{synonyms}}, { name => $syn->name, source => $dbname } if defined $syn->name and $syn->dbname;
         }
       }
 
