@@ -12,16 +12,19 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import groovy.json.JsonSlurper
 
-def get_key_list(dict) {
-    // Add quotes around each key of the dictionary to make the list compatible with Bash
-    return "['" + dict.keySet().join("','") + "']"
-}
+include { DUMP_DB } from '../modules/dump_db.nf'
 
-def read_json(json_path) {
-    slurp = new JsonSlurper()
-    json_file = file(json_path)
-    text = json_file.text
-    return slurp.parseText(text)
+workflow DUMP_SQL {
+    take:
+        server
+        dbs
+        filter_map
+        out_dir
+
+    emit:
+        dbs
+
+    main:
+        DUMP_DB(server, dbs, out_dir)
 }

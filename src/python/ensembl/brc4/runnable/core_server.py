@@ -16,7 +16,7 @@
 
 import argparse
 import re
-from typing import List
+from typing import Dict, List
 
 import mysql.connector
 
@@ -76,7 +76,7 @@ class CoreServer:
     def get_cores(self, prefix: str = "", build: str = "", version: str = "") -> List[str]:
         """Provide a list of core databases, filtered if requested.
         Args:
-            prefix: filter by prefix (automatically followed by _)
+            prefix: filter by prefix (no _ is added automatically)
             build: filter by build
             version: filter by Ensembl version
 
@@ -88,13 +88,55 @@ class CoreServer:
         dbs = self.get_all_cores()
 
         if prefix:
-            dbs = [db for db in dbs if db.startswith(f"{prefix}_")]
+            dbs = [db for db in dbs if db.startswith(f"{prefix}")]
         if build:
             dbs = [db for db in dbs if re.search(f"_core_{build}_\d+_\d+$", db)]
         if version:
             dbs = [db for db in dbs if re.search(f"_core_\d+_{version}_\d+$", db)]
 
         return dbs
+
+    def get_db_metadata(self) -> Dict[str, List]:
+        """Retrieve all metadata from a database.
+
+        Returns:
+            A dict of with key meta_key, and value=List of meta_value.
+
+        """
+        query = "SELECT meta_key, meta_value FROM meta"
+        cursor = self.get_cursor()
+        cursor.execute(query)
+
+        metadata = {}
+        for row in cursor:
+            meta_key, meta_value = row
+            if meta_key in metadata:
+                metadata[meta_key].append(meta_value)
+            else:
+                metadata[meta_key] = [meta_value]
+
+        return metadata
+
+    def get_table_data(self, table: str, fields: List[str], constraints: str = "") -> List[Dict]:
+        """Retrieve all rows from a table.
+
+        Returns:
+            A List containing a dict for each row.
+
+        """
+        fields_str = ", ".join(fields)
+        query = f"SELECT {fields_str} FROM {table}"
+        if constraints:
+            query = f"{query} WHERE {constraints}"
+        cursor = self.get_cursor()
+        cursor.execute(query)
+
+        rows = []
+        for row in cursor:
+            row_data = dict(zip(fields, list(row)))
+            rows.append(row_data)
+
+        return rows
 
 
 if __name__ == "__main__":
