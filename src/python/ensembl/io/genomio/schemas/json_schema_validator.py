@@ -1,4 +1,3 @@
-#!env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -13,39 +12,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Validates a JSON file with the provided JSON schema."""
+
+__all__ = ["validate_json_schema"]
+
+import json
+
+import argschema
+import jsonschema
 
 
-from pathlib import Path
-
-import eHive
-from jsonschema import validate
-
-from ensembl.brc4.runnable.utils import get_json
-
-
-class schema_validator(eHive.BaseRunnable):
-    """Check a json file with a provided json schema.
+def validate_json_schema(json_file: str, json_schema: str) -> None:
+    """Validates a JSON file with the provided JSON schema.
 
     Args:
-        json_file: Path to the json to check.
-        json_schema: Dict of json schema paths.
-        metadata_type: Key to find to schema path to use from the json_schema.
+        json_file: Path to the JSON file to check.
+        json_schema: JSON schema to validate `json_file` against.
 
-    Dataflows:
-        None
     """
+    with open(json_file) as fh:
+        content = json.load(fh)
+    with open(json_schema) as fh:
+        schema = json.load(fh)
+    jsonschema.validate(instance=content, schema=schema)
 
-    def run(self):
-        json_file = Path(self.param_required("json_file"))
-        json_schemas = self.param_required("json_schema")
-        metadata_type = self.param_required("metadata_type")
 
-        if metadata_type in json_schemas:
-            json_schema = Path(json_schemas[metadata_type])
-        else:
-            raise Exception(f"Schema not defined: {metadata_type}")
+class InputSchema(argschema.ArgSchema):
+    """Input arguments expected by this script."""
 
-        file = get_json(json_file)
-        schema = get_json(json_schema)
+    json_file = argschema.fields.InputFile(required=True, metadata={"description": "JSON file to check"})
+    json_schema = argschema.fields.InputFile(
+        required=True, metadata={"description": "JSON schema to validate against"}
+    )
 
-        validate(instance=file, schema=schema)
+
+def main() -> None:
+    """Main script entry-point."""
+    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
+    validate_json_schema(mod.args["json_file"], mod.args["json_schema"])
