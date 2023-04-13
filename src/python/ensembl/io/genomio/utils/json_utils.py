@@ -19,7 +19,6 @@ __all__ = ["get_json", "print_json"]
 import json
 from os import PathLike
 from pathlib import Path
-import shutil
 from typing import Any
 
 

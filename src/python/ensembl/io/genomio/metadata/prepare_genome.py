@@ -26,7 +26,6 @@ __all__ = [
 ]
 
 import datetime
-import os
 from os import PathLike
 from pathlib import Path
 import requests
@@ -208,7 +207,7 @@ def _get_node_text(node: Element, tag: str) -> Optional[str]:
 
 def prepare_genome_metadata(
     json_path: PathLike,
-    output_dir: PathLike = "",
+    output_dir: PathLike,
     gff3_file: Optional[PathLike] = None,
     base_api_url: str = DEFAULT_API_URL,
 ) -> None:
