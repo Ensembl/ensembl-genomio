@@ -27,20 +27,31 @@ from BCBio import GFF
 import json
 
 
-def get_args():
-    """
-    Handle script arguments
-    :return: Script arguments
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--manifest_dir', help='Manifest file path', type=str, required=True)
-    parser.add_argument('-a', '--accession', help='Accession_ID', type=str, required=True)
-    parser.add_argument('-e', '--error', help='error status, True or False, Default False', default="false")
-    parser.add_argument('-dsin', '--datasets_bin', help='Datasets_bin Status', type=str, required=True)
+# def get_args():
+#     """
+#     Handle script arguments
+#     :return: Script arguments
+#     """
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('-m', '--manifest_dir', help='Manifest file path', type=str, required=True)
+#     parser.add_argument('-a', '--accession', help='Accession_ID', type=str, required=True)
+#     parser.add_argument('-e', '--error', help='error status, True or False, Default False', default="false")
+#     parser.add_argument('-dsin', '--datasets_bin', help='Datasets_bin Status', type=str, required=True)
+#
+#
+#     args = parser.parse_args()
+#     return args
 
 
-    args = parser.parse_args()
-    return args
+class InputSchema(argschema.ArgSchema): #need more metadata/'True' requirements
+    """Input arguments expected by this script."""
+    manifest_dir = argschema.fields.String(metadata={
+        "required": True, "description": "Manifest file path required"})
+    accession = argschema.fields.String(metadata={
+        "required": True, "description": "Sequence accession ID required"})
+    datasets_bin = argschema.fields.String(metadata={
+        "required": True, "description": "Datasets bin status"})
+
 
 class manifest_stats:
     def __init__(self, manifest_dir:str, accession:str, datasets_bin: str):
@@ -290,8 +301,9 @@ class manifest_stats:
         biotypes[feature_biotype]["ids"].add(feature_id)
 
 def main():
-    args = get_args()
-    manifest_stats(args.manifest_dir, args.accession, args.datasets_bin).run()
+    #args = get_args()
+    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
+    manifest_stats(mod.args["manifest_dir"], mod.args["accession"], mod.args["datasets_bin"]).run()
 
 if __name__ == "__main__":
     main()
