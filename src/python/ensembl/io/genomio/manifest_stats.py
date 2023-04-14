@@ -43,12 +43,12 @@ def get_args():
     return args
 
 class manifest_stats:
-    def __init__(self, manifest, accession, error, datasets_bin):
-        self.manifest = f'{manifest}/manifest.json'
+    def __init__(self, manifest_dir:str, accession:str, datasets_bin: str):
+        self.manifest = f'{manifest_dir}/manifest.json'
         self.accession = accession
-        self.error = error
+        self.error = False
         self.datasets_bin = datasets_bin
-        self.manifest_parent = manifest
+        self.manifest_parent = manifest_dir
 
     def param_defaults(self):
         return {
@@ -60,7 +60,7 @@ class manifest_stats:
 
         stats = [self.accession]
 
-        if self.error == 'false':
+        if not self.error:
             if "gff3" in manifest:
                 stats += self.get_gff3_stats(Path(manifest["gff3"]))
             if "seq_region" in manifest:
@@ -73,13 +73,13 @@ class manifest_stats:
             stats_out.write("\n".join(stats))
 
         # Flow out if errors in stats comparison
-        if self.error == 'true':
+        if self.error:
             raise Exception(f"Stats count errors, check the file {stats_path}")
 
     def get_manifest(self) -> Dict:
-        f_json = open(self.manifest)
-        manifest = json.load(f_json)
-        manifest_root = self.manifest_parent
+        with open(self.manifest) as f_json:
+            manifest = json.load(f_json)
+            manifest_root = self.manifest_parent
 
         # Use dir name from the manifest
         for name in manifest:
@@ -291,7 +291,7 @@ class manifest_stats:
 
 def main():
     args = get_args()
-    manifest_stats(args.manifest_dir, args.accession, args.error.lower(), args.datasets_bin).run()
+    manifest_stats(args.manifest_dir, args.accession, args.datasets_bin).run()
 
 if __name__ == "__main__":
     main()
