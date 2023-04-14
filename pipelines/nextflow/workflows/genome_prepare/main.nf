@@ -44,6 +44,10 @@ else if (params.input_dir) {
     exit 1, 'Input directory not specified!'
 }
 
+if (params.regions_to_exclude) {
+    params.regions_to_exclude_list = params.regions_to_exclude?.split(',') as List
+}
+
 
 // Import modules/subworkflows
 include { PREPARE_GENOME_METADATA } from '../../modules/prepare_genome_metadata.nf'
@@ -53,16 +57,13 @@ include { UNPACK_FILE } from '../../modules/unpack_gff3.nf'
 include { PROCESS_SEQ_REGION } from '../../modules/process_seq_region.nf'
 
 
-
-
 // Run main workflow
 workflow {
     ch_metadata_json = PREPARE_GENOME_METADATA(ch_genome_json)
     checked_jsons = CHECK_JSON_SCHEMA(ch_metadata_json)
     checked_jsons.view()
     genome_data = DOWNLOAD_ASM_DATA(checked_jsons)
-    genome_data.view()
-    // ch_process_seqregion = PROCESS_SEQ_REGION(genome_data)
-    // ch_process_seqregion.view()
+    ch_process_seqregion = PROCESS_SEQ_REGION(genome_data, params.regions_to_exclude_list)
+    ch_process_seqregion.view()
 }
 

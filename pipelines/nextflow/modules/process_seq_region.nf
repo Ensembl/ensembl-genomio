@@ -18,12 +18,14 @@ process PROCESS_SEQ_REGION {
 
     input:
     path accession_dir
+    value regions_to_exclude
 
     output:
     path "*"
 
     script:
     """
-    prepare_seq_region --json_file ${accession_dir}/genome.json
+    prepare_seq_region --genome_file ${accession_dir}/genome.json --report_file ${accession_dir}/report.txt \
+        --gbff_file ${accession_dir}/assembly.gbff.gz --to_exclude $regions_to_exclude
     """
 }
