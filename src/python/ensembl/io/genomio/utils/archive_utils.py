@@ -14,7 +14,7 @@
 # limitations under the License.
 """TODO"""
 
-__all__ = ["extract_file", "SUPPORTED_ARCHIVE_FORMATS"]
+__all__ = ["SUPPORTED_ARCHIVE_FORMATS", "extract_file"]
 
 import gzip
 from os import PathLike
