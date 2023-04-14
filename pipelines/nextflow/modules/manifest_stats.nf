@@ -1,8 +1,6 @@
 #!/usr/bin/env nextflow
 
-nextflow.enable.dsl=2 
-
-process manifeststats {
+process MANIFEST_STATS {
 	tag "manifest_stats"                  
 	label 'default'                
 	publishDir "$manifest_dir", mode: 'copy' 
@@ -17,7 +15,7 @@ output:
 
 script:
  """
- manifest_stats --manifest_dir $manifest_dir --accession $accession -dsin $datasets 
+ manifest_stats --manifest_dir $manifest_dir --accession $accession --datasets_bin $datasets 
  """
  }
  
