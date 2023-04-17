@@ -1149,12 +1149,16 @@ sub new_predicted_transcript {
 
 sub circulise_coord {
   my ($self, $coord, $length, $circular, $msg) = @_;
+  return $coord if ($coord <= $length);
+
   if ($coord > $length && !$circular) {
     $self->log_throw("coord behind the non-circular slice end: $msg");
   } else {
-    $self->log_warning("coord behind the non-circular slice end, circulising ( mod ($length + 1), " .int($coord % ($length + 1)). "): $msg");
+    # moving to 0-based coords, mod len and moving back to 1-based coords
+    $coord = int( ($coord - 1) % $length + 1 );
+    $self->log_warning("coord behind the non-circular slice end, circulising (mod $length, $coord): $msg");
   }
-  return $coord % ($length + 1);
+  return $coord;
 }
 
 
