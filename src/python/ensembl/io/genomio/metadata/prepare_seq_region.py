@@ -208,7 +208,7 @@ def get_gbff_seq_regions(gbff_path: PathLike) -> Dict[str, SeqRegion]:
     """
     seq_regions = {}
     _open = str(gbff_path).endswith(".gz") and gzip.open or open
-    with _open(str(gbff_path), "rt") as gbff_file:
+    with _open(gbff_path, "rt") as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
             seqr: SeqRegion = {"length": len(record.seq)}
             # Is the seq_region circular?
@@ -394,7 +394,7 @@ def report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
 
     """
     _open = str(report_path).endswith(".gz") and gzip.open or open
-    with _open(str(report_path), "rt") as report:
+    with _open(report_path, "rt") as report:
         data = ""
         metadata = {}
         last_head = ""
