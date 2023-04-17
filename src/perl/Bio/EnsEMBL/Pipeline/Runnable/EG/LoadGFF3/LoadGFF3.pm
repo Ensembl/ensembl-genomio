@@ -708,8 +708,30 @@ sub infer_translation {
     
     if ($transcript->strand == -1) {
       $genomic_end   -= $gff_cds[-1]->phase if defined $gff_cds[-1]->phase;
-    } else {
+    } elsif ($transcript->strand == 1) {
       $genomic_start += $gff_cds[0]->phase if defined $gff_cds[0]->phase;
+    } else { # unknow strand for trans spliced
+      # partly duplicating self::translation_coordinates
+      # order CDSs based on exon
+      my $exon = undef;
+      my @exons = @{ $transcript->get_all_Exons };
+      my $start_cds = [ $self->exon_coords($gff_cds[0], $transcript, "CDS"), "start" ]; # start, end, strand, label
+      my $end_cds = [ $self->exon_coords($gff_cds[-1], $transcript, "CDS"), "end" ];
+      for $exon (@exons) {
+        # check if there are any CDSs (with corrected coordinates within exon), assume no overlaps
+        my @filtered_cds = grep { $exon->start <= $_->[0] && $_->[1] <= $exon->end } ($start_cds, $end_cds);
+        if (@filtered_cds) {
+          # assume exon and CDS have the same strand
+          my $label = ($exon->strand == 1)? $filtered_cds[0]->[3] : $filtered_cds[-1]->[3];
+          # alter genomic_(start|end) only for closest CDSs
+          if ($label eq "start" && $exon->strand == 1) {
+            $genomic_start += $gff_cds[0]->phase if defined $gff_cds[0]->phase;
+          }
+          if ($label eq "end" && $exon->strand == -1) {
+            $genomic_end   -= $gff_cds[-1]->phase if defined $gff_cds[-1]->phase;
+          }
+        }
+      }
     }
   }
   
@@ -791,8 +813,18 @@ sub translation_coordinates {
   $seq_start  = 1;
   $seq_end    = $exons[-1]->length;
   
+  # fix seq_start, seq_end for circular seq_regions
+  my $slice_len = $transcript->slice->length();
+  my $is_circular = $transcript->slice->is_circular();
+  my $transcript_id = $transcript->stable_id;
+
+  my ($genomic_start_raw, $genomic_end_raw) = ($genomic_start, $genomic_end);
+  $genomic_start = $self->circulise_coord($genomic_start, $slice_len, $is_circular, "fixing translation_coordiantes genomic_start for $transcript_id");
+  $genomic_end = $self->circulise_coord($genomic_end, $slice_len, $is_circular, "fixing translation_coordiantes genomic_end for $transcript_id");
+
   foreach my $exon (@exons) {
-    if ($genomic_start >= $exon->start && $genomic_start <= $exon->end) {
+    if ($exon->start <= $genomic_start && $genomic_start <= $exon->end) {
+      # genomic_start (fixed coords) is within exon
       if ($exon->strand == -1) {
         $end_exon = $exon;
         $seq_end = $exon->end - $genomic_start + 1;
@@ -801,7 +833,8 @@ sub translation_coordinates {
         $seq_start = $genomic_start - $exon->start + 1;
       }
     }
-    if ($genomic_end >= $exon->start && $genomic_end <= $exon->end) {
+    # genomic_end (fixed coords) is within exon
+    if ($exon->start <= $genomic_end && $genomic_end <= $exon->end) {
       if ($exon->strand == -1) {
         $start_exon = $exon;
         $seq_start = $exon->end - $genomic_end + 1;
