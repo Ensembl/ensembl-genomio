@@ -20,6 +20,7 @@ include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
 include { JSON_SCHEMA_FACTORY } from '../modules/json_schema_factory.nf'
 include { COLLECT_FILES; MANIFEST; PUBLISH_DIR } from '../modules/collect_files.nf'
 include { CHECK_INTEGRITY } from '../modules/integrity.nf'
+include { MANIFEST_STATS } from '../modules/manifest_stats.nf'
 
 workflow additional_seq_prepare {
     take:
@@ -27,7 +28,8 @@ workflow additional_seq_prepare {
         accession
         production_name
         brc_mode
-
+    emit:
+        manifeststats_ch 
     main:
         gb_file_ch = download_genbank(accession)
         extract_from_gb(prefix, production_name, gb_file_ch)
@@ -43,4 +45,10 @@ workflow additional_seq_prepare {
         manifested_dir = MANIFEST(collect_dir, accession)
         manifest_checked = CHECK_INTEGRITY(manifested_dir, brc_mode)
         PUBLISH_DIR(manifest_checked, accession)
+        manifeststats_ch = MANIFEST_STATS(manifested_dir, accession, 'datasets')
+}
+
+workflow {
+    manifest_stats = additional_seq_prepare(params.prefix, params.accession, params.production_name, params.brc_mode)
+    manifest_stats.view()
 }

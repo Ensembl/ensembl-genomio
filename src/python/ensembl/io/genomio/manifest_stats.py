@@ -17,56 +17,86 @@
 
 import gzip
 import io
-import json
 from pathlib import Path
 from shutil import which
 from statistics import mean
 import subprocess
 from typing import Dict, List, TextIO
-
+import argparse, os
 from BCBio import GFF
-import eHive
-
-from ensembl.brc4.runnable.utils import get_json
+import json
 
 
-class manifest_stats(eHive.BaseRunnable):
+# def get_args():
+#     """
+#     Handle script arguments
+#     :return: Script arguments
+#     """
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('-m', '--manifest_dir', help='Manifest file path', type=str, required=True)
+#     parser.add_argument('-a', '--accession', help='Accession_ID', type=str, required=True)
+#     parser.add_argument('-e', '--error', help='error status, True or False, Default False', default="false")
+#     parser.add_argument('-dsin', '--datasets_bin', help='Datasets_bin Status', type=str, required=True)
+#
+#
+#     args = parser.parse_args()
+#     return args
+
+
+class InputSchema(argschema.ArgSchema): #need more metadata/'True' requirements
+    """Input arguments expected by this script."""
+    manifest_dir = argschema.fields.String(metadata={
+        "required": True, "description": "Manifest file path required"})
+    accession = argschema.fields.String(metadata={
+        "required": True, "description": "Sequence accession ID required"})
+    datasets_bin = argschema.fields.String(metadata={
+        "required": True, "description": "Datasets bin status"})
+
+
+class manifest_stats:
+    def __init__(self, manifest_dir:str, accession:str, datasets_bin: str):
+        self.manifest = f'{manifest_dir}/manifest.json'
+        self.accession = accession
+        self.error = False
+        self.datasets_bin = datasets_bin
+        self.manifest_parent = manifest_dir
 
     def param_defaults(self):
         return {
-            "datasets_bin" : "datasets",
+            "datasets_bin": "datasets",
         }
 
     def run(self):
-        manifest_path = Path(self.param_required("manifest"))
-        manifest = self.get_manifest(manifest_path)
-        
-        stats = [self.param("accession")]
+        manifest = self.get_manifest()
 
-        self.param("error", False)
-        if "gff3" in manifest:
-            stats += self.get_gff3_stats(Path(manifest["gff3"]))
-        if "seq_region" in manifest:
-            stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
-        
-        stats_path = manifest_path.parent / "stats.txt"
+        stats = [self.accession]
+
+        if not self.error:
+            if "gff3" in manifest:
+                stats += self.get_gff3_stats(Path(manifest["gff3"]))
+            if "seq_region" in manifest:
+                print(manifest)
+                stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
+
+        stats_path = f"{self.manifest_parent}/stats.txt"
         print(stats_path)
-        with stats_path.open("w") as stats_out:
+        with open(stats_path, "w") as stats_out:
             stats_out.write("\n".join(stats))
 
         # Flow out if errors in stats comparison
-        if self.param("error"):
+        if self.error:
             raise Exception(f"Stats count errors, check the file {stats_path}")
-        
-    def get_manifest(self, manifest_path: Path) -> Dict:
-        manifest = get_json(manifest_path)
-        manifest_root = manifest_path.parent
-        
+
+    def get_manifest(self) -> Dict:
+        with open(self.manifest) as f_json:
+            manifest = json.load(f_json)
+            manifest_root = self.manifest_parent
+
         # Use dir name from the manifest
         for name in manifest:
             if "file" in manifest[name]:
                 file_name = manifest[name]["file"]
-                file_name = manifest_root / file_name
+                file_name = f'{manifest_root}/{file_name}'
                 manifest[name] = file_name
             else:
                 for f in manifest[name]:
@@ -74,13 +104,15 @@ class manifest_stats(eHive.BaseRunnable):
                         file_name = manifest[name][f]["file"]
                         file_name = manifest_root, file_name
                         manifest[name][f] = file_name
-        
+
         return manifest
 
     def get_seq_region_stats(self, seq_region_path: Path) -> List:
-        
-        seq_regions = get_json(seq_region_path)
-        
+
+        json_file = open(seq_region_path, 'r')
+        seq_regions = json.load(json_file)
+
+
         # Get basic data
         coord_systems = {}
         circular = 0
@@ -95,21 +127,21 @@ class manifest_stats(eHive.BaseRunnable):
             if not coord_level in coord_systems:
                 coord_systems[coord_level] = []
             coord_systems[coord_level].append(seqr["length"])
-            
+
             if "circular" in seqr:
                 circular += 1
             if "codon_table" in seqr:
                 codon_tables.append("%s = %s" % (seqr_name, seqr["codon_table"]))
             if "location" in seqr:
                 locations.append("%s = %s" % (seqr_name, seqr["location"]))
-        
+
         # Stats
         stats = []
         stats.append(seq_region_path.name)
         stats.append("Total coord_systems %d" % len(coord_systems))
         for coord_name, lengths in coord_systems.items():
             stats.append("\nCoord_system: %s" % coord_name)
-            
+
             stat_counts = dict()
             stat_counts["Number of sequences"] = len(lengths)
             stat_counts["Sequence length sum"] = sum(lengths)
@@ -119,7 +151,7 @@ class manifest_stats(eHive.BaseRunnable):
 
             for name, count in stat_counts.items():
                 stats.append("%9d\t%s" % (count, name))
-        
+
         # Special
         if circular or locations:
             stats.append("\nSpecial")
@@ -133,13 +165,13 @@ class manifest_stats(eHive.BaseRunnable):
                 stats.append("%9d\t%s" % (len(codon_tables), "sequences with codon_table"))
                 for table in codon_tables:
                     stats.append("\t\t\t%s" % table)
-        
+
         stats.append("\n")
 
         return stats
 
     def get_gff3_stats(self, gff3_path: Path) -> List:
-        
+
         stats = []
         stats.append(gff3_path.name)
         if gff3_path.name.endswith(".gz"):
@@ -149,7 +181,7 @@ class manifest_stats(eHive.BaseRunnable):
             with gff3_path.open("r") as gff3_handle:
                 stats += self.parse_gff3(gff3_handle)
         stats.append("\n")
-        
+
         return stats
 
     def parse_gff3(self, gff3_handle: TextIO) -> List:
@@ -165,12 +197,14 @@ class manifest_stats(eHive.BaseRunnable):
                         types2 = {f.type for f in feat2.sub_features}
                         if "CDS" in types2:
                             is_protein = True
-                    manifest_stats.increment_biotype(biotypes, feat2.id,  f"{feat1.type}-{feat2.type}")
+                    manifest_stats.increment_biotype(biotypes, feat2.id, f"{feat1.type}-{feat2.type}")
                     for feat3 in feat2.sub_features:
                         if feat3.type == "exon":
                             continue
-                        manifest_stats.increment_biotype(biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}")
-                
+                        manifest_stats.increment_biotype(
+                            biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}"
+                        )
+
                 # Main categories counts
                 if feat1.type == "pseudogene":
                     manifest_stats.increment_biotype(biotypes, feat1.id, f"pseudogene")
@@ -178,38 +212,45 @@ class manifest_stats(eHive.BaseRunnable):
                     manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
                 else:
                     # Special case, undefined gene-transcript
-                    if feat1.type == "gene" and feat1.sub_features and feat1.sub_features[0].type == "transcript":
+                    if (
+                        feat1.type == "gene"
+                        and feat1.sub_features
+                        and feat1.sub_features[0].type == "transcript"
+                    ):
                         manifest_stats.increment_biotype(biotypes, feat1.id, f"OTHER")
                     else:
                         manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
-                
+
                 # Total
                 if feat1.type in ("gene", "pseudogene"):
                     manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
-                
+
         # Order
         sorted_biotypes = dict()
         for name in sorted(biotypes.keys()):
             data = biotypes[name]
             data["unique_count"] = len(data["ids"])
             sorted_biotypes[name] = data
-        
-        stats = [f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}" for (biotype, data) in sorted_biotypes.items()]
+
+        stats = [
+            f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}"
+            for (biotype, data) in sorted_biotypes.items()
+        ]
 
         # Check against NCBI stats
-        stats += self.check_ncbi_stats(biotypes, self.param("accession"))
-        
+        stats += self.check_ncbi_stats(biotypes, self.accession)
+
         return stats
-    
+
     def check_ncbi_stats(self, biotypes: Dict, accession: str) -> List:
         """Use the dataset tool from NCBI to get stats and compare with what we have"""
 
         stats = []
 
-        datasets_bin = self.param("datasets_bin")
+        datasets_bin = self.datasets_bin
         if not which(datasets_bin):
             return stats
-        
+
         # Get the dataset summary from NCBI
         command = [datasets_bin, "summary", "genome", "accession", accession]
         result_out = subprocess.run(command, stdout=subprocess.PIPE)
@@ -246,17 +287,23 @@ class manifest_stats(eHive.BaseRunnable):
             if prep_count != ncbi_count:
                 diff = prep_count - ncbi_count
                 stats.append(f"DIFF gene count for {map}: {prep_count} - {ncbi_count} = {diff}")
-                self.param("error", True)
+                self.error = True
             else:
                 stats.append(f"Same count for {map}: {prep_count}")
 
         return stats
 
-
     @staticmethod
     def increment_biotype(biotypes: Dict, feature_id: str, feature_biotype: str) -> None:
         if not feature_biotype in biotypes:
-            biotypes[feature_biotype] = { "count" : 0, "ids": set(), "example" : feature_id }
+            biotypes[feature_biotype] = {"count": 0, "ids": set(), "example": feature_id}
         biotypes[feature_biotype]["count"] += 1
         biotypes[feature_biotype]["ids"].add(feature_id)
-        
+
+def main():
+    #args = get_args()
+    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
+    manifest_stats(mod.args["manifest_dir"], mod.args["accession"], mod.args["datasets_bin"]).run()
+
+if __name__ == "__main__":
+    main()
