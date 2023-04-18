@@ -1,24 +1,6 @@
 [
   {
     "circular": true,
-    "coord_system_level": "chromosome",
-    "karyotype_bands": [],
-    "length": 402545,
-    "location": "mitochondrial_chromosome",
-    "name": "NC_039768.1",
-    "synonyms": [
-      {
-        "name": "MT",
-        "source": "INSDC_submitted_name"
-      },
-      {
-        "name": "NC_039768.1",
-        "source": "RefSeq"
-      }
-    ]
-  },
-  {
-    "circular": true,
     "codon_table": 11,
     "coord_system_level": "chromosome",
     "karyotype_bands": [],
