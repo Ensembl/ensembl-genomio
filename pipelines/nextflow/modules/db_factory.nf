@@ -12,16 +12,31 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import groovy.json.JsonSlurper
 
-def get_key_list(dict) {
-    // Add quotes around each key of the dictionary to make the list compatible with Bash
-    return "['" + dict.keySet().join("','") + "']"
-}
+process DB_FACTORY {
+    tag "DB_factory"
+    label 'default'
+    time '5min'
 
-def read_json(json_path) {
-    slurp = new JsonSlurper()
-    json_file = file(json_path)
-    text = json_file.text
-    return slurp.parseText(text)
+    input:
+        val server
+        val filter_map
+
+    output:
+        path "dbs.json"
+
+    script:
+        """
+        brc_mode=''
+        if [ $filter_map.brc_mode == 1 ]; then
+            brc_mode='--brc_mode 1'
+        fi
+        db_factory --host '${server.host}' \
+            --port '${server.port}' \
+            --user '${server.user}' \
+            --password '${server.password}' \
+            --prefix '${filter_map.prefix}' \
+            \$brc_mode \
+            --output_json dbs.json
+        """
 }

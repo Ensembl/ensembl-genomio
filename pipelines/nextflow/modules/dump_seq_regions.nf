@@ -13,19 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-process CHECK_INTEGRITY {
-    tag "${manifest_dir}"
-    label 'default'
-    errorStrategy 'finish'
-    time '1h'
+process DUMP_SEQ_REGIONS {
+    tag "${db.species}"
+    label "variable_2_8_32"
 
     input:
-        path manifest_dir
+        val server
+        val db
         val filter_map
-    
+
     output:
-        path manifest_dir
+        tuple val(db), val("seq_region"), path("seq_region.json")
 
     script:
         """
@@ -33,7 +31,13 @@ process CHECK_INTEGRITY {
         if [ $filter_map.brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
-        check_integrity --manifest_file ${manifest_dir}/manifest.json \
-            \$brc_mode
+        touch seq_region.json
+        seq_region_dumper --host '${server.host}' \
+            --port '${server.port}' \
+            --user '${server.user}' \
+            --password '${server.password}' \
+            --database '${db.database}' \
+            \$brc_mode \
+            --output_json seq_region.json
         """
 }

@@ -12,16 +12,32 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import groovy.json.JsonSlurper
 
-def get_key_list(dict) {
-    // Add quotes around each key of the dictionary to make the list compatible with Bash
-    return "['" + dict.keySet().join("','") + "']"
-}
 
-def read_json(json_path) {
-    slurp = new JsonSlurper()
-    json_file = file(json_path)
-    text = json_file.text
-    return slurp.parseText(text)
+process DUMP_EVENTS {
+    tag "${db.species}"
+    label "variable_2_8_32"
+
+    input:
+        val server
+        val db
+        val filter_map
+
+    output:
+        tuple val(db), val("events"), path("events.txt")
+
+    script:
+        """
+        brc_mode=''
+        if [ $filter_map.brc_mode == 1 ]; then
+            brc_mode='--brc_mode 1'
+        fi
+        touch "events.txt"
+        events_dumper --host '${server.host}' \
+            --port '${server.port}' \
+            --user '${server.user}' \
+            --password '${server.password}' \
+            --database '${db.database}' \
+            --output_file "events.txt"
+        """
 }

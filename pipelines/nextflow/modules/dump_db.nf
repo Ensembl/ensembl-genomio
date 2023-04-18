@@ -12,16 +12,33 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import groovy.json.JsonSlurper
 
-def get_key_list(dict) {
-    // Add quotes around each key of the dictionary to make the list compatible with Bash
-    return "['" + dict.keySet().join("','") + "']"
-}
+process DUMP_DB {
+    publishDir "$out_dir/coredb/$db.division", mode: 'copy'
+    tag "$db.species"
+    label "variable_2_8_32"
+    maxForks 10
 
-def read_json(json_path) {
-    slurp = new JsonSlurper()
-    json_file = file(json_path)
-    text = json_file.text
-    return slurp.parseText(text)
+    input:
+        val server
+        val db
+        val out_dir
+
+    output:
+        path "*.sql.gz"
+
+    script:
+        """
+        db_pass=""
+        if [ "${server.password}" != "" ]; then
+            db_pass="--password '${server.password}'"
+        fi
+
+        mysqldump '${db.database}' \
+            --host '${server.host}' \
+            --port '${server.port}' \
+            --user '${server.user}' \
+            \$db_pass \
+            | gzip > ${db.species}.sql.gz
+        """
 }
