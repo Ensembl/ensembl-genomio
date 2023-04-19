@@ -17,15 +17,18 @@ process CHECK_JSON_SCHEMA {
     label 'default'
 
     input:
+    val metadata_type
     path accession_dir
 
     output:
-    tuple val(accession), path("${accession_dir}/genome.json")
+    // tuple val(accession), path("${accession_dir}/genome.json")
+    val "$accession", emit: gca
+    path "${accession_dir}/${metadata_type}.json", emit: json_file
 
     script:
     accession = accession_dir.getName()
-    json_schema = params.json_schemas["genome"]
+    json_schema = params.json_schemas["$metadata_type"]
     """
-    check_json_schema --json_file ${accession_dir}/genome.json --json_schema $json_schema
+    check_json_schema --json_file ${accession_dir}/${metadata_type}.json --json_schema $json_schema
     """
 }
