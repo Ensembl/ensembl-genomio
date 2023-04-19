@@ -19,13 +19,18 @@ process DOWNLOAD_ASM_DATA {
     debug true
 
     input:
-    tuple val(gca), path(genome_json)
+    val(gca)
     
     output:
-    path "*"
+    val gca, emit: gca
+    path "${gca}/*_assembly_report.txt", emit: asm_report
+    path "${gca}/*_genomic.fna.gz", emit: genome_fna
+    path "${gca}/*_genomic.gbff.gz", emit: genome_gbff, optional: true
+    path "${gca}/*_genomic.gff.gz", emit: genome_gff, optional: true
+    path "${gca}/*_protein.faa.gz", emit: protein_fa, optional: true
 
     script:
     """
-    retrieve_assembly_data --accession $gca --asm_download_dir $gca
+    retrieve_assembly_data --accession $gca --asm_download_dir ./
     """
 }
