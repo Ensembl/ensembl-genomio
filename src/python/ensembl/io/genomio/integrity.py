@@ -24,7 +24,7 @@ from os import path
 from pathlib import Path
 import re
 import sys
-from typing import Dict
+from typing import Dict, List
 
 import argschema
 from BCBio import GFF
@@ -33,14 +33,18 @@ from Bio import SeqIO
 from ensembl.brc4.runnable.utils import get_json
 
 
+class InvalidIntegrityError(Exception):
+    """When a file integrity check fails"""
+
+
 class IntegrityTool:
     """Check the integrity of sequence and annotation files in the genome"""
 
     def __init__(self, manifest_file: Path, brc_mode: bool = False, ignore_final_stops: bool = False) -> None:
         self.manifest_file = manifest_file
         self.brc_mode = brc_mode
-        self.ignore_final_stop = ignore_final_stops
-        self.errors = list()
+        self.ignore_final_stops = ignore_final_stops
+        self.errors: List = []
 
     def add_error(self, error_str: str) -> None:
         self.errors += error_str
@@ -133,7 +137,7 @@ class IntegrityTool:
                 if "accession" in genome_ass:
                     genome_acc = genome_ass["accession"]
                     if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
-                        errors += ["Genome assembly accession is wrong: '%s'" % genome_acc]
+                        errors += [f"Genome assembly accession is wrong: '{genome_acc}'"]
 
         # Check gff3
         if gff:
@@ -195,9 +199,9 @@ class IntegrityTool:
 
         if errors:
             errors_str = "\n".join(errors)
-            raise Exception("Integrity test failed for %s:\n%s" % (self.manifest_path, errors_str))
+            raise InvalidIntegrityError(f"Integrity test failed for {self.manifest_file}:\n{errors_str}")
 
-    def check_md5sum(self, path, md5sum) -> None:
+    def check_md5sum(self, file_path, md5sum) -> None:
         """Verify the integrity of the files in manifest.json.
 
             An MD5 hash is generated using the path provided which is then compared to the hash
@@ -209,11 +213,11 @@ class IntegrityTool:
             md5sum: MD5 hash for the files.
         """
 
-        with open(path, "rb") as f:
-            bytes = f.read()
-            readable_hash = hashlib.md5(bytes).hexdigest()
+        with open(file_path, "rb") as f:
+            bytes_obj = f.read()
+            readable_hash = hashlib.md5(bytes_obj).hexdigest()
             if readable_hash != md5sum:
-                self.add_error(f"File {path} has a wrong md5sum")
+                self.add_error(f"File {file_path} has a wrong md5sum")
 
     def get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
         """Check if the fasta files have the correct ids and no stop codon.
@@ -250,11 +254,11 @@ class IntegrityTool:
 
         errors = []
         if empty_id_count > 0:
-            errors.append("%d sequences with empty ids in %s" % (empty_id_count, fasta_path))
+            errors.append(f"{empty_id_count} sequences with empty ids in {fasta_path}")
         if non_unique_count > 0:
-            errors.append("%d non unique sequence ids in %s" % (non_unique_count, fasta_path))
+            errors.append(f"{non_unique_count} non unique sequence ids in {fasta_path}")
         if contains_stop_codon > 0:
-            errors.append("%d sequences with stop codons in %s" % (contains_stop_codon, fasta_path))
+            errors.append(f"{contains_stop_codon} sequences with stop codons in {fasta_path}")
         return data, errors
 
     def get_functional_annotation(self, json_path):
@@ -340,9 +344,9 @@ class IntegrityTool:
                                     if pep_id not in length:
                                         length[pep_id] = 0
                                     length[pep_id] += abs(feat3.location.end - feat3.location.start)
-                            for pep_id in length:
+                            for pep_id, pep_length in length.items():
                                 # Store length for translations, add pseudo translations separately
-                                pep_length = floor(length[pep_id] / 3) - 1
+                                pep_length = floor(pep_length / 3) - 1
                                 if feat.type != "pseudogene":
                                     peps[pep_id] = pep_length
                                 all_peps[pep_id] = pep_length
@@ -427,11 +431,11 @@ class IntegrityTool:
 
         errors = []
         if common:
-            print("%d common elements in %s" % (len(common), name))
+            print(f"{len(common)} common elements in {name}")
         if only1:
-            errors.append("%d only in first list in %s (first: %s)" % (len(only1), name, only1[0]))
+            errors.append(f"{len(only1)} only in first list in {name} (first: {only1[0]})")
         if only2:
-            errors.append("%d only in second list in %s (first: %s)" % (len(only2), name, only2[0]))
+            errors.append(f"{len(only2)} only in second list in {name} (first: {only2[0]})")
 
         return errors
 
@@ -464,9 +468,9 @@ class IntegrityTool:
 
         errors = []
         if len(list1_2) > 0:
-            errors.append("%s: %d from the first list only (i.e. %s)" % (name, len(list1_2), list1_2[0]))
+            errors.append(f"{name}: {len(list1_2)} from the first list only (i.e. {list1_2[0]})")
         if len(list2_1) > 0:
-            errors.append("%s: %d from the second list only (i.e. %s)" % (name, len(list2_1), list2_1[0]))
+            errors.append(f"{name}: {len(list2_1)} from the second list only (i.e. {list2_1[0]})")
 
         common_len = 0
         if allowed_len_diff is None:
@@ -485,19 +489,23 @@ class IntegrityTool:
                     #   so assuming the stop codon is not included in the CDS (when it should be)
                     if dl12 == 1 and special_diff:
                         _dlist = diff_len_special_list
-                    _dlist.append("%s: %d vs %d" % (e, list1[e], list2[e]))
+                    _dlist.append(f"{e}: {list1[e]}, {list2[e]}")
             if diff_len_special_list:
                 errors.append(
-                    "%d common elements with one BP/AA length diff for %s (e.g. %s)"
-                    % (len(diff_len_special_list), name, diff_len_special_list[0])
+                    (
+                        f"{len(diff_len_special_list)} common elements with one BP/AA length diff for {name}"
+                        f"(e.g. {diff_len_special_list[0]})"
+                    )
                 )
             if diff_len_list:
                 errors.append(
-                    "%d common elements with length diff for %s (e.g. %s)"
-                    % (len(diff_len_list), name, diff_len_list[0])
+                    (
+                        f"{len(diff_len_list)} common elements with length diff for {name}"
+                        f"(e.g. {diff_len_list[0]})"
+                    )
                 )
         if common_len > 0:
-            print("%d common elements between lists for %s" % (common_len, name), file=sys.stderr)
+            print(f"{common_len} common elements between lists for {name}", file=sys.stderr)
 
         return errors
 
@@ -531,7 +539,7 @@ class IntegrityTool:
                 # Check that feature is within the seq_region length
                 if feats[seq_id] > seqrs[seq_id]:
                     diff.append(seq_id)
-                    diff_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
+                    diff_list.append(f"{seq_id}: {seqrs[seq_id]} vs {feats[seq_id]}")
                 else:
                     common.append(seq_id)
             else:
@@ -542,16 +550,14 @@ class IntegrityTool:
 
         errors = []
         if common:
-            print("%d common elements in %s" % (len(common), name))
+            print(f"{len(common)} common elements in {name}")
         if diff:
-            errors.append(
-                "%d common elements with higher length in %s (e.g. %s)" % (len(diff), name, diff_list[0])
-            )
+            errors.append(f"{len(diff)} common elements with higher length in {name} (e.g. {diff_list[0]})")
         if only_seqr:
             # Not an error!
-            print("%d only in seq_region list in %s (first: %s)" % (len(only_seqr), name, only_seqr[0]))
+            print(f"{len(only_seqr)} only in seq_region list in {name} (first: {only_seqr[0]})")
         if only_feat:
-            errors.append("%d only in second list in %s (first: %s)" % (len(only_feat), name, only_feat[0]))
+            errors.append(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
 
         return errors
 
