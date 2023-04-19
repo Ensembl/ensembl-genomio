@@ -21,7 +21,7 @@ import json
 from os import PathLike
 from pathlib import Path
 import shutil
-from typing import List, Union
+from typing import List
 
 import argschema
 
@@ -69,7 +69,7 @@ def json_schema_factory(manifest_dir: PathLike, metadata_types: List[str], outpu
         # Check the other JSON schemas
         for metadata_key in metadata_types:
             if metadata_key in json_files:
-                if type(json_files[metadata_key]) is dict:
+                if isinstance(json_files[metadata_key], dict):
                     for key, filepath in json_files[metadata_key].items():
                         shutil.copyfile(filepath, Path(output_dir, f"{metadata_key}_{key}.json"))
                 else:
