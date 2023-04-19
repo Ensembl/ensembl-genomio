@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-import os
 import requests
 import argschema
 
@@ -49,14 +48,13 @@ def download_genbank(accession: str) -> str:
         "retmode": "text",
     }
     e_params["id"] = accession
-    result = requests.get(e_url, params=e_params)
+    result = requests.get(e_url, params=e_params, timeout=60)
     if result and result.status_code == 200:
         with open(dl_file, "wb") as gff:
             gff.write(result.content)
         print(f"GFF file write to {dl_file}")
         return dl_file
-    else:
-        raise DownloadError(f"Could not download the genbank file: {result}")
+    raise DownloadError(f"Could not download the genbank file: {result}")
 
 
 def main() -> None:
