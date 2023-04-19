@@ -28,7 +28,9 @@ BRC4_START_DATE = datetime(2020, 5, 1)
 
 
 class UnsupportedEvent(ValueError):
-    pass
+    """If an event is not supported
+
+    """
 
 
 class StableIdEvent:
@@ -53,11 +55,15 @@ class StableIdEvent:
 
     def __init__(
         self,
-        from_list: Set[str] = set(),
-        to_list: Set[str] = set(),
+        from_list: Optional[Set[str]] = None,
+        to_list: Optional[Set[str]] = None,
         release: Optional[str] = None,
         date: Optional[datetime] = None,
     ) -> None:
+        if from_list is None:
+            from_list = set()
+        if to_list is None:
+            to_list = set()
         self.from_set = self.clean_set(from_list)
         self.to_set = self.clean_set(to_list)
         self.release = release
@@ -89,9 +95,9 @@ class StableIdEvent:
             date = "no_date"
         name = self.get_name()
         line_list = []
-        for id in self.from_set:
+        for identifier in self.from_set:
             line = [
-                id,
+                identifier,
                 name,
                 release,
                 date,
@@ -149,7 +155,7 @@ class StableIdEvent:
             The cleaned list.
 
         """
-        return set([id for id in this_list if id])
+        return {identifier for identifier in this_list if identifier}
 
     def add_from(self, from_id: str) -> None:
         """Store an id in the from_set."""
@@ -388,19 +394,19 @@ class DumpStableIDs:
             to_list[to_id] = StableIdEvent.clean_set(to_list[to_id])
 
         events: List[StableIdEvent] = []
-        for old_id in from_list:
+        for old_id, from_old_list in from_list.items():
             if not old_id or old_id not in from_list:
                 continue
-            event = StableIdEvent(set([old_id]), set(from_list[old_id]))
+            event = StableIdEvent(set([old_id]), set(from_old_list))
             (event, from_list, to_list) = self.extend_event(event, from_list, to_list)
             event.add_pairs(pairs)
             events.append(event)
 
         # Remaining events should only be new genes
-        for new_id in to_list:
+        for new_id, to_new_list in to_list.items():
             if not new_id:
                 continue
-            event = StableIdEvent(set(to_list[new_id]), set([new_id]))
+            event = StableIdEvent(set(to_new_list), set([new_id]))
             event.add_pairs(pairs)
             events.append(event)
 
@@ -413,8 +419,8 @@ class DumpStableIDs:
             else:
                 stats[name] += 1
 
-        for stat in stats:
-            print(f"\t{stat} = {stats[stat]}")
+        for stat, value in stats.items():
+            print(f"\t{stat} = {value}")
 
         return events
 
