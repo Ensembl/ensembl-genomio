@@ -57,7 +57,7 @@ class InputSchema(argschema.ArgSchema):
     )
 
 
-def format_db_data(server: CoreServer, dbs: List[str], brc_mode: False) -> List[Dict]:
+def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
     db_datas = []
     for db in dbs:
         server.set_database(db)
