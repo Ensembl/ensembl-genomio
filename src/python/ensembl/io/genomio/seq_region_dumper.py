@@ -204,7 +204,7 @@ class InputSchema(argschema.ArgSchema):
     brc_mode = argschema.fields.Bool(default=False, metadata={"description": "BRC specific output"})
 
 
-def make_mysql_url(host: str, user: str, database: str, port: str = 0, password: str = "") -> str:
+def make_mysql_url(host: str, user: str, database: str, port: int = 0, password: str = "") -> str:
     user_pass = user
     host_port = host
     if password:
@@ -221,7 +221,7 @@ def main() -> None:
     args = mod.args
 
     host = mod.args["host"]
-    port = mod.args["port"]
+    port = int(mod.args["port"])
     user = mod.args["user"]
     password = mod.args.get("password")
     database = mod.args.get("database")
