@@ -22,8 +22,7 @@ import tempfile
 import json
 import argschema
 
-from os import PathLike
-from typing import List, TextIO
+from typing import Dict, List, IO
 
 # import eHive
 from BCBio import GFF
@@ -104,14 +103,14 @@ class process_gff3:
     gene_cds_skip_others = False
     allow_pseudogene_with_CDS = False
     merge_split_genes = False
-    exclude_seq_regions = []
+    exclude_seq_regions: List = []
     validate_gene_id = True
     min_id_length = 8
     make_missing_stable_id = False
     stable_id_prefix = None
     current_stable_id_number = None
 
-    def merge_genes_gff(self, in_gff_path: Path, out_gff_fh: TextIO) -> None:
+    def merge_genes_gff(self, in_gff_path: Path, out_gff_fh: IO[str]) -> None:
         """
         Merge genes in a gff that are split in multiple lines
         """
@@ -196,7 +195,7 @@ class process_gff3:
 
         return "\t".join(new_gene) + "\n"
 
-    def simpler_gff3(self, gff3_in: TextIO, out_gff_path: Path, out_funcann_path: Path) -> None:
+    def simpler_gff3(self, gff3_in: IO[str], out_gff_path: Path, out_funcann_path: Path) -> None:
         """
         Load a GFF3 from INSDC, and rewrite it in a simpler version,
         and also write a functional_annotation file
@@ -209,11 +208,11 @@ class process_gff3:
         skip_unrecognized = self.skip_unrecognized
         to_exclude = self.exclude_seq_regions
 
-        functional_annotation = []
+        functional_annotation: List = []
 
         with out_gff_path.open("w") as gff3_out:
             new_records = []
-            fail_types = {}
+            fail_types: Dict = {}
 
             for record in GFF.parse(gff3_in):
                 new_record = SeqRecord(record.seq, id=record.id)
@@ -260,7 +259,6 @@ class process_gff3:
 
     def format_mobile_element(self, feat, functional_annotation):
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
-        quals = feat.qualifiers
 
         # Change mobile_genetic_element into a transposable_element feature
         if feat.type == "mobile_genetic_element":
@@ -298,7 +296,7 @@ class process_gff3:
 
         return feat
 
-    def normalize_gene(self, gene: SeqFeature, functional_annotation: List, fail_types: List) -> SeqFeature:
+    def normalize_gene(self, gene: SeqFeature, functional_annotation: List, fail_types: Dict) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
         Args:
@@ -627,7 +625,6 @@ class process_gff3:
 
         """
         # First, count the types
-        feats = []
         mrnas = []
         cdss = []
 
@@ -780,7 +777,7 @@ class process_gff3:
 
         """
 
-        prefixes = ("gene-", "gene:")
+        prefixes = ["gene-", "gene:"]
         new_gene_id = self.remove_prefixes(gene.id, prefixes)
 
         # In case the gene id is not valid, use the GeneID
@@ -876,7 +873,7 @@ class process_gff3:
         - Delete the ID if it is not proper
         """
 
-        prefixes = ("cds-", "cds:")
+        prefixes = ["cds-", "cds:"]
         cds_id = self.remove_prefixes(cds_id, prefixes)
 
         # Special case: if the ID doesn't look like one, remove it
@@ -927,7 +924,7 @@ class process_gff3:
         """
         for prefix in prefixes:
             if identifier.startswith(prefix):
-                identifier = identifier[len(prefix) :]
+                identifier = identifier[len(prefix):]
         return identifier
 
 
@@ -940,7 +937,7 @@ def main() -> None:
     out_funcann_path = Path("functional_annotation.json")
 
     # Merge multiline gene features
-    interim_gff_fh = tempfile.TemporaryFile(mode="w+")
+    interim_gff_fh = tempfile.TemporaryFile(mode="w+t")
     gff = process_gff3()
     gff.merge_genes_gff(in_gff_path, interim_gff_fh)
     interim_gff_fh.seek(0)
