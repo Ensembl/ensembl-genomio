@@ -58,7 +58,7 @@ class InputSchema(argschema.ArgSchema):
 
 
 def format_db_data(server: CoreServer, dbs: List[str], brc_mode: False) -> List[Dict]:
-    db_datas = list()
+    db_datas = []
     for db in dbs:
         server.set_database(db)
         metadata = server.get_db_metadata()
@@ -89,8 +89,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: False) -> List[
 def get_metadata_value(metadata, key) -> str:
     if key in metadata and len(metadata[key]) > 0:
         return metadata[key][0]
-    else:
-        return None
+    return ""
 
 
 def main() -> None:
