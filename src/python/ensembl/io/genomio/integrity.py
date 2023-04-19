@@ -330,7 +330,7 @@ class IntegrityTool:
                 if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
                     gene_id = feat.id
                     if not self.brc_mode:
-                        gene_id = feat_length
+                        gene_id = gene_id.replace("gene:", "")
                     genes[gene_id] = abs(feat.location.end - feat.location.start)
                     # Get CDS id and length
                     for feat2 in feat.sub_features:
