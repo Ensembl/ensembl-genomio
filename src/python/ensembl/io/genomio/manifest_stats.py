@@ -16,7 +16,6 @@
 
 
 import gzip
-import io
 from pathlib import Path
 from shutil import which
 from statistics import mean
@@ -158,7 +157,7 @@ class manifest_stats:
         stats = []
         stats.append(gff3_path.name)
         if gff3_path.name.endswith(".gz"):
-            with io.TextIOWrapper(gzip.open(gff3_path, "r")) as gff3_handle:
+            with gzip.open(gff3_path, "rt") as gff3_handle:
                 stats += self.parse_gff3(gff3_handle)
         else:
             with gff3_path.open("r") as gff3_handle:
