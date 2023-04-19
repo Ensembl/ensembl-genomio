@@ -53,9 +53,9 @@ class StableIdEvent:
 
     def __init__(
         self,
-        from_list: Set[str] = [],
-        to_list: Set[str] = [],
-        release: Optional[int] = None,
+        from_list: Set[str] = set(),
+        to_list: Set[str] = set(),
+        release: Optional[str] = None,
         date: Optional[datetime] = None,
     ) -> None:
         self.from_set = self.clean_set(from_list)
@@ -63,7 +63,7 @@ class StableIdEvent:
         self.release = release
         self.date = date
         self.name = ""
-        self.pairs = []
+        self.pairs: List = []
 
     def __str__(self) -> str:
         from_str = ",".join(self.from_set)
@@ -104,8 +104,8 @@ class StableIdEvent:
             line_list.append("\t".join(line))
 
         if self.get_name() == "new":
-            new_id = self.to_set[0]
-            line = (new_id, name, release, date, "", "")
+            new_id = [self.to_set][0]
+            line = [new_id, name, release, date, "", ""]
             line_list.append("\t".join(line))
         return line_list
 
@@ -361,8 +361,8 @@ class DumpStableIDs:
 
         """
 
-        from_list = {}
-        to_list = {}
+        from_list: Dict = {}
+        to_list: Dict = {}
         for pair in pairs:
             old_id = pair["old_id"]
             new_id = pair["new_id"]
@@ -391,7 +391,7 @@ class DumpStableIDs:
         for old_id in from_list:
             if not old_id or old_id not in from_list:
                 continue
-            event = StableIdEvent([old_id], from_list[old_id])
+            event = StableIdEvent(set([old_id]), set(from_list[old_id]))
             (event, from_list, to_list) = self.extend_event(event, from_list, to_list)
             event.add_pairs(pairs)
             events.append(event)
@@ -400,7 +400,7 @@ class DumpStableIDs:
         for new_id in to_list:
             if not new_id:
                 continue
-            event = StableIdEvent(to_list[new_id], [new_id])
+            event = StableIdEvent(set(to_list[new_id]), set([new_id]))
             event.add_pairs(pairs)
             events.append(event)
 
@@ -420,7 +420,7 @@ class DumpStableIDs:
 
     def extend_event(
         self, event: StableIdEvent, from_list: Dict[str, List[str]], to_list: Dict[str, List[str]]
-    ) -> Tuple[StableIdEvent, List, List]:
+    ) -> Tuple[StableIdEvent, Dict[str, List[str]], Dict[str, List[str]]]:
         """Given an event, aggregate ids in the 'from' and 'to' sets, to connect the whole group.
 
         Args:
