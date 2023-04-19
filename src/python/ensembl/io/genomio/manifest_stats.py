@@ -22,40 +22,26 @@ from shutil import which
 from statistics import mean
 import subprocess
 from typing import Dict, List, TextIO
-import argparse, os
+import argschema
 from BCBio import GFF
 import json
 
 
-# def get_args():
-#     """
-#     Handle script arguments
-#     :return: Script arguments
-#     """
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('-m', '--manifest_dir', help='Manifest file path', type=str, required=True)
-#     parser.add_argument('-a', '--accession', help='Accession_ID', type=str, required=True)
-#     parser.add_argument('-e', '--error', help='error status, True or False, Default False', default="false")
-#     parser.add_argument('-dsin', '--datasets_bin', help='Datasets_bin Status', type=str, required=True)
-#
-#
-#     args = parser.parse_args()
-#     return args
-
-
-class InputSchema(argschema.ArgSchema): #need more metadata/'True' requirements
+class InputSchema(argschema.ArgSchema):  # need more metadata/'True' requirements
     """Input arguments expected by this script."""
-    manifest_dir = argschema.fields.String(metadata={
-        "required": True, "description": "Manifest file path required"})
-    accession = argschema.fields.String(metadata={
-        "required": True, "description": "Sequence accession ID required"})
-    datasets_bin = argschema.fields.String(metadata={
-        "required": True, "description": "Datasets bin status"})
+
+    manifest_dir = argschema.fields.String(
+        metadata={"required": True, "description": "Manifest file path required"}
+    )
+    accession = argschema.fields.String(
+        metadata={"required": True, "description": "Sequence accession ID required"}
+    )
+    datasets_bin = argschema.fields.String(metadata={"required": True, "description": "Datasets bin status"})
 
 
 class manifest_stats:
-    def __init__(self, manifest_dir:str, accession:str, datasets_bin: str):
-        self.manifest = f'{manifest_dir}/manifest.json'
+    def __init__(self, manifest_dir: str, accession: str, datasets_bin: str):
+        self.manifest = f"{manifest_dir}/manifest.json"
         self.accession = accession
         self.error = False
         self.datasets_bin = datasets_bin
@@ -96,7 +82,7 @@ class manifest_stats:
         for name in manifest:
             if "file" in manifest[name]:
                 file_name = manifest[name]["file"]
-                file_name = f'{manifest_root}/{file_name}'
+                file_name = f"{manifest_root}/{file_name}"
                 manifest[name] = file_name
             else:
                 for f in manifest[name]:
@@ -108,13 +94,11 @@ class manifest_stats:
         return manifest
 
     def get_seq_region_stats(self, seq_region_path: Path) -> List:
-
-        json_file = open(seq_region_path, 'r')
+        json_file = open(seq_region_path, "r")
         seq_regions = json.load(json_file)
 
-
         # Get basic data
-        coord_systems = {}
+        coord_systems: Dict = {}
         circular = 0
         locations = []
         codon_tables = []
@@ -124,7 +108,7 @@ class manifest_stats:
             seqr_name = genbank and genbank[0]["name"] or seqr["name"]
 
             coord_level = seqr["coord_system_level"]
-            if not coord_level in coord_systems:
+            if coord_level not in coord_systems:
                 coord_systems[coord_level] = []
             coord_systems[coord_level].append(seqr["length"])
 
@@ -171,7 +155,6 @@ class manifest_stats:
         return stats
 
     def get_gff3_stats(self, gff3_path: Path) -> List:
-
         stats = []
         stats.append(gff3_path.name)
         if gff3_path.name.endswith(".gz"):
@@ -185,7 +168,7 @@ class manifest_stats:
         return stats
 
     def parse_gff3(self, gff3_handle: TextIO) -> List:
-        biotypes = {}
+        biotypes: Dict = {}
 
         for rec in GFF.parse(gff3_handle):
             for feat1 in rec.features:
@@ -207,7 +190,7 @@ class manifest_stats:
 
                 # Main categories counts
                 if feat1.type == "pseudogene":
-                    manifest_stats.increment_biotype(biotypes, feat1.id, f"pseudogene")
+                    manifest_stats.increment_biotype(biotypes, feat1.id, "pseudogene")
                 elif is_protein:
                     manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
                 else:
@@ -217,7 +200,7 @@ class manifest_stats:
                         and feat1.sub_features
                         and feat1.sub_features[0].type == "transcript"
                     ):
-                        manifest_stats.increment_biotype(biotypes, feat1.id, f"OTHER")
+                        manifest_stats.increment_biotype(biotypes, feat1.id, "OTHER")
                     else:
                         manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
 
@@ -245,7 +228,7 @@ class manifest_stats:
     def check_ncbi_stats(self, biotypes: Dict, accession: str) -> List:
         """Use the dataset tool from NCBI to get stats and compare with what we have"""
 
-        stats = []
+        stats: List = []
 
         datasets_bin = self.datasets_bin
         if not which(datasets_bin):
@@ -295,15 +278,17 @@ class manifest_stats:
 
     @staticmethod
     def increment_biotype(biotypes: Dict, feature_id: str, feature_biotype: str) -> None:
-        if not feature_biotype in biotypes:
+        if feature_biotype not in biotypes:
             biotypes[feature_biotype] = {"count": 0, "ids": set(), "example": feature_id}
         biotypes[feature_biotype]["count"] += 1
         biotypes[feature_biotype]["ids"].add(feature_id)
 
+
 def main():
-    #args = get_args()
+    # args = get_args()
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     manifest_stats(mod.args["manifest_dir"], mod.args["accession"], mod.args["datasets_bin"]).run()
+
 
 if __name__ == "__main__":
     main()
