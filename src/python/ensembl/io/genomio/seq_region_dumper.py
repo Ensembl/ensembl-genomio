@@ -59,18 +59,19 @@ def get_coord_systems(session: Session) -> List[CoordSystem]:
 
 
 def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
-
     coord_systems = get_coord_systems(session)
     seq_regions = []
 
     for coord_system in coord_systems:
         print(f"Dump coord {coord_system.name}")
-        seqr_stmt = select(SeqRegion).where(
-            SeqRegion.coord_system_id == coord_system.coord_system_id
-        ).options(
-            joinedload(SeqRegion.seq_region_synonym).joinedload(SeqRegionSynonym.external_db),
-            joinedload(SeqRegion.seq_region_attrib).joinedload(SeqRegionAttrib.attrib_type),
-            joinedload(SeqRegion.karyotype),
+        seqr_stmt = (
+            select(SeqRegion)
+            .where(SeqRegion.coord_system_id == coord_system.coord_system_id)
+            .options(
+                joinedload(SeqRegion.seq_region_synonym).joinedload(SeqRegionSynonym.external_db),
+                joinedload(SeqRegion.seq_region_attrib).joinedload(SeqRegionAttrib.attrib_type),
+                joinedload(SeqRegion.karyotype),
+            )
         )
         for row in session.execute(seqr_stmt).unique().all():
             seqr: SeqRegion = row[0]
@@ -93,7 +94,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
             karyotype = get_karyotype(seqr)
             if karyotype:
                 seq_region["karyotype_bands"] = karyotype
-            
+
             if "coord_system_tag" not in seq_region:
                 seq_region["coord_system_level"] = coord_system.name
 
@@ -150,7 +151,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
             else:
                 syn_obj = {"name": syn.synonym}
             syns.append(syn_obj)
-    
+
     syns = sorted(syns, key=lambda syn: (syn["name"], syn.get("source", "")))
     return syns
 
@@ -179,7 +180,7 @@ def get_karyotype(seq_region: SeqRegion) -> List:
                 if structure:
                     kar["structure"] = structure
             kars.append(kar)
-    
+
     kars = sorted(kars, key=lambda kar: kar["name"])
     return kars
 
