@@ -22,20 +22,24 @@ import argschema
 
 class DownloadError(Exception):
     """In case a download failed."""
+
     def __init__(self, msg):
         self.msg = msg
 
+
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
-    accession = argschema.fields.String(metadata={
-        "required": True, "description": "Sequence accession required"
-    })
-    
+
+    accession = argschema.fields.String(
+        metadata={"required": True, "description": "Sequence accession required"}
+    )
+
+
 def download_genbank(accession: str) -> str:
     """
     Given a GenBank accession, download the corresponding file in GenBank format
     """
-    dl_file= accession + '.gb'
+    dl_file = accession + ".gb"
 
     # Get the list of assemblies for this accession
     e_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
@@ -53,14 +57,14 @@ def download_genbank(accession: str) -> str:
         return dl_file
     else:
         raise DownloadError(f"Could not download the genbank file: {result}")
-    
+
+
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    accession=mod.args["accession"]
+    accession = mod.args["accession"]
     download_genbank(accession)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
-
