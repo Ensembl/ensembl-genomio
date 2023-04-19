@@ -15,8 +15,7 @@
 # limitations under the License.
 
 
-import re, sys, argparse
-import os, json
+import json
 import argschema
 
 from Bio import SeqIO
@@ -24,10 +23,9 @@ from Bio import GenBank
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.SeqFeature import SeqFeature, FeatureLocation
+from Bio.SeqFeature import SeqFeature
 from BCBio import GFF
 
-import tempfile
 from collections import Counter
 
 
@@ -59,7 +57,8 @@ def extract_gb(prefix, prod_name, gb_file):
 
 class FormattedFilesGenerator:
     """
-    Contains a parser to load data from a file, and output a set of files that follow our schema for input into a core database
+    Contains a parser to load data from a file, and output a set of files that follow our schema
+    for input into a core database
     """
 
     locations = {
@@ -135,7 +134,7 @@ class FormattedFilesGenerator:
                 for q in record.features[0].qualifiers:
                     if q.key == "/organelle=":
                         organelle = q.value.replace('"', "")
-                        organella[record.version] = organelle
+                        organella[accession] = organelle
         return organella
 
     def _write_fasta_dna(self):
@@ -269,7 +268,11 @@ class FormattedFilesGenerator:
             codon_table = self._get_codon_table(seq)
             if not codon_table:
                 print(
-                    f"Warning: No codon table found. Make sure to change the codon table number in {self.seq_region_json} manually if it is not the standard codon table"
+                    (
+                        "Warning: No codon table found."
+                        f"Make sure to change the codon table number in {self.seq_region_json} manually"
+                        "if it is not the standard codon table"
+                    )
                 )
 
                 codon_table = 1
@@ -286,7 +289,11 @@ class FormattedFilesGenerator:
                 seq_obj["location"] = self._prepare_location(seq.organelle)
                 if not codon_table:
                     print(
-                        f"Warning: '{seq.organelle}' is an organelle: make sure to change the codon table number in {self.seq_region_json} manually if it is not the standard codon table"
+                        (
+                            f"Warning: '{seq.organelle}' is an organelle:"
+                            f"make sure to change the codon table number in {self.seq_region_json} manually"
+                            "if it is not the standard codon table"
+                        )
                     )
 
             # Additional attributes for Ensembl
