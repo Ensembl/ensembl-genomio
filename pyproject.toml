@@ -57,10 +57,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "black",
+    "ensembl-py @ git+ssh://git@github.com/Ensembl/ensembl-py",
     "mock",
+    "mypy",
+    "pylint",
+    "pytest",
     "Sphinx",
     "toml-validator",
-    "ensembl-py @ git+ssh://git@github.com/Ensembl/ensembl-py",
+    "types-requests",
 ]
 doc = [
     "mock",
@@ -108,6 +113,27 @@ build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 110
+
+[tool.pylint.main]
+max-line-length = 110
+disable = [
+    "invalid-name",
+    "similarities",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-statements",
+    "unspecified-encoding",
+    "wildcard-import",
+]
+
+[tool.mypy]
+python_version = 3.8
+mypy_path = "src/python"
+explicit_package_bases = true
+ignore_missing_imports = true
+show_error_codes = true
+warn_unused_configs = true
 
 [tool.pytest.ini_options]
 addopts = "-v --tb=native --server=sqlite:///"
