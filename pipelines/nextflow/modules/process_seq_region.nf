@@ -15,17 +15,23 @@
 
 process PROCESS_SEQ_REGION {
     label 'default'
+    tag "$gca - $task.attempt"
+    debug true
 
     input:
-    path accession_dir
-    value regions_to_exclude
+    val gca
+    path genome_json
+    path assembly_report
+    path gbff_file
+    // val regions_to_exclude
 
     output:
     path "*"
 
     script:
     """
-    prepare_seq_region --genome_file ${accession_dir}/genome.json --report_file ${accession_dir}/report.txt \
-        --gbff_file ${accession_dir}/assembly.gbff.gz --to_exclude $regions_to_exclude
+    prepare_seq_region --genome_file ${genome_json} --report_file ${assembly_report} \
+        --gbff_file ${gbff_file} --dst_dir ${gca}
     """
+    // --to_exclude ${regions_to_exclude}
 }

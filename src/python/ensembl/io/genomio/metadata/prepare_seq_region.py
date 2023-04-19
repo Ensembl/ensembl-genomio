@@ -453,7 +453,7 @@ def prepare_seq_region_metadata(
     else:
         seq_regions = list(report_regions.values())
     # Exclude seq_regions from a list
-    if to_exclude:
+    if to_exclude is not None:
         seq_regions = exclude_seq_regions(seq_regions, to_exclude)
     # Setup the BRC4_seq_region_name
     if brc4_mode:
@@ -490,7 +490,7 @@ class InputSchema(argschema.ArgSchema):
     )
     to_exclude = argschema.fields.String(
         required=False,
-        dump_default=None,
+        dump_default="None",
         metadata={"description": "Sequence region names to exclude, in a list-like string"},
     )
 
