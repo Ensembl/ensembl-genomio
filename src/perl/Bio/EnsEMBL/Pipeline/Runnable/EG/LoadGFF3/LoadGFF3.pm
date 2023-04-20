@@ -255,6 +255,7 @@ sub load_genes {
     
     $self->add_transcripts($db, $ga, $pta, $gff_gene, $gene);
     $self->set_pseudogene($ga, $gene);
+    $self->update_gene_coords_based_on_transcripts_on_circular_sr($gene, $ga);
   }
 
   $dba->dbc->disconnect_if_idle();
@@ -399,6 +400,55 @@ sub add_pseudogenic_transcript {
   return $transcript;
 }
 
+sub update_gene_coords_based_on_transcripts_on_circular_sr {
+  my ($self, $gene, $ga) = @_;
+
+  # fixing only on circular seq_regions
+  return if (!$gene->slice->is_circular);
+  
+  # we can assume that we work with the top-level seq_regions,
+  #   thus Gene::start/end and Gene::seq_region_start/end are equivalent
+  my ($gene_start, $gene_end) = ( $gene->start, $gene->end );
+  $gene->recalculate_coordinates();
+  if ($gene_start != $gene->start || $gene_end != $gene->end) {
+    # ideally, just call
+    #   $ga->update_coords($gene);
+    # unfortunately this doesn't work for circular seq_regions
+    # ( Gene::seq_region_start/end uses BaseFeatureAdaptor::_seq_region_boundary_from_db failback for circular regions )
+    # going vanila SQL update way
+    $self->update_gene_seq_region_coords_from_coords($gene, $ga);
+  }
+}
+
+sub update_gene_seq_region_coords_from_coords {
+  my ($self, $gene, $ga) = @_;
+
+  return if !$gene;
+  
+  # if not circular use the default mechanism
+  if (!$gene->slice->is_circular) {
+    $ga->update_coords($gene);
+    return;
+  }
+
+  # for circular
+  #   (copied from Bio::EnsEMBL::DBSQL::GeneAdaptor::update_coords)
+  my $update_sql = qq(
+    UPDATE gene
+       SET seq_region_start = ?,
+           seq_region_end = ?
+       WHERE gene_id = ?
+    );
+  
+  # we can assume that we work with the top-level seq_regions,
+  #   thus Gene::start/end and Gene::seq_region_start/end are equivalent
+  my $sth = $ga->prepare($update_sql);
+  $sth->bind_param(1, $gene->start); # ~ seq_region_start
+  $sth->bind_param(2, $gene->end); # ~ seq_region_end
+  $sth->bind_param(3, $gene->dbID);
+  $sth->execute();
+}
+
 sub add_exons {
   my ($self, $gff_exons, $transcript, $prediction) = @_;
   
@@ -489,8 +539,6 @@ sub add_translation {
 sub common_prefix {
   my ($self, $name, @names) = @_;
   return $name if (!@names);
-
-  # TODO: benchmark trie variant
 
   ($name, @names) = keys %{{ map { $_ => 1 } ($name, @names) }};
   return $name if (!@names);
