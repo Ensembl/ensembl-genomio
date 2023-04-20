@@ -742,6 +742,8 @@ sub infer_exons {
 }
 
 sub infer_translation {
+  # produce ($genomic_start, $genomic_end) to be used by translation_coordinates
+  # to infer offsets withing start / end exons
   my ($self, $gff_transcript, $transcript) = @_;
   
   my ($genomic_start, $genomic_end);
@@ -759,19 +761,26 @@ sub infer_translation {
     } elsif ($transcript->strand == 1) {
       $genomic_start += $gff_cds[0]->phase if defined $gff_cds[0]->phase;
     } else { # unknow strand for trans spliced
-      # partly duplicating self::translation_coordinates
-      # order CDSs based on exon
-      my $exon = undef;
-      my @exons = @{ $transcript->get_all_Exons };
+      # (partly duplicating self::translation_coordinates)
+      # pick first "[0]" / last "[-1]" CDSs parts from unadjusted (genomically sorted) list of CDS
+      
+      # but because we're are to iterate through adjusted exon (sort_coding) we need to adjust (circulise) CDS coordinates
       my $start_cds = [ $self->exon_coords($gff_cds[0], $transcript, "CDS"), "start" ]; # start, end, strand, label
       my $end_cds = [ $self->exon_coords($gff_cds[-1], $transcript, "CDS"), "end" ];
-      for $exon (@exons) {
-        # check if there are any CDSs (with corrected coordinates within exon), assume no overlaps
+
+      # find out which exon has firs or last CDS part
+      # and adjust phase if there's a need
+      my @exons = @{ $transcript->get_all_Exons };
+      for my $exon (@exons) {
+        # check if there are any CDSs withing the current exon
         my @filtered_cds = grep { $exon->start <= $_->[0] && $_->[1] <= $exon->end } ($start_cds, $end_cds);
+
+        # if we have one -- translation starts (or ends)
         if (@filtered_cds) {
-          # assume exon and CDS have the same strand
+          # update start/end based on label (assume exon and CDS have the same strand)
           my $label = ($exon->strand == 1)? $filtered_cds[0]->[3] : $filtered_cds[-1]->[3];
-          # alter genomic_(start|end) only for closest CDSs
+           
+          # alter genomic_(start|end) only for "closest" CDSs
           if ($label eq "start" && $exon->strand == 1) {
             $genomic_start += $gff_cds[0]->phase if defined $gff_cds[0]->phase;
           }
@@ -902,14 +911,25 @@ sub set_exon_phase {
   my ($phase, $end_phase) = (undef, undef);
   my $exons = $transcript->get_all_Exons;
   my $translation = $transcript->translation;
+
+  my $coding_region_start = $transcript->coding_region_start();
+  my $coding_region_end = $transcript->coding_region_end();
+  return if (!defined $coding_region_start);
   
   # The phase and end_phase have defaults of -1, so only need to change
   # these when dealing with coding regions. The exons are automatically
   # returned in 5' -> 3' order.
-  my $start_exon = 1;
+  my $fixed_start_phase = 0;
+  my $translatable = 0;
   foreach my $exon (@{$exons}) {
-    if (defined $exon->coding_region_start($transcript)) {
-      if ($start_exon) {
+    # find if translation starts / ends within this exon
+    my $started = $exon->start <= $coding_region_start && $coding_region_start <= $exon->end;
+    my $ended = $exon->start <= $coding_region_end && $coding_region_end <= $exon->end;
+    
+    # with weird circular stuff not sure what we see first
+    $translatable ^= 1 if ($started || $ended);
+    if ($translatable || $started || $ended) {
+      if (!$fixed_start_phase) {
         if ($translation->start == 1) {
           $phase = 0;
           $end_phase = ($exon->length) % 3;
@@ -917,16 +937,21 @@ sub set_exon_phase {
           $phase = -1;
           my $offset = $translation->start - 1;
           $end_phase = ($exon->length - $offset) % 3;
-        }
-        $start_exon = 0;
+        } # translation start else
+        $fixed_start_phase = 1;
       } else {
+        # if already fixed start phase
         $end_phase = ($phase + $exon->length) % 3;
       }
+      # for any exon
       $exon->phase($phase);
       $exon->end_phase($end_phase);
       $phase = $end_phase;
-    }
-  }
+    } # $translatable
+
+    # mark everything else as not translatable
+    $translatable = 0 if ($started && $ended); # same start & end exon
+  } # foreach exon
   
   # End phase of -1 is conditional on there being a 3' UTR.
   if ($translation->end < $translation->end_Exon->length) {
