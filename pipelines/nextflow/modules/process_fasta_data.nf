@@ -1,3 +1,4 @@
+
 // See the NOTICE file distributed with this work for additional information
 // regarding copyright ownership.
 //
@@ -13,25 +14,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process PROCESS_SEQ_REGION {
+process PROCESS_FASTA {
     label 'default'
-    tag "$gca - $task.attempt"
-    debug true
 
     input:
-    path genome_json
-    path assembly_report
+    path fasta_file
     path gbff_file
     val gca
-    // val regions_to_exclude
+    val pep_mode
 
     output:
-    path "*"
+    val gca, emit: gca
+    path "${gca}/*.fa", emit: processed_fasta
 
     script:
     """
-    prepare_seq_region --genome_file ${genome_json} --report_file ${assembly_report} \
-        --gbff_file ${gbff_file} --dst_dir ${gca}
+    prep_fasta_data --fasta_infile ${fasta_file} --genbank_infile ${gbff_file} --output_dir "${gca}" --peptide_mode ${pep_mode}
     """
-    // --to_exclude ${regions_to_exclude}
 }

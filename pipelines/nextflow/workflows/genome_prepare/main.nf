@@ -56,7 +56,8 @@ include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_SEQREG } from '../../modules/ch
 include { DOWNLOAD_ASM_DATA } from '../../modules/download_asm_data.nf'
 include { UNPACK_FILE } from '../../modules/unpack_gff3.nf'
 include { PROCESS_SEQ_REGION } from '../../modules/process_seq_region.nf'
-
+include { PROCESS_FASTA as PROCESS_FASTA_DNA } from '../../modules/process_fasta_data.nf'
+include { PROCESS_FASTA as PROCESS_FASTA_PEP } from '../../modules/process_fasta_data.nf'
 
 // Run main workflow
 workflow {
@@ -66,10 +67,12 @@ workflow {
     // DOWNLOAD_ASM_DATA.out.asm_report.view()
     // DOWNLOAD_ASM_DATA.out.genome_fna.view()
     // DOWNLOAD_ASM_DATA.out.asm_report.view()
-    ch_process_seqregion = PROCESS_SEQ_REGION(DOWNLOAD_ASM_DATA.out.gca, CHECK_JSON_SCHEMA_GENOME.out.json_file, DOWNLOAD_ASM_DATA.out.asm_report, DOWNLOAD_ASM_DATA.out.genome_gbff)
+    ch_process_seqregion = PROCESS_SEQ_REGION(CHECK_JSON_SCHEMA_GENOME.out.json_file, DOWNLOAD_ASM_DATA.out.asm_report, DOWNLOAD_ASM_DATA.out.genome_gbff, DOWNLOAD_ASM_DATA.out.gca)
     // ch_process_seqregion.view()
     CHECK_JSON_SCHEMA_SEQREG('seq_region', ch_process_seqregion)
     // CHECK_JSON_SCHEMA_SEQREG.out.gca.view()
     // CHECK_JSON_SCHEMA_SEQREG.out.json_file.view()
+    PROCESS_FASTA_DNA(DOWNLOAD_ASM_DATA.out.genome_fna, DOWNLOAD_ASM_DATA.out.genome_gbff, CHECK_JSON_SCHEMA_SEQREG.out.gca, '0')
+    PROCESS_FASTA_DNA.out.processed_fasta.view()
 }
 
