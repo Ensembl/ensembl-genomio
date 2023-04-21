@@ -914,7 +914,15 @@ sub set_exon_phase {
 
   my $coding_region_start = $transcript->coding_region_start();
   my $coding_region_end = $transcript->coding_region_end();
-  return if (!defined $coding_region_start);
+  return if (!defined $coding_region_start || !defined $coding_region_end);
+
+  # warn if Transcript::coding_region_start invariant
+  #   "By convention, the coding_region_start is always lower than the value returned by the coding_end method"
+  # is broken
+  # https://github.com/Ensembl/ensembl/blob/ae2dd9f7392c152c1aa07fa70c7eca4416fc1171/modules/Bio/EnsEMBL/Transcript.pm#L1072
+  if ($coding_region_end < $coding_region_start) {
+    $self->log_warning("Set exon phase for transcript " . $transcript->stable_id . ": (coding_region_start <= coding_region_end) ($coding_region_start <= $coding_region_end) invariant is broken. Can be a transspliced one and/or on a circular region");
+  }
   
   # The phase and end_phase have defaults of -1, so only need to change
   # these when dealing with coding regions. The exons are automatically
