@@ -54,16 +54,27 @@ include { PREPARE_GENOME_METADATA } from '../../modules/prepare_genome_metadata.
 include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_GENOME } from '../../modules/check_json_schema.nf'
 include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_SEQREG } from '../../modules/check_json_schema.nf'
 include { DOWNLOAD_ASM_DATA } from '../../modules/download_asm_data.nf'
+include { PROCESS_GFF3; GFF3_VALIDATION } from '../../modules/process_gff3.nf'
 include { UNPACK_FILE } from '../../modules/unpack_gff3.nf'
 include { PROCESS_SEQ_REGION } from '../../modules/process_seq_region.nf'
 include { PROCESS_FASTA as PROCESS_FASTA_DNA } from '../../modules/process_fasta_data.nf'
 include { PROCESS_FASTA as PROCESS_FASTA_PEP } from '../../modules/process_fasta_data.nf'
+include { AMEND_GENOME_DATA } from '../../modules/amend_genome_data.nf'
 
 // Run main workflow
 workflow {
     ch_metadata_json = PREPARE_GENOME_METADATA(ch_genome_json)
     CHECK_JSON_SCHEMA_GENOME('genome', ch_metadata_json)
     DOWNLOAD_ASM_DATA(CHECK_JSON_SCHEMA_GENOME.out.gca)
+    if(DOWNLOAD_ASM_DATA.out.gene_gff && DOWNLOAD_ASM_DATA.out.protein_fa){
+        // println "GFF and Pep Present:"
+        unpacked_gff = UNPACK_FILE(DOWNLOAD_ASM_DATA.out.gene_gff, 'gff')
+        unpacked_gff.view()
+        PROCESS_GFF3(unpacked_gff, CHECK_JSON_SCHEMA_GENOME.out.json_file)
+        PROCESS_GFF3.out.functional_annotation.view()
+        PROCESS_FASTA_PEP(DOWNLOAD_ASM_DATA.out.protein_fa, DOWNLOAD_ASM_DATA.out.genome_gbff, CHECK_JSON_SCHEMA_GENOME.out.gca, '1')
+    }
+    CHECK_JSON_SCHEMA_GENOME.out.gca.view()
     // DOWNLOAD_ASM_DATA.out.asm_report.view()
     // DOWNLOAD_ASM_DATA.out.genome_fna.view()
     // DOWNLOAD_ASM_DATA.out.asm_report.view()
@@ -74,5 +85,7 @@ workflow {
     // CHECK_JSON_SCHEMA_SEQREG.out.json_file.view()
     PROCESS_FASTA_DNA(DOWNLOAD_ASM_DATA.out.genome_fna, DOWNLOAD_ASM_DATA.out.genome_gbff, CHECK_JSON_SCHEMA_SEQREG.out.gca, '0')
     PROCESS_FASTA_DNA.out.processed_fasta.view()
+    AMEND_GENOME_DATA(CHECK_JSON_SCHEMA_GENOME.out.json_file, DOWNLOAD_ASM_DATA.out.asm_report, DOWNLOAD_ASM_DATA.out.genome_gbff, DOWNLOAD_ASM_DATA.out.gca, params.brc4_mode)
+    AMEND_GENOME_DATA.out.amended_json.view()
 }
 
