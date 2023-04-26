@@ -28,6 +28,7 @@ process DOWNLOAD_ASM_DATA {
     path "${gca}/*_genomic.gbff.gz", emit: genome_gbff, optional: true
     path "${gca}/*_genomic.gff.gz", emit: genome_gff, optional: true
     path "${gca}/*_protein.faa.gz", emit: protein_fa, optional: true
+    path "${gca}/*.gff*", emit: gene_gff, optional: true
 
     script:
     """
