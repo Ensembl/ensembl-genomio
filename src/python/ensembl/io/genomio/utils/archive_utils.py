@@ -39,9 +39,12 @@ def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
 
     """
     extension = Path(src_file).suffix
+    file_base = src_file.strip(extension)
+    final_path = Path(dst_dir) / file_base
+
     if extension == ".gz":
         with gzip.open(src_file, "rb") as f_in:
-            with open(dst_dir, "wb") as f_out:
+            with open(final_path, "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
     elif extension in SUPPORTED_ARCHIVE_FORMATS:
         shutil.unpack_archive(src_file, dst_dir)
@@ -56,7 +59,9 @@ class InputSchema(argschema.ArgSchema):
         required=True, metadata={"description": "Path to the file to unpack"}
     )
     dst_dir = argschema.fields.OutputDir(
-        required=True, metadata={"description": "Output folder to where extract the file"}
+        required=True, 
+        dump_default=".", 
+        metadata={"description": "Output folder to where extract the file"}
     )
 
 
