@@ -125,10 +125,10 @@ def get_report_regions(report_path: str) -> List[str]:
 
 
 def amend_genomic_metadata(
-    genome_infile: str,
-    INSDC_RefSeq_report_infile: str,
-    genbank_infile: str,
-    work_dir: Optional[PathLike] = "",
+    genome_infile: PathLike,
+    INSDC_RefSeq_report_infile: Optional[PathLike],
+    genbank_infile: Optional[PathLike],
+    output_dir: PathLike,
     brc4_mode: Optional[int] = 1,
 ) -> None:
     """
@@ -136,17 +136,18 @@ def amend_genomic_metadata(
         genome_infile: Genome data following the schemas/genome_schema.json.
         INSDC_RefSeq_report_infile: Path to the INSDC/RefSeq sequences report to parse.
         genbank_infile: Path to the INSDC/RefSeq gbff file to parse.
-        work_dir: Directory where the new file will be created.
+        output_dir: Directory where the new file will be created.
         brc4_mode: Activate BRC4 mode (default).
     """
 
     # Create dedicated work dir
-    work_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Final file name
     metadata_type = "genome"
     new_file_name = f"{metadata_type}_amended.json"
-    final_path = work_dir / new_file_name
+    final_path = output_dir / new_file_name
     # use_refseq = self.param("accession").startswith("GCF_")
 
     # Get additional sequences in the assembly but not in the data
@@ -171,6 +172,11 @@ class InputSchema(argschema.ArgSchema):
     genbank_infile = argschema.fields.InputFile(
         required=False, metadata={"description": "Path to the INSDC/RefSeq gbff file to parse"}
     )
+    output_dir = argschema.fields.OutputDir(
+        required=False,
+        dump_default=".",
+        metadata={"description": "Directory where the new amended genome file will be created"},
+    )
     brc4_mode = argschema.fields.Int(required=False, metadata={"description": "Activate BRC4 mode (default)"})
 
 
@@ -181,5 +187,6 @@ def main() -> None:
         mod.args["genome_infile"],
         mod.args["INSDC_RefSeq_report_infile"],
         mod.args["genbank_infile"],
+        mod.args["output_dir"],
         mod.args["brc4_mode"],
     )
