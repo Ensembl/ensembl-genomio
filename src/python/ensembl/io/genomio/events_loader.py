@@ -47,24 +47,18 @@ class MapSession:
 def load_events(input_file: Path) -> List[IdEvent]:
     events: List[IdEvent] = []
 
-    with input_file.open('r') as events_fh:
+    with input_file.open("r") as events_fh:
         for line in events_fh:
             line.strip()
             if line == "":
                 continue
             (from_id, to_id, _, release, release_date) = line.split("\t")
-            event = IdEvent(
-                from_id=from_id,
-                to_id=to_id,
-                release=release,
-                release_date=release_date
-            )
+            event = IdEvent(from_id=from_id, to_id=to_id, release=release, release_date=release_date)
             events.append(event)
     return events
 
 
 def write_events(session: Session, events: List[IdEvent], update: bool = False) -> None:
-
     # First, create mapping_sessions based on the release
     mappings: Dict[str, MapSession] = {}
     for event in events:
@@ -74,7 +68,7 @@ def write_events(session: Session, events: List[IdEvent], update: bool = False) 
             mappings[release].add_event(event)
         else:
             mappings[release] = MapSession(release, event.release_date)
-    
+
     # Then, add the mapping, and the events for this mapping
     for release, mapping in mappings.items():
         print(f"Adding mapping for release {release} ({len(mapping.events)} events)")
@@ -107,11 +101,17 @@ class InputSchema(argschema.ArgSchema):
     user = argschema.fields.String(required=True, metadata={"description": "User to use"})
     password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
     database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
-    input_file = argschema.fields.InputFile(required=True, metadata={"description": "Input file"})
+    input_file = argschema.fields.InputFile(
+        required=True,
+        metadata={
+            "description": (
+                "Tab input events files in the format exported by the dumper:"
+                "old_id, new_id, event_name, release, date"
+            )
+        },
+    )
     update = argschema.fields.Boolean(
-        default=False,
-        required=False,
-        metadata={"description": "Set this to actually make changes to the db"}
+        default=False, required=False, metadata={"description": "Set this to actually make changes to the db"}
     )
 
 
