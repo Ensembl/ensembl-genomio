@@ -28,6 +28,7 @@ from ensembl.core.models import MappingSession, StableIdEvent
 
 @dataclass
 class IdEvent:
+    """Simple representation for the events from the input file"""
     from_id: str
     to_id: str
     release: str
@@ -35,16 +36,22 @@ class IdEvent:
 
 
 class MapSession:
+    """Simple mapping_sessions representation from the input file"""
     def __init__(self, release: str, release_date: str) -> None:
         self.release = release
         self.release_date = release_date
         self.events: List[IdEvent] = []
 
     def add_event(self, event: IdEvent) -> None:
+        """Add an event to this mapping_session"""
         self.events.append(event)
 
 
 def load_events(input_file: Path) -> List[IdEvent]:
+    """Load events from input file.
+    Expected tab file columns: old_id, new_id, event_name, release, release_date
+    
+    """
     events: List[IdEvent] = []
 
     with input_file.open("r") as events_fh:
@@ -59,6 +66,10 @@ def load_events(input_file: Path) -> List[IdEvent]:
 
 
 def write_events(session: Session, events: List[IdEvent], update: bool = False) -> None:
+    """Insert the events in the core database.
+    A mapping session is created for each different 'release'.
+    
+    """
     # First, create mapping_sessions based on the release
     mappings: Dict[str, MapSession] = {}
     for event in events:
@@ -116,6 +127,7 @@ class InputSchema(argschema.ArgSchema):
 
 
 def make_mysql_url(host: str, user: str, database: str, port: int = 0, password: str = "") -> str:
+    """Create a mysql URL given server parameters for SQLalchemy."""
     user_pass = user
     host_port = host
     if password:
