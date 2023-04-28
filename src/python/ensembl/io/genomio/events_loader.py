@@ -16,14 +16,14 @@
 
 
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 from dataclasses import dataclass
-
 
 import argschema
 from sqlalchemy.orm import Session
 
 from ensembl.database import DBConnection
+from ensembl.core.models import MappingSession, StableIdEvent
 
 
 @dataclass
@@ -32,6 +32,16 @@ class IdEvent:
     to_id: str
     release: str
     release_date: str
+
+
+class MapSession:
+    def __init__(self, release: str, release_date: str) -> None:
+        self.release = release
+        self.release_date = release_date
+        self.events: List[IdEvent] = []
+
+    def add_event(self, event: IdEvent) -> None:
+        self.events.append(event)
 
 
 def load_events(input_file: Path) -> List[IdEvent]:
@@ -53,8 +63,37 @@ def load_events(input_file: Path) -> List[IdEvent]:
     return events
 
 
-def write_events(session: Session, events: List[IdEvent]) -> None:
-    return
+def write_events(session: Session, events: List[IdEvent], update: bool = False) -> None:
+
+    # First, create mapping_sessions based on the release
+    mappings: Dict[str, MapSession] = {}
+    for event in events:
+        release = event.release
+
+        if release in mappings:
+            mappings[release].add_event(event)
+        else:
+            mappings[release] = MapSession(release, event.release_date)
+    
+    # Then, add the mapping, and the events for this mapping
+    for release, mapping in mappings.items():
+        print(f"Adding mapping for release {release} ({len(mapping.events)} events)")
+        if update:
+            map_session = MappingSession(new_release=mapping.release, created=mapping.release_date)
+            session.add(map_session)
+            session.flush()
+            session.refresh(map_session)
+            for event in mapping.events:
+                id_event = StableIdEvent(
+                    mapping_session_id=map_session.mapping_session_id,
+                    old_stable_id=event.from_id,
+                    new_stable_id=event.to_id,
+                    id_type="gene",
+                    old_version=1,
+                    new_version=1,
+                )
+                session.add(id_event)
+            session.commit()
 
 
 class InputSchema(argschema.ArgSchema):
@@ -69,6 +108,11 @@ class InputSchema(argschema.ArgSchema):
     password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
     database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
     input_file = argschema.fields.InputFile(required=True, metadata={"description": "Input file"})
+    update = argschema.fields.Boolean(
+        default=False,
+        required=False,
+        metadata={"description": "Set this to actually make changes to the db"}
+    )
 
 
 def make_mysql_url(host: str, user: str, database: str, port: int = 0, password: str = "") -> str:
@@ -101,8 +145,9 @@ def main() -> None:
     dbc = DBConnection(db_url)
 
     events = load_events(Path(mod.args.get("input_file")))
+
     with dbc.session_scope() as session:
-        write_events(session, events)
+        write_events(session, events, mod.args["update"])
 
 
 if __name__ == "__main__":
