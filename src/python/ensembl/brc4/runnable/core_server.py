@@ -107,7 +107,7 @@ class CoreServer:
         cursor = self.get_cursor()
         cursor.execute(query)
 
-        metadata: Dict = {}
+        metadata: Dict[str, List] = {}
         for row in cursor:
             meta_key, meta_value = row
             if meta_key in metadata:

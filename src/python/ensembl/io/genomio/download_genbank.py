@@ -38,7 +38,7 @@ def download_genbank(accession: str) -> str:
     """
     Given a GenBank accession, download the corresponding file in GenBank format
     """
-    dl_file = accession + ".gb"
+    dl_file = f"{accession}.gb"
 
     # Get the list of assemblies for this accession
     e_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
