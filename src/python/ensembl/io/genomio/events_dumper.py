@@ -25,12 +25,37 @@ from ensembl.brc4.runnable.core_server import CoreServer
 
 
 BRC4_START_DATE = datetime(2020, 5, 1)
+IdsList = List[str]
+DictToIdsList = Dict[str, IdsList]
+
+
+class Pair:
+    def __init__(self, old_id: Optional[str], new_id: Optional[str]) -> None:
+        """Create a pair with an old_id and a new_id if provided"""
+
+        if old_id is not None:
+            self.old_id = old_id
+        else:
+            self.old_id = ""
+        if new_id is not None:
+            self.new_id = new_id
+        else:
+            self.new_id = ""
+
+    def has_old_id(self) -> bool:
+        return self.old_id != ""
+
+    def has_new_id(self) -> bool:
+        return self.new_id != ""
+
+    def is_empty(self) -> bool:
+        """Test if the current pair has no id."""
+
+        return not (self.has_old_id() or self.has_new_id())
 
 
 class UnsupportedEvent(ValueError):
-    """If an event is not supported
-
-    """
+    """If an event is not supported"""
 
 
 class StableIdEvent:
@@ -69,7 +94,7 @@ class StableIdEvent:
         self.release = release
         self.date = date
         self.name = ""
-        self.pairs: List = []
+        self.pairs: List[Pair] = []
 
     def __str__(self) -> str:
         from_str = ",".join(self.from_set)
@@ -135,8 +160,8 @@ class StableIdEvent:
 
         for pair in self.pairs:
             line = [
-                pair["old_id"],
-                pair["new_id"],
+                pair.old_id,
+                pair.new_id,
                 name,
                 release,
                 date,
@@ -173,21 +198,17 @@ class StableIdEvent:
     def set_date(self, date: datetime) -> None:
         self.date = date
 
-    def add_pair(self, pair: Dict) -> None:
+    def add_pair(self, pair: Pair) -> None:
         """Keeps a record of this pair.
 
         Args:
-            pair: Dictionary of pairs to record, with keys "old_id" and "new_id".
+            pair: a Pair to record.
 
         Raises:
-            ValueError: When no-empty value is provided for either "old_id" or "new_id".
+            ValueError: can't add an empty pair.
 
         """
-        if "old_id" in pair and pair["old_id"] is None:
-            pair["old_id"] = ""
-        if "new_id" in pair and pair["new_id"] is None:
-            pair["new_id"] = ""
-        if not pair["old_id"] and not pair["new_id"]:
+        if pair.is_empty():
             raise ValueError(f"Expected at least one value in the given pair {pair}")
         self.pairs.append(pair)
 
@@ -228,7 +249,7 @@ class StableIdEvent:
         if self.name != "new":
             new_pairs = []
             for pair in self.pairs:
-                if pair.get("old_id", "") == "":
+                if not pair.has_old_id():
                     continue
                 new_pairs.append(pair)
             self.pairs = new_pairs
@@ -238,21 +259,21 @@ class StableIdEvent:
         self._name_event()
         return self.name
 
-    def add_pairs(self, pairs: List[Dict[str, str]]) -> None:
+    def add_pairs(self, pairs: List[Pair]) -> None:
         """Provided all the pairs, keep those that are used by this event.
 
         Args:
-            pairs: list of pairs of ids {old_id:"", new_id:""}.
+            pairs: list of Pair.
 
         """
         for pair in pairs:
-            if (pair["old_id"] and pair["old_id"] in self.from_set) or (
-                pair["new_id"] and pair["new_id"] in self.to_set
+            if (pair.has_old_id() and pair.old_id in self.from_set) or (
+                pair.has_new_id() and pair.new_id in self.to_set
             ):
                 # Core db contains an empty line to signify that an old id has been removed
                 # in merge/split/mixed
                 name = self.get_name()
-                if (name != "deletion") and not pair["new_id"]:
+                if (name != "deletion") and not pair.has_new_id():
                     continue
                 self.add_pair(pair)
 
@@ -328,7 +349,7 @@ class DumpStableIDs:
             sessions.append(session)
         return sessions
 
-    def get_pairs(self, session_id: int) -> List[Dict]:
+    def get_pairs(self, session_id: int) -> List[Pair]:
         """Retrieve all pair of ids for a given session.
 
         Args:
@@ -351,16 +372,16 @@ class DumpStableIDs:
 
         pairs = []
         for db in cursor:
-            pair = {"old_id": db[0], "new_id": db[1]}
+            pair = Pair(old_id=db[0], new_id=db[1])
             pairs.append(pair)
         print(f"{len(pairs)} stable id events")
         return pairs
 
-    def make_events(self, pairs: List) -> List:
+    def make_events(self, pairs: List[Pair]) -> List:
         """Given a list of pairs, create events.
 
         Args:
-            pairs: list of dicts {'old_id': str, 'new_id': str}.
+            pairs: list of Pair.
 
         Return:
             A list of events.
@@ -370,8 +391,8 @@ class DumpStableIDs:
         from_list: Dict = {}
         to_list: Dict = {}
         for pair in pairs:
-            old_id = pair["old_id"]
-            new_id = pair["new_id"]
+            old_id = pair.old_id
+            new_id = pair.new_id
             if old_id is None:
                 old_id = ""
             if new_id is None:
