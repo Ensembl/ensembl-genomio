@@ -20,7 +20,7 @@ Can be imported as a module and called as a script as well, with the same parame
 
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import argschema
 
@@ -69,9 +69,9 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
         if brc_mode:
             brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
             brc_component = get_metadata_value(metadata, "BRC4.component")
-            if brc_organism:
+            if brc_organism is not None:
                 species = brc_organism
-            if brc_component:
+            if brc_component is not None:
                 division = brc_component
 
         if not division:
@@ -86,10 +86,17 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
     return db_datas
 
 
-def get_metadata_value(metadata, key) -> str:
-    if key in metadata and len(metadata[key]) > 0:
+def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:
+    """Returns the first element in the list assigned to `key` in `metadata`.
+
+    Args:
+        metadata: Map of metadata information to lists of values.
+        key: Metadata key to search for.
+
+    """
+    if (key in metadata) and metadata[key]:
         return metadata[key][0]
-    return ""
+    return None
 
 
 def main() -> None:
