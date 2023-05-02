@@ -44,7 +44,7 @@ class IntegrityTool:
         self.manifest_file = manifest_file
         self.brc_mode = brc_mode
         self.ignore_final_stops = ignore_final_stops
-        self.errors: List = []
+        self.errors: List[str] = []
 
     def add_error(self, error_str: str) -> None:
         self.errors += error_str

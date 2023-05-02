@@ -92,12 +92,12 @@ class manifest_stats:
 
         return manifest
 
-    def get_seq_region_stats(self, seq_region_path: Path) -> List:
+    def get_seq_region_stats(self, seq_region_path: Path) -> List[str]:
         json_file = open(seq_region_path, "r")
         seq_regions = json.load(json_file)
 
         # Get basic data
-        coord_systems: Dict = {}
+        coord_systems: Dict[str, List[int]] = {}
         circular = 0
         locations = []
         codon_tables = []
@@ -119,7 +119,7 @@ class manifest_stats:
                 locations.append("%s = %s" % (seqr_name, seqr["location"]))
 
         # Stats
-        stats = []
+        stats: List[str] = []
         stats.append(seq_region_path.name)
         stats.append("Total coord_systems %d" % len(coord_systems))
         for coord_name, lengths in coord_systems.items():
@@ -153,8 +153,8 @@ class manifest_stats:
 
         return stats
 
-    def get_gff3_stats(self, gff3_path: Path) -> List:
-        stats = []
+    def get_gff3_stats(self, gff3_path: Path) -> List[str]:
+        stats: List[str] = []
         stats.append(gff3_path.name)
         if gff3_path.name.endswith(".gz"):
             with gzip.open(gff3_path, "rt") as gff3_handle:
@@ -167,7 +167,7 @@ class manifest_stats:
         return stats
 
     def parse_gff3(self, gff3_handle: TextIO) -> List:
-        biotypes: Dict = {}
+        biotypes: Dict[str, Dict] = {}
 
         for rec in GFF.parse(gff3_handle):
             for feat1 in rec.features:
@@ -224,10 +224,10 @@ class manifest_stats:
 
         return stats
 
-    def check_ncbi_stats(self, biotypes: Dict, accession: str) -> List:
+    def check_ncbi_stats(self, biotypes: Dict, accession: str) -> List[str]:
         """Use the dataset tool from NCBI to get stats and compare with what we have"""
 
-        stats: List = []
+        stats: List[str] = []
 
         datasets_bin = self.datasets_bin
         if not which(datasets_bin):
@@ -249,9 +249,9 @@ class manifest_stats:
                     stats = self.compare_ncbi_counts(biotypes, counts)
         return stats
 
-    def compare_ncbi_counts(self, prepared: Dict, ncbi: Dict) -> List:
+    def compare_ncbi_counts(self, prepared: Dict, ncbi: Dict) -> List[str]:
         """Compare specific gene stats from NCBI"""
-        stats = []
+        stats: List[str] = []
 
         maps = [
             ["total", "ALL_GENES"],
