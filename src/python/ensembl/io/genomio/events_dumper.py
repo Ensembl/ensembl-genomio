@@ -15,6 +15,9 @@
 # limitations under the License.
 
 
+"""Module to dump stable id events from an Ensembl Core database"""
+
+
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Set, Tuple
@@ -30,6 +33,8 @@ DictToIdsSet = Dict[str, IdsSet]
 
 
 class Pair:
+    """Simple old_id - new_id pair representation"""
+
     def __init__(self, old_id: Optional[str], new_id: Optional[str]) -> None:
         """Create a pair with an old_id and a new_id if provided"""
 
@@ -43,9 +48,11 @@ class Pair:
             self.new_id = ""
 
     def has_old_id(self) -> bool:
+        """Check if the pair has an old_id"""
         return self.old_id != ""
 
     def has_new_id(self) -> bool:
+        """Check if the pair has a new_id"""
         return self.new_id != ""
 
     def is_empty(self) -> bool:
@@ -85,6 +92,8 @@ class StableIdEvent:
         release: Optional[str] = None,
         date: Optional[datetime] = None,
     ) -> None:
+        """Create a stable id event from a set of old_ids to a set of new_ids"""
+
         if from_list is None:
             from_list = set()
         if to_list is None:
@@ -97,6 +106,8 @@ class StableIdEvent:
         self.pairs: List[Pair] = []
 
     def __str__(self) -> str:
+        """String representation of the stable id event"""
+
         from_str = ",".join(self.from_set)
         to_str = ",".join(self.to_set)
         return f"From {from_str} to {to_str} = {self.get_name()} in release {self.release}"
@@ -193,9 +204,11 @@ class StableIdEvent:
             self.to_set.add(to_id)
 
     def set_release(self, release: str) -> None:
+        """Set the release name of the event"""
         self.release = release
 
     def set_date(self, date: datetime) -> None:
+        """Set the date of the release for this event"""
         self.date = date
 
     def add_pair(self, pair: Pair) -> None:
@@ -287,6 +300,7 @@ class DumpStableIDs:
     """
 
     def __init__(self, server: CoreServer) -> None:
+        """Create a processor for events"""
         self.server = server
 
     def get_history(self) -> List:
@@ -387,32 +401,9 @@ class DumpStableIDs:
 
         """
 
-        from_list: DictToIdsSet = {}
-        to_list: DictToIdsSet = {}
-        for pair in pairs:
-            old_id = pair.old_id
-            new_id = pair.new_id
-            if old_id is None:
-                old_id = ""
-            if new_id is None:
-                new_id = ""
+        from_list, to_list = self.get_pairs_from_to(pairs)
 
-            if old_id in from_list:
-                from_list[old_id].add(new_id)
-            else:
-                from_list[old_id] = set([new_id])
-
-            if new_id in to_list:
-                to_list[new_id].add(old_id)
-            else:
-                to_list[new_id] = set([old_id])
-
-        # Remove empty elements
-        for from_id in from_list:
-            from_list[from_id] = StableIdEvent.clean_set(from_list[from_id])
-        for to_id in to_list:
-            to_list[to_id] = StableIdEvent.clean_set(to_list[to_id])
-
+        # Create events with those 2 dicts
         events: List[StableIdEvent] = []
         for old_id, from_old_list in from_list.items():
             if not old_id or old_id not in from_list:
@@ -443,6 +434,49 @@ class DumpStableIDs:
             print(f"\t{stat} = {value}")
 
         return events
+
+    @staticmethod
+    def get_pairs_from_to(pairs: List[Pair]) -> Tuple[DictToIdsSet, DictToIdsSet]:
+        """
+        From a list of Pairs, extract a mapping of all ids from a given old id (from_list),
+        and a mapping of all ids to a given new id (to_list).
+
+        Args:
+            pairs: list of Pairs.
+
+        Return:
+             Tuple of 2 values:
+                from_list
+                to_list
+
+        """
+        from_list: DictToIdsSet = {}
+        to_list: DictToIdsSet = {}
+        for pair in pairs:
+            old_id = pair.old_id
+            new_id = pair.new_id
+            if old_id is None:
+                old_id = ""
+            if new_id is None:
+                new_id = ""
+
+            if old_id in from_list:
+                from_list[old_id].add(new_id)
+            else:
+                from_list[old_id] = set([new_id])
+
+            if new_id in to_list:
+                to_list[new_id].add(old_id)
+            else:
+                to_list[new_id] = set([old_id])
+
+        # Remove empty elements
+        for from_id in from_list:
+            from_list[from_id] = StableIdEvent.clean_set(from_list[from_id])
+        for to_id in to_list:
+            to_list[to_id] = StableIdEvent.clean_set(to_list[to_id])
+
+        return from_list, to_list
 
     def extend_event(
         self, event: StableIdEvent, from_list: DictToIdsSet, to_list: DictToIdsSet
@@ -507,6 +541,7 @@ class InputSchema(argschema.ArgSchema):
 
 
 def main() -> None:
+    """Main entrypoint"""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     args = mod.args
 
