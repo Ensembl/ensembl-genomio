@@ -25,8 +25,8 @@ from ensembl.brc4.runnable.core_server import CoreServer
 
 
 BRC4_START_DATE = datetime(2020, 5, 1)
-IdsList = List[str]
-DictToIdsList = Dict[str, IdsList]
+IdsSet = Set[str]
+DictToIdsSet = Dict[str, IdsSet]
 
 
 class Pair:
@@ -342,10 +342,9 @@ class DumpStableIDs:
         cursor = self.server.get_cursor()
         cursor.execute(query)
 
-        sessions = []
+        sessions: List[Dict[str, str]] = []
         for db in cursor:
-            date = db[2]
-            session = {"id": db[0], "release": db[1], "date": date}
+            session = {"id": db[0], "release": db[1], "date": db[2]}
             sessions.append(session)
         return sessions
 
@@ -370,7 +369,7 @@ class DumpStableIDs:
         cursor = self.server.get_cursor()
         cursor.execute(query, values)
 
-        pairs = []
+        pairs: List[Pair] = []
         for db in cursor:
             pair = Pair(old_id=db[0], new_id=db[1])
             pairs.append(pair)
@@ -388,8 +387,8 @@ class DumpStableIDs:
 
         """
 
-        from_list: Dict = {}
-        to_list: Dict = {}
+        from_list: DictToIdsSet = {}
+        to_list: DictToIdsSet = {}
         for pair in pairs:
             old_id = pair.old_id
             new_id = pair.new_id
@@ -446,8 +445,8 @@ class DumpStableIDs:
         return events
 
     def extend_event(
-        self, event: StableIdEvent, from_list: Dict[str, List[str]], to_list: Dict[str, List[str]]
-    ) -> Tuple[StableIdEvent, Dict[str, List[str]], Dict[str, List[str]]]:
+        self, event: StableIdEvent, from_list: DictToIdsSet, to_list: DictToIdsSet
+    ) -> Tuple[StableIdEvent, DictToIdsSet, DictToIdsSet]:
         """Given an event, aggregate ids in the 'from' and 'to' sets, to connect the whole group.
 
         Args:
@@ -469,7 +468,7 @@ class DumpStableIDs:
             # Extend the group in the to ids
             for to_id in event.to_set:
                 if to_id in to_list:
-                    to_from_ids: List[str] = to_list[to_id]
+                    to_from_ids: IdsSet = to_list[to_id]
                     # Add to the from list?
                     for to_from_id in to_from_ids:
                         if to_from_id not in event.from_set:
