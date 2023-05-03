@@ -19,7 +19,7 @@ from collections import Counter
 from pathlib import Path
 import re
 import tempfile
-from typing import List, TextIO
+from typing import Dict, List, TextIO
 
 import eHive
 from BCBio import GFF
@@ -131,7 +131,6 @@ class process_gff3(eHive.BaseRunnable):
 
         with in_gff_path.open("r") as gff3_in:
             for line in gff3_in:
-
                 # Skip comments
                 if line.startswith("#"):
                     out_gff_fh.write(line)
@@ -221,11 +220,11 @@ class process_gff3(eHive.BaseRunnable):
         allowed_non_gene_types = self.param("non_gene_types")
         to_exclude = self.param("exclude_seq_regions")
 
-        functional_annotation = []
+        functional_annotation: List[Dict] = []
 
         with out_gff_path.open("w") as gff3_out:
             new_records = []
-            fail_types = {}
+            fail_types: Dict[str, int] = {}
 
             for record in GFF.parse(gff3_in):
                 new_record = SeqRecord(record.seq, id=record.id)
@@ -272,7 +271,6 @@ class process_gff3(eHive.BaseRunnable):
 
     def format_mobile_element(self, feat, functional_annotation):
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
-        quals = feat.qualifiers
 
         # Change mobile_genetic_element into a transposable_element feature
         if feat.type == "mobile_genetic_element":
@@ -310,13 +308,15 @@ class process_gff3(eHive.BaseRunnable):
 
         return feat
 
-    def normalize_gene(self, gene: SeqFeature, functional_annotation: List, fail_types: List) -> SeqFeature:
+    def normalize_gene(
+        self, gene: SeqFeature, functional_annotation: List, fail_types: Dict[str, int]
+    ) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
         Args:
             gene: Gene object to normalize.
             functional_annotation: List of feature annotations (appended by this method).
-            fail_types: List of feature types that are not supported (appended by this method).
+            fail_types: Dict of feature types that are not supported, with value their number.
 
         """
 
@@ -400,7 +400,6 @@ class process_gff3(eHive.BaseRunnable):
             cds_found = False
             exons_to_delete = []
             for tcount, feat in enumerate(transcript.sub_features):
-
                 if feat.type == "exon":
                     # Replace qualifiers
                     old_exon_qualifiers = feat.qualifiers
@@ -463,7 +462,7 @@ class process_gff3(eHive.BaseRunnable):
 
         return gene
 
-    def clean_functional_annotations(self, functional_annotation: List) -> List:
+    def clean_functional_annotations(self, functional_annotation: List[Dict]) -> List:
         """Returns the functional annotations list without putative product descriptions."""
         for feat in functional_annotation:
             if "description" in feat and not self.check_product(feat["description"]):
@@ -640,7 +639,6 @@ class process_gff3(eHive.BaseRunnable):
 
         """
         # First, count the types
-        feats = []
         mrnas = []
         cdss = []
 
@@ -793,7 +791,7 @@ class process_gff3(eHive.BaseRunnable):
 
         """
 
-        prefixes = ("gene-", "gene:")
+        prefixes = ["gene-", "gene:"]
         new_gene_id = self.remove_prefixes(gene.id, prefixes)
 
         # In case the gene id is not valid, use the GeneID
@@ -801,7 +799,6 @@ class process_gff3(eHive.BaseRunnable):
             print("Gene id is not valid: %s" % new_gene_id)
             qual = gene.qualifiers
             if "Dbxref" in qual:
-
                 for xref in qual["Dbxref"]:
                     (db, value) = xref.split(":")
                     if db == "GeneID":
@@ -889,7 +886,7 @@ class process_gff3(eHive.BaseRunnable):
         - Delete the ID if it is not proper
         """
 
-        prefixes = ("cds-", "cds:")
+        prefixes = ["cds-", "cds:"]
         cds_id = self.remove_prefixes(cds_id, prefixes)
 
         # Special case: if the ID doesn't look like one, remove it
@@ -940,5 +937,5 @@ class process_gff3(eHive.BaseRunnable):
         """
         for prefix in prefixes:
             if identifier.startswith(prefix):
-                identifier = identifier[len(prefix) :]
+                identifier = identifier[len(prefix):]
         return identifier

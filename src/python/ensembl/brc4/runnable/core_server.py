@@ -16,7 +16,7 @@
 
 import argparse
 import re
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import mysql.connector
 
@@ -43,7 +43,7 @@ class CoreServer:
         self.port = port
         self.user = user
         self.password = password
-        self._connector = None
+        self._connector: Any = None
 
         # Start a connection directly
         self.connect()
@@ -90,9 +90,9 @@ class CoreServer:
         if prefix:
             dbs = [db for db in dbs if db.startswith(f"{prefix}")]
         if build:
-            dbs = [db for db in dbs if re.search(f"_core_{build}_\d+_\d+$", db)]
+            dbs = [db for db in dbs if re.search(fr"_core_{build}_\d+_\d+$", db)]
         if version:
-            dbs = [db for db in dbs if re.search(f"_core_\d+_{version}_\d+$", db)]
+            dbs = [db for db in dbs if re.search(fr"_core_\d+_{version}_\d+$", db)]
 
         return dbs
 
@@ -107,7 +107,7 @@ class CoreServer:
         cursor = self.get_cursor()
         cursor.execute(query)
 
-        metadata = {}
+        metadata: Dict[str, List] = {}
         for row in cursor:
             meta_key, meta_value = row
             if meta_key in metadata:
