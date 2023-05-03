@@ -538,7 +538,7 @@ class process_gff3:
 
         # Create a gene, add the transcript
         gene_type = "gene"
-        if "pseudo" in cds.qualifiers and cds.qualifiers["pseudo"][0] == "true":
+        if ("pseudo" in cds.qualifiers) and (cds.qualifiers["pseudo"][0] == "true"):
             gene_type = "pseudogene"
         gene = SeqFeature(cds.location, type=gene_type)
         gene.qualifiers["source"] = cds.qualifiers["source"]
