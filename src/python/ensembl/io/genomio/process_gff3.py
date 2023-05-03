@@ -19,10 +19,11 @@ from collections import Counter
 from pathlib import Path
 import re
 import tempfile
+from typing import Dict, List, IO
+
 import json
 import argschema
 
-from typing import Dict, List, IO
 
 # import eHive
 from BCBio import GFF
@@ -32,15 +33,8 @@ from Bio.SeqFeature import SeqFeature
 from ensembl.brc4.runnable.utils import print_json
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    in_gff_path = argschema.fields.InputFile(
-        metadata={"required": True, "description": "gene.gff file required"}
-    )
-    genome_data = argschema.fields.InputFile(
-        metadata={"required": True, "description": "genome.json file required"}
-    )
+class GFFParserError(Exception):
+    pass
 
 
 class process_gff3:
@@ -108,14 +102,14 @@ class process_gff3:
     min_id_length = 8
     make_missing_stable_id = False
     stable_id_prefix = None
-    current_stable_id_number = None
+    current_stable_id_number: int = 0
 
     def merge_genes_gff(self, in_gff_path: Path, out_gff_fh: IO[str]) -> None:
         """
         Merge genes in a gff that are split in multiple lines
         """
         tomerge = []
-        merged = []
+        merged: List[str] = []
 
         with in_gff_path.open("r") as gff3_in:
             for line in gff3_in:
@@ -160,8 +154,8 @@ class process_gff3:
                 out_gff_fh.write(new_line)
 
         if merged and not self.merge_split_genes:
-            count = len(merged)
-            raise Exception("%s merged genes:\n%s\n" % (count, "\n".join(merged)))
+            merged_genes_str = "\n".join(merged)
+            raise GFFParserError(f"{len(merged)} merged genes:\n{merged_genes_str}\n")
 
     def merge_genes(self, tomerge: List) -> str:
         """Returns a single gene gff3 line merged from separate parts.
@@ -174,7 +168,7 @@ class process_gff3:
         min_start = -1
         max_end = -1
         for gene in tomerge:
-            print("Merge part: %s" % gene[8])
+            print(f"Merge part: {gene[8]}")
             start = int(gene[3])
             end = int(gene[4])
 
@@ -225,7 +219,7 @@ class process_gff3:
                     # Skip or format depending on the feature type
                     if feat.type in ignored_gene_types:
                         continue
-                    elif feat.type in transcript_types:
+                    if feat.type in transcript_types:
                         feat = self.transcript_gene(feat)
                     elif feat.type == "CDS":
                         feat = self.cds_gene(feat)
@@ -249,7 +243,8 @@ class process_gff3:
                 new_records.append(new_record)
 
             if fail_types and not skip_unrecognized:
-                raise Exception(f"Unrecognized types found ({' '.join(fail_types.keys())}): fail")
+                fail_errors = " ".join(fail_types.keys())
+                raise GFFParserError(f"Unrecognized types found ({fail_errors})")
 
             GFF.write(new_records, gff3_out)
 
@@ -316,7 +311,7 @@ class process_gff3:
 
         # Gene with no subfeatures: need to create a transcript at least
         if len(gene.sub_features) == 0:
-            print("Insert transcript for lone gene %s" % (gene.id))
+            print(f"Insert transcript for lone gene {gene.id}")
             transcript = self.transcript_for_gene(gene)
             gene.sub_features = [transcript]
 
@@ -397,8 +392,8 @@ class process_gff3:
                 elif feat.type == "CDS":
                     # New CDS ID
                     feat.id = self.normalize_cds_id(feat.id)
-                    if feat.id == "" or feat.id == gene.id or feat.id == transcript.id:
-                        feat.id = "%s_cds" % transcript.id
+                    if feat.id in ("", gene.id, transcript.id):
+                        feat.id = f"{transcript.id}_cds"
 
                     # Store CDS functional annotation (only once)
                     if not cds_found:
@@ -416,16 +411,16 @@ class process_gff3:
                     if feat.type in ignored_transcript_types:
                         exons_to_delete.append(tcount)
                         continue
-                    else:
-                        fail_types["sub_transcript=" + feat.type] = 1
-                        message = (
-                            f"Unrecognized exon type for {feat.type}: {feat.id}"
-                            f" (for transcript {transcript.id} of type {transcript.type})"
-                        )
-                        print(message)
-                        if self.skip_unrecognized:
-                            exons_to_delete.append(tcount)
-                            continue
+
+                    fail_types["sub_transcript=" + feat.type] = 1
+                    message = (
+                        f"Unrecognized exon type for {feat.type}: {feat.id}"
+                        f" (for transcript {transcript.id} of type {transcript.type})"
+                    )
+                    print(message)
+                    if self.skip_unrecognized:
+                        exons_to_delete.append(tcount)
+                        continue
 
             if exons_to_delete:
                 for elt in sorted(exons_to_delete, reverse=True):
@@ -498,13 +493,12 @@ class process_gff3:
                         return
 
                     # No transcript product, but a CDS product? Copy it to both transcript and gene
-                    else:
-                        for cds in tran.sub_features:
-                            if cds.type == "CDS" and "product" in cds.qualifiers:
-                                description = cds.qualifiers["product"][0]
-                                tran.qualifiers["product"] = [description]
-                                gene.qualifiers["product"] = [description]
-                        # Continue transfering the translation products to the transcripts
+                    for cds in tran.sub_features:
+                        if cds.type == "CDS" and "product" in cds.qualifiers:
+                            description = cds.qualifiers["product"][0]
+                            tran.qualifiers["product"] = [description]
+                            gene.qualifiers["product"] = [description]
+                    # Continue transfering the translation products to the transcripts
 
     def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
         """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
@@ -574,12 +568,11 @@ class process_gff3:
                 if gene_cds_skip_others:
                     del_transcript.append(count)
                     continue
-                else:
-                    raise Exception(
-                        "Can not create a chain 'transcript - exon - CDS'"
-                        f" when the gene children are not all CDSs"
-                        f" ({cds.id} of type {cds.type} is child of gene {gene.id})"
-                    )
+                raise GFFParserError(
+                    "Can not create a chain 'transcript - exon - CDS'"
+                    f" when the gene children are not all CDSs"
+                    f" ({cds.id} of type {cds.type} is child of gene {gene.id})"
+                )
 
             exon = SeqFeature(cds.location, type="exon")
 
@@ -641,7 +634,7 @@ class process_gff3:
             # Nothing to fix here, no CDSs to move
             return gene
         if len(mrnas) > 1:
-            raise Exception(
+            raise GFFParserError(
                 f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene"
             )
 
@@ -657,7 +650,7 @@ class process_gff3:
                 sub_exons.append(subf)
 
         if len(sub_cdss) > 0:
-            raise Exception(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
+            raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
         if len(sub_exons) > 0:
             # Check that they match the CDS outside
             if len(sub_exons) == len(cdss):
@@ -666,9 +659,9 @@ class process_gff3:
                 coord_cdss = [f"{cds.location}" for cds in cdss]
 
                 if coord_exons != coord_cdss:
-                    raise Exception(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
+                    raise GFFParserError(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
             else:
-                raise Exception(
+                raise GFFParserError(
                     f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)"
                 )
 
@@ -711,7 +704,7 @@ class process_gff3:
                     gene.sub_features = mrnas
                     gene.sub_features += others
                 else:
-                    raise Exception(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
+                    raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
 
         return gene
 
@@ -782,13 +775,13 @@ class process_gff3:
 
         # In case the gene id is not valid, use the GeneID
         if not self.valid_id(new_gene_id):
-            print("Gene id is not valid: %s" % new_gene_id)
+            print(f"Gene id is not valid: {new_gene_id}")
             qual = gene.qualifiers
             if "Dbxref" in qual:
                 for xref in qual["Dbxref"]:
                     (db, value) = xref.split(":")
                     if db == "GeneID":
-                        new_gene_id = db + "_" + value
+                        new_gene_id = f"{db}_{value}"
                         print(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
                         return new_gene_id
 
@@ -797,8 +790,7 @@ class process_gff3:
                 new_id = self.generate_stable_id()
                 print(f"New id: {new_gene_id} -> {new_id}")
                 return new_id
-            else:
-                raise Exception(f"Can't use invalid gene id for {gene}")
+            raise GFFParserError(f"Can't use invalid gene id for {gene}")
 
         return new_gene_id
 
@@ -819,13 +811,8 @@ class process_gff3:
             prefix = "TMP_" + org + "_"
             self.stable_id_prefix = prefix
 
-        if self.current_stable_id_number:
-            number = self.current_stable_id_number
-        else:
-            number = 1
-
-        number += 1
-        new_id = "%s%d" % (prefix, number)
+        number = self.current_stable_id_number + 1
+        new_id = f"{prefix}{number}"
         self.current_stable_id_number = number
 
         return new_id
@@ -840,25 +827,25 @@ class process_gff3:
 
         # Trna (from tRNAscan)
         if re.search(r"^Trna", name):
-            print("Stable id is a Trna from tRNA-scan: %s" % name)
+            print(f"Stable id is a Trna from tRNA-scan: {name}")
             return False
 
         # Coordinates
-        elif re.search(r"^.+:\d+..\d+", name):
-            print("Stable id is a coordinate: %s" % name)
+        if re.search(r"^.+:\d+..\d+", name):
+            print(f"Stable id is a coordinate: {name}")
             return False
 
         # Special characters
-        elif re.search(r"[ |]", name):
-            print("Stable id contains special characters: %s" % name)
+        if re.search(r"[ |]", name):
+            print(f"Stable id contains special characters: {name}")
             return False
 
         # Min length
-        elif len(name) <= min_length:
-            print("Stable id is too short (<%d) %s" % (min_length, name))
+        if len(name) <= min_length:
+            print(f"Stable id is too short (<{min_length}) {name}")
             return False
-        else:
-            return True
+
+        return True
 
     def normalize_transcript_id(self, gene_id: str, number: int) -> str:
         """Use a gene ID and a number to make a formatted transcript ID."""
@@ -893,8 +880,8 @@ class process_gff3:
             for feat in transcript.sub_features:
                 if feat.type == "CDS":
                     feat.id = self.normalize_cds_id(feat.id)
-                    if feat.id == "" or gene.id == feat.id:
-                        feat.id = "%s_cds" % transcript.id
+                    if feat.id in ("", gene.id):
+                        feat.id = f"{transcript.id}_cds"
                         feat.qualifiers["ID"] = feat.id
 
     def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
@@ -926,6 +913,17 @@ class process_gff3:
             if identifier.startswith(prefix):
                 identifier = identifier[len(prefix):]
         return identifier
+
+
+class InputSchema(argschema.ArgSchema):
+    """Input arguments expected by this script."""
+
+    in_gff_path = argschema.fields.InputFile(
+        metadata={"required": True, "description": "gene.gff file required"}
+    )
+    genome_data = argschema.fields.InputFile(
+        metadata={"required": True, "description": "genome.json file required"}
+    )
 
 
 def main() -> None:
