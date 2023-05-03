@@ -19,7 +19,7 @@ from collections import Counter
 from pathlib import Path
 import re
 import tempfile
-from typing import Dict, List, IO
+from typing import Any, Dict, List, IO
 
 import json
 import argschema
@@ -35,6 +35,9 @@ from ensembl.brc4.runnable.utils import print_json
 
 class GFFParserError(Exception):
     pass
+
+
+FunctionalAnnotation = Dict[str, Any]
 
 
 class process_gff3:
@@ -202,7 +205,7 @@ class process_gff3:
         skip_unrecognized = self.skip_unrecognized
         to_exclude = self.exclude_seq_regions
 
-        functional_annotation: List = []
+        functional_annotation: List[FunctionalAnnotation] = []
 
         with out_gff_path.open("w") as gff3_out:
             new_records = []
@@ -252,7 +255,7 @@ class process_gff3:
         functional_annotation = self.clean_functional_annotations(functional_annotation)
         print_json(out_funcann_path, functional_annotation)
 
-    def format_mobile_element(self, feat, functional_annotation):
+    def format_mobile_element(self, feat, functional_annotation: List[FunctionalAnnotation]):
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
 
         # Change mobile_genetic_element into a transposable_element feature
@@ -291,7 +294,9 @@ class process_gff3:
 
         return feat
 
-    def normalize_gene(self, gene: SeqFeature, functional_annotation: List, fail_types: Dict) -> SeqFeature:
+    def normalize_gene(
+        self, gene: SeqFeature, functional_annotation: List[FunctionalAnnotation], fail_types: Dict
+    ) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
         Args:
@@ -720,7 +725,9 @@ class process_gff3:
 
         return transcript
 
-    def add_funcann_feature(self, funcann: List, feature: SeqFeature, feat_type: str) -> None:
+    def add_funcann_feature(
+        self, funcann: List[FunctionalAnnotation], feature: SeqFeature, feat_type: str
+    ) -> None:
         """Append a feature object following the specifications.
 
         Args:
@@ -730,7 +737,7 @@ class process_gff3:
 
         """
 
-        feature_object = {"object_type": feat_type, "id": feature.id}
+        feature_object: FunctionalAnnotation = {"object_type": feat_type, "id": feature.id}
 
         # Description?
         if "product" in feature.qualifiers:
@@ -911,7 +918,7 @@ class process_gff3:
         """
         for prefix in prefixes:
             if identifier.startswith(prefix):
-                identifier = identifier[len(prefix):]
+                identifier = identifier[len(prefix) :]
         return identifier
 
 
