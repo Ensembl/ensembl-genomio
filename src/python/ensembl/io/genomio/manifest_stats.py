@@ -20,47 +20,52 @@ from pathlib import Path
 from shutil import which
 from statistics import mean
 import subprocess
-from typing import Dict, List, TextIO
+from typing import Dict, List, Optional, Set, TextIO
 import argschema
 from BCBio import GFF
 import json
 
 
-class InputSchema(argschema.ArgSchema):  # need more metadata/'True' requirements
-    """Input arguments expected by this script."""
+class BiotypeCounter:
+    def __init__(self, count: int = 0, ids: Optional[Set[str]] = None, example: Optional[str] = None) -> None:
+        self.count: int = count
+        if ids is None:
+            ids = set()
+        self.ids: Set[str] = ids
+        if example is None:
+            example = ""
+        self.example: str = example
 
-    manifest_dir = argschema.fields.String(
-        metadata={"required": True, "description": "Manifest file path required"}
-    )
-    accession = argschema.fields.String(
-        metadata={"required": True, "description": "Sequence accession ID required"}
-    )
-    datasets_bin = argschema.fields.String(metadata={"required": True, "description": "Datasets bin status"})
+    def add_id(self, feature_id) -> None:
+        self.count += 1
+        self.ids.add(feature_id)
+
+    def unique_count(self) -> int:
+        return len(self.ids)
 
 
 class manifest_stats:
-    def __init__(self, manifest_dir: str, accession: str, datasets_bin: str):
+    def __init__(self, manifest_dir: str, accession: Optional[str], datasets_bin: Optional[str]):
         self.manifest = f"{manifest_dir}/manifest.json"
-        self.accession = accession
+        self.accession: Optional[str] = accession
         self.error = False
+        if datasets_bin is None:
+            datasets_bin = "datasets"
         self.datasets_bin = datasets_bin
         self.manifest_parent = manifest_dir
-
-    def param_defaults(self):
-        return {
-            "datasets_bin": "datasets",
-        }
+        self.check_ncbi = False
 
     def run(self):
         manifest = self.get_manifest()
 
-        stats = [self.accession]
+        stats = []
+        if self.accession is not None:
+            stats.append(self.accession)
 
         if not self.error:
             if "gff3" in manifest:
                 stats += self.get_gff3_stats(Path(manifest["gff3"]))
             if "seq_region" in manifest:
-                print(manifest)
                 stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
 
         stats_path = f"{self.manifest_parent}/stats.txt"
@@ -167,7 +172,7 @@ class manifest_stats:
         return stats
 
     def parse_gff3(self, gff3_handle: TextIO) -> List:
-        biotypes: Dict[str, Dict] = {}
+        biotypes: Dict[str, BiotypeCounter] = {}
 
         for rec in GFF.parse(gff3_handle):
             for feat1 in rec.features:
@@ -210,24 +215,29 @@ class manifest_stats:
         # Order
         sorted_biotypes = dict()
         for name in sorted(biotypes.keys()):
-            data = biotypes[name]
-            data["unique_count"] = len(data["ids"])
+            data: BiotypeCounter = biotypes[name]
             sorted_biotypes[name] = data
 
         stats = [
-            f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}"
+            f"{data.unique_count():>9}\t{biotype:<20}\tID = {data.example}"
             for (biotype, data) in sorted_biotypes.items()
         ]
 
         # Check against NCBI stats
-        stats += self.check_ncbi_stats(biotypes, self.accession)
+        stats += self.check_ncbi_stats(biotypes)
 
         return stats
 
-    def check_ncbi_stats(self, biotypes: Dict, accession: str) -> List[str]:
+    def check_ncbi_stats(self, biotypes: Dict[str, BiotypeCounter]) -> List[str]:
         """Use the dataset tool from NCBI to get stats and compare with what we have"""
-
         stats: List[str] = []
+        if not self.check_ncbi:
+            return stats
+
+        if self.accession is None:
+            return stats
+
+        accession: str = self.accession
 
         datasets_bin = self.datasets_bin
         if not which(datasets_bin):
@@ -249,7 +259,7 @@ class manifest_stats:
                     stats = self.compare_ncbi_counts(biotypes, counts)
         return stats
 
-    def compare_ncbi_counts(self, prepared: Dict, ncbi: Dict) -> List[str]:
+    def compare_ncbi_counts(self, biotypes: Dict[str, BiotypeCounter], ncbi: Dict) -> List[str]:
         """Compare specific gene stats from NCBI"""
         stats: List[str] = []
 
@@ -261,32 +271,49 @@ class manifest_stats:
             ["other", "OTHER"],
         ]
 
-        for map in maps:
-            ncbi_name, prep_name = map
+        for count_map in maps:
+            ncbi_name, prep_name = count_map
             ncbi_count = ncbi.get(ncbi_name, 0)
-            prep_count = prepared.get(prep_name, {}).get("count", 0)
+            preped: Optional[BiotypeCounter] = biotypes.get(prep_name)
+            prep_count = 0
+            if preped is not None:
+                prep_count = preped.count
 
             if prep_count != ncbi_count:
                 diff = prep_count - ncbi_count
-                stats.append(f"DIFF gene count for {map}: {prep_count} - {ncbi_count} = {diff}")
+                stats.append(f"DIFF gene count for {count_map}: {prep_count} - {ncbi_count} = {diff}")
                 self.error = True
             else:
-                stats.append(f"Same count for {map}: {prep_count}")
+                stats.append(f"Same count for {count_map}: {prep_count}")
 
         return stats
 
     @staticmethod
-    def increment_biotype(biotypes: Dict, feature_id: str, feature_biotype: str) -> None:
+    def increment_biotype(biotypes: Dict[str, BiotypeCounter], feature_id: str, feature_biotype: str) -> None:
         if feature_biotype not in biotypes:
-            biotypes[feature_biotype] = {"count": 0, "ids": set(), "example": feature_id}
-        biotypes[feature_biotype]["count"] += 1
-        biotypes[feature_biotype]["ids"].add(feature_id)
+            biotypes[feature_biotype] = BiotypeCounter(example=feature_id)
+        biotypes[feature_biotype].add_id(feature_id)
+
+
+class InputSchema(argschema.ArgSchema):  # need more metadata/'True' requirements
+    """Input arguments expected by this script."""
+
+    manifest_dir = argschema.fields.String(
+        required=True, metadata={"description": "Manifest file path"}
+    )
+    accession = argschema.fields.String(
+        metadata={"description": "Sequence accession ID to compare stats with NCBI"}
+    )
+    datasets_bin = argschema.fields.String(metadata={"description": "Datasets bin status"})
 
 
 def main():
     # args = get_args()
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    manifest_stats(mod.args["manifest_dir"], mod.args["accession"], mod.args["datasets_bin"]).run()
+    mstats = manifest_stats(mod.args["manifest_dir"], mod.args.get("accession"), mod.args.get("datasets_bin"))
+    if mod.args.get("accession"):
+        mstats.check_ncbi = True
+    mstats.run()
 
 
 if __name__ == "__main__":
