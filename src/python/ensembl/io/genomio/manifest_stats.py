@@ -308,7 +308,6 @@ class InputSchema(argschema.ArgSchema):  # need more metadata/'True' requirement
 
 
 def main():
-    # args = get_args()
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     mstats = manifest_stats(mod.args["manifest_dir"], mod.args.get("accession"), mod.args.get("datasets_bin"))
     if mod.args.get("accession"):

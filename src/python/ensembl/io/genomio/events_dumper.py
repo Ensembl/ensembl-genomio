@@ -38,10 +38,7 @@ class Pair:
     def __init__(self, old_id: Optional[str], new_id: Optional[str]) -> None:
         """Create a pair with an old_id and a new_id if provided"""
 
-        if old_id is not None:
-            self.old_id = old_id
-        else:
-            self.old_id = ""
+        self.old_id = old_id if old_id is not None else ""
         if new_id is not None:
             self.new_id = new_id
         else:

@@ -25,7 +25,6 @@ import json
 import argschema
 
 
-# import eHive
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
