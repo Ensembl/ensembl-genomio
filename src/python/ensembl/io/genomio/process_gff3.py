@@ -209,7 +209,7 @@ class process_gff3:
 
         with out_gff_path.open("w") as gff3_out:
             new_records = []
-            fail_types: Dict = {}
+            fail_types: Dict[str, int] = {}
 
             for record in GFF.parse(gff3_in):
                 new_record = SeqRecord(record.seq, id=record.id)
@@ -295,7 +295,7 @@ class process_gff3:
         return feat
 
     def normalize_gene(
-        self, gene: SeqFeature, functional_annotation: List[FunctionalAnnotation], fail_types: Dict
+        self, gene: SeqFeature, functional_annotation: List[FunctionalAnnotation], fail_types: Dict[str, int]
     ) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
