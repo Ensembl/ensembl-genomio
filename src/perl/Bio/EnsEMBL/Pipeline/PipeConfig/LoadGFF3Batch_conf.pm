@@ -41,8 +41,6 @@ use warnings;
 
 use base ('Bio::EnsEMBL::Pipeline::PipeConfig::LoadGFF3_conf');
 
-use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use Bio::EnsEMBL::Hive::Version 2.4;
 
 sub default_options {
   my ($self) = @_;
