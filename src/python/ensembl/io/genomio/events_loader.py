@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Dict, List
 
 import argschema
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
 from ensembl.database import DBConnection
@@ -126,18 +127,6 @@ class InputSchema(argschema.ArgSchema):
     )
 
 
-def make_mysql_url(host: str, user: str, database: str, port: int = 0, password: str = "") -> str:
-    """Create a mysql URL given server parameters for SQLalchemy."""
-    user_pass = user
-    host_port = host
-    if password:
-        user_pass = f"{user}:{password}"
-    if port:
-        host_port = f"{host}:{port}"
-    db_url = f"mysql://{user_pass}@{host_port}/{database}"
-    return db_url
-
-
 def main() -> None:
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
 
@@ -147,12 +136,13 @@ def main() -> None:
     user = mod.args["user"]
     password = mod.args.get("password")
     database = mod.args.get("database")
-    db_url = make_mysql_url(
-        host=host,
-        port=port,
-        user=user,
-        password=password,
-        database=database,
+    db_url = URL.create(
+        "mysql",
+        mod.args["user"],
+        mod.args.get("password"),
+        mod.args["host"],
+        mod.args["port"],
+        mod.args.get("database"),
     )
     dbc = DBConnection(db_url)
 
