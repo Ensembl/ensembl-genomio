@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -30,6 +29,7 @@ from ensembl.core.models import MappingSession, StableIdEvent
 @dataclass
 class IdEvent:
     """Simple representation for the events from the input file"""
+
     from_id: str
     to_id: str
     release: str
@@ -38,6 +38,7 @@ class IdEvent:
 
 class MapSession:
     """Simple mapping_sessions representation from the input file"""
+
     def __init__(self, release: str, release_date: str) -> None:
         self.release = release
         self.release_date = release_date
@@ -51,7 +52,7 @@ class MapSession:
 def load_events(input_file: PathLike) -> List[IdEvent]:
     """Load events from input file.
     Expected tab file columns: old_id, new_id, event_name, release, release_date
-    
+
     """
     events: List[IdEvent] = []
 
@@ -69,7 +70,7 @@ def load_events(input_file: PathLike) -> List[IdEvent]:
 def write_events(session: Session, events: List[IdEvent], update: bool = False) -> None:
     """Insert the events in the core database.
     A mapping session is created for each different 'release'.
-    
+
     """
     # First, create mapping_sessions based on the release
     mappings: Dict[str, MapSession] = {}
