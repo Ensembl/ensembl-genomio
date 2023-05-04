@@ -88,6 +88,7 @@ manifest_stats = "ensembl.io.genomio.manifest_stats:main"
 db_factory = "ensembl.io.genomio.db_factory:main"
 seq_region_dumper = "ensembl.io.genomio.seq_region_dumper:main"
 events_dumper = "ensembl.io.genomio.events_dumper:main"
+events_loader = "ensembl.io.genomio.events_loader:main"
 
 [tool.setuptools]
 package-dir = {"" = "src/python"}
