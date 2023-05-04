@@ -15,9 +15,9 @@
 # limitations under the License.
 
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
-from dataclasses import dataclass
 
 import argschema
 from sqlalchemy.orm import Session
@@ -47,14 +47,14 @@ class MapSession:
         self.events.append(event)
 
 
-def load_events(input_file: Path) -> List[IdEvent]:
+def load_events(input_file: PathLike) -> List[IdEvent]:
     """Load events from input file.
     Expected tab file columns: old_id, new_id, event_name, release, release_date
     
     """
     events: List[IdEvent] = []
 
-    with input_file.open("r") as events_fh:
+    with Path(input_file).open("r") as events_fh:
         for line in events_fh:
             line.strip()
             if line == "":
@@ -156,7 +156,7 @@ def main() -> None:
     )
     dbc = DBConnection(db_url)
 
-    events = load_events(Path(mod.args.get("input_file")))
+    events = load_events(mod.args.get("input_file"))
 
     with dbc.session_scope() as session:
         write_events(session, events, mod.args["update"])
