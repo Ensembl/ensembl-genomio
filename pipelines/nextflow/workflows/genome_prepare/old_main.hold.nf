@@ -53,39 +53,68 @@ else if (params.input_dir) {
 include { PREPARE_GENOME_METADATA } from '../../modules/prepare_genome_metadata.nf'
 include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_GENOME } from '../../modules/check_json_schema.nf'
 include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_SEQREG } from '../../modules/check_json_schema.nf'
+include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_FUNCT } from '../../modules/check_json_schema.nf'
 include { DOWNLOAD_ASM_DATA } from '../../modules/download_asm_data.nf'
-include { PROCESS_GFF3; GFF3_VALIDATION } from '../../modules/process_gff3.nf'
 include { UNPACK_FILE } from '../../modules/unpack_gff3.nf'
+include { PROCESS_GFF3 } from '../../modules/process_gff3.nf'
+include { GFF3_VALIDATION } from '../../modules/gff3_validation.nf'
 include { PROCESS_SEQ_REGION } from '../../modules/process_seq_region.nf'
 include { PROCESS_FASTA as PROCESS_FASTA_DNA } from '../../modules/process_fasta_data.nf'
 include { PROCESS_FASTA as PROCESS_FASTA_PEP } from '../../modules/process_fasta_data.nf'
 include { AMEND_GENOME_DATA } from '../../modules/amend_genome_data.nf'
+// include { COLLECT_FILES; MANIFEST; PUBLISH_DIR } from '../../modules/collect_files.nf'
+// include { CHECK_INTEGRITY } from '../../modules/integrity.nf'
 
 // Run main workflow
 workflow {
-    ch_metadata_json = PREPARE_GENOME_METADATA(ch_genome_json)
-    CHECK_JSON_SCHEMA_GENOME('genome', ch_metadata_json)
+    PREPARE_GENOME_METADATA(ch_genome_json)
+    accession = PREPARE_GENOME_METADATA.out.accession.map{ it.getName() }
+    genome_json = PREPARE_GENOME_METADATA.out.json
+    CHECK_JSON_SCHEMA_GENOME(genome_json, accession)
+    ch_genome = CHECK_JSON_SCHEMA_GENOME.out.gca.concat(CHECK_JSON_SCHEMA_GENOME.out.verified_json)
+    // CHECK_JSON_SCHEMA_GENOME.out.gca.view()
+    // CHECK_JSON_SCHEMA_GENOME.out.verified_json.view()
     DOWNLOAD_ASM_DATA(CHECK_JSON_SCHEMA_GENOME.out.gca)
-    if(DOWNLOAD_ASM_DATA.out.gene_gff && DOWNLOAD_ASM_DATA.out.protein_fa){
+    if (DOWNLOAD_ASM_DATA.out.gene_gff && DOWNLOAD_ASM_DATA.out.protein_fa) {
         // println "GFF and Pep Present:"
-        unpacked_gff = UNPACK_FILE(DOWNLOAD_ASM_DATA.out.gene_gff, 'gff')
-        unpacked_gff.view()
-        PROCESS_GFF3(unpacked_gff, CHECK_JSON_SCHEMA_GENOME.out.json_file)
-        PROCESS_GFF3.out.functional_annotation.view()
-        PROCESS_FASTA_PEP(DOWNLOAD_ASM_DATA.out.protein_fa, DOWNLOAD_ASM_DATA.out.genome_gbff, CHECK_JSON_SCHEMA_GENOME.out.gca, '1')
+        // unpacked_gff = UNPACK_FILE(DOWNLOAD_ASM_DATA.out.gene_gff, 'gff', DOWNLOAD_ASM_DATA.out.gca)
+        // unpacked_gff.view()
+        UNPACK_FILE(DOWNLOAD_ASM_DATA.out.gene_gff, 'gff', DOWNLOAD_ASM_DATA.out.gca)
+        // PROCESS_GFF3(unpacked_gff, CHECK_JSON_SCHEMA_GENOME.out.json_file)
+        PROCESS_GFF3(UNPACK_FILE.out.uncompressed_file, CHECK_JSON_SCHEMA_GENOME.out.verified_json, UNPACK_FILE.out.gca)
+        ch_gene_models = PROCESS_GFF3.out.gca.concat(PROCESS_GFF3.out.gene_models)
+        // PROCESS_GFF3.out.functional_annotation.view()
+        // PROCESS_GFF3.out.gca.view()
+        // PROCESS_GFF3.out.gene_models.view()
+        CHECK_JSON_SCHEMA_FUNCT(PROCESS_GFF3.out.functional_annotation, PROCESS_GFF3.out.gca)
+        ch_functional_anno = CHECK_JSON_SCHEMA_FUNCT.out.gca.concat(CHECK_JSON_SCHEMA_FUNCT.out.verified_json)
+        // CHECK_JSON_SCHEMA_FUNCT.out.gca.view()
+        // CHECK_JSON_SCHEMA_FUNCT.out.verified_json.view()
+        GFF3_VALIDATION(PROCESS_GFF3.out.gene_models)
+        PROCESS_FASTA_PEP(DOWNLOAD_ASM_DATA.out.protein_fa, DOWNLOAD_ASM_DATA.out.genome_gbff, DOWNLOAD_ASM_DATA.out.gca, '1')
+        ch_process_pep = PROCESS_FASTA_PEP.out.gca.concat(PROCESS_FASTA_PEP.out.processed_fasta)
     }
-    CHECK_JSON_SCHEMA_GENOME.out.gca.view()
     // DOWNLOAD_ASM_DATA.out.asm_report.view()
     // DOWNLOAD_ASM_DATA.out.genome_fna.view()
     // DOWNLOAD_ASM_DATA.out.asm_report.view()
-    ch_process_seqregion = PROCESS_SEQ_REGION(CHECK_JSON_SCHEMA_GENOME.out.json_file, DOWNLOAD_ASM_DATA.out.asm_report, DOWNLOAD_ASM_DATA.out.genome_gbff, DOWNLOAD_ASM_DATA.out.gca)
+    // ch_process_seqregion = PROCESS_SEQ_REGION(CHECK_JSON_SCHEMA_GENOME.out.verified_json, DOWNLOAD_ASM_DATA.out.asm_report, DOWNLOAD_ASM_DATA.out.genome_gbff, DOWNLOAD_ASM_DATA.out.gca)
     // ch_process_seqregion.view()
-    CHECK_JSON_SCHEMA_SEQREG('seq_region', ch_process_seqregion)
+    PROCESS_SEQ_REGION(CHECK_JSON_SCHEMA_GENOME.out.verified_json, DOWNLOAD_ASM_DATA.out.asm_report, DOWNLOAD_ASM_DATA.out.genome_gbff, DOWNLOAD_ASM_DATA.out.gca)
+    CHECK_JSON_SCHEMA_SEQREG(PROCESS_SEQ_REGION.out.seq_region, PROCESS_SEQ_REGION.out.gca)
+    ch_seq_region = CHECK_JSON_SCHEMA_SEQREG.out.gca.concat(CHECK_JSON_SCHEMA_SEQREG.out.verified_json)
     // CHECK_JSON_SCHEMA_SEQREG.out.gca.view()
-    // CHECK_JSON_SCHEMA_SEQREG.out.json_file.view()
-    PROCESS_FASTA_DNA(DOWNLOAD_ASM_DATA.out.genome_fna, DOWNLOAD_ASM_DATA.out.genome_gbff, CHECK_JSON_SCHEMA_SEQREG.out.gca, '0')
-    PROCESS_FASTA_DNA.out.processed_fasta.view()
-    AMEND_GENOME_DATA(CHECK_JSON_SCHEMA_GENOME.out.json_file, DOWNLOAD_ASM_DATA.out.asm_report, DOWNLOAD_ASM_DATA.out.genome_gbff, DOWNLOAD_ASM_DATA.out.gca, params.brc4_mode)
-    AMEND_GENOME_DATA.out.amended_json.view()
+    // CHECK_JSON_SCHEMA_SEQREG.out.verified_json.view()
+    PROCESS_FASTA_DNA(DOWNLOAD_ASM_DATA.out.genome_fna, DOWNLOAD_ASM_DATA.out.genome_gbff, DOWNLOAD_ASM_DATA.out.gca, '0')
+    ch_process_dna = PROCESS_FASTA_DNA.out.gca.concat(PROCESS_FASTA_DNA.out.processed_fasta)
+    // PROCESS_FASTA_DNA.out.processed_fasta.view()
+    // PROCESS_FASTA_DNA.out.gca.view()
+    AMEND_GENOME_DATA(CHECK_JSON_SCHEMA_GENOME.out.verified_json, DOWNLOAD_ASM_DATA.out.asm_report, DOWNLOAD_ASM_DATA.out.genome_gbff, DOWNLOAD_ASM_DATA.out.gca, params.brc4_mode)
+    // AMEND_GENOME_DATA.out.amended_json.view()
+    // standardised_files = CHECK_JSON_SCHEMA_GENOME.out.gca
+    //                     .concat(PROCESS_FASTA_DNA.out.processed_fasta, PROCESS_FASTA_PEP.out.processed_fasta, PROCESS_GFF3.out.gene_models, CHECK_JSON_SCHEMA_GENOME.out.verified_json, CHECK_JSON_SCHEMA_FUNCT.out.verified_json, CHECK_JSON_SCHEMA_SEQREG.out.verified_json)
+    //                     .map{it -> [gca, it]}
+    //                     .groupTuple()
+    standardised_files = Channel.of(ch_genome, ch_gene_models, ch_functional_anno, ch_process_pep, ch_seq_region, ch_process_dna)
+    standardised_files.map{it -> [accession, it]}.groupTuple().view()
 }
 
