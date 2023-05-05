@@ -14,14 +14,15 @@
 // limitations under the License.
 
 process PREPARE_GENOME_METADATA {
-    label 'default'
+    label 'local'
 
     input:
-    path input_json
+        path input_json
 
     output:
-    path "*"
-
+        path "*/genome.json", emit: json
+        path "*", emit: accession
+        
     script:
     """
     prepare_genome_metadata --json_file ${input_json}

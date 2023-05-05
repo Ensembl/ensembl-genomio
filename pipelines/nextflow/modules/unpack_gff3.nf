@@ -19,9 +19,11 @@ process UNPACK_FILE {
     input:
     path compressed_file
     val extension
+    val gca
 
     output:
-    path "*.${extension}"
+    path "*.${extension}", emit: uncompressed_file
+    val gca, emit: gca
 
     script:
     """

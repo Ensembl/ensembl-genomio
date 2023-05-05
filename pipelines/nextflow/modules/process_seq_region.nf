@@ -26,7 +26,8 @@ process PROCESS_SEQ_REGION {
     // val regions_to_exclude
 
     output:
-    path "*"
+        val gca, emit: gca
+        path "*/seq_region.json", emit: seq_region
 
     script:
     """
