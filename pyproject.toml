@@ -78,6 +78,7 @@ extract_file = "ensembl.io.genomio.utils.archive_utils:extract_file_cli"
 retrieve_assembly_data = "ensembl.io.genomio.assembly.get_assembly_data:main"
 prep_fasta_data = "ensembl.io.genomio.fastaprep.process_fasta:main"
 amend_genomic_data = "ensembl.io.genomio.metadata.update_genome_metadata:main"
+process_gff3 = "ensembl.io.genomio.process_gff3:main"
 
 [tool.setuptools]
 package-dir = {"" = "src/python"}
