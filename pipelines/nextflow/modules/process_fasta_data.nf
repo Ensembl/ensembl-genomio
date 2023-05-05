@@ -15,6 +15,7 @@
 // limitations under the License.
 
 process PROCESS_FASTA {
+    tag "${gca}"
     label 'default'
 
     input:
