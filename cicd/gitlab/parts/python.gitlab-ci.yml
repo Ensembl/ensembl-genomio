@@ -1,0 +1,107 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Python related part of the Ensembl/ensembl-genomio CI/CD pipeline
+
+variables:
+  # legacy, used to find ensembl-hive python parts
+  PYTHONPATH: $RUN_DIR/ensembl-hive/wrappers/python3
+
+# don't fotget to update /pyproject.toml
+#  if changing python version
+image: python:3.8
+
+
+# overriding the default stages  list (https://docs.gitlab.com/ee/ci/yaml/#stages)
+stages:
+  - python:prepare_env
+  - python:static_analysis
+
+
+# Python related environmnet and tests
+python:prepare_env:venv:
+  stage: python:prepare_env
+  artifacts:
+    paths:
+      - $RUN_DIR
+  before_script:
+    - python --version # For debugging
+    - python -m venv $RUN_DIR/venv
+    - source $RUN_DIR/venv/bin/activate
+  script:
+    - pip install mypy
+    - pip install types-requests  # type stub for "requests" (or run `mypy --install-types`)
+    - pip install pylint
+    - pip install black
+
+
+##  LOCAL ENV & PIP
+python:prepare_env:local:
+  stage: python:prepare_env
+  needs:
+    # using `needs` as it allows to depend on jobs from the same stage
+    #  https://docs.gitlab.com/ee/ci/yaml/#needs
+    - job: python:prepare_env:venv
+      artifacts: true
+  artifacts:
+    paths:
+      - $RUN_DIR
+  before_script:
+    - source $RUN_DIR/venv/bin/activate
+  script:
+    # pip based
+    - pip install -e .[dev]
+    # legacy
+    - git clone -b "version/2.6" --depth 1 https://github.com/Ensembl/ensembl-hive.git $RUN_DIR/ensembl-hive
+    - echo "testing eHive python parts presence"
+    - echo PYTHONPATH $PYTHONPATH
+    - python -c 'import eHive' # testing eHive presense
+
+
+##  PYTHON STATIC ANALYSIS
+
+# A generic job to be used by various python tests
+# to be reused with `extends` mechanism (https://docs.gitlab.com/ee/ci/yaml/#extends)
+.python:static_analysis:generic:
+  stage: python:static_analysis
+  needs:
+    - job: python:prepare_env:local
+      artifacts: true
+  #variables: 
+  #  PYTHONPATH: $RUN_DIR/ensembl-hive/wrappers/python3
+  before_script:
+    - source $RUN_DIR/venv/bin/activate
+    - echo PYTHONPATH $PYTHONPATH
+    - echo "testing eHive python parts presence"
+    - python -c 'import eHive' # testing eHive presense
+
+# Specific instances
+python:static_analysis:mypy:
+  extends: .python:static_analysis:generic
+  script:
+    - mypy --config-file pyproject.toml src/python
+
+python:static_analysis:pylint:
+  extends: .python:static_analysis:generic
+  script:
+    # - pylint --list-msgs-enabled # for debugging
+    - pylint --rcfile pyproject.toml
+    - pylint --rcfile pyproject.toml src/python/ensembl/brc4
+
+python:static_analysis:black:
+  extends: .python:static_analysis:generic
+  # not sure this stage stores any changes
+  script:
+    - black --verbose --config pyproject.toml --check
+

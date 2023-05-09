@@ -27,7 +27,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ensembl-genomio"
 version = "0.1" # should be assigned dynamically in the future
-requires-python = ">= 3.7"
+requires-python = ">= 3.7" # don't forget to update /cicd/gitlab/dot.gitlab-ci.yml
 
 description = "Ensembl GenomIO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
 readme = "README.md"
@@ -96,3 +96,24 @@ where = ["src/python"]  # list of folders that contain the packages (["."] by de
 
 [tool.black]
 line-length = 110
+
+[tool.pylint.main]
+max-line-length = 110
+disable = [
+    "invalid-name",
+    "similarities",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-statements",
+    "unspecified-encoding",
+    "wildcard-import",
+]
+
+[tool.mypy]
+mypy_path = "src/python"
+explicit_package_bases = true
+ignore_missing_imports = true
+show_error_codes = true
+warn_unused_configs = true
+
