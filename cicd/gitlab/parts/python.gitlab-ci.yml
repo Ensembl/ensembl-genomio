@@ -29,7 +29,7 @@ stages:
   - python:static_analysis
 
 
-# Python related environmnet and tests
+# Python related environment and tests
 python:prepare_env:venv:
   stage: python:prepare_env
   artifacts:
