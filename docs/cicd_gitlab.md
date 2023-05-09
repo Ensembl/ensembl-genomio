@@ -42,7 +42,7 @@ As for now we have [cicd/gitlab/parts/](cicd/gitlab/parts/) folder for these nee
 ```
 to your trigger jobs whenever possible.
 
-* We're trying to use `:` devided "namespace" qualifiers for stage and job names.
+* We're trying to use `:` decided "namespace" qualifiers for stage and job names.
 
 * Feel free to use template/generic jobs with names startting from `.` and `extends` keyword (see [`extends` descripion](https://docs.gitlab.com/ee/ci/yaml/#extends)
 
