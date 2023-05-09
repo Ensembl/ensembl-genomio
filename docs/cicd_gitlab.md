@@ -44,6 +44,6 @@ to your trigger jobs whenever possible.
 
 * We're trying to use `:` decided "namespace" qualifiers for stage and job names.
 
-* Feel free to use template/generic jobs with names startting from `.` and `extends` keyword (see [`extends` descripion](https://docs.gitlab.com/ee/ci/yaml/#extends)
+* Feel free to use template/generic jobs with names starting from `.` and `extends` keyword (see [`extends` description](https://docs.gitlab.com/ee/ci/yaml/#extends)
 
 
