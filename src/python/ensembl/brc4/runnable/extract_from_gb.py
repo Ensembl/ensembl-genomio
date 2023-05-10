@@ -355,7 +355,7 @@ class FormattedFilesGenerator:
         if organelle in self.locations:
             return self.locations[organelle]
         else:
-            raise Exception(f"Unkown organelle: {location}")
+            raise Exception(f"Unkown organelle: {organelle}")
 
     def _write_genome_json(self):
         """
