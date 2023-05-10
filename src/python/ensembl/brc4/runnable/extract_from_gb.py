@@ -178,6 +178,8 @@ class FormattedFilesGenerator:
                         gene_id = self.prefix + gene_name
 
                         if feat.type == "gene":
+                            if "pseudo" in gff_qualifiers:
+                                gff_feat.type = "pseudogene"
                             gff_feat.qualifiers["ID"] = gene_id
                             gff_feat.qualifiers["Name"] = gene_name
                             if "gene" in gff_feat.qualifiers:
@@ -188,6 +190,8 @@ class FormattedFilesGenerator:
                             all_ids.append(str(gene_id))
 
                         if feat.type == "CDS":
+                            if "pseudo" in gff_qualifiers:
+                                gff_feat.type = "exon"
                             cds_id = gene_id + "_p1"
                             tr_id = gene_id + "_t1"
                             gff_feat.qualifiers["ID"] = cds_id
@@ -198,7 +202,8 @@ class FormattedFilesGenerator:
                                 del gff_feat.qualifiers["locus_tag"]
 
                             # Add fasta to pep fasta file
-                            peptides.append(SeqRecord(Seq(feat.qualifiers["translation"][0]), id=cds_id))
+                            if "translation" in feat.qualifiers:
+                                peptides.append(SeqRecord(Seq(feat.qualifiers["translation"][0]), id=cds_id))
 
                             # Also create a parent transcript for this translation
                             tr_qualifiers = {"ID": tr_id, "Name": gene_name, "Parent": gene_id}
