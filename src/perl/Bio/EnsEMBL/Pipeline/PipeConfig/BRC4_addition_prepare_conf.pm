@@ -279,6 +279,9 @@ sub pipeline_analyses {
     {
       -logic_name  => 'Manifest_stats',
       -module      => 'ensembl.brc4.runnable.manifest_stats',
+      -parameters     => {
+        accession => $self->o('gb_accession'),
+      },
       -language    => 'python3',
       -analysis_capacity   => 1,
       -rc_name         => 'small',
