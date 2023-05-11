@@ -26,6 +26,15 @@ General pipelines] expand
 [Runners] expand
 pick "Shared runners"
 
+6) Customize email settings
+Like it's stated on the [official documentation](https://docs.gitlab.com/ee/user/project/integrations/pipeline_status_emails.html):
+
+* Go to *Settings > Integrations > Pipeline status emails*.
+* Edit *Recipients* (a comma-separated list of email addresses)
+* Select *Notify only broken pipelines*
+* Select the branches
+* *Save*
+
 ## A few notes on style
 
 * We suggest separating logic for running various parts into separate pipelines and using different `trigger` jobs to invoke these pipelines.
