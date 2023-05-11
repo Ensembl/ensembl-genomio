@@ -96,7 +96,6 @@ python:static_analysis:pylint:
   extends: .python:static_analysis:generic
   script:
     # - pylint --list-msgs-enabled # for debugging
-    - pylint --rcfile pyproject.toml --generate-rcfile
     - pylint --rcfile pyproject.toml src/python/ensembl/brc4
 
 python:static_analysis:black:
