@@ -772,7 +772,7 @@ sub infer_translation {
       # and adjust phase if there's a need
       my @exons = @{ $transcript->get_all_Exons };
       for my $exon (@exons) {
-        # check if there are any CDSs withing the current exon
+        # check if there are any CDSs within the current exon
         my @filtered_cds = grep { $exon->start <= $_->[0] && $_->[1] <= $exon->end } ($start_cds, $end_cds);
 
         # if we have one -- translation starts (or ends)
