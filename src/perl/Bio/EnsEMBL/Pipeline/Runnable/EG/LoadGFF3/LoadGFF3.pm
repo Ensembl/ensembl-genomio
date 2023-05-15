@@ -458,7 +458,7 @@ sub add_exons {
   my $different_strands = scalar(keys %{{ map { $_=>1 } @strands }});
   my $force_ranking = ($different_strands > 1 || scalar(@outlayers) > 0) ? 1 : 0;
 
-  # get major trandness to deal with transspliced
+  # Use the strandness majority to decide in which order the exons of transspliced genes are ranked
   my $strandness = sum0 @strands;
   my $sorting = ($strandness > 0)? \&sort_genomic : \&sort_genomic_desc;
 
