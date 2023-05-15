@@ -743,7 +743,7 @@ sub infer_exons {
 
 sub infer_translation {
   # produce ($genomic_start, $genomic_end) to be used by translation_coordinates
-  # to infer offsets withing start / end exons
+  # to infer offsets within start / end exons
   my ($self, $gff_transcript, $transcript) = @_;
   
   my ($genomic_start, $genomic_end);
