@@ -1288,7 +1288,7 @@ sub exon_coords {
 
   my $is_circular = $transcript->slice->is_circular(); 
   my $slice_len = $transcript->slice->length(); 
-  my $slice_name= $transcript->slice->name(); 
+  my $slice_name = $transcript->slice->name(); 
 
   my $msg = "exon $exon_id (start $exon_start, end $exon_end, strand $exon_strand) on slice $slice_name";
   $self->log_throw("not a valid strand for $msg") if ($exon_strand != 1 && $exon_strand != -1);
