@@ -768,7 +768,7 @@ sub infer_translation {
       my $start_cds = [ $self->exon_coords($gff_cds[0], $transcript, "CDS"), "start" ]; # start, end, strand, label
       my $end_cds = [ $self->exon_coords($gff_cds[-1], $transcript, "CDS"), "end" ];
 
-      # find out which exon has firs or last CDS part
+      # find out which exon has first or last CDS part
       # and adjust phase if there's a need
       my @exons = @{ $transcript->get_all_Exons };
       for my $exon (@exons) {
