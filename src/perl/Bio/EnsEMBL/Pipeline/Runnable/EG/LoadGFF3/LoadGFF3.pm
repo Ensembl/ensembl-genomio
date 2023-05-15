@@ -1270,7 +1270,7 @@ sub circulise_coord {
   } else {
     # moving to 0-based coords, mod len and moving back to 1-based coords
     $coord = int( ($coord - 1) % $length + 1 );
-    $self->log_warning("coord behind the non-circular slice end, circulising (mod $length, $coord): $msg");
+    $self->log_warning("coord behind the non-circular slice end, circularising (mod $length, $coord): $msg");
   }
   return $coord;
 }
