@@ -876,8 +876,8 @@ sub translation_coordinates {
   my $transcript_id = $transcript->stable_id;
 
   my ($genomic_start_raw, $genomic_end_raw) = ($genomic_start, $genomic_end);
-  $genomic_start = $self->circulise_coord($genomic_start, $slice_len, $is_circular, "fixing translation_coordiantes genomic_start for $transcript_id");
-  $genomic_end = $self->circulise_coord($genomic_end, $slice_len, $is_circular, "fixing translation_coordiantes genomic_end for $transcript_id");
+  $genomic_start = $self->circulise_coord($genomic_start, $slice_len, $is_circular, "fixing translation_coordinates genomic_start for $transcript_id");
+  $genomic_end = $self->circulise_coord($genomic_end, $slice_len, $is_circular, "fixing translation_coordinates genomic_end for $transcript_id");
 
   foreach my $exon (@exons) {
     if ($exon->start <= $genomic_start && $genomic_start <= $exon->end) {
