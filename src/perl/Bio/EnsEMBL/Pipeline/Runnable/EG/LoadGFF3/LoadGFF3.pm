@@ -764,7 +764,7 @@ sub infer_translation {
       # (partly duplicating self::translation_coordinates)
       # pick first "[0]" / last "[-1]" CDSs parts from unadjusted (genomically sorted) list of CDS
       
-      # but because we're are to iterate through adjusted exon (sort_coding) we need to adjust (circulise) CDS coordinates
+      # but because we are to iterate through adjusted exon (sort_coding) we need to adjust (circulise) CDS coordinates
       my $start_cds = [ $self->exon_coords($gff_cds[0], $transcript, "CDS"), "start" ]; # start, end, strand, label
       my $end_cds = [ $self->exon_coords($gff_cds[-1], $transcript, "CDS"), "end" ];
 
