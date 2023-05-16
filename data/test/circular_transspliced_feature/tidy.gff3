@@ -1,0 +1,48 @@
+##sequence-region   NC_022868.1 1 220519
+NC_022868.1	feature	gene	68177	138650	.	+	.	ID=W848_p084;biotype=protein_coding
+NC_022868.1	feature	mRNA	68177	138650	.	.	.	ID=W848_p084_t1;Parent=W848_p084
+#
+NC_022868.1	feature	exon	68177	68302	.	-	.	Parent=W848_p084_t1
+NC_022868.1	feature	exon	137862	138093	.	+	.	Parent=W848_p084_t1
+NC_022868.1	feature	exon	138625	138650	.	+	.	Parent=W848_p084_t1
+#
+NC_022868.1	feature	CDS	68177	68302	.	-	2	ID=YP_008816270.1;Parent=W848_p084_t1;protein_id=YP_008816270.1
+NC_022868.1	feature	CDS	137862	138093	.	+	0	ID=YP_008816270.1;Parent=W848_p084_t1;protein_id=YP_008816270.1
+NC_022868.1	feature	CDS	138625	138650	.	+	2	ID=YP_008816270.1;Parent=W848_p084_t1;protein_id=YP_008816270.1
+#
+#
+NC_022868.1	feature	gene	96742	220519	.	-	.	ID=W848_p085;biotype=protein_coding
+NC_022868.1	feature	mRNA	96742	220519	.	-	.	ID=W848_p085_t1;Parent=W848_p085
+#
+NC_022868.1	feature	exon	96742	96767	.	-	.	Parent=W848_p085_t1
+NC_022868.1	feature	exon	97299	97530	.	-	.	Parent=W848_p085_t1
+NC_022868.1	feature	exon	220394	220519	.	-	.	Parent=W848_p085_t1
+#
+NC_022868.1	feature	CDS	96742	96767	.	-	2	ID=YP_008816226.1;Parent=W848_p085_t1;protein_id=YP_008816226.1
+NC_022868.1	feature	CDS	97299	97530	.	-	0	ID=YP_008816226.1;Parent=W848_p085_t1;protein_id=YP_008816226.1
+NC_022868.1	feature	CDS	220394	220519	.	-	0	ID=YP_008816226.1;Parent=W848_p085_t1;protein_id=YP_008816226.1
+###
+# control
+###
+NC_022868.1	feature	gene	68516	70592	.	-	.	ID=W848_p040;biotype=protein_coding
+NC_022868.1	feature	mRNA	68516	70592	.	-	.	ID=W848_p040_t1;Parent=W848_p040
+#
+NC_022868.1	feature	exon	68516	68743	.	-	.	Parent=W848_p040_t1
+NC_022868.1	feature	exon	69518	69809	.	-	.	Parent=W848_p040_t1
+NC_022868.1	feature	exon	70522	70592	.	-	.	Parent=W848_p040_t1
+#
+NC_022868.1	feature	CDS	68516	68743	.	-	0	ID=YP_008816271.1;Parent=W848_p040_t1;protein_id=YP_008816271.1
+NC_022868.1	feature	CDS	69518	69809	.	-	1	ID=YP_008816271.1;Parent=W848_p040_t1;protein_id=YP_008816271.1
+NC_022868.1	feature	CDS	70522	70592	.	-	0	ID=YP_008816271.1;Parent=W848_p040_t1;protein_id=YP_008816271.1
+###
+NC_022868.1	feature	gene	24842	25030	.	-	.	ID=W848_p070;biotype=protein_coding
+NC_022868.1	feature	mRNA	24842	25030	.	-	.	ID=W848_p070_t1;Parent=W848_p070
+NC_022868.1	feature	exon	24842	25030	.	-	.	Parent=W848_p070_t1
+NC_022868.1	feature	CDS	24842	25030	.	-	0	ID=YP_008816240.1;Parent=W848_p070_t1;protein_id=YP_008816240.1
+###
+NC_022868.1	feature	gene	37489	40354	.	+	.	ID=W848_p064;biotype=protein_coding
+NC_022868.1	feature	mRNA	37489	40354	.	+	.	ID=W848_p064_t1;Parent=W848_p064
+NC_022868.1	feature	exon	37489	37920	.	+	.	Parent=W848_p064_t1
+NC_022868.1	feature	CDS	37489	37920	.	+	0	ID=YP_008816246.1;Parent=W848_p064_t1;protein_id=YP_008816246.1
+NC_022868.1	feature	exon	38723	40354	.	+	.	Parent=W848_p064_t1
+NC_022868.1	feature	CDS	38723	40354	.	+	0	ID=YP_008816246.1;Parent=W848_p064_t1;protein_id=YP_008816246.1
