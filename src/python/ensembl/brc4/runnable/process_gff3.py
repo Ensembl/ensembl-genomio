@@ -361,7 +361,7 @@ class process_gff3(eHive.BaseRunnable):
                 gene = self.clean_extra_exons(gene)
 
         # Remove CDS from pseudogenes
-        if gene.type == "pseudogene" and not self.param("allow_pseudogene_with_cds"):
+        if gene.type == "pseudogene" and not self.param("allow_pseudogene_with_CDS"):
             self.remove_cds_from_pseudogene(gene)
 
         # TRANSCRIPTS
@@ -450,7 +450,7 @@ class process_gff3(eHive.BaseRunnable):
                 gene.sub_features.pop(elt)
 
         # PSEUDOGENE CDS IDs
-        if gene.type == "pseudogene" and self.param("allow_pseudogene_with_cds"):
+        if gene.type == "pseudogene" and self.param("allow_pseudogene_with_CDS"):
             self.normalize_pseudogene_cds(gene)
 
         # Finally, store gene functional annotation

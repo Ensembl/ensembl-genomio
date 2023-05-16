@@ -39,8 +39,7 @@ package Bio::EnsEMBL::Pipeline::PipeConfig::LoadGFF3_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::EGPipeline::PipeConfig::EGGeneric_conf');
-
+use base ('Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_base_conf');
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Hive::Version 2.4;
 

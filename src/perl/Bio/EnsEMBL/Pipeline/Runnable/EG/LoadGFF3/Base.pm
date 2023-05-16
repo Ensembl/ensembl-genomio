@@ -173,6 +173,9 @@ sub log {
   my ($self, $msg) = @_;
   $self->{_local_log} = [] if (!defined $self->{_local_log});
   push @{$self->{_local_log}}, $msg;
+
+  # don't put into eHive `msg` table (by using $self->log), just warn
+  warn "$msg\n";
 }
 
 sub log_warning {

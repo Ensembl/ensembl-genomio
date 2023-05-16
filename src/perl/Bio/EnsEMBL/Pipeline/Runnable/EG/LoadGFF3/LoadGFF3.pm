@@ -35,6 +35,7 @@ package Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::LoadGFF3;
 use strict;
 use warnings;
 use feature 'say';
+use List::Util qw/sum0/;
 
 use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 
@@ -254,6 +255,7 @@ sub load_genes {
     
     $self->add_transcripts($db, $ga, $pta, $gff_gene, $gene);
     $self->set_pseudogene($ga, $gene);
+    $self->update_gene_coords_based_on_transcripts_on_circular_sr($gene, $ga);
   }
 
   $dba->dbc->disconnect_if_idle();
@@ -398,12 +400,85 @@ sub add_pseudogenic_transcript {
   return $transcript;
 }
 
+sub update_gene_coords_based_on_transcripts_on_circular_sr {
+  my ($self, $gene, $ga) = @_;
+
+  # fixing only on circular seq_regions
+  return if (!$gene->slice->is_circular);
+  
+  # we can assume that we work with the top-level seq_regions,
+  #   thus Gene::start/end and Gene::seq_region_start/end are equivalent
+  my ($gene_start, $gene_end) = ( $gene->start, $gene->end );
+  $gene->recalculate_coordinates();
+  if ($gene_start != $gene->start || $gene_end != $gene->end) {
+    # ideally, just call
+    #   $ga->update_coords($gene);
+    # unfortunately this doesn't work for circular seq_regions
+    # when update_coords is called it uses Gene::seq_region_start/end, but
+    # Gene::seq_region_start/end uses BaseFeatureAdaptor::_seq_region_boundary_from_db
+    # failback mechanism for circular regions and ignore Feature:: coords being updated
+    # (see https://github.com/Ensembl/ensembl/blob/release/111/modules/Bio/EnsEMBL/Feature.pm#L1067)
+
+    # going vanila SQL update way
+    $self->update_gene_seq_region_coords_from_coords($gene, $ga);
+  }
+}
+
+
+sub update_gene_seq_region_coords_from_coords {
+  # function to update gene coordinates in db based on the object state
+  # ideally,
+  #   $ga->update_coords($gene);
+  # should be called, but unfortunately this doesn't work for _circular_ seq_regions
+  #   when update_coords is called it uses Gene::seq_region_start/end, but
+  #   Gene::seq_region_start/end uses BaseFeatureAdaptor::_seq_region_boundary_from_db
+  #   failback mechanism for circular regions and ignore Feature:: coords being updated
+  #   (see https://github.com/Ensembl/ensembl/blob/release/111/modules/Bio/EnsEMBL/Feature.pm#L1067)
+  # for _circular_ regions going vanila SQL UPDATE way
+
+  my ($self, $gene, $ga) = @_;
+
+  return if !$gene;
+  
+  # if not circular use the default mechanism
+  if (!$gene->slice->is_circular) {
+    $ga->update_coords($gene);
+    return;
+  }
+
+  # for circular
+  #   (copied from Bio::EnsEMBL::DBSQL::GeneAdaptor::update_coords)
+  my $update_sql = qq(
+    UPDATE gene
+       SET seq_region_start = ?,
+           seq_region_end = ?
+       WHERE gene_id = ?
+    );
+  
+  # we can assume that we work with the top-level seq_regions,
+  #   thus Gene::start/end and Gene::seq_region_start/end are equivalent
+  my $sth = $ga->prepare($update_sql);
+  $sth->bind_param(1, $gene->start); # ~ seq_region_start
+  $sth->bind_param(2, $gene->end); # ~ seq_region_end
+  $sth->bind_param(3, $gene->dbID);
+  $sth->execute();
+}
+
 sub add_exons {
   my ($self, $gff_exons, $transcript, $prediction) = @_;
   
+  # force exon ranking for strange cases like transplacing or for coords > seq_region length (on circular)
+  my @outliers = grep { $_ ->start > $transcript->slice->length } @$gff_exons;
+  my @strands = map {$_->strand} @$gff_exons;
+  my $different_strands = scalar(keys %{{ map { $_=>1 } @strands }});
+  my $force_ranking = ($different_strands > 1 || scalar(@outliers) > 0) ? 1 : 0;
+
+  # Use the strandness majority to decide in which order the exons of transspliced genes are ranked
+  my $strandness = sum0 @strands;
+  my $sorting = ($strandness > 0)? \&sort_genomic : \&sort_genomic_desc;
+
   my $n = 1;
-  
-  foreach my $gff_exon (sort sort_coding @$gff_exons) {
+  foreach my $gff_exon (sort $sorting @$gff_exons) {
     my $exon_id = $transcript->stable_id.'-E'.$n++;
     my $exon;
     if ($prediction) {
@@ -411,7 +486,7 @@ sub add_exons {
     } else {
       $exon = $self->new_exon($gff_exon, $transcript, $exon_id);
     }
-    $transcript->add_Exon($exon);
+    $transcript->add_Exon($exon, ($force_ranking ? $n-1 : undef));
   }
 }
 
@@ -479,8 +554,6 @@ sub add_translation {
 sub common_prefix {
   my ($self, $name, @names) = @_;
   return $name if (!@names);
-
-  # TODO: benchmark trie variant
 
   ($name, @names) = keys %{{ map { $_ => 1 } ($name, @names) }};
   return $name if (!@names);
@@ -684,6 +757,8 @@ sub infer_exons {
 }
 
 sub infer_translation {
+  # produce ($genomic_start, $genomic_end) to be used by translation_coordinates
+  # to infer offsets within start / end exons
   my ($self, $gff_transcript, $transcript) = @_;
   
   my ($genomic_start, $genomic_end);
@@ -698,8 +773,37 @@ sub infer_translation {
     
     if ($transcript->strand == -1) {
       $genomic_end   -= $gff_cds[-1]->phase if defined $gff_cds[-1]->phase;
-    } else {
+    } elsif ($transcript->strand == 1) {
       $genomic_start += $gff_cds[0]->phase if defined $gff_cds[0]->phase;
+    } else { # unknow strand for trans spliced
+      # (partly duplicating self::translation_coordinates)
+      # pick first "[0]" / last "[-1]" CDSs parts from unadjusted (genomically sorted) list of CDS
+      
+      # but because we are to iterate through adjusted exon (sort_coding) we need to adjust (circularise) CDS coordinates
+      my $start_cds = [ $self->exon_coords($gff_cds[0], $transcript, "CDS"), "start" ]; # start, end, strand, label
+      my $end_cds = [ $self->exon_coords($gff_cds[-1], $transcript, "CDS"), "end" ];
+
+      # find out which exon has first or last CDS part
+      # and adjust phase if there's a need
+      my @exons = @{ $transcript->get_all_Exons };
+      for my $exon (@exons) {
+        # check if there are any CDSs within the current exon
+        my @filtered_cds = grep { $exon->start <= $_->[0] && $_->[1] <= $exon->end } ($start_cds, $end_cds);
+
+        # if we have one -- translation starts (or ends)
+        if (@filtered_cds) {
+          # update start/end based on label (assume exon and CDS have the same strand)
+          my $label = ($exon->strand == 1)? $filtered_cds[0]->[3] : $filtered_cds[-1]->[3];
+           
+          # alter genomic_(start|end) only for "closest" CDSs
+          if ($label eq "start" && $exon->strand == 1) {
+            $genomic_start += $gff_cds[0]->phase if defined $gff_cds[0]->phase;
+          }
+          if ($label eq "end" && $exon->strand == -1) {
+            $genomic_end   -= $gff_cds[-1]->phase if defined $gff_cds[-1]->phase;
+          }
+        }
+      }
     }
   }
   
@@ -781,8 +885,18 @@ sub translation_coordinates {
   $seq_start  = 1;
   $seq_end    = $exons[-1]->length;
   
+  # fix seq_start, seq_end for circular seq_regions
+  my $slice_len = $transcript->slice->length();
+  my $is_circular = $transcript->slice->is_circular();
+  my $transcript_id = $transcript->stable_id;
+
+  my ($genomic_start_raw, $genomic_end_raw) = ($genomic_start, $genomic_end);
+  $genomic_start = $self->circularise_coord($genomic_start, $slice_len, $is_circular, "fixing translation_coordinates genomic_start for $transcript_id");
+  $genomic_end = $self->circularise_coord($genomic_end, $slice_len, $is_circular, "fixing translation_coordinates genomic_end for $transcript_id");
+
   foreach my $exon (@exons) {
-    if ($genomic_start >= $exon->start && $genomic_start <= $exon->end) {
+    if ($exon->start <= $genomic_start && $genomic_start <= $exon->end) {
+      # genomic_start (fixed coords) is within exon
       if ($exon->strand == -1) {
         $end_exon = $exon;
         $seq_end = $exon->end - $genomic_start + 1;
@@ -791,7 +905,8 @@ sub translation_coordinates {
         $seq_start = $genomic_start - $exon->start + 1;
       }
     }
-    if ($genomic_end >= $exon->start && $genomic_end <= $exon->end) {
+    # genomic_end (fixed coords) is within exon
+    if ($exon->start <= $genomic_end && $genomic_end <= $exon->end) {
       if ($exon->strand == -1) {
         $start_exon = $exon;
         $seq_start = $exon->end - $genomic_end + 1;
@@ -811,14 +926,33 @@ sub set_exon_phase {
   my ($phase, $end_phase) = (undef, undef);
   my $exons = $transcript->get_all_Exons;
   my $translation = $transcript->translation;
+
+  my $coding_region_start = $transcript->coding_region_start();
+  my $coding_region_end = $transcript->coding_region_end();
+  return if (!defined $coding_region_start || !defined $coding_region_end);
+
+  # warn if Transcript::coding_region_start invariant
+  #   "By convention, the coding_region_start is always lower than the value returned by the coding_end method"
+  # is broken
+  # https://github.com/Ensembl/ensembl/blob/ae2dd9f7392c152c1aa07fa70c7eca4416fc1171/modules/Bio/EnsEMBL/Transcript.pm#L1072
+  if ($coding_region_end < $coding_region_start) {
+    $self->log_warning("Set exon phase for transcript " . $transcript->stable_id . ": (coding_region_start <= coding_region_end) ($coding_region_start <= $coding_region_end) invariant is broken. Can be a transspliced one and/or on a circular region");
+  }
   
   # The phase and end_phase have defaults of -1, so only need to change
   # these when dealing with coding regions. The exons are automatically
   # returned in 5' -> 3' order.
-  my $start_exon = 1;
+  my $fixed_start_phase = 0;
+  my $translatable = 0;
   foreach my $exon (@{$exons}) {
-    if (defined $exon->coding_region_start($transcript)) {
-      if ($start_exon) {
+    # find if translation starts / ends within this exon
+    my $started = $exon->start <= $coding_region_start && $coding_region_start <= $exon->end;
+    my $ended = $exon->start <= $coding_region_end && $coding_region_end <= $exon->end;
+    
+    # with weird circular stuff not sure what we see first
+    $translatable ^= 1 if ($started || $ended);
+    if ($translatable || $started || $ended) {
+      if (!$fixed_start_phase) {
         if ($translation->start == 1) {
           $phase = 0;
           $end_phase = ($exon->length) % 3;
@@ -826,16 +960,21 @@ sub set_exon_phase {
           $phase = -1;
           my $offset = $translation->start - 1;
           $end_phase = ($exon->length - $offset) % 3;
-        }
-        $start_exon = 0;
+        } # translation start else
+        $fixed_start_phase = 1;
       } else {
+        # if already fixed start phase
         $end_phase = ($phase + $exon->length) % 3;
       }
+      # for any exon
       $exon->phase($phase);
       $exon->end_phase($end_phase);
       $phase = $end_phase;
-    }
-  }
+    } # $translatable
+
+    # mark everything else as not translatable
+    $translatable = 0 if ($started && $ended); # same start & end exon
+  } # foreach exon
   
   # End phase of -1 is conditional on there being a 3' UTR.
   if ($translation->end < $translation->end_Exon->length) {
@@ -1058,7 +1197,7 @@ sub new_transcript {
     
     # Other kinds of pseudogenes?
     } else {
-      die("Unrecognized pseudogene biotype: $transcript_type (gene: $gene_type)");
+      $self->log_throw("Unrecognized pseudogene biotype: $transcript_type (gene: $gene_type)");
     }
     
   # transposable_element
@@ -1136,15 +1275,60 @@ sub new_predicted_transcript {
   return $transcript;
 }
 
+
+sub circularise_coord {
+  my ($self, $coord, $length, $circular, $msg) = @_;
+  return $coord if ($coord <= $length);
+
+  if ($coord > $length && !$circular) {
+    $self->log_throw("coord behind the non-circular slice end: $msg");
+  } else {
+    # moving to 0-based coords, mod len and moving back to 1-based coords
+    $coord = int( ($coord - 1) % $length + 1 );
+    $self->log_warning("coord behind the non-circular slice end, circularising (mod $length, $coord): $msg");
+  }
+  return $coord;
+}
+
+
+sub exon_coords {
+  my ($self, $gff_exon, $transcript, $exon_id) = @_;
+  # gets coords from $gff_exon, wraps them for circular seq_regions
+  #   throws error for non-circular seq_regions behind the seq_region length
+  #   returns ($exon_start, $exon_end, $exon_strand)
+
+  my $exon_start = $gff_exon->start;
+  my $exon_end = $gff_exon->end;
+  my $exon_strand = $gff_exon->strand;
+
+  my $is_circular = $transcript->slice->is_circular(); 
+  my $slice_len = $transcript->slice->length(); 
+  my $slice_name = $transcript->slice->name(); 
+
+  my $msg = "exon $exon_id (start $exon_start, end $exon_end, strand $exon_strand) on slice $slice_name";
+  $self->log_throw("not a valid strand for $msg") if ($exon_strand != 1 && $exon_strand != -1);
+
+  # circularise only if seq_region start is not within exon (exon[ | ]exon)
+  if ($exon_start > $slice_len) {
+    $exon_start = $self->circularise_coord($exon_start, $slice_len, $is_circular, $msg);
+    $exon_end = $self->circularise_coord($exon_end, $slice_len, $is_circular, $msg);
+  }
+
+  return ($exon_start, $exon_end, $exon_strand);
+}
+
+
 sub new_exon {
   my ($self, $gff_exon, $transcript, $exon_id) = @_;
+
+  my ($exon_start, $exon_end, $exon_strand) = $self->exon_coords($gff_exon, $transcript, $exon_id);
   
   my $exon = Bio::EnsEMBL::Exon->new(
     -stable_id     => $exon_id,
     -slice         => $transcript->slice,
-    -start         => $gff_exon->start,
-    -end           => $gff_exon->end,
-    -strand        => $gff_exon->strand,
+    -start         => $exon_start,
+    -end           => $exon_end,
+    -strand        => $exon_strand,
     -phase         => -1,
     -end_phase     => -1,
     -created_date  => time,
@@ -1161,12 +1345,14 @@ sub new_predicted_exon {
   my %atts    = $gff_exon->attributes;
   my $att     = $atts{'p_value'};
   my $p_value = $$att[0];
+
+  my ($exon_start, $exon_end, $exon_strand) = $self->exon_coords($gff_exon, $transcript, "predicted");
   
   my $exon = Bio::EnsEMBL::PredictionExon->new(
     -slice   => $transcript->slice,
-    -start   => $gff_exon->start,
-    -end     => $gff_exon->end,
-    -strand  => $gff_exon->strand,
+    -start   => $exon_start,
+    -end     => $exon_end,
+    -strand  => $exon_strand,
     -phase   => -1,
     -score   => $gff_exon->score,
     -p_value => $p_value,
@@ -1232,6 +1418,10 @@ sub sort_coding {
 
 sub sort_genomic {  
   return $a->start <=> $b->start;
+}
+
+sub sort_genomic_desc {
+  return $b->start <=> $a->start;
 }
 
 1;

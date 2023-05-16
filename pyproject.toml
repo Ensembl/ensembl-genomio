@@ -20,7 +20,7 @@ name = "ensembl-genomio"
 dynamic = [
     "version",
 ]
-requires-python = ">= 3.7"
+requires-python = ">= 3.8"
 description = "Ensembl GenomIO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
 readme = "README.md"
 authors = [

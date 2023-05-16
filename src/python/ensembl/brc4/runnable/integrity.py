@@ -89,6 +89,7 @@ class integrity(eHive.BaseRunnable):
             pep = {}
             seq_regions = {}
             seq_lengths = {}
+            seq_circular = {}
             gff = {}
             func_ann = {}
             agp_seqr = {}
@@ -118,6 +119,7 @@ class integrity(eHive.BaseRunnable):
                 # Store the length as int
                 for seq in seq_regions:
                     seq_lengths[seq["name"]] = int(seq["length"])
+                    seq_circular[seq["name"]] = seq.get("circular", False)
                     if seq["coord_system_level"] == "contig":
                         seqr_seqlevel[seq["name"]] = int(seq["length"])
             if "functional_annotation" in manifest:
@@ -183,7 +185,7 @@ class integrity(eHive.BaseRunnable):
                 # Compare the length and id retrieved from seq.json to the gff
                 if seq_regions:
                     errors += self.check_seq_region_lengths(
-                        seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff"
+                        seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff", seq_circular
                     )
 
             # Check fasta dna and seq_region integrity
@@ -508,7 +510,7 @@ class integrity(eHive.BaseRunnable):
 
         return errors
 
-    def check_seq_region_lengths(self, seqrs, feats, name):
+    def check_seq_region_lengths(self, seqrs, feats, name, circular = None):
         """Check the integrity of seq_region.json file by comparing the length of the sequence
             to fasta files and the gff.
 
@@ -532,23 +534,36 @@ class integrity(eHive.BaseRunnable):
         diff = []
         diff_list = []
 
+        # not an error on circular for gff features
+        diff_circular = []
+        diff_circular_list = []
+
         for seq_id in seqrs:
             if seq_id in feats:
                 # Check that feature is within the seq_region length
                 if feats[seq_id] > seqrs[seq_id]:
-                    diff.append(seq_id)
-                    diff_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
+                      if circular is None or not circular.get(seq_id, False):
+                          diff.append(seq_id)
+                          diff_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
+                      else:
+                          diff_circular.append(seq_id)
+                          diff_circular_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
                 else:
                     common.append(seq_id)
             else:
                 only_seqr.append(seq_id)
+
         for seq_id in feats:
-            if seq_id not in common and seq_id not in diff:
+            if seq_id not in common and seq_id not in diff and seq_id not in diff_circular:
                 only_feat.append(seq_id)
 
-        errors = []
         if common:
             print("%d common elements in %s" % (len(common), name))
+        if diff_circular:
+            print("%d differences for circular elements in %s (e.g. %s)" %
+                (len(diff_circular), name, diff_circular_list[0]))
+        
+        errors = []
         if diff:
             errors.append(
                 "%d common elements with higher length in %s (e.g. %s)" % (len(diff), name, diff_list[0])
