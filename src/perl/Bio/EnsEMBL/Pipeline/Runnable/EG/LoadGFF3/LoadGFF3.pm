@@ -779,7 +779,7 @@ sub infer_translation {
       # (partly duplicating self::translation_coordinates)
       # pick first "[0]" / last "[-1]" CDSs parts from unadjusted (genomically sorted) list of CDS
       
-      # but because we are to iterate through adjusted exon (sort_coding) we need to adjust (circulise) CDS coordinates
+      # but because we are to iterate through adjusted exon (sort_coding) we need to adjust (circularise) CDS coordinates
       my $start_cds = [ $self->exon_coords($gff_cds[0], $transcript, "CDS"), "start" ]; # start, end, strand, label
       my $end_cds = [ $self->exon_coords($gff_cds[-1], $transcript, "CDS"), "end" ];
 
@@ -891,8 +891,8 @@ sub translation_coordinates {
   my $transcript_id = $transcript->stable_id;
 
   my ($genomic_start_raw, $genomic_end_raw) = ($genomic_start, $genomic_end);
-  $genomic_start = $self->circulise_coord($genomic_start, $slice_len, $is_circular, "fixing translation_coordinates genomic_start for $transcript_id");
-  $genomic_end = $self->circulise_coord($genomic_end, $slice_len, $is_circular, "fixing translation_coordinates genomic_end for $transcript_id");
+  $genomic_start = $self->circularise_coord($genomic_start, $slice_len, $is_circular, "fixing translation_coordinates genomic_start for $transcript_id");
+  $genomic_end = $self->circularise_coord($genomic_end, $slice_len, $is_circular, "fixing translation_coordinates genomic_end for $transcript_id");
 
   foreach my $exon (@exons) {
     if ($exon->start <= $genomic_start && $genomic_start <= $exon->end) {
@@ -1276,7 +1276,7 @@ sub new_predicted_transcript {
 }
 
 
-sub circulise_coord {
+sub circularise_coord {
   my ($self, $coord, $length, $circular, $msg) = @_;
   return $coord if ($coord <= $length);
 
@@ -1308,10 +1308,10 @@ sub exon_coords {
   my $msg = "exon $exon_id (start $exon_start, end $exon_end, strand $exon_strand) on slice $slice_name";
   $self->log_throw("not a valid strand for $msg") if ($exon_strand != 1 && $exon_strand != -1);
 
-  # circulise only if seq_region start is not within exon (exon[ | ]exon)
+  # circularise only if seq_region start is not within exon (exon[ | ]exon)
   if ($exon_start > $slice_len) {
-    $exon_start = $self->circulise_coord($exon_start, $slice_len, $is_circular, $msg);
-    $exon_end = $self->circulise_coord($exon_end, $slice_len, $is_circular, $msg);
+    $exon_start = $self->circularise_coord($exon_start, $slice_len, $is_circular, $msg);
+    $exon_end = $self->circularise_coord($exon_end, $slice_len, $is_circular, $msg);
   }
 
   return ($exon_start, $exon_end, $exon_strand);
