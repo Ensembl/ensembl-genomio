@@ -64,7 +64,6 @@ dev = [
     "pylint",
     "pytest",
     "Sphinx",
-    "toml-validator",
     "types-requests",
 ]
 doc = [
