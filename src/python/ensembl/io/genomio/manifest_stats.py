@@ -20,7 +20,7 @@ from pathlib import Path
 from shutil import which
 from statistics import mean
 import subprocess
-from typing import Dict, List, Optional, Set, TextIO
+from typing import Dict, List, Optional, Set, TextIO, Union
 import argschema
 from BCBio import GFF
 import json
@@ -130,7 +130,7 @@ class manifest_stats:
         for coord_name, lengths in coord_systems.items():
             stats.append("\nCoord_system: %s" % coord_name)
 
-            stat_counts = dict()
+            stat_counts: Dict[str, Union[int, float]] = dict()
             stat_counts["Number of sequences"] = len(lengths)
             stat_counts["Sequence length sum"] = sum(lengths)
             stat_counts["Sequence length minimum"] = min(lengths)
