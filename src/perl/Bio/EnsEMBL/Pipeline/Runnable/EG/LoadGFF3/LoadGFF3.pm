@@ -414,13 +414,28 @@ sub update_gene_coords_based_on_transcripts_on_circular_sr {
     # ideally, just call
     #   $ga->update_coords($gene);
     # unfortunately this doesn't work for circular seq_regions
-    # ( Gene::seq_region_start/end uses BaseFeatureAdaptor::_seq_region_boundary_from_db failback for circular regions )
+    # when update_coords is called it uses Gene::seq_region_start/end, but
+    # Gene::seq_region_start/end uses BaseFeatureAdaptor::_seq_region_boundary_from_db
+    # failback mechanism for circular regions and ignore Feature:: coords being updated
+    # (see https://github.com/Ensembl/ensembl/blob/release/111/modules/Bio/EnsEMBL/Feature.pm#L1067)
+
     # going vanila SQL update way
     $self->update_gene_seq_region_coords_from_coords($gene, $ga);
   }
 }
 
+
 sub update_gene_seq_region_coords_from_coords {
+  # function to update gene coordinates in db based on the object state
+  # ideally,
+  #   $ga->update_coords($gene);
+  # should be called, but unfortunately this doesn't work for _circular_ seq_regions
+  #   when update_coords is called it uses Gene::seq_region_start/end, but
+  #   Gene::seq_region_start/end uses BaseFeatureAdaptor::_seq_region_boundary_from_db
+  #   failback mechanism for circular regions and ignore Feature:: coords being updated
+  #   (see https://github.com/Ensembl/ensembl/blob/release/111/modules/Bio/EnsEMBL/Feature.pm#L1067)
+  # for _circular_ regions going vanila SQL UPDATE way
+
   my ($self, $gene, $ga) = @_;
 
   return if !$gene;
