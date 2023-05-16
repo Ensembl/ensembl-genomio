@@ -33,10 +33,11 @@ workflow additional_seq_prepare {
     main:
         gb_file_ch = download_genbank(accession)
         extract_from_gb(prefix, production_name, gb_file_ch)
-        annotation = process_gff3(extract_from_gb.out.gene_gff, extract_from_gb.out.genome)
+        annotation = process_gff3(extract_from_gb.out.gene_gff, extract_from_gb.out.genome, accession)
         gff3_validation(process_gff3.out.gene_models)
         json_files = extract_from_gb.out.genome.concat(extract_from_gb.out.seq_regions, process_gff3.out.functional_annotation)
-        json_files_checked = CHECK_JSON_SCHEMA(json_files)
+        json_files_checked = CHECK_JSON_SCHEMA(json_files, annotation.out.gca)
+                        .map{verified_json, gca -> verified_json}
         all_files = json_files_checked
                         .concat(extract_from_gb.out.dna_fasta, extract_from_gb.out.pep_fasta)
                         .map{it -> [accession, it]}
