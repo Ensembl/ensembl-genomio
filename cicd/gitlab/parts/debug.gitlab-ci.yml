@@ -1,0 +1,39 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+# various parts for debugging Gitlab CI/CD
+stages:
+  - debug:gitlab_ci
+
+debug:gitlab_ci:env:
+  # see https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+  stage: debug:gitlab_ci
+  script:
+    - echo various Gitlab CI/CD variables to follow 
+    - echo RUN_DIR $RUN_DIR
+    - echo CI_PIPELINE_SOURCE $CI_PIPELINE_SOURCE 
+    - echo CI_COMMIT_BRANCH $CI_COMMIT_BRANCH
+    - echo CI_DEFAULT_BRANCH $CI_DEFAULT_BRANCH
+    - echo CI_OPEN_MERGE_REQUESTS $CI_OPEN_MERGE_REQUESTS
+    - echo CI_DEFAULT_BRANCH $CI_DEFAULT_BRANCH
+    - echo CI_MERGE_REQUEST_TARGET_BRANCH_NAME $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - echo CI_MERGE_REQUEST_TARGET_BRANCH_PROTECTED $CI_MERGE_REQUEST_TARGET_BRANCH_PROTECTED 
+    - echo CI_MERGE_REQUEST_EVENT_TYPE $CI_MERGE_REQUEST_EVENT_TYPE
+    - echo external pull-requests related
+    - echo CI_EXTERNAL_PULL_REQUEST_IID $CI_EXTERNAL_PULL_REQUEST_IID
+    - echo CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY $CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY
+    - echo CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY $CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY
+    - echo CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME
+

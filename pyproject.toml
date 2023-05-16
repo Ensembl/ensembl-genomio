@@ -57,9 +57,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "black",
+    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",
     "mock",
+    "mypy",
+    "pylint",
+    "pytest",
     "Sphinx",
     "ensembl-py @ git+ssh://git@github.com/Ensembl/ensembl-py",
+    "types-requests",
 ]
 doc = [
     "mock",
@@ -71,14 +77,32 @@ homepage = "https://www.ensembl.org"
 repository = "https://github.com/Ensembl/ensembl-genomio"
 
 [project.scripts]
+# Download
+download_genbank = "ensembl.io.genomio.download_genbank:main"
+retrieve_assembly_data = "ensembl.io.genomio.assembly.get_assembly_data:main"
+# Prepare
+amend_genomic_data = "ensembl.io.genomio.metadata.update_genome_metadata:main"
+extract_from_gb = "ensembl.io.genomio.extract_from_gb:main"
+prep_fasta_data = "ensembl.io.genomio.fastaprep.process_fasta:main"
 prepare_genome_metadata = "ensembl.io.genomio.metadata.prepare_genome:main"
 prepare_seq_region = "ensembl.io.genomio.metadata.prepare_seq_region:main"
-check_json_schema = "ensembl.io.genomio.schemas.json_schema_validator:main"
-extract_file = "ensembl.io.genomio.utils.archive_utils:extract_file_cli"
-retrieve_assembly_data = "ensembl.io.genomio.assembly.get_assembly_data:main"
-prep_fasta_data = "ensembl.io.genomio.fastaprep.process_fasta:main"
-amend_genomic_data = "ensembl.io.genomio.metadata.update_genome_metadata:main"
 process_gff3 = "ensembl.io.genomio.process_gff3:main"
+# Schema
+check_json_schema = "ensembl.io.genomio.schemas.json_schema_validator:main"
+json_schema_factory = "ensembl.io.genomio.schemas.json_schema_factory:main"
+# Utils
+extract_file = "ensembl.io.genomio.utils.archive_utils:extract_file_cli"
+# Manifest
+check_integrity = "ensembl.io.genomio.integrity:main"
+manifest_maker = "ensembl.io.genomio.manifest_maker:main"
+manifest_stats = "ensembl.io.genomio.manifest_stats:main"
+# DB
+db_factory = "ensembl.io.genomio.db_factory:main"
+# Dump
+seq_region_dumper = "ensembl.io.genomio.seq_region_dumper:main"
+events_dumper = "ensembl.io.genomio.events_dumper:main"
+# Load
+events_loader = "ensembl.io.genomio.events_loader:main"
 
 [tool.setuptools]
 package-dir = {"" = "src/python"}
@@ -104,6 +128,26 @@ build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 110
+
+[tool.pylint.main]
+max-line-length = 110
+disable = [
+    "invalid-name",
+    "similarities",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-statements",
+    "unspecified-encoding",
+    "wildcard-import",
+]
+
+[tool.mypy]
+mypy_path = "src/python"
+explicit_package_bases = true
+ignore_missing_imports = true
+show_error_codes = true
+warn_unused_configs = true
 
 [tool.pytest.ini_options]
 addopts = "-v --tb=native --server=sqlite:///"

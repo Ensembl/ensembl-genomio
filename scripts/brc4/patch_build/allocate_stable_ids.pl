@@ -236,12 +236,12 @@ if ($opt{update} and not $opt{mock_osid}) {
   $osid = OSID_service_dev->new();
 }
 $osid->connect($opt{organism});
-allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix});
+allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix}, $opt{out_gene_map});
 
 ###############################################################################
 
 sub allocate_genes {
-  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix) = @_;
+  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix, $gene_map_path) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
   my $tra = $registry->get_adaptor($species, "core", "transcript");
@@ -287,6 +287,8 @@ sub allocate_genes {
       'transcripts' => scalar(@transcripts)
     };
   }
+
+  save_gene_map(\%gene_map, $gene_map_path);
   
   # Part 2: get transcripts ids
   my $tr_ids = $osid->get_transcripts_ids($set_id, \@tran_count);
@@ -410,6 +412,19 @@ sub allocate_genes {
   $logger->info("(Use --update to make the changes to the database)") if not $update;
 }
 
+sub save_gene_map {
+  my ($map, $map_path) = @_;
+  return if not $map_path;
+
+  open my $map_fh, ">", $map_path;
+  for my $old_id (sort keys %$map) {
+    my $new_id = $map->{$old_id};
+    my @line = ($old_id, $new_id, "", "release_name", "date");
+    print $map_fh join("\t", @line) . "\n";
+  }
+  close $map_fh;
+}
+
 ###############################################################################
 # Parameters and usage
 sub usage {
@@ -438,6 +453,8 @@ sub usage {
     
     --mock_osid       : Get IDs from the Fake OSID server (for dev testing with update)
 
+    --out_gene_map <path>: Save the gene mapping in a tab file (old_id, new_id, "", "release_name", "date"). You will need to replace the last 2.
+
     --help            : show this help message
     --verbose         : show detailed progress
     --debug           : show even more information (for debugging purposes)
@@ -460,6 +477,7 @@ sub opt_check {
     "prefix:s",
     "xref_source:s",
     "analysis_name:s",
+    "out_gene_map:s",
     "help",
     "verbose",
     "debug",
@@ -469,7 +487,9 @@ sub opt_check {
   usage("Registry needed") if not $opt{registry};
   usage("Species needed") if not $opt{species};
   $opt{organism} //= $opt{species};
-  usage("OSID details needed") if not $opt{osid_url} and not $opt{osid_user} and not $opt{osid_pass};
+  if (not $opt{mock_osid}) {
+    usage("OSID details needed") if not ($opt{osid_url} and $opt{osid_user} and $opt{osid_pass});
+  }
   usage()                if $opt{help};
   Log::Log4perl->easy_init($INFO) if $opt{verbose};
   Log::Log4perl->easy_init($DEBUG) if $opt{debug};

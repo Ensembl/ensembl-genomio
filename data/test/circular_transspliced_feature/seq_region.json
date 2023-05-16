@@ -1,0 +1,21 @@
+[
+  {
+    "circular": true,
+    "codon_table": 11,
+    "coord_system_level": "chromosome",
+    "karyotype_bands": [],
+    "length": 152217,
+    "location": "chloroplast_chromosome",
+    "name": "NC_022868.1",
+    "synonyms": [
+      {
+        "name": "Pltd",
+        "source": "INSDC_submitted_name"
+      },
+      {
+        "name": "NC_022868.1",
+        "source": "RefSeq"
+      }
+    ]
+  }
+]

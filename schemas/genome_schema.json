@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/schema#",
+  "$schema": "http://json-schema.org/draft-07/schema",
   "$id": "https://.../.../meta/schemas/v0.0.0/genome_schema.json",
   "description" : "JSON schema for exchanging meta information for genomes",
 
