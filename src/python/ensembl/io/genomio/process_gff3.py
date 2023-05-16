@@ -29,7 +29,7 @@ from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.brc4.runnable.utils import print_json
+from ensembl.io.genomio.utils.json_utils import print_json
 
 
 class GFFParserError(Exception):
