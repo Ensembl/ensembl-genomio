@@ -18,7 +18,7 @@ variables:
   # legacy, used to find ensembl-hive python parts
   PYTHONPATH: $RUN_DIR/ensembl-hive/wrappers/python3
 
-# don't fotget to update /pyproject.toml
+# don't forget to update /pyproject.toml
 #  if changing python version
 image: python:3.8
 
@@ -66,7 +66,7 @@ python:prepare_env:local:
     - git clone -b "version/2.6" --depth 1 https://github.com/Ensembl/ensembl-hive.git $RUN_DIR/ensembl-hive
     - echo "testing eHive python parts presence"
     - echo PYTHONPATH $PYTHONPATH
-    - python -c 'import eHive' # testing eHive presense
+    - python -c 'import eHive' # testing eHive presence
 
 
 ##  PYTHON STATIC ANALYSIS
