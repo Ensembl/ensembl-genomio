@@ -65,8 +65,8 @@ process PUBLISH_DIR {
 
     input:
         path data_dir
-        val db
         val out_dir
+        val db
     
     output:
         path data_dir
