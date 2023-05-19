@@ -847,7 +847,7 @@ class process_gff3:
             return False
 
         # Min length
-        if len(name) <= min_length:
+        if len(name) < min_length:
             print(f"Stable id is too short (<{min_length}) {name}")
             return False
 
