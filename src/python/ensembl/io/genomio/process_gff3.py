@@ -156,7 +156,7 @@ class process_gff3:
                 out_gff_fh.write(new_line)
 
         if merged and not self.merge_split_genes:
-            merged_genes_str = "\n".join(merged)
+            merged_genes_str = f"{merged[0]}\netc."
             raise GFFParserError(f"{len(merged)} merged genes:\n{merged_genes_str}\n")
 
     def merge_genes(self, tomerge: List) -> str:
