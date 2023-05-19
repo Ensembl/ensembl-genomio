@@ -16,7 +16,8 @@
 // Import modules/subworkflows
 include { download_genbank } from '../modules/download_genbank.nf'
 include { extract_from_gb } from '../modules/extract_from_gb.nf'
-include { PROCESS_GFF3; gff3_validation } from '../modules/process_gff3.nf'
+include { PROCESS_GFF3 } from '../modules/process_gff3.nf'
+include { GFF3_VALIDATION } from '../modules/gff3_validation.nf'
 include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
 include { JSON_SCHEMA_FACTORY } from '../modules/json_schema_factory.nf'
 include { COLLECT_FILES; MANIFEST; PUBLISH_DIR } from '../modules/collect_files.nf'
@@ -37,7 +38,7 @@ workflow additional_seq_prepare {
         // Parse data from GB file into GFF3 and json files
         extract_from_gb(prefix, production_name, gb_file)
         PROCESS_GFF3(extract_from_gb.out.gene_gff, extract_from_gb.out.genome, accession)
-        gff3_validation(PROCESS_GFF3.out.gene_models)
+        GFF3_VALIDATION(PROCESS_GFF3.out.gene_models)
 
         // Validate files
         json_files = extract_from_gb.out.genome
