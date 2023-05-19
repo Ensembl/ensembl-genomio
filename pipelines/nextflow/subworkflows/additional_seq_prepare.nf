@@ -14,7 +14,8 @@
 // limitations under the License.
 
 // Import modules/subworkflows
-include { download_genbank; extract_from_gb} from '../modules/download_genbank.nf'
+include { download_genbank } from '../modules/download_genbank.nf'
+include { extract_from_gb } from '../modules/extract_from_gb.nf'
 include { PROCESS_GFF3; gff3_validation } from '../modules/process_gff3.nf'
 include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
 include { JSON_SCHEMA_FACTORY } from '../modules/json_schema_factory.nf'
