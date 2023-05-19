@@ -14,8 +14,8 @@
 // limitations under the License.
 
 // Import modules/subworkflows
-include { download_genbank } from '../modules/download_genbank.nf'
-include { extract_from_gb } from '../modules/extract_from_gb.nf'
+include { DOWNLOAD_GENBANK } from '../modules/download_genbank.nf'
+include { EXTRACT_FROM_GB } from '../modules/extract_from_gb.nf'
 include { PROCESS_GFF3 } from '../modules/process_gff3.nf'
 include { GFF3_VALIDATION } from '../modules/gff3_validation.nf'
 include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
@@ -33,19 +33,19 @@ workflow additional_seq_prepare {
         output_dir
     main:
         // Get the data
-        gb_file = download_genbank(accession)
+        gb_file = DOWNLOAD_GENBANK(accession)
 
         // Parse data from GB file into GFF3 and json files
-        extract_from_gb(prefix, production_name, gb_file)
-        PROCESS_GFF3(extract_from_gb.out.gene_gff, extract_from_gb.out.genome, accession)
+        EXTRACT_FROM_GB(prefix, production_name, gb_file)
+        PROCESS_GFF3(EXTRACT_FROM_GB.out.gene_gff, EXTRACT_FROM_GB.out.genome, accession)
         GFF3_VALIDATION(PROCESS_GFF3.out.gene_models)
 
         // Validate files
-        json_files = extract_from_gb.out.genome
-            .concat(extract_from_gb.out.seq_regions, PROCESS_GFF3.out.functional_annotation)
+        json_files = EXTRACT_FROM_GB.out.genome
+            .concat(EXTRACT_FROM_GB.out.seq_regions, PROCESS_GFF3.out.functional_annotation)
         CHECK_JSON_SCHEMA(json_files, accession)
         all_files = CHECK_JSON_SCHEMA.out.verified_json
-                        .concat(extract_from_gb.out.dna_fasta, extract_from_gb.out.pep_fasta)
+                        .concat(EXTRACT_FROM_GB.out.dna_fasta, EXTRACT_FROM_GB.out.pep_fasta)
                         .map{it -> [accession, it]}
                         .groupTuple()
         

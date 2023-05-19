@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
 
-process extract_from_gb {
+process EXTRACT_FROM_GB {
     tag "$gb_file"
     label 'default'
 

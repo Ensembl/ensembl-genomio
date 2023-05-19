@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
 
-process download_genbank {
+process DOWNLOAD_GENBANK {
     label "Sequence_genbank_file"
     tag "${accession}"
     label 'default'
