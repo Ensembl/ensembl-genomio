@@ -64,7 +64,6 @@ dev = [
     "pylint",
     "pytest",
     "Sphinx",
-    "ensembl-py @ git+ssh://git@github.com/Ensembl/ensembl-py",
     "types-requests",
 ]
 doc = [
