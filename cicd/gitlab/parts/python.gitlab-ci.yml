@@ -112,4 +112,8 @@ python:static_analysis:black:
 python:tests:pytest:
   extends: .python:tests:generic
   script:
-    - pytest .
+    - coverage run -m pytest
+    - coverage xml -o cov_report.xml
+  artifacts:
+    reports:
+      junit: cov_report.xml
