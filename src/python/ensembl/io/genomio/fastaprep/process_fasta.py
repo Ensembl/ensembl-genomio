@@ -21,20 +21,20 @@ from mimetypes import guess_type
 from pathlib import Path
 from os import PathLike
 import argschema
-from typing import Optional
+from typing import Dict, List, Optional, Set
 
 from Bio import SeqIO
 
-exclude_seq_regions = []
+exclude_seq_regions: List[str] = []
 
 
-def peptides_to_exclude(genbank_path, seqr_to_exclude) -> dict():
+def peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -> Set[str]:
     """
     Extract peptide IDs from a genbank file that are in a given list of seq regions
     """
     encoding = guess_type(genbank_path)[1]
     _open = partial(gzip.open, mode="rt") if encoding == "gzip" else open
-    peptides_to_exclude = dict()
+    peptides_to_exclude: Set[str] = set()
     with _open(genbank_path) as in_genbank:
         for record in SeqIO.parse(in_genbank, "genbank"):
             if record.id in seqr_to_exclude:
@@ -43,7 +43,7 @@ def peptides_to_exclude(genbank_path, seqr_to_exclude) -> dict():
                     if feat.type == "CDS":
                         if "protein_id" in feat.qualifiers:
                             feat_id = feat.qualifiers["protein_id"]
-                            peptides_to_exclude[feat_id[0]] = True
+                            peptides_to_exclude.add(feat_id[0])
                         else:
                             raise Exception(f"Peptide without peptide ID ${feat}")
     return peptides_to_exclude
@@ -66,7 +66,7 @@ def prep_fasta_data(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    seqr_to_exclude = exclude_seq_regions
+    seqr_to_exclude = set(exclude_seq_regions)
     if peptide_mode:
         genbank_path = Path(genebank_infile)
         to_exclude = peptides_to_exclude(genbank_path, seqr_to_exclude)
