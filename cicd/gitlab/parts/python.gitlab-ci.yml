@@ -15,8 +15,7 @@
 # Python related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
 variables:
-  # legacy, used to find ensembl-hive python parts
-  PYTHONPATH: $RUN_DIR/ensembl-hive/wrappers/python3
+  # Commands for running static analyses
   PYLINT_CMD: pylint --rcfile pyproject.toml
   MYPY_CMD: mypy --config-file pyproject.toml
   BLACK_CMD: black --config pyproject.toml
@@ -26,7 +25,7 @@ variables:
 image: python:3.8
 
 
-# overriding the default stages  list (https://docs.gitlab.com/ee/ci/yaml/#stages)
+# overriding the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
 stages:
   - python:prepare_env
   - python:static_analysis
@@ -65,11 +64,6 @@ python:prepare_env:local:
   script:
     # pip based
     - pip install -e .[dev]
-    # legacy
-    - git clone -b "version/2.6" --depth 1 https://github.com/Ensembl/ensembl-hive.git $RUN_DIR/ensembl-hive
-    - echo "testing eHive python parts presence"
-    - echo PYTHONPATH $PYTHONPATH
-    - python -c 'import eHive' # testing eHive presence
 
 
 ##  PYTHON STATIC ANALYSIS
@@ -85,9 +79,6 @@ python:prepare_env:local:
   #  PYTHONPATH: $RUN_DIR/ensembl-hive/wrappers/python3
   before_script:
     - source $RUN_DIR/venv/bin/activate
-    - echo PYTHONPATH $PYTHONPATH
-    - echo "testing eHive python parts presence"
-    - python -c 'import eHive' # testing eHive presence
 
 # Specific instances
 python:static_analysis:pylint:
