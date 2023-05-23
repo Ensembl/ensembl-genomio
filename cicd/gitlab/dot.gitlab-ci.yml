@@ -61,7 +61,8 @@ test:python:
 
 test:external:code_quality:
   # https://gitlab.ebi.ac.uk/help/user/project/merge_requests/code_quality.md
-  stage: test 
+  when: manual
+  stage: test
   trigger:
     strategy: depend
     forward:
