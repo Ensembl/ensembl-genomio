@@ -38,8 +38,9 @@ def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
         dst_dir: Path to where extract the file.
 
     """
-    extension = Path(src_file).suffix
-    file_base = src_file.strip(extension)
+    src_file = Path(src_file)
+    extension = src_file.suffix
+    file_base = src_file.stem
     final_path = Path(dst_dir) / file_base
 
     if extension == ".gz":
