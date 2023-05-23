@@ -59,6 +59,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "black",
+    "coverage",
     "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",
     "mock",
     "mypy",
