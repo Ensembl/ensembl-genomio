@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process PROCESS_SEQ_REGION {
-    label 'adaptative'
+    label 'adaptive'
     tag "$gca - $task.attempt"
     debug true
 

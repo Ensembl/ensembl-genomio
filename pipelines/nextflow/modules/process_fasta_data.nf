@@ -16,7 +16,7 @@
 
 process PROCESS_FASTA {
     tag "${gca}"
-    label 'adaptative'
+    label 'adaptive'
 
     input:
     path fasta_file
