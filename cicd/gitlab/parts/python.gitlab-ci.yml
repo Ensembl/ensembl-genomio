@@ -29,6 +29,7 @@ image: python:3.8
 stages:
   - python:prepare_env
   - python:static_analysis
+  - python:tests
 
 
 # Python related environment and tests
@@ -75,12 +76,15 @@ python:prepare_env:local:
   needs:
     - job: python:prepare_env:local
       artifacts: true
-  #variables: 
-  #  PYTHONPATH: $RUN_DIR/ensembl-hive/wrappers/python3
   before_script:
     - source $RUN_DIR/venv/bin/activate
 
-# Specific instances
+.python:tests:generic:
+  extends: .python:static_analysis:generic
+  stage: python:tests
+
+
+# Specific instances for static analyses
 python:static_analysis:pylint:
   extends: .python:static_analysis:generic
   script:
@@ -103,3 +107,9 @@ python:static_analysis:black:
   script:
     - $BLACK_CMD --verbose --check .
 
+
+# Specific instances for tests
+python:tests:pytest:
+  extends: .python:tests:generic
+  script:
+    - pytest .
