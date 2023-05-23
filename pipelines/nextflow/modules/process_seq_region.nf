@@ -13,21 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
-    label 'default'
+process PROCESS_SEQ_REGION {
+    label 'adaptive'
+    tag "$gca - $task.attempt"
+    debug true
 
     input:
-        path(json_file)
-        val(gca)
+    path genome_json
+    path assembly_report
+    path gbff_file
+    val gca
+    // val regions_to_exclude
 
     output:
-        path json_file, emit: verified_json
         val gca, emit: gca
+        path "*/seq_region.json", emit: seq_region
 
     script:
-        schema = params.json_schemas[json_file.baseName]
-        """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
-        """
+    """
+    prepare_seq_region --genome_file ${genome_json} --report_file ${assembly_report} \
+        --gbff_file ${gbff_file} --dst_dir ${gca}
+    """
+    // --to_exclude ${regions_to_exclude}
 }

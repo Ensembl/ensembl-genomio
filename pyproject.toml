@@ -76,17 +76,31 @@ homepage = "https://www.ensembl.org"
 repository = "https://github.com/Ensembl/ensembl-genomio"
 
 [project.scripts]
-json_schema_factory = "ensembl.io.genomio.schemas.json_schema_factory:main"
-check_json_schema = "ensembl.io.genomio.schemas.json_schema_validator:main"
+# Download
 download_genbank = "ensembl.io.genomio.download_genbank:main"
+retrieve_assembly_data = "ensembl.io.genomio.assembly.get_assembly_data:main"
+# Prepare
+amend_genomic_data = "ensembl.io.genomio.metadata.update_genome_metadata:main"
 extract_from_gb = "ensembl.io.genomio.extract_from_gb:main"
+prep_fasta_data = "ensembl.io.genomio.fastaprep.process_fasta:main"
+prepare_genome_metadata = "ensembl.io.genomio.metadata.prepare_genome:main"
+prepare_seq_region = "ensembl.io.genomio.metadata.prepare_seq_region:main"
 process_gff3 = "ensembl.io.genomio.process_gff3:main"
-manifest_maker = "ensembl.io.genomio.manifest_maker:main"
+# Schema
+check_json_schema = "ensembl.io.genomio.schemas.json_schema_validator:main"
+json_schema_factory = "ensembl.io.genomio.schemas.json_schema_factory:main"
+# Utils
+extract_file = "ensembl.io.genomio.utils.archive_utils:extract_file_cli"
+# Manifest
 check_integrity = "ensembl.io.genomio.integrity:main"
+manifest_maker = "ensembl.io.genomio.manifest_maker:main"
 manifest_stats = "ensembl.io.genomio.manifest_stats:main"
+# DB
 db_factory = "ensembl.io.genomio.db_factory:main"
+# Dump
 seq_region_dumper = "ensembl.io.genomio.seq_region_dumper:main"
 events_dumper = "ensembl.io.genomio.events_dumper:main"
+# Load
 events_loader = "ensembl.io.genomio.events_loader:main"
 
 [tool.setuptools]

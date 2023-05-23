@@ -30,7 +30,7 @@ import argschema
 from BCBio import GFF
 from Bio import SeqIO
 
-from ensembl.brc4.runnable.utils import get_json
+from ensembl.io.genomio.utils.json_utils import get_json
 
 
 class InvalidIntegrityError(Exception):

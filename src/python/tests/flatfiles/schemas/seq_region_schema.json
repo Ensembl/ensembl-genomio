@@ -1,0 +1,139 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://.../.../schema/v0.0.0/seq_region_schema.json",
+    "description" : "JSON schema for exchanging meta information for seq regions",
+  
+    "definitions" : {
+      "seq_region_synonym_info" : {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name" : { "type" : "string" },
+          "source": { "type" : "string" }
+        }
+      },
+      "seq_region_info" : {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name" : { "type" : "string" },
+          "object_type" : { "type" : "string", "enum" : [ "seq_region" ] },
+          "BRC4_seq_region_name" : { "type" : "string" },
+          "EBI_seq_region_name" : { "type" : "string" },
+          "synonyms" : {
+            "oneOf" : [
+              { "$ref" : "#/definitions/seq_region_synonym_info" },
+              { "type" : "array", "items" : { "$ref" : "#/definitions/seq_region_synonym_info" } }
+            ],
+            "description" : "Personally I don't like having array and obj with the same name."
+          },
+          "coord_system_level" : {
+            "type" : "string",
+            "enum" : [
+              "chromosome",
+              "linkage_group",
+              "scaffold",
+              "supercontig",
+              "non_ref_scaffold",
+              "contig",
+              "chunk",
+              "primary_assembly",
+              "clone"
+            ]
+          },
+          "omit" : { "type" : "boolean", "description" : "prevent loading/processing of the scaffold" },
+          "circular" : { "type" : "boolean" },
+          "codon_table" : {
+            "type" : "integer", "default" : 1,
+            "minimum" : 1, "maximum" : 25,
+            "description" : "wikipedia: 33, https://www.ebi.ac.uk/ena/browse/translation-tables: 25"
+          },
+          "note" : { "type" : "string", "description" : "optional note" },
+          "non_ref" : { "type" : "boolean", "description" : "clashes with non_ref_scaffold cs ?" },
+          "location" : {
+            "type" : "string",
+            "description" : "SO_term attribute to account for mitochondria, apicoplasts, etc.",
+            "enum" : [
+              "apicoplast_chromosome",
+              "chloroplast_chromosome",
+              "chromoplast_chromosome",
+              "cyanelle_chromosome",
+              "leucoplast_chromosome",
+              "macronuclear_chromosome",
+              "micronuclear_chromosome",
+              "mitochondrial_chromosome",
+              "nuclear_chromosome",
+              "plasmid",
+              "maxicircle"
+            ]
+          },
+          "karyotype_bands" : {
+            "type" : "array",
+            "items" : {
+              "type": "object",
+              "additionalProperties": false,
+              "description" : "string",
+              "properties": {
+                "name" : { "type" : "string", "description" : "band name" },
+                "start" : { "type" : "integer", "minimum" : 1 , "description" : "band start" },
+                "end" : { "type" : "integer", "minimum" : 1 , "description" : "band end" },
+                "stain" : { "type" : "string", "description" : "band stain. use 'TEL' for telomere and 'ACEN' for centromere" },
+                "structure" : { "type" : "string", "description" : "telomere or centromere flag", "enum" : [ "centromere", "telomere" ] }
+              },
+              "required" : [ "name", "start", "end" ]
+            }
+          },
+          "length" : {
+            "type" : "integer",
+            "minimum" : 1,
+            "description" : "wikipedia: 33, https://www.ebi.ac.uk/ena/browse/translation-tables: 25"
+          },
+          "added_sequence" : { "$ref" : "#/definitions/added_sequence_info" }
+        },
+        "required" : [
+          "name"
+        ]
+      },
+      "provider_info" : {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name" : { "type" : "string" },
+          "url" : { "type" : "string", "format" : "url" }
+        },
+        "required" : [
+          "name"
+        ]
+      },
+      "added_sequence_info" : {
+        "type": "object",
+        "additionalProperties": false,
+        "description" : "Additionally imported sequences, not present in the main assembly (i.e. apicoplasts)",
+        "properties": {
+          "accession" : {
+            "type" : "string",
+            "description" : "Unique INSDC accession of the source assembly/sequence. (NB, no pattern yet)"
+          },
+          "assembly_provider" : { "$ref" : "#/definitions/provider_info" },
+          "annotation_provider" : { "$ref" : "#/definitions/provider_info" }
+        },
+        "required" : [
+          "accession",
+          "assembly_provider"
+        ]
+      } 
+    },
+  
+    "oneOf" : [
+      { "$ref" : "#/definitions/seq_region_info" },
+      { "type": "array", "items" : { "$ref" : "#/definitions/seq_region_info" } }
+    ],
+  
+    "examples": [
+      { "note": "bad_example" },
+      { "name": "2", "note" : "bad but valid example" },
+      { "name": "MT", "circular" : true, "codon_table" : 2, "location": "mitochondrial_chromosome" },
+      { "name" : "2", "synonym" : "2L" },
+      [ { "name" : "2", "synonym" : [ "2L", "2R" ] } ]
+    ]
+  }

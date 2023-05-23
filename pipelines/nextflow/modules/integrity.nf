@@ -22,7 +22,7 @@ process CHECK_INTEGRITY {
 
     input:
         path manifest_dir
-        val filter_map
+        val brc_mode
     
     output:
         path manifest_dir
@@ -30,7 +30,7 @@ process CHECK_INTEGRITY {
     script:
         """
         brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
+        if [ $brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
         check_integrity --manifest_file ${manifest_dir}/manifest.json \

@@ -287,7 +287,7 @@ class FormattedFilesGenerator:
                 print(
                     (
                         "Warning: No codon table found."
-                        f"Make sure to change the codon table number in {self.seq_region_json} manually"
+                        f"Make sure to change the codon table number in {self.seq_region} manually"
                         "if it is not the standard codon table"
                     )
                 )
@@ -308,7 +308,7 @@ class FormattedFilesGenerator:
                     print(
                         (
                             f"Warning: '{seq.organelle}' is an organelle:"
-                            f"make sure to change the codon table number in {self.seq_region_json} manually"
+                            f"make sure to change the codon table number in {self.seq_region} manually"
                             "if it is not the standard codon table"
                         )
                     )

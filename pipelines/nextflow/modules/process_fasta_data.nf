@@ -1,3 +1,4 @@
+
 // See the NOTICE file distributed with this work for additional information
 // regarding copyright ownership.
 //
@@ -13,21 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
-    label 'default'
+process PROCESS_FASTA {
+    tag "${gca}"
+    label 'adaptive'
 
     input:
-        path(json_file)
-        val(gca)
+    path fasta_file
+    path gbff_file
+    val gca
+    val pep_mode
 
     output:
-        path json_file, emit: verified_json
-        val gca, emit: gca
+    val gca, emit: gca
+    path "${gca}/*.fa", emit: processed_fasta
 
     script:
-        schema = params.json_schemas[json_file.baseName]
-        """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
-        """
+    """
+    prep_fasta_data --fasta_infile ${fasta_file} --genbank_infile ${gbff_file} --output_dir "${gca}" --peptide_mode ${pep_mode}
+    """
 }

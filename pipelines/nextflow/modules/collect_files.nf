@@ -22,7 +22,7 @@ process COLLECT_FILES {
         tuple val(accession), path(file_name)
     
     output:
-        path "${accession}"
+        path "${accession}", emit: manifest_dir
     
     script:
         """
@@ -38,30 +38,31 @@ process COLLECT_FILES {
 }
 
 process MANIFEST {
-    tag 'manifest.json'
+    tag "Manifest_$accession"
     label 'default'
     
     input:
-        path out_dir
+        path manifest_dir
         val accession
 
     output:
-        path out_dir
+        path manifest_dir
     
     script:
         """
-        manifest_maker --manifest_dir ${out_dir}
+        manifest_maker --manifest_dir ${manifest_dir}
         """
 }
 
 process PUBLISH_DIR {
-    publishDir "$params.outdir/results", mode: 'copy', overwrite: false
-    tag "Publish_$accession"
+    publishDir "$out_dir", mode: 'copy', overwrite: false
+    tag "Publish_${accession}"
     label 'default'
     time '5min'
 
     input:
         path data_dir
+        val out_dir
         val accession
     
     output:
@@ -70,6 +71,6 @@ process PUBLISH_DIR {
     script:
         """
         echo "Just copy over the finished files"
+        echo "From '$data_dir' to '$out_dir' for accession '$accession'"
         """
 }
-

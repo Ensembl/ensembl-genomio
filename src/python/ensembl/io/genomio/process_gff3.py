@@ -29,7 +29,7 @@ from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.brc4.runnable.utils import print_json
+from ensembl.io.genomio.utils.json_utils import print_json
 
 
 class GFFParserError(Exception):
@@ -156,7 +156,7 @@ class process_gff3:
                 out_gff_fh.write(new_line)
 
         if merged and not self.merge_split_genes:
-            merged_genes_str = "\n".join(merged)
+            merged_genes_str = f"{merged[0]}\netc."
             raise GFFParserError(f"{len(merged)} merged genes:\n{merged_genes_str}\n")
 
     def merge_genes(self, tomerge: List) -> str:
@@ -847,7 +847,7 @@ class process_gff3:
             return False
 
         # Min length
-        if len(name) <= min_length:
+        if len(name) < min_length:
             print(f"Stable id is too short (<{min_length}) {name}")
             return False
 

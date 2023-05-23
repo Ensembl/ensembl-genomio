@@ -13,21 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
-    label 'default'
+process DOWNLOAD_ASM_DATA {
+    label 'adaptive'
+    tag "$gca - $task.attempt"
+    debug true
 
     input:
-        path(json_file)
-        val(gca)
-
+    val(gca)
+    
     output:
-        path json_file, emit: verified_json
-        val gca, emit: gca
+    val gca, emit: gca
+    path "${gca}/*_assembly_report.txt", emit: asm_report
+    path "${gca}/*_genomic.fna.gz", emit: genome_fna
+    path "${gca}/*_genomic.gbff.gz", emit: genome_gbff, optional: true
+    path "${gca}/*_genomic.gff.gz", emit: genome_gff, optional: true
+    path "${gca}/*_protein.faa.gz", emit: protein_fa, optional: true
+    path "${gca}/*.gff*", emit: gene_gff, optional: true
 
     script:
-        schema = params.json_schemas[json_file.baseName]
-        """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
-        """
+    """
+    retrieve_assembly_data --accession $gca --asm_download_dir ./
+    """
 }

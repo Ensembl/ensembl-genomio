@@ -22,15 +22,6 @@ import argschema
 import jsonschema
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    json_file = argschema.fields.InputFile(required=True, metadata={"description": "JSON file to check"})
-    json_schema = argschema.fields.InputFile(
-        required=True, metadata={"description": "JSON schema to validate against"}
-    )
-
-
 def validate_json_schema(json_file: str, json_schema: str) -> None:
     """Validates a JSON file with the provided JSON schema.
 
@@ -44,6 +35,15 @@ def validate_json_schema(json_file: str, json_schema: str) -> None:
     with open(json_schema) as fh:
         schema = json.load(fh)
     jsonschema.validate(instance=content, schema=schema)
+
+
+class InputSchema(argschema.ArgSchema):
+    """Input arguments expected by this script."""
+
+    json_file = argschema.fields.InputFile(required=True, metadata={"description": "JSON file to check"})
+    json_schema = argschema.fields.InputFile(
+        required=True, metadata={"description": "JSON schema to validate against"}
+    )
 
 
 def main() -> None:

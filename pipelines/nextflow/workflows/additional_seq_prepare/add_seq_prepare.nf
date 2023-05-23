@@ -38,7 +38,7 @@ def helpMessage() {
         --production_name              Production name of the species
 
        Optional arguments:
-        --outdir                       Output directory to place final output
+        --output_dir                   Output directory to place final output
         --help                         This usage statement.
         --brc_mode                     By default it is set to 1, set it to 0 if you are not using it for brc
         """
@@ -60,5 +60,5 @@ include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepa
 // Run main workflow
 workflow {
     main:
-    additional_seq_prepare(params.prefix, params.accession, params.production_name, params.brc_mode)
+    additional_seq_prepare(params.prefix, params.accession, params.production_name, params.brc_mode, params.output_dir)
 }

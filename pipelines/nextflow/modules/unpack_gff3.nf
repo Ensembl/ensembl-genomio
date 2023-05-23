@@ -13,21 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
+process UNPACK_FILE {
     label 'default'
 
     input:
-        path(json_file)
-        val(gca)
+    path compressed_file
+    val extension
+    val gca
 
     output:
-        path json_file, emit: verified_json
-        val gca, emit: gca
+    path "*.${extension}", emit: uncompressed_file
+    val gca, emit: gca
 
     script:
-        schema = params.json_schemas[json_file.baseName]
-        """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
-        """
+    """
+    extract_file --src_file ${compressed_file} --dst_dir "."
+    """
 }

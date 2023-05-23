@@ -14,8 +14,10 @@
 // limitations under the License.
 
 // Import modules/subworkflows
-include { download_genbank; extract_from_gb} from '../modules/download_genbank.nf'
-include { process_gff3; gff3_validation } from '../modules/process_gff3.nf'
+include { DOWNLOAD_GENBANK } from '../modules/download_genbank.nf'
+include { EXTRACT_FROM_GB } from '../modules/extract_from_gb.nf'
+include { PROCESS_GFF3 } from '../modules/process_gff3.nf'
+include { GFF3_VALIDATION } from '../modules/gff3_validation.nf'
 include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
 include { JSON_SCHEMA_FACTORY } from '../modules/json_schema_factory.nf'
 include { COLLECT_FILES; MANIFEST; PUBLISH_DIR } from '../modules/collect_files.nf'
@@ -28,27 +30,31 @@ workflow additional_seq_prepare {
         accession
         production_name
         brc_mode
-    emit:
-        manifeststats_ch 
+        output_dir
     main:
-        gb_file_ch = download_genbank(accession)
-        extract_from_gb(prefix, production_name, gb_file_ch)
-        annotation = process_gff3(extract_from_gb.out.gene_gff, extract_from_gb.out.genome)
-        gff3_validation(process_gff3.out.gene_models)
-        json_files = extract_from_gb.out.genome.concat(extract_from_gb.out.seq_regions, process_gff3.out.functional_annotation)
-        json_files_checked = CHECK_JSON_SCHEMA(json_files)
-        all_files = json_files_checked
-                        .concat(extract_from_gb.out.dna_fasta, extract_from_gb.out.pep_fasta)
+        // Get the data
+        gb_file = DOWNLOAD_GENBANK(accession)
+
+        // Parse data from GB file into GFF3 and json files
+        EXTRACT_FROM_GB(prefix, production_name, gb_file)
+        PROCESS_GFF3(EXTRACT_FROM_GB.out.gene_gff, EXTRACT_FROM_GB.out.genome, accession)
+        GFF3_VALIDATION(PROCESS_GFF3.out.gene_models)
+
+        // Validate files
+        json_files = EXTRACT_FROM_GB.out.genome
+            .concat(EXTRACT_FROM_GB.out.seq_regions, PROCESS_GFF3.out.functional_annotation)
+        CHECK_JSON_SCHEMA(json_files, accession)
+        all_files = CHECK_JSON_SCHEMA.out.verified_json
+                        .concat(EXTRACT_FROM_GB.out.dna_fasta, EXTRACT_FROM_GB.out.pep_fasta)
                         .map{it -> [accession, it]}
                         .groupTuple()
+        
+        // Collect in manifest, checks and stats
         collect_dir = COLLECT_FILES(all_files)
-        manifested_dir = MANIFEST(collect_dir, accession)
-        manifest_checked = CHECK_INTEGRITY(manifested_dir, brc_mode)
-        PUBLISH_DIR(manifest_checked, accession)
-        manifeststats_ch = MANIFEST_STATS(manifested_dir, accession, 'datasets')
-}
+        manifest_dired = MANIFEST(collect_dir, accession)
+        manifest_checked = CHECK_INTEGRITY(manifest_dired, brc_mode)
+        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets')
 
-workflow {
-    manifest_stats = additional_seq_prepare(params.prefix, params.accession, params.production_name, params.brc_mode)
-    manifest_stats.view()
+        // Publish the data
+        PUBLISH_DIR(manifest_stated, output_dir, accession)
 }

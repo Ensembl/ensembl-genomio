@@ -13,21 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
-    label 'default'
+process AMEND_GENOME_DATA {
+    label 'adaptive'
+    tag "$gca - $task.attempt"
+    debug true
 
     input:
-        path(json_file)
-        val(gca)
+    path genome_json
+    path asm_report
+    path genbank_gbff
+    val gca
+    val brc4_mode
 
     output:
-        path json_file, emit: verified_json
-        val gca, emit: gca
-
+    val gca, emit: gca
+    path "${gca}/genome_amended.json", emit: amended_json
+   
     script:
-        schema = params.json_schemas[json_file.baseName]
-        """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
-        """
+    """
+    amend_genomic_data --genome_infile ${genome_json} --INSDC_RefSeq_report_infile ${asm_report} --genbank_infile ${genbank_gbff} --output_dir ${gca} --brc4_mode ${brc4_mode}
+    """
 }
