@@ -84,7 +84,7 @@ sub write_json_file {
   # Print pretty JSON
   my $json = JSON->new;
   open my $jsonfh, '>', $json_file_path;
-  print $jsonfh $json->pretty->encode($data);
+  print $jsonfh $json->pretty->canonical(1)->encode($data);
   close $jsonfh;
   
   $self->info("Write complete");
