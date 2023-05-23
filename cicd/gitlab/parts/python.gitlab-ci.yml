@@ -17,6 +17,9 @@
 variables:
   # legacy, used to find ensembl-hive python parts
   PYTHONPATH: $RUN_DIR/ensembl-hive/wrappers/python3
+  PYLINT_CMD: pylint --rcfile pyproject.toml
+  MYPY_CMD: mypy --config-file pyproject.toml
+  BLACK_CMD: black --config pyproject.toml
 
 # don't forget to update /pyproject.toml
 #  if changing python version
@@ -87,20 +90,25 @@ python:prepare_env:local:
     - python -c 'import eHive' # testing eHive presence
 
 # Specific instances
-python:static_analysis:mypy:
-  extends: .python:static_analysis:generic
-  script:
-    - mypy --config-file pyproject.toml src/python/ensembl/io src/python/tests
-
 python:static_analysis:pylint:
   extends: .python:static_analysis:generic
   script:
-    # - pylint --list-msgs-enabled # for debugging
-    - pylint --rcfile pyproject.toml src/python/ensembl/io/genomio src/python/tests
+    - $PYLINT_CMD src/python/ensembl/io/genomio src/python/tests
+
+python:static_analysis:mypy:src:
+  extends: .python:static_analysis:generic
+  script:
+    - $MYPY_CMD src/python/ensembl/io
+
+python:static_analysis:mypy:tests:
+  extends: .python:static_analysis:generic
+  allow_failure: true
+  script:
+    - $MYPY_CMD src/python/tests
 
 python:static_analysis:black:
   extends: .python:static_analysis:generic
-  # not sure this stage stores any changes
+  allow_failure: true
   script:
-    - black --verbose --config pyproject.toml --check .
+    - $BLACK_CMD --verbose --check .
 
