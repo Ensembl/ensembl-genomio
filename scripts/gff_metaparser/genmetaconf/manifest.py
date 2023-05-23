@@ -58,7 +58,7 @@ class Manifest:
         os.makedirs(outdir, exist_ok=True)
         try:
             shutil.copyfile(name, outfile)
-        except (shutil.SameFileError):
+        except shutil.SameFileError:
             pass
         return outfile
 

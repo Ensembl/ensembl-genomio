@@ -21,7 +21,6 @@ from jsonschema import validate
 
 
 def run(json_file, json_schema):
-
     file_data = get_json(json_file)
     schema_data = get_json(json_schema)
 

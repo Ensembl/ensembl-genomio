@@ -90,9 +90,9 @@ class CoreServer:
         if prefix:
             dbs = [db for db in dbs if db.startswith(f"{prefix}")]
         if build:
-            dbs = [db for db in dbs if re.search(fr"_core_{build}_\d+_\d+$", db)]
+            dbs = [db for db in dbs if re.search(rf"_core_{build}_\d+_\d+$", db)]
         if version:
-            dbs = [db for db in dbs if re.search(fr"_core_\d+_{version}_\d+$", db)]
+            dbs = [db for db in dbs if re.search(rf"_core_\d+_{version}_\d+$", db)]
 
         return dbs
 

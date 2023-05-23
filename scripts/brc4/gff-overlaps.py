@@ -46,7 +46,6 @@ def scan_tree(intervals):
     t = IntervalTree(Interval(*iv) for iv in intervals)
 
     for g in intervals:
-
         if len(t.overlap(g[0], g[1])) > 1:
             #            print( t.overlap( g[0], g[1]) )
             o = t.overlap(g[0], g[1])
@@ -62,9 +61,7 @@ def write_report(out_file, seqDict, genesDict):
 
     try:
         with open(out_file, "w+") as fh:
-
             for x in seqDict:
-
                 logging.info(f"{x} plus  { len( seqDict[x]['plus']) }")
                 logging.info(f"{x} minus { len( seqDict[x]['minus']) }")
 
@@ -92,7 +89,6 @@ def get_intervals(record, genesDict, seqDict, seqname):
     """extract start/stop feature coordinates for use in creating intervaltree object"""
 
     for r in record.features:
-
         genesDict[str(r.id)] = {
             "sequence": record.id,
             "start": int(r.location.start) + 1,
@@ -114,7 +110,6 @@ def get_intervals(record, genesDict, seqDict, seqname):
 
 
 def main(in_file, out_file, filter):
-
     in_handle = open(in_file)
     limit_info = dict(gff_type=[filter])
 
@@ -148,7 +143,6 @@ def main(in_file, out_file, filter):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="Scan a GFF file to detect overlapping seqfeature objects (default = gene)."
     )

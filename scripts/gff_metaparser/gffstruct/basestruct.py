@@ -23,6 +23,7 @@ from collections import defaultdict
 # local
 from .rules import UnseenRule
 
+
 # BASE STRUCTURES class
 class BaseStructures:
     KNOWN_RULES = []

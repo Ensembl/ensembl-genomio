@@ -15,4 +15,3 @@
 """TODO"""
 
 from .get_assembly_data import *
-

@@ -298,9 +298,7 @@ class manifest_stats:
 class InputSchema(argschema.ArgSchema):  # need more metadata/'True' requirements
     """Input arguments expected by this script."""
 
-    manifest_dir = argschema.fields.String(
-        required=True, metadata={"description": "Manifest file path"}
-    )
+    manifest_dir = argschema.fields.String(required=True, metadata={"description": "Manifest file path"})
     accession = argschema.fields.String(
         metadata={"description": "Sequence accession ID to compare stats with NCBI"}
     )

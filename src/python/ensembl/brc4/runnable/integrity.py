@@ -510,7 +510,7 @@ class integrity(eHive.BaseRunnable):
 
         return errors
 
-    def check_seq_region_lengths(self, seqrs, feats, name, circular = None):
+    def check_seq_region_lengths(self, seqrs, feats, name, circular=None):
         """Check the integrity of seq_region.json file by comparing the length of the sequence
             to fasta files and the gff.
 
@@ -542,12 +542,12 @@ class integrity(eHive.BaseRunnable):
             if seq_id in feats:
                 # Check that feature is within the seq_region length
                 if feats[seq_id] > seqrs[seq_id]:
-                      if circular is None or not circular.get(seq_id, False):
-                          diff.append(seq_id)
-                          diff_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
-                      else:
-                          diff_circular.append(seq_id)
-                          diff_circular_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
+                    if circular is None or not circular.get(seq_id, False):
+                        diff.append(seq_id)
+                        diff_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
+                    else:
+                        diff_circular.append(seq_id)
+                        diff_circular_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
                 else:
                     common.append(seq_id)
             else:
@@ -560,9 +560,11 @@ class integrity(eHive.BaseRunnable):
         if common:
             print("%d common elements in %s" % (len(common), name))
         if diff_circular:
-            print("%d differences for circular elements in %s (e.g. %s)" %
-                (len(diff_circular), name, diff_circular_list[0]))
-        
+            print(
+                "%d differences for circular elements in %s (e.g. %s)"
+                % (len(diff_circular), name, diff_circular_list[0])
+            )
+
         errors = []
         if diff:
             errors.append(

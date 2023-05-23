@@ -108,7 +108,7 @@ class fill_metadata(eHive.BaseRunnable):
         elif isinstance(data, dict):
             ignore_lst = frozenset(ignore_lst)
             res = []
-            for (k, v) in data.items():
+            for k, v in data.items():
                 new_pfx = ".".join(filter(lambda p: p != None, [pfx, k]))
                 res.append(self.flattern(v, ignore_lst, new_pfx))
             return sum(res, [])

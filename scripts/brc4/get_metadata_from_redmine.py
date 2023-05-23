@@ -214,7 +214,6 @@ def parse_genome(issue):
 
 
 def check_genome(genome, extra):
-
     if not genome:
         return "No genome parsed"
 
@@ -504,7 +503,6 @@ def load_abbrevs(path):
 
 
 def make_organism_abbrev(name):
-
     name = name.strip()
     if name == "":
         raise Exception("field 'Experimental Organisms' needed")

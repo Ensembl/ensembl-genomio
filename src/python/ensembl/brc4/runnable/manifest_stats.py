@@ -77,7 +77,6 @@ class manifest_stats(eHive.BaseRunnable):
         return manifest
 
     def get_seq_region_stats(self, seq_region_path: Path) -> List:
-
         seq_regions = get_json(seq_region_path)
 
         # Get basic data
@@ -138,7 +137,6 @@ class manifest_stats(eHive.BaseRunnable):
         return stats
 
     def get_gff3_stats(self, gff3_path: Path) -> List:
-
         stats = []
         stats.append(gff3_path.name)
         if gff3_path.name.endswith(".gz"):
