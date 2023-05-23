@@ -36,11 +36,15 @@ from ensembl.io.genomio import schemas
 
 
 class TestSchemas:
+    test_data_dir = Path()
+    schema_dir = Path()
+    tmp_dir = Path()
+
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, tmp_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
-        type(self).test_data_dir = pytest.manifest_dir / "data1"
-        type(self).schema_dir = pytest.schema_dir
+        type(self).test_data_dir = Path(pytest.manifest_dir) / "data1"
+        type(self).schema_dir = Path(pytest.schema_dir)
         type(self).tmp_dir = tmp_dir
 
     @pytest.mark.parametrize(
