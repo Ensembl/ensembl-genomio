@@ -48,6 +48,7 @@ dependencies = [
     "argschema >= 3.0.4",
     "bcbio-gff == 0.6.7",
     "biopython == 1.80",
+    "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
     "jsonschema >= 4.6.0",
     "intervaltree >= 3.1.0",
     "mysql-connector-python >= 8.0.29",

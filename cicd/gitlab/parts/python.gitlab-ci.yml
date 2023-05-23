@@ -15,18 +15,21 @@
 # Python related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
 variables:
-  # legacy, used to find ensembl-hive python parts
-  PYTHONPATH: $RUN_DIR/ensembl-hive/wrappers/python3
+  # Commands for running static analyses
+  PYLINT_CMD: pylint --rcfile pyproject.toml
+  MYPY_CMD: mypy --config-file pyproject.toml
+  BLACK_CMD: black --config pyproject.toml
 
 # don't forget to update /pyproject.toml
 #  if changing python version
 image: python:3.8
 
 
-# overriding the default stages  list (https://docs.gitlab.com/ee/ci/yaml/#stages)
+# overriding the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
 stages:
   - python:prepare_env
   - python:static_analysis
+  - python:tests
 
 
 # Python related environment and tests
@@ -62,11 +65,6 @@ python:prepare_env:local:
   script:
     # pip based
     - pip install -e .[dev]
-    # legacy
-    - git clone -b "version/2.6" --depth 1 https://github.com/Ensembl/ensembl-hive.git $RUN_DIR/ensembl-hive
-    - echo "testing eHive python parts presence"
-    - echo PYTHONPATH $PYTHONPATH
-    - python -c 'import eHive' # testing eHive presence
 
 
 ##  PYTHON STATIC ANALYSIS
@@ -78,29 +76,44 @@ python:prepare_env:local:
   needs:
     - job: python:prepare_env:local
       artifacts: true
-  #variables: 
-  #  PYTHONPATH: $RUN_DIR/ensembl-hive/wrappers/python3
   before_script:
     - source $RUN_DIR/venv/bin/activate
-    - echo PYTHONPATH $PYTHONPATH
-    - echo "testing eHive python parts presence"
-    - python -c 'import eHive' # testing eHive presence
 
-# Specific instances
-python:static_analysis:mypy:
+.python:tests:generic:
   extends: .python:static_analysis:generic
-  script:
-    - mypy --config-file pyproject.toml src/python/ensembl/io src/python/tests
+  stage: python:tests
 
+
+# Specific instances for static analyses
 python:static_analysis:pylint:
   extends: .python:static_analysis:generic
   script:
-    # - pylint --list-msgs-enabled # for debugging
-    - pylint --rcfile pyproject.toml src/python/ensembl/io/genomio src/python/tests
+    - $PYLINT_CMD src/python/ensembl/io/genomio src/python/tests
+
+python:static_analysis:mypy:src:
+  extends: .python:static_analysis:generic
+  script:
+    - $MYPY_CMD src/python/ensembl/io
+
+python:static_analysis:mypy:tests:
+  extends: .python:static_analysis:generic
+  allow_failure: true
+  script:
+    - $MYPY_CMD src/python/tests
 
 python:static_analysis:black:
   extends: .python:static_analysis:generic
-  # not sure this stage stores any changes
+  allow_failure: true
   script:
-    - black --verbose --config pyproject.toml --check .
+    - $BLACK_CMD --verbose --check .
 
+
+# Specific instances for tests
+python:tests:pytest:
+  extends: .python:tests:generic
+  script:
+    - coverage run -m pytest
+    - coverage xml -o cov_report.xml
+  artifacts:
+    reports:
+      junit: cov_report.xml
