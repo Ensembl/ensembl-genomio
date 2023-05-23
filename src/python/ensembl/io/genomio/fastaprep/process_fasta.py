@@ -65,7 +65,7 @@ def prep_fasta_data(
     file_path = Path(fasta_infile)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     seqr_to_exclude = exclude_seq_regions
     if peptide_mode:
         genbank_path = Path(genebank_infile)
@@ -75,17 +75,17 @@ def prep_fasta_data(
 
     # Final file name
     new_file_name = file_path.stem
-    
+
     # Copy and filter
     records = []
     encoding = guess_type(file_path)[1]
-    
+
     if encoding == "gzip":
         _open = partial(gzip.open, mode="rt")
         new_file_name = Path(new_file_name).stem
     else:
         _open = open
-    
+
     # Final path
     final_path = output_dir / f"{new_file_name}.fa"
     with _open(file_path) as in_fasta:
@@ -102,10 +102,12 @@ class InputSchema(argschema.ArgSchema):
     """Input arguments expected by the entry point of this module."""
 
     fasta_infile = argschema.fields.InputFile(
-        required=True, metadata={"description": "Input fasta file - DNA / Protein"},
+        required=True,
+        metadata={"description": "Input fasta file - DNA / Protein"},
     )
     genbank_infile = argschema.fields.InputFile(
-        required=False, metadata={"description": "Input genbank GBFF file (Optional)"},
+        required=False,
+        metadata={"description": "Input genbank GBFF file (Optional)"},
     )
     output_dir = argschema.fields.OutputDir(
         required=False,
@@ -113,10 +115,14 @@ class InputSchema(argschema.ArgSchema):
         metadata={"description": "Dir name where processed fasta data will reside"},
     )
     peptide_mode = argschema.fields.Int(
-        required=False, metadata={"description": "Process proteins not DNA (Optional)"},
+        required=False,
+        metadata={"description": "Process proteins not DNA (Optional)"},
     )
+
 
 def main() -> None:
     """Module's entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    prep_fasta_data(mod.args["fasta_infile"], mod.args["genbank_infile"], mod.args["output_dir"], mod.args["peptide_mode"])
+    prep_fasta_data(
+        mod.args["fasta_infile"], mod.args["genbank_infile"], mod.args["output_dir"], mod.args["peptide_mode"]
+    )

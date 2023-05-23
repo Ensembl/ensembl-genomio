@@ -21,7 +21,6 @@ from BCBio import GFF
 
 
 def check_gff_ids(gff_path):
-
     limits = {
         "gff_type": ["gene"],
     }

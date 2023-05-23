@@ -15,4 +15,3 @@
 """TODO"""
 
 from .process_fasta import *
-

@@ -80,7 +80,6 @@ class compare_fasta(eHive.BaseRunnable):
         self.dataflow(out, 2)
 
     def print_map(self, seq_map: dict, map_file: str, report_file: str, accession: str) -> None:
-
         report_parser = SeqregionParser()
         report_seq = report_parser.get_report_regions(report_file, accession)
         report = self.add_report_to_map(seq_map, report_seq)
@@ -90,7 +89,6 @@ class compare_fasta(eHive.BaseRunnable):
             out_fh.write(json.dumps(report, sort_keys=True, indent=4))
 
     def add_report_to_map(self, seq_map: dict, report_seq: dict) -> List[Any]:
-
         accession_version = r"\.\d+$"
         report = []
         for insdc_name, old_name in seq_map.items():
@@ -110,7 +108,6 @@ class compare_fasta(eHive.BaseRunnable):
         return report
 
     def get_map(self, map_path: str) -> dict:
-
         print(f"Read file {map_path}")
         data = self.get_json(map_path)
 
@@ -126,7 +123,6 @@ class compare_fasta(eHive.BaseRunnable):
         return map_dna
 
     def get_json(self, json_path: str) -> dict:
-
         with open(json_path) as json_file:
             return json.load(json_file)
 
@@ -143,7 +139,6 @@ class compare_fasta(eHive.BaseRunnable):
         return seqs_dict
 
     def get_fasta(self, fasta_path: str, map_dna: dict) -> dict:
-
         print(f"Read file {fasta_path}")
         sequences = {}
         _open = partial(gzip.open, mode="rt") if fasta_path.endswith(".gz") else open
@@ -156,7 +151,6 @@ class compare_fasta(eHive.BaseRunnable):
         return sequences
 
     def compare_seqs(self, seq1: dict, seq2: dict) -> Tuple[dict, list, dict]:
-
         comp = []
         accession = self.param_required("accession")
         diff = abs(len(seq1) - len(seq2))
@@ -373,7 +367,6 @@ class compare_fasta(eHive.BaseRunnable):
         return (stats, comp, common)
 
     def find_common_groups(self, seqs1: dict, seqs2: dict) -> Tuple[dict, List[Any]]:
-
         print(len(seqs1))
         print(len(seqs2))
         comp = []
@@ -428,7 +421,6 @@ class compare_fasta(eHive.BaseRunnable):
         return org_loc
 
     def assembly_level(self, report_seq: dict, core_data: list) -> Tuple[str, str]:
-
         INSDC_assembly_level = []
         core_assembly_level = []
         core_assembly = {}

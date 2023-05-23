@@ -102,7 +102,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     f.cwd(str(sub_dir))
     # max_redo = self.param("max_redo")
 
-    for (ftp_dir, entry) in f.mlsd():
+    for ftp_dir, entry in f.mlsd():
         if re.match(accession, ftp_dir):
             f.cwd(ftp_dir)
             # First, get the md5sum file
@@ -113,7 +113,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
             md5_sums = get_checksums(md5_path)
 
             # Get all the files
-            for (ftp_file, file_entry) in f.mlsd():
+            for ftp_file, file_entry in f.mlsd():
                 has_md5 = True
                 expected_sum = ""
                 for end in FILE_ENDS:

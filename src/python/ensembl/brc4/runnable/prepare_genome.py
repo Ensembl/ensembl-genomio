@@ -95,7 +95,6 @@ class prepare_genome(eHive.BaseRunnable):
                 return json.load(genome_file)
 
     def make_db_name(self, genome):
-
         prod_name = self.make_production_name(genome)
         prod_name = prod_name.replace(".", "")
         ensembl_version = str(self.param_required("ensembl_version"))
@@ -192,7 +191,6 @@ class prepare_genome(eHive.BaseRunnable):
             raise Exception("Can't make production name for genome: %s" % genome)
 
     def get_scientific_name(self, taxon_id):
-
         host = self.param("taxonomy_host")
         user = self.param("taxonomy_user")
         port = self.param("taxonomy_port")
@@ -215,7 +213,6 @@ class prepare_genome(eHive.BaseRunnable):
             return
 
     def get_assembly_version(self, genome):
-
         if "assembly" in genome:
             assembly = genome["assembly"]
             if "version" in assembly:

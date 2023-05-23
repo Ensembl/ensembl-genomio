@@ -420,7 +420,7 @@ class load_sequence_data(eHive.BaseRunnable):
                         seq_region, prop_name, path_attrib_id_map
                     )
                     # fill attrib_trios
-                    for (path, attrib_id, value) in path_attrib_id_values_list:
+                    for path, attrib_id, value in path_attrib_id_values_list:
                         attrib_trios.append((seq_region_id, attrib_id, self.quote_or_null(value)))
 
         # run insertion SQL
@@ -976,7 +976,7 @@ class load_sequence_data(eHive.BaseRunnable):
         asm_v = self.asm_name()
 
         sequence_rank = max(cs_rank.values())
-        for (cs, rank) in sorted(cs_rank.items(), key=lambda p: -p[1]):
+        for cs, rank in sorted(cs_rank.items(), key=lambda p: -p[1]):
             logs = self.pjc(log_pfx, "%02d_%s" % (rank, cs))
             if rank == sequence_rank:
                 self.load_cs_data(cs, rank, "fasta", asm_v, fasta, logs, loaded_regions=None, seq_level=True)
@@ -1498,7 +1498,7 @@ class load_sequence_data(eHive.BaseRunnable):
         if clear_lst:
             clear_pfx = self.pjc(log_pfx, "clear")
             with open(clear_pfx + ".sql", "w") as clear_sql:
-                for (cs_id, cs_name) in clear_lst:
+                for cs_id, cs_name in clear_lst:
                     sql = r"""
                         update meta set
                             meta_value=replace(meta_value, "|{_cs_name}:{_asm_v}", "|{_cs_name}")

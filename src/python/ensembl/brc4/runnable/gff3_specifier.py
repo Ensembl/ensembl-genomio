@@ -24,7 +24,6 @@ from math import floor
 
 
 class gff3_specifier(eHive.BaseRunnable):
-
     allowed_biotypes = [
         "gene",
         "mRNA",
@@ -66,7 +65,6 @@ class gff3_specifier(eHive.BaseRunnable):
         self.dataflow({"specifications_gff_file": new_gff3_path}, 2)
 
     def get_gff3(self, gff3_path):
-
         gff3_tmp_path = gff3_path + ".specifications.gff3"
 
         if gff3_path.endswith(".gz"):
@@ -143,7 +141,6 @@ class gff3_specifier(eHive.BaseRunnable):
 
                     # Special production-specific modification
                     if remove_prefix and key in ("ID", "Parent") and ":" in value:
-
                         (btype, real_value) = value.split(":", 1)
                         if btype and real_value:
                             value = real_value

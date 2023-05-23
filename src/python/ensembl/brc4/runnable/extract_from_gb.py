@@ -248,7 +248,7 @@ class FormattedFilesGenerator:
                         feats[str(feat_id)] = gff_feat
                         all_ids.append(str(gene_id))
                         all_ids.append(str(feat_id))
-                    
+
                     else:
                         raise Exception(f"No ID for allowed feature: {feat}")
 

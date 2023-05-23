@@ -17,4 +17,3 @@
 from .prepare_genome import *
 from .prepare_seq_region import *
 from .update_genome_metadata import *
-

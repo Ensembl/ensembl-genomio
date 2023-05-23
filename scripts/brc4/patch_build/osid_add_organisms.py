@@ -43,7 +43,6 @@ def get_organism(url, user, key, org_data):
 
 
 def add_organism(url, user, key, org_data):
-
     add_org_url = url + "/organisms"
     headers = {"Content-type": "application/json", "Accept": "application/json"}
     result = requests.post(add_org_url, auth=(user, key), headers=headers, json=org_data)
@@ -56,7 +55,6 @@ def add_organism(url, user, key, org_data):
 
 
 def update_organism(url, user, key, org_data, organism_id):
-
     del org_data["organismName"]
     update_org_url = url + "/organisms" + "/" + str(organism_id)
     headers = {"Content-type": "application/json", "Accept": "application/json"}
