@@ -44,7 +44,7 @@ def md5_files(dl_dir: Path) -> bool:
     md5_path = dl_dir / md5_file
     sums = get_checksums(md5_path)
     if not sums:
-        return
+        return False
     print(f"File sums from {md5_path}: {len(sums)}")
     for dl_file, checksum in sums.items():
         for end in FILE_ENDS:
@@ -70,9 +70,9 @@ def get_checksums(checksum_path: Path) -> Dict[str, str]:
     """
     Get a dict of checksums from a file, with file names as keys and sums as values
     """
+    sums: Dict[str, str] = {}
     if not checksum_path.is_file():
-        return
-    sums = {}
+        return sums
     with checksum_path.open(mode="r") as fh:
         for line in fh:
             checksum, file_path = line.strip().split("  ")
@@ -87,6 +87,8 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     Given an INSDC accession, download all available files from the ftp to the download dir
     """
     match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+    if not match:
+        raise Exception(f"Could not recognize GCA accession format: {accession}")
     gca = match.group(1)
     part1 = match.group(2)
     part2 = match.group(3)
@@ -194,8 +196,8 @@ def get_root_name(dl_dir: Path) -> str:
 def retrieve_assembly_data(
     accession: str,
     asm_download_dir: PathLike,
-    max_increment: Optional[int] = 0,
-    max_redo: Optional[int] = 3,
+    max_increment: int = 0,
+    max_redo: int = 3,
 ) -> None:
     """
     Args:
