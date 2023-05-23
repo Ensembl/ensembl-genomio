@@ -46,8 +46,8 @@ class TestSchemas:
         [
             (["new_metadata"], ["manifest.json"]),
             (
-                ["functional_annotation", "seq_region"],
-                ["manifest.json", "functional_annotation_test.json", "seq_region.json"],
+                ["new_metadata", "functional_annotation", "seq_region"],
+                ["manifest.json", "functional_annotation.json", "seq_region.json"],
             ),
         ],
     )

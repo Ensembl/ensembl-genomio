@@ -61,7 +61,7 @@ class download_genbank(eHive.BaseRunnable):
         e_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
         e_params = {
             "db": "nuccore",
-            "rettype": "gb",
+            "rettype" : "gbwithparts",
             "retmode": "text",
         }
         e_params["id"] = accession

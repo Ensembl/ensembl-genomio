@@ -3,5 +3,6 @@
 **/pip-wheel-metadata
 **/build
 **/.nextflow*
+**/.*_cache
 **/.coverage
 **/htmlcov

@@ -1,0 +1,4 @@
+# ignore everything
+/**
+# but .gitignore
+!/.gitignore

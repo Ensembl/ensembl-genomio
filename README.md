@@ -1,7 +1,7 @@
 # ensembl-genomio
 Pipelines to turn basic genomic data into Ensembl cores and back
 
-This is a mulitlanguage (Perl, Python) repo providing eHive pipelines
+This is a multilanguage (Perl, Python) repo providing eHive pipelines
 and various scripts (see below) to prepare genomic data and load it as [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) or to dump such core databases as file bundles.
 
 Bundles themselves consist of genomic data in various formats (e.g. fasta, gff3, json) and should follow the corresponding [specification](docs/BRC4_genome_loader.md#input-data).
@@ -49,7 +49,7 @@ pip install -e ./ensembl-genomio[dev]
 For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](./pyproject.toml). 
 
 
-### Additional steps to use automated genertaion of the documentation (part of it)
+### Additional steps to use automated generation of the documentation (part of it)
 Install python part with the `[doc]` or `[dev]` tag.
 Change into repo dir
 Run doc build script.
@@ -126,12 +126,26 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 
 * [trf_split_run.bash](scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [doc](docs/trf_split_run.md))
 
+## CI/CD bits
+As for now some [Gitlab CI](https://docs.gitlab.com/ee/ci/) pipelines introduced to keep things in shape.
+Though, this bit is in constant development. Some documentatin can be found in [docs for GitLab CI/CD](docs/cicd_gitlab.md)
 
 ## Various docs
 See [docs](docs)
 
-## TODO
-Tests, tests, tests...
+## Unit testing
+The Python part of the codebase has now unit tests available to test each module. Make sure you have installed this repository's `[dev]` dependencies (via `pip install ensembl-genomio[dev]`) before continuing.
+
+Running all the tests in one go is as easy as running `pytest` **from the root of the repository**. If you also want to measure, collect and report the code coverage, you can do:
+```bash
+coverage run -m pytest
+coverage report
+```
+
+You can also run specific tests by supplying the path to the specific test file/subfolder, e.g.:
+```bash
+pytest lib/python/tests/test_schema.py
+```
 
 ## Acknowledgements
 Some of this code and documentation is inherited from the [EnsemblGenomes](https://github.com/EnsemblGenomes) and other [Ensembl](https://github.com/Ensembl) projects.

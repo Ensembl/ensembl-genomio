@@ -4,7 +4,7 @@ params.merge_split_genes="False"
 
 process PROCESS_GFF3 {
     tag "$gff3 - $task.attempt"
-    label 'adaptive'
+    label 'variable_2_8_32'
 
     input:
     path gff3

@@ -133,7 +133,6 @@ sub pipeline_analyses {
       -input_ids  => [{}],
       -analysis_capacity   => 1,
       -rc_name    => 'small',
-      -meadow_type       => 'LSF',
       -flow_into  => {
         '1->A' => 'Download_genbank',
         'A->1' => 'Manifest_maker',
@@ -193,7 +192,6 @@ sub pipeline_analyses {
       -failed_job_tolerance => 100,
       -analysis_capacity   => 5,
       -rc_name    => 'small',
-      -meadow_type       => 'LSF',
       -flow_into  => {
           2 => 'GFF3_validation',
           3 => "Check_json_schema",
@@ -279,6 +277,9 @@ sub pipeline_analyses {
     {
       -logic_name  => 'Manifest_stats',
       -module      => 'ensembl.brc4.runnable.manifest_stats',
+      -parameters     => {
+        accession => $self->o('gb_accession'),
+      },
       -language    => 'python3',
       -analysis_capacity   => 1,
       -rc_name         => 'small',

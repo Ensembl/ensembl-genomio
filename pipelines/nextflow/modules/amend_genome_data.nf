@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process AMEND_GENOME_DATA {
-    label 'adaptative'
+    label 'adaptive'
     tag "$gca - $task.attempt"
     debug true
 
