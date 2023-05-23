@@ -44,7 +44,7 @@ def download_genbank(accession: str) -> str:
     e_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     e_params = {
         "db": "nuccore",
-        "rettype" : "gbwithparts",
+        "rettype": "gbwithparts",
         "retmode": "text",
     }
     e_params["id"] = accession
