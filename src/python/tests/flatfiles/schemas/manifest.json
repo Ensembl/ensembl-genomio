@@ -1,0 +1,10 @@
+{
+    "functional_annotation": {
+        "file": "functional_annotation.json",
+        "md5sum": "88f3ab8e4a266fe60c0f72db4e99643b"
+    },
+    "seq_region": {
+        "file": "seq_region.json",
+        "md5sum": "27bfd50c68908586c96401acf030469c"
+    }
+}
