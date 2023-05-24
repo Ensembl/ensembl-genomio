@@ -161,7 +161,7 @@ filterwarnings = [
 [tool.coverage.run]
 branch = true
 source = [
-    "src/python/ensembl"
+    "ensembl.io.genomio",
 ]
 
 [tool.coverage.report]

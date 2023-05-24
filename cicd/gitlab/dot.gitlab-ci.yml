@@ -46,14 +46,23 @@ debug:gitlab_env:
     include:
     - local: /cicd/gitlab/parts/debug.gitlab-ci.yml
 
-#   python related
+#   Python checks
 test:python:
-  stage: test 
+  stage: test
   # using sub-pipeline from ./parts
   trigger:
     strategy: depend
     include:
     - local: /cicd/gitlab/parts/python.gitlab-ci.yml
+
+#   License checks
+test:license:
+  stage: test
+  # using sub-pipeline from ./parts
+  trigger:
+    strategy: depend
+    include:
+    - local: /cicd/gitlab/parts/license.gitlab-ci.yml
 
 
 # external pipelines
