@@ -16,7 +16,7 @@
 """TODO"""
 
 import csv
-import gzip
+import json
 from os import PathLike
 from pathlib import Path
 import re
@@ -32,14 +32,14 @@ from ensembl.io.genomio.utils.archive_utils import open_gz_file
 class MissingDataError(Exception):
     """Used if some data is missing from the report file."""
 
-    def __init__(self, report_path: str, accession: str, msg: str):
+    def __init__(self, report_path: PathLike, accession: str, msg: str):
         report_msg = f"Can't get data for {accession} in report {report_path}"
         if msg:
             report_msg = f"{report_msg}: {msg}"
         self.msg = report_msg
 
 
-def get_additions(report_path: str, gbff_path: str) -> List[str]:
+def get_additions(report_path: Path, gbff_path: Path) -> List[str]:
     """Returns all `seq_regions` that are mentioned in the report but that are not in the data.
 
     Args:
@@ -52,7 +52,7 @@ def get_additions(report_path: str, gbff_path: str) -> List[str]:
     return additions
 
 
-def get_gbff_regions(gbff_path: str) -> List[str]:
+def get_gbff_regions(gbff_path: Path) -> List[str]:
     """Returns the `seq_region` data from the GBFF file.
 
     Args:
@@ -68,14 +68,14 @@ def get_gbff_regions(gbff_path: str) -> List[str]:
     return seq_regions
 
 
-def report_to_csv(report_path: str) -> Tuple[str, dict]:
+def report_to_csv(report_path: Path) -> Tuple[str, dict]:
     """Returns an assembly report as a CSV string, and the head metadata as a dict.
 
     Args:
         report_path: Path to a `seq_region` file from INSDC/RefSeq.
 
     """
-    with open(report_path) as report:
+    with report_path.open('r') as report:
         data = ""
         metadata = {}
         last_head = ""
@@ -96,7 +96,7 @@ def report_to_csv(report_path: str) -> Tuple[str, dict]:
         return data, metadata
 
 
-def get_report_regions(report_path: str) -> List[str]:
+def get_report_regions(report_path: Path) -> List[str]:
     """Returns a list of `seq_region` names from the report file.
 
     Args:
@@ -125,8 +125,8 @@ def get_report_regions(report_path: str) -> List[str]:
 
 def amend_genomic_metadata(
     genome_infile: PathLike,
-    INSDC_RefSeq_report_infile: Optional[PathLike],
-    genbank_infile: Optional[PathLike],
+    INSDC_RefSeq_report_infile: PathLike,
+    genbank_infile: PathLike,
     output_dir: PathLike,
     brc4_mode: Optional[int] = 1,
 ) -> None:
@@ -149,12 +149,16 @@ def amend_genomic_metadata(
     final_path = output_dir / new_file_name
     # use_refseq = self.param("accession").startswith("GCF_")
 
+    # Load genome data
+    with Path(genome_infile).open('r') as genome_fh:
+        genome_metadata = json.load(genome_fh)
+
     # Get additional sequences in the assembly but not in the data
-    additions = get_additions(INSDC_RefSeq_report_infile, genbank_infile)
+    additions = get_additions(Path(INSDC_RefSeq_report_infile), Path(genbank_infile))
     if additions:
-        genome_infile["added_seq"] = {"region_name": additions}
+        genome_metadata["added_seq"] = {"region_name": additions}
     # Print out the file
-    print_json(final_path, genome_infile)
+    print_json(final_path, genome_metadata)
     # Flow out the file and type
     output = {"metadata_type": metadata_type, "metadata_json": str(final_path)}
 
