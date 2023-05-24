@@ -19,6 +19,8 @@ import gzip
 import csv
 from typing import Any, Dict, Tuple
 
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
+
 
 class SeqregionParser:
     """Parser of a seq_region report from INSDC/RefSeq.
@@ -85,8 +87,7 @@ class SeqregionParser:
             The csv as a string, and the head metadata as a dict.
         """
 
-        _open = report_path.endswith(".gz") and gzip.open or open
-        with _open(report_path, "rt") as report:
+        with open_gz_file(report_path) as report:
             data = ""
             metadata = {}
             last_head = ""

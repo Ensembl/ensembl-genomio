@@ -25,7 +25,9 @@ import hashlib
 from functools import partial
 from Bio import SeqIO
 from os import path
+
 from ensembl.brc4.runnable.seqregion_parser import SeqregionParser
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
 class SeqGroup:
@@ -141,8 +143,7 @@ class compare_fasta(eHive.BaseRunnable):
     def get_fasta(self, fasta_path: str, map_dna: dict) -> dict:
         print(f"Read file {fasta_path}")
         sequences = {}
-        _open = partial(gzip.open, mode="rt") if fasta_path.endswith(".gz") else open
-        with _open(fasta_path) as fasta_fh:
+        with open_gz_file(fasta_path) as fasta_fh:
             for rec in SeqIO.parse(fasta_fh, "fasta"):
                 name = rec.id
                 if name in map_dna:

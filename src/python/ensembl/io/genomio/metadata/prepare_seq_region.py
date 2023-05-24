@@ -50,6 +50,7 @@ from Bio.SeqRecord import SeqRecord
 from marshmallow import post_load
 
 from ensembl.io.genomio.utils import get_json, print_json
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
 # Definition of SeqRegion type
@@ -207,8 +208,7 @@ def get_gbff_seq_regions(gbff_path: PathLike) -> Dict[str, SeqRegion]:
 
     """
     seq_regions = {}
-    _open = str(gbff_path).endswith(".gz") and gzip.open or open
-    with _open(gbff_path, "rt") as gbff_file:
+    with open_gz_file(gbff_path) as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
             seqr: SeqRegion = {"length": len(record.seq)}
             # Is the seq_region circular?
@@ -393,8 +393,7 @@ def report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
         The data as a string in CSV format, and the head metadata as a dictionary.
 
     """
-    _open = str(report_path).endswith(".gz") and gzip.open or open
-    with _open(report_path, "rt") as report:
+    with open_gz_file(report_path) as report:
         data = ""
         metadata = {}
         last_head = ""

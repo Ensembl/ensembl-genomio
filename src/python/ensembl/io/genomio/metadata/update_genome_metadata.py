@@ -26,6 +26,7 @@ import argschema
 from Bio import SeqIO
 
 from ensembl.io.genomio.utils import print_json
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
 class MissingDataError(Exception):
@@ -61,8 +62,7 @@ def get_gbff_regions(gbff_path: str) -> List[str]:
         return []
 
     seq_regions = []
-    _open = gbff_path.endswith(".gz") and gzip.open or open
-    with _open(gbff_path, "rt") as gbff_file:
+    with open_gz_file(gbff_path) as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
             seq_regions.append(record.id)
     return seq_regions
@@ -75,8 +75,7 @@ def report_to_csv(report_path: str) -> Tuple[str, dict]:
         report_path: Path to a `seq_region` file from INSDC/RefSeq.
 
     """
-    _open = report_path.endswith(".gz") and gzip.open or open
-    with _open(report_path, "rt") as report:
+    with open(report_path) as report:
         data = ""
         metadata = {}
         last_head = ""

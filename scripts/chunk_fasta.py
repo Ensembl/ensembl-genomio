@@ -26,6 +26,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -156,8 +158,7 @@ def main():
 
     # process input fasta
     fasta_file = args.fasta_dna
-    _open = fasta_file.endswith(".gz") and gzip.open or open
-    with _open(fasta_file, "rt") as fasta:
+    with open_gz_file(fasta_file) as fasta:
         agp_lines = []
         print(
             f"spliting sequences from '{fasta_file}', chunk size {args.chunk_size:_}, splitting on {args.n_seq} Ns (0 -- disabled)",
