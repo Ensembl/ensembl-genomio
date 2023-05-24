@@ -33,12 +33,12 @@ from ensembl.brc4.runnable.utils import get_json
 class BiotypeCollection:
     def __init__(self) -> None:
         self.biotypes: Dict[str, FeatureCounter] = dict()
-    
+
     def add_feature(self, feature_id: str, feature_type: str) -> None:
         if feature_type not in self.biotypes:
             self.biotypes[feature_type] = FeatureCounter()
         self.biotypes[feature_type].add_feature(feature_id)
-    
+
     def get_count(self, feature_id: str) -> int:
         count = 0
         biotype = self.biotypes.get(feature_id)
@@ -64,7 +64,7 @@ class FeatureCounter:
     def __init__(self) -> None:
         self.count = 0
         self.ids: Set = set()
-    
+
     def add_feature(self, feature_id: str):
         self.ids.add(feature_id)
         self.count += 1

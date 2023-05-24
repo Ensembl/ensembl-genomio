@@ -32,9 +32,9 @@ def validate_json_schema(json_file: PathLike, json_schema: PathLike) -> None:
         json_schema: JSON schema to validate `json_file` against.
 
     """
-    with Path(json_file).open('r') as fh:
+    with Path(json_file).open("r") as fh:
         content = json.load(fh)
-    with Path(json_schema).open('r') as fh:
+    with Path(json_schema).open("r") as fh:
         schema = json.load(fh)
     jsonschema.validate(instance=content, schema=schema)
 

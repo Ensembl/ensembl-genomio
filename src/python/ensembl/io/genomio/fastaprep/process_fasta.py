@@ -32,7 +32,7 @@ exclude_seq_regions: List[str] = []
 @contextmanager
 def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
     this_file = Path(file_path)
-    if this_file.suffix == '.gz':
+    if this_file.suffix == ".gz":
         with gzip.open(this_file, "rt") as fh:
             yield fh
     else:
