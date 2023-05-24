@@ -163,3 +163,17 @@ branch = true
 source = [
     "src/python/ensembl"
 ]
+
+[tool.coverage.report]
+exclude_lines = [
+    # Do not complain about missing debug-only code
+    "def __repr__",
+    "if self\\.debug",
+    # Do not complain if tests do not hit defensive assertion code
+    "raise AssertionError",
+    "raise NotImplementedError",
+    # Do not complain if non-runnable code is not run
+    "if __name__ == .__main__.:",
+    # Do not complain about abstract methods, they are not run
+    "@(abc\\.)?abstractmethod",
+]
