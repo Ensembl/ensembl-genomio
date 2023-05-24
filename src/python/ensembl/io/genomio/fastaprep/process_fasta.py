@@ -15,17 +15,29 @@
 # limitations under the License.
 """TODO"""
 
+from contextlib import contextmanager
 from functools import partial
 import gzip
 from mimetypes import guess_type
 from pathlib import Path
 from os import PathLike
 import argschema
-from typing import Dict, List, Optional, Set
+from typing import Dict, Generator, List, Optional, Set, TextIO
 
 from Bio import SeqIO
 
 exclude_seq_regions: List[str] = []
+
+
+@contextmanager
+def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
+    this_file = Path(file_path)
+    if this_file.suffix == '.gz':
+        with gzip.open(this_file, "rt") as fh:
+            yield fh
+    else:
+        with open(this_file, "rt") as fh:
+            yield fh
 
 
 def peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -> Set[str]:
@@ -33,9 +45,8 @@ def peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -> Se
     Extract peptide IDs from a genbank file that are in a given list of seq regions
     """
     encoding = guess_type(genbank_path)[1]
-    _open = partial(gzip.open, mode="rt") if encoding == "gzip" else open
     peptides_to_exclude: Set[str] = set()
-    with _open(genbank_path) as in_genbank:
+    with open_gz_file(genbank_path) as in_genbank:
         for record in SeqIO.parse(in_genbank, "genbank"):
             if record.id in seqr_to_exclude:
                 print("Skip sequence %s" % record.id)
@@ -81,14 +92,11 @@ def prep_fasta_data(
     encoding = guess_type(file_path)[1]
 
     if encoding == "gzip":
-        _open = partial(gzip.open, mode="rt")
         new_file_name = Path(new_file_name).stem
-    else:
-        _open = open
 
     # Final path
     final_path = output_dir / f"{new_file_name}.fa"
-    with _open(file_path) as in_fasta:
+    with open_gz_file(file_path) as in_fasta:
         for record in SeqIO.parse(in_fasta, "fasta"):
             if record.id in to_exclude:
                 print(f"Skip record ${record.id}")
