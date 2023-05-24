@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 import re
 import gzip
 import csv
@@ -46,7 +47,7 @@ class SeqregionParser:
     }
 
     def get_report_regions(
-        self, report_path: str, accession: str, use_refseq: bool = False
+        self, report_path: Path, accession: str, use_refseq: bool = False
     ) -> Dict[str, dict]:
         """Get seq_region data from report file.
 
@@ -78,7 +79,7 @@ class SeqregionParser:
 
         return seq_regions
 
-    def report_to_csv(self, report_path: str) -> Tuple[str, dict]:
+    def report_to_csv(self, report_path: Path) -> Tuple[str, dict]:
         """Load an assembly report as a csv string.
 
         Args:

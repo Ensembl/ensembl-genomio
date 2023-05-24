@@ -47,7 +47,7 @@ def get_additions(report_path: Path, gbff_path: Path) -> List[str]:
         gbff_path: Path to the GBFF file.
     """
     gbff_regions = set(get_gbff_regions(gbff_path))
-    report_regions = set(get_report_regions(report_path))
+    report_regions = set(get_report_regions_names(report_path))
     additions = list(report_regions.difference(gbff_regions))
     return additions
 
@@ -68,7 +68,7 @@ def get_gbff_regions(gbff_path: Path) -> List[str]:
     return seq_regions
 
 
-def report_to_csv(report_path: Path) -> Tuple[str, dict]:
+def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
     """Returns an assembly report as a CSV string, and the head metadata as a dict.
 
     Args:
@@ -96,14 +96,14 @@ def report_to_csv(report_path: Path) -> Tuple[str, dict]:
         return data, metadata
 
 
-def get_report_regions(report_path: Path) -> List[str]:
+def get_report_regions_names(report_path: Path) -> List[str]:
     """Returns a list of `seq_region` names from the report file.
 
     Args:
         report_path: Path to the seq_regions report from INSDC/RefSeq.
     """
     # Get the report in a CSV format, easier to manipulate
-    report_csv, _ = report_to_csv(report_path)
+    report_csv, _ = _report_to_csv(report_path)
 
     # Feed the csv string to the CSV reader
     reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
