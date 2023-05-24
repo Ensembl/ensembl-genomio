@@ -63,6 +63,10 @@ PROVIDER_DATA = {
 DEFAULT_API_URL = "https://www.ebi.ac.uk/ena/browser/api/xml/"
 
 
+def MissingNodeError(Exception):
+    pass
+
+
 def add_provider(genome_data: Dict, gff3_file: Optional[PathLike] = None) -> None:
     """Adds provider metadata for assembly and gene models in `genome_data`.
 
@@ -165,44 +169,54 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
         only if present in the fetched taxonomy data.
 
     Raises:
-        Exception: If ``TAXON_ID`` or ``SCIENTIFIC_NAME`` are missing in the taxonomy data fetched.
+        MissinDataException: If ``TAXON_ID`` or ``SCIENTIFIC_NAME`` are missing in the taxonomy data fetched.
 
     """
     # Use the GenBank accession without version
     gb_accession = accession.replace("GCF", "GCA").split(".")[0]
     response = requests.get(f"{base_api_url}/{gb_accession}")
     entry = ElementTree.fromstring(response.text)
-    taxon_node = entry.find(".//TAXON")
-    # Fetch taxon ID, scientific name and strain information
-    taxon_id = _get_node_text(taxon_node, "TAXON_ID")
-    if not taxon_id:
-        raise Exception(f"No 'TAXON_ID' found for accession {accession}")
-    scientific_name = _get_node_text(taxon_node, "SCIENTIFIC_NAME")
-    if not scientific_name:
-        raise Exception(f"No 'SCIENTIFIC_NAME' found for accession {accession}")
-    strain = _get_node_text(taxon_node, "STRAIN")
 
-    taxonomy = {
-        "taxon_id": int(taxon_id),
-        "scientific_name": scientific_name,
-    }
+    taxon_node = entry.find(".//TAXON")
+    if taxon_node is None:
+        raise Exception("Can't find the TAXON node")
+
+    # Fetch taxon ID, scientific_name and strain
+    taxon_id = _get_node_text(taxon_node, "TAXON_ID")
+    scientific_name = _get_node_text(taxon_node, "SCIENTIFIC_NAME")
+    strain = _get_node_text(taxon_node, "STRAIN", optional=True)
+
+    if taxon_id and scientific_name:
+        taxonomy = {
+            "taxon_id": int(taxon_id),
+            "scientific_name": scientific_name,
+        }
     if strain:
         taxonomy["strain"] = strain
     return taxonomy
 
 
-def _get_node_text(node: Element, tag: str) -> Optional[str]:
+def _get_node_text(node: Element, tag: str, optional: bool = False) -> Optional[str]:
     """Returns the value of the field matching the provided tag inside `node`.
+    By default raise a MissingNodeException if the tag is not found.
+    If optional is True and no tag is found, return None.
 
     Args:
         node: Node of an XML tree.
         tag: Tag to fetch within the node.
+        optional: Don't raise an exception if the tag doesn't exist.
 
     """
-    try:
-        return node.find(tag).text
-    except:
-        return
+    if node is None:
+        raise MissingNodeError(f"No node provided to look for {tag}")
+    tag_node = node.find(tag)
+    
+    if tag_node is not None:
+        return tag_node.text
+    else:
+        if optional:
+            return None
+        raise MissingNodeError(f"No node found for tag {tag}")
 
 
 def prepare_genome_metadata(
