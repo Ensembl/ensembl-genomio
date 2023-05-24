@@ -16,12 +16,25 @@
 
 __all__ = ["SUPPORTED_ARCHIVE_FORMATS", "extract_file"]
 
+from contextlib import contextmanager
 import gzip
 from os import PathLike
 from pathlib import Path
 import shutil
+from typing import Generator, TextIO
 
 import argschema
+
+
+@contextmanager
+def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
+    this_file = Path(file_path)
+    if this_file.suffix == ".gz":
+        with gzip.open(this_file, "rt") as fh:
+            yield fh
+    else:
+        with open(this_file, "rt") as fh:
+            yield fh
 
 
 # Each registered format is a tuple, `(name, extensions, description)`

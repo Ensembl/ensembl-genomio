@@ -26,18 +26,9 @@ from typing import Dict, Generator, List, Optional, Set, TextIO
 
 from Bio import SeqIO
 
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
+
 exclude_seq_regions: List[str] = []
-
-
-@contextmanager
-def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
-    this_file = Path(file_path)
-    if this_file.suffix == ".gz":
-        with gzip.open(this_file, "rt") as fh:
-            yield fh
-    else:
-        with open(this_file, "rt") as fh:
-            yield fh
 
 
 def peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -> Set[str]:
