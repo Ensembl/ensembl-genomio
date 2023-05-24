@@ -113,7 +113,7 @@ python:tests:pytest:
   extends: .python:tests:generic
   script:
     - coverage run -m pytest
-    - coverage xml -o cov_report.xml
+    - coverage html -d cov_report
   artifacts:
-    reports:
-      junit: cov_report.xml
+    paths:
+      - cov_report
