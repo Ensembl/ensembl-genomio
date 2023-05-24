@@ -210,7 +210,7 @@ def _get_node_text(node: Element, tag: str, optional: bool = False) -> Optional[
     if node is None:
         raise MissingNodeError(f"No node provided to look for {tag}")
     tag_node = node.find(tag)
-    
+
     if tag_node is not None:
         return tag_node.text
     else:

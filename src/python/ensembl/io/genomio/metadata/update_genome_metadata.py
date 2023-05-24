@@ -75,7 +75,7 @@ def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
         report_path: Path to a `seq_region` file from INSDC/RefSeq.
 
     """
-    with report_path.open('r') as report:
+    with report_path.open("r") as report:
         data = ""
         metadata = {}
         last_head = ""
@@ -150,7 +150,7 @@ def amend_genomic_metadata(
     # use_refseq = self.param("accession").startswith("GCF_")
 
     # Load genome data
-    with Path(genome_infile).open('r') as genome_fh:
+    with Path(genome_infile).open("r") as genome_fh:
         genome_metadata = json.load(genome_fh)
 
     # Get additional sequences in the assembly but not in the data
