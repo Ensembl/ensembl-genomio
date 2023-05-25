@@ -25,7 +25,7 @@ import argschema
 
 from Bio import SeqIO
 
-from ensembl.io.genomio.utils import print_json
+from ensembl.io.genomio.utils import print_json, get_json
 from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
@@ -143,6 +143,9 @@ def amend_genomic_metadata(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Get genome data
+    genome_metadata = get_json(genome_infile)
+
     # Final file name
     metadata_type = "genome"
     new_file_name = f"{metadata_type}_amended.json"
@@ -180,7 +183,10 @@ class InputSchema(argschema.ArgSchema):
         dump_default=".",
         metadata={"description": "Directory where the new amended genome file will be created"},
     )
-    brc4_mode = argschema.fields.Int(required=False, metadata={"description": "Activate BRC4 mode (default)"})
+    brc4_mode = argschema.fields.Int(
+        required=False,
+        metadata={"description": "Activate BRC4 mode (default)"}
+    )
 
 
 def main() -> None:
