@@ -25,7 +25,7 @@ import argschema
 
 from Bio import SeqIO
 
-from ensembl.io.genomio.utils import print_json
+from ensembl.io.genomio.utils import print_json, get_json
 
 
 class MissingDataError(Exception):
@@ -144,6 +144,9 @@ def amend_genomic_metadata(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    #Make dict from Genome JSON
+    genome_json = get_json(genome_infile)
+
     # Final file name
     metadata_type = "genome"
     new_file_name = f"{metadata_type}_amended.json"
@@ -153,12 +156,9 @@ def amend_genomic_metadata(
     # Get additional sequences in the assembly but not in the data
     additions = get_additions(INSDC_RefSeq_report_infile, genbank_infile)
     if additions:
-        genome_infile["added_seq"] = {"region_name": additions}
+        genome_json["added_seq"] = {"region_name": additions}
     # Print out the file
-    print_json(final_path, genome_infile)
-    # Flow out the file and type
-    output = {"metadata_type": metadata_type, "metadata_json": str(final_path)}
-
+    print_json(final_path, genome_json)
 
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by the entry point of this module."""
@@ -177,7 +177,10 @@ class InputSchema(argschema.ArgSchema):
         dump_default=".",
         metadata={"description": "Directory where the new amended genome file will be created"},
     )
-    brc4_mode = argschema.fields.Int(required=False, metadata={"description": "Activate BRC4 mode (default)"})
+    brc4_mode = argschema.fields.Int(
+        required=False,
+        metadata={"description": "Activate BRC4 mode (default)"}
+    )
 
 
 def main() -> None:
