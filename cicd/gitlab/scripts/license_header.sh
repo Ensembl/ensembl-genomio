@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
