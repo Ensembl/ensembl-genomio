@@ -129,7 +129,7 @@ def amend_genomic_metadata(
     genbank_infile: PathLike,
     output_dir: PathLike,
     brc4_mode: Optional[int] = 1,
-) -> None:
+) -> Path:
     """
     Args:
         genome_infile: Genome data following the schemas/genome_schema.json.
@@ -143,7 +143,7 @@ def amend_genomic_metadata(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    #Make dict from Genome JSON
+    # Make dict from Genome JSON
     genome_json = get_json(genome_infile)
 
     # Final file name
@@ -162,8 +162,8 @@ def amend_genomic_metadata(
         genome_metadata["added_seq"] = {"region_name": additions}
     # Print out the file
     print_json(final_path, genome_metadata)
-    # Flow out the file and type
-    output = {"metadata_type": metadata_type, "metadata_json": str(final_path)}
+
+    return final_path
 
 
 class InputSchema(argschema.ArgSchema):
@@ -183,19 +183,19 @@ class InputSchema(argschema.ArgSchema):
         dump_default=".",
         metadata={"description": "Directory where the new amended genome file will be created"},
     )
-    brc4_mode = argschema.fields.Int(
-        required=False,
-        metadata={"description": "Activate BRC4 mode (default)"}
-    )
+    brc4_mode = argschema.fields.Int(required=False, metadata={"description": "Activate BRC4 mode (default)"})
 
 
 def main() -> None:
     """Module's entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    amend_genomic_metadata(
+    amended_genome_file = amend_genomic_metadata(
         mod.args["genome_infile"],
         mod.args["INSDC_RefSeq_report_infile"],
         mod.args["genbank_infile"],
         mod.args["output_dir"],
         mod.args["brc4_mode"],
     )
+    # Flow out the file and type
+    output = {"metadata_type": "genome", "metadata_json": str(amended_genome_file)}
+    print_json(mod.args["output_json"], output)
