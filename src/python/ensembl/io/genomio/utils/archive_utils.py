@@ -33,7 +33,7 @@ def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
         with gzip.open(this_file, "rt") as fh:
             yield fh
     else:
-        with open(this_file, "rt") as fh:
+        with this_file.open("rt") as fh:
             yield fh
 
 

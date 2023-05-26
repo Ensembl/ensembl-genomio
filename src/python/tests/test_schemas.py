@@ -36,9 +36,9 @@ from ensembl.io.genomio import schemas
 
 
 class TestSchemas:
-    test_data_dir = Path()
-    schema_dir = Path()
-    tmp_dir = Path()
+    test_data_dir: Path
+    schema_dir: Path
+    tmp_dir: Path
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, tmp_dir: Path):
