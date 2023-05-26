@@ -23,3 +23,8 @@ license:tests:notice:
   stage: license:tests
   script:
     - grep $(date +"%Y") NOTICE
+
+license:tests:header:
+  stage: license:tests
+  script:
+    - bash cicd/gitlab/scripts/license_header.sh
