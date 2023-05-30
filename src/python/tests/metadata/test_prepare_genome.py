@@ -35,10 +35,13 @@ from ensembl.io.genomio import schemas
 
 
 class TestSchemas:
+    test_data_dir: Path
+    tmp_dir: Path
+
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, tmp_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
-        type(self).test_data_dir = pytest.files_dir / "schemas"
+        type(self).test_data_dir = Path(pytest.files_dir) / "schemas"
         type(self).tmp_dir = tmp_dir
 
     @pytest.mark.parametrize(
@@ -82,4 +85,6 @@ class TestSchemas:
 
         """
         with expected:
-            schemas.validate_json_schema(self.test_data_dir / json_file, self.test_data_dir / json_schema)
+            jfile = self.test_data_dir / json_file
+            jschema = self.test_data_dir / json_schema
+            schemas.validate_json_schema(jfile, jschema)

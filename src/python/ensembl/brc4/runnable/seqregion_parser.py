@@ -14,10 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 import re
 import gzip
 import csv
 from typing import Any, Dict, Tuple
+
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
 class SeqregionParser:
@@ -44,7 +47,7 @@ class SeqregionParser:
     }
 
     def get_report_regions(
-        self, report_path: str, accession: str, use_refseq: bool = False
+        self, report_path: Path, accession: str, use_refseq: bool = False
     ) -> Dict[str, dict]:
         """Get seq_region data from report file.
 
@@ -76,7 +79,7 @@ class SeqregionParser:
 
         return seq_regions
 
-    def report_to_csv(self, report_path: str) -> Tuple[str, dict]:
+    def report_to_csv(self, report_path: Path) -> Tuple[str, dict]:
         """Load an assembly report as a csv string.
 
         Args:
@@ -85,8 +88,7 @@ class SeqregionParser:
             The csv as a string, and the head metadata as a dict.
         """
 
-        _open = report_path.endswith(".gz") and gzip.open or open
-        with _open(report_path, "rt") as report:
+        with open_gz_file(report_path) as report:
             data = ""
             metadata = {}
             last_head = ""

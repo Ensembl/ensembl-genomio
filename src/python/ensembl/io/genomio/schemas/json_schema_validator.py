@@ -17,12 +17,14 @@
 __all__ = ["validate_json_schema"]
 
 import json
+from os import PathLike
+from pathlib import Path
 
 import argschema
 import jsonschema
 
 
-def validate_json_schema(json_file: str, json_schema: str) -> None:
+def validate_json_schema(json_file: PathLike, json_schema: PathLike) -> None:
     """Validates a JSON file with the provided JSON schema.
 
     Args:
@@ -30,9 +32,9 @@ def validate_json_schema(json_file: str, json_schema: str) -> None:
         json_schema: JSON schema to validate `json_file` against.
 
     """
-    with open(json_file) as fh:
+    with Path(json_file).open("r") as fh:
         content = json.load(fh)
-    with open(json_schema) as fh:
+    with Path(json_schema).open("r") as fh:
         schema = json.load(fh)
     jsonschema.validate(instance=content, schema=schema)
 

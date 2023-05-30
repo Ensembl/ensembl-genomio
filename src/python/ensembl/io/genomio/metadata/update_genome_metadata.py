@@ -16,7 +16,7 @@
 """TODO"""
 
 import csv
-import gzip
+import json
 from os import PathLike
 from pathlib import Path
 import re
@@ -26,19 +26,20 @@ import argschema
 from Bio import SeqIO
 
 from ensembl.io.genomio.utils import print_json, get_json
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
 class MissingDataError(Exception):
     """Used if some data is missing from the report file."""
 
-    def __init__(self, report_path: str, accession: str, msg: str):
+    def __init__(self, report_path: PathLike, accession: str, msg: str):
         report_msg = f"Can't get data for {accession} in report {report_path}"
         if msg:
             report_msg = f"{report_msg}: {msg}"
         self.msg = report_msg
 
 
-def get_additions(report_path: str, gbff_path: str) -> List[str]:
+def get_additions(report_path: Path, gbff_path: Path) -> List[str]:
     """Returns all `seq_regions` that are mentioned in the report but that are not in the data.
 
     Args:
@@ -46,12 +47,12 @@ def get_additions(report_path: str, gbff_path: str) -> List[str]:
         gbff_path: Path to the GBFF file.
     """
     gbff_regions = set(get_gbff_regions(gbff_path))
-    report_regions = set(get_report_regions(report_path))
+    report_regions = set(get_report_regions_names(report_path))
     additions = list(report_regions.difference(gbff_regions))
     return additions
 
 
-def get_gbff_regions(gbff_path: str) -> List[str]:
+def get_gbff_regions(gbff_path: Path) -> List[str]:
     """Returns the `seq_region` data from the GBFF file.
 
     Args:
@@ -61,22 +62,20 @@ def get_gbff_regions(gbff_path: str) -> List[str]:
         return []
 
     seq_regions = []
-    _open = gbff_path.endswith(".gz") and gzip.open or open
-    with _open(gbff_path, "rt") as gbff_file:
+    with open_gz_file(gbff_path) as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
             seq_regions.append(record.id)
     return seq_regions
 
 
-def report_to_csv(report_path: str) -> Tuple[str, dict]:
+def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
     """Returns an assembly report as a CSV string, and the head metadata as a dict.
 
     Args:
         report_path: Path to a `seq_region` file from INSDC/RefSeq.
 
     """
-    _open = report_path.endswith(".gz") and gzip.open or open
-    with _open(report_path, "rt") as report:
+    with report_path.open("r") as report:
         data = ""
         metadata = {}
         last_head = ""
@@ -97,14 +96,14 @@ def report_to_csv(report_path: str) -> Tuple[str, dict]:
         return data, metadata
 
 
-def get_report_regions(report_path: str) -> List[str]:
+def get_report_regions_names(report_path: Path) -> List[str]:
     """Returns a list of `seq_region` names from the report file.
 
     Args:
         report_path: Path to the seq_regions report from INSDC/RefSeq.
     """
     # Get the report in a CSV format, easier to manipulate
-    report_csv, _ = report_to_csv(report_path)
+    report_csv, _ = _report_to_csv(report_path)
 
     # Feed the csv string to the CSV reader
     reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
@@ -126,11 +125,11 @@ def get_report_regions(report_path: str) -> List[str]:
 
 def amend_genomic_metadata(
     genome_infile: PathLike,
-    INSDC_RefSeq_report_infile: Optional[PathLike],
-    genbank_infile: Optional[PathLike],
+    INSDC_RefSeq_report_infile: PathLike,
+    genbank_infile: PathLike,
     output_dir: PathLike,
     brc4_mode: Optional[int] = 1,
-) -> None:
+) -> Path:
     """
     Args:
         genome_infile: Genome data following the schemas/genome_schema.json.
@@ -144,7 +143,7 @@ def amend_genomic_metadata(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    #Make dict from Genome JSON
+    # Make dict from Genome JSON
     genome_json = get_json(genome_infile)
 
     # Final file name
@@ -153,12 +152,19 @@ def amend_genomic_metadata(
     final_path = output_dir / new_file_name
     # use_refseq = self.param("accession").startswith("GCF_")
 
+    # Load genome data
+    with Path(genome_infile).open("r") as genome_fh:
+        genome_metadata = json.load(genome_fh)
+
     # Get additional sequences in the assembly but not in the data
-    additions = get_additions(INSDC_RefSeq_report_infile, genbank_infile)
+    additions = get_additions(Path(INSDC_RefSeq_report_infile), Path(genbank_infile))
     if additions:
-        genome_json["added_seq"] = {"region_name": additions}
+        genome_metadata["added_seq"] = {"region_name": additions}
     # Print out the file
-    print_json(final_path, genome_json)
+    print_json(final_path, genome_metadata)
+
+    return final_path
+
 
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by the entry point of this module."""
@@ -177,19 +183,19 @@ class InputSchema(argschema.ArgSchema):
         dump_default=".",
         metadata={"description": "Directory where the new amended genome file will be created"},
     )
-    brc4_mode = argschema.fields.Int(
-        required=False,
-        metadata={"description": "Activate BRC4 mode (default)"}
-    )
+    brc4_mode = argschema.fields.Int(required=False, metadata={"description": "Activate BRC4 mode (default)"})
 
 
 def main() -> None:
     """Module's entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    amend_genomic_metadata(
+    amended_genome_file = amend_genomic_metadata(
         mod.args["genome_infile"],
         mod.args["INSDC_RefSeq_report_infile"],
         mod.args["genbank_infile"],
         mod.args["output_dir"],
         mod.args["brc4_mode"],
     )
+    # Flow out the file and type
+    output = {"metadata_type": "genome", "metadata_json": str(amended_genome_file)}
+    print_json(mod.args["output_json"], output)

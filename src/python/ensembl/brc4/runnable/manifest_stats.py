@@ -22,12 +22,61 @@ from pathlib import Path
 from shutil import which
 from statistics import mean
 import subprocess
-from typing import Dict, List, TextIO
+from typing import Any, Dict, List, Set, TextIO
 
 from BCBio import GFF
 import eHive
 
 from ensembl.brc4.runnable.utils import get_json
+
+
+class BiotypeCollection:
+    def __init__(self) -> None:
+        self.biotypes: Dict[str, FeatureCounter] = dict()
+
+    def add_feature(self, feature_id: str, feature_type: str) -> None:
+        if feature_type not in self.biotypes:
+            self.biotypes[feature_type] = FeatureCounter()
+        self.biotypes[feature_type].add_feature(feature_id)
+
+    def get_count(self, feature_id: str) -> int:
+        count = 0
+        biotype = self.biotypes.get(feature_id)
+        if biotype:
+            count = biotype.count
+        return count
+
+    def sorted_stats(self) -> List[str]:
+        # Order
+        sorted_biotypes = dict()
+        for name in sorted(self.biotypes.keys()):
+            data = self.biotypes[name]
+            sorted_biotypes[name] = data
+
+        stats = [
+            f"{data.unique_count():>9}\t{biotype:<20}\tID = {data.example()}"
+            for (biotype, data) in sorted_biotypes.items()
+        ]
+        return stats
+
+
+class FeatureCounter:
+    def __init__(self) -> None:
+        self.count = 0
+        self.ids: Set = set()
+
+    def add_feature(self, feature_id: str):
+        self.ids.add(feature_id)
+        self.count += 1
+
+    def unique_count(self):
+        return len(self.ids)
+
+    def example(self) -> str:
+        example_str = ""
+        if self.ids:
+            example_str = list(self.ids)[0]
+        return example_str
 
 
 class manifest_stats(eHive.BaseRunnable):
@@ -80,7 +129,7 @@ class manifest_stats(eHive.BaseRunnable):
         seq_regions = get_json(seq_region_path)
 
         # Get basic data
-        coord_systems = {}
+        coord_systems: Dict[str, List[int]] = {}
         circular = 0
         locations = []
         codon_tables = []
@@ -92,7 +141,7 @@ class manifest_stats(eHive.BaseRunnable):
             coord_level = seqr["coord_system_level"]
             if not coord_level in coord_systems:
                 coord_systems[coord_level] = []
-            coord_systems[coord_level].append(seqr["length"])
+            coord_systems[coord_level].append(int(seqr["length"]))
 
             if "circular" in seqr:
                 circular += 1
@@ -108,7 +157,7 @@ class manifest_stats(eHive.BaseRunnable):
         for coord_name, lengths in coord_systems.items():
             stats.append("\nCoord_system: %s" % coord_name)
 
-            stat_counts = dict()
+            stat_counts: Dict[str, float] = {}
             stat_counts["Number of sequences"] = len(lengths)
             stat_counts["Sequence length sum"] = sum(lengths)
             stat_counts["Sequence length minimum"] = min(lengths)
@@ -140,7 +189,7 @@ class manifest_stats(eHive.BaseRunnable):
         stats = []
         stats.append(gff3_path.name)
         if gff3_path.name.endswith(".gz"):
-            with io.TextIOWrapper(gzip.open(gff3_path, "r")) as gff3_handle:
+            with gzip.open(gff3_path, "rt") as gff3_handle:
                 stats += self.parse_gff3(gff3_handle)
         else:
             with gff3_path.open("r") as gff3_handle:
@@ -150,7 +199,7 @@ class manifest_stats(eHive.BaseRunnable):
         return stats
 
     def parse_gff3(self, gff3_handle: TextIO) -> List:
-        biotypes = {}
+        biotypes = BiotypeCollection()
 
         for rec in GFF.parse(gff3_handle):
             for feat1 in rec.features:
@@ -162,19 +211,17 @@ class manifest_stats(eHive.BaseRunnable):
                         types2 = {f.type for f in feat2.sub_features}
                         if "CDS" in types2:
                             is_protein = True
-                    manifest_stats.increment_biotype(biotypes, feat2.id, f"{feat1.type}-{feat2.type}")
+                    biotypes.add_feature(feat2.id, f"{feat1.type}-{feat2.type}")
                     for feat3 in feat2.sub_features:
                         if feat3.type == "exon":
                             continue
-                        manifest_stats.increment_biotype(
-                            biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}"
-                        )
+                        biotypes.add_feature(feat1.id, f"{feat2.type}-{feat3.type}")
 
                 # Main categories counts
                 if feat1.type == "pseudogene":
-                    manifest_stats.increment_biotype(biotypes, feat1.id, f"pseudogene")
+                    biotypes.add_feature(feat1.id, "pseudogene")
                 elif is_protein:
-                    manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
+                    biotypes.add_feature(feat1.id, f"PROT_{feat1.type}")
                 else:
                     # Special case, undefined gene-transcript
                     if (
@@ -182,35 +229,24 @@ class manifest_stats(eHive.BaseRunnable):
                         and feat1.sub_features
                         and feat1.sub_features[0].type == "transcript"
                     ):
-                        manifest_stats.increment_biotype(biotypes, feat1.id, f"OTHER")
+                        biotypes.add_feature(feat1.id, "OTHER")
                     else:
-                        manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
+                        biotypes.add_feature(feat1.id, f"NONPROT_{feat1.type}")
 
                 # Total
                 if feat1.type in ("gene", "pseudogene"):
-                    manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
-
-        # Order
-        sorted_biotypes = dict()
-        for name in sorted(biotypes.keys()):
-            data = biotypes[name]
-            data["unique_count"] = len(data["ids"])
-            sorted_biotypes[name] = data
-
-        stats = [
-            f"{data['unique_count']:>9}\t{biotype:<20}\tID = {data['example']}"
-            for (biotype, data) in sorted_biotypes.items()
-        ]
+                    biotypes.add_feature(feat1.id, f"ALL_GENES")
+        stats = biotypes.sorted_stats()
 
         # Check against NCBI stats
         stats += self.check_ncbi_stats(biotypes, self.param("accession"))
 
         return stats
 
-    def check_ncbi_stats(self, biotypes: Dict, accession: str) -> List:
+    def check_ncbi_stats(self, biotypes: BiotypeCollection, accession: str) -> List:
         """Use the dataset tool from NCBI to get stats and compare with what we have"""
 
-        stats = []
+        stats: List[str] = []
 
         datasets_bin = self.param("datasets_bin")
         if not which(datasets_bin):
@@ -232,7 +268,7 @@ class manifest_stats(eHive.BaseRunnable):
                     stats = self.compare_ncbi_counts(biotypes, counts)
         return stats
 
-    def compare_ncbi_counts(self, prepared: Dict, ncbi: Dict) -> List:
+    def compare_ncbi_counts(self, prepared: BiotypeCollection, ncbi: Dict) -> List:
         """Compare specific gene stats from NCBI"""
         stats = []
 
@@ -247,7 +283,7 @@ class manifest_stats(eHive.BaseRunnable):
         for map in maps:
             ncbi_name, prep_name = map
             ncbi_count = ncbi.get(ncbi_name, 0)
-            prep_count = prepared.get(prep_name, {}).get("count", 0)
+            prep_count = prepared.get_count(prep_name)
 
             if prep_count != ncbi_count:
                 diff = prep_count - ncbi_count
@@ -257,10 +293,3 @@ class manifest_stats(eHive.BaseRunnable):
                 stats.append(f"Same count for {map}: {prep_count}")
 
         return stats
-
-    @staticmethod
-    def increment_biotype(biotypes: Dict, feature_id: str, feature_biotype: str) -> None:
-        if not feature_biotype in biotypes:
-            biotypes[feature_biotype] = {"count": 0, "ids": set(), "example": feature_id}
-        biotypes[feature_biotype]["count"] += 1
-        biotypes[feature_biotype]["ids"].add(feature_id)
