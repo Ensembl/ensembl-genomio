@@ -20,7 +20,7 @@ Can be imported as a module and called as a script as well, with the same parame
 
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import argschema
 from sqlalchemy import select
@@ -34,9 +34,13 @@ DEFAULT_MAP = ROOT_DIR / "config/external_db_map/default.txt"
 KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
 
+class MapFormatError(Exception):
+    """Error when parsing the db map file."""
+
+
 def get_external_db_map(map_file: Path) -> Dict:
     """Class method, set up the map for all SeqRegion objects"""
-    db_map = dict()
+    db_map: Dict[str, str] = {}
     with map_file.open("r") as map_fh:
         for line in map_fh:
             line = line.rstrip()
@@ -44,14 +48,13 @@ def get_external_db_map(map_file: Path) -> Dict:
                 continue
             parts = line.split("\t")
             if not parts[0] or not parts[1]:
-                raise Exception(f"External db file is not formatted correctly for: {line}")
-            else:
-                db_map[parts[1]] = parts[0]
+                raise MapFormatError(f"External db file is not formatted correctly for: {line}")
+            db_map[parts[1]] = parts[0]
     return db_map
 
 
 def get_coord_systems(session: Session) -> List[CoordSystem]:
-    coord_systems = list()
+    coord_systems: List[CoordSystem] = []
     coord_stmt = select(CoordSystem).filter(CoordSystem.attrib.like("%default_version%"))
     for row in session.execute(coord_stmt).unique().all():
         coord_systems.append(row[0])
@@ -75,7 +78,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
         )
         for row in session.execute(seqr_stmt).unique().all():
             seqr: SeqRegion = row[0]
-            seq_region = dict()
+            seq_region: Dict[str, Any] = {}
             seq_region = {"name": seqr.name, "length": seqr.length}
             synonyms = get_synonyms(seqr, external_db_map)
             if synonyms:
@@ -119,22 +122,19 @@ def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
         "sequence_location": "location",
     }
 
-    for name in bool_attribs:
+    for name, key in bool_attribs.items():
         value = attrib_dict.get(name)
         if value:
-            key = bool_attribs[name]
             seq_region[key] = bool(value)
 
-    for name in int_attribs:
+    for name, key in int_attribs.items():
         value = attrib_dict.get(name)
         if value:
-            key = int_attribs[name]
             seq_region[key] = int(value)
 
-    for name in string_attribs:
+    for name, key in string_attribs.items():
         value = attrib_dict.get(name)
         if value:
-            key = string_attribs[name]
             seq_region[key] = str(value)
 
 
