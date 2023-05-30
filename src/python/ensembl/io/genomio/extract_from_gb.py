@@ -286,7 +286,8 @@ class FormattedFilesGenerator:
 
             # Add fasta to pep fasta file
             if "translation" in gene_qualifiers:
-                peptides.append(SeqRecord(Seq(gene_qualifiers["translation"][0]), id=cds_id))
+                new_pep_record = SeqRecord(Seq(gene_qualifiers["translation"][0]), id=cds_id)
+                peptides.append(new_pep_record)
 
             # Also create a parent transcript for this translation
             tr_qualifiers = {"ID": tr_id, "Name": gene_name, "Parent": gene_id}
@@ -360,11 +361,11 @@ class FormattedFilesGenerator:
 
         for seq in self.seq_records:
             codon_table = self._get_codon_table(seq)
-            if codon_table is not None:
+            if codon_table is None:
                 print(
                     (
-                        "Warning: No codon table found."
-                        f"Make sure to change the codon table number in {self.files.seq_region} manually"
+                        "Warning: No codon table found. "
+                        f"Make sure to change the codon table number in {self.files.seq_region} manually "
                         "if it is not the standard codon table"
                     )
                 )
@@ -384,8 +385,8 @@ class FormattedFilesGenerator:
                 if not codon_table:
                     print(
                         (
-                            f"Warning: '{seq.organelle}' is an organelle:"
-                            f"make sure to change the codon table number in {self.files.seq_region} manually"
+                            f"Warning: '{seq.organelle}' is an organelle: "
+                            f"make sure to change the codon table number in {self.files.seq_region} manually "
                             "if it is not the standard codon table"
                         )
                     )
