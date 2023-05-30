@@ -14,10 +14,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Parse a Genbank file and creates cleaned up files from it:
+- DNA fasta
+- Peptide fasta
+- Gene models GFF3
+- seq_regions json
+- genome metadata json
 
+Raises:
+    GFFPArseError: If the structure of the gb file can't be parsed.
+    UnsupportedData: If some data is not as expected.
+
+Returns:
+    json_output: json file with a dict that contains all genome files created.
+"""
+
+
+from collections import Counter
 import json
-import argschema
+from os import PathLike
+from pathlib import Path
+from typing import Dict, Optional
 
+import argschema
 from Bio import SeqIO
 from Bio import GenBank
 
@@ -26,33 +45,36 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 from BCBio import GFF
 
-from collections import Counter
+
+class GBParseError(Exception):
+    """Error when parsing the Genbank file."""
 
 
-class InputSchema(argschema.ArgSchema):
-    prefix = argschema.fields.String(metadata={"required": True, "description": "prefix to add required"})
-    prod_name = argschema.fields.String(
-        metadata={"required": True, "description": "production name for the species"}
-    )
-    gb_file = argschema.fields.InputFile(
-        metadata={"required": True, "description": "Sequence accession file"}
-    )
+class UnsupportedData(Exception):
+    """When an expected data is not supported by the current parser."""
 
 
-def extract_gb(prefix, prod_name, gb_file):
-    formatter = FormattedFilesGenerator()
-    formatter.set_prefix(prefix)
-    formatter.set_production_name(prod_name)
-    formatter.parse_genbank(gb_file)
+class GenomeFiles:
+    """Store the representation of the genome files created."""
 
-    # Output the gff3 file
-    output = {
-        "gff3": formatter.genes_gff,
-        "fasta_dna": formatter.fasta_dna,
-        "fasta_pep": formatter.fasta_pep,
-        "seq_region": formatter.seq_region,
-        "genome_data": formatter.genome,
-    }
+    def __init__(self, out_dir: Optional[Path] = None) -> None:
+        if out_dir is None:
+            out_dir = Path(".")
+        self.genome = out_dir / "genome.json"
+        self.seq_region = out_dir / "seq_region.json"
+        self.fasta_dna = out_dir / "dna.fasta"
+        self.fasta_pep = out_dir / "pep.fasta"
+        self.gene_models = out_dir / "genes.gff"
+
+    def to_dict(self) -> Dict[str, Path]:
+        """Create a dict from the genome files."""
+        return {
+            "genome": self.genome,
+            "seq_region": self.seq_region,
+            "fasta_dna": self.fasta_dna,
+            "fasta_pep": self.fasta_pep,
+            "gene_models": self.gene_models,
+        }
 
 
 class FormattedFilesGenerator:
@@ -78,14 +100,12 @@ class FormattedFilesGenerator:
         "CDS",
     ]
 
-    def __init__(self, prefix=""):
-        self.genome = "genome.json"
-        self.seq_region = "seq_region.json"
-        self.fasta_dna = "dna.fasta"
-        self.fasta_pep = "pep.fasta"
-        self.genes_gff = "genes.gff"
+    def __init__(self, prod_name: str, gb_file: Path, prefix: str = ""):
         self.prefix = prefix
         self.seqs = []
+        self.prod_name = prod_name
+        self.gb_file = gb_file
+        self.files = GenomeFiles()
 
     def set_prefix(self, prefix):
         """
@@ -100,6 +120,17 @@ class FormattedFilesGenerator:
         """
         if prod_name:
             self.prod_name = prod_name
+
+    def extract_gb(self, out_dir: Optional[PathLike]) -> Dict[str, Path]:
+        """Extract data from a Genbank file and create files from it."""
+        if out_dir is not None:
+            self.files = GenomeFiles(out_dir)
+        self.set_prefix(self.prefix)
+        self.set_production_name(self.prod_name)
+        self.parse_genbank(Path(self.gb_file))
+
+        # Output the gff3 file
+        return self.files.to_dict()
 
     def parse_genbank(self, gb_file):
         """
@@ -124,7 +155,7 @@ class FormattedFilesGenerator:
 
     def _get_organella(self, gb_file):
         """
-        Retrive the organelle from the genbank file, using the specific GenBank object,
+        Retrieve the organelle from the genbank file, using the specific GenBank object,
         because SeqIO does not support this field
         """
         organella = {}
@@ -138,13 +169,13 @@ class FormattedFilesGenerator:
         return organella
 
     def _write_fasta_dna(self):
-        with open(self.fasta_dna, "w") as fasta_fh:
+        with open(self.files.fasta_dna, "w") as fasta_fh:
             SeqIO.write(self.seqs, fasta_fh, "fasta")
 
     def _write_genes_gff(self):
         peptides = []
 
-        with open(self.genes_gff, "w") as gff_fh:
+        with self.files.gene_models.open("w") as gff_fh:
             recs = []
             all_ids = []
 
@@ -242,7 +273,7 @@ class FormattedFilesGenerator:
                         all_ids.append(str(feat_id))
 
                     else:
-                        raise Exception(f"No ID for allowed feature: {feat}")
+                        raise GBParseError(f"No ID for allowed feature: {feat}")
 
                 rec = SeqRecord(seq.seq, seq.id)
                 rec.features = feats.values()
@@ -250,7 +281,7 @@ class FormattedFilesGenerator:
 
             GFF.write(recs, gff_fh)
 
-            with open(self.fasta_pep, "w") as fasta_fh:
+            with open(self.files.fasta_pep, "w") as fasta_fh:
                 SeqIO.write(peptides, fasta_fh, "fasta")
 
             # Warn if some IDs are not unique
@@ -261,7 +292,7 @@ class FormattedFilesGenerator:
                     num_duplicates += 1
                     print(f"ID {key} is duplicated {count[key]} times")
             if num_duplicates > 0:
-                raise Exception(f"Some {num_duplicates} IDs are duplicated")
+                raise GBParseError(f"Some {num_duplicates} IDs are duplicated")
 
     def _uniquify_id(self, gene_id, all_ids):
         """Ensure the gene id used is unique,
@@ -283,11 +314,11 @@ class FormattedFilesGenerator:
 
         for seq in self.seqs:
             codon_table = self._get_codon_table(seq)
-            if not codon_table:
+            if codon_table is not None:
                 print(
                     (
                         "Warning: No codon table found."
-                        f"Make sure to change the codon table number in {self.seq_region} manually"
+                        f"Make sure to change the codon table number in {self.files.seq_region} manually"
                         "if it is not the standard codon table"
                     )
                 )
@@ -308,7 +339,7 @@ class FormattedFilesGenerator:
                     print(
                         (
                             f"Warning: '{seq.organelle}' is an organelle:"
-                            f"make sure to change the codon table number in {self.seq_region} manually"
+                            f"make sure to change the codon table number in {self.files.seq_region} manually"
                             "if it is not the standard codon table"
                         )
                     )
@@ -322,18 +353,28 @@ class FormattedFilesGenerator:
                 },
             }
             if not seq_obj["added_sequence"]["assembly_provider"]["name"]:
-                print(f"Warning: please add the relevant provider name for the assembly in {self.seq_region}")
+                print(
+                    (
+                        "Warning: please add the relevant provider name"
+                        f"for the assembly in {self.files.seq_region}"
+                    )
+                )
             if not seq_obj["added_sequence"]["assembly_provider"]["url"]:
-                print(f"Warning: please add the relevant provider url for the assembly in {self.seq_region}")
+                print(
+                    (
+                        "Warning: please add the relevant provider url"
+                        f" for the assembly in {self.files.seq_region}"
+                    )
+                )
 
             # Additional attributes for gene set, if any
             # TODO
 
             json_array.append(seq_obj)
-        with open(self.seq_region, "w") as seq_fh:
+        with open(self.files.seq_region, "w") as seq_fh:
             seq_fh.write(json.dumps(json_array, indent=4))
 
-    def _get_codon_table(self, seq):
+    def _get_codon_table(self, seq) -> Optional[int]:
         """
         Look at the CDS features to see if they have a codon table
         """
@@ -342,9 +383,8 @@ class FormattedFilesGenerator:
                 quals = feat.qualifiers
                 if "transl_table" in quals:
                     return quals["transl_table"][0]
-                else:
-                    return
-        return
+                return None
+        return None
 
     def _prepare_location(self, organelle):
         """
@@ -352,8 +392,7 @@ class FormattedFilesGenerator:
         """
         if organelle in self.locations:
             return self.locations[organelle]
-        else:
-            raise Exception(f"Unkown organelle: {organelle}")
+        raise UnsupportedData(f"Unkown organelle: {organelle}")
 
     def _write_genome_json(self):
         """
@@ -374,23 +413,43 @@ class FormattedFilesGenerator:
         }
 
         if not genome_data["species"]["production_name"]:
-            print(f"Warning: please add the relevant production_name for this genome in {self.genome}")
+            print(f"Warning: please add the relevant production_name for this genome in {self.files.genome}")
 
         ids = [seq.id for seq in self.seqs]
         genome_data["added_seq"]["region_name"] = ids
 
-        with open(self.genome, "w") as genome_fh:
+        with open(self.files.genome, "w") as genome_fh:
             genome_fh.write(json.dumps(genome_data, indent=4))
+
+
+class InputSchema(argschema.ArgSchema):
+    """Input arguments expected by this script."""
+
+    prefix = argschema.fields.String(required=True, metadata={"description": "prefix to add required"})
+    prod_name = argschema.fields.String(
+        required=True, metadata={"description": "production name for the species"}
+    )
+    gb_file = argschema.fields.InputFile(required=True, metadata={"description": "Sequence accession file"})
+    out_dir = argschema.fields.OutputDir(
+        metadata={"description": "Output dir where the generated files will be stored (default=current)"}
+    )
 
 
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     # mod.args["metadata_types"] will be a list-like string that needs to be parsed to List[str]
-    prefix = mod.args["prefix"]
-    prod_name = mod.args["prod_name"]
-    gb_file = mod.args["gb_file"]
-    extract_gb(prefix, prod_name, gb_file)
+    gb_extractor = FormattedFilesGenerator(
+        prefix=mod.args["prefix"],
+        prod_name=mod.args["prod_name"],
+        gb_file=mod.args["gb_file"],
+    )
+    gb_output = gb_extractor.extract_gb(mod.args.get("out_dir"))
+
+    output_json_file = mod.args.get("json_output")
+    if output_json_file:
+        with Path(output_json_file).open("w") as out_fh:
+            json.dump(gb_output, out_fh)
 
 
 if __name__ == "__main__":
