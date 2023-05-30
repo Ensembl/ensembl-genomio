@@ -24,6 +24,7 @@ from typing import Any, Dict, List
 
 import argschema
 from sqlalchemy import select
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session, joinedload
 
 from ensembl.database import DBConnection
@@ -54,6 +55,14 @@ def get_external_db_map(map_file: Path) -> Dict:
 
 
 def get_coord_systems(session: Session) -> List[CoordSystem]:
+    """Retrieve the coord_system metadata from the current core.
+
+    Args:
+        session (Session): Session for the current core.
+
+    Returns:
+        List[CoordSystem]: All coord_systems in the core.
+    """
     coord_systems: List[CoordSystem] = []
     coord_stmt = select(CoordSystem).filter(CoordSystem.attrib.like("%default_version%"))
     for row in session.execute(coord_stmt).unique().all():
@@ -62,6 +71,17 @@ def get_coord_systems(session: Session) -> List[CoordSystem]:
 
 
 def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
+    """Retrieve the seq_region metadata from the current core.
+    Include synonyms, attribs and karyotypes.
+    Only the top level sequences are exported.
+
+    Args:
+        session (Session): Session from the current core.
+        external_db_map (dict): Mapping of external_db names for the synonyms.
+
+    Returns:
+        List[SeqRegion]: All seq_regions in the core.
+    """
     coord_systems = get_coord_systems(session)
     seq_regions = []
 
@@ -108,6 +128,12 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
 
 
 def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
+    """Map seq_regions attribs to a specific name and type defined below.
+
+    Args:
+        seq_region (Dict): A seq_region dict to modify.
+        attrib_dict (Dict): The attribs for this seq_region.
+    """
     bool_attribs = {
         "circular_seq": "circular",
         "non_ref": "non_ref",
@@ -139,6 +165,15 @@ def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
 
 
 def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
+    """Get all synonyms for a given seq_region. Use the mapping for synonym source names.
+
+    Args:
+        seq_region (SeqRegion): Seq_region from which the synonyms are extracted.
+        external_db_map (dict): To map the synonym source names.
+
+    Returns:
+        List: All synonyms as a dict with 'name' and 'source' keys.
+    """
     synonyms = seq_region.seq_region_synonym
     syns = []
     if synonyms:
@@ -157,6 +192,14 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
 
 
 def get_attribs(seq_region: SeqRegion) -> List:
+    """Given a seq_region, extract the attribs as value-source items.
+
+    Args:
+        seq_region (SeqRegion): The seq_region from which the attribs are extracted.
+
+    Returns:
+        List: All attribs as a dict with 'value' and 'source' keys.
+    """
     attribs = seq_region.seq_region_attrib
     atts = []
     if attribs:
@@ -167,6 +210,14 @@ def get_attribs(seq_region: SeqRegion) -> List:
 
 
 def get_karyotype(seq_region: SeqRegion) -> List:
+    """Given a seq_region, extract the karyotype bands.
+
+    Args:
+        seq_region (SeqRegion): The seq_region from which the karyotype bands are extracted.
+
+    Returns:
+        List: All karyotype bands as a dict with values 'start', 'end', 'name' 'stain', 'structure'.
+    """
     bands = seq_region.karyotype
     kars = []
     if bands:
@@ -204,33 +255,18 @@ class InputSchema(argschema.ArgSchema):
     brc_mode = argschema.fields.Bool(default=False, metadata={"description": "BRC specific output"})
 
 
-def make_mysql_url(host: str, user: str, database: str, port: int = 0, password: str = "") -> str:
-    user_pass = user
-    host_port = host
-    if password:
-        user_pass = f"{user}:{password}"
-    if port:
-        host_port = f"{host}:{port}"
-    db_url = f"mysql://{user_pass}@{host_port}/{database}"
-    return db_url
-
-
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     args = mod.args
 
-    host = mod.args["host"]
-    port = int(mod.args["port"])
-    user = mod.args["user"]
-    password = mod.args.get("password")
-    database = mod.args.get("database")
-    db_url = make_mysql_url(
-        host=host,
-        port=port,
-        user=user,
-        password=password,
-        database=database,
+    db_url = URL.create(
+        "mysql",
+        mod.args["user"],
+        mod.args.get("password"),
+        mod.args["host"],
+        mod.args["port"],
+        mod.args.get("database"),
     )
     dbc = DBConnection(db_url)
 
