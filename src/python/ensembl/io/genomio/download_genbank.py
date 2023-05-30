@@ -14,6 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Download a Genbank file from NCBI from an accession.
+A file is created in the current working dir, with the name {accession}.gb
+
+Raises:
+    DownloadError: if the download fails
+"""
+
 
 import requests
 import argschema
