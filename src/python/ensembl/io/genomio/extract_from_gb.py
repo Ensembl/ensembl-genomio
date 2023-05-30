@@ -246,9 +246,9 @@ class FormattedFilesGenerator:
             else:
                 raise GBParseError(f"No ID for allowed feature: {feat}")
 
-            new_record = SeqRecord(record.seq, record.id)
-            new_record.features = feats.values()
-        return new_record, peptides, all_ids
+        new_record = SeqRecord(record.seq, record.id)
+        new_record.features = feats.values()
+        return new_record, all_ids, peptides
 
     def _parse_gene_feat(
         self, gene_feat: SeqFeature, gene_name: str
