@@ -16,11 +16,10 @@
 """TODO"""
 
 import csv
-import json
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Tuple, Optional
+from typing import List, Tuple, Optional
 import argschema
 
 from Bio import SeqIO
@@ -125,7 +124,7 @@ def get_report_regions_names(report_path: Path) -> List[str]:
 
 def amend_genomic_metadata(
     genome_infile: PathLike,
-    INSDC_RefSeq_report_infile: PathLike,
+    insdc_refseq_report_infile: PathLike,
     genbank_infile: PathLike,
     output_dir: PathLike,
     brc4_mode: Optional[int] = 1,
@@ -144,7 +143,7 @@ def amend_genomic_metadata(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Make dict from Genome JSON
-    genome_json = get_json(genome_infile)
+    genome_metadata = get_json(genome_infile)
 
     # Final file name
     metadata_type = "genome"
@@ -152,14 +151,15 @@ def amend_genomic_metadata(
     final_path = output_dir / new_file_name
     # use_refseq = self.param("accession").startswith("GCF_")
 
-    # Load genome data
-    with Path(genome_infile).open("r") as genome_fh:
-        genome_metadata = json.load(genome_fh)
-
     # Get additional sequences in the assembly but not in the data
-    additions = get_additions(Path(INSDC_RefSeq_report_infile), Path(genbank_infile))
+    additions = get_additions(Path(insdc_refseq_report_infile), Path(genbank_infile))
     if additions:
         genome_metadata["added_seq"] = {"region_name": additions}
+
+    # Possible brc specific
+    if brc4_mode:
+        pass
+
     # Print out the file
     print_json(final_path, genome_metadata)
 
