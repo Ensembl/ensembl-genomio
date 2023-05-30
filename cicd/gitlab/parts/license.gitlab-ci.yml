@@ -27,4 +27,4 @@ license:tests:notice:
 license:tests:header:
   stage: license:tests
   script:
-    - bash cicd/gitlab/scripts/license_header.sh
+    - sh cicd/gitlab/scripts/license_header.sh
