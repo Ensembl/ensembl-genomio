@@ -58,6 +58,13 @@ class InputSchema(argschema.ArgSchema):
 
 
 def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
+    """Get metadata from a list of databases (dbs) on a server, in a list of dicts with 3 keys:
+    - database
+    - species
+    - division
+    If in brc_mode, the species is the BRC4.organism_abbrev, and the division is BRC4.component.
+    Otherwise the species is the species.production_name and the division is species.division.
+    """
     db_datas = []
     for db in dbs:
         server.set_database(db)
