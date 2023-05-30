@@ -13,6 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Provided a file with events, load them in a core database.
+
+cf the load_events functions for the events tab file format.
+"""
+
 
 from dataclasses import dataclass
 from os import PathLike
@@ -130,14 +135,10 @@ class InputSchema(argschema.ArgSchema):
 
 
 def main() -> None:
+    """Main entrypoint"""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
 
     # Start
-    host = mod.args["host"]
-    port = int(mod.args["port"])
-    user = mod.args["user"]
-    password = mod.args.get("password")
-    database = mod.args.get("database")
     db_url = URL.create(
         "mysql",
         mod.args["user"],
