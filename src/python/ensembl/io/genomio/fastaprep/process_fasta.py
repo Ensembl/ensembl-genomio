@@ -13,16 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TODO"""
+"""Takes a fasta file (DNA or peptide), clean it up and optionally exclude some ids."""
 
-from contextlib import contextmanager
-from functools import partial
-import gzip
 from mimetypes import guess_type
 from pathlib import Path
 from os import PathLike
+from typing import List, Optional, Set
+
 import argschema
-from typing import Dict, Generator, List, Optional, Set, TextIO
 
 from Bio import SeqIO
 
@@ -31,23 +29,26 @@ from ensembl.io.genomio.utils.archive_utils import open_gz_file
 exclude_seq_regions: List[str] = []
 
 
-def peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -> Set[str]:
+class GFFParserError(Exception):
+    """Error while parsing a GFF file."""
+
+
+def get_peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -> Set[str]:
     """
     Extract peptide IDs from a genbank file that are in a given list of seq regions
     """
-    encoding = guess_type(genbank_path)[1]
     peptides_to_exclude: Set[str] = set()
     with open_gz_file(genbank_path) as in_genbank:
         for record in SeqIO.parse(in_genbank, "genbank"):
             if record.id in seqr_to_exclude:
-                print("Skip sequence %s" % record.id)
+                print(f"Skip sequence {record.id}")
                 for feat in record.features:
                     if feat.type == "CDS":
                         if "protein_id" in feat.qualifiers:
                             feat_id = feat.qualifiers["protein_id"]
                             peptides_to_exclude.add(feat_id[0])
                         else:
-                            raise Exception(f"Peptide without peptide ID ${feat}")
+                            raise GFFParserError(f"Peptide without peptide ID ${feat}")
     return peptides_to_exclude
 
 
@@ -71,7 +72,7 @@ def prep_fasta_data(
     seqr_to_exclude = set(exclude_seq_regions)
     if peptide_mode:
         genbank_path = Path(genebank_infile)
-        to_exclude = peptides_to_exclude(genbank_path, seqr_to_exclude)
+        to_exclude = get_peptides_to_exclude(genbank_path, seqr_to_exclude)
     else:
         to_exclude = seqr_to_exclude
 
