@@ -34,7 +34,7 @@ from collections import Counter
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import argschema
 from Bio import SeqIO
@@ -104,7 +104,7 @@ class FormattedFilesGenerator:
 
     def __init__(self, prod_name: str, gb_file: Path, prefix: str = ""):
         self.prefix = prefix
-        self.seqs: List[SeqRecord] = []
+        self.seq_records: List[SeqRecord] = []
         self.prod_name = prod_name
         self.gb_file = gb_file
         self.files = GenomeFiles()
@@ -148,7 +148,7 @@ class FormattedFilesGenerator:
                 record.organelle = None
                 if record.id in organella:
                     record.organelle = organella[record.id]
-                self.seqs.append(record)
+                self.seq_records.append(record)
 
             self._write_genome_json()
             self._write_genes_gff()
@@ -172,129 +172,147 @@ class FormattedFilesGenerator:
 
     def _write_fasta_dna(self):
         with open(self.files.fasta_dna, "w") as fasta_fh:
-            SeqIO.write(self.seqs, fasta_fh, "fasta")
+            SeqIO.write(self.seq_records, fasta_fh, "fasta")
 
-    def _write_genes_gff(self):
+    def _write_genes_gff(self) -> None:
+        """Extract gene models from the record, and write a GFF and peptide fasta file.
+        Raise GBParseError If the IDs in all the records are not unique."""
         peptides = []
+        records = []
+        all_ids = []
 
+        for record in self.seq_records:
+            new_record, rec_ids, rec_peptides = self._parse_record(record)
+            records.append(new_record)
+            all_ids += rec_ids
+            peptides += rec_peptides
+
+        # Write those records to a clean GFF
         with self.files.gene_models.open("w") as gff_fh:
-            recs = []
-            all_ids = []
+            GFF.write(records, gff_fh)
 
-            for seq in self.seqs:
-                feats = {}
+        # Write the peptide sequences to a fasta file
+        with open(self.files.fasta_pep, "w") as fasta_fh:
+            SeqIO.write(peptides, fasta_fh, "fasta")
 
-                for feat in seq.features:
-                    if feat.type not in self.allowed_feat_types:
-                        continue
-                    gff_qualifiers = feat.qualifiers
-                    gff_feat = SeqFeature(
+        # Warn if some IDs are not unique
+        count = dict(Counter(all_ids))
+        num_duplicates = 0
+        for key in count:
+            if count[key] > 1:
+                num_duplicates += 1
+                print(f"ID {key} is duplicated {count[key]} times")
+        if num_duplicates > 0:
+            raise GBParseError(f"Some {num_duplicates} IDs are duplicated")
+
+    def _parse_record(self, record: SeqRecord) -> Tuple[SeqRecord, List[SeqRecord], List[str]]:
+        all_ids: List[str] = []
+        peptides: List[SeqRecord] = []
+        feats = {}
+
+        for feat in record.features:
+            # Silently skip any unsupported feature type
+            if feat.type not in self.allowed_feat_types:
+                continue
+
+            # Create a clean clone of the feature
+            gff_qualifiers = feat.qualifiers
+            gff_feat = SeqFeature(
+                location=feat.location,
+                type=feat.type,
+                strand=feat.location.strand,
+                qualifiers=gff_qualifiers,
+            )
+
+            # Only Genes should have a name: use either attribute gene or locus_tag
+            gene_name = gff_qualifiers.get("gene", [None])[0]
+            if gene_name is None:
+                gene_name = gff_qualifiers.get("locus_tag", [None])[0]
+
+            # Parse this gene
+            if gene_name is not None:
+                gene_id = self.prefix + gene_name
+
+                if feat.type == "gene":
+                    if "pseudo" in gff_qualifiers:
+                        gff_feat.type = "pseudogene"
+                    gff_feat.qualifiers["ID"] = gene_id
+                    gff_feat.qualifiers["Name"] = gene_name
+                    if "gene" in gff_feat.qualifiers:
+                        del gff_feat.qualifiers["gene"]
+                    if "locus_tag" in gff_feat.qualifiers:
+                        del gff_feat.qualifiers["locus_tag"]
+                    feats[str(gene_id)] = gff_feat
+                    all_ids.append(str(gene_id))
+
+                if feat.type == "CDS":
+                    if "pseudo" in gff_qualifiers:
+                        gff_feat.type = "exon"
+                    cds_id = gene_id + "_p1"
+                    tr_id = gene_id + "_t1"
+                    gff_feat.qualifiers["ID"] = cds_id
+                    gff_feat.qualifiers["Parent"] = tr_id
+                    if "gene" in gff_feat.qualifiers:
+                        del gff_feat.qualifiers["gene"]
+                    if "locus_tag" in gff_feat.qualifiers:
+                        del gff_feat.qualifiers["locus_tag"]
+
+                    # Add fasta to pep fasta file
+                    if "translation" in feat.qualifiers:
+                        peptides.append(SeqRecord(Seq(feat.qualifiers["translation"][0]), id=cds_id))
+
+                    # Also create a parent transcript for this translation
+                    tr_qualifiers = {"ID": tr_id, "Name": gene_name, "Parent": gene_id}
+                    gff_tr = SeqFeature(
                         location=feat.location,
-                        type=feat.type,
+                        type="mRNA",
                         strand=feat.location.strand,
-                        qualifiers=gff_qualifiers,
+                        qualifiers=tr_qualifiers,
                     )
+                    feats[str(tr_id)] = gff_tr
+                    feats[str(cds_id)] = gff_feat
+                    all_ids.append(str(tr_id))
+                    all_ids.append(str(cds_id))
 
-                    gene_name = gff_qualifiers.get("gene", [None])[0]
-                    if gene_name is None:
-                        gene_name = gff_qualifiers.get("locus_tag", [None])[0]
+            # No gene ID: parse if it is a tRNA or rRNA
+            elif feat.type in ("tRNA", "rRNA"):
+                feat_name = gff_qualifiers["product"][0]
+                gene_id = self.prefix + feat_name
 
-                    if gene_name is not None:
-                        gene_id = self.prefix + gene_name
+                parts = gene_id.split(" ")
+                if len(parts) > 2:
+                    print(f"Shortening gene_id to {parts[0]}")
+                    gene_id = parts[0]
+                gene_id = self._uniquify_id(gene_id, all_ids)
 
-                        if feat.type == "gene":
-                            if "pseudo" in gff_qualifiers:
-                                gff_feat.type = "pseudogene"
-                            gff_feat.qualifiers["ID"] = gene_id
-                            gff_feat.qualifiers["Name"] = gene_name
-                            if "gene" in gff_feat.qualifiers:
-                                del gff_feat.qualifiers["gene"]
-                            if "locus_tag" in gff_feat.qualifiers:
-                                del gff_feat.qualifiers["locus_tag"]
-                            feats[str(gene_id)] = gff_feat
-                            all_ids.append(str(gene_id))
+                feat_id = gene_id + "_t1"
+                gff_feat.qualifiers["ID"] = feat_id
+                gff_feat.qualifiers["Name"] = feat_name
+                gff_feat.qualifiers["Parent"] = gene_id
 
-                        if feat.type == "CDS":
-                            if "pseudo" in gff_qualifiers:
-                                gff_feat.type = "exon"
-                            cds_id = gene_id + "_p1"
-                            tr_id = gene_id + "_t1"
-                            gff_feat.qualifiers["ID"] = cds_id
-                            gff_feat.qualifiers["Parent"] = tr_id
-                            if "gene" in gff_feat.qualifiers:
-                                del gff_feat.qualifiers["gene"]
-                            if "locus_tag" in gff_feat.qualifiers:
-                                del gff_feat.qualifiers["locus_tag"]
+                # Also create a parent gene for this transcript
+                gene_qualifiers = {
+                    "ID": gene_id,
+                    "Name": feat_name,
+                }
+                gff_gene = SeqFeature(
+                    location=feat.location,
+                    type="gene",
+                    strand=feat.location.strand,
+                    qualifiers=gene_qualifiers,
+                )
+                feats[str(gene_id)] = gff_gene
+                feats[str(feat_id)] = gff_feat
+                all_ids.append(str(gene_id))
+                all_ids.append(str(feat_id))
 
-                            # Add fasta to pep fasta file
-                            if "translation" in feat.qualifiers:
-                                peptides.append(SeqRecord(Seq(feat.qualifiers["translation"][0]), id=cds_id))
+            # Any other case? Fail here and check if we shoud support it, or add it to unsupported list
+            else:
+                raise GBParseError(f"No ID for allowed feature: {feat}")
 
-                            # Also create a parent transcript for this translation
-                            tr_qualifiers = {"ID": tr_id, "Name": gene_name, "Parent": gene_id}
-                            gff_tr = SeqFeature(
-                                location=feat.location,
-                                type="mRNA",
-                                strand=feat.location.strand,
-                                qualifiers=tr_qualifiers,
-                            )
-                            feats[str(tr_id)] = gff_tr
-                            feats[str(cds_id)] = gff_feat
-                            all_ids.append(str(tr_id))
-                            all_ids.append(str(cds_id))
-
-                    elif feat.type in ("tRNA", "rRNA"):
-                        feat_name = gff_qualifiers["product"][0]
-                        gene_id = self.prefix + feat_name
-
-                        parts = gene_id.split(" ")
-                        if len(parts) > 2:
-                            print(f"Shortening gene_id to {parts[0]}")
-                            gene_id = parts[0]
-                        gene_id = self._uniquify_id(gene_id, all_ids)
-
-                        feat_id = gene_id + "_t1"
-                        gff_feat.qualifiers["ID"] = feat_id
-                        gff_feat.qualifiers["Name"] = feat_name
-                        gff_feat.qualifiers["Parent"] = gene_id
-
-                        # Also create a parent gene for this transcript
-                        gene_qualifiers = {
-                            "ID": gene_id,
-                            "Name": feat_name,
-                        }
-                        gff_gene = SeqFeature(
-                            location=feat.location,
-                            type="gene",
-                            strand=feat.location.strand,
-                            qualifiers=gene_qualifiers,
-                        )
-                        feats[str(gene_id)] = gff_gene
-                        feats[str(feat_id)] = gff_feat
-                        all_ids.append(str(gene_id))
-                        all_ids.append(str(feat_id))
-
-                    else:
-                        raise GBParseError(f"No ID for allowed feature: {feat}")
-
-                rec = SeqRecord(seq.seq, seq.id)
-                rec.features = feats.values()
-                recs.append(rec)
-
-            GFF.write(recs, gff_fh)
-
-            with open(self.files.fasta_pep, "w") as fasta_fh:
-                SeqIO.write(peptides, fasta_fh, "fasta")
-
-            # Warn if some IDs are not unique
-            count = dict(Counter(all_ids))
-            num_duplicates = 0
-            for key in count:
-                if count[key] > 1:
-                    num_duplicates += 1
-                    print(f"ID {key} is duplicated {count[key]} times")
-            if num_duplicates > 0:
-                raise GBParseError(f"Some {num_duplicates} IDs are duplicated")
+            new_record = SeqRecord(record.seq, record.id)
+            new_record.features = feats.values()
+        return new_record, peptides, all_ids
 
     def _uniquify_id(self, gene_id, all_ids):
         """Ensure the gene id used is unique,
@@ -314,7 +332,7 @@ class FormattedFilesGenerator:
     def _write_seq_region_json(self):
         json_array = []
 
-        for seq in self.seqs:
+        for seq in self.seq_records:
             codon_table = self._get_codon_table(seq)
             if codon_table is not None:
                 print(
@@ -414,7 +432,7 @@ class FormattedFilesGenerator:
         if not genome_data["species"]["production_name"]:
             print(f"Warning: please add the relevant production_name for this genome in {self.files.genome}")
 
-        ids = [seq.id for seq in self.seqs]
+        ids = [seq.id for seq in self.seq_records]
         genome_data["added_seq"]["region_name"] = ids
 
         with open(self.files.genome, "w") as genome_fh:
