@@ -34,7 +34,7 @@ from collections import Counter
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import argschema
 from Bio import SeqIO
@@ -57,9 +57,11 @@ class UnsupportedData(Exception):
 class GenomeFiles:
     """Store the representation of the genome files created."""
 
-    def __init__(self, out_dir: Optional[Path] = None) -> None:
+    def __init__(self, out_dir: Optional[PathLike] = None) -> None:
         if out_dir is None:
             out_dir = Path(".")
+        else:
+            out_dir = Path(out_dir)
         self.genome = out_dir / "genome.json"
         self.seq_region = out_dir / "seq_region.json"
         self.fasta_dna = out_dir / "dna.fasta"
@@ -102,7 +104,7 @@ class FormattedFilesGenerator:
 
     def __init__(self, prod_name: str, gb_file: Path, prefix: str = ""):
         self.prefix = prefix
-        self.seqs = []
+        self.seqs: List[SeqRecord] = []
         self.prod_name = prod_name
         self.gb_file = gb_file
         self.files = GenomeFiles()
@@ -366,9 +368,6 @@ class FormattedFilesGenerator:
                         f" for the assembly in {self.files.seq_region}"
                     )
                 )
-
-            # Additional attributes for gene set, if any
-            # TODO
 
             json_array.append(seq_obj)
         with open(self.files.seq_region, "w") as seq_fh:
