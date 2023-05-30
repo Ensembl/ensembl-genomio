@@ -14,17 +14,18 @@
 
 # License-related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
+image: python:3.11  # for internal tests we do not have the minimum required version restriction
+
 stages:
   - license:tests
 
 
-# Check if the NOTICE file has the latest year in its copyright
 license:tests:notice:
   stage: license:tests
   script:
-    - grep $(date +"%Y") NOTICE
+    - python cicd/gitlab/scripts/check_license.py notice
 
 license:tests:header:
   stage: license:tests
   script:
-    - sh cicd/gitlab/scripts/license_header.sh
+    - python cicd/gitlab/scripts/check_license.py header
