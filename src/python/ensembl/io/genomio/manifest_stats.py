@@ -13,7 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""Compute stats from the current genome files associated with the manifest.
+"""
 
 import gzip
 import json
@@ -156,16 +157,16 @@ class manifest_stats:
             if "circular" in seqr:
                 circular += 1
             if "codon_table" in seqr:
-                codon_tables.append("%s = %s" % (seqr_name, seqr["codon_table"]))
+                codon_tables.append(f"{seqr_name} = {seqr['codon_table']}")
             if "location" in seqr:
-                locations.append("%s = %s" % (seqr_name, seqr["location"]))
+                locations.append(f"{seqr_name} = {seqr['location']}")
 
         # Stats
         stats: List[str] = []
         stats.append(seq_region_path.name)
-        stats.append("Total coord_systems %d" % len(coord_systems))
+        stats.append(f"Total coord_systems {len(coord_systems)}")
         for coord_name, lengths in coord_systems.items():
-            stats.append("\nCoord_system: %s" % coord_name)
+            stats.append(f"\nCoord_system: {coord_name}")
 
             stat_counts: Dict[str, Union[int, float]] = dict()
             stat_counts["Number of sequences"] = len(lengths)
@@ -175,21 +176,21 @@ class manifest_stats:
             stat_counts["Sequence length maximum"] = max(lengths)
 
             for name, count in stat_counts.items():
-                stats.append("%9d\t%s" % (count, name))
+                stats.append(f"{count: 9d}\t{name}")
 
         # Special
         if circular or locations:
             stats.append("\nSpecial")
             if circular:
-                stats.append("%9d\t%s" % (circular, "circular sequences"))
+                stats.append(f"{circular: 9d}\tcircular sequences")
             if locations:
-                stats.append("%9d\t%s" % (len(locations), "sequences with location"))
+                stats.append(f"{len(locations): 9d} sequences with location")
                 for loc in locations:
-                    stats.append("\t\t\t%s" % loc)
+                    stats.append(f"\t\t\t%s{loc}")
             if codon_tables:
-                stats.append("%9d\t%s" % (len(codon_tables), "sequences with codon_table"))
+                stats.append(f"{len(codon_tables): 9d} sequences with codon_table")
                 for table in codon_tables:
-                    stats.append("\t\t\t%s" % table)
+                    stats.append(f"\t\t\t{table}")
 
         stats.append("\n")
 
