@@ -29,6 +29,7 @@ def helpMessage() {
         --input_dir                    Location of input json(s) with component/organism genome metadata
 
         Optional arguments:
+        --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
         --help                         This usage statement.
         """
 }
@@ -55,6 +56,5 @@ workflow {
     PREPARE_GENOME_METADATA(ch_genome_json)
     accession = PREPARE_GENOME_METADATA.out.accession.map{ it.getName() }
     genome_json = PREPARE_GENOME_METADATA.out.json
-    GENOME_PREPARE(accession, genome_json)
+    GENOME_PREPARE(accession, genome_json, params.output_dir)
 }
-
