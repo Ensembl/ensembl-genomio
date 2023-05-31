@@ -16,16 +16,17 @@
 """Compute stats from the current genome files associated with the manifest.
 """
 
-import gzip
 import json
 from pathlib import Path
 from shutil import which
 from statistics import mean
 import subprocess
-from typing import Dict, List, Optional, Set, TextIO, Union
+from typing import Dict, List, Optional, Set, Union
 
 import argschema
 from BCBio import GFF
+
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
 class BiotypeCounter:
@@ -197,74 +198,54 @@ class manifest_stats:
         return stats
 
     def get_gff3_stats(self, gff3_path: Path) -> List[str]:
-        """Compute stats from the gene models in the GFF3 file.
-
-        Args:
-            gff3_path (Path): the GFF3 file.
-
-        Returns:
-            List[str]: Stats from the gene models.
-        """
-        stats: List[str] = []
-        stats.append(gff3_path.name)
-        if gff3_path.name.endswith(".gz"):
-            with gzip.open(gff3_path, "rt") as gff3_handle:
-                stats += self.parse_gff3(gff3_handle)
-        else:
-            with gff3_path.open("r") as gff3_handle:
-                stats += self.parse_gff3(gff3_handle)
-        stats.append("\n")
-
-        return stats
-
-    def parse_gff3(self, gff3_handle: TextIO) -> List:
         """Extract the gene models from the GFF3 file and compute stats.
 
         Args:
-            gff3_handle (TextIO): the GFF3 file.
+            gff3_path (Path): the GFF3 file.
 
         Returns:
             List: Stats from the gene model.
         """
         biotypes: Dict[str, BiotypeCounter] = {}
 
-        for rec in GFF.parse(gff3_handle):
-            for feat1 in rec.features:
-                # Check if the gene contains proteins (CDSs),
-                # and keep a count of all hierarchies (e.g. gene-mRNA-CDS)
-                is_protein = False
-                for feat2 in feat1.sub_features:
-                    if feat2.type == "mRNA":
-                        types2 = {f.type for f in feat2.sub_features}
-                        if "CDS" in types2:
-                            is_protein = True
-                    manifest_stats.increment_biotype(biotypes, feat2.id, f"{feat1.type}-{feat2.type}")
-                    for feat3 in feat2.sub_features:
-                        if feat3.type == "exon":
-                            continue
-                        manifest_stats.increment_biotype(
-                            biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}"
-                        )
+        with open_gz_file(gff3_path) as gff3_handle:
+            for rec in GFF.parse(gff3_handle):
+                for feat1 in rec.features:
+                    # Check if the gene contains proteins (CDSs),
+                    # and keep a count of all hierarchies (e.g. gene-mRNA-CDS)
+                    is_protein = False
+                    for feat2 in feat1.sub_features:
+                        if feat2.type == "mRNA":
+                            types2 = {f.type for f in feat2.sub_features}
+                            if "CDS" in types2:
+                                is_protein = True
+                        manifest_stats.increment_biotype(biotypes, feat2.id, f"{feat1.type}-{feat2.type}")
+                        for feat3 in feat2.sub_features:
+                            if feat3.type == "exon":
+                                continue
+                            manifest_stats.increment_biotype(
+                                biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}"
+                            )
 
-                # Main categories counts
-                if feat1.type == "pseudogene":
-                    manifest_stats.increment_biotype(biotypes, feat1.id, "pseudogene")
-                elif is_protein:
-                    manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
-                else:
-                    # Special case, undefined gene-transcript
-                    if (
-                        feat1.type == "gene"
-                        and feat1.sub_features
-                        and feat1.sub_features[0].type == "transcript"
-                    ):
-                        manifest_stats.increment_biotype(biotypes, feat1.id, "OTHER")
+                    # Main categories counts
+                    if feat1.type == "pseudogene":
+                        manifest_stats.increment_biotype(biotypes, feat1.id, "pseudogene")
+                    elif is_protein:
+                        manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
                     else:
-                        manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
+                        # Special case, undefined gene-transcript
+                        if (
+                            feat1.type == "gene"
+                            and feat1.sub_features
+                            and feat1.sub_features[0].type == "transcript"
+                        ):
+                            manifest_stats.increment_biotype(biotypes, feat1.id, "OTHER")
+                        else:
+                            manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
 
-                # Total
-                if feat1.type in ("gene", "pseudogene"):
-                    manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
+                    # Total
+                    if feat1.type in ("gene", "pseudogene"):
+                        manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
 
         # Order
         sorted_biotypes = {}
