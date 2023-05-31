@@ -23,9 +23,9 @@ stages:
 license:tests:notice:
   stage: license:tests
   script:
-    - python cicd/gitlab/scripts/check_license.py notice
+    - python cicd/scripts/check_license.py notice
 
 license:tests:header:
   stage: license:tests
   script:
-    - python cicd/gitlab/scripts/check_license.py header
+    - python cicd/scripts/check_license.py header
