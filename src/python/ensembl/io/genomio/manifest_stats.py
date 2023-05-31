@@ -16,17 +16,19 @@
 
 
 import gzip
+import json
 from pathlib import Path
 from shutil import which
 from statistics import mean
 import subprocess
 from typing import Dict, List, Optional, Set, TextIO, Union
+
 import argschema
 from BCBio import GFF
-import json
 
 
 class BiotypeCounter:
+    """A counter for a given biotype, given a list of features."""
     def __init__(self, count: int = 0, ids: Optional[Set[str]] = None, example: Optional[str] = None) -> None:
         self.count: int = count
         if ids is None:
@@ -36,15 +38,31 @@ class BiotypeCounter:
             example = ""
         self.example: str = example
 
-    def add_id(self, feature_id) -> None:
+    def add_id(self, feature_id: str) -> None:
+        """Add a feature to the counter.
+
+        Args:
+            feature_id (str): Feature id to add.
+        """
         self.count += 1
         self.ids.add(feature_id)
 
     def unique_count(self) -> int:
+        """Total number feature ids added to the counter so far.
+
+        Returns:
+            int: number of features in the counter.
+        """
         return len(self.ids)
 
 
+class StatsError(Exception):
+    """Raised when stats could not be computed."""
+
+
 class manifest_stats:
+    """Representation of the statistics of the set of files listed in the manifest file provided.
+    """
     def __init__(self, manifest_dir: str, accession: Optional[str], datasets_bin: Optional[str]):
         self.manifest = f"{manifest_dir}/manifest.json"
         self.accession: Optional[str] = accession
@@ -56,6 +74,11 @@ class manifest_stats:
         self.check_ncbi = False
 
     def run(self):
+        """Compute stats in the files and output a stats.txt file in the same folder.
+
+        Raises:
+            StatsError: Could not compute some stats.
+        """
         manifest = self.get_manifest()
 
         stats = []
@@ -75,9 +98,14 @@ class manifest_stats:
 
         # Flow out if errors in stats comparison
         if self.error:
-            raise Exception(f"Stats count errors, check the file {stats_path}")
+            raise StatsError(f"Stats count errors, check the file {stats_path}")
 
     def get_manifest(self) -> Dict:
+        """Get the files metadata from the manifest json file.
+
+        Returns:
+            Dict: A representation of the manifest json data.
+        """
         with open(self.manifest) as f_json:
             manifest = json.load(f_json)
             manifest_root = self.manifest_parent
@@ -98,6 +126,14 @@ class manifest_stats:
         return manifest
 
     def get_seq_region_stats(self, seq_region_path: Path) -> List[str]:
+        """Compute stats from the seq_region json file.
+
+        Args:
+            seq_region_path (Path): the seq_region json file.
+
+        Returns:
+            List[str]: Stats from the seq_regions.
+        """
         json_file = open(seq_region_path, "r")
         seq_regions = json.load(json_file)
 
@@ -159,6 +195,14 @@ class manifest_stats:
         return stats
 
     def get_gff3_stats(self, gff3_path: Path) -> List[str]:
+        """Compute stats from the gene models in the GFF3 file.
+
+        Args:
+            gff3_path (Path): the GFF3 file.
+
+        Returns:
+            List[str]: Stats from the gene models.
+        """
         stats: List[str] = []
         stats.append(gff3_path.name)
         if gff3_path.name.endswith(".gz"):
@@ -172,6 +216,14 @@ class manifest_stats:
         return stats
 
     def parse_gff3(self, gff3_handle: TextIO) -> List:
+        """Extract the gene models from the GFF3 file and compute stats.
+
+        Args:
+            gff3_handle (TextIO): the GFF3 file.
+
+        Returns:
+            List: Stats from the gene model.
+        """
         biotypes: Dict[str, BiotypeCounter] = {}
 
         for rec in GFF.parse(gff3_handle):
@@ -245,7 +297,7 @@ class manifest_stats:
 
         # Get the dataset summary from NCBI
         command = [datasets_bin, "summary", "genome", "accession", accession]
-        result_out = subprocess.run(command, stdout=subprocess.PIPE)
+        result_out = subprocess.run(command, stdout=subprocess.PIPE, check=True)
         result = json.loads(result_out.stdout)
 
         # Get stats
@@ -290,6 +342,13 @@ class manifest_stats:
 
     @staticmethod
     def increment_biotype(biotypes: Dict[str, BiotypeCounter], feature_id: str, feature_biotype: str) -> None:
+        """Add the feature to their respective biotype counter.
+
+        Args:
+            biotypes (Dict[str, BiotypeCounter]): All current biotypes, with their counter.
+            feature_id (str): Feature id to be counted.
+            feature_biotype (str): The biotype of the feature.
+        """
         if feature_biotype not in biotypes:
             biotypes[feature_biotype] = BiotypeCounter(example=feature_id)
         biotypes[feature_biotype].add_id(feature_id)
@@ -306,6 +365,7 @@ class InputSchema(argschema.ArgSchema):  # need more metadata/'True' requirement
 
 
 def main():
+    """Main entrypoint."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     mstats = manifest_stats(mod.args["manifest_dir"], mod.args.get("accession"), mod.args.get("datasets_bin"))
     if mod.args.get("accession"):
