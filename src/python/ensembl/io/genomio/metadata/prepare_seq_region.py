@@ -516,11 +516,12 @@ class InputSchema(argschema.ArgSchema):
     )
 
     @post_load
-    def reformat_args(self, data: Dict[str, Any]):
+    def reformat_args(self, data: Dict[str, Any], **kwargs):  # pylint: disable=unused-argument
         """Processes arguments to may need additional parsing after being correctly loaded.
 
         Args:
             data: Loaded arguments.
+            **kwargs: Arbitrary keyword arguments.
 
         """
         # "to_exclude" argument will be a list-like string that needs to be parsed into a list
