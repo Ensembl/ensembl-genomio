@@ -136,8 +136,8 @@ class manifest_stats:
         Returns:
             List[str]: Stats from the seq_regions.
         """
-        json_file = open(seq_region_path, "r")
-        seq_regions = json.load(json_file)
+        with seq_region_path.open("r") as json_file:
+            seq_regions = json.load(json_file)
 
         # Get basic data
         coord_systems: Dict[str, List[int]] = {}
@@ -168,7 +168,7 @@ class manifest_stats:
         for coord_name, lengths in coord_systems.items():
             stats.append(f"\nCoord_system: {coord_name}")
 
-            stat_counts: Dict[str, Union[int, float]] = dict()
+            stat_counts: Dict[str, Union[int, float]] = {}
             stat_counts["Number of sequences"] = len(lengths)
             stat_counts["Sequence length sum"] = sum(lengths)
             stat_counts["Sequence length minimum"] = min(lengths)
@@ -267,7 +267,7 @@ class manifest_stats:
                     manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
 
         # Order
-        sorted_biotypes = dict()
+        sorted_biotypes = {}
         for name in sorted(biotypes.keys()):
             data: BiotypeCounter = biotypes[name]
             sorted_biotypes[name] = data
