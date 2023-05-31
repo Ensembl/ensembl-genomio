@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TODO"""
+"""Add more metadata to the genome metadata file, including added seq_regions (e.g. MT chromosome)."""
 
 import csv
 from os import PathLike
@@ -87,11 +87,10 @@ def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
                     metadata[match.group(1)] = match.group(2)
                 last_head = line
                 continue
-            else:
-                if last_head:
-                    data += last_head[2:].strip() + "\n"
-                    last_head = ""
-                data += line
+            if last_head:
+                data += last_head[2:].strip() + "\n"
+                last_head = ""
+            data += line
         return data, metadata
 
 
