@@ -29,6 +29,7 @@ from BCBio import GFF
 
 class BiotypeCounter:
     """A counter for a given biotype, given a list of features."""
+
     def __init__(self, count: int = 0, ids: Optional[Set[str]] = None, example: Optional[str] = None) -> None:
         self.count: int = count
         if ids is None:
@@ -61,8 +62,8 @@ class StatsError(Exception):
 
 
 class manifest_stats:
-    """Representation of the statistics of the set of files listed in the manifest file provided.
-    """
+    """Representation of the statistics of the set of files listed in the manifest file provided."""
+
     def __init__(self, manifest_dir: str, accession: Optional[str], datasets_bin: Optional[str]):
         self.manifest = f"{manifest_dir}/manifest.json"
         self.accession: Optional[str] = accession
