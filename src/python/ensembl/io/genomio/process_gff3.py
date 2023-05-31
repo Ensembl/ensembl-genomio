@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Standardize the gene model representation of a GFF3 file, and extract the functional annotation
+in a separate file."""
 
 
 from collections import Counter
@@ -32,22 +34,33 @@ from Bio.SeqFeature import SeqFeature
 from ensembl.io.genomio.utils.json_utils import print_json
 
 
-class GFFParserError(Exception):
-    pass
-
-
 FunctionalAnnotation = Dict[str, Any]
 
 
+class GFFParserError(Exception):
+    """Error when parsing a GFF3 file."""
+
+
 class process_gff3:
+    """Parse a GGF3 file and output a cleaned up GFF3 + annotation json file.
+
+    Raises:
+        GFFParserError: Raise this if an error can't be automatically fixed.
+    """
+
+    # Supported gene level biotypes
     gene_types = [
         "gene",
         "pseudogene",
         "ncRNA_gene",
     ]
+
+    # Exception: non_gene_types that are nonetheless kept in the GFF3 file
     non_gene_types = [
         "transposable_element",
     ]
+
+    # Supported transcript level biotypes
     transcript_types = [
         "transcript",
         "mRNA",
@@ -69,6 +82,8 @@ class process_gff3:
         "RNase_MRP_RNA",
         "misc_RNA",
     ]
+
+    # Biotypes that are ignored, and removed from the final GFF3 file
     ignored_gene_types = [
         "intron",
         "region",
@@ -88,6 +103,8 @@ class process_gff3:
         "dispersed_repeat",
         "terminal%2Cinverted",
     ]
+
+    # Ignored biotypes that are under a gene parent feature
     ignored_transcript_types = [
         "antisense_RNA",
         "3'UTR",
@@ -95,6 +112,7 @@ class process_gff3:
         "intron",
     ]
 
+    # Multiple parameters to automate various fixes
     skip_unrecognized = False
     gene_cds_skip_others = False
     allow_pseudogene_with_CDS = False
@@ -808,11 +826,12 @@ class process_gff3:
         or use the genome organism_abbrev and prepend "TMP_" to it.
 
         """
-        genome_data = InputSchema().genome_data
+        genome_data = Path(InputSchema().genome_data)
         if self.stable_id_prefix:
             prefix = self.stable_id_prefix
         else:
-            dat = json.loads(genome_data.read())
+            with genome_data.open("r") as genome_data_fh:
+                dat = json.load(genome_data_fh)
             org = dat["BRC4"]["organism_abbrev"]
             prefix = "TMP_" + org + "_"
             self.stable_id_prefix = prefix
