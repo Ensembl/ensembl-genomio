@@ -180,10 +180,7 @@ class InputSchema(argschema.ArgSchema):
         dump_default=".",
         metadata={"description": "Directory where the new amended genome file will be created"},
     )
-    brc4_mode = argschema.fields.Int(
-        required=False,
-        metadata={"description": "Activate BRC4 mode (default)"}
-    )
+    brc4_mode = argschema.fields.Int(required=False, metadata={"description": "Activate BRC4 mode (default)"})
     output_json = argschema.fields.OutputFile(
         required=False,
         dump_default="amend_genome_meta.json",
