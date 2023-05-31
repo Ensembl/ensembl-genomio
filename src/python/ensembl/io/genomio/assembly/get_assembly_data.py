@@ -13,14 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TODO"""
+"""Download an assembly data files from INSDC or RefSeq."""
 
 import ftplib
 import hashlib
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, Optional
+from typing import Dict
 
 import argschema
 
@@ -32,6 +32,14 @@ FILE_ENDS = {
     "genomic.gff.gz": "gff3_raw",
     "genomic.gbff.gz": "gbff",
 }
+
+
+class FileDownloadError(Exception):
+    """When a file download fails or there is a problem with that file."""
+
+
+class UnsupportedFormatError(Exception):
+    """When a string does not have the expected format."""
 
 
 def md5_files(dl_dir: Path) -> bool:
@@ -60,8 +68,7 @@ def md5_files(dl_dir: Path) -> bool:
                 if file_sum != checksum:
                     print(f"File {file_path} checksum doesn't match")
                     return False
-                else:
-                    print(f"File checksum ok {file_path}")
+                print(f"File checksum ok {file_path}")
     print("All checksums OK")
     return True
 
@@ -88,12 +95,11 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     """
     match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
     if not match:
-        raise Exception(f"Could not recognize GCA accession format: {accession}")
+        raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
     gca = match.group(1)
     part1 = match.group(2)
     part2 = match.group(3)
     part3 = match.group(4)
-    parts = (gca, part1, part2, part3)
 
     # Get the list of assemblies for this accession
     ftp_url = "ftp.ncbi.nlm.nih.gov"
@@ -104,7 +110,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     f.cwd(str(sub_dir))
     # max_redo = self.param("max_redo")
 
-    for ftp_dir, entry in f.mlsd():
+    for ftp_dir, _ in f.mlsd():
         if re.match(accession, ftp_dir):
             f.cwd(ftp_dir)
             # First, get the md5sum file
@@ -115,7 +121,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
             md5_sums = get_checksums(md5_path)
 
             # Get all the files
-            for ftp_file, file_entry in f.mlsd():
+            for ftp_file, _ in f.mlsd():
                 has_md5 = True
                 expected_sum = ""
                 for end in FILE_ENDS:
@@ -160,7 +166,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
                         if expected_sum == file_sum:
                             print(f"Downloaded file properly to {local_path}")
                         else:
-                            raise Exception(f"Could not download file {ftp_file} after {redo} tries")
+                            raise FileDownloadError(f"Could not download file {ftp_file} after {redo} tries")
 
 
 def get_files_selection(dl_dir: Path) -> Dict[str, str]:
@@ -173,7 +179,7 @@ def get_files_selection(dl_dir: Path) -> Dict[str, str]:
     files = {}
     root_name = get_root_name(dl_dir)
     if root_name == "":
-        raise Exception(f"Could not determine the files root name in {dl_dir}")
+        raise FileDownloadError(f"Could not determine the files root name in {dl_dir}")
     for dl_file in dl_dir.iterdir():
         for end, name in FILE_ENDS.items():
             file_with_end = dl_file.name.endswith(end) and not dl_file.name.endswith(f"_from_{end}")
@@ -230,13 +236,13 @@ def retrieve_assembly_data(
             download_files(accession, download_dir, max_redo)
 
         if not md5_files(download_dir):
-            raise Exception("Failed md5sum of downloaded files")
+            raise FileDownloadError("Failed md5sum of downloaded files")
 
     # Select specific files and give them a name
     files = get_files_selection(download_dir)
 
     if len(files) == 0:
-        raise Exception("No file downloaded")
+        raise FileDownloadError("No file downloaded")
 
     # # Output all those named files + dir
     # dataflow(files, 2)
