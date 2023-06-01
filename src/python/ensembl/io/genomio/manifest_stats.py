@@ -149,15 +149,18 @@ class manifest_stats:
         locations = []
         codon_tables = []
         for seqr in seq_regions:
-            # Get readable seq_region name
+            # Get readable seq_region name:
+            # either use a Genbank synonym, or just the provided seq_region name
             genbank = "synonyms" in seqr and [x for x in seqr["synonyms"] if x["source"] == "GenBank"]
             seqr_name = genbank and genbank[0]["name"] or seqr["name"]
 
+            # Record the lengths of the elements of each coord_system
             coord_level = seqr["coord_system_level"]
             if coord_level not in coord_systems:
                 coord_systems[coord_level] = []
             coord_systems[coord_level].append(seqr["length"])
 
+            # Additional metadata records to count
             if "circular" in seqr:
                 circular += 1
             if "codon_table" in seqr:
@@ -168,26 +171,63 @@ class manifest_stats:
         # Stats
         stats: List[str] = []
         stats.append(seq_region_path.name)
+        stats += self.coord_systems_stats(coord_systems)
+        stats += self.seq_region_special_stats(circular, locations, codon_tables)
+
+        stats.append("\n")
+
+        return stats
+
+    def coord_systems_stats(self, coord_systems: Dict[str, List[int]]) -> List[str]:
+        """For each coord_system compute various stats:
+            - number of sequences
+            - sequence length sum, minimum, maximum, mean
+
+        Args:
+            coord_systems (Dict[str, List[int]]): Coordinate system dict of lengths.
+
+        Returns:
+            List[str]: Stats.
+        """
+        stats: List[str] = []
         stats.append(f"Total coord_systems {len(coord_systems)}")
         for coord_name, lengths in coord_systems.items():
             stats.append(f"\nCoord_system: {coord_name}")
 
-            stat_counts: Dict[str, Union[int, float]] = {}
-            stat_counts["Number of sequences"] = len(lengths)
-            stat_counts["Sequence length sum"] = sum(lengths)
-            stat_counts["Sequence length minimum"] = min(lengths)
-            stat_counts["Sequence length mean"] = mean(lengths)
-            stat_counts["Sequence length maximum"] = max(lengths)
+            stat_counts: Dict[str, Union[int, float]] = {
+                "Number of sequences": len(lengths),
+                "Sequence length sum": sum(lengths),
+                "Sequence length minimum": min(lengths),
+                "Sequence length mean": mean(lengths),
+                "Sequence length maximum": max(lengths),
+            }
 
             for name, count in stat_counts.items():
                 stats.append(f"{count: 9d}\t{name}")
+        return stats
 
-        # Special
-        if circular or locations:
+    def seq_region_special_stats(
+        self,
+        circular: int = 0,
+        locations: Optional[List[str]] = None,
+        codon_tables: Optional[List[str]] = None,
+    ) -> List[str]:
+        """Prepare stats in case there are circular regions, specific locations and codon_tables.
+
+        Args:
+            circular (int, optional): Number of circular regions. Defaults to 0.
+            locations (Optional[List[str]], optional): The regions and their location. Defaults to None.
+            codon_tables (Optional[List[str]], optional): The regions and their codon_table. Defaults to None.
+
+        Returns:
+            List[str]: Stats.
+        """
+        stats: List[str] = []
+        if circular or locations or codon_tables:
             stats.append("\nSpecial")
             if circular:
                 stats.append(f"{circular: 9d}\tcircular sequences")
-            if locations:
+            if locations is not None:
                 stats.append(f"{len(locations): 9d} sequences with location")
                 for loc in locations:
                     stats.append(f"\t\t\t%s{loc}")
@@ -195,9 +235,6 @@ class manifest_stats:
                 stats.append(f"{len(codon_tables): 9d} sequences with codon_table")
                 for table in codon_tables:
                     stats.append(f"\t\t\t{table}")
-
-        stats.append("\n")
-
         return stats
 
     def get_gff3_stats(self, gff3_path: Path) -> List[str]:
