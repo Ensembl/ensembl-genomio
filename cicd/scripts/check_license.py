@@ -17,6 +17,7 @@
 import argparse
 import datetime
 from itertools import zip_longest
+from os import PathLike
 from pathlib import Path
 import re
 import sys
@@ -35,14 +36,16 @@ _SUFFIXES_WITH_HEADER = set(
 )
 
 
-def check_notice() -> None:
+def check_notice(notice_template: PathLike) -> None:
     """Checks if the NOTICE file is correct and the copyright year is up-to-date.
+
+    Args:
+        notice_template: Path to notice template file.
 
     Raises:
         RuntimeError: If the NOTICE file has incorrect format or the copyright year is not correct.
 
     """
-    notice_template = _TEMPLATES_DIR / "notice.tpl"
     notice_file = _ROOT_PATH / "NOTICE"
     year = datetime.date.today().year
     report = ""
@@ -60,14 +63,16 @@ def check_notice() -> None:
         print("NOTICE file is correct and the copyright year is up-to-date")
 
 
-def check_header() -> None:
+def check_header(header_template: PathLike) -> None:
     """Checks if every code file in the repository has a valid license header.
+
+    Args:
+        header_template: Path to license header template file.
 
     Raises:
         RuntimeError: If at least one file has missing or incorrect license header.
 
     """
-    header_template = _TEMPLATES_DIR / "license_header.tpl"
     template = header_template.read_text()
     # Escape symbols that may be interpreted as part of a regex otherwise
     template = template.replace(".", "\.").replace("(", "\(").replace(")", "\)")
@@ -97,9 +102,23 @@ if __name__ == "__main__":
     # Create separate subparsers for each case "notice" and "header"
     subparsers = parser.add_subparsers(title="License aspect to check", required=True, dest="{notice,header}")
     parser_notice = subparsers.add_parser("notice", help="Check NOTICE file format and copyright year")
-    parser_notice.set_defaults(func=check_notice)
+    parser_notice.add_argument(
+        "--template",
+        type=Path,
+        required=False,
+        default=_TEMPLATES_DIR / "notice.tpl",
+        help="Path to notice template file",
+    )
+    parser_notice.set_defaults(check_function=check_notice)
     parser_header = subparsers.add_parser("header", help="Check if code files have proper license header")
-    parser_header.set_defaults(func=check_header)
+    parser_header.add_argument(
+        "--template",
+        type=Path,
+        required=False,
+        default=_TEMPLATES_DIR / "license_header.tpl",
+        help="Path to license header template file",
+    )
+    parser_header.set_defaults(check_function=check_header)
     args = parser.parse_args()
     # Run the corresponding function depending on the type of check selected by the user
-    args.func()
+    args.check_function(args.template)
