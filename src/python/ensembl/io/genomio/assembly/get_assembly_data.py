@@ -104,69 +104,74 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     # Get the list of assemblies for this accession
     ftp_url = "ftp.ncbi.nlm.nih.gov"
     sub_dir = Path("genomes", "all", gca, part1, part2, part3)
-    f = ftplib.FTP()
-    f.connect(ftp_url)
-    f.login()
-    f.cwd(str(sub_dir))
-    # max_redo = self.param("max_redo")
+    ftp_conn = ftplib.FTP()
+    ftp_conn.connect(ftp_url)
+    ftp_conn.login()
+    ftp_conn.cwd(str(sub_dir))
 
-    for ftp_dir, _ in f.mlsd():
+    for ftp_dir, _ in ftp_conn.mlsd():
         if re.match(accession, ftp_dir):
-            f.cwd(ftp_dir)
+            ftp_conn.cwd(ftp_dir)
             # First, get the md5sum file
             md5_file = "md5checksums.txt"
             md5_path = dl_dir / md5_file
             with md5_path.open("wb") as fp:
-                f.retrbinary(f"RETR {md5_file}", fp.write)
+                ftp_conn.retrbinary(f"RETR {md5_file}", fp.write)
             md5_sums = get_checksums(md5_path)
 
             # Get all the files
-            for ftp_file, _ in f.mlsd():
-                has_md5 = True
-                expected_sum = ""
+            for ftp_file, _ in ftp_conn.mlsd():
                 for end in FILE_ENDS:
                     if ftp_file.endswith(end) and not ftp_file.endswith(f"_from_{end}"):
-                        if not ftp_file in md5_sums:
-                            print(f"File not in {md5_file}: {ftp_file}")
-                            has_md5 = False
-                        else:
-                            expected_sum = md5_sums[ftp_file]
-                        local_path = Path(dl_dir, ftp_file)
+                        _download_file(ftp_conn, ftp_file, md5_sums, dl_dir, max_redo)
 
-                        # File exists? Check md5sum before anything else
-                        if local_path.is_file():
-                            if has_md5:
-                                with local_path.open(mode="rb") as fp:
-                                    content = fp.read()
-                                    file_sum = hashlib.md5(content).hexdigest()
-                                    if file_sum == expected_sum:
-                                        print(f"File {local_path} is already downloaded properly")
-                                        continue
-                            else:
-                                print(f"Can't check file (no md5sum), using it as is: {local_path}")
-                        file_sum = ""
-                        redo = 0
 
-                        while (file_sum != expected_sum) and (redo <= max_redo):
-                            redo += 1
-                            print(f"Downloading file {ftp_file}, try {redo}...")
-                            # Download the file
-                            try:
-                                with local_path.open(mode="wb") as fp:
-                                    f.retrbinary(f"RETR {ftp_file}", fp.write)
-                            except EOFError:
-                                continue
-                            if not has_md5:
-                                file_sum = ""
-                                continue
-                            # Compute checksum
-                            with local_path.open(mode="rb") as fp:
-                                content = fp.read()
-                                file_sum = hashlib.md5(content).hexdigest()
-                        if expected_sum == file_sum:
-                            print(f"Downloaded file properly to {local_path}")
-                        else:
-                            raise FileDownloadError(f"Could not download file {ftp_file} after {redo} tries")
+def _download_file(
+    ftp_conn: ftplib.FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
+) -> None:
+    has_md5 = True
+    expected_sum = ""
+    if not ftp_file in md5_sums:
+        print(f"File not in the md5 checksums: {ftp_file}")
+        has_md5 = False
+    else:
+        expected_sum = md5_sums[ftp_file]
+    local_path = Path(dl_dir, ftp_file)
+
+    # File exists? Check md5sum before anything else
+    if local_path.is_file():
+        if has_md5:
+            with local_path.open(mode="rb") as fp:
+                content = fp.read()
+                file_sum = hashlib.md5(content).hexdigest()
+                if file_sum == expected_sum:
+                    print(f"File {local_path} is already downloaded properly")
+                    return
+        else:
+            print(f"Can't check file (no md5sum), using it as is: {local_path}")
+    file_sum = ""
+    redo = 0
+
+    while (file_sum != expected_sum) and (redo <= max_redo):
+        redo += 1
+        print(f"Downloading file {ftp_file}, try {redo}...")
+        # Download the file
+        try:
+            with local_path.open(mode="wb") as fp:
+                ftp_conn.retrbinary(f"RETR {ftp_file}", fp.write)
+        except EOFError:
+            continue
+        if not has_md5:
+            file_sum = ""
+            continue
+        # Compute checksum
+        with local_path.open(mode="rb") as fp:
+            content = fp.read()
+            file_sum = hashlib.md5(content).hexdigest()
+    if expected_sum == file_sum:
+        print(f"Downloaded file properly to {local_path}")
+    else:
+        raise FileDownloadError(f"Could not download file {ftp_file} after {redo} tries")
 
 
 def get_files_selection(dl_dir: Path) -> Dict[str, str]:
