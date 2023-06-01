@@ -87,7 +87,9 @@ def check_header(header_template: PathLike) -> None:
                 report_files.append(file_path.name)
     if report_files:
         report = "\n".join(report_files)
-        raise RuntimeError(f"{len(report_files)} code files have missing or incorrect license header\n\n{report}")
+        raise RuntimeError(
+            f"{len(report_files)} code files have missing or incorrect license header\n\n{report}"
+        )
     else:
         print("Every code file in the repository has a valid license header")
 
