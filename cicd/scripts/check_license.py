@@ -94,6 +94,7 @@ if __name__ == "__main__":
             "license header."
         )
     )
+    # Create separate subparsers for each case "notice" and "header"
     subparsers = parser.add_subparsers(title="License aspect to check", required=True, dest="{notice,header}")
     parser_notice = subparsers.add_parser("notice", help="Check NOTICE file format and copyright year")
     parser_notice.set_defaults(func=check_notice)
