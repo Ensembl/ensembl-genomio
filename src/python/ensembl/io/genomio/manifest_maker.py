@@ -26,7 +26,7 @@ import argschema
 class ManifestMaker:
     """Given a directory with genomic files, create a manifest json file for them."""
 
-    names = {
+    same_names = {
         "gff3",
         "fasta_dna",
         "fasta_pep",
@@ -36,7 +36,15 @@ class ManifestMaker:
         "seq_region",
         "agp",
         "events",
+    }   
+    aliases = {
+        "gene_models": "gff3",
+        "dna": "fasta_dna",
+        "pep": "fasta_pep"
     }
+    names = {name: name for name in same_names}
+    alias_names = {alias: name for alias, name in aliases.items()}
+    names = {**names, **alias_names}
 
     def __init__(self, manifest_dir: Path) -> None:
         self.dir = manifest_dir
@@ -58,20 +66,21 @@ class ManifestMaker:
                 print("Can't create manifest for subdirectory")
                 continue
 
-            for name in ManifestMaker.names:
+            for name, standard_name in ManifestMaker.names.items():
                 if subfile.stem.endswith(name):
                     used_file = True
                     md5 = self._get_md5sum(subfile)
                     file_obj = {"file": subfile.name, "md5sum": md5}
-                    if name in manifest_files:
-                        if isinstance(manifest_files[name], list):
-                            manifest_files[name].append(file_obj)
+                    if standard_name in manifest_files:
+                        if isinstance(manifest_files[standard_name], list):
+                            manifest_files[standard_name].append(file_obj)
                         else:
                             # Convert to a list
-                            manifest_files[name] = [manifest_files[name], file_obj]
+                            manifest_files[standard_name] = [manifest_files[standard_name], file_obj]
 
                     else:
-                        manifest_files[name] = file_obj
+                        manifest_files[standard_name] = file_obj
+                    break
 
             if not used_file:
                 print(f"File {subfile} was not included in the manifest")
