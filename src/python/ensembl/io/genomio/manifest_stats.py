@@ -246,6 +246,25 @@ class manifest_stats:
         Returns:
             List: Stats from the gene model.
         """
+
+        biotypes = self.count_biotypes(gff3_path)
+
+        # Compile final stats
+        stats = self.biotypes_stats(biotypes)
+        stats += self.check_ncbi_stats(biotypes)
+
+        return stats
+
+    def count_biotypes(self, gff3_path: Path) -> Dict[str, BiotypeCounter]:
+        """Count the biotypes in a GFF3 file.
+
+        Args:
+            gff3_path (Path): the GFF3 file.
+
+        Returns:
+            Dict[str, BiotypeCounter]: Dict of biotype counters.
+        """
+
         biotypes: Dict[str, BiotypeCounter] = {}
 
         with open_gz_file(gff3_path) as gff3_handle:
@@ -286,8 +305,17 @@ class manifest_stats:
                     # Total
                     if feat1.type in ("gene", "pseudogene"):
                         manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
+        return biotypes
 
-        # Order
+    def biotypes_stats(self, biotypes: Dict[str, BiotypeCounter]) -> List[str]:
+        """Prepare biotype stats in order of their name.
+
+        Args:
+            biotypes (Dict[str, BiotypeCounter]): Dict of biotypes counters.
+
+        Returns:
+            List[str]: Stats.
+        """
         sorted_biotypes = {}
         for name in sorted(biotypes.keys()):
             data: BiotypeCounter = biotypes[name]
@@ -297,10 +325,6 @@ class manifest_stats:
             f"{data.unique_count():>9}\t{biotype:<20}\tID = {data.example}"
             for (biotype, data) in sorted_biotypes.items()
         ]
-
-        # Check against NCBI stats
-        stats += self.check_ncbi_stats(biotypes)
-
         return stats
 
     def check_ncbi_stats(self, biotypes: Dict[str, BiotypeCounter]) -> List[str]:
