@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Genomio Utils modules."""
+"""GenomIO utils modules."""
 
 from .archive_utils import *
 from .json_utils import *

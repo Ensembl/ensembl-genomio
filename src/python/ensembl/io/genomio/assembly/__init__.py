@@ -13,6 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Genomio assembly preparation modules."""
+"""GenomIO assembly preparation modules."""
 
 from .get_assembly_data import *

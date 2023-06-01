@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Takes a fasta file (DNA or peptide), clean it up and optionally exclude some ids."""
+"""Takes a FASTA file (DNA or peptide), cleans it up and optionally excludes some IDs."""
 
 from mimetypes import guess_type
 from pathlib import Path

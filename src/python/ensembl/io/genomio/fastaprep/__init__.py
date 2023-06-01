@@ -13,6 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Genomio fasta preparation modules."""
+"""GenomIO FASTA preparation modules."""
 
 from .process_fasta import *

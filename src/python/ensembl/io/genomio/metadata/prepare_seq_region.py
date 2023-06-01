@@ -308,8 +308,8 @@ def get_organelle(record: SeqRecord, molecule_location: Optional[Dict] = None) -
             # Get controlled name
             try:
                 location = molecule_location[organelle]
-            except KeyError as exk:
-                raise UnknownMetadata(f"Unrecognized sequence location: {organelle}") from exk
+            except KeyError as exc:
+                raise UnknownMetadata(f"Unrecognized sequence location: {organelle}") from exc
             break
     return location
 
@@ -398,8 +398,8 @@ def make_seq_region(
         # Get location metadata
         try:
             seq_region["location"] = molecule_location[location]
-        except KeyError as exk:
-            raise UnknownMetadata(f"Unrecognized sequence location: {location}") from exk
+        except KeyError as exc:
+            raise UnknownMetadata(f"Unrecognized sequence location: {location}") from exc
     else:
         raise UnknownMetadata(f"Unrecognized sequence role: {seq_role}")
     return seq_region
