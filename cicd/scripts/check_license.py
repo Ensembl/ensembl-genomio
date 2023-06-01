@@ -75,13 +75,14 @@ def check_header() -> None:
     template = "[#/-]*\s*" + template.replace("\n\n", "(\n)+").replace("\n", "\n[#/-]*\s*")
     # Compile template as regex to improve performance
     prog = re.compile(rf"{template}")
-    report = ""
+    report_files = []
     for file_path in _ROOT_PATH.rglob("*.*"):
         if file_path.is_file() and (file_path.suffix[1:] in _SUFFIXES_WITH_HEADER):
             if not prog.search(file_path.read_text()):
-                report += f"{file_path.name}"
-    if report:
-        raise RuntimeError(f"One or more code files have missing or incorrect license header\n\n{report}")
+                report_files.append(file_path.name)
+    if report_files:
+        report = "\n".join(report_files)
+        raise RuntimeError(f"{len(report_files)} code files have missing or incorrect license header\n\n{report}")
     else:
         print("Every code file in the repository has a valid license header")
 
