@@ -88,18 +88,21 @@ class manifest_stats:
         if self.accession is not None:
             stats.append(self.accession)
 
-        if not self.error:
-            if "gff3" in manifest:
-                stats += self.get_gff3_stats(Path(manifest["gff3"]))
-            if "seq_region" in manifest:
-                stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
+        # Compute the stats from the GFF3 file
+        if "gff3" in manifest:
+            stats += self.get_gff3_stats(Path(manifest["gff3"]))
 
+        # Compute the stats from the seq_region file
+        if "seq_region" in manifest:
+            stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
+
+        # Print out the stats in a separate file
         stats_path = f"{self.manifest_parent}/stats.txt"
         print(stats_path)
         with open(stats_path, "w") as stats_out:
             stats_out.write("\n".join(stats))
 
-        # Flow out if errors in stats comparison
+        # Die if there were errors in stats comparison
         if self.error:
             raise StatsError(f"Stats count errors, check the file {stats_path}")
 
