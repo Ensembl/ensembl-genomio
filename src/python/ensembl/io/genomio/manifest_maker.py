@@ -36,14 +36,9 @@ class ManifestMaker:
         "seq_region",
         "agp",
         "events",
-    }   
-    aliases = {
-        "gene_models": "gff3",
-        "dna": "fasta_dna",
-        "pep": "fasta_pep"
     }
+    alias_names = {"gene_models": "gff3", "dna": "fasta_dna", "pep": "fasta_pep"}
     names = {name: name for name in same_names}
-    alias_names = {alias: name for alias, name in aliases.items()}
     names = {**names, **alias_names}
 
     def __init__(self, manifest_dir: Path) -> None:
