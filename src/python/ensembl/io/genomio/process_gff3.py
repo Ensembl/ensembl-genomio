@@ -34,7 +34,7 @@ from Bio.SeqFeature import SeqFeature
 from ensembl.io.genomio.utils.json_utils import print_json
 
 
-FunctionalAnnotation = Dict[str, Any]
+Annotation = Dict[str, Any]
 
 
 class GFFParserError(Exception):
@@ -222,7 +222,7 @@ class process_gff3:
         skip_unrecognized = self.skip_unrecognized
         to_exclude = self.exclude_seq_regions
 
-        functional_annotation: List[FunctionalAnnotation] = []
+        functional_annotation: List[Annotation] = []
 
         with out_gff_path.open("w") as gff3_out:
             new_records = []
@@ -272,7 +272,7 @@ class process_gff3:
         functional_annotation = self.clean_functional_annotations(functional_annotation)
         print_json(out_funcann_path, functional_annotation)
 
-    def format_mobile_element(self, feat, functional_annotation: List[FunctionalAnnotation]):
+    def format_mobile_element(self, feat, functional_annotation: List[Annotation]):
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
 
         # Change mobile_genetic_element into a transposable_element feature
@@ -312,7 +312,7 @@ class process_gff3:
         return feat
 
     def normalize_gene(
-        self, gene: SeqFeature, functional_annotation: List[FunctionalAnnotation], fail_types: Dict[str, int]
+        self, gene: SeqFeature, functional_annotation: List[Annotation], fail_types: Dict[str, int]
     ) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
@@ -743,7 +743,7 @@ class process_gff3:
         return transcript
 
     def add_funcann_feature(
-        self, funcann: List[FunctionalAnnotation], feature: SeqFeature, feat_type: str
+        self, funcann: List[Annotation], feature: SeqFeature, feat_type: str
     ) -> None:
         """Append a feature object following the specifications.
 
@@ -754,7 +754,7 @@ class process_gff3:
 
         """
 
-        feature_object: FunctionalAnnotation = {"object_type": feat_type, "id": feature.id}
+        feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
 
         # Description?
         if "product" in feature.qualifiers:
