@@ -514,7 +514,9 @@ class InputSchema(argschema.ArgSchema):
     )
 
     @post_load
-    def reformat_args(self, data: Dict[str, Any], **kwargs):  # pylint: disable=unused-argument
+    def reformat_args(
+        self, data: Dict[str, Any], **kwargs  # pylint: disable=unused-argument
+    ) -> Dict[str, Any]:
         """Processes arguments to may need additional parsing after being correctly loaded.
 
         Args:
