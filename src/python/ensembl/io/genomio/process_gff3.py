@@ -18,10 +18,10 @@ in a separate file."""
 
 
 from collections import Counter
+from os import PathLike
 from pathlib import Path
 import re
-import tempfile
-from typing import Any, Dict, List, IO
+from typing import Any, Dict, List
 
 import json
 import argschema
@@ -41,12 +41,8 @@ class GFFParserError(Exception):
     """Error when parsing a GFF3 file."""
 
 
-class process_gff3:
-    """Parse a GGF3 file and output a cleaned up GFF3 + annotation json file.
-
-    Raises:
-        GFFParserError: Raise this if an error can't be automatically fixed.
-    """
+class GFFParserCommon:
+    """Heritable class to share the list of feature types supported or ignored by the parser"""
 
     # Supported gene level biotypes
     gene_types = [
@@ -112,27 +108,19 @@ class process_gff3:
         "intron",
     ]
 
-    # Multiple parameters to automate various fixes
-    skip_unrecognized = False
-    gene_cds_skip_others = False
-    allow_pseudogene_with_CDS = False
-    merge_split_genes = False
-    exclude_seq_regions: List = []
-    validate_gene_id = True
-    min_id_length = 8
-    make_missing_stable_id = False
-    stable_id_prefix = None
-    current_stable_id_number: int = 0
 
-    def merge_genes_gff(self, in_gff_path: Path, out_gff_fh: IO[str]) -> None:
+class GFFGeneMerger(GFFParserCommon):
+    """Specialized class to merge split genes in a GFF3 file, prior to further parsing."""
+
+    def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> int:
         """
         Merge genes in a gff that are split in multiple lines
         """
         tomerge = []
         merged: List[str] = []
 
-        with in_gff_path.open("r") as gff3_in:
-            for line in gff3_in:
+        with Path(in_gff_path).open("r") as in_gff_fh, Path(out_gff_path).open("w") as out_gff_fh:
+            for line in in_gff_fh:
                 # Skip comments
                 if line.startswith("#"):
                     out_gff_fh.write(line)
@@ -158,7 +146,7 @@ class process_gff3:
                                 merged_str.append("\t".join(line_tomerge))
                             merged.append("\n".join(merged_str) + "\n")
 
-                            new_line = self.merge_genes(tomerge)
+                            new_line = self._merge_genes(tomerge)
                             out_gff_fh.write(new_line)
                             tomerge = []
                         out_gff_fh.write(line + "\n")
@@ -170,14 +158,12 @@ class process_gff3:
                     merged_str.append("\t".join(line_tomerge))
                 merged.append("\n".join(merged_str) + "\n")
 
-                new_line = self.merge_genes(tomerge)
+                new_line = self._merge_genes(tomerge)
                 out_gff_fh.write(new_line)
 
-        if merged and not self.merge_split_genes:
-            merged_genes_str = f"{merged[0]}\netc."
-            raise GFFParserError(f"{len(merged)} merged genes:\n{merged_genes_str}\n")
+        return len(merged)
 
-    def merge_genes(self, tomerge: List) -> str:
+    def _merge_genes(self, tomerge: List) -> str:
         """Returns a single gene gff3 line merged from separate parts.
 
         Args:
@@ -209,7 +195,27 @@ class process_gff3:
 
         return "\t".join(new_gene) + "\n"
 
-    def simpler_gff3(self, gff3_in: IO[str], out_gff_path: Path, out_funcann_path: Path) -> None:
+
+class GFFSimplifier(GFFParserCommon):
+    """Parse a GGF3 file and output a cleaned up GFF3 + annotation json file.
+
+    Raises:
+        GFFParserError: Raise this if an error can't be automatically fixed.
+    """
+
+    # Multiple parameters to automate various fixes
+    skip_unrecognized = False
+    gene_cds_skip_others = False
+    allow_pseudogene_with_CDS = False
+    merge_split_genes = False
+    exclude_seq_regions: List = []
+    validate_gene_id = True
+    min_id_length = 8
+    make_missing_stable_id = False
+    stable_id_prefix = None
+    current_stable_id_number: int = 0
+
+    def simpler_gff3(self, in_gff_path: PathLike, out_gff_path: PathLike, out_funcann_path: PathLike) -> None:
         """
         Load a GFF3 from INSDC, and rewrite it in a simpler version,
         and also write a functional_annotation file
@@ -224,11 +230,11 @@ class process_gff3:
 
         functional_annotation: List[FunctionalAnnotation] = []
 
-        with out_gff_path.open("w") as gff3_out:
+        with Path(in_gff_path).open("r") as in_gff_fh, Path(out_gff_path).open("w") as out_gff_fh:
             new_records = []
             fail_types: Dict[str, int] = {}
 
-            for record in GFF.parse(gff3_in):
+            for record in GFF.parse(in_gff_fh):
                 new_record = SeqRecord(record.seq, id=record.id)
                 if record.id in to_exclude:
                     print(f"Skip seq_region {record.id}")
@@ -266,11 +272,11 @@ class process_gff3:
                 fail_errors = " ".join(fail_types.keys())
                 raise GFFParserError(f"Unrecognized types found ({fail_errors})")
 
-            GFF.write(new_records, gff3_out)
+            GFF.write(new_records, out_gff_fh)
 
         # Write functional annotation
         functional_annotation = self.clean_functional_annotations(functional_annotation)
-        print_json(out_funcann_path, functional_annotation)
+        print_json(Path(out_funcann_path), functional_annotation)
 
     def format_mobile_element(self, feat, functional_annotation: List[FunctionalAnnotation]):
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
@@ -943,29 +949,43 @@ class process_gff3:
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
-    in_gff_path = argschema.fields.InputFile(
-        metadata={"required": True, "description": "gene.gff file required"}
+    in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
+    genome_data = argschema.fields.InputFile(required=True, metadata={"description": "genome.json path"})
+    out_gff_path = argschema.fields.OutputFile(
+        default="gene_models.gff3", metadata={"description": "Output gff path"}
     )
-    genome_data = argschema.fields.InputFile(
-        metadata={"required": True, "description": "genome.json file required"}
+    out_func_path = argschema.fields.OutputFile(
+        default="functional_annotation.json",
+        metadata={"description": "Output functional_annotation.json path"},
+    )
+    merge_split_genes = argschema.fields.Boolean(
+        default=True, metadata={"description": "Should split genes be merged automatically"}
     )
 
 
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    in_gff_path = mod.args["in_gff_path"]
-    in_gff_path = Path(in_gff_path)
-    out_gff_path = Path("gene_models.gff3")
-    out_funcann_path = Path("functional_annotation.json")
 
-    # Merge multiline gene features
-    interim_gff_fh = tempfile.TemporaryFile(mode="w+t")
-    gff = process_gff3()
-    gff.merge_genes_gff(in_gff_path, interim_gff_fh)
-    interim_gff_fh.seek(0)
+    in_gff_path = mod.args["in_gff_path"]
+
+    # Merge multiline gene features in a separate file
+    interim_gff_path = Path(f"{in_gff_path}_INTERIM_MERGE")
+    merger = GFFGeneMerger()
+    num_merged_genes = merger.merge(in_gff_path, interim_gff_path)
+
+    # If there are split genes, decide to merge, or just die
+    if num_merged_genes > 0:
+        if mod.args["merge_split_genes"]:
+            # Use the GFF with the merged genes for the next part
+            in_gff_path = interim_gff_path
+        else:
+            raise GFFParserError("GFF contains split genes. Fix it or use the merge_split_genes option.")
+
     # Load gff3 data and write a simpler version that follows our specifications
-    gff.simpler_gff3(interim_gff_fh, out_gff_path, out_funcann_path)
+    # as well as a functional_annotation json file
+    gff = GFFSimplifier()
+    gff.simpler_gff3(in_gff_path, mod.args["out_gff_path"], mod.args["out_func_path"])
 
 
 if __name__ == "__main__":
