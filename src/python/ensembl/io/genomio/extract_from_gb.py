@@ -192,7 +192,7 @@ class FormattedFilesGenerator:
             GFF.write(records, gff_fh)
 
         # Write the peptide sequences to a fasta file
-        with open(self.files.fasta_pep, "w") as fasta_fh:
+        with self.files.fasta_pep.open("w") as fasta_fh:
             SeqIO.write(peptides, fasta_fh, "fasta")
 
         # Warn if some IDs are not unique
