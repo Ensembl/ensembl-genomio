@@ -34,7 +34,101 @@ from Bio.SeqFeature import SeqFeature
 from ensembl.io.genomio.utils.json_utils import print_json
 
 
-FunctionalAnnotation = Dict[str, Any]
+Annotation = Dict[str, Any]
+
+
+class FunctionalAnnotations:
+    """List of annotations extracted from a GFF3 file."""
+
+    def __init__(self) -> None:
+        self.annotations: List[Annotation] = []
+
+    def add_feature(self, feature: SeqFeature, feat_type: str) -> None:
+        """Append a feature object following the specifications.
+
+        Args:
+            feature: The SeqFeature to add to the list.
+            feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
+
+        """
+
+        feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
+
+        # Description?
+        if "product" in feature.qualifiers:
+            description = feature.qualifiers["product"][0]
+            if self._product_is_valid(description):
+                feature_object["description"] = description
+
+        if "Name" in feature.qualifiers and "description" not in feature_object:
+            name = feature.qualifiers["Name"][0]
+
+            # Exclude Name if it just a variant of the feature ID
+            if feature.id not in name:
+                feature_object["description"] = name
+
+        # Synonyms?
+        if "Name" in feature.qualifiers:
+            feat_name = feature.qualifiers["Name"][0]
+            if feat_name != feature.id:
+                feature_object["synonyms"] = {"synonym": feat_name, "default": True}
+
+        # is_pseudogene?
+        if feature.type.startswith("pseudogen"):
+            feature_object["is_pseudogene"] = True
+
+        self.annotations.append(feature_object)
+
+    @staticmethod
+    def _product_is_valid(product: str) -> bool:
+        """Check a product string.
+
+        Args:
+            product: a product name.
+
+        Returns:
+            True only if the string is valid, False otherwise.
+
+        """
+        excluded_names = re.compile(
+            r"^(uncharacterized|putative|hypothetical|predicted)"
+            r"( uncharacterized)?"
+            r" protein"
+            r"( of unknown function)?"
+            r"( \(fragment\))?$"
+        )
+
+        if excluded_names.match(product.lower()):
+            return False
+        return True
+
+    def _cleanup(self) -> None:
+        """Returns the functional annotations list without putative product descriptions."""
+        for feat in self.annotations:
+            if "description" in feat and not self._product_is_valid(feat["description"]):
+                del feat["description"]
+
+    def to_json(self, out_path: PathLike) -> None:
+        """Print out the current annotation list in a json file.
+
+        Args:
+            out_path (PathLike): Json file where to write the data.
+        """
+        self._cleanup()
+        print_json(Path(out_path), self.annotations)
+
+
+class Records(list):
+    """List of GFF3 SeqRecords."""
+
+    def to_gff(self, out_gff_path: PathLike) -> None:
+        """Print out the current list of records in a GFF3 file.
+
+        Args:
+            out_gff_path (PathLike}: GFF3 file where to write the records.
+        """
+        with Path(out_gff_path).open("w") as out_gff_fh:
+            GFF.write(self, out_gff_fh)
 
 
 class GFFParserError(Exception):
@@ -215,7 +309,11 @@ class GFFSimplifier(GFFParserCommon):
     stable_id_prefix = None
     current_stable_id_number: int = 0
 
-    def simpler_gff3(self, in_gff_path: PathLike, out_gff_path: PathLike, out_funcann_path: PathLike) -> None:
+    def __init__(self):
+        self.records = Records()
+        self.annotations = FunctionalAnnotations()
+
+    def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """
         Load a GFF3 from INSDC, and rewrite it in a simpler version,
         and also write a functional_annotation file
@@ -228,10 +326,7 @@ class GFFSimplifier(GFFParserCommon):
         skip_unrecognized = self.skip_unrecognized
         to_exclude = self.exclude_seq_regions
 
-        functional_annotation: List[FunctionalAnnotation] = []
-
-        with Path(in_gff_path).open("r") as in_gff_fh, Path(out_gff_path).open("w") as out_gff_fh:
-            new_records = []
+        with Path(in_gff_path).open("r") as in_gff_fh:
             fail_types: Dict[str, int] = {}
 
             for record in GFF.parse(in_gff_fh):
@@ -250,11 +345,11 @@ class GFFSimplifier(GFFParserCommon):
                     elif feat.type == "CDS":
                         feat = self.cds_gene(feat)
                     elif feat.type in ("mobile_genetic_element", "transposable_element"):
-                        feat = self.format_mobile_element(feat, functional_annotation)
+                        feat = self.format_mobile_element(feat)
 
                     # Normalize the gene structure
                     if feat.type in allowed_gene_types:
-                        feat = self.normalize_gene(feat, functional_annotation, fail_types)
+                        feat = self.normalize_gene(feat, fail_types)
                     elif feat.type in allowed_non_gene_types:
                         pass
                     else:
@@ -266,19 +361,13 @@ class GFFSimplifier(GFFParserCommon):
                             continue
 
                     new_record.features.append(feat)
-                new_records.append(new_record)
+                self.records.append(new_record)
 
             if fail_types and not skip_unrecognized:
                 fail_errors = " ".join(fail_types.keys())
                 raise GFFParserError(f"Unrecognized types found ({fail_errors})")
 
-            GFF.write(new_records, out_gff_fh)
-
-        # Write functional annotation
-        functional_annotation = self.clean_functional_annotations(functional_annotation)
-        print_json(Path(out_funcann_path), functional_annotation)
-
-    def format_mobile_element(self, feat, functional_annotation: List[FunctionalAnnotation]):
+    def format_mobile_element(self, feat):
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
 
         # Change mobile_genetic_element into a transposable_element feature
@@ -312,14 +401,12 @@ class GFFSimplifier(GFFParserCommon):
 
         # Generate ID if needed and add it to the functional annotation
         feat.id = self.normalize_gene_id(feat)
-        self.add_funcann_feature(functional_annotation, feat, "transposable_element")
+        self.annotations.add_feature(feat, "transposable_element")
         feat.qualifiers = {"ID": feat.id}
 
         return feat
 
-    def normalize_gene(
-        self, gene: SeqFeature, functional_annotation: List[FunctionalAnnotation], fail_types: Dict[str, int]
-    ) -> SeqFeature:
+    def normalize_gene(self, gene: SeqFeature, fail_types: Dict[str, int]) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
         Args:
@@ -394,7 +481,7 @@ class GFFSimplifier(GFFParserCommon):
             transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
 
             # Store transcript functional annotation
-            self.add_funcann_feature(functional_annotation, transcript, "transcript")
+            self.annotations.add_feature(transcript, "transcript")
 
             # Replace qualifiers
             old_transcript_qualifiers = transcript.qualifiers
@@ -426,7 +513,7 @@ class GFFSimplifier(GFFParserCommon):
                     # Store CDS functional annotation (only once)
                     if not cds_found:
                         cds_found = True
-                        self.add_funcann_feature(functional_annotation, feat, "translation")
+                        self.annotations.add_feature(feat, "translation")
 
                     # Replace qualifiers
                     feat.qualifiers = {
@@ -463,42 +550,13 @@ class GFFSimplifier(GFFParserCommon):
             self.normalize_pseudogene_cds(gene)
 
         # Finally, store gene functional annotation
-        self.add_funcann_feature(functional_annotation, gene, "gene")
+        self.annotations.add_feature(gene, "gene")
 
         # replace qualifiers
         old_gene_qualifiers = gene.qualifiers
         gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
 
         return gene
-
-    def clean_functional_annotations(self, functional_annotation: List) -> List:
-        """Returns the functional annotations list without putative product descriptions."""
-        for feat in functional_annotation:
-            if "description" in feat and not self.check_product(feat["description"]):
-                del feat["description"]
-        return functional_annotation
-
-    def check_product(self, product: str) -> bool:
-        """Check a product string.
-
-        Args:
-            product: a product name.
-
-        Returns:
-            True only if the string is valid, False otherwise.
-
-        """
-        excluded_names = re.compile(
-            r"^(uncharacterized|putative|hypothetical|predicted)"
-            r"( uncharacterized)?"
-            r" protein"
-            r"( of unknown function)?"
-            r"( \(fragment\))?$"
-        )
-
-        if excluded_names.match(product.lower()):
-            return False
-        return True
 
     def transfer_description(self, gene: SeqFeature) -> None:
         """Transfer descriptions from transcripts/translations to gene/transcripts.
@@ -748,45 +806,6 @@ class GFFSimplifier(GFFParserCommon):
 
         return transcript
 
-    def add_funcann_feature(
-        self, funcann: List[FunctionalAnnotation], feature: SeqFeature, feat_type: str
-    ) -> None:
-        """Append a feature object following the specifications.
-
-        Args:
-            funcann: The list to which the feature object are appended.
-            feature: The SeqFeature to add to the list.
-            feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
-
-        """
-
-        feature_object: FunctionalAnnotation = {"object_type": feat_type, "id": feature.id}
-
-        # Description?
-        if "product" in feature.qualifiers:
-            description = feature.qualifiers["product"][0]
-            if self.check_product(description):
-                feature_object["description"] = description
-
-        if "Name" in feature.qualifiers and "description" not in feature_object:
-            name = feature.qualifiers["Name"][0]
-
-            # Exclude Name if it just a variant of the feature ID
-            if feature.id not in name:
-                feature_object["description"] = name
-
-        # Synonyms?
-        if "Name" in feature.qualifiers:
-            feat_name = feature.qualifiers["Name"][0]
-            if feat_name != feature.id:
-                feature_object["synonyms"] = {"synonym": feat_name, "default": True}
-
-        # is_pseudogene?
-        if feature.type.startswith("pseudogen"):
-            feature_object["is_pseudogene"] = True
-
-        funcann.append(feature_object)
-
     def normalize_gene_id(self, gene: SeqFeature) -> str:
         """Remove any unnecessary prefixes around the gene ID.
 
@@ -984,8 +1003,10 @@ def main() -> None:
 
     # Load gff3 data and write a simpler version that follows our specifications
     # as well as a functional_annotation json file
-    gff = GFFSimplifier()
-    gff.simpler_gff3(in_gff_path, mod.args["out_gff_path"], mod.args["out_func_path"])
+    gff_data = GFFSimplifier()
+    gff_data.simpler_gff3(in_gff_path)
+    gff_data.records.to_gff(mod.args["out_gff_path"])
+    gff_data.annotations.to_json(mod.args["out_func_path"])
 
 
 if __name__ == "__main__":
