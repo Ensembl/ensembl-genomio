@@ -52,8 +52,9 @@ from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
-# Definition of SeqRegion type
+# Definition of SeqRegion types
 SeqRegion = Dict[str, Any]
+SeqRegionDict = Dict[str, SeqRegion]
 
 
 SYNONYM_RESOURCES = ["GenBank", "RefSeq", "INSDC"]
@@ -72,9 +73,6 @@ MOLECULE_LOCATION = {
     "plasmid": "plasmid",
 }
 LOCATION_CODON = {"apicoplast_chromosome": 4}
-
-
-SeqRegionDict = Dict[str, SeqRegion]
 
 
 class UnknownMetadata(Exception):
