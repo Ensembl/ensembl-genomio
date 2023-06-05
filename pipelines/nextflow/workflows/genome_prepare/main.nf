@@ -27,6 +27,7 @@ def helpMessage() {
 
         Mandatory arguments:
         --input_dir                    Location of input json(s) with component/organism genome metadata
+        --cache_dir                    Cache dir for the downloaded assembly data
 
         Optional arguments:
         --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
@@ -39,10 +40,13 @@ if (params.help) {
     helpMessage()
     exit 0
 }
-else if (params.input_dir) {
+if (params.input_dir) {
     ch_genome_json = Channel.fromPath("${params.input_dir}/*.json", checkIfExists: true)
 } else {
     exit 1, 'Input directory not specified!'
+}
+if (!params.cache_dir) {
+    params.cache_dir = "./genome_prepare_dowload_cache"
 }
 
 // Import subworkflow
@@ -56,5 +60,5 @@ workflow {
     PREPARE_GENOME_METADATA(ch_genome_json)
     accession = PREPARE_GENOME_METADATA.out.accession.map{ it.getName() }
     genome_json = PREPARE_GENOME_METADATA.out.json
-    GENOME_PREPARE(accession, genome_json, params.output_dir)
+    GENOME_PREPARE(accession, genome_json, params.output_dir, params.cache_dir)
 }

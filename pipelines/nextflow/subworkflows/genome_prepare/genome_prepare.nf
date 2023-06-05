@@ -65,10 +65,11 @@ workflow GENOME_PREPARE {
         accession
         genome_json
         output_dir
+        cache_dir
 
     main:
         CHECK_JSON_SCHEMA_GENOME(genome_json, accession)
-        DOWNLOAD_ASM_DATA(CHECK_JSON_SCHEMA_GENOME.out.gca)
+        DOWNLOAD_ASM_DATA(CHECK_JSON_SCHEMA_GENOME.out.gca, cache_dir)
 
         if (DOWNLOAD_ASM_DATA.out.gene_gff && DOWNLOAD_ASM_DATA.out.protein_fa) {
             UNPACK_FILE(DOWNLOAD_ASM_DATA.out.gene_gff, 'gff', DOWNLOAD_ASM_DATA.out.gca)

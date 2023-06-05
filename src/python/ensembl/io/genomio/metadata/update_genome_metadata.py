@@ -13,14 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TODO"""
+"""Add more metadata to the genome metadata file, including added seq_regions (e.g. MT chromosome)."""
 
 import csv
-import json
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Tuple, Optional
+from typing import List, Tuple, Optional
 import argschema
 
 from Bio import SeqIO
@@ -88,11 +87,10 @@ def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
                     metadata[match.group(1)] = match.group(2)
                 last_head = line
                 continue
-            else:
-                if last_head:
-                    data += last_head[2:].strip() + "\n"
-                    last_head = ""
-                data += line
+            if last_head:
+                data += last_head[2:].strip() + "\n"
+                last_head = ""
+            data += line
         return data, metadata
 
 
@@ -125,7 +123,7 @@ def get_report_regions_names(report_path: Path) -> List[str]:
 
 def amend_genomic_metadata(
     genome_infile: PathLike,
-    INSDC_RefSeq_report_infile: PathLike,
+    insdc_refseq_report_infile: PathLike,
     genbank_infile: PathLike,
     output_dir: PathLike,
     brc4_mode: Optional[int] = 1,
@@ -143,20 +141,23 @@ def amend_genomic_metadata(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    genome_metadata = get_json(genome_infile)
+
     # Final file name
     metadata_type = "genome"
     new_file_name = f"{metadata_type}_amended.json"
     final_path = output_dir / new_file_name
     # use_refseq = self.param("accession").startswith("GCF_")
 
-    # Load genome data
-    with Path(genome_infile).open("r") as genome_fh:
-        genome_metadata = json.load(genome_fh)
-
     # Get additional sequences in the assembly but not in the data
-    additions = get_additions(Path(INSDC_RefSeq_report_infile), Path(genbank_infile))
+    additions = get_additions(Path(insdc_refseq_report_infile), Path(genbank_infile))
     if additions:
         genome_metadata["added_seq"] = {"region_name": additions}
+
+    # Possible brc specific
+    if brc4_mode:
+        pass
+
     # Print out the file
     print_json(final_path, genome_metadata)
 

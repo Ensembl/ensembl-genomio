@@ -20,10 +20,11 @@ Can be imported as a module and called as a script as well, with the same parame
 
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import argschema
 from sqlalchemy import select
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session, joinedload
 
 from ensembl.database import DBConnection
@@ -34,9 +35,13 @@ DEFAULT_MAP = ROOT_DIR / "config/external_db_map/default.txt"
 KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
 
+class MapFormatError(Exception):
+    """Error when parsing the db map file."""
+
+
 def get_external_db_map(map_file: Path) -> Dict:
     """Class method, set up the map for all SeqRegion objects"""
-    db_map = dict()
+    db_map: Dict[str, str] = {}
     with map_file.open("r") as map_fh:
         for line in map_fh:
             line = line.rstrip()
@@ -44,14 +49,21 @@ def get_external_db_map(map_file: Path) -> Dict:
                 continue
             parts = line.split("\t")
             if not parts[0] or not parts[1]:
-                raise Exception(f"External db file is not formatted correctly for: {line}")
-            else:
-                db_map[parts[1]] = parts[0]
+                raise MapFormatError(f"External db file is not formatted correctly for: {line}")
+            db_map[parts[1]] = parts[0]
     return db_map
 
 
 def get_coord_systems(session: Session) -> List[CoordSystem]:
-    coord_systems = list()
+    """Retrieve the coord_system metadata from the current core.
+
+    Args:
+        session (Session): Session for the current core.
+
+    Returns:
+        List[CoordSystem]: All coord_systems in the core.
+    """
+    coord_systems: List[CoordSystem] = []
     coord_stmt = select(CoordSystem).filter(CoordSystem.attrib.like("%default_version%"))
     for row in session.execute(coord_stmt).unique().all():
         coord_systems.append(row[0])
@@ -59,6 +71,17 @@ def get_coord_systems(session: Session) -> List[CoordSystem]:
 
 
 def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
+    """Retrieve the seq_region metadata from the current core.
+    Include synonyms, attribs and karyotypes.
+    Only the top level sequences are exported.
+
+    Args:
+        session (Session): Session from the current core.
+        external_db_map (dict): Mapping of external_db names for the synonyms.
+
+    Returns:
+        List[SeqRegion]: All seq_regions in the core.
+    """
     coord_systems = get_coord_systems(session)
     seq_regions = []
 
@@ -75,7 +98,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
         )
         for row in session.execute(seqr_stmt).unique().all():
             seqr: SeqRegion = row[0]
-            seq_region = dict()
+            seq_region: Dict[str, Any] = {}
             seq_region = {"name": seqr.name, "length": seqr.length}
             synonyms = get_synonyms(seqr, external_db_map)
             if synonyms:
@@ -105,6 +128,12 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
 
 
 def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
+    """Map seq_regions attribs to a specific name and type defined below.
+
+    Args:
+        seq_region (Dict): A seq_region dict to modify.
+        attrib_dict (Dict): The attribs for this seq_region.
+    """
     bool_attribs = {
         "circular_seq": "circular",
         "non_ref": "non_ref",
@@ -119,26 +148,32 @@ def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
         "sequence_location": "location",
     }
 
-    for name in bool_attribs:
+    for name, key in bool_attribs.items():
         value = attrib_dict.get(name)
         if value:
-            key = bool_attribs[name]
             seq_region[key] = bool(value)
 
-    for name in int_attribs:
+    for name, key in int_attribs.items():
         value = attrib_dict.get(name)
         if value:
-            key = int_attribs[name]
             seq_region[key] = int(value)
 
-    for name in string_attribs:
+    for name, key in string_attribs.items():
         value = attrib_dict.get(name)
         if value:
-            key = string_attribs[name]
             seq_region[key] = str(value)
 
 
 def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
+    """Get all synonyms for a given seq_region. Use the mapping for synonym source names.
+
+    Args:
+        seq_region (SeqRegion): Seq_region from which the synonyms are extracted.
+        external_db_map (dict): To map the synonym source names.
+
+    Returns:
+        List: All synonyms as a dict with 'name' and 'source' keys.
+    """
     synonyms = seq_region.seq_region_synonym
     syns = []
     if synonyms:
@@ -157,6 +192,14 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
 
 
 def get_attribs(seq_region: SeqRegion) -> List:
+    """Given a seq_region, extract the attribs as value-source items.
+
+    Args:
+        seq_region (SeqRegion): The seq_region from which the attribs are extracted.
+
+    Returns:
+        List: All attribs as a dict with 'value' and 'source' keys.
+    """
     attribs = seq_region.seq_region_attrib
     atts = []
     if attribs:
@@ -167,6 +210,14 @@ def get_attribs(seq_region: SeqRegion) -> List:
 
 
 def get_karyotype(seq_region: SeqRegion) -> List:
+    """Given a seq_region, extract the karyotype bands.
+
+    Args:
+        seq_region (SeqRegion): The seq_region from which the karyotype bands are extracted.
+
+    Returns:
+        List: All karyotype bands as a dict with values 'start', 'end', 'name' 'stain', 'structure'.
+    """
     bands = seq_region.karyotype
     kars = []
     if bands:
@@ -204,33 +255,18 @@ class InputSchema(argschema.ArgSchema):
     brc_mode = argschema.fields.Bool(default=False, metadata={"description": "BRC specific output"})
 
 
-def make_mysql_url(host: str, user: str, database: str, port: int = 0, password: str = "") -> str:
-    user_pass = user
-    host_port = host
-    if password:
-        user_pass = f"{user}:{password}"
-    if port:
-        host_port = f"{host}:{port}"
-    db_url = f"mysql://{user_pass}@{host_port}/{database}"
-    return db_url
-
-
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     args = mod.args
 
-    host = mod.args["host"]
-    port = int(mod.args["port"])
-    user = mod.args["user"]
-    password = mod.args.get("password")
-    database = mod.args.get("database")
-    db_url = make_mysql_url(
-        host=host,
-        port=port,
-        user=user,
-        password=password,
-        database=database,
+    db_url = URL.create(
+        "mysql",
+        mod.args["user"],
+        mod.args.get("password"),
+        mod.args["host"],
+        mod.args["port"],
+        mod.args.get("database"),
     )
     dbc = DBConnection(db_url)
 

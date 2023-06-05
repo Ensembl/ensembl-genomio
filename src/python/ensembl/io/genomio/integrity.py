@@ -13,23 +13,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Compare the genomic data in a DNA fasta file, seq_region json, gene models GFF3 and peptide fasta
+to ensure their contents are in sync.
+"""
 
 
-import gzip
 import hashlib
-import io
 import json
 from math import floor
 from os import path
 from pathlib import Path
 import re
 import sys
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import argschema
 from BCBio import GFF
 from Bio import SeqIO
 
+from ensembl.io.genomio.utils.archive_utils import open_gz_file
 from ensembl.io.genomio.utils.json_utils import get_json
 
 
@@ -47,9 +49,15 @@ class IntegrityTool:
         self.errors: List[str] = []
 
     def add_error(self, error_str: str) -> None:
+        """Store a new error in the list."""
         self.errors += error_str
 
-    def get_manifest(self) -> Dict:
+    def get_manifest(self) -> Dict[str, Any]:
+        """Load the content of a manifest file.
+
+        Returns:
+            Dict: Content of the manifest file.
+        """
         with open(self.manifest_file) as manifest_fh:
             manifest = json.load(manifest_fh)
 
@@ -293,21 +301,12 @@ class IntegrityTool:
 
             return {"genes": genes, "translations": translations, "transposable_elements": tes}
 
-    def get_gff3(self, gff3_path):
-        # Load the gff file
-        if gff3_path.endswith(".gz"):
-            with io.TextIOWrapper(gzip.open(gff3_path, "r")) as gff3_handle:
-                return self.parse_gff3(gff3_handle)
-        else:
-            with open(gff3_path, "r") as gff3_handle:
-                return self.parse_gff3(gff3_handle)
-
-    def parse_gff3(self, gff3_handle):
+    def get_gff3(self, gff3_path: Path) -> Dict[str, Dict[str, int]]:
         """A GFF parser is used to retrieve information in the GFF file such as
            gene and CDS ids and their corresponding lengths.
 
         Args:
-            gff3_handle: Path to gff3 file.
+            gff3_path: Path to gff3 file.
 
         Returns:
             dict containing sequence ids, gene ids, transcript ids and translation ids
@@ -320,7 +319,8 @@ class IntegrityTool:
         all_peps = {}
         tes = {}
 
-        gff = GFF.parse(gff3_handle)
+        with open_gz_file(gff3_path) as gff3_handle:
+            gff = GFF.parse(gff3_handle)
         for seq in gff:
             seqs[seq.id] = len(seq.seq)
 
@@ -381,14 +381,14 @@ class IntegrityTool:
                 for line in agph:
                     (
                         asm_id,
-                        asm_start,
+                        _,  # asm_start
                         asm_end,
-                        asm_part,
+                        _,  # asm_part
                         typ,
                         cmp_id,
-                        cmp_start,
+                        _,  # cmp_start
                         cmp_end,
-                        cmp_strand,
+                        _,  # cmp_strand
                     ) = line.split("\t")
                     # Ignore WGS contig
                     if typ != "W":
@@ -573,6 +573,7 @@ class InputSchema(argschema.ArgSchema):
 
 
 def main() -> None:
+    """Main entrypoint."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
 
     # Start

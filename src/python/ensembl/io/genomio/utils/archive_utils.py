@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TODO"""
+"""Utils to deal with archived files (gzip)."""
 
 __all__ = ["SUPPORTED_ARCHIVE_FORMATS", "extract_file"]
 
@@ -28,6 +28,15 @@ import argschema
 
 @contextmanager
 def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
+    """Open a file that is optionally compressed with gz.
+    The file is expected to contain a text, and this can be used with the usual "with".
+
+    Args:
+        file_path (PathLike): A file path to open.
+
+    Yields:
+        Generator[TextIO, None, None]: A generator for the file.
+    """
     this_file = Path(file_path)
     if this_file.suffix == ".gz":
         with gzip.open(this_file, "rt") as fh:
