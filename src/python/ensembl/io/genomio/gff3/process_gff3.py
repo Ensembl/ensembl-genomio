@@ -607,7 +607,7 @@ class GFFSimplifier(GFFParserCommon):
         This is to fix the case where we have the following structure:
         gene -> [ mRNA, CDSs ]
         and change it to
-        gene -> [ mNRA -> [ CDSs ] ]
+        gene -> [ mRNA -> [ CDSs ] ]
         The mRNA might have exons, in which case check that they match the CDS coordinates.
 
         Raises an exception if the feature structure is not recognized.
@@ -650,8 +650,27 @@ class GFFSimplifier(GFFParserCommon):
             elif subf.type == "exon":
                 sub_exons.append(subf)
 
+        self._check_sub_cdss(gene, sub_cdss)
+        self._check_sub_exons(gene, cdss, sub_exons)
+
+        print(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
+        # No more issues? move the CDSs
+        mrna.sub_features += cdss
+        # And remove them from the gene
+        gene.sub_features = gene_subf_clean
+        gene.sub_features.append(mrna)
+
+        return gene
+
+    @staticmethod
+    def _check_sub_cdss(gene, sub_cdss) -> None:
         if len(sub_cdss) > 0:
             raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
+
+    @staticmethod
+    def _check_sub_exons(gene, cdss, sub_exons) -> None:
+        """Check that the exons of the mRNA and the CDSs match"""
+
         if len(sub_exons) > 0:
             # Check that they match the CDS outside
             if len(sub_exons) == len(cdss):
@@ -665,15 +684,6 @@ class GFFSimplifier(GFFParserCommon):
                 raise GFFParserError(
                     f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)"
                 )
-
-        print(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
-        # No more issues? move the CDSs
-        mrna.sub_features += cdss
-        # And remove them from the gene
-        gene.sub_features = gene_subf_clean
-        gene.sub_features.append(mrna)
-
-        return gene
 
     def clean_extra_exons(self, gene: SeqFeature) -> SeqFeature:
         """Remove extra exons, already existing in the mRNA.
