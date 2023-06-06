@@ -87,6 +87,7 @@ collect:artifacts:coverage:
   needs:
     - project: $CI_PROJECT_PATH
       job: python:tests:pytest
+      ref: $ARTIFACTS_DOWNLOAD_REF
       artifacts: true
   script:
     - cat $RUN_DIR/cov_report/report.txt
