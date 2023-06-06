@@ -32,7 +32,6 @@ variables:
 stages:
   - debug
   - test
-  - collect
 
 # In-house stuff
 
@@ -50,14 +49,29 @@ debug:gitlab_env:
 #   Python checks
 test:python:
   stage: test
-  artifacts:
-    paths:
-      - $RUN_DIR
   # using sub-pipeline from ./parts
   trigger:
     strategy: depend
     include:
     - local: /cicd/gitlab/parts/python.gitlab-ci.yml
+
+#  Get artifacts from python tests
+test:python:artifacts:
+  stage: test
+  needs:
+    - job: test:python
+
+# collect artifatcs
+collect:artifacts:coverage:
+  stage: collect
+  needs:
+    - job: test:python
+  script:
+    - cd $RUN_DIR
+    - wget https://gitlab.com/api/v4/projects/$CI_PROJECT_PATH/jobs/artifacts/main/download?job=python:tests:pytest
+    - cat $RUN_DIR/cov_report/report.txt
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+
 
 #   License checks
 test:license:
@@ -86,17 +100,4 @@ test:external:code_quality:
 
 
 
-# collect artifatcs
-collect:artifacts:coverage:
-  stage: collect
-  needs:
-    - job: test:python
-      artifacts: true
-#    - project: $CI_PROJECT_PATH
-#      job: python:tests:pytest
-#      ref: $ARTIFACTS_DOWNLOAD_REF
-#      artifacts: true
-  script:
-    - cat $RUN_DIR/cov_report/report.txt
-  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
 
