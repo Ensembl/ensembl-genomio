@@ -92,6 +92,10 @@ test:external:code_quality:
     include:
       - template: Code-Quality.gitlab-ci.yml
 
-
-
+# DANGER ZONE
+danger:project:drop:artifacts:
+  when: manual
+  stage: debug
+  script:
+    - 'wget --method=DELETE --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/artifacts"'
 
