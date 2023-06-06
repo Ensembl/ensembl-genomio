@@ -26,11 +26,11 @@ process GFF3_VALIDATION {
     path gene_models
 
   output:
-    path "*"
+    path gene_models, emit: gene_models
 
   script:
   """
-  mv ${gene_models} gene_models.gff3.tmp 
+  cp ${gene_models} gene_models.gff3.tmp 
   gt gff3 -tidy -sort -retainids -force -o ${gene_models} gene_models.gff3.tmp 
   gt gff3validator ${gene_models}
   """
