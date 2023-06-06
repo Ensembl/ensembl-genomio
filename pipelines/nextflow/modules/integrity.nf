@@ -21,12 +21,13 @@ process CHECK_INTEGRITY {
     time '1h'
 
     input:
-        path manifest_dir
+        // path manifest_dir
+        tuple path(manifest_dir), val(accession)
         val brc_mode
     
     output:
-        path manifest_dir
-
+        // path manifest_dir
+        tuple path("${manifest_dir}/"), val(accession), emit: integrity_checked
     script:
         """
         brc_mode=''

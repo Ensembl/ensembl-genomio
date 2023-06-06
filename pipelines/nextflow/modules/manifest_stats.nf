@@ -18,11 +18,12 @@ process MANIFEST_STATS {
     label 'default'
 
     input:
-        path manifest_dir
-        val datasets
+        // path manifest_dir
+        tuple path(manifest_dir), val(accession)
+        val (datasets)
 
     output:
-        path manifest_dir
+        tuple path(manifest_dir), val(accession)
 
     script:
         """

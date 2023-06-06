@@ -58,8 +58,8 @@ include { PREPARE_GENOME_METADATA } from '../../modules/prepare_genome_metadata.
 // Run main workflow
 workflow {
     PREPARE_GENOME_METADATA(ch_genome_json)
-    accession = PREPARE_GENOME_METADATA.out.accession.map{ it.getName() }
-    genome_json = PREPARE_GENOME_METADATA.out.json
-    GENOME_PREPARE(accession, genome_json, params.output_dir, params.cache_dir)
-
+    PREPARE_GENOME_METADATA.out.genomic_dataset
+        .map{ gca_dir, json_file -> tuple( gca_dir.getName(), json_file ) }
+        .set { genome_metadata }
+    GENOME_PREPARE(genome_metadata, params.output_dir, params.cache_dir)
 }

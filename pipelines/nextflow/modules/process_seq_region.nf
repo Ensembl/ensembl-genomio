@@ -19,20 +19,16 @@ process PROCESS_SEQ_REGION {
     debug true
 
     input:
-    path genome_json
-    path assembly_report
-    path gbff_file
-    val gca
-    // val regions_to_exclude
+        tuple val(gca), path (genome_json)
+        tuple val(gca), path (assembly_report), path (genomic_fna), path (genomic_gbff)
 
     output:
-        val gca, emit: gca
-        path "*/seq_region.json", emit: seq_region
+        tuple val(gca), path("*/seq_region.json"), emit: seq_region
 
     script:
     """
     prepare_seq_region --genome_file ${genome_json} --report_file ${assembly_report} \
-        --gbff_file ${gbff_file} --dst_dir ${gca}
+        --gbff_file ${genomic_gbff} --dst_dir ${gca}
     """
     // --to_exclude ${regions_to_exclude}
 }

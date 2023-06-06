@@ -19,16 +19,15 @@ params.merge_split_genes="False"
 process PROCESS_GFF3 {
     tag "$gff3 - $task.attempt"
     label 'variable_2_8_32'
+    errorStrategy 'ignore'
 
     input:
-    path gff3
-    path genome
-    val gca
+        tuple val(gca), path (gff3) // Unpacked data
+        tuple val(gca), path (genome) // Checked genome json
 
     output:
-    path "*.gff3", emit: gene_models
-    path "*.json", emit: functional_annotation
-    val gca, emit: gca
+        tuple val(gca), path("*.json"), emit: functional_annotation
+        tuple val(gca), path ("*.gff3"), emit: gene_models
 
     script:
     """

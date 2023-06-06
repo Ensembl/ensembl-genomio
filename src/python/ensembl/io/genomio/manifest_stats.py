@@ -177,7 +177,7 @@ class manifest_stats:
             stat_counts["Sequence length maximum"] = max(lengths)
 
             for name, count in stat_counts.items():
-                stats.append(f"{count: 9d}\t{name}")
+                stats.append(f"{count: 9f}\t{name}")
 
         # Special
         if circular or locations:

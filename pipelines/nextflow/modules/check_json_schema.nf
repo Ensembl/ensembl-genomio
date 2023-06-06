@@ -18,12 +18,10 @@ process CHECK_JSON_SCHEMA {
     label 'default'
 
     input:
-        path(json_file)
-        val(gca)
+        tuple val(gca), path(json_file)
 
     output:
-        path json_file, emit: verified_json
-        val gca, emit: gca
+        tuple val(gca), path(json_file), emit: verified_json
 
     script:
         schema = params.json_schemas[json_file.baseName]

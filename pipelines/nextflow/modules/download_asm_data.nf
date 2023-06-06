@@ -20,17 +20,12 @@ process DOWNLOAD_ASM_DATA {
     storeDir "$store_assembly"
 
     input:
-    val(gca)
-    val(store_assembly)
-    
+        tuple val(gca), path(json_file)
+        val(store_assembly)
+
     output:
-    val gca, emit: gca
-    path "${gca}/*_assembly_report.txt", emit: asm_report
-    path "${gca}/*_genomic.fna.gz", emit: genome_fna
-    path "${gca}/*_genomic.gbff.gz", emit: genome_gbff, optional: true
-    path "${gca}/*_genomic.gff.gz", emit: genome_gff, optional: true
-    path "${gca}/*_protein.faa.gz", emit: protein_fa, optional: true
-    path "${gca}/*.gff*", emit: gene_gff, optional: true
+        tuple val(gca), path("${gca}/*_assembly_report.txt"), path("${gca}/*_genomic.fna.gz"), path("${gca}/*_genomic.gbff.gz"), emit: min_set
+        tuple val(gca), path("${gca}/*_genomic.gff.gz"), path("${gca}/*_protein.faa.gz"), path("${gca}/*_genomic.gbff.gz"), emit: opt_set, optional: true
 
     script:
     """
