@@ -13,26 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process COLLECT_FILES {
-    tag "Collect_files"
+process MANIFEST {
+    tag "Manifest_$accession"
     label 'default'
-    time '5min'
-
-    input:
-        tuple val(accession), path(file_name)
     
+    input:
+        tuple path(manifest_dir), val(accession)
+
     output:
-        tuple path ("${accession}"), val(accession), emit: manifest_dir_gca
+        tuple path(manifest_dir), val(accession)
     
     script:
         """
-        DBDIR=${accession}/
-        mkdir \$DBDIR
-        echo ${file_name}
-        for FILE in ${file_name}; do
-            if [ -s \$FILE ]; then
-                mv \$FILE \$DBDIR
-            fi
-        done
+        manifest_maker --manifest_dir ${manifest_dir}
         """
 }

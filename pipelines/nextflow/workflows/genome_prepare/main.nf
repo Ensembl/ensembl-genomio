@@ -61,4 +61,5 @@ workflow {
     accession = PREPARE_GENOME_METADATA.out.accession.map{ it.getName() }
     genome_json = PREPARE_GENOME_METADATA.out.json
     GENOME_PREPARE(accession, genome_json, params.output_dir, params.cache_dir)
+
 }
