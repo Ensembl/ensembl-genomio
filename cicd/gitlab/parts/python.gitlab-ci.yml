@@ -114,7 +114,7 @@ python:tests:pytest:
   script:
     - coverage run -m pytest
     - coverage html -d $RUN_DIR/cov_report/html
-    - coverage xml -d $RUN_DIR/cov_report/xml
+    - coverage xml -o $RUN_DIR/cov_report/xml/coverage.xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
     paths:
