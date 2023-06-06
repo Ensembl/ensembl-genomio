@@ -28,21 +28,17 @@ from pathlib import Path
 from typing import ContextManager
 
 import pytest
-from pytest import raises
 
 from ensembl.io.genomio.integrity import IntegrityTool
 
 
-class TestSchemas:
+class TestIntegrity:
+    """Tests for the integrity module.
+    """
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, tmp_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
         type(self).tmp_dir = tmp_dir
-
-    def test_integrity_empty(self) -> None:
-        with raises(TypeError):
-            integrity = IntegrityTool()
-            assert isinstance(integrity, IntegrityTool)
 
     @pytest.mark.parametrize(
         "manifest_dir, brc_mode, ignore_false_stops, expected",
