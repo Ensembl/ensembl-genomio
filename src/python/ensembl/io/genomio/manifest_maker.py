@@ -24,6 +24,8 @@ import argschema
 
 
 class ManifestMaker:
+    """Given a directory with genomic files, create a manifest json file for them."""
+
     names = {
         "gff3",
         "fasta_dna",
@@ -34,14 +36,13 @@ class ManifestMaker:
         "seq_region",
         "agp",
         "events",
-        "pep",
-        "dna",
     }
 
     def __init__(self, manifest_dir: Path) -> None:
         self.dir = manifest_dir
 
     def create_manifest(self) -> Path:
+        """Create the manifest file."""
         manifest_data = self.get_files_checksums()
         manifest_path = self.dir / "manifest.json"
         with manifest_path.open("w") as json_out:
@@ -49,11 +50,12 @@ class ManifestMaker:
         return manifest_path
 
     def get_files_checksums(self):
+        """Compute the checksum of all the files in the directory."""
         manifest_files = {}
         for subfile in self.dir.iterdir():
             used_file = False
             if subfile.is_dir():
-                print("Can't create manifet for subdirectory")
+                print("Can't create manifest for subdirectory")
                 continue
 
             for name in ManifestMaker.names:
@@ -62,7 +64,7 @@ class ManifestMaker:
                     md5 = self._get_md5sum(subfile)
                     file_obj = {"file": subfile.name, "md5sum": md5}
                     if name in manifest_files:
-                        if type(manifest_files[name]) == "list":
+                        if isinstance(manifest_files[name], list):
                             manifest_files[name].append(file_obj)
                         else:
                             # Convert to a list
@@ -79,8 +81,8 @@ class ManifestMaker:
     @staticmethod
     def _get_md5sum(file_path: Path) -> str:
         with file_path.open("rb") as f:
-            bytes = f.read()
-            return hashlib.md5(bytes).hexdigest()
+            data_bytes = f.read()
+            return hashlib.md5(data_bytes).hexdigest()
 
 
 class InputSchema(argschema.ArgSchema):
@@ -93,6 +95,7 @@ class InputSchema(argschema.ArgSchema):
 
 
 def main() -> None:
+    """Main entrypoint."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
 
     maker = ManifestMaker(Path(mod.args["manifest_dir"]))

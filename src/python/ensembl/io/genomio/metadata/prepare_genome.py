@@ -12,7 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TODO"""
+"""Expand the genome_metadata with more details for:
+the provider, assembly and gene build version, and the taxonomy.
+"""
 
 __all__ = [
     "add_provider",
@@ -28,12 +30,12 @@ __all__ = [
 import datetime
 from os import PathLike
 from pathlib import Path
-import requests
 from typing import Dict, Optional
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
 import argschema
+import requests
 
 from ensembl.io.genomio.utils import get_json, print_json
 
@@ -63,8 +65,12 @@ PROVIDER_DATA = {
 DEFAULT_API_URL = "https://www.ebi.ac.uk/ena/browser/api/xml/"
 
 
-def MissingNodeError(Exception):
-    pass
+class MissingNodeError(Exception):
+    """When a taxon XML node cannot be found."""
+
+
+class MetadataError(Exception):
+    """When a metadata value is not expected."""
 
 
 def add_provider(genome_data: Dict, gff3_file: Optional[PathLike] = None) -> None:
@@ -85,18 +91,20 @@ def add_provider(genome_data: Dict, gff3_file: Optional[PathLike] = None) -> Non
     elif accession.startswith("GCA"):
         provider = PROVIDER_DATA["GenBank"]
     else:
-        raise Exception(f"Accession doesn't look like an INSDC or RefSeq accession: {accession}")
+        raise MetadataError(f"Accession doesn't look like an INSDC or RefSeq accession: {accession}")
+
     # Add assembly provider (if missing)
     assembly = genome_data["assembly"]
     if (not "provider_name" in assembly) and (not "provider_url" in assembly):
         assembly["provider_name"] = provider["assembly"]["provider_name"]
         assembly["provider_url"] = provider["assembly"]["provider_url"]
+
     # Add annotation provider if there are gene models
     if gff3_file:
         annotation = {}
         if "annotation" in genome_data:
             annotation = genome_data["annotation"]
-        if (not "provider_name" in annotation) and (not "provider_url" in annotation):
+        if ("provider_name" not in annotation) and ("provider_url" not in annotation):
             annotation["provider_name"] = provider["annotation"]["provider_name"]
             annotation["provider_url"] = provider["annotation"]["provider_url"]
         genome_data["annotation"] = annotation
@@ -126,7 +134,6 @@ def add_genebuild_metadata(genome_data: Dict) -> None:
         genome_data: Genome information of assembly, accession and annotation.
 
     """
-    assembly = genome_data["assembly"]
     genebuild = genome_data["genebuild"]
     current_date = datetime.date.today().isoformat()
     if not "version" in genebuild:
@@ -174,12 +181,12 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
     """
     # Use the GenBank accession without version
     gb_accession = accession.replace("GCF", "GCA").split(".")[0]
-    response = requests.get(f"{base_api_url}/{gb_accession}")
+    response = requests.get(f"{base_api_url}/{gb_accession}", timeout=60)
     entry = ElementTree.fromstring(response.text)
 
     taxon_node = entry.find(".//TAXON")
     if taxon_node is None:
-        raise Exception("Can't find the TAXON node")
+        raise MissingNodeError("Can't find the TAXON node")
 
     # Fetch taxon ID, scientific_name and strain
     taxon_id = _get_node_text(taxon_node, "TAXON_ID")
@@ -213,10 +220,9 @@ def _get_node_text(node: Element, tag: str, optional: bool = False) -> Optional[
 
     if tag_node is not None:
         return tag_node.text
-    else:
-        if optional:
-            return None
-        raise MissingNodeError(f"No node found for tag {tag}")
+    if optional:
+        return None
+    raise MissingNodeError(f"No node found for tag {tag}")
 
 
 def prepare_genome_metadata(
