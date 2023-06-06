@@ -50,14 +50,14 @@ debug:gitlab_env:
 #   Python checks
 test:python:
   stage: test
+  artifacts:
+    paths:
+      - $RUN_DIR
   # using sub-pipeline from ./parts
   trigger:
     strategy: depend
     include:
     - local: /cicd/gitlab/parts/python.gitlab-ci.yml
-  artifacts:
-    paths:
-      - $RUN_DIR
 
 #   License checks
 test:license:
