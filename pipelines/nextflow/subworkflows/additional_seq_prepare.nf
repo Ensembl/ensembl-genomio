@@ -19,7 +19,6 @@ include { EXTRACT_FROM_GB } from '../modules/extract_from_gb.nf'
 include { PROCESS_GFF3 } from '../modules/process_gff3.nf'
 include { GFF3_VALIDATION } from '../modules/gff3_validation.nf'
 include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
-// include { JSON_SCHEMA_FACTORY } from '../modules/json_schema_factory.nf' // NOT USED !! 
 include { COLLECT_FILES } from '../modules/collect_files.nf'
 include { MANIFEST } from '../modules/manifest_maker.nf'
 include { PUBLISH_DIR } from '../modules/publish_output.nf'
