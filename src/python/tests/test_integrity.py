@@ -33,8 +33,8 @@ from ensembl.io.genomio.integrity import IntegrityTool
 
 
 class TestIntegrity:
-    """Tests for the integrity module.
-    """
+    """Tests for the integrity module."""
+
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, tmp_dir: Path):
         """Loads necessary fixtures and values as class attributes."""

@@ -36,6 +36,8 @@ from ensembl.io.genomio import schemas
 
 
 class TestSchemas:
+    """Tests for the schemas modules."""
+
     test_data_dir: Path
     schema_dir: Path
     tmp_dir: Path
