@@ -51,7 +51,7 @@ workflow additional_seq_prepare {
         // Verify schemas 
         CHECK_JSON_SCHEMA(json_files)
 
-        // Gather json files and reduce to unique input accession
+        // Gather json and fasta files and reduce to unique input accession
         all_files = CHECK_JSON_SCHEMA.out.verified_json
                         .concat(EXTRACT_FROM_GB.out.dna_fasta, EXTRACT_FROM_GB.out.pep_fasta)
                         .groupTuple()
