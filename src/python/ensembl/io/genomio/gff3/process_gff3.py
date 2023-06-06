@@ -1,4 +1,3 @@
-#!env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -21,7 +20,7 @@ from collections import Counter
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import json
 import argschema
@@ -31,91 +30,7 @@ from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.io.genomio.utils.json_utils import print_json
-
-
-Annotation = Dict[str, Any]
-
-
-class FunctionalAnnotations:
-    """List of annotations extracted from a GFF3 file."""
-
-    def __init__(self) -> None:
-        self.annotations: List[Annotation] = []
-
-    def add_feature(self, feature: SeqFeature, feat_type: str) -> None:
-        """Append a feature object following the specifications.
-
-        Args:
-            feature: The SeqFeature to add to the list.
-            feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
-
-        """
-
-        feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
-
-        # Description?
-        if "product" in feature.qualifiers:
-            description = feature.qualifiers["product"][0]
-            if self._product_is_valid(description):
-                feature_object["description"] = description
-
-        if "Name" in feature.qualifiers and "description" not in feature_object:
-            name = feature.qualifiers["Name"][0]
-
-            # Exclude Name if it just a variant of the feature ID
-            if feature.id not in name:
-                feature_object["description"] = name
-
-        # Synonyms?
-        if "Name" in feature.qualifiers:
-            feat_name = feature.qualifiers["Name"][0]
-            if feat_name != feature.id:
-                feature_object["synonyms"] = {"synonym": feat_name, "default": True}
-
-        # is_pseudogene?
-        if feature.type.startswith("pseudogen"):
-            feature_object["is_pseudogene"] = True
-
-        self.annotations.append(feature_object)
-
-    @staticmethod
-    def _product_is_valid(product: str) -> bool:
-        """Check a product string.
-
-        Args:
-            product: a product name.
-
-        Returns:
-            True only if the string is valid, False otherwise.
-
-        """
-        excluded_names = re.compile(
-            r"^(uncharacterized|putative|hypothetical|predicted)"
-            r"( uncharacterized)?"
-            r" protein"
-            r"( of unknown function)?"
-            r"( \(fragment\))?$"
-        )
-
-        if excluded_names.match(product.lower()):
-            return False
-        return True
-
-    def _cleanup(self) -> None:
-        """Returns the functional annotations list without putative product descriptions."""
-        for feat in self.annotations:
-            if "description" in feat and not self._product_is_valid(feat["description"]):
-                del feat["description"]
-
-    def to_json(self, out_path: PathLike) -> None:
-        """Print out the current annotation list in a json file.
-
-        Args:
-            out_path (PathLike): Json file where to write the data.
-        """
-        self._cleanup()
-        print_json(Path(out_path), self.annotations)
+from ensembl.io.genomio.gff3.functional_annotation import FunctionalAnnotations
 
 
 class Records(list):
