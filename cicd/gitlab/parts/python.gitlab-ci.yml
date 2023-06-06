@@ -113,7 +113,14 @@ python:tests:pytest:
   extends: .python:tests:generic
   script:
     - coverage run -m pytest
-    - coverage html -d cov_report
+    - coverage html -d $RUN_DIR/cov_report/html
+    - coverage xml -d $RUN_DIR/cov_report/xml
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
     paths:
-      - cov_report
+      - $RUN_DIR/cov_report
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: $RUN_DIR/cov_report/xml/coverage.xml
+
