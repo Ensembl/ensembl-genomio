@@ -331,10 +331,6 @@ class GFFSimplifier(GFFParserCommon):
 
         """
 
-        allowed_transcript_types = self.transcript_types
-        ignored_transcript_types = self.ignored_transcript_types
-        skip_unrecognized = self.skip_unrecognized
-
         # New gene ID
         gene.id = self.normalize_gene_id(gene)
         self.transfer_description(gene)
@@ -376,6 +372,26 @@ class GFFSimplifier(GFFParserCommon):
             self.remove_cds_from_pseudogene(gene)
 
         # TRANSCRIPTS
+        gene = self._normalize_transcripts(gene, fail_types)
+
+        # PSEUDOGENE CDS IDs
+        if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
+            self.normalize_pseudogene_cds(gene)
+
+        # Finally, store gene functional annotation
+        self.annotations.add_feature(gene, "gene")
+
+        # replace qualifiers
+        old_gene_qualifiers = gene.qualifiers
+        gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
+
+        return gene
+
+    def _normalize_transcripts(self, gene: SeqFeature, fail_types) -> SeqFeature:
+        allowed_transcript_types = self.transcript_types
+        ignored_transcript_types = self.ignored_transcript_types
+        skip_unrecognized = self.skip_unrecognized
+
         transcripts_to_delete = []
         for count, transcript in enumerate(gene.sub_features):
             if (
@@ -459,17 +475,6 @@ class GFFSimplifier(GFFParserCommon):
         if transcripts_to_delete:
             for elt in sorted(transcripts_to_delete, reverse=True):
                 gene.sub_features.pop(elt)
-
-        # PSEUDOGENE CDS IDs
-        if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
-            self.normalize_pseudogene_cds(gene)
-
-        # Finally, store gene functional annotation
-        self.annotations.add_feature(gene, "gene")
-
-        # replace qualifiers
-        old_gene_qualifiers = gene.qualifiers
-        gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
 
         return gene
 
