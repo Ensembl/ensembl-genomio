@@ -57,12 +57,6 @@ test:python:
 
 #  Get artifacts from python tests
 test:python:artifacts:
-  stage: test
-  needs:
-    - job: test:python
-
-# collect artifatcs
-collect:artifacts:coverage:
   stage: collect
   needs:
     - job: test:python
