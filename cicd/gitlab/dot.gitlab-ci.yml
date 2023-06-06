@@ -55,6 +55,9 @@ test:python:
     strategy: depend
     include:
     - local: /cicd/gitlab/parts/python.gitlab-ci.yml
+  artifacts:
+    paths:
+      - $RUN_DIR
 
 #   License checks
 test:license:
@@ -81,16 +84,18 @@ test:external:code_quality:
     include:
       - template: Code-Quality.gitlab-ci.yml
 
+
+
 # collect artifatcs
 collect:artifacts:coverage:
   stage: collect
   needs:
     - job: test:python
       artifacts: true
-    - project: $CI_PROJECT_PATH
-      job: python:tests:pytest
-      ref: $ARTIFACTS_DOWNLOAD_REF
-      artifacts: true
+#    - project: $CI_PROJECT_PATH
+#      job: python:tests:pytest
+#      ref: $ARTIFACTS_DOWNLOAD_REF
+#      artifacts: true
   script:
     - cat $RUN_DIR/cov_report/report.txt
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
