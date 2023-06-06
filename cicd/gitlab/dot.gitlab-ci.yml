@@ -61,10 +61,8 @@ test:python:artifacts:
   needs:
     - job: test:python
   script:
-    # - wget https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/main/download?job=python:tests:pytest
     - 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/download?job=python:tests:pytest"'
-    - unzip $RUN_DIR/artifatcs.zip
-    - ls $RUN_DIR
+    - unzip $RUN_DIR/artifacts.zip # N.B. has $RUN_DIR as the root
     - cat $RUN_DIR/cov_report/report.txt
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
 
