@@ -57,7 +57,7 @@ test:python:
 
 #  Get artifacts from python tests
 test:python:artifacts:
-  stage: collect
+  stage: test
   needs:
     - job: test:python
   script:
