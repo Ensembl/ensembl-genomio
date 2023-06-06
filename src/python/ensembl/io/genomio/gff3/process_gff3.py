@@ -388,8 +388,8 @@ class GFFSimplifier(GFFParserCommon):
         return gene
 
     def _normalize_transcripts(self, gene: SeqFeature, fail_types) -> SeqFeature:
+        """Returns a normalized transcript."""
         allowed_transcript_types = self.transcript_types
-        ignored_transcript_types = self.ignored_transcript_types
         skip_unrecognized = self.skip_unrecognized
 
         transcripts_to_delete = []
@@ -424,59 +424,67 @@ class GFFSimplifier(GFFParserCommon):
                 transcript.qualifiers["source"] = old_transcript_qualifiers["source"]
 
             # EXONS AND CDS
-            cds_found = False
-            exons_to_delete = []
-            for tcount, feat in enumerate(transcript.sub_features):
-                if feat.type == "exon":
-                    # Replace qualifiers
-                    old_exon_qualifiers = feat.qualifiers
-                    feat.qualifiers = {
-                        "Parent": transcript.id,
-                    }
-                    if "source" in old_exon_qualifiers:
-                        feat.qualifiers["source"] = old_exon_qualifiers["source"]
-                elif feat.type == "CDS":
-                    # New CDS ID
-                    feat.id = self.normalize_cds_id(feat.id)
-                    if feat.id in ("", gene.id, transcript.id):
-                        feat.id = f"{transcript.id}_cds"
-
-                    # Store CDS functional annotation (only once)
-                    if not cds_found:
-                        cds_found = True
-                        self.annotations.add_feature(feat, "translation")
-
-                    # Replace qualifiers
-                    feat.qualifiers = {
-                        "ID": feat.id,
-                        "Parent": transcript.id,
-                        "phase": feat.qualifiers["phase"],
-                        "source": feat.qualifiers["source"],
-                    }
-                else:
-                    if feat.type in ignored_transcript_types:
-                        exons_to_delete.append(tcount)
-                        continue
-
-                    fail_types["sub_transcript=" + feat.type] = 1
-                    message = (
-                        f"Unrecognized exon type for {feat.type}: {feat.id}"
-                        f" (for transcript {transcript.id} of type {transcript.type})"
-                    )
-                    print(message)
-                    if self.skip_unrecognized:
-                        exons_to_delete.append(tcount)
-                        continue
-
-            if exons_to_delete:
-                for elt in sorted(exons_to_delete, reverse=True):
-                    transcript.sub_features.pop(elt)
+            transcript = self._normalize_transcript_subfeatures(gene, transcript, fail_types)
 
         if transcripts_to_delete:
             for elt in sorted(transcripts_to_delete, reverse=True):
                 gene.sub_features.pop(elt)
 
         return gene
+
+    def _normalize_transcript_subfeatures(
+        self, gene: SeqFeature, transcript: SeqFeature, fail_types
+    ) -> SeqFeature:
+        """Returns a transcript with normalized sub-features."""
+        ignored_transcript_types = self.ignored_transcript_types
+        cds_found = False
+        exons_to_delete = []
+        for tcount, feat in enumerate(transcript.sub_features):
+            if feat.type == "exon":
+                # Replace qualifiers
+                old_exon_qualifiers = feat.qualifiers
+                feat.qualifiers = {
+                    "Parent": transcript.id,
+                }
+                if "source" in old_exon_qualifiers:
+                    feat.qualifiers["source"] = old_exon_qualifiers["source"]
+            elif feat.type == "CDS":
+                # New CDS ID
+                feat.id = self.normalize_cds_id(feat.id)
+                if feat.id in ("", gene.id, transcript.id):
+                    feat.id = f"{transcript.id}_cds"
+
+                # Store CDS functional annotation (only once)
+                if not cds_found:
+                    cds_found = True
+                    self.annotations.add_feature(feat, "translation")
+
+                # Replace qualifiers
+                feat.qualifiers = {
+                    "ID": feat.id,
+                    "Parent": transcript.id,
+                    "phase": feat.qualifiers["phase"],
+                    "source": feat.qualifiers["source"],
+                }
+            else:
+                if feat.type in ignored_transcript_types:
+                    exons_to_delete.append(tcount)
+                    continue
+
+                fail_types["sub_transcript=" + feat.type] = 1
+                message = (
+                    f"Unrecognized exon type for {feat.type}: {feat.id}"
+                    f" (for transcript {transcript.id} of type {transcript.type})"
+                )
+                print(message)
+                if self.skip_unrecognized:
+                    exons_to_delete.append(tcount)
+                    continue
+
+        if exons_to_delete:
+            for elt in sorted(exons_to_delete, reverse=True):
+                transcript.sub_features.pop(elt)
+        return transcript
 
     def transfer_description(self, gene: SeqFeature) -> None:
         """Transfer descriptions from transcripts/translations to gene/transcripts.
