@@ -13,26 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process COLLECT_FILES {
-    tag "Collect_files"
+process PUBLISH_DIR {
+    publishDir "$out_dir", mode: 'copy', overwrite: false
+    tag "Publish_${accession}"
     label 'default'
     time '5min'
 
     input:
-        tuple val(accession), path(file_name)
+        tuple path(data_dir), val(accession)
+        val (out_dir)
     
     output:
-        tuple path ("${accession}"), val(accession), emit: manifest_dir_gca
+        path data_dir
     
     script:
         """
-        DBDIR=${accession}/
-        mkdir \$DBDIR
-        echo ${file_name}
-        for FILE in ${file_name}; do
-            if [ -s \$FILE ]; then
-                mv \$FILE \$DBDIR
-            fi
-        done
+        echo "Just copy over the finished files"
+        echo "From '$data_dir' to '$out_dir' for accession '$accession'"
         """
 }
