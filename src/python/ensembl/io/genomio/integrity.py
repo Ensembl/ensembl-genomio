@@ -321,37 +321,37 @@ class IntegrityTool:
 
         with open_gz_file(gff3_path) as gff3_handle:
             gff = GFF.parse(gff3_handle)
-        for seq in gff:
-            seqs[seq.id] = len(seq.seq)
+            for seq in gff:
+                seqs[seq.id] = len(seq.seq)
 
-            for feat in seq.features:
-                feat_length = abs(feat.location.end - feat.location.start)
-                # Store gene id and length
-                if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
-                    gene_id = feat.id
-                    if not self.brc_mode:
-                        gene_id = gene_id.replace("gene:", "")
-                    genes[gene_id] = abs(feat.location.end - feat.location.start)
-                    # Get CDS id and length
-                    for feat2 in feat.sub_features:
-                        if feat2.type in ("mRNA", "pseudogenic_transcript"):
-                            length = {}
-                            for feat3 in feat2.sub_features:
-                                if feat3.type == "CDS":
-                                    pep_id = feat3.id
-                                    if not self.brc_mode:
-                                        pep_id = pep_id.replace("CDS:", "")
-                                    if pep_id not in length:
-                                        length[pep_id] = 0
-                                    length[pep_id] += abs(feat3.location.end - feat3.location.start)
-                            for pep_id, pep_length in length.items():
-                                # Store length for translations, add pseudo translations separately
-                                pep_length = floor(pep_length / 3) - 1
-                                if feat.type != "pseudogene":
-                                    peps[pep_id] = pep_length
-                                all_peps[pep_id] = pep_length
-                if feat.type == "transposable_element":
-                    tes[feat.id] = feat_length
+                for feat in seq.features:
+                    feat_length = abs(feat.location.end - feat.location.start)
+                    # Store gene id and length
+                    if feat.type in ["gene", "ncRNA_gene", "pseudogene"]:
+                        gene_id = feat.id
+                        if not self.brc_mode:
+                            gene_id = gene_id.replace("gene:", "")
+                        genes[gene_id] = abs(feat.location.end - feat.location.start)
+                        # Get CDS id and length
+                        for feat2 in feat.sub_features:
+                            if feat2.type in ("mRNA", "pseudogenic_transcript"):
+                                length = {}
+                                for feat3 in feat2.sub_features:
+                                    if feat3.type == "CDS":
+                                        pep_id = feat3.id
+                                        if not self.brc_mode:
+                                            pep_id = pep_id.replace("CDS:", "")
+                                        if pep_id not in length:
+                                            length[pep_id] = 0
+                                        length[pep_id] += abs(feat3.location.end - feat3.location.start)
+                                for pep_id, pep_length in length.items():
+                                    # Store length for translations, add pseudo translations separately
+                                    pep_length = floor(pep_length / 3) - 1
+                                    if feat.type != "pseudogene":
+                                        peps[pep_id] = pep_length
+                                    all_peps[pep_id] = pep_length
+                    if feat.type == "transposable_element":
+                        tes[feat.id] = feat_length
 
         stats = {
             "seq_region": seqs,
