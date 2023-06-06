@@ -32,6 +32,7 @@ variables:
 stages:
   - debug
   - test
+  - collect
 
 # In-house stuff
 
@@ -79,4 +80,15 @@ test:external:code_quality:
       yaml_variables: false
     include:
       - template: Code-Quality.gitlab-ci.yml
+
+# collect artifatcs
+collect:artifacts:coverage:
+  stage: collect
+  needs:
+    - project: $CI_PROJECT_PATH
+      job: python:tests:pytest
+      artifacts: true
+  script:
+    - cat $RUN_DIR/cov_report/report.txt
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
 
