@@ -97,5 +97,5 @@ danger:project:drop:artifacts:
   when: manual
   stage: debug
   script:
-    - 'wget --method "DELETE" --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/artifacts"'
+    - 'wget --header "X-HTTP-Method-Override: DELETE" --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/artifacts"'
 
