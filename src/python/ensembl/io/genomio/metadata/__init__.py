@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Genomio prepare modules."""
+"""GenomIO prepare modules."""
 
 from .prepare_genome import *
 from .prepare_seq_region import *

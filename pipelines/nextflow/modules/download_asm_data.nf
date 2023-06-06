@@ -17,9 +17,11 @@ process DOWNLOAD_ASM_DATA {
     label 'adaptive'
     tag "$gca - $task.attempt"
     debug true
+    storeDir "$store_assembly"
 
     input:
     val(gca)
+    val(store_assembly)
     
     output:
     val gca, emit: gca

@@ -54,29 +54,17 @@ class UnsupportedData(Exception):
     """When an expected data is not supported by the current parser."""
 
 
-class GenomeFiles:
+class GenomeFiles(dict):
     """Store the representation of the genome files created."""
 
-    def __init__(self, out_dir: Optional[PathLike] = None) -> None:
-        if out_dir is None:
-            out_dir = Path(".")
-        else:
-            out_dir = Path(out_dir)
-        self.genome = out_dir / "genome.json"
-        self.seq_region = out_dir / "seq_region.json"
-        self.fasta_dna = out_dir / "dna.fasta"
-        self.fasta_pep = out_dir / "pep.fasta"
-        self.gene_models = out_dir / "genes.gff"
-
-    def to_dict(self) -> Dict[str, Path]:
-        """Create a dict from the genome files."""
-        return {
-            "genome": self.genome,
-            "seq_region": self.seq_region,
-            "fasta_dna": self.fasta_dna,
-            "fasta_pep": self.fasta_pep,
-            "gene_models": self.gene_models,
-        }
+    def __init__(self, out_dir: PathLike = Path()) -> None:
+        super().__init__()
+        out_dir = Path(out_dir)
+        self["genome"] = out_dir / "genome.json"
+        self["seq_region"] = out_dir / "seq_region.json"
+        self["fasta_dna"] = out_dir / "dna.fasta"
+        self["fasta_pep"] = out_dir / "pep.fasta"
+        self["gene_models"] = out_dir / "genes.gff"
 
 
 class FormattedFilesGenerator:
@@ -132,7 +120,7 @@ class FormattedFilesGenerator:
         self.parse_genbank(Path(self.gb_file))
 
         # Output the gff3 file
-        return self.files.to_dict()
+        return self.files
 
     def parse_genbank(self, gb_file):
         """
@@ -171,7 +159,7 @@ class FormattedFilesGenerator:
         return organella
 
     def _write_fasta_dna(self):
-        with open(self.files.fasta_dna, "w") as fasta_fh:
+        with open(self.files["fasta_dna"], "w") as fasta_fh:
             SeqIO.write(self.seq_records, fasta_fh, "fasta")
 
     def _write_genes_gff(self) -> None:
@@ -188,11 +176,11 @@ class FormattedFilesGenerator:
             peptides += rec_peptides
 
         # Write those records to a clean GFF
-        with self.files.gene_models.open("w") as gff_fh:
+        with self.files["gene_models"].open("w") as gff_fh:
             GFF.write(records, gff_fh)
 
         # Write the peptide sequences to a fasta file
-        with open(self.files.fasta_pep, "w") as fasta_fh:
+        with self.files["fasta_pep"].open("w") as fasta_fh:
             SeqIO.write(peptides, fasta_fh, "fasta")
 
         # Warn if some IDs are not unique
@@ -365,7 +353,7 @@ class FormattedFilesGenerator:
                 print(
                     (
                         "Warning: No codon table found. "
-                        f"Make sure to change the codon table number in {self.files.seq_region} manually "
+                        f"Make sure to change the codon table number in {self.files['seq_region']} manually "
                         "if it is not the standard codon table"
                     )
                 )
@@ -386,8 +374,8 @@ class FormattedFilesGenerator:
                     print(
                         (
                             f"Warning: '{seq.organelle}' is an organelle: "
-                            f"make sure to change the codon table number in {self.files.seq_region} manually "
-                            "if it is not the standard codon table"
+                            f"make sure to change the codon table number in {self.files['seq_region']} "
+                            "manually if it is not the standard codon table"
                         )
                     )
 
@@ -403,19 +391,19 @@ class FormattedFilesGenerator:
                 print(
                     (
                         "Warning: please add the relevant provider name"
-                        f"for the assembly in {self.files.seq_region}"
+                        f"for the assembly in {self.files['seq_region']}"
                     )
                 )
             if not seq_obj["added_sequence"]["assembly_provider"]["url"]:
                 print(
                     (
                         "Warning: please add the relevant provider url"
-                        f" for the assembly in {self.files.seq_region}"
+                        f" for the assembly in {self.files['seq_region']}"
                     )
                 )
 
             json_array.append(seq_obj)
-        with open(self.files.seq_region, "w") as seq_fh:
+        with open(self.files["seq_region"], "w") as seq_fh:
             seq_fh.write(json.dumps(json_array, indent=4))
 
     def _get_codon_table(self, seq) -> Optional[int]:
@@ -457,12 +445,14 @@ class FormattedFilesGenerator:
         }
 
         if not genome_data["species"]["production_name"]:
-            print(f"Warning: please add the relevant production_name for this genome in {self.files.genome}")
+            print(
+                f"Warning: please add the relevant production_name for this genome in {self.files['genome']}"
+            )
 
         ids = [seq.id for seq in self.seq_records]
         genome_data["added_seq"]["region_name"] = ids
 
-        with open(self.files.genome, "w") as genome_fh:
+        with open(self.files["genome"], "w") as genome_fh:
             genome_fh.write(json.dumps(genome_data, indent=4))
 
 

@@ -52,8 +52,9 @@ from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
-# Definition of SeqRegion type
+# Definition of SeqRegion types
 SeqRegion = Dict[str, Any]
+SeqRegionDict = Dict[str, SeqRegion]
 
 
 SYNONYM_RESOURCES = ["GenBank", "RefSeq", "INSDC"]
@@ -72,9 +73,6 @@ MOLECULE_LOCATION = {
     "plasmid": "plasmid",
 }
 LOCATION_CODON = {"apicoplast_chromosome": 4}
-
-
-SeqRegionDict = Dict[str, SeqRegion]
 
 
 class UnknownMetadata(Exception):
@@ -308,8 +306,8 @@ def get_organelle(record: SeqRecord, molecule_location: Optional[Dict] = None) -
             # Get controlled name
             try:
                 location = molecule_location[organelle]
-            except KeyError as exk:
-                raise UnknownMetadata(f"Unrecognized sequence location: {organelle}") from exk
+            except KeyError as exc:
+                raise UnknownMetadata(f"Unrecognized sequence location: {organelle}") from exc
             break
     return location
 
@@ -398,8 +396,8 @@ def make_seq_region(
         # Get location metadata
         try:
             seq_region["location"] = molecule_location[location]
-        except KeyError as exk:
-            raise UnknownMetadata(f"Unrecognized sequence location: {location}") from exk
+        except KeyError as exc:
+            raise UnknownMetadata(f"Unrecognized sequence location: {location}") from exc
     else:
         raise UnknownMetadata(f"Unrecognized sequence role: {seq_role}")
     return seq_region
@@ -516,7 +514,9 @@ class InputSchema(argschema.ArgSchema):
     )
 
     @post_load
-    def reformat_args(self, data: Dict[str, Any], **kwargs):  # pylint: disable=unused-argument
+    def reformat_args(
+        self, data: Dict[str, Any], **kwargs  # pylint: disable=unused-argument
+    ) -> Dict[str, Any]:
         """Processes arguments to may need additional parsing after being correctly loaded.
 
         Args:
