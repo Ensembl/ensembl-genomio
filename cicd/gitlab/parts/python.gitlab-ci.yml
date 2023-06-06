@@ -117,6 +117,7 @@ python:tests:pytest:
     - coverage xml -o $RUN_DIR/cov_report/xml/coverage.xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
+    expire_in: 3 days
     paths:
       - $RUN_DIR/cov_report
     reports:
