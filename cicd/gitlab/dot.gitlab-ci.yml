@@ -62,7 +62,7 @@ test:python:artifacts:
     - job: test:python
   script:
     - cd $RUN_DIR
-    - wget https://gitlab.com/api/v4/projects/$CI_PROJECT_PATH/jobs/artifacts/main/download?job=python:tests:pytest
+    - wget https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/main/download?job=python:tests:pytest
     - cat $RUN_DIR/cov_report/report.txt
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
 
