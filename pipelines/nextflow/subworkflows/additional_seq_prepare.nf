@@ -39,7 +39,6 @@ workflow additional_seq_prepare {
         // Parse data from GB file into GFF3 and json files
         EXTRACT_FROM_GB(DOWNLOAD_GENBANK.out.downloaded_gb_data, prefix, production_name)
 
-        // PROCESS_GFF3(EXTRACT_FROM_GB.out.gene_gff, EXTRACT_FROM_GB.out.genome, accession)
         PROCESS_GFF3(EXTRACT_FROM_GB.out.gene_gff, EXTRACT_FROM_GB.out.genome)
 
         // Tidy and validate gff3 using gff3validator (NOTE: Requires `module load libffi-3.3-gcc-9.3.0-cgokng6`)
