@@ -113,6 +113,7 @@ python:tests:pytest:
   extends: .python:tests:generic
   script:
     - coverage run -m pytest
+    - coverage report --format=text
     - coverage html -d $RUN_DIR/cov_report/html
     - coverage xml -o $RUN_DIR/cov_report/xml/coverage.xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
