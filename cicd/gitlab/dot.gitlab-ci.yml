@@ -85,6 +85,8 @@ test:external:code_quality:
 collect:artifacts:coverage:
   stage: collect
   needs:
+    - job: test:python
+      artifacts: true
     - project: $CI_PROJECT_PATH
       job: python:tests:pytest
       ref: $ARTIFACTS_DOWNLOAD_REF
