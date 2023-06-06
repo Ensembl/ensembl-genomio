@@ -116,11 +116,11 @@ python:tests:pytest:
     - coverage run -m pytest
     - coverage html -d $RUN_DIR/cov_report/html
     - coverage xml -o $RUN_DIR/cov_report/xml/coverage.xml
-    - coverage report --format=text | tee $RUN_DIR/cov_report/report.txt
+    - coverage report --format=text 2>&1 | tee $RUN_DIR/cov_report/report.txt
   # pattern to extract cov from output: https://docs.gitlab.com/ee/ci/yaml/index.html#coverage
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
-    expire_in: 3 days
+    expire_in: 1 week
     paths:
       - $RUN_DIR/cov_report
     reports:
