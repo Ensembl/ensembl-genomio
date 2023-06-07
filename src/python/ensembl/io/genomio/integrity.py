@@ -21,7 +21,7 @@ to ensure their contents are in sync.
 import hashlib
 import json
 from math import floor
-from os import path
+from os import PathLike, path
 from pathlib import Path
 import re
 import sys
@@ -51,6 +51,11 @@ class IntegrityTool:
     def add_error(self, error_str: str) -> None:
         """Store a new error in the list."""
         self.errors += error_str
+
+    def add_errors(self, errors: List[str]) -> None:
+        """Store a list of errors in the list."""
+        for error in errors:
+            self.add_error(error)
 
     def get_manifest(self) -> Dict[str, Any]:
         """Load the content of a manifest file.
@@ -104,21 +109,18 @@ class IntegrityTool:
         agp_seqr = {}
         genome = {}
 
+        # First, get the Data
         if "gff3" in manifest:
             print("Got a gff")
             gff = self.get_gff3(manifest["gff3"])
         if "fasta_dna" in manifest:
             print("Got a fasta dna")
             # Verify if the length and id for the sequence is unique
-            dna, dna_errors = self.get_fasta_lengths(manifest["fasta_dna"])
-            errors += dna_errors
+            dna = self.get_fasta_lengths(manifest["fasta_dna"])
         if "fasta_pep" in manifest:
             print("Got a fasta pep")
             # Verify if the length and id for the sequence is unique
-            pep, pep_errors = self.get_fasta_lengths(
-                manifest["fasta_pep"], ignore_final_stops=self.ignore_final_stops
-            )
-            errors += pep_errors
+            pep = self.get_fasta_lengths(manifest["fasta_pep"], ignore_final_stops=self.ignore_final_stops)
         if "seq_region" in manifest:
             print("Got a seq_regions")
             seq_regions = get_json(Path(manifest["seq_region"]))
@@ -138,14 +140,8 @@ class IntegrityTool:
             print("Got a genome")
             genome = get_json(Path(manifest["genome"]))
 
-        # Check if the accession is correct in genome.json
-        if genome:
-            if "assembly" in genome:
-                genome_ass = genome["assembly"]
-                if "accession" in genome_ass:
-                    genome_acc = genome_ass["accession"]
-                    if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
-                        errors += [f"Genome assembly accession is wrong: '{genome_acc}'"]
+        # Then, run the checks
+        self._check_genome(genome)
 
         # Check gff3
         if gff:
@@ -167,7 +163,7 @@ class IntegrityTool:
                         "Fasta translations vs gff (include pseudo CDS)",
                         special_diff=True,
                     )
-                    errors += tr_errors
+                    self.add_errors(tr_errors)
 
             # Check functional_annotation.json integrity
             # Gene ids, translated CDS ids and translated CDSs
@@ -183,7 +179,7 @@ class IntegrityTool:
                         gff["all_translations"],
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
-                errors += tr_errors
+                self.add_errors(tr_errors)
                 errors += self.check_ids(
                     func_ann["transposable_elements"],
                     gff["transposable_elements"],
@@ -193,21 +189,29 @@ class IntegrityTool:
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
             if seq_regions:
-                errors += self.check_seq_region_lengths(
-                    seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff"
-                )
+                self.check_seq_region_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff")
 
         # Check fasta dna and seq_region integrity
         if dna and seq_regions:
-            errors += self.check_seq_region_lengths(seq_lengths, dna, "seq_regions json vs dna")
+            self.check_seq_region_lengths(seq_lengths, dna, "seq_regions json vs dna")
 
         # Check agp and seq_region integrity
         if agp_seqr and seq_lengths:
-            errors += self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
+            self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
 
         if errors:
             errors_str = "\n".join(errors)
             raise InvalidIntegrityError(f"Integrity test failed for {self.manifest_file}:\n{errors_str}")
+
+    def _check_genome(self, genome: Dict) -> None:
+        """Check if the accession is correct in genome.json."""
+        if genome:
+            if "assembly" in genome:
+                genome_ass = genome["assembly"]
+                if "accession" in genome_ass:
+                    genome_acc = genome_ass["accession"]
+                    if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
+                        self.add_error(f"Genome assembly accession is wrong: '{genome_acc}'")
 
     def check_md5sum(self, file_path, md5sum) -> None:
         """Verify the integrity of the files in manifest.json.
@@ -260,14 +264,13 @@ class IntegrityTool:
                     if not rec.seq.endswith("*") or not ignore_final_stops:
                         contains_stop_codon += 1
 
-        errors = []
         if empty_id_count > 0:
-            errors.append(f"{empty_id_count} sequences with empty ids in {fasta_path}")
+            self.add_error(f"{empty_id_count} sequences with empty ids in {fasta_path}")
         if non_unique_count > 0:
-            errors.append(f"{non_unique_count} non unique sequence ids in {fasta_path}")
+            self.add_error(f"{non_unique_count} non unique sequence ids in {fasta_path}")
         if contains_stop_codon > 0:
-            errors.append(f"{contains_stop_codon} sequences with stop codons in {fasta_path}")
-        return data, errors
+            self.add_error(f"{contains_stop_codon} sequences with stop codons in {fasta_path}")
+        return data
 
     def get_functional_annotation(self, json_path):
         """Load the functional annotation file to retrieve the gene_id and translation id.
@@ -509,7 +512,7 @@ class IntegrityTool:
 
         return errors
 
-    def check_seq_region_lengths(self, seqrs, feats, name):
+    def check_seq_region_lengths(self, seqrs, feats, name) -> None:
         """Check the integrity of seq_region.json file by comparing the length of the sequence
             to fasta files and the gff.
 
@@ -548,18 +551,15 @@ class IntegrityTool:
             if seq_id not in common and seq_id not in diff:
                 only_feat.append(seq_id)
 
-        errors = []
         if common:
             print(f"{len(common)} common elements in {name}")
         if diff:
-            errors.append(f"{len(diff)} common elements with higher length in {name} (e.g. {diff_list[0]})")
+            self.add_error(f"{len(diff)} common elements with higher length in {name} (e.g. {diff_list[0]})")
         if only_seqr:
             # Not an error!
             print(f"{len(only_seqr)} only in seq_region list in {name} (first: {only_seqr[0]})")
         if only_feat:
-            errors.append(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
-
-        return errors
+            self.add_error(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
 
 
 class InputSchema(argschema.ArgSchema):
