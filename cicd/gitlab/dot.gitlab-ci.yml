@@ -22,9 +22,10 @@
 workflow:
   rules:
      - if: $CI_EXTERNAL_PULL_REQUEST_IID && $CI_COMMIT_BRANCH
-     # MB allow for   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
      - if: $CI_COMMIT_BRANCH
        when: never
+
+# MB allow for   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
   RUN_DIR: ./cicd/runtime
