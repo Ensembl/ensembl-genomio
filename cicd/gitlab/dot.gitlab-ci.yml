@@ -18,12 +18,15 @@
 # workflow:rules -- using template instead
 #   https://docs.gitlab.com/ee/ci/yaml/#workflow
 # https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
-#workflow:
-#  rules:
+workflow:
+  rules:
+     - if: $CI_EXTERNAL_PULL_REQUEST_IID && $CI_COMMIT_BRANCH
+     - if: $CI_COMMIT_BRANCH
+       when: never
+#    - if: $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
 #    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 #    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
 #      when: never
-#    # - if: $CI_COMMIT_BRANCH
 
 
 variables:
@@ -61,7 +64,7 @@ test:python:artifacts:
   needs:
     - job: test:python
   script:
-    - echo Getting https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/download?job=python:tests:pytest
+    - echo Getting "https://gitlab.ebi.ac.uk/api/v4/projects/" $CI_PROJECT_ID "/jobs/artifacts/" $CI_COMMIT_BRANCH "/download?job=python:tests:pytest"
     - 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/download?job=python:tests:pytest"'
     - unzip $RUN_DIR/artifacts.zip # N.B. has $RUN_DIR as the root
     - cat $RUN_DIR/cov_report/txt/report.txt
