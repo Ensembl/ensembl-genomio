@@ -63,8 +63,8 @@ workflow GENOME_PREPARE {
             // Verify functional_annotation.json schema
             CHECK_JSON_SCHEMA_FUNCT(PROCESS_GFF3.out.functional_annotation)
 
-            // Tidy and validate gff3 using gff3validator (NOTE: Requires `module load libffi-3.3-gcc-9.3.0-cgokng6`)
-            GFF3_VALIDATION(PROCESS_GFF3.out.functional_annotation, PROCESS_GFF3.out.gene_models)
+            // Tidy and validate gff3 using gff3validator
+            GFF3_VALIDATION(PROCESS_GFF3.out.gene_models)
 
             // Process peptides
             PROCESS_FASTA_PEP(DOWNLOAD_ASM_DATA.out.opt_set, '1')
