@@ -25,7 +25,6 @@ process CHECK_INTEGRITY {
         val brc_mode
     
     output:
-        // path manifest_dir
         tuple path("${manifest_dir}/"), val(accession), emit: integrity_checked
     script:
         """
