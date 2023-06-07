@@ -29,7 +29,7 @@ from typing import ContextManager
 
 import pytest
 
-from ensembl.io.genomio.integrity import IntegrityTool
+from ensembl.io.genomio.integrity import IntegrityTool, Manifest
 
 
 class TestIntegrity:
@@ -41,10 +41,10 @@ class TestIntegrity:
         type(self).tmp_dir = tmp_dir
 
     @pytest.mark.parametrize(
-        "manifest_dir, brc_mode, ignore_false_stops, expected",
+        "manifest_path, brc_mode, ignore_false_stops, expected",
         [
             (
-                [pytest.manifest_dir / "data1/manifest.json"],
+                pytest.manifest_dir / "data1/manifest.json",
                 [None, True, False],
                 [None, True, False],
                 does_not_raise(),
@@ -52,7 +52,7 @@ class TestIntegrity:
         ],
     )
     def test_integrity(
-        self, manifest_dir: Path, brc_mode: bool, ignore_false_stops: bool, expected: ContextManager
+        self, manifest_path: Path, brc_mode: bool, ignore_false_stops: bool, expected: ContextManager
     ) -> None:
         """Tests `integrity:IntegrityTool` method.
 
@@ -62,7 +62,7 @@ class TestIntegrity:
 
         """
         with expected:
-            integrity = IntegrityTool(manifest_dir, brc_mode, ignore_false_stops)
+            integrity = IntegrityTool(manifest_path, brc_mode, ignore_false_stops)
             assert isinstance(integrity, IntegrityTool)
 
     @pytest.mark.parametrize(
@@ -75,5 +75,5 @@ class TestIntegrity:
         """Tests `integrity:IntegrityTool:get_manifest()` method."""
         with expected:
             integrity = IntegrityTool(manifest_dir)
-            manifest = integrity.get_manifest()
-            assert isinstance(manifest, dict)
+            manifest = integrity.manifest
+            assert isinstance(manifest, Manifest)
