@@ -21,7 +21,7 @@ process DOWNLOAD_ASM_DATA {
 
     input:
         tuple val(gca), path(json_file)
-        val(store_assembly)
+        val store_assembly
 
     output:
         tuple val(gca), path("${gca}/*_assembly_report.txt"), path("${gca}/*_genomic.fna.gz"), path("${gca}/*_genomic.gbff.gz"), emit: min_set
