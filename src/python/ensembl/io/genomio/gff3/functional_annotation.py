@@ -54,7 +54,7 @@ class FunctionalAnnotations:
             name = feature.qualifiers["Name"][0]
 
             # Exclude Name if it just a variant of the feature ID
-            if feature.id not in name:
+            if feature.id.lower() not in name.lower():
                 feature_object["description"] = name
 
         # Synonyms?
