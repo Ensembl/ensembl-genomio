@@ -24,8 +24,10 @@ process DOWNLOAD_ASM_DATA {
         val store_assembly
 
     output:
-        tuple val(gca), path("${gca}/*_assembly_report.txt"), path("${gca}/*_genomic.fna.gz"), path("${gca}/*_genomic.gbff.gz"), emit: min_set
-        tuple val(gca), path("${gca}/*_genomic.gff.gz"), path("${gca}/*_protein.faa.gz"), path("${gca}/*_genomic.gbff.gz"), emit: opt_set, optional: true
+        tuple val(gca), path("${gca}/*_assembly_report.txt"), path("${gca}/*_genomic.fna.gz"),
+              path("${gca}/*_genomic.gbff.gz"), emit: min_set
+        tuple val(gca), path("${gca}/*_genomic.gff.gz"), path("${gca}/*_protein.faa.gz"),
+              path("${gca}/*_genomic.gbff.gz"), emit: opt_set, optional: true
 
     script:
     """
