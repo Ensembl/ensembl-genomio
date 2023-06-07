@@ -21,7 +21,7 @@ to ensure their contents are in sync.
 import hashlib
 import json
 from math import floor
-from os import PathLike, path
+from os import PathLike
 from pathlib import Path
 import re
 import sys
@@ -39,181 +39,68 @@ class InvalidIntegrityError(Exception):
     """When a file integrity check fails"""
 
 
-class IntegrityTool:
-    """Check the integrity of sequence and annotation files in the genome"""
+class Manifest:
+    """Representation of the manifest and its files."""
 
-    def __init__(self, manifest_file: Path, brc_mode: bool = False, ignore_final_stops: bool = False) -> None:
-        self.manifest_file = manifest_file
-        self.brc_mode = brc_mode
-        self.ignore_final_stops = ignore_final_stops
+    def __init__(self, manifest_path: PathLike) -> None:
+        self.manifest_files = self.get_manifest(manifest_path)
+        self.genome: Dict[str, Any] = {}
+        self.seq_regions: Dict[str, Any] = {}
+
+        self.lengths: Dict[str, Dict] = {
+            "gene_models": {},
+            "dna_sequences": {},
+            "peptide_sequences": {},
+            "seq_region_levels": {},
+            "annotations": {},
+            "agp": {},
+        }
+
         self.errors: List[str] = []
 
-    def add_error(self, error_str: str) -> None:
-        """Store a new error in the list."""
-        self.errors += error_str
+        self.ignore_final_stops = False
+        self.brc_mode = False
 
-    def add_errors(self, errors: List[str]) -> None:
-        """Store a list of errors in the list."""
-        for error in errors:
-            self.add_error(error)
+    def get_lengths(self, name: str) -> Dict[str, Any]:
+        """Returns a dict associating IDs with their length from a given file name."""
+        if name in self.lengths:
+            return self.lengths[name]
+        raise KeyError(f"No length available for key {name}")
 
-    def get_manifest(self) -> Dict[str, Any]:
+    def _add_error(self, error: str) -> None:
+        self.errors.append(error)
+
+    def get_manifest(self, manifest_path: PathLike) -> Dict[str, Any]:
         """Load the content of a manifest file.
 
         Returns:
             Dict: Content of the manifest file.
         """
-        with open(self.manifest_file) as manifest_fh:
+        manifest_path = Path(manifest_path)
+        with manifest_path.open("r") as manifest_fh:
             manifest = json.load(manifest_fh)
 
             # Use dir name from the manifest
             for name in manifest:
                 if "file" in manifest[name]:
-                    file_name = manifest[name]["file"]
-                    file_name = path.join(path.dirname(self.manifest_file), file_name)
+                    file_path = manifest_path.parent / manifest[name]["file"]
                     # check if the md5sum is correct
                     md5sum = manifest[name]["md5sum"]
-                    self.check_md5sum(file_name, md5sum)
+                    self._check_md5sum(file_path, md5sum)
 
-                    manifest[name] = file_name
+                    manifest[name] = file_path
                 else:
                     for f in manifest[name]:
                         if "file" in manifest[name][f]:
-                            file_name = manifest[name][f]["file"]
-                            file_name = path.join(path.dirname(self.manifest_file), file_name)
+                            file_path = manifest_path.parent / manifest[name][f]["file"]
                             # check if the md5sum is correct
                             md5sum = manifest[name][f]["md5sum"]
-                            self.check_md5sum(file_name, md5sum)
+                            self._check_md5sum(file_path, md5sum)
 
-                            manifest[name][f] = file_name
+                            manifest[name][f] = file_path
             return manifest
 
-    def check_integrity(self):
-        """Load files listed in the manifest.json and check the integrity.
-        Check if the files are correct by verifying the MD5 hash.
-        Check if translation, functional annotation and sequence region ids
-        and lengths are consistent with the information in gff.
-        Compare sequence length from fasta_dna file to seq_region.json metadata.
-        """
-
-        manifest = self.get_manifest()
-        errors = []
-
-        # Get content from the manifest file and store it into following variables
-        dna = {}
-        pep = {}
-        seq_regions = {}
-        seq_lengths = {}
-        gff = {}
-        func_ann = {}
-        agp_seqr = {}
-        genome = {}
-
-        # First, get the Data
-        if "gff3" in manifest:
-            print("Got a gff")
-            gff = self.get_gff3(manifest["gff3"])
-        if "fasta_dna" in manifest:
-            print("Got a fasta dna")
-            # Verify if the length and id for the sequence is unique
-            dna = self.get_fasta_lengths(manifest["fasta_dna"])
-        if "fasta_pep" in manifest:
-            print("Got a fasta pep")
-            # Verify if the length and id for the sequence is unique
-            pep = self.get_fasta_lengths(manifest["fasta_pep"], ignore_final_stops=self.ignore_final_stops)
-        if "seq_region" in manifest:
-            print("Got a seq_regions")
-            seq_regions = get_json(Path(manifest["seq_region"]))
-            seqr_seqlevel = {}
-            # Store the length as int
-            for seq in seq_regions:
-                seq_lengths[seq["name"]] = int(seq["length"])
-                if seq["coord_system_level"] == "contig":
-                    seqr_seqlevel[seq["name"]] = int(seq["length"])
-        if "functional_annotation" in manifest:
-            print("Got a func_anns")
-            func_ann = self.get_functional_annotation(manifest["functional_annotation"])
-        if "agp" in manifest:
-            print("Got agp files")
-            agp_seqr = self.get_agp_seq_regions(manifest["agp"])
-        if "genome" in manifest:
-            print("Got a genome")
-            genome = get_json(Path(manifest["genome"]))
-
-        # Then, run the checks
-        self._check_genome(genome)
-
-        # Check gff3
-        if gff:
-            # Check fasta_pep.fa integrity
-            # The sequence length and id retrieved from the fasta_pep file
-            # and compared to the translated CDS id and length in the gff
-            # We don't compare the peptide lengths because of seqedits
-            if pep:
-                tr_errors = self.check_lengths(
-                    pep, gff["translations"], "Fasta translations vs gff", special_diff=True
-                )
-                if len(tr_errors) > 0:
-                    # The pseudo CDSs are included in this check
-                    # Pseudo CDSs are not translated, if the pseudo translation ids are not ignored
-                    # in the gff it will give an error
-                    tr_errors = self.check_lengths(
-                        pep,
-                        gff["all_translations"],
-                        "Fasta translations vs gff (include pseudo CDS)",
-                        special_diff=True,
-                    )
-                    self.add_errors(tr_errors)
-
-            # Check functional_annotation.json integrity
-            # Gene ids, translated CDS ids and translated CDSs
-            # including pseudogenes are compared to the gff
-            if func_ann:
-                errors += self.check_ids(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff")
-                tr_errors = self.check_ids(
-                    func_ann["translations"], gff["translations"], "Translation ids metadata vs gff"
-                )
-                if len(tr_errors) > 0:
-                    tr_errors = self.check_ids(
-                        func_ann["translations"],
-                        gff["all_translations"],
-                        "Translation ids metadata vs gff (include pseudo CDS)",
-                    )
-                self.add_errors(tr_errors)
-                errors += self.check_ids(
-                    func_ann["transposable_elements"],
-                    gff["transposable_elements"],
-                    "TE ids metadata vs gff",
-                )
-
-            # Check the seq.json intregrity
-            # Compare the length and id retrieved from seq.json to the gff
-            if seq_regions:
-                self.check_seq_region_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff")
-
-        # Check fasta dna and seq_region integrity
-        if dna and seq_regions:
-            self.check_seq_region_lengths(seq_lengths, dna, "seq_regions json vs dna")
-
-        # Check agp and seq_region integrity
-        if agp_seqr and seq_lengths:
-            self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
-
-        if errors:
-            errors_str = "\n".join(errors)
-            raise InvalidIntegrityError(f"Integrity test failed for {self.manifest_file}:\n{errors_str}")
-
-    def _check_genome(self, genome: Dict) -> None:
-        """Check if the accession is correct in genome.json."""
-        if genome:
-            if "assembly" in genome:
-                genome_ass = genome["assembly"]
-                if "accession" in genome_ass:
-                    genome_acc = genome_ass["accession"]
-                    if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
-                        self.add_error(f"Genome assembly accession is wrong: '{genome_acc}'")
-
-    def check_md5sum(self, file_path, md5sum) -> None:
+    def _check_md5sum(self, file_path: Path, md5sum: str) -> None:
         """Verify the integrity of the files in manifest.json.
 
             An MD5 hash is generated using the path provided which is then compared to the hash
@@ -229,7 +116,49 @@ class IntegrityTool:
             bytes_obj = f.read()
             readable_hash = hashlib.md5(bytes_obj).hexdigest()
             if readable_hash != md5sum:
-                self.add_error(f"File {file_path} has a wrong md5sum")
+                raise InvalidIntegrityError(f"Invalid md5 checksum for {file_path}")
+
+    def prepare_integrity_data(self) -> None:
+        """Read all the files and keep a record (IDs and their lengths)
+        for each cases to be compared later.
+        """
+        # First, get the Data
+        if "gff3" in self.manifest_files:
+            print("Got a gff")
+            self.lengths["gene_models"] = self.get_gff3(self.manifest_files["gff3"])
+        if "fasta_dna" in self.manifest_files:
+            print("Got a fasta dna")
+            # Verify if the length and id for the sequence is unique
+            self.lengths["dna_sequences"] = self.get_fasta_lengths(self.manifest_files["fasta_dna"])
+        if "fasta_pep" in self.manifest_files:
+            print("Got a fasta pep")
+            # Verify if the length and id for the sequence is unique
+            self.lengths["peptide_sequences"] = self.get_fasta_lengths(
+                self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
+            )
+        if "seq_region" in self.manifest_files:
+            print("Got a seq_regions")
+            seq_regions = get_json(Path(self.manifest_files["seq_region"]))
+            seqr_seqlevel = {}
+            seq_lengths = {}
+            # Store the length as int
+            for seq in seq_regions:
+                seq_lengths[seq["name"]] = int(seq["length"])
+                if seq["coord_system_level"] == "contig":
+                    seqr_seqlevel[seq["name"]] = int(seq["length"])
+            self.lengths["seq_regions"] = seq_lengths
+            self.seq_regions = seq_regions
+        if "functional_annotation" in self.manifest_files:
+            print("Got a func_anns")
+            self.lengths["annotations"] = self.get_functional_annotation(
+                self.manifest_files["functional_annotation"]
+            )
+        if "agp" in self.manifest_files:
+            print("Got agp files")
+            self.lengths["agp"] = self.get_agp_seq_regions(self.manifest_files["agp"])
+        if "genome" in self.manifest_files:
+            print("Got a genome")
+            self.lengths["genome"] = get_json(Path(self.manifest_files["genome"]))
 
     def get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
         """Check if the fasta files have the correct ids and no stop codon.
@@ -265,11 +194,11 @@ class IntegrityTool:
                         contains_stop_codon += 1
 
         if empty_id_count > 0:
-            self.add_error(f"{empty_id_count} sequences with empty ids in {fasta_path}")
+            self._add_error(f"{empty_id_count} sequences with empty ids in {fasta_path}")
         if non_unique_count > 0:
-            self.add_error(f"{non_unique_count} non unique sequence ids in {fasta_path}")
+            self._add_error(f"{non_unique_count} non unique sequence ids in {fasta_path}")
         if contains_stop_codon > 0:
-            self.add_error(f"{contains_stop_codon} sequences with stop codons in {fasta_path}")
+            self._add_error(f"{contains_stop_codon} sequences with stop codons in {fasta_path}")
         return data
 
     def get_functional_annotation(self, json_path):
@@ -406,6 +335,122 @@ class IntegrityTool:
                         seqr[cmp_id] = int(cmp_end)
 
         return seqr
+
+
+class IntegrityTool:
+    """Check the integrity of sequence and annotation files in the genome"""
+
+    def __init__(self, manifest_file: Path, brc_mode: bool = False, ignore_final_stops: bool = False) -> None:
+        self.manifest = Manifest(manifest_file)
+        self.brc_mode = brc_mode
+        self.ignore_final_stops = ignore_final_stops
+        self.errors: List[str] = []
+
+    def add_error(self, error_str: str) -> None:
+        """Store a new error in the list."""
+        self.errors += error_str
+
+    def add_errors(self, errors: List[str]) -> None:
+        """Store a list of errors in the list."""
+        for error in errors:
+            self.add_error(error)
+
+    def check_integrity(self):
+        """Load files listed in the manifest.json and check the integrity.
+        Check if the files are correct by verifying the MD5 hash.
+        Check if translation, functional annotation and sequence region ids
+        and lengths are consistent with the information in gff.
+        Compare sequence length from fasta_dna file to seq_region.json metadata.
+        """
+
+        errors = []
+
+        # Load the manifest integrity counts
+        manifest = self.manifest
+        manifest.prepare_integrity_data()
+
+        genome = manifest.genome
+        seq_regions = manifest.seq_regions
+
+        dna = manifest.get_lengths("dna_sequences")
+        pep = manifest.get_lengths("peptide_sequences")
+        seq_lengths = manifest.get_lengths("seq_regions")
+        gff = manifest.get_lengths("gene_models")
+        func_ann = manifest.get_lengths("annotations")
+        agp_seqr = manifest.get_lengths("agp")
+
+        # Then, run the checks
+        self._check_genome(genome)
+
+        # Check gff3
+        if gff:
+            # Check fasta_pep.fa integrity
+            # The sequence length and id retrieved from the fasta_pep file
+            # and compared to the translated CDS id and length in the gff
+            # We don't compare the peptide lengths because of seqedits
+            if pep:
+                tr_errors = self.check_lengths(
+                    pep, gff["translations"], "Fasta translations vs gff", special_diff=True
+                )
+                if len(tr_errors) > 0:
+                    # The pseudo CDSs are included in this check
+                    # Pseudo CDSs are not translated, if the pseudo translation ids are not ignored
+                    # in the gff it will give an error
+                    tr_errors = self.check_lengths(
+                        pep,
+                        gff["all_translations"],
+                        "Fasta translations vs gff (include pseudo CDS)",
+                        special_diff=True,
+                    )
+                    self.add_errors(tr_errors)
+
+            # Check functional_annotation.json integrity
+            # Gene ids, translated CDS ids and translated CDSs
+            # including pseudogenes are compared to the gff
+            if func_ann:
+                errors += self.check_ids(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff")
+                tr_errors = self.check_ids(
+                    func_ann["translations"], gff["translations"], "Translation ids metadata vs gff"
+                )
+                if len(tr_errors) > 0:
+                    tr_errors = self.check_ids(
+                        func_ann["translations"],
+                        gff["all_translations"],
+                        "Translation ids metadata vs gff (include pseudo CDS)",
+                    )
+                self.add_errors(tr_errors)
+                errors += self.check_ids(
+                    func_ann["transposable_elements"],
+                    gff["transposable_elements"],
+                    "TE ids metadata vs gff",
+                )
+
+            # Check the seq.json intregrity
+            # Compare the length and id retrieved from seq.json to the gff
+            if seq_regions:
+                self.check_seq_region_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff")
+
+        # Check fasta dna and seq_region integrity
+        if dna and seq_regions:
+            self.check_seq_region_lengths(seq_lengths, dna, "seq_regions json vs dna")
+
+        # Check agp and seq_region integrity
+        if agp_seqr and seq_lengths:
+            self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
+
+        if errors:
+            errors_str = "\n".join(errors)
+            raise InvalidIntegrityError(f"Integrity test failed:\n{errors_str}")
+
+    def _check_genome(self, genome: Dict) -> None:
+        """Check if the accession is correct in genome.json."""
+        if genome:
+            if "assembly" in genome:
+                genome_ass = genome["assembly"]
+                if "accession" in genome_ass:
+                    genome_acc = genome_ass["accession"]
+                    if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
+                        self.add_error(f"Genome assembly accession is wrong: '{genome_acc}'")
 
     def check_ids(self, list1, list2, name):
         """Compare the ids in list1 and list2.
