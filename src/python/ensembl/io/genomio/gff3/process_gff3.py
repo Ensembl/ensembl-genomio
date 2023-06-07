@@ -316,7 +316,7 @@ class GFFSimplifier(GFFParserCommon):
 
         # Generate ID if needed and add it to the functional annotation
         feat.id = self.normalize_gene_id(feat)
-        self.annotations.add_feature(feat, "transposable_element")
+        self.annotations.add_transposable_element(feat)
         feat.qualifiers = {"ID": feat.id}
 
         return feat
@@ -333,7 +333,6 @@ class GFFSimplifier(GFFParserCommon):
 
         # New gene ID
         gene.id = self.normalize_gene_id(gene)
-        self.transfer_description(gene)
 
         # Gene with no subfeatures: need to create a transcript at least
         if len(gene.sub_features) == 0:
@@ -379,7 +378,7 @@ class GFFSimplifier(GFFParserCommon):
             self.normalize_pseudogene_cds(gene)
 
         # Finally, store gene functional annotation
-        self.annotations.add_feature(gene, "gene")
+        self.annotations.add_gene(gene)
 
         # replace qualifiers
         old_gene_qualifiers = gene.qualifiers
@@ -412,7 +411,7 @@ class GFFSimplifier(GFFParserCommon):
             transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
 
             # Store transcript functional annotation
-            self.annotations.add_feature(transcript, "transcript")
+            self.annotations.add_transcript(transcript, gene.id)
 
             # Replace qualifiers
             old_transcript_qualifiers = transcript.qualifiers
@@ -455,7 +454,7 @@ class GFFSimplifier(GFFParserCommon):
                 # Store CDS functional annotation (only once)
                 if not cds_found:
                     cds_found = True
-                    self.annotations.add_feature(feat, "translation")
+                    self.annotations.add_translation(feat, transcript.id)
 
                 # Replace qualifiers
                 feat.qualifiers = {
@@ -507,10 +506,17 @@ class GFFSimplifier(GFFParserCommon):
                     # No transcript product, but a CDS product? Copy it to both transcript and gene
                     for cds in tran.sub_features:
                         if cds.type == "CDS" and "product" in cds.qualifiers:
+                            print(f"Transfer description from CDS to gene and transcript in {gene.id}")
                             description = cds.qualifiers["product"][0]
                             tran.qualifiers["product"] = [description]
                             gene.qualifiers["product"] = [description]
+                        else:
+                            print(f"No transfer possible for {gene.id}")
                     # Continue transfering the translation products to the transcripts
+                else:
+                    print(f"Transfer not allowed: {gene.id} <- {tran.id} ({tran.type})")
+        else:
+            print("No transfer")
 
     def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
         """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others

@@ -27,14 +27,55 @@ from ensembl.io.genomio.utils.json_utils import print_json
 Annotation = Dict[str, Any]
 
 
+class DuplicateIdError(Exception):
+    """Trying to add a feature with an ID already in use."""
+
+
+class MissingParentError(Exception):
+    """Trying to add a feature without an expected parent."""
+
+
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
     def __init__(self) -> None:
         self.annotations: List[Annotation] = []
 
-    def add_feature(self, feature: SeqFeature, feat_type: str) -> None:
-        """Append a feature object following the specifications.
+        self.genes = {}
+        self.transcripts = {}
+        self.translations = {}
+        self.transposable_elements = {}
+        self.gene_parent = {}
+        self.transcript_parent = {}
+
+    def add_gene(self, feature: SeqFeature) -> None:
+        if feature.id in self.genes:
+            raise DuplicateIdError(f"Gene ID {feature.id} already added")
+        gene = self._generic_feature(feature, "gene")
+        self.genes[gene["id"]] = gene
+
+    def add_transcript(self, feature: SeqFeature, gene_id: str) -> None:
+        if feature.id in self.transcripts:
+            raise DuplicateIdError(f"Transcript ID {feature.id} already added")
+        transcript = self._generic_feature(feature, "transcript")
+        self.transcripts[transcript["id"]] = transcript
+        self.gene_parent[transcript["id"]] = gene_id
+
+    def add_translation(self, feature: SeqFeature, transcript_id: str) -> None:
+        if feature.id in self.translations:
+            raise DuplicateIdError(f"Translation ID {feature.id} already added")
+        translation = self._generic_feature(feature, "translation")
+        self.translations[translation["id"]] = translation
+        self.transcript_parent[translation["id"]] = transcript_id
+
+    def add_transposable_element(self, feature: SeqFeature) -> None:
+        if feature.id in self.transposable_elements:
+            raise DuplicateIdError(f"TE ID {feature.id} already added")
+        te = self._generic_feature(feature, "transposable_element")
+        self.transposable_elements[te["id"]] = te
+
+    def _generic_feature(self, feature: SeqFeature, feat_type: str) -> Dict[str, Any]:
+        """Create a feature object following the specifications.
 
         Args:
             feature: The SeqFeature to add to the list.
@@ -51,11 +92,17 @@ class FunctionalAnnotations:
                 feature_object["description"] = description
 
         if "Name" in feature.qualifiers and "description" not in feature_object:
-            name = feature.qualifiers["Name"][0]
+            feature_object["description"] = feature.qualifiers["Name"][0]
 
-            # Exclude Name if it just a variant of the feature ID
-            if feature.id.lower() not in name.lower():
-                feature_object["description"] = name
+        # Don't keep useless description
+        # Don't keep description if it contains the ID
+        if ("description" in feature_object) and (
+            (
+                not self._product_is_valid(feature_object["description"])
+                or (feature.id.lower() in feature_object["description"].lower())
+            )
+        ):
+            del feature_object["description"]
 
         # Synonyms?
         if "Name" in feature.qualifiers:
@@ -67,7 +114,30 @@ class FunctionalAnnotations:
         if feature.type.startswith("pseudogen"):
             feature_object["is_pseudogene"] = True
 
-        self.annotations.append(feature_object)
+        return feature_object
+
+    def _transfer_descriptions(self) -> None:
+        # Transfer translation CDS if useful
+        for translation_id, translation in self.translations.items():
+            description = translation.get("description")
+            if description is not None:
+                # Check transcript
+                parent_tr_id = self.transcript_parent[translation_id]
+                parent_tr = self.transcripts[parent_tr_id]
+                tr_description = parent_tr.get("description")
+                if tr_description is None:
+                    parent_tr["description"] = description
+
+        # Same, from transcripts to genes
+        for transcript_id, transcript in self.transcripts.items():
+            description = transcript.get("description")
+            if description is not None:
+                # Check gene
+                parent_gene_id = self.gene_parent[transcript_id]
+                parent_gene = self.genes[parent_gene_id]
+                tr_description = parent_gene.get("description")
+                if tr_description is None:
+                    parent_gene["description"] = description
 
     @staticmethod
     def _product_is_valid(product: str) -> bool:
@@ -89,11 +159,16 @@ class FunctionalAnnotations:
         product_is_valid = not excluded_names.match(product)
         return product_is_valid
 
-    def _cleanup(self) -> None:
-        """Returns the functional annotations list without putative product descriptions."""
-        for feat in self.annotations:
-            if "description" in feat and not self._product_is_valid(feat["description"]):
-                del feat["description"]
+    def _to_list(self):
+        feat_list = []
+        for feat in (
+            list(self.genes.values()) +
+            list(self.transcripts.values()) +
+            list(self.translations.values()) +
+            list(self.transposable_elements.values())
+        ):
+            feat_list.append(feat)
+        return feat_list
 
     def to_json(self, out_path: PathLike) -> None:
         """Print out the current annotation list in a json file.
@@ -102,5 +177,6 @@ class FunctionalAnnotations:
             out_path: JSON file path where to write the data.
 
         """
-        self._cleanup()
-        print_json(Path(out_path), self.annotations)
+        self._transfer_descriptions()
+        feats_list = self._to_list()
+        print_json(Path(out_path), feats_list)
