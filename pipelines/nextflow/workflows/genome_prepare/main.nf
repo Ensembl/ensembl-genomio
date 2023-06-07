@@ -17,6 +17,9 @@
 // Genome prepare pipeline
 // See full documentation in docs/genome_prepare.md
 
+// default params
+params.help = false
+
 // Print usage
 def helpMessage() {
   log.info """
