@@ -21,7 +21,6 @@ process CHECK_INTEGRITY {
     time '1h'
 
     input:
-        // path manifest_dir
         tuple path(manifest_dir), val(accession)
         val brc_mode
     
