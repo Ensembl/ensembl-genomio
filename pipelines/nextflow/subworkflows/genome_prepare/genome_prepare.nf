@@ -49,7 +49,7 @@ workflow GENOME_PREPARE {
         // Verify genome.json schema
         CHECK_JSON_SCHEMA_GENOME(genomic_dataset)
 
-        // Download genome data files. Files may or may not include gene models (gff) & or peptides
+        // Download genome data files. Files may or may not include gene models (gff3) and/or peptides.
         DOWNLOAD_ASM_DATA(CHECK_JSON_SCHEMA_GENOME.out.verified_json, cache_dir)
 
         // Check for presence of annotation related output files, then process gene models data if present
