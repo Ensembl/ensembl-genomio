@@ -58,7 +58,6 @@ workflow GENOME_PREPARE {
             // Decompress gff3 file, output with accession in tuple
             unpacked_gff = UNPACK_GFF3(DOWNLOAD_ASM_DATA.out.opt_set, 'gff')
             
-            // PROCESS_GFF3(UNPACK_GFF3.out.uncompressed_file, CHECK_JSON_SCHEMA_GENOME.out.verified_json)
             PROCESS_GFF3(unpacked_gff, CHECK_JSON_SCHEMA_GENOME.out.verified_json)
 
             // Verify functional_annotation.json schema
