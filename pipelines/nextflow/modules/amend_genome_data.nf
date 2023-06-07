@@ -21,7 +21,7 @@ process AMEND_GENOME_DATA {
     input:
         tuple val(gca), path(genome_json) // Seq region json
         tuple val(gca), path(asm_report), path(genomic_fna), path(genbank_gbff) // downloaded genome data
-        val (brc4_mode)
+        val brc4_mode
 
     output:
         tuple val(gca), path ("${gca}/genome_amended.json"), emit: amended_json
