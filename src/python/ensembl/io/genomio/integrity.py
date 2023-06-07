@@ -350,7 +350,8 @@ class IntegrityTool:
 
     def __init__(self, manifest_file: Path, brc_mode: bool = False, ignore_final_stops: bool = False) -> None:
         self.manifest = Manifest(manifest_file)
-        self.brc_mode = brc_mode
+        self.brc_mode = False
+        self.set_brc_mode(brc_mode)
         self.ignore_final_stops = ignore_final_stops
         self.errors: List[str] = []
 
@@ -449,6 +450,11 @@ class IntegrityTool:
         if errors:
             errors_str = "\n".join(errors)
             raise InvalidIntegrityError(f"Integrity test failed:\n{errors_str}")
+
+    def set_brc_mode(self, brc_mode: bool) -> None:
+        """Set brc mode for this tool and the manifest."""
+        self.brc_mode = brc_mode
+        self.manifest.brc_mode = brc_mode
 
     def _check_genome(self, genome: Dict) -> None:
         """Check if the accession is correct in genome.json."""
@@ -632,7 +638,7 @@ def main() -> None:
     # Start
     inspector = IntegrityTool(mod.args["manifest_file"])
     if mod.args.get("brc_mode"):
-        inspector.brc_mode = True
+        inspector.set_brc_mode(True)
 
     inspector.check_integrity()
 

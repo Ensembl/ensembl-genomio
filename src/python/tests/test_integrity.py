@@ -64,6 +64,8 @@ class TestIntegrity:
         with expected:
             integrity = IntegrityTool(manifest_path, brc_mode, ignore_false_stops)
             assert isinstance(integrity, IntegrityTool)
+            assert integrity.brc_mode == brc_mode
+            assert integrity.manifest.brc_mode == brc_mode
 
     @pytest.mark.parametrize(
         "manifest_dir, expected",
