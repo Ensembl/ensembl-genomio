@@ -77,7 +77,7 @@ test:python:artifacts:
     # trying REST API way 
     # get triggered pipelines info (bridges)
     #   https://docs.gitlab.com/ee/api/jobs.html#list-pipeline-trigger-jobs
-    - 'wget -O $RUN_DIR/bridges.json --header "JOB-TOKEN $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/bridges"'
+    - 'wget -O $RUN_DIR/bridges.json --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/bridges"'
     # get pipeline.id with "name":"test:python"
     - 'cat $RUN_DIR/bridges.json | python -c "import json; import sys; ps = json.load(sys.stdin); p = filter(lambda x: x.get(\"name\", \"\") == \"test:python\", ps); print(list(p)[0][\"id\"])" > $RUN_DIR/bridge_pipeline_id'
     # get jobs for downstream pipeline with `bridge_pipeline_id`
