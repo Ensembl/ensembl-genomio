@@ -19,7 +19,7 @@ process MANIFEST_STATS {
 
     input:
         tuple path(manifest_dir), val(accession)
-        val (datasets)
+        val datasets
 
     output:
         tuple path(manifest_dir), val(accession)
