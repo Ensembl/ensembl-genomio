@@ -28,6 +28,7 @@ workflow:
 # MB allow for   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
+  GITLAB_URL: https://gitlab.ebi.ac.uk
   RUN_DIR: ./cicd/runtime
 
 stages:
@@ -65,24 +66,16 @@ test:python:artifacts:
   script:
     # get artifacts from the downstream pipeline using url
     #   https://docs.gitlab.com/ee/ci/jobs/job_artifacts.html#from-a-url-1
-    # - 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/download?job=python:tests:pytest"'
+    # - 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "$GITLAB_URL/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/download?job=python:tests:pytest"'
     # DOES NOT WORK
-    # so going down the API way
-    # in REST should be
-    # get triggered pipelines info (bridges)
-    #   https://docs.gitlab.com/ee/api/jobs.html#list-pipeline-trigger-jobs
-    #   "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/bridges"
-    # get pipeline "id" with "name":"test:python"
-    # get jobs for downstream pipeline with `bridge_pipeline_id`
-    #   https://docs.gitlab.com/ee/api/pipelines.html
-    #   "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/pipelines/XXX/jobs"
-    # get job id with name "python:tests:pytest"
-
-    # get artifacts for `pytest_job_id`
-    #   https://docs.gitlab.com/ee/api/job_artifacts.html
-    #   "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/XXX/artifacts"
-    #- cat $RUN_DIR/pytest_job_id | xargs -n 1 -I XXX 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/XXX/artifacts"'
-    - echo 1285989 | xargs -n 1 -I XXX 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/XXX/artifacts"'
+    # so going down the GRAPHQL way
+    - echo $CI_PROJECT_PATH $CI_API_GRAPHQL_URL $GITLAB_URL $CI_API_V4_URL 
+    #   get artifacts url json
+    - 'wget -O - --header "Authorization: Bearer $CI_JOB_TOKEN"" --header "Content-Type: application/json"
+--post-data="{\"query\": \"query { project(fullPath:\\\"$CI_PROJECT_PATH\\\") { pipeline(iid:\\\"$CI_PIPELINE_IID\\\") { job(name:\\\"test:python\\\") { downstreamPipeline { job(name:\\\"python:tests:pytest\\\") { browseArtifactsPath }  }  } }  } }\"}" $CI_API_GRAPHQL_URL | tee $RUN_DIR/test_python_artifacts.json'
+    #   get artifacts url
+    - 'cat  $RUN_DIR/test_python_artifacts.json | grep -Po "\"browseArtifactsPath\":\"[^\"]+" | cut -f 4 -d "\""  | perl -pe \"s,/browse$,/download?file_type=archive,\" | tee $RUN_DIR/test_python_artifacts.url_part' 
+    # get artifacts
     - unzip $RUN_DIR/artifacts.zip # N.B. has $RUN_DIR as the root
     - cat $RUN_DIR/cov_report/txt/report.txt
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
