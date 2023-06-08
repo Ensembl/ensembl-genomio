@@ -28,7 +28,6 @@ workflow:
 # MB allow for   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
-  GITLAB_URL: https://gitlab.ebi.ac.uk
   RUN_DIR: ./cicd/runtime
 
 stages:
@@ -70,10 +69,11 @@ test:python:artifacts:
     # DOES NOT WORK
     # so going down the GRAPHQL way
     #   get artifacts url json
-    - 'wget -O - --header "Authorization: Bearer $CI_JOB_TOKEN"" --header "Content-Type: application/json" --post-data="{\"query\": \"query { project(fullPath:\\\"$CI_PROJECT_PATH\\\") { pipeline(iid:\\\"$CI_PIPELINE_IID\\\") { job(name:\\\"test:python\\\") { downstreamPipeline { job(name:\\\"python:tests:pytest\\\") { browseArtifactsPath }  }  } }  } }\"}" $CI_API_GRAPHQL_URL | tee $RUN_DIR/test_python_artifacts.json'
+    - 'wget -O - --header "Authorization: Bearer $CI_JOB_TOKEN" --header "Content-Type: application/json" --post-data="{\"query\": \"query { project(fullPath:\\\"$CI_PROJECT_PATH\\\") { pipeline(iid:\\\"$CI_PIPELINE_IID\\\") { job(name:\\\"test:python\\\") { downstreamPipeline { job(name:\\\"python:tests:pytest\\\") { browseArtifactsPath }  }  } }  } }\"}" $CI_API_GRAPHQL_URL | tee $RUN_DIR/test_python_artifacts.json'
     #   get artifacts url
     - 'cat  $RUN_DIR/test_python_artifacts.json | grep -Po "\"browseArtifactsPath\":\"[^\"]+" | cut -f 4 -d "\""  | perl -pe \"s,/browse$,/download?file_type=archive,\" | tee $RUN_DIR/test_python_artifacts.url_part' 
     # get artifacts
+    # $CI_SERVER_URL
     - unzip $RUN_DIR/artifacts.zip # N.B. has $RUN_DIR as the root
     - cat $RUN_DIR/cov_report/txt/report.txt
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
