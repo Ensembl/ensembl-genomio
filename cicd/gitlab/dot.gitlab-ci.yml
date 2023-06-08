@@ -63,19 +63,9 @@ test:python:artifacts:
     - job: test:python
   image: python:3.8
   script:
-    # get triggered pipelines info (bridges)
-    #   https://docs.gitlab.com/ee/api/jobs.html#list-pipeline-trigger-jobs
-    - 'wget -O $RUN_DIR/bridges.json --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/bridges"'
-    # get pipeline.id with "name":"test:python"
-    - cat $RUN_DIR/bridges.json | python -c 'import json; import sys; ps = json.load(sys.stdin); p = filter(lambda x: "name" in x and x["name"] == "test:python", ps); print(list(p)[0]["id"])' > $RUN_DIR/bridge_pipeline_id
-    # get jobs for downstream pipeline with `bridge_pipeline_id`
-    #   https://docs.gitlab.com/ee/api/pipelines.html
-    - cat $RUN_DIR/bridge_pipeline_id | xargs -n 1 -I XXX 'wget -O $RUN_DIR/downstream_jobs.json --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/pipelines/XXX/jobs"'
-    # get job id with name "python:tests:pytest"
-    - cat $RUN_DIR/downstream_jobs.json | python -c 'import json; import sys; js = json.load(sys.stdin); j = filter(lambda x: "name" in x and x["name"] == "python:tests:pytest", js); print(list(j)[0]["id"])' > $RUN_DIR/pytest_job_id
-    # get artifacts for `pytest_job_id`
-    #   https://docs.gitlab.com/ee/api/job_artifacts.html
-    - cat $RUN_DIR/pytest_job_id | xargs -n 1 -I XXX 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/XXX/artifacts"'
+    # get artifacts from the downstream pipeline usig url
+    #   https://docs.gitlab.com/ee/ci/jobs/job_artifacts.html#from-a-url-1
+    - 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/download?job=python:tests:pytest"'
     - unzip $RUN_DIR/artifacts.zip # N.B. has $RUN_DIR as the root
     - cat $RUN_DIR/cov_report/txt/report.txt
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'

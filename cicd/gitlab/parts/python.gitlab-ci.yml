@@ -113,7 +113,7 @@ python:static_analysis:black:
 python:tests:pytest:
   extends: .python:tests:generic
   script:
-    - coverage run -m pytest
+    - coverage run -m pytest --junitxml=$RUN_DIR/cov_report/xml/junit_reports.xml
     - coverage html -d $RUN_DIR/cov_report/html
     - coverage xml -o $RUN_DIR/cov_report/xml/coverage.xml
     - mkdir -p $RUN_DIR/cov_report/txt
@@ -121,10 +121,11 @@ python:tests:pytest:
   # pattern to extract cov from output: https://docs.gitlab.com/ee/ci/yaml/index.html#coverage
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
-    expire_in: 2 hours
+    when: always
     paths:
       - $RUN_DIR/cov_report
     reports:
+      junit: $RUN_DIR/cov_report/xml/junit_reports.xml
       coverage_report:
         coverage_format: cobertura
         path: $RUN_DIR/cov_report/xml/coverage.xml
