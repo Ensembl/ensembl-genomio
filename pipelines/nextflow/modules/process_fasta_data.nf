@@ -19,14 +19,11 @@ process PROCESS_FASTA {
     label 'adaptive'
 
     input:
-    path fasta_file
-    path gbff_file
-    val gca
-    val pep_mode
+        tuple val(gca), path(compressed_gff), path(fasta_file), path(gbff_file)
+        val pep_mode
 
     output:
-    val gca, emit: gca
-    path "${gca}/*.fa", emit: processed_fasta
+        tuple val(gca), path ("${gca}/*.fa"), emit: processed_fasta
 
     script:
     """

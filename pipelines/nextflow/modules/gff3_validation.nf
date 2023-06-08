@@ -23,10 +23,10 @@ process GFF3_VALIDATION {
   container "biocontainers/genometools:v1.5.10ds-3-deb_cv1"
 
   input:
-    path gene_models
+    tuple val(gca), path (gene_models)
 
   output:
-    path "*"
+    tuple val(gca), path("*"), emit: gca
 
   script:
   """
