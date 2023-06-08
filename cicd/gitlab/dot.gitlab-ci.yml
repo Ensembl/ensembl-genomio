@@ -69,6 +69,7 @@ test:python:artifacts:
     # DOES NOT WORK
     # so going down the GRAPHQL way
     #   get artifacts url json
+    - 'echo wget -O - --header "Authorization: Bearer XXX" --header "Content-Type: application/json" --post-data="{\"query\": \"query { project(fullPath:\\\"$CI_PROJECT_PATH\\\") { pipeline(iid:\\\"$CI_PIPELINE_IID\\\") { job(name:\\\"test:python\\\") { downstreamPipeline { job(name:\\\"python:tests:pytest\\\") { browseArtifactsPath }  }  } }  } }\"}" $CI_API_GRAPHQL_URL | tee $RUN_DIR/test_python_artifacts.json'
     - 'wget -O - --header "Authorization: Bearer $CI_JOB_TOKEN" --header "Content-Type: application/json" --post-data="{\"query\": \"query { project(fullPath:\\\"$CI_PROJECT_PATH\\\") { pipeline(iid:\\\"$CI_PIPELINE_IID\\\") { job(name:\\\"test:python\\\") { downstreamPipeline { job(name:\\\"python:tests:pytest\\\") { browseArtifactsPath }  }  } }  } }\"}" $CI_API_GRAPHQL_URL | tee $RUN_DIR/test_python_artifacts.json'
     #   get artifacts url
     - 'cat  $RUN_DIR/test_python_artifacts.json | grep -Po "\"browseArtifactsPath\":\"[^\"]+" | cut -f 4 -d "\""  | perl -pe \"s,/browse$,/download?file_type=archive,\" | tee $RUN_DIR/test_python_artifacts.url_part' 
