@@ -203,7 +203,7 @@ class manifest_stats:
             }
 
             for name, count in stat_counts.items():
-                stats.append(f"{count: 9d}\t{name}")
+                stats.append(f"{count: 9f}\t{name}")
         return stats
 
     def seq_region_special_stats(
@@ -213,6 +213,7 @@ class manifest_stats:
         codon_tables: Optional[List[str]] = None,
     ) -> List[str]:
         """Prepare stats in case there are circular regions, specific locations and codon_tables.
+                stats.append(f"{count: 9f}\t{name}")
 
         Args:
             circular (int, optional): Number of circular regions. Defaults to 0.

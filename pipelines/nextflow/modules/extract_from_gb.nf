@@ -20,16 +20,16 @@ process EXTRACT_FROM_GB {
     label 'default'
 
     input:
-    val prefix
-    val production_name
-    path gb_file 
+        tuple val(accession), path(gb_file)
+        val prefix
+        val production_name
 
     output:
-    path "*.gff", emit: gene_gff
-    path "genome.json", emit: genome
-    path "seq_region.json", emit: seq_regions
-    path "dna.fasta", emit: dna_fasta
-    path "pep.fasta", emit: pep_fasta   //is this optional?
+        tuple val(accession), path("*.gff"), emit: gene_gff
+        tuple val(accession), path("genome.json"), emit: genome 
+        tuple val(accession), path("seq_region.json"), emit: seq_regions
+        tuple val(accession), path("dna.fasta"), emit: dna_fasta
+        tuple val(accession), path("pep.fasta"), emit: pep_fasta, optional: true
 
     script:
     """

@@ -24,7 +24,7 @@ process DOWNLOAD_GENBANK {
         val accession
 
     output:
-       path "*.gb"
+        tuple val(accession), path("*.gb"), emit: downloaded_gb_data
 
     script:
     """

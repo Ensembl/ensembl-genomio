@@ -13,19 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
+process MANIFEST {
+    tag "Manifest_$accession"
     label 'default'
-
+    
     input:
-        tuple val(gca), path(json_file)
+        tuple path(manifest_dir), val(accession)
 
     output:
-        tuple val(gca), path(json_file), emit: verified_json
-
+        tuple path(manifest_dir), val(accession)
+    
     script:
-        schema = params.json_schemas[json_file.baseName]
         """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
+        manifest_maker --manifest_dir ${manifest_dir}
         """
 }

@@ -13,19 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
+process PUBLISH_DIR {
+    publishDir "$out_dir", mode: 'copy', overwrite: false
+    tag "Publish_${accession}"
     label 'default'
+    time '5min'
 
     input:
-        tuple val(gca), path(json_file)
-
+        tuple path(data_dir), val(accession)
+        val (out_dir)
+    
     output:
-        tuple val(gca), path(json_file), emit: verified_json
-
+        path data_dir
+    
     script:
-        schema = params.json_schemas[json_file.baseName]
         """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
+        echo "Just copy over the finished files"
+        echo "From '$data_dir' to '$out_dir' for accession '$accession'"
         """
 }
