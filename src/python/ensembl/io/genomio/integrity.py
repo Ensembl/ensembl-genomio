@@ -107,16 +107,15 @@ class Manifest:
     def _check_md5sum(self, file_path: Path, md5sum: str) -> None:
         """Verify the integrity of the files in manifest.json.
 
-            An MD5 hash is generated using the path provided which is then compared to the hash
-            in manifest.json.
-            Errors are stored in self.errors
+        An MD5 hash is generated using the path provided which is then compared to the hash in manifest.json.
+        Errors are stored in ``self.errors``.
 
         Args:
-            Path: The path for each file in the genome.
+            file_path: Path to a genome file.
             md5sum: MD5 hash for the files.
         """
 
-        with open(file_path, "rb") as f:
+        with file_path.open("rb") as f:
             bytes_obj = f.read()
             readable_hash = hashlib.md5(bytes_obj).hexdigest()
             if readable_hash != md5sum:
@@ -365,14 +364,10 @@ class IntegrityTool:
         self.ignore_final_stops = ignore_final_stops
         self.errors: List[str] = []
 
-    def add_error(self, error_str: str) -> None:
-        """Store a new error in the list."""
-        self.errors += error_str
-
-    def add_errors(self, errors: List[str]) -> None:
-        """Store a list of errors in the list."""
-        for error in errors:
-            self.add_error(error)
+    def add_errors(self, *args: str) -> None:
+        """Store the given errors in the list."""
+        for error in args:
+            self.errors += error
 
     def check_integrity(self):
         """Load files listed in the manifest.json and check the integrity.
@@ -581,7 +576,7 @@ class IntegrityTool:
 
         return errors
 
-    def check_seq_region_lengths(self, seqrs, feats, name) -> None:
+    def check_seq_region_lengths(self, seqrs: Tuple[str, int], feats: Tuple[str, int], name: str) -> None:
         """Check the integrity of seq_region.json file by comparing the length of the sequence
             to fasta files and the gff.
 
