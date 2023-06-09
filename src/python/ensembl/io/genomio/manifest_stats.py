@@ -173,9 +173,7 @@ class manifest_stats:
         stats.append(seq_region_path.name)
         stats += self.coord_systems_stats(coord_systems)
         stats += self.seq_region_special_stats(circular, locations, codon_tables)
-
         stats.append("\n")
-
         return stats
 
     def coord_systems_stats(self, coord_systems: Dict[str, List[int]]) -> List[str]:
@@ -184,10 +182,10 @@ class manifest_stats:
             - sequence length sum, minimum, maximum, mean
 
         Args:
-            coord_systems (Dict[str, List[int]]): Coordinate system dict of lengths.
+            coord_systems: Coordinate system dictionary of lengths.
 
         Returns:
-            List[str]: Stats.
+            A list with the computed statistics in a printable format.
         """
         stats: List[str] = []
         stats.append(f"Total coord_systems {len(coord_systems)}")
@@ -216,12 +214,12 @@ class manifest_stats:
                 stats.append(f"{count: 9f}\t{name}")
 
         Args:
-            circular (int, optional): Number of circular regions. Defaults to 0.
-            locations (Optional[List[str]], optional): The regions and their location. Defaults to None.
-            codon_tables (Optional[List[str]], optional): The regions and their codon_table. Defaults to None.
+            circular: Number of circular regions. Defaults to 0.
+            locations: The regions and their location. Defaults to None.
+            codon_tables: The regions and their codon_table. Defaults to None.
 
         Returns:
-            List[str]: Stats.
+            A list with the computed statistics in a printable format.
         """
         stats: List[str] = []
         if circular or locations or codon_tables:
@@ -249,21 +247,19 @@ class manifest_stats:
         """
 
         biotypes = self.count_biotypes(gff3_path)
-
         # Compile final stats
         stats = self.biotypes_stats(biotypes)
         stats += self.check_ncbi_stats(biotypes)
-
         return stats
 
     def count_biotypes(self, gff3_path: Path) -> Dict[str, BiotypeCounter]:
         """Count the biotypes in a GFF3 file.
 
         Args:
-            gff3_path (Path): the GFF3 file.
+            gff3_path: Path to the GFF3 file.
 
         Returns:
-            Dict[str, BiotypeCounter]: Dict of biotype counters.
+            Dictionary of biotype counters.
         """
 
         biotypes: Dict[str, BiotypeCounter] = {}
@@ -312,10 +308,10 @@ class manifest_stats:
         """Prepare biotype stats in order of their name.
 
         Args:
-            biotypes (Dict[str, BiotypeCounter]): Dict of biotypes counters.
+            biotypes: Biotypes counters.
 
         Returns:
-            List[str]: Stats.
+            A list with the computed statistics in a printable format.
         """
         sorted_biotypes = {}
         for name in sorted(biotypes.keys()):
