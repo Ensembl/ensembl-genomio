@@ -61,7 +61,7 @@ class ManifestMaker:
                 print("Can't create manifest for subdirectory")
                 continue
 
-            for name, standard_name in ManifestMaker.names.items():
+            for name, standard_name in self.names.items():
                 if subfile.stem.endswith(name):
                     used_file = True
                     md5 = self._get_md5sum(subfile)
