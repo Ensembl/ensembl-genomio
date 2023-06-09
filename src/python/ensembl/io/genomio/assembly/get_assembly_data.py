@@ -155,7 +155,8 @@ def _download_file(
 
     while (file_sum != expected_sum) and (redo <= max_redo):
         redo += 1
-        time.sleep(3)
+        if redo > 1:
+            time.sleep(3)
 
         print(f"Downloading file {ftp_file}, try {redo}...")
         # Download the file
