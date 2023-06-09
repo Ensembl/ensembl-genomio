@@ -88,9 +88,8 @@ class FunctionalAnnotations:
             r"( \(fragment\))?$"
         )
 
-        if excluded_names.match(product.lower()):
-            return False
-        return True
+        product_is_valid = not excluded_names.match(product.lower())
+        return product_is_valid
 
     def _cleanup(self) -> None:
         """Returns the functional annotations list without putative product descriptions."""
