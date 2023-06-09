@@ -66,8 +66,11 @@ test:python:artifacts:
     # get artifacts from the downstream pipeline using url
     #   https://docs.gitlab.com/ee/ci/jobs/job_artifacts.html#from-a-url-1
     # - 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "$GITLAB_URL/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/download?job=python:tests:pytest"'
-    # DOES NOT WORK: artifacts became accessible only if the run was successful
+    # DOES NOT WORK: artifacts became accessible only if the run was successful, otherwise they are outdated
     # so going down the GRAPHQL way
+    # REST AND GRAPHQL API need auth tokens to be accessed, but
+    #   API is not accessible using $CI_JOB_TOKEN
+    #   we need a configured "vault" (key storage)
     #   get artifacts url json
     # - 'wget -O - --header "Authorization: Bearer $CI_JOB_TOKEN" --header "Content-Type: application/json" --post-data="{\"query\": \"query { project(fullPath:\\\"$CI_PROJECT_PATH\\\") { pipeline(iid:\\\"$CI_PIPELINE_IID\\\") { job(name:\\\"test:python\\\") { downstreamPipeline { job(name:\\\"python:tests:pytest\\\") { browseArtifactsPath }  }  } }  } }\"}" $CI_API_GRAPHQL_URL | tee $RUN_DIR/test_python_artifacts.json'
     #   get artifacts url
