@@ -282,10 +282,10 @@ class Manifest:
         """Record genes and peptides lengths from a feature.
 
         Args:
-            feat (SeqFeature): Gene feature to check.
-            genes (Lengths): Record of genes lengths to update.
-            peps (Lengths): Record of peptides lengths to update.
-            all_peps (Lengths): Record of all peptides lengths to update (include pseudogenes).
+            feat : Gene feature to check.
+            genes: Record of genes lengths to update.
+            peps: Record of peptides lengths to update.
+            all_peps: Record of all peptides lengths to update (include pseudogenes).
 
         """
         gene_id = feat.id
@@ -416,7 +416,7 @@ class IntegrityTool:
                         "Fasta translations vs gff (include pseudo CDS)",
                         special_diff=True,
                     )
-                    self.add_errors(tr_errors)
+                    self.add_errors(*tr_errors)
 
             # Check functional_annotation.json integrity
             # Gene ids, translated CDS ids and translated CDSs
@@ -432,7 +432,7 @@ class IntegrityTool:
                         gff["all_translations"],
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
-                self.add_errors(tr_errors)
+                self.add_errors(*tr_errors)
                 errors += self.check_ids(
                     func_ann["transposable_elements"],
                     gff["transposable_elements"],

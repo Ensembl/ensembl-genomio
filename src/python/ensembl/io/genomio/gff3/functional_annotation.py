@@ -82,10 +82,11 @@ class FunctionalAnnotations:
             r"( uncharacterized)?"
             r" protein"
             r"( of unknown function)?"
-            r"( \(fragment\))?$"
+            r"( \(fragment\))?$",
+            re.IGNORECASE
         )
 
-        product_is_valid = not excluded_names.match(product.lower())
+        product_is_valid = not excluded_names.match(product)
         return product_is_valid
 
     def _cleanup(self) -> None:

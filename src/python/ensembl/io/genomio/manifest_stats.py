@@ -192,7 +192,7 @@ class manifest_stats:
         for coord_name, lengths in coord_systems.items():
             stats.append(f"\nCoord_system: {coord_name}")
 
-            stat_counts: Dict[str, Union[int, float]] = {
+            stat_counts: Dict[str, float] = {
                 "Number of sequences": len(lengths),
                 "Sequence length sum": sum(lengths),
                 "Sequence length minimum": min(lengths),
