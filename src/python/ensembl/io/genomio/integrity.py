@@ -51,7 +51,7 @@ class Manifest:
         self.genome: Dict[str, Any] = {}
         self.seq_regions: Dict[str, Any] = {}
 
-        self.lengths: Dict[str, Dict] = {
+        self.lengths: Dict[str, Lengths] = {
             "gene_models": {},
             "dna_sequences": {},
             "peptide_sequences": {},
