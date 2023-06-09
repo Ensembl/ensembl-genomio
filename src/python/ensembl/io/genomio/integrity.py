@@ -35,6 +35,7 @@ from ensembl.io.genomio.utils.archive_utils import open_gz_file
 from ensembl.io.genomio.utils.json_utils import get_json
 
 
+# Record the lengths of the sequence for features/regions
 Lengths = Dict[str, int]
 
 
@@ -224,7 +225,7 @@ class Manifest:
             # Get gene ids and translation ids
             genes = {}
             translations = {}
-            tes = {}
+            transposons = {}
 
             for item in data:
                 if item["object_type"] == "gene":
@@ -232,9 +233,9 @@ class Manifest:
                 elif item["object_type"] == "translation":
                     translations[item["id"]] = 1
                 if item["object_type"] == "transposable_element":
-                    tes[item["id"]] = 1
+                    transposons[item["id"]] = 1
 
-            return {"genes": genes, "translations": translations, "transposable_elements": tes}
+            return {"genes": genes, "translations": translations, "transposable_elements": transposons}
 
     def get_gff3(self, gff3_path: Path) -> Dict[str, Dict[str, int]]:
         """A GFF parser is used to retrieve information in the GFF file such as
@@ -279,6 +280,15 @@ class Manifest:
     def _retrieve_gff_gene_lengths(
         self, feat: SeqFeature, genes: Lengths, peps: Lengths, all_peps: Lengths
     ) -> None:
+        """Record genes and peptides lengths from a feature.
+
+        Args:
+            feat (SeqFeature): Gene feature to check.
+            genes (Lengths): Record of genes lengths to update.
+            peps (Lengths): Record of peptides lengths to update.
+            all_peps (Lengths): Record of all peptides lengths to update (include pseudogenes).
+
+        """
         gene_id = feat.id
         if not self.brc_mode:
             gene_id = gene_id.replace("gene:", "")
