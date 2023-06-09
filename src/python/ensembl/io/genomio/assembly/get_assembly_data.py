@@ -15,7 +15,7 @@
 # limitations under the License.
 """Download an assembly data files from INSDC or RefSeq."""
 
-import ftplib
+from ftplib import FTP
 import hashlib
 from os import PathLike
 from pathlib import Path
@@ -105,7 +105,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     # Get the list of assemblies for this accession
     ftp_url = "ftp.ncbi.nlm.nih.gov"
     sub_dir = Path("genomes", "all", gca, part1, part2, part3)
-    ftp_conn = ftplib.FTP()
+    ftp_conn = FTP()
     ftp_conn.connect(ftp_url)
     ftp_conn.login()
     ftp_conn.cwd(str(sub_dir))
@@ -128,7 +128,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
 
 
 def _download_file(
-    ftp_conn: ftplib.FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
+    ftp_conn: FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
 ) -> None:
     has_md5 = True
     expected_sum = ""
