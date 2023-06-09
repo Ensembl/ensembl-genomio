@@ -469,7 +469,7 @@ class IntegrityTool:
                 if "accession" in genome_ass:
                     genome_acc = genome_ass["accession"]
                     if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
-                        self.add_error(f"Genome assembly accession is wrong: '{genome_acc}'")
+                        self.add_errors(f"Genome assembly accession is wrong: '{genome_acc}'")
 
     def check_ids(self, list1, list2, name):
         """Compare the ids in list1 and list2.
@@ -576,7 +576,7 @@ class IntegrityTool:
 
         return errors
 
-    def check_seq_region_lengths(self, seqrs: Tuple[str, int], feats: Tuple[str, int], name: str) -> None:
+    def check_seq_region_lengths(self, seqrs: Dict[str, Any], feats: Dict[str, Any], name: str) -> None:
         """Check the integrity of seq_region.json file by comparing the length of the sequence
             to fasta files and the gff.
 
@@ -618,12 +618,12 @@ class IntegrityTool:
         if common:
             print(f"{len(common)} common elements in {name}")
         if diff:
-            self.add_error(f"{len(diff)} common elements with higher length in {name} (e.g. {diff_list[0]})")
+            self.add_errors(f"{len(diff)} common elements with higher length in {name} (e.g. {diff_list[0]})")
         if only_seqr:
             # Not an error!
             print(f"{len(only_seqr)} only in seq_region list in {name} (first: {only_seqr[0]})")
         if only_feat:
-            self.add_error(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
+            self.add_errors(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
 
 
 class InputSchema(argschema.ArgSchema):
