@@ -71,13 +71,10 @@ class FunctionalAnnotations:
 
     @staticmethod
     def _product_is_valid(product: str) -> bool:
-        """Check a product string.
+        """Returns True if the product name is valid, False otherwise.
 
         Args:
-            product: a product name.
-
-        Returns:
-            True only if the string is valid, False otherwise.
+            product: A product name.
 
         """
         excluded_names = re.compile(
@@ -101,7 +98,8 @@ class FunctionalAnnotations:
         """Print out the current annotation list in a json file.
 
         Args:
-            out_path (PathLike): Json file where to write the data.
+            out_path: JSON file path where to write the data.
+
         """
         self._cleanup()
         print_json(Path(out_path), self.annotations)
