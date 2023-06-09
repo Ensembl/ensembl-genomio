@@ -40,7 +40,7 @@ class Records(list):
         """Print out the current list of records in a GFF3 file.
 
         Args:
-            out_gff_path (PathLike}: GFF3 file where to write the records.
+            out_gff_path: Path to GFF3 file where to write the records.
         """
         with Path(out_gff_path).open("w") as out_gff_fh:
             GFF.write(self, out_gff_fh)
@@ -209,7 +209,7 @@ class GFFSimplifier(GFFParserCommon):
     """Parse a GGF3 file and output a cleaned up GFF3 + annotation json file.
 
     Raises:
-        GFFParserError: Raise this if an error can't be automatically fixed.
+        GFFParserError: If an error cannot be automatically fixed.
     """
 
     # Multiple parameters to automate various fixes
@@ -443,9 +443,7 @@ class GFFSimplifier(GFFParserCommon):
             if feat.type == "exon":
                 # Replace qualifiers
                 old_exon_qualifiers = feat.qualifiers
-                feat.qualifiers = {
-                    "Parent": transcript.id,
-                }
+                feat.qualifiers = {"Parent": transcript.id}
                 if "source" in old_exon_qualifiers:
                     feat.qualifiers["source"] = old_exon_qualifiers["source"]
             elif feat.type == "CDS":
@@ -471,7 +469,7 @@ class GFFSimplifier(GFFParserCommon):
                     exons_to_delete.append(tcount)
                     continue
 
-                fail_types["sub_transcript=" + feat.type] = 1
+                fail_types[f"sub_transcript={feat.type}"] = 1
                 message = (
                     f"Unrecognized exon type for {feat.type}: {feat.id}"
                     f" (for transcript {transcript.id} of type {transcript.type})"
