@@ -23,10 +23,18 @@ process PROCESS_FASTA {
         val pep_mode
 
     output:
-        tuple val(gca), path ("${gca}/*.fa"), emit: processed_fasta
+        tuple val(gca), path ("fasta_*.fa"), emit: processed_fasta
 
     script:
     """
-    prep_fasta_data --fasta_infile ${fasta_file} --genbank_infile ${gbff_file} --output_dir "${gca}" --peptide_mode ${pep_mode}
+    if [ $pep_mode == 1 ]; then
+        output_fasta=fasta_pep.fa
+    else
+        output_fasta=fasta_dna.fa
+    fi
+    prep_fasta_data --fasta_infile ${fasta_file} \
+        --genbank_infile ${gbff_file} \
+        --fasta_outfile \$output_fasta \
+        --peptide_mode ${pep_mode}
     """
 }
