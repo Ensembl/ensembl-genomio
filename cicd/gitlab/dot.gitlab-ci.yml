@@ -14,42 +14,47 @@
 
 
 # WORKFLOW RULES -- WHEN TO RUN PIPELINES
+
 # https://docs.gitlab.com/ee/ci/yaml/#workflow
 # https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
+
+# do not run on commits, as we expect everything to be pushed from GitHub
 workflow:
   rules:
      - if: $CI_EXTERNAL_PULL_REQUEST_IID && $CI_COMMIT_BRANCH
      - if: $CI_COMMIT_BRANCH
        when: never
 
+# MB allow for   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 variables:
   RUN_DIR: ./cicd/runtime
 
-stages:
-  - debug
-  - test
+
+# Stages
+#   using defaul default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages):
+# .pre build test deploy .post
+
 
 # In-house stuff
+
+#  Included pipelines
+#   Python checks
+include:
+  - local: /cicd/gitlab/parts/python.gitlab-ci.yml
+
+#  Triggered pipelines
 
 #   CI/CD debugging
 debug:gitlab_env:
   # comment out when section to run
   when: manual
-  stage: debug
+  stage: build
   # using sub-pipeline from ./parts
   trigger:
     strategy: depend
     include:
     - local: /cicd/gitlab/parts/debug.gitlab-ci.yml
-
-#   Python checks
-test:python:
-  stage: test
-  # using sub-pipeline from ./parts
-  trigger:
-    strategy: depend
-    include:
-    - local: /cicd/gitlab/parts/python.gitlab-ci.yml
 
 #   License checks
 test:license:
@@ -61,7 +66,7 @@ test:license:
     - local: /cicd/gitlab/parts/license.gitlab-ci.yml
 
 
-# external pipelines
+# External pipelines
 #   trying to use those from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates
 
 test:external:code_quality:

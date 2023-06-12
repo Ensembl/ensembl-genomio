@@ -20,21 +20,20 @@ variables:
   MYPY_CMD: mypy --config-file pyproject.toml
   BLACK_CMD: black --config pyproject.toml
 
-# don't forget to update /pyproject.toml
-#  if changing python version
-image: python:3.8
 
-
-# overriding the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
-stages:
-  - python:prepare_env
-  - python:static_analysis
-  - python:tests
-
+# Stages
+#   using defaul default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages):
+# .pre build test deploy .post
 
 # Python related environment and tests
+.python:image:
+  # don't forget to update /pyproject.toml
+  #  if changing python version
+  image: python:3.8
+
 python:prepare_env:venv:
-  stage: python:prepare_env
+  extends: .python:image
+  stage: .pre
   artifacts:
     paths:
       - $RUN_DIR
@@ -51,7 +50,8 @@ python:prepare_env:venv:
 
 ##  LOCAL ENV & PIP
 python:prepare_env:local:
-  stage: python:prepare_env
+  extends: .python:image
+  stage: build
   needs:
     # using `needs` as it allows to depend on jobs from the same stage
     #  https://docs.gitlab.com/ee/ci/yaml/#needs
@@ -72,7 +72,8 @@ python:prepare_env:local:
 # A generic job to be used by various python tests
 # to be reused with `extends` mechanism (https://docs.gitlab.com/ee/ci/yaml/#extends)
 .python:static_analysis:generic:
-  stage: python:static_analysis
+  extends: .python:image
+  stage: test
   needs:
     - job: python:prepare_env:local
       artifacts: true
@@ -81,7 +82,7 @@ python:prepare_env:local:
 
 .python:tests:generic:
   extends: .python:static_analysis:generic
-  stage: python:tests
+  stage: test
 
 
 # Specific instances for static analyses
@@ -112,8 +113,20 @@ python:static_analysis:black:
 python:tests:pytest:
   extends: .python:tests:generic
   script:
-    - coverage run -m pytest
-    - coverage html -d cov_report
+    - coverage run -m pytest --junitxml=$RUN_DIR/cov_report/xml/junit_reports.xml
+    - coverage html -d $RUN_DIR/cov_report/html
+    - coverage xml -o $RUN_DIR/cov_report/xml/coverage.xml
+    - mkdir -p $RUN_DIR/cov_report/txt
+    - coverage report --format=text 2>&1 | tee $RUN_DIR/cov_report/txt/report.txt
+  # pattern to extract cov from output: https://docs.gitlab.com/ee/ci/yaml/index.html#coverage
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
+    when: always
     paths:
-      - cov_report
+      - $RUN_DIR/cov_report
+    reports:
+      junit: $RUN_DIR/cov_report/xml/junit_reports.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: $RUN_DIR/cov_report/xml/coverage.xml
+
