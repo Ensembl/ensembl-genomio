@@ -83,7 +83,7 @@ class FunctionalAnnotations:
             r" protein"
             r"( of unknown function)?"
             r"( \(fragment\))?$",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         product_is_valid = not excluded_names.match(product)

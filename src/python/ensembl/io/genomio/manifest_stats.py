@@ -21,7 +21,7 @@ from pathlib import Path
 from shutil import which
 from statistics import mean
 import subprocess
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set
 
 import argschema
 from BCBio import GFF
@@ -229,7 +229,7 @@ class manifest_stats:
             if locations is not None:
                 stats.append(f"{len(locations): 9d} sequences with location")
                 for loc in locations:
-                    stats.append(f"\t\t\t%s{loc}")
+                    stats.append(f"\t\t\t{loc}")
             if codon_tables:
                 stats.append(f"{len(codon_tables): 9d} sequences with codon_table")
                 for table in codon_tables:
