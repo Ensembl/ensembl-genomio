@@ -52,18 +52,31 @@ class Manifest:
         self.seq_regions: Dict[str, Any] = {}
 
         self.lengths: Dict[str, Lengths] = {
-            "gene_models": {},
             "dna_sequences": {},
             "peptide_sequences": {},
             "seq_region_levels": {},
             "annotations": {},
             "agp": {},
+            "gff3_seq_regions": {},
+            "gff3_genes": {},
+            "gff3_translations": {},
+            "gff3_all_translations": {},
+            "gff3_transposable_elements": {},
+            "ann_genes": {},
+            "ann_translations": {},
+            "ann_transposable_elements": {},
         }
 
         self.errors: List[str] = []
 
         self.ignore_final_stops = False
         self.brc_mode = False
+
+    def has_lengths(self, name: str) -> bool:
+        """Check if a given name has lengths records."""
+        if name in self.lengths:
+            return True
+        return False
 
     def get_lengths(self, name: str) -> Dict[str, Any]:
         """Returns a dict associating IDs with their length from a given file name."""
@@ -128,7 +141,7 @@ class Manifest:
         # First, get the Data
         if "gff3" in self.manifest_files:
             print("Got a gff")
-            self.lengths["gene_models"] = self.get_gff3(self.manifest_files["gff3"])
+            self.get_gff3(self.manifest_files["gff3"])
         if "fasta_dna" in self.manifest_files:
             print("Got a fasta dna")
             # Verify if the length and id for the sequence is unique
@@ -153,9 +166,7 @@ class Manifest:
             self.seq_regions = seq_regions
         if "functional_annotation" in self.manifest_files:
             print("Got a func_anns")
-            self.lengths["annotations"] = self.get_functional_annotation(
-                self.manifest_files["functional_annotation"]
-            )
+            self.get_functional_annotation(self.manifest_files["functional_annotation"])
         if "agp" in self.manifest_files:
             print("Got agp files")
             self.lengths["agp"] = self.get_agp_seq_regions(self.manifest_files["agp"])
@@ -204,7 +215,7 @@ class Manifest:
             self._add_error(f"{contains_stop_codon} sequences with stop codons in {fasta_path}")
         return data
 
-    def get_functional_annotation(self, json_path):
+    def get_functional_annotation(self, json_path: Path) -> None:
         """Load the functional annotation file to retrieve the gene_id and translation id.
             A functional annotation file contains information about a gene.
             The functional annotation file is stored in a json format containing
@@ -221,31 +232,32 @@ class Manifest:
         with open(json_path) as json_file:
             data = json.load(json_file)
 
-            # Get gene ids and translation ids
-            genes = {}
-            translations = {}
-            transposons = {}
+        # Get gene ids and translation ids
+        genes = {}
+        translations = {}
+        transposons = {}
 
-            for item in data:
-                if item["object_type"] == "gene":
-                    genes[item["id"]] = 1
-                elif item["object_type"] == "translation":
-                    translations[item["id"]] = 1
-                if item["object_type"] == "transposable_element":
-                    transposons[item["id"]] = 1
+        for item in data:
+            if item["object_type"] == "gene":
+                genes[item["id"]] = 1
+            elif item["object_type"] == "translation":
+                translations[item["id"]] = 1
+            if item["object_type"] == "transposable_element":
+                transposons[item["id"]] = 1
 
-            return {"genes": genes, "translations": translations, "transposable_elements": transposons}
+        stats = {
+            "ann_genes": genes,
+            "ann_translations": translations,
+            "ann_transposable_elements": transposons,
+        }
+        self.lengths = {**self.lengths, **stats}
 
-    def get_gff3(self, gff3_path: Path) -> Dict[str, Dict[str, int]]:
+    def get_gff3(self, gff3_path: Path) -> None:
         """A GFF parser is used to retrieve information in the GFF file such as
            gene and CDS ids and their corresponding lengths.
 
         Args:
             gff3_path: Path to gff3 file.
-
-        Returns:
-            dict containing sequence ids, gene ids, transcript ids and translation ids
-            are stored with their corresponding lengths.
         """
 
         seqs: Lengths = {}
@@ -267,14 +279,14 @@ class Manifest:
                     if feat.type == "transposable_element":
                         tes[feat.id] = feat_length
 
-        stats = {
-            "seq_region": seqs,
-            "genes": genes,
-            "translations": peps,
-            "all_translations": all_peps,
-            "transposable_elements": tes,
+        stats: Dict[str, Lengths] = {
+            "gff3_seq_regions": seqs,
+            "gff3_genes": genes,
+            "gff3_translations": peps,
+            "gff3_all_translations": all_peps,
+            "gff3_transposable_elements": tes,
         }
-        return stats
+        self.lengths = {**self.lengths, **stats}
 
     def _retrieve_gff_gene_lengths(
         self, feat: SeqFeature, genes: Lengths, peps: Lengths, all_peps: Lengths
@@ -389,22 +401,31 @@ class IntegrityTool:
         dna = manifest.get_lengths("dna_sequences")
         pep = manifest.get_lengths("peptide_sequences")
         seq_lengths = manifest.get_lengths("seq_regions")
-        gff = manifest.get_lengths("gene_models")
-        func_ann = manifest.get_lengths("annotations")
+
         agp_seqr = manifest.get_lengths("agp")
 
         # Then, run the checks
         self._check_genome(genome)
 
         # Check gff3
-        if gff:
+        if manifest.has_lengths("gff_genes"):
+            gff_genes = manifest.get_lengths("gff_genes")
+            gff_seq_regions = manifest.get_lengths("gff_seq_regions")
+            gff_translations = manifest.get_lengths("gff_translations")
+            gff_all_translations = manifest.get_lengths("gff_all_translations")
+            gff_transposable_elements = manifest.get_lengths("gff_transposable_elements")
+
+            ann_genes = manifest.get_lengths("ann_genes")
+            ann_translations = manifest.get_lengths("ann_translations")
+            ann_transposable_elements = manifest.get_lengths("ann_transposable_elements")
+
             # Check fasta_pep.fa integrity
             # The sequence length and id retrieved from the fasta_pep file
             # and compared to the translated CDS id and length in the gff
             # We don't compare the peptide lengths because of seqedits
             if pep:
                 tr_errors = self.check_lengths(
-                    pep, gff["translations"], "Fasta translations vs gff", special_diff=True
+                    pep, gff_translations, "Fasta translations vs gff", special_diff=True
                 )
                 if len(tr_errors) > 0:
                     # The pseudo CDSs are included in this check
@@ -412,7 +433,7 @@ class IntegrityTool:
                     # in the gff it will give an error
                     tr_errors = self.check_lengths(
                         pep,
-                        gff["all_translations"],
+                        gff_all_translations,
                         "Fasta translations vs gff (include pseudo CDS)",
                         special_diff=True,
                     )
@@ -421,28 +442,28 @@ class IntegrityTool:
             # Check functional_annotation.json integrity
             # Gene ids, translated CDS ids and translated CDSs
             # including pseudogenes are compared to the gff
-            if func_ann:
-                errors += self.check_ids(func_ann["genes"], gff["genes"], "Gene ids metadata vs gff")
+            if ann_genes:
+                errors += self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff")
                 tr_errors = self.check_ids(
-                    func_ann["translations"], gff["translations"], "Translation ids metadata vs gff"
+                    ann_translations, gff_translations, "Translation ids metadata vs gff"
                 )
                 if len(tr_errors) > 0:
                     tr_errors = self.check_ids(
-                        func_ann["translations"],
-                        gff["all_translations"],
+                        ann_translations,
+                        gff_all_translations,
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
                 self.add_errors(*tr_errors)
                 errors += self.check_ids(
-                    func_ann["transposable_elements"],
-                    gff["transposable_elements"],
+                    ann_transposable_elements,
+                    gff_transposable_elements,
                     "TE ids metadata vs gff",
                 )
 
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
             if seq_regions:
-                self.check_seq_region_lengths(seq_lengths, gff["seq_region"], "Seq_regions metadata vs gff")
+                self.check_seq_region_lengths(seq_lengths, gff_seq_regions, "Seq_regions metadata vs gff")
 
         # Check fasta dna and seq_region integrity
         if dna and seq_regions:
