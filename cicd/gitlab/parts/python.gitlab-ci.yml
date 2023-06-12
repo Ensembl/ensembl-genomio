@@ -21,14 +21,9 @@ variables:
   BLACK_CMD: black --config pyproject.toml
 
 
-
-# overriding/appending to the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
-#   uncomment if using as a standalone or triggered pipeline
-#
-# stages:
-#   include:
-#     - local: /cicd/gitlab/parts/python_stages.gitlab-ci.yml
-
+# Stages
+#   using defaul default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages):
+# .pre build test deploy .post
 
 # Python related environment and tests
 .python:image:
@@ -38,7 +33,7 @@ variables:
 
 python:prepare_env:venv:
   extends: .python:image
-  stage: python:prepare_env
+  stage: .pre
   artifacts:
     paths:
       - $RUN_DIR
@@ -55,7 +50,8 @@ python:prepare_env:venv:
 
 ##  LOCAL ENV & PIP
 python:prepare_env:local:
-  stage: python:prepare_env
+  extends: .python:image
+  stage: build
   needs:
     # using `needs` as it allows to depend on jobs from the same stage
     #  https://docs.gitlab.com/ee/ci/yaml/#needs
@@ -76,7 +72,8 @@ python:prepare_env:local:
 # A generic job to be used by various python tests
 # to be reused with `extends` mechanism (https://docs.gitlab.com/ee/ci/yaml/#extends)
 .python:static_analysis:generic:
-  stage: python:static_analysis
+  extends: .python:image
+  stage: test
   needs:
     - job: python:prepare_env:local
       artifacts: true
@@ -85,7 +82,7 @@ python:prepare_env:local:
 
 .python:tests:generic:
   extends: .python:static_analysis:generic
-  stage: python:tests
+  stage: test
 
 
 # Specific instances for static analyses

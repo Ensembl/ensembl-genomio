@@ -30,12 +30,11 @@ workflow:
 variables:
   RUN_DIR: ./cicd/runtime
 
-stages:
-  - debug
-  - python:prepare_env
-  - python:static_analysis
-  - python:tests
-  - test
+
+# Stages
+#   using defaul default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages):
+# .pre build test deploy .post
+
 
 # In-house stuff
 
@@ -50,53 +49,12 @@ include:
 debug:gitlab_env:
   # comment out when section to run
   when: manual
-  stage: debug
+  stage: build
   # using sub-pipeline from ./parts
   trigger:
     strategy: depend
     include:
     - local: /cicd/gitlab/parts/debug.gitlab-ci.yml
-
-
-#  Get artifacts from python tests
-.test:python:artifacts:
-  stage: test
-  #needs:
-  #  - job: test:python
-  image: python:3.8
-  script:
-    # get artifacts from the downstream pipeline using url
-    #   https://docs.gitlab.com/ee/ci/jobs/job_artifacts.html#from-a-url-1
-    # - 'wget -O $RUN_DIR/artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "$GITLAB_URL/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/download?job=python:tests:pytest"'
-    # DOES NOT WORK: artifacts became accessible only if the run was successful, otherwise they are outdated
-    # so going down the GRAPHQL way
-    # REST AND GRAPHQL API need auth tokens to be accessed, but
-    #   API is not accessible using $CI_JOB_TOKEN
-    #   we need a configured "vault" (key storage)
-    #   get artifacts url json
-    # - 'wget -O - --header "Authorization: Bearer $CI_JOB_TOKEN" --header "Content-Type: application/json" --post-data="{\"query\": \"query { project(fullPath:\\\"$CI_PROJECT_PATH\\\") { pipeline(iid:\\\"$CI_PIPELINE_IID\\\") { job(name:\\\"test:python\\\") { downstreamPipeline { job(name:\\\"python:tests:pytest\\\") { browseArtifactsPath }  }  } }  } }\"}" $CI_API_GRAPHQL_URL | tee $RUN_DIR/test_python_artifacts.json'
-    #   get artifacts url
-    # - 'cat  $RUN_DIR/test_python_artifacts.json | grep -Po "\"browseArtifactsPath\":\"[^\"]+" | cut -f 4 -d "\""  | perl -pe \"s,/browse$,/download?file_type=archive,\" | tee $RUN_DIR/test_python_artifacts.url_part' 
-    # get artifacts from  $CI_SERVER_URL
-    # DOES NOT WORK: GraphQL API is not accessible using $CI_JOB_TOKEN
-    # trying REST API way 
-    # get triggered pipelines info (bridges)
-    #   https://docs.gitlab.com/ee/api/jobs.html#list-pipeline-trigger-jobs
-    - 'wget -O $RUN_DIR/bridges.json --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/bridges"'
-    # get pipeline.id with "name":"test:python"
-    - 'cat $RUN_DIR/bridges.json | python -c "import json; import sys; ps = json.load(sys.stdin); p = filter(lambda x: x.get(\"name\", \"\") == \"test:python\", ps); print(list(p)[0][\"id\"])" > $RUN_DIR/bridge_pipeline_id'
-    # get jobs for downstream pipeline with `bridge_pipeline_id`
-    #   https://docs.gitlab.com/ee/api/pipelines.html
-    - 'cat $RUN_DIR/bridge_pipeline_id | xargs -n 1 -I XXX "wget -O $RUN_DIR/downstream_jobs.json --header \"JOB-TOKEN: $CI_JOB_TOKEN\" \"https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/pipelines/XXX/jobs\" " '
-    # get job id with name "python:tests:pytest"
-    - 'cat $RUN_DIR/downstream_jobs.json | python -c "import json; import sys; js = json.load(sys.stdin); j = filter(lambda x: x.get(\"name\", \"\") == \"python:tests:pytest\", js); print(list(j)[0][\"id\"])" > $RUN_DIR/pytest_job_id'
-    # get artifacts for `pytest_job_id`
-    #   https://docs.gitlab.com/ee/api/job_artifacts.html
-    - 'cat $RUN_DIR/pytest_job_id | xargs -n 1 -I XXX "wget -O $RUN_DIR/artifacts.zip --header \"JOB-TOKEN: $CI_JOB_TOKEN\" \"https://gitlab.ebi.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/XXX/artifacts\" "'
-    - unzip $RUN_DIR/artifacts.zip # N.B. has $RUN_DIR as the root
-    - cat $RUN_DIR/cov_report/txt/report.txt
-  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
-
 
 #   License checks
 test:license:
@@ -108,7 +66,7 @@ test:license:
     - local: /cicd/gitlab/parts/license.gitlab-ci.yml
 
 
-# external pipelines
+# External pipelines
 #   trying to use those from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates
 
 test:external:code_quality:
