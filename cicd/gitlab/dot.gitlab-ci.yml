@@ -36,6 +36,13 @@ stages:
 
 # In-house stuff
 
+#  Included pipelines
+#   Python checks
+include:
+  - local: /cicd/gitlab/parts/python.gitlab-ci.yml
+
+#  Triggered pipelines
+
 #   CI/CD debugging
 debug:gitlab_env:
   # comment out when section to run
@@ -47,14 +54,6 @@ debug:gitlab_env:
     include:
     - local: /cicd/gitlab/parts/debug.gitlab-ci.yml
 
-#   Python checks
-test:python:
-  stage: test
-  # using sub-pipeline from ./parts
-  trigger:
-    strategy: depend
-    include:
-    - local: /cicd/gitlab/parts/python.gitlab-ci.yml
 
 #  Get artifacts from python tests
 test:python:artifacts:

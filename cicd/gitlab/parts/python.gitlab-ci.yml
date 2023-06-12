@@ -20,11 +20,6 @@ variables:
   MYPY_CMD: mypy --config-file pyproject.toml
   BLACK_CMD: black --config pyproject.toml
 
-# don't forget to update /pyproject.toml
-#  if changing python version
-image: python:3.8
-
-
 # overriding the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
 stages:
   - python:prepare_env
@@ -33,7 +28,13 @@ stages:
 
 
 # Python related environment and tests
+.python:image:
+  # don't forget to update /pyproject.toml
+  #  if changing python version
+  image: python:3.8
+
 python:prepare_env:venv:
+  extends: .python:image
   stage: python:prepare_env
   artifacts:
     paths:
