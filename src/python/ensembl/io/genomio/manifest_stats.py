@@ -88,18 +88,21 @@ class manifest_stats:
         if self.accession is not None:
             stats.append(self.accession)
 
-        if not self.error:
-            if "gff3" in manifest:
-                stats += self.get_gff3_stats(Path(manifest["gff3"]))
-            if "seq_region" in manifest:
-                stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
+        # Compute the stats from the GFF3 file
+        if "gff3" in manifest:
+            stats += self.get_gff3_stats(Path(manifest["gff3"]))
 
+        # Compute the stats from the seq_region file
+        if "seq_region" in manifest:
+            stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
+
+        # Print out the stats in a separate file
         stats_path = f"{self.manifest_parent}/stats.txt"
         print(stats_path)
         with open(stats_path, "w") as stats_out:
             stats_out.write("\n".join(stats))
 
-        # Flow out if errors in stats comparison
+        # Die if there were errors in stats comparison
         if self.error:
             raise StatsError(f"Stats count errors, check the file {stats_path}")
 
@@ -146,15 +149,18 @@ class manifest_stats:
         locations = []
         codon_tables = []
         for seqr in seq_regions:
-            # Get readable seq_region name
+            # Get readable seq_region name:
+            # either use a Genbank synonym, or just the provided seq_region name
             genbank = "synonyms" in seqr and [x for x in seqr["synonyms"] if x["source"] == "GenBank"]
             seqr_name = genbank and genbank[0]["name"] or seqr["name"]
 
+            # Record the lengths of the elements of each coord_system
             coord_level = seqr["coord_system_level"]
             if coord_level not in coord_systems:
                 coord_systems[coord_level] = []
             coord_systems[coord_level].append(seqr["length"])
 
+            # Additional metadata records to count
             if "circular" in seqr:
                 circular += 1
             if "codon_table" in seqr:
@@ -165,36 +171,72 @@ class manifest_stats:
         # Stats
         stats: List[str] = []
         stats.append(seq_region_path.name)
+        stats += self.coord_systems_stats(coord_systems)
+        stats += self.seq_region_special_stats(circular, locations, codon_tables)
+        stats.append("\n")
+        return stats
+
+    def coord_systems_stats(self, coord_systems: Dict[str, List[int]]) -> List[str]:
+        """For each coord_system compute various stats:
+            - number of sequences
+            - sequence length sum, minimum, maximum, mean
+
+        Args:
+            coord_systems: Coordinate system dictionary of lengths.
+
+        Returns:
+            A list with the computed statistics in a printable format.
+        """
+        stats: List[str] = []
         stats.append(f"Total coord_systems {len(coord_systems)}")
         for coord_name, lengths in coord_systems.items():
             stats.append(f"\nCoord_system: {coord_name}")
 
-            stat_counts: Dict[str, Union[int, float]] = {}
-            stat_counts["Number of sequences"] = len(lengths)
-            stat_counts["Sequence length sum"] = sum(lengths)
-            stat_counts["Sequence length minimum"] = min(lengths)
-            stat_counts["Sequence length mean"] = mean(lengths)
-            stat_counts["Sequence length maximum"] = max(lengths)
+            stat_counts: Dict[str, Union[int, float]] = {
+                "Number of sequences": len(lengths),
+                "Sequence length sum": sum(lengths),
+                "Sequence length minimum": min(lengths),
+                "Sequence length maximum": max(lengths),
+                "Sequence length mean": mean(lengths),
+            }
 
             for name, count in stat_counts.items():
+                if isinstance(count, int):
+                    stats.append(f"{count: 9d}\t{name}")
+                else:
+                    stats.append(f"{count: 9f}\t{name}")
+        return stats
+
+    def seq_region_special_stats(
+        self,
+        circular: int = 0,
+        locations: Optional[List[str]] = None,
+        codon_tables: Optional[List[str]] = None,
+    ) -> List[str]:
+        """Prepare stats in case there are circular regions, specific locations and codon_tables.
                 stats.append(f"{count: 9f}\t{name}")
 
-        # Special
-        if circular or locations:
+        Args:
+            circular: Number of circular regions. Defaults to 0.
+            locations: The regions and their location. Defaults to None.
+            codon_tables: The regions and their codon_table. Defaults to None.
+
+        Returns:
+            A list with the computed statistics in a printable format.
+        """
+        stats: List[str] = []
+        if circular or locations or codon_tables:
             stats.append("\nSpecial")
             if circular:
                 stats.append(f"{circular: 9d}\tcircular sequences")
-            if locations:
+            if locations is not None:
                 stats.append(f"{len(locations): 9d} sequences with location")
                 for loc in locations:
-                    stats.append(f"\t\t\t%s{loc}")
+                    stats.append(f"\t\t\t{loc}")
             if codon_tables:
                 stats.append(f"{len(codon_tables): 9d} sequences with codon_table")
                 for table in codon_tables:
                     stats.append(f"\t\t\t{table}")
-
-        stats.append("\n")
-
         return stats
 
     def get_gff3_stats(self, gff3_path: Path) -> List[str]:
@@ -206,6 +248,23 @@ class manifest_stats:
         Returns:
             List: Stats from the gene model.
         """
+
+        biotypes = self.count_biotypes(gff3_path)
+        # Compile final stats
+        stats = self.biotypes_stats(biotypes)
+        stats += self.check_ncbi_stats(biotypes)
+        return stats
+
+    def count_biotypes(self, gff3_path: Path) -> Dict[str, BiotypeCounter]:
+        """Count the biotypes in a GFF3 file.
+
+        Args:
+            gff3_path: Path to the GFF3 file.
+
+        Returns:
+            Dictionary of biotype counters.
+        """
+
         biotypes: Dict[str, BiotypeCounter] = {}
 
         with open_gz_file(gff3_path) as gff3_handle:
@@ -246,8 +305,17 @@ class manifest_stats:
                     # Total
                     if feat1.type in ("gene", "pseudogene"):
                         manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
+        return biotypes
 
-        # Order
+    def biotypes_stats(self, biotypes: Dict[str, BiotypeCounter]) -> List[str]:
+        """Prepare biotype stats in order of their name.
+
+        Args:
+            biotypes: Biotypes counters.
+
+        Returns:
+            A list with the computed statistics in a printable format.
+        """
         sorted_biotypes = {}
         for name in sorted(biotypes.keys()):
             data: BiotypeCounter = biotypes[name]
@@ -257,10 +325,6 @@ class manifest_stats:
             f"{data.unique_count():>9}\t{biotype:<20}\tID = {data.example}"
             for (biotype, data) in sorted_biotypes.items()
         ]
-
-        # Check against NCBI stats
-        stats += self.check_ncbi_stats(biotypes)
-
         return stats
 
     def check_ncbi_stats(self, biotypes: Dict[str, BiotypeCounter]) -> List[str]:

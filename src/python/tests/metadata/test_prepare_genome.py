@@ -34,7 +34,9 @@ from pytest import raises
 from ensembl.io.genomio import schemas
 
 
-class TestSchemas:
+class TestPrepareGenome:
+    """Tests for the prepare_genome module."""
+
     test_data_dir: Path
     tmp_dir: Path
 

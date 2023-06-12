@@ -1,4 +1,3 @@
-#!env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -18,10 +17,10 @@ in a separate file."""
 
 
 from collections import Counter
+from os import PathLike
 from pathlib import Path
 import re
-import tempfile
-from typing import Any, Dict, List, IO
+from typing import Dict, List
 
 import json
 import argschema
@@ -31,22 +30,28 @@ from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.io.genomio.utils.json_utils import print_json
+from ensembl.io.genomio.gff3.functional_annotation import FunctionalAnnotations
 
 
-Annotation = Dict[str, Any]
+class Records(list):
+    """List of GFF3 SeqRecords."""
+
+    def to_gff(self, out_gff_path: PathLike) -> None:
+        """Print out the current list of records in a GFF3 file.
+
+        Args:
+            out_gff_path: Path to GFF3 file where to write the records.
+        """
+        with Path(out_gff_path).open("w") as out_gff_fh:
+            GFF.write(self, out_gff_fh)
 
 
 class GFFParserError(Exception):
     """Error when parsing a GFF3 file."""
 
 
-class process_gff3:
-    """Parse a GGF3 file and output a cleaned up GFF3 + annotation json file.
-
-    Raises:
-        GFFParserError: Raise this if an error can't be automatically fixed.
-    """
+class GFFParserCommon:
+    """Heritable class to share the list of feature types supported or ignored by the parser"""
 
     # Supported gene level biotypes
     gene_types = [
@@ -112,27 +117,19 @@ class process_gff3:
         "intron",
     ]
 
-    # Multiple parameters to automate various fixes
-    skip_unrecognized = False
-    gene_cds_skip_others = False
-    allow_pseudogene_with_CDS = False
-    merge_split_genes = False
-    exclude_seq_regions: List = []
-    validate_gene_id = True
-    min_id_length = 8
-    make_missing_stable_id = False
-    stable_id_prefix = None
-    current_stable_id_number: int = 0
 
-    def merge_genes_gff(self, in_gff_path: Path, out_gff_fh: IO[str]) -> None:
+class GFFGeneMerger(GFFParserCommon):
+    """Specialized class to merge split genes in a GFF3 file, prior to further parsing."""
+
+    def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> int:
         """
         Merge genes in a gff that are split in multiple lines
         """
         tomerge = []
         merged: List[str] = []
 
-        with in_gff_path.open("r") as gff3_in:
-            for line in gff3_in:
+        with Path(in_gff_path).open("r") as in_gff_fh, Path(out_gff_path).open("w") as out_gff_fh:
+            for line in in_gff_fh:
                 # Skip comments
                 if line.startswith("#"):
                     out_gff_fh.write(line)
@@ -158,7 +155,7 @@ class process_gff3:
                                 merged_str.append("\t".join(line_tomerge))
                             merged.append("\n".join(merged_str) + "\n")
 
-                            new_line = self.merge_genes(tomerge)
+                            new_line = self._merge_genes(tomerge)
                             out_gff_fh.write(new_line)
                             tomerge = []
                         out_gff_fh.write(line + "\n")
@@ -170,14 +167,12 @@ class process_gff3:
                     merged_str.append("\t".join(line_tomerge))
                 merged.append("\n".join(merged_str) + "\n")
 
-                new_line = self.merge_genes(tomerge)
+                new_line = self._merge_genes(tomerge)
                 out_gff_fh.write(new_line)
 
-        if merged and not self.merge_split_genes:
-            merged_genes_str = f"{merged[0]}\netc."
-            raise GFFParserError(f"{len(merged)} merged genes:\n{merged_genes_str}\n")
+        return len(merged)
 
-    def merge_genes(self, tomerge: List) -> str:
+    def _merge_genes(self, tomerge: List) -> str:
         """Returns a single gene gff3 line merged from separate parts.
 
         Args:
@@ -209,7 +204,31 @@ class process_gff3:
 
         return "\t".join(new_gene) + "\n"
 
-    def simpler_gff3(self, gff3_in: IO[str], out_gff_path: Path, out_funcann_path: Path) -> None:
+
+class GFFSimplifier(GFFParserCommon):
+    """Parse a GGF3 file and output a cleaned up GFF3 + annotation json file.
+
+    Raises:
+        GFFParserError: If an error cannot be automatically fixed.
+    """
+
+    # Multiple parameters to automate various fixes
+    skip_unrecognized = False
+    gene_cds_skip_others = False
+    allow_pseudogene_with_CDS = False
+    merge_split_genes = False
+    exclude_seq_regions: List = []
+    validate_gene_id = True
+    min_id_length = 8
+    make_missing_stable_id = False
+    stable_id_prefix = None
+    current_stable_id_number: int = 0
+
+    def __init__(self):
+        self.records = Records()
+        self.annotations = FunctionalAnnotations()
+
+    def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """
         Load a GFF3 from INSDC, and rewrite it in a simpler version,
         and also write a functional_annotation file
@@ -222,13 +241,10 @@ class process_gff3:
         skip_unrecognized = self.skip_unrecognized
         to_exclude = self.exclude_seq_regions
 
-        functional_annotation: List[Annotation] = []
-
-        with out_gff_path.open("w") as gff3_out:
-            new_records = []
+        with Path(in_gff_path).open("r") as in_gff_fh:
             fail_types: Dict[str, int] = {}
 
-            for record in GFF.parse(gff3_in):
+            for record in GFF.parse(in_gff_fh):
                 new_record = SeqRecord(record.seq, id=record.id)
                 if record.id in to_exclude:
                     print(f"Skip seq_region {record.id}")
@@ -244,11 +260,11 @@ class process_gff3:
                     elif feat.type == "CDS":
                         feat = self.cds_gene(feat)
                     elif feat.type in ("mobile_genetic_element", "transposable_element"):
-                        feat = self.format_mobile_element(feat, functional_annotation)
+                        feat = self.format_mobile_element(feat)
 
                     # Normalize the gene structure
                     if feat.type in allowed_gene_types:
-                        feat = self.normalize_gene(feat, functional_annotation, fail_types)
+                        feat = self.normalize_gene(feat, fail_types)
                     elif feat.type in allowed_non_gene_types:
                         pass
                     else:
@@ -260,19 +276,13 @@ class process_gff3:
                             continue
 
                     new_record.features.append(feat)
-                new_records.append(new_record)
+                self.records.append(new_record)
 
             if fail_types and not skip_unrecognized:
                 fail_errors = " ".join(fail_types.keys())
                 raise GFFParserError(f"Unrecognized types found ({fail_errors})")
 
-            GFF.write(new_records, gff3_out)
-
-        # Write functional annotation
-        functional_annotation = self.clean_functional_annotations(functional_annotation)
-        print_json(out_funcann_path, functional_annotation)
-
-    def format_mobile_element(self, feat, functional_annotation: List[Annotation]):
+    def format_mobile_element(self, feat):
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
 
         # Change mobile_genetic_element into a transposable_element feature
@@ -306,14 +316,12 @@ class process_gff3:
 
         # Generate ID if needed and add it to the functional annotation
         feat.id = self.normalize_gene_id(feat)
-        self.add_funcann_feature(functional_annotation, feat, "transposable_element")
+        self.annotations.add_feature(feat, "transposable_element")
         feat.qualifiers = {"ID": feat.id}
 
         return feat
 
-    def normalize_gene(
-        self, gene: SeqFeature, functional_annotation: List[Annotation], fail_types: Dict[str, int]
-    ) -> SeqFeature:
+    def normalize_gene(self, gene: SeqFeature, fail_types: Dict[str, int]) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
         Args:
@@ -322,10 +330,6 @@ class process_gff3:
             fail_types: List of feature types that are not supported (appended by this method).
 
         """
-
-        allowed_transcript_types = self.transcript_types
-        ignored_transcript_types = self.ignored_transcript_types
-        skip_unrecognized = self.skip_unrecognized
 
         # New gene ID
         gene.id = self.normalize_gene_id(gene)
@@ -368,6 +372,26 @@ class process_gff3:
             self.remove_cds_from_pseudogene(gene)
 
         # TRANSCRIPTS
+        gene = self._normalize_transcripts(gene, fail_types)
+
+        # PSEUDOGENE CDS IDs
+        if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
+            self.normalize_pseudogene_cds(gene)
+
+        # Finally, store gene functional annotation
+        self.annotations.add_feature(gene, "gene")
+
+        # replace qualifiers
+        old_gene_qualifiers = gene.qualifiers
+        gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
+
+        return gene
+
+    def _normalize_transcripts(self, gene: SeqFeature, fail_types) -> SeqFeature:
+        """Returns a normalized transcript."""
+        allowed_transcript_types = self.transcript_types
+        skip_unrecognized = self.skip_unrecognized
+
         transcripts_to_delete = []
         for count, transcript in enumerate(gene.sub_features):
             if (
@@ -388,7 +412,7 @@ class process_gff3:
             transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
 
             # Store transcript functional annotation
-            self.add_funcann_feature(functional_annotation, transcript, "transcript")
+            self.annotations.add_feature(transcript, "transcript")
 
             # Replace qualifiers
             old_transcript_qualifiers = transcript.qualifiers
@@ -400,99 +424,65 @@ class process_gff3:
                 transcript.qualifiers["source"] = old_transcript_qualifiers["source"]
 
             # EXONS AND CDS
-            cds_found = False
-            exons_to_delete = []
-            for tcount, feat in enumerate(transcript.sub_features):
-                if feat.type == "exon":
-                    # Replace qualifiers
-                    old_exon_qualifiers = feat.qualifiers
-                    feat.qualifiers = {
-                        "Parent": transcript.id,
-                    }
-                    if "source" in old_exon_qualifiers:
-                        feat.qualifiers["source"] = old_exon_qualifiers["source"]
-                elif feat.type == "CDS":
-                    # New CDS ID
-                    feat.id = self.normalize_cds_id(feat.id)
-                    if feat.id in ("", gene.id, transcript.id):
-                        feat.id = f"{transcript.id}_cds"
-
-                    # Store CDS functional annotation (only once)
-                    if not cds_found:
-                        cds_found = True
-                        self.add_funcann_feature(functional_annotation, feat, "translation")
-
-                    # Replace qualifiers
-                    feat.qualifiers = {
-                        "ID": feat.id,
-                        "Parent": transcript.id,
-                        "phase": feat.qualifiers["phase"],
-                        "source": feat.qualifiers["source"],
-                    }
-                else:
-                    if feat.type in ignored_transcript_types:
-                        exons_to_delete.append(tcount)
-                        continue
-
-                    fail_types["sub_transcript=" + feat.type] = 1
-                    message = (
-                        f"Unrecognized exon type for {feat.type}: {feat.id}"
-                        f" (for transcript {transcript.id} of type {transcript.type})"
-                    )
-                    print(message)
-                    if self.skip_unrecognized:
-                        exons_to_delete.append(tcount)
-                        continue
-
-            if exons_to_delete:
-                for elt in sorted(exons_to_delete, reverse=True):
-                    transcript.sub_features.pop(elt)
+            transcript = self._normalize_transcript_subfeatures(gene, transcript, fail_types)
 
         if transcripts_to_delete:
             for elt in sorted(transcripts_to_delete, reverse=True):
                 gene.sub_features.pop(elt)
 
-        # PSEUDOGENE CDS IDs
-        if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
-            self.normalize_pseudogene_cds(gene)
-
-        # Finally, store gene functional annotation
-        self.add_funcann_feature(functional_annotation, gene, "gene")
-
-        # replace qualifiers
-        old_gene_qualifiers = gene.qualifiers
-        gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
-
         return gene
 
-    def clean_functional_annotations(self, functional_annotation: List) -> List:
-        """Returns the functional annotations list without putative product descriptions."""
-        for feat in functional_annotation:
-            if "description" in feat and not self.check_product(feat["description"]):
-                del feat["description"]
-        return functional_annotation
+    def _normalize_transcript_subfeatures(
+        self, gene: SeqFeature, transcript: SeqFeature, fail_types
+    ) -> SeqFeature:
+        """Returns a transcript with normalized sub-features."""
+        ignored_transcript_types = self.ignored_transcript_types
+        cds_found = False
+        exons_to_delete = []
+        for tcount, feat in enumerate(transcript.sub_features):
+            if feat.type == "exon":
+                # Replace qualifiers
+                old_exon_qualifiers = feat.qualifiers
+                feat.qualifiers = {"Parent": transcript.id}
+                if "source" in old_exon_qualifiers:
+                    feat.qualifiers["source"] = old_exon_qualifiers["source"]
+            elif feat.type == "CDS":
+                # New CDS ID
+                feat.id = self.normalize_cds_id(feat.id)
+                if feat.id in ("", gene.id, transcript.id):
+                    feat.id = f"{transcript.id}_cds"
 
-    def check_product(self, product: str) -> bool:
-        """Check a product string.
+                # Store CDS functional annotation (only once)
+                if not cds_found:
+                    cds_found = True
+                    self.annotations.add_feature(feat, "translation")
 
-        Args:
-            product: a product name.
+                # Replace qualifiers
+                feat.qualifiers = {
+                    "ID": feat.id,
+                    "Parent": transcript.id,
+                    "phase": feat.qualifiers["phase"],
+                    "source": feat.qualifiers["source"],
+                }
+            else:
+                if feat.type in ignored_transcript_types:
+                    exons_to_delete.append(tcount)
+                    continue
 
-        Returns:
-            True only if the string is valid, False otherwise.
+                fail_types[f"sub_transcript={feat.type}"] = 1
+                message = (
+                    f"Unrecognized exon type for {feat.type}: {feat.id}"
+                    f" (for transcript {transcript.id} of type {transcript.type})"
+                )
+                print(message)
+                if self.skip_unrecognized:
+                    exons_to_delete.append(tcount)
+                    continue
 
-        """
-        excluded_names = re.compile(
-            r"^(uncharacterized|putative|hypothetical|predicted)"
-            r"( uncharacterized)?"
-            r" protein"
-            r"( of unknown function)?"
-            r"( \(fragment\))?$"
-        )
-
-        if excluded_names.match(product.lower()):
-            return False
-        return True
+        if exons_to_delete:
+            for elt in sorted(exons_to_delete, reverse=True):
+                transcript.sub_features.pop(elt)
+        return transcript
 
     def transfer_description(self, gene: SeqFeature) -> None:
         """Transfer descriptions from transcripts/translations to gene/transcripts.
@@ -628,7 +618,7 @@ class process_gff3:
         This is to fix the case where we have the following structure:
         gene -> [ mRNA, CDSs ]
         and change it to
-        gene -> [ mNRA -> [ CDSs ] ]
+        gene -> [ mRNA -> [ CDSs ] ]
         The mRNA might have exons, in which case check that they match the CDS coordinates.
 
         Raises an exception if the feature structure is not recognized.
@@ -671,8 +661,27 @@ class process_gff3:
             elif subf.type == "exon":
                 sub_exons.append(subf)
 
+        self._check_sub_cdss(gene, sub_cdss)
+        self._check_sub_exons(gene, cdss, sub_exons)
+
+        print(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
+        # No more issues? move the CDSs
+        mrna.sub_features += cdss
+        # And remove them from the gene
+        gene.sub_features = gene_subf_clean
+        gene.sub_features.append(mrna)
+
+        return gene
+
+    @staticmethod
+    def _check_sub_cdss(gene, sub_cdss) -> None:
         if len(sub_cdss) > 0:
             raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
+
+    @staticmethod
+    def _check_sub_exons(gene, cdss, sub_exons) -> None:
+        """Check that the exons of the mRNA and the CDSs match"""
+
         if len(sub_exons) > 0:
             # Check that they match the CDS outside
             if len(sub_exons) == len(cdss):
@@ -686,15 +695,6 @@ class process_gff3:
                 raise GFFParserError(
                     f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)"
                 )
-
-        print(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
-        # No more issues? move the CDSs
-        mrna.sub_features += cdss
-        # And remove them from the gene
-        gene.sub_features = gene_subf_clean
-        gene.sub_features.append(mrna)
-
-        return gene
 
     def clean_extra_exons(self, gene: SeqFeature) -> SeqFeature:
         """Remove extra exons, already existing in the mRNA.
@@ -741,45 +741,6 @@ class process_gff3:
             transcript.sub_features.append(exon)
 
         return transcript
-
-    def add_funcann_feature(
-        self, funcann: List[Annotation], feature: SeqFeature, feat_type: str
-    ) -> None:
-        """Append a feature object following the specifications.
-
-        Args:
-            funcann: The list to which the feature object are appended.
-            feature: The SeqFeature to add to the list.
-            feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
-
-        """
-
-        feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
-
-        # Description?
-        if "product" in feature.qualifiers:
-            description = feature.qualifiers["product"][0]
-            if self.check_product(description):
-                feature_object["description"] = description
-
-        if "Name" in feature.qualifiers and "description" not in feature_object:
-            name = feature.qualifiers["Name"][0]
-
-            # Exclude Name if it just a variant of the feature ID
-            if feature.id not in name:
-                feature_object["description"] = name
-
-        # Synonyms?
-        if "Name" in feature.qualifiers:
-            feat_name = feature.qualifiers["Name"][0]
-            if feat_name != feature.id:
-                feature_object["synonyms"] = {"synonym": feat_name, "default": True}
-
-        # is_pseudogene?
-        if feature.type.startswith("pseudogen"):
-            feature_object["is_pseudogene"] = True
-
-        funcann.append(feature_object)
 
     def normalize_gene_id(self, gene: SeqFeature) -> str:
         """Remove any unnecessary prefixes around the gene ID.
@@ -943,29 +904,45 @@ class process_gff3:
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
-    in_gff_path = argschema.fields.InputFile(
-        metadata={"required": True, "description": "gene.gff file required"}
+    in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
+    genome_data = argschema.fields.InputFile(required=True, metadata={"description": "genome.json path"})
+    out_gff_path = argschema.fields.OutputFile(
+        default="gene_models.gff3", metadata={"description": "Output gff path"}
     )
-    genome_data = argschema.fields.InputFile(
-        metadata={"required": True, "description": "genome.json file required"}
+    out_func_path = argschema.fields.OutputFile(
+        default="functional_annotation.json",
+        metadata={"description": "Output functional_annotation.json path"},
+    )
+    merge_split_genes = argschema.fields.Boolean(
+        default=True, metadata={"description": "Should split genes be merged automatically"}
     )
 
 
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    in_gff_path = mod.args["in_gff_path"]
-    in_gff_path = Path(in_gff_path)
-    out_gff_path = Path("gene_models.gff3")
-    out_funcann_path = Path("functional_annotation.json")
 
-    # Merge multiline gene features
-    interim_gff_fh = tempfile.TemporaryFile(mode="w+t")
-    gff = process_gff3()
-    gff.merge_genes_gff(in_gff_path, interim_gff_fh)
-    interim_gff_fh.seek(0)
+    in_gff_path = mod.args["in_gff_path"]
+
+    # Merge multiline gene features in a separate file
+    interim_gff_path = Path(f"{in_gff_path}_INTERIM_MERGE")
+    merger = GFFGeneMerger()
+    num_merged_genes = merger.merge(in_gff_path, interim_gff_path)
+
+    # If there are split genes, decide to merge, or just die
+    if num_merged_genes > 0:
+        if mod.args["merge_split_genes"]:
+            # Use the GFF with the merged genes for the next part
+            in_gff_path = interim_gff_path
+        else:
+            raise GFFParserError("GFF contains split genes. Fix it or use the merge_split_genes option.")
+
     # Load gff3 data and write a simpler version that follows our specifications
-    gff.simpler_gff3(interim_gff_fh, out_gff_path, out_funcann_path)
+    # as well as a functional_annotation json file
+    gff_data = GFFSimplifier()
+    gff_data.simpler_gff3(in_gff_path)
+    gff_data.records.to_gff(mod.args["out_gff_path"])
+    gff_data.annotations.to_json(mod.args["out_func_path"])
 
 
 if __name__ == "__main__":

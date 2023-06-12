@@ -15,7 +15,6 @@
 # limitations under the License.
 """Takes a FASTA file (DNA or peptide), cleans it up and optionally excludes some IDs."""
 
-from mimetypes import guess_type
 from pathlib import Path
 from os import PathLike
 from typing import List, Optional, Set
@@ -55,7 +54,7 @@ def get_peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -
 def prep_fasta_data(
     fasta_infile: PathLike,
     genebank_infile: PathLike,
-    output_dir: PathLike,
+    fasta_outfile: PathLike,
     peptide_mode: Optional[int] = 0,
 ) -> None:
     """
@@ -66,8 +65,6 @@ def prep_fasta_data(
         peptide_mode: Process proteins not DNA (Optional)
     """
     file_path = Path(fasta_infile)
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     seqr_to_exclude = set(exclude_seq_regions)
     if peptide_mode:
@@ -76,25 +73,17 @@ def prep_fasta_data(
     else:
         to_exclude = seqr_to_exclude
 
-    # Final file name
-    new_file_name = file_path.stem
-
     # Copy and filter
     records = []
-    encoding = guess_type(file_path)[1]
-
-    if encoding == "gzip":
-        new_file_name = Path(new_file_name).stem
 
     # Final path
-    final_path = output_dir / f"{new_file_name}.fa"
     with open_gz_file(file_path) as in_fasta:
         for record in SeqIO.parse(in_fasta, "fasta"):
             if record.id in to_exclude:
                 print(f"Skip record ${record.id}")
             else:
                 records.append(record)
-    with final_path.open("w") as out_fasta:
+    with Path(fasta_outfile).open("w") as out_fasta:
         SeqIO.write(records, out_fasta, "fasta")
 
 
@@ -109,10 +98,9 @@ class InputSchema(argschema.ArgSchema):
         required=False,
         metadata={"description": "Input genbank GBFF file (Optional)"},
     )
-    output_dir = argschema.fields.OutputDir(
-        required=False,
-        dump_default=".",
-        metadata={"description": "Dir name where processed fasta data will reside"},
+    fasta_outfile = argschema.fields.OutputFile(
+        required=True,
+        metadata={"description": "Output fasta file path"},
     )
     peptide_mode = argschema.fields.Int(
         required=False,
@@ -124,5 +112,8 @@ def main() -> None:
     """Module's entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     prep_fasta_data(
-        mod.args["fasta_infile"], mod.args["genbank_infile"], mod.args["output_dir"], mod.args["peptide_mode"]
+        fasta_infile=mod.args["fasta_infile"],
+        genebank_infile=mod.args["genbank_infile"],
+        fasta_outfile=mod.args["fasta_outfile"],
+        peptide_mode=mod.args["peptide_mode"],
     )

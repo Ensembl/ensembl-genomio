@@ -16,7 +16,7 @@
 
 process CHECK_INTEGRITY {
     tag "${manifest_dir}"
-    label 'default'
+    label 'variable_2_8_32'
     errorStrategy 'finish'
     time '1h'
 

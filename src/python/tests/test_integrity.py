@@ -28,27 +28,23 @@ from pathlib import Path
 from typing import ContextManager
 
 import pytest
-from pytest import raises
 
-from ensembl.io.genomio.integrity import IntegrityTool
+from ensembl.io.genomio.integrity import IntegrityTool, Manifest
 
 
-class TestSchemas:
+class TestIntegrity:
+    """Tests for the integrity module."""
+
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, tmp_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
         type(self).tmp_dir = tmp_dir
 
-    def test_integrity_empty(self) -> None:
-        with raises(TypeError):
-            integrity = IntegrityTool()
-            assert isinstance(integrity, IntegrityTool)
-
     @pytest.mark.parametrize(
-        "manifest_dir, brc_mode, ignore_false_stops, expected",
+        "manifest_path, brc_mode, ignore_false_stops, expected",
         [
             (
-                [pytest.manifest_dir / "data1/manifest.json"],
+                pytest.manifest_dir / "data1/manifest.json",
                 [None, True, False],
                 [None, True, False],
                 does_not_raise(),
@@ -56,7 +52,7 @@ class TestSchemas:
         ],
     )
     def test_integrity(
-        self, manifest_dir: Path, brc_mode: bool, ignore_false_stops: bool, expected: ContextManager
+        self, manifest_path: Path, brc_mode: bool, ignore_false_stops: bool, expected: ContextManager
     ) -> None:
         """Tests `integrity:IntegrityTool` method.
 
@@ -66,8 +62,10 @@ class TestSchemas:
 
         """
         with expected:
-            integrity = IntegrityTool(manifest_dir, brc_mode, ignore_false_stops)
+            integrity = IntegrityTool(manifest_path, brc_mode, ignore_false_stops)
             assert isinstance(integrity, IntegrityTool)
+            assert integrity.brc_mode == brc_mode
+            assert integrity.manifest.brc_mode == brc_mode
 
     @pytest.mark.parametrize(
         "manifest_dir, expected",
@@ -79,5 +77,5 @@ class TestSchemas:
         """Tests `integrity:IntegrityTool:get_manifest()` method."""
         with expected:
             integrity = IntegrityTool(manifest_dir)
-            manifest = integrity.get_manifest()
-            assert isinstance(manifest, dict)
+            manifest = integrity.manifest
+            assert isinstance(manifest, Manifest)

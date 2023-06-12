@@ -42,7 +42,7 @@ workflow additional_seq_prepare {
         PROCESS_GFF3(EXTRACT_FROM_GB.out.gene_gff, EXTRACT_FROM_GB.out.genome)
 
         // Tidy and validate gff3 using gff3validator (NOTE: Requires `module load libffi-3.3-gcc-9.3.0-cgokng6`)
-        GFF3_VALIDATION(PROCESS_GFF3.out.functional_annotation, PROCESS_GFF3.out.gene_models)
+        GFF3_VALIDATION(PROCESS_GFF3.out.gene_models)
 
         // Validate files
         json_files = EXTRACT_FROM_GB.out.genome
@@ -53,6 +53,7 @@ workflow additional_seq_prepare {
 
         // Gather json and fasta files and reduce to unique input accession
         all_files = CHECK_JSON_SCHEMA.out.verified_json
+                        .concat(GFF3_VALIDATION.out.gene_models)
                         .concat(EXTRACT_FROM_GB.out.dna_fasta, EXTRACT_FROM_GB.out.pep_fasta)
                         .groupTuple()
 
