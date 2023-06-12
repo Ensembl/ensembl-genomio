@@ -20,11 +20,13 @@ variables:
   MYPY_CMD: mypy --config-file pyproject.toml
   BLACK_CMD: black --config pyproject.toml
 
-# overriding the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
-stages:
-  - python:prepare_env
-  - python:static_analysis
-  - python:tests
+
+
+# overriding/appending to the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
+#   uncomment if using as a standalone or triggered pipeline
+#
+# include:
+#   - local: /cicd/gitlab/parts/python_stages.gitlab-ci.yml
 
 
 # Python related environment and tests
