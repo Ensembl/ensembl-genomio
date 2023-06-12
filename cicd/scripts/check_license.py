@@ -84,7 +84,7 @@ def check_header(header_template: PathLike) -> None:
     for file_path in _ROOT_PATH.rglob("*.*"):
         if file_path.is_file() and (file_path.suffix[1:] in _SUFFIXES_WITH_HEADER):
             if not prog.search(file_path.read_text()):
-                report_files.append(file_path.name)
+                report_files.append(str(file_path))
     if report_files:
         report = "\n".join(report_files)
         raise RuntimeError(

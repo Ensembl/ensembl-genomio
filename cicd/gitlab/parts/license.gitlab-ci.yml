@@ -14,18 +14,12 @@
 
 # License-related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
-image: python:3.11  # for internal tests we do not have the minimum required version restriction
-
-stages:
-  - license:tests
-
-
-license:tests:notice:
-  stage: license:tests
+test:license:notice:
+  stage: test
   script:
     - python cicd/scripts/check_license.py notice
 
-license:tests:header:
-  stage: license:tests
+test:license:header:
+  stage: test
   script:
     - python cicd/scripts/check_license.py header

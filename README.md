@@ -1,3 +1,5 @@
+[![coverage report](https://gitlab.ebi.ac.uk/vectorbase/ensembl-genomio/badges/main/coverage.svg)](https://gitlab.ebi.ac.uk/vectorbase/ensembl-genomio/-/commits/main) [![pipeline status](https://gitlab.ebi.ac.uk/vectorbase/ensembl-genomio/badges/main/pipeline.svg)](https://gitlab.ebi.ac.uk/vectorbase/ensembl-genomio/-/commits/main)
+
 # ensembl-genomio
 Pipelines to turn basic genomic data into Ensembl cores and back
 
@@ -18,7 +20,7 @@ Please, make sure you have all the proper credential, keys, etc. set up.
 
 Clone:
 ```
-git clone git@github.com:Ensembl/ensembl-genomio.git 
+git clone git@github.com:Ensembl/ensembl-genomio.git
 ```
 
 Install the python part (of the pipelines) and test it:
