@@ -21,7 +21,7 @@ from pathlib import Path
 from shutil import which
 from statistics import mean
 import subprocess
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Union
 
 import argschema
 from BCBio import GFF
@@ -192,16 +192,19 @@ class manifest_stats:
         for coord_name, lengths in coord_systems.items():
             stats.append(f"\nCoord_system: {coord_name}")
 
-            stat_counts: Dict[str, float] = {
+            stat_counts: Dict[str, Union[int, float]] = {
                 "Number of sequences": len(lengths),
                 "Sequence length sum": sum(lengths),
                 "Sequence length minimum": min(lengths),
-                "Sequence length mean": mean(lengths),
                 "Sequence length maximum": max(lengths),
+                "Sequence length mean": mean(lengths),
             }
 
             for name, count in stat_counts.items():
-                stats.append(f"{count: 9f}\t{name}")
+                if isinstance(count, int):
+                    stats.append(f"{count: 9d}\t{name}")
+                else:
+                    stats.append(f"{count: 9f}\t{name}")
         return stats
 
     def seq_region_special_stats(
