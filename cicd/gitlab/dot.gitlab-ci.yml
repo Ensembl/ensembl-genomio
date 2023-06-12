@@ -31,9 +31,10 @@ variables:
   RUN_DIR: ./cicd/runtime
 
 stages:
-  include:
-    - local: /cicd/gitlab/parts/python_stages.gitlab-ci.yml
   - debug
+  - python:prepare_env
+  - python:static_analysis
+  - python:tests
   - test
 
 # In-house stuff
