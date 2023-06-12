@@ -59,10 +59,10 @@ debug:gitlab_env:
 
 
 #  Get artifacts from python tests
-test:python:artifacts:
+.test:python:artifacts:
   stage: test
-  needs:
-    - job: test:python
+  #needs:
+  #  - job: test:python
   image: python:3.8
   script:
     # get artifacts from the downstream pipeline using url
