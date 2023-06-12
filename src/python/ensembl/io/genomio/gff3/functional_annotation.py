@@ -41,20 +41,35 @@ class FunctionalAnnotations:
     def __init__(self) -> None:
         self.annotations: List[Annotation] = []
 
-        self.genes = {}
-        self.transcripts = {}
-        self.translations = {}
-        self.transposable_elements = {}
-        self.gene_parent = {}
-        self.transcript_parent = {}
+        # Annotated features
+        self.genes: Dict[str, Annotation] = {}
+        self.transcripts: Dict[str, Annotation] = {}
+        self.translations: Dict[str, Annotation] = {}
+        self.transposable_elements: Dict[str, Annotation] = {}
+        # Keep parent info: key is the feature ID, value is the parent ID
+        self.gene_parent: Dict[str, str] = {}
+        self.transcript_parent: Dict[str, str] = {}
 
     def add_gene(self, feature: SeqFeature) -> None:
+        """Add the functional annotation of a given gene.
+
+        Raises:
+            DuplicateIdError: Do not allow genes with the same ID.
+
+        """
         if feature.id in self.genes:
             raise DuplicateIdError(f"Gene ID {feature.id} already added")
         gene = self._generic_feature(feature, "gene")
         self.genes[gene["id"]] = gene
 
     def add_transcript(self, feature: SeqFeature, gene_id: str) -> None:
+        """Add the functional annotation of a given transcript,
+        and keep a record of its gene parent.
+
+        Raises:
+            DuplicateIdError: Do not allow transcripts with the same ID.
+
+        """
         if feature.id in self.transcripts:
             raise DuplicateIdError(f"Transcript ID {feature.id} already added")
         transcript = self._generic_feature(feature, "transcript")
@@ -62,6 +77,13 @@ class FunctionalAnnotations:
         self.gene_parent[transcript["id"]] = gene_id
 
     def add_translation(self, feature: SeqFeature, transcript_id: str) -> None:
+        """Add the functional annotation of a given translation,
+        and keep a record of its transcript parent.
+
+        Raises:
+            DuplicateIdError: Do not allow translations with the same ID.
+
+        """
         if feature.id in self.translations:
             raise DuplicateIdError(f"Translation ID {feature.id} already added")
         translation = self._generic_feature(feature, "translation")
@@ -69,6 +91,12 @@ class FunctionalAnnotations:
         self.transcript_parent[translation["id"]] = transcript_id
 
     def add_transposable_element(self, feature: SeqFeature) -> None:
+        """Add the functional annotation of a transposable_element,
+
+        Raises:
+            DuplicateIdError: Do not allow transposable_elements with the same ID.
+
+        """
         if feature.id in self.transposable_elements:
             raise DuplicateIdError(f"TE ID {feature.id} already added")
         te = self._generic_feature(feature, "transposable_element")
@@ -162,10 +190,10 @@ class FunctionalAnnotations:
     def _to_list(self):
         feat_list = []
         for feat in (
-            list(self.genes.values()) +
-            list(self.transcripts.values()) +
-            list(self.translations.values()) +
-            list(self.transposable_elements.values())
+            list(self.genes.values())
+            + list(self.transcripts.values())
+            + list(self.translations.values())
+            + list(self.transposable_elements.values())
         ):
             feat_list.append(feat)
         return feat_list
