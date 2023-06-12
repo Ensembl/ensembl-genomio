@@ -16,8 +16,6 @@
 #   parts/python.gitlab-ci.yml or dot.gitlab-ci.yml
 # for  
 # overriding/appending to the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
-stages:
   - python:prepare_env
   - python:static_analysis
   - python:tests
-

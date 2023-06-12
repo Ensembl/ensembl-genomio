@@ -25,8 +25,9 @@ variables:
 # overriding/appending to the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
 #   uncomment if using as a standalone or triggered pipeline
 #
-# include:
-#   - local: /cicd/gitlab/parts/python_stages.gitlab-ci.yml
+# stages:
+#   include:
+#     - local: /cicd/gitlab/parts/python_stages.gitlab-ci.yml
 
 
 # Python related environment and tests
