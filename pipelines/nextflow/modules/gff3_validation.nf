@@ -26,7 +26,7 @@ process GFF3_VALIDATION {
     tuple val(gca), path (gene_models)
 
   output:
-    path gene_models, emit: gene_models
+    tuple val(gca), path(gene_models), emit: gene_models
 
   script:
   """
