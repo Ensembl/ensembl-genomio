@@ -1,4 +1,4 @@
-[![coverage report](https://gitlab.ebi.ac.uk/vectorbase/ensembl-genomio/badges/main/coverage.svg)](http://vectorbase.gitdocs.ebi.ac.uk/ensembl-genomio/) [![pipeline status](https://gitlab.ebi.ac.uk/vectorbase/ensembl-genomio/badges/main/pipeline.svg)](https://github.com/Ensembl/ensembl-genomio/commits/main)
+[![coverage report](https://gitlab.ebi.ac.uk/vectorbase/ensembl-genomio/badges/main/coverage.svg)](https://vectorbase.gitdocs.ebi.ac.uk/ensembl-genomio/) [![pipeline status](https://gitlab.ebi.ac.uk/vectorbase/ensembl-genomio/badges/main/pipeline.svg)](https://github.com/Ensembl/ensembl-genomio/commits/main)
 
 # ensembl-genomio
 Pipelines to turn basic genomic data into Ensembl cores and back
