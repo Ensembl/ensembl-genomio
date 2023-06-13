@@ -16,18 +16,18 @@
 
 # A generic job to be used by all License jobs with the "extends" mechanism
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
-.license:generic:
+.license:
   stage: test
   image: python:3.11
   variables:
     CMD: python cicd/scripts/check_license.py
 
 license:notice:
-  extends: .license:generic
+  extends: .license
   script:
     - $CMD notice
 
 license:header:
-  extends: .license:generic
+  extends: .license
   script:
     - $CMD header

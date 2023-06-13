@@ -18,14 +18,14 @@
 
 # A generic job to be used by all Python jobs with the "extends" mechanism
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
-.python:generic:
+.python:
   stage: test
   image: python:3.8
 
 ## Prepare and load the Python virtual environment
 
 python:prepare_venv:
-  extends: .python:generic
+  extends: .python
   artifacts:
     paths:
       - $RUN_DIR
@@ -38,7 +38,7 @@ python:prepare_venv:
 
 
 .python:test:
-  extends: .python:generic
+  extends: .python
   needs:
     # Using `needs` as it allows to depend on jobs from the same stage
     # (https://docs.gitlab.com/ee/ci/yaml/#needs)
@@ -102,6 +102,7 @@ python:pytest:
 .python:coverage:
   extends: .python:test
   needs:
+    # "extends" cannot merge arrays (https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#merge-details)
     - !reference [.python:test, needs]
     - job: python:pytest
       artifacts: true
