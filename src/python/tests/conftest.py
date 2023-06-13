@@ -23,30 +23,30 @@ from pathlib import Path
 
 import pytest
 
-test_data_dir_path = Path(__file__).parent
-root_dir_path = test_data_dir_path.parents[2]
-files_dir_path = test_data_dir_path / "flatfiles"
+TEST_DATA_DIR_PATH = Path(__file__).parent
+ROOT_DIR_PATH = TEST_DATA_DIR_PATH.parents[2]
+FILES_DIR_PATH = TEST_DATA_DIR_PATH / "flatfiles"
 
 
 @pytest.fixture(scope="package")
-def dbs_dir():
-    """Dir with database test files."""
-    return test_data_dir_path / "databases"
+def dbs_dir() -> Path:
+    """Returns the folder that contains the database test files."""
+    return TEST_DATA_DIR_PATH / "databases"
 
 
 @pytest.fixture(scope="package")
-def files_dir():
-    """Dir with flat test files."""
-    return files_dir_path
+def files_dir() -> Path:
+    """Returns the folder that contains the flat test files."""
+    return FILES_DIR_PATH
 
 
 @pytest.fixture(scope="package")
-def manifest_dir():
-    """Dir with manifest data test files."""
-    return files_dir_path / "manifest_data"
+def manifest_dir() -> Path:
+    """Returns the folder that contains the manifest data test files."""
+    return FILES_DIR_PATH / "manifest_data"
 
 
 @pytest.fixture(scope="package")
-def schemas_dir():
-    """Dir with schema test files."""
-    return root_dir_path / "schemas"
+def schemas_dir() -> Path:
+    """Returns the folder that contains the schema test files."""
+    return ROOT_DIR_PATH / "schemas"
