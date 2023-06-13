@@ -116,7 +116,7 @@ class FunctionalAnnotations:
         # Description?
         if "product" in feature.qualifiers:
             description = feature.qualifiers["product"][0]
-            if self._product_is_valid(description):
+            if self.product_is_valid(description):
                 feature_object["description"] = description
 
         if "Name" in feature.qualifiers and "description" not in feature_object:
@@ -126,7 +126,7 @@ class FunctionalAnnotations:
         # Don't keep description if it contains the ID
         if ("description" in feature_object) and (
             (
-                not self._product_is_valid(feature_object["description"])
+                not self.product_is_valid(feature_object["description"])
                 or (feature.id.lower() in feature_object["description"].lower())
             )
         ):
@@ -168,24 +168,48 @@ class FunctionalAnnotations:
                     parent_gene["description"] = description
 
     @staticmethod
-    def _product_is_valid(product: str) -> bool:
-        """Returns True if the product name is valid, False otherwise.
+    def product_is_valid(product: str, feat_id: str = None) -> bool:
+        """Returns True if the product name contains informative words (not just hypothetical etc.).
+        If an ID is provided, ignore it as well (we don't want description to be just the ID).
 
         Args:
             product: A product name.
+            feat_id: Feature ID (optional).
 
         """
-        excluded_names = re.compile(
-            r"^(uncharacterized|putative|hypothetical|predicted)"
-            r"( uncharacterized)?"
-            r" protein"
-            r"( of unknown function)?"
-            r"( \(fragment\))?$",
-            re.IGNORECASE,
-        )
+        non_informative_words = [
+            "hypothetical",
+            "putative",
+            "uncharacterized",
+            "unspecified",
+            "of unknown function",
+            "conserved",
+            "predicted",
+            "fragment",
+            "product",
+            "protein",
+            "RNA",
+            r"variant( \d+)?",
+        ]
+        non_informative_re = re.compile(r"|".join(non_informative_words), re.IGNORECASE)
 
-        product_is_valid = not excluded_names.match(product)
-        return product_is_valid
+        # Remove the feature ID if it's in the description
+        if feat_id:
+            feat_id_re = re.compile(feat_id, re.IGNORECASE)
+            product = re.sub(feat_id_re, "", product)
+
+        # Remove punctuations
+        punct_re = re.compile(r"[,;: _()-]+")
+        product = re.sub(punct_re, " ", product)
+
+        # Then remove non informative words
+        product = re.sub(non_informative_re, " ", product)
+
+        # Anything (informative) left?
+        empty_re = re.compile(r"^[ ]*$")
+        if empty_re.match(product):
+            return False
+        return True
 
     def _to_list(self):
         feat_list = []
