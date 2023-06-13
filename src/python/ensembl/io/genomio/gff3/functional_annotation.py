@@ -123,12 +123,8 @@ class FunctionalAnnotations:
             feature_object["description"] = feature.qualifiers["Name"][0]
 
         # Don't keep useless description
-        # Don't keep description if it contains the ID
-        if ("description" in feature_object) and (
-            (
-                not self.product_is_valid(feature_object["description"])
-                or (feature.id.lower() in feature_object["description"].lower())
-            )
+        if ("description" in feature_object) and not self.product_is_valid(
+            feature_object["description"], feature.id
         ):
             del feature_object["description"]
 
