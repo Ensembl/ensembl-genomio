@@ -12,59 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # WORKFLOW RULES -- WHEN TO RUN PIPELINES
 # https://docs.gitlab.com/ee/ci/yaml/#workflow
 # https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
 workflow:
   rules:
      - if: $CI_EXTERNAL_PULL_REQUEST_IID && $CI_COMMIT_BRANCH
-     - if: $CI_COMMIT_BRANCH
+     - if: $CI_COMMIT_BRANCH =~ $CI_DEFAULT_BRANCH
        when: never
 
 variables:
   RUN_DIR: ./cicd/runtime
 
-stages:
-  - debug
-  - test
-
-# In-house stuff
-
-#   CI/CD debugging
-debug:gitlab_env:
-  # comment out when section to run
-  when: manual
-  stage: debug
-  # using sub-pipeline from ./parts
-  trigger:
-    strategy: depend
-    include:
-    - local: /cicd/gitlab/parts/debug.gitlab-ci.yml
-
-#   Python checks
-test:python:
-  stage: test
-  # using sub-pipeline from ./parts
-  trigger:
-    strategy: depend
-    include:
-    - local: /cicd/gitlab/parts/python.gitlab-ci.yml
-
-#   License checks
-test:license:
-  stage: test
-  # using sub-pipeline from ./parts
-  trigger:
-    strategy: depend
-    include:
-    - local: /cicd/gitlab/parts/license.gitlab-ci.yml
+# Using default stages (https://docs.gitlab.com/ee/ci/yaml/#stages): .pre > build > test > deploy > .post
 
 
-# external pipelines
-#   trying to use those from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates
+# In-house pipelines
 
-test:external:code_quality:
+include:
+  # CI/CD debugging
+  - local: cicd/gitlab/parts/debug.gitlab-ci.yml
+  # Python checks
+  - local: cicd/gitlab/parts/python.gitlab-ci.yml
+  # License checks
+  - local: cicd/gitlab/parts/license.gitlab-ci.yml
+
+
+# External pipelines
+# (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
+
+external:code_quality:
   # https://gitlab.ebi.ac.uk/help/user/project/merge_requests/code_quality.md
   when: manual
   stage: test

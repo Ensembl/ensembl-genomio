@@ -14,18 +14,20 @@
 
 # License-related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
-image: python:3.11  # for internal tests we do not have the minimum required version restriction
+# A generic job to be used by all License jobs with the "extends" mechanism
+# (https://docs.gitlab.com/ee/ci/yaml/#extends)
+.license:
+  stage: test
+  image: python:3.11
+  variables:
+    CMD: python cicd/scripts/check_license.py
 
-stages:
-  - license:tests
-
-
-license:tests:notice:
-  stage: license:tests
+license:notice:
+  extends: .license
   script:
-    - python cicd/scripts/check_license.py notice
+    - $CMD notice
 
-license:tests:header:
-  stage: license:tests
+license:header:
+  extends: .license
   script:
-    - python cicd/scripts/check_license.py header
+    - $CMD header

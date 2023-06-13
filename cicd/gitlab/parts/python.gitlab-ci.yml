@@ -14,106 +14,148 @@
 
 # Python related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
-variables:
-  # Commands for running static analyses
-  PYLINT_CMD: pylint --rcfile pyproject.toml
-  MYPY_CMD: mypy --config-file pyproject.toml
-  BLACK_CMD: black --config pyproject.toml
+# Test stage instances
 
-# don't forget to update /pyproject.toml
-#  if changing python version
-image: python:3.8
+# A generic job to be used by all Python jobs with the "extends" mechanism
+# (https://docs.gitlab.com/ee/ci/yaml/#extends)
+.python:
+  stage: test
+  image: python:3.8
+  only:
+    changes:
+      - pyproject.toml
+      - "*.py"
+      - src/python/**/*.py
 
+## Prepare and load the Python virtual environment
 
-# overriding the default stages list (https://docs.gitlab.com/ee/ci/yaml/#stages)
-stages:
-  - python:prepare_env
-  - python:static_analysis
-  - python:tests
-
-
-# Python related environment and tests
-python:prepare_env:venv:
-  stage: python:prepare_env
+python:prepare_venv:
+  extends: .python
   artifacts:
     paths:
       - $RUN_DIR
   before_script:
-    - python --version # For debugging
+    - python --version  # for debugging
     - python -m venv $RUN_DIR/venv
     - source $RUN_DIR/venv/bin/activate
   script:
-    - pip install mypy
-    - pip install types-requests  # type stub for "requests" (or run `mypy --install-types`)
-    - pip install pylint
-    - pip install black
-
-
-##  LOCAL ENV & PIP
-python:prepare_env:local:
-  stage: python:prepare_env
-  needs:
-    # using `needs` as it allows to depend on jobs from the same stage
-    #  https://docs.gitlab.com/ee/ci/yaml/#needs
-    - job: python:prepare_env:venv
-      artifacts: true
-  artifacts:
-    paths:
-      - $RUN_DIR
-  before_script:
-    - source $RUN_DIR/venv/bin/activate
-  script:
-    # pip based
     - pip install -e .[dev]
 
 
-##  PYTHON STATIC ANALYSIS
-
-# A generic job to be used by various python tests
-# to be reused with `extends` mechanism (https://docs.gitlab.com/ee/ci/yaml/#extends)
-.python:static_analysis:generic:
-  stage: python:static_analysis
+.python:test:
+  extends: .python
   needs:
-    - job: python:prepare_env:local
+    # Using `needs` as it allows to depend on jobs from the same stage
+    # (https://docs.gitlab.com/ee/ci/yaml/#needs)
+    - job: python:prepare_venv
       artifacts: true
   before_script:
     - source $RUN_DIR/venv/bin/activate
 
-.python:tests:generic:
-  extends: .python:static_analysis:generic
-  stage: python:tests
+## Static analyses
 
+.python:pylint:
+  extends: .python:test
+  variables:
+    PYLINT_CMD: pylint --rcfile pyproject.toml
 
-# Specific instances for static analyses
-python:static_analysis:pylint:
-  extends: .python:static_analysis:generic
+python:pylint:src:
+  extends: .python:pylint
   script:
-    - $PYLINT_CMD src/python/ensembl/io/genomio src/python/tests
+    - $PYLINT_CMD src/python/ensembl/io/genomio
 
-python:static_analysis:mypy:src:
-  extends: .python:static_analysis:generic
+python:pylint:tests:
+  extends: .python:pylint
+  script:
+    - $PYLINT_CMD src/python/tests
+
+.python:mypy:
+  extends: .python:test
+  variables:
+    MYPY_CMD: mypy --config-file pyproject.toml
+
+python:mypy:src:
+  extends: .python:mypy
   script:
     - $MYPY_CMD src/python/ensembl/io
 
-python:static_analysis:mypy:tests:
-  extends: .python:static_analysis:generic
+python:mypy:tests:
+  extends: .python:mypy
   allow_failure: true
   script:
     - $MYPY_CMD src/python/tests
 
-python:static_analysis:black:
-  extends: .python:static_analysis:generic
+python:black:
+  extends: .python:test
   allow_failure: true
   script:
-    - $BLACK_CMD --verbose --check .
+    - black --config pyproject.toml --verbose --check .
 
+## Unit tests and coverage
 
-# Specific instances for tests
-python:tests:pytest:
-  extends: .python:tests:generic
+python:pytest:
+  extends: .python:test
   script:
-    - coverage run -m pytest
-    - coverage html -d cov_report
+    - coverage run -m pytest --junitxml=$RUN_DIR/junit_reports.xml
+  artifacts:
+    when: always
+    reports:
+      junit: $RUN_DIR/junit_reports.xml
+    paths:
+      - .coverage
+
+.python:coverage:
+  extends: .python:test
+  needs:
+    # "extends" cannot merge arrays (https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#merge-details)
+    - !reference [.python:test, needs]
+    - job: python:pytest
+      artifacts: true
+
+python:coverage:cobertura:
+  extends: .python:coverage
+  script:
+    - coverage xml -o $RUN_DIR/cobertura_coverage.xml
+  artifacts:
+    when: always
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: $RUN_DIR/cobertura_coverage.xml
+
+python:coverage:html:
+  extends: .python:coverage
+  script:
+    - coverage html -d $RUN_DIR/coverage
+  artifacts:
+    when: always
+    paths:
+      - $RUN_DIR/coverage/
+
+python:coverage:report:
+  extends: .python:coverage
+  script:
+    - coverage report
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+
+
+# Deploy stage instances
+
+## Generate GitLab pages with HTML coverage report
+
+pages:
+  stage: deploy
+  needs:
+    - job: python:coverage:html
+      artifacts: true
+  script:
+    - mv $RUN_DIR/coverage/ public/
   artifacts:
     paths:
-      - cov_report
+      - public
+  only:
+    changes:
+      - src/python/**/*.py
+  except:
+    refs:
+      - merge_requests
