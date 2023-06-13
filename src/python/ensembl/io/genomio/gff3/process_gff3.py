@@ -216,7 +216,6 @@ class GFFSimplifier(GFFParserCommon):
     skip_unrecognized = False
     gene_cds_skip_others = False
     allow_pseudogene_with_CDS = False
-    merge_split_genes = True
     exclude_seq_regions: List = []
     validate_gene_id = True
     min_id_length = 8
