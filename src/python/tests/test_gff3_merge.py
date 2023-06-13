@@ -13,13 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of :mod:`ensembl.io.genomio.schemas` module.
-
-The unit testing is divided into one test class per submodule/class found in this module, and one test method
-per public function/class method.
-
-Typical usage example::
-    $ pytest test_schemas.py
+"""Unit testing of :mod:`ensembl.io.genomio.gff3.process_gff3` module.
 
 """
 
@@ -40,7 +34,7 @@ class TestGFF3Merge:
     def setup(self, tmp_dir: Path, files_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
         type(self).tmp_dir = tmp_dir
-        type(self).data_dir = files_dir / 'process_gff3/merge_genes'
+        type(self).data_dir = files_dir / "process_gff3/merge_genes"
 
     @pytest.mark.parametrize(
         "input_name, expected_name",
@@ -49,11 +43,12 @@ class TestGFF3Merge:
         ],
     )
     def test_merge(self, tmp_path: Path, input_name: str, expected_name: str) -> None:
-        """Tests `integrity:IntegrityTool` method.
+        """Tests merge method.
 
         Args:
-            brc_mode: BRC specific mode.
-            ignore_false_stops: Ignore false stops.
+            tmp_path: Where temporary files will be created.
+            input_name: Name of the GFF file with example input, in the test folder.
+            expected_name: Name of the GFF file with expected output, in the test folder.
 
         """
         merger = GFFGeneMerger()
