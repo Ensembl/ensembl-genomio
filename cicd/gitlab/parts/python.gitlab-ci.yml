@@ -21,6 +21,11 @@
 .python:
   stage: test
   image: python:3.8
+  only:
+    changes:
+      - pyproject.toml
+      - "*.py"
+      - src/python/**/*.py
 
 ## Prepare and load the Python virtual environment
 
