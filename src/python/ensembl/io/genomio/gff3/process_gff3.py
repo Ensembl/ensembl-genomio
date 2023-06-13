@@ -915,14 +915,14 @@ class InputSchema(argschema.ArgSchema):
     in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
     genome_data = argschema.fields.InputFile(metadata={"description": "genome.json path"})
     out_gff_path = argschema.fields.OutputFile(
-        default="gene_models.gff3", metadata={"description": "Output gff path"}
+        dump_default="gene_models.gff3", metadata={"description": "Output gff path"}
     )
     out_func_path = argschema.fields.OutputFile(
-        default="functional_annotation.json",
+        dump_default="functional_annotation.json",
         metadata={"description": "Output functional_annotation.json path"},
     )
     merge_split_genes = argschema.fields.Boolean(
-        default=True, metadata={"description": "Should split genes be merged automatically"}
+        dump_default=True, metadata={"description": "Should split genes be merged automatically"}
     )
 
 
