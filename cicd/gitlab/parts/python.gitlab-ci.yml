@@ -102,6 +102,7 @@ python:pytest:
 .python:coverage:
   extends: .python:test
   needs:
+    - !reference [.python:test, needs]
     - job: python:pytest
       artifacts: true
 
