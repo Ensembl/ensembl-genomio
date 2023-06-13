@@ -43,10 +43,10 @@ class TestSchemas:
     tmp_dir: Path
 
     @pytest.fixture(scope="class", autouse=True)
-    def setup(self, tmp_dir: Path):
+    def setup(self, tmp_dir: Path, schemas_dir: Path, manifest_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
-        type(self).test_data_dir = Path(pytest.manifest_dir) / "data1"
-        type(self).schema_dir = Path(pytest.schema_dir)
+        type(self).schema_dir = schemas_dir
+        type(self).test_data_dir = manifest_dir / "data1"
         type(self).tmp_dir = tmp_dir
 
     @pytest.mark.parametrize(
