@@ -17,7 +17,7 @@
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from Bio.SeqFeature import SeqFeature
 
@@ -164,7 +164,7 @@ class FunctionalAnnotations:
                     parent_gene["description"] = description
 
     @staticmethod
-    def product_is_valid(product: str, feat_id: str = None) -> bool:
+    def product_is_valid(product: str, feat_id: Optional[str] = None) -> bool:
         """Returns True if the product name contains informative words (not just hypothetical etc.).
         If an ID is provided, ignore it as well (we don't want description to be just the ID).
 
@@ -190,7 +190,7 @@ class FunctionalAnnotations:
         non_informative_re = re.compile(r"|".join(non_informative_words), re.IGNORECASE)
 
         # Remove the feature ID if it's in the description
-        if feat_id:
+        if feat_id is not None:
             feat_id_re = re.compile(feat_id, re.IGNORECASE)
             product = re.sub(feat_id_re, "", product)
 
