@@ -116,14 +116,14 @@ class FunctionalAnnotations:
         # Description?
         if "product" in feature.qualifiers:
             description = feature.qualifiers["product"][0]
-            if self.product_is_valid(description):
+            if self.product_is_informative(description):
                 feature_object["description"] = description
 
         if "Name" in feature.qualifiers and "description" not in feature_object:
             feature_object["description"] = feature.qualifiers["Name"][0]
 
         # Don't keep useless description
-        if ("description" in feature_object) and not self.product_is_valid(
+        if ("description" in feature_object) and not self.product_is_informative(
             feature_object["description"], feature.id
         ):
             del feature_object["description"]
@@ -164,7 +164,7 @@ class FunctionalAnnotations:
                     parent_gene["description"] = description
 
     @staticmethod
-    def product_is_valid(product: str, feat_id: Optional[str] = None) -> bool:
+    def product_is_informative(product: str, feat_id: Optional[str] = None) -> bool:
         """Returns True if the product name contains informative words (not just hypothetical etc.).
         If an ID is provided, ignore it as well (we don't want description to be just the ID).
 

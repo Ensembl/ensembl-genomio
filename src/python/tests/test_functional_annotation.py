@@ -55,13 +55,13 @@ class TestMergeGFF3:
         ],
     )
     def test_invalid_description(self, description: str) -> None:
-        """Tests `functional_annotation.product_is_valid` method.
+        """Tests `functional_annotation.product_is_informative` method.
 
         Args:
             description: Description string to check.
 
         """
-        assert not fa.product_is_valid(description)
+        assert not fa.product_is_informative(description)
 
     @pytest.mark.parametrize(
         "description",
@@ -70,13 +70,13 @@ class TestMergeGFF3:
         ],
     )
     def test_valid_description(self, description: str) -> None:
-        """Tests `functional_annotation.product_is_valid` method with valid descriptions.
+        """Tests `functional_annotation.product_is_informative` method with valid descriptions.
 
         Args:
             description: Description string to check.
 
         """
-        assert fa.product_is_valid(description)
+        assert fa.product_is_informative(description)
 
     @pytest.mark.parametrize(
         "description, feat_id",
@@ -91,11 +91,11 @@ class TestMergeGFF3:
         ],
     )
     def test_invalid_description_with_id(self, description: str, feat_id: str) -> None:
-        """Tests `functional_annotation.product_is_valid` method with an ID in the description.
+        """Tests `functional_annotation.product_is_informative` method with an ID in the description.
 
         Args:
             description: Description string to check.
             feat_id: Feature ID that might be in the description.
 
         """
-        assert not fa.product_is_valid(description, feat_id)
+        assert not fa.product_is_informative(description, feat_id)
