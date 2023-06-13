@@ -23,17 +23,30 @@ from pathlib import Path
 
 import pytest
 
+test_data_dir_path = Path(__file__).parent
+root_dir_path = test_data_dir_path.parents[2]
+files_dir_path = test_data_dir_path / "flatfiles"
 
-def pytest_configure() -> None:
-    """Adds global variables and configuration attributes required by GenomIO's unit tests.
 
-    `Pytest initialisation hook
-    <https://docs.pytest.org/en/latest/reference.html#_pytest.hookspec.pytest_configure>`_.
+@pytest.fixture(scope="package")
+def dbs_dir():
+    """Dir with database test files."""
+    return test_data_dir_path / "databases"
 
-    """
-    test_data_dir = Path(__file__).parent
-    root_dir = test_data_dir.parents[2]
-    pytest.dbs_dir = test_data_dir / "databases"
-    pytest.files_dir = test_data_dir / "flatfiles"
-    pytest.manifest_dir = pytest.files_dir / "manifest_data"
-    pytest.schema_dir = root_dir / "schemas"
+
+@pytest.fixture(scope="package")
+def files_dir():
+    """Dir with flat test files."""
+    return files_dir_path
+
+
+@pytest.fixture(scope="package")
+def manifest_dir():
+    """Dir with manifest data test files."""
+    return files_dir_path / "manifest_data"
+
+
+@pytest.fixture(scope="package")
+def schemas_dir():
+    """Dir with schema test files."""
+    return root_dir_path / "schemas"

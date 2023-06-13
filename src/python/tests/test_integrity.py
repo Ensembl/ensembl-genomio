@@ -35,16 +35,20 @@ from ensembl.io.genomio.integrity import IntegrityTool, Manifest
 class TestIntegrity:
     """Tests for the integrity module."""
 
+    tmp_dir: Path
+    manifest_dir: Path
+
     @pytest.fixture(scope="class", autouse=True)
-    def setup(self, tmp_dir: Path):
+    def setup(self, tmp_dir: Path, manifest_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
         type(self).tmp_dir = tmp_dir
+        type(self).manifest_dir = manifest_dir
 
     @pytest.mark.parametrize(
         "manifest_path, brc_mode, ignore_false_stops, expected",
         [
             (
-                pytest.manifest_dir / "data1/manifest.json",
+                "data1/manifest.json",
                 [None, True, False],
                 [None, True, False],
                 does_not_raise(),
@@ -61,6 +65,7 @@ class TestIntegrity:
             ignore_false_stops: Ignore false stops.
 
         """
+        manifest_path = self.manifest_dir / manifest_path
         with expected:
             integrity = IntegrityTool(manifest_path, brc_mode, ignore_false_stops)
             assert isinstance(integrity, IntegrityTool)
@@ -68,13 +73,14 @@ class TestIntegrity:
             assert integrity.manifest.brc_mode == brc_mode
 
     @pytest.mark.parametrize(
-        "manifest_dir, expected",
+        "manifest_path, expected",
         [
-            (pytest.manifest_dir / "data1/manifest.json", does_not_raise()),
+            ("data1/manifest.json", does_not_raise()),
         ],
     )
-    def test_get_manifest(self, manifest_dir: Path, expected: ContextManager) -> None:
+    def test_get_manifest(self, manifest_path: Path, expected: ContextManager) -> None:
         """Tests `integrity:IntegrityTool:get_manifest()` method."""
+        manifest_dir = self.manifest_dir / manifest_path
         with expected:
             integrity = IntegrityTool(manifest_dir)
             manifest = integrity.manifest
