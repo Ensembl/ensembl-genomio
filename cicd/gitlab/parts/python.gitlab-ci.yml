@@ -103,6 +103,7 @@ python:pytest:
 ## Generate GitLab pages with HTML coverage report
 
 pages:
+  when: manual
   stage: deploy
   dependencies:
     - python:pytest
@@ -111,6 +112,6 @@ pages:
   artifacts:
     paths:
       - public
-  only:
-    - main
+  # only:
+  #   - main
 
