@@ -27,7 +27,7 @@ variables:
 image: python:3.8
 
 stages:
-  - debug
+  - .pre
   - test
   - deploy
 
@@ -45,7 +45,7 @@ include:
 # External pipelines
 # (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
 
-test:external:code_quality:
+external:code_quality:
   # https://gitlab.ebi.ac.uk/help/user/project/merge_requests/code_quality.md
   when: manual
   stage: test

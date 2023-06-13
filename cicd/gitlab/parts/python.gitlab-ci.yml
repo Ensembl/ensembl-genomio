@@ -16,14 +16,16 @@
 
 variables:
   # Commands for running static analyses
+  PYLINT_CMD: pylint --rcfile pyproject.toml
   MYPY_CMD: mypy --config-file pyproject.toml
+  BLACK_CMD: black --config pyproject.toml
 
 
 # Build stage instances
 
 ## Prepare and load the Python virtual environment
 
-test:python:prepare_venv:
+python:prepare_venv:
   stage: test
   artifacts:
     paths:
@@ -40,44 +42,44 @@ test:python:prepare_venv:
 
 # A generic job to be used by various Python tests to be reused with `extends` mechanism
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
-.test:python:generic:
+.python:generic:
   stage: test
   needs:
     # Using `needs` as it allows to depend on jobs from the same stage
     # (https://docs.gitlab.com/ee/ci/yaml/#needs)
-    - job: test:python:prepare_venv
+    - job: python:prepare_venv
       artifacts: true
   before_script:
     - source $RUN_DIR/venv/bin/activate
 
 ## Static analyses
 
-test:python:static_analysis:pylint:
-  extends: .test:python:generic
+python:pylint:
+  extends: .python:generic
   script:
-    - pylint --rcfile pyproject.toml src/python/ensembl/io/genomio src/python/tests
+    - $PYLINT_CMD src/python/ensembl/io/genomio src/python/tests
 
-test:python:static_analysis:mypy:src:
-  extends: .test:python:generic
+python:mypy:src:
+  extends: .python:generic
   script:
     - $MYPY_CMD src/python/ensembl/io
 
-test:python:static_analysis:mypy:tests:
-  extends: .test:python:generic
+python:mypy:tests:
+  extends: .python:generic
   allow_failure: true
   script:
     - $MYPY_CMD src/python/tests
 
-test:python:static_analysis:black:
-  extends: .test:python:generic
+python:black:
+  extends: .python:generic
   allow_failure: true
   script:
-    - black --config pyproject.toml --verbose --check .
+    - $BLACK_CMD --verbose --check .
 
 ## Unit tests and coverage
 
-test:python:pytest:
-  extends: .test:python:generic
+python:pytest:
+  extends: .python:generic
   script:
     - coverage run -m pytest --junitxml=junit_reports.xml
     - coverage xml -o cobertura_coverage.xml
@@ -103,7 +105,7 @@ test:python:pytest:
 pages:
   stage: deploy
   dependencies:
-    - test:python:pytest
+    - python:pytest
   script:
     - mv coverage/ public/
   artifacts:

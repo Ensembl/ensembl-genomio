@@ -14,12 +14,12 @@
 
 # License-related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
-test:license:notice:
+license:notice:
   stage: test
   script:
     - python cicd/scripts/check_license.py notice
 
-test:license:header:
+license:header:
   stage: test
   script:
     - python cicd/scripts/check_license.py header
