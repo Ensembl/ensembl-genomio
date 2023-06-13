@@ -793,14 +793,17 @@ class GFFSimplifier(GFFParserCommon):
         or use the genome organism_abbrev and prepend "TMP_" to it.
 
         """
-        genome_data = Path(InputSchema().genome_data)
         if self.stable_id_prefix:
             prefix = self.stable_id_prefix
         else:
-            with genome_data.open("r") as genome_data_fh:
-                dat = json.load(genome_data_fh)
-            org = dat["BRC4"]["organism_abbrev"]
-            prefix = "TMP_" + org + "_"
+            genome_data_path = InputSchema().genome_data
+            if genome_data_path:
+                with Path(genome_data_path).open("r") as genome_data_fh:
+                    dat = json.load(genome_data_fh)
+                org = dat["BRC4"]["organism_abbrev"]
+                prefix = "TMP_" + org + "_"
+            else:
+                prefix = "TMP_PREFIX_"
             self.stable_id_prefix = prefix
 
         number = self.current_stable_id_number + 1
@@ -911,7 +914,7 @@ class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
     in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
-    genome_data = argschema.fields.InputFile(required=True, metadata={"description": "genome.json path"})
+    genome_data = argschema.fields.InputFile(metadata={"description": "genome.json path"})
     out_gff_path = argschema.fields.OutputFile(
         default="gene_models.gff3", metadata={"description": "Output gff path"}
     )
