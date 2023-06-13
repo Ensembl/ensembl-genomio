@@ -14,12 +14,20 @@
 
 # License-related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
-license:notice:
+# A generic job to be used by all License jobs with the "extends" mechanism
+# (https://docs.gitlab.com/ee/ci/yaml/#extends)
+.license:generic:
   stage: test
+  image: python:3.11
+  variables:
+    CMD: python cicd/scripts/check_license.py
+
+license:notice:
+  extends: .license:generic
   script:
-    - python cicd/scripts/check_license.py notice
+    - $CMD notice
 
 license:header:
-  stage: test
+  extends: .license:generic
   script:
-    - python cicd/scripts/check_license.py header
+    - $CMD header

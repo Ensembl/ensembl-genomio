@@ -18,20 +18,16 @@
 workflow:
   rules:
      - if: $CI_EXTERNAL_PULL_REQUEST_IID && $CI_COMMIT_BRANCH
-     - if: $CI_COMMIT_BRANCH
+     - if: $CI_COMMIT_BRANCH =~ $CI_DEFAULT_BRANCH
        when: never
 
 variables:
   RUN_DIR: ./cicd/runtime
 
-image: python:3.8
+# Using default stages (https://docs.gitlab.com/ee/ci/yaml/#stages): .pre > build > test > deploy > .post
 
-stages:
-  - .pre
-  - test
-  - deploy
 
-# In-house stuff
+# In-house pipelines
 
 include:
   # CI/CD debugging

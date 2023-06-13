@@ -14,19 +14,18 @@
 
 # Python related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
-variables:
-  # Commands for running static analyses
-  PYLINT_CMD: pylint --rcfile pyproject.toml
-  MYPY_CMD: mypy --config-file pyproject.toml
-  BLACK_CMD: black --config pyproject.toml
+# Test stage instances
 
-
-# Build stage instances
+# A generic job to be used by all Python jobs with the "extends" mechanism
+# (https://docs.gitlab.com/ee/ci/yaml/#extends)
+.python:generic:
+  stage: test
+  image: python:3.8
 
 ## Prepare and load the Python virtual environment
 
 python:prepare_venv:
-  stage: test
+  extends: .python:generic
   artifacts:
     paths:
       - $RUN_DIR
@@ -38,12 +37,8 @@ python:prepare_venv:
     - pip install -e .[dev]
 
 
-# Test stage instances
-
-# A generic job to be used by various Python tests to be reused with `extends` mechanism
-# (https://docs.gitlab.com/ee/ci/yaml/#extends)
-.python:generic:
-  stage: test
+.python:test:
+  extends: .python:generic
   needs:
     # Using `needs` as it allows to depend on jobs from the same stage
     # (https://docs.gitlab.com/ee/ci/yaml/#needs)
@@ -54,48 +49,87 @@ python:prepare_venv:
 
 ## Static analyses
 
-python:pylint:
-  extends: .python:generic
+.python:pylint:
+  extends: .python:test
+  variables:
+    PYLINT_CMD: pylint --rcfile pyproject.toml
+
+python:pylint:src:
+  extends: .python:pylint
   script:
-    - $PYLINT_CMD src/python/ensembl/io/genomio src/python/tests
+    - $PYLINT_CMD src/python/ensembl/io/genomio
+
+python:pylint:tests:
+  extends: .python:pylint
+  script:
+    - $PYLINT_CMD src/python/tests
+
+.python:mypy:
+  extends: .python:test
+  variables:
+    MYPY_CMD: mypy --config-file pyproject.toml
 
 python:mypy:src:
-  extends: .python:generic
+  extends: .python:mypy
   script:
     - $MYPY_CMD src/python/ensembl/io
 
 python:mypy:tests:
-  extends: .python:generic
+  extends: .python:mypy
   allow_failure: true
   script:
     - $MYPY_CMD src/python/tests
 
 python:black:
-  extends: .python:generic
+  extends: .python:test
   allow_failure: true
   script:
-    - $BLACK_CMD --verbose --check .
+    - black --config pyproject.toml --verbose --check .
 
 ## Unit tests and coverage
 
 python:pytest:
-  extends: .python:generic
+  extends: .python:test
   script:
-    - coverage run -m pytest --junitxml=junit_reports.xml
-    - coverage xml -o cobertura_coverage.xml
-    - coverage html -d coverage
-    - coverage report
-  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+    - coverage run -m pytest --junitxml=$RUN_DIR/junit_reports.xml
   artifacts:
     when: always
     reports:
-      junit: junit_reports.xml
+      junit: $RUN_DIR/junit_reports.xml
+    paths:
+      - .coverage
+
+.python:coverage:
+  extends: .python:test
+  needs:
+    - job: python:pytest
+      artifacts: true
+
+python:coverage:cobertura:
+  extends: .python:coverage
+  script:
+    - coverage xml -o $RUN_DIR/cobertura_coverage.xml
+  artifacts:
+    when: always
+    reports:
       coverage_report:
         coverage_format: cobertura
-        path: cobertura_coverage.xml
+        path: $RUN_DIR/cobertura_coverage.xml
+
+python:coverage:html:
+  extends: .python:coverage
+  script:
+    - coverage html -d $RUN_DIR/coverage
+  artifacts:
+    when: always
     paths:
-      - junit_reports.xml
-      - coverage/
+      - $RUN_DIR/coverage/
+
+python:coverage:report:
+  extends: .python:coverage
+  script:
+    - coverage report
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
 
 
 # Deploy stage instances
@@ -103,15 +137,18 @@ python:pytest:
 ## Generate GitLab pages with HTML coverage report
 
 pages:
-  when: manual
   stage: deploy
-  dependencies:
-    - python:pytest
+  needs:
+    - job: python:coverage:html
+      artifacts: true
   script:
-    - mv coverage/ public/
+    - mv $RUN_DIR/coverage/ public/
   artifacts:
     paths:
       - public
-  # only:
-  #   - main
-
+  only:
+    changes:
+      - src/python/**/*.py
+  except:
+    refs:
+      - merge_requests
