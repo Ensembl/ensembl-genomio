@@ -178,7 +178,7 @@ class FunctionalAnnotations:
             "putative",
             "uncharacterized",
             "unspecified",
-            "of unknown function",
+            r"(of )?unknown function",
             "conserved",
             "predicted",
             "fragment",

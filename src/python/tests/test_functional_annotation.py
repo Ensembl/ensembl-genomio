@@ -47,6 +47,7 @@ class TestMergeGFF3:
             "Hypothetical conserved protein",
             "conserved hypothetical protein",
             "conserved hypothetical protein, putative",
+            "conserved protein, unknown function",
             "putative protein",
             "putative_protein",
             "hypothetical RNA",
