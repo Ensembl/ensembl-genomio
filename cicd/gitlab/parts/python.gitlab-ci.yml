@@ -116,12 +116,15 @@ python:coverage:cobertura:
   extends: .python:coverage
   script:
     - coverage xml -o $RUN_DIR/cobertura_coverage.xml
+    - genbadge coverage -i $RUN_DIR/cobertura_coverage.xml -o $RUN_DIR/coverage-badge.svg
   artifacts:
     when: always
     reports:
       coverage_report:
         coverage_format: cobertura
         path: $RUN_DIR/cobertura_coverage.xml
+    paths:
+      - $RUN_DIR/coverage-badge.svg
 
 python:coverage:html:
   extends: .python:coverage
@@ -149,6 +152,7 @@ pages:
     - job: python:coverage:html
       artifacts: true
   script:
+    - mv $RUN_DIR/*-badge.svg $RUN_DIR/coverage/.
     - mv $RUN_DIR/coverage/ public/
   artifacts:
     paths:

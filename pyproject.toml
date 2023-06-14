@@ -61,6 +61,7 @@ dev = [
     "black",
     "coverage",
     "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",
+    "genbadge[coverage]",
     "mock",
     "mypy",
     "pylint",
