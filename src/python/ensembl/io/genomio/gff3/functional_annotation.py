@@ -50,12 +50,14 @@ class FunctionalAnnotations:
         self.parent: Dict[str, str] = {}
 
     def add_parent(self, parent_type: str, parent_id: str, child_id: str) -> None:
+        """Record a parent-child IDs relationship for a given parent biotype."""
         if parent_type in ("gene", "transcript"):
             self.parent[f"{parent_type}-{child_id}"] = parent_id
         else:
             raise MissingParentError(f"Unsupported parent type {parent_type}")
 
     def get_parent(self, parent_type: str, child_id: str) -> str:
+        """Returns the parent ID of a given child for a given parent biotype."""
         if parent_type in ("gene", "transcript"):
             parent_id = self.parent.get(f"{parent_type}-{child_id}")
             if parent_id is None:
