@@ -20,7 +20,7 @@ from collections import Counter
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import json
 import argschema
@@ -223,9 +223,13 @@ class GFFSimplifier(GFFParserCommon):
     stable_id_prefix = None
     current_stable_id_number: int = 0
 
-    def __init__(self):
+    def __init__(self, genome_path: Optional[PathLike] = None):
         self.records = Records()
         self.annotations = FunctionalAnnotations()
+        self.genome = {}
+        if genome_path is not None:
+            with Path(genome_path).open("r") as genome_fh:
+                self.genome = json.load(genome_fh)
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """
@@ -795,11 +799,9 @@ class GFFSimplifier(GFFParserCommon):
         if self.stable_id_prefix:
             prefix = self.stable_id_prefix
         else:
-            genome_data_path = InputSchema().genome_data
-            if genome_data_path:
-                with Path(genome_data_path).open("r") as genome_data_fh:
-                    dat = json.load(genome_data_fh)
-                org = dat["BRC4"]["organism_abbrev"]
+            if self.genome:
+                org = self.genome.get("BRC4", {}).get("organism_abbrev")
+            if org is not None:
                 prefix = "TMP_" + org + "_"
             else:
                 prefix = "TMP_PREFIX_"
@@ -947,7 +949,7 @@ def main() -> None:
 
     # Load gff3 data and write a simpler version that follows our specifications
     # as well as a functional_annotation json file
-    gff_data = GFFSimplifier()
+    gff_data = GFFSimplifier(mod.args.get("genome_data"))
     gff_data.simpler_gff3(in_gff_path)
     gff_data.records.to_gff(mod.args["out_gff_path"])
     gff_data.annotations.to_json(mod.args["out_func_path"])

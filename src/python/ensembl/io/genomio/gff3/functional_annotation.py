@@ -47,8 +47,21 @@ class FunctionalAnnotations:
         self.translations: Dict[str, Annotation] = {}
         self.transposable_elements: Dict[str, Annotation] = {}
         # Keep parent info: key is the feature ID, value is the parent ID
-        self.gene_parent: Dict[str, str] = {}
-        self.transcript_parent: Dict[str, str] = {}
+        self.parent: Dict[str, str] = {}
+
+    def add_parent(self, parent_type: str, parent_id: str, child_id: str) -> None:
+        if parent_type in ("gene", "transcript"):
+            self.parent[f"{parent_type}-{child_id}"] = parent_id
+        else:
+            raise MissingParentError(f"Unsupported parent type {parent_type}")
+
+    def get_parent(self, parent_type: str, child_id: str) -> str:
+        if parent_type in ("gene", "transcript"):
+            parent_id = self.parent.get(f"{parent_type}-{child_id}")
+            if parent_id is None:
+                raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
+            return parent_id
+        raise MissingParentError(f"Unsupported parent type {parent_type}")
 
     def add_gene(self, feature: SeqFeature) -> None:
         """Add the functional annotation of a given gene.
@@ -74,7 +87,7 @@ class FunctionalAnnotations:
             raise DuplicateIdError(f"Transcript ID {feature.id} already added")
         transcript = self._generic_feature(feature, "transcript")
         self.transcripts[transcript["id"]] = transcript
-        self.gene_parent[transcript["id"]] = gene_id
+        self.add_parent("gene", gene_id, transcript["id"])
 
     def add_translation(self, feature: SeqFeature, transcript_id: str) -> None:
         """Add the functional annotation of a given translation,
@@ -88,7 +101,8 @@ class FunctionalAnnotations:
             raise DuplicateIdError(f"Translation ID {feature.id} already added")
         translation = self._generic_feature(feature, "translation")
         self.translations[translation["id"]] = translation
-        self.transcript_parent[translation["id"]] = transcript_id
+        self.parent[f"transcript-{translation['id']}"] = transcript_id
+        self.add_parent("transcript", transcript_id, translation["id"])
 
     def add_transposable_element(self, feature: SeqFeature) -> None:
         """Add the functional annotation of a transposable_element,
@@ -146,7 +160,7 @@ class FunctionalAnnotations:
             description = translation.get("description")
             if description is not None:
                 # Check transcript
-                parent_tr_id = self.transcript_parent[translation_id]
+                parent_tr_id = self.get_parent("transcript", translation_id)
                 parent_tr = self.transcripts[parent_tr_id]
                 tr_description = parent_tr.get("description")
                 if tr_description is None:
@@ -157,7 +171,7 @@ class FunctionalAnnotations:
             description = transcript.get("description")
             if description is not None:
                 # Check gene
-                parent_gene_id = self.gene_parent[transcript_id]
+                parent_gene_id = self.get_parent("gene", transcript_id)
                 parent_gene = self.genes[parent_gene_id]
                 tr_description = parent_gene.get("description")
                 if tr_description is None:
