@@ -67,7 +67,7 @@ cd ./ensembl-genomio
 ```
 
 ###  Nexflow installation
-Please, refer to the "Installation" section of the [Nexflow pipelines document](docs/nexflow.md#installation).
+Please, refer to the "Installation" section of the [Nextflow pipelines document](docs/nextflow.md#installation).
 
 ## Pipelines
 
