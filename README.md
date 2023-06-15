@@ -66,6 +66,9 @@ cd ./ensembl-genomio
 ./scripts/setup/docs/build_sphinx_docs.sh
 ```
 
+###  Nexflow installation
+Please, refer to the "Installation" section of the [Nextflow pipelines document](docs/nextflow.md#installation).
+
 ## Pipelines
 
 ### Initialising and running eHive-based pipelines
