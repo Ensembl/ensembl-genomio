@@ -14,6 +14,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
+// default params
+params.help = false
+param.output_dir = './dumper_output'
+
+// Print usage
+def helpMessage() {
+  log.info """
+        Usage:
+        The typical command for running the 'Dumper' pipeline is as follows:
+
+        NXF_WORK=data/nextflow_work \
+          nextflow run \
+            ${ENSEMBL_ROOT_DIR}/ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/dumper_pipiline.nf \
+            -profile lsf \
+            $(${CMD} details script) \
+            --dbname_re '^drosophila_melanogaster_\w+_57_.*$' \
+            --output_dir <json_output_dir>
+
+        Mandatory arguments:
+        --host, --port, --user           Connection parameters to the SQL servers we getting core db(s) from
+
+        Optional arguments:
+        --password                     Password part of the connection parameters
+        --prefix
+        --dbname_re                    Regexp
+        --brc_mode
+        --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
+        --help                         This usage statement.
+        """
+}
+
+// Check mandatory parameters
+if (params.help) {
+    helpMessage()
+    exit 0
+}
+
 def create_server(params) {
     server = [
         "host": params.host,
@@ -38,6 +76,9 @@ def create_filter_map(params) {
     if (params.prefix) {
         filter_map["prefix"] = params.prefix
     }
+    if (params.db_name_pat) {
+        filter_map["dbname_re"] = params.dbname_re
+    }
     return filter_map
 }
 
@@ -58,6 +99,6 @@ workflow {
     dbs = DB_FACTORY(server, filter_map)
         .map(it -> read_json(it))
         .flatten()
-    DUMP_SQL(server, dbs, filter_map, params.out_dir)
-    DUMP_METADATA(server, dbs, filter_map, params.out_dir)
+    DUMP_SQL(server, dbs, filter_map, params.output_dir)
+    DUMP_METADATA(server, dbs, filter_map, params.output_dir)
 }

@@ -73,12 +73,13 @@ class CoreServer:
             dbs.append(db[0])
         return dbs
 
-    def get_cores(self, prefix: str = "", build: str = "", version: str = "") -> List[str]:
+    def get_cores(self, prefix: str = "", build: str = "", version: str = "", dbname_re: str = "") -> List[str]:
         """Provide a list of core databases, filtered if requested.
         Args:
             prefix: filter by prefix (no _ is added automatically)
             build: filter by build
             version: filter by Ensembl version
+            dbname_re: filter by dbname regular expression
 
         Returns:
             A list of database names
@@ -89,6 +90,9 @@ class CoreServer:
 
         if prefix:
             dbs = [db for db in dbs if db.startswith(f"{prefix}")]
+        if dbname_re:
+            dbname_m = re.compile(dbname_re)
+            dbs = list(filter(dbname_m.search, dbs))
         if build:
             dbs = [db for db in dbs if re.search(rf"_core_{build}_\d+_\d+$", db)]
         if version:

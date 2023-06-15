@@ -31,12 +31,17 @@ process DB_FACTORY {
         if [ $filter_map.brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
+        db_name_pat=''
+        if [ -n "$db_name_pat" ]; then
+            db_name_pat="--db_name_pat '$db_name_pat'"
+        fi
         db_factory --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \
             --prefix '${filter_map.prefix}' \
             \$brc_mode \
+            \$dbname_re \
             --output_json dbs.json
         """
 }
