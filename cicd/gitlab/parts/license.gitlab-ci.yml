@@ -26,6 +26,8 @@ license:notice:
   extends: .license
   script:
     - $CMD notice
+  except:
+    - external_pull_requests
 
 license:header:
   extends: .license

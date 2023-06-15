@@ -157,9 +157,5 @@ pages:
   artifacts:
     paths:
       - public
-  only:
-    changes:
-      - src/python/**/*.py
   except:
-    refs:
-      - merge_requests
+    - external_pull_requests
