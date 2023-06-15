@@ -47,7 +47,7 @@ classifiers = [
 dependencies = [
     "argschema >= 3.0.4",
     "bcbio-gff == 0.7.0",
-    "biopython == 1.80",
+    "biopython == 1.81",
     "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
     "jsonschema >= 4.6.0",
     "intervaltree >= 3.1.0",
