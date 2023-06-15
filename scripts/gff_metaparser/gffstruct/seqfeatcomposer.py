@@ -18,7 +18,7 @@ import sys
 
 from BCBio import GFF
 
-from Bio.Seq import UnknownSeq
+from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 
@@ -37,7 +37,7 @@ class SeqFeatComposer:
             return
         if out_rec_features:
             self.update_stashed(out_rec_features, global_context)
-            out_rec = SeqRecord(UnknownSeq(length=contig_len), id=contig_id)
+            out_rec = SeqRecord(Seq(None, length=contig_len), id=contig_id)
             out_rec.features = out_rec_features
             GFF.write([out_rec], out_file)
 
