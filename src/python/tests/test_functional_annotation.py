@@ -22,6 +22,7 @@ Typical usage example::
 
 """
 
+from typing import Optional
 import pytest
 
 from ensembl.io.genomio.gff3.functional_annotation import FunctionalAnnotations as fa
