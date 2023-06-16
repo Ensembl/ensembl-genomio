@@ -227,7 +227,7 @@ class GFFSimplifier(GFFParserCommon):
         self.records = Records()
         self.annotations = FunctionalAnnotations()
         self.genome = {}
-        if genome_path is not None:
+        if genome_path:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
 
@@ -801,10 +801,10 @@ class GFFSimplifier(GFFParserCommon):
         else:
             if self.genome:
                 org = self.genome.get("BRC4", {}).get("organism_abbrev")
-            if org is not None:
-                prefix = "TMP_" + org + "_"
-            else:
+            if org is None:
                 prefix = "TMP_PREFIX_"
+            else:
+                prefix = "TMP_" + org + "_"
             self.stable_id_prefix = prefix
 
         number = self.current_stable_id_number + 1

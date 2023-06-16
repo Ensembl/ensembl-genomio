@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -32,71 +31,42 @@ class TestMergeGFF3:
     """Tests for the integrity module."""
 
     @pytest.mark.parametrize(
-        "description",
+        "description, feature_id, output",
         [
-            "",
-            "hypothetical protein",
-            "hypothetical_protein",
-            "Hypothetical protein",
-            "hypothetical protein (fragment)",
-            "hypothetical protein, variant",
-            "hypothetical protein, variant 2",
-            "hypothetical protein - conserved",
-            "hypothetical protein, conserved",
-            "Hypothetical_protein_conserved",
-            "Hypothetical conserved protein",
-            "conserved hypothetical protein",
-            "conserved hypothetical protein, putative",
-            "conserved protein, unknown function",
-            "putative protein",
-            "putative_protein",
-            "hypothetical RNA",
-            "unspecified product",
-            "Unspecified product",
+            ("", None, False),
+            ("", "PROTID12345", False),
+            ("PROTID12345", "PROTID12345", False),
+            ("ProtId12345", "PROTID12345", False),
+            ("hypothetical PROTID12345 (ProtId12345)", "PROTID12345", False),
+            ("hypothetical protein", None, False),
+            ("hypothetical_protein", None, False),
+            ("Hypothetical protein", None, False),
+            ("hypothetical protein PROTID12345", "PROTID12345", False),
+            ("hypothetical protein ProtId12345", "PROTID12345", False),
+            ("hypothetical protein (ProtId12345)", "PROTID12345", False),
+            ("hypothetical protein (fragment)", None, False),
+            ("hypothetical protein, variant", None, False),
+            ("hypothetical protein, variant 2", None, False),
+            ("hypothetical protein - conserved", None, False),
+            ("hypothetical protein, conserved", None, False),
+            ("Hypothetical_protein_conserved", None, False),
+            ("Hypothetical conserved protein", None, False),
+            ("conserved hypothetical protein", None, False),
+            ("conserved hypothetical protein, putative", None, False),
+            ("conserved protein, unknown function", None, False),
+            ("putative protein", None, False),
+            ("putative_protein", None, False),
+            ("hypothetical RNA", None, False),
+            ("unspecified product", None, False),
+            ("Unspecified product", None, False),
+            ("conserved hypothetical transmembrane protein", None, True),
         ],
     )
-    def test_invalid_description(self, description: str) -> None:
+    def test_product_is_informative(self, description: str, feature_id: Optional[str], output: bool) -> None:
         """Tests `functional_annotation.product_is_informative` method.
-
         Args:
-            description: Description string to check.
-
+            description: Product description.
+            feature_id: Feature ID that might be in the description.
+            output: True if description is informative, False otherwise.
         """
-        assert not fa.product_is_informative(description)
-
-    @pytest.mark.parametrize(
-        "description",
-        [
-            "conserved hypothetical transmembrane protein",
-        ],
-    )
-    def test_valid_description(self, description: str) -> None:
-        """Tests `functional_annotation.product_is_informative` method with valid descriptions.
-
-        Args:
-            description: Description string to check.
-
-        """
-        assert fa.product_is_informative(description)
-
-    @pytest.mark.parametrize(
-        "description, feat_id",
-        [
-            ("", "PROTID12345"),
-            ("PROTID12345", "PROTID12345"),
-            ("ProtId12345", "PROTID12345"),
-            ("hypothetical protein PROTID12345", "PROTID12345"),
-            ("hypothetical protein ProtId12345", "PROTID12345"),
-            ("hypothetical protein (ProtId12345)", "PROTID12345"),
-            ("hypothetical PROTID12345 (ProtId12345)", "PROTID12345"),
-        ],
-    )
-    def test_invalid_description_with_id(self, description: str, feat_id: str) -> None:
-        """Tests `functional_annotation.product_is_informative` method with an ID in the description.
-
-        Args:
-            description: Description string to check.
-            feat_id: Feature ID that might be in the description.
-
-        """
-        assert not fa.product_is_informative(description, feat_id)
+        assert fa.product_is_informative(description, feature_id) == output

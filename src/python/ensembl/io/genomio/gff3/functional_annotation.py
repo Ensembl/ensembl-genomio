@@ -107,14 +107,14 @@ class FunctionalAnnotations:
         self.add_parent("transcript", transcript_id, translation["id"])
 
     def add_transposable_element(self, feature: SeqFeature) -> None:
-        """Add the functional annotation of a transposable_element,
+        """Add the functional annotation of a transposable element.
 
         Raises:
-            DuplicateIdError: Do not allow transposable_elements with the same ID.
+            DuplicateIdError: Do not allow transposable elements with the same ID.
 
         """
         if feature.id in self.transposable_elements:
-            raise DuplicateIdError(f"TE ID {feature.id} already added")
+            raise DuplicateIdError(f"Transposable element ID {feature.id} already added")
         te = self._generic_feature(feature, "transposable_element")
         self.transposable_elements[te["id"]] = te
 
@@ -181,8 +181,11 @@ class FunctionalAnnotations:
 
     @staticmethod
     def product_is_informative(product: str, feat_id: Optional[str] = None) -> bool:
-        """Returns True if the product name contains informative words (not just hypothetical etc.).
-        If an ID is provided, ignore it as well (we don't want description to be just the ID).
+        """Returns True if the product name contains informative words, False otherwise.
+
+        It is considered uninformative when the description contains words such as "hypothetical" or
+        or "putative". If a feature ID is provided, consider it uninformative as well (we do not want
+        descriptions to be just the ID).
 
         Args:
             product: A product name.
