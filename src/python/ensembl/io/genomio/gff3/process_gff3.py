@@ -486,41 +486,6 @@ class GFFSimplifier(GFFParserCommon):
                 transcript.sub_features.pop(elt)
         return transcript
 
-    def transfer_description(self, gene: SeqFeature) -> None:
-        """Transfer descriptions from transcripts/translations to gene/transcripts.
-
-        If a gene has no description but the transcript has one, transfer it to the gene.
-        Otherwise, if the translation has a description, transfer it to the transcript and gene.
-
-        Args:
-            gene: Gene to transfer descriptions.
-
-        """
-        allowed_transcript_types = self.transcript_types
-
-        if "product" not in gene.qualifiers:
-            for tran in gene.sub_features:
-                if tran.type in allowed_transcript_types:
-                    if "product" in tran.qualifiers:
-                        description = tran.qualifiers["product"][0]
-                        gene.qualifiers["product"] = [description]
-                        return
-
-                    # No transcript product, but a CDS product? Copy it to both transcript and gene
-                    for cds in tran.sub_features:
-                        if cds.type == "CDS" and "product" in cds.qualifiers:
-                            print(f"Transfer description from CDS to gene and transcript in {gene.id}")
-                            description = cds.qualifiers["product"][0]
-                            tran.qualifiers["product"] = [description]
-                            gene.qualifiers["product"] = [description]
-                        else:
-                            print(f"No transfer possible for {gene.id}")
-                    # Continue transfering the translation products to the transcripts
-                else:
-                    print(f"Transfer not allowed: {gene.id} <- {tran.id} ({tran.type})")
-        else:
-            print("No transfer")
-
     def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
         """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
 
