@@ -1,8 +1,8 @@
-# ensembl-genomio
+# Ensembl GenomIO
 [![coverage report](https://vectorbase.gitdocs.ebi.ac.uk/ensembl-genomio/coverage-badge.svg)](https://vectorbase.gitdocs.ebi.ac.uk/ensembl-genomio/)
 Pipelines to turn basic genomic data into Ensembl cores and back
 
-This is a multilanguage (Perl, Python) repo providing eHive pipelines
+This is a multilanguage (Perl, Python) repo providing eHive pipelines.
 and various scripts (see below) to prepare genomic data and load it as [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) or to dump such core databases as file bundles.
 
 Bundles themselves consist of genomic data in various formats (e.g. fasta, gff3, json) and should follow the corresponding [specification](docs/BRC4_genome_loader.md#input-data).
