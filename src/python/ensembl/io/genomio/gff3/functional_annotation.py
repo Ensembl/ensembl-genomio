@@ -85,7 +85,7 @@ class FunctionalAnnotations:
 
         Args:
             feature: The feature to create an annotation.
-            feat_type: type of the feature to annotate.
+            feat_type: Type of the feature to annotate.
         """
         if feat_type not in self.features:
             raise AnnotationError(f"Unsupported feature type {feat_type}")
@@ -148,7 +148,7 @@ class FunctionalAnnotations:
 
     def _transfer_descriptions(self) -> None:
         """Transfers the feature descriptions in 2 steps:
-        - from translations to transcripts (if the transcript description is empty
+        - from translations to transcripts (if the transcript description is empty)
         - from transcripts to genes (same case)
 
         """
@@ -159,7 +159,7 @@ class FunctionalAnnotations:
         """Transfer descriptions from all feature of a given type, up to their parent.
 
         Args:
-            child_feature: either "translation" (transfer to transcript) or "transcript" (to gene)
+            child_feature: Either "translation" (transfer to transcript) or "transcript" (to gene).
 
         """
         children_features = self.get_features(child_feature)
