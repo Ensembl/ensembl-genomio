@@ -319,7 +319,7 @@ class GFFSimplifier(GFFParserCommon):
 
         # Generate ID if needed and add it to the functional annotation
         feat.id = self.normalize_gene_id(feat)
-        self.annotations.add_transposable_element(feat)
+        self.annotations.add_feature(feat, "transposable_element")
         feat.qualifiers = {"ID": feat.id}
 
         return feat
@@ -381,7 +381,7 @@ class GFFSimplifier(GFFParserCommon):
             self.normalize_pseudogene_cds(gene)
 
         # Finally, store gene functional annotation
-        self.annotations.add_gene(gene)
+        self.annotations.add_feature(gene, "gene")
 
         # replace qualifiers
         old_gene_qualifiers = gene.qualifiers
@@ -414,7 +414,7 @@ class GFFSimplifier(GFFParserCommon):
             transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
 
             # Store transcript functional annotation
-            self.annotations.add_transcript(transcript, gene.id)
+            self.annotations.add_feature(transcript, "transcript", gene.id)
 
             # Replace qualifiers
             old_transcript_qualifiers = transcript.qualifiers
@@ -457,7 +457,7 @@ class GFFSimplifier(GFFParserCommon):
                 # Store CDS functional annotation (only once)
                 if not cds_found:
                     cds_found = True
-                    self.annotations.add_translation(feat, transcript.id)
+                    self.annotations.add_feature(feat, "translation", transcript.id)
 
                 # Replace qualifiers
                 feat.qualifiers = {
