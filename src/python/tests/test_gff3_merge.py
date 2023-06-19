@@ -52,7 +52,6 @@ class TestGFF3Merge:
 
         """
         merger = GFFGeneMerger()
-        assert isinstance(merger, GFFGeneMerger)
 
         gff_input_path = self.data_dir / input_name
         test_output_path = tmp_path / f"{input_name}.test.gff3"
