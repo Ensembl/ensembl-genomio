@@ -220,9 +220,7 @@ class FunctionalAnnotations:
 
         # Anything (informative) left?
         empty_re = re.compile(r"^[ ]*$")
-        if empty_re.match(product):
-            return False
-        return True
+        return not bool(empty_re.match(product))
 
     def _to_list(self):
         all_list = []
