@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -17,6 +16,7 @@
 
 """
 
+import filecmp
 from pathlib import Path
 
 import pytest
@@ -61,3 +61,4 @@ class TestGFF3Merge:
 
         expected_path = self.data_dir / expected_name
         assert test_output_path.read_text() == expected_path.read_text()
+        assert filecmp.cmp(test_output_path, expected_path)
