@@ -128,6 +128,7 @@ python:coverage:
 ## Generate GitLab pages with HTML coverage report
 
 pages:
+  extends: .python
   stage: deploy
   needs:
     - job: python:coverage
