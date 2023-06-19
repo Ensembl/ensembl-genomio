@@ -38,9 +38,9 @@ def helpMessage() {
 
         Optional arguments:
         --password                     Password part of the connection parameters
-        --prefix
-        --dbname_re                    Regexp
-        --brc_mode
+        --prefix                       Core dabase(s) name prefixes
+        --dbname_re                    Regexp to match core db name(s) against
+        --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
         --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
         --help                         This usage statement.
         """
