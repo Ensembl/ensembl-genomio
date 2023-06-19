@@ -60,5 +60,4 @@ class TestGFF3Merge:
         merger.merge(gff_input_path, test_output_path)
 
         expected_path = self.data_dir / expected_name
-        assert test_output_path.read_text() == expected_path.read_text()
         assert filecmp.cmp(test_output_path, expected_path)
