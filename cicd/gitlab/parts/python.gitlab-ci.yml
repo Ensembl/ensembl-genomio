@@ -104,39 +104,23 @@ python:pytest:
     paths:
       - .coverage
 
-.python:coverage:
+python:coverage:
   extends: .python:test
   needs:
     # "extends" cannot merge arrays (https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#merge-details)
     - !reference [.python:test, needs]
     - job: python:pytest
       artifacts: true
-
-python:coverage:cobertura:
-  extends: .python:coverage
-  script:
-    - coverage xml -o $RUN_DIR/cobertura_coverage.xml
-  artifacts:
-    when: always
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: $RUN_DIR/cobertura_coverage.xml
-
-python:coverage:html:
-  extends: .python:coverage
   script:
     - coverage html -d $RUN_DIR/coverage
+    - coverage xml -o $RUN_DIR/coverage.xml
+    - genbadge coverage -i $RUN_DIR/coverage.xml -o $RUN_DIR/coverage/coverage-badge.svg
+    - coverage report
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
     when: always
     paths:
-      - $RUN_DIR/coverage/
-
-python:coverage:report:
-  extends: .python:coverage
-  script:
-    - coverage report
-  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+      - $RUN_DIR/coverage
 
 
 # Deploy stage instances
@@ -146,16 +130,12 @@ python:coverage:report:
 pages:
   stage: deploy
   needs:
-    - job: python:coverage:html
+    - job: python:coverage
       artifacts: true
   script:
     - mv $RUN_DIR/coverage/ public/
   artifacts:
     paths:
       - public
-  only:
-    changes:
-      - src/python/**/*.py
   except:
-    refs:
-      - merge_requests
+    - external_pull_requests

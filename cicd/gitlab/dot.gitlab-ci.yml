@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# WORKFLOW RULES -- WHEN TO RUN PIPELINES
-# https://docs.gitlab.com/ee/ci/yaml/#workflow
-# https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
+# Workflow rules (https://docs.gitlab.com/ee/ci/yaml/#workflow):
+# Run CI/CD automatically only for pull requests originated within ensembl-genomio and targeting "main"
+# branch or for commits pushed directly to "main" branch
 workflow:
   rules:
-     - if: $CI_EXTERNAL_PULL_REQUEST_IID && $CI_COMMIT_BRANCH
-     - if: $CI_COMMIT_BRANCH =~ $CI_DEFAULT_BRANCH
-       when: never
+    - if: $CI_EXTERNAL_PULL_REQUEST_IID &&
+          $CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY == $CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY &&
+          $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
   RUN_DIR: ./cicd/runtime
