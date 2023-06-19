@@ -17,7 +17,7 @@
 
 // default params
 params.help = false
-param.output_dir = './dumper_output'
+params.output_dir = './dumper_output'
 
 // Print usage
 def helpMessage() {
@@ -25,13 +25,15 @@ def helpMessage() {
         Usage:
         The typical command for running the 'Dumper' pipeline is as follows:
 
-        NXF_WORK=data/nextflow_work \
-          nextflow run \
-            ${ENSEMBL_ROOT_DIR}/ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/dumper_pipiline.nf \
-            -profile lsf \
-            $(${CMD} details script) \
-            --dbname_re '^drosophila_melanogaster_\w+_57_.*$' \
-            --output_dir <json_output_dir>
+        CMD=<dba_alias>
+        nextflow run \\
+          ${ENSEMBL_ROOT_DIR}/ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
+          -profile lsf \\
+          -e.NXF_WORK=data/nextflow_work.nxf \\
+          -w data/nextflow_work \\
+          \$(\${CMD} details script) \\
+          --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
+          --output_dir data/dumper_output
 
         Mandatory arguments:
         --host, --port, --user           Connection parameters to the SQL servers we getting core db(s) from
@@ -76,13 +78,13 @@ def create_filter_map(params) {
     if (params.prefix) {
         filter_map["prefix"] = params.prefix
     }
-    if (params.db_name_pat) {
+    if (params.dbname_re) {
         filter_map["dbname_re"] = params.dbname_re
     }
     return filter_map
 }
 
-if (params.host && params.port && params.user && params.out_dir) {
+if (params.host && params.port && params.user && params.output_dir) {
     server = create_server(params)
     filter_map = create_filter_map(params)
 } else {
