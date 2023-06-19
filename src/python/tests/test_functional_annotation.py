@@ -25,7 +25,7 @@ Typical usage example::
 from typing import Optional
 import pytest
 
-from ensembl.io.genomio.gff3.functional_annotation import FunctionalAnnotations as fa
+from ensembl.io.genomio.gff3.functional_annotation import FunctionalAnnotations
 
 
 class TestMergeGFF3:
@@ -70,4 +70,4 @@ class TestMergeGFF3:
             feature_id: Feature ID that might be in the description.
             output: True if description is informative, False otherwise.
         """
-        assert fa.product_is_informative(description, feature_id) == output
+        assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
