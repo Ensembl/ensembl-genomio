@@ -26,14 +26,18 @@ def helpMessage() {
         The typical command for running the 'Dumper' pipeline is as follows:
 
         CMD=<dba_alias>
-        nextflow run \\
-          ${ENSEMBL_ROOT_DIR}/ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
-          -profile lsf \\
-          -e.NXF_WORK=data/nextflow_work.nxf \\
-          -w data/nextflow_work \\
-          \$(\${CMD} details script) \\
-          --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
-          --output_dir data/dumper_output
+        pushd data
+          data_dir=\$(pwd)
+          nextflow run \\
+            -w \${data_dir}/nextflow_work \\
+            -e.NXF_WORK=\${data_dir}/nextflow_work.nxf \\
+            --ansi-log false \\
+            ${ENSEMBL_ROOT_DIR}/ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
+            -profile lsf \\
+            \$(\${CMD} details script) \\
+            --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
+            --output_dir \${data_dir}/dumper_output
+        popd
 
         Mandatory arguments:
         --host, --port, --user           Connection parameters to the SQL servers we getting core db(s) from
