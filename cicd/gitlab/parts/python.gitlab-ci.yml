@@ -23,6 +23,7 @@
   image: python:3.8
   only:
     changes:
+      - cicd/gitlab/parts/python.gitlab-ci.yml
       - pyproject.toml
       - "*.py"
       - src/python/**/*.py
@@ -128,6 +129,7 @@ python:coverage:
 ## Generate GitLab pages with HTML coverage report
 
 pages:
+  extends: .python
   stage: deploy
   needs:
     - job: python:coverage
