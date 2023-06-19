@@ -22,12 +22,11 @@ process PROCESS_GFF3 {
     errorStrategy 'ignore'
 
     input:
-        tuple val(gca), path (gff3) // Unpacked data
-        tuple val(gca), path (genome) // Checked genome json
+        tuple val(gca), path(gff3), path(genome)
 
     output:
         tuple val(gca), path("*.json"), emit: functional_annotation
-        tuple val(gca), path ("*.gff3"), emit: gene_models
+        tuple val(gca), path("*.gff3"), emit: gene_models
 
     script:
     """

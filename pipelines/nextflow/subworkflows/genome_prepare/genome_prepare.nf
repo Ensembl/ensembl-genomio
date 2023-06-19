@@ -47,48 +47,54 @@ workflow GENOME_PREPARE {
     // Main data input to this subworkflow is genomic_dataset tuple
     main:        
         // Verify genome.json schema
-        CHECK_JSON_SCHEMA_GENOME(genomic_dataset)
+        checked_genome = CHECK_JSON_SCHEMA_GENOME(genomic_dataset)
 
         // Download genome data files. Files may or may not include gene models (gff3) and/or peptides.
-        DOWNLOAD_ASM_DATA(CHECK_JSON_SCHEMA_GENOME.out.verified_json, cache_dir)
+        (download_min, download_opt) = DOWNLOAD_ASM_DATA(checked_genome, cache_dir)
 
         // Check for presence of annotation related output files, then process gene models data if present
-        if (DOWNLOAD_ASM_DATA.out.opt_set) {
+        if (download_opt) {
 
             // Decompress gff3 file, output with accession in tuple
-            unpacked_gff = UNPACK_GFF3(DOWNLOAD_ASM_DATA.out.opt_set, 'gff')
+            unpacked_gff = UNPACK_GFF3(download_opt, 'gff')
             
-            PROCESS_GFF3(unpacked_gff, CHECK_JSON_SCHEMA_GENOME.out.verified_json)
+            // Need both gff and genome files in one tuple
+            gff_genome = unpacked_gff.concat(checked_genome)
+                .groupTuple(size: 2)
+                .map{ key, files -> tuple(key, files[0], files[1]) }
+            (new_functional_annotation, new_gene_models) = PROCESS_GFF3(gff_genome)
 
             // Verify functional_annotation.json schema
-            CHECK_JSON_SCHEMA_FUNCT(PROCESS_GFF3.out.functional_annotation)
+            functional_annotation = CHECK_JSON_SCHEMA_FUNCT(new_functional_annotation)
 
             // Tidy and validate gff3 using gff3validator
-            GFF3_VALIDATION(PROCESS_GFF3.out.gene_models)
+            gene_models = GFF3_VALIDATION(new_gene_models)
 
             // Process peptides
-            PROCESS_FASTA_PEP(DOWNLOAD_ASM_DATA.out.opt_set, '1')
+            fasta_pep = PROCESS_FASTA_PEP(download_opt, '1')
         }
 
         // Generate seq_region.json
-        PROCESS_SEQ_REGION(CHECK_JSON_SCHEMA_GENOME.out.verified_json, DOWNLOAD_ASM_DATA.out.min_set)
+        new_seq_region = PROCESS_SEQ_REGION(CHECK_JSON_SCHEMA_GENOME.out.verified_json, download_min)
 
         // Verify seq_region.json schema
-        CHECK_JSON_SCHEMA_SEQREG(PROCESS_SEQ_REGION.out.seq_region)
+        seq_region = CHECK_JSON_SCHEMA_SEQREG(new_seq_region)
 
         // Process genomic fna
-        PROCESS_FASTA_DNA(DOWNLOAD_ASM_DATA.out.min_set, '0')
+        fasta_dna = PROCESS_FASTA_DNA(download_min, '0')
 
         // Amend genome data find any additional sequence regions
-        AMEND_GENOME_DATA(CHECK_JSON_SCHEMA_GENOME.out.verified_json, DOWNLOAD_ASM_DATA.out.min_set, params.brc_mode)
+        amended_genome = AMEND_GENOME_DATA(checked_genome, download_min, params.brc_mode)
 
         // // Group files
-        prepared_files = AMEND_GENOME_DATA.out.amended_json
-                    .concat(PROCESS_GFF3.out.gene_models, 
-                    CHECK_JSON_SCHEMA_FUNCT.out.verified_json,
-                    PROCESS_FASTA_PEP.out.processed_fasta, 
-                    CHECK_JSON_SCHEMA_SEQREG.out.verified_json,
-                    PROCESS_FASTA_DNA.out.processed_fasta)
+        prepared_files_grouped = amended_genome.concat(
+            gene_models, 
+            functional_annotation,
+            fasta_pep,
+            seq_region,
+            fasta_dna
+        )
+        prepared_files = prepared_files_grouped
                     .groupTuple()
 
         // Collect in manifest, checks and generate sequence stats
