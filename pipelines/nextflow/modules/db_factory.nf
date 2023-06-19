@@ -32,8 +32,8 @@ process DB_FACTORY {
             brc_mode='--brc_mode 1'
         fi
         dbname_re=''
-        if [ -n "${filter_map.dbname_re}" ]; then
-            dbname_re="--dbname_re '${filter_map.dbname_re}'"
+        if [ -n '${filter_map.dbname_re}' ]; then
+            dbname_re="--dbname_re ${filter_map.dbname_re}"
         fi
         db_factory --host '${server.host}' \
             --port '${server.port}' \
