@@ -15,6 +15,20 @@
 // limitations under the License.
 
 
+// dealing with custom $NXF_WORK based workDir
+//   don't do anything if "-work-dir (-w)" option specified on command line
+cmd_line = binding.variables.workflow.commandLine
+cmd_line_has_wd = cmd_line.contains(" -w ") || cmd_line.contains(" -work_dir ")
+if (!cmd_line_has_wd) {
+  log.info " no -work-dir (-w) option specified. Trying to build one base on NXF_WORK env"
+  nxf_work_env = binding.getVariable('NXF_WORK')
+  if (nxf_work_env) {
+    session.workDir = ("${nxf_work_env}/dumper_pipeline" as Path).complete()
+    session.workDir.mkdirs()
+    workDir = session.workDir as String
+  }
+}
+
 // default params
 params.help = false
 params.output_dir = './dumper_output'
