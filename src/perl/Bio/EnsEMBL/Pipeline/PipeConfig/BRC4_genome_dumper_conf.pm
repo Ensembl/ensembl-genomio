@@ -249,10 +249,9 @@ sub pipeline_analyses {
      },
 
     { -logic_name  => 'Integrity_check',
-      -module      => 'ensembl.brc4.runnable.integrity',
-      -language    => 'python3',
+      -module          => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters     => {
-        ensembl_mode => $self->o('ensembl_mode'),
+        cmd => "check_integrity --manifest_file #manifest#",
       },
       -analysis_capacity   => 5,
       -rc_name         => '8GB',
@@ -494,11 +493,11 @@ sub pipeline_analyses {
     },
 
     { -logic_name     => 'Check_json_schema',
-      -module         => 'ensembl.brc4.runnable.schema_validator',
-      -language => 'python3',
+      -module          => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters     => {
         json_file => '#metadata_json#',
         json_schema => '#schemas#',
+        cmd => "check_json_schema --json_file #json_file# --json_schema #json_schema#",
         hash_key => "#metadata_type#",
       },
       -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=metadata_json' },
