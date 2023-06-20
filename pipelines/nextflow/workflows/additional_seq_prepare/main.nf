@@ -55,7 +55,7 @@ assert params.prefix, "Parameter 'prefix' is not specified"
 assert params.production_name, "Parameter 'production_name' is not specified"
 
 // Import modules/subworkflows
-include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepare.nf'
+include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepare/main.nf'
 
 // Run main workflow
 workflow {

@@ -48,10 +48,10 @@ if (params.host && params.port && params.user && params.out_dir) {
     exit 1, "Missing server parameters"
 }
 
-include { DUMP_SQL } from '../../subworkflows/dump_sql.nf'
-include { DUMP_METADATA } from '../../subworkflows/dump_metadata.nf'
-include { DB_FACTORY } from '../../modules/db_factory.nf'
-include { read_json } from '../../modules/utils.nf'
+include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
+include { DUMP_METADATA } from '../../subworkflows/dump_metadata/main.nf'
+include { DB_FACTORY } from '../../modules/database/db_factory.nf'
+include { read_json } from '../../modules/utils/utils.nf'
 
 // Run main workflow
 workflow {

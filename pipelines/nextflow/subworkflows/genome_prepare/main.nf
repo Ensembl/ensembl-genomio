@@ -18,22 +18,22 @@
 // See full documentation in docs/genome_prepare.md
 
 // Import modules/subworkflows
-include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_GENOME } from '../../modules/check_json_schema.nf'
-include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_SEQREG } from '../../modules/check_json_schema.nf'
-include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_FUNCT } from '../../modules/check_json_schema.nf'
-include { DOWNLOAD_ASM_DATA } from '../../modules/download_asm_data.nf'
-include { UNPACK_GFF3 } from '../../modules/unpack_gff3.nf'
-include { PROCESS_GFF3 } from '../../modules/process_gff3.nf'
-include { GFF3_VALIDATION } from '../../modules/gff3_validation.nf'
-include { PROCESS_SEQ_REGION } from '../../modules/process_seq_region.nf'
-include { PROCESS_FASTA as PROCESS_FASTA_DNA } from '../../modules/process_fasta_data.nf'
-include { PROCESS_FASTA as PROCESS_FASTA_PEP } from '../../modules/process_fasta_data.nf'
-include { AMEND_GENOME_DATA } from '../../modules/amend_genome_data.nf'
-include { COLLECT_FILES } from '../../modules/collect_files.nf'
-include { MANIFEST } from '../../modules/manifest_maker.nf'
-include { PUBLISH_DIR } from '../../modules/publish_output.nf'
-include { CHECK_INTEGRITY } from '../../modules/integrity.nf'
-include { MANIFEST_STATS } from '../../modules/manifest_stats.nf'
+include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_GENOME } from '../../modules/schema/check_json_schema.nf'
+include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_SEQREG } from '../../modules/schema/check_json_schema.nf'
+include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_FUNCT } from '../../modules/schema/check_json_schema.nf'
+include { DOWNLOAD_ASM_DATA } from '../../modules/download/download_asm_data.nf'
+include { UNPACK_GFF3 } from '../../modules/gff3/unpack_gff3.nf'
+include { PROCESS_GFF3 } from '../../modules/gff3/process_gff3.nf'
+include { GFF3_VALIDATION } from '../../modules/gff3/gff3_validation.nf'
+include { PROCESS_SEQ_REGION } from '../../modules/seq_region/process_seq_region.nf'
+include { PROCESS_FASTA as PROCESS_FASTA_DNA } from '../../modules/fasta/process_fasta_data.nf'
+include { PROCESS_FASTA as PROCESS_FASTA_PEP } from '../../modules/fasta/process_fasta_data.nf'
+include { AMEND_GENOME_DATA } from '../../modules/genome_metadata/amend_genome_data.nf'
+include { COLLECT_FILES } from '../../modules/files/collect_files.nf'
+include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
+include { PUBLISH_DIR } from '../../modules/files/publish_output.nf'
+include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
+include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
 
 
 // Run main workflow
