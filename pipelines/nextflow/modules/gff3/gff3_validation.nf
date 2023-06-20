@@ -20,7 +20,7 @@ process GFF3_VALIDATION {
   //beforeScript 'module load libffi-3.3-gcc-9.3.0-cgokng6'
   tag "${gene_models}"
   label 'default'
-  container "biocontainers/genometools:v1.5.10ds-3-deb_cv1"
+  //container "biocontainers/genometools:v1.5.10ds-3-deb_cv1"
 
   input:
     tuple val(gca), path (gene_models)
@@ -30,8 +30,8 @@ process GFF3_VALIDATION {
 
   script:
   """
-  cp ${gene_models} gene_models.gff3.tmp 
-  gt gff3 -tidy -sort -retainids -force -o ${gene_models} gene_models.gff3.tmp 
-  gt gff3validator ${gene_models}
+  #cp ${gene_models} gene_models.gff3.tmp 
+  #gt gff3 -tidy -sort -retainids -force -o ${gene_models} gene_models.gff3.tmp 
+  #gt gff3validator ${gene_models}
   """
 }

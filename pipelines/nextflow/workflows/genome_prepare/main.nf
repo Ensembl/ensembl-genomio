@@ -53,9 +53,9 @@ if (!params.cache_dir) {
 }
 
 // Import subworkflow
-include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/genome_prepare.nf'
+include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/main.nf'
 // Import module
-include { PREPARE_GENOME_METADATA } from '../../modules/prepare_genome_metadata.nf'
+include { PREPARE_GENOME_METADATA } from '../../modules/genome_metadata/prepare_genome_metadata.nf'
 
 
 // Run main workflow

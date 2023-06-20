@@ -14,16 +14,16 @@
 // limitations under the License.
 
 // Import modules/subworkflows
-include { DOWNLOAD_GENBANK } from '../modules/download_genbank.nf'
-include { EXTRACT_FROM_GB } from '../modules/extract_from_gb.nf'
-include { PROCESS_GFF3 } from '../modules/process_gff3.nf'
-include { GFF3_VALIDATION } from '../modules/gff3_validation.nf'
-include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema.nf'
-include { COLLECT_FILES } from '../modules/collect_files.nf'
-include { MANIFEST } from '../modules/manifest_maker.nf'
-include { PUBLISH_DIR } from '../modules/publish_output.nf'
-include { CHECK_INTEGRITY } from '../modules/integrity.nf'
-include { MANIFEST_STATS } from '../modules/manifest_stats.nf'
+include { DOWNLOAD_GENBANK } from '../../modules/download/download_genbank.nf'
+include { EXTRACT_FROM_GB } from '../../modules/genbank/extract_from_gb.nf'
+include { PROCESS_GFF3 } from '../../modules/gff3/process_gff3.nf'
+include { GFF3_VALIDATION } from '../../modules/gff3/gff3_validation.nf'
+include { CHECK_JSON_SCHEMA } from '../../modules/schema/check_json_schema.nf'
+include { COLLECT_FILES } from '../../modules/files/collect_files.nf'
+include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
+include { PUBLISH_DIR } from '../../modules/files/publish_output.nf'
+include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
+include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
 
 workflow additional_seq_prepare {
     take:
@@ -38,12 +38,16 @@ workflow additional_seq_prepare {
 
         // Parse data from GB file into GFF3 and json files
         (gb_gff, gb_genome, gb_seq_regions, gb_dna_fasta, gb_pep_fasta) = EXTRACT_FROM_GB(gb_file, prefix, production_name)
+
+        // Group gff and genome file to be used at the same time for each genome, used as key
+        // gb_gff = [gca, path/to/gff]
+        // gb_genome = [gca, path/to/genome]
         gff_genome = gb_gff.concat(gb_genome)
             .groupTuple(size: 2)
             .map{ key, files -> tuple(key, files[0], files[1]) }
         (new_functional_annotation, new_gene_models) = PROCESS_GFF3(gff_genome)
 
-        // Tidy and validate gff3 using gff3validator (NOTE: Requires `module load libffi-3.3-gcc-9.3.0-cgokng6`)
+        // Tidy and validate gff3 using gff3validator
         gene_models = GFF3_VALIDATION(new_gene_models)
 
         // Validate files

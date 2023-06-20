@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-include { DUMP_DB } from '../modules/dump_db.nf'
+include { DUMP_DB } from '../../modules/database/dump_db.nf'
 
 workflow DUMP_SQL {
     take:

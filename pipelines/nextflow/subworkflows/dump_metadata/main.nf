@@ -13,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-include { DUMP_SEQ_REGIONS } from '../modules/dump_seq_regions.nf'
-include { DUMP_EVENTS } from '../modules/dump_events.nf'
-include { CHECK_JSON_SCHEMA } from '../modules/check_json_schema_db.nf'
+include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
+include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
+include { CHECK_JSON_SCHEMA } from '../../modules/schema/check_json_schema_db.nf'
 
-include { COLLECT_FILES } from '../modules/collect_files_db.nf'
-include { MANIFEST } from '../modules/collect_files_db.nf'
-include { PUBLISH_DIR } from '../modules/collect_files_db.nf'
-include { CHECK_INTEGRITY } from '../modules/check_integrity_db.nf'
+include { COLLECT_FILES } from '../../modules/files/collect_files_db.nf'
+include { MANIFEST } from '../../modules/files/collect_files_db.nf'
+include { PUBLISH_DIR } from '../../modules/files/collect_files_db.nf'
+include { CHECK_INTEGRITY } from '../../modules/manifest/check_integrity_db.nf'
 
 workflow DUMP_METADATA {
     take:
