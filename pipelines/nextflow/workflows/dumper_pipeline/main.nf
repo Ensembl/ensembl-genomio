@@ -44,7 +44,6 @@ def helpMessage() {
           data_dir=\$(pwd)
           nextflow run \\
             -w \${data_dir}/nextflow_work \\
-            -e.NXF_WORK=\${data_dir}/nextflow_work.nxf \\
             --ansi-log false \\
             ${ENSEMBL_ROOT_DIR}/ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
             -profile lsf \\
