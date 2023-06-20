@@ -20,7 +20,7 @@ from collections import Counter
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import json
 import argschema
@@ -216,7 +216,6 @@ class GFFSimplifier(GFFParserCommon):
     skip_unrecognized = False
     gene_cds_skip_others = False
     allow_pseudogene_with_CDS = False
-    merge_split_genes = False
     exclude_seq_regions: List = []
     validate_gene_id = True
     min_id_length = 8
@@ -224,9 +223,13 @@ class GFFSimplifier(GFFParserCommon):
     stable_id_prefix = None
     current_stable_id_number: int = 0
 
-    def __init__(self):
+    def __init__(self, genome_path: Optional[PathLike] = None):
         self.records = Records()
         self.annotations = FunctionalAnnotations()
+        self.genome = {}
+        if genome_path:
+            with Path(genome_path).open("r") as genome_fh:
+                self.genome = json.load(genome_fh)
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """
@@ -333,7 +336,6 @@ class GFFSimplifier(GFFParserCommon):
 
         # New gene ID
         gene.id = self.normalize_gene_id(gene)
-        self.transfer_description(gene)
 
         # Gene with no subfeatures: need to create a transcript at least
         if len(gene.sub_features) == 0:
@@ -412,7 +414,7 @@ class GFFSimplifier(GFFParserCommon):
             transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
 
             # Store transcript functional annotation
-            self.annotations.add_feature(transcript, "transcript")
+            self.annotations.add_feature(transcript, "transcript", gene.id)
 
             # Replace qualifiers
             old_transcript_qualifiers = transcript.qualifiers
@@ -455,7 +457,7 @@ class GFFSimplifier(GFFParserCommon):
                 # Store CDS functional annotation (only once)
                 if not cds_found:
                     cds_found = True
-                    self.annotations.add_feature(feat, "translation")
+                    self.annotations.add_feature(feat, "translation", transcript.id)
 
                 # Replace qualifiers
                 feat.qualifiers = {
@@ -483,34 +485,6 @@ class GFFSimplifier(GFFParserCommon):
             for elt in sorted(exons_to_delete, reverse=True):
                 transcript.sub_features.pop(elt)
         return transcript
-
-    def transfer_description(self, gene: SeqFeature) -> None:
-        """Transfer descriptions from transcripts/translations to gene/transcripts.
-
-        If a gene has no description but the transcript has one, transfer it to the gene.
-        Otherwise, if the translation has a description, transfer it to the transcript and gene.
-
-        Args:
-            gene: Gene to transfer descriptions.
-
-        """
-        allowed_transcript_types = self.transcript_types
-
-        if "product" not in gene.qualifiers:
-            for tran in gene.sub_features:
-                if tran.type in allowed_transcript_types:
-                    if "product" in tran.qualifiers:
-                        description = tran.qualifiers["product"][0]
-                        gene.qualifiers["product"] = [description]
-                        return
-
-                    # No transcript product, but a CDS product? Copy it to both transcript and gene
-                    for cds in tran.sub_features:
-                        if cds.type == "CDS" and "product" in cds.qualifiers:
-                            description = cds.qualifiers["product"][0]
-                            tran.qualifiers["product"] = [description]
-                            gene.qualifiers["product"] = [description]
-                    # Continue transfering the translation products to the transcripts
 
     def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
         """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
@@ -787,14 +761,15 @@ class GFFSimplifier(GFFParserCommon):
         or use the genome organism_abbrev and prepend "TMP_" to it.
 
         """
-        genome_data = Path(InputSchema().genome_data)
         if self.stable_id_prefix:
             prefix = self.stable_id_prefix
         else:
-            with genome_data.open("r") as genome_data_fh:
-                dat = json.load(genome_data_fh)
-            org = dat["BRC4"]["organism_abbrev"]
-            prefix = "TMP_" + org + "_"
+            if self.genome:
+                org = self.genome.get("BRC4", {}).get("organism_abbrev")
+            if org is None:
+                prefix = "TMP_PREFIX_"
+            else:
+                prefix = "TMP_" + org + "_"
             self.stable_id_prefix = prefix
 
         number = self.current_stable_id_number + 1
@@ -905,16 +880,16 @@ class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
     in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
-    genome_data = argschema.fields.InputFile(required=True, metadata={"description": "genome.json path"})
+    genome_data = argschema.fields.InputFile(metadata={"description": "genome.json path"})
     out_gff_path = argschema.fields.OutputFile(
-        default="gene_models.gff3", metadata={"description": "Output gff path"}
+        dump_default="gene_models.gff3", metadata={"description": "Output gff path"}
     )
     out_func_path = argschema.fields.OutputFile(
-        default="functional_annotation.json",
+        dump_default="functional_annotation.json",
         metadata={"description": "Output functional_annotation.json path"},
     )
     merge_split_genes = argschema.fields.Boolean(
-        default=True, metadata={"description": "Should split genes be merged automatically"}
+        dump_default=True, metadata={"description": "Should split genes be merged automatically"}
     )
 
 
@@ -939,7 +914,7 @@ def main() -> None:
 
     # Load gff3 data and write a simpler version that follows our specifications
     # as well as a functional_annotation json file
-    gff_data = GFFSimplifier()
+    gff_data = GFFSimplifier(mod.args.get("genome_data"))
     gff_data.simpler_gff3(in_gff_path)
     gff_data.records.to_gff(mod.args["out_gff_path"])
     gff_data.annotations.to_json(mod.args["out_func_path"])
