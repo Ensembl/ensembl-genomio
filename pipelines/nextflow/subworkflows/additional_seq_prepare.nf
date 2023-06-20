@@ -37,25 +37,30 @@ workflow additional_seq_prepare {
         gb_file = DOWNLOAD_GENBANK(accession)
 
         // Parse data from GB file into GFF3 and json files
-        EXTRACT_FROM_GB(DOWNLOAD_GENBANK.out.downloaded_gb_data, prefix, production_name)
-
-        PROCESS_GFF3(EXTRACT_FROM_GB.out.gene_gff, EXTRACT_FROM_GB.out.genome)
+        (gb_gff, gb_genome, gb_seq_regions, gb_dna_fasta, gb_pep_fasta) = EXTRACT_FROM_GB(gb_file, prefix, production_name)
+        gff_genome = gb_gff.concat(gb_genome)
+            .groupTuple(size: 2)
+            .map{ key, files -> tuple(key, files[0], files[1]) }
+        (new_functional_annotation, new_gene_models) = PROCESS_GFF3(gff_genome)
 
         // Tidy and validate gff3 using gff3validator (NOTE: Requires `module load libffi-3.3-gcc-9.3.0-cgokng6`)
-        GFF3_VALIDATION(PROCESS_GFF3.out.gene_models)
+        gene_models = GFF3_VALIDATION(new_gene_models)
 
         // Validate files
-        json_files = EXTRACT_FROM_GB.out.genome
-            .concat(EXTRACT_FROM_GB.out.seq_regions, PROCESS_GFF3.out.functional_annotation)
+        json_files = gb_genome.concat(
+            gb_seq_regions,
+            new_functional_annotation
+        )
         
         // Verify schemas 
-        CHECK_JSON_SCHEMA(json_files)
+        checked_json_files = CHECK_JSON_SCHEMA(json_files)
 
         // Gather json and fasta files and reduce to unique input accession
-        all_files = CHECK_JSON_SCHEMA.out.verified_json
-                        .concat(GFF3_VALIDATION.out.gene_models)
-                        .concat(EXTRACT_FROM_GB.out.dna_fasta, EXTRACT_FROM_GB.out.pep_fasta)
-                        .groupTuple()
+        all_files = checked_json_files.concat(
+            gene_models,
+            gb_dna_fasta,
+            gb_pep_fasta
+        ).groupTuple()
 
         collect_dir = COLLECT_FILES(all_files)
         
