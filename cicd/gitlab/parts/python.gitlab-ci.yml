@@ -139,5 +139,6 @@ pages:
   artifacts:
     paths:
       - public
-  except:
-    - external_pull_requests
+  only:
+    refs:
+      - main
