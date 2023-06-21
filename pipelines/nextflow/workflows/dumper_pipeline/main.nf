@@ -51,6 +51,9 @@ def create_filter_map(params) {
     if (params.prefix) {
         filter_map["prefix"] = params.prefix
     }
+    if (params.dbname_re) {
+        filter_map["dbname_re"] = params.dbname_re
+    }
     return filter_map
 }
 

@@ -20,6 +20,7 @@ Can be imported as a module and called as a script as well, with the same parame
 
 import json
 from pathlib import Path
+import re
 from typing import Dict, List, Optional
 
 import argschema
@@ -53,6 +54,12 @@ class InputSchema(argschema.ArgSchema):
         metadata={
             "required": False,
             "description": "BRC4 mode: use organism_abbrev for species, component for division",
+        }
+    )
+    dbname_re = argschema.fields.String(
+        metadata={
+            "required": False,
+            "description": "regexp to match db name against",
         }
     )
 
@@ -121,9 +128,10 @@ def main() -> None:
     )
 
     prefix = mod.args.get("prefix")
+    dbname_re = mod.args.get("dbname_re")
     build = mod.args.get("build")
     version = mod.args.get("version")
-    dbs = server.get_cores(prefix=prefix, build=build, version=version)
+    dbs = server.get_cores(prefix=prefix, build=build, version=version, dbname_re=dbname_re)
 
     brc_mode = mod.args.get("brc_mode")
     dbs_data = format_db_data(server, dbs, brc_mode)
