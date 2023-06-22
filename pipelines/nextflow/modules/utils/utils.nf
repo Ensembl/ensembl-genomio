@@ -23,5 +23,10 @@ def read_json(json_path) {
     slurp = new JsonSlurper()
     json_file = file(json_path)
     text = json_file.text
-    return slurp.parseText(text)
+    // unfortunately
+    //   return slurp.parseText(text)
+    // doesn't work for a single element list, we suspect lazy eval
+    // symptom: instead of `[a:..., b:...]` we see the same stuff in the curly brackets `{a:..., b:...}`
+    not_a_lazy_val = slurp.parseText(text)
+    return not_a_lazy_val
 }
