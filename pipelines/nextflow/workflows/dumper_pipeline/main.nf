@@ -34,6 +34,7 @@ params.prefix = ''
 params.brc_mode = 0
 params.dbname_re = ''
 params.output_dir = './dumper_output'
+params.password = ''
 
 // Print usage
 def helpMessage() {
