@@ -22,6 +22,8 @@ from pathlib import Path
 import re
 import time
 from typing import Dict
+import logging
+from importlib import reload
 
 import argschema
 
@@ -54,23 +56,23 @@ def md5_files(dl_dir: Path) -> bool:
     sums = get_checksums(md5_path)
     if not sums:
         return False
-    print(f"File sums from {md5_path}: {len(sums)}")
+    logging.info(f" File sums from {md5_path}: {len(sums)}")
     for dl_file, checksum in sums.items():
         for end in FILE_ENDS:
             if dl_file.endswith(end) and not dl_file.endswith(f"_from_{end}"):
                 file_path = dl_dir / dl_file
                 if not file_path.is_file():
-                    print(f"No file {file_path} found")
+                    logging.warning(f" No file {file_path} found")
                     return False
                 # Check the file checksum
                 with file_path.open(mode="rb") as f:
                     content = f.read()
                     file_sum = hashlib.md5(content).hexdigest()
                 if file_sum != checksum:
-                    print(f"File {file_path} checksum doesn't match")
+                    logging.warning(f" File {file_path} checksum doesn't match")
                     return False
-                print(f"File checksum ok {file_path}")
-    print("All checksums OK")
+                logging.info(f" File checksum ok {file_path}")
+    logging.info(" All checksums OK")
     return True
 
 
@@ -133,7 +135,7 @@ def _download_file(
     has_md5 = True
     expected_sum = ""
     if not ftp_file in md5_sums:
-        print(f"File not in the md5 checksums: {ftp_file}")
+        logging.warning(f" File not in the md5 checksums: {ftp_file}")
         has_md5 = False
     else:
         expected_sum = md5_sums[ftp_file]
@@ -146,10 +148,10 @@ def _download_file(
                 content = fp.read()
                 file_sum = hashlib.md5(content).hexdigest()
                 if file_sum == expected_sum:
-                    print(f"File {local_path} is already downloaded properly")
+                    logging.info(f" File {local_path} is already downloaded properly")
                     return
         else:
-            print(f"Can't check file (no md5sum), using it as is: {local_path}")
+            logging.info(f" Can't check file (no md5sum), using it as is: {local_path}")
     file_sum = ""
     redo = 0
 
@@ -158,8 +160,8 @@ def _download_file(
         if redo > 1:
             time.sleep(3)
 
-        print(f"Downloading file {ftp_file}, try {redo}...")
         # Download the file
+        logging.info(f" Downloading file {ftp_file}, try {redo}...")
         try:
             with local_path.open(mode="wb") as fp:
                 ftp_conn.retrbinary(f"RETR {ftp_file}", fp.write)
@@ -173,7 +175,7 @@ def _download_file(
             content = fp.read()
             file_sum = hashlib.md5(content).hexdigest()
     if expected_sum == file_sum:
-        print(f"Downloaded file properly to {local_path}")
+        logging.info(f" Downloaded file properly to {local_path}")
     else:
         raise FileDownloadError(f"Could not download file {ftp_file} after {redo} tries")
 
@@ -224,19 +226,24 @@ def retrieve_assembly_data(
     asm_download_path = Path(asm_download_dir)
     download_dir = asm_download_path / accession
 
+    #Configure logging
+    log_file = (f"{accession}_download.log")
+    reload(logging)
+    logging.basicConfig(filename=log_file, format='%(levelname)s:%(message)s', filemode='w', level=logging.DEBUG) 
+
     # Set and create dedicated dir for download
     if not download_dir.is_dir():
         download_dir.mkdir(parents=True)
 
     # Download if files don't exist or fail checksum
     if not md5_files(download_dir):
-        print("Download the files")
+        logging.info(" Download the files")
 
         # max_increment = self.param("max_increment")
 
         for increment in range(0, max_increment + 1):
             if increment > 0:
-                print(f"Increment accession version once from {accession}")
+                logging.info(f" Increment accession version once from {accession}")
                 version = int(accession[-1])
                 version += 1
                 accession = accession[:-1] + str(version)
