@@ -63,7 +63,9 @@ Try to invoke pipelines with `--help` option to get insight on how to run them.
 When running a stage or a subworkflow on a channel with a single element
 we expect stream to be forked, allowing us to seed several task at a time.
 ```
-dbs = from_read_json(...) // creates that channel with a single element; calls read_json(...), see belo
+// create that channel with a single element
+//   calls read_json(...) in turn, see below
+dbs = from_read_json(...)
 
 DUMP_SQL(..., dbs, ...)
 DUMP_METADATA(..., dbs, ...)
