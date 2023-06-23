@@ -81,7 +81,7 @@ we see it dict surronded by the curly brackets like this
 instead of this (with square brackets)
 ```
 [..., "db_name":"some_db_name", ...]
-```.
+```
 
 #### Reason / solution
 In our case we used the `read_json` function similar to this one:
