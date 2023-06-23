@@ -15,18 +15,19 @@
 
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
 
-name: "genome_prepare"
-description: BRC/Ensembl metazoa pipeline. Retrieve data for genome(s), obtained from INSDC, validate and prepare GFF3, FASTA, JSON files for each genome.
+name: "additional_seq_prepare"
+description: BRC/Ensembl metazoa pipeline. Preparation of genome data loading files (Fasta, GFF3, JSON) for new sequence(s) to existing species databases.  
 keywords:
   - fasta
   - gff3
   - json
-  - INSDC
   - schema
   - validate
   - genbank
-  - gbff
   - annotation
+  - genome
+  - mitochondrion
+  - seq-region
 modules:
   - download/download_genbank
   - files/collect_files
@@ -39,34 +40,58 @@ modules:
   - manifest/manifest_stats
   - schema/check_json_schema
 input:
-  - input_dir:
-      type: directory
+  - accession:
+      type: string
       description: |
-        MANDATORY; Dir name containing input genome json(s) holding meta information including:
-        genome INSDC accession, BRC 'organism_abbrev', BRC 'component'.
-      pattern: "dir_name/*.json"
-  - cache_dir:
-      type: directory
+        Mandatory param. A mitochondrion Genbank accession of mt genome sequence being added. e.g. NC_XXXXXXX.X
+  - prefix:
+      type: string
       description: |
-        NON MANDATORY; Dir name used for caching intermediate download data files, prevents re-download upon '-resume'.
-        Default 'genome_prepare_download_cache'.
-  - output_dir:
-      type: directory
+        Mandatory param. A prefix name/identifier added to all genes in order to ensure gene ids are unique
+  - production_name:
+      type: string
       description: |
-        NON MANDATORY; Optional dir name used to store prepared genome data files (.gff3; .fa; .json)
-        Default 'Output_GenomePrepare'. Houses >=1 GCA_* subdirectories. 
+        Mandatory param. Ensembl 'production_name' assigned to species having sequence(s) added
 output:
-  - fasta_dna:
+  - dna:
+      type: file
+      description: |
+        Fasta file containing nucleotide sequence(s) added during processing. 
+      pattern: "dna.fasta"
+  - functional_annotation:
       type: file
       description: |
         Some description....
-        ...cont description
-      pattern: "fasta_dna.fa"
-  - fasta_pep:
+      pattern: "functional_annotation.json"
+  - gene_models:
       type: file
       description: |
-        Some description....
-        ...cont description
-      pattern: "fasta_pep.fa"
+        GFF3 format file covering all seq_regions and the gene feature associated with the added sequence. 
+      pattern: "gene_models.gff3"
+  - genome:
+      type: file
+      description: |
+        JSON file describing species name, assembly and accession related information for all added sequences.
+      pattern: "genome.json"
+  - manifest:
+      type: file
+      description: |
+        Manifest json file listing all generated output files in main output folder and associated md5 checksums.
+      pattern: "manifest.json"
+  - pep:
+      type: file
+      description: |
+        Fasta file containing peptide sequences added during processing.
+      pattern: "pep.fasta"
+  - seq_region:
+      type: file
+      description: |
+        JSON file describing added sequence(s), sequence length(s), coordinate level(s), codon table(s), sequence topology etc.  
+      pattern: "seq_region.json"
+  - stats:
+      type: file
+      description: |
+        General stats on gene amendments and summary of coord_system and seq_region alterations.  
+      pattern: "stats.txt"
 authors:
   - "@ensembl-genomio"
