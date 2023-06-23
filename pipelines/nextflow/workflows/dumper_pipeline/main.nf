@@ -30,7 +30,7 @@ params.password = ''
 
 // Print usage
 def helpMessage() {
-  log.info """
+  log.info '''
         Usage:
         The typical command for running the 'Dumper' pipeline is as follows:
 
@@ -56,7 +56,7 @@ def helpMessage() {
         --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
         --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
         --help                         This usage statement.
-        """
+        '''
 }
 
 // Check mandatory parameters
