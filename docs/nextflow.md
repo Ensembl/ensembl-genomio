@@ -56,7 +56,7 @@ popd
 
 Try to invoke pipelines with `--help` option to get insight on how to run them.
 
-##Strange things we met
+## Strange things we met
 
 ### Channel is not forked, only one operation on stream is allowed
 #### Symptoms:
