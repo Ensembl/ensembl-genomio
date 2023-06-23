@@ -1,0 +1,99 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+
+name: "genome_prepare"
+description: BRC/Ensembl metazoa pipeline. Retrieve data for genome(s), obtained from INSDC, validate and prepare GFF3, FASTA, JSON files for each genome.
+keywords:
+  - fasta
+  - gff3
+  - json
+  - INSDC
+  - schema
+  - validate
+  - genbank
+  - gbff
+  - annotation
+modules:
+
+input:
+  - input_dir:
+      type: directory
+      description: |
+        MANDATORY; Dir name containing input genome json(s) holding meta information including:
+        genome INSDC accession, BRC 'organism_abbrev', BRC 'component'.
+      pattern: "dir_name/*.json"
+  - cache_dir:
+      type: directory
+      description: |
+        NON MANDATORY; Dir name used for caching intermediate download data files, prevents re-download upon '-resume'.
+        Default 'genome_prepare_download_cache'.
+  - output_dir:
+      type: directory
+      description: |
+        NON MANDATORY; Optional dir name used to store prepared genome data files (.gff3; .fa; .json)
+        Default 'Output_GenomePrepare'. Houses >=1 GCA_* subdirectories. 
+output:
+  - fasta_dna:
+      type: file
+      description: |
+        Some description....
+        ...cont description
+      pattern: "fasta_dna.fa"
+  - fasta_pep:
+      type: file
+      description: |
+        Some description....
+        ...cont description
+      pattern: "fasta_pep.fa"
+  - functional_annotation:
+      type: file
+      description: |
+        Some description....
+        ...cont description
+      pattern: "functional_annotation.json"
+  - gene_models:
+      type: file
+      description: |
+        Some description....
+        ...cont description
+      pattern: "gene_models.gff3"
+  - genome_amended:
+      type: file
+      description: |
+        Some description....
+        ...cont description
+      pattern: "genome_amended.json"
+  - manifest:
+      type: file
+      description: |
+        Some description....
+        ...cont description
+      pattern: "manifest.json"
+  - seq_region:
+      type: file
+      description: |
+        Some description....
+        ...cont description
+      pattern: "manifest.json"
+  - stats:
+      type: file
+      description: |
+        Some description....
+        ...cont description
+      pattern: "stats.txt"
+authors:
+  - "@ensembl-genomio"
