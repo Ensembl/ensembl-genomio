@@ -43,7 +43,13 @@ class InputSchema(argschema.ArgSchema):
 
 def download_genbank(accession: str) -> str:
     """
-    Given a GenBank accession, download the corresponding file in GenBank format
+    Given a GenBank accession, download via NCBI Enterez service the corresponding file in GenBank format.
+
+    Args:
+        accession: Only param required. Associated with genome INSDC Genbank record.
+
+    Returns:
+        Single file containing a genome sequence record in Genbank format (.gb).
     """
     dl_file = f"{accession}.gb"
 
@@ -57,11 +63,11 @@ def download_genbank(accession: str) -> str:
     e_params["id"] = accession
     result = requests.get(e_url, params=e_params, timeout=60)
     if result and result.status_code == 200:
-        with open(dl_file, "wb") as gff:
-            gff.write(result.content)
-        print(f"GFF file write to {dl_file}")
+        with open(dl_file, "wb") as gbff:
+            gbff.write(result.content)
+        print(f"GBF file write to {dl_file}")
         return dl_file
-    raise DownloadError(f"Could not download the genbank file: {result}")
+    raise DownloadError(f"Could not download the genbank ({accession}) file: {result}")
 
 
 def main() -> None:
