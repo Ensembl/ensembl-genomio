@@ -18,12 +18,16 @@ This is an example of how the tree folder for Nextflow pipelines has been agreed
         ├── conf
         │   └── base.config
         ├── modules
-        │   └── process_fasta.nf
+        │   └── fasta
+        │   |   └── dump_fasta.nf
+        |   └── utils.nf
         ├── subworkflows
-        │   └── genome_validation.nf
+        |    └── genome_validation
+        │       ├── main.nf
+        │       └── meta.yaml
         └── workflows
             ├── genome_loader
-            │   ├── genome_loader.nf
+            │   ├── main.nf
             │   └── nextflow.config
             └── nextflow.config
 ```
