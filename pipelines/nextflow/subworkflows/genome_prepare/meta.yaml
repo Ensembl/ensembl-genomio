@@ -16,7 +16,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
 
 name: "genome_prepare"
-description: BRC/Ensembl metazoa pipeline. Retrieve data for genome(s), obtained from INSDC, validate and prepare GFF3, FASTA, JSON files for each genome.
+description: BRC/Ensembl metazoa pipeline. Retrieve data for genome(s), obtained from INSDC, validate and prepare GFF3, FASTA, JSON files for each genome accession.
 keywords:
   - fasta
   - gff3
@@ -33,67 +33,59 @@ input:
   - input_dir:
       type: directory
       description: |
-        MANDATORY; Dir name containing input genome json(s) holding meta information including:
+        MANDATORY param. User supplied input directory name containing genome json(s) storing meta information including:
         genome INSDC accession, BRC 'organism_abbrev', BRC 'component'.
-      pattern: "dir_name/*.json"
+      pattern: "input_dir/*.json"
   - cache_dir:
       type: directory
       description: |
-        NON MANDATORY; Dir name used for caching intermediate download data files, prevents re-download upon '-resume'.
+        NON MANDATORY param. Dir name used for caching intermediate download data files, prevents re-download data upon '-resume'.
         Default 'genome_prepare_download_cache'.
   - output_dir:
       type: directory
       description: |
-        NON MANDATORY; Optional dir name used to store prepared genome data files (.gff3; .fa; .json)
-        Default 'Output_GenomePrepare'. Houses >=1 GCA_* subdirectories. 
+        NON MANDATORY param. Optional dir name used to store prepared genome data files (.gff3; .fa; .json)
+        Default 'Output_GenomePrepare'. Contains one or more GCA_* sub directories. 
 output:
   - fasta_dna:
       type: file
       description: |
-        Some description....
-        ...cont description
+        File containing genomic nucleotide sequence data; in one fasta file per INSDC accession processed.
       pattern: "fasta_dna.fa"
   - fasta_pep:
       type: file
       description: |
-        Some description....
-        ...cont description
+        File containing protein coding gene peptide sequences; in one fasta file per INSDC accession processed.
       pattern: "fasta_pep.fa"
   - functional_annotation:
       type: file
       description: |
-        Some description....
-        ...cont description
+        Functional annotation information stored with JSON formatted output file.
       pattern: "functional_annotation.json"
   - gene_models:
       type: file
       description: |
-        Some description....
-        ...cont description
+        Gene models extracted and linked to genome INSDC accession
       pattern: "gene_models.gff3"
   - genome_amended:
       type: file
       description: |
-        Some description....
-        ...cont description
+        Updated genome metadata, includes additional seq_regions added e.g. mtDNA sequence
       pattern: "genome_amended.json"
   - manifest:
       type: file
       description: |
-        Some description....
-        ...cont description
+        Manifest json file listing all generated output files in main output folder and associated md5 checksums.
       pattern: "manifest.json"
   - seq_region:
       type: file
       description: |
-        Some description....
-        ...cont description
+        JSON file describing added sequence(s), sequence length(s), coordinate level(s), codon table(s), sequence topology etc.
       pattern: "manifest.json"
   - stats:
       type: file
       description: |
-        Some description....
-        ...cont description
+        General stats on gene amendments and summary of coord_system and seq_region alterations.
       pattern: "stats.txt"
 authors:
   - "@ensembl-genomio"
