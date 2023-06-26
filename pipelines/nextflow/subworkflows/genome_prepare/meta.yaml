@@ -28,7 +28,19 @@ keywords:
   - gbff
   - annotation
 modules:
-
+  - download/download_asm_data
+  - fasta/process_fasta_data
+  - files/collect_files
+  - files/publish_output
+  - genome_metadata/amend_genome_data
+  - gff3/gff3_validation
+  - gff3/process_gff3
+  - gff3/unpack_gff3
+  - manifest/integrity
+  - manifest/manifest_maker
+  - manifest/manifest_stats
+  - schema/check_json_schema
+  - seq_region/process_seq_region
 input:
   - input_dir:
       type: directory
