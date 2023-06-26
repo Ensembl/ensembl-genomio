@@ -43,30 +43,30 @@ input:
   - accession:
       type: string
       description: |
-        Mandatory param. A mitochondrion Genbank accession of mt genome sequence being added. e.g. NC_XXXXXXX.X
+        MANDATORY param. A mitochondrion Genbank accession of mt genome sequence being added. e.g. NC_XXXXXXX.X
   - prefix:
       type: string
       description: |
-        Mandatory param. A prefix name/identifier added to all genes in order to ensure gene ids are unique
+        MANDATORY param. A prefix name/identifier added to all genes in order to ensure gene ids are unique.
   - production_name:
       type: string
       description: |
-        Mandatory param. Ensembl 'production_name' assigned to species having sequence(s) added
+        MANDATORY param. Ensembl 'production_name' assigned to species having sequence(s) added.
 output:
   - dna:
       type: file
       description: |
-        Fasta file containing nucleotide sequence(s) added during processing. 
+        Fasta file containing nucleotide sequence(s) added during processing.
       pattern: "dna.fasta"
   - functional_annotation:
       type: file
       description: |
-        Some description....
+        JSON file of 
       pattern: "functional_annotation.json"
   - gene_models:
       type: file
       description: |
-        GFF3 format file covering all seq_regions and the gene feature associated with the added sequence. 
+        GFF3 format file covering all seq_regions and the gene feature associated with the added sequence.
       pattern: "gene_models.gff3"
   - genome:
       type: file
@@ -86,12 +86,12 @@ output:
   - seq_region:
       type: file
       description: |
-        JSON file describing added sequence(s), sequence length(s), coordinate level(s), codon table(s), sequence topology etc.  
+        JSON file describing added sequence(s), sequence length(s), coordinate level(s), codon table(s), sequence topology etc.
       pattern: "seq_region.json"
   - stats:
       type: file
       description: |
-        General stats on gene amendments and summary of coord_system and seq_region alterations.  
+        General stats on gene amendments and summary of coord_system and seq_region alterations.
       pattern: "stats.txt"
 authors:
   - "@ensembl-genomio"
