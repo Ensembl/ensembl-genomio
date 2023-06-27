@@ -31,22 +31,6 @@ params.password = ''
 // Print usage
 def helpMessage() {
   log.info '''
-        Usage:
-        The typical command for running the 'Dumper' pipeline is as follows:
-
-        CMD=<dba_alias>
-        mkdir -p data
-        pushd data
-          data_dir=\$(pwd)
-          nextflow run \\
-            -w \${data_dir}/nextflow_work \\
-            ${ENSEMBL_ROOT_DIR}/ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
-            -profile lsf \\
-            \$(\${CMD} details script) \\
-            --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
-            --output_dir \${data_dir}/dumper_output
-        popd
-
         Mandatory arguments:
         --host, --port, --user           Connection parameters to the SQL servers we getting core db(s) from
 
@@ -57,6 +41,18 @@ def helpMessage() {
         --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
         --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
         --help                         This usage statement.
+
+        Usage:
+        The typical command for running the 'Dumper' pipeline is as follows:
+
+        nextflow run \\
+            -w \${data_dir}/nextflow_work \\
+            ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
+            -profile lsf \\
+            --host <DB_HOST> --port <DB_PORT> --user <DB_USER>
+            --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
+            --output_dir \${data_dir}/dumper_output
+
         '''
 }
 
