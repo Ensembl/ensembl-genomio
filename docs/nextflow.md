@@ -32,7 +32,7 @@ If you wish, you can set `NXF_WORK` env to be used by `nextflow`.
 ```
 export NXF_WORK=...
 ```
-Or use `nexflow -e.NXF_WORK=...` approach.
+Or use `nextflow -e.NXF_WORK=...` approach.
 Ideally, should be overridable by the `-work-dir` (`-w`) option of `nextflow run`
 
 ## Running a pipeline
