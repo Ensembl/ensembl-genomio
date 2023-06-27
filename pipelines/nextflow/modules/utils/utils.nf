@@ -23,5 +23,26 @@ def read_json(json_path) {
     slurp = new JsonSlurper()
     json_file = file(json_path)
     text = json_file.text
-    return slurp.parseText(text)
+    // unfortunately
+    //   return slurp.parseText(text)
+    // doesn't work for a single element list, we suspect lazy eval
+    // symptom: instead of `[a:..., b:...]` we see the same stuff in the curly brackets `{a:..., b:...}`
+    not_a_lazy_val = slurp.parseText(text)
+    return not_a_lazy_val
+}
+
+def updateWorkDirAsNeeded(dir_name) {
+    // dealing with custom $NXF_WORK based workDir
+    //   don't do anything if "-work-dir (-w)" option specified on command line
+    cmd_line = binding.variables.workflow.commandLine
+    cmd_line_has_wd = cmd_line.contains(" -w ") || cmd_line.contains(" -work_dir ")
+    if (!cmd_line_has_wd) {
+        log.info " no -work-dir (-w) option specified. Trying to build one base on NXF_WORK env"
+        nxf_work_env = binding.getVariable('NXF_WORK')
+        if (nxf_work_env) {
+            session.workDir = ("${nxf_work_env}/dumper_pipeline" as Path).complete()
+            session.workDir.mkdirs()
+            workDir = session.workDir as String
+        }
+    }
 }

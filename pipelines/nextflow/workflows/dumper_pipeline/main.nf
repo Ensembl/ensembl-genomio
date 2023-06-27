@@ -14,6 +14,54 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// dealing with custom $NXF_WORK based workDir
+//   don't do anything if "-work-dir (-w)" option specified on command line
+include { updateWorkDirAsNeeded } from '../../modules/utils/utils.nf'
+updateWorkDirAsNeeded("dumper_pipeline2")
+
+
+// default params
+params.help = false
+params.prefix = ''
+params.brc_mode = 0
+params.dbname_re = ''
+params.output_dir = './dumper_output'
+params.password = ''
+
+// Print usage
+def helpMessage() {
+  log.info '''
+        Mandatory arguments:
+        --host, --port, --user           Connection parameters to the SQL servers we getting core db(s) from
+
+        Optional arguments:
+        --password                     Password part of the connection parameters
+        --prefix                       Core dabase(s) name prefixes
+        --dbname_re                    Regexp to match core db name(s) against
+        --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
+        --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
+        --help                         This usage statement.
+
+        Usage:
+        The typical command for running the 'Dumper' pipeline is as follows:
+
+        nextflow run \\
+            -w \${data_dir}/nextflow_work \\
+            ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
+            -profile lsf \\
+            --host <DB_HOST> --port <DB_PORT> --user <DB_USER>
+            --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
+            --output_dir \${data_dir}/dumper_output
+
+        '''
+}
+
+// Check mandatory parameters
+if (params.help) {
+    helpMessage()
+    exit 0
+}
+
 def create_server(params) {
     server = [
         "host": params.host,
@@ -30,7 +78,8 @@ def create_server(params) {
 def create_filter_map(params) {
     filter_map = [
         "brc_mode": 0,
-        "prefix": ""
+        "prefix": "",
+        "dbname_re": ""
     ]
     if (params.brc_mode) {
         filter_map["brc_mode"] = 1
@@ -38,10 +87,13 @@ def create_filter_map(params) {
     if (params.prefix) {
         filter_map["prefix"] = params.prefix
     }
+    if (params.dbname_re) {
+        filter_map["dbname_re"] = params.dbname_re
+    }
     return filter_map
 }
 
-if (params.host && params.port && params.user && params.out_dir) {
+if (params.host && params.port && params.user && params.output_dir) {
     server = create_server(params)
     filter_map = create_filter_map(params)
 } else {
@@ -58,6 +110,6 @@ workflow {
     dbs = DB_FACTORY(server, filter_map)
         .map(it -> read_json(it))
         .flatten()
-    DUMP_SQL(server, dbs, filter_map, params.out_dir)
-    DUMP_METADATA(server, dbs, filter_map, params.out_dir)
+    DUMP_SQL(server, dbs, filter_map, params.output_dir)
+    DUMP_METADATA(server, dbs, filter_map, params.output_dir)
 }
