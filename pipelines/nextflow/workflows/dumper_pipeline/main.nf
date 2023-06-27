@@ -35,6 +35,7 @@ def helpMessage() {
         The typical command for running the 'Dumper' pipeline is as follows:
 
         CMD=<dba_alias>
+        mkdir -p data
         pushd data
           data_dir=\$(pwd)
           nextflow run \\
