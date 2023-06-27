@@ -20,7 +20,6 @@ Can be imported as a module and called as a script as well, with the same parame
 
 import json
 from pathlib import Path
-import re
 from typing import Dict, List, Optional
 
 import argschema
