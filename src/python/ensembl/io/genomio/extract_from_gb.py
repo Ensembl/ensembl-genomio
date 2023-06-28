@@ -215,7 +215,7 @@ class FormattedFilesGenerator:
             gene_name = gff_qualifiers.get("gene", [None])[0]
             if gene_name is None:
                 gene_name = gff_qualifiers.get("locus_tag", [None])[0]
-            
+
             # Parse this gene
             if gene_name is not None:
                 gene_feats, gene_ids, gene_peptides = self._parse_gene_feat(gff_feat, gene_name)
