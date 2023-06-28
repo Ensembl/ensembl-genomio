@@ -1,0 +1,28 @@
+# This test runs the genome_prepare pipeline for the INSDC accession GCA_017607445.1 from Genbank
+# It uses a cache file to avoid downloading assembly related data files (--cache_dir)
+# The cached data has been reduced to two seq regions, 1 nuclear and 1 mitochondrial sequence
+- name: Test run 'genome_prepare' nxf pipeline
+  command: nextflow run ./pipelines/nextflow/workflows/genome_prepare/main.nf \\
+    --input_dir ./data/test/genome_prepare/inputDir \\
+    --cache_dir ./data/test/genome_prepare/cache/ \\
+    --output_dir ./Test-Out-genome_prepare
+
+  # Check that all the expected files are produced
+  # Make sure to update those if the processing of the files changes!
+  files:
+    - path: ./Test-Out-genome_prepare/GCA_017607445.1/fasta_dna.fa
+      md5sum: 68d26226b04950883edecd6095d1db1f
+    - path: ./Test-Out-genome_prepare/GCA_017607445.1/fasta_pep.fa
+      md5sum: d3be87e392cc53ded62987c28952cc3d
+    - path: ./Test-Out-genome_prepare/GCA_017607445.1/functional_annotation.json
+      md5sum: eb834948fb9363dd71d02cb591848345
+    - path: ./Test-Out-genome_prepare/GCA_017607445.1/gene_models.gff3
+      md5sum: 3303f5a000173812ba53d01571037b30
+    - path: ./Test-Out-genome_prepare/GCA_017607445.1/genome_amended.json
+      md5sum: 6c624038599449b59f2eaa3b3064439d
+    - path: ./Test-Out-genome_prepare/GCA_017607445.1/manifest.json
+      md5sum: b6cbe99d24353f847ad04a0d3ebbdc80
+    - path: ./Test-Out-genome_prepare/GCA_017607445.1/seq_region.json
+      md5sum: 585da9f97f094e83702860ce43da652f
+    - path: ./Test-Out-genome_prepare/GCA_017607445.1/stats.txt
+      md5sum: 6104869d437ec4a9d13a2d070c307b0f

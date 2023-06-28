@@ -1,0 +1,33 @@
+# Assembly name:  ASM00000001v1
+# Organism name:  Histoplasma ohiense (nom. inval.) (ascomycete fungi)
+# Infraspecific name:  strain=G217B
+# Taxid:          2902605
+# BioSample:      SAMN0000001
+# BioProject:     PRJNA000001
+# Submitter:      University of buzz lightyear
+# Date:           2021-03-30
+# Assembly type:  haploid
+# Release type:   major
+# Assembly level: Contig
+# Genome representation: full
+# WGS project:    JAEVH00000
+# Assembly method: miniasm v. 0.3-r179
+# Expected final version: no
+# Genome coverage: 21x
+# Sequencing technology: Oxford Nanopore MinION; Illumina MiSeq
+# RefSeq category: Representative Genome
+# GenBank assembly accession: GCA_000000000.1
+#
+## Assembly-Units:
+## GenBank Unit Accession	RefSeq Unit Accession	Assembly-Unit name
+## GCA_000000000.1		Primary Assembly
+## GCA_000000001.1		non-nuclear
+#
+# Ordered by chromosome/plasmid; the chromosomes/plasmids are followed by
+# unlocalized scaffolds.
+# Unplaced scaffolds are listed at the end.
+# RefSeq is equal or derived from GenBank object.
+#
+# Sequence-Name	Sequence-Role	Assigned-Molecule	Assigned-Molecule-Location/Type	GenBank-Accn	Relationship	RefSeq-Accn	Assembly-Unit	Sequence-Length	UCSC-style-name
+HcG217B10	unplaced-scaffold	na	na	JAEVHH010000011.1	<>	na	Primary Assembly	60710	na
+HcG217B07	assembled-molecule	MT	Mitochondrion	CM029948.1	<>	na	non-nuclear	41220	na

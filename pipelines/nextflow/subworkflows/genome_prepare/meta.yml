@@ -1,0 +1,103 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+
+name: "genome_prepare"
+description: BRC/Ensembl metazoa pipeline. Retrieve data for genome(s), obtained from INSDC, validate and prepare GFF3, FASTA, JSON files for each genome accession.
+keywords:
+  - fasta
+  - gff3
+  - json
+  - INSDC
+  - schema
+  - validate
+  - genbank
+  - gbff
+  - annotation
+modules:
+  - download/download_asm_data
+  - fasta/process_fasta_data
+  - files/collect_files
+  - files/publish_output
+  - genome_metadata/amend_genome_data
+  - gff3/gff3_validation
+  - gff3/process_gff3
+  - gff3/unpack_gff3
+  - manifest/integrity
+  - manifest/manifest_maker
+  - manifest/manifest_stats
+  - schema/check_json_schema
+  - seq_region/process_seq_region
+input:
+  - input_dir:
+      type: directory
+      description: |
+        MANDATORY param. User supplied input directory name containing genome json(s) storing meta information including:
+        genome INSDC accession, BRC 'organism_abbrev', BRC 'component'.
+      pattern: "input_dir/*.json"
+  - cache_dir:
+      type: directory
+      description: |
+        NON MANDATORY param. Dir name used for caching intermediate download data files, prevents re-download data upon '-resume'.
+        Default 'genome_prepare_download_cache'.
+  - output_dir:
+      type: directory
+      description: |
+        NON MANDATORY param. Optional dir name used to store prepared genome data files (.gff3; .fa; .json)
+        Default 'Output_GenomePrepare'. Contains one or more GCA_* sub directories. 
+output:
+  - fasta_dna:
+      type: file
+      description: |
+        File containing genomic nucleotide sequence data; in one fasta file per INSDC accession processed.
+      pattern: "fasta_dna.fa"
+  - fasta_pep:
+      type: file
+      description: |
+        File containing protein coding gene peptide sequences; in one fasta file per INSDC accession processed.
+      pattern: "fasta_pep.fa"
+  - functional_annotation:
+      type: file
+      description: |
+        Functional annotation information stored with JSON formatted output file.
+      pattern: "functional_annotation.json"
+  - gene_models:
+      type: file
+      description: |
+        Gene models extracted and linked to genome INSDC accession
+      pattern: "gene_models.gff3"
+  - genome_amended:
+      type: file
+      description: |
+        Updated genome metadata, includes additional seq_regions added e.g. mtDNA sequence
+      pattern: "genome_amended.json"
+  - manifest:
+      type: file
+      description: |
+        Manifest json file listing all generated output files in main output folder and associated md5 checksums.
+      pattern: "manifest.json"
+  - seq_region:
+      type: file
+      description: |
+        JSON file describing added sequence(s), sequence length(s), coordinate level(s), codon table(s), sequence topology etc.
+      pattern: "manifest.json"
+  - stats:
+      type: file
+      description: |
+        General stats on gene amendments and summary of coord_system and seq_region alterations.
+      pattern: "stats.txt"
+authors:
+  - Ensembl
