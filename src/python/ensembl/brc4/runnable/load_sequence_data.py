@@ -44,7 +44,6 @@ class load_sequence_data(eHive.BaseRunnable):
         return {
             # relative order of the coord_systems types to infer their rank from
             "cs_order": "ensembl_internal,chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome",
-            "clean_non_ACGTN" : false, # replace non-ACTGN symbols in contig seqs on load from FASTA
             "IUPAC": "RYKMSWBDHV",  # symbols to be replaced with N in the DNA sequences (ensembl core(107) doesn't support the whole IUPAC alphabet for DNA)
             # unversion scaffold, remove ".\d$" from seq_region.names if there's a need
             "unversion_scaffolds": 0,
@@ -178,12 +177,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         # preprocess FASTA with sequences
         #   rename IUPAC to N symbols using sed
-        fasta_raw = self.from_param("manifest_data", "fasta_dna")
-        if self.param("clean_non_ACGTN"):
-            fasta_clean = self.pjc(work_dir, "fasta", "seq_no_iupac.fasta")
-            self.remove_IUPAC(fasta_raw, fasta_clean)
-        else:
-            fasta_clean = fasta_raw
+        fasta_clean = self.from_param("manifest_data", "fasta_dna")
 
         # start coord system ranking and agps processing
         agps = self.from_param("manifest_data", "agp", not_throw=True)

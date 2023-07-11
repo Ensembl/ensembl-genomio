@@ -167,8 +167,6 @@ sub default_options {
     sequence_data_chunck => 0,
     # coord system name for chunks
     chunk_cs_name => 'ensembl_internal',
-    # replace non-ACTGN symbols with Ns on load from FASTA
-    seq_clean_non_ACGTN => 0,
   };
 }
 
@@ -234,7 +232,6 @@ sub pipeline_wide_parameters {
 
     sequence_data_chunck => $self->o('sequence_data_chunck'),
     chunk_cs_name        => $self->o('chunk_cs_name'),
-    seq_clean_non_ACGTN  => $slef->o('seq_clean_non_ACGTN'),
   };
 }
 
@@ -456,7 +453,6 @@ sub pipeline_analyses {
         # N.B. chunking will work correctly only if it was used for initial loading
         sequence_data_chunck => $self->o('sequence_data_chunck'),
         chunk_cs_name        => $self->o('chunk_cs_name'),
-        clean_non_ACGTN      => $self->o('seq_clean_non_ACGTN'),
       },
       -analysis_capacity   => 10,
       -rc_name         => $self->o('load_sequence_data_rc_name'),
