@@ -61,7 +61,7 @@ output:
   - functional_annotation:
       type: file
       description: |
-        JSON file of 
+        JSON file containing the metadata for gene models
       pattern: "functional_annotation.json"
   - gene_models:
       type: file

@@ -16,7 +16,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
 
 name: "genome_prepare"
-description: BRC/Ensembl metazoa pipeline. Retrieve data for genome(s), obtained from INSDC, validate and prepare GFF3, FASTA, JSON files for each genome accession.
+description: BRC/Ensembl metazoa pipeline. Retrieve data for genome(s), obtained from INSDC and RefSeq, validate and prepare GFF3, FASTA, JSON files for each genome accession.
 keywords:
   - fasta
   - gff3
