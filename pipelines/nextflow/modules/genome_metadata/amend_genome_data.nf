@@ -19,15 +19,15 @@ process AMEND_GENOME_DATA {
     debug true
 
     input:
-        tuple val(gca), path(genome_json) // Seq region json
+        tuple val(gca), path(genome_json, stageAs: "incoming_genome.json") // Seq region json
         tuple val(gca), path(asm_report), path(genomic_fna), path(genbank_gbff) // downloaded genome data
         val brc4_mode
 
     output:
-        tuple val(gca), path ("${gca}/genome_amended.json"), emit: amended_json
+        tuple val(gca), path ("genome.json"), emit: amended_json
     
     script:
     """
-    amend_genomic_data --genome_infile ${genome_json} --INSDC_RefSeq_report_infile ${asm_report} --genbank_infile ${genbank_gbff} --output_dir ${gca} --brc4_mode ${brc4_mode}
+    amend_genomic_data --genome_infile ${genome_json} --genome_outfile genome.json --INSDC_RefSeq_report_infile ${asm_report} --genbank_infile ${genbank_gbff} --brc4_mode ${brc4_mode}
     """
 }
