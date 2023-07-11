@@ -14,12 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// dealing with custom $NXF_WORK based workDir
-//   don't do anything if "-work-dir (-w)" option specified on command line
-include { updateWorkDirAsNeeded } from '../../modules/utils/utils.nf'
-updateWorkDirAsNeeded("dumper_pipeline2")
-
-
 // default params
 params.help = false
 params.prefix = ''
