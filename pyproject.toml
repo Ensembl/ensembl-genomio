@@ -135,7 +135,7 @@ line-length = 110
 max-line-length = 110
 disable = [
     "invalid-name",
-    "logging-fstring-interpolatio",
+    "logging-fstring-interpolation",
     "similarities",
     "too-few-public-methods",
     "too-many-arguments",
