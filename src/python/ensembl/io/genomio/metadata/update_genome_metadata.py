@@ -139,9 +139,6 @@ def amend_genomic_metadata(
     """
     genome_metadata = get_json(genome_infile)
 
-    # Final file name
-    metadata_type = "genome"
-
     # Get additional sequences in the assembly but not in the data
     additions = get_additions(Path(insdc_refseq_report_infile), Path(genbank_infile))
     if additions:
@@ -152,6 +149,7 @@ def amend_genomic_metadata(
         pass
 
     # Print out the file
+    genome_outfile = Path(genome_outfile)
     print_json(genome_outfile, genome_metadata)
 
     return genome_outfile
