@@ -1,0 +1,11 @@
+{
+ "BRC4": {
+  "component": "OrganismDB",
+  "organism_abbrev": "organAbrev123"
+ },
+ "species": {},
+ "assembly": {
+  "accession": "GCA_017607445.1"
+ },
+ "genebuild": {}
+}

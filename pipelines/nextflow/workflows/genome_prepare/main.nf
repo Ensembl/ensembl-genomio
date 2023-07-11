@@ -49,7 +49,7 @@ if (params.input_dir) {
     exit 1, 'Input directory not specified!'
 }
 if (!params.cache_dir) {
-    params.cache_dir = "./genome_prepare_dowload_cache"
+    params.cache_dir = "./genome_prepare_download_cache"
 }
 
 // Import subworkflow
