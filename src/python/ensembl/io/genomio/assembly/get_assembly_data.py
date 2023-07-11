@@ -225,10 +225,12 @@ def retrieve_assembly_data(
     asm_download_path = Path(asm_download_dir)
     download_dir = asm_download_path / accession
 
-    #Configure logging
+    # Configure logging
     log_file = f"{accession}_download.log"
     reload(logging)
-    logging.basicConfig(filename=log_file, format='%(levelname)s:%(message)s', filemode='w', level=logging.DEBUG)
+    logging.basicConfig(
+        filename=log_file, format="%(levelname)s:%(message)s", filemode="w", level=logging.DEBUG
+    )
 
     # Set and create dedicated dir for download
     if not download_dir.is_dir():
