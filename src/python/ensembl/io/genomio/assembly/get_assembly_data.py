@@ -1,4 +1,3 @@
-#!env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -17,13 +16,13 @@
 
 from ftplib import FTP
 import hashlib
+from importlib import reload
+import logging
 from os import PathLike
 from pathlib import Path
 import re
 import time
 from typing import Dict
-import logging
-from importlib import reload
 
 import argschema
 
@@ -227,9 +226,9 @@ def retrieve_assembly_data(
     download_dir = asm_download_path / accession
 
     #Configure logging
-    log_file = (f"{accession}_download.log")
+    log_file = f"{accession}_download.log"
     reload(logging)
-    logging.basicConfig(filename=log_file, format='%(levelname)s:%(message)s', filemode='w', level=logging.DEBUG) 
+    logging.basicConfig(filename=log_file, format='%(levelname)s:%(message)s', filemode='w', level=logging.DEBUG)
 
     # Set and create dedicated dir for download
     if not download_dir.is_dir():
