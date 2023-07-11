@@ -211,7 +211,6 @@ class FormattedFilesGenerator:
                 strand=feat.location.strand,
                 qualifiers=gff_qualifiers,
             )
-
             # Only Genes should have a name: use either attribute gene or locus_tag
             gene_name = gff_qualifiers.get("gene", [None])[0]
             if gene_name is None:
@@ -243,7 +242,6 @@ class FormattedFilesGenerator:
     ) -> Tuple[Dict[str, SeqFeature], List[str], List[SeqFeature]]:
         gene_id = self.prefix + gene_name
         gene_qualifiers = gene_feat.qualifiers
-
         new_feats: Dict[str, Any] = {}
         peptides: List[SeqFeature] = []
         all_ids: List[str] = []
@@ -259,6 +257,17 @@ class FormattedFilesGenerator:
                 del gene_feat.qualifiers["locus_tag"]
             new_feats[str(gene_id)] = gene_feat
             all_ids.append(str(gene_id))
+
+        if gene_feat.type in ("tRNA", "rRNA"):
+            tr_id = gene_id + "_t1"
+            gene_feat.qualifiers["ID"] = tr_id
+            gene_feat.qualifiers["Parent"] = gene_id
+            if "gene" in gene_feat.qualifiers:
+                del gene_feat.qualifiers["gene"]
+            if "locus_tag" in gene_feat.qualifiers:
+                del gene_feat.qualifiers["locus_tag"]
+            new_feats[str(tr_id)] = gene_feat
+            all_ids.append(str(tr_id))
 
         if gene_feat.type == "CDS":
             if "pseudo" in gene_qualifiers:
