@@ -177,9 +177,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         # preprocess FASTA with sequences
         #   rename IUPAC to N symbols using sed
-        fasta_raw = self.from_param("manifest_data", "fasta_dna")
-        fasta_clean = self.pjc(work_dir, "fasta", "seq_no_iupac.fasta")
-        self.remove_IUPAC(fasta_raw, fasta_clean)
+        fasta_clean = self.from_param("manifest_data", "fasta_dna")
 
         # start coord system ranking and agps processing
         agps = self.from_param("manifest_data", "agp", not_throw=True)
@@ -1221,7 +1219,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """ensembl-analysis script (load_seq_region.pl) based utility for loading seq_regions FASTA sequences"""
         en_root = self.param_required("ensembl_root_dir")
         cmd = (
-            r"""{_loader} {_db_string} {_asm_v_flag} -default_version """
+            r"""{_loader} {_db_string} {_asm_v_flag} -default_version -ignore_ambiguous_bases """
             + r"""    -rank {_rank} -coord_system_name {_cs} {_sl_flag} -{_tag}_file {_file}"""
             + r"""     > {_log}.stdout 2> {_log}.stderr"""
         ).format(
