@@ -22,7 +22,7 @@ from typing import Dict
 
 import eHive
 
-from ensembl.brc4.runnable.utils import print_json, get_json
+from ensembl.io.genomio.utils.json_utils import print_json, get_json
 
 
 class manifest(eHive.BaseRunnable):
