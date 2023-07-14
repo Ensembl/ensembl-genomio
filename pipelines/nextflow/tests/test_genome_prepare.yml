@@ -35,10 +35,9 @@
     - path: ./test_genome_prepare_output/GCA_017607445.1/gene_models.gff3
       md5sum: 3303f5a000173812ba53d01571037b30
     - path: ./test_genome_prepare_output/GCA_017607445.1/genome.json
-      md5sum: 04c0fd27fb52ebb3507a205e43b815b7
+      md5sum: 97624cfffdcf43edd3f00df35ba24d30
     - path: ./test_genome_prepare_output/GCA_017607445.1/manifest.json
-      md5sum: 2a9733a7701dfeae0be204c8a5ba27a8
+      md5sum: 493dc0486e5a5b66e481a88f5ed433ae
     - path: ./test_genome_prepare_output/GCA_017607445.1/seq_region.json
       md5sum: 585da9f97f094e83702860ce43da652f
     - path: ./test_genome_prepare_output/GCA_017607445.1/stats.txt
-      md5sum: 6104869d437ec4a9d13a2d070c307b0f
