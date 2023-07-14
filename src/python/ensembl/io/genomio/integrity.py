@@ -499,11 +499,10 @@ class IntegrityTool:
         self.manifest.brc_mode = brc_mode
 
     def set_ignore_final_stops(self, ignore_final_stops: bool) -> None:
-        """Set ignore_finale_stops (when calculating peptide length) for this tool and the manifest."""
-        self.ignore_final_stops = brc_mode
+        """Set ignore_final_stops (when calculating peptide length) for this tool and the manifest."""
+        self.ignore_final_stops = ignore_final_stops
         self.manifest.ignore_final_stops = ignore_final_stops
 
-        self.set_ignore_final_stops(ignore_finale_stops)
 
     def _check_genome(self, genome: Dict) -> None:
         """Check if the accession is correct in genome.json."""
