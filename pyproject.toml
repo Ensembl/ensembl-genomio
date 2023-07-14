@@ -66,6 +66,7 @@ dev = [
     "mypy",
     "pylint",
     "pytest",
+    "pytest-workflow",
     "Sphinx",
     "types-requests",
 ]

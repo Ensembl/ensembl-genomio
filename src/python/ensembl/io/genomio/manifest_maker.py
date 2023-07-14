@@ -37,7 +37,11 @@ class ManifestMaker:
         "agp",
         "events",
     }
-    alias_names = {"gene_models": "gff3", "dna": "fasta_dna", "pep": "fasta_pep"}
+    alias_names = {
+        "gene_models": "gff3",
+        "dna": "fasta_dna",
+        "pep": "fasta_pep",
+    }
     names = {name: name for name in same_names}
     names = {**names, **alias_names}
 
