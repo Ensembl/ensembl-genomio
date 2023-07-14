@@ -17,6 +17,7 @@
 """
 
 import json
+from os import PathLike
 from pathlib import Path
 from shutil import which
 from statistics import mean
@@ -75,8 +76,9 @@ class manifest_stats:
         self.datasets_bin = datasets_bin
         self.manifest_parent = manifest_dir
         self.check_ncbi = False
+        self.ignore_failed = False
 
-    def run(self):
+    def run(self, stats_path: PathLike):
         """Compute stats in the files and output a stats.txt file in the same folder.
 
         Raises:
@@ -97,13 +99,12 @@ class manifest_stats:
             stats += self.get_seq_region_stats(Path(manifest["seq_region"]))
 
         # Print out the stats in a separate file
-        stats_path = f"{self.manifest_parent}/stats.txt"
         print(stats_path)
         with open(stats_path, "w") as stats_out:
             stats_out.write("\n".join(stats))
 
         # Die if there were errors in stats comparison
-        if self.error:
+        if self.error and not self.ignore_failed:
             raise StatsError(f"Stats count errors, check the file {stats_path}")
 
     def get_manifest(self) -> Dict:
@@ -409,7 +410,12 @@ class InputSchema(argschema.ArgSchema):  # need more metadata/'True' requirement
         metadata={"description": "Sequence accession ID to compare stats with NCBI"}
     )
     datasets_bin = argschema.fields.String(metadata={"description": "Datasets bin status"})
+    ignore_failed = argschema.fields.Bool(default=False, metadata={"description": "Do not fail if stats do not match NCBI"})
 
+    stats_file = argschema.fields.files.OutputFile(
+        required=False,
+        metadata={"description": "Output file with the stats"},
+    )
 
 def main():
     """Main entrypoint."""
@@ -417,7 +423,15 @@ def main():
     mstats = manifest_stats(mod.args["manifest_dir"], mod.args.get("accession"), mod.args.get("datasets_bin"))
     if mod.args.get("accession"):
         mstats.check_ncbi = True
-    mstats.run()
+    if mod.args.get("ignore_failed"):
+            mstats.ignore_failed = True
+    stats_file: Path
+    if mod.args.get("stats_file"):
+        stats_file = mod.args.get('stats_file')
+    else:
+        stats_file = Path(mod.args.get('manifest_dir')) / "stats.txt"
+
+    mstats.run(stats_file)
 
 
 if __name__ == "__main__":
