@@ -65,6 +65,11 @@ class Manifest:
             "ann_genes": {},
             "ann_translations": {},
             "ann_transposable_elements": {},
+            "seq_regions": {},
+        }
+
+        self.circular: Dict[str, Lengths] = {
+            "seq_regions": {},
         }
 
         self.errors: List[str] = []
@@ -82,6 +87,12 @@ class Manifest:
         """Returns a dict associating IDs with their length from a given file name."""
         if name in self.lengths:
             return self.lengths[name]
+        raise KeyError(f"No length available for key {name}")
+
+    def get_circular(self, name: str) -> Dict[str, Any]:
+        """Returns a dict associating IDs with their is_circular flag from a given file name."""
+        if name in self.circular:
+            return self.circular[name]
         raise KeyError(f"No length available for key {name}")
 
     def _add_error(self, error: str) -> None:
@@ -157,12 +168,15 @@ class Manifest:
             seq_regions = get_json(Path(self.manifest_files["seq_region"]))
             seqr_seqlevel = {}
             seq_lengths = {}
+            seq_circular = {}
             # Store the length as int
             for seq in seq_regions:
                 seq_lengths[seq["name"]] = int(seq["length"])
+                seq_circular[seq["name"]] = seq.get("circular", False)
                 if seq["coord_system_level"] == "contig":
                     seqr_seqlevel[seq["name"]] = int(seq["length"])
             self.lengths["seq_regions"] = seq_lengths
+            self.circular["seq_regions"] = seq_circular
             self.seq_regions = seq_regions
         if "functional_annotation" in self.manifest_files:
             print("Got a func_anns")
@@ -373,7 +387,8 @@ class IntegrityTool:
         self.manifest = Manifest(manifest_file)
         self.brc_mode = False
         self.set_brc_mode(brc_mode)
-        self.ignore_final_stops = ignore_final_stops
+        self.ignore_final_stops = False
+        self.set_ignore_final_stops(ignore_final_stops)
         self.errors: List[str] = []
 
     def add_errors(self, *args: str) -> None:
@@ -401,6 +416,7 @@ class IntegrityTool:
         dna = manifest.get_lengths("dna_sequences")
         pep = manifest.get_lengths("peptide_sequences")
         seq_lengths = manifest.get_lengths("seq_regions")
+        seq_circular = manifest.get_circular("seq_regions")
 
         agp_seqr = manifest.get_lengths("agp")
 
@@ -463,7 +479,7 @@ class IntegrityTool:
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
             if seq_regions:
-                self.check_seq_region_lengths(seq_lengths, gff_seq_regions, "Seq_regions metadata vs gff")
+                self.check_seq_region_lengths(seq_lengths, gff_seq_regions, "Seq_regions metadata vs gff", seq_circular)
 
         # Check fasta dna and seq_region integrity
         if dna and seq_regions:
@@ -481,6 +497,13 @@ class IntegrityTool:
         """Set brc mode for this tool and the manifest."""
         self.brc_mode = brc_mode
         self.manifest.brc_mode = brc_mode
+
+    def set_ignore_final_stops(self, ignore_final_stops: bool) -> None:
+        """Set ignore_finale_stops (when calculating peptide length) for this tool and the manifest."""
+        self.ignore_final_stops = brc_mode
+        self.manifest.ignore_final_stops = ignore_final_stops
+
+        self.set_ignore_final_stops(ignore_finale_stops)
 
     def _check_genome(self, genome: Dict) -> None:
         """Check if the accession is correct in genome.json."""
@@ -597,7 +620,7 @@ class IntegrityTool:
 
         return errors
 
-    def check_seq_region_lengths(self, seqrs: Dict[str, Any], feats: Dict[str, Any], name: str) -> None:
+    def check_seq_region_lengths(self, seqrs: Dict[str, Any], feats: Dict[str, Any], name: str, circular: Dict[str, Any] = None) -> None:
         """Check the integrity of seq_region.json file by comparing the length of the sequence
             to fasta files and the gff.
 
@@ -622,22 +645,35 @@ class IntegrityTool:
         diff = []
         diff_list = []
 
+        # not an error on circular for gff features
+        diff_circular = []
+        diff_circular_list = []
+
         for seq_id in seqrs:
             if seq_id in feats:
                 # Check that feature is within the seq_region length
                 if feats[seq_id] > seqrs[seq_id]:
-                    diff.append(seq_id)
-                    diff_list.append(f"{seq_id}: {seqrs[seq_id]} vs {feats[seq_id]}")
+                    if circular is None or not circular.get(seq_id, False):
+                        diff.append(seq_id)
+                        diff_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
+                    else:
+                        diff_circular.append(seq_id)
+                        diff_circular_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
                 else:
                     common.append(seq_id)
             else:
                 only_seqr.append(seq_id)
         for seq_id in feats:
-            if seq_id not in common and seq_id not in diff:
+            if seq_id not in common and seq_id not in diff and seq_id not in diff_circular:
                 only_feat.append(seq_id)
 
         if common:
             print(f"{len(common)} common elements in {name}")
+        if diff_circular:
+            print(
+                "%d differences for circular elements in %s (e.g. %s)"
+                % (len(diff_circular), name, diff_circular_list[0])
+            )
         if diff:
             self.add_errors(f"{len(diff)} common elements with higher length in {name} (e.g. {diff_list[0]})")
         if only_seqr:
@@ -655,6 +691,7 @@ class InputSchema(argschema.ArgSchema):
         required=True, metadata={"description": "Manifest file for the data to check"}
     )
     brc_mode = argschema.fields.Boolean(required=False, metadata={"description": "BRC mode"})
+    ignore_final_stops = argschema.fields.Boolean(required=False, metadata={"description": "Ignore final stop when calculating peptide length"})
 
 
 def main() -> None:
@@ -665,6 +702,8 @@ def main() -> None:
     inspector = IntegrityTool(mod.args["manifest_file"])
     if mod.args.get("brc_mode"):
         inspector.set_brc_mode(True)
+    if mod.args.get("ignore_final_stops"):
+        inspector.set_ignore_final_stops(True)
 
     inspector.check_integrity()
 
