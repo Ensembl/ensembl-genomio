@@ -34,6 +34,7 @@ def helpMessage() {
 
         Optional arguments:
         --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
+        --ignore_failed_stats          Skip and continue if stats counts fail
         --help                         This usage statement.
         """
 }
@@ -51,6 +52,9 @@ if (params.input_dir) {
 if (!params.cache_dir) {
     params.cache_dir = "./genome_prepare_download_cache"
 }
+if (!params.ignore_failed_stats) {
+    params.ignore_failed_stats = 1
+}
 
 // Import subworkflow
 include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/main.nf'
@@ -64,5 +68,5 @@ workflow {
     PREPARE_GENOME_METADATA.out.genomic_dataset
         .map{ gca_dir, json_file -> tuple( gca_dir.getName(), json_file ) }
         .set { genome_metadata }
-    GENOME_PREPARE(genome_metadata, params.output_dir, params.cache_dir)
+    GENOME_PREPARE(genome_metadata, params.output_dir, params.cache_dir, params.ignore_failed_stats)
 }

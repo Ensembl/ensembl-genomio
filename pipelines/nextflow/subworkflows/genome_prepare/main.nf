@@ -43,6 +43,7 @@ workflow GENOME_PREPARE {
         genomic_dataset // tuple composed of GCA_XXXXXXX.X (as path) and genome.json
         output_dir // User specified or default
         cache_dir
+        ignore_failed_stats
 
     // Main data input to this subworkflow is genomic_dataset tuple
     main:        
@@ -104,7 +105,7 @@ workflow GENOME_PREPARE {
         
         manifest_checked = CHECK_INTEGRITY(manifest_dired, params.brc_mode)
         
-        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets')
+        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', ignore_failed_stats)
 
         // Publish the data to output directory
         PUBLISH_DIR(manifest_stated, output_dir)

@@ -20,12 +20,17 @@ process MANIFEST_STATS {
     input:
         tuple path(manifest_dir), val(accession)
         val datasets
+        val ignore_failed_stats
 
     output:
         tuple path(manifest_dir), val(accession)
 
     script:
         """
-        manifest_stats --manifest_dir "$manifest_dir" --datasets_bin "$datasets" --accession "$accession"
+        MORE_CMD=""
+        if [ "$ignore_failed_stats" = "1" ]; then
+            MORE_CMD=" --ignore_failed 1"
+        fi
+        manifest_stats --manifest_dir "$manifest_dir" --datasets_bin "$datasets" --accession "$accession" \$MORE_CMD
         """
 }

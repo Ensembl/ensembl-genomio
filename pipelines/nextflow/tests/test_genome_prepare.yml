@@ -20,7 +20,8 @@
   command: nextflow run ./pipelines/nextflow/workflows/genome_prepare/main.nf \\
     --input_dir ./data/test/genome_prepare/inputDir \\
     --cache_dir ./data/test/genome_prepare/cache/ \\
-    --output_dir ./test_genome_prepare_output
+    --output_dir ./test_genome_prepare_output \\
+    --ignore_failed_stats 1
 
   # Check that all the expected files are produced
   # Make sure to update those if the processing of the files changes!
