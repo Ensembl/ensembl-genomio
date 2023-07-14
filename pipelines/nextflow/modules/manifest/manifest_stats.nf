@@ -26,6 +26,6 @@ process MANIFEST_STATS {
 
     script:
         """
-        manifest_stats --manifest_dir "$manifest_dir" --datasets_bin "$datasets"
+        manifest_stats --manifest_dir "$manifest_dir" --datasets_bin "$datasets" --accession "$accession"
         """
 }
