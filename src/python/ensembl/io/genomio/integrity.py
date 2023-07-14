@@ -25,7 +25,7 @@ from os import PathLike
 from pathlib import Path
 import re
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import argschema
 from BCBio import GFF
@@ -619,7 +619,7 @@ class IntegrityTool:
 
         return errors
 
-    def check_seq_region_lengths(self, seqrs: Dict[str, Any], feats: Dict[str, Any], name: str, circular: Dict[str, Any] = None) -> None:
+    def check_seq_region_lengths(self, seqrs: Dict[str, Any], feats: Dict[str, Any], name: str, circular: Optional[Dict[str, Any]] = None) -> None:
         """Check the integrity of seq_region.json file by comparing the length of the sequence
             to fasta files and the gff.
 
