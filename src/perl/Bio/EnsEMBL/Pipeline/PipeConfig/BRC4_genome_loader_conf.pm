@@ -341,7 +341,8 @@ sub pipeline_analyses {
       },
     },
 
-    { -logic_name     => 'check_json_schema',
+    {
+      -logic_name     => 'check_json_schema',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
         cmd => 'mkdir -p #log_path#; '
@@ -353,6 +354,7 @@ sub pipeline_analyses {
         schema => '#expr( #schemas#->{#metadata_type#} )expr#', # N.B. no quotes around #metadata_type#
       },
       -analysis_capacity => 2,
+      -failed_job_tolerance => 10, # in %
       -batch_size     => 50,
       -rc_name        => 'default',
     },
@@ -368,7 +370,7 @@ sub pipeline_analyses {
       -analysis_capacity   => 10,
       -rc_name         => $self->o('manifest_integrity_rc_name'),
       -max_retry_count => 0,
-      -failed_job_tolerance => 100,
+      -failed_job_tolerance => 10, # in %
       -flow_into => 'Prepare_genome',
     },
 
