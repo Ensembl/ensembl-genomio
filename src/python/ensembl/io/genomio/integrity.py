@@ -637,56 +637,83 @@ class IntegrityTool:
         Args:
             seqs: Sequence name and length retrieved from seq_region.json file.
             feats: Sequence name and length retrieved from the fasta and gff file.
-            name: String
+            name: Name of the check to show in the logs.
+            circular: Whether any sequence is circular.
 
         Returns:
             Error if there are common sequences with difference in ids
             and if the sequences are not consistent in the files.
         """
+        comp = self._compare_seqs(seqrs, feats, circular)
 
-        only_seqr = []
-        only_feat = []
-
-        common = []
-        diff = []
-        diff_list = []
-
-        # not an error on circular for gff features
-        diff_circular = []
-        diff_circular_list = []
-
-        for seq_id in seqrs:
-            if seq_id in feats:
-                # Check that feature is within the seq_region length
-                if feats[seq_id] > seqrs[seq_id]:
-                    if circular is None or not circular.get(seq_id, False):
-                        diff.append(seq_id)
-                        diff_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
-                    else:
-                        diff_circular.append(seq_id)
-                        diff_circular_list.append("%s: %d vs %d" % (seq_id, seqrs[seq_id], feats[seq_id]))
-                else:
-                    common.append(seq_id)
-            else:
-                only_seqr.append(seq_id)
-        for seq_id in feats:
-            if seq_id not in common and seq_id not in diff and seq_id not in diff_circular:
-                only_feat.append(seq_id)
+        common = comp["common"]
+        diff = comp["diff"]
+        diff_circular = comp["diff_circular"]
+        only_seqr = comp["only_seqr"]
+        only_feat = comp["only_feat"]
 
         if common:
             print(f"{len(common)} common elements in {name}")
         if diff_circular:
-            print(
-                "%d differences for circular elements in %s (e.g. %s)"
-                % (len(diff_circular), name, diff_circular_list[0])
-            )
+            example = diff_circular[0]
+            print(f"{len(diff_circular)} differences for circular elements in {name} (e.g. {example})")
         if diff:
-            self.add_errors(f"{len(diff)} common elements with higher length in {name} (e.g. {diff_list[0]})")
+            self.add_errors(f"{len(diff)} common elements with higher length in {name} (e.g. {diff[0]})")
         if only_seqr:
             # Not an error!
             print(f"{len(only_seqr)} only in seq_region list in {name} (first: {only_seqr[0]})")
         if only_feat:
             self.add_errors(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
+
+    def _compare_seqs(
+        self, seqrs: Dict[str, Any], feats: Dict[str, Any], circular: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, List[str]]:
+        """Give the intersection and other comparison between two groups of sequences.
+
+        Args:
+            seqs: Sequence name and length retrieved from seq_region.json file.
+            feats: Sequence name and length retrieved from the fasta and gff file.
+            circular: Whether any sequence is circular.
+
+        Returns: Dict with 5 stats:
+            common: Common elements.
+            only_seqr: Elements only in the first one.
+            only_feat: Elements only in the second one.
+            diff: Elements that differ.
+            diff_circular: Elements that differ in a circular sequence.
+
+        """
+        comp: Dict[str, List[str]] = {
+            "common": [],
+            "only_seqr": [],
+            "only_feat": [],
+            "diff": [],
+            "diff_circular": [],
+        }
+
+        for seq_id in seqrs:
+            if seq_id in feats:
+                # Check that feature is within the seq_region length
+                if feats[seq_id] > seqrs[seq_id]:
+                    diff_str = f"{seq_id}: {seqrs[seq_id]} vs {feats[seq_id]}"
+                    if circular and circular.get(seq_id, False):
+                        comp["diff_circular"].append(diff_str)
+                    else:
+                        comp["diff"].append(diff_str)
+                else:
+                    comp["common"].append(seq_id)
+            else:
+                comp["only_seqr"].append(seq_id)
+
+        for seq_id in feats:
+            if (
+                seq_id not in comp["common"]
+                and seq_id not in comp["diff"]
+                and seq_id not in comp["diff_circular"]
+            ):
+                comp["only_feat"].append(seq_id)
+
+        return comp
 
 
 class InputSchema(argschema.ArgSchema):
