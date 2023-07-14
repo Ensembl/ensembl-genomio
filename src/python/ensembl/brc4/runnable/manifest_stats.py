@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Set, TextIO
 from BCBio import GFF
 import eHive
 
-from ensembl.brc4.runnable.utils import get_json
+from ensembl.io.genomio.utils.json_utils import get_json
 
 
 class BiotypeCollection:

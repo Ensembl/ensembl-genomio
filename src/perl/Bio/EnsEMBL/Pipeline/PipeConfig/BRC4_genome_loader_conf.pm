@@ -341,15 +341,20 @@ sub pipeline_analyses {
       },
     },
 
-    { -logic_name     => 'check_json_schema',
-      -module         => 'ensembl.brc4.runnable.schema_validator',
-      -language => 'python3',
-      -parameters     => {
-        json_file => '#metadata_json#',
-        json_schema => '#schemas#',
+    {
+      -logic_name     => 'check_json_schema',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        cmd => 'mkdir -p #log_path#; '
+             . 'echo "checking #json# against #schema#" > #log_path#/#metadata_type#.log; '
+             . 'check_json_schema --json_file #json# --json_schema #schema# '
+             . '   >> #log_path#/#metadata_type#.log 2>&1 ',
+        log_path => $self->o('pipeline_dir') . '/check_schemas',
+        json => '#metadata_json#',
+        schema => '#expr( #schemas#->{#metadata_type#} )expr#', # N.B. no quotes around #metadata_type#
       },
       -analysis_capacity => 2,
-      -failed_job_tolerance => 100,
+      -failed_job_tolerance => 10, # in %
       -batch_size     => 50,
       -rc_name        => 'default',
     },
@@ -357,15 +362,17 @@ sub pipeline_analyses {
     {
       # Check the integrity of the manifest before loading anything
       -logic_name => 'Manifest_integrity',
-      -module     => 'ensembl.brc4.runnable.integrity',
-      -language   => 'python3',
-      -parameters => {
-        ignore_final_stops => $self->o('ignore_final_stops'),
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        cmd => 'mkdir -p #log_path#; '
+             . 'check_integrity --brc_mode #brc4_mode# --ignore_final_stops #ignore_final_stops# --manifest_file #manifest# '
+             . '   > #log_path#/check.log 2>&1 ',
+        log_path => $self->o('pipeline_dir') . '/check_integrity',
       },
       -analysis_capacity   => 10,
       -rc_name         => $self->o('manifest_integrity_rc_name'),
       -max_retry_count => 0,
-      -failed_job_tolerance => 100,
+      -failed_job_tolerance => 10, # in %
       -flow_into => 'Prepare_genome',
     },
 
