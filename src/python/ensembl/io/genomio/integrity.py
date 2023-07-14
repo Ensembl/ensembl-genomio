@@ -479,7 +479,9 @@ class IntegrityTool:
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
             if seq_regions:
-                self.check_seq_region_lengths(seq_lengths, gff_seq_regions, "Seq_regions metadata vs gff", seq_circular)
+                self.check_seq_region_lengths(
+                    seq_lengths, gff_seq_regions, "Seq_regions metadata vs gff", seq_circular
+                )
 
         # Check fasta dna and seq_region integrity
         if dna and seq_regions:
@@ -502,7 +504,6 @@ class IntegrityTool:
         """Set ignore_final_stops (when calculating peptide length) for this tool and the manifest."""
         self.ignore_final_stops = ignore_final_stops
         self.manifest.ignore_final_stops = ignore_final_stops
-
 
     def _check_genome(self, genome: Dict) -> None:
         """Check if the accession is correct in genome.json."""
@@ -619,7 +620,13 @@ class IntegrityTool:
 
         return errors
 
-    def check_seq_region_lengths(self, seqrs: Dict[str, Any], feats: Dict[str, Any], name: str, circular: Optional[Dict[str, Any]] = None) -> None:
+    def check_seq_region_lengths(
+        self,
+        seqrs: Dict[str, Any],
+        feats: Dict[str, Any],
+        name: str,
+        circular: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """Check the integrity of seq_region.json file by comparing the length of the sequence
             to fasta files and the gff.
 
@@ -690,7 +697,9 @@ class InputSchema(argschema.ArgSchema):
         required=True, metadata={"description": "Manifest file for the data to check"}
     )
     brc_mode = argschema.fields.Boolean(required=False, metadata={"description": "BRC mode"})
-    ignore_final_stops = argschema.fields.Boolean(required=False, metadata={"description": "Ignore final stop when calculating peptide length"})
+    ignore_final_stops = argschema.fields.Boolean(
+        required=False, metadata={"description": "Ignore final stop when calculating peptide length"}
+    )
 
 
 def main() -> None:
