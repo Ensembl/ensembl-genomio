@@ -368,7 +368,7 @@ sub pipeline_analyses {
              . 'check_integrity #brc_mode_opt# #ignore_final_stops_opt# --manifest_file #manifest# '
              . '   >> #log_path#/check.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_integrity',
-        brc_mode_opt => '#expr( #brc_mode# ? "--brc_mode" : "" )expr#',
+        brc_mode_opt => '#expr( #brc4_mode# ? "--brc_mode" : "" )expr#',
         ignore_final_stops_opt => '#expr( #ignore_final_stops# ? "--ignore_final_stops" : "" )expr#',
       },
       -analysis_capacity   => 10,
