@@ -345,12 +345,12 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
         cmd => 'mkdir -p #log_path#; '
-            . 'echo "checking #json# against #schema#" >> #log_path#/check.log; '
-            . 'check_json_schema -json_file #json# -json_schema #schema# '
-            . ' >> #log_path#/check.log 2>&1 ',
+             . 'echo "checking #json# against #schema#" >> #log_path#/#metadata_type#.log; '
+             . 'check_json_schema --json_file #json# --json_schema #schema# '
+             . '   >> #log_path#/#metadata_type#.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_schemas',
         json => '#metadata_json#',
-        schema => '#expr( #schemas#->{"#metadata_type#"} )expr#',
+        schema => '#expr( #schemas#->{#metadata_type#} )expr#', # N.B. no quotes around #metadata_type#
       },
       -analysis_capacity => 2,
       -batch_size     => 50,
