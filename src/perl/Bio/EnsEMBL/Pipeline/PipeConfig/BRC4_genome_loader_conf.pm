@@ -346,7 +346,7 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
         cmd => 'mkdir -p #log_path#; '
-             . 'echo "checking #json# against #schema#" >> #log_path#/#metadata_type#.log; '
+             . 'echo "checking #json# against #schema#" > #log_path#/#metadata_type#.log; '
              . 'check_json_schema --json_file #json# --json_schema #schema# '
              . '   >> #log_path#/#metadata_type#.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_schemas',
@@ -366,7 +366,7 @@ sub pipeline_analyses {
       -parameters  => {
         cmd => 'mkdir -p #log_path#; '
              . 'check_integrity --brc_mode #brc4_mode# --ignore_final_stops #ignore_final_stops# --manifest_file #manifest# '
-             . '   >> #log_path#/check.log 2>&1 ',
+             . '   > #log_path#/check.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_integrity',
       },
       -analysis_capacity   => 10,
