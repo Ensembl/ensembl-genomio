@@ -28,6 +28,9 @@ from ensembl.io.genomio.utils import print_json, get_json
 from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
+version_end = re.compile(r"\.\d+$")
+
+
 class MissingDataError(Exception):
     """Used if some data is missing from the report file."""
 
@@ -46,8 +49,17 @@ def get_additions(report_path: Path, gbff_path: Path) -> List[str]:
         gbff_path: Path to the GBFF file.
     """
     gbff_regions = set(get_gbff_regions(gbff_path))
-    report_regions = set(get_report_regions_names(report_path))
-    additions = list(report_regions.difference(gbff_regions))
+    report_regions = get_report_regions_names(report_path)
+
+    additions = []
+    for rep_seq in report_regions:
+        (rs_seq, gb_seq) = rep_seq
+        if rs_seq not in gbff_regions and gb_seq not in gbff_regions:
+            if rs_seq:
+                additions.append(rs_seq)
+            else:
+                additions.append(gb_seq)
+    additions = sorted(additions)
     return additions
 
 
@@ -63,7 +75,8 @@ def get_gbff_regions(gbff_path: Path) -> List[str]:
     seq_regions = []
     with open_gz_file(gbff_path) as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
-            seq_regions.append(record.id)
+            record_id = re.sub(version_end, "", record.id)
+            seq_regions.append(record_id)
     return seq_regions
 
 
@@ -94,7 +107,7 @@ def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
         return data, metadata
 
 
-def get_report_regions_names(report_path: Path) -> List[str]:
+def get_report_regions_names(report_path: Path) -> List[Tuple[str]]:
     """Returns a list of `seq_region` names from the report file.
 
     Args:
@@ -111,13 +124,14 @@ def get_report_regions_names(report_path: Path) -> List[str]:
     for row in reader:
         refseq_name = row["RefSeq-Accn"]
         genbank_name = row["GenBank-Accn"]
-        name = ""
-        if genbank_name and genbank_name != "na":
-            name = genbank_name
-        elif refseq_name and refseq_name != "na":
-            name = refseq_name
-        if name:
-            seq_regions.append(name)
+
+        if refseq_name == "na":
+            refseq_name = ""
+        if genbank_name == "na":
+            genbank_name = ""
+        refseq_name = re.sub(version_end, "", refseq_name)
+        genbank_name = re.sub(version_end, "", genbank_name)
+        seq_regions.append((genbank_name, refseq_name))
     return seq_regions
 
 
