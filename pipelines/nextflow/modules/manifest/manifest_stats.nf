@@ -20,12 +20,17 @@ process MANIFEST_STATS {
     input:
         tuple path(manifest_dir), val(accession)
         val datasets
+        val ncbi_check
 
     output:
         tuple path(manifest_dir), val(accession)
 
     script:
         """
-        manifest_stats --manifest_dir "$manifest_dir" --datasets_bin "$datasets" --accession $accession
+        CHECK_ASSEMBLY=""
+        if [ "$ncbi_check" == 1 ]; then
+            CHECK_ASSEMBLY=" --datasets_bin $datasets --accession $accession"
+        fi
+        manifest_stats --manifest_dir "$manifest_dir" \$CHECK_ASSEMBLY
         """
 }
