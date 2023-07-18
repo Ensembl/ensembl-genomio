@@ -14,21 +14,21 @@
 // limitations under the License.
 
 process PUBLISH_DIR {
-    publishDir "$out_dir", mode: 'copy', overwrite: false
+    publishDir "$out_dir/$accession", mode: 'copy', overwrite: false
     tag "Publish_${accession}"
     label 'default'
     time '5min'
 
     input:
-        tuple path(data_dir), val(accession)
+        tuple val(accession), path(genome_files)
         val (out_dir)
     
     output:
-        path data_dir
+        path("*.*", includeInputs: true)
     
     script:
         """
         echo "Just copy over the finished files"
-        echo "From '$data_dir' to '$out_dir' for accession '$accession'"
+        echo "All files here to '$out_dir/$accession'"
         """
 }

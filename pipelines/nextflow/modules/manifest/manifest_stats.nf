@@ -16,21 +16,27 @@
 process MANIFEST_STATS {
     tag "manifest_stats"
     label 'default'
+    publishDir "$out_dir/$accession", mode: 'copy'
 
     input:
-        tuple path(manifest_dir), val(accession)
+        tuple val(accession), path(genome_files)
         val datasets
-        val ignore_failed_stats
+        val ignore_failed
+        val out_dir
 
     output:
-        tuple path(manifest_dir), val(accession)
+        tuple val(accession), path("stats.txt")
 
     script:
         """
         MORE_CMD=""
-        if [ "$ignore_failed_stats" = "1" ]; then
+        if [ "$ignore_failed" = "1" ]; then
             MORE_CMD=" --ignore_failed 1"
         fi
-        manifest_stats --manifest_dir "$manifest_dir" --datasets_bin "$datasets" --accession "$accession" \$MORE_CMD
+        manifest_stats --manifest_dir "." \
+        --datasets_bin "$datasets" \
+        --accession "$accession" \
+        --stats_file ./stats.txt \
+        \$MORE_CMD
         """
 }

@@ -18,13 +18,13 @@ process MANIFEST {
     label 'default'
     
     input:
-        tuple path(manifest_dir), val(accession)
+        tuple val(accession), path(files_to_record)
 
     output:
-        tuple path(manifest_dir), val(accession)
+        tuple val(accession), path("*.*", includeInputs: true)
     
     script:
         """
-        manifest_maker --manifest_dir ${manifest_dir}
+        manifest_maker --manifest_dir ./
         """
 }

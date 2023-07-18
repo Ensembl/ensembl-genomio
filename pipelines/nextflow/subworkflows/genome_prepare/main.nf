@@ -99,14 +99,12 @@ workflow GENOME_PREPARE {
                     .groupTuple()
 
         // Collect in manifest, checks and generate sequence stats
-        collect_dir = COLLECT_FILES(prepared_files)
-
-        manifest_dired = MANIFEST(collect_dir)
-        
-        manifest_checked = CHECK_INTEGRITY(manifest_dired, params.brc_mode)
-        
-        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', ignore_failed_stats)
+        manifest = MANIFEST(prepared_files)
+        manifest_checked = CHECK_INTEGRITY(manifest, params.brc_mode)
 
         // Publish the data to output directory
-        PUBLISH_DIR(manifest_stated, output_dir)
+        PUBLISH_DIR(manifest_checked, output_dir)
+
+        // Include a stats file, outside of the manifest files
+        MANIFEST_STATS(manifest_checked, 'datasets', ignore_failed_stats, output_dir)
 }
