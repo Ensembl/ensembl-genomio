@@ -48,7 +48,11 @@ sub default_options {
     %{ $self->SUPER::default_options() },
 
     ## default LSF/Slurm queue name 
-    queue_name => "standard",
+    #   is defined at Bio::EnsEMBL::EGPipeline::PipeConfig::EGGeneric_conf
+    #   via Bio::EnsEMBL::EGPipeline::PrivateConfDetails::Impl
+    #   (https://github.com/Ensembl/ensembl-production-imported/blob/main/lib/perl/Bio/EnsEMBL/EGPipeline/PrivateConfDetails/Impl.pm.example)
+    #
+    # queue_name => "standard",
 
     ############################################
     # Config to be set by the user
