@@ -107,7 +107,7 @@ def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
         return data, metadata
 
 
-def get_report_regions_names(report_path: Path) -> List[Tuple[str]]:
+def get_report_regions_names(report_path: Path) -> List[Tuple[str, str]]:
     """Returns a list of `seq_region` names from the report file.
 
     Args:
