@@ -493,20 +493,24 @@ sub pipeline_analyses {
       -rc_name         => 'default',
     },
 
-    { -logic_name     => 'Check_json_schema',
-      -module         => 'ensembl.brc4.runnable.schema_validator',
-      -language => 'python3',
-      -parameters     => {
-        json_file => '#metadata_json#',
-        json_schema => '#schemas#',
+    {
+      -logic_name     => 'Check_json_schema',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        log_path => $self->o('tmp_dir') . '/check_schemas',
+        json => '#metadata_json#',
+        schema => '#expr( #schemas#->{#metadata_type#} )expr#',
+        cmd => 'mkdir -p #log_path#; '
+             . 'echo "checking #json# against #schema#" > #log_path#/#metadata_type#.log; '
+             . 'check_json_schema --json_file #json# --json_schema #schema# '
+             . '   >> #log_path#/#metadata_type#.log 2>&1 ',
         hash_key => "#metadata_type#",
       },
-      -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=metadata_json' },
-      -analysis_capacity => 1,
-      -analysis_capacity => 1,
-      -failed_job_tolerance => 100,
+      -analysis_capacity => 2,
+      -failed_job_tolerance => 10,
       -batch_size     => 50,
       -rc_name        => 'default',
+      -flow_into  => { 1 => '?accu_name=manifest&accu_address={hash_key}&accu_input_variable=metadata_json' },
     },
 
     { -logic_name  => 'Dump_genome_sql',
