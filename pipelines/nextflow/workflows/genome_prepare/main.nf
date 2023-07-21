@@ -34,6 +34,7 @@ def helpMessage() {
 
         Optional arguments:
         --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
+        --ncbi_check                   Set to 0 to skip the NCBI stats check.
         --help                         This usage statement.
         """
 }
@@ -64,5 +65,5 @@ workflow {
     PREPARE_GENOME_METADATA.out.genomic_dataset
         .map{ gca_dir, json_file -> tuple( gca_dir.getName(), json_file ) }
         .set { genome_metadata }
-    GENOME_PREPARE(genome_metadata, params.output_dir, params.cache_dir)
+    GENOME_PREPARE(genome_metadata, params.output_dir, params.cache_dir, params.ncbi_check)
 }

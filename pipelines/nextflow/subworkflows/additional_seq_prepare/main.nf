@@ -72,7 +72,7 @@ workflow additional_seq_prepare {
         
         manifest_checked = CHECK_INTEGRITY(manifest_dired, params.brc_mode)
         
-        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets')
+        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', 0)
 
         // Publish the data to output directory
         PUBLISH_DIR(manifest_stated, output_dir)

@@ -58,6 +58,11 @@ input:
       description: |
         NON MANDATORY param. Optional dir name used to store prepared genome data files (.gff3; .fa; .json)
         Default 'Output_GenomePrepare'. Contains one or more GCA_* sub directories. 
+  - ncbi_check:
+      type: boolean
+      description: |
+        NON MANDATORY param. Set to 0 to skip the NCBI stats check. If the stats fail, the script will die.
+        Default '1'.
 output:
   - fasta_dna:
       type: file
