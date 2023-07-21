@@ -17,19 +17,21 @@ nextflow.enable.dsl=2
 params.merge_split_genes="False"
 
 process PROCESS_GFF3 {
-    tag "$gff3 - $task.attempt"
+    tag "$gca"
     label 'variable_2_8_32'
-    errorStrategy 'ignore'
+    errorStrategy 'finish'
 
     input:
         tuple val(gca), path(gff3), path(genome)
 
     output:
-        tuple val(gca), path("*.json"), emit: functional_annotation
-        tuple val(gca), path("*.gff3"), emit: gene_models
+        tuple val(gca), path("functional_annotation.json"), emit: functional_annotation
+        tuple val(gca), path("gene_models.gff3"), emit: gene_models
 
     script:
+    def out_func = "functional_annotation.json"
+    def out_gff = "gene_models.gff3"
     """
-    process_gff3 --in_gff_path ${gff3} --genome_data ${genome}
+    process_gff3 --genome_data $genome --in_gff_path $gff3 --out_gff_path $out_gff --out_func_path $out_func
     """
 }
