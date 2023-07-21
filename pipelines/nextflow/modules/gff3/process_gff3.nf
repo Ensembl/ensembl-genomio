@@ -18,8 +18,7 @@ params.merge_split_genes="False"
 
 process PROCESS_GFF3 {
     tag "$gca"
-    label 'variable_2_8_32'
-    errorStrategy 'finish'
+    label 'adaptive'
 
     input:
         tuple val(gca), path(gff3), path(genome)
