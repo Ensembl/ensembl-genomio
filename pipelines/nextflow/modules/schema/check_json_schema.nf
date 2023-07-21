@@ -15,7 +15,7 @@
 
 process CHECK_JSON_SCHEMA {
     tag "$json_file.name"
-    label 'default'
+    label 'adaptive'
 
     input:
         tuple val(gca), path(json_file)
