@@ -15,7 +15,7 @@
 
 process MANIFEST {
     tag "Manifest_$accession"
-    label 'default'
+    label 'adaptive'
     
     input:
         tuple path(manifest_dir), val(accession)

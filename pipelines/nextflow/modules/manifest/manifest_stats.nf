@@ -15,7 +15,7 @@
 
 process MANIFEST_STATS {
     tag "manifest_stats"
-    label 'default'
+    label 'adaptive'
 
     input:
         tuple path(manifest_dir), val(accession)
