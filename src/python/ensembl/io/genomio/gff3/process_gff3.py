@@ -115,6 +115,8 @@ class GFFParserCommon:
         "3'UTR",
         "5'UTR",
         "intron",
+        "non_canonical_five_prime_splice_site",
+        "non_canonical_three_prime_splice_site",
     ]
 
 
