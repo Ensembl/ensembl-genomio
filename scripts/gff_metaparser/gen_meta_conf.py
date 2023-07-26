@@ -179,6 +179,13 @@ def get_args():
         default=False,
         help="assume contigs are circular by default",
     )
+    parser.add_argument(
+        "--generate_species_aliases",
+        action="store_true",
+        required=False,
+        default=False,
+        help="add generated species aliases",
+    )
     #
     args = parser.parse_args()
     return args
@@ -188,7 +195,7 @@ def get_args():
 def main():
     args = get_args()
 
-    meta = MetaConf(args.raw_meta_conf)
+    meta = MetaConf(args.raw_meta_conf, args.generate_species_aliases)
     meta.merge_from_asm_rep(args.asm_rep_file)
     meta.merge_from_gbff(args.gbff_file)
     meta.update_derived_data(
