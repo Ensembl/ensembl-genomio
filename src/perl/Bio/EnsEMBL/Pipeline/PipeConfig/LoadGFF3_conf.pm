@@ -97,6 +97,7 @@ sub default_options_generic {
     # Remove existing genes; if => 0 then existing analyses
     # and their features will remain, with the logic_name suffixed by '_bkp'.
     delete_existing => 1,
+    keep_logic_name => 0,
     
     # Retrieve analysis descriptions from the production database;
     # the supplied registry file will need the relevant server details.
@@ -322,6 +323,7 @@ sub pipeline_analyses_generic {
                               db_backup_file     => catdir($self->o('pipeline_dir'), '#species#', 'pre_gff3_bkp.sql.gz'),
                               module             => $self->o('analysis_module'),
                               delete_existing    => $self->o('delete_existing'),
+                              keep_logic_name    => $self->o('keep_logic_name'),
                               production_lookup  => $self->o('production_lookup'),
                               production_db      => $self->o('production_db'),
                             },
