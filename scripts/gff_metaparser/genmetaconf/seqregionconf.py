@@ -240,10 +240,10 @@ class SeqRegionConf:
                 }
 
                 # fill cs_tag from "Assigned-Molecule-Location/Type" only if "Sequence-Role" is ""assembled-molecule"
-                cs_tag = None
+                cs_tag, cs_location = None, None
                 _seq_role = sources_syns_raw.get("_SEQUENCE_ROLE", "")
                 if _seq_role.lower() == "assembled-molecule":
-                    cs_tag = self.map_cs_tag(sources_syns_raw.get("_COORD_SYSTEM_TAG", None))
+                    cs_tag, cs_location = self.map_cs_tag(sources_syns_raw.get("_COORD_SYSTEM_TAG", None))
 
                 # remove INSDC_submitted_name if it's equal to INSDC or RefSeq one
                 major_syns = {src: nm for src, nm in sources_syns.items() if src in ["INSDC", "RefSeq"]}
@@ -276,6 +276,8 @@ class SeqRegionConf:
                     # update cs_tag
                     if cs_tag:
                         self.seq_regions[contig].coord_system_level = cs_tag
+                    if cs_location:
+                        self.seq_regions[contig].location = cs_location
         return
 
     def unversion(self, name: str) -> str:
@@ -408,12 +410,25 @@ class SeqRegionConf:
             "contig": "contig",
             "superscaffold": "superscaffold",
             "linkagegroup": "linkage_group",
-            "chromosome": "chromosome",
             "primaryassembly": "primary_assembly",
+            "chromosome": "chromosome",
+            "mitochondrion": "chromosome",
+            "apicoplast": "chromosome",
+            "plasmid": "chromosome",
+            "chloroplast": "chromosome",
+        }
+
+        # location part
+        location_map = {
+            "chromosome": "nuclear_chromosome",
+            "genomic": "nuclear_chromosome",
+            "mitochondrion": "mitochondrial_chromosome",
+            "apicoplast": "apicoplast_chromosome",
+            "chloroplast":"chloroplast_chromosome",
         }
 
         if not location_type:
             return None
 
         raw = location_type.strip().lower().replace(" ", "").replace("_", "")
-        return assigned_loc_type_map.get(raw, None)
+        return assigned_loc_type_map.get(raw, None), location_map.get(raw, None)

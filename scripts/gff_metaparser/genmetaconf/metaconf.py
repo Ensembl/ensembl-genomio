@@ -32,11 +32,12 @@ from .seqregionconf import SeqRegionConf
 
 
 class MetaConf:
-    def __init__(self, config=None):
+    def __init__(self, config=None, add_generated_species_aliases = False):
         self.tech_data = defaultdict(list)
         self._order = dict()
         self.data = defaultdict(list)
 
+        self.add_generated_species_aliases = add_generated_species_aliases
         self.load_from_tsv(config)
 
     def load_from_tsv(self, tsv):
@@ -212,9 +213,9 @@ class MetaConf:
         sci_name_words = list(filter(None, _sci_name.split()))
         if sci_name_words:
             syns.append(sci_name_words[0][0] + ". " + sci_name_words[1])
-            syns.append(sci_name_words[0][0] + "." + sci_name_words[1][:3])
-            syns.append((sci_name_words[0][0] + sci_name_words[1][:3]).lower())
-        if syns:
+            syns.append(sci_name_words[0][0] + "." + sci_name_words[1][:5])
+            syns.append((sci_name_words[0][0] + sci_name_words[1][:5]).lower())
+        if syns and self.add_generated_species_aliases:
             self.update("species.alias", syns)
         # genebuild metadata
         if update_annotation_related:
