@@ -35,6 +35,7 @@ use Bio::EnsEMBL::DBEntry;
 use Try::Tiny;
 use File::Path qw(make_path);
 use LWP::UserAgent;
+use Time::Piece;
 use HTTP::Request;
 use JSON;
 
@@ -236,12 +237,12 @@ if ($opt{update} and not $opt{mock_osid}) {
   $osid = OSID_service_dev->new();
 }
 $osid->connect($opt{organism});
-allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix}, $opt{out_gene_map});
+allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix}, $opt{created_date}, $opt{out_gene_map});
 
 ###############################################################################
 
 sub allocate_genes {
-  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix, $gene_map_path) = @_;
+  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix, $created_date, $gene_map_path) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
   my $tra = $registry->get_adaptor($species, "core", "transcript");
@@ -250,7 +251,7 @@ sub allocate_genes {
   my $analysa = $registry->get_adaptor($species, "core", "analysis");
 
   my $import_an = $analysa->fetch_by_logic_name($analysis_name);
-  die if not $import_an;
+  die("No analysis $analysis_name found") if not $import_an;
   
   my $genes_count = 0;
   my $transcripts_count = 0;
@@ -263,6 +264,12 @@ sub allocate_genes {
     @genes = grep { $_->stable_id =~ /^$prefix/ } @genes;
     my $nnew = scalar(@genes);
     $logger->info("Reduce list using prefix $prefix: from $nold genes to $nnew");
+  }
+  if ($created_date) {
+    my $nold = scalar(@genes);
+    @genes = grep { localtime($_->created_date)->datetime >= $created_date } @genes;
+    my $nnew = scalar(@genes);
+    $logger->info("Reduce list using date $created_date: from $nold genes to $nnew");
   }
   $logger->info(scalar(@genes) . " genes will have a new stable_id allocated");
   
@@ -448,6 +455,7 @@ sub usage {
     
     --update          : Do the actual changes (default is no OSID call and no db changes)
     --prefix <str>    : Only replace ids for genes with this prefix [optional]
+    --after_date <str> : Only replace ids for genes created after this date (ISO format) [optional]
     --xref_source <str>: Keep the old ids under this xref name, e.g. "RefSeq" [optional]
     --analysis_name <str>: Name of the analysis to use for the renamed xrefs (default: $default_analysis_name)
     
@@ -475,6 +483,7 @@ sub opt_check {
     "update",
     "mock_osid",
     "prefix:s",
+    "after_date:s",
     "xref_source:s",
     "analysis_name:s",
     "out_gene_map:s",
@@ -486,6 +495,7 @@ sub opt_check {
 
   usage("Registry needed") if not $opt{registry};
   usage("Species needed") if not $opt{species};
+  usage("Output mapping file needed") if not $opt{out_gene_map};
   $opt{organism} //= $opt{species};
   if (not $opt{mock_osid}) {
     usage("OSID details needed") if not ($opt{osid_url} and $opt{osid_user} and $opt{osid_pass});
