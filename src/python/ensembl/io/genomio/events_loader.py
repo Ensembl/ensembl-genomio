@@ -39,11 +39,12 @@ class IdEvent:
 
     from_id: str
     to_id: str
+    event: str
     release: str
     release_date: str
 
     def __str__(self) -> str:
-        fields = [self.from_id, self.to_id, self.release, self.release_date]
+        fields = [self.from_id, self.to_id, self.event, self.release, self.release_date]
         return "\t".join(fields)
 
 
@@ -78,8 +79,8 @@ class EventCollection:
                 line.strip()
                 if line == "":
                     continue
-                (from_id, to_id, _, release, release_date) = line.split("\t")
-                event = IdEvent(from_id=from_id, to_id=to_id, release=release, release_date=release_date)
+                (from_id, to_id, event_name, release, release_date) = line.split("\t")
+                event = IdEvent(from_id=from_id, to_id=to_id, event=event_name, release=release, release_date=release_date)
                 events.append(event)
         self.events = events
 
@@ -88,6 +89,7 @@ class EventCollection:
     ):
         """Load events from input file from gene_diff."""
         events: List[IdEvent] = []
+        event_name = "event"
 
         with Path(input_file).open("r") as events_fh:
             for line in events_fh:
@@ -97,7 +99,7 @@ class EventCollection:
                 for pair in self._parse_gene_diff_event(event_string):
                     (from_id, to_id) = pair
                     event = IdEvent(
-                        from_id=from_id, to_id=to_id, release=release_name, release_date=release_date
+                        from_id=from_id, to_id=to_id, event=event_name, release=release_name, release_date=release_date
                     )
                     events.append(event)
         self.events = events
