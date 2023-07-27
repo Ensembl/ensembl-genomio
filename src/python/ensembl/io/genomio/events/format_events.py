@@ -20,7 +20,8 @@
 
 from os import PathLike
 from pathlib import Path
-from typing import Dict
+import re
+from typing import Dict, List
 
 import argschema
 
@@ -49,6 +50,20 @@ class IdsMapper:
 
         return mapping
 
+def load_list(list_file: Path) -> List[str]:
+    """Return a simple list from a file.
+    """
+    items = set()
+    empty_spaces = re.compile(r"\s+")
+    with Path(list_file).open("r") as map_fh:
+        for line in map_fh:
+            line = re.sub(empty_spaces, "", line)
+            if line == "":
+                continue
+            items.add(line)
+
+    return list(items)
+
 
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
@@ -56,6 +71,9 @@ class InputSchema(argschema.ArgSchema):
     # Server parameters
     input_file = argschema.fields.InputFile(
         required=True, metadata={"description": "Input file from gene_diff"}
+    )
+    deletes_file = argschema.fields.InputFile(
+        required=True, metadata={"description": "Deleted genes files (apart from the deletes from the gene diff)."}
     )
     output_file = argschema.fields.OutputFile(required=True, metadata={"description": "Formatted event file"})
     map_file = argschema.fields.InputFile(
@@ -76,6 +94,9 @@ def main() -> None:
 
     # Start
     events = EventCollection()
+    if args.get("deletes_file"):
+        deleted_genes = load_list(args.get("deletes_file"))
+        events.add_deletes(deleted_genes, args.get("release_name"), args.get("release_date"))
     events.load_events_from_gene_diff(
         args.get("input_file"), args.get("release_name"), args.get("release_date")
     )

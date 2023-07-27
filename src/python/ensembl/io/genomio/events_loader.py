@@ -85,12 +85,20 @@ class EventCollection:
                 )
                 events.append(event)
         self.events = events
+    
+    def add_deletes(self, genes: List[str], release_name: str = "release_name", release_date: str = "release_date") -> None:
+        """Add deletion events from a list of deleted genes."""
+        for gene_id in genes:
+            event = IdEvent(
+                from_id=gene_id, to_id="", event="deletion", release=release_name, release_date=release_date
+            )
+            self.events.append(event)
+
 
     def load_events_from_gene_diff(
         self, input_file: PathLike, release_name: str = "release_name", release_date: str = "release_date"
     ):
         """Load events from input file from gene_diff."""
-        events: List[IdEvent] = []
         event_name = "event"
         loaded_event = set()
 
@@ -113,8 +121,7 @@ class EventCollection:
                         release=release_name,
                         release_date=release_date,
                     )
-                    events.append(event)
-        self.events = events
+                    self.events.append(event)
 
     def _parse_gene_diff_event(self, event_string: str) -> Generator[Tuple[str, str], None, None]:
         """Gets all the pairs of IDs from an event string from gene diff."""
@@ -137,6 +144,8 @@ class EventCollection:
 
         no_map = 0
         for event in self.events:
+            if not event.to_id:
+                continue
             if event.to_id in map_dict:
                 event.to_id = map_dict[event.to_id]
             else:
