@@ -237,12 +237,12 @@ if ($opt{update} and not $opt{mock_osid}) {
   $osid = OSID_service_dev->new();
 }
 $osid->connect($opt{organism});
-allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix}, $opt{created_date}, $opt{out_gene_map});
+allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix}, $opt{after_date}, $opt{out_gene_map});
 
 ###############################################################################
 
 sub allocate_genes {
-  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix, $created_date, $gene_map_path) = @_;
+  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix, $after_date, $gene_map_path) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
   my $tra = $registry->get_adaptor($species, "core", "transcript");
@@ -265,11 +265,11 @@ sub allocate_genes {
     my $nnew = scalar(@genes);
     $logger->info("Reduce list using prefix $prefix: from $nold genes to $nnew");
   }
-  if ($created_date) {
+  if ($after_date) {
     my $nold = scalar(@genes);
-    @genes = grep { localtime($_->created_date)->datetime >= $created_date } @genes;
+    @genes = grep { localtime($_->created_date)->datetime gt $after_date } @genes;
     my $nnew = scalar(@genes);
-    $logger->info("Reduce list using date $created_date: from $nold genes to $nnew");
+    $logger->info("Reduce list using date $after_date: from $nold genes to $nnew");
   }
   $logger->info(scalar(@genes) . " genes will have a new stable_id allocated");
   
