@@ -61,6 +61,12 @@ class InputSchema(argschema.ArgSchema):
     map_file = argschema.fields.InputFile(
         required=True, metadata={"description": "Mapping tab file with 2 columns: old_id, new_id"}
     )
+    release_name = argschema.fields.String(
+        required=True, metadata={"description": "Name of the release for all event."}
+    )
+    release_date = argschema.fields.String(
+        required=True, metadata={"description": "Date of the release for all events."}
+    )
 
 
 def main() -> None:
@@ -70,7 +76,9 @@ def main() -> None:
 
     # Start
     events = EventCollection()
-    events.load_events_from_gene_diff(args["input_file"])
+    events.load_events_from_gene_diff(
+        args.get("input_file"), args.get("release_name"), args.get("release_date")
+    )
     mapper = IdsMapper(args["map_file"])
     events.remap_to_ids(mapper.map)
     events.write_events_to_file(args["output_file"])

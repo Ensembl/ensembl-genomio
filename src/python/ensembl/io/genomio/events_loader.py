@@ -83,11 +83,11 @@ class EventCollection:
                 events.append(event)
         self.events = events
 
-    def load_events_from_gene_diff(self, input_file: PathLike):
+    def load_events_from_gene_diff(
+        self, input_file: PathLike, release_name: str = "release_name", release_date: str = "release_date"
+    ):
         """Load events from input file from gene_diff."""
         events: List[IdEvent] = []
-        release_name = "release_name"
-        release_date = "release_date"
 
         with Path(input_file).open("r") as events_fh:
             for line in events_fh:
