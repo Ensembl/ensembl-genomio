@@ -80,7 +80,9 @@ class EventCollection:
                 if line == "":
                     continue
                 (from_id, to_id, event_name, release, release_date) = line.split("\t")
-                event = IdEvent(from_id=from_id, to_id=to_id, event=event_name, release=release, release_date=release_date)
+                event = IdEvent(
+                    from_id=from_id, to_id=to_id, event=event_name, release=release, release_date=release_date
+                )
                 events.append(event)
         self.events = events
 
@@ -105,7 +107,11 @@ class EventCollection:
                         continue
                     loaded_event.add(fingerprint)
                     event = IdEvent(
-                        from_id=from_id, to_id=to_id, event=event_name, release=release_name, release_date=release_date
+                        from_id=from_id,
+                        to_id=to_id,
+                        event=event_name,
+                        release=release_name,
+                        release_date=release_date,
                     )
                     events.append(event)
         self.events = events
