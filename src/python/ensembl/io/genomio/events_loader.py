@@ -90,6 +90,7 @@ class EventCollection:
         """Load events from input file from gene_diff."""
         events: List[IdEvent] = []
         event_name = "event"
+        loaded_event = set()
 
         with Path(input_file).open("r") as events_fh:
             for line in events_fh:
@@ -98,6 +99,11 @@ class EventCollection:
                 (_, event_string, _) = line.split("\t")
                 for pair in self._parse_gene_diff_event(event_string):
                     (from_id, to_id) = pair
+                    fingerprint = f"{from_id} {to_id}"
+                    if fingerprint in loaded_event:
+                        print(f"Duplicated event, skipped: {fingerprint}")
+                        continue
+                    loaded_event.add(fingerprint)
                     event = IdEvent(
                         from_id=from_id, to_id=to_id, event=event_name, release=release_name, release_date=release_date
                     )
