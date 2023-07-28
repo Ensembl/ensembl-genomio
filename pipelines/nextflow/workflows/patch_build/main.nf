@@ -28,6 +28,11 @@ def helpMessage() {
         --database                     Database name
         --events_file                  Annotation event file from gene_diff
 
+        Registries parameters:
+        --old_registry                 Registry where the old version of the db resides (transfer from)
+        --new_registry                 Registry where the new version of the db resides (to modify) 
+        --species                      Production name of the species, same in both registries
+
         Optional arguments:
         --output_dir                   Where the process files can be stored
         --help                         This usage statement
@@ -56,6 +61,9 @@ if (params.host && params.port && params.user && params.pass) {
 } else {
     exit 1, "Missing server parameters"
 }
+if (!params.old_registry or !params.new_registry or !params.species) {
+    exit 1, "Missing registries parameters"
+}
 
 process extract_gene_lists {
     label 'local'
@@ -73,6 +81,25 @@ process extract_gene_lists {
     """
     grep -v "//" $events | grep -v "=" | grep -v "~" | sed s'/[+><]/\\t/' | cut -f3 | sed 's/:/\\n/g' | sort -u > $new_genes
     grep "=" $events | cut -f2 | sed -r 's/=[+!-]?/\t/' > $changed_genes
+    """
+}
+
+process transfer_ids {
+    label 'local'
+
+    input:
+        path(changed_genes)
+        path(old_registry)
+        path(new_registry)
+        val(species)
+
+    output:
+        path("untransfered_transcripts.txt")
+
+    script:
+    def untranscripts = "untransfered_transcripts.txt"
+    """
+    touch $untranscripts
     """
 }
 
@@ -96,11 +123,19 @@ process publish {
 // Run main workflow
 workflow {
     events = Channel.fromPath(params.events_file, checkIfExists: true)
+    old_registry = Channel.fromPath(params.old_registry, checkIfExists: true)
+    new_registry = Channel.fromPath(params.new_registry, checkIfExists: true)
 
     // Extract the genes lists from the annotation event file
     (new_genes, changed_genes) = extract_gene_lists(events)
 
+    // Transfer the genes from the old db to the new db
+    // Requires 2 registries and the species name
+    transcripts = transfer_ids(changed_genes, old_registry, new_registry, params.species)
+
     // Temporary: get all generated files in one folder
-    all_files = new_genes.concat(changed_genes)
+    all_files = new_genes
+        .concat(changed_genes)
+        .concat(transcripts)
     publish(all_files, params.output_dir)
 }
