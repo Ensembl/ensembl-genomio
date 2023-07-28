@@ -16,6 +16,7 @@
 
 // default params
 params.help = false
+params.mock_osid = false
 
 // Print usage
 def helpMessage() {
@@ -32,6 +33,13 @@ def helpMessage() {
         --old_registry                 Registry where the old version of the db resides (transfer from)
         --new_registry                 Registry where the new version of the db resides (to modify) 
         --species                      Production name of the species, same in both registries
+        
+        OSID parameters:
+        --osid_url
+        --osid_user
+        --osid_pass                    
+        --osid_species                 Connection parameters to the OSID server
+        --mock_osid                    Set to 1 if you want to run a fake id generator instead of OSID (for testing)
 
         Optional arguments:
         --output_dir                   Where the process files can be stored
@@ -56,10 +64,27 @@ def create_server(params) {
     return server
 }
 
+def create_osid_params(params) {
+    osid = [
+        "url": params.osid_url,
+        "user": params.osid_user,
+        "pass": params.osid_pass,
+        "species": params.osid_species
+    ]
+    return osid
+}
+
 if (params.host && params.port && params.user && params.pass) {
     server = create_server(params)
 } else {
     exit 1, "Missing server parameters"
+}
+if (params.mock_osid) {
+    osid = ["mock": true]
+} else if (params.osid_url && params.osid_user && params.osid_pass && params.osid_species) {
+    osid = create_osid_params(params)
+} else {
+    exit 1, "Missing OSID parameters"
 }
 if (!params.old_registry or !params.new_registry or !params.species) {
     exit 1, "Missing registries parameters"
@@ -94,12 +119,45 @@ process transfer_ids {
         val(species)
 
     output:
-        path("untransfered_transcripts.txt")
+        path("new_transcripts.txt")
 
     script:
-    def untranscripts = "untransfered_transcripts.txt"
+    def new_transcripts = "new_transcripts.txt"
     """
-    touch $untranscripts
+    touch $new_transcripts
+    """
+}
+
+process transfer_metadata {
+    label 'local'
+
+    input:
+        path(old_registry)
+        path(new_registry)
+        val(species)
+
+    script:
+    """
+    """
+}
+
+process allocate_ids {
+    label 'local'
+
+    input:
+        path(new_registry)
+        val(species)
+        val(osid_params)
+        path(new_genes)
+        val(mode)
+    
+    output:
+        path("output_map.txt")
+
+    script:
+    def output_map = "output_map.txt"
+    """
+    touch $output_map
     """
 }
 
@@ -131,11 +189,19 @@ workflow {
 
     // Transfer the genes from the old db to the new db
     // Requires 2 registries and the species name
-    transcripts = transfer_ids(changed_genes, old_registry, new_registry, params.species)
+    new_transcripts = transfer_ids(changed_genes, old_registry, new_registry, params.species)
+
+    // Transfer metadata (can be done any time after the ids are tranfered?)
+    transfer_metadata(old_registry, new_registry, params.species)
+
+    // Allocate ids for both the new_genes and the changed_genes new transcripts
+    new_genes_map = allocate_ids(new_registry, params.species, osid, new_genes, "gene")
+    // new_transcripts_map = allocate_transcript_ids(new_registry, species, osid_params, new_transcripts)
 
     // Temporary: get all generated files in one folder
     all_files = new_genes
         .concat(changed_genes)
-        .concat(transcripts)
+        .concat(new_transcripts)
+        .concat(new_genes_map)
     publish(all_files, params.output_dir)
 }
