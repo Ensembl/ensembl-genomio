@@ -161,6 +161,35 @@ process allocate_ids {
     """
 }
 
+process format_events {
+    label 'local'
+
+    input:
+        path(events, stageAs: "annotation_events.txt")
+        path(new_genes)
+    
+    output:
+        path("events.tab")
+
+    script:
+    def final_events = "events.tab"
+    """
+    touch $final_events
+    """
+}
+
+process load_events {
+    label 'local'
+
+    input:
+        val(server)
+        path(events)
+
+    script:
+    """
+    """
+}
+
 process publish {
     label "local"
     publishDir "$output_dir", mode: "copy"
@@ -198,10 +227,15 @@ workflow {
     new_genes_map = allocate_ids(new_registry, params.species, osid, new_genes, "gene")
     // new_transcripts_map = allocate_transcript_ids(new_registry, species, osid_params, new_transcripts)
 
+    // Format the annotation events file into a compatible event file
+    events_file = format_events(events, new_genes_map)
+    load_events(server, events_file)
+
     // Temporary: get all generated files in one folder
     all_files = new_genes
         .concat(changed_genes)
         .concat(new_transcripts)
         .concat(new_genes_map)
+        .concat(events_file)
     publish(all_files, params.output_dir)
 }
