@@ -50,9 +50,9 @@ class IdsMapper:
 
         return mapping
 
+
 def load_list(list_file: Path) -> List[str]:
-    """Return a simple list from a file.
-    """
+    """Return a simple list from a file."""
     items = set()
     empty_spaces = re.compile(r"\s+")
     with Path(list_file).open("r") as map_fh:
@@ -73,7 +73,8 @@ class InputSchema(argschema.ArgSchema):
         required=True, metadata={"description": "Input file from gene_diff"}
     )
     deletes_file = argschema.fields.InputFile(
-        required=True, metadata={"description": "Deleted genes files (apart from the deletes from the gene diff)."}
+        required=True,
+        metadata={"description": "Deleted genes files (apart from the deletes from the gene diff)."},
     )
     output_file = argschema.fields.OutputFile(required=True, metadata={"description": "Formatted event file"})
     map_file = argschema.fields.InputFile(

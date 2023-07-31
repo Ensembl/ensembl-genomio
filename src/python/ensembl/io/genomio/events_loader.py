@@ -85,15 +85,16 @@ class EventCollection:
                 )
                 events.append(event)
         self.events = events
-    
-    def add_deletes(self, genes: List[str], release_name: str = "release_name", release_date: str = "release_date") -> None:
+
+    def add_deletes(
+        self, genes: List[str], release_name: str = "release_name", release_date: str = "release_date"
+    ) -> None:
         """Add deletion events from a list of deleted genes."""
         for gene_id in genes:
             event = IdEvent(
                 from_id=gene_id, to_id="", event="deletion", release=release_name, release_date=release_date
             )
             self.events.append(event)
-
 
     def load_events_from_gene_diff(
         self, input_file: PathLike, release_name: str = "release_name", release_date: str = "release_date"
