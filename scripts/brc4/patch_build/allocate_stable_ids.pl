@@ -140,7 +140,7 @@ my $default_analysis_name = 'brc4_import';
     if ($data) {
       my $set_id = $data->{idSetId};
       my $ids_list = $data->{generatedIds};
-      die "No gene ids generated (requested $number)" if @$ids_list == 0;
+      die "No gene ids generated (requested $number)" if $number > 0 and @$ids_list == 0;
       my @ids = map { $_->{geneId} } @$ids_list;
       return ($set_id, \@ids);
     } else {
@@ -237,12 +237,28 @@ if ($opt{update} and not $opt{mock_osid}) {
   $osid = OSID_service_dev->new();
 }
 $osid->connect($opt{organism});
-allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix}, $opt{after_date}, $opt{out_gene_map});
+
+my $genes_list = load_gene_list($opt{gene_list});
+allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix}, $opt{after_date}, $opt{output_map}, $genes_list);
 
 ###############################################################################
 
+sub load_gene_list {
+  my ($gene_file) = @_;
+
+  return if not $gene_file;
+
+  my @gene_ids;
+  open my $file_fh, "<", $gene_file;
+  while (my $line = readline $file_fh) {
+    chomp($line);
+    push @gene_ids, $line;
+  }
+  return \@gene_ids;
+}
+
 sub allocate_genes {
-  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix, $after_date, $gene_map_path) = @_;
+  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix, $after_date, $output_map, $genes_list) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
   my $tra = $registry->get_adaptor($species, "core", "transcript");
@@ -257,7 +273,12 @@ sub allocate_genes {
   my $transcripts_count = 0;
   my $translations_count = 0;
   
-  my @genes = @{ $ga->fetch_all() };
+  my @genes;
+  if ($genes_list) {
+    @genes = map { $ga->fetch_by_stable_id($_) } @$genes_list;
+  } else {
+    @genes = @{ $ga->fetch_all() };
+  }
   
   if ($prefix) {
     my $nold = scalar(@genes);
@@ -295,7 +316,7 @@ sub allocate_genes {
     };
   }
 
-  save_gene_map(\%gene_map, $gene_map_path);
+  save_gene_map(\%gene_map, $output_map);
   
   # Part 2: get transcripts ids
   my $tr_ids = $osid->get_transcripts_ids($set_id, \@tran_count);
@@ -454,14 +475,22 @@ sub usage {
     --organism <str>  : species name in OSID, if it is not the production_name
     
     --update          : Do the actual changes (default is no OSID call and no db changes)
+
+    Selection of features to allocate:
     --prefix <str>    : Only replace ids for genes with this prefix [optional]
-    --after_date <str> : Only replace ids for genes created after this date (ISO format) [optional]
+    --after_date <str>: Only replace ids for genes created after this date (ISO format) [optional]
+    
+    Selection from a list:
+    --gene_list <path>: List of gene_ids to replace from a file.
+    --transcript_list <path>: List of transcript ids to replace from a file (need gene_id as first column).
+
+    Metadata:
     --xref_source <str>: Keep the old ids under this xref name, e.g. "RefSeq" [optional]
     --analysis_name <str>: Name of the analysis to use for the renamed xrefs (default: $default_analysis_name)
     
     --mock_osid       : Get IDs from the Fake OSID server (for dev testing with update)
 
-    --out_gene_map <path>: Save the gene mapping in a tab file (old_id, new_id, "", "release_name", "date"). You will need to replace the last 2.
+    --output_map <path>: Save the feature mapping in a tab file (old_id, new_id, "", "release_name", "date"). You will need to replace the last 2.
 
     --help            : show this help message
     --verbose         : show detailed progress
@@ -486,7 +515,9 @@ sub opt_check {
     "after_date:s",
     "xref_source:s",
     "analysis_name:s",
-    "out_gene_map:s",
+    "output_map:s",
+    "gene_list:s",
+    "transcript_list:s",
     "help",
     "verbose",
     "debug",
@@ -495,7 +526,7 @@ sub opt_check {
 
   usage("Registry needed") if not $opt{registry};
   usage("Species needed") if not $opt{species};
-  usage("Output mapping file needed") if not $opt{out_gene_map};
+  usage("Output mapping file needed") if not $opt{output_map};
   $opt{organism} //= $opt{species};
   if (not $opt{mock_osid}) {
     usage("OSID details needed") if not ($opt{osid_url} and $opt{osid_user} and $opt{osid_pass});

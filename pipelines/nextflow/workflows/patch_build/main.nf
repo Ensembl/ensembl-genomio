@@ -173,37 +173,6 @@ process transfer_metadata {
     """
 }
 
-process allocate_ids {
-    label 'local'
-
-    input:
-        path(new_registry)
-        val(species)
-        val(osid)
-        path(new_genes)
-        val(mode)
-    
-    output:
-        path("output_map.txt")
-
-    script:
-    def output_map = "output_map.txt"
-    def osid_params = ""
-    if (osid.mock) {
-        osid_params = "--mock_osid"
-    } else {
-        exit 1, "Actual OSID not implemented yet: $osid";
-    }
-    """
-    perl $params.scripts_dir/allocate_stable_ids.pl \\
-        --reg ./$new_registry \\
-        --species $species \\
-        --out_gene $output_map \\
-        $osid_params \\
-        --update
-    """
-}
-
 process format_events {
     label 'local'
 
@@ -266,6 +235,8 @@ process publish {
     """
 }
 
+include { ALLOCATE_IDS as ALLOCATE_GENE_IDS } from '../../modules/patch_build/allocate_ids.nf'
+include { ALLOCATE_IDS as ALLOCATE_TRANSCRIPT_IDS } from '../../modules/patch_build/allocate_ids.nf'
 
 workflow PATCH_BUILD_PROCESS {
 
@@ -290,7 +261,7 @@ workflow PATCH_BUILD_PROCESS {
         // transfer_metadata(old_registry, new_registry, params.species)
 
         // Allocate ids for both the new_genes and the changed_genes new transcripts
-        new_genes_map = allocate_ids(new_registry, params.species, osid, new_genes, "gene")
+        new_genes_map = ALLOCATE_GENE_IDS(new_registry, params.species, osid, new_genes, "gene")
         // new_transcripts_map = allocate_transcript_ids(new_registry, species, osid_params, new_transcripts)
 
         // Format the annotation events file into a compatible event file
