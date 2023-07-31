@@ -39,7 +39,7 @@ $reg_path = $opt{new_registry};
 $registry->load_all($reg_path);
 
 # Transfer the IDs to the new genes using the mapping
-transfer_gene_ids($registry, $species, $mapping, $opt{update});
+transfer_gene_ids($registry, $species, $mapping, $old_genes, $opt{update});
 
 ###############################################################################
 sub load_mapping {
@@ -66,26 +66,12 @@ sub get_genes_data {
     my $gene_id = $gene->stable_id;
 
     # Get transcripts
-    my @trs;
+    my %tr_data;
     for my $tr (@{$gene->get_all_Transcripts()}) {
-      my $tr_data = {
-        id => $tr->stable_id,
-        fingerprint => tr_fingerprint($tr),
-        seq_checksum => {},
-      };
-      my $prot = $tr->translation;
-      if ($prot) {
-        $tr_data->{protein_id} = $prot->stable_id;
-        my $seq = $prot->seq();
-        $tr_data->{seq_checksum}->{$seq} = 1;
-      }
-      push @trs, $tr_data;
+      my $tr_fingerprint = tr_fingerprint($tr);
+      $tr_data{$tr_fingerprint} = $tr;
     }
-    my $gene_data = {
-      id => $gene_id,
-      transcripts => \@trs,
-    };
-    $genes{$gene_id} =$gene_data;
+    $genes{$gene_id} = \%tr_data;
   }
   
   return \%genes;
@@ -94,11 +80,21 @@ sub get_genes_data {
 sub tr_fingerprint {
   my ($tr) = @_;
 
-  return $tr->stable_id;
+  my @coords = (
+    $tr->seq_region_name,
+    $tr->seq_region_start,
+    $tr->seq_region_end,
+    $tr->strand,
+  );
+  my $fingerprint = join(":", @coords);
+
+  # print("Fingerprint for " . $tr->stable_id . " : $fingerprint\n");
+
+  return $fingerprint;
 }
 
 sub transfer_gene_ids {
-  my ($registry, $species, $mapping, $update) = @_;
+  my ($registry, $species, $mapping, $old_genes, $update) = @_;
 
   my %stats = (
     gene_id => 0,
@@ -117,6 +113,9 @@ sub transfer_gene_ids {
     $gene->stable_id($old_id);
     $stats{gene_id}++;
     $stats{total}++;
+
+    # Update transcripts as well?
+    transfer_transcript($gene, $old_genes);
     $ga->update($gene) if $update;
   }
 
@@ -129,46 +128,30 @@ sub transfer_gene_ids {
   }
 }
 
-sub update_descriptions {
-  my ($registry, $species, $old_genes, $update) = @_;
-  
-  my $update_count = 0;
-  my $empty_count = 0;
-  my $new_count = 0;
-  
-  my $ga = $registry->get_adaptor($species, "core", 'gene');
+sub transfer_transcript {
+  my ($gene, $old_genes, $stats) = @_;
 
-  for my $gene (@{$ga->fetch_all}) {
-    my $id = $gene->stable_id;
-    my $description = $gene->description;
+  my $old_gene = $old_genes->{$gene->stable_id};
+  return $gene if not $old_gene;
 
-    if (not defined $description) {
-      my $old_gene = $old_genes->{$id};
-      if (not $old_gene) {
-        $new_count++;
-        next;
-      }
-      my $old_description = $old_gene->{description};
+  my $transcripts = $gene->get_all_Transcripts();
+  for my $transcript (@$transcripts) {
+    my $cur_fingerprint = tr_fingerprint($transcript);
 
-      if (defined $old_description) {
-        my $new_description = $old_description;
-        $logger->debug("Transfer gene $id description: $new_description");
-        $update_count++;
+    my $old_tr = $old_gene->{$cur_fingerprint};
+    next if not $old_tr;
 
-        if ($update) {
-          $gene->description($new_description);
-          $ga->update($gene);
-        }
-      } else {
-        $empty_count++;
-      }
-    }
+    # Same transcript fingerprint = same ID (both transcript and translation)
+    $transcript->stable_id($old_tr->stable_id);
+    $stats->{transcript}++;
+
+    my $translation = $transcript->translation;
+    my $old_translation = $old_tr->translation;
+    next if not $translation or not $old_translation;
+
+    $translation->stable_id($old_translation->stable_id);
+    $stats->{translation}++;
   }
-  
-  $logger->info("$update_count gene descriptions transferred");
-  $logger->info("$empty_count genes without description remain");
-  $logger->info("$new_count new genes, without description");
-  $logger->info("(Use --write to update the descriptions in the database)") if $update_count > 0 and not $update;
 }
 
 ###############################################################################
