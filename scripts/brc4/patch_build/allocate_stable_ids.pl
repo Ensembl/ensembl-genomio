@@ -218,30 +218,6 @@ my $default_analysis_name = 'brc4_import';
 }
 
 ###############################################################################
-# MAIN
-# Get command line args
-my %opt = %{ opt_check() };
-
-my $registry = 'Bio::EnsEMBL::Registry';
-my $reg_path = $opt{registry};
-$registry->load_all($reg_path);
-
-my $osid;
-if ($opt{update} and not $opt{mock_osid}) {
-  $osid = OSID_service->new(
-    url  => $opt{osid_url},
-    user => $opt{osid_user},
-    pass => $opt{osid_pass},
-  );
-} else {
-  $osid = OSID_service_dev->new();
-}
-$osid->connect($opt{organism});
-
-my $genes_list = load_gene_list($opt{gene_list});
-allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix}, $opt{after_date}, $opt{output_map}, $genes_list);
-
-###############################################################################
 
 sub load_gene_list {
   my ($gene_file) = @_;
@@ -257,8 +233,29 @@ sub load_gene_list {
   return \@gene_ids;
 }
 
+sub load_transcript_list {
+  # Get a dict of gene ids and transcript ids, where the key is gene_id and the value an array of transcript_ids
+  # for that gene_id
+  my ($transcript_file) = @_;
+
+  return if not $transcript_file;
+
+  my %ids;
+  open my $file_fh, "<", $transcript_file;
+  while (my $line = readline $file_fh) {
+    chomp($line);
+    my ($gene_id, $tr_id) = split("\t", $line);
+    if ($ids{$gene_id}) {
+      push @{$ids{$gene_id}}, $tr_id;
+    } else {
+      $ids{$gene_id} = [$tr_id];
+    }
+  }
+  return \%ids;
+}
+
 sub allocate_genes {
-  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix, $after_date, $output_map, $genes_list) = @_;
+  my ($osid, $registry, $species, $update, $xref_source, $analysis_name, $prefix, $after_date, $output_map, $genes_list, $trs_list) = @_;
   
   my $ga = $registry->get_adaptor($species, "core", "gene");
   my $tra = $registry->get_adaptor($species, "core", "transcript");
@@ -276,6 +273,8 @@ sub allocate_genes {
   my @genes;
   if ($genes_list) {
     @genes = map { $ga->fetch_by_stable_id($_) } @$genes_list;
+  } elsif ($trs_list) {
+    @genes = map { $ga->fetch_by_stable_id($_) } sort keys %$trs_list;
   } else {
     @genes = @{ $ga->fetch_all() };
   }
@@ -296,63 +295,79 @@ sub allocate_genes {
   
   # How to get all the ids
 
-  # Part 1: get gene ids, store in a map for later
-  my ($set_id, $gene_ids) = $osid->get_gene_ids(scalar(@genes));
-  
-  my %gene_map;
+  # Transcript list = don't need to get gene ids, we already have them
   my @tran_count;
-  for my $gene (@genes) {
-    # Allocate gene id
-    my $gene_id = shift @$gene_ids;
-    $gene_map{$gene->stable_id} = $gene_id;
+  my $set_id;
+  my %gene_map;
+  if ($trs_list) {
+    ($set_id) = $osid->get_gene_ids(0);  # Get a set id without asking for gene ids
+    for my $gene (@genes) {
+      my $gene_id = $gene->stable_id;
+      my $tr_count = $trs_list->{$gene_id};
+      # Make content for OSID patch
+      push @tran_count, {
+        'geneId' => $gene_id,
+        'transcripts' => $tr_count
+      };
+    }
+  } else {
+    # Part 1: get gene ids, store in a map for later
+    ($set_id, my $gene_ids) = $osid->get_gene_ids(scalar(@genes));
     
-    # Count transcript for that gene, for later transcripts allocation
-    my @transcripts = @{ $gene->get_all_Transcripts };
+    for my $gene (@genes) {
+      # Allocate gene id
+      my $gene_id = shift @$gene_ids;
+      $gene_map{$gene->stable_id} = $gene_id;
+      
+      # Count transcript for that gene, for later transcripts allocation
+      my @transcripts = @{ $gene->get_all_Transcripts };
 
-    # Make content for OSID patch
-    push @tran_count, {
-      'geneId' => $gene_id,
-      'transcripts' => scalar(@transcripts)
-    };
+      # Make content for OSID patch
+      push @tran_count, {
+        'geneId' => $gene_id,
+        'transcripts' => scalar(@transcripts)
+      };
+    }
+    save_gene_map(\%gene_map, $output_map);
   }
-
-  save_gene_map(\%gene_map, $output_map);
   
   # Part 2: get transcripts ids
   my $tr_ids = $osid->get_transcripts_ids($set_id, \@tran_count);
   
   # Part 3: Actually replace the ids
   for my $gene (@genes) {
-    $genes_count++;
 
-    my $gene_id = $gene_map{$gene->stable_id};
+    my $gene_id = $trs_list ? $gene->stable_id : $gene_map{$gene->stable_id};
     
     my @transcripts = @{ $gene->get_all_Transcripts };
 
     my $new_tran_ids = $tr_ids->{$gene_id}->{transcripts};
     my $new_prot_ids = $tr_ids->{$gene_id}->{proteins};
     
-    $logger->debug("Use gene id $gene_id to replace " . $gene->stable_id);
+    if (not $trs_list) {
+      $genes_count++;
+      $logger->debug("Use gene id $gene_id to replace " . $gene->stable_id);
 
-    # Store changes
-    if ($update) {
-      my $old_gene_id = $gene->stable_id;
-      $gene->stable_id($gene_id);
-      $ga->update($gene);
-      
-      # Xref
-      if ($xref_source) {
-        my $dbentry = Bio::EnsEMBL::DBEntry->new(
-          -adaptor => $dbenta,
-          -dbname => $xref_source,
-          -primary_id => $old_gene_id,
-          -display_id => $old_gene_id
-        );
+      # Store changes
+      if ($update) {
+        my $old_gene_id = $gene->stable_id;
+        $gene->stable_id($gene_id);
+        $ga->update($gene);
         
-        # Add analysis ENA for this
-        $dbentry->analysis($import_an);
+        # Xref
+        if ($xref_source) {
+          my $dbentry = Bio::EnsEMBL::DBEntry->new(
+            -adaptor => $dbenta,
+            -dbname => $xref_source,
+            -primary_id => $old_gene_id,
+            -display_id => $old_gene_id
+          );
+          
+          # Add analysis ENA for this
+          $dbentry->analysis($import_an);
 
-        $dbenta->store($dbentry, $gene->dbID, 'Gene');
+          $dbenta->store($dbentry, $gene->dbID, 'Gene');
+        }
       }
     }
     
@@ -536,6 +551,31 @@ sub opt_check {
   Log::Log4perl->easy_init($DEBUG) if $opt{debug};
   return \%opt;
 }
+
+###############################################################################
+# MAIN
+# Get command line args
+my %opt = %{ opt_check() };
+
+my $registry = 'Bio::EnsEMBL::Registry';
+my $reg_path = $opt{registry};
+$registry->load_all($reg_path);
+
+my $osid;
+if ($opt{update} and not $opt{mock_osid}) {
+  $osid = OSID_service->new(
+    url  => $opt{osid_url},
+    user => $opt{osid_user},
+    pass => $opt{osid_pass},
+  );
+} else {
+  $osid = OSID_service_dev->new();
+}
+$osid->connect($opt{organism});
+
+my $transcript_list = load_transcript_list($opt{transcript_list});
+my $genes_list = load_gene_list($opt{gene_list});
+allocate_genes($osid, $registry, $opt{species}, $opt{update}, $opt{xref_source}, $opt{analysis_name}, $opt{prefix}, $opt{after_date}, $opt{output_map}, $genes_list, $transcript_list);
 
 __END__
 

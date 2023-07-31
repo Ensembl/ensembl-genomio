@@ -262,17 +262,18 @@ workflow PATCH_BUILD_PROCESS {
 
         // Allocate ids for both the new_genes and the changed_genes new transcripts
         new_genes_map = ALLOCATE_GENE_IDS(new_registry, params.species, osid, new_genes, "gene")
-        // new_transcripts_map = allocate_transcript_ids(new_registry, species, osid_params, new_transcripts)
+        new_transcripts_map = ALLOCATE_TRANSCRIPT_IDS(new_registry, params.species, osid, new_transcripts, "transcript")
 
         // Format the annotation events file into a compatible event file
         events_file = format_events(events, deleted, new_genes_map, release)
         load_events(server, events_file)
 
         // Temporary: get all generated files in one folder
-        all_files = new_genes
-            .concat(changed_genes)
-            .concat(new_transcripts)
+        all_files = changed_genes
+            .concat(new_genes)
             .concat(new_genes_map)
+            .concat(new_transcripts)
+            .concat(new_transcripts_map)
             .concat(events_file)
         publish(all_files, params.output_dir)
 }

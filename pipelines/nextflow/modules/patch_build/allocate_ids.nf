@@ -34,11 +34,11 @@ process ALLOCATE_IDS {
     } else {
         exit 1, "Actual OSID not implemented yet: $osid";
     }
-    def list = ""
+    def feat_list = ""
     if (mode == "gene") {
-        list = "--gene_list $new_feats"
+        feat_list = "--gene_list $new_feats"
     } else if (mode == "transcript") {
-        list = "--transcript_list $new_feats"
+        feat_list = "--transcript_list $new_feats"
     } else {
         exit 1, "Unsupported allocation mode";
     }
@@ -46,7 +46,7 @@ process ALLOCATE_IDS {
     perl $params.scripts_dir/allocate_stable_ids.pl \\
         --reg ./$new_registry \\
         --species $species \\
-        --gene_list $new_feats \\
+        $feat_list \\
         --output_map $output_map \\
         $osid_params \\
         --update

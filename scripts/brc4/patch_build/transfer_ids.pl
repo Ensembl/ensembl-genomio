@@ -148,7 +148,7 @@ sub transfer_transcripts {
 
     my $old_tr = $old_gene->{$cur_fingerprint};
     if (not $old_tr) {
-      push @missed_trs, $transcript->stable_id;
+      push @missed_trs, [$gene->stable_id, $transcript->stable_id];
     }
     next if not $old_tr;
 
@@ -170,8 +170,8 @@ sub print_missed {
   my ($list, $out_file) = @_;
 
   open my $out_fh, ">", $out_file;
-  for my $id (@$list) {
-    print $out_fh "$id\n";
+  for my $ids (@$list) {
+    print $out_fh join("\t", @$ids) . "\n";
   }
 }
 
