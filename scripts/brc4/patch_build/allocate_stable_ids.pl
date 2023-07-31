@@ -188,6 +188,8 @@ my $default_analysis_name = 'brc4_import';
 
   sub get_gene_ids {
     my ($self, $count) = @_;
+
+    return 1, [] if $count == 0;
     
     my $prefix = 'FAKEID_';
     my @ids = ();
@@ -206,7 +208,7 @@ my $default_analysis_name = 'brc4_import';
     my @prot_ids = ();
     for my $gene_data(@$map) {
       my $gene_id = $gene_data->{geneId};
-      my $count =  $gene_data->{transcripts};
+      my $count = scalar @{$gene_data->{transcripts}};
       for my $i (1..($count+1)) {
         push @tr_ids, $gene_id . '.R' . $i;
         push @prot_ids, $gene_id . '.P' . $i;
