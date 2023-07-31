@@ -157,7 +157,7 @@ process allocate_ids {
     input:
         path(new_registry)
         val(species)
-        val(osid_params)
+        val(osid)
         path(new_genes)
         val(mode)
     
@@ -166,8 +166,19 @@ process allocate_ids {
 
     script:
     def output_map = "output_map.txt"
+    def osid_params = ""
+    if (osid.mock) {
+        osid_params = "--mock_osid"
+    } else {
+        exit 1, "Actual OSID not implemented yet: $osid";
+    }
     """
-    touch $output_map
+    perl $params.scripts_dir/allocate_stable_ids.pl \\
+        --reg ./$new_registry \\
+        --species $species \\
+        --out_gene $output_map \\
+        $osid_params \\
+        --update
     """
 }
 
@@ -235,8 +246,8 @@ workflow PATCH_BUILD_PROCESS {
         // Requires 2 registries and the species name
         new_transcripts = transfer_ids(changed_genes, old_registry, new_registry, params.species)
 
-        // Transfer metadata (can be done any time after the ids are tranfered?)
-        transfer_metadata(old_registry, new_registry, params.species)
+        // Transfer metadata (can be done any time after the ids are transfered?)
+        // transfer_metadata(old_registry, new_registry, params.species)
 
         // Allocate ids for both the new_genes and the changed_genes new transcripts
         new_genes_map = allocate_ids(new_registry, params.species, osid, new_genes, "gene")
