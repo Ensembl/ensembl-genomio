@@ -53,7 +53,19 @@ if (params.help) {
     exit 0
 }
 
-def create_server(params) {
+if (!params.host or !params.port or !params.user or !params.pass) {
+    exit 1, "Missing server parameters"
+}
+if (!params.mock_osid) {
+    if (!params.osid_url or !params.osid_user or !params.osid_pass or !params.osid_species) {
+        exit 1, "Missing OSID parameters"
+    }
+}
+if (!params.old_registry or !params.new_registry or !params.species) {
+    exit 1, "Missing registries parameters"
+}
+
+def create_server() {
     server = [
         "host": params.host,
         "port": params.port,
@@ -64,30 +76,22 @@ def create_server(params) {
     return server
 }
 
-def create_osid_params(params) {
-    osid = [
-        "url": params.osid_url,
-        "user": params.osid_user,
-        "pass": params.osid_pass,
-        "species": params.osid_species
-    ]
+def create_osid_params() {
+    if (params.mock_osid) {
+        osid = ["mock": true]
+    } else {
+        osid = [
+            "url": params.osid_url,
+            "user": params.osid_user,
+            "pass": params.osid_pass,
+            "species": params.osid_species
+        ]
+    }
     return osid
 }
 
-if (params.host && params.port && params.user && params.pass) {
-    server = create_server(params)
-} else {
-    exit 1, "Missing server parameters"
-}
-if (params.mock_osid) {
-    osid = ["mock": true]
-} else if (params.osid_url && params.osid_user && params.osid_pass && params.osid_species) {
-    osid = create_osid_params(params)
-} else {
-    exit 1, "Missing OSID parameters"
-}
-if (!params.old_registry or !params.new_registry or !params.species) {
-    exit 1, "Missing registries parameters"
+def create_osid_server_params() {
+
 }
 
 process extract_gene_lists {
@@ -207,35 +211,51 @@ process publish {
     """
 }
 
+
+workflow PATCH_BUILD_PROCESS {
+
+    take:
+        events
+        old_registry
+        new_registry
+        server
+        osid
+    
+    main:
+        // Extract the genes lists from the annotation event file
+        (new_genes, changed_genes) = extract_gene_lists(events)
+
+        // Transfer the genes from the old db to the new db
+        // Requires 2 registries and the species name
+        new_transcripts = transfer_ids(changed_genes, old_registry, new_registry, params.species)
+
+        // Transfer metadata (can be done any time after the ids are tranfered?)
+        transfer_metadata(old_registry, new_registry, params.species)
+
+        // Allocate ids for both the new_genes and the changed_genes new transcripts
+        new_genes_map = allocate_ids(new_registry, params.species, osid, new_genes, "gene")
+        // new_transcripts_map = allocate_transcript_ids(new_registry, species, osid_params, new_transcripts)
+
+        // Format the annotation events file into a compatible event file
+        events_file = format_events(events, new_genes_map)
+        load_events(server, events_file)
+
+        // Temporary: get all generated files in one folder
+        all_files = new_genes
+            .concat(changed_genes)
+            .concat(new_transcripts)
+            .concat(new_genes_map)
+            .concat(events_file)
+        publish(all_files, params.output_dir)
+}
+
 // Run main workflow
 workflow {
     events = Channel.fromPath(params.events_file, checkIfExists: true)
     old_registry = Channel.fromPath(params.old_registry, checkIfExists: true)
     new_registry = Channel.fromPath(params.new_registry, checkIfExists: true)
+    server = create_server()
+    osid = create_osid_params()
 
-    // Extract the genes lists from the annotation event file
-    (new_genes, changed_genes) = extract_gene_lists(events)
-
-    // Transfer the genes from the old db to the new db
-    // Requires 2 registries and the species name
-    new_transcripts = transfer_ids(changed_genes, old_registry, new_registry, params.species)
-
-    // Transfer metadata (can be done any time after the ids are tranfered?)
-    transfer_metadata(old_registry, new_registry, params.species)
-
-    // Allocate ids for both the new_genes and the changed_genes new transcripts
-    new_genes_map = allocate_ids(new_registry, params.species, osid, new_genes, "gene")
-    // new_transcripts_map = allocate_transcript_ids(new_registry, species, osid_params, new_transcripts)
-
-    // Format the annotation events file into a compatible event file
-    events_file = format_events(events, new_genes_map)
-    load_events(server, events_file)
-
-    // Temporary: get all generated files in one folder
-    all_files = new_genes
-        .concat(changed_genes)
-        .concat(new_transcripts)
-        .concat(new_genes_map)
-        .concat(events_file)
-    publish(all_files, params.output_dir)
+    PATCH_BUILD_PROCESS(events, old_registry, new_registry, server, osid)
 }
