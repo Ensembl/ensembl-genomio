@@ -53,6 +53,10 @@ if (params.help) {
     exit 0
 }
 
+if (!params.scripts_dir) {
+    exit 1, "Missing scripts_dir"
+}
+
 if (!params.host or !params.port or !params.user or !params.pass) {
     exit 1, "Missing server parameters"
 }
@@ -90,10 +94,6 @@ def create_osid_params() {
     return osid
 }
 
-def create_osid_server_params() {
-
-}
-
 process extract_gene_lists {
     label 'local'
 
@@ -118,8 +118,8 @@ process transfer_ids {
 
     input:
         path(changed_genes)
-        path(old_registry)
-        path(new_registry)
+        path(old_registry, stageAs: "old_registry.pm")
+        path(new_registry, stageAs: "new_registry.pm")
         val(species)
 
     output:
@@ -128,7 +128,13 @@ process transfer_ids {
     script:
     def new_transcripts = "new_transcripts.txt"
     """
-    touch $new_transcripts
+    perl $params.scripts_dir/transfer_ids.pl \\
+        --mapping $changed_genes \\
+        --old ./$old_registry \\
+        --new ./$new_registry \\
+        --species $species \\
+        --out_transcripts $new_transcripts \\
+        --update
     """
 }
 
