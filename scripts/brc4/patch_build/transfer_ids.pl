@@ -21,8 +21,8 @@ use List::MoreUtils qw(uniq);
 our %opt = %{ opt_check() };
 
 # First, load the mapping
-my $mapping = load_mapping($opt{mapping})
-my @old_gene_ids = values(%mapping);
+my $mapping = load_mapping($opt{mapping});
+my @old_gene_ids = values(%$mapping);
 
 my $species = $opt{species};
 
@@ -32,14 +32,14 @@ my $reg_path = $opt{old_registry};
 $registry->load_all($reg_path);
 
 my $old_genes = get_genes_data($registry, $species, \@old_gene_ids);
-$logger->info(scalar(@$old_genes) . " genes from old database");
+$logger->info(scalar(%$old_genes) . " genes from old database");
 
 # Reload registry, this time for new database
 $reg_path = $opt{new_registry};
 $registry->load_all($reg_path);
 
 # Transfer the IDs to the new genes using the mapping
-transfer_gene_ids($registry, $species, $mapping)
+transfer_gene_ids($registry, $species, $mapping, $opt{update});
 
 ###############################################################################
 sub load_mapping {
@@ -63,7 +63,7 @@ sub get_genes_data {
   my $ga = $registry->get_adaptor($species, "core", 'gene');
   for my $gene_id (@$gene_ids) {
     my $gene = $ga->fetch_by_stable_id($gene_id);
-    my $gene_id = $feat->stable_id;
+    my $gene_id = $gene->stable_id;
 
     # Get transcripts
     my @trs;
@@ -75,26 +75,58 @@ sub get_genes_data {
       };
       my $prot = $tr->translation;
       if ($prot) {
-        $tr_data{protein_id} = $prot->stable_id;
+        $tr_data->{protein_id} = $prot->stable_id;
         my $seq = $prot->seq();
-        $tr_data{seq_checksum}{$seq} = 1;
+        $tr_data->{seq_checksum}->{$seq} = 1;
       }
       push @trs, $tr_data;
     }
-    my %gene_data = (
+    my $gene_data = {
       id => $gene_id,
       transcripts => \@trs,
-    );
-    $genes{$gene_id} = $gene_data;
+    };
+    $genes{$gene_id} =$gene_data;
   }
   
-  return \%feats;
+  return \%genes;
 }
 
 sub tr_fingerprint {
   my ($tr) = @_;
 
-  
+  return $tr->stable_id;
+}
+
+sub transfer_gene_ids {
+  my ($registry, $species, $mapping, $update) = @_;
+
+  my %stats = (
+    gene_id => 0,
+    total => 0,
+    not_found => 0,
+  );
+  my $ga = $registry->get_adaptor($species, "core", 'gene');
+
+  for my $new_id (sort keys %$mapping) {
+    my $old_id = $mapping->{$new_id};
+    my $gene = $ga->fetch_by_stable_id($new_id);
+    if (not $gene) {
+      $stats{not_found}++;
+      next;
+    }
+    $gene->stable_id($old_id);
+    $stats{gene_id}++;
+    $stats{total}++;
+    $ga->update($gene) if $update;
+  }
+
+  for my $name (sort keys %stats) {
+    my $count = $stats{$name};
+    print("Transfered $name = $count\n") if $count;
+  }
+  if ($stats{total}) {
+    print("(Add --update to actually make the transfers)\n") if not $update;
+  }
 }
 
 sub update_descriptions {
@@ -105,6 +137,7 @@ sub update_descriptions {
   my $new_count = 0;
   
   my $ga = $registry->get_adaptor($species, "core", 'gene');
+
   for my $gene (@{$ga->fetch_all}) {
     my $id = $gene->stable_id;
     my $description = $gene->description;
