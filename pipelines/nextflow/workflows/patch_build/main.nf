@@ -27,7 +27,10 @@ def helpMessage() {
         --user
         --pass                         Connection parameters to the SQL servers we getting core db(s) from
         --database                     Database name
+
+        Input files parameters:
         --events_file                  Annotation event file from gene_diff
+        --deletes_file                 Deleted genes file
 
         Registries parameters:
         --old_registry                 Registry where the old version of the db resides (transfer from)
@@ -40,6 +43,10 @@ def helpMessage() {
         --osid_pass                    
         --osid_species                 Connection parameters to the OSID server
         --mock_osid                    Set to 1 if you want to run a fake id generator instead of OSID (for testing)
+
+        Release parameters:
+        --release_name                 Short release name (e.g. "66")
+        --release_date                 Date of the release in ISO format (e.g. "2023-07-01")
 
         Optional arguments:
         --output_dir                   Where the process files can be stored
@@ -57,6 +64,10 @@ if (!params.scripts_dir) {
     exit 1, "Missing scripts_dir"
 }
 
+if (!params.events_file or !params.deletes_file) {
+    exit 1, "Missing input files parameters"
+}
+
 if (!params.host or !params.port or !params.user or !params.pass) {
     exit 1, "Missing server parameters"
 }
@@ -67,6 +78,9 @@ if (!params.mock_osid) {
 }
 if (!params.old_registry or !params.new_registry or !params.species) {
     exit 1, "Missing registries parameters"
+}
+if (!params.release_name or !params.release_date) {
+    exit 1, "Missing release parameters"
 }
 
 def create_server() {
@@ -92,6 +106,14 @@ def create_osid_params() {
         ]
     }
     return osid
+}
+
+def create_release() {
+    release = [
+        "name": params.release_name,
+        "date": params.release_date,
+    ]
+    return release
 }
 
 process extract_gene_lists {
@@ -187,7 +209,9 @@ process format_events {
 
     input:
         path(events, stageAs: "annotation_events.txt")
+        path(deletes)
         path(new_genes)
+        val(release)
     
     output:
         path("events.tab")
@@ -195,7 +219,13 @@ process format_events {
     script:
     def final_events = "events.tab"
     """
-    touch $final_events
+    format_events \\
+    --input_file $events \\
+    --map $new_genes \\
+    --deletes $deletes \\
+    --release_name $release.name \\
+    --release_date $release.date \\
+    --output_file $final_events
     """
 }
 
@@ -208,6 +238,14 @@ process load_events {
 
     script:
     """
+    events_loader \\
+    --host $server.host \\
+    --user $server.user \\
+    --port $server.port \\
+    --password $server.password \\
+    --database $server.database \\
+    --input_file $events \\
+    --update 1
     """
 }
 
@@ -233,10 +271,12 @@ workflow PATCH_BUILD_PROCESS {
 
     take:
         events
+        deleted
         old_registry
         new_registry
         server
         osid
+        release
     
     main:
         // Extract the genes lists from the annotation event file
@@ -254,7 +294,7 @@ workflow PATCH_BUILD_PROCESS {
         // new_transcripts_map = allocate_transcript_ids(new_registry, species, osid_params, new_transcripts)
 
         // Format the annotation events file into a compatible event file
-        events_file = format_events(events, new_genes_map)
+        events_file = format_events(events, deleted, new_genes_map, release)
         load_events(server, events_file)
 
         // Temporary: get all generated files in one folder
@@ -269,10 +309,12 @@ workflow PATCH_BUILD_PROCESS {
 // Run main workflow
 workflow {
     events = Channel.fromPath(params.events_file, checkIfExists: true)
+    deleted = Channel.fromPath(params.deletes_file, checkIfExists: true)
     old_registry = Channel.fromPath(params.old_registry, checkIfExists: true)
     new_registry = Channel.fromPath(params.new_registry, checkIfExists: true)
     server = create_server()
     osid = create_osid_params()
+    release = create_release()
 
-    PATCH_BUILD_PROCESS(events, old_registry, new_registry, server, osid)
+    PATCH_BUILD_PROCESS(events, deleted, old_registry, new_registry, server, osid, release)
 }
