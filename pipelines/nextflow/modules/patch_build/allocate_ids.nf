@@ -43,6 +43,7 @@ process ALLOCATE_IDS {
         exit 1, "Unsupported allocation mode";
     }
     """
+    touch $output_map   # Not necessarily created if no genes were allocated, only transcripts
     perl $params.scripts_dir/allocate_stable_ids.pl \\
         --reg ./$new_registry \\
         --species $species \\
