@@ -32,7 +32,7 @@ process ALLOCATE_IDS {
     if (osid.mock) {
         osid_params = "--mock_osid"
     } else {
-        exit 1, "Actual OSID not implemented yet: $osid";
+        osid_params = "--osid_url $osid.url --osid_user $osid.user --osid_pass $osid.pass --organism $osid.species"
     }
     def feat_list = ""
     if (mode == "gene") {
