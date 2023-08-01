@@ -1,0 +1,72 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+
+name: "patch_build_post_process"
+description: BRC/Ensembl metazoa pipeline. After a patch build gene_diff and having loaded the data in a core database, this pipeline transfers IDs and metadata if a feature has been updated, and it allocate IDs if it is new. Also updates the event tables.
+keywords:
+  - patch_build
+  - stable_id
+input:
+  - events:
+      type: file
+      description: |
+        MANDATORY param. Annotation events files output from the gene diff.
+  - deleted:
+      type: file
+      description: |
+        MANDATORY param. Lists of deleted genes from the core database before the gene_diff (for the history).
+  - old_registry:
+      type: file
+      description: |
+        MANDATORY param. Ensembl registry containing the old core database of the species to update.
+  - new_registry:
+      type: file
+      description: |
+        MANDATORY param. Ensembl registry containing the new core database of the species to update.
+  - server:
+      type: tuple
+      description: |
+        MANDATORY param. Tuple containing Mysql parameters to the server and core db of the species to update.
+        Must contain the following key=value pairs:
+        host
+        port
+        user
+        password
+        species = this is the production_name for the species to update
+  - osid:
+      type: tuple
+      description: |
+        MANDATORY param. Tuple containing OSID parameters to allocate IDs.
+        Must be either:
+        mock: true = in this case OSID will not be used and the script will generate FAKE IDs, for testing purposes
+        or
+        url
+        user
+        pass
+        species = organism name in OSID (might be different from the production_name)
+  - release:
+      type: tuple
+      description: |
+        MANDATORY param. Release information, to use when adding the events to the core db.
+        Must contain the following keys:
+        name
+        date
+output:
+  - logs:
+    type: files
+    description: |
+    Output files of interest (mapping used, logs).

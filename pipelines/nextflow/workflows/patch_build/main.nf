@@ -1,4 +1,3 @@
-#!/usr/bin/env nextflow
 // See the NOTICE file distributed with this work for additional information
 // regarding copyright ownership.
 //
@@ -38,18 +37,19 @@ def helpMessage() {
         --species                      Production name of the species, same in both registries
         
         OSID parameters:
+        --mock_osid                    Set to 1 if you want to run a fake id generator instead of OSID (for testing)
+        or
         --osid_url
         --osid_user
         --osid_pass                    
         --osid_species                 Connection parameters to the OSID server
-        --mock_osid                    Set to 1 if you want to run a fake id generator instead of OSID (for testing)
 
         Release parameters:
         --release_name                 Short release name (e.g. "66")
         --release_date                 Date of the release in ISO format (e.g. "2023-07-01")
 
         Optional arguments:
-        --output_dir                   Where the process files can be stored
+        --output_dir                   Where the logs and process files can be stored
         --help                         This usage statement
         '''
 }
@@ -89,7 +89,8 @@ def create_server() {
         "port": params.port,
         "user": params.user,
         "password": params.pass,
-        "database": params.database
+        "database": params.database,
+        "species": params.species
     ]
     return server
 }
@@ -116,56 +117,8 @@ def create_release() {
     return release
 }
 
-include { EXTRACT_GENE_LISTS } from '../../modules/patch_build/extract_gene_lists.nf'
-include { TRANSFER_IDS } from '../../modules/patch_build/transfer_ids.nf'
-include { TRANSFER_METADATA } from '../../modules/patch_build/transfer_metadata.nf'
-include { FORMAT_EVENTS } from '../../modules/patch_build/format_events.nf'
-include { LOAD_EVENTS } from '../../modules/patch_build/load_events.nf'
+include { PATCH_BUILD_PROCESS } from '../../subworkflows/patch_build_post_process/main.nf'
 include { PUBLISH_FILES } from '../../modules/patch_build/publish_files.nf'
-include { ALLOCATE_IDS as ALLOCATE_GENE_IDS } from '../../modules/patch_build/allocate_ids.nf'
-include { ALLOCATE_IDS as ALLOCATE_TRANSCRIPT_IDS } from '../../modules/patch_build/allocate_ids.nf'
-
-workflow PATCH_BUILD_PROCESS {
-
-    take:
-        events
-        deleted
-        old_registry
-        new_registry
-        server
-        osid
-        release
-    
-    main:
-        // Extract the genes lists from the annotation event file
-        (new_genes, changed_genes) = EXTRACT_GENE_LISTS(events)
-
-        // Transfer the genes from the old db to the new db
-        // Requires 2 registries and the species name
-        new_transcripts = TRANSFER_IDS(changed_genes, old_registry, new_registry, params.species)
-
-        // Transfer metadata (can be done any time after the ids are transfered?)
-        transfer_log = TRANSFER_METADATA(new_transcripts, old_registry, new_registry, params.species)
-
-        // Allocate ids for both the new_genes and the changed_genes new transcripts
-        new_genes_map = ALLOCATE_GENE_IDS(new_registry, params.species, osid, new_genes, "gene")
-        new_transcripts_map = ALLOCATE_TRANSCRIPT_IDS(new_registry, params.species, osid, new_transcripts, "transcript")
-
-        // Format the annotation events file into a compatible event file
-        events_file = FORMAT_EVENTS(events, deleted, new_genes_map, release)
-        LOAD_EVENTS(server, events_file)
-
-        // Temporary: get all generated files in one folder
-        all_files = changed_genes
-            .concat(new_genes)
-            .concat(new_genes_map)
-            .concat(new_transcripts)
-            .concat(events_file)
-            .concat(transfer_log)
-        PUBLISH_FILES(all_files, params.output_dir)
-}
-
-// Run main workflow
 workflow {
     events = Channel.fromPath(params.events_file, checkIfExists: true)
     deleted = Channel.fromPath(params.deletes_file, checkIfExists: true)
@@ -175,5 +128,8 @@ workflow {
     osid = create_osid_params()
     release = create_release()
 
-    PATCH_BUILD_PROCESS(events, deleted, old_registry, new_registry, server, osid, release)
+    logs = PATCH_BUILD_PROCESS(events, deleted, old_registry, new_registry, server, osid, release)
+    if (params.output_dir) {
+        PUBLISH_FILES(logs, params.output_dir)
+    }
 }
