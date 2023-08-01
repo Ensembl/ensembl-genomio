@@ -205,10 +205,16 @@ class EventCollection:
                 session.flush()
                 session.refresh(map_session)
                 for event in mapping.events:
+                    from_id = event.from_id
+                    if from_id == "":
+                        from_id = None
+                    to_id = event.to_id
+                    if to_id == "":
+                        to_id = None
                     id_event = StableIdEvent(
                         mapping_session_id=map_session.mapping_session_id,
-                        old_stable_id=event.from_id,
-                        new_stable_id=event.to_id,
+                        old_stable_id=from_id,
+                        new_stable_id=to_id,
                         id_type="gene",
                         old_version=1,
                         new_version=1,
