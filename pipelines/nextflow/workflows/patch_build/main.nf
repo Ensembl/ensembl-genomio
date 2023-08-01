@@ -164,12 +164,22 @@ process transfer_metadata {
     label 'local'
 
     input:
+        path(waited_file)
         path(old_registry)
         path(new_registry)
         val(species)
 
     script:
     """
+    perl $params.scripts_dir/transfer_metadata.pl \\
+        --old ./$old_registry \\
+        --new ./$new_registry \\
+        --species $species \\
+        --descriptions \\
+        --versions \\
+        --xrefs \\
+        --verbose \\
+        --update
     """
 }
 
@@ -258,7 +268,7 @@ workflow PATCH_BUILD_PROCESS {
         new_transcripts = transfer_ids(changed_genes, old_registry, new_registry, params.species)
 
         // Transfer metadata (can be done any time after the ids are transfered?)
-        // transfer_metadata(old_registry, new_registry, params.species)
+        transfer_metadata(new_transcripts, old_registry, new_registry, params.species)
 
         // Allocate ids for both the new_genes and the changed_genes new transcripts
         new_genes_map = ALLOCATE_GENE_IDS(new_registry, params.species, osid, new_genes, "gene")
@@ -273,7 +283,6 @@ workflow PATCH_BUILD_PROCESS {
             .concat(new_genes)
             .concat(new_genes_map)
             .concat(new_transcripts)
-            .concat(new_transcripts_map)
             .concat(events_file)
         publish(all_files, params.output_dir)
 }
