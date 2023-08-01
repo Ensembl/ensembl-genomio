@@ -111,6 +111,7 @@ sub transfer_gene_ids {
     not_found => 0,
   );
   my $ga = $registry->get_adaptor($species, "core", 'gene');
+  my $tra = $registry->get_adaptor($species, "core", 'transcript');
 
   my @missed_transcripts;
   for my $new_id (sort keys %$mapping) {
@@ -125,7 +126,7 @@ sub transfer_gene_ids {
     $stats{total}++;
 
     # Update transcripts as well?
-    my @missed_tr = transfer_transcripts($gene, $old_genes);
+    my @missed_tr = transfer_transcripts($gene, $old_genes, \%stats, $tra, $update);
     push @missed_transcripts, @missed_tr;
     $ga->update($gene) if $update;
   }
@@ -142,7 +143,7 @@ sub transfer_gene_ids {
 }
 
 sub transfer_transcripts {
-  my ($gene, $old_genes, $stats) = @_;
+  my ($gene, $old_genes, $stats, $tra, $update) = @_;
 
   my $old_gene = $old_genes->{$gene->stable_id};
   die("No old gene to transfer transcript from") if not $old_gene;
@@ -154,22 +155,44 @@ sub transfer_transcripts {
 
     my $old_tr = $old_gene->{$cur_fingerprint};
     if (not $old_tr) {
+      $logger->debug("Missed id for " . $transcript->stable_id);
       push @missed_trs, [$gene->stable_id, $transcript->stable_id];
+      $stats->{missed_transcripts}++;
+      next;
     }
-    next if not $old_tr;
 
     # Same transcript fingerprint = same ID (both transcript and translation)
+    $logger->debug("Update id for " . $transcript->stable_id . " to " . $old_tr->stable_id);
     $transcript->stable_id($old_tr->stable_id);
+    $tra->update($transcript) if $update;
     $stats->{transcript}++;
-
+    
     my $translation = $transcript->translation;
     my $old_translation = $old_tr->translation;
-    next if not $translation or not $old_translation;
+
+    if (not $old_translation and $translation) {
+        die("Old transcript had not translation, but new one has one " . $transcript->stable_id);
+    } elsif ($old_translation and not $translation) {
+        die("Old transcript had a translation, but new one doesn't " . $transcript->stable_id);
+    } else {
+      next;
+    }
 
     $translation->stable_id($old_translation->stable_id);
+    update_translation_id($tra, $old_translation, $translation) if $update;
     $stats->{translation}++;
   }
   return @missed_trs;
+}
+
+sub update_translation_id {
+  my ($tra, $old_tr, $new_tr) = @_;
+
+  # There is no translationAdaptor update, so mkae it manually
+  my $sth = $tra->prepare("UPDATE translation SET stable_id=? WHERE stable_id=?");
+  $sth->bind_param(1, $old_tr->stable_id);
+  $sth->bind_param(2, $new_tr->stable_id);
+  $sth->execute();
 }
 
 sub print_missed {
