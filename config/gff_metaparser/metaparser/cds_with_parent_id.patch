@@ -1,0 +1,5 @@
+# patch for the gff_metaparser.conf to propagate use mRNA IDs for CDSs with no IDs
+
+#   overriding the default "keep empty" approach
+cds/parent	GFF	parent	{"_FROM_STASH":{"ID": "mrna:_PARENT/_STASH/cds_id"}}
+
