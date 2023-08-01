@@ -66,6 +66,7 @@ sub default_options {
     # Since this mode was designed to be used with patch builds,
     # default to not deleting any existing genes.
     delete_existing => 0,
+    keep_logic_name => 1,
   };
 }
 

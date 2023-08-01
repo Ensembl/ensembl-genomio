@@ -22,7 +22,7 @@ These files can then be fed to the Genome loader pipeline.
 ### How to run
 
 ```
-init_pipeline.pl Bio::EnsEMBL::EGPipeline::PipeConfig::BRC4_genome_prepare_conf \
+init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_prepare_conf \
     --host $HOST --port $PORT --user $USER --pass $PASS \
     --hive_force_init 1 \
     --pipeline_dir temp/prepare \
