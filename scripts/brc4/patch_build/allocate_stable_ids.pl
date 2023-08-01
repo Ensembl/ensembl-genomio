@@ -378,6 +378,15 @@ sub allocate_genes {
       }
     }
     
+    # Now update the transcripts
+    my @transcripts = @{ $gene->get_all_Transcripts };
+
+    # Restrict to the transcripts in the list
+    if ($trs_list) {
+      my %tr_ids = map { $_ => 1 } @{$trs_list->{$gene_id}};
+      @transcripts = grep { $tr_ids{$_->stable_id} } @transcripts;
+    }
+
     for my $tr (@transcripts) {
       $transcripts_count++;
 
