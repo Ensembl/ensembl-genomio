@@ -116,138 +116,12 @@ def create_release() {
     return release
 }
 
-process extract_gene_lists {
-    label 'local'
-
-    input:
-        path(events, stageAs: "events.tab")
-
-    output:
-        path("new_genes.tab")
-        path("changed_genes.tab")
-
-    script:
-    def changed_genes = "changed_genes.tab"
-    def new_genes = "new_genes.tab"
-    """
-    grep -v "//" $events | grep -v "=" | grep -v "~" | sed s'/[+><]/\\t/' | cut -f3 | sed 's/:/\\n/g' | sort -u > $new_genes
-    grep "=" $events | cut -f2 | sed -r 's/=[+!-]?/\t/' > $changed_genes
-    """
-}
-
-process transfer_ids {
-    label 'local'
-
-    input:
-        path(changed_genes)
-        path(old_registry, stageAs: "old_registry.pm")
-        path(new_registry, stageAs: "new_registry.pm")
-        val(species)
-
-    output:
-        path("new_transcripts.txt")
-
-    script:
-    def new_transcripts = "new_transcripts.txt"
-    """
-    perl $params.scripts_dir/transfer_ids.pl \\
-        --mapping $changed_genes \\
-        --old ./$old_registry \\
-        --new ./$new_registry \\
-        --species $species \\
-        --out_transcripts $new_transcripts \\
-        --update
-    """
-}
-
-process transfer_metadata {
-    label 'local'
-
-    input:
-        path(waited_file)
-        path(old_registry)
-        path(new_registry)
-        val(species)
-    
-    output:
-        path("transfer_metadata.err")
-
-    script:
-    """
-    perl $params.scripts_dir/transfer_metadata.pl \\
-        --old ./$old_registry \\
-        --new ./$new_registry \\
-        --species $species \\
-        --descriptions \\
-        --versions \\
-        --xrefs \\
-        --verbose \\
-        --update 2> transfer_metadata.err
-    """
-}
-
-process format_events {
-    label 'local'
-
-    input:
-        path(events, stageAs: "annotation_events.txt")
-        path(deletes)
-        path(new_genes)
-        val(release)
-    
-    output:
-        path("events.tab")
-
-    script:
-    def final_events = "events.tab"
-    """
-    format_events \\
-    --input_file $events \\
-    --map $new_genes \\
-    --deletes $deletes \\
-    --release_name $release.name \\
-    --release_date $release.date \\
-    --output_file $final_events
-    """
-}
-
-process load_events {
-    label 'local'
-
-    input:
-        val(server)
-        path(events)
-
-    script:
-    """
-    events_loader \\
-    --host $server.host \\
-    --user $server.user \\
-    --port $server.port \\
-    --password $server.password \\
-    --database $server.database \\
-    --input_file $events \\
-    --update 1
-    """
-}
-
-process publish {
-    label "local"
-    publishDir "$output_dir", mode: "copy"
-
-    input:
-    path(files)
-    val(output_dir)
-
-    output:
-    path(files, includeInputs: true)
-    
-    script:
-    """
-    echo "$output_dir"
-    """
-}
-
+include { EXTRACT_GENE_LISTS } from '../../modules/patch_build/extract_gene_lists.nf'
+include { TRANSFER_IDS } from '../../modules/patch_build/transfer_ids.nf'
+include { TRANSFER_METADATA } from '../../modules/patch_build/transfer_metadata.nf'
+include { FORMAT_EVENTS } from '../../modules/patch_build/format_events.nf'
+include { LOAD_EVENTS } from '../../modules/patch_build/load_events.nf'
+include { PUBLISH_FILES } from '../../modules/patch_build/publish_files.nf'
 include { ALLOCATE_IDS as ALLOCATE_GENE_IDS } from '../../modules/patch_build/allocate_ids.nf'
 include { ALLOCATE_IDS as ALLOCATE_TRANSCRIPT_IDS } from '../../modules/patch_build/allocate_ids.nf'
 
@@ -264,22 +138,22 @@ workflow PATCH_BUILD_PROCESS {
     
     main:
         // Extract the genes lists from the annotation event file
-        (new_genes, changed_genes) = extract_gene_lists(events)
+        (new_genes, changed_genes) = EXTRACT_GENE_LISTS(events)
 
         // Transfer the genes from the old db to the new db
         // Requires 2 registries and the species name
-        new_transcripts = transfer_ids(changed_genes, old_registry, new_registry, params.species)
+        new_transcripts = TRANSFER_IDS(changed_genes, old_registry, new_registry, params.species)
 
         // Transfer metadata (can be done any time after the ids are transfered?)
-        transfer_log = transfer_metadata(new_transcripts, old_registry, new_registry, params.species)
+        transfer_log = TRANSFER_METADATA(new_transcripts, old_registry, new_registry, params.species)
 
         // Allocate ids for both the new_genes and the changed_genes new transcripts
         new_genes_map = ALLOCATE_GENE_IDS(new_registry, params.species, osid, new_genes, "gene")
         new_transcripts_map = ALLOCATE_TRANSCRIPT_IDS(new_registry, params.species, osid, new_transcripts, "transcript")
 
         // Format the annotation events file into a compatible event file
-        events_file = format_events(events, deleted, new_genes_map, release)
-        load_events(server, events_file)
+        events_file = FORMAT_EVENTS(events, deleted, new_genes_map, release)
+        LOAD_EVENTS(server, events_file)
 
         // Temporary: get all generated files in one folder
         all_files = changed_genes
@@ -288,7 +162,7 @@ workflow PATCH_BUILD_PROCESS {
             .concat(new_transcripts)
             .concat(events_file)
             .concat(transfer_log)
-        publish(all_files, params.output_dir)
+        PUBLISH_FILES(all_files, params.output_dir)
 }
 
 // Run main workflow
