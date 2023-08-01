@@ -294,6 +294,11 @@ sub allocate_genes {
     $logger->info("Reduce list using date $after_date: from $nold genes to $nnew");
   }
   $logger->info(scalar(@genes) . " genes will have a new stable_id allocated");
+
+  # Check that all genes have been found
+  if (grep {not defined $_} @genes) {
+    die("Some genes to replace are not defined\n");
+  }
   
   # How to get all the ids
 
