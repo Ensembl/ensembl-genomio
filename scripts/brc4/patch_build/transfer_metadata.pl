@@ -258,9 +258,17 @@ sub update_xrefs {
         $update_count++;
         if ($update) {
           # Ensure we use an up to date analysis
-          my $analysis_name = $xref->analysis->logic_name;
-          my $analysis = $aa->fetch_by_logic_name($analysis_name);
-          $xref->analysis($analysis);
+          my $analysis = $xref->analysis;
+
+          # No analysis attached? Give it a default one...
+          if (not $analysis) {
+            $logger->debug("No analysis for $analysis_name");
+          } else {
+            # Reload the analysis from this db
+            my $analysis_name = $analysis->logic_name;
+            $analysis = $aa->fetch_by_logic_name($analysis_name);
+            $xref->analysis($analysis);
+          }
           $xa->store($xref, $feat->dbID, $feature, 1); # ignore release
           $total_transfer++;
         }
