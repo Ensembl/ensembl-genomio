@@ -15,20 +15,18 @@ use Try::Tiny;
 use File::Path qw(make_path);
 use List::MoreUtils qw(uniq);
 
-my @current_xrefs = (
-  'BRC4_Community_Annotation',
-  'RefSeq_gene_name',
-  'RefSeq_dna',
-  'RefSeq_peptide',
-  'PUBMED',
-  'EntrezGene',
-);
 my %alias_xrefs = (
   VB_Community_Annotation => 'BRC4_Community_Annotation',
 );
-
-my %ok_xrefs = map { $_ => $_ } @current_xrefs;
-%ok_xrefs = (%ok_xrefs, %alias_xrefs);
+my %skip_analysis = map { $_ => 1 } (
+  "xrefuniprot",
+  "xrefchecksum",
+  "xref_sprot_blastp",
+  "xref_trembl_blastp",
+  "xrefuniparc",
+  "gouniprot",
+  "interpro2go",
+);
 
 ###############################################################################
 # MAIN
@@ -244,19 +242,15 @@ sub update_xrefs {
 
     for my $xref (@$old_xrefs) {
       my $dbname = $xref->dbname;
+      $dbname = $alias_xrefs{$dbname} // $dbname;
       my $analysis = $xref->analysis;
       my $analysis_name = $analysis ? "$dbname (".$analysis->logic_name.")" : $dbname;
-
-      # We only include dbnames that we expect
-      if (not exists $ok_xrefs{$dbname}) {
+      if ($analysis and exists $skip_analysis{$analysis->logic_name}) {
         $logger->debug("NO TRANSFER for $feature $id xref:\t$analysis_name\twith ID " . $xref->primary_id);
         $no_transfer{$analysis_name}++;
         next;
       }
 
-      # Rename the dbname in case we need to transfer old xrefs which had their name changed
-      $dbname = $ok_xrefs{$dbname};
-      $analysis_name = $analysis ? "$dbname (".$analysis->logic_name.")" : $dbname;
       $xref->dbname($dbname);
       if (not exists $xref_dict{$dbname}) {
         $logger->debug("Transfer $feature $id xref: $analysis_name with ID " . $xref->primary_id);
