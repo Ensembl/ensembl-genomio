@@ -24,10 +24,10 @@ process ALLOCATE_IDS {
         val(mode)
     
     output:
-        path("output_map.txt")
+        path("output_map*.txt")
 
     script:
-    def output_map = "output_map.txt"
+    def output_map = "output_map_${mode}.txt"
     def osid_params = ""
     if (osid.mock) {
         osid_params = "--mock_osid"
