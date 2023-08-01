@@ -206,9 +206,9 @@ my $default_analysis_name = 'brc4_import';
     my %tr_ids;
     my @tr_ids = ();
     my @prot_ids = ();
-    for my $gene_data(@$map) {
+    for my $gene_data (@$map) {
       my $gene_id = $gene_data->{geneId};
-      my $count = scalar @{$gene_data->{transcripts}};
+      my $count = $gene_data->{transcripts};
       for my $i (1..($count+1)) {
         push @tr_ids, $gene_id . '.R' . $i;
         push @prot_ids, $gene_id . '.P' . $i;
@@ -310,11 +310,11 @@ sub allocate_genes {
     ($set_id) = $osid->get_gene_ids(0);  # Get a set id without asking for gene ids
     for my $gene (@genes) {
       my $gene_id = $gene->stable_id;
-      my $tr_count = $trs_list->{$gene_id};
+      my $trs = $trs_list->{$gene_id};
       # Make content for OSID patch
       push @tran_count, {
         'geneId' => $gene_id,
-        'transcripts' => $tr_count
+        'transcripts' => scalar @$trs
       };
     }
   } else {
