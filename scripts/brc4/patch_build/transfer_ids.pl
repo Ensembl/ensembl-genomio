@@ -83,13 +83,19 @@ sub get_genes_data {
 sub tr_fingerprint {
   my ($tr) = @_;
 
-  my @coords = (
-    $tr->seq_region_name,
-    $tr->seq_region_start,
-    $tr->seq_region_end,
-    $tr->strand,
-  );
-  my $fingerprint = join(":", @coords);
+  my @exon_fingerprints;
+  my $exons = $tr->get_all_Exons();
+  for my $exon (@$exons) {
+    my @exon_coords = (
+      $exon->seq_region_name,
+      $exon->seq_region_start,
+      $exon->seq_region_end,
+      $exon->strand,
+    );
+    my $exon_fingerprint = join(":", @exon_coords);
+    push @exon_fingerprints, $exon;
+  }
+  my $fingerprint = join("__", @exon_fingerprints);
 
   # print("Fingerprint for " . $tr->stable_id . " : $fingerprint\n");
 
