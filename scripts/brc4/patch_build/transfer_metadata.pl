@@ -18,6 +18,8 @@ use List::MoreUtils qw(uniq);
 my @current_xrefs = (
   'BRC4_Community_Annotation',
   'RefSeq_gene_name',
+  'RefSeq_dna',
+  'RefSeq_peptide',
   'PUBMED',
   'EntrezGene',
 );
@@ -36,7 +38,7 @@ our %opt = %{ opt_check() };
 my $species = $opt{species};
 
 # Features to transfer versions from
-my @features = qw(gene);
+my @features = qw(gene transcript translation);
 
 # Get genes and transcripts from old database
 my $registry = 'Bio::EnsEMBL::Registry';
@@ -65,56 +67,29 @@ for my $feat (@features) {
 
 # Transfer descriptions
 if ($opt{descriptions}) {
-  $logger->info("Gene descriptions transfer:");
-  update_descriptions($registry, $species, $old_data{gene}, $opt{write});
+  for my $feat (@features) {
+    $logger->info("Descriptions transfer for $feat:");
+    update_descriptions($registry, $species, $feat, $old_data{$feat}, $opt{update});
+  }
 }
 
 # Transfer xrefs
 if ($opt{xrefs}) {
-  $logger->info("Gene xrefs transfer:");
-  update_xrefs($registry, $species, $old_data{gene}, $opt{write});
-}
-
-if ($opt{events}) {
-  # Get events from features differences
-  my ($old_ids, $new_ids) = diff_events($old_data{gene}, $new_data{gene});
-
-  # Load all events from the file
-  my $del_events = load_deletes($opt{deletes}, $old_ids);
-  my $file_events = load_events($opt{events}, $old_ids, $new_ids);
-
-  my %events = (%$del_events, %$file_events);
-
-  for my $event_type (sort keys %events) {
-    my @feat_events = @{$events{$event_type}};
-    $logger->info("Event: $event_type = " . scalar(@feat_events));
+  for my $feat (@features) {
+    $logger->info("Xrefs transfer for $feat:");
+    update_xrefs($registry, $species, $feat, $old_data{$feat}, $opt{update});
   }
-
-  # Compile metadata for mapping
-  my $metadata = {
-    old_db_name => $old_metadata->{db_name},
-    new_db_name => $new_metadata->{db_name},
-    old_release => $old_metadata->{release},
-    new_release => $new_metadata->{release},
-    old_assembly => $old_metadata->{assembly},
-    new_assembly => $new_metadata->{assembly},
-  };
-
-  my $ga = $registry->get_adaptor($species, "core", 'gene');
-  my $dbc = $ga->dbc;
-  add_events(\%events, $old_data{gene}, $dbc, $metadata, $opt{write});
 }
 
 # Transfer versions
 if ($opt{versions}) {
-  $logger->info("Gene versions transfer:");
-  # Update the version for the features we want to transfer and update
   for my $feat (@features) {
-    update_versions($registry, $species, $feat, $old_data{$feat}, $opt{write});
+    $logger->info("Versions transfer for $feat:");
+    update_versions($registry, $species, $feat, $old_data{$feat}, $opt{update});
   }
 
   # Blanket version replacement for transcripts, translations, exons
-  if ($opt{write}) {
+  if ($opt{update}) {
     $logger->info("Transcripts, translations and exons version update");
     my $ga = $registry->get_adaptor($species, "core", 'gene');
     my $dbc = $ga->dbc;
@@ -131,226 +106,11 @@ if ($opt{versions}) {
     my $exon_query = "UPDATE exon SET version = 1";
     $dbc->do($exon_query);
   } else {
-    $logger->info("Transcripts, translations and exons init versions were not updated (use --write to do so)");
+    $logger->info("Transcripts, translations and exons init versions were not updated (use --update to do so)");
   }
 }
 
 ###############################################################################
-sub load_deletes {
-  my ($deletes_file, $old_ids) = @_;
-
-  if (not $deletes_file) {
-    return {};
-  }
-
-  my %events = (
-    deleted => [],
-  );
-  open(my $deletes_fh, "<", $deletes_file);
-  while (my $line = readline($deletes_fh)) {
-    chomp $line;
-    my $id = $line;
-
-    if ($old_ids->{$id}) {
-      push @{$events{deleted}}, {from => [$id], to => []};
-      delete $old_ids->{$id};
-    } else {
-      $logger->warn("Warning: '$id' in the deletes file, but not deleted in the new core");
-    }
-  }
-
-  return \%events;
-}
-
-sub load_events {
-  my ($events_file, $old_ids, $new_ids) = @_;
-
-  if (not $events_file) {
-    return {};
-  }
-
-  my %events = (
-    change => [],
-    new => [],
-    split => [],
-    merge => [],
-  );
-  my %merge_to = ();
-  my %split_from = ();
-  open(my $events_fh, "<", $events_file);
-  while (my $line = readline($events_fh)) {
-    chomp $line;
-    my ($id1, $event_name, $id2) = split("\t", $line);
-
-    # New gene
-    if ($id1 and not $id2) {
-      push @{$events{new}}, {from => [], to => [$id1]};
-      if ($new_ids->{$id1}) {
-        delete $new_ids->{$id1};
-      }
-    # Changed gene
-    } elsif ($id1 eq $id2) {
-      push @{$events{change}}, {from => [$id1], to => [$id1]};
-    # Merge or split
-    } elsif ($event_name eq 'merge_gene' or $event_name eq 'split_gene') {
-      if (not $merge_to{$id1}) {
-        $merge_to{$id1} = [];
-      }
-      if (not $split_from{$id2}) {
-        $split_from{$id2} = [];
-      }
-      push @{$merge_to{$id1}}, $id2;
-      push @{$split_from{$id2}}, $id1;
-    }
-    else {
-      $logger->warn("Unsupported event '$event_name'? $line");
-    }
-  }
-
-  # Ensure all event ids are unique in their groups
-  for my $merge_id (keys %merge_to) {
-    my @ids = uniq @{ $merge_to{$merge_id} };
-    $merge_to{$merge_id} = \@ids;
-  }
-  for my $split_id (keys %split_from) {
-    my @ids = uniq @{ $split_from{$split_id} };
-    $split_from{$split_id} = \@ids;
-  }
-
-  # Check for merge and splits involving the same ids (multi event)
-  my $multi_events = check_multi_events(\%split_from, \%merge_to);
-
-  for my $event_name (keys %$multi_events) {
-    my @named_events = @{ $multi_events->{$event_name} };
-    for my $named_event (@named_events) {
-      for my $from_id (@{ $named_event->{from} }) {
-        if ($old_ids->{$from_id}) {
-          delete $old_ids->{$from_id};
-        }
-      }
-      for my $to_id (@{ $named_event->{to} }) {
-        if ($new_ids->{$to_id}) {
-          delete $new_ids->{$to_id};
-        }
-      }
-    }
-  }
-  %events = (%events, %$multi_events);
-
-  if (%$new_ids) {
-    $logger->warn(scalar(%$new_ids) . " new ids not in the event file: " . join("; ", sort keys %$new_ids));
-  }
-
-  if (%$old_ids) {
-    $logger->warn(scalar(%$old_ids) . " old ids not in the event file: " . join("; ", sort keys %$old_ids));
-  }
-
-  close($events_fh);
-
-  return \%events;
-}
-
-sub check_multi_events {
-  my ( $from, $to ) = @_;
-
-  my %events = (
-    merge => [],
-    split => [],
-    multi => [],
-  );
-  for my $from_id ( sort keys %$from ) {
-    next if not $from->{$from_id};
-    my @to_ids = @{ $from->{$from_id} };
-    my %group  = ( from => [$from_id], to => [@to_ids] );
-
-    my $extended = 1;
-    while ($extended) {
-      $extended = 0;
-      my %from_ids = map { $_ => 1 } @{$group{from}};
-      my %to_ids = map { $_ => 1 } @{$group{to}};
-
-      # Expand the group in the to ids
-      for my $to_id (sort keys %to_ids) {
-        if ( exists $to->{$to_id} ) {
-          my @to_from_ids = @{ $to->{$to_id} };
-
-          # Add to the from list?
-          my @new_from_ids;
-          for my $to_from_id (@to_from_ids) {
-            if (not $from_ids{$to_from_id}) {
-              push @new_from_ids, $to_from_id;
-            }
-          }
-          if (@new_from_ids) {
-            push @{ $group{from} }, @new_from_ids;
-            $extended = 1;
-          }
-        }
-      }
-      # Expand the group in the from ids
-      for my $from_id (sort keys %from_ids) {
-        if ( exists $from->{$from_id} ) {
-          my @from_to_ids = @{ $from->{$from_id} };
-
-          # Add to the to list?
-          my @new_to_ids;
-          for my $from_to_id (@from_to_ids) {
-            if (not $to_ids{$from_to_id}) {
-              push @new_to_ids, $from_to_id;
-            }
-          }
-          if (@new_to_ids) {
-            push @{ $group{to} }, @new_to_ids;
-            $extended = 1;
-          }
-        }
-      }
-    }
-
-    # We have a group! Clean up and save it
-    for my $from_id (@{ $group{from} }) {
-      delete $from->{$from_id};
-    }
-    for my $to_id (@{ $group{to} }) {
-      delete $to->{$to_id};
-    }
-    
-    # Save the group, guess the event name
-    if (@{ $group{from} } > 1) {
-      if (@{ $group{to} } > 1) {
-        push @{$events{multi}}, \%group;
-      } else {
-        push @{$events{merge}}, \%group;
-      }
-    } else {
-      push @{$events{split}}, \%group;
-    }
-  }
-
-  return \%events;
-}
-
-sub diff_events {
-  my ($old, $new) = @_;
-
-  my %events = (
-    new => [],
-    deleted => [],
-  );
-
-  my %old_ids = map { $_ => 1 } keys %$old;
-  my %new_ids = map { $_ => 1 } keys %$new;
-
-  for my $old_id (keys %old_ids) {
-    if ($new_ids{$old_id}) {
-      delete $old_ids{$old_id};
-      delete $new_ids{$old_id};
-    }
-  }
-
-  return \%old_ids, \%new_ids;
-}
-
 sub get_feat_data {
   my ($registry, $species, $feature) = @_;
   
@@ -360,7 +120,7 @@ sub get_feat_data {
     my $id = $feat->stable_id;
     my $version = $feat->version // 1;
     my $description;
-    if ($feature eq 'gene') {
+    if ($feature eq 'gene' or $feature eq 'transcript') {
       $description = $feat->description;
     }
     my $xrefs = $feat->get_all_DBEntries();
@@ -410,37 +170,38 @@ sub update_versions {
   
   $logger->info("$update_count $feature version updated");
   $logger->info("$new_count $feature version to be initialized");
-  $logger->info("(Use --write to make the changes to the database))") if $update_count + $new_count > 0 and not $update;
+  $logger->info("(Use --update to make the changes to the database))") if $update_count + $new_count > 0 and not $update;
 }
 
 sub update_descriptions {
-  my ($registry, $species, $old_genes, $update) = @_;
+  my ($registry, $species, $feature, $old_feats, $update) = @_;
+  return if $feature eq "translation";
   
   my $update_count = 0;
   my $empty_count = 0;
   my $new_count = 0;
   
-  my $ga = $registry->get_adaptor($species, "core", 'gene');
-  for my $gene (@{$ga->fetch_all}) {
-    my $id = $gene->stable_id;
-    my $description = $gene->description;
+  my $adaptor = $registry->get_adaptor($species, "core", $feature);
+  for my $feat (@{$adaptor->fetch_all}) {
+    my $id = $feat->stable_id;
+    my $description = $feat->description;
 
     if (not defined $description) {
-      my $old_gene = $old_genes->{$id};
-      if (not $old_gene) {
+      my $old_feat = $old_feats->{$id};
+      if (not $old_feat) {
         $new_count++;
         next;
       }
-      my $old_description = $old_gene->{description};
+      my $old_description = $old_feat->{description};
 
       if (defined $old_description) {
         my $new_description = $old_description;
-        $logger->debug("Transfer gene $id description: $new_description");
+        $logger->debug("Transfer $feature $id description: $new_description");
         $update_count++;
 
         if ($update) {
-          $gene->description($new_description);
-          $ga->update($gene);
+          $feat->description($new_description);
+          $adaptor->update($feat);
         }
       } else {
         $empty_count++;
@@ -448,15 +209,15 @@ sub update_descriptions {
     }
   }
   
-  $logger->info("$update_count gene descriptions transferred");
-  $logger->info("$empty_count genes without description remain");
-  $logger->info("$new_count new genes, without description");
-  $logger->info("(Use --write to update the descriptions in the database)") if $update_count > 0 and not $update;
+  $logger->info("$update_count $feature descriptions transferred");
+  $logger->info("$empty_count $feature without description remain");
+  $logger->info("$new_count new $feature, without description");
+  $logger->info("(Use --update to update the descriptions in the database)") if $update_count > 0 and not $update;
 }
 
 sub update_xrefs {
-  # Transfer the xrefs from old gene entries to new gene entries, if those do not exist
-  my ($registry, $species, $old_genes, $update) = @_;
+  # Transfer the xrefs from old entries to new entries, if those do not exist
+  my ($registry, $species, $feature, $old_feats, $update) = @_;
   
   my $update_count = 0;
   my $new_count = 0;
@@ -466,50 +227,55 @@ sub update_xrefs {
 
   my $aa = $registry->get_adaptor($species, "core", 'analysis');
   
-  my $ga = $registry->get_adaptor($species, "core", 'gene');
+  my $adaptor = $registry->get_adaptor($species, "core", $feature);
   my $xa = $registry->get_adaptor($species, "core", 'DBentry');
-  for my $gene (@{$ga->fetch_all}) {
-    my $id = $gene->stable_id;
+  for my $feat (@{$adaptor->fetch_all}) {
+    my $id = $feat->stable_id;
 
-    my $old_gene = $old_genes->{$id};
-    if (not $old_gene) {
+    my $old_feat = $old_feats->{$id};
+    if (not $old_feat) {
       $new_count++;
       next;
     }
-    my $xrefs = $gene->get_all_DBEntries();
+    my $xrefs = $feat->get_all_DBEntries();
     my %xref_dict = map { $_->dbname => $_ } @$xrefs;
 
-    my $old_xrefs = $old_gene->{xrefs};
+    my $old_xrefs = $old_feat->{xrefs};
 
     for my $xref (@$old_xrefs) {
       my $dbname = $xref->dbname;
+      my $analysis = $xref->analysis;
+      my $analysis_name = $analysis ? "$dbname (".$analysis->logic_name.")" : $dbname;
+
       # We only include dbnames that we expect
       if (not exists $ok_xrefs{$dbname}) {
-        $logger->debug("NO TRANSFER for gene $id xref:\t$dbname\twith ID " . $xref->primary_id);
-        $no_transfer{$dbname}++;
+        $logger->debug("NO TRANSFER for $feature $id xref:\t$analysis_name\twith ID " . $xref->primary_id);
+        $no_transfer{$analysis_name}++;
         next;
       }
+
       # Rename the dbname in case we need to transfer old xrefs which had their name changed
       $dbname = $ok_xrefs{$dbname};
+      $analysis_name = $analysis ? "$dbname (".$analysis->logic_name.")" : $dbname;
       $xref->dbname($dbname);
       if (not exists $xref_dict{$dbname}) {
-        $yes_transfer{$dbname}++;
-        $logger->debug("Transfer gene $id xref: $dbname with ID " . $xref->primary_id);
+        $logger->debug("Transfer $feature $id xref: $analysis_name with ID " . $xref->primary_id);
+        $yes_transfer{$analysis_name}++;
         $update_count++;
         if ($update) {
           # Ensure we use an up to date analysis
           my $analysis_name = $xref->analysis->logic_name;
           my $analysis = $aa->fetch_by_logic_name($analysis_name);
           $xref->analysis($analysis);
-          $xa->store($xref, $gene->dbID, 'Gene', 1); # ignore release
+          $xa->store($xref, $feat->dbID, $feature, 1); # ignore release
           $total_transfer++;
         }
       }
     }
   }
   
-  $logger->info("$update_count gene xrefs transferred");
-  $logger->info("$new_count new genes, without xref to transfer");
+  $logger->info("$update_count $feature xrefs transferred");
+  $logger->info("$new_count new $feature, without xref to transfer");
   for my $dbname (sort keys %yes_transfer) {
     my $count = $yes_transfer{$dbname};
     $logger->info("Transfered: $count\t$dbname");
@@ -521,68 +287,10 @@ sub update_xrefs {
   $logger->info("$total_transfer written xref transfers") if $total_transfer > 0;
   if ($update_count > 0) {
     if (not $update) {
-      $logger->info("(Use --write to update the xrefs in the database)");
+      $logger->info("(Use --update to update the xrefs in the database)");
     }
   } else {
     $logger->info("(No xrefs to update in the database)");
-  }
-}
-
-sub add_events {
-  my ($events, $data, $dbc, $metadata, $write) = @_;
-
-  my $feat = 'gene';
-  my $mapping_id = add_mapping_session($dbc, $metadata, $write);
-
-  for my $event_name (keys %$events) {
-    my @events = @{$events->{$event_name}};
-    my $nevents = scalar @events;
-    my $msg = "Storing $nevents events $event_name...";
-    $msg = "Fake $msg" unless $write;
-    $logger->info($msg);
-    for my $event (@events) {
-      my @from = @{$event->{from}};
-      my @to = @{$event->{to}};
-
-      if ($event_name eq 'new') {
-        insert_event($dbc, $write, [$mapping_id, $feat, undef, undef, $to[0], 1]);
-      }
-      elsif ($event_name eq 'deleted') {
-        my $id = $from[0];
-        my $version = $data->{$id}->{version} // 1;
-        insert_event($dbc, $write, [$mapping_id, $feat, $id, $version, undef, undef]);
-      }
-      elsif ($event_name eq 'change') {
-        my $id = $from[0];
-        my $old_version = $data->{$id}->{version} // 1;
-        my $new_version = $old_version + 1;
-        insert_event($dbc, $write, [$mapping_id, $feat, $id, $old_version, $id, $new_version]);
-      }
-      elsif ($event_name eq 'split' or $event_name eq 'merge' or $event_name eq 'multi') {
-        for my $merge_id (@from) {
-          my $old_version = $data->{$merge_id}->{version} // 1;
-          for my $split_id (@to) {
-            insert_event($dbc, $write, [$mapping_id, $feat, $merge_id, $old_version, $split_id, 1]);
-          }
-          insert_event($dbc, $write, [$mapping_id, $feat, $merge_id, $old_version, undef, undef]);
-        }
-      } else {
-        $logger->warn("Unsupported event: $event_name");
-      }
-    }
-  }
-}
-
-sub insert_event {
-  my ($dbc, $write, $values) = @_;
-  my $sql = "INSERT INTO stable_id_event(mapping_session_id, type, old_stable_id, old_version, new_stable_id, new_version) VALUES(?,?,?,?,?,?)";
-  my $sth = $dbc->prepare($sql);
-  my $msg = "Insert values: " . join(", ", map { $_ // 'undef' } @$values);
-  if ($write) {
-    $logger->debug($msg);
-    $sth->execute(@$values);
-  } else {
-    $logger->debug("Fake $msg");
   }
 }
 
@@ -628,28 +336,6 @@ sub get_meta_value {
   return $value;
 }
 
-sub add_mapping_session {
-  my ($dbc, $meta, $write) = @_;
-
-  my $mapping_id = 1;
-  if ($write) {
-    $logger->info("Storing new mapping session...");
-    my @fields = qw(old_db_name new_db_name old_release new_release old_assembly new_assembly);
-    my $sql = "INSERT INTO mapping_session(".join(", ", @fields).", created) VALUES(?,?,?,?,?,?,NOW())";
-    my $sth = $dbc->prepare($sql);
-    my @values = map { $meta->{$_} } @fields;
-    $sth->execute(@values);
-    my $dbh = $dbc->db_handle();
-    $mapping_id = $dbh->last_insert_id;
-  } else {
-    $logger->info("Fake storing new mapping session (set to 1).");
-    use Data::Dumper;
-    $logger->debug(Dumper($meta));
-  }
-
-  return $mapping_id;
-}
-
 ###############################################################################
 # Parameters and usage
 sub usage {
@@ -665,24 +351,13 @@ sub usage {
     --new_registry <path> : Ensembl registry
     --species <str>   : production_name of one species
 
-    You can do 2 things:
-    - Update the history
-    - Transfer the descriptions and version
-    (you can do both at the same time)
-
-    History (use both events and deletes at the same time to make them part of the same session):
-    --events <path>   : Path to an events file, to update the history and versions
-    --deletes <path>  : Path to a list of deleted genes (to use with the events file)
-
-    NB: only run the history update once (otherwise you will have duplicates).
-    
     Transfer:
     --descriptions : Transfer the gene descriptions
     --versions     : Transfer and increment the gene versions, and init the others
     --xrefs        : Transfer the xrefs associated with genes
     
     Use this to make actual changes:
-    --write           : Do the actual changes (default is no changes to the database)
+    --update          : Do the actual changes (default is no changes to the database)
     
     --help            : show this help message
     --verbose         : show detailed progress
@@ -701,9 +376,7 @@ sub opt_check {
     "descriptions",
     "versions",
     "xrefs",
-    "events=s",
-    "deletes=s",
-    "write",
+    "update",
     "help",
     "verbose",
     "debug",
