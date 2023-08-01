@@ -345,8 +345,6 @@ sub allocate_genes {
   for my $gene (@genes) {
 
     my $gene_id = $trs_list ? $gene->stable_id : $gene_map{$gene->stable_id};
-    
-    my @transcripts = @{ $gene->get_all_Transcripts };
 
     my $new_tran_ids = $tr_ids->{$gene_id}->{transcripts};
     my $new_prot_ids = $tr_ids->{$gene_id}->{proteins};
@@ -399,9 +397,10 @@ sub allocate_genes {
       if ($update) {
         my $old_tr_id = $tr->stable_id;
         $tr->stable_id($tran_id);
+        $logger->debug("Reset ID from $old_tr_id to $tran_id: " . $tr->stable_id);
 
         if ($update) {
-        $tra->update($tr);
+          $tra->update($tr);
 
           # Xref
           if ($xref_source) {
