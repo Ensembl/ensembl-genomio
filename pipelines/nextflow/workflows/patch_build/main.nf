@@ -168,6 +168,9 @@ process transfer_metadata {
         path(old_registry)
         path(new_registry)
         val(species)
+    
+    output:
+        path("transfer_metadata.err")
 
     script:
     """
@@ -179,7 +182,7 @@ process transfer_metadata {
         --versions \\
         --xrefs \\
         --verbose \\
-        --update
+        --update 2> transfer_metadata.err
     """
 }
 
@@ -268,7 +271,7 @@ workflow PATCH_BUILD_PROCESS {
         new_transcripts = transfer_ids(changed_genes, old_registry, new_registry, params.species)
 
         // Transfer metadata (can be done any time after the ids are transfered?)
-        transfer_metadata(new_transcripts, old_registry, new_registry, params.species)
+        transfer_log = transfer_metadata(new_transcripts, old_registry, new_registry, params.species)
 
         // Allocate ids for both the new_genes and the changed_genes new transcripts
         new_genes_map = ALLOCATE_GENE_IDS(new_registry, params.species, osid, new_genes, "gene")
@@ -284,6 +287,7 @@ workflow PATCH_BUILD_PROCESS {
             .concat(new_genes_map)
             .concat(new_transcripts)
             .concat(events_file)
+            .concat(transfer_log)
         publish(all_files, params.output_dir)
 }
 
