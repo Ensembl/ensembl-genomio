@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, Generator, List, Tuple
+from typing import Dict, Generator, List, Optional, Tuple
 
 import argschema
 from sqlalchemy.engine import URL
@@ -46,7 +46,7 @@ class IdEvent:
     def __str__(self) -> str:
         fields = [self.from_id, self.to_id, self.event, self.release, self.release_date]
         return "\t".join(fields)
-    
+
     def is_change(self) -> bool:
         """If the event is an update of an existing gene."""
         changed_events = ("iso_gain", "iso_loss", "broken", "changed")
@@ -142,7 +142,7 @@ class EventCollection:
             "<": "split",
             "+": "new",
         }
-        event_sep = r"|".join([symbol.replace(r"+", r"\+") for symbol in event_symbol]);
+        event_sep = r"|".join([symbol.replace(r"+", r"\+") for symbol in event_symbol])
         splitter = f"({event_sep})"
         parts = re.split(splitter, event_string)
         if len(parts) != 3:
@@ -163,7 +163,7 @@ class EventCollection:
         for event in self.events:
             if not event.to_id:
                 continue
-            elif event.is_change():
+            if event.is_change():
                 event.to_id = event.from_id
             elif event.to_id in map_dict:
                 event.to_id = map_dict[event.to_id]
@@ -205,10 +205,10 @@ class EventCollection:
                 session.flush()
                 session.refresh(map_session)
                 for event in mapping.events:
-                    from_id = event.from_id
+                    from_id: Optional[str] = event.from_id
                     if from_id == "":
                         from_id = None
-                    to_id = event.to_id
+                    to_id: Optional[str] = event.to_id
                     if to_id == "":
                         to_id = None
                     id_event = StableIdEvent(

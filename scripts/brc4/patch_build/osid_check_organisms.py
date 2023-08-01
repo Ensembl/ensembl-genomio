@@ -18,8 +18,8 @@
 
 import argparse
 from typing import List
-import requests
 import json
+import requests
 
 
 class OSIDClient:
@@ -50,12 +50,12 @@ class OSIDClient:
             body["organismName"] = species
 
         get_url = self.url + "/" + OSIDClient.organisms_page
-        result = requests.get(get_url, auth=(self.user, self.key), params=body)
+        result = requests.get(get_url, auth=(self.user, self.key), params=body, timeout=30)
 
         if result and result.status_code == 200:
             organisms = json.loads(result.content)
         else:
-            raise Exception("Could not retrieve organism data from {get_url}")
+            raise ValueError(f"Could not retrieve organism data from {get_url}")
         return organisms
 
 
