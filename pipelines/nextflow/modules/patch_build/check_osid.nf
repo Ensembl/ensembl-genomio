@@ -23,17 +23,21 @@ process CHECK_OSID {
         val(osid)
 
     script:
-    def osid_params = ""
-    if (!osid.mock) {
-        osid_params = "--osid_url $osid.url --osid_user $osid.user --osid_pass $osid.pass --species $osid.species"
-    }
+    def osid_file = "osid_organism.json"
     """
-    if [ "$osid_params" != "" ]; then
-        perl $params.scripts_dir/osid_check_organisms.pl $osid_params > osid_organism.json
-        size=\$(wc -l osid_organism.json)
-        if [ \$size -eq 0 ]; then
+    if [ "$osid.mock" != "true" ]; then
+        python $params.scripts_dir/osid_check_organisms.py \\
+        --url $osid.url \\
+        --user $osid.user \\
+        --key $osid.pass \\
+        --species $osid.species \\
+         > $osid_file
+        FOUND=\$(cat osid_organism.json)
+        if [ "\$FOUND" = "[]" ]; then
             echo "Cannot get organism info from OSID for $osid.species"
             exit 1
+        else
+            echo "$osid.species is in OSID"
         fi
     fi
     """

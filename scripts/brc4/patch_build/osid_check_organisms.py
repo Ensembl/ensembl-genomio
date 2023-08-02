@@ -17,6 +17,7 @@
 """This script retrieves the organism metadata from an OSID server."""
 
 import argparse
+import sys
 from typing import List
 import json
 import requests
@@ -72,7 +73,7 @@ def main():
     organisms = client.get_organism_data(args.species)
 
     # Display results
-    print(f"{len(organisms)} Organisms in {args.url}:")
+    print(f"{len(organisms)} Organisms in {args.url}:", file=sys.stderr)
     print(json.dumps(organisms, indent=4, sort_keys=True))
 
 
