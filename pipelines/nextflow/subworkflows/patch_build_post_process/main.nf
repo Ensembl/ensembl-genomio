@@ -59,7 +59,7 @@ workflow PATCH_BUILD_PROCESS {
         new_transcripts_map = ALLOCATE_TRANSCRIPT_IDS(new_registry, server.species, osid, new_transcripts, "transcript")
 
         // Finalize the versions
-        waited_files = new_genes_map.concat(new_transcripts_map)
+        waited_files = new_genes_map.concat(new_transcripts_map).last()
         FINALIZE_VERSIONS(server, waited_files)
 
         // Format the annotation events file into a compatible event file
