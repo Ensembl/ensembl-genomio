@@ -47,7 +47,7 @@ input:
         user
         password
         species = this is the production_name for the species to update
-  - osid:
+  - osid_params:
       type: tuple
       description: |
         MANDATORY param. Tuple containing OSID parameters to allocate IDs.

@@ -16,6 +16,7 @@
 // Patch build post-processing pipeline
 
 // Import modules/subworkflows
+include { CHECK_OSID } from '../../modules/patch_build/check_osid.nf'
 include { EXTRACT_GENE_LISTS } from '../../modules/patch_build/extract_gene_lists.nf'
 include { TRANSFER_IDS } from '../../modules/patch_build/transfer_ids.nf'
 include { TRANSFER_METADATA } from '../../modules/patch_build/transfer_metadata.nf'
@@ -32,13 +33,16 @@ workflow PATCH_BUILD_PROCESS {
         old_registry
         new_registry
         server
-        osid
+        osid_params
         release
     
     emit:
         logs
     
     main:
+        // Check OSID is available and has the expected species
+        osid = CHECK_OSID(osid_params)
+
         // Extract the genes lists from the annotation event file
         (new_genes, changed_genes) = EXTRACT_GENE_LISTS(events)
 
