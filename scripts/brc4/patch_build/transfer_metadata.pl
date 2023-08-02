@@ -105,27 +105,6 @@ if ($opt{versions}) {
     $logger->info("Versions transfer for $feat:");
     update_versions($registry, $species, $feat, $old_data{$feat}, $opt{update});
   }
-
-  # Blanket version replacement for transcripts, translations, exons
-  if ($opt{update}) {
-    $logger->info("Transcripts, translations and exons version update");
-    my $ga = $registry->get_adaptor($species, "core", 'gene');
-    my $dbc = $ga->dbc;
-
-    # Transfer the versions from genes to transcripts
-    my $transcript_query = "UPDATE transcript LEFT JOIN gene USING(gene_id) SET transcript.version = gene.version";
-    $dbc->do($transcript_query);
-
-    # Also transfer the versions from transcripts to translations
-    my $translation_query = "UPDATE translation LEFT JOIN transcript USING(transcript_id) SET translation.version = transcript.version";
-    $dbc->do($translation_query);
-
-    # And set the exons version to 1
-    my $exon_query = "UPDATE exon SET version = 1";
-    $dbc->do($exon_query);
-  } else {
-    $logger->info("Transcripts, translations and exons init versions were not updated (use --update to do so)");
-  }
 }
 
 ###############################################################################

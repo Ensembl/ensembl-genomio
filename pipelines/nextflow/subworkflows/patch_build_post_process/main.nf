@@ -24,6 +24,7 @@ include { FORMAT_EVENTS } from '../../modules/patch_build/format_events.nf'
 include { LOAD_EVENTS } from '../../modules/patch_build/load_events.nf'
 include { ALLOCATE_IDS as ALLOCATE_GENE_IDS } from '../../modules/patch_build/allocate_ids.nf'
 include { ALLOCATE_IDS as ALLOCATE_TRANSCRIPT_IDS } from '../../modules/patch_build/allocate_ids.nf'
+include { FINALIZE_VERSIONS } from '../../modules/patch_build/finalize_versions.nf'
 
 workflow PATCH_BUILD_PROCESS {
 
@@ -56,6 +57,10 @@ workflow PATCH_BUILD_PROCESS {
         // Allocate ids for both the new_genes and the changed_genes new transcripts
         new_genes_map = ALLOCATE_GENE_IDS(new_registry, server.species, osid, new_genes, "gene")
         new_transcripts_map = ALLOCATE_TRANSCRIPT_IDS(new_registry, server.species, osid, new_transcripts, "transcript")
+
+        // Finalize the versions
+        waited_files = new_genes_map.concat(new_transcripts_map)
+        FINALIZE_VERSIONS(server, waited_files)
 
         // Format the annotation events file into a compatible event file
         events_file = FORMAT_EVENTS(events, deleted, new_genes_map, release)
