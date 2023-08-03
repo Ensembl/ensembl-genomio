@@ -81,6 +81,7 @@ sub default_options_generic {
     
     # Where fixes fail, apply seq-edits where possible.
     apply_seq_edits => 1,
+    gff3_autoapply_manual_seq_edits => 1,
     
     # Can also load genes into an otherfeatures db.
     db_type => 'core',
@@ -210,6 +211,7 @@ sub pipeline_wide_parameters_generic {
     'fix_models'           => $self->o('fix_models'),
     'apply_seq_edits'      => $self->o('apply_seq_edits'),
     'big_genome_threshold' => $self->o('big_genome_threshold'),
+    'gff3_autoapply_manual_seq_edits' => $self->o('gff3_autoapply_manual_seq_edits'),
   };
 }
 
@@ -222,7 +224,7 @@ sub pipeline_analyses {
       -module          => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -max_retry_count => 0,
       -input_ids       => [ {} ],
-      -flow_into       => ['GFF3Tidy'],
+      -flow_into       => ['LoadGFF3Start'],
       -meadow_type     => 'LOCAL',
     },
     
@@ -234,6 +236,23 @@ sub pipeline_analyses_generic {
   my ($self) = @_;
   
   return [
+    {
+      -logic_name      => 'LoadGFF3Start',
+      -module          => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -max_retry_count => 0,
+      -flow_into       => ['ServerFromRegistry'],
+      -meadow_type     => 'LOCAL',
+    },
+
+    {
+      -logic_name => 'ServerFromRegistry',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::ServerFromRegistry',
+      -rc_name    => 'default',
+      -flow_into => {
+        '2' => 'GFF3Tidy',
+      },
+    },
+
     {
       -logic_name        => 'GFF3Tidy',
       -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -444,6 +463,38 @@ sub pipeline_analyses_generic {
           log            => catdir($self->o('pipeline_dir'), '#species#', 'apply_seq_edits.log'),
       },
       -rc_name           => 'normal',
+      -flow_into         => ['ReportSeqEdits'],
+    },
+
+    {
+      -logic_name => 'ReportSeqEdits',
+      -module     => 'Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::ReportSeqEdits',
+      -parameters => {
+        logic_name      => $self->o('logic_name'),
+        db_url          => '#dbsrv_url#' . '#db_name#',
+        protein_fasta_file      => '#protein_fasta_file#',
+          biotype_report_filename      => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/biotypes.txt',
+          seq_edit_tt_report_filename  => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/seq_edit_tt.txt',
+          seq_edit_tn_report_filename  => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/seq_edit_tn.txt',
+          protein_seq_report_filename  => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins.txt',
+          protein_seq_fixes_filename   => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins_fixes.txt',
+      },
+      -max_retry_count   => 0,
+      -rc_name    => '16GB',
+      -analysis_capacity   => 10,
+      -flow_into => WHEN('#gff3_autoapply_manual_seq_edits#' => [ 'ApplyPatches' ], ELSE 'EmailReport'),
+      # -flow_into => 'ApplyPatches',
+    },
+
+    {
+      -logic_name => 'ApplyPatches',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::DbCmd',
+      -parameters => {
+        db_conn    => '#dbsrv_url#' . '#db_name#',
+        input_file => $self->o('pipeline_dir') . '/#db_name#/load_gff3/reports/proteins_fixes.txt',
+      },
+      -rc_name    => 'default',
+      -analysis_capacity   => 10,
       -flow_into         => ['EmailReport'],
     },
 

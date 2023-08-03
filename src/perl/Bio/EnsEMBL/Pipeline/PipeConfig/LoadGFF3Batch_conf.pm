@@ -113,7 +113,7 @@ sub pipeline_analyses {
                             genbank_filename       => $self->o('genbank_filename'),
                             protein_fasta_filename => $self->o('protein_fasta_filename'),
                           },
-      -flow_into       => ['GFF3Tidy'],
+      -flow_into       => ['LoadGFF3Start'],
       -meadow_type     => 'LOCAL',
     },
     
