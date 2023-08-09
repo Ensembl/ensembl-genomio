@@ -203,19 +203,19 @@ my $default_analysis_name = 'brc4_import';
   sub get_transcripts_ids {
     my ($self, $set_id, $map) = @_;
     
-    my %tr_ids;
-    my @tr_ids = ();
-    my @prot_ids = ();
+    my %tr_ids_out;
     for my $gene_data (@$map) {
+      my @tr_ids = ();
+      my @prot_ids = ();
       my $gene_id = $gene_data->{geneId};
       my $count = $gene_data->{transcripts};
       for my $i (1..($count+1)) {
         push @tr_ids, $gene_id . '.R' . $i;
         push @prot_ids, $gene_id . '.P' . $i;
       }
-      $tr_ids{$gene_id} = {transcripts => \@tr_ids, proteins => \@prot_ids};
+      $tr_ids_out{$gene_id} = {transcripts => \@tr_ids, proteins => \@prot_ids};
     }
-    return \%tr_ids;
+    return \%tr_ids_out;
   }
 }
 
