@@ -25,6 +25,7 @@ include { LOAD_EVENTS } from '../../modules/patch_build/load_events.nf'
 include { ALLOCATE_IDS as ALLOCATE_GENE_IDS } from '../../modules/patch_build/allocate_ids.nf'
 include { ALLOCATE_IDS as ALLOCATE_TRANSCRIPT_IDS } from '../../modules/patch_build/allocate_ids.nf'
 include { FINALIZE_VERSIONS } from '../../modules/patch_build/finalize_versions.nf'
+include { CHECK_PATCH } from '../../modules/patch_build/check_patch.nf'
 
 workflow PATCH_BUILD_PROCESS {
 
@@ -62,6 +63,9 @@ workflow PATCH_BUILD_PROCESS {
         waited_files = new_genes_map.concat(new_transcripts_map).last()
         FINALIZE_VERSIONS(server, waited_files)
 
+        // Check stable ids
+        patch_errors=CHECK_PATCH(server, waited_files)
+
         // Format the annotation events file into a compatible event file
         events_file = FORMAT_EVENTS(events, deleted, new_genes_map, release)
         LOAD_EVENTS(server, events_file)
@@ -73,4 +77,5 @@ workflow PATCH_BUILD_PROCESS {
             .concat(new_transcripts)
             .concat(events_file)
             .concat(transfer_log)
+            .concat(patch_errors)
 }
