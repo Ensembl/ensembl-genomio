@@ -41,7 +41,7 @@ process CHECK_PATCH {
         table=$1
         dups=$(run_sql "SELECT stable_id FROM $table GROUP BY stable_id HAVING count(*)>1" | wc -l)
         if [ "$dups" -gt "0" ]; then
-            echo "$dups duplicate $table stable ids" > $error_report
+            echo "$dups duplicate $table stable ids" >> $error_report
             echo 1
             return
         fi
@@ -53,7 +53,7 @@ process CHECK_PATCH {
         apollo_pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
         apids=$(run_sql "SELECT stable_id FROM $table" | grep -E "$apollo_pattern" | wc -l)
         if [ "$apids" -gt "0" ]; then
-            echo "$apids Apollo IDs remain in $table" > $error_report
+            echo "$apids Apollo IDs remain in $table" >> $error_report
             echo 1
             return
         fi
@@ -74,7 +74,8 @@ process CHECK_PATCH {
     done
 
     if [ "$errors" -gt "0" ]; then
-        echo "$errors errors found, abort" > $error_report
+        echo "$errors errors found, abort" >> $error_report
+        cat $error_report
         exit 1
     fi
     '''
