@@ -93,8 +93,7 @@ sub param_defaults {
     exon_types      => ['exon', 'pseudogenic_exon'],
     cds_types       => ['CDS'],
     utr_types       => ['five_prime_UTR', 'three_prime_UTR'],
-    ignore_types    => [
-                        'match', 'match_part',
+    ignore_types    => ['match', 'match_part',
                         'sequence_feature',
                         'cDNA_match', 'nucleotide_match', 'protein_match',
                         'polypeptide', 'protein',
