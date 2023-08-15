@@ -93,8 +93,7 @@ sub param_defaults {
     exon_types      => ['exon', 'pseudogenic_exon'],
     cds_types       => ['CDS'],
     utr_types       => ['five_prime_UTR', 'three_prime_UTR'],
-    ignore_types    => [
-                        'match', 'match_part',
+    ignore_types    => ['match', 'match_part',
                         'sequence_feature',
                         'cDNA_match', 'nucleotide_match', 'protein_match',
                         'polypeptide', 'protein',
@@ -102,7 +101,8 @@ sub param_defaults {
                         'region', 'biological_region',
                         'regulatory_region', 'repeat_region',
                         'long_terminal_repeat', 'STS',
-                        'D_loop','origin_of_replication'],
+                        'D_loop','origin_of_replication',
+			'non_canonical_five_prime_splice_site','non_canonical_three_prime_splice_site'],
 
     # By default, it is assumed that the above type lists are exhaustive.
     # If there is a type in the GFF3 that is not listed, an error will be
