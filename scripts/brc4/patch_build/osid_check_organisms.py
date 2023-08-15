@@ -17,9 +17,10 @@
 """This script retrieves the organism metadata from an OSID server."""
 
 import argparse
+import sys
 from typing import List
-import requests
 import json
+import requests
 
 
 class OSIDClient:
@@ -50,12 +51,12 @@ class OSIDClient:
             body["organismName"] = species
 
         get_url = self.url + "/" + OSIDClient.organisms_page
-        result = requests.get(get_url, auth=(self.user, self.key), params=body)
+        result = requests.get(get_url, auth=(self.user, self.key), params=body, timeout=30)
 
         if result and result.status_code == 200:
             organisms = json.loads(result.content)
         else:
-            raise Exception("Could not retrieve organism data from {get_url}")
+            raise ValueError(f"Could not retrieve organism data from {get_url}")
         return organisms
 
 
@@ -72,7 +73,7 @@ def main():
     organisms = client.get_organism_data(args.species)
 
     # Display results
-    print(f"{len(organisms)} Organisms in {args.url}:")
+    print(f"{len(organisms)} Organisms in {args.url}:", file=sys.stderr)
     print(json.dumps(organisms, indent=4, sort_keys=True))
 
 

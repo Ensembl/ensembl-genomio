@@ -45,7 +45,10 @@ class IdsMapper:
             for line in map_fh:
                 if line == "":
                     continue
-                (from_id, to_id) = line.split("\t")[0:2]
+                items = line.split("\t")
+                if len(items) < 2:
+                    raise ValueError(f"Not 2 elements in {line}")
+                (from_id, to_id) = items[0:2]
                 mapping[from_id] = to_id
 
         return mapping
