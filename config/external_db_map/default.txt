@@ -10,10 +10,10 @@
 #         - if exists feature rule an there's no universal valid rule, other features are treated as ignored
 
 # check parser conf
-# fixing duplicating flybase_annotation_id
-# find proper display_xref_id from flybase_{gene,transcript}_id for those with flybase_annotation_id
-# drop duplicating flybase_annotation_id if corresponding flybase_{gene,transcript,translation}_id exist
-# drop duplicating flybase_annotation_id if corresponding FlyBaseName_{gene,transcript,translation} exist
+# fixing duplicating flybase_annot_id
+# find proper display_xref_id from flybase_{gene,transcript}_id for those with flybase_annot_id
+# drop duplicating flybase_annot_id if corresponding flybase_{gene,transcript,translation}_id exist
+# drop duplicating flybase_annot_id if corresponding FlyBaseName_{gene,transcript,translation} exist
 
 # Hint: get list of xrefs from metadata/functional_annotation.json
 #  cat metadata/functional_annotation.json | grep '"dbname":' | cut -f 4 -d '"' | sort | uniq -c
@@ -32,9 +32,9 @@ DRscDB	DRscDB	gene	gene
 
 EntrezGene	EntrezGene	gene
 
-flybase_annotation_id	flybase_annotation_id	gene
-FlyBase	flybase_annotation_id	gene
-FlyBase_Annotation_IDs	flybase_annotation_id	gene
+flybase_annotation_id	flybase_annot_id	gene
+FlyBase	flybase_annot_id	gene
+FlyBase_Annotation_IDs	flybase_annot_id	gene
 
 flybase_gene_id	flybase_gene_id	gene
 
@@ -72,10 +72,10 @@ BRC4_Community_Annotation	BRC4_Community_Annotation_transcript	transcript
 Community_Annotation_transcript	BRC4_Community_Annotation_transcript	transcript
 BRC4_Community_Annotation_transcript	BRC4_Community_Annotation_transcript	transcript
 
-flybase_annotation_id	flybase_annotation_id_transcript	transcript
-FlyBase	flybase_annotation_id_transcript	transcript
-FlyBase_Annotation_IDs	flybase_annotation_id_transcript	transcript
-flybase_annotation_id_transcript	flybase_annotation_id_transcript	transcript
+flybase_annotation_id	flybase_annot_id_transcr	transcript
+FlyBase	flybase_annot_id_transcr	transcript
+FlyBase_Annotation_IDs	flybase_annot_id_transcr	transcript
+flybase_annotation_id_transcript	flybase_annot_id_transcr	transcript
 
 flybase_transcript_id	flybase_transcript_id	transcript
 
@@ -116,10 +116,10 @@ BRC4_Community_Annotation_translation	BRC4_Community_Annotation_translation	tran
 
 AlphaFold_DB	AlphaFold_DB	translation
 
-flybase_annotation_id	flybase_annotation_id_translation	translation
-FlyBase	flybase_annotation_id_translation	translation
-FlyBase_Annotation_IDs	flybase_annotation_id_translation	translation
-flybase_annotation_id_translation	flybase_annotation_id_translation	translation
+flybase_annotation_id	flybase_annot_id_transl	translation
+FlyBase	flybase_annot_id_transl	translation
+FlyBase_Annotation_IDs	flybase_annot_id_transl	translation
+flybase_annotation_id_translation	flybase_annot_id_transl	translation
 
 flybase_translation_id	flybase_translation_id	translation
 
