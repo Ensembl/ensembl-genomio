@@ -37,6 +37,8 @@ include:
   - local: cicd/gitlab/parts/python.gitlab-ci.yml
   # License checks
   - local: cicd/gitlab/parts/license.gitlab-ci.yml
+  # Flat file checks
+  - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
 
 
 # External pipelines
