@@ -95,10 +95,10 @@ sub load_fasta {
   my ($self, $fasta_file) = @_;
   my %fasta;
   
-  open(FASTA, $fasta_file);
+  open(my $fasta_fh, '<', $fasta_file);
   
   my $id;
-  while (my $row = <FASTA>) {
+  while (my $row = <$fasta_fh>) {
     if ($row =~ /^>(\S+)/) {
       $id = $1;
     } else {
@@ -107,7 +107,7 @@ sub load_fasta {
     }
   }
   
-  close(FASTA);
+  close($fasta_fh);
   
   return %fasta;
 }
