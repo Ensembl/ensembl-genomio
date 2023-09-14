@@ -18,6 +18,7 @@
 
 import json
 from pathlib import Path
+import re
 from typing import Any, Dict
 
 import argschema
@@ -67,18 +68,60 @@ def get_genome_metadata(session: Session) -> Dict[str, Any]:
 
 def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
     meta_list = {
-        "species": {"taxonomy_id"},
+        "species": {"taxonomy_id", "production_name", "scientific_name", "strain", "display_name", "division", "alias", "annotation_source"},
+        "assembly": {"accession", "date", "name", "version", "provider_name", "provider_url"},
+        "genebuild": {"version", "method", "start_date", "method_display"},
+        "annotation":{"provider_name", "provider_url"},
         "BRC4": {"organism_abbrev", "component"},
+        "added_seq": {"region_name"},
+    }
+    is_integer = {
+        "species": {"taxonomy_id"},
+        "assembly": {"version"}
     }
 
     gmeta_out: Dict[str, Any] = {}
-    for mkey, mval in meta_list.items():
-        if mkey in gmeta:
-            gmeta_out[mkey] = gmeta[mkey]
+    for key1, subkeys in meta_list.items():
+        if key1 in gmeta:
+            if subkeys:
+                gmeta_out[key1] = {}
+                for key2 in subkeys:
+                    if key2 in gmeta[key1]:
+                        value = gmeta[key1][key2]
+                        if len(value) == 1:
+                            value = value[0]
+                            if key2 in is_integer.get(key1, {}):
+                                value = int(value)
+                        gmeta_out[key1][key2] = value
+            else:
+                value = gmeta[key1]
+                if len(value) == 1:
+                    value = value[0]
+                    if is_integer.get(key1):
+                        value = int(value)
+                gmeta_out[key1] = value
     
+    check_assembly_version(gmeta_out)
+
     return gmeta_out
 
 
+def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
+    assembly = gmeta_out["assembly"]
+    version = assembly.get("version")
+    
+    # Check the version is an integer
+    if version is not None and version.isdigit():
+        assembly["version"] = int(version)
+    else:
+        # Get the version from the assembly accession
+        accession = assembly["accession"]
+        parts = accession.split(".")
+        if len(parts) == 2 and parts[1].isdigit():
+            version = parts[1]
+            assembly["version"] = int(version)
+        else:
+            raise ValueError(f"Assembly version is not an integer in {assembly}");
 
 
 class InputSchema(argschema.ArgSchema):
