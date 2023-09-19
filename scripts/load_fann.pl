@@ -430,8 +430,8 @@ sub db_name_for_feature {
   # check if there's a specific ignore rule
   if ($ignore_feature) {
     my $pat = $ignore_feature->{pat};
-    return undef if (!defined $pat);
-    return undef if ($xref_id =~ m/$pat/);
+    return if (!defined $pat);
+    return if ($xref_id =~ m/$pat/);
   }
 
   # check if there's a specific valid rule
@@ -442,10 +442,10 @@ sub db_name_for_feature {
   }
 
   # check if mentioned anywhere else and no global validness; no pattern checked
-  return undef if ($valid_other and !$valid_any);
+  return if ($valid_other and !$valid_any);
 
   # check global ignore
-  return undef if ($ignore_any);
+  return if ($ignore_any);
   # then check global validness
   return $valid_any->{val} if ($valid_any);
 

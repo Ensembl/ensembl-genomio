@@ -209,10 +209,10 @@ sub load_external_db_map {
 sub get_attribute_single_val {
   my ($self, $obj, $name) = @_;
 
-  return undef if (!$obj);
+  return if (!$obj);
 
   my ($attr) = @{ $obj->get_all_Attributes($name) };
-  return undef if (!$attr);
+  return if (!$attr);
 
   return $attr->value();
 }
@@ -247,7 +247,7 @@ sub get_added_sequence {
   my ($self, $slice) = @_;
 
   my $added_seq_accession = $self->get_attribute_single_val($slice, 'added_seq_accession');
-  return undef if (!$added_seq_accession);
+  return if (!$added_seq_accession);
 
   my $added_sequence = {
     accession => $added_seq_accession,
@@ -263,7 +263,7 @@ sub get_added_sequence {
   $self->update_from_attribute_single_val($slice, 'added_seq_ann_pr_url', $added_sequence, 'annotation_provider/url');
 
   # panic perhaps?
-  return undef if (!exists $added_sequence->{assembly_provider}->{name});
+  return if (!exists $added_sequence->{assembly_provider}->{name});
 
   return $added_sequence;
 }

@@ -33,6 +33,8 @@ variables:
 include:
   # CI/CD debugging
   - local: cicd/gitlab/parts/debug.gitlab-ci.yml
+  # Perl checks
+  - local: cicd/gitlab/parts/perl.gitlab-ci.yml
   # Python checks
   - local: cicd/gitlab/parts/python.gitlab-ci.yml
   # License checks
