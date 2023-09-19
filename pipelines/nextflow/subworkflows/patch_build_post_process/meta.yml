@@ -67,6 +67,5 @@ input:
         date
 output:
   - logs:
-    type: files
-    description: |
-    Output files of interest (mapping used, logs).
+      type: files
+      description: Output files of interest (mapping used, logs).
