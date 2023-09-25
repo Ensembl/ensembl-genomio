@@ -56,9 +56,6 @@ sub main {
 
   # Apply the gene metadata to each genes conserved
   transfer_genes_metadata($opt{new_registry}, $opt{species}, \@replaced, $opt{update});
-  
-  # Add the history to the stable_id history table
-  # TODO
 }
 
 ###############################################################################
