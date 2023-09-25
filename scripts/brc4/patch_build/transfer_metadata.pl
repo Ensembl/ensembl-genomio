@@ -1,4 +1,3 @@
-#!/usr/env perl
 =head1 LICENSE
 
 See the NOTICE file distributed with this work for additional information
@@ -64,6 +63,7 @@ my $reg_path = $opt{old_registry};
 $registry->load_all($reg_path);
 my $ma = $registry->get_adaptor($species, "core", 'MetaContainer');
 
+#Get the metadata from the database
 my $old_metadata = get_meta($ma);
 my %old_data;
 for my $feat (@features) {
@@ -108,6 +108,7 @@ if ($opt{versions}) {
 }
 
 ###############################################################################
+#Retrieve all the features and store the descriptions and xrefs, the translation descriptions are not stored
 sub get_feat_data {
   my ($registry, $species, $feature) = @_;
   
@@ -170,6 +171,7 @@ sub update_versions {
   $logger->info("(Use --update to make the changes to the database))") if $update_count + $new_count > 0 and not $update;
 }
 
+#Update descriptions, excluding the feature type 'translation'
 sub update_descriptions {
   my ($registry, $species, $feature, $old_feats, $update) = @_;
   return if $feature eq "translation";
@@ -212,6 +214,7 @@ sub update_descriptions {
   $logger->info("(Use --update to update the descriptions in the database)") if $update_count > 0 and not $update;
 }
 
+#Xrefs are updated by mapping the gene stable_id
 sub update_xrefs {
   # Transfer the xrefs from old entries to new entries, if those do not exist
   my ($registry, $species, $feature, $old_feats, $update) = @_;
@@ -239,6 +242,7 @@ sub update_xrefs {
 
     my $old_xrefs = $old_feat->{xrefs};
 
+    #A few xrefs in 'skip_analysis' are not transferred 
     for my $xref (@$old_xrefs) {
       my $dbname = $xref->dbname;
       $dbname = $alias_xrefs{$dbname} // $dbname;
@@ -295,6 +299,7 @@ sub update_xrefs {
   }
 }
 
+#Retrieve other metadata 
 sub get_meta {
   my ($ma) = @_;
 
