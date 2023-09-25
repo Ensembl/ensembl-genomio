@@ -39,7 +39,7 @@ use List::MoreUtils qw(uniq);
 # Get command line args
 our %opt = %{ opt_check() };
 
-# First, load the mapping an event of changed genes
+# First, load the mapping of changed genes
 my $mapping = load_mapping($opt{mapping});
 my @old_gene_ids = values(%$mapping);
 
@@ -77,6 +77,7 @@ sub load_mapping {
 
   return \%mapping;
 }
+
 #Get all the genes and transcripts associated through the adaptor, its a key value pair
 sub get_genes_data {
   my ($registry, $species, $gene_ids) = @_;
@@ -98,6 +99,7 @@ sub get_genes_data {
   
   return \%genes;
 }
+
 #Retrieve all the exons 
 sub tr_fingerprint {
   my ($tr) = @_;
@@ -120,6 +122,7 @@ sub tr_fingerprint {
 
   return $fingerprint;
 }
+
 #Gene ids are updated mapping stable_id, the old gene_id is stored as stable_id in the new db
 sub transfer_gene_ids {
   my ($registry, $species, $mapping, $old_genes, $update) = @_;
@@ -160,6 +163,7 @@ sub transfer_gene_ids {
 
   return \@missed_transcripts;
 }
+
 #Transcripts are transferred mapping the stable_id
 sub transfer_transcripts {
   my ($gene, $old_genes, $stats, $tra, $update) = @_;
