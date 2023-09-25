@@ -100,7 +100,7 @@ sub get_genes_data {
   return \%genes;
 }
 
-#Retrieve all the exons 
+#Retrieve all the exons coords and pack them into "fingerprint"
 sub tr_fingerprint {
   my ($tr) = @_;
 
