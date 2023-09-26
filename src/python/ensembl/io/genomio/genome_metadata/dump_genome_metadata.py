@@ -18,7 +18,6 @@
 
 import json
 from pathlib import Path
-import re
 from typing import Any, Dict
 
 import argschema
@@ -67,18 +66,30 @@ def get_genome_metadata(session: Session) -> Dict[str, Any]:
 
 
 def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
+    """Returns a filtered metadata dict with only predefined keys.
+    Also converts expected numbers to integers (to follow the genome json schema).
+
+    Args:
+        gmeta (Dict[str, Any]): Nested metadata key values from the core metadata table.
+    """
     meta_list = {
-        "species": {"taxonomy_id", "production_name", "scientific_name", "strain", "display_name", "division", "alias", "annotation_source"},
+        "species": {
+            "taxonomy_id",
+            "production_name",
+            "scientific_name",
+            "strain",
+            "display_name",
+            "division",
+            "alias",
+            "annotation_source",
+        },
         "assembly": {"accession", "date", "name", "version", "provider_name", "provider_url"},
         "genebuild": {"version", "method", "start_date", "method_display"},
-        "annotation":{"provider_name", "provider_url"},
+        "annotation": {"provider_name", "provider_url"},
         "BRC4": {"organism_abbrev", "component"},
         "added_seq": {"region_name"},
     }
-    is_integer = {
-        "species": {"taxonomy_id"},
-        "assembly": {"version"}
-    }
+    is_integer = {"species": {"taxonomy_id"}, "assembly": {"version"}}
 
     gmeta_out: Dict[str, Any] = {}
     for key1, subkeys in meta_list.items():
@@ -100,16 +111,22 @@ def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
                     if is_integer.get(key1):
                         value = int(value)
                 gmeta_out[key1] = value
-    
+
     check_assembly_version(gmeta_out)
 
     return gmeta_out
 
 
 def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
+    """Update the assembly version of the genome metadata provided to use an integer.
+    Get the version from the assembly accession as alternative.
+
+    Args:
+        gmeta (Dict[str, Any]): Nested metadata key values from the core metadata table.
+    """
     assembly = gmeta_out["assembly"]
     version = assembly.get("version")
-    
+
     # Check the version is an integer
     if version is not None and version.isdigit():
         assembly["version"] = int(version)
@@ -121,7 +138,7 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
             version = parts[1]
             assembly["version"] = int(version)
         else:
-            raise ValueError(f"Assembly version is not an integer in {assembly}");
+            raise ValueError(f"Assembly version is not an integer in {assembly}")
 
 
 class InputSchema(argschema.ArgSchema):
