@@ -74,6 +74,7 @@ workflow PATCH_BUILD_PROCESS {
         logs = changed_genes
             .concat(new_genes)
             .concat(new_genes_map)
+            .concat(new_transcripts_map)
             .concat(new_transcripts)
             .concat(events_file)
             .concat(transfer_log)
