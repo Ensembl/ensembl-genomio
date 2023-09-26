@@ -21,10 +21,10 @@
 .python:
   stage: test
   image: python:3.8
-  only:
-    changes:
+  rules:
+    - changes:
       - cicd/gitlab/parts/python.gitlab-ci.yml
-      - pyproject.toml
+      - "pyproject.toml"
       - "*.py"
       - src/python/**/*.py
 
