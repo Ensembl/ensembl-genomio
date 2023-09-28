@@ -105,6 +105,7 @@ db_factory = "ensembl.io.genomio.db_factory:main"
 # Dump
 seq_region_dumper = "ensembl.io.genomio.seq_region_dumper:main"
 genome_meta_dumper = "ensembl.io.genomio.genome_metadata.dump_genome_metadata:main"
+genome_stats_dumper = "ensembl.io.genomio.genome_metadata.dump_genome_stats:main"
 # Events
 events_dumper = "ensembl.io.genomio.events_dumper:main"
 events_loader = "ensembl.io.genomio.events_loader:main"
