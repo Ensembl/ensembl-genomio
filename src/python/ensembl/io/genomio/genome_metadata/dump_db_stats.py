@@ -23,46 +23,55 @@ from typing import Any, Dict
 import argschema
 from sqlalchemy import select, func
 from sqlalchemy.engine import URL
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from ensembl.database import DBConnection
-from ensembl.core.models import SeqRegion, SeqRegionAttrib, AttribType
+from ensembl.core.models import SeqRegionAttrib, AttribType
 
 
-def get_assembly_stats(session: Session) -> Dict[str, Any]:
-    stats = {
-        "coord_system": get_coord_system_tags(session),
-    }
-    return stats
+class StatsGenerator:
+    """Interface to extract stats from a core database."""
 
+    def __init__(self, session: Session) -> None:
+        self.session = session
 
-def get_coord_system_tags(session: Session) -> Dict[str, int]:
-    # Assuming stats are in seq_region_attribs
-    seqs_st = (
-        select(SeqRegionAttrib.value, func.count(SeqRegionAttrib.value))
-        .join(AttribType)
-        .filter(AttribType.code == "coord_system_tag")
-        .group_by(SeqRegionAttrib.value)
-    )
+    def get_assembly_stats(self) -> Dict[str, Any]:
+        """Returns a dict of stats about the assembly."""
+        stats = {
+            "coord_system": self.get_coord_system_tags(),
+        }
+        return stats
 
-    coords = {}
-    for row in session.execute(seqs_st):
-        (coord, value) = row
-        coords[coord] = value
+    def get_coord_system_tags(self) -> Dict[str, int]:
+        """Returns a dict of stats about the coordinate systems (number of chromosomes, etc.)."""
+        session = self.session
 
-    return coords
+        # Assuming stats are in seq_region_attribs
+        seqs_st = (
+            select(SeqRegionAttrib.value, func.count(SeqRegionAttrib.value))
+            .join(AttribType)
+            .filter(AttribType.code == "coord_system_tag")
+            .group_by(SeqRegionAttrib.value)
+        )
 
+        coords = {}
+        for row in session.execute(seqs_st):
+            (coord, value) = row
+            coords[coord] = value
 
-def get_annotation_stats(session: Session) -> Dict[str, Any]:
-    return {}
+        return coords
 
+    def get_annotation_stats(self) -> Dict[str, Any]:
+        """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
+        return {}
 
-def get_stats(session: Session) -> Dict[str, Any]:
-    all_stats = {
-        "assembly": get_assembly_stats(session),
-        "annotation": get_annotation_stats(session),
-    }
-    return all_stats
+    def get_stats(self) -> Dict[str, Any]:
+        """Returns a dict of stats about the assembly and annotation."""
+        all_stats = {
+            "assembly": self.get_assembly_stats(),
+            "annotation": self.get_annotation_stats(),
+        }
+        return all_stats
 
 
 class InputSchema(argschema.ArgSchema):
@@ -94,7 +103,8 @@ def main() -> None:
     dbc = DBConnection(db_url)
 
     with dbc.session_scope() as session:
-        all_stats = get_stats(session)
+        generator = StatsGenerator(session)
+        all_stats = generator.get_stats()
 
     if args.get("output_json"):
         output_file = Path(args.get("output_json"))
