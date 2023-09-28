@@ -38,28 +38,28 @@ class StatsGenerator:
     def get_assembly_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the assembly."""
         stats = {
-            "coord_system": self.get_coord_system_tags(),
+            "coord_system": self.get_attrib_counts("coord_system_tag"),
+            "locations": self.get_attrib_counts("sequence_location"),
+            "codon_table": self.get_attrib_counts("codon_table"),
         }
         return stats
 
-    def get_coord_system_tags(self) -> Dict[str, int]:
-        """Returns a dict of stats about the coordinate systems (number of chromosomes, etc.)."""
+    def get_attrib_counts(self, code: str) -> Dict[str, Any]:
         session = self.session
 
-        # Assuming stats are in seq_region_attribs
         seqs_st = (
             select(SeqRegionAttrib.value, func.count(SeqRegionAttrib.value))
             .join(AttribType)
-            .filter(AttribType.code == "coord_system_tag")
+            .filter(AttribType.code == code)
             .group_by(SeqRegionAttrib.value)
         )
 
-        coords = {}
+        attribs = {}
         for row in session.execute(seqs_st):
-            (coord_tag, count) = row
-            coords[coord_tag] = count
+            (attrib_name, count) = row
+            attribs[attrib_name] = count
 
-        return coords
+        return attribs
 
     def get_annotation_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
