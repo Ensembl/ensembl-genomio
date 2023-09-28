@@ -26,7 +26,7 @@ from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
 from ensembl.database import DBConnection
-from ensembl.core.models import SeqRegionAttrib, AttribType, Gene
+from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
 
 
 class StatsGenerator:
@@ -65,19 +65,19 @@ class StatsGenerator:
         """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
 
         stats = {
-            "biotypes": self.get_biotypes(),
-            "genes": self.get_genes_stats(),
+            "genes": self.get_feature_stats(Gene),
+            "transcripts": self.get_feature_stats(Transcript),
         }
 
         return stats
 
-    def get_biotypes(self) -> Dict[str, int]:
-        """Returns a dict of stats about the genes biotypes."""
+    def get_biotypes(self, table) -> Dict[str, int]:
+        """Returns a dict of stats about the feature biotypes."""
         session = self.session
 
         seqs_st = (
-            select(Gene.biotype, func.count())
-            .group_by(Gene.biotype)
+            select(table.biotype, func.count())
+            .group_by(table.biotype)
         )
 
         biotypes = {}
@@ -87,28 +87,29 @@ class StatsGenerator:
 
         return biotypes
 
-    def get_genes_stats(self) -> Dict[str, int]:
-        """Returns a dict of stats about genes."""
+    def get_feature_stats(self, table) -> Dict[str, int]:
+        """Returns a dict of stats about a given feature."""
         session = self.session
 
-        totals_st = select(func.count(Gene.gene_id))
+        totals_st = select(func.count(table.stable_id))
         (total,) = session.execute(totals_st).one()
-        no_desc_st = select(func.count(Gene.gene_id)).filter(Gene.description == None)
+        no_desc_st = select(func.count(table.stable_id)).filter(table.description is None)
         (no_desc,) = session.execute(no_desc_st).one()
-        xref_desc_st = select(func.count(Gene.gene_id)).where(Gene.description.like("%[Source:%"))
+        xref_desc_st = select(func.count(table.stable_id)).where(table.description.like("%[Source:%"))
         (xref_desc,) = session.execute(xref_desc_st).one()
 
         left_over = total - no_desc - xref_desc
 
-        gene_stats = {
+        feat_stats = {
             "total": total,
+            "biotypes": self.get_biotypes(table),
             "description": {
                 "empty": no_desc,
                 "source_xref": xref_desc,
                 "normal": left_over,
             }
         }
-        return gene_stats
+        return feat_stats
 
     def get_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the assembly and annotation."""
