@@ -26,7 +26,7 @@ from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
 from ensembl.database import DBConnection
-from ensembl.core.models import SeqRegionAttrib, AttribType
+from ensembl.core.models import SeqRegionAttrib, AttribType, Gene
 
 
 class StatsGenerator:
@@ -56,14 +56,35 @@ class StatsGenerator:
 
         coords = {}
         for row in session.execute(seqs_st):
-            (coord, value) = row
-            coords[coord] = value
+            (coord_tag, count) = row
+            coords[coord_tag] = count
 
         return coords
 
     def get_annotation_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
-        return {}
+
+        stats = {
+            "biotypes": self.get_biotypes(),
+        }
+
+        return stats
+
+    def get_biotypes(self) -> Dict[str, int]:
+        """Returns a dict of stats about the genes biotypes."""
+        session = self.session
+
+        seqs_st = (
+            select(Gene.biotype, func.count(Gene.biotype))
+            .group_by(Gene.biotype)
+        )
+
+        biotypes = {}
+        for row in session.execute(seqs_st):
+            (biotype, count) = row
+            biotypes[biotype] = count
+
+        return biotypes
 
     def get_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the assembly and annotation."""
