@@ -127,7 +127,7 @@ sub prepare_data {
   print(scalar(@seq_regions) . " seq_regions\n");
 
   # Sort
-  @seq_regions = sort { $a->{name} cmp $b->{name} } @seq_regions;
+  @seq_regions = sort { $a->{coord_system_level} cmp $b->{coord_system_level} or $a->{name} cmp $b->{name} } @seq_regions;
 
   # Write data to json
   return \@seq_regions;

@@ -114,7 +114,7 @@ sub check_assembly_version {
       my $acc = $assembly->{accession};
       if ($acc and $acc =~ /\.(\d+$)/) {
         my $version = $1;
-        $meta->{assembly}->{version} = $version;
+        $meta->{assembly}->{version} = int($version);
         return $meta;
       } else {
         die("Can't extract version number from assembly version: $version (accession = $acc)");
