@@ -66,6 +66,7 @@ class StatsGenerator:
 
         stats = {
             "biotypes": self.get_biotypes(),
+            "genes": self.get_genes_stats(),
         }
 
         return stats
@@ -75,7 +76,7 @@ class StatsGenerator:
         session = self.session
 
         seqs_st = (
-            select(Gene.biotype, func.count(Gene.biotype))
+            select(Gene.biotype, func.count())
             .group_by(Gene.biotype)
         )
 
@@ -85,6 +86,29 @@ class StatsGenerator:
             biotypes[biotype] = count
 
         return biotypes
+
+    def get_genes_stats(self) -> Dict[str, int]:
+        """Returns a dict of stats about genes."""
+        session = self.session
+
+        totals_st = select(func.count(Gene.gene_id))
+        (total,) = session.execute(totals_st).one()
+        no_desc_st = select(func.count(Gene.gene_id)).filter(Gene.description == None)
+        (no_desc,) = session.execute(no_desc_st).one()
+        xref_desc_st = select(func.count(Gene.gene_id)).where(Gene.description.like("%[Source:%"))
+        (xref_desc,) = session.execute(xref_desc_st).one()
+
+        left_over = total - no_desc - xref_desc
+
+        gene_stats = {
+            "total": total,
+            "description": {
+                "empty": no_desc,
+                "source_xref": xref_desc,
+                "normal": left_over,
+            }
+        }
+        return gene_stats
 
     def get_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the assembly and annotation."""
