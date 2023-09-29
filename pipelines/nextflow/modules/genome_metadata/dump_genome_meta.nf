@@ -16,7 +16,7 @@
 
 process DUMP_GENOME_META {
     tag "${db.species}"
-    label "default"
+    label "normal"
 
     input:
         val server
