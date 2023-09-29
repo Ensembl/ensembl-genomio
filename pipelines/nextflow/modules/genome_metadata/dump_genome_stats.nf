@@ -16,12 +16,11 @@
 
 process DUMP_GENOME_STATS {
     tag "${db.species}"
-    label "normal"
+    label "local"
 
     input:
         val server
         val db
-        val filter_map
 
     output:
         tuple val(db), val("stats"), path("stats.json")
