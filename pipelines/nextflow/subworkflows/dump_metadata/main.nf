@@ -43,12 +43,10 @@ workflow DUMP_METADATA {
         events = DUMP_EVENTS(server, db, filter_map)
         genome_meta = DUMP_GENOME_META(server, db, filter_map)
 
+        // Compute stats
         genome_stats = DUMP_GENOME_STATS(server, db)
         ncbi_stats = DUMP_NCBI_STATS(server, db)
-
         stats = ncbi_stats.join(genome_stats)
-            .view()
-
         diff_stats = COMPARE_GENOME_STATS(stats)
 
         // Group the files by db species (use the db object as key)
