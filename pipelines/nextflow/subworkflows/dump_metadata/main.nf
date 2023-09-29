@@ -17,6 +17,7 @@ include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
 include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
 include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_meta.nf'
 include { DUMP_GENOME_STATS } from '../../modules/genome_metadata/dump_genome_stats.nf'
+include { COMPARE_GENOME_STATS } from '../../modules/genome_metadata/compare_genome_stats.nf'
 include { DUMP_NCBI_STATS } from '../../modules/genome_metadata/dump_ncbi_stats.nf'
 include { CHECK_JSON_SCHEMA } from '../../modules/schema/check_json_schema_db.nf'
 
@@ -41,15 +42,21 @@ workflow DUMP_METADATA {
         seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
         events = DUMP_EVENTS(server, db, filter_map)
         genome_meta = DUMP_GENOME_META(server, db, filter_map)
+
         genome_stats = DUMP_GENOME_STATS(server, db)
         ncbi_stats = DUMP_NCBI_STATS(server, db)
+
+        stats = ncbi_stats.join(genome_stats)
+            .view()
+
+        diff_stats = COMPARE_GENOME_STATS(stats)
 
         // Group the files by db species (use the db object as key)
         // Only keep the files so they are easy to collect
         db_files = seq_regions_checked
             .concat(events)
             .concat(genome_meta)
-            .concat(genome_stats)
+            .concat(diff_stats)
             .map{ db, name, file_name -> tuple(db, file_name) }
             .groupTuple()
 

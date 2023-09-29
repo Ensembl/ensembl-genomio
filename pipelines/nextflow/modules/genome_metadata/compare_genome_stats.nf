@@ -14,26 +14,23 @@
 // limitations under the License.
 
 
-process DUMP_GENOME_STATS {
+process COMPARE_GENOME_STATS {
     tag "${db.species}"
     label "local"
 
     input:
-        val server
-        val db
+        tuple val(db), path(ncbi_stats, stageAs: "ncbi_stats.json"), path(core_stats, stageAs: "core_stats.json")
 
     output:
-        tuple val(db), path("stats.json")
+        tuple val(db), val("stats"), path("stats.json")
 
     script:
         def output = "stats.json"
         """
         touch $output
-        genome_stats_dumper --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
-            --password '${server.password}' \
-            --database '${db.database}' \
+        genome_stats_compare \
+            --ncbi $ncbi_stats \
+            --core $core_stats \
             --output_json $output
         """
 }

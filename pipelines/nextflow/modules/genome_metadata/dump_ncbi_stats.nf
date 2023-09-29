@@ -23,7 +23,7 @@ process DUMP_NCBI_STATS {
         val db
 
     output:
-        tuple val(db), val("ncbi_stats"), path("ncbi_stats.json")
+        tuple val(db), path("ncbi_stats.json")
 
     script:
         def output = "ncbi_stats.json"
