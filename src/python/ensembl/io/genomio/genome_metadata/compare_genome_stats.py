@@ -24,10 +24,26 @@ from typing import Any, Dict
 import argschema
 
 
+def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
+
+    diff = {}
+    for key in ncbi.keys():
+        diff[key] = {
+            "ncbi": ncbi[key],
+            "core": core[key],
+            "diff": ncbi[key] - core[key]
+        }
+    return diff
+
+
 def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
+    """Returns a compilation of count comparisons.
+    Each comparison is a dict with the value from NCBI, from Core, and their diff.
+    """
+
+    # Prepare counts to be comparable to the NCBI stats
 
     # First count the organella
-    ncbi_num_organella = len(ncbi_organella)
     core_num_organella = 0
     core_num_chrs = 0
     for loc, loc_count in core["locations"].items():
@@ -35,40 +51,30 @@ def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
             core_num_chrs += loc_count
         else:
             core_num_organella += loc_count
-    
-    print(f"Core Chromosomes: {core_num_chrs}")
-    print(f"Core Organella: {core_num_organella}")
 
     # Our core stats count Organella chromosomes, sanity check here
     core_adjusted_chrs = core["coord_system"].get("chromosome", 0) - core_num_organella
     if core_adjusted_chrs != core_num_chrs:
         raise ValueError(f"Core stats chromosomes number doesn't add up: {core_adjusted_chrs} vs {core_num_chrs}")
     
+    # Number of scaffolds from our core
     core_num_scaffolds = core["coord_system"].get("scaffold", 0)
-    print(f"Core scaffolds: {core_num_scaffolds}")
 
     # NCBI includes the chromodomes in its stats
     core_adjusted_scaffolds = core_num_scaffolds + core_num_chrs
-    print(f"Core adjusted scaffolds: {core_adjusted_scaffolds}")
 
-    # Compare:
-    # The number of scaffolds
-    comp = {
-        "scaffolds": _diff_count(ncbi_main["number_of_scaffolds"], core_adjusted_scaffolds),
-        "chromosomes": _diff_count(ncbi_main["total_number_of_chromosomes"], core_adjusted_chrs),
-        "organella": _diff_count(ncbi_num_organella, core_num_organella),
+    # Compile the counts
+    ncbi_counts = {
+        "num_organella": len(ncbi_organella),
+        "num_chromosomes": ncbi_main["total_number_of_chromosomes"],
+        "num_scaffolds": ncbi_main["number_of_scaffolds"],
     }
-
-    return comp
-
-
-def _diff_count(ncbi_count: int, core_count: int) -> Dict:
-    comp = {
-        "ncbi": ncbi_count,
-        "core": core_count,
-        "diff": ncbi_count - core_count
+    core_counts = {
+        "num_organella": core_num_organella,
+        "num_chromosomes": core_adjusted_chrs,
+        "num_scaffolds": core_adjusted_scaffolds,
     }
-    return comp
+    return _diff_dicts(ncbi_counts, core_counts)
 
 
 def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
@@ -81,7 +87,7 @@ def compare_stats(ncbi: Dict, core: Dict) -> Dict:
 
     ncbi_assembly_stats = ncbi.get("assembly_stats")
     ncbi_organella = ncbi.get("organelle_info")
-    ncbi_annotation_stats = ncbi.get("annotation_stats")
+    ncbi_annotation_stats = ncbi.get("annotation_info", {}).get("stats", {}).get("gene_counts", {})
     core_assembly_stats = core.get("assembly_stats")
     core_annotation_stats = core.get("annotation_stats")
 
@@ -93,7 +99,7 @@ def compare_stats(ncbi: Dict, core: Dict) -> Dict:
 
     new_core = {
         "core_stats": core,
-        "ncbi_stats": {"assembly_stats": ncbi_assembly_stats, "anotation_stats": core_annotation_stats},
+        "ncbi_stats": {"assembly_stats": ncbi_assembly_stats, "anotation_stats": ncbi_annotation_stats},
         "ncbi_comparison": comp
     }
     return new_core
