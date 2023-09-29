@@ -27,13 +27,25 @@ import argschema
 def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
 
     diff = {}
+    same = {}
     for key in ncbi.keys():
+        if ncbi[key] == 0 and core[key] == 0:
+            continue
+        if ncbi[key] == core[key]:
+            same[key] = ncbi[key]
+            continue
         diff[key] = {
             "ncbi": ncbi[key],
             "core": core[key],
             "diff": ncbi[key] - core[key]
         }
-    return diff
+    
+    comp = {}
+    if same:
+        comp["same"] = same
+    if diff:
+        comp["different"] = diff
+    return comp
 
 
 def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
@@ -78,8 +90,30 @@ def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
 
 
 def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
-    comp = {}
-    return comp
+
+    # Prepare counts to be comparable
+    core_biotypes = core.get("genes", {}).get("biotypes", {})
+
+    # We want a value for:
+    # protein_coding = same
+    # pseudogene = same
+    # non_coding = total - rest
+    # other = ?
+
+    ncbi_counts = {
+        "protein_coding": ncbi["protein_coding"],
+        "pseudogene": ncbi["pseudogene"],
+        "total_genes": ncbi["total"],
+        "other": ncbi.get("other", 0),
+    }
+
+    core_counts = {
+        "protein_coding": core_biotypes.get("protein_coding", 0),
+        "pseudogene": core_biotypes.get("pseudogene", 0),
+        "total_genes": core.get("genes", {}).get("total", 0),
+        "other": 0,
+    }
+    return _diff_dicts(ncbi_counts, core_counts)
 
 
 def compare_stats(ncbi: Dict, core: Dict) -> Dict:
