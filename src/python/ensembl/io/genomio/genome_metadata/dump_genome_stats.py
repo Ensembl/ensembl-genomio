@@ -114,8 +114,8 @@ class StatsGenerator:
     def get_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the assembly and annotation."""
         all_stats = {
-            "assembly": self.get_assembly_stats(),
-            "annotation": self.get_annotation_stats(),
+            "assembly_stats": self.get_assembly_stats(),
+            "annotation_stats": self.get_annotation_stats(),
         }
         return all_stats
 
