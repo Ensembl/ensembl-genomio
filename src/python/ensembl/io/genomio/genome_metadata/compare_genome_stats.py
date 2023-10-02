@@ -81,13 +81,15 @@ def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
     # Compile the counts
     ncbi_counts = {
         "num_organella": len(ncbi_organella),
-        "num_chromosomes": ncbi_main["total_number_of_chromosomes"],
-        "num_scaffolds": ncbi_main["number_of_scaffolds"],
+        "num_chromosomes": ncbi_main.get("total_number_of_chromosomes", 0),
+        "num_scaffolds": ncbi_main.get("number_of_scaffolds", 0),
+        "num_contigs": ncbi_main.get("number_of_contigs", 0),
     }
     core_counts = {
         "num_organella": core_num_organella,
         "num_chromosomes": core_adjusted_chrs,
         "num_scaffolds": core_adjusted_scaffolds,
+        "num_contigs": core["coord_system"].get("contig", 0),
     }
     return _diff_dicts(ncbi_counts, core_counts)
 
@@ -104,9 +106,9 @@ def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
     # other = ?
 
     ncbi_counts = {
-        "protein_coding": ncbi["protein_coding"],
-        "pseudogene": ncbi["pseudogene"],
-        "total_genes": ncbi["total"],
+        "protein_coding": ncbi.get("protein_coding", 0),
+        "pseudogene": ncbi.get("pseudogene", 0),
+        "total_genes": ncbi.get("total", 0),
         "other": ncbi.get("other", 0),
     }
 
@@ -123,7 +125,7 @@ def compare_stats(ncbi: Dict, core: Dict) -> Dict:
     """Compare stats from NCBI and our core."""
 
     ncbi_assembly_stats = ncbi.get("assembly_stats")
-    ncbi_organella = ncbi.get("organelle_info")
+    ncbi_organella = ncbi.get("organelle_info", [])
     ncbi_annotation_stats = ncbi.get("annotation_info", {}).get("stats", {}).get("gene_counts", {})
     core_assembly_stats = core.get("assembly_stats")
     core_annotation_stats = core.get("annotation_stats")
