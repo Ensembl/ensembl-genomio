@@ -37,7 +37,7 @@ def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
         diff[key] = {
             "ncbi": ncbi[key],
             "core": core[key],
-            "diff": ncbi[key] - core[key]
+            "diff": core[key] - ncbi[key]
         }
     
     comp = {}
