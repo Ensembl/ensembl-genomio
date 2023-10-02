@@ -32,29 +32,45 @@ workflow DUMP_METADATA {
         db
         filter_map
         out_dir
+        selection
 
     emit:
         db
 
     main:
-        // Generate the files
-        seq_regions = DUMP_SEQ_REGIONS(server, db, filter_map)
-        seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
-        events = DUMP_EVENTS(server, db, filter_map)
-        genome_meta = DUMP_GENOME_META(server, db, filter_map)
+        db_files = Channel.of()
 
-        // Compute stats
-        genome_stats = DUMP_GENOME_STATS(server, db)
-        ncbi_stats = DUMP_NCBI_STATS(server, db)
-        stats = ncbi_stats.join(genome_stats)
-        diff_stats = COMPARE_GENOME_STATS(stats)
+        // Seq regions
+        if (selection.contains("seq_regions")) {
+            seq_regions = DUMP_SEQ_REGIONS(server, db, filter_map)
+            seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
+            db_files = db_files.concat(seq_regions_checked)
+        }
+        
+        // // Events
+        if (selection.contains("events")) {
+            events = DUMP_EVENTS(server, db, filter_map)
+            db_files = db_files.concat(events)
+        }
+
+        // // Genome metadata
+        if (selection.contains("genome_metadata")) {
+            genome_meta = DUMP_GENOME_META(server, db, filter_map)
+            db_files = db_files.concat(genome_meta)
+        }
+
+        // Genome stats
+        if (selection.contains("stats")) {
+            genome_stats = DUMP_GENOME_STATS(server, db)
+            ncbi_stats = DUMP_NCBI_STATS(server, db)
+            stats = ncbi_stats.join(genome_stats)
+            diff_stats = COMPARE_GENOME_STATS(stats)
+            db_files = db_files.concat(diff_stats)
+        }
 
         // Group the files by db species (use the db object as key)
         // Only keep the files so they are easy to collect
-        db_files = seq_regions_checked
-            .concat(events)
-            .concat(genome_meta)
-            .concat(diff_stats)
+        db_files = db_files
             .map{ db, name, file_name -> tuple(db, file_name) }
             .groupTuple()
 
