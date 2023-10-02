@@ -17,6 +17,7 @@
 process DUMP_NCBI_STATS {
     tag "${db.species}"
     label "local"
+    maxForks 1
 
     input:
         val server
