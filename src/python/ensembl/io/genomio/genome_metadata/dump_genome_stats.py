@@ -42,6 +42,19 @@ class StatsGenerator:
             "locations": self.get_attrib_counts("sequence_location"),
             "codon_table": self.get_attrib_counts("codon_table"),
         }
+
+        # Special: rename supercontigs to scaffolds for homogeneity
+        stats = self._fix_scaffolds(stats)
+        return stats
+
+    def _fix_scaffolds(self, stats: Dict[str, Any]):
+        coords = stats.get("coord_system")
+        if "supercontig" in coords:
+            if "scaffold" in coords:
+                pass
+            else:
+                coords["scaffold"] = coords["supercontig"]
+                del coords["supercontig"]
         return stats
 
     def get_attrib_counts(self, code: str) -> Dict[str, Any]:
