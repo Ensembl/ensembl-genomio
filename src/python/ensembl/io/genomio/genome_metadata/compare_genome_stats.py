@@ -81,6 +81,12 @@ def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
         "num_scaffolds": core_adjusted_scaffolds,
         "num_contigs": core["coord_system"].get("contig", 0),
     }
+
+    # Only compare contigs if there are any in the core db
+    if core_counts["num_contigs"] == 0:
+        del ncbi_counts["num_contigs"]
+        del core_counts["num_contigs"]
+
     return _diff_dicts(ncbi_counts, core_counts)
 
 
