@@ -25,7 +25,6 @@ import argschema
 
 
 def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
-
     diff = {}
     same = {}
     for key in ncbi.keys():
@@ -34,12 +33,8 @@ def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
         if ncbi[key] == core[key]:
             same[key] = ncbi[key]
             continue
-        diff[key] = {
-            "ncbi": ncbi[key],
-            "core": core[key],
-            "diff": core[key] - ncbi[key]
-        }
-    
+        diff[key] = {"ncbi": ncbi[key], "core": core[key], "diff": core[key] - ncbi[key]}
+
     comp = {}
     if same:
         comp["same"] = same
@@ -66,7 +61,7 @@ def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
 
     # Our core stats count Organella chromosomes, sanity check here
     core_adjusted_chrs = core["coord_system"].get("chromosome", 0) - core_num_organella
-    
+
     # Number of scaffolds from our core
     core_num_scaffolds = core["coord_system"].get("scaffold", 0)
 
@@ -90,7 +85,6 @@ def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
 
 
 def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
-
     # Prepare counts to be comparable
     core_biotypes = core.get("genes", {}).get("biotypes", {})
 
@@ -119,7 +113,7 @@ def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
 def compare_stats(ncbi: Dict, core: Dict) -> Dict:
     """Compare stats from NCBI and our core."""
 
-    ncbi_assembly_stats = ncbi.get("assembly_stats")
+    ncbi_assembly_stats = ncbi.get("assembly_stats", {})
     ncbi_organella = ncbi.get("organelle_info", [])
     ncbi_annotation_stats = ncbi.get("annotation_info", {}).get("stats", {}).get("gene_counts", {})
     core_assembly_stats = core.get("assembly_stats")
@@ -134,7 +128,7 @@ def compare_stats(ncbi: Dict, core: Dict) -> Dict:
     new_core = {
         "core_stats": core,
         "ncbi_stats": {"assembly_stats": ncbi_assembly_stats, "anotation_stats": ncbi_annotation_stats},
-        "ncbi_comparison": comp
+        "ncbi_comparison": comp,
     }
     return new_core
 
@@ -153,7 +147,10 @@ def main() -> None:
     args = mod.args
 
     with open(args["ncbi_stats"]) as ncbi_fh:
-        ncbi_stats = json.load(ncbi_fh)["reports"][0]
+        try:
+            ncbi_stats = json.load(ncbi_fh)["reports"][0]
+        except KeyError:
+            ncbi_stats = {}
     with open(args["core_stats"]) as core_fh:
         core_stats = json.load(core_fh)
     all_stats = compare_stats(ncbi_stats, core_stats)
