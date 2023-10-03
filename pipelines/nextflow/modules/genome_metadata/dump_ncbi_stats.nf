@@ -18,10 +18,12 @@ process DUMP_NCBI_STATS {
     tag "${db.species}"
     label "local"
     maxForks 1
+    storeDir "$cache_dir/ncbi_stats/${db.species}"
 
     input:
         val server
         val db
+        val cache_dir
 
     output:
         tuple val(db), path("ncbi_stats.json")

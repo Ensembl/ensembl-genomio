@@ -33,6 +33,7 @@ workflow DUMP_METADATA {
         filter_map
         out_dir
         selection
+        cache_dir
 
     emit:
         db
@@ -62,7 +63,7 @@ workflow DUMP_METADATA {
         // Genome stats
         if (selection.contains("stats")) {
             genome_stats = DUMP_GENOME_STATS(server, db)
-            ncbi_stats = DUMP_NCBI_STATS(server, db)
+            ncbi_stats = DUMP_NCBI_STATS(server, db, cache_dir)
             stats = ncbi_stats.join(genome_stats)
             diff_stats = COMPARE_GENOME_STATS(stats)
             db_files = db_files.concat(diff_stats)
