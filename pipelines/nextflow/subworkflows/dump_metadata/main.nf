@@ -77,7 +77,7 @@ workflow DUMP_METADATA {
 
         // Collect, create manifest, and publish
         collect_dir = COLLECT_FILES(db_files)
-        manifested_dir = MANIFEST(collect_dir, db)
+        manifested_dir = MANIFEST(collect_dir)
         manifest_checked = CHECK_INTEGRITY(manifested_dir, filter_map)
-        PUBLISH_DIR(manifest_checked, out_dir, db)
+        PUBLISH_DIR(manifest_checked, out_dir)
 }

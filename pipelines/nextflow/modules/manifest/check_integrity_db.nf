@@ -15,17 +15,17 @@
 
 
 process CHECK_INTEGRITY {
-    tag "Integrity_${manifest_dir}"
+    tag "Integrity_${db.species}"
     label 'default'
     errorStrategy 'finish'
     time '1h'
 
     input:
-        path manifest_dir
+        tuple val(db), path(manifest_dir)
         val filter_map
     
     output:
-        path manifest_dir
+        tuple val(db), path(manifest_dir, includeInputs: true)
 
     script:
         """
