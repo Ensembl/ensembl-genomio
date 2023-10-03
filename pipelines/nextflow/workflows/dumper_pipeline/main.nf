@@ -21,6 +21,7 @@ params.brc_mode = 0
 params.dbname_re = ''
 params.output_dir = './dumper_output'
 params.password = ''
+params.cache_dir = './cache'
 params.select_dump = ''
 default_selection = [
     'sql',
@@ -43,6 +44,7 @@ def helpMessage() {
         --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
         --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
         --select_dump                  Comma-separated list of items to dump (dump all by default)
+        --cache_dir                    Dir where some files are cached (e.g. NCBI stats files)
         --help                         This usage statement.
 
         Usage:
@@ -130,5 +132,5 @@ workflow {
     if (params.selection.contains('sql')) {
         DUMP_SQL(server, dbs, filter_map, params.output_dir)
     }
-    DUMP_METADATA(server, dbs, filter_map, params.output_dir, params.selection)
+    DUMP_METADATA(server, dbs, filter_map, params.output_dir, params.selection, params.cache_dir)
 }
