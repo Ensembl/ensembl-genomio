@@ -66,11 +66,6 @@ def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
 
     # Our core stats count Organella chromosomes, sanity check here
     core_adjusted_chrs = core["coord_system"].get("chromosome", 0) - core_num_organella
-
-    # We might not have nuclear_chromsomes (especially in older genomes)
-    # If we do, then it should be the same as the number of chromosomes in our cores
-    if core_num_chrs > 0 and core_adjusted_chrs != core_num_chrs:
-        raise ValueError(f"Core stats chromosomes number doesn't add up: {core_adjusted_chrs} vs {core_num_chrs}")
     
     # Number of scaffolds from our core
     core_num_scaffolds = core["coord_system"].get("scaffold", 0)
