@@ -60,7 +60,10 @@ def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
             core_num_organella += loc_count
 
     # Our core stats count Organella chromosomes, sanity check here
-    core_adjusted_chrs = core["coord_system"].get("chromosome", 0) - core_num_organella
+    core_chr = core["coord_system"].get("chromosome", 0)
+    core_adjusted_chrs = 0
+    if core_chr:
+        core_adjusted_chrs = core_chr - core_num_organella
 
     # Number of scaffolds from our core
     core_num_scaffolds = core["coord_system"].get("scaffold", 0)
