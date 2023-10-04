@@ -16,8 +16,8 @@
 
 process DUMP_GENOME_STATS {
     tag "${db.species}"
-    label "local"
-    maxForks 1
+    label "normal"
+    maxForks 10
 
     input:
         val server

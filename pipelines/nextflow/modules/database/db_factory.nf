@@ -15,7 +15,7 @@
 
 process DB_FACTORY {
     tag "DB_factory"
-    label 'default'
+    label 'local'
     time '5min'
 
     input:

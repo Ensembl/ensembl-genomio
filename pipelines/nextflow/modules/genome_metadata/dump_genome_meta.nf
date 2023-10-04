@@ -17,6 +17,7 @@
 process DUMP_GENOME_META {
     tag "${db.species}"
     label "normal"
+    maxForks 10
 
     input:
         val server
