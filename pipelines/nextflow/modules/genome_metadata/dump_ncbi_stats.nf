@@ -56,6 +56,13 @@ process DUMP_NCBI_STATS {
         echo "Provider is \$provider"
         echo "Accession is \$accession"
 
-        datasets summary genome accession \$accession > $output
+        datasets summary genome accession \$accession | jq '.' > $output
+
+        # Check if it should maybe be using RefSeq?           
+        if [ "\$(jq '.total_count' $output)" == "0" ]; then
+            accession=\$(echo \$accession | sed 's/^GCA_/GCF_/')
+            echo "Trying again with accession \$accession"
+            datasets summary genome accession \$accession | jq '.' > $output
+            fi
         """
 }
