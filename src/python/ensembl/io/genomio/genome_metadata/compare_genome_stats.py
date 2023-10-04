@@ -142,12 +142,7 @@ def compare_stats(ncbi: Dict, core: Dict) -> Dict:
     if core_annotation_stats is not None and ncbi_annotation_stats is not None:
         comp["annotation_diff"] = compare_annotation(ncbi_annotation_stats, core_annotation_stats)
 
-    new_core = {
-        "core_stats": core,
-        "ncbi_stats": {"assembly_stats": ncbi_assembly_stats, "anotation_stats": ncbi_annotation_stats},
-        "ncbi_comparison": comp,
-    }
-    return new_core
+    return comp
 
 
 class InputSchema(argschema.ArgSchema):
