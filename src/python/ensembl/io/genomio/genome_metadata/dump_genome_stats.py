@@ -48,7 +48,7 @@ class StatsGenerator:
         return stats
 
     def _fix_scaffolds(self, stats: Dict[str, Any]):
-        coords = stats.get("coord_system")
+        coords = stats.get("coord_system", {})
         if "supercontig" in coords:
             if "scaffold" in coords:
                 pass
@@ -58,6 +58,11 @@ class StatsGenerator:
         return stats
 
     def get_attrib_counts(self, code: str) -> Dict[str, Any]:
+        """Returns a dict of count for each value counted with the attrib_type code provided.
+
+        Args:
+            code (str): Ensembl database attrib_type code.
+        """
         session = self.session
 
         seqs_st = (
@@ -88,10 +93,7 @@ class StatsGenerator:
         """Returns a dict of stats about the feature biotypes."""
         session = self.session
 
-        seqs_st = (
-            select(table.biotype, func.count())
-            .group_by(table.biotype)
-        )
+        seqs_st = select(table.biotype, func.count()).group_by(table.biotype)
 
         biotypes = {}
         for row in session.execute(seqs_st):
@@ -120,7 +122,7 @@ class StatsGenerator:
                 "empty": no_desc,
                 "source_xref": xref_desc,
                 "normal": left_over,
-            }
+            },
         }
         return feat_stats
 
