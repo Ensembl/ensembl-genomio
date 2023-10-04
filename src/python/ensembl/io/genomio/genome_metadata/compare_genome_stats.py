@@ -26,6 +26,11 @@ import argschema
 
 
 def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
+    """Compare two dicts with the same keys and compute the difference of their values.
+
+    Returns:
+        A dict with the same keys, where the values are dicts with 3 keys: ncbi, core, and diff
+    """
     diff = {}
     same = {}
     for key in ncbi.keys():
@@ -47,6 +52,13 @@ def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
 def compare_assembly(ncbi: Dict, core: Dict) -> Dict:
     """Returns a compilation of count comparisons.
     Each comparison is a dict with the value from NCBI, from Core, and their diff.
+
+    Args:
+        ncbi: Dict of stats from NCBI.
+        core: Dict of assembly stats from the core.
+
+    Returns:
+        Dict: Each count from NCBI, from Core, and their diff.
     """
 
     # Prepare counts to be comparable to the NCBI stats
@@ -98,14 +110,23 @@ def compare_assembly(ncbi: Dict, core: Dict) -> Dict:
 
 
 def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
+    """Compare NCBI vs Core annotation stats (biotype counts).
+
+    Args:
+        ncbi: Dict of biotype counts from NCBI.
+        core: Dict of biotype counts from the core.
+
+    Returns:
+        Dict: Each count from NCBI, from Core, and their diff.
+    """
     # Prepare counts to be comparable
     core_biotypes = core.get("genes", {}).get("biotypes", {})
 
     # We want a value for:
     # protein_coding = same
-    # pseudogene = same
-    # non_coding = total - rest
-    # other = ?
+    # pseudogene = all pseudogene biotypes
+    # total = same
+    # other = number of misc_RNA
 
     ncbi_counts = {
         "protein_coding": ncbi.get("protein_coding", 0),
@@ -134,7 +155,15 @@ def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
 
 
 def compare_stats(ncbi: Dict, core: Dict) -> Dict:
-    """Compare stats from NCBI and our core."""
+    """Compare stats from NCBI and our core.
+
+    Args:
+        ncbi: Dict of stats from NCBI.
+        core: Dict of stats from the core.
+
+    Returns:
+        Dict: Each count from NCBI, from Core, and their diff.
+    """
 
     ncbi_annotation_stats = ncbi.get("annotation_info", {}).get("stats", {}).get("gene_counts", {})
     core_assembly_stats = core.get("assembly_stats")
