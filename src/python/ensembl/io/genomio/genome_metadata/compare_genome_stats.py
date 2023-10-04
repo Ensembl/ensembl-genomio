@@ -44,12 +44,15 @@ def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
     return comp
 
 
-def compare_assembly(ncbi_main: Dict, ncbi_organella: Dict, core: Dict) -> Dict:
+def compare_assembly(ncbi: Dict, core: Dict) -> Dict:
     """Returns a compilation of count comparisons.
     Each comparison is a dict with the value from NCBI, from Core, and their diff.
     """
 
     # Prepare counts to be comparable to the NCBI stats
+    ncbi_main = ncbi.get("assembly_stats", {})
+    ncbi_info = ncbi.get("assembly_info", {})
+    ncbi_organella = ncbi.get("organelle_info", [])
 
     # First count the organella
     core_num_organella = 0
@@ -130,14 +133,12 @@ def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
 def compare_stats(ncbi: Dict, core: Dict) -> Dict:
     """Compare stats from NCBI and our core."""
 
-    ncbi_assembly_stats = ncbi.get("assembly_stats", {})
-    ncbi_organella = ncbi.get("organelle_info", [])
     ncbi_annotation_stats = ncbi.get("annotation_info", {}).get("stats", {}).get("gene_counts", {})
     core_assembly_stats = core.get("assembly_stats")
     core_annotation_stats = core.get("annotation_stats")
 
     comp = {
-        "assembly_diff": compare_assembly(ncbi_assembly_stats, ncbi_organella, core_assembly_stats),
+        "assembly_diff": compare_assembly(ncbi, core_assembly_stats),
     }
     if core_annotation_stats is not None and ncbi_annotation_stats is not None:
         comp["annotation_diff"] = compare_annotation(ncbi_annotation_stats, core_annotation_stats)
