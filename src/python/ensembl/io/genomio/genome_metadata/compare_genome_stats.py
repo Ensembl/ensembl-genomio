@@ -120,11 +120,14 @@ def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
         if re.match(".*pseudogen.*", name):
             num_pseudogenes += num
 
+    # Others? misc_mRNA (or anything similar?)
+    num_others = core_biotypes.get("misc_RNA", 0)
+
     core_counts = {
         "protein_coding": core_biotypes.get("protein_coding", 0),
         "pseudogene": num_pseudogenes,
         "total_genes": core.get("genes", {}).get("total", 0),
-        "other": 0,
+        "other": num_others,
     }
 
     return _diff_dicts(ncbi_counts, core_counts)
