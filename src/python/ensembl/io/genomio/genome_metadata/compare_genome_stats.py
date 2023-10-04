@@ -25,7 +25,7 @@ from typing import Any, Dict
 import argschema
 
 
-def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
+def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Any]:
     """Compare two dicts with the same keys and compute the difference of their values.
 
     Returns:
@@ -41,7 +41,7 @@ def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
             continue
         diff[key] = {"ncbi": ncbi[key], "core": core[key], "diff": core[key] - ncbi[key]}
 
-    comp = {}
+    comp: Dict[str, Any] = {}
     if same:
         comp["same"] = same
     if diff:
@@ -49,7 +49,7 @@ def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict:
     return comp
 
 
-def compare_assembly(ncbi: Dict, core: Dict) -> Dict:
+def compare_assembly(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Any]:
     """Returns a compilation of count comparisons.
     Each comparison is a dict with the value from NCBI, from Core, and their diff.
 
@@ -154,7 +154,7 @@ def compare_annotation(ncbi: Dict, core: Dict) -> Dict:
     return _diff_dicts(ncbi_counts, core_counts)
 
 
-def compare_stats(ncbi: Dict, core: Dict) -> Dict:
+def compare_stats(ncbi: Dict, core: Dict) -> Dict[str, Any]:
     """Compare stats from NCBI and our core.
 
     Args:
@@ -166,10 +166,10 @@ def compare_stats(ncbi: Dict, core: Dict) -> Dict:
     """
 
     ncbi_annotation_stats = ncbi.get("annotation_info", {}).get("stats", {}).get("gene_counts", {})
-    core_assembly_stats = core.get("assembly_stats")
-    core_annotation_stats = core.get("annotation_stats")
+    core_assembly_stats = core.get("assembly_stats", {})
+    core_annotation_stats = core.get("annotation_stats", {})
 
-    comp = {
+    comp: Dict[str, Any] = {
         "assembly_diff": compare_assembly(ncbi, core_assembly_stats),
     }
     if core_annotation_stats is not None and ncbi_annotation_stats is not None:
