@@ -90,7 +90,7 @@ def compare_assembly(ncbi: Dict, core: Dict) -> Dict:
     }
 
     # Only compare contigs if there are any in the core db
-    if core_counts["num_contigs"] == 0:
+    if ncbi_info.get("assembly_level") != "Contig":
         del ncbi_counts["num_contigs"]
         del core_counts["num_contigs"]
 
