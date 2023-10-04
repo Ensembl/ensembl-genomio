@@ -66,7 +66,11 @@ workflow DUMP_METADATA {
             ncbi_stats = DUMP_NCBI_STATS(server, db, cache_dir)
             stats = ncbi_stats.join(genome_stats)
             diff_stats = COMPARE_GENOME_STATS(stats)
-            db_files = db_files.concat(diff_stats)
+            stats_files = genome_stats.concat(ncbi_stats).concat(diff_stats)
+                .groupTuple()
+                .transpose(by: 1)
+                .map { db, files -> tuple(db, "stats", files) }
+            db_files = db_files.concat(stats_files)
         }
 
         // Group the files by db species (use the db object as key)
