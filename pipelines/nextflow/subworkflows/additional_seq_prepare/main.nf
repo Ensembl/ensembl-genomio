@@ -60,16 +60,14 @@ workflow additional_seq_prepare {
             gene_models,
             gb_dna_fasta,
             gb_pep_fasta
-        ).groupTuple()
-
-        collect_dir = COLLECT_FILES(all_files)
+        ).groupTuple().view()
         
-        manifest_dired = MANIFEST(collect_dir)
+        manifest_dired = MANIFEST(all_files)
         
-        manifest_checked = CHECK_INTEGRITY(manifest_dired, params.brc_mode)
+        //manifest_checked = CHECK_INTEGRITY(manifest_dired.out.all_files, params.brc_mode)
         
-        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', 0)
+        //manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', 0)
 
         // Publish the data to output directory
-        PUBLISH_DIR(manifest_stated, output_dir)
+        //PUBLISH_DIR(manifest_stated, output_dir)
 }
