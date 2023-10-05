@@ -77,7 +77,7 @@ class TestPrepareGenome:
         ],
     )
     def test_validate_json_schema(self, json_file: str, json_schema: str, expected: ContextManager) -> None:
-        """Tests :meth:`schemas.validate_json_schema()` method.
+        """Tests :meth:`schemas.json_schema_validator()` method.
 
         Args:
             json_file: Path to the JSON file to check.
@@ -89,4 +89,4 @@ class TestPrepareGenome:
         with expected:
             jfile = self.test_data_dir / json_file
             jschema = self.test_data_dir / json_schema
-            schemas.validate_json_schema(jfile, jschema)
+            schemas.json_schema_validator(jfile, jschema)

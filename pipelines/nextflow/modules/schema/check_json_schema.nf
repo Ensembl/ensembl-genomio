@@ -23,9 +23,10 @@ process CHECK_JSON_SCHEMA {
     output:
         tuple val(gca), path(json_file), emit: verified_json
 
-    script:
+    shell:
         schema = params.json_schemas[json_file.baseName]
-        """
-        check_json_schema --json_file ${json_file} --json_schema ${schema}
-        """
+        '''
+        check_json_schema --json_file !{json_file} --json_schema !{schema}
+        '''
+        
 }
