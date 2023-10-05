@@ -15,7 +15,6 @@
 # limitations under the License.
 
 """Download a Genbank file from NCBI from an accession.
-A file is created in the current working dir, with the name {accession}.gb
 
 Raises:
     DownloadError: if the download fails
@@ -37,24 +36,22 @@ class DownloadError(Exception):
 
 def download_genbank(accession: str, output_gb: PathLike) -> None:
     """
-    Given a GenBank accession, download via NCBI Enterez service the corresponding file in GenBank format.
+    Given a GenBank accession, download via NCBI Entrez service the corresponding file in GenBank format.
 
     Args:
-        accession: Only param required. Associated with genome INSDC Genbank record.
-
-    Returns:
-        Single file containing a genome sequence record in Genbank format (.gb).
+        accession: INSDC Genbank record accession.
+        output_gb: Path to the downloaded record in Genbank format.
     """
 
     # Get the list of assemblies for this accession
-    e_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
-    e_params = {
+    entrez_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+    entrez_params = {
         "db": "nuccore",
         "rettype": "gbwithparts",
         "retmode": "text",
     }
-    e_params["id"] = accession
-    result = requests.get(e_url, params=e_params, timeout=60)
+    entrez_params["id"] = accession
+    result = requests.get(entrez_url, params=entrez_params, timeout=60)
     if result and result.status_code == 200:
         with Path(output_gb).open("wb") as gbff:
             gbff.write(result.content)
