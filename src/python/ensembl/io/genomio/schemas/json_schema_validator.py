@@ -31,6 +31,8 @@ def json_schema_validator(json_file: PathLike, json_schema: PathLike) -> None:
         json_file: Path to the JSON file to check.
         json_schema: JSON schema to validate `json_file` against.
 
+    Example:
+        check_json_schema --json_file <JSON_FILE> --json_schema <JSON_SCHEMA>
     """
 
     # Open IO for JSON files and validate it
