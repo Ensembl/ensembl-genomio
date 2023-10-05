@@ -14,8 +14,8 @@
 // limitations under the License.
 
 process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
     label 'adaptive'
+    tag "$json_file.name"
 
     input:
         tuple val(gca), path(json_file)
