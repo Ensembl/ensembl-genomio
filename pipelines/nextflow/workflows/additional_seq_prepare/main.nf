@@ -50,15 +50,20 @@ if (params.help) {
     exit 0
 }
 
-assert params.accession, "Parameter 'acession' is not specified"
+assert params.accession, "Parameter 'accession' is not specified"
 assert params.prefix, "Parameter 'prefix' is not specified"
 assert params.production_name, "Parameter 'production_name' is not specified"
+
+params.meta = [
+    "accession": params.accession,
+    "production_name": params.production_name,
+    "prefix": params.prefix
+]
 
 // Import modules/subworkflows
 include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepare/main.nf'
 
 // Run main workflow
 workflow {
-    main:
-    additional_seq_prepare(params.prefix, params.accession, params.production_name, params.brc_mode, params.output_dir)
+    additional_seq_prepare(params.meta, params.brc_mode, params.output_dir)
 }

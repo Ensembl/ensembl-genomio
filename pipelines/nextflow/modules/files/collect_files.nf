@@ -19,14 +19,14 @@ process COLLECT_FILES {
     time '5min'
 
     input:
-        tuple val(accession), path(file_name)
+        tuple val(meta), path(file_name)
     
     output:
-        tuple path ("${accession}"), val(accession), emit: manifest_dir_gca
+        tuple path ("${meta.accession}"), val(meta), emit: manifest_dir_gca
     
     script:
         """
-        DBDIR=${accession}/
+        DBDIR=${meta.accession}/
         mkdir \$DBDIR
         echo ${file_name}
         for FILE in ${file_name}; do
