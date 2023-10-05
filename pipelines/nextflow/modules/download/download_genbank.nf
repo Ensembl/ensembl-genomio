@@ -27,9 +27,9 @@ process DOWNLOAD_GENBANK {
     output:
         tuple val(meta), path("output.gb"), emit: downloaded_gb_data
 
-    script:
+    shell:
     def output_gb = "output.gb"
     """
-    download_genbank --accession ${meta.accession} --output_gb $output_gb
+    download_genbank --accession !{meta.accession} --output_gb !output_gb
     """
 }
