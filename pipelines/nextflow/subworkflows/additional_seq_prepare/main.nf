@@ -62,7 +62,8 @@ workflow additional_seq_prepare {
             gb_pep_fasta
         ).groupTuple()
 
-        collect_dir = COLLECT_FILES(all_files)
+        all_files_legacy = all_files.map{ meta, files -> tuple(meta["accession"], files) }
+        collect_dir = COLLECT_FILES(all_files_legacy)
         
         manifest_dired = MANIFEST(collect_dir)
         
