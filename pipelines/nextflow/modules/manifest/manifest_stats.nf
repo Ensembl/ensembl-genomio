@@ -18,19 +18,19 @@ process MANIFEST_STATS {
     label 'adaptive'
 
     input:
-        tuple path(manifest_dir), val(accession)
+        tuple val(meta), path(manifest_files)
         val datasets
         val ncbi_check
 
     output:
-        tuple path(manifest_dir), val(accession)
+        tuple val(meta), path("*", includeInputs: true)
 
-    script:
-        """
+    shell:
+        '''
         CHECK_ASSEMBLY=""
-        if [ "$ncbi_check" == 1 ]; then
-            CHECK_ASSEMBLY=" --datasets_bin $datasets --accession $accession"
+        if [ "!{ncbi_check}" == 1 ]; then
+            CHECK_ASSEMBLY=" --datasets_bin !{datasets} --accession !{meta.accession}"
         fi
-        manifest_stats --manifest_dir "$manifest_dir" \$CHECK_ASSEMBLY
-        """
+        manifest_stats --manifest_dir ./ $CHECK_ASSEMBLY
+        '''
 }

@@ -15,7 +15,7 @@
 
 
 process CHECK_INTEGRITY {
-    tag "${manifest_dir}"
+    tag "${meta.accession} ${meta.production_name}"
     label 'variable_2_8_32'
     errorStrategy 'finish'
     time '1h'
@@ -25,7 +25,7 @@ process CHECK_INTEGRITY {
         val brc_mode
     
     output:
-        tuple val(meta), path(manifest_files), emit: integrity_checked
+        tuple val(meta), path(manifest_files)
     shell:
         '''
         brc_mode=''
