@@ -25,7 +25,7 @@ process DOWNLOAD_GENBANK {
         val(cache_dir)
 
     output:
-        tuple val(meta), path("output.gb"), emit: downloaded_gb_data
+        tuple val(meta), path("output.gb")
 
     shell:
     output_gb = "output.gb"
