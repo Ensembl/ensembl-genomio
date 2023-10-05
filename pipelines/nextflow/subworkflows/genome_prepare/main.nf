@@ -98,9 +98,9 @@ workflow GENOME_PREPARE {
                     .groupTuple()
 
         // Checks and generate sequence stats for manifest
-        manifest_dired = MANIFEST(prepared_files)
+        manifest_bundle = MANIFEST(all_files)
 
-        manifest_checked = CHECK_INTEGRITY(manifest_dired.out.all_files, params.brc_mode)
+        manifest_checked = CHECK_INTEGRITY(manifest_bundle, params.brc_mode)
         
         manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', ncbi_check)
 

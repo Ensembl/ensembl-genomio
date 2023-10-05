@@ -21,18 +21,18 @@ process CHECK_INTEGRITY {
     time '1h'
 
     input:
-        tuple path(manifest_dir), val(accession)
+        tuple val(meta), path(manifest_files)
         val brc_mode
     
     output:
-        tuple path("${manifest_dir}/"), val(accession), emit: integrity_checked
-    script:
-        """
+        tuple val(meta), path(manifest_files), emit: integrity_checked
+    shell:
+        '''
         brc_mode=''
         if [ $brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
-        check_integrity --manifest_file ${manifest_dir}/manifest.json \
-            \$brc_mode
-        """
+        check_integrity --manifest_file ./manifest.json \
+            $brc_mode
+        '''
 }

@@ -61,10 +61,10 @@ workflow additional_seq_prepare {
             gb_pep_fasta
         ).groupTuple()
         
-        manifest_dired = MANIFEST(all_files)
+        manifest_bundle = MANIFEST(all_files)
         
         // Checks and generate sequence stats for manifest
-        manifest_checked = CHECK_INTEGRITY(manifest_dired.out.all_files, params.brc_mode)
+        manifest_checked = CHECK_INTEGRITY(manifest_bundle, params.brc_mode)
         
         manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', 0)
 
