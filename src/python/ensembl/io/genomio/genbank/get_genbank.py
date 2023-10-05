@@ -66,9 +66,7 @@ class InputSchema(argschema.ArgSchema):
     accession = argschema.fields.String(
         metadata={"required": True, "description": "Sequence accession required"}
     )
-    output_gb = argschema.fields.OutputFile(
-        metadata={"required": True, "description": "Ouput Genbank path"}
-    )
+    output_gb = argschema.fields.OutputFile(metadata={"required": True, "description": "Ouput Genbank path"})
 
 
 def main() -> None:
