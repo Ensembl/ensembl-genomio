@@ -83,7 +83,7 @@ class TestSchemas:
         ],
     )
     def test_validate_json_schema(self, json_file: str, json_schema: str, expected: ContextManager) -> None:
-        """Tests :meth:`schemas.validate_json_schema()` method.
+        """Tests :meth:`schemas.json_schema_validator()` method.
 
         Args:
             json_file: Path to the JSON file to check.
@@ -95,4 +95,4 @@ class TestSchemas:
         json_path = self.test_data_dir / json_file
         schema_path = self.schema_dir / json_schema
         with expected:
-            schemas.validate_json_schema(json_path, schema_path)
+            schemas.json_schema_validator(json_path, schema_path)
