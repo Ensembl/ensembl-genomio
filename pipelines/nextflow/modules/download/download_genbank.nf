@@ -16,7 +16,7 @@
 
 process DOWNLOAD_GENBANK {
     tag "${meta.production_name}"
-    label 'default'
+    label 'normal'
     storeDir "$cache_dir/genbank/${meta.accession}"
     afterScript "sleep $params.storeDir_latency"
 
