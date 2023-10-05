@@ -22,7 +22,7 @@ process COLLECT_FILES {
         tuple val(meta), path(file_name)
     
     output:
-        tuple path ("${meta.accession}"), val(meta), emit: manifest_dir_gca
+        tuple val(meta), path ("${meta.accession}"), emit: manifest_meta_dir
     
     script:
         """
