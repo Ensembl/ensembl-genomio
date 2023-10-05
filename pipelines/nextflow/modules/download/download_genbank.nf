@@ -18,17 +18,18 @@ process DOWNLOAD_GENBANK {
     tag "${meta.production_name}"
     label 'default'
     storeDir "$cache_dir/genbank/${meta.accession}"
-    afterScript "sleep $params.storeDir_"
+    afterScript "sleep $params.storeDir_latency"
 
     input:
         val(meta)
         val(cache_dir)
 
     output:
-        tuple val(meta), path("*.gb"), emit: downloaded_gb_data
+        tuple val(meta), path("output.gb"), emit: downloaded_gb_data
 
     script:
+    def output_gb = "output.gb"
     """
-    download_genbank --accession ${meta.accession}
+    download_genbank --accession ${meta.accession} --output_gb $output_gb
     """
 }
