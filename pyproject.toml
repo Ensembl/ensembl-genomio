@@ -82,7 +82,7 @@ repository = "https://github.com/Ensembl/ensembl-genomio"
 
 [project.scripts]
 # Download
-download_genbank = "ensembl.io.genomio.download_genbank:main"
+download_genbank = "ensembl.io.genomio.download.get_genbank:main"
 retrieve_assembly_data = "ensembl.io.genomio.assembly.get_assembly_data:main"
 # Prepare
 amend_genomic_data = "ensembl.io.genomio.metadata.update_genome_metadata:main"

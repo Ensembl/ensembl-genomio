@@ -13,11 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-nextflow.enable.dsl=2
 
 process DOWNLOAD_GENBANK {
-    label "Sequence_genbank_file"
-    tag "${meta.accession}"
+    tag "${meta.production_name}"
     label 'default'
 
     input:
