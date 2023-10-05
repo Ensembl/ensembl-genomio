@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-nextflow.enable.dsl=2
-
 process DOWNLOAD_GENBANK {
     label "Sequence_genbank_file"
     tag "${meta.accession}"
@@ -26,8 +24,8 @@ process DOWNLOAD_GENBANK {
     output:
         tuple val(meta), path("*.gb"), emit: downloaded_gb_data
 
-    script:
-    """
-    download_genbank --accession ${meta.accession}
-    """
+    shell:
+    '''
+    download_genbank --accession !{meta.accession}
+    '''
 }
