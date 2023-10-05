@@ -14,7 +14,7 @@
 # limitations under the License.
 """Validates a JSON file with the provided JSON schema."""
 
-__all__ = ["validate_json_schema"]
+__all__ = ["json_schema_validator"]
 
 import json
 from os import PathLike
@@ -24,7 +24,7 @@ import argschema
 import jsonschema
 
 
-def validate_json_schema(json_file: PathLike, json_schema: PathLike) -> None:
+def json_schema_validator(json_file: PathLike, json_schema: PathLike) -> None:
     """Validates a JSON file with the provided JSON schema.
 
     Args:
@@ -32,6 +32,8 @@ def validate_json_schema(json_file: PathLike, json_schema: PathLike) -> None:
         json_schema: JSON schema to validate `json_file` against.
 
     """
+
+    # Open IO for JSON files and validate it
     with Path(json_file).open("r") as fh:
         content = json.load(fh)
     with Path(json_schema).open("r") as fh:
@@ -51,4 +53,4 @@ class InputSchema(argschema.ArgSchema):
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    validate_json_schema(mod.args["json_file"], mod.args["json_schema"])
+    json_schema_validator(mod.args["json_file"], mod.args["json_schema"])
