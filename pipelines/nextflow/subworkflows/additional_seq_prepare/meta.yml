@@ -30,7 +30,6 @@ keywords:
   - seq-region
 modules:
   - download/download_genbank
-  - files/collect_files
   - files/publish_output
   - genbank/extract_from_gb
   - gff3/gff3_validation

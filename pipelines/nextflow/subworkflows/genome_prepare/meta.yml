@@ -30,7 +30,6 @@ keywords:
 modules:
   - download/download_asm_data
   - fasta/process_fasta_data
-  - files/collect_files
   - files/publish_output
   - genome_metadata/amend_genome_data
   - gff3/gff3_validation
