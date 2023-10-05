@@ -17,17 +17,17 @@ nextflow.enable.dsl=2
 
 process DOWNLOAD_GENBANK {
     label "Sequence_genbank_file"
-    tag "${accession}"
+    tag "${meta.accession}"
     label 'default'
 
     input:
-        val accession
+        val(meta)
 
     output:
-        tuple val(accession), path("*.gb"), emit: downloaded_gb_data
+        tuple val(meta), path("*.gb"), emit: downloaded_gb_data
 
     script:
     """
-    download_genbank --accession ${accession}
+    download_genbank --accession ${meta.accession}
     """
 }

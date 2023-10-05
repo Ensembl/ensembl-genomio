@@ -27,27 +27,23 @@ include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
 
 workflow additional_seq_prepare {
     take:
-        prefix
-        accession
-        production_name
+        meta
         brc_mode
         output_dir
     main:
+        // We expect meta be
+        // tuple("accession": accession, "production_name": production_name, "prefix": prefix)
+
         // Get the data
-        gb_file = DOWNLOAD_GENBANK(accession)
+        gb_file = DOWNLOAD_GENBANK(meta)
 
         // Parse data from GB file into GFF3 and json files
-        (gb_gff, gb_genome, gb_seq_regions, gb_dna_fasta, gb_pep_fasta) = EXTRACT_FROM_GB(gb_file, prefix, production_name)
+        (gff_genome, gb_genome, gb_seq_regions, gb_dna_fasta, gb_pep_fasta) = EXTRACT_FROM_GB(gb_file)
 
-        // Group gff and genome file to be used at the same time for each genome, used as key
-        // gb_gff = [gca, path/to/gff]
-        // gb_genome = [gca, path/to/genome]
-        gff_genome = gb_gff.concat(gb_genome)
-            .groupTuple(size: 2)
-            .map{ key, files -> tuple(key, files[0], files[1]) }
-        (new_functional_annotation, new_gene_models) = PROCESS_GFF3(gff_genome)
+        // Process the GFF and GB files into a cleaned GFF and a functional_annotation file
+        (new_functional_annotation, new_gene_models) = PROCESS_GFF3(gff_genome.join(gb_genome))
 
-        // Tidy and validate gff3 using gff3validator
+        // // Tidy and validate gff3 using gff3validator
         gene_models = GFF3_VALIDATION(new_gene_models)
 
         // Validate files
@@ -76,5 +72,4 @@ workflow additional_seq_prepare {
 
         // Publish the data to output directory
         PUBLISH_DIR(manifest_stated, output_dir)
-
 }
