@@ -52,6 +52,14 @@ input:
       type: string
       description: |
         MANDATORY param. Ensembl 'production_name' assigned to species having sequence(s) added.
+  - output_dir:
+      type: string
+      description: |
+        OPTIONAL param. Name of directory used to store finalized output files.
+  - brc_mode:
+      type: string
+      description: |
+        OPTIONAL param. By default brc_mode is enabled. Disable brc_mode => '0'
 output:
   - dna:
       type: file
