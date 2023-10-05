@@ -21,10 +21,10 @@ process MANIFEST {
         tuple val(meta), path(file_name)
 
     output:
-        tuple val (meta), path("*", includeInputs: true) 
+        tuple val (meta), path("*", includeInputs: true)
     
-    script:
-        """
+    shell:
+        '''
         manifest_maker --manifest_dir .
-        """
+        '''
 }

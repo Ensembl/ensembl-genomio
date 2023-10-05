@@ -29,7 +29,6 @@ include { PROCESS_SEQ_REGION } from '../../modules/seq_region/process_seq_region
 include { PROCESS_FASTA as PROCESS_FASTA_DNA } from '../../modules/fasta/process_fasta_data.nf'
 include { PROCESS_FASTA as PROCESS_FASTA_PEP } from '../../modules/fasta/process_fasta_data.nf'
 include { AMEND_GENOME_DATA } from '../../modules/genome_metadata/amend_genome_data.nf'
-include { COLLECT_FILES } from '../../modules/files/collect_files.nf'
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
@@ -98,12 +97,10 @@ workflow GENOME_PREPARE {
         prepared_files = prepared_files_grouped
                     .groupTuple()
 
-        // Collect in manifest, checks and generate sequence stats
-        collect_dir = COLLECT_FILES(prepared_files)
+        // Checks and generate sequence stats for manifest
+        manifest_bundle = MANIFEST(all_files)
 
-        manifest_dired = MANIFEST(collect_dir)
-        
-        manifest_checked = CHECK_INTEGRITY(manifest_dired, params.brc_mode)
+        manifest_checked = CHECK_INTEGRITY(manifest_bundle, params.brc_mode)
         
         manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', ncbi_check)
 

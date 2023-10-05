@@ -19,7 +19,6 @@ include { EXTRACT_FROM_GB } from '../../modules/genbank/extract_from_gb.nf'
 include { PROCESS_GFF3 } from '../../modules/gff3/process_gff3.nf'
 include { GFF3_VALIDATION } from '../../modules/gff3/gff3_validation.nf'
 include { CHECK_JSON_SCHEMA } from '../../modules/schema/check_json_schema.nf'
-include { COLLECT_FILES } from '../../modules/files/collect_files.nf'
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
@@ -60,14 +59,15 @@ workflow additional_seq_prepare {
             gene_models,
             gb_dna_fasta,
             gb_pep_fasta
-        ).groupTuple().view()
+        ).groupTuple()
         
-        manifest_dired = MANIFEST(all_files)
+        manifest_bundle = MANIFEST(all_files)
         
-        //manifest_checked = CHECK_INTEGRITY(manifest_dired.out.all_files, params.brc_mode)
+        // Checks and generate sequence stats for manifest
+        manifest_checked = CHECK_INTEGRITY(manifest_bundle, params.brc_mode)
         
-        //manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', 0)
+        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', 0)
 
         // Publish the data to output directory
-        //PUBLISH_DIR(manifest_stated, output_dir)
+        PUBLISH_DIR(manifest_stated, output_dir)
 }
