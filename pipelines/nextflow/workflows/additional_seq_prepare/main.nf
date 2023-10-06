@@ -23,10 +23,6 @@ params.accession = null
 params.prefix = null
 params.PROD_NAME = null
 
-// Optional params
-params.cache_dir = "./cache"
-
-
 // Print usage
 def helpMessage() {
   log.info """
