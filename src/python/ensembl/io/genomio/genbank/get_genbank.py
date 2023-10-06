@@ -21,10 +21,11 @@ Raises:
 """
 
 
-from pathlib import Path
 from os import PathLike
-import requests
+from pathlib import Path
+
 import argschema
+import requests
 
 
 class DownloadError(Exception):
@@ -66,15 +67,17 @@ class InputSchema(argschema.ArgSchema):
     accession = argschema.fields.String(
         metadata={"required": True, "description": "Sequence accession required"}
     )
-    output_gb = argschema.fields.OutputFile(metadata={"required": True, "description": "Ouput Genbank path"})
+    output_file = argschema.fields.OutputFile(
+        metadata={"required": True, "description": "Ouput Genbank path"}
+    )
 
 
 def main() -> None:
     """Main script entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
     accession = mod.args["accession"]
-    output_gb = mod.args["output_gb"]
-    download_genbank(accession, output_gb)
+    output_file = mod.args["output_file"]
+    download_genbank(accession, output_file)
 
 
 if __name__ == "__main__":

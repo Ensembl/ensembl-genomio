@@ -28,8 +28,8 @@ process DOWNLOAD_GENBANK {
         tuple val(meta), path("output.gb")
 
     shell:
-    output_gb = "output.gb"
+    output_file = "output.gb"
     '''
-    download_genbank --accession !{meta.accession} --output_gb !{output_gb}
+    download_genbank --accession !{meta.accession} --output_file !{output_file}
     '''
 }
