@@ -68,7 +68,7 @@ class InputSchema(argschema.ArgSchema):
         metadata={"required": True, "description": "Sequence accession required"}
     )
     output_file = argschema.fields.OutputFile(
-        metadata={"required": True, "description": "Ouput Genbank path"}
+        metadata={"required": True, "description": "Output Genbank path"}
     )
 
 
