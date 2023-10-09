@@ -25,13 +25,11 @@ from typing import Dict, List, Optional
 import json
 import argschema
 
-
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
 from ensembl.io.genomio.gff3.functional_annotation import FunctionalAnnotations
-
 
 class Records(list):
     """List of GFF3 SeqRecords."""
@@ -67,53 +65,53 @@ class GFFParserCommon:
 
     # Supported transcript level biotypes
     transcript_types = [
-        "transcript",
-        "mRNA",
-        "pseudogenic_transcript",
-        "tRNA",
-        "pseudogenic_tRNA",
-        "pseudogenic_rRNA",
-        "telomerase_RNA",
-        "RNase_P_RNA",
-        "SRP_RNA",
-        "rRNA",
         "lnc_RNA",
+        "miRNA",
+        "misc_RNA",
+        "mRNA",
+        "ncRNA",
+        "piRNA",
+        "pseudogenic_rRNA",
+        "pseudogenic_transcript",
+        "pseudogenic_tRNA",
+        "ribozyme",
+        "RNase_MRP_RNA",
+        "RNase_P_RNA",
+        "rRNA",
         "snoRNA",
         "snRNA",
-        "ncRNA",
-        "miRNA",
-        "ribozyme",
-        "piRNA",
-        "RNase_MRP_RNA",
-        "misc_RNA",
+        "SRP_RNA",
+        "telomerase_RNA",
+        "transcript",
+        "tRNA",
     ]
 
     # Biotypes that are ignored, and removed from the final GFF3 file
     ignored_gene_types = [
-        "intron",
-        "region",
+        "cDNA_match",
+        "centromere",
+        "dispersed_repeat",
         "gap",
+        "intron",
+        "inverted_repeat",
+        "long_terminal_repeat",
+        "microsatellite",
+        "region",
+        "repeat_region",
+        "satellite_DNA",
         "sequence_feature",
         "sequence_uncertainty",
-        "microsatellite",
-        "satellite_DNA",
-        "cDNA_match",
         "STS",
-        "telomere",
-        "centromere",
-        "repeat_region",
-        "inverted_repeat",
         "tandem_repeat",
-        "long_terminal_repeat",
-        "dispersed_repeat",
+        "telomere",
         "terminal%2Cinverted",
     ]
 
     # Ignored biotypes that are under a gene parent feature
     ignored_transcript_types = [
-        "antisense_RNA",
         "3'UTR",
         "5'UTR",
+        "antisense_RNA",
         "intron",
         "non_canonical_five_prime_splice_site",
         "non_canonical_three_prime_splice_site",
@@ -127,7 +125,7 @@ class GFFGeneMerger(GFFParserCommon):
         """
         Merge genes in a gff that are split in multiple lines
         """
-        tomerge = []
+        to_merge = []
         merged: List[str] = []
 
         with Path(in_gff_path).open("r") as in_gff_fh, Path(out_gff_path).open("w") as out_gff_fh:
@@ -147,44 +145,44 @@ class GFFGeneMerger(GFFParserCommon):
 
                     # Check this is a gene to merge; cache it then
                     if fields[2] in self.gene_types and ("part" in attrs or "is_ordered" in attrs):
-                        tomerge.append(fields)
+                        to_merge.append(fields)
 
                     # If not, merge previous gene if needed, and print the line
                     else:
-                        if tomerge:
+                        if to_merge:
                             merged_str = []
-                            for line_tomerge in tomerge:
-                                merged_str.append("\t".join(line_tomerge))
+                            for line_to_merge in to_merge:
+                                merged_str.append("\t".join(line_to_merge))
                             merged.append("\n".join(merged_str) + "\n")
 
-                            new_line = self._merge_genes(tomerge)
+                            new_line = self._merge_genes(to_merge)
                             out_gff_fh.write(new_line)
-                            tomerge = []
+                            to_merge = []
                         out_gff_fh.write(line + "\n")
 
             # Print last merged gene if there is one
-            if tomerge:
+            if to_merge:
                 merged_str = []
-                for line_tomerge in tomerge:
-                    merged_str.append("\t".join(line_tomerge))
+                for line_to_merge in to_merge:
+                    merged_str.append("\t".join(line_to_merge))
                 merged.append("\n".join(merged_str) + "\n")
 
-                new_line = self._merge_genes(tomerge)
+                new_line = self._merge_genes(to_merge)
                 out_gff_fh.write(new_line)
 
         return len(merged)
 
-    def _merge_genes(self, tomerge: List) -> str:
+    def _merge_genes(self, to_merge: List) -> str:
         """Returns a single gene gff3 line merged from separate parts.
 
         Args:
-            tomerge: List of gff3 lines with gene parts.
+            to_merge: List of gff3 lines with gene parts.
 
         """
-        print(f"Merge gene in {len(tomerge)} parts")
+        print(f"Merge gene in {len(to_merge)} parts")
         min_start = -1
         max_end = -1
-        for gene in tomerge:
+        for gene in to_merge:
             print(f"Merge part: {gene[8]}")
             start = int(gene[3])
             end = int(gene[4])
@@ -195,7 +193,7 @@ class GFFGeneMerger(GFFParserCommon):
                 max_end = end
 
         # Take the first line as template and replace things
-        new_gene = tomerge[0]
+        new_gene = to_merge[0]
         new_gene[3] = str(min_start)
         new_gene[4] = str(max_end)
 
@@ -235,7 +233,7 @@ class GFFSimplifier(GFFParserCommon):
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """
-        Load a GFF3 from INSDC, and rewrite it in a simpler version,
+        Load a GFF3 from INSDC and rewrite it in a simpler version,
         and also write a functional_annotation file
         """
 
@@ -879,8 +877,10 @@ class GFFSimplifier(GFFParserCommon):
 
 
 class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
+    """Standardize the gene model representation of a GFF3 file, and extract the functional annotation
+    in a separate file. Input arguments expected by this script:
+    """
+  
     in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
     genome_data = argschema.fields.InputFile(metadata={"description": "genome.json path"})
     out_gff_path = argschema.fields.OutputFile(
@@ -893,7 +893,6 @@ class InputSchema(argschema.ArgSchema):
     merge_split_genes = argschema.fields.Boolean(
         dump_default=True, metadata={"description": "Should split genes be merged automatically"}
     )
-
 
 def main() -> None:
     """Main script entry-point."""
