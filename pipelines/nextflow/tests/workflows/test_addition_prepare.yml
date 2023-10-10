@@ -18,7 +18,7 @@
 # The cached data has been reduced to two genes, 1 protein_coding and 1 tRNA
 - name: genome_prepare_pipeline
   command: nextflow run ./pipelines/nextflow/workflows/additional_seq_prepare/main.nf \\
-    -c ./pipelines/nextflow/workflows/nextflow_test.config \\
+    -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
     --cache_dir ./data/test/additional_seq_prepare/cache/ \\
     --output_dir ./test_addition_seq_prepare_output \\
     --accession NC_035159.1 \\
