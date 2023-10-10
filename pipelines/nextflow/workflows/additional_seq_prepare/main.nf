@@ -23,8 +23,6 @@ params.accession = null
 params.prefix = null
 params.PROD_NAME = null
 
-
-
 // Print usage
 def helpMessage() {
   log.info """
@@ -39,6 +37,7 @@ def helpMessage() {
 
        Optional arguments:
         --output_dir                   Output directory to place final output
+        --cache_dir                    Cache directory for downloaded files
         --help                         This usage statement.
         --brc_mode                     By default it is set to 1, set it to 0 if you are not using it for brc
         """
@@ -65,5 +64,5 @@ include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepa
 
 // Run main workflow
 workflow {
-    additional_seq_prepare(params.meta, params.brc_mode, params.output_dir)
+    additional_seq_prepare(params.meta, params.brc_mode, params.output_dir, params.cache_dir)
 }
