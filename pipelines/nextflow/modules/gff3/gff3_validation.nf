@@ -27,7 +27,7 @@ process GFF3_VALIDATION {
     tuple val(meta), path("gene_models.gff3"), emit: gene_models
 
   shell:
-  def out_gff = "gene_models.gff3"
+  out_gff = "gene_models.gff3"
   '''
   cp !{gene_models} temp.gff3
   gt gff3 -tidy -sort -retainids -force -o !{out_gff} temp.gff3 
