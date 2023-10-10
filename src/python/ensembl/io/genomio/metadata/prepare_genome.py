@@ -27,6 +27,7 @@ __all__ = [
     "DEFAULT_API_URL",
 ]
 
+import argparse
 import datetime
 from os import PathLike
 from pathlib import Path
@@ -34,7 +35,6 @@ from typing import Dict, Optional
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
-import argschema
 import requests
 
 from ensembl.io.genomio.utils import get_json, print_json
@@ -231,7 +231,10 @@ def prepare_genome_metadata(
     gff3_file: Optional[PathLike] = None,
     base_api_url: str = DEFAULT_API_URL,
 ) -> None:
-    """TODO
+    """Updates the genome metadata JSON file with additional information.
+
+    In particular, more information is added about the provider, the assembly and its gene build version,
+    and the taxonomy.
 
     Args:
         json_file: Path to JSON file with genome metadata.
@@ -255,22 +258,31 @@ def prepare_genome_metadata(
     print_json(output_path, genome_data)
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by the entry point of this module."""
-
-    json_file = argschema.fields.InputFile(
-        required=True, metadata={"description": "Genome metadata JSON file path"}
-    )
-    output_dir = argschema.fields.OutputDir(
-        required=False,
-        dump_default=".",
-        metadata={
-            "description": "Output folder for the updated genome metadata JSON file. By default, $PWD."
-        },
-    )
+def validate_input_path(parser: argparse.ArgumentParser, filepath: PathLike) -> PathLike:
+    """TODO"""
+    if Path(filepath).exists():
+        return filepath
+    parser.error(f"File '{filepath}' not found")
 
 
 def main() -> None:
     """Module's entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    prepare_genome_metadata(mod.args["json_file"], mod.args["output_dir"])
+    parser = argparse.ArgumentParser(
+        description=("Expand the genome metadata with information about the provider, assembly and gene"
+                     "build version, and taxonomy."),
+    )
+    parser.add_argument(
+        "--json_file",
+        required=True,
+        type=lambda x: validate_input_path(parser, x),
+        help="Genome metadata JSON file path",
+    )
+    parser.add_argument(
+        "--output_dir",
+        default=Path().absolute(),
+        type=Path,
+        help="Output folder for the updated genome metadata JSON file (default: current working directory)",
+    )
+    args = parser.parse_args()
+
+    prepare_genome_metadata(args.json_file, args.output_dir)
