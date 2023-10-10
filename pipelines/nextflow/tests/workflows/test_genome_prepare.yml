@@ -18,6 +18,7 @@
 # The cached data has been reduced to two seq regions, 1 nuclear and 1 mitochondrial sequence
 - name: genome_prepare_pipeline
   command: nextflow run ./pipelines/nextflow/workflows/genome_prepare/main.nf \\
+    -c ./pipelines/nextflow/workflows/nextflow_test.config \\
     --input_dir ./data/test/genome_prepare/inputDir \\
     --cache_dir ./data/test/genome_prepare/cache/ \\
     --output_dir ./test_genome_prepare_output \\
