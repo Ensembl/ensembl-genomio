@@ -15,22 +15,22 @@
 
 process DOWNLOAD_ASM_DATA {
     label 'adaptive'
-    tag "$gca - $task.attempt"
+    tag "${meta.accession} - $task.attempt"
     debug true
     storeDir "$store_assembly"
 
     input:
-        tuple val(gca), path(json_file)
+        tuple val(meta), path(json_file)
         val store_assembly
 
     output:
-        tuple val(gca), path("${gca}/*_assembly_report.txt"), path("${gca}/*_genomic.fna.gz"),
-              path("${gca}/*_genomic.gbff.gz"), emit: min_set
-        tuple val(gca), path("${gca}/*_genomic.gff.gz"), path("${gca}/*_protein.faa.gz"),
-              path("${gca}/*_genomic.gbff.gz"), emit: opt_set, optional: true
+        tuple val(meta), path("${meta.accession}/*_assembly_report.txt"), path("${meta.accession}/*_genomic.fna.gz"),
+              path("${meta.accession}/*_genomic.gbff.gz"), emit: min_set
+        tuple val(meta), path("${meta.accession}/*_genomic.gff.gz"), path("${meta.accession}/*_protein.faa.gz"),
+              path("${meta.accession}/*_genomic.gbff.gz"), emit: opt_set, optional: true
 
-    script:
-    """
-    retrieve_assembly_data --accession $gca --asm_download_dir ./
-    """
+    shell
+    '''
+    retrieve_assembly_data --accession !{meta.accesion} --asm_download_dir ./
+    '''
 }

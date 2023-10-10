@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-nextflow.enable.dsl=2
-
 process EXTRACT_FROM_GB {
     tag "$gb_file"
     label 'default'
@@ -29,9 +27,9 @@ process EXTRACT_FROM_GB {
         tuple val(meta), path("dna.fasta"), emit: dna_fasta
         tuple val(meta), path("pep.fasta"), emit: pep_fasta, optional: true
 
-    script:
-    """
-    extract_from_gb --prefix ${meta.prefix} --prod_name ${meta.production_name} --gb_file ${gb_file}
-    """
+    shell:
+    '''
+    extract_from_gb --prefix !{meta.prefix} --prod_name !{meta.production_name} --gb_file !{gb_file}
+    '''
 }
 

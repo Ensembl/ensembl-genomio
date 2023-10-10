@@ -15,26 +15,26 @@
 // limitations under the License.
 
 process PROCESS_FASTA {
-    tag "${gca}"
+    tag "${meta.accession}"
     label 'adaptive'
 
     input:
-        tuple val(gca), path(compressed_gff), path(fasta_file), path(gbff_file)
+        tuple val(meta), path(compressed_gff), path(fasta_file), path(gbff_file)
         val pep_mode
 
     output:
-        tuple val(gca), path ("fasta_*.fa"), emit: processed_fasta
+        tuple val(meta), path ("fasta_*.fa"), emit: processed_fasta
 
-    script:
-    """
-    if [ $pep_mode == 1 ]; then
+    shell:
+    '''
+    if [ !{pep_mode} == 1 ]; then
         output_fasta=fasta_pep.fa
     else
         output_fasta=fasta_dna.fa
     fi
-    prep_fasta_data --fasta_infile ${fasta_file} \
-        --genbank_infile ${gbff_file} \
-        --fasta_outfile \$output_fasta \
-        --peptide_mode ${pep_mode}
-    """
+    prep_fasta_data --fasta_infile !{fasta_file} \
+        --genbank_infile !{gbff_file} \
+        --fasta_outfile $output_fasta \
+        --peptide_mode !{pep_mode}
+    '''
 }

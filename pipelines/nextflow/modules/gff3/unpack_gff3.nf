@@ -17,14 +17,14 @@ process UNPACK_GFF3 {
     label 'default'
 
     input:
-        tuple val(gca), path(compressed_gff), path(protein_faa), path(gbff)
+        tuple val(meta), path(compressed_gff), path(protein_faa), path(gbff)
         val extension
 
     output:
-        tuple val(gca), path("*.${extension}")
+        tuple val(meta), path("*.${extension}")
     
-    script:
-    """
-    extract_file --src_file ${compressed_gff} --dst_dir "."
-    """
+    shell:
+    '''
+    extract_file --src_file !{compressed_gff} --dst_dir "."
+    '''
 }
