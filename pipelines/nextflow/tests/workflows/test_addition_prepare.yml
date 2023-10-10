@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This test runs the genome_prepare pipeline for the INSDC accession GCA_017607445.1 from Genbank
-# It uses a cache file to avoid downloading assembly related data files (--cache_dir)
-# The cached data has been reduced to two seq regions, 1 nuclear and 1 mitochondrial sequence
+# This test runs the additional_seq_prepare pipeline for the accession NC_035159.1 from Genbank
+# It uses a cache file to avoid downloading the genbank file (--cache_dir)
+# The cached data has been reduced to two genes, 1 protein_coding and 1 tRNA
 - name: genome_prepare_pipeline
   command: nextflow run ./pipelines/nextflow/workflows/additional_seq_prepare/main.nf \\
     -c ./pipelines/nextflow/workflows/nextflow_test.config \\
