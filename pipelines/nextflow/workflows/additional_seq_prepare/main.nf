@@ -28,7 +28,7 @@ def helpMessage() {
   log.info """
         Usage:
         The typical command for running the pipeline is as follows:
-        nextflow run add_seq_prepare.nf --accession  --prefix "PREFIX_" --PROD_NAME "productionname"
+        nextflow run add_seq_prepare.nf --accession "GENBANK_ACCESSION" --prefix "PREFIX_" --production_name "species_name"
 
         Mandatory arguments:
         --accession                    A GenBank accession of the sequence you are adding
