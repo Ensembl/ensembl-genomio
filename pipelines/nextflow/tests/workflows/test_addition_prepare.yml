@@ -1,0 +1,38 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This test runs the genome_prepare pipeline for the INSDC accession GCA_017607445.1 from Genbank
+# It uses a cache file to avoid downloading assembly related data files (--cache_dir)
+# The cached data has been reduced to two seq regions, 1 nuclear and 1 mitochondrial sequence
+- name: genome_prepare_pipeline
+  command: nextflow run ./pipelines/nextflow/workflows/additional_seq_prepare/main.nf \\
+    -c ./pipelines/nextflow/workflows/nextflow_test.config \\
+    --cache_dir ./data/test/additional_seq_prepare/cache/ \\
+    --output_dir ./test_addition_seq_prepare_output \\
+    --accession NC_035159.1 \\
+    --prefix TEMP_PREF \\
+    --production_name species_name
+
+  # Check that all the expected files are produced
+  # Make sure to update those if the processing of the files changes!
+  files:
+   - path: ./test_addition_seq_prepare_output/NC_035159.1/dna.fasta
+   - path: ./test_addition_seq_prepare_output/NC_035159.1/functional_annotation.json
+   - path: ./test_addition_seq_prepare_output/NC_035159.1/gene_models.gff3
+   - path: ./test_addition_seq_prepare_output/NC_035159.1/genome.json
+   - path: ./test_addition_seq_prepare_output/NC_035159.1/manifest.json
+   - path: ./test_addition_seq_prepare_output/NC_035159.1/pep.fasta
+   - path: ./test_addition_seq_prepare_output/NC_035159.1/seq_region.json
+   - path: ./test_addition_seq_prepare_output/NC_035159.1/stats.txt 
