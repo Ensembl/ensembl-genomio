@@ -31,6 +31,7 @@ from Bio.SeqFeature import SeqFeature
 
 from ensembl.io.genomio.gff3.functional_annotation import FunctionalAnnotations
 
+
 class Records(list):
     """List of GFF3 SeqRecords."""
 
@@ -880,7 +881,7 @@ class InputSchema(argschema.ArgSchema):
     """Standardize the gene model representation of a GFF3 file, and extract the functional annotation
     in a separate file. Input arguments expected by this script:
     """
-  
+
     in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
     genome_data = argschema.fields.InputFile(metadata={"description": "genome.json path"})
     out_gff_path = argschema.fields.OutputFile(
@@ -893,6 +894,7 @@ class InputSchema(argschema.ArgSchema):
     merge_split_genes = argschema.fields.Boolean(
         dump_default=True, metadata={"description": "Should split genes be merged automatically"}
     )
+
 
 def main() -> None:
     """Main script entry-point."""
