@@ -16,7 +16,7 @@
 # This test runs the additional_seq_prepare pipeline for the accession NC_035159.1 from Genbank
 # It uses a cache file to avoid downloading the genbank file (--cache_dir)
 # The cached data has been reduced to two genes, 1 protein_coding and 1 tRNA
-- name: genome_prepare_pipeline
+- name: additional_seq_prepare_pipeline
   command: nextflow run ./pipelines/nextflow/workflows/additional_seq_prepare/main.nf \\
     -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
     --cache_dir ./data/test/additional_seq_prepare/cache/ \\
