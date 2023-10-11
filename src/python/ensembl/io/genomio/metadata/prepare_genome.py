@@ -29,7 +29,6 @@ __all__ = [
 
 import datetime
 from os import PathLike
-from pathlib import Path
 from typing import Dict, Optional
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
@@ -257,9 +256,7 @@ class InputSchema(argschema.ArgSchema):
         required=True, metadata={"description": "Genome metadata JSON file path"}
     )
     output_path = argschema.fields.OutputFile(
-        metadata={
-            "description": "Output path for the new genome metadata file."
-        },
+        metadata={"description": "Output path for the new genome metadata file."},
     )
 
 
