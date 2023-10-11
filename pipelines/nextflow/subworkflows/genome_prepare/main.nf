@@ -46,7 +46,7 @@ workflow GENOME_PREPARE {
         ncbi_check
 
     // Main data input to this subworkflow is genomic_dataset tuple
-    main:        
+    main:
         // We expect every input and output stream to have `meta` as the first val in the form of:
         //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
 
