@@ -14,18 +14,21 @@
 // limitations under the License.
 
 process DOWNLOAD_GENBANK {
-    label "Sequence_genbank_file"
-    tag "${meta.accession}"
-    label 'default'
+    tag "${meta.production_name}"
+    label 'normal'
+    storeDir "$cache_dir/genbank/${meta.accession}"
+    afterScript "sleep $params.storeDir_latency"
 
     input:
         val(meta)
+        val(cache_dir)
 
     output:
-        tuple val(meta), path("*.gb"), emit: downloaded_gb_data
+        tuple val(meta), path("output.gb")
 
     shell:
+    output_file = "output.gb"
     '''
-    download_genbank --accession !{meta.accession}
+    download_genbank --accession !{meta.accession} --output_file !{output_file}
     '''
 }

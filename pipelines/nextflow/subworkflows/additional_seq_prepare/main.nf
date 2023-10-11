@@ -29,12 +29,13 @@ workflow additional_seq_prepare {
         meta
         brc_mode
         output_dir
+        cache_dir
     main:
         // We expect meta be
         // tuple("accession": accession, "production_name": production_name, "prefix": prefix)
 
         // Get the data
-        gb_file = DOWNLOAD_GENBANK(meta)
+        gb_file = DOWNLOAD_GENBANK(meta, cache_dir)
 
         // Parse data from GB file into GFF3 and json files
         (gff_genome, gb_genome, gb_seq_regions, gb_dna_fasta, gb_pep_fasta) = EXTRACT_FROM_GB(gb_file)

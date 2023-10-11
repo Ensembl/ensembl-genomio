@@ -31,3 +31,14 @@ This is an example of how the tree folder for Nextflow pipelines has been agreed
             │   └── nextflow.config
             └── nextflow.config
 ```
+
+## Pipelines test
+To run the pipelines tests, run each test file with --git-aware:
+
+```
+pytest --git-aware pipelines/nextflow/tests/workflows/test_addition_prepare.yml
+```
+
+```
+pytest --git-aware pipelines/nextflow/tests/workflows/test_genome_prepare.yml
+```
