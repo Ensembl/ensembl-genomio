@@ -30,8 +30,8 @@ workflow additional_seq_prepare {
         brc_mode
         output_dir
     main:
-        // We expect meta be
-        // tuple("accession": accession, "production_name": production_name, "prefix": prefix)
+        // We expect every input and output stream to have `meta` as the first val in the form of:
+        //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
 
         // Get the data
         gb_file = DOWNLOAD_GENBANK(meta)

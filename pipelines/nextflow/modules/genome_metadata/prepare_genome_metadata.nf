@@ -20,7 +20,7 @@ process PREPARE_GENOME_METADATA {
         path input_json
 
     output:
-        tuple path ("*"), path ("*/genome.json"), emit: genomic_dataset
+        tuple path ("*/genome.json"), emit: genomic_dataset
         
     script:
     """

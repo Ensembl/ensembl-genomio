@@ -63,7 +63,7 @@ include { PREPARE_GENOME_METADATA } from '../../modules/genome_metadata/prepare_
 workflow {
     PREPARE_GENOME_METADATA(ch_genome_json)
     PREPARE_GENOME_METADATA.out.genomic_dataset
-        .map{ gca_dir, json_file -> tuple( gca_dir.getName(), json_file ) }
+        .map{ json_file -> tuple( json_file.getName(), json_file ) }
         .set { genome_metadata }
     GENOME_PREPARE(genome_metadata, params.output_dir, params.cache_dir, params.ncbi_check)
 }
