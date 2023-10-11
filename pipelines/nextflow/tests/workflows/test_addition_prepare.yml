@@ -1,0 +1,46 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This test runs the additional_seq_prepare pipeline for the accession NC_035159.1 from Genbank
+# It uses a cache file to avoid downloading the genbank file (--cache_dir)
+# The cached data has been reduced to two genes, 1 protein_coding and 1 tRNA
+- name: additional_seq_prepare_pipeline
+  command: nextflow run ./pipelines/nextflow/workflows/additional_seq_prepare/main.nf \\
+    -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
+    --cache_dir ./data/test/additional_seq_prepare/cache/ \\
+    --output_dir ./test_addition_seq_prepare_output \\
+    --accession NC_035159.1 \\
+    --prefix TEMP_PREF_ \\
+    --production_name species_name
+
+  # Check that all the expected files are produced
+  # Make sure to update those if the processing of the files changes!
+  files:
+    - path: ./test_addition_seq_prepare_output/NC_035159.1/dna.fasta
+      md5sum: 445faf45bd7a1c5186eefe1474a780b9
+    - path: ./test_addition_seq_prepare_output/NC_035159.1/functional_annotation.json
+      md5sum: c134a548687b2363672c0bbdcf1dc95f
+    - path: ./test_addition_seq_prepare_output/NC_035159.1/gene_models.gff3
+      md5sum: 8ae7f6b32c0743c0171050ec1ede96cd
+    - path: ./test_addition_seq_prepare_output/NC_035159.1/genome.json
+      md5sum: bb00e618ddcd4efcf430ef1c29bcde98
+    - path: ./test_addition_seq_prepare_output/NC_035159.1/manifest.json
+      md5sum: ab5f473080cdb9b20b0da075e53ee6a5
+    - path: ./test_addition_seq_prepare_output/NC_035159.1/pep.fasta
+      md5sum: 61b0a45ee3038d42a02b55fe63ad34fe
+    - path: ./test_addition_seq_prepare_output/NC_035159.1/seq_region.json
+      md5sum: 583d28280ee2929ac0b493bec2ffb8b7
+    - path: ./test_addition_seq_prepare_output/NC_035159.1/stats.txt 
+      md5sum: 6cf5fe5d61a9ca22e217c23bb46802d3
