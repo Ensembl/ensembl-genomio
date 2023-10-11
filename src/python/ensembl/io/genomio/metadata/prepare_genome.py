@@ -226,8 +226,8 @@ def _get_node_text(node: Element, tag: str, optional: bool = False) -> Optional[
 
 
 def prepare_genome_metadata(
-    json_path: PathLike,
-    output_dir: PathLike,
+    input_path: PathLike,
+    output_path: PathLike,
     gff3_file: Optional[PathLike] = None,
     base_api_url: str = DEFAULT_API_URL,
 ) -> None:
@@ -240,32 +240,25 @@ def prepare_genome_metadata(
         base_api_url: Base API URL to fetch the accession's taxonomy data from.
 
     """
-    genome_data = get_json(json_path)
+    genome_data = get_json(input_path)
     # Amend any missing metadata
     add_provider(genome_data, gff3_file)
     add_assembly_version(genome_data)
     add_genebuild_metadata(genome_data)
     add_species_metadata(genome_data, base_api_url)
-    # Create output directory
-    accession = genome_data["assembly"]["accession"]
-    work_dir = Path(output_dir, accession)
-    work_dir.mkdir(parents=True, exist_ok=True)
     # Dump updated genome metadata
-    output_path = work_dir / "genome.json"
     print_json(output_path, genome_data)
 
 
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by the entry point of this module."""
 
-    json_file = argschema.fields.InputFile(
+    input_path = argschema.fields.InputFile(
         required=True, metadata={"description": "Genome metadata JSON file path"}
     )
-    output_dir = argschema.fields.OutputDir(
-        required=False,
-        dump_default=".",
+    output_path = argschema.fields.OutputFile(
         metadata={
-            "description": "Output folder for the updated genome metadata JSON file. By default, $PWD."
+            "description": "Output path for the new genome metadata file."
         },
     )
 
@@ -273,4 +266,4 @@ class InputSchema(argschema.ArgSchema):
 def main() -> None:
     """Module's entry-point."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    prepare_genome_metadata(mod.args["json_file"], mod.args["output_dir"])
+    prepare_genome_metadata(mod.args["input_path"], mod.args["output_path"])
