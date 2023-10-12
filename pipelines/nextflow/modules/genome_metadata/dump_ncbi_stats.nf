@@ -28,41 +28,41 @@ process DUMP_NCBI_STATS {
     output:
         tuple val(db), path("ncbi_stats.json")
 
-    script:
-        def output = "ncbi_stats.json"
-        """
+    shell:
+        output = "ncbi_stats.json"
+        '''
         function get_meta_value {
-            meta_key=\$1
+            meta_key=$1
 
             password_line=""
-            if [ "${server.password}" != "" ]; then
-                password_line='--password ${server.password}'
+            if [ "!{server.password}" != "" ]; then
+                password_line='--password !{server.password}'
             fi
-            mysql --host '${server.host}' \
-                --port '${server.port}' \
-                --user '${server.user}' \
-                \$password_line \
-                --database '${db.database}' \
-                -N -e "SELECT meta_value FROM meta WHERE meta_key='\$meta_key'"
+            mysql --host '!{server.host}' \
+                --port '!{server.port}' \
+                --user '!{server.user}' \
+                $password_line \
+                --database '!{db.database}' \
+                -N -e "SELECT meta_value FROM meta WHERE meta_key='$meta_key'"
         }
 
-        touch $output
+        touch !{output}
         # Get the INSDC accession to use
-        accession=\$(get_meta_value "assembly.accession")
-        provider=\$(get_meta_value "assembly.provider_url" | sed -r 's%^.+/%%g')
-        if [ \$provider == "refseq" ]; then
-            accession=\$(echo \$accession | sed 's/^GCA_/GCF_/')
+        accession=$(get_meta_value "assembly.accession")
+        provider=$(get_meta_value "assembly.provider_url" | sed -r 's%^.+/%%g')
+        if [ $provider == "refseq" ]; then
+            accession=$(echo $accession | sed 's/^GCA_/GCF_/')
         fi
-        echo "Provider is \$provider"
-        echo "Accession is \$accession"
+        echo "Provider is $provider"
+        echo "Accession is $accession"
 
-        datasets summary genome accession \$accession | jq '.' > $output
+        datasets summary genome accession $accession | jq '.' > !{output}
 
         # Check if it should maybe be using RefSeq?           
-        if [ "\$(jq '.total_count' $output)" == "0" ]; then
-            accession=\$(echo \$accession | sed 's/^GCA_/GCF_/')
-            echo "Trying again with accession \$accession"
-            datasets summary genome accession \$accession | jq '.' > $output
+        if [ "$(jq '.total_count' !{output})" == "0" ]; then
+            accession=$(echo $accession | sed 's/^GCA_/GCF_/')
+            echo "Trying again with accession $accession"
+            datasets summary genome accession $accession | jq '.' > !{output}
             fi
-        """
+        '''
 }
