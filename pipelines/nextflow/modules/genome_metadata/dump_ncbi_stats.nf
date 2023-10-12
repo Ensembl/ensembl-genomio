@@ -63,6 +63,6 @@ process DUMP_NCBI_STATS {
             accession=$(echo $accession | sed 's/^GCA_/GCF_/')
             echo "Trying again with accession $accession"
             datasets summary genome accession $accession | jq '.' > !{output}
-            fi
+        fi
         '''
 }
