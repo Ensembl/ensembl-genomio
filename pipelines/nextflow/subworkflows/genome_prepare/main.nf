@@ -29,7 +29,6 @@ include { PROCESS_SEQ_REGION } from '../../modules/seq_region/process_seq_region
 include { PROCESS_FASTA as PROCESS_FASTA_DNA } from '../../modules/fasta/process_fasta_data.nf'
 include { PROCESS_FASTA as PROCESS_FASTA_PEP } from '../../modules/fasta/process_fasta_data.nf'
 include { AMEND_GENOME_DATA } from '../../modules/genome_metadata/amend_genome_data.nf'
-include { COLLECT_FILES } from '../../modules/files/collect_files.nf'
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
@@ -40,13 +39,17 @@ include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
 workflow GENOME_PREPARE {
 
     take:
-        genomic_dataset // tuple composed of GCA_XXXXXXX.X (as path) and genome.json
+        genomic_dataset // tuple composed of `meta` with accessions like GCA_XXXXXXX.X (as path) and `genome.json`
+        // genomic_dataset // tuple composed of GCA_XXXXXXX.X (as path) and genome.json
         output_dir // User specified or default
         cache_dir
         ncbi_check
 
     // Main data input to this subworkflow is genomic_dataset tuple
-    main:        
+    main:
+        // We expect every input and output stream to have `meta` as the first val in the form of:
+        //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
+
         // Verify genome.json schema
         checked_genome = CHECK_JSON_SCHEMA_GENOME(genomic_dataset)
 
@@ -72,7 +75,7 @@ workflow GENOME_PREPARE {
             gene_models = GFF3_VALIDATION(new_gene_models)
 
             // Process peptides
-            fasta_pep = PROCESS_FASTA_PEP(download_opt, '1')
+            fasta_pep = PROCESS_FASTA_PEP(download_opt, 1)
         }
 
         // Generate seq_region.json
@@ -82,7 +85,7 @@ workflow GENOME_PREPARE {
         seq_region = CHECK_JSON_SCHEMA_SEQREG(new_seq_region)
 
         // Process genomic fna
-        fasta_dna = PROCESS_FASTA_DNA(download_min, '0')
+        fasta_dna = PROCESS_FASTA_DNA(download_min, 0)
 
         // Amend genome data find any additional sequence regions
         amended_genome = AMEND_GENOME_DATA(checked_genome, download_min, params.brc_mode)
@@ -98,12 +101,10 @@ workflow GENOME_PREPARE {
         prepared_files = prepared_files_grouped
                     .groupTuple()
 
-        // Collect in manifest, checks and generate sequence stats
-        collect_dir = COLLECT_FILES(prepared_files)
+        // Checks and generate sequence stats for manifest
+        manifest_bundle = MANIFEST(prepared_files)
 
-        manifest_dired = MANIFEST(collect_dir)
-        
-        manifest_checked = CHECK_INTEGRITY(manifest_dired, params.brc_mode)
+        manifest_checked = CHECK_INTEGRITY(manifest_bundle, params.brc_mode)
         
         manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', ncbi_check)
 

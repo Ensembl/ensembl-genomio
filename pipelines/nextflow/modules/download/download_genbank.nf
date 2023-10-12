@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 process DOWNLOAD_GENBANK {
     tag "${meta.production_name}"
     label 'normal'

@@ -18,15 +18,14 @@ process CHECK_JSON_SCHEMA {
     label 'adaptive'
 
     input:
-        tuple val(gca), path(json_file)
+        tuple val(meta), path(json_file)
 
     output:
-        tuple val(gca), path(json_file), emit: verified_json
+        tuple val(meta), path(json_file), emit: verified_json
 
     shell:
         schema = params.json_schemas[json_file.baseName]
         '''
         check_json_schema --json_file !{json_file} --json_schema !{schema}
         '''
-        
 }

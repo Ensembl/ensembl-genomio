@@ -15,20 +15,20 @@
 
 process PROCESS_SEQ_REGION {
     label 'adaptive'
-    tag "$gca - $task.attempt"
+    tag "${meta.accession} - $task.attempt"
     debug true
 
     input:
-        tuple val(gca), path (genome_json)
-        tuple val(gca), path (assembly_report), path (genomic_fna), path (genomic_gbff)
+        tuple val(meta), path (genome_json)
+        tuple val(meta), path (assembly_report), path (genomic_fna), path (genomic_gbff)
 
     output:
-        tuple val(gca), path("*/seq_region.json"), emit: seq_region
+        tuple val(meta), path("*/seq_region.json"), emit: seq_region
 
-    script:
-    """
-    prepare_seq_region --genome_file ${genome_json} --report_file ${assembly_report} \
-        --gbff_file ${genomic_gbff} --dst_dir ${gca}
-    """
-    // --to_exclude ${regions_to_exclude}
+    shell:
+    '''
+    prepare_seq_region --genome_file !{genome_json} --report_file !{assembly_report} \
+        --gbff_file !{genomic_gbff} --dst_dir !{meta.accession}
+    '''
+    // --to_exclude !{regions_to_exclude}
 }

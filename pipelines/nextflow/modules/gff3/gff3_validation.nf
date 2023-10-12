@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-nextflow.enable.dsl=2
-
 process GFF3_VALIDATION {
 
   //beforeScript 'module load libffi-3.3-gcc-9.3.0-cgokng6'
@@ -23,16 +21,16 @@ process GFF3_VALIDATION {
   container "biocontainers/genometools:v1.5.10ds-3-deb_cv1"
 
   input:
-    tuple val(gca), path (gene_models, stageAs: "incoming.gff3")
+    tuple val(meta), path (gene_models, stageAs: "incoming.gff3")
 
   output:
-    tuple val(gca), path("gene_models.gff3"), emit: gene_models
+    tuple val(meta), path("gene_models.gff3"), emit: gene_models
 
-  script:
-  def out_gff = "gene_models.gff3"
-  """
-  cp $gene_models temp.gff3
-  gt gff3 -tidy -sort -retainids -force -o $out_gff temp.gff3 
-  gt gff3validator $out_gff
-  """
+  shell:
+  out_gff = "gene_models.gff3"
+  '''
+  cp !{gene_models} temp.gff3
+  gt gff3 -tidy -sort -retainids -force -o !{out_gff} temp.gff3 
+  gt gff3validator !{out_gff}
+  '''
 }

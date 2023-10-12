@@ -15,24 +15,24 @@
 
 
 process CHECK_INTEGRITY {
-    tag "${manifest_dir}"
+    tag "${meta.accession} ${meta.production_name}"
     label 'variable_2_8_32'
     errorStrategy 'finish'
     time '1h'
 
     input:
-        tuple path(manifest_dir), val(accession)
+        tuple val(meta), path(manifest_files)
         val brc_mode
     
     output:
-        tuple path("${manifest_dir}/"), val(accession), emit: integrity_checked
-    script:
-        """
+        tuple val(meta), path(manifest_files)
+    shell:
+        '''
         brc_mode=''
         if [ $brc_mode == 1 ]; then
             brc_mode='--brc_mode 1'
         fi
-        check_integrity --manifest_file ${manifest_dir}/manifest.json \
-            \$brc_mode
-        """
+        check_integrity --manifest_file ./manifest.json \
+            $brc_mode
+        '''
 }
