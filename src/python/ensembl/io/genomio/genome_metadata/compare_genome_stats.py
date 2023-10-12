@@ -29,7 +29,9 @@ def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Any]:
     """Compare two dicts with the same keys and compute the difference of their values.
 
     Returns:
-        A dict with the same keys, where the values are dicts with 3 keys: ncbi, core, and diff
+        A dict with 2 dicts:
+        - same: List of keys that have the same count
+        - different: Dict of keys with different count, with values for ncbi, core, and diff (=core - ncbi)
     """
     diff = {}
     same = {}
