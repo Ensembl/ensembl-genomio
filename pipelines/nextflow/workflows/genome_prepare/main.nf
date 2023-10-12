@@ -57,13 +57,35 @@ if (!params.cache_dir) {
 include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/main.nf'
 // Import module
 include { PREPARE_GENOME_METADATA } from '../../modules/genome_metadata/prepare_genome_metadata.nf'
+// Utilities
+include { read_json } from '../../modules/utils/utils.nf'
 
+// function to create meta tuple from genome.json in the form:
+//   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
+def meta_from_genome_json(json_path) {
+    data = read_json(json_path)
+
+    prod_name = data.assembly.accession
+    if ( data.species && data.species.production_name ) {
+        prod_name = data.species.production_name
+    } else if ( data.BRC4 && data.BRC4.organism_abbrev ){
+        prod_name = data.BRC4.organism_abbrev
+    }
+
+    return [
+        accession: data.assembly.accession,
+        production_name: prod_name,
+        prefix: "",
+    ]
+} // meta_from_genome_json(json_path)
 
 // Run main workflow
 workflow {
     PREPARE_GENOME_METADATA(ch_genome_json)
+
     PREPARE_GENOME_METADATA.out.genomic_dataset
-        .map{ gca, json_file -> tuple( [accession: gca], json_file ) }
+        .map{ json_file -> meta_from_genome_json(json_file), json_file ) }
         .set { genome_metadata }
+
     GENOME_PREPARE(genome_metadata, params.output_dir, params.cache_dir, params.ncbi_check)
 }
