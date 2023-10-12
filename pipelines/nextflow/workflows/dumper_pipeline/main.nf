@@ -32,7 +32,7 @@ default_selection = [
 
 // Print usage
 def helpMessage() {
-  log.info '''
+  log.info """
         Mandatory arguments:
         --host, --port, --user           Connection parameters to the SQL servers we getting core db(s) from
 
@@ -41,8 +41,8 @@ def helpMessage() {
         --prefix                       Core dabase(s) name prefixes
         --dbname_re                    Regexp to match core db name(s) against
         --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
-        --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
-        --select_dump                  Comma-separated list of items to dump (dump all by default)
+        --output_dir                   Name of Output directory to gather prepared outfiles. (default: ${params.output_dir})
+        --select_dump                  Comma-separated list of items to dump (all by default, or choose among ${default_selection})
         --cache_dir                    Directory where some files are cached (e.g. NCBI stats files)
         --help                         This usage statement.
 
@@ -57,7 +57,7 @@ def helpMessage() {
             --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
             --output_dir \${data_dir}/dumper_output
 
-        '''
+        """
 }
 
 // Check mandatory parameters
