@@ -21,7 +21,6 @@ params.brc_mode = 0
 params.dbname_re = ''
 params.output_dir = './dumper_output'
 params.password = ''
-params.cache_dir = './cache'
 params.select_dump = ''
 default_selection = [
     'sql',
