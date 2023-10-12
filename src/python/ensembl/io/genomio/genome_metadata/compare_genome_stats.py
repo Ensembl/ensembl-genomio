@@ -174,7 +174,7 @@ def compare_stats(ncbi: Dict, core: Dict) -> Dict[str, Any]:
     comp: Dict[str, Any] = {
         "assembly_diff": compare_assembly(ncbi, core_assembly_stats),
     }
-    if core_annotation_stats is not None and ncbi_annotation_stats is not None:
+    if core_annotation_stats and ncbi_annotation_stats:
         comp["annotation_diff"] = compare_annotation(ncbi_annotation_stats, core_annotation_stats)
 
     return comp
