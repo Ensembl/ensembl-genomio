@@ -13,8 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Compare stats in a JSON from NCBI dataset and a json from our core.
-Returns the json from our core including a section with comparisons.
+"""Compare stats in a JSON from NCBI dataset and a JSON from our core db.
+Returns the JSON from our core db including a section with comparisons.
 """
 
 import json
@@ -84,7 +84,7 @@ def compare_assembly(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, An
     # Number of scaffolds from our core
     core_num_scaffolds = core["coord_system"].get("scaffold", 0)
 
-    # NCBI includes the chromodomes in its stats
+    # NCBI includes the chromosomes in its stats
     core_adjusted_scaffolds = core_num_scaffolds + core_num_chrs
 
     # Compile the counts
