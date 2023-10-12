@@ -14,17 +14,17 @@
 // limitations under the License.
 
 process MANIFEST {
-    tag "Manifest_$accession"
+    tag "Manifest_$meta.accession"
     label 'adaptive'
     
     input:
-        tuple path(manifest_dir), val(accession)
+        tuple val(meta), path(file_name)
 
     output:
-        tuple path(manifest_dir), val(accession)
+        tuple val (meta), path("*", includeInputs: true)
     
-    script:
-        """
-        manifest_maker --manifest_dir ${manifest_dir}
-        """
+    shell:
+        '''
+        manifest_maker --manifest_dir .
+        '''
 }

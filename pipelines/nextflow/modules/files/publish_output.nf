@@ -14,21 +14,21 @@
 // limitations under the License.
 
 process PUBLISH_DIR {
-    publishDir "$out_dir", mode: 'copy', overwrite: false
-    tag "Publish_${accession}"
+    publishDir "$out_dir/${meta.accession}", mode: 'copy', overwrite: false
+    tag "Publish_${meta.accession}"
     label 'default'
     time '5min'
 
     input:
-        tuple path(data_dir), val(accession)
+        tuple val(meta), path(bundle_files)
         val (out_dir)
     
     output:
-        path data_dir
+        path "*", includeInputs: true
     
-    script:
-        """
-        echo "Just copy over the finished files"
-        echo "From '$data_dir' to '$out_dir' for accession '$accession'"
-        """
+    shell:
+        '''
+        echo "Just publishing the finished files"
+        echo "To '!{out_dir}/!{meta.accession}' for accession '!{meta.accession}'"
+        '''
 }

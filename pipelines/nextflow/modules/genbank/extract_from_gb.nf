@@ -13,27 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-nextflow.enable.dsl=2
-
 process EXTRACT_FROM_GB {
     tag "$gb_file"
     label 'default'
 
     input:
-        tuple val(accession), path(gb_file)
-        val prefix
-        val production_name
+        tuple val(meta), path(gb_file)
 
     output:
-        tuple val(accession), path("*.gff"), emit: gene_gff
-        tuple val(accession), path("genome.json"), emit: genome 
-        tuple val(accession), path("seq_region.json"), emit: seq_regions
-        tuple val(accession), path("dna.fasta"), emit: dna_fasta
-        tuple val(accession), path("pep.fasta"), emit: pep_fasta, optional: true
+        tuple val(meta), path("*.gff"), emit: gene_gff
+        tuple val(meta), path("genome.json"), emit: genome 
+        tuple val(meta), path("seq_region.json"), emit: seq_regions
+        tuple val(meta), path("dna.fasta"), emit: dna_fasta
+        tuple val(meta), path("pep.fasta"), emit: pep_fasta, optional: true
 
-    script:
-    """
-    extract_from_gb --prefix ${prefix} --prod_name ${production_name} --gb_file ${gb_file}
-    """
+    shell:
+    '''
+    extract_from_gb --prefix !{meta.prefix} --prod_name !{meta.production_name} --gb_file !{gb_file}
+    '''
 }
 

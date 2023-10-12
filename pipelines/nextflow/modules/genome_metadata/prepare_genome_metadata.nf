@@ -17,13 +17,14 @@ process PREPARE_GENOME_METADATA {
     label 'local'
 
     input:
-        path input_json
+        path(input_json, stageAs: "input_genome.json")
 
     output:
-        tuple path ("*"), path ("*/genome.json"), emit: genomic_dataset
+        tuple path ("genome.json"), emit: genomic_dataset
         
-    script:
-    """
-    prepare_genome_metadata --json_file ${input_json}
-    """
+    shell:
+    output_json = "genome.json"
+    '''
+    prepare_genome_metadata --input_path !{input_json} --output_path !{output_json}
+    '''
 }

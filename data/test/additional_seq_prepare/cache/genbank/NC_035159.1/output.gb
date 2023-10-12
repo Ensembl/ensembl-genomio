@@ -1,0 +1,68 @@
+LOCUS       NC_035159              1140 bp    DNA     circular INV 03-APR-2023
+DEFINITION  Aedes aegypti strain LVP_AGWG mitochondrion, complete genome.
+ACCESSION   NC_035159
+VERSION     NC_035159.1
+DBLINK      BioProject: PRJNA927338
+            BioSample: SAMN07177802
+KEYWORDS    RefSeq.
+SOURCE      mitochondrion Aedes aegypti (yellow fever mosquito)
+  ORGANISM  Aedes aegypti
+            Eukaryota; Metazoa; Ecdysozoa; Arthropoda; Hexapoda; Insecta;
+            Pterygota; Neoptera; Endopterygota; Diptera; Nematocera;
+            Culicoidea; Culicidae; Culicinae; Aedini; Aedes; Stegomyia.
+FEATURES             Location/Qualifiers
+     source          1..1140
+                     /organism="Aedes aegypti"
+                     /organelle="mitochondrion"
+                     /mol_type="genomic DNA"
+                     /strain="LVP_AGWG"
+                     /db_xref="taxon:7159"
+                     /sex="male"
+     gene            1..69
+                     /locus_tag="CFI06_mgt01"
+                     /db_xref="GeneID:33307553"
+     tRNA            1..69
+                     /locus_tag="CFI06_mgt01"
+                     /product="tRNA-Met"
+                     /db_xref="GeneID:33307553"
+     gene            70..1095
+                     /gene="ND2"
+                     /locus_tag="CFI06_mgp13"
+                     /db_xref="GeneID:33307554"
+     CDS             70..1095
+                     /gene="ND2"
+                     /locus_tag="CFI06_mgp13"
+                     /codon_start=1
+                     /transl_table=5
+                     /product="NADH dehydrogenase subunit 2"
+                     /protein_id="YP_009389260.1"
+                     /db_xref="GeneID:33307554"
+                     /translation="MKKISNNIFFIMLISGTLITISSNSWLGAWMGLEINLLSFIPLM
+                     NEGKKNLMTSESSLKYFLTQAFASSILLFAIILMMMFFNENWMMNNNFNNLLILSTLL
+                     LKSGAAPFHFWFPGVMEGLNWINGLILMTWQKIAPLMLISYNLNINFFYFTILLSMII
+                     GALGGLNQTSLRKLMAFSSINHIGWMLMAMMNNELLWLTYFLLYSILSMSIILMFNNF
+                     KLFHFNQIFNFSMMNPYIKFFMFLNLLSLGGLPPFLGFLPKWLVIQNLVEMNQLFLLF
+                     IAVCLTLITLYYYLRMSYSIYMLNYNKNSWMLMNSYSNNNLTLILTMNFISIMGLLII
+                     TLIYLIL"
+ORIGIN      
+        1 aaaaagataa gctaattaag ctattgggtt cataccccac ttataaaggt tataatcctt
+       61 ttctttttaa ttaaaaaaat ctctaataat atttttttta ttatattaat ttcaggaact
+      121 ttaattacca tttcatctaa ttcctgatta ggagcttgaa taggattaga aattaattta
+      181 ctttcattta tccccttaat aaatgaaggt aaaaaaaatc taataacttc agaaagtagt
+      241 ctaaaatatt ttttaactca agctttcgct tcttcaattt tattatttgc tattatttta
+      301 ataataatat tttttaatga aaattgaata ataaataata attttaataa tttattaatt
+      361 ttatctactt tattattaaa aagaggagca gctccttttc atttttgatt cccaggagtt
+      421 atagaaggat taaattgaat taatggttta attttaataa cttgacaaaa aatcgctcct
+      481 ttaatactta tttcctataa tttaaatatt aatttttttt actttacaat tttactttca
+      541 ataattattg gagctttagg aggattaaat caaacatctt tacgtaaatt aatagctttt
+      601 tcatcaatta atcatattgg ttgaatatta atagctataa taaataacga acttttatga
+      661 ttaacttatt ttttattata ttcaatttta tctatatcta tcattttaat atttaataat
+      721 tttaaattat ttcattttaa tcaaattttt aatttttcaa taataaatcc ttacattaaa
+      781 ttctttatat ttttaaatct tttatcttta ggaggattac ccccatttct aggattttta
+      841 cctaaatgat tagttattca aaatttagta gaaataaatc aattatttct tttatttatt
+      901 gctgtttgtt taactttaat tactttatac tattatttac gaatatctta tagtatttat
+      961 atattaaatt acaataaaaa ttcatgaata ttaataaatt cttattctaa taataattta
+     1021 actttaattt taactataaa ttttatttct attataggat tattaattat tacattaatt
+     1081 tatttaatct tataataaga atttaagtta aataaactaa tagccttcaa agctgaaaat
+//
+

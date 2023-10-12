@@ -13,21 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-nextflow.enable.dsl=2
-
 process DOWNLOAD_GENBANK {
-    label "Sequence_genbank_file"
-    tag "${accession}"
-    label 'default'
+    tag "${meta.production_name}"
+    label 'normal'
+    storeDir "$cache_dir/genbank/${meta.accession}"
+    afterScript "sleep $params.storeDir_latency"
 
     input:
-        val accession
+        val(meta)
+        val(cache_dir)
 
     output:
-        tuple val(accession), path("*.gb"), emit: downloaded_gb_data
+        tuple val(meta), path("output.gb")
 
-    script:
-    """
-    download_genbank --accession ${accession}
-    """
+    shell:
+    output_file = "output.gb"
+    '''
+    download_genbank --accession !{meta.accession} --output_file !{output_file}
+    '''
 }
