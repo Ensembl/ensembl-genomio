@@ -75,7 +75,7 @@ workflow GENOME_PREPARE {
             gene_models = GFF3_VALIDATION(new_gene_models)
 
             // Process peptides
-            fasta_pep = PROCESS_FASTA_PEP(download_opt, '1')
+            fasta_pep = PROCESS_FASTA_PEP(download_opt, 1)
         }
 
         // Generate seq_region.json
@@ -85,7 +85,7 @@ workflow GENOME_PREPARE {
         seq_region = CHECK_JSON_SCHEMA_SEQREG(new_seq_region)
 
         // Process genomic fna
-        fasta_dna = PROCESS_FASTA_DNA(download_min, '0')
+        fasta_dna = PROCESS_FASTA_DNA(download_min, 0)
 
         // Amend genome data find any additional sequence regions
         amended_genome = AMEND_GENOME_DATA(checked_genome, download_min, params.brc_mode)

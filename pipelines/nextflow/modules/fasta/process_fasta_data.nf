@@ -26,7 +26,7 @@ process PROCESS_FASTA {
         tuple val(meta), path ("fasta_*.fa"), emit: processed_fasta
 
     shell:
-    output_fasta = pep_mode ? "fasta_pep.fa" : "fasta_dna.fa"
+    output_fasta = pep_mode == 1 ? "fasta_pep.fa" : "fasta_dna.fa"
     '''
     prep_fasta_data --fasta_infile !{fasta_file} \
         --genbank_infile !{gbff_file} \
