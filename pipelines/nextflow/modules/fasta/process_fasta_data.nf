@@ -26,15 +26,11 @@ process PROCESS_FASTA {
         tuple val(meta), path ("fasta_*.fa"), emit: processed_fasta
 
     shell:
+    output_fasta = pep_mode == 1 ? "fasta_pep.fa" : "fasta_dna.fa"
     '''
-    if [ !{pep_mode} == 1 ]; then
-        output_fasta=fasta_pep.fa
-    else
-        output_fasta=fasta_dna.fa
-    fi
     prep_fasta_data --fasta_infile !{fasta_file} \
         --genbank_infile !{gbff_file} \
-        --fasta_outfile $output_fasta \
+        --fasta_outfile !{output_fasta} \
         --peptide_mode !{pep_mode}
     '''
 }

@@ -39,13 +39,17 @@ include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
 workflow GENOME_PREPARE {
 
     take:
-        genomic_dataset // tuple composed of GCA_XXXXXXX.X (as path) and genome.json
+        genomic_dataset // tuple composed of `meta` with accessions like GCA_XXXXXXX.X (as path) and `genome.json`
+        // genomic_dataset // tuple composed of GCA_XXXXXXX.X (as path) and genome.json
         output_dir // User specified or default
         cache_dir
         ncbi_check
 
     // Main data input to this subworkflow is genomic_dataset tuple
-    main:        
+    main:
+        // We expect every input and output stream to have `meta` as the first val in the form of:
+        //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
+
         // Verify genome.json schema
         checked_genome = CHECK_JSON_SCHEMA_GENOME(genomic_dataset)
 
@@ -71,7 +75,7 @@ workflow GENOME_PREPARE {
             gene_models = GFF3_VALIDATION(new_gene_models)
 
             // Process peptides
-            fasta_pep = PROCESS_FASTA_PEP(download_opt, '1')
+            fasta_pep = PROCESS_FASTA_PEP(download_opt, 1)
         }
 
         // Generate seq_region.json
@@ -81,7 +85,7 @@ workflow GENOME_PREPARE {
         seq_region = CHECK_JSON_SCHEMA_SEQREG(new_seq_region)
 
         // Process genomic fna
-        fasta_dna = PROCESS_FASTA_DNA(download_min, '0')
+        fasta_dna = PROCESS_FASTA_DNA(download_min, 0)
 
         // Amend genome data find any additional sequence regions
         amended_genome = AMEND_GENOME_DATA(checked_genome, download_min, params.brc_mode)

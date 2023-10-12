@@ -20,12 +20,11 @@ process PREPARE_GENOME_METADATA {
         path(input_json, stageAs: "input_genome.json")
 
     output:
-        tuple env(accession), path("genome.json"), emit: genomic_dataset
+        tuple path ("genome.json"), emit: genomic_dataset
         
     shell:
     output_json = "genome.json"
     '''
     prepare_genome_metadata --input_path !{input_json} --output_path !{output_json}
-    export accession=$(jq -r '.assembly.accession' !{output_json})
     '''
 }
