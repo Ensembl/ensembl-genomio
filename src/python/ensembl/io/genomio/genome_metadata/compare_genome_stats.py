@@ -37,10 +37,9 @@ def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Any]:
     same = {}
     for key, ncbi_count in ncbi.items():
         core_count = core[key]
-        if ncbi_count == 0 and core_count == 0:
-            continue
         if ncbi_count == core_count:
-            same[key] = ncbi_count
+            if ncbi_count != 0:
+                same[key] = ncbi_count
             continue
         diff[key] = {"ncbi": ncbi_count, "core": core_count, "diff": core_count - ncbi_count}
 
