@@ -48,13 +48,13 @@ workflow DUMP_METADATA {
             db_files = db_files.concat(seq_regions_checked)
         }
         
-        // // Events
+        // Events
         if (selection.contains("events")) {
             events = DUMP_EVENTS(server, db, filter_map)
             db_files = db_files.concat(events)
         }
 
-        // // Genome metadata
+        // Genome metadata
         if (selection.contains("genome_metadata")) {
             genome_meta = DUMP_GENOME_META(server, db, filter_map)
             db_files = db_files.concat(genome_meta)
