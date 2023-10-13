@@ -33,15 +33,8 @@ process DUMP_NCBI_STATS {
         function get_meta_value {
             meta_key=$1
 
-            password_line=""
-            if [ "!{server.password}" != "" ]; then
-                password_line='--password !{server.password}'
-            fi
-            mysql --host '!{server.host}' \
-                --port '!{server.port}' \
-                --user '!{server.user}' \
-                $password_line \
-                --database '!{db.database}' \
+            mysql --host="!{server.host}" --port="!{server.port}" --user="!{server.user}" \
+                --password="!{server.password}" --database="!{db.database}" \
                 -N -e "SELECT meta_value FROM meta WHERE meta_key='$meta_key'"
         }
 
