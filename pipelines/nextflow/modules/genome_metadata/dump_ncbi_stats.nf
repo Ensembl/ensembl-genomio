@@ -17,7 +17,6 @@
 process DUMP_NCBI_STATS {
     tag "${db.species}"
     label "local"
-    maxForks 1
     storeDir "$cache_dir/ncbi_stats/${db.species}"
 
     input:
