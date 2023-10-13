@@ -47,12 +47,11 @@ class StatsGenerator:
         stats = self._fix_scaffolds(stats)
         return stats
 
-    def _fix_scaffolds(self, stats: Dict[str, Any]):
+    def _fix_scaffolds(self, stats: Dict[str, Any]) -> Dict[str, Any]:
+        """Rename supercontigs to scaffolds in a stats dict and return it."""
         coords = stats.get("coord_system", {})
         if "supercontig" in coords:
-            if "scaffold" in coords:
-                pass
-            else:
+            if "scaffold" not in coords:
                 coords["scaffold"] = coords["supercontig"]
                 del coords["supercontig"]
         return stats
@@ -61,7 +60,7 @@ class StatsGenerator:
         """Returns a dict of count for each value counted with the attrib_type code provided.
 
         Args:
-            code (str): Ensembl database attrib_type code.
+            code: Ensembl database attrib_type code.
         """
         session = self.session
 
@@ -159,7 +158,7 @@ def main() -> None:
         mod.args.get("password"),
         mod.args["host"],
         mod.args["port"],
-        mod.args.get("database"),
+        mod.args["database"],
     )
     dbc = DBConnection(db_url)
 
