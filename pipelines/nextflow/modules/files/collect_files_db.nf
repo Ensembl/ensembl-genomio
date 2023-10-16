@@ -23,7 +23,7 @@ process COLLECT_FILES {
         tuple val(db), path(file_name)
     
     output:
-        path "${db.species}"
+        tuple val(db), path("${db.species}")
     
     script:
         """
@@ -45,11 +45,10 @@ process MANIFEST {
     time '5min'
 
     input:
-        path collect_dir
-        val db
+        tuple val(db), path(collect_dir)
     
     output:
-        path collect_dir
+        tuple val(db), path(collect_dir, includeInputs: true)
     
     script:
         """
@@ -64,12 +63,11 @@ process PUBLISH_DIR {
     time '5min'
 
     input:
-        path data_dir
+        tuple val(db), path(data_dir)
         val out_dir
-        val db
     
     output:
-        path data_dir
+        tuple val(db), path(data_dir, includeInputs: true)
     
     script:
         """

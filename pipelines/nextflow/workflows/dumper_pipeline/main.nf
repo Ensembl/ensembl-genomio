@@ -21,10 +21,18 @@ params.brc_mode = 0
 params.dbname_re = ''
 params.output_dir = './dumper_output'
 params.password = ''
+params.select_dump = ''
+default_selection = [
+    'sql',
+    'seq_regions',
+    'events',
+    'genome_metadata',
+    'stats',
+]
 
 // Print usage
 def helpMessage() {
-  log.info '''
+  log.info """
         Mandatory arguments:
         --host, --port, --user           Connection parameters to the SQL servers we getting core db(s) from
 
@@ -33,7 +41,9 @@ def helpMessage() {
         --prefix                       Core dabase(s) name prefixes
         --dbname_re                    Regexp to match core db name(s) against
         --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
-        --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
+        --output_dir                   Name of Output directory to gather prepared outfiles. (default: ${params.output_dir})
+        --select_dump                  Comma-separated list of items to dump (all by default, or choose among ${default_selection})
+        --cache_dir                    Directory where some files are cached (e.g. NCBI stats files)
         --help                         This usage statement.
 
         Usage:
@@ -47,7 +57,7 @@ def helpMessage() {
             --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
             --output_dir \${data_dir}/dumper_output
 
-        '''
+        """
 }
 
 // Check mandatory parameters
@@ -94,6 +104,19 @@ if (params.host && params.port && params.user && params.output_dir) {
     exit 1, "Missing server parameters"
 }
 
+if (params.select_dump) {
+    items = params.select_dump.split(/,/)
+    for (item in items) {
+        if (!default_selection.contains(item)) {
+            acceptable = default_selection.join(", ")
+            exit 1, "Selection item unknown: " + item + " (accepted: " + acceptable + ")"
+        }
+    }
+    params.selection = items
+} else {
+    params.selection = default_selection
+}
+
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
 include { DUMP_METADATA } from '../../subworkflows/dump_metadata/main.nf'
 include { DB_FACTORY } from '../../modules/database/db_factory.nf'
@@ -104,6 +127,9 @@ workflow {
     dbs = DB_FACTORY(server, filter_map)
         .map(it -> read_json(it))
         .flatten()
-    DUMP_SQL(server, dbs, filter_map, params.output_dir)
-    DUMP_METADATA(server, dbs, filter_map, params.output_dir)
+    
+    if (params.selection.contains('sql')) {
+        DUMP_SQL(server, dbs, filter_map, params.output_dir)
+    }
+    DUMP_METADATA(server, dbs, filter_map, params.output_dir, params.selection, params.cache_dir)
 }

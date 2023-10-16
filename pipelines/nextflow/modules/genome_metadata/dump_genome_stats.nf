@@ -14,26 +14,27 @@
 // limitations under the License.
 
 
-process CHECK_INTEGRITY {
-    tag "Integrity_${db.species}"
-    label 'default'
-    errorStrategy 'finish'
-    time '1h'
+process DUMP_GENOME_STATS {
+    tag "${db.species}"
+    label "normal"
+    maxForks 10
 
     input:
-        tuple val(db), path(manifest_dir)
-        val filter_map
-    
+        val server
+        val db
+
     output:
-        tuple val(db), path(manifest_dir, includeInputs: true)
+        tuple val(db), path("core_stats.json")
 
     script:
+        def output = "core_stats.json"
         """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
-        check_integrity --manifest_file ${manifest_dir}/manifest.json \
-            \$brc_mode
+        touch $output
+        genome_stats_dumper --host '${server.host}' \
+            --port '${server.port}' \
+            --user '${server.user}' \
+            --password '${server.password}' \
+            --database '${db.database}' \
+            --output_json $output
         """
 }

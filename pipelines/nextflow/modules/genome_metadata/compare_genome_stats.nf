@@ -14,26 +14,23 @@
 // limitations under the License.
 
 
-process CHECK_INTEGRITY {
-    tag "Integrity_${db.species}"
-    label 'default'
-    errorStrategy 'finish'
-    time '1h'
+process COMPARE_GENOME_STATS {
+    tag "${db.species}"
+    label "local"
 
     input:
-        tuple val(db), path(manifest_dir)
-        val filter_map
-    
+        tuple val(db), path(ncbi_stats, stageAs: "ncbi_stats.json"), path(core_stats, stageAs: "core_stats.json")
+
     output:
-        tuple val(db), path(manifest_dir, includeInputs: true)
+        tuple val(db), path("diff_stats.json")
 
     script:
+        def output = "diff_stats.json"
         """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
-        check_integrity --manifest_file ${manifest_dir}/manifest.json \
-            \$brc_mode
+        touch $output
+        genome_stats_compare \
+            --ncbi $ncbi_stats \
+            --core $core_stats \
+            --output_json $output
         """
 }
