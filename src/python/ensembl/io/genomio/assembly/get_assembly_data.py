@@ -14,6 +14,17 @@
 # limitations under the License.
 """Download an assembly data files from INSDC or RefSeq."""
 
+__all__ = [
+    "FileDownloadError",
+    "UnsupportedFormatError",
+    "md5_files",
+    "get_checksums",
+    "download_files",
+    "get_files_selection",
+    "get_root_name",
+    "retrieve_assembly_data",
+]
+
 from ftplib import FTP
 import hashlib
 from importlib import reload
@@ -27,7 +38,7 @@ from typing import Dict
 import argschema
 
 
-FILE_ENDS = {
+_FILE_ENDS = {
     "assembly_report.txt": "report",
     "genomic.fna.gz": "fasta_dna",
     "protein.faa.gz": "fasta_pep",
@@ -57,7 +68,7 @@ def md5_files(dl_dir: Path) -> bool:
         return False
     logging.info(f" File sums from {md5_path}: {len(sums)}")
     for dl_file, checksum in sums.items():
-        for end in FILE_ENDS:
+        for end in _FILE_ENDS:
             if dl_file.endswith(end) and not dl_file.endswith(f"_from_{end}"):
                 file_path = dl_dir / dl_file
                 if not file_path.is_file():
@@ -123,7 +134,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
 
             # Get all the files
             for ftp_file, _ in ftp_conn.mlsd():
-                for end in FILE_ENDS:
+                for end in _FILE_ENDS:
                     if ftp_file.endswith(end) and not ftp_file.endswith(f"_from_{end}"):
                         _download_file(ftp_conn, ftp_file, md5_sums, dl_dir, max_redo)
 
@@ -184,14 +195,14 @@ def get_files_selection(dl_dir: Path) -> Dict[str, str]:
     Among all the files downloaded, only keep a subset for which we use a controlled name.
     Return a dict[name] = file_path
     The file_path is relative to the download dir
-    Current names are defined in FILE_ENDS
+    Current names are defined in _FILE_ENDS
     """
     files = {}
     root_name = get_root_name(dl_dir)
     if root_name == "":
         raise FileDownloadError(f"Could not determine the files root name in {dl_dir}")
     for dl_file in dl_dir.iterdir():
-        for end, name in FILE_ENDS.items():
+        for end, name in _FILE_ENDS.items():
             file_with_end = dl_file.name.endswith(end) and not dl_file.name.endswith(f"_from_{end}")
             if (root_name and dl_file.name == root_name + end) or file_with_end:
                 files[name] = str(dl_file)

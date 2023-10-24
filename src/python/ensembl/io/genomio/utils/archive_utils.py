@@ -14,7 +14,7 @@
 # limitations under the License.
 """Utils to deal with archived files (gzip)."""
 
-__all__ = ["SUPPORTED_ARCHIVE_FORMATS", "extract_file"]
+__all__ = ["SUPPORTED_ARCHIVE_FORMATS", "open_gz_file", "extract_file"]
 
 from contextlib import contextmanager
 import gzip

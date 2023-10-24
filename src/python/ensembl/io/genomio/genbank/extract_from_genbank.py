@@ -29,6 +29,7 @@ Returns:
     json_output: json file with a dict that contains all genome files created.
 """
 
+__all__ = ["GBParseError", "UnsupportedData", "GenomeFiles", "FormattedFilesGenerator"]
 
 from collections import Counter
 import json

@@ -16,10 +16,12 @@
 
 __all__ = [
     "SeqRegion",
+    "SeqRegionDict",
     "LOCATION_CODON",
     "MOLECULE_LOCATION",
     "SYNONYM_MAP",
     "SYNONYM_RESOURCES",
+    "UnknownMetadata",
     "add_insdc_seq_region_name",
     "add_mitochondrial_codon_table",
     "add_translation_table",

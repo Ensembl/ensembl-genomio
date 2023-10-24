@@ -15,6 +15,12 @@
 """Standardize the gene model representation of a GFF3 file, and extract the functional annotation
 in a separate file."""
 
+__all__ = [
+    "Records",
+    "GFFParserError",
+    "GFFGeneMerger",
+    "GFFSimplifier",
+]
 
 from collections import Counter
 from os import PathLike

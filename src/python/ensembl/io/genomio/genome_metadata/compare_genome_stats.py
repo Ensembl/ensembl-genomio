@@ -17,6 +17,8 @@
 Returns the JSON from our core db including a section with comparisons.
 """
 
+__all__ = ["compare_assembly", "compare_annotation", "compare_stats"]
+
 import json
 from pathlib import Path
 import re

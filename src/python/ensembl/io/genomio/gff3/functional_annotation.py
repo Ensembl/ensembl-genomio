@@ -14,6 +14,14 @@
 # limitations under the License.
 """Simple representation of gene features functional annotation extracted from a GFF3 file."""
 
+__all__ = [
+    "Annotation",
+    "DuplicateIdError",
+    "MissingParentError",
+    "AnnotationError",
+    "FunctionalAnnotations",
+]
+
 from os import PathLike
 from pathlib import Path
 import re
