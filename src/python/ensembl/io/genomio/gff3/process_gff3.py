@@ -66,6 +66,8 @@ class GFFParserCommon:
 
     # Supported transcript level biotypes
     transcript_types = [
+        "C_gene_segment",
+        "guide_RNA",
         "lnc_RNA",
         "miRNA",
         "misc_RNA",
@@ -79,28 +81,34 @@ class GFFParserCommon:
         "RNase_MRP_RNA",
         "RNase_P_RNA",
         "rRNA",
+        "scRNA",
         "snoRNA",
         "snRNA",
         "SRP_RNA",
         "telomerase_RNA",
         "transcript",
         "tRNA",
+        "V_gene_segment",
     ]
 
     # Biotypes that are ignored, and removed from the final GFF3 file
     ignored_gene_types = [
         "cDNA_match",
         "centromere",
+        "D_loop",
+        "direct_repeat",
         "dispersed_repeat",
         "gap",
         "intron",
         "inverted_repeat",
         "long_terminal_repeat",
         "microsatellite",
+        "origin_of_replication",
         "region",
         "repeat_region",
         "satellite_DNA",
         "sequence_feature",
+        "sequence_secondary_structure",
         "sequence_uncertainty",
         "STS",
         "tandem_repeat",
@@ -286,7 +294,7 @@ class GFFSimplifier(GFFParserCommon):
                 fail_errors = " ".join(fail_types.keys())
                 raise GFFParserError(f"Unrecognized types found ({fail_errors})")
 
-    def format_mobile_element(self, feat):
+    def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
 
         # Change mobile_genetic_element into a transposable_element feature
@@ -324,6 +332,32 @@ class GFFSimplifier(GFFParserCommon):
         feat.qualifiers = {"ID": feat.id}
 
         return feat
+
+    def format_gene_segments(self, transcript: SeqFeature) -> SeqFeature:
+        """Returns the equivalent Ensembl biotype feature for gene segment transcript features.
+
+        Supported features: "C_gene_segment" and "V_gene_segment".
+
+        Args:
+            transcript: Gene segment transcript feature.
+
+        """
+        # Change mobile_genetic_element into a transposable_element feature
+        if transcript.type in ("C_gene_segment", "V_gene_segment"):
+            standard_name = transcript.qualifiers["standard_name"][0]
+            # Drop "_segment" from the transcript type
+            biotype = transcript.type[:-8]
+            if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
+                biotype = f'IG_{biotype}'
+            elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
+                biotype = f'TR_{biotype}'
+            else:
+                print(f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}")
+                return transcript
+            transcript.type = biotype
+        else:
+            print(f"Feature {transcript.id} is not a supported gene segment feature: {transcript.type}")
+        return transcript
 
     def normalize_gene(self, gene: SeqFeature, fail_types: Dict[str, int]) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
@@ -413,6 +447,9 @@ class GFFSimplifier(GFFParserCommon):
             # New transcript ID
             transcript_number = count + 1
             transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
+
+            if transcript.type in ("C_gene_segment", "V_gene_segment"):
+                transcript = self.format_gene_segments(transcript)
 
             # Store transcript functional annotation
             self.annotations.add_feature(transcript, "transcript", gene.id)
