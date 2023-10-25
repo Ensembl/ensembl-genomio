@@ -63,5 +63,5 @@ include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepa
 
 // Run main workflow
 workflow {
-    additional_seq_prepare(params.meta, params.brc_mode, params.output_dir, params.cache_dir)
+    additional_seq_prepare(params.meta)
 }
