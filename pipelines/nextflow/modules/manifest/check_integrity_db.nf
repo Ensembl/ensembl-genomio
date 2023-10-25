@@ -15,7 +15,7 @@
 
 
 process CHECK_INTEGRITY {
-    tag "integrity_${db.species}"
+    tag "${db.species}"
     label 'default'
     errorStrategy 'finish'
     time '1h'
