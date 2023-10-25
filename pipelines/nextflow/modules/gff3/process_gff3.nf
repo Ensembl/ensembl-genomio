@@ -18,6 +18,7 @@ params.merge_split_genes="False"
 process PROCESS_GFF3 {
     tag "${meta.accession}"
     label 'adaptive'
+    label 'cached'
 
     input:
         tuple val(meta), path(gff3), path(genome)

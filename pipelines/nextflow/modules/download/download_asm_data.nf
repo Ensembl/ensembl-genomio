@@ -16,8 +16,7 @@
 process DOWNLOAD_ASM_DATA {
     label 'adaptive'
     tag "${meta.accession} - $task.attempt"
-    debug true
-    storeDir "$store_assembly"
+    label 'cached'
 
     input:
         tuple val(meta), path(json_file)

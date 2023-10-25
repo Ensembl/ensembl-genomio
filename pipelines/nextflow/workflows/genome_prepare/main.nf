@@ -49,9 +49,6 @@ if (params.input_dir) {
 } else {
     exit 1, 'Input directory not specified!'
 }
-if (!params.cache_dir) {
-    params.cache_dir = "./genome_prepare_download_cache"
-}
 
 // Import subworkflow
 include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/main.nf'
@@ -87,5 +84,5 @@ workflow {
         .map{ json_file -> tuple(meta_from_genome_json(json_file), json_file) }
         .set { genome_metadata }
 
-    GENOME_PREPARE(genome_metadata, params.output_dir, params.cache_dir, params.ncbi_check)
+    GENOME_PREPARE(genome_metadata, params.output_dir, params.ncbi_check)
 }

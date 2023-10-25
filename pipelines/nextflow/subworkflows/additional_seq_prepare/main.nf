@@ -29,13 +29,13 @@ workflow additional_seq_prepare {
         meta
         brc_mode
         output_dir
-        cache_dir
+
     main:
         // We expect every input and output stream to have `meta` as the first val in the form of:
         //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
 
         // Get the data
-        gb_file = DOWNLOAD_GENBANK(meta, cache_dir)
+        gb_file = DOWNLOAD_GENBANK(meta)
 
         // Parse data from GB file into GFF3 and json files
         (gff_genome, gb_genome, gb_seq_regions, gb_dna_fasta, gb_pep_fasta) = EXTRACT_FROM_GB(gb_file)

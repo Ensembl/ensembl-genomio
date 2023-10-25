@@ -16,12 +16,10 @@
 process DOWNLOAD_GENBANK {
     tag "${meta.production_name}"
     label 'normal'
-    storeDir "$cache_dir/genbank/${meta.accession}"
-    afterScript "sleep $params.storeDir_latency"
+    label 'cached'
 
     input:
         val(meta)
-        val(cache_dir)
 
     output:
         tuple val(meta), path("output.gb")
