@@ -928,8 +928,8 @@ class InputSchema(argschema.ArgSchema):
         dump_default="functional_annotation.json",
         metadata={"description": "Output functional_annotation.json path"},
     )
-    merge_split_genes = argschema.fields.Boolean(
-        dump_default=True, metadata={"description": "Should split genes be merged automatically"}
+    retain_split_genes = argschema.fields.Boolean(
+        default=False, metadata={"description": "Do not merge split genes automatically"}
     )
 
 
@@ -946,11 +946,10 @@ def main() -> None:
 
     # If there are split genes, decide to merge, or just die
     if num_merged_genes > 0:
-        if mod.args["merge_split_genes"]:
-            # Use the GFF with the merged genes for the next part
-            in_gff_path = interim_gff_path
-        else:
-            raise GFFParserError("GFF contains split genes. Fix it or use the merge_split_genes option.")
+        if mod.args["retain_split_genes"]:
+            raise GFFParserError("GFF contains split genes. Fix it or remove '--retain_split_genes' flag.")
+        # Use the GFF with the merged genes for the next part
+        in_gff_path = interim_gff_path
 
     # Load gff3 data and write a simpler version that follows our specifications
     # as well as a functional_annotation json file
