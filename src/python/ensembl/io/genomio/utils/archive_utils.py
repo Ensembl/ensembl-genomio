@@ -82,7 +82,7 @@ class InputSchema(argschema.ArgSchema):
         required=True, metadata={"description": "Path to the file to unpack"}
     )
     dst_dir = argschema.fields.OutputDir(
-        required=True, dump_default=".", metadata={"description": "Output folder to where extract the file"}
+        required=True, default=".", metadata={"description": "Output folder to where extract the file"}
     )
 
 

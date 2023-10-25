@@ -496,20 +496,20 @@ class InputSchema(argschema.ArgSchema):
     gbff_file = argschema.fields.InputFile(
         required=False,
         allow_none=True,
-        dump_default=None,
+        default=None,
         metadata={"description": "INSDC/RefSeq GBFF file path to parse"},
     )
     dst_dir = argschema.fields.OutputDir(
         required=False,
-        dump_default=".",
+        default=".",
         metadata={"description": "Output folder for the processed sequence regions JSON file"},
     )
     brc4_mode = argschema.fields.Boolean(
-        required=False, dump_default=True, metadata={"description": "Include INSDC sequence region names"}
+        required=False, default=True, metadata={"description": "Include INSDC sequence region names"}
     )
     to_exclude = argschema.fields.String(
         required=False,
-        dump_default="None",
+        default="None",
         metadata={"description": "Sequence region names to exclude, in a list-like string"},
     )
 

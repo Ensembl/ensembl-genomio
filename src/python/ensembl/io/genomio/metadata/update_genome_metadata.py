@@ -187,7 +187,7 @@ class InputSchema(argschema.ArgSchema):
     brc4_mode = argschema.fields.Int(required=False, metadata={"description": "Activate BRC4 mode (default)"})
     json_outfile = argschema.fields.OutputFile(
         required=False,
-        dump_default="amend_genome_meta.json",
+        default="amend_genome_meta.json",
         metadata={"description": "Default json file to capture json metadata"},
     )
 

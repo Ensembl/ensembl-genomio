@@ -36,7 +36,7 @@ class InputSchema(argschema.ArgSchema):
         required=True, metadata={"description": "Metadata types to extract (in a list-like string)"}
     )
     output_dir = argschema.fields.InputDir(
-        required=False, dump_default=".", metadata={"description": "Folder to store the produced files"}
+        required=False, default=".", metadata={"description": "Folder to store the produced files"}
     )
 
 

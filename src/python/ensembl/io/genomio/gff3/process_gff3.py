@@ -925,10 +925,10 @@ class InputSchema(argschema.ArgSchema):
         default=True, metadata={"description": "Generate and add stable IDs when missing?"}
     )
     out_gff_path = argschema.fields.OutputFile(
-        dump_default="gene_models.gff3", metadata={"description": "Output gff path"}
+        default="gene_models.gff3", metadata={"description": "Output gff path"}
     )
     out_func_path = argschema.fields.OutputFile(
-        dump_default="functional_annotation.json",
+        default="functional_annotation.json",
         metadata={"description": "Output functional_annotation.json path"},
     )
     retain_split_genes = argschema.fields.Boolean(
