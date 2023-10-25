@@ -26,6 +26,7 @@ process CHECK_INTEGRITY {
     
     output:
         tuple val(meta), path(manifest_files)
+
     shell:
         '''
         brc_mode=''

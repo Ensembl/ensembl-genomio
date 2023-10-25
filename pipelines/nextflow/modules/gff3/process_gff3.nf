@@ -27,9 +27,10 @@ process PROCESS_GFF3 {
         tuple val(meta), path("gene_models.gff3"), emit: gene_models
 
     shell:
-    out_func = "functional_annotation.json"
-    out_gff = "gene_models.gff3"
-    '''
-    process_gff3 --genome_data !{genome} --in_gff_path !{gff3} --out_gff_path !{out_gff} --out_func_path !{out_func}
-    '''
+        out_func = "functional_annotation.json"
+        out_gff = "gene_models.gff3"
+        '''
+        process_gff3 --genome_data !{genome} --in_gff_path !{gff3} --out_gff_path !{out_gff} \
+            --out_func_path !{out_func}
+        '''
 }

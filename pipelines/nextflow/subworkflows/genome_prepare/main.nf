@@ -34,21 +34,17 @@ include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
 
 
-// Run main workflow
+// Main workflow
 workflow GENOME_PREPARE {
+    // We expect every input and output stream to have `meta` as the first element in the form of:
+    //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
 
     take:
-        genomic_dataset // tuple composed of `meta` with accessions like GCA_XXXXXXX.X (as path) and `genome.json`
-        // genomic_dataset // tuple composed of GCA_XXXXXXX.X (as path) and genome.json
+        genomic_dataset // tuple(`meta`, path("genome.json"))
         output_dir // User specified or default
-        cache_dir
         ncbi_check
 
-    // Main data input to this subworkflow is genomic_dataset tuple
     main:
-        // We expect every input and output stream to have `meta` as the first val in the form of:
-        //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
-
         // Verify genome.json schema
         checked_genome = CHECK_JSON_SCHEMA_GENOME(genomic_dataset)
 

@@ -25,8 +25,8 @@ process PROCESS_SEQ_REGION {
         tuple val(meta), path("*/seq_region.json"), emit: seq_region
 
     shell:
-    '''
-    prepare_seq_region --genome_file !{genome_json} --report_file !{assembly_report} \
-        --gbff_file !{genomic_gbff} --dst_dir !{meta.accession}
-    '''
+        '''
+        prepare_seq_region --genome_file !{genome_json} --report_file !{assembly_report} \
+            --gbff_file !{genomic_gbff} --dst_dir !{meta.accession}
+        '''
 }

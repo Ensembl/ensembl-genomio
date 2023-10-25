@@ -24,7 +24,7 @@ process UNPACK_GFF3 {
         tuple val(meta), path("*.${extension}")
     
     shell:
-    '''
-    extract_file --src_file !{compressed_gff} --dst_dir "."
-    '''
+        '''
+        extract_file --src_file !{compressed_gff} --dst_dir "."
+        '''
 }
