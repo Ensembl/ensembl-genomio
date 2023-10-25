@@ -291,8 +291,8 @@ class GFFSimplifier(GFFParserCommon):
                 self.records.append(new_record)
 
             if fail_types and not skip_unrecognized:
-                fail_errors = " ".join(fail_types.keys())
-                raise GFFParserError(f"Unrecognized types found ({fail_errors})")
+                fail_errors = "\n   ".join(fail_types.keys())
+                raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
 
     def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
@@ -309,7 +309,7 @@ class GFFSimplifier(GFFParserCommon):
                     element_type = mobile_element_type[0]
                     description = element_type
 
-                # Keep the metdata in the description if the type is known
+                # Keep the metadata in the description if the type is known
                 if element_type in ("transposon", "retrotransposon"):
                     feat.type = "transposable_element"
                     if not feat.qualifiers.get("product"):

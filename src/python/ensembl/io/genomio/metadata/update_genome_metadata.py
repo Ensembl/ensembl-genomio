@@ -20,8 +20,8 @@ from os import PathLike
 from pathlib import Path
 import re
 from typing import List, Tuple, Optional
-import argschema
 
+import argschema
 from Bio import SeqIO
 
 from ensembl.io.genomio.utils import print_json, get_json
