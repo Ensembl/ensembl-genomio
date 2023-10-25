@@ -222,8 +222,7 @@ def retrieve_assembly_data(
         max_increment: If you want to allow assembly versions
         max_redo: Set max number of times to retry downloading a file
     """
-    asm_download_path = Path(asm_download_dir)
-    download_dir = asm_download_path / accession
+    download_dir = Path(asm_download_dir)
 
     # Configure logging
     log_file = f"{accession}_download.log"
@@ -248,7 +247,6 @@ def retrieve_assembly_data(
                 version = int(accession[-1])
                 version += 1
                 accession = accession[:-1] + str(version)
-                download_dir = asm_download_path / accession
                 download_dir.mkdir(parents=True, exist_ok=True)
             download_files(accession, download_dir, max_redo)
 
