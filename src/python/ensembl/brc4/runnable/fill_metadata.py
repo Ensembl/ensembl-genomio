@@ -116,14 +116,13 @@ class fill_metadata(eHive.BaseRunnable):
 
     def run_sql_req(self, sql, log_pfx, from_file=False):
         os.makedirs(dirname(log_pfx), exist_ok=True)
-        en_root = self.param_required("ensembl_root_dir")
 
         sql_option = r""" -sql '{_sql}' """.format(_sql=sql)
         if from_file:
             sql_option = r""" < '{_sql}' """.format(_sql=sql)
 
         cmd = r"""{_dbcmd} -url "{_srv}{_dbname}" {_sql_option} > {_out} 2> {_err}""".format(
-            _dbcmd="perl %s/ensembl-hive/scripts/db_cmd.pl" % (en_root),
+            _dbcmd="perl %s/scripts/db_cmd.pl" % os.getenv("EHIVE_ROOT_DIR"),
             _srv=self.param("dbsrv_url"),
             _dbname=self.param("db_name"),
             _sql_option=sql_option,
