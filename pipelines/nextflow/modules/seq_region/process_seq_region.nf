@@ -29,5 +29,4 @@ process PROCESS_SEQ_REGION {
     prepare_seq_region --genome_file !{genome_json} --report_file !{assembly_report} \
         --gbff_file !{genomic_gbff} --dst_dir !{meta.accession}
     '''
-    // --to_exclude !{regions_to_exclude}
 }

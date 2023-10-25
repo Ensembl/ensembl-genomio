@@ -21,7 +21,6 @@ process DOWNLOAD_ASM_DATA {
 
     input:
         tuple val(meta), path(json_file)
-        val store_assembly
 
     output:
         tuple val(meta), path("${meta.accession}/*_assembly_report.txt"), path("${meta.accession}/*_genomic.fna.gz"),

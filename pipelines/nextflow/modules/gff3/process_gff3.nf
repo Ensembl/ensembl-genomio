@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-params.merge_split_genes="False"
 
 process PROCESS_GFF3 {
     tag "${meta.accession}"

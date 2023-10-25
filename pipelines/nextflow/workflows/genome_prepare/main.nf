@@ -1,4 +1,3 @@
-#!/usr/bin/env nextflow
 // See the NOTICE file distributed with this work for additional information
 // regarding copyright ownership.
 //
@@ -74,7 +73,7 @@ def meta_from_genome_json(json_path) {
         production_name: prod_name,
         prefix: "",
     ]
-} // meta_from_genome_json(json_path)
+}
 
 // Run main workflow
 workflow {
