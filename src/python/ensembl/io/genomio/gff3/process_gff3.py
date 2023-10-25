@@ -228,17 +228,17 @@ class GFFSimplifier(GFFParserCommon):
     exclude_seq_regions: List = []
     validate_gene_id = True
     min_id_length = 8
-    make_missing_stable_id = False
     stable_id_prefix = None
     current_stable_id_number: int = 0
 
-    def __init__(self, genome_path: Optional[PathLike] = None):
+    def __init__(self, genome_path: Optional[PathLike] = None, make_missing_stable_ids: bool = False):
         self.records = Records()
         self.annotations = FunctionalAnnotations()
         self.genome = {}
         if genome_path:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
+        self.make_missing_stable_ids: bool = make_missing_stable_ids
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """
@@ -783,7 +783,7 @@ class GFFSimplifier(GFFParserCommon):
                         return new_gene_id
 
             # Make a new stable_id
-            if self.make_missing_stable_id:
+            if self.make_missing_stable_ids:
                 new_id = self.generate_stable_id()
                 print(f"New id: {new_gene_id} -> {new_id}")
                 return new_id
@@ -921,6 +921,9 @@ class InputSchema(argschema.ArgSchema):
 
     in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
     genome_data = argschema.fields.InputFile(metadata={"description": "genome.json path"})
+    make_missing_stable_ids = argschema.fields.Boolean(
+        default=True, metadata={"description": "Generate and add stable IDs when missing?"}
+    )
     out_gff_path = argschema.fields.OutputFile(
         dump_default="gene_models.gff3", metadata={"description": "Output gff path"}
     )
@@ -953,7 +956,7 @@ def main() -> None:
 
     # Load gff3 data and write a simpler version that follows our specifications
     # as well as a functional_annotation json file
-    gff_data = GFFSimplifier(mod.args.get("genome_data"))
+    gff_data = GFFSimplifier(mod.args.get("genome_data"), mod.args["make_missing_stable_ids"])
     gff_data.simpler_gff3(in_gff_path)
     gff_data.records.to_gff(mod.args["out_gff_path"])
     gff_data.annotations.to_json(mod.args["out_func_path"])
