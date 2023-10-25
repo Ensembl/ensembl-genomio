@@ -722,7 +722,7 @@ class InputSchema(argschema.ArgSchema):
     manifest_file = argschema.fields.InputFile(
         required=True, metadata={"description": "Manifest file for the data to check"}
     )
-    brc_mode = argschema.fields.Boolean(required=False, metadata={"description": "BRC mode"})
+    brc_mode = argschema.fields.Boolean(required=False, default=False, metadata={"description": "BRC mode"})
     ignore_final_stops = argschema.fields.Boolean(
         required=False, metadata={"description": "Ignore final stop when calculating peptide length"}
     )
