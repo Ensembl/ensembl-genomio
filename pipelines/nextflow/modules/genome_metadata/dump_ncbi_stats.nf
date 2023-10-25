@@ -17,7 +17,7 @@
 process DUMP_NCBI_STATS {
     tag "${db.species}"
     label 'local'
-    local 'cached'
+    label 'cached'
 
     input:
         val server
