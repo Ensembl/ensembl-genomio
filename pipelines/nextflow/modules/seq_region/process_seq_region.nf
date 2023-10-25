@@ -14,9 +14,8 @@
 // limitations under the License.
 
 process PROCESS_SEQ_REGION {
+    tag "${meta.accession}"
     label 'adaptive'
-    tag "${meta.accession} - $task.attempt"
-    debug true
 
     input:
         tuple val(meta), path (genome_json)

@@ -13,9 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 process DOWNLOAD_ASM_DATA {
+    tag "${meta.accession}"
     label 'adaptive'
-    tag "${meta.accession} - $task.attempt"
     label 'cached'
 
     input:

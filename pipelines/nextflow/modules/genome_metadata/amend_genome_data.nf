@@ -14,9 +14,8 @@
 // limitations under the License.
 
 process AMEND_GENOME_DATA {
+    tag "${meta.accession}"
     label 'adaptive'
-    tag "${meta.accession} - $task.attempt"
-    debug true
 
     input:
         tuple val(meta), path(genome_json, stageAs: "incoming_genome.json") // Seq region json

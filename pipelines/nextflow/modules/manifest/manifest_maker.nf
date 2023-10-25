@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process MANIFEST {
-    tag "Manifest_$meta.accession"
+    tag "manifest_$meta.accession"
     label 'adaptive'
     label 'cached'
     

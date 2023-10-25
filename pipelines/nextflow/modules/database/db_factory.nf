@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process DB_FACTORY {
-    tag "DB_factory"
+    tag "db_factory"
     label 'local'
     time '5min'
 
