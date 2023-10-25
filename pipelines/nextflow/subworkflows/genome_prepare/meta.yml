@@ -47,21 +47,6 @@ input:
         MANDATORY param. User supplied input directory name containing genome json(s) storing meta information including:
         genome INSDC accession, BRC 'organism_abbrev', BRC 'component'.
       pattern: "input_dir/*.json"
-  - cache_dir:
-      type: directory
-      description: |
-        NON MANDATORY param. Dir name used for caching intermediate download data files, prevents re-download data upon '-resume'.
-        Default 'genome_prepare_download_cache'.
-  - output_dir:
-      type: directory
-      description: |
-        NON MANDATORY param. Optional dir name used to store prepared genome data files (.gff3; .fa; .json)
-        Default 'Output_GenomePrepare'. Contains one or more GCA_* sub directories. 
-  - ncbi_check:
-      type: boolean
-      description: |
-        NON MANDATORY param. Set to 0 to skip the NCBI stats check. If the stats fail, the script will die.
-        Default '1'.
 output:
   - fasta_dna:
       type: file

@@ -41,8 +41,6 @@ workflow GENOME_PREPARE {
 
     take:
         genomic_dataset // tuple(`meta`, path("genome.json"))
-        output_dir // User specified or default
-        ncbi_check
 
     main:
         // Verify genome.json schema
@@ -96,10 +94,10 @@ workflow GENOME_PREPARE {
         // Checks and generate sequence stats for manifest
         manifest_bundle = MANIFEST(prepared_files)
 
-        manifest_checked = CHECK_INTEGRITY(manifest_bundle, params.brc_mode)
+        manifest_checked = CHECK_INTEGRITY(manifest_bundle)
         
-        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', ncbi_check)
+        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', params.ncbi_check)
 
         // Publish the data to output directory
-        PUBLISH_DIR(manifest_stated, output_dir)
+        PUBLISH_DIR(manifest_stated, params.output_dir)
 }

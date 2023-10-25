@@ -83,5 +83,5 @@ workflow {
         .map{ json_file -> tuple(meta_from_genome_json(json_file), json_file) }
         .set { genome_metadata }
 
-    GENOME_PREPARE(genome_metadata, params.output_dir, params.ncbi_check)
+    GENOME_PREPARE(genome_metadata)
 }

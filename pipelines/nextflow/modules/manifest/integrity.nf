@@ -22,18 +22,13 @@ process CHECK_INTEGRITY {
 
     input:
         tuple val(meta), path(manifest_files)
-        val brc_mode
     
     output:
         tuple val(meta), path(manifest_files)
 
     shell:
+        brc_mode = params.brc_mode ? '--brc_mode 1' : ''
         '''
-        brc_mode=''
-        if [ $brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
-        check_integrity --manifest_file ./manifest.json \
-            $brc_mode
+        check_integrity --manifest_file ./manifest.json !{brc_mode}
         '''
 }

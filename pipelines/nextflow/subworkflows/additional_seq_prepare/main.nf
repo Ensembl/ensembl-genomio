@@ -27,8 +27,6 @@ include { PUBLISH_DIR } from '../../modules/files/publish_output.nf'
 workflow additional_seq_prepare {
     take:
         meta
-        brc_mode
-        output_dir
 
     main:
         // We expect every input and output stream to have `meta` as the first val in the form of:
@@ -66,11 +64,11 @@ workflow additional_seq_prepare {
         manifest_bundle = MANIFEST(all_files)
         
         // Checks if all the md5sum generated are correct for manifest
-        manifest_checked = CHECK_INTEGRITY(manifest_bundle, params.brc_mode)
+        manifest_checked = CHECK_INTEGRITY(manifest_bundle)
         
         //Generate stats for the files
         manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', 0)
 
         // Publish the data to output directory
-        PUBLISH_DIR(manifest_stated, output_dir)
+        PUBLISH_DIR(manifest_stated, params.output_dir)
 }
