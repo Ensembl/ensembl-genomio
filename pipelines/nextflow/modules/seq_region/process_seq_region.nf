@@ -18,8 +18,7 @@ process PROCESS_SEQ_REGION {
     label 'adaptive'
 
     input:
-        tuple val(meta), path (genome_json)
-        tuple val(meta), path (assembly_report), path (genomic_fna), path (genomic_gbff)
+        tuple val(meta), path (genome_json), path (assembly_report), path (genomic_fna), path (genomic_gbff)
 
     output:
         tuple val(meta), path("*/seq_region.json"), emit: seq_region

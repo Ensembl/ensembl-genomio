@@ -20,7 +20,7 @@ process PROCESS_GFF3 {
     label 'cached'
 
     input:
-        tuple val(meta), path(gff3), path(genome)
+        tuple val(meta), path(genome), path(gff3)
 
     output:
         tuple val(meta), path("functional_annotation.json"), emit: functional_annotation

@@ -61,16 +61,19 @@ workflow GENOME_PREPARE {
         new_gene_models = PROCESS_GFF3.out.gene_models
 
         // Verify functional_annotation.json schema
-        functional_annotation = CHECK_JSON_SCHEMA_FUNCT(new_functional_annotation)
+        functional_annotation = CHECK_JSON_SCHEMA_FUNCT(new_functional_annotation).verified_json
 
         // Tidy and validate gff3 using gff3validator
-        gene_models = GFF3_VALIDATION(new_gene_models)
+        gene_models = GFF3_VALIDATION(new_gene_models).gene_models
 
         // Process peptides
-        fasta_pep = PROCESS_FASTA_PEP(download_opt, 1)
+        fasta_pep = PROCESS_FASTA_PEP(download_opt, 1).processed_fasta
+
+        // Group all the genome data files under the same meta key
+        genome_data_files = checked_genome.join(download_min, failOnDuplicate: true, failOnMismatch: true)
 
         // Generate seq_region.json
-        new_seq_region = PROCESS_SEQ_REGION(CHECK_JSON_SCHEMA_GENOME.out.verified_json, download_min)
+        new_seq_region = PROCESS_SEQ_REGION(genome_data_files).seq_region
 
         // Verify seq_region.json schema
         seq_region = CHECK_JSON_SCHEMA_SEQREG(new_seq_region).verified_json
@@ -79,7 +82,7 @@ workflow GENOME_PREPARE {
         fasta_dna = PROCESS_FASTA_DNA(download_min, 0).processed_fasta
 
         // Amend genome data find any additional sequence regions
-        amended_genome = AMEND_GENOME_DATA(checked_genome, download_min, params.brc_mode)
+        amended_genome = AMEND_GENOME_DATA(genome_data_files, params.brc_mode).amended_json
 
         // Group files
         prepared_files = amended_genome.concat(

@@ -30,8 +30,8 @@ process DOWNLOAD_ASM_DATA {
             path("${meta.accession}/*_protein.faa.gz"), path("${meta.accession}/*_genomic.gbff.gz"),
             emit: opt_set, optional: true
 
-    shell
-    '''
-    retrieve_assembly_data --accession !{meta.accesion} --asm_download_dir ./
-    '''
+    shell:
+        '''
+        retrieve_assembly_data --accession !{meta.accession} --asm_download_dir ./
+        '''
 }

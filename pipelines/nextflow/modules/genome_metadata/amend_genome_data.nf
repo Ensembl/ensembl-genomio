@@ -18,8 +18,8 @@ process AMEND_GENOME_DATA {
     label 'adaptive'
 
     input:
-        tuple val(meta), path(genome_json, stageAs: "incoming_genome.json") // Seq region json
-        tuple val(meta), path(asm_report), path(genomic_fna), path(genbank_gbff) // downloaded genome data
+        tuple val(meta), path(genome_json, stageAs: "incoming_genome.json"), path(asm_report),
+            path(genomic_fna), path(genbank_gbff)
         val brc4_mode
 
     output:
