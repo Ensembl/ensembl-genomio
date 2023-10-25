@@ -23,11 +23,15 @@ process DOWNLOAD_ASM_DATA {
         tuple val(meta), path(json_file)
 
     output:
-        tuple val(meta), path("${meta.accession}/*_assembly_report.txt"),
-            path("${meta.accession}/*_genomic.fna.gz"), path("${meta.accession}/*_genomic.gbff.gz"),
+        tuple val(meta),
+            path("*_assembly_report.txt"),
+            path("*_genomic.fna.gz"),
+            path("*_genomic.gbff.gz"),
             emit: min_set
-        tuple val(meta), path("${meta.accession}/*_genomic.gff.gz"),
-            path("${meta.accession}/*_protein.faa.gz"), path("${meta.accession}/*_genomic.gbff.gz"),
+        tuple val(meta),
+            path("*_genomic.gff.gz"),
+            path("*_protein.faa.gz"),
+            path("*_genomic.gbff.gz"),
             emit: opt_set, optional: true
 
     shell:
