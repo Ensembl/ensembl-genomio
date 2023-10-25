@@ -17,7 +17,6 @@
 process PROCESS_GFF3 {
     tag "${meta.accession}"
     label 'adaptive'
-    label 'cached'
 
     input:
         tuple val(meta), path(genome), path(gff3)

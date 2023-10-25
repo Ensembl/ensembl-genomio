@@ -16,7 +16,6 @@
 process MANIFEST {
     tag "manifest_$meta.accession"
     label 'adaptive'
-    label 'cached'
     
     input:
         tuple val(meta), path(file_name)
