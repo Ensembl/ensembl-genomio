@@ -22,7 +22,6 @@ process DUMP_GENOME_META {
     input:
         val server
         val db
-        val filter_map
 
     output:
         tuple val(db), val("genome"), path("genome.json")

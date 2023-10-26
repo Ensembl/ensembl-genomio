@@ -22,18 +22,13 @@ process CHECK_INTEGRITY {
 
     input:
         tuple val(db), path(manifest_dir)
-        val filter_map
     
     output:
         tuple val(db), path(manifest_dir, includeInputs: true)
 
     script:
+        brc_mode = params.brc_mode ? '--brc_mode 1' : ''
         """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
-        check_integrity --manifest_file ${manifest_dir}/manifest.json \
-            \$brc_mode
+        check_integrity --manifest_file ${manifest_dir}/manifest.json $brc_mode
         """
 }

@@ -21,7 +21,6 @@ process DUMP_EVENTS {
     input:
         val server
         val db
-        val filter_map
 
     output:
         tuple val(db), val("events"), path("events.txt")

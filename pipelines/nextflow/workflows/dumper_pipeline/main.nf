@@ -131,5 +131,5 @@ workflow {
     if (params.selection.contains('sql')) {
         DUMP_SQL(server, dbs)
     }
-    DUMP_METADATA(server, dbs, filter_map)
+    DUMP_METADATA(server, dbs)
 }
