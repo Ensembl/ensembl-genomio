@@ -15,7 +15,6 @@
 
 //default params
 params.help = false
-params.brc_mode = 1
 
 // mandatory params
 params.accession = null
@@ -38,7 +37,7 @@ def helpMessage() {
         --output_dir                   Output directory to place final output
         --cache_dir                    Cache directory for downloaded files
         --help                         This usage statement.
-        --brc_mode                     By default it is set to 1, set it to 0 if you are not using it for brc
+        --brc_mode                     Set to 1 to use with BRC data (default: ${paranms.brc_mode})
         """
 }
 
