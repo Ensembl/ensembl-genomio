@@ -20,7 +20,6 @@ process AMEND_GENOME_DATA {
     input:
         tuple val(meta), path(genome_json, stageAs: "incoming_genome.json"), path(asm_report),
             path(genomic_fna), path(genbank_gbff)
-        val brc4_mode
 
     output:
         tuple val(meta), path ("genome.json"), emit: amended_json
@@ -29,6 +28,6 @@ process AMEND_GENOME_DATA {
         '''
         amend_genomic_data --genome_infile !{genome_json} --genome_outfile genome.json \
             --INSDC_RefSeq_report_infile !{asm_report} --genbank_infile !{genbank_gbff} \
-            --brc4_mode !{brc4_mode}
+            --brc4_mode !{params.brc_mode}
         '''
 }
