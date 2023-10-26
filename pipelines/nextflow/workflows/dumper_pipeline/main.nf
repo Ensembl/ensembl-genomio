@@ -17,7 +17,6 @@
 // default params
 params.help = false
 params.prefix = ''
-params.brc_mode = 0
 params.dbname_re = ''
 params.output_dir = './dumper_output'
 params.password = ''
@@ -34,13 +33,13 @@ default_selection = [
 def helpMessage() {
   log.info """
         Mandatory arguments:
-        --host, --port, --user           Connection parameters to the SQL servers we getting core db(s) from
+        --host, --port, --user         Connection parameters to the SQL servers we getting core db(s) from
 
         Optional arguments:
         --password                     Password part of the connection parameters
         --prefix                       Core dabase(s) name prefixes
         --dbname_re                    Regexp to match core db name(s) against
-        --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
+        --brc_mode	                   Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
         --output_dir                   Name of Output directory to gather prepared outfiles. (default: ${params.output_dir})
         --select_dump                  Comma-separated list of items to dump (all by default, or choose among ${default_selection})
         --cache_dir                    Directory where some files are cached (e.g. NCBI stats files)
@@ -66,6 +65,10 @@ if (params.help) {
     exit 0
 }
 
+if (params.brc_mode) {
+    params.brc_mode = params.brc_mode as Integer
+}
+
 def create_server(params) {
     server = [
         "host": params.host,
@@ -81,13 +84,9 @@ def create_server(params) {
 
 def create_filter_map(params) {
     filter_map = [
-        "brc_mode": 0,
         "prefix": "",
         "dbname_re": ""
     ]
-    if (params.brc_mode) {
-        filter_map["brc_mode"] = 1
-    }
     if (params.prefix) {
         filter_map["prefix"] = params.prefix
     }

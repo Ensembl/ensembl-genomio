@@ -48,6 +48,10 @@ if (params.help) {
     exit 0
 }
 
+if (params.brc_mode) {
+    params.brc_mode = params.brc_mode as Integer
+}
+
 assert params.accession, "Parameter 'accession' is not specified"
 assert params.prefix, "Parameter 'prefix' is not specified"
 assert params.production_name, "Parameter 'production_name' is not specified"

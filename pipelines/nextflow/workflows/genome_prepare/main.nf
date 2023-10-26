@@ -49,6 +49,10 @@ if (params.input_dir) {
     exit 1, 'Input directory not specified!'
 }
 
+if (params.brc_mode) {
+    params.brc_mode = params.brc_mode as Integer
+}
+
 // Import subworkflow
 include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/main.nf'
 // Import module
