@@ -19,7 +19,6 @@ workflow DUMP_SQL {
     take:
         server
         dbs
-        filter_map
 
     emit:
         dbs
