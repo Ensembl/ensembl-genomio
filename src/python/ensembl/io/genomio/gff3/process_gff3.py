@@ -342,7 +342,7 @@ class GFFSimplifier(GFFParserCommon):
             transcript: Gene segment transcript feature.
 
         """
-        # Change mobile_genetic_element into a transposable_element feature
+        # Change V/C_gene_segment into a its corresponding transcript names
         if transcript.type in ("C_gene_segment", "V_gene_segment"):
             standard_name = transcript.qualifiers["standard_name"][0]
             # Drop "_segment" from the transcript type
@@ -922,7 +922,7 @@ class InputSchema(argschema.ArgSchema):
     in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
     genome_data = argschema.fields.InputFile(metadata={"description": "genome.json path"})
     make_missing_stable_ids = argschema.fields.Boolean(
-        default=True, metadata={"description": "Generate and add stable IDs when missing?"}
+        default=True, metadata={"description": "Generate and add stable IDs when missing or invalid?"}
     )
     out_gff_path = argschema.fields.OutputFile(
         default="gene_models.gff3", metadata={"description": "Output gff path"}
