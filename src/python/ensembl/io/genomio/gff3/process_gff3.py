@@ -130,7 +130,7 @@ class GFFParserCommon:
 class GFFGeneMerger(GFFParserCommon):
     """Specialized class to merge split genes in a GFF3 file, prior to further parsing."""
 
-    def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> int:
+    def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> List[str]:
         """
         Merge genes in a gff that are split in multiple lines
         """
@@ -179,7 +179,7 @@ class GFFGeneMerger(GFFParserCommon):
                 new_line = self._merge_genes(to_merge)
                 out_gff_fh.write(new_line)
 
-        return len(merged)
+        return merged
 
     def _merge_genes(self, to_merge: List) -> str:
         """Returns a single gene gff3 line merged from separate parts.
@@ -927,9 +927,6 @@ class InputSchema(argschema.ArgSchema):
         default="functional_annotation.json",
         metadata={"description": "Output functional_annotation.json path"},
     )
-    retain_split_genes = argschema.fields.Boolean(
-        default=False, metadata={"description": "Do not merge split genes automatically"}
-    )
 
 
 def main() -> None:
@@ -941,12 +938,11 @@ def main() -> None:
     # Merge multiline gene features in a separate file
     interim_gff_path = Path(f"{in_gff_path}_INTERIM_MERGE")
     merger = GFFGeneMerger()
-    num_merged_genes = merger.merge(in_gff_path, interim_gff_path)
-
-    # If there are split genes, decide to merge, or just die
+    merged_genes = merger.merge(in_gff_path, interim_gff_path)
+    num_merged_genes = len(merged_genes)
     if num_merged_genes > 0:
-        if mod.args["retain_split_genes"]:
-            raise GFFParserError("GFF contains split genes. Fix it or remove '--retain_split_genes' flag.")
+        # Report the list of merged genes in case something does not look right
+        print(f"{num_merged_genes} genes merged:\n" + "\n".join(merged_genes))
         # Use the GFF with the merged genes for the next part
         in_gff_path = interim_gff_path
 
