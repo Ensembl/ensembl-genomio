@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Utils to deal with archived files (gzip)."""
+"""Utils to deal with archive files."""
 
 __all__ = ["SUPPORTED_ARCHIVE_FORMATS", "open_gz_file", "extract_file"]
 
@@ -26,16 +26,19 @@ from typing import Generator, TextIO
 import argschema
 
 
+# Each registered format is a tuple, `(name, extensions, description)`
+SUPPORTED_ARCHIVE_FORMATS = [ext for elem in shutil.get_unpack_formats() for ext in elem[1]]
+
+
 @contextmanager
 def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
-    """Open a file that is optionally compressed with gz.
+    """Yields an open file object, even if the file is compressed with gzip.
+
     The file is expected to contain a text, and this can be used with the usual "with".
 
     Args:
-        file_path (PathLike): A file path to open.
+        file_path: A file path to open.
 
-    Yields:
-        Generator[TextIO, None, None]: A generator for the file.
     """
     this_file = Path(file_path)
     if this_file.suffix == ".gz":
@@ -46,14 +49,11 @@ def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
             yield fh
 
 
-# Each registered format is a tuple, `(name, extensions, description)`
-SUPPORTED_ARCHIVE_FORMATS = [ext for elem in shutil.get_unpack_formats() for ext in elem[1]]
-
-
 def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
     """Extracts the `src_file` into `dst_dir`.
 
-    If the file is not an archive, it will only be copied to `dst_dir`.
+    If the file is not an archive, it will be copied to `dst_dir`. `dst_dir` will be created if it
+    does not exist.
 
     Args:
         src_file: Path to the file to unpack.
@@ -61,18 +61,22 @@ def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
 
     """
     src_file = Path(src_file)
-    extension = src_file.suffix
-    file_base = src_file.stem
-    final_path = Path(dst_dir) / file_base
+    # Create a set of all the possible "right-side suffixes", e.g. "myfile.tar.gz" produces {".tar.gz", ".gz"}
+    extensions = {"".join(src_file.suffixes[i:]) for i in range(0, len(src_file.suffixes))}
+    dst_dir = Path(dst_dir)
 
-    if extension == ".gz":
-        with gzip.open(src_file, "rb") as f_in:
-            with open(final_path, "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
-    elif extension in SUPPORTED_ARCHIVE_FORMATS:
+    if extensions.intersection(SUPPORTED_ARCHIVE_FORMATS):
         shutil.unpack_archive(src_file, dst_dir)
     else:
-        shutil.copy(src_file, dst_dir)
+        # Replicate the functionality of shutil.unpack_archive() by creating `dst_dir`
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        if extensions.intersection([".gz"]):
+            final_path = dst_dir / src_file.stem
+            with gzip.open(src_file, "rb") as f_in:
+                with final_path.open("wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+        else:
+            shutil.copy(src_file, dst_dir)
 
 
 class InputSchema(argschema.ArgSchema):
