@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Utils to deal with archived files (gzip)."""
+"""Utils to deal with archive files."""
 
 __all__ = ["SUPPORTED_ARCHIVE_FORMATS", "extract_file"]
 
@@ -32,14 +32,13 @@ SUPPORTED_ARCHIVE_FORMATS = [ext for elem in shutil.get_unpack_formats() for ext
 
 @contextmanager
 def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
-    """Open a file that is optionally compressed with gz.
+    """Yields an open file object, even if the file is compressed with gzip.
+
     The file is expected to contain a text, and this can be used with the usual "with".
 
     Args:
-        file_path (PathLike): A file path to open.
+        file_path: A file path to open.
 
-    Yields:
-        Generator[TextIO, None, None]: A generator for the file.
     """
     this_file = Path(file_path)
     if this_file.suffix == ".gz":
@@ -53,7 +52,8 @@ def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
 def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
     """Extracts the `src_file` into `dst_dir`.
 
-    If the file is not an archive, it will only be copied to `dst_dir`.
+    If the file is not an archive, it will be copied to `dst_dir`. `dst_dir` will be created if it
+    does not exist.
 
     Args:
         src_file: Path to the file to unpack.

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TODO"""
+"""Utils to deal with JSON files."""
 
 __all__ = ["get_json", "print_json"]
 
@@ -22,24 +22,24 @@ from pathlib import Path
 from typing import Any
 
 
-def get_json(json_path: PathLike) -> Any:
+def get_json(src_path: PathLike) -> Any:
     """Generic data JSON loader.
 
     Args:
-        path: Path to the JSON file to load.
+        src_path: Path to the JSON file to load.
 
     """
-    with Path(json_path).open("r") as json_file:
+    with Path(src_path).open("r") as json_file:
         return json.load(json_file)
 
 
-def print_json(json_path: PathLike, data: Any) -> None:
+def print_json(dst_path: PathLike, data: Any) -> None:
     """Generic data JSON dumper to a file.
 
     Args:
-        path: Path to the JSON to create.
+        dst_path: Path to the JSON to create.
         data: Any data to store into the file.
 
     """
-    with Path(json_path).open("w") as json_file:
+    with Path(dst_path).open("w") as json_file:
         json_file.write(json.dumps(data, sort_keys=True, indent=4))
