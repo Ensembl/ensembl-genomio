@@ -732,7 +732,7 @@ def main() -> None:
     """Main entrypoint."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
 
-    inspector = IntegrityTool(mod.args["manifest_file"], mod.args["brc_mode"])
+    inspector = IntegrityTool(mod.args["manifest_file"], brc_mode=mod.args["brc_mode"])
     if mod.args.get("ignore_final_stops"):
         inspector.set_ignore_final_stops(True)
 

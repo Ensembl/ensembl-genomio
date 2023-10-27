@@ -345,8 +345,7 @@ class GFFSimplifier(GFFParserCommon):
         # Change V/C_gene_segment into a its corresponding transcript names
         if transcript.type in ("C_gene_segment", "V_gene_segment"):
             standard_name = transcript.qualifiers["standard_name"][0]
-            # Drop "_segment" from the transcript type
-            biotype = transcript.type[:-8]
+            biotype = transcript.type.replace("_segment", "")
             if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
                 biotype = f'IG_{biotype}'
             elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
