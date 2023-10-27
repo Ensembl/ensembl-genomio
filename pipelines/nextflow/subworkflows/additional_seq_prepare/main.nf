@@ -25,23 +25,24 @@ include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output.nf'
 
 workflow additional_seq_prepare {
+    // We expect every input and output stream to have `meta` as the first element in the form of:
+    //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
+
     take:
         meta
-        brc_mode
-        output_dir
-        cache_dir
-    main:
-        // We expect every input and output stream to have `meta` as the first val in the form of:
-        //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
 
+    main:
         // Get the data
-        gb_file = DOWNLOAD_GENBANK(meta, cache_dir)
+        gb_file = DOWNLOAD_GENBANK(meta)
 
         // Parse data from GB file into GFF3 and json files
         (gff_genome, gb_genome, gb_seq_regions, gb_dna_fasta, gb_pep_fasta) = EXTRACT_FROM_GB(gb_file)
 
-        // Process the GFF and GB files into a cleaned GFF and a functional_annotation file
-        (new_functional_annotation, new_gene_models) = PROCESS_GFF3(gff_genome.join(gb_genome))
+        // Process the GB and GFF3 files into a cleaned GFF3 and a functional_annotation files
+        genome_gff_files = gb_genome.join(gff_genome)
+        PROCESS_GFF3(genome_gff_files)
+        new_functional_annotation = PROCESS_GFF3.out.functional_annotation
+        new_gene_models = PROCESS_GFF3.out.gene_models
 
         // Tidy and validate gff3 using gff3validator
         gene_models = GFF3_VALIDATION(new_gene_models)
@@ -66,11 +67,11 @@ workflow additional_seq_prepare {
         manifest_bundle = MANIFEST(all_files)
         
         // Checks if all the md5sum generated are correct for manifest
-        manifest_checked = CHECK_INTEGRITY(manifest_bundle, params.brc_mode)
+        manifest_checked = CHECK_INTEGRITY(manifest_bundle)
         
         //Generate stats for the files
         manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', 0)
 
         // Publish the data to output directory
-        PUBLISH_DIR(manifest_stated, output_dir)
+        PUBLISH_DIR(manifest_stated, params.output_dir)
 }

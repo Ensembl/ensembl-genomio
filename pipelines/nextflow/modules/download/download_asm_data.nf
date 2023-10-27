@@ -13,24 +13,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 process DOWNLOAD_ASM_DATA {
+    tag "${meta.accession}"
     label 'adaptive'
-    tag "${meta.accession} - $task.attempt"
-    debug true
-    storeDir "$store_assembly"
+    label 'cached'
 
     input:
         tuple val(meta), path(json_file)
-        val store_assembly
 
     output:
-        tuple val(meta), path("${meta.accession}/*_assembly_report.txt"), path("${meta.accession}/*_genomic.fna.gz"),
-              path("${meta.accession}/*_genomic.gbff.gz"), emit: min_set
-        tuple val(meta), path("${meta.accession}/*_genomic.gff.gz"), path("${meta.accession}/*_protein.faa.gz"),
-              path("${meta.accession}/*_genomic.gbff.gz"), emit: opt_set, optional: true
+        tuple val(meta),
+            path("*_assembly_report.txt"),
+            path("*_genomic.fna.gz"),
+            path("*_genomic.gbff.gz"),
+            emit: min_set
+        tuple val(meta),
+            path("*_genomic.gff.gz"),
+            path("*_protein.faa.gz"),
+            path("*_genomic.gbff.gz"),
+            emit: opt_set, optional: true
 
-    shell
-    '''
-    retrieve_assembly_data --accession !{meta.accesion} --asm_download_dir ./
-    '''
+    shell:
+        '''
+        retrieve_assembly_data --accession !{meta.accession} --asm_download_dir ./
+        '''
 }

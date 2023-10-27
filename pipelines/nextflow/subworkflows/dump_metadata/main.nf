@@ -31,9 +31,6 @@ workflow DUMP_METADATA {
         server
         db
         filter_map
-        out_dir
-        selection
-        cache_dir
 
     emit:
         db
@@ -42,28 +39,28 @@ workflow DUMP_METADATA {
         db_files = Channel.of()
 
         // Seq regions
-        if (selection.contains("seq_regions")) {
+        if (params.selection.contains("seq_regions")) {
             seq_regions = DUMP_SEQ_REGIONS(server, db, filter_map)
             seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
             db_files = db_files.concat(seq_regions_checked)
         }
         
         // Events
-        if (selection.contains("events")) {
+        if (params.selection.contains("events")) {
             events = DUMP_EVENTS(server, db, filter_map)
             db_files = db_files.concat(events)
         }
 
         // Genome metadata
-        if (selection.contains("genome_metadata")) {
+        if (params.selection.contains("genome_metadata")) {
             genome_meta = DUMP_GENOME_META(server, db, filter_map)
             db_files = db_files.concat(genome_meta)
         }
 
         // Genome stats
-        if (selection.contains("stats")) {
+        if (params.selection.contains("stats")) {
             genome_stats = DUMP_GENOME_STATS(server, db)
-            ncbi_stats = DUMP_NCBI_STATS(server, db, cache_dir)
+            ncbi_stats = DUMP_NCBI_STATS(server, db)
             stats = ncbi_stats.join(genome_stats)
             diff_stats = COMPARE_GENOME_STATS(stats)
             stats_files = genome_stats.concat(ncbi_stats).concat(diff_stats)
@@ -83,5 +80,5 @@ workflow DUMP_METADATA {
         collect_dir = COLLECT_FILES(db_files)
         manifested_dir = MANIFEST(collect_dir)
         manifest_checked = CHECK_INTEGRITY(manifested_dir, filter_map)
-        PUBLISH_DIR(manifest_checked, out_dir)
+        PUBLISH_DIR(manifest_checked, params.output_dir)
 }

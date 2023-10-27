@@ -1,4 +1,3 @@
-#!/usr/bin/env nextflow
 // See the NOTICE file distributed with this work for additional information
 // regarding copyright ownership.
 //
@@ -35,79 +34,73 @@ include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
 
 
-// Run main workflow
+// Main workflow
 workflow GENOME_PREPARE {
+    // We expect every input and output stream to have `meta` as the first element in the form of:
+    //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
 
     take:
-        genomic_dataset // tuple composed of `meta` with accessions like GCA_XXXXXXX.X (as path) and `genome.json`
-        // genomic_dataset // tuple composed of GCA_XXXXXXX.X (as path) and genome.json
-        output_dir // User specified or default
-        cache_dir
-        ncbi_check
+        genomic_dataset // tuple(`meta`, path("genome.json"))
 
-    // Main data input to this subworkflow is genomic_dataset tuple
     main:
-        // We expect every input and output stream to have `meta` as the first val in the form of:
-        //   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
-
         // Verify genome.json schema
-        checked_genome = CHECK_JSON_SCHEMA_GENOME(genomic_dataset)
+        checked_genome = CHECK_JSON_SCHEMA_GENOME(genomic_dataset).verified_json
 
-        // Download genome data files. Files may or may not include gene models (gff3) and/or peptides.
-        (download_min, download_opt) = DOWNLOAD_ASM_DATA(checked_genome, cache_dir)
+        // Download genome data files. Files may or may not include gene models (GFF3) and/or peptides.
+        DOWNLOAD_ASM_DATA(checked_genome)
+        download_min = DOWNLOAD_ASM_DATA.out.min_set
+        download_opt = DOWNLOAD_ASM_DATA.out.opt_set
 
-        // Check for presence of annotation related output files, then process gene models data if present
-        if (download_opt) {
+        // Decompress GFF3 file, output with accession in tuple
+        unpacked_gff = UNPACK_GFF3(download_opt, 'gff')
 
-            // Decompress gff3 file, output with accession in tuple
-            unpacked_gff = UNPACK_GFF3(download_opt, 'gff')
-            
-            // Need both gff and genome files in one tuple
-            gff_genome = unpacked_gff.concat(checked_genome)
-                .groupTuple(size: 2)
-                .map{ key, files -> tuple(key, files[0], files[1]) }
-            (new_functional_annotation, new_gene_models) = PROCESS_GFF3(gff_genome)
+        // Process the GB and GFF3 files into a cleaned GFF3 and a functional_annotation files
+        genome_gff_files = checked_genome.join(unpacked_gff, failOnDuplicate: true)
+        PROCESS_GFF3(genome_gff_files)
+        new_functional_annotation = PROCESS_GFF3.out.functional_annotation
+        new_gene_models = PROCESS_GFF3.out.gene_models
 
-            // Verify functional_annotation.json schema
-            functional_annotation = CHECK_JSON_SCHEMA_FUNCT(new_functional_annotation)
+        // Verify functional_annotation.json schema
+        functional_annotation = CHECK_JSON_SCHEMA_FUNCT(new_functional_annotation).verified_json
 
-            // Tidy and validate gff3 using gff3validator
-            gene_models = GFF3_VALIDATION(new_gene_models)
+        // Tidy and validate gff3 using gff3validator
+        gene_models = GFF3_VALIDATION(new_gene_models).gene_models
 
-            // Process peptides
-            fasta_pep = PROCESS_FASTA_PEP(download_opt, 1)
-        }
+        // Process peptides
+        fasta_pep = PROCESS_FASTA_PEP(download_opt, 1).processed_fasta
+
+        // Group all the genome data files under the same meta key
+        genome_data_files = checked_genome.join(download_min, failOnDuplicate: true, failOnMismatch: true)
 
         // Generate seq_region.json
-        new_seq_region = PROCESS_SEQ_REGION(CHECK_JSON_SCHEMA_GENOME.out.verified_json, download_min)
+        new_seq_region = PROCESS_SEQ_REGION(genome_data_files).seq_region
 
         // Verify seq_region.json schema
-        seq_region = CHECK_JSON_SCHEMA_SEQREG(new_seq_region)
+        seq_region = CHECK_JSON_SCHEMA_SEQREG(new_seq_region).verified_json
 
         // Process genomic fna
-        fasta_dna = PROCESS_FASTA_DNA(download_min, 0)
+        fasta_dna = PROCESS_FASTA_DNA(download_min, 0).processed_fasta
 
         // Amend genome data find any additional sequence regions
-        amended_genome = AMEND_GENOME_DATA(checked_genome, download_min, params.brc_mode)
+        amended_genome = AMEND_GENOME_DATA(genome_data_files, params.brc_mode).amended_json
 
-        // // Group files
-        prepared_files_grouped = amended_genome.concat(
-            gene_models, 
-            functional_annotation,
-            fasta_pep,
-            seq_region,
-            fasta_dna
-        )
-        prepared_files = prepared_files_grouped
-                    .groupTuple()
+        // Group files
+        prepared_files = amended_genome.concat(
+                gene_models,
+                functional_annotation,
+                fasta_pep,
+                seq_region,
+                fasta_dna
+            )
+            .groupTuple()
 
         // Checks and generate sequence stats for manifest
         manifest_bundle = MANIFEST(prepared_files)
 
-        manifest_checked = CHECK_INTEGRITY(manifest_bundle, params.brc_mode)
+        manifest_checked = CHECK_INTEGRITY(manifest_bundle)
         
-        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', ncbi_check)
+        manifest_stated = MANIFEST_STATS(manifest_checked, 'datasets', params.ncbi_check)
 
         // Publish the data to output directory
-        PUBLISH_DIR(manifest_stated, output_dir)
+        PUBLISH_DIR(manifest_stated, params.output_dir)
 }

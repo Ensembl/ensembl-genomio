@@ -20,7 +20,7 @@ process PREPARE_GENOME_METADATA {
         path(input_json, stageAs: "input_genome.json")
 
     output:
-        tuple path ("genome.json"), emit: genomic_dataset
+        path ("genome.json"), emit: genomic_dataset
         
     shell:
     output_json = "genome.json"

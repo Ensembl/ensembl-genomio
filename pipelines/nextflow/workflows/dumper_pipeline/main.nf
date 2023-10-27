@@ -129,7 +129,7 @@ workflow {
         .flatten()
     
     if (params.selection.contains('sql')) {
-        DUMP_SQL(server, dbs, filter_map, params.output_dir)
+        DUMP_SQL(server, dbs, filter_map)
     }
-    DUMP_METADATA(server, dbs, filter_map, params.output_dir, params.selection, params.cache_dir)
+    DUMP_METADATA(server, dbs, filter_map)
 }

@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process UNPACK_GFF3 {
-    label 'default'
+    label 'default_retry'
 
     input:
         tuple val(meta), path(compressed_gff), path(protein_faa), path(gbff)
@@ -24,7 +24,7 @@ process UNPACK_GFF3 {
         tuple val(meta), path("*.${extension}")
     
     shell:
-    '''
-    extract_file --src_file !{compressed_gff} --dst_dir "."
-    '''
+        '''
+        extract_file --src_file !{compressed_gff} --dst_dir "."
+        '''
 }

@@ -16,13 +16,12 @@
 
 process DUMP_NCBI_STATS {
     tag "${db.species}"
-    label "local"
-    storeDir "$cache_dir/ncbi_stats/${db.species}"
+    label 'local'
+    label 'cached'
 
     input:
         val server
         val db
-        val cache_dir
 
     output:
         tuple val(db), path("ncbi_stats.json")

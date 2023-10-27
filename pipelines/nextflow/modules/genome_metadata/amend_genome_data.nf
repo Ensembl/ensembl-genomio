@@ -14,20 +14,21 @@
 // limitations under the License.
 
 process AMEND_GENOME_DATA {
+    tag "${meta.accession}"
     label 'adaptive'
-    tag "${meta.accession} - $task.attempt"
-    debug true
 
     input:
-        tuple val(meta), path(genome_json, stageAs: "incoming_genome.json") // Seq region json
-        tuple val(meta), path(asm_report), path(genomic_fna), path(genbank_gbff) // downloaded genome data
+        tuple val(meta), path(genome_json, stageAs: "incoming_genome.json"), path(asm_report),
+            path(genomic_fna), path(genbank_gbff)
         val brc4_mode
 
     output:
         tuple val(meta), path ("genome.json"), emit: amended_json
     
     shell:
-    '''
-    amend_genomic_data --genome_infile !{genome_json} --genome_outfile genome.json --INSDC_RefSeq_report_infile !{asm_report} --genbank_infile !{genbank_gbff} --brc4_mode !{brc4_mode}
-    '''
+        '''
+        amend_genomic_data --genome_infile !{genome_json} --genome_outfile genome.json \
+            --INSDC_RefSeq_report_infile !{asm_report} --genbank_infile !{genbank_gbff} \
+            --brc4_mode !{brc4_mode}
+        '''
 }

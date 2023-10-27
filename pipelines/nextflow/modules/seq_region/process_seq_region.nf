@@ -14,21 +14,18 @@
 // limitations under the License.
 
 process PROCESS_SEQ_REGION {
+    tag "${meta.accession}"
     label 'adaptive'
-    tag "${meta.accession} - $task.attempt"
-    debug true
 
     input:
-        tuple val(meta), path (genome_json)
-        tuple val(meta), path (assembly_report), path (genomic_fna), path (genomic_gbff)
+        tuple val(meta), path (genome_json), path (assembly_report), path (genomic_fna), path (genomic_gbff)
 
     output:
         tuple val(meta), path("*/seq_region.json"), emit: seq_region
 
     shell:
-    '''
-    prepare_seq_region --genome_file !{genome_json} --report_file !{assembly_report} \
-        --gbff_file !{genomic_gbff} --dst_dir !{meta.accession}
-    '''
-    // --to_exclude !{regions_to_exclude}
+        '''
+        prepare_seq_region --genome_file !{genome_json} --report_file !{assembly_report} \
+            --gbff_file !{genomic_gbff} --dst_dir !{meta.accession}
+        '''
 }

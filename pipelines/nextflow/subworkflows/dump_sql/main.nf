@@ -20,11 +20,10 @@ workflow DUMP_SQL {
         server
         dbs
         filter_map
-        out_dir
 
     emit:
         dbs
 
     main:
-        DUMP_DB(server, dbs, out_dir)
+        DUMP_DB(server, dbs, params.output_dir)
 }
