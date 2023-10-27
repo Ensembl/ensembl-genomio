@@ -61,7 +61,7 @@ def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
 
     """
     src_file = Path(src_file)
-    extensions = set(["".join(src_file.suffixes[i:]) for i in range(0, len(src_file.suffixes))])
+    extensions = {"".join(src_file.suffixes[i:]) for i in range(0, len(src_file.suffixes))}
     file_base = src_file.stem
     dst_dir = Path(dst_dir)
     final_path = dst_dir / file_base
