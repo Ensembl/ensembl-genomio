@@ -25,6 +25,8 @@ __all__ = [
     "prepare_genome_metadata",
     "PROVIDER_DATA",
     "DEFAULT_API_URL",
+    "MissingNodeError",
+    "MetadataError",
 ]
 
 import datetime

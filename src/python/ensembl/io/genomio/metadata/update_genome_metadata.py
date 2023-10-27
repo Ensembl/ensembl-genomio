@@ -15,6 +15,14 @@
 # limitations under the License.
 """Add more metadata to the genome metadata file, including added seq_regions (e.g. MT chromosome)."""
 
+__all__ = [
+    "MissingDataError",
+    "get_additions",
+    "get_gbff_regions",
+    "get_report_regions_names",
+    "amend_genomic_metadata",
+]
+
 import csv
 from os import PathLike
 from pathlib import Path
@@ -28,7 +36,7 @@ from ensembl.io.genomio.utils import print_json, get_json
 from ensembl.io.genomio.utils.archive_utils import open_gz_file
 
 
-version_end = re.compile(r"\.\d+$")
+_VERSION_END = re.compile(r"\.\d+$")
 
 
 class MissingDataError(Exception):
@@ -75,7 +83,7 @@ def get_gbff_regions(gbff_path: Path) -> List[str]:
     seq_regions = []
     with open_gz_file(gbff_path) as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
-            record_id = re.sub(version_end, "", record.id)
+            record_id = re.sub(_VERSION_END, "", record.id)
             seq_regions.append(record_id)
     return seq_regions
 
@@ -129,8 +137,8 @@ def get_report_regions_names(report_path: Path) -> List[Tuple[str, str]]:
             refseq_name = ""
         if genbank_name == "na":
             genbank_name = ""
-        refseq_name = re.sub(version_end, "", refseq_name)
-        genbank_name = re.sub(version_end, "", genbank_name)
+        refseq_name = re.sub(_VERSION_END, "", refseq_name)
+        genbank_name = re.sub(_VERSION_END, "", genbank_name)
         seq_regions.append((genbank_name, refseq_name))
     return seq_regions
 

@@ -16,6 +16,8 @@
 """Generates a JSON file representing various stats for the assembly and annotation from a core db.
 """
 
+__all__ = ["StatsGenerator"]
+
 import json
 from pathlib import Path
 from typing import Any, Dict

@@ -1,4 +1,3 @@
-#!env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -20,6 +19,7 @@ Raises:
     DownloadError: if the download fails
 """
 
+__all__ = ["DownloadError", "download_genbank"]
 
 from os import PathLike
 from pathlib import Path

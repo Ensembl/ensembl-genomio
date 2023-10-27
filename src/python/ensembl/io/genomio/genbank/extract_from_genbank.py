@@ -1,4 +1,3 @@
-#!env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -29,6 +28,7 @@ Returns:
     json_output: json file with a dict that contains all genome files created.
 """
 
+__all__ = ["GBParseError", "UnsupportedData", "GenomeFiles", "FormattedFilesGenerator"]
 
 from collections import Counter
 import json

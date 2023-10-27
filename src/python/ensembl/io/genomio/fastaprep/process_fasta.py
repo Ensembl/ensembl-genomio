@@ -1,4 +1,3 @@
-#!env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -14,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Takes a FASTA file (DNA or peptide), cleans it up and optionally excludes some IDs."""
+
+__all__ = ["GFFParserError", "get_peptides_to_exclude", "prep_fasta_data"]
 
 from pathlib import Path
 from os import PathLike
