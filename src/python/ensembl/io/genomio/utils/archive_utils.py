@@ -61,6 +61,7 @@ def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
 
     """
     src_file = Path(src_file)
+    # Create a set of all the possible "right-side suffixes", e.g. from "myfile.tar.gz" you get {".tar.gz", ".gz"}
     extensions = {"".join(src_file.suffixes[i:]) for i in range(0, len(src_file.suffixes))}
     dst_dir = Path(dst_dir)
 
