@@ -62,9 +62,7 @@ def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
     """
     src_file = Path(src_file)
     extensions = {"".join(src_file.suffixes[i:]) for i in range(0, len(src_file.suffixes))}
-    file_base = src_file.stem
     dst_dir = Path(dst_dir)
-    final_path = dst_dir / file_base
 
     if extensions.intersection(SUPPORTED_ARCHIVE_FORMATS):
         shutil.unpack_archive(src_file, dst_dir)
@@ -72,6 +70,7 @@ def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
         # Replicate the functionality of shutil.unpack_archive() by creating `dst_dir`
         dst_dir.mkdir(parents=True, exist_ok=True)
         if extensions.intersection([".gz"]):
+            final_path = dst_dir / src_file.stem
             with gzip.open(src_file, "rb") as f_in:
                 with final_path.open("wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
