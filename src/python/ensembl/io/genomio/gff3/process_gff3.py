@@ -354,8 +354,6 @@ class GFFSimplifier(GFFParserCommon):
                 print(f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}")
                 return transcript
             transcript.type = biotype
-        else:
-            print(f"Feature {transcript.id} is not a supported gene segment feature: {transcript.type}")
         return transcript
 
     def normalize_gene(self, gene: SeqFeature, fail_types: Dict[str, int]) -> SeqFeature:
@@ -447,8 +445,7 @@ class GFFSimplifier(GFFParserCommon):
             transcript_number = count + 1
             transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
 
-            if transcript.type in ("C_gene_segment", "V_gene_segment"):
-                transcript = self.format_gene_segments(transcript)
+            transcript = self.format_gene_segments(transcript)
 
             # Store transcript functional annotation
             self.annotations.add_feature(transcript, "transcript", gene.id)
