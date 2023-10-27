@@ -26,6 +26,10 @@ from typing import Generator, TextIO
 import argschema
 
 
+# Each registered format is a tuple, `(name, extensions, description)`
+SUPPORTED_ARCHIVE_FORMATS = [ext for elem in shutil.get_unpack_formats() for ext in elem[1]]
+
+
 @contextmanager
 def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
     """Open a file that is optionally compressed with gz.
@@ -44,10 +48,6 @@ def open_gz_file(file_path: PathLike) -> Generator[TextIO, None, None]:
     else:
         with this_file.open("rt") as fh:
             yield fh
-
-
-# Each registered format is a tuple, `(name, extensions, description)`
-SUPPORTED_ARCHIVE_FORMATS = [ext for elem in shutil.get_unpack_formats() for ext in elem[1]]
 
 
 def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
