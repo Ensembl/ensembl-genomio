@@ -61,18 +61,22 @@ def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
 
     """
     src_file = Path(src_file)
-    extension = src_file.suffix
+    extensions = set(["".join(src_file.suffixes[i:]) for i in range(0, len(src_file.suffixes))])
     file_base = src_file.stem
-    final_path = Path(dst_dir) / file_base
+    dst_dir = Path(dst_dir)
+    final_path = dst_dir / file_base
 
-    if extension == ".gz":
-        with gzip.open(src_file, "rb") as f_in:
-            with open(final_path, "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
-    elif extension in SUPPORTED_ARCHIVE_FORMATS:
+    if extensions.intersection(SUPPORTED_ARCHIVE_FORMATS):
         shutil.unpack_archive(src_file, dst_dir)
     else:
-        shutil.copy(src_file, dst_dir)
+        # Replicate the functionality of shutil.unpack_archive() by creating `dst_dir`
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        if extensions.intersection([".gz"]):
+            with gzip.open(src_file, "rb") as f_in:
+                with final_path.open("wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+        else:
+            shutil.copy(src_file, dst_dir)
 
 
 class InputSchema(argschema.ArgSchema):
