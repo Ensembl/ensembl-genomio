@@ -17,7 +17,6 @@
 to ensure their contents are in sync.
 """
 
-
 import hashlib
 import json
 from math import floor

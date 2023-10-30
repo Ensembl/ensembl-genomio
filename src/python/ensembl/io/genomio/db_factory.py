@@ -40,7 +40,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
         List of dictionaries with 3 keys: "database", "species" and "division".
 
     """
-    db_datas = []
+    databases_data = []
     for db in dbs:
         server.set_database(db)
         metadata = server.get_db_metadata()
@@ -64,8 +64,8 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
             "species": species,
             "division": division,
         }
-        db_datas.append(db_data)
-    return db_datas
+        databases_data.append(db_data)
+    return databases_data
 
 
 def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:

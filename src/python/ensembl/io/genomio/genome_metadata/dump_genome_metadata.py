@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates a JSON file representing the genome metadata from a core database.
-"""
+"""Generates a JSON file representing the genome metadata from a core database."""
 
 import json
 from pathlib import Path

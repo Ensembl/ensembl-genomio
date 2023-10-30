@@ -131,6 +131,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
 def _download_file(
     ftp_conn: FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
 ) -> None:
+    """TODO"""
     has_md5 = True
     expected_sum = ""
     if not ftp_file in md5_sums:
@@ -215,12 +216,14 @@ def retrieve_assembly_data(
     max_increment: int = 0,
     max_redo: int = 3,
 ) -> None:
-    """
+    """TODO
+
     Args:
         accession: Genome Assembly accession
         asm_download_dir: Path to directory used to store retrieved
         max_increment: If you want to allow assembly versions
         max_redo: Set max number of times to retry downloading a file
+
     """
     asm_download_path = Path(asm_download_dir)
     download_dir = asm_download_path / accession
@@ -239,8 +242,6 @@ def retrieve_assembly_data(
     # Download if files don't exist or fail checksum
     if not md5_files(download_dir):
         logging.info(" Download the files")
-
-        # max_increment = self.param("max_increment")
 
         for increment in range(0, max_increment + 1):
             if increment > 0:

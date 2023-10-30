@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Compare stats in a JSON from NCBI dataset and a JSON from our core db.
+
 Returns the JSON from our core db including a section with comparisons.
 """
 

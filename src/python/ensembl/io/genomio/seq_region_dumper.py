@@ -13,10 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates one JSON file per metadata type inside `manifest`, including the manifest itself.
-
-Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
-"""
+"""Fetch all the sequence regions from a core database and print them in JSON format."""
 
 import json
 from pathlib import Path
@@ -72,16 +69,14 @@ def get_coord_systems(session: Session) -> List[CoordSystem]:
 
 
 def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
-    """Retrieve the seq_region metadata from the current core.
-    Include synonyms, attribs and karyotypes.
-    Only the top level sequences are exported.
+    """Returns all the sequence regions from the current core database.
+
+    Include synonyms, attribs and karyotypes. Only the top level sequences are exported.
 
     Args:
         session (Session): Session from the current core.
         external_db_map (dict): Mapping of external_db names for the synonyms.
 
-    Returns:
-        List[SeqRegion]: All seq_regions in the core.
     """
     coord_systems = get_coord_systems(session)
     seq_regions = []

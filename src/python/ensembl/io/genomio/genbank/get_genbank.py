@@ -31,12 +31,17 @@ class DownloadError(Exception):
 
 
 def download_genbank(accession: str, output_gb: PathLike) -> None:
-    """
-    Given a GenBank accession, download via NCBI Entrez service the corresponding file in GenBank format.
+    """Given a GenBank accession, download the corresponding file in GenBank format.
+
+    Uses NCBI Entrez service to fetch the data.
 
     Args:
         accession: INSDC Genbank record accession.
         output_gb: Path to the downloaded record in Genbank format.
+
+    Raises:
+        DownloadError: If the download fails.
+
     """
 
     # Get the list of assemblies for this accession
