@@ -15,5 +15,5 @@
 
 sphinx-apidoc -Mf --implicit-namespaces -o source ./src/python/ensembl
 
-SPHINX_MAKEFILE="./scripts/setup/docs/Makefile"
+SPHINX_MAKEFILE="./scripts/setup/docs/Makefile_ghpages"
 make -f $SPHINX_MAKEFILE clean && make -f $SPHINX_MAKEFILE html text
