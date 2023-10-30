@@ -27,7 +27,6 @@ process DUMP_GENOME_META {
         tuple val(db), val("genome"), path("genome.json")
 
     script:
-        def output = "genome.json"
         """
         touch $output
         genome_meta_dumper --host '${server.host}' \
@@ -35,6 +34,6 @@ process DUMP_GENOME_META {
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            --output_json $output
+            > genome.json
         """
 }

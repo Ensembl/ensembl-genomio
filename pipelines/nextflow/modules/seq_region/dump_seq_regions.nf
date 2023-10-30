@@ -32,6 +32,6 @@ process DUMP_SEQ_REGIONS {
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            --output_json seq_region.json
+            > seq_region.json
         """
 }

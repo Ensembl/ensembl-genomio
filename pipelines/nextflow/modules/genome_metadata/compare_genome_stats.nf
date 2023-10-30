@@ -25,12 +25,7 @@ process COMPARE_GENOME_STATS {
         tuple val(db), path("diff_stats.json")
 
     script:
-        def output = "diff_stats.json"
         """
-        touch $output
-        genome_stats_compare \
-            --ncbi $ncbi_stats \
-            --core $core_stats \
-            --output_json $output
+        genome_stats_compare --ncbi $ncbi_stats --core $core_stats > diff_stats.json
         """
 }
