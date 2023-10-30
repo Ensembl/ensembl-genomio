@@ -42,6 +42,6 @@ process DB_FACTORY {
             --prefix '${filter_map.prefix}' \
             \$brc_mode \
             \$dbname_re \
-            --output_json dbs.json
+            > dbs.json
         """
 }

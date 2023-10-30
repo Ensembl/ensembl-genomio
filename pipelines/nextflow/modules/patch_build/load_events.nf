@@ -29,6 +29,6 @@ process LOAD_EVENTS {
     --password $server.password \\
     --database $server.database \\
     --input_file $events \\
-    --update 1
+    --update
     """
 }

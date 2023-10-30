@@ -28,18 +28,12 @@ process DUMP_GENOME_META {
         tuple val(db), val("genome"), path("genome.json")
 
     script:
-        def output = "genome.json"
         """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
-        touch $output
         genome_meta_dumper --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            --output_json $output
+            > genome.json
         """
 }

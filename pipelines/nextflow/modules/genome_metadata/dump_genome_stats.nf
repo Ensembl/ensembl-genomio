@@ -27,14 +27,12 @@ process DUMP_GENOME_STATS {
         tuple val(db), path("core_stats.json")
 
     script:
-        def output = "core_stats.json"
         """
-        touch $output
         genome_stats_dumper --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            --output_json $output
+            > core_stats.json
         """
 }
