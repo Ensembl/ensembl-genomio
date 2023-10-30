@@ -12,12 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Provided a file with events, load them in a core database.
 
 cf the load_events functions for the events tab file format.
 """
-
 
 from dataclasses import dataclass
 from os import PathLike
@@ -25,12 +23,12 @@ from pathlib import Path
 import re
 from typing import Dict, Generator, List, Optional, Tuple
 
-import argschema
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
 from ensembl.database import DBConnection
 from ensembl.core.models import MappingSession, StableIdEvent
+from ensembl.utils.argparse import ArgumentParser
 
 
 @dataclass
@@ -223,51 +221,28 @@ class EventCollection:
                 session.commit()
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    # Server parameters
-    host = argschema.fields.String(
-        required=True, metadata={"description": "Host to the server with EnsEMBL databases"}
-    )
-    port = argschema.fields.Integer(required=True, metadata={"description": "Port to use"})
-    user = argschema.fields.String(required=True, metadata={"description": "User to use"})
-    password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
-    database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
-    input_file = argschema.fields.InputFile(
-        required=True,
-        metadata={
-            "description": (
-                "Tab input events files in the format exported by the dumper:"
-                "old_id, new_id, event_name, release, date"
-            )
-        },
-    )
-    update = argschema.fields.Boolean(
-        default=False, required=False, metadata={"description": "Set this to actually make changes to the db"}
-    )
-
-
 def main() -> None:
     """Main entrypoint"""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
+    parser = ArgumentParser(description="Load the events in the input file into a core database.")
+    parser.add_database_arguments()
+    parser.add_argument_src_path(
+        "--input_file",
+        required=True,
+        help=("Input TSV file with events in the format exported by the dumper: "
+              "old_id, new_id, event_name, release, date"),
+    )
+    parser.add_argument("--update", action="store_true", help="Make changes to the database?")
+    args = parser.parse_args()
 
     # Start
-    db_url = URL.create(
-        "mysql",
-        mod.args["user"],
-        mod.args.get("password"),
-        mod.args["host"],
-        mod.args["port"],
-        mod.args.get("database"),
-    )
+    db_url = URL.create("mysql", args.user, args.password, args.host, args.port, args.database)
     dbc = DBConnection(db_url)
 
     collection = EventCollection()
-    collection.load_events(mod.args.get("input_file"))
+    collection.load_events(args.input_file)
 
     with dbc.session_scope() as session:
-        collection.write_events_to_db(session, mod.args["update"])
+        collection.write_events_to_db(session, args.update)
 
 
 if __name__ == "__main__":

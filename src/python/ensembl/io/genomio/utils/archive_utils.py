@@ -23,7 +23,7 @@ from pathlib import Path
 import shutil
 from typing import Generator, TextIO
 
-import argschema
+from ensembl.utils.argparse import ArgumentParser
 
 
 # Each registered format is a tuple, `(name, extensions, description)`
@@ -79,18 +79,13 @@ def extract_file(src_file: PathLike, dst_dir: PathLike) -> None:
             shutil.copy(src_file, dst_dir)
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by the entry point of `extract_file_cli`."""
-
-    src_file = argschema.fields.InputFile(
-        required=True, metadata={"description": "Path to the file to unpack"}
-    )
-    dst_dir = argschema.fields.OutputDir(
-        required=True, default=".", metadata={"description": "Output folder to where extract the file"}
-    )
-
-
 def extract_file_cli() -> None:
     """Entry-point for the `extract_file` method."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    extract_file(mod.args["src_file"], mod.args["dst_dir"])
+    parser = ArgumentParser(description="Extract a file into a directory.")
+    parser.add_argument_src_path("--src_file", required=True, help="File to unpack")
+    parser.add_argument_dst_path(
+        "--dst_dir", default=Path.cwd(), help="Output folder where to extract the file"
+    )
+    args = parser.parse_args()
+
+    extract_file(args.src_file, args.dst_dir)

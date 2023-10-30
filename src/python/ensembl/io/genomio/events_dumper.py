@@ -13,18 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """Module to dump stable id events from an Ensembl Core database"""
-
 
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Set, Tuple
 
-import argschema
-
 from ensembl.brc4.runnable.core_server import CoreServer
+from ensembl.utils.argparse import ArgumentParser
 
 
 BRC4_START_DATE = datetime(2020, 5, 1)
@@ -523,33 +519,21 @@ class DumpStableIDs:
         return (event, from_list, to_list)
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    # Server parameters
-    host = argschema.fields.String(
-        required=True, metadata={"description": "Host to the server with EnsEMBL databases"}
-    )
-    port = argschema.fields.Integer(required=True, metadata={"description": "Port to use"})
-    user = argschema.fields.String(required=True, metadata={"description": "User to use"})
-    password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
-    database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
-    output_file = argschema.fields.OutputFile(required=True, metadata={"description": "Output file"})
-
-
 def main() -> None:
     """Main entrypoint"""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    args = mod.args
+    parser = ArgumentParser(
+        description="Dump the stable ID events from the information available in a core database."
+    )
+    parser.add_database_arguments()
+    parser.add_argument_dst_path("--output_file", required=True, help="Output file")
+    args = parser.parse_args()
 
     # Start
-    factory = CoreServer(
-        host=args.get("host"), port=args.get("port"), user=args.get("user"), password=args.get("password")
-    )
-    factory.set_database(args.get("database"))
+    factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
+    factory.set_database(args.database)
     dumper = DumpStableIDs(factory)
     events = dumper.get_history()
-    dumper.print_events(events, Path(args.get("output_file")))
+    dumper.print_events(events, args.output_file)
 
 
 if __name__ == "__main__":

@@ -23,10 +23,10 @@ from statistics import mean
 import subprocess
 from typing import Dict, List, Optional, Set, Union
 
-import argschema
 from BCBio import GFF
 
-from ensembl.io.genomio.utils.archive_utils import open_gz_file
+from ensembl.io.genomio.utils import open_gz_file
+from ensembl.utils.argparse import ArgumentParser
 
 
 class BiotypeCounter:
@@ -399,34 +399,23 @@ class manifest_stats:
         biotypes[feature_biotype].add_id(feature_id)
 
 
-class InputSchema(argschema.ArgSchema):  # need more metadata/'True' requirements
-    """Input arguments expected by this script."""
-
-    manifest_dir = argschema.fields.String(required=True, metadata={"description": "Manifest file path"})
-    accession = argschema.fields.String(
-        metadata={"description": "Sequence accession ID to compare stats with NCBI"}
-    )
-    datasets_bin = argschema.fields.String(metadata={"description": "Datasets bin status"})
-    stats_file = argschema.fields.files.OutputFile(
-        required=False,
-        metadata={"description": "Output file with the stats"},
-    )
-
-
 def main() -> None:
     """Main entrypoint."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    mstats = manifest_stats(mod.args["manifest_dir"], mod.args.get("accession"), mod.args.get("datasets_bin"))
+    parser = ArgumentParser(
+        description="Compute stats from the current genome files associated with the manifest."
+    )
+    parser.add_argument_src_path(
+        "--manifest_dir", required=True, help="Manifest directory where 'manifest.json' file is located"
+    )
+    parser.add_argument("--accession", help="Sequence accession ID to compare stats with NCBI")
+    parser.add_argument("--datasets_bin", help="Datasets bin status")
+    parser.add_argument_dst_path("--stats_file", help="Output file with the stats")
+    args = parser.parse_args()
 
-    if mod.args.get("accession"):
+    mstats = manifest_stats(args.manifest_dir, args.accession, args.datasets_bin)
+    if args.accession is not None:
         mstats.check_ncbi = True
-
-    stats_file: Path
-    if mod.args.get("stats_file"):
-        stats_file = mod.args.get("stats_file")
-    else:
-        stats_file = Path(mod.args.get("manifest_dir")) / "stats.txt"
-
+    stats_file = args.stats_file if args.stats_file is not None else args.manifest_dir / "stats.txt"
     mstats.run(stats_file)
 
 

@@ -35,7 +35,7 @@ import re
 import time
 from typing import Dict
 
-import argschema
+from ensembl.utils.argparse import ArgumentParser
 
 
 _FILE_ENDS = {
@@ -233,7 +233,8 @@ def retrieve_assembly_data(
         max_increment: If you want to allow assembly versions
         max_redo: Set max number of times to retry downloading a file
     """
-    download_dir = Path(asm_download_dir)
+    asm_download_path = Path(asm_download_dir)
+    download_dir = asm_download_path / accession
 
     # Configure logging
     log_file = f"{accession}_download.log"
@@ -258,6 +259,7 @@ def retrieve_assembly_data(
                 version = int(accession[-1])
                 version += 1
                 accession = accession[:-1] + str(version)
+                download_dir = asm_download_path / accession
                 download_dir.mkdir(parents=True, exist_ok=True)
             download_files(accession, download_dir, max_redo)
 
@@ -271,16 +273,13 @@ def retrieve_assembly_data(
         raise FileDownloadError("No file downloaded")
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by the entry point of this module."""
-
-    accession = argschema.fields.String(required=True, metadata={"descriptions": "Genome assembly accession"})
-    asm_download_dir = argschema.fields.OutputDir(
-        required=True, metadata={"description": "Path to folder where data will be downloaded"}
-    )
-
-
 def main() -> None:
     """Module's entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    retrieve_assembly_data(mod.args["accession"], mod.args["asm_download_dir"])
+    parser = ArgumentParser(description="Download an assembly data files from INSDC or RefSeq.")
+    parser.add_argument("--accession", required=True, help="Genome assembly accession")
+    parser.add_argument_outdir(
+        "--asm_download_dir", default=Path.cwd(), help="Path to folder where data will be downloaded"
+    )
+    args = parser.parse_args()
+
+    retrieve_assembly_data(args.accession, args.asm_download_dir)

@@ -26,12 +26,11 @@ import re
 import sys
 from typing import Any, Dict, List, Optional
 
-import argschema
 from BCBio import GFF
 from Bio import SeqIO, SeqFeature
 
-from ensembl.io.genomio.utils.archive_utils import open_gz_file
-from ensembl.io.genomio.utils.json_utils import get_json
+from ensembl.io.genomio.utils import get_json, open_gz_file
+from ensembl.utils.argparse import ArgumentParser
 
 
 # Record the lengths of the sequence for features/regions
@@ -715,26 +714,19 @@ class IntegrityTool:
         return comp
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    manifest_file = argschema.fields.InputFile(
-        required=True, metadata={"description": "Manifest file for the data to check"}
-    )
-    brc_mode = argschema.fields.Boolean(required=False, default=False, metadata={"description": "BRC mode"})
-    ignore_final_stops = argschema.fields.Boolean(
-        required=False, metadata={"description": "Ignore final stop when calculating peptide length"}
-    )
-
-
 def main() -> None:
     """Main entrypoint."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
+    parser = ArgumentParser(
+        description="Compare the genomic data between the files present in a manifest file."
+    )
+    parser.add_argument_src_path("--manifest_file", required=True, help="Manifest file for the data to check")
+    parser.add_argument("--brc_mode", action="store_true", help="Enable BRC mode")
+    parser.add_argument(
+        "--ignore_final_stops", action="store_true", help="Ignore final stop when calculating peptide length"
+    )
+    args = parser.parse_args()
 
-    inspector = IntegrityTool(mod.args["manifest_file"], brc_mode=mod.args["brc_mode"])
-    if mod.args.get("ignore_final_stops"):
-        inspector.set_ignore_final_stops(True)
-
+    inspector = IntegrityTool(args.manifest_file, args.brc_mode, args.ignore_final_stops)
     inspector.check_integrity()
 
 
