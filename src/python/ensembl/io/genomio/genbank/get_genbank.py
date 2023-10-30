@@ -13,19 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Download a Genbank file from NCBI from an accession.
-
-Raises:
-    DownloadError: if the download fails
-"""
-
+"""Download a Genbank file from NCBI from an accession."""
 
 from os import PathLike
 from pathlib import Path
 
-import argschema
 import requests
+
+from ensembl.utils.argparse import ArgumentParser
 
 
 class DownloadError(Exception):
@@ -61,23 +56,14 @@ def download_genbank(accession: str, output_gb: PathLike) -> None:
     raise DownloadError(f"Could not download the genbank ({accession}) file: {result}")
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    accession = argschema.fields.String(
-        metadata={"required": True, "description": "Sequence accession required"}
-    )
-    output_file = argschema.fields.OutputFile(
-        metadata={"required": True, "description": "Output Genbank path"}
-    )
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    accession = mod.args["accession"]
-    output_file = mod.args["output_file"]
-    download_genbank(accession, output_file)
+    parser = ArgumentParser(description="Download a sequence from GenBank.")
+    parser.add_argument("--accession", required=True, help="Sequence accession")
+    parser.add_argument_dst_path("--output_file", required=True, help="Output GenBank file")
+    args = parser.parse_args()
+
+    download_genbank(args.accession, args.output_file)
 
 
 if __name__ == "__main__":

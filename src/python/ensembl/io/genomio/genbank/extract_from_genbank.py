@@ -29,21 +29,20 @@ Returns:
     json_output: json file with a dict that contains all genome files created.
 """
 
-
 from collections import Counter
 import json
 from os import PathLike
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import argschema
+from BCBio import GFF
 from Bio import SeqIO
 from Bio import GenBank
-
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
-from BCBio import GFF
+
+from ensembl.utils.argparse import ArgumentParser
 
 
 class GBParseError(Exception):
@@ -465,34 +464,19 @@ class FormattedFilesGenerator:
             genome_fh.write(json.dumps(genome_data, indent=4))
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    prefix = argschema.fields.String(required=True, metadata={"description": "prefix to add required"})
-    prod_name = argschema.fields.String(
-        required=True, metadata={"description": "production name for the species"}
-    )
-    gb_file = argschema.fields.InputFile(required=True, metadata={"description": "Sequence accession file"})
-    out_dir = argschema.fields.OutputDir(
-        metadata={"description": "Output dir where the generated files will be stored (default=current)"}
-    )
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    # mod.args["metadata_types"] will be a list-like string that needs to be parsed to List[str]
-    gb_extractor = FormattedFilesGenerator(
-        prefix=mod.args["prefix"],
-        prod_name=mod.args["prod_name"],
-        gb_file=mod.args["gb_file"],
+    parser = ArgumentParser(description="Parse a GenBank file and create cleaned up files from it.")
+    parser.add_argument_src_path("--gb_file", required=True, help="Sequence accession file")
+    parser.add_argument("--prefix", required=True, help="Prefix to add to every feature ID")
+    parser.add_argument("--prod_name", required=True, help="Production name for the species")
+    parser.add_argument_dst_path(
+        "--out_dir", default=Path.cwd(), help="Output folder where the generated files will be stored"
     )
-    gb_output = gb_extractor.extract_gb(mod.args.get("out_dir"))
+    args = parser.parse_args()
 
-    output_json_file = mod.args.get("json_output")
-    if output_json_file:
-        with Path(output_json_file).open("w") as out_fh:
-            json.dump(gb_output, out_fh)
+    gb_extractor = FormattedFilesGenerator(prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file)
+    gb_output = gb_extractor.extract_gb(args.out_dir)
 
 
 if __name__ == "__main__":

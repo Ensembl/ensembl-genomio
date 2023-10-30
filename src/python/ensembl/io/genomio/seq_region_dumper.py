@@ -22,13 +22,14 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-import argschema
 from sqlalchemy import select
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session, joinedload
 
-from ensembl.database import DBConnection
 from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
+from ensembl.database import DBConnection
+from ensembl.utils.argparse import ArgumentParser
+
 
 ROOT_DIR = Path(__file__).parent / "../../../../.."
 DEFAULT_MAP = ROOT_DIR / "config/external_db_map/default.txt"
@@ -236,52 +237,27 @@ def get_karyotype(seq_region: SeqRegion) -> List:
     return kars
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    # Server parameters
-    host = argschema.fields.String(
-        required=True, metadata={"description": "Host to the server with EnsEMBL databases"}
-    )
-    port = argschema.fields.Integer(required=True, metadata={"description": "Port to use"})
-    user = argschema.fields.String(required=True, metadata={"description": "User to use"})
-    password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
-    database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
-    external_db_map = argschema.fields.files.InputFile(
-        required=False,
-        dump_default=str(DEFAULT_MAP),
-        metadata={"description": "File with external_db mapping"},
-    )
-    brc_mode = argschema.fields.Bool(default=False, metadata={"description": "BRC specific output"})
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    args = mod.args
-
-    db_url = URL.create(
-        "mysql",
-        mod.args["user"],
-        mod.args.get("password"),
-        mod.args["host"],
-        mod.args["port"],
-        mod.args.get("database"),
+    parser = ArgumentParser(
+        description="Fetch all the sequence regions from a core database and print them in JSON format."
     )
+    parser.add_database_arguments()
+    parser.add_argument_src_path(
+        "--external_db_map", default=DEFAULT_MAP.resolve(), help="File with external_db mapping"
+    )
+    args = parser.parse_args()
+
+    db_url = URL.create("mysql", args.user, args.password, args.host, args.port, args.database)
     dbc = DBConnection(db_url)
 
-    external_map_path = Path(mod.args.get("external_db_map"))
+    external_map_path = Path(args.external_db_map)
     external_map = get_external_db_map(external_map_path)
 
     with dbc.session_scope() as session:
         seq_regions = get_seq_regions(session, external_map)
 
-    if args.get("output_json"):
-        output_file = Path(args.get("output_json"))
-        with output_file.open("w") as output_fh:
-            output_fh.write(json.dumps(seq_regions, indent=2, sort_keys=True))
-    else:
-        print(seq_regions)
+    print(json.dumps(seq_regions,  indent=2))
 
 
 if __name__ == "__main__":

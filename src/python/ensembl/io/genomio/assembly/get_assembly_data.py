@@ -24,7 +24,7 @@ import re
 import time
 from typing import Dict
 
-import argschema
+from ensembl.utils.argparse import ArgumentParser
 
 
 FILE_ENDS = {
@@ -261,20 +261,14 @@ def retrieve_assembly_data(
     if len(files) == 0:
         raise FileDownloadError("No file downloaded")
 
-    # # Output all those named files + dir
-    # dataflow(files, 2)
-
-
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by the entry point of this module."""
-
-    accession = argschema.fields.String(required=True, metadata={"descriptions": "Genome assembly accession"})
-    asm_download_dir = argschema.fields.OutputDir(
-        required=True, metadata={"description": "Path to folder where data will be downloaded"}
-    )
-
 
 def main() -> None:
     """Module's entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    retrieve_assembly_data(mod.args["accession"], mod.args["asm_download_dir"])
+    parser = ArgumentParser(description="Download an assembly data files from INSDC or RefSeq.")
+    parser.add_argument("--accession", required=True, help="Genome assembly accession")
+    parser.add_argument_outdir(
+        "--asm_download_dir", default=Path.cwd(), help="Path to folder where data will be downloaded"
+    )
+    args = parser.parse_args()
+
+    retrieve_assembly_data(args.accession, args.asm_download_dir)

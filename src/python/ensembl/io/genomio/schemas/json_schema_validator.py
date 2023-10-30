@@ -20,8 +20,9 @@ import json
 from os import PathLike
 from pathlib import Path
 
-import argschema
 import jsonschema
+
+from ensembl.utils.argparse import ArgumentParser
 
 
 def json_schema_validator(json_file: PathLike, json_schema: PathLike) -> None:
@@ -43,16 +44,10 @@ def json_schema_validator(json_file: PathLike, json_schema: PathLike) -> None:
     jsonschema.validate(instance=content, schema=schema)
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    json_file = argschema.fields.InputFile(required=True, metadata={"description": "JSON file to check"})
-    json_schema = argschema.fields.InputFile(
-        required=True, metadata={"description": "JSON schema to validate against"}
-    )
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    json_schema_validator(mod.args["json_file"], mod.args["json_schema"])
+    parser = ArgumentParser(description="Validates a JSON file against a JSON schema")
+    parser.add_argument_inpath("--json_file", required=True, help="JSON file to check")
+    parser.add_argument_inpath("--json_schema", required=True, help="JSON schema to validate against")
+    args = parser.parse_args()
+    json_schema_validator(args.json_file, args.json_schema)

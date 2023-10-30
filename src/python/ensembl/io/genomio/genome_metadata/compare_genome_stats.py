@@ -22,7 +22,8 @@ from pathlib import Path
 import re
 from typing import Any, Dict
 
-import argschema
+from ensembl.io.genomio.utils import get_json
+from ensembl.utils.argparse import ArgumentParser
 
 
 def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Any]:
@@ -180,34 +181,23 @@ def compare_stats(ncbi: Dict, core: Dict) -> Dict[str, Any]:
     return comp
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    # Server parameters
-    ncbi_stats = argschema.fields.InputFile(required=True, metadata={"description": "NCBI json file"})
-    core_stats = argschema.fields.InputFile(required=True, metadata={"description": "Core json file"})
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    args = mod.args
+    parser = ArgumentParser(
+        description="Compare genome statistics between an NCBI dataset and a core database."
+    )
+    parser.add_argument_src_path("--ncbi_stats", required=True, help="NCBI dataset JSON file")
+    parser.add_argument_src_path("--core_stats", required=True, help="Core database JSON file")
+    args = parser.parse_args()
 
-    with open(args["ncbi_stats"]) as ncbi_fh:
-        try:
-            ncbi_stats = json.load(ncbi_fh)["reports"][0]
-        except KeyError:
-            ncbi_stats = {}
-    with open(args["core_stats"]) as core_fh:
-        core_stats = json.load(core_fh)
+    try:
+        ncbi_stats = get_json(args.ncbi_stats)["reports"][0]
+    except KeyError:
+        ncbi_stats = {}
+    core_stats = get_json(args.core_stats)
     all_stats = compare_stats(ncbi_stats, core_stats)
 
-    if args.get("output_json"):
-        output_file = Path(args.get("output_json"))
-        with output_file.open("w") as output_fh:
-            output_fh.write(json.dumps(all_stats, indent=2, sort_keys=True))
-    else:
-        print(json.dumps(all_stats, indent=2, sort_keys=True))
+    print(json.dumps(all_stats, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
