@@ -45,7 +45,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "argschema >= 3.0.4",
     "bcbio-gff == 0.7.0",
     "biopython == 1.81",
     "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
@@ -164,9 +163,6 @@ warn_unused_configs = true
 addopts = "-v --tb=native --server=sqlite:///"
 testpaths = ["src/python/tests"]
 norecursedirs = ["data", "docs", "*.egg_info"]
-filterwarnings = [
-    "ignore::DeprecationWarning:argschema",
-]
 
 [tool.coverage.run]
 branch = true
