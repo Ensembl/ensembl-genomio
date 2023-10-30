@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 
-def get_json(json_path: PathLike) -> Any:
+def get_json(json_path: PathLike, **kwargs) -> Any:
     """Generic data JSON loader.
 
     Args:
@@ -30,7 +30,7 @@ def get_json(json_path: PathLike) -> Any:
 
     """
     with Path(json_path).open("r") as json_file:
-        return json.load(json_file)
+        return json.load(json_file, **kwargs)
 
 
 def print_json(json_path: PathLike, data: Any, **kwargs) -> None:
