@@ -33,13 +33,15 @@ def get_json(src_path: PathLike) -> Any:
         return json.load(json_file)
 
 
-def print_json(dst_path: PathLike, data: Any) -> None:
-    """Generic data JSON dumper to a file.
+def print_json(dst_path: PathLike, data: Any, **kwargs) -> None:
+    """Generic data JSON dumper to a file, with keys sorted and pretty-printed with indent 4 by default.
 
     Args:
-        dst_path: Path to the JSON to create.
+        dst_path: Path to the JSON file to create.
         data: Any data to store into the file.
 
     """
+    kwargs.setdefault("sort_keys", True)
+    kwargs.setdefault("indent", 4)
     with Path(dst_path).open("w") as json_file:
-        json_file.write(json.dumps(data, sort_keys=True, indent=4))
+        json_file.write(json.dumps(data, **kwargs))
