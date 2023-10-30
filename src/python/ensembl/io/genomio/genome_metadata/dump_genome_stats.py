@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates a JSON file representing various stats for the assembly and annotation from a core db.
-"""
+"""Generates a JSON file representing various stats for the assembly and annotation from a core db."""
 
 __all__ = ["StatsGenerator"]
 

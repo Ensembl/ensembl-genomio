@@ -19,7 +19,8 @@ process COMPARE_GENOME_STATS {
     label "local"
 
     input:
-        tuple val(db), path(ncbi_stats, stageAs: "ncbi_stats.json"), path(core_stats, stageAs: "core_stats.json")
+        tuple val(db), path(ncbi_stats, stageAs: "ncbi_stats.json"),
+            path(core_stats, stageAs: "core_stats.json")
 
     output:
         tuple val(db), path("diff_stats.json")
