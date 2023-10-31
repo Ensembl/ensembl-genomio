@@ -1,7 +1,7 @@
 name: Documentation_deploy
 run-name: ${{ github.actor }} triggered doc generation
 on: 
-  pull_request:
+  push:
     branches:
       - main
       - '!jalvarez/**'
