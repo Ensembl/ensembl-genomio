@@ -12,8 +12,8 @@ on:
       - '!vsitnik/**'
       - '!lcampbell/**'
     paths:
-      - 'src/python/'
-      - 'docs/'
+      - 'src/python/ensembl/**'
+      - 'docs/**'
     page_build:
 permissions:
     contents: write
