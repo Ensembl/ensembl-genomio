@@ -1,0 +1,49 @@
+name: Documentation_deploy
+run-name: ${{ github.actor }} triggered doc generation
+on: 
+  pull_request:
+    branches:
+      - main
+      - '!jalvarez/**'
+      - '!mbarba/**'
+      - '!disha/**'
+      - '!vsitnik/**'
+      - '!lcampbell/**'
+    paths:
+      - 'src/python/'
+      - 'docs/'
+    page_build:
+permissions:
+    contents: write
+jobs:
+  Sphinx_Doc_generation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+          allow-prereleases: false
+          cache: 'pip'
+          cache-dependency-path: '**/pip'
+          run: echo '${{ steps.cp38.outputs.cache-hit }}'
+
+      - name: Install Dependencies
+        run: |
+          pip install -e .[doc]
+
+      - name: Sphinx Build
+        run: |
+          sh scripts/setup/docs/build_docs_gh-pages.sh
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' }}
+        with:
+          publish_branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/build/html
+          force_orphan: true
