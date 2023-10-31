@@ -40,6 +40,9 @@
     - path: ./test_genome_prepare_output/GCA_017607445.1/genome.json
       contains:
         - GCA_017607445.1
+      must_not_contain:
+        - organAbrev123
+        - OrganismDB
     # Manifest depends on the genome checksum, so also date dependent
     - path: ./test_genome_prepare_output/GCA_017607445.1/manifest.json
     - path: ./test_genome_prepare_output/GCA_017607445.1/seq_region.json
