@@ -1,7 +1,7 @@
 name: Documentation_deploy
 run-name: ${{ github.actor }} triggered doc generation
 on: 
-  push:
+  pull_request:
     branches:
       - main
       - '!jalvarez/**'
@@ -16,9 +16,11 @@ on:
 permissions:
     contents: write
 jobs:
-  Sphinx_Doc_generation:
-    runs-on: ubuntu-latest
-    steps:
+  if_merged:
+    if: github.event.pull_request.merged == true
+    Sphinx_Doc_generation:
+      runs-on: ubuntu-latest
+      steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
