@@ -14,14 +14,12 @@ on:
     paths:
       - 'src/python/ensembl/**'
       - 'docs/**'
-    page_build:
 permissions:
     contents: write
 
 jobs:
   if_merged:
     if: github.event.pull_request.merged == true
-    Sphinx_Doc_generation:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
