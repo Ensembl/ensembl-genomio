@@ -39,7 +39,7 @@ def helpMessage() {
         --password                     Password part of the connection parameters
         --prefix                       Core dabase(s) name prefixes
         --dbname_re                    Regexp to match core db name(s) against
-        --brc_mode	                   Override Ensembl 'species' and 'division' with the corresponding BRC4 ones ('organism_abbrev' and 'component')
+        --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC ones ('organism_abbrev' and 'component')
         --output_dir                   Name of Output directory to gather prepared outfiles. (default: ${params.output_dir})
         --select_dump                  Comma-separated list of items to dump (all by default, or choose among ${default_selection})
         --cache_dir                    Directory where some files are cached (e.g. NCBI stats files)
