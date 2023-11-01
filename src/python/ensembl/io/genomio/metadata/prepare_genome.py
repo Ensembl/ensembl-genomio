@@ -232,7 +232,10 @@ def prepare_genome_metadata(
     gff3_file: Optional[PathLike] = None,
     base_api_url: str = DEFAULT_API_URL,
 ) -> None:
-    """TODO
+    """Updates the genome metadata JSON file with additional information.
+
+    In particular, more information is added about the provider, the assembly and its gene build version,
+    and the taxonomy.
 
     Args:
         json_file: Path to JSON file with genome metadata.

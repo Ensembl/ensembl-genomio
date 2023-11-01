@@ -72,6 +72,8 @@ class GFFParserCommon:
 
     # Supported transcript level biotypes
     transcript_types = [
+        "C_gene_segment",
+        "guide_RNA",
         "lnc_RNA",
         "miRNA",
         "misc_RNA",
@@ -85,28 +87,34 @@ class GFFParserCommon:
         "RNase_MRP_RNA",
         "RNase_P_RNA",
         "rRNA",
+        "scRNA",
         "snoRNA",
         "snRNA",
         "SRP_RNA",
         "telomerase_RNA",
         "transcript",
         "tRNA",
+        "V_gene_segment",
     ]
 
     # Biotypes that are ignored, and removed from the final GFF3 file
     ignored_gene_types = [
         "cDNA_match",
         "centromere",
+        "D_loop",
+        "direct_repeat",
         "dispersed_repeat",
         "gap",
         "intron",
         "inverted_repeat",
         "long_terminal_repeat",
         "microsatellite",
+        "origin_of_replication",
         "region",
         "repeat_region",
         "satellite_DNA",
         "sequence_feature",
+        "sequence_secondary_structure",
         "sequence_uncertainty",
         "STS",
         "tandem_repeat",
@@ -128,7 +136,7 @@ class GFFParserCommon:
 class GFFGeneMerger(GFFParserCommon):
     """Specialized class to merge split genes in a GFF3 file, prior to further parsing."""
 
-    def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> int:
+    def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> List[str]:
         """
         Merge genes in a gff that are split in multiple lines
         """
@@ -177,7 +185,7 @@ class GFFGeneMerger(GFFParserCommon):
                 new_line = self._merge_genes(to_merge)
                 out_gff_fh.write(new_line)
 
-        return len(merged)
+        return merged
 
     def _merge_genes(self, to_merge: List) -> str:
         """Returns a single gene gff3 line merged from separate parts.
@@ -226,17 +234,17 @@ class GFFSimplifier(GFFParserCommon):
     exclude_seq_regions: List = []
     validate_gene_id = True
     min_id_length = 8
-    make_missing_stable_id = False
     stable_id_prefix = None
     current_stable_id_number: int = 0
 
-    def __init__(self, genome_path: Optional[PathLike] = None):
+    def __init__(self, genome_path: Optional[PathLike] = None, make_missing_stable_ids: bool = False):
         self.records = Records()
         self.annotations = FunctionalAnnotations()
         self.genome = {}
         if genome_path:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
+        self.make_missing_stable_ids: bool = make_missing_stable_ids
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """
@@ -289,10 +297,10 @@ class GFFSimplifier(GFFParserCommon):
                 self.records.append(new_record)
 
             if fail_types and not skip_unrecognized:
-                fail_errors = " ".join(fail_types.keys())
-                raise GFFParserError(f"Unrecognized types found ({fail_errors})")
+                fail_errors = "\n   ".join(fail_types.keys())
+                raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
 
-    def format_mobile_element(self, feat):
+    def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
 
         # Change mobile_genetic_element into a transposable_element feature
@@ -307,7 +315,7 @@ class GFFSimplifier(GFFParserCommon):
                     element_type = mobile_element_type[0]
                     description = element_type
 
-                # Keep the metdata in the description if the type is known
+                # Keep the metadata in the description if the type is known
                 if element_type in ("transposon", "retrotransposon"):
                     feat.type = "transposable_element"
                     if not feat.qualifiers.get("product"):
@@ -330,6 +338,29 @@ class GFFSimplifier(GFFParserCommon):
         feat.qualifiers = {"ID": feat.id}
 
         return feat
+
+    def format_gene_segments(self, transcript: SeqFeature) -> SeqFeature:
+        """Returns the equivalent Ensembl biotype feature for gene segment transcript features.
+
+        Supported features: "C_gene_segment" and "V_gene_segment".
+
+        Args:
+            transcript: Gene segment transcript feature.
+
+        """
+        # Change V/C_gene_segment into a its corresponding transcript names
+        if transcript.type in ("C_gene_segment", "V_gene_segment"):
+            standard_name = transcript.qualifiers["standard_name"][0]
+            biotype = transcript.type.replace("_segment", "")
+            if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
+                biotype = f'IG_{biotype}'
+            elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
+                biotype = f'TR_{biotype}'
+            else:
+                print(f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}")
+                return transcript
+            transcript.type = biotype
+        return transcript
 
     def normalize_gene(self, gene: SeqFeature, fail_types: Dict[str, int]) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
@@ -419,6 +450,8 @@ class GFFSimplifier(GFFParserCommon):
             # New transcript ID
             transcript_number = count + 1
             transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
+
+            transcript = self.format_gene_segments(transcript)
 
             # Store transcript functional annotation
             self.annotations.add_feature(transcript, "transcript", gene.id)
@@ -752,7 +785,7 @@ class GFFSimplifier(GFFParserCommon):
                         return new_gene_id
 
             # Make a new stable_id
-            if self.make_missing_stable_id:
+            if self.make_missing_stable_ids:
                 new_id = self.generate_stable_id()
                 print(f"New id: {new_gene_id} -> {new_id}")
                 return new_id
@@ -890,15 +923,15 @@ class InputSchema(argschema.ArgSchema):
 
     in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
     genome_data = argschema.fields.InputFile(metadata={"description": "genome.json path"})
+    make_missing_stable_ids = argschema.fields.Boolean(
+        default=True, metadata={"description": "Generate and add stable IDs when missing or invalid?"}
+    )
     out_gff_path = argschema.fields.OutputFile(
-        dump_default="gene_models.gff3", metadata={"description": "Output gff path"}
+        default="gene_models.gff3", metadata={"description": "Output gff path"}
     )
     out_func_path = argschema.fields.OutputFile(
-        dump_default="functional_annotation.json",
+        default="functional_annotation.json",
         metadata={"description": "Output functional_annotation.json path"},
-    )
-    merge_split_genes = argschema.fields.Boolean(
-        dump_default=True, metadata={"description": "Should split genes be merged automatically"}
     )
 
 
@@ -911,19 +944,17 @@ def main() -> None:
     # Merge multiline gene features in a separate file
     interim_gff_path = Path(f"{in_gff_path}_INTERIM_MERGE")
     merger = GFFGeneMerger()
-    num_merged_genes = merger.merge(in_gff_path, interim_gff_path)
-
-    # If there are split genes, decide to merge, or just die
+    merged_genes = merger.merge(in_gff_path, interim_gff_path)
+    num_merged_genes = len(merged_genes)
     if num_merged_genes > 0:
-        if mod.args["merge_split_genes"]:
-            # Use the GFF with the merged genes for the next part
-            in_gff_path = interim_gff_path
-        else:
-            raise GFFParserError("GFF contains split genes. Fix it or use the merge_split_genes option.")
+        # Report the list of merged genes in case something does not look right
+        print(f"{num_merged_genes} genes merged:\n" + "\n".join(merged_genes))
+        # Use the GFF with the merged genes for the next part
+        in_gff_path = interim_gff_path
 
     # Load gff3 data and write a simpler version that follows our specifications
     # as well as a functional_annotation json file
-    gff_data = GFFSimplifier(mod.args.get("genome_data"))
+    gff_data = GFFSimplifier(mod.args.get("genome_data"), mod.args["make_missing_stable_ids"])
     gff_data.simpler_gff3(in_gff_path)
     gff_data.records.to_gff(mod.args["out_gff_path"])
     gff_data.annotations.to_json(mod.args["out_func_path"])

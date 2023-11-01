@@ -28,8 +28,8 @@ from os import PathLike
 from pathlib import Path
 import re
 from typing import List, Tuple, Optional
-import argschema
 
+import argschema
 from Bio import SeqIO
 
 from ensembl.io.genomio.utils import print_json, get_json
@@ -193,9 +193,9 @@ class InputSchema(argschema.ArgSchema):
         required=False, metadata={"description": "Path to the INSDC/RefSeq gbff file to parse"}
     )
     brc4_mode = argschema.fields.Int(required=False, metadata={"description": "Activate BRC4 mode (default)"})
-    output_json = argschema.fields.OutputFile(
+    json_outfile = argschema.fields.OutputFile(
         required=False,
-        dump_default="amend_genome_meta.json",
+        default="amend_genome_meta.json",
         metadata={"description": "Default json file to capture json metadata"},
     )
 
@@ -212,4 +212,4 @@ def main() -> None:
     )
     # Flow out the file and type
     output = {"metadata_type": "genome", "metadata_json": str(amended_genome_file)}
-    print_json(mod.args["output_json"], output)
+    print_json(mod.args["json_outfile"], output)

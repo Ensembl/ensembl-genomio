@@ -718,11 +718,10 @@ class IntegrityTool:
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by this script."""
 
-    # Server parameters
     manifest_file = argschema.fields.InputFile(
         required=True, metadata={"description": "Manifest file for the data to check"}
     )
-    brc_mode = argschema.fields.Boolean(required=False, metadata={"description": "BRC mode"})
+    brc_mode = argschema.fields.Boolean(required=False, default=False, metadata={"description": "BRC mode"})
     ignore_final_stops = argschema.fields.Boolean(
         required=False, metadata={"description": "Ignore final stop when calculating peptide length"}
     )
@@ -732,10 +731,7 @@ def main() -> None:
     """Main entrypoint."""
     mod = argschema.ArgSchemaParser(schema_type=InputSchema)
 
-    # Start
-    inspector = IntegrityTool(mod.args["manifest_file"])
-    if mod.args.get("brc_mode"):
-        inspector.set_brc_mode(True)
+    inspector = IntegrityTool(mod.args["manifest_file"], brc_mode=mod.args["brc_mode"])
     if mod.args.get("ignore_final_stops"):
         inspector.set_ignore_final_stops(True)
 

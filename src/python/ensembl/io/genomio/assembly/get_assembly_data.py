@@ -270,9 +270,6 @@ def retrieve_assembly_data(
     if len(files) == 0:
         raise FileDownloadError("No file downloaded")
 
-    # # Output all those named files + dir
-    # dataflow(files, 2)
-
 
 class InputSchema(argschema.ArgSchema):
     """Input arguments expected by the entry point of this module."""

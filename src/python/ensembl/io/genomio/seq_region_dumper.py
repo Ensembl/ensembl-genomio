@@ -249,7 +249,7 @@ class InputSchema(argschema.ArgSchema):
     database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
     external_db_map = argschema.fields.files.InputFile(
         required=False,
-        dump_default=str(DEFAULT_MAP),
+        default=str(DEFAULT_MAP),
         metadata={"description": "File with external_db mapping"},
     )
     brc_mode = argschema.fields.Bool(default=False, metadata={"description": "BRC specific output"})
