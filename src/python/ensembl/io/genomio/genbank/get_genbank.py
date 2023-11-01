@@ -30,14 +30,14 @@ class DownloadError(Exception):
         self.msg = msg
 
 
-def download_genbank(accession: str, output_gb: PathLike) -> None:
+def download_genbank(accession: str, output_file: PathLike) -> None:
     """Given a GenBank accession, download the corresponding file in GenBank format.
 
     Uses NCBI Entrez service to fetch the data.
 
     Args:
         accession: INSDC Genbank record accession.
-        output_gb: Path to the downloaded record in Genbank format.
+        output_file: Path to the downloaded record in Genbank format.
 
     Raises:
         DownloadError: If the download fails.
@@ -54,9 +54,9 @@ def download_genbank(accession: str, output_gb: PathLike) -> None:
     entrez_params["id"] = accession
     result = requests.get(entrez_url, params=entrez_params, timeout=60)
     if result and result.status_code == 200:
-        with Path(output_gb).open("wb") as gbff:
+        with Path(output_file).open("wb") as gbff:
             gbff.write(result.content)
-        print(f"GBF file write to {output_gb}")
+        print(f"GBF file write to {output_file}")
         return
     raise DownloadError(f"Could not download the genbank ({accession}) file: {result}")
 
@@ -68,7 +68,7 @@ def main() -> None:
     parser.add_argument_dst_path("--output_file", required=True, help="Output GenBank file")
     args = parser.parse_args()
 
-    download_genbank(args.accession, args.output_file)
+    download_genbank(**vars(args))
 
 
 if __name__ == "__main__":

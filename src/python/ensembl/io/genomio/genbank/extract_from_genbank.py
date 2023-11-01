@@ -474,7 +474,7 @@ def main() -> None:
     args = parser.parse_args()
 
     gb_extractor = FormattedFilesGenerator(prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file)
-    gb_output = gb_extractor.extract_gb(args.out_dir)
+    gb_extractor.extract_gb(args.out_dir)
 
 
 if __name__ == "__main__":

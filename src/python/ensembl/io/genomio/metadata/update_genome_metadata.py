@@ -174,7 +174,5 @@ def main() -> None:
     parser.add_argument_src_path("--report_file", help="INSDC/RefSeq sequences report file")
     parser.add_argument_src_path("--genbank_file", help="INSDC/RefSeq GBFF file")
     args = parser.parse_args()
-    print(args)
-    exit()
 
-    amend_genomic_metadata(args.genome_infile, args.genome_outfile, args.report_file, args.genbank_file)
+    amend_genomic_metadata(**vars(args))

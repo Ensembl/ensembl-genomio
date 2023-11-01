@@ -15,11 +15,9 @@
 """Generates a JSON file representing various stats for the assembly and annotation from a core db."""
 
 import json
-from pathlib import Path
 from typing import Any, Dict
 
 from sqlalchemy import select, func
-from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
@@ -137,11 +135,10 @@ def main() -> None:
     parser = ArgumentParser(
         description="Fetch all the sequence regions from a core database and print them in JSON format."
     )
-    parser.add_database_arguments()
+    parser.add_server_arguments(include_database=True)
     args = parser.parse_args()
 
-    db_url = URL.create("mysql", args.user, args.password, args.host, args.port, args.database)
-    dbc = DBConnection(db_url)
+    dbc = DBConnection(args.url)
 
     with dbc.session_scope() as session:
         generator = StatsGenerator(session)

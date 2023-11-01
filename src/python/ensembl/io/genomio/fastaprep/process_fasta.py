@@ -24,6 +24,7 @@ from Bio import SeqIO
 from ensembl.io.genomio.utils.archive_utils import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 
+
 exclude_seq_regions: List[str] = []
 
 
@@ -91,14 +92,9 @@ def main() -> None:
     """Module's entry-point."""
     parser = ArgumentParser(description="Clean-up a given FASTA file to remove unwanted elements.")
     parser.add_argument_src_path("--fasta_infile", required=True, help="Input FASTA file - DNA / Protein")
-    parser.add_argument_src_path("--genbank_infile", default=None, help="Input GenBank GBFF file")
+    parser.add_argument_src_path("--genbank_infile", help="Input GenBank GBFF file")
     parser.add_argument_dst_path("--fasta_outfile", required=True, help="Output FASTA file")
     parser.add_argument("--peptide_mode", action="store_true", help="Process proteins instead of DNA")
     args = parser.parse_args()
 
-    prep_fasta_data(
-        fasta_infile=args.fasta_infile,
-        genbank_infile=args.genbank_infile,
-        fasta_outfile=args.fasta_outfile,
-        peptide_mode=args.peptide_mode,
-    )
+    prep_fasta_data(**vars(args))

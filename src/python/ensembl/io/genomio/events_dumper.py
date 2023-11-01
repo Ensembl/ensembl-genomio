@@ -523,7 +523,7 @@ def main() -> None:
     parser = ArgumentParser(
         description="Dump the stable ID events from the information available in a core database."
     )
-    parser.add_database_arguments()
+    parser.add_server_arguments(include_database=True)
     parser.add_argument_dst_path("--output_file", required=True, help="Output file")
     args = parser.parse_args()
 

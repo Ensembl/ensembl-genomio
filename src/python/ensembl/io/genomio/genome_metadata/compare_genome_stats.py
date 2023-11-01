@@ -18,7 +18,6 @@ Returns the JSON from our core db including a section with comparisons.
 """
 
 import json
-from pathlib import Path
 import re
 from typing import Any, Dict
 

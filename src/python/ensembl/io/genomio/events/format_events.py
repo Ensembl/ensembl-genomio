@@ -68,7 +68,7 @@ def main() -> None:
     parser = ArgumentParser(description="Map stable IDs in a file and produce an events file.")
     parser.add_argument_src_path("--input_file", required=True, help="Input file from gene_diff")
     parser.add_argument_src_path(
-        "--deletes_file", required=True, help="Deleted genes files (apart from the deletes from the gene diff)"
+        "--deletes_file", required=True, help="Deleted genes file (apart from the deletes from the gene diff)"
     )
     parser.add_argument_src_path(
         "--map_file", required=True, help="Mapping tab file with 2 columns: old_id, new_id"

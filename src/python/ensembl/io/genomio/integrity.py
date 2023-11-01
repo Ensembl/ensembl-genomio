@@ -725,7 +725,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    inspector = IntegrityTool(args.manifest_file, args.brc_mode, args.ignore_final_stops)
+    inspector = IntegrityTool(**vars(args))
     inspector.check_integrity()
 
 
