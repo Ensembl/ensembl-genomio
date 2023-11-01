@@ -40,7 +40,7 @@ jobs:
 
     - name: Sphinx Build
       run: |
-        sh scripts/setup/docs/build_docs_gh-pages.sh
+        sh scripts/setup/docs/build_sphinx_docs.sh
         
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
