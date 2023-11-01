@@ -37,7 +37,7 @@ def helpMessage() {
         --output_dir                   Output directory to place final output
         --cache_dir                    Cache directory for downloaded files
         --help                         This usage statement.
-        --brc_mode                     Set to 1 to use with BRC data (default: ${paranms.brc_mode})
+        --brc_mode                     Set to 1 to use with BRC data (default: ${params.brc_mode})
         """
 }
 
