@@ -35,6 +35,7 @@ __all__ = [
     "report_to_csv",
 ]
 
+import csv
 from os import PathLike
 from pathlib import Path
 import re
