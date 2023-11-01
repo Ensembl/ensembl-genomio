@@ -25,6 +25,6 @@ process PREPARE_GENOME_METADATA {
     shell:
     output_json = "genome.json"
     '''
-    prepare_genome_metadata --input_path !{input_json} --output_path !{output_json}
+    prepare_genome_metadata --input_file !{input_json} --output_file !{output_json}
     '''
 }

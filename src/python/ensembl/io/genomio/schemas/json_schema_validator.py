@@ -47,7 +47,8 @@ def json_schema_validator(json_file: PathLike, json_schema: PathLike) -> None:
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(description="Validates a JSON file against a JSON schema")
-    parser.add_argument_inpath("--json_file", required=True, help="JSON file to check")
-    parser.add_argument_inpath("--json_schema", required=True, help="JSON schema to validate against")
+    parser.add_argument_src_path("--json_file", required=True, help="JSON file to check")
+    parser.add_argument_src_path("--json_schema", required=True, help="JSON schema to validate against")
     args = parser.parse_args()
-    json_schema_validator(args.json_file, args.json_schema)
+
+    json_schema_validator(**vars(args))

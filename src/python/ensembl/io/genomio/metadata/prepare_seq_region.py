@@ -489,7 +489,7 @@ def main() -> None:
     parser.add_argument_src_path(
         "--report_file", required=True, help="INSDC/RefSeq sequences report file to parse"
     )
-    parser.add_argument_src_path("--gbff_file", default=None, help="INSDC/RefSeq GBFF file to parse")
+    parser.add_argument_src_path("--gbff_file", help="INSDC/RefSeq GBFF file to parse")
     parser.add_argument_dst_path(
         "--dst_dir", default=Path.cwd(), help="Output folder for the processed sequence regions JSON file"
     )
@@ -499,11 +499,4 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    prepare_seq_region_metadata(
-        args.genome_file,
-        args.report_file,
-        args.gbff_file,
-        args.dst_dir,
-        args.brc_mode,
-        args.to_exclude,
-    )
+    prepare_seq_region_metadata(**vars(args))

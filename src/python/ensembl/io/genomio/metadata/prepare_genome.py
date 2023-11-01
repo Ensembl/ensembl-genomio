@@ -227,8 +227,8 @@ def _get_node_text(node: Element, tag: str, optional: bool = False) -> Optional[
 
 
 def prepare_genome_metadata(
-    input_path: PathLike,
-    output_path: PathLike,
+    input_file: PathLike,
+    output_file: PathLike,
     gff3_file: Optional[PathLike] = None,
     base_api_url: str = DEFAULT_API_URL,
 ) -> None:
@@ -238,20 +238,20 @@ def prepare_genome_metadata(
     and the taxonomy.
 
     Args:
-        json_file: Path to JSON file with genome metadata.
-        output_dir: Output directory where to generate the final `genome.json` file.
+        input_file: Path to JSON file with genome metadata.
+        output_file: Output directory where to generate the final `genome.json` file.
         gff3_file: Path to GFF3 file to use as annotation source for this genome.
         base_api_url: Base API URL to fetch the accession's taxonomy data from.
 
     """
-    genome_data = get_json(input_path)
+    genome_data = get_json(input_file)
     # Amend any missing metadata
     add_provider(genome_data, gff3_file)
     add_assembly_version(genome_data)
     add_genebuild_metadata(genome_data)
     add_species_metadata(genome_data, base_api_url)
     # Dump updated genome metadata
-    print_json(output_path, genome_data)
+    print_json(output_file, genome_data)
 
 
 def main() -> None:
@@ -260,14 +260,14 @@ def main() -> None:
         description=("Add information about provider, taxonomy and assembly and gene build version "
                      "to the genome metadata file.")
     )
-    parser.add_argument_src_path("--input_path", required=True, help="Genome metadata JSON file")
+    parser.add_argument_src_path("--input_file", required=True, help="Genome metadata JSON file")
     parser.add_argument_dst_path(
-        "--output_path", required=True, help="Output path for the new genome metadata file"
+        "--output_file", required=True, help="Output path for the new genome metadata file"
     )
-    parser.add_argument_src_path("--gff3_file", default=None, help="GFF3 file to use as annotation source")
+    parser.add_argument_src_path("--gff3_file", help="GFF3 file to use as annotation source")
     parser.add_argument(
         "--base_api_url", default=DEFAULT_API_URL, help="API URL to fetch the accession's taxonomy data from"
     )
     args = parser.parse_args()
 
-    prepare_genome_metadata(args.input_path, args.output_path, args.gff3_file, args.base_api_url)
+    prepare_genome_metadata(**vars(args))

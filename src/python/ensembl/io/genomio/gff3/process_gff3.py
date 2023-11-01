@@ -940,6 +940,7 @@ def main() -> None:
     merger = GFFGeneMerger()
     merged_genes = merger.merge(args.in_gff_path, interim_gff_path)
     num_merged_genes = len(merged_genes)
+    in_gff_path = args.in_gff_path
     # If there are split genes, decide to merge, or just die
     if num_merged_genes > 0:
         # Report the list of merged genes in case something does not look right
@@ -947,8 +948,8 @@ def main() -> None:
         # Use the GFF with the merged genes for the next part
         in_gff_path = interim_gff_path
 
-    # Load gff3 data and write a simpler version that follows our specifications
-    # as well as a functional_annotation json file
+    # Load GFF3 data and write a simpler version that follows our specifications as well as a
+    # functional annotation JSON file
     gff_data = GFFSimplifier(args.genome_data, args.make_missing_stable_ids)
     gff_data.simpler_gff3(in_gff_path)
     gff_data.records.to_gff(args.out_gff_path)

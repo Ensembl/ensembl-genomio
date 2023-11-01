@@ -66,12 +66,15 @@ def main() -> None:
     parser = ArgumentParser(
         description="Generates one JSON file per metadata type in the provided manifest, including itself."
     )
-    parser.add_argument_inpath(
+    parser.add_argument_src_path(
         "--manifest_dir", required=True, help="Folder containing the 'manifest.json' file to check"
     )
     parser.add_argument(
         "--metadata_types", required=True, nargs="+", metavar="TYPE", help="Metadata types to extract"
     )
-    parser.add_argument_outdir("--output_dir", default=Path(), help="Folder to store the produced files")
+    parser.add_argument_dst_path(
+        "--output_dir", default=Path.cwd(), help="Folder to store the produced files"
+    )
     args = parser.parse_args()
-    json_schema_factory(args.manifest_dir, args.metadata_types, args.output_dir)
+
+    json_schema_factory(**vars(args))

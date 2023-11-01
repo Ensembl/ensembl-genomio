@@ -18,7 +18,6 @@ Can be imported as a module and called as a script as well, with the same parame
 """
 
 import json
-from pathlib import Path
 from typing import Dict, List, Optional
 
 from ensembl.brc4.runnable.core_server import CoreServer
@@ -95,7 +94,7 @@ def main() -> None:
     parser.add_argument(
         "--brc_mode",
         action="store_true",
-        help="Enable BRC4 mode, i.e. use organism_abbrev for species, component for division",
+        help="Enable BRC mode, i.e. use organism_abbrev for species, component for division",
     )
     args = parser.parse_args()
 

@@ -88,4 +88,4 @@ def extract_file_cli() -> None:
     )
     args = parser.parse_args()
 
-    extract_file(args.src_file, args.dst_dir)
+    extract_file(**vars(args))

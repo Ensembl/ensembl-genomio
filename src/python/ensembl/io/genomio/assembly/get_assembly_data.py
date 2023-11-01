@@ -223,7 +223,7 @@ def get_root_name(dl_dir: Path) -> str:
 
 def retrieve_assembly_data(
     accession: str,
-    asm_download_dir: PathLike,
+    download_dir: PathLike,
     max_increment: int = 0,
     max_redo: int = 3,
 ) -> None:
@@ -231,13 +231,13 @@ def retrieve_assembly_data(
 
     Args:
         accession: Genome Assembly accession
-        asm_download_dir: Path to directory used to store retrieved
+        download_dir: Path to directory used to store retrieved
         max_increment: If you want to allow assembly versions
         max_redo: Set max number of times to retry downloading a file
 
     """
-    asm_download_path = Path(asm_download_dir)
-    download_dir = asm_download_path / accession
+    download_path = Path(download_dir)
+    download_dir = download_path / accession
 
     # Configure logging
     log_file = f"{accession}_download.log"
@@ -260,7 +260,7 @@ def retrieve_assembly_data(
                 version = int(accession[-1])
                 version += 1
                 accession = accession[:-1] + str(version)
-                download_dir = asm_download_path / accession
+                download_dir = download_path / accession
                 download_dir.mkdir(parents=True, exist_ok=True)
             download_files(accession, download_dir, max_redo)
 
@@ -278,9 +278,9 @@ def main() -> None:
     """Module's entry-point."""
     parser = ArgumentParser(description="Download an assembly data files from INSDC or RefSeq.")
     parser.add_argument("--accession", required=True, help="Genome assembly accession")
-    parser.add_argument_outdir(
-        "--asm_download_dir", default=Path.cwd(), help="Path to folder where data will be downloaded"
+    parser.add_argument_dst_path(
+        "--download_dir", default=Path.cwd(), help="Folder where the data will be downloaded"
     )
     args = parser.parse_args()
 
-    retrieve_assembly_data(args.accession, args.asm_download_dir)
+    retrieve_assembly_data(**vars(args))

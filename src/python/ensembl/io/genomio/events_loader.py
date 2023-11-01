@@ -23,7 +23,6 @@ from pathlib import Path
 import re
 from typing import Dict, Generator, List, Optional, Tuple
 
-from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
 from ensembl.database import DBConnection
@@ -224,7 +223,7 @@ class EventCollection:
 def main() -> None:
     """Main entrypoint"""
     parser = ArgumentParser(description="Load the events in the input file into a core database.")
-    parser.add_database_arguments()
+    parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path(
         "--input_file",
         required=True,
@@ -235,8 +234,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Start
-    db_url = URL.create("mysql", args.user, args.password, args.host, args.port, args.database)
-    dbc = DBConnection(db_url)
+    dbc = DBConnection(args.url)
 
     collection = EventCollection()
     collection.load_events(args.input_file)
