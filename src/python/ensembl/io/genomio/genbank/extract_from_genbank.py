@@ -55,7 +55,7 @@ class UnsupportedData(Exception):
 class GenomeFiles(dict):
     """Store the representation of the genome files created."""
 
-    def __init__(self, out_dir: PathLike = Path()) -> None:
+    def __init__(self, out_dir: PathLike = Path.cwd()) -> None:
         super().__init__()
         out_dir = Path(out_dir)
         self["genome"] = out_dir / "genome.json"
