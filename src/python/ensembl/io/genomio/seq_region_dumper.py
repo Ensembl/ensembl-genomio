@@ -249,7 +249,7 @@ def main() -> None:
     with dbc.session_scope() as session:
         seq_regions = get_seq_regions(session, external_map)
 
-    print(json.dumps(seq_regions,  indent=2))
+    print(json.dumps(seq_regions, indent=2))
 
 
 if __name__ == "__main__":

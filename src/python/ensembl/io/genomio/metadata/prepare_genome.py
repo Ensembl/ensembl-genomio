@@ -257,8 +257,10 @@ def prepare_genome_metadata(
 def main() -> None:
     """Module's entry-point."""
     parser = ArgumentParser(
-        description=("Add information about provider, taxonomy and assembly and gene build version "
-                     "to the genome metadata file.")
+        description=(
+            "Add information about provider, taxonomy and assembly and gene build version to the genome "
+            "metadata file."
+        )
     )
     parser.add_argument_src_path("--input_file", required=True, help="Genome metadata JSON file")
     parser.add_argument_dst_path(

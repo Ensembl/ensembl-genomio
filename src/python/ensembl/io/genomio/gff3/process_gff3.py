@@ -352,9 +352,9 @@ class GFFSimplifier(GFFParserCommon):
             standard_name = transcript.qualifiers["standard_name"][0]
             biotype = transcript.type.replace("_segment", "")
             if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
-                biotype = f'IG_{biotype}'
+                biotype = f"IG_{biotype}"
             elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
-                biotype = f'TR_{biotype}'
+                biotype = f"TR_{biotype}"
             else:
                 print(f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}")
                 return transcript
@@ -919,8 +919,10 @@ class GFFSimplifier(GFFParserCommon):
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(
-        description=("Standardize the gene model representation of a GFF3 file, and extract the "
-                     "functional annotation in a separate file.")
+        description=(
+            "Standardize the gene model representation of a GFF3 file, and extract the functional "
+            "annotation in a separate file."
+        )
     )
     parser.add_argument_src_path("--in_gff_path", required=True, help="Input GFF3 file")
     parser.add_argument_src_path("--genome_data", required=True, help="Genome JSON file")

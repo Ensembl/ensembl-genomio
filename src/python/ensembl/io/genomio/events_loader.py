@@ -227,8 +227,10 @@ def main() -> None:
     parser.add_argument_src_path(
         "--input_file",
         required=True,
-        help=("Input TSV file with events in the format exported by the dumper: "
-              "old_id, new_id, event_name, release, date"),
+        help=(
+            "Input TSV file with events in the format exported by the dumper: old_id, new_id, event_name, "
+            "release, date"
+        ),
     )
     parser.add_argument("--update", action="store_true", help="Make changes to the database?")
     args = parser.parse_args()
