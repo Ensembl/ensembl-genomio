@@ -20,24 +20,18 @@ process DUMP_SEQ_REGIONS {
     input:
         val server
         val db
-        val filter_map
 
     output:
         tuple val(db), val("seq_region"), path("seq_region.json")
 
     script:
         """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
         touch seq_region.json
         seq_region_dumper --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            \$brc_mode \
             --output_json seq_region.json
         """
 }

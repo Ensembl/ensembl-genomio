@@ -30,7 +30,6 @@ workflow DUMP_METADATA {
     take:
         server
         db
-        filter_map
 
     emit:
         db
@@ -40,20 +39,20 @@ workflow DUMP_METADATA {
 
         // Seq regions
         if (params.selection.contains("seq_regions")) {
-            seq_regions = DUMP_SEQ_REGIONS(server, db, filter_map)
+            seq_regions = DUMP_SEQ_REGIONS(server, db)
             seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
             db_files = db_files.concat(seq_regions_checked)
         }
         
         // Events
         if (params.selection.contains("events")) {
-            events = DUMP_EVENTS(server, db, filter_map)
+            events = DUMP_EVENTS(server, db)
             db_files = db_files.concat(events)
         }
 
         // Genome metadata
         if (params.selection.contains("genome_metadata")) {
-            genome_meta = DUMP_GENOME_META(server, db, filter_map)
+            genome_meta = DUMP_GENOME_META(server, db)
             db_files = db_files.concat(genome_meta)
         }
 
@@ -79,6 +78,6 @@ workflow DUMP_METADATA {
         // Collect, create manifest, and publish
         collect_dir = COLLECT_FILES(db_files)
         manifested_dir = MANIFEST(collect_dir)
-        manifest_checked = CHECK_INTEGRITY(manifested_dir, filter_map)
+        manifest_checked = CHECK_INTEGRITY(manifested_dir)
         PUBLISH_DIR(manifest_checked, params.output_dir)
 }

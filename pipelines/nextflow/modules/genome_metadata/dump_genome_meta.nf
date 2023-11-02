@@ -22,7 +22,6 @@ process DUMP_GENOME_META {
     input:
         val server
         val db
-        val filter_map
 
     output:
         tuple val(db), val("genome"), path("genome.json")
@@ -30,10 +29,6 @@ process DUMP_GENOME_META {
     script:
         def output = "genome.json"
         """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
         touch $output
         genome_meta_dumper --host '${server.host}' \
             --port '${server.port}' \

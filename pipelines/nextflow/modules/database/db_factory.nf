@@ -25,22 +25,16 @@ process DB_FACTORY {
         path "dbs.json"
 
     script:
+        brc_mode = params.brc_mode ? '--brc_mode 1' : ''
+        dbname_re = filter_map.dbname_re ? "--dbname_re $filter_map.dbname_re" : ''
         """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
-        dbname_re=''
-        if [ -n '${filter_map.dbname_re}' ]; then
-            dbname_re="--dbname_re ${filter_map.dbname_re}"
-        fi
         db_factory --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \
             --prefix '${filter_map.prefix}' \
-            \$brc_mode \
-            \$dbname_re \
+            $brc_mode \
+            $dbname_re \
             --output_json dbs.json
         """
 }

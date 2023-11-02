@@ -82,7 +82,7 @@ workflow GENOME_PREPARE {
         fasta_dna = PROCESS_FASTA_DNA(download_min, 0).processed_fasta
 
         // Amend genome data find any additional sequence regions
-        amended_genome = AMEND_GENOME_DATA(genome_data_files, params.brc_mode).amended_json
+        amended_genome = AMEND_GENOME_DATA(genome_data_files).amended_json
 
         // Group files
         prepared_files = amended_genome.concat(

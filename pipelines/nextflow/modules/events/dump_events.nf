@@ -21,17 +21,12 @@ process DUMP_EVENTS {
     input:
         val server
         val db
-        val filter_map
 
     output:
         tuple val(db), val("events"), path("events.txt")
 
     script:
         """
-        brc_mode=''
-        if [ $filter_map.brc_mode == 1 ]; then
-            brc_mode='--brc_mode 1'
-        fi
         touch "events.txt"
         events_dumper --host '${server.host}' \
             --port '${server.port}' \
