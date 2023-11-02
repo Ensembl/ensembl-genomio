@@ -496,7 +496,7 @@ def main() -> None:
     )
     parser.add_argument("--brc_mode", action="store_true", help="Enable BRC mode")
     parser.add_argument(
-        "--to_exclude", nargs="+", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
+        "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
     )
     args = parser.parse_args()
 
