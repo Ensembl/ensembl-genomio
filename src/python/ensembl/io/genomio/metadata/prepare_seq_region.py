@@ -437,7 +437,7 @@ def prepare_seq_region_metadata(
     report_file: PathLike,
     dst_dir: PathLike,
     gbff_file: Optional[PathLike] = None,
-    brc_mode: bool = True,
+    brc_mode: bool = False,
     to_exclude: Optional[List[str]] = None,
 ) -> None:
     """Prepares the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
