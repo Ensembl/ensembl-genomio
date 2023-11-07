@@ -40,7 +40,7 @@ python:prepare_venv:
     - python -m venv $RUN_DIR/venv
     - source $RUN_DIR/venv/bin/activate
   script:
-    - pip install -e .[dev]
+    - pip install -e .[cicd]
 
 
 .python:test:
