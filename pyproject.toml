@@ -47,7 +47,8 @@ classifiers = [
 dependencies = [
     "bcbio-gff == 0.7.0",
     "biopython == 1.81",
-    "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",  # minimum v1.2.0
+    "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
+    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v1.2.0
     "jsonschema >= 4.6.0",
     "importlib_resources",  # not needed from Python 3.9+
     "intervaltree >= 3.1.0",
@@ -60,7 +61,6 @@ dependencies = [
 dev = [
     "black",
     "coverage",
-    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",
     "genbadge[coverage]",
     "mock",
     "mypy",
