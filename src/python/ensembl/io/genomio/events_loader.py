@@ -190,16 +190,14 @@ class EventCollection:
         mappings: Dict[str, MapSession] = {}
         for event in self.events:
             release = event.release
-
-            if release in mappings:
-                mappings[release].add_event(event)
-            else:
+            if release not in mappings:
                 mappings[release] = MapSession(release, event.release_date)
+            mappings[release].add_event(event)
 
         # Then, add the mapping, and the events for this mapping
         for release, mapping in mappings.items():
-            print(f"Adding mapping for release {release} ({len(mapping.events)} events)")
             if update:
+                print(f"Adding mapping for release {release} ({len(mapping.events)} events)")
                 map_session = MappingSession(new_release=mapping.release, created=mapping.release_date)
                 session.add(map_session)
                 session.flush()
@@ -221,6 +219,10 @@ class EventCollection:
                     )
                     session.add(id_event)
                 session.commit()
+            else:
+                print(f"Found mapping for release {release} ({len(mapping.events)} events)")
+        if not update:
+            print(f"Run your command again with '--update' to add them")
 
 
 class InputSchema(argschema.ArgSchema):
