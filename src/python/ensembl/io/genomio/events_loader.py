@@ -222,7 +222,7 @@ class EventCollection:
             else:
                 print(f"Found mapping for release {release} ({len(mapping.events)} events)")
         if not update:
-            print(f"Run your command again with '--update' to add them")
+            print("Run your command again with '--update' to add them")
 
 
 class InputSchema(argschema.ArgSchema):
