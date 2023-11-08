@@ -14,9 +14,9 @@
 // limitations under the License.
 
 process PUBLISH_DIR {
-    publishDir "$out_dir/${meta.accession}", mode: 'copy', overwrite: false
-    tag "Publish_${meta.accession}"
+    tag "publish_${meta.accession}"
     label 'default'
+    publishDir "$out_dir/${meta.accession}", mode: 'copy', overwrite: false
     time '5min'
 
     input:

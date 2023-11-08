@@ -30,7 +30,7 @@ process GFF3_VALIDATION {
   out_gff = "gene_models.gff3"
   '''
   cp !{gene_models} temp.gff3
-  gt gff3 -tidy -sort -retainids -force -o !{out_gff} temp.gff3 
+  gt gff3 -tidy -sort -retainids -force -o !{out_gff} temp.gff3
   gt gff3validator !{out_gff}
   '''
 }
