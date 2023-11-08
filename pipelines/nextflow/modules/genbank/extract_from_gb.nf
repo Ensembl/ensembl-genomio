@@ -21,10 +21,10 @@ process EXTRACT_FROM_GB {
         tuple val(meta), path(gb_file)
 
     output:
-        tuple val(meta), path("*.gff"), emit: gene_gff
-        tuple val(meta), path("genome.json"), emit: genome 
+        tuple val(meta), path("genome.json"), emit: genome
         tuple val(meta), path("seq_region.json"), emit: seq_regions
         tuple val(meta), path("dna.fasta"), emit: dna_fasta
+        tuple val(meta), path("*.gff"), emit: gene_gff, optional: true
         tuple val(meta), path("pep.fasta"), emit: pep_fasta, optional: true
 
     shell:

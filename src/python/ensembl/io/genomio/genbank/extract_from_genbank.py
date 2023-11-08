@@ -169,17 +169,20 @@ class FormattedFilesGenerator:
 
         for record in self.seq_records:
             new_record, rec_ids, rec_peptides = self._parse_record(record)
-            records.append(new_record)
+            if new_record.features:
+                records.append(new_record)
             all_ids += rec_ids
             peptides += rec_peptides
 
-        # Write those records to a clean GFF
-        with self.files["gene_models"].open("w") as gff_fh:
-            GFF.write(records, gff_fh)
+        # Write the annotated records to a clean GFF
+        if records:
+            with self.files["gene_models"].open("w") as gff_fh:
+                GFF.write(records, gff_fh)
 
-        # Write the peptide sequences to a fasta file
-        with self.files["fasta_pep"].open("w") as fasta_fh:
-            SeqIO.write(peptides, fasta_fh, "fasta")
+        # Write the peptide sequences to a FASTA file
+        if peptides:
+            with self.files["fasta_pep"].open("w") as fasta_fh:
+                SeqIO.write(peptides, fasta_fh, "fasta")
 
         # Warn if some IDs are not unique
         count = dict(Counter(all_ids))
