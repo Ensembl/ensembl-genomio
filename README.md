@@ -139,7 +139,7 @@ Though, this bit is in constant development. Some documentatin can be found in [
 See [docs](docs)
 
 ## Unit testing
-The Python part of the codebase has now unit tests available to test each module. Make sure you have installed this repository's `[dev]` dependencies (via `pip install ensembl-genomio[dev]`) before continuing.
+The Python part of the codebase has now unit tests available to test each module. Make sure you have installed this repository's `[cicd]` dependencies (via `pip install ensembl-genomio[cicd]`) before continuing.
 
 Running all the tests in one go is as easy as running `pytest` **from the root of the repository**. If you also want to measure, collect and report the code coverage, you can do:
 ```bash
