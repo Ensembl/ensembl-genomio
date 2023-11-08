@@ -151,7 +151,7 @@ def add_species_metadata(genome_data: Dict, base_api_url: str = DEFAULT_API_URL)
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
-        base_api_url: Base API URL to fetch the accession's taxonomy data from.
+        base_api_url: Base API URL to fetch the taxonomy data from.
 
     """
     species = genome_data["species"]
@@ -170,7 +170,7 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
 
     Args:
         accession: INSDC accession ID.
-        base_api_url: Base API URL to fetch the accession's taxonomy data from.
+        base_api_url: Base API URL to fetch the taxonomy data from.
 
     Returns:
         Dictionary with key-value pairs for ``taxon_id`` and ``scientific_name``. ``strain`` will be added
@@ -241,7 +241,7 @@ def prepare_genome_metadata(
         input_file: Path to JSON file with genome metadata.
         output_file: Output directory where to generate the final `genome.json` file.
         gff3_file: Path to GFF3 file to use as annotation source for this genome.
-        base_api_url: Base API URL to fetch the accession's taxonomy data from.
+        base_api_url: Base API URL to fetch the taxonomy data from.
 
     """
     genome_data = get_json(input_file)
@@ -268,7 +268,7 @@ def main() -> None:
     )
     parser.add_argument_src_path("--gff3_file", help="GFF3 file to use as annotation source")
     parser.add_argument(
-        "--base_api_url", default=DEFAULT_API_URL, help="API URL to fetch the accession's taxonomy data from"
+        "--base_api_url", default=DEFAULT_API_URL, help="API URL to fetch the taxonomy data from"
     )
     args = parser.parse_args()
 

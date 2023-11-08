@@ -232,7 +232,7 @@ def main() -> None:
             "release, date"
         ),
     )
-    parser.add_argument("--update", action="store_true", help="Make changes to the database?")
+    parser.add_argument("--update", action="store_true", help="Make changes to the database")
     args = parser.parse_args()
 
     # Start

@@ -927,7 +927,7 @@ def main() -> None:
     parser.add_argument_src_path("--in_gff_path", required=True, help="Input GFF3 file")
     parser.add_argument_src_path("--genome_data", required=True, help="Genome JSON file")
     parser.add_argument(
-        "--make_missing_stable_ids", action="store_true", help="Generate stable IDs when missing or invalid?"
+        "--make_missing_stable_ids", action="store_true", help="Generate stable IDs when missing or invalid"
     )
     parser.add_argument_dst_path("--out_gff_path", default=Path("gene_models.gff3"), help="Output GFF3 file")
     parser.add_argument_dst_path(
