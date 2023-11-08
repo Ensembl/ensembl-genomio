@@ -58,16 +58,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
+cicd = [
     "black",
     "coverage",
     "genbadge[coverage]",
-    "mock",
     "mypy",
     "pylint",
     "pytest",
     "pytest-workflow",
-    "Sphinx",
     "types-requests",
 ]
 doc = [

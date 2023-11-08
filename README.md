@@ -43,16 +43,16 @@ If you need to install "editable" python package use '-e' option
 pip install -e ./ensembl-genomio
 ```
 
-To install additional dependencies (e.g. `[doc]` or `[dev]`) provide `[<tag>]` string. I.e.
+To install additional dependencies (e.g. `[doc]` or `[cicd]`) provide `[<tag>]` string. I.e.
 ```
-pip install -e ./ensembl-genomio[dev]
+pip install -e ./ensembl-genomio[doc]
 ```
 
 For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](./pyproject.toml). 
 
 
 ### Additional steps to use automated generation of the documentation (part of it)
-Install python part with the `[doc]` or `[dev]` tag.
+Install python part with the `[doc]` tag.
 Change into repo dir
 Run doc build script.
 
@@ -139,7 +139,7 @@ Though, this bit is in constant development. Some documentatin can be found in [
 See [docs](docs)
 
 ## Unit testing
-The Python part of the codebase has now unit tests available to test each module. Make sure you have installed this repository's `[dev]` dependencies (via `pip install ensembl-genomio[dev]`) before continuing.
+The Python part of the codebase has now unit tests available to test each module. Make sure you have installed this repository's `[cicd]` dependencies (via `pip install ensembl-genomio[cicd]`) before continuing.
 
 Running all the tests in one go is as easy as running `pytest` **from the root of the repository**. If you also want to measure, collect and report the code coverage, you can do:
 ```bash
