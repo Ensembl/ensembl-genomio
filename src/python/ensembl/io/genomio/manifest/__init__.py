@@ -12,4 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Schemas module."""
+"""GenomIO manifest handling modules."""
+
+from .check_integrity import *
+from .compute_stats import *
+from .generate import *

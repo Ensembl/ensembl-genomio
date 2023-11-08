@@ -12,9 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Core database interface modules."""
 
-"""GenomIO prepare modules."""
-
-from .prepare_genome import *
-from .prepare_seq_region import *
-from .update_genome_metadata import *
+from .factory import *

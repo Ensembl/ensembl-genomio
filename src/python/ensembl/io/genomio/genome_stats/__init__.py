@@ -12,4 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Schemas module."""
+"""GenomIO genome statistics handling modules."""
+
+from .compare_stats import *
+from .dump_stats import *

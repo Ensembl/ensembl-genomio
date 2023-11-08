@@ -12,7 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""GenomIO genome metadata handling modules."""
 
-"""GenomIO FASTA preparation modules."""
-
-from .process_fasta import *
+from .dump import *
+from .prepare import *
+from .extend import *
