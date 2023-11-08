@@ -14,4 +14,4 @@
 # limitations under the License.
 """GenomIO FASTA preparation modules."""
 
-from .process_fasta import *
+from .process import *

@@ -15,4 +15,4 @@
 
 """GenomIO assembly preparation modules."""
 
-from .get_assembly_data import *
+from .download import *

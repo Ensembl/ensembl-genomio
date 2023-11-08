@@ -14,5 +14,5 @@
 # limitations under the License.
 """GenomIO GFF3 modules."""
 
-from .functional_annotation import *
+from .extract_annotation import *
 from .process_gff3 import *

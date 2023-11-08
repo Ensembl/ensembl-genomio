@@ -14,5 +14,5 @@
 # limitations under the License.
 """GenomIO genome statistics handling modules."""
 
-from .compare_stats import *
-from .dump_stats import *
+from .compare import *
+from .dump import *
