@@ -13,32 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//default params
+// Default params
 params.help = false
 
-// mandatory params
+// Mandatory params
 params.accession = null
 params.prefix = null
 params.PROD_NAME = null
 
 // Print usage
 def helpMessage() {
-  log.info """
-        Usage:
-        The typical command for running the pipeline is as follows:
-        nextflow run add_seq_prepare.nf --accession "GENBANK_ACCESSION" --prefix "PREFIX_" --production_name "species_name"
+    log.info """
+Usage:
+  The typical command for running the pipeline is as follows:
+    nextflow run add_seq_prepare/main.nf --accession "GB_ACCESSION" \\
+      --prefix "PREFIX_" --production_name "SPECIES_PROD_NAME"
 
-        Mandatory arguments:
-        --accession                    A GenBank accession of the sequence you are adding
-        --prefix                       Required a string to add to the gene ids, to ensure that they are unique (include  PREFIX_)
-        --production_name              Production name of the species
+Mandatory arguments:
+  --accession        GenBank accession of the sequence you are adding
+  --prefix           String to prepend to the gene IDs to ensure that they are unique
+  --production_name  Production name of the species
 
-       Optional arguments:
-        --output_dir                   Output directory to place final output
-        --cache_dir                    Cache directory for downloaded files
-        --help                         This usage statement.
-        --brc_mode                     Set to 1 to use with BRC data (default: ${params.brc_mode})
-        """
+Optional arguments:
+  --help             Show this help message and exit
+  --output_dir       Output directory to place final formatted files
+  --cache_dir        Cache directory for downloaded files
+  --brc_mode         Set to 1 to use with BRC data (default: ${params.brc_mode})
+    """
 }
 
 // Show help message
