@@ -29,7 +29,7 @@ from typing import ContextManager
 
 import pytest
 
-from ensembl.io.genomio.integrity import IntegrityTool, Manifest
+from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, Manifest
 
 
 class TestIntegrity:
