@@ -27,7 +27,7 @@ process CHECK_INTEGRITY {
         tuple val(meta), path(manifest_files)
 
     shell:
-        brc_mode = params.brc_mode ? '--brc_mode 1' : ''
+        brc_mode = params.brc_mode ? '--brc_mode' : ''
         '''
         check_integrity --manifest_file ./manifest.json !{brc_mode}
         '''

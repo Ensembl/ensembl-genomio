@@ -16,28 +16,13 @@
 
 __all__ = ["json_schema_factory"]
 
-import ast
 import json
 from os import PathLike
 from pathlib import Path
 import shutil
 from typing import List
 
-import argschema
-
-
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    manifest_dir = argschema.fields.InputDir(
-        required=True, metadata={"description": "Folder containing the 'manifest.json' file to check"}
-    )
-    metadata_types = argschema.fields.String(
-        required=True, metadata={"description": "Metadata types to extract (in a list-like string)"}
-    )
-    output_dir = argschema.fields.InputDir(
-        required=False, default=".", metadata={"description": "Folder to store the produced files"}
-    )
+from ensembl.utils.argparse import ArgumentParser
 
 
 def json_schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir: PathLike) -> None:
@@ -78,7 +63,18 @@ def json_schema_factory(manifest_dir: PathLike, metadata_types: List[str], outpu
 
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    # mod.args["metadata_types"] will be a list-like string that needs to be parsed to List[str]
-    metadata_types = ast.literal_eval(mod.args["metadata_types"])
-    json_schema_factory(mod.args["manifest_dir"], metadata_types, mod.args["output_dir"])
+    parser = ArgumentParser(
+        description="Generates one JSON file per metadata type in the provided manifest, including itself."
+    )
+    parser.add_argument_src_path(
+        "--manifest_dir", required=True, help="Folder containing the 'manifest.json' file to check"
+    )
+    parser.add_argument(
+        "--metadata_types", required=True, nargs="+", metavar="TYPE", help="Metadata types to extract"
+    )
+    parser.add_argument_dst_path(
+        "--output_dir", default=Path.cwd(), help="Folder to store the produced files"
+    )
+    args = parser.parse_args()
+
+    json_schema_factory(**vars(args))

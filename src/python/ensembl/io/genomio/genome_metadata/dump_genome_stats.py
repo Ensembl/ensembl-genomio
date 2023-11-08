@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -13,22 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates a JSON file representing various stats for the assembly and annotation from a core db.
-"""
+"""Generates a JSON file representing various stats for the assembly and annotation from a core db."""
 
 __all__ = ["StatsGenerator"]
 
 import json
-from pathlib import Path
 from typing import Any, Dict
 
-import argschema
 from sqlalchemy import select, func
-from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
-from ensembl.database import DBConnection
 from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
+from ensembl.database import DBConnection
+from ensembl.utils.argparse import ArgumentParser
 
 
 class StatsGenerator:
@@ -136,44 +132,21 @@ class StatsGenerator:
         return all_stats
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    # Server parameters
-    host = argschema.fields.String(
-        required=True, metadata={"description": "Host to the server with EnsEMBL databases"}
-    )
-    port = argschema.fields.Integer(required=True, metadata={"description": "Port to use"})
-    user = argschema.fields.String(required=True, metadata={"description": "User to use"})
-    password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
-    database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    args = mod.args
-
-    db_url = URL.create(
-        "mysql",
-        mod.args["user"],
-        mod.args.get("password"),
-        mod.args["host"],
-        mod.args["port"],
-        mod.args["database"],
+    parser = ArgumentParser(
+        description="Fetch all the sequence regions from a core database and print them in JSON format."
     )
-    dbc = DBConnection(db_url)
+    parser.add_server_arguments(include_database=True)
+    args = parser.parse_args()
+
+    dbc = DBConnection(args.url)
 
     with dbc.session_scope() as session:
         generator = StatsGenerator(session)
         all_stats = generator.get_stats()
 
-    if args.get("output_json"):
-        output_file = Path(args.get("output_json"))
-        with output_file.open("w") as output_fh:
-            output_fh.write(json.dumps(all_stats, indent=2, sort_keys=True))
-    else:
-        print(json.dumps(all_stats, indent=2, sort_keys=True))
+    print(json.dumps(all_stats, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

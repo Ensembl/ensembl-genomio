@@ -37,21 +37,18 @@ __all__ = [
     "report_to_csv",
 ]
 
-import ast
 import csv
 from os import PathLike
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-import argschema
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
-from marshmallow import post_load
 import requests
 
-from ensembl.io.genomio.utils import get_json, print_json
-from ensembl.io.genomio.utils.archive_utils import open_gz_file
+from ensembl.io.genomio.utils import get_json, open_gz_file, print_json
+from ensembl.utils.argparse import ArgumentParser
 
 
 # Definition of SeqRegion types
@@ -438,9 +435,9 @@ def report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
 def prepare_seq_region_metadata(
     genome_file: PathLike,
     report_file: PathLike,
-    gbff_file: Optional[PathLike],
     dst_dir: PathLike,
-    brc4_mode: bool = True,
+    gbff_file: Optional[PathLike] = None,
+    brc_mode: bool = False,
     to_exclude: Optional[List[str]] = None,
 ) -> None:
     """Prepares the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
@@ -452,9 +449,9 @@ def prepare_seq_region_metadata(
     Args:
         genome_file: Genome metadata JSON file path.
         report_file: INSDC/RefSeq sequences report file path to parse.
-        gbff_file: INSDC/RefSeq GBFF file path to parse.
         dst_dir: Output folder for the processed sequence regions JSON file.
-        brc4_mode: Include INSDC sequence region names?
+        gbff_file: INSDC/RefSeq GBFF file path to parse.
+        brc_mode: Include INSDC sequence region names.
         to_exclude: Sequence region names to exclude.
 
     """
@@ -477,7 +474,7 @@ def prepare_seq_region_metadata(
     if to_exclude is not None:
         seq_regions = exclude_seq_regions(seq_regions, to_exclude)
     # Setup the BRC4_seq_region_name
-    if brc4_mode:
+    if brc_mode:
         seq_regions = add_insdc_seq_region_name(seq_regions)
     # Add translation and mitochondrial codon tables
     add_translation_table(seq_regions)
@@ -486,59 +483,21 @@ def prepare_seq_region_metadata(
     print_json(final_path, seq_regions)
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by the entry point of this module."""
-
-    genome_file = argschema.fields.InputFile(
-        required=True, metadata={"description": "Genome metadata JSON file path"}
-    )
-    report_file = argschema.fields.InputFile(
-        required=True, metadata={"description": "INSDC/RefSeq sequences report file path to parse"}
-    )
-    gbff_file = argschema.fields.InputFile(
-        required=False,
-        allow_none=True,
-        default=None,
-        metadata={"description": "INSDC/RefSeq GBFF file path to parse"},
-    )
-    dst_dir = argschema.fields.OutputDir(
-        required=False,
-        default=".",
-        metadata={"description": "Output folder for the processed sequence regions JSON file"},
-    )
-    brc4_mode = argschema.fields.Boolean(
-        required=False, default=True, metadata={"description": "Include INSDC sequence region names"}
-    )
-    to_exclude = argschema.fields.String(
-        required=False,
-        default="None",
-        metadata={"description": "Sequence region names to exclude, in a list-like string"},
-    )
-
-    @post_load
-    def reformat_args(
-        self, data: Dict[str, Any], **kwargs  # pylint: disable=unused-argument
-    ) -> Dict[str, Any]:
-        """Processes arguments to may need additional parsing after being correctly loaded.
-
-        Args:
-            data: Loaded arguments.
-            **kwargs: Arbitrary keyword arguments.
-
-        """
-        # "to_exclude" argument will be a list-like string that needs to be parsed into a list
-        data["to_exclude"] = ast.literal_eval(data["to_exclude"])
-        return data
-
-
 def main() -> None:
     """Module's entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    prepare_seq_region_metadata(
-        mod.args["genome_file"],
-        mod.args["report_file"],
-        mod.args["gbff_file"],
-        mod.args["dst_dir"],
-        mod.args["brc4_mode"],
-        mod.args["to_exclude"],
+    parser = ArgumentParser(description="Construct a sequence region metadata file from INSDC files.")
+    parser.add_argument_src_path("--genome_file", required=True, help="Genome metadata JSON file")
+    parser.add_argument_src_path(
+        "--report_file", required=True, help="INSDC/RefSeq sequences report file to parse"
     )
+    parser.add_argument_src_path("--gbff_file", help="INSDC/RefSeq GBFF file to parse")
+    parser.add_argument_dst_path(
+        "--dst_dir", default=Path.cwd(), help="Output folder for the processed sequence regions JSON file"
+    )
+    parser.add_argument("--brc_mode", action="store_true", help="Enable BRC mode")
+    parser.add_argument(
+        "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
+    )
+    args = parser.parse_args()
+
+    prepare_seq_region_metadata(**vars(args))

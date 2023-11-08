@@ -35,10 +35,10 @@ from typing import Dict, Optional
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
-import argschema
 import requests
 
 from ensembl.io.genomio.utils import get_json, print_json
+from ensembl.utils.argparse import ArgumentParser
 
 
 PROVIDER_DATA = {
@@ -151,7 +151,7 @@ def add_species_metadata(genome_data: Dict, base_api_url: str = DEFAULT_API_URL)
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
-        base_api_url: Base API URL to fetch the accession's taxonomy data from.
+        base_api_url: Base API URL to fetch the taxonomy data from.
 
     """
     species = genome_data["species"]
@@ -170,7 +170,7 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
 
     Args:
         accession: INSDC accession ID.
-        base_api_url: Base API URL to fetch the accession's taxonomy data from.
+        base_api_url: Base API URL to fetch the taxonomy data from.
 
     Returns:
         Dictionary with key-value pairs for ``taxon_id`` and ``scientific_name``. ``strain`` will be added
@@ -227,8 +227,8 @@ def _get_node_text(node: Element, tag: str, optional: bool = False) -> Optional[
 
 
 def prepare_genome_metadata(
-    input_path: PathLike,
-    output_path: PathLike,
+    input_file: PathLike,
+    output_file: PathLike,
     gff3_file: Optional[PathLike] = None,
     base_api_url: str = DEFAULT_API_URL,
 ) -> None:
@@ -238,34 +238,38 @@ def prepare_genome_metadata(
     and the taxonomy.
 
     Args:
-        json_file: Path to JSON file with genome metadata.
-        output_dir: Output directory where to generate the final `genome.json` file.
+        input_file: Path to JSON file with genome metadata.
+        output_file: Output directory where to generate the final `genome.json` file.
         gff3_file: Path to GFF3 file to use as annotation source for this genome.
-        base_api_url: Base API URL to fetch the accession's taxonomy data from.
+        base_api_url: Base API URL to fetch the taxonomy data from.
 
     """
-    genome_data = get_json(input_path)
+    genome_data = get_json(input_file)
     # Amend any missing metadata
     add_provider(genome_data, gff3_file)
     add_assembly_version(genome_data)
     add_genebuild_metadata(genome_data)
     add_species_metadata(genome_data, base_api_url)
     # Dump updated genome metadata
-    print_json(output_path, genome_data)
-
-
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by the entry point of this module."""
-
-    input_path = argschema.fields.InputFile(
-        required=True, metadata={"description": "Genome metadata JSON file path"}
-    )
-    output_path = argschema.fields.OutputFile(
-        metadata={"description": "Output path for the new genome metadata file."},
-    )
+    print_json(output_file, genome_data)
 
 
 def main() -> None:
     """Module's entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    prepare_genome_metadata(mod.args["input_path"], mod.args["output_path"])
+    parser = ArgumentParser(
+        description=(
+            "Add information about provider, taxonomy and assembly and gene build version to the genome "
+            "metadata file."
+        )
+    )
+    parser.add_argument_src_path("--input_file", required=True, help="Genome metadata JSON file")
+    parser.add_argument_dst_path(
+        "--output_file", required=True, help="Output path for the new genome metadata file"
+    )
+    parser.add_argument_src_path("--gff3_file", help="GFF3 file to use as annotation source")
+    parser.add_argument(
+        "--base_api_url", default=DEFAULT_API_URL, help="API URL to fetch the taxonomy data from"
+    )
+    args = parser.parse_args()
+
+    prepare_genome_metadata(**vars(args))

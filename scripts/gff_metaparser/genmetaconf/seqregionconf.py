@@ -424,7 +424,7 @@ class SeqRegionConf:
             "genomic": "nuclear_chromosome",
             "mitochondrion": "mitochondrial_chromosome",
             "apicoplast": "apicoplast_chromosome",
-            "chloroplast":"chloroplast_chromosome",
+            "chloroplast": "chloroplast_chromosome",
         }
 
         if not location_type:

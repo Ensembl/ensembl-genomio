@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -19,48 +18,10 @@ Can be imported as a module and called as a script as well, with the same parame
 """
 
 import json
-from pathlib import Path
 from typing import Dict, List, Optional
 
-import argschema
-
 from ensembl.brc4.runnable.core_server import CoreServer
-
-
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    # Server parameters
-    host = argschema.fields.String(
-        metadata={"required": True, "description": "Host to the server with EnsEMBL databases"}
-    )
-    port = argschema.fields.Integer(metadata={"required": True, "description": "Port to use"})
-    host = argschema.fields.String(metadata={"required": True, "description": "Host to use"})
-    user = argschema.fields.String(metadata={"required": True, "description": "User to use"})
-    password = argschema.fields.String(metadata={"required": False, "description": "Password to use"})
-
-    # Filters
-    prefix = argschema.fields.String(
-        metadata={"required": False, "description": "Prefix to filter the databases"}
-    )
-    build = argschema.fields.String(
-        metadata={"required": False, "description": "Build to filter the databases"}
-    )
-    version = argschema.fields.String(
-        metadata={"required": False, "description": "EnsEMBL version to filter the databases"}
-    )
-    brc_mode = argschema.fields.Boolean(
-        metadata={
-            "required": False,
-            "description": "BRC4 mode: use organism_abbrev for species, component for division",
-        }
-    )
-    dbname_re = argschema.fields.String(
-        metadata={
-            "required": False,
-            "description": "regexp to match db name against",
-        }
-    )
+from ensembl.utils.argparse import ArgumentParser
 
 
 def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
@@ -77,7 +38,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
         List of dictionaries with 3 keys: "database", "species" and "division".
 
     """
-    db_datas = []
+    databases_data = []
     for db in dbs:
         server.set_database(db)
         metadata = server.get_db_metadata()
@@ -101,8 +62,8 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
             "species": species,
             "division": division,
         }
-        db_datas.append(db_data)
-    return db_datas
+        databases_data.append(db_data)
+    return databases_data
 
 
 def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:
@@ -120,27 +81,29 @@ def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:
 
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-
-    server = CoreServer(
-        host=mod.args["host"], port=mod.args["port"], user=mod.args["user"], password=mod.args.get("password")
+    parser = ArgumentParser(
+        description="Get the metadata from a list of databases on a server (in JSON format)."
     )
+    parser.add_server_arguments()
+    # Add filter arguments
+    parser.add_argument("--prefix", default="", help="Prefix to filter the databases")
+    parser.add_argument("--build", default="", help="Build to filter the databases")
+    parser.add_argument("--version", default="", help="EnsEMBL version to filter the databases")
+    parser.add_argument("--db_regex", default="", help="Regular expression to match database names against")
+    # Add flags
+    parser.add_argument(
+        "--brc_mode",
+        action="store_true",
+        help="Enable BRC mode, i.e. use organism_abbrev for species, component for division",
+    )
+    args = parser.parse_args()
 
-    prefix = mod.args.get("prefix")
-    dbname_re = mod.args.get("dbname_re")
-    build = mod.args.get("build")
-    version = mod.args.get("version")
-    dbs = server.get_cores(prefix=prefix, build=build, version=version, dbname_re=dbname_re)
-
-    brc_mode = mod.args.get("brc_mode")
-    dbs_data = format_db_data(server, dbs, brc_mode)
-
-    if mod.args.get("output_json"):
-        output_file = Path(mod.args.get("output_json"))
-        with output_file.open("w") as output_fh:
-            output_fh.write(json.dumps(dbs_data, indent=2))
-    else:
-        print(dbs)
+    server = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
+    databases = server.get_cores(
+        prefix=args.prefix, build=args.build, version=args.version, dbname_re=args.db_regex
+    )
+    databases_data = format_db_data(server, databases, args.brc_mode)
+    print(json.dumps(databases_data, sort_keys=True, indent=4))
 
 
 if __name__ == "__main__":

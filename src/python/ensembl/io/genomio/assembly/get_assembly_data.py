@@ -35,7 +35,7 @@ import re
 import time
 from typing import Dict
 
-import argschema
+from ensembl.utils.argparse import ArgumentParser
 
 
 _FILE_ENDS = {
@@ -142,6 +142,7 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
 def _download_file(
     ftp_conn: FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
 ) -> None:
+    """TODO"""
     has_md5 = True
     expected_sum = ""
     if not ftp_file in md5_sums:
@@ -222,18 +223,21 @@ def get_root_name(dl_dir: Path) -> str:
 
 def retrieve_assembly_data(
     accession: str,
-    asm_download_dir: PathLike,
+    download_dir: PathLike,
     max_increment: int = 0,
     max_redo: int = 3,
 ) -> None:
-    """
+    """TODO
+
     Args:
         accession: Genome Assembly accession
-        asm_download_dir: Path to directory used to store retrieved
+        download_dir: Path to directory used to store retrieved
         max_increment: If you want to allow assembly versions
         max_redo: Set max number of times to retry downloading a file
+
     """
-    download_dir = Path(asm_download_dir)
+    download_path = Path(download_dir)
+    download_dir = download_path / accession
 
     # Configure logging
     log_file = f"{accession}_download.log"
@@ -250,14 +254,13 @@ def retrieve_assembly_data(
     if not md5_files(download_dir):
         logging.info(" Download the files")
 
-        # max_increment = self.param("max_increment")
-
         for increment in range(0, max_increment + 1):
             if increment > 0:
                 logging.info(f" Increment accession version once from {accession}")
                 version = int(accession[-1])
                 version += 1
                 accession = accession[:-1] + str(version)
+                download_dir = download_path / accession
                 download_dir.mkdir(parents=True, exist_ok=True)
             download_files(accession, download_dir, max_redo)
 
@@ -271,16 +274,13 @@ def retrieve_assembly_data(
         raise FileDownloadError("No file downloaded")
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by the entry point of this module."""
-
-    accession = argschema.fields.String(required=True, metadata={"descriptions": "Genome assembly accession"})
-    asm_download_dir = argschema.fields.OutputDir(
-        required=True, metadata={"description": "Path to folder where data will be downloaded"}
-    )
-
-
 def main() -> None:
     """Module's entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    retrieve_assembly_data(mod.args["accession"], mod.args["asm_download_dir"])
+    parser = ArgumentParser(description="Download an assembly data files from INSDC or RefSeq.")
+    parser.add_argument("--accession", required=True, help="Genome assembly accession")
+    parser.add_argument_dst_path(
+        "--download_dir", default=Path.cwd(), help="Folder where the data will be downloaded"
+    )
+    args = parser.parse_args()
+
+    retrieve_assembly_data(**vars(args))

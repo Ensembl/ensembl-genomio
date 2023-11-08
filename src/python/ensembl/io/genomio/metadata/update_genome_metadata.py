@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -29,11 +28,10 @@ from pathlib import Path
 import re
 from typing import List, Tuple, Optional
 
-import argschema
 from Bio import SeqIO
 
-from ensembl.io.genomio.utils import print_json, get_json
-from ensembl.io.genomio.utils.archive_utils import open_gz_file
+from ensembl.io.genomio.utils import get_json, open_gz_file, print_json
+from ensembl.utils.argparse import ArgumentParser
 
 
 _VERSION_END = re.compile(r"\.\d+$")
@@ -49,7 +47,7 @@ class MissingDataError(Exception):
         self.msg = report_msg
 
 
-def get_additions(report_path: Path, gbff_path: Path) -> List[str]:
+def get_additions(report_path: Path, gbff_path: Optional[Path]) -> List[str]:
     """Returns all `seq_regions` that are mentioned in the report but that are not in the data.
 
     Args:
@@ -71,7 +69,7 @@ def get_additions(report_path: Path, gbff_path: Path) -> List[str]:
     return additions
 
 
-def get_gbff_regions(gbff_path: Path) -> List[str]:
+def get_gbff_regions(gbff_path: Optional[Path]) -> List[str]:
     """Returns the `seq_region` data from the GBFF file.
 
     Args:
@@ -95,9 +93,9 @@ def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
         report_path: Path to a `seq_region` file from INSDC/RefSeq.
 
     """
+    data = ""
+    metadata = {}
     with report_path.open("r") as report:
-        data = ""
-        metadata = {}
         last_head = ""
         for line in report:
             # Ignore header
@@ -112,7 +110,7 @@ def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
                 data += last_head[2:].strip() + "\n"
                 last_head = ""
             data += line
-        return data, metadata
+    return data, metadata
 
 
 def get_report_regions_names(report_path: Path) -> List[Tuple[str, str]]:
@@ -146,70 +144,43 @@ def get_report_regions_names(report_path: Path) -> List[Tuple[str, str]]:
 def amend_genomic_metadata(
     genome_infile: PathLike,
     genome_outfile: PathLike,
-    insdc_refseq_report_infile: PathLike,
-    genbank_infile: PathLike,
-    brc4_mode: Optional[int] = 1,
-) -> Path:
+    report_file: Optional[PathLike] = None,
+    genbank_infile: Optional[PathLike] = None,
+) -> None:
     """
     Args:
         genome_infile: Genome data following the schemas/genome_schema.json.
         genome_outfile: Amended genome data file.
-        output_dir: Directory where the new file will be created.
-        INSDC_RefSeq_report_infile: Path to the INSDC/RefSeq sequences report to parse.
-        genbank_infile: Path to the INSDC/RefSeq gbff file to parse.
-        brc4_mode: Activate BRC4 mode (default).
+        report_file: INSDC/RefSeq sequences report file.
+        genbank_infile: INSDC/RefSeq GBFF file.
     """
     genome_metadata = get_json(genome_infile)
 
     # Get additional sequences in the assembly but not in the data
-    additions = get_additions(Path(insdc_refseq_report_infile), Path(genbank_infile))
-    if additions:
-        genome_metadata["added_seq"] = {"region_name": additions}
-
-    # Possible brc specific
-    if brc4_mode:
-        pass
+    if report_file:
+        gbff_path = Path(genbank_infile) if genbank_infile else None
+        additions = get_additions(Path(report_file), gbff_path)
+        if additions:
+            genome_metadata["added_seq"] = {"region_name": additions}
 
     # Print out the file
     genome_outfile = Path(genome_outfile)
     print_json(genome_outfile, genome_metadata)
 
-    return genome_outfile
-
-
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by the entry point of this module."""
-
-    genome_infile = argschema.fields.InputFile(
-        required=True, metadata={"description": "Input Genome data. Following the schemas/genome_schema.json"}
-    )
-    genome_outfile = argschema.fields.OutputFile(
-        required=True, metadata={"description": "Path to the new amended genome metadata file."}
-    )
-    INSDC_RefSeq_report_infile = argschema.fields.InputFile(
-        required=False, metadata={"description": "Path to the INSDC/RefSeq sequences report to parse"}
-    )
-    genbank_infile = argschema.fields.InputFile(
-        required=False, metadata={"description": "Path to the INSDC/RefSeq gbff file to parse"}
-    )
-    brc4_mode = argschema.fields.Int(required=False, metadata={"description": "Activate BRC4 mode (default)"})
-    json_outfile = argschema.fields.OutputFile(
-        required=False,
-        default="amend_genome_meta.json",
-        metadata={"description": "Default json file to capture json metadata"},
-    )
-
 
 def main() -> None:
     """Module's entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    amended_genome_file = amend_genomic_metadata(
-        mod.args["genome_infile"],
-        mod.args["genome_outfile"],
-        mod.args["INSDC_RefSeq_report_infile"],
-        mod.args["genbank_infile"],
-        mod.args["brc4_mode"],
+    parser = ArgumentParser(
+        description="Update genome metadata file to include additional sequence regions (e.g. MT chromosome)."
     )
-    # Flow out the file and type
-    output = {"metadata_type": "genome", "metadata_json": str(amended_genome_file)}
-    print_json(mod.args["json_outfile"], output)
+    parser.add_argument_src_path(
+        "--genome_infile", required=True, help="Input genome file (following the schemas/genome_schema.json)"
+    )
+    parser.add_argument_dst_path(
+        "--genome_outfile", required=True, help="Path to the new amended genome metadata file"
+    )
+    parser.add_argument_src_path("--report_file", help="INSDC/RefSeq sequences report file")
+    parser.add_argument_src_path("--genbank_infile", help="INSDC/RefSeq GBFF file")
+    args = parser.parse_args()
+
+    amend_genomic_metadata(**vars(args))

@@ -26,8 +26,9 @@ process AMEND_GENOME_DATA {
     
     shell:
         '''
-        amend_genomic_data --genome_infile !{genome_json} --genome_outfile genome.json \
-            --INSDC_RefSeq_report_infile !{asm_report} --genbank_infile !{genbank_gbff} \
-            --brc4_mode !{params.brc_mode}
+        amend_genomic_data --genome_infile !{genome_json} \
+            --report_file !{asm_report} \
+            --genbank_infile !{genbank_gbff} \
+            --genome_outfile genome.json
         '''
 }

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -13,14 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Creates a manifest file in a folder depending on the file names ends.
-"""
+"""Creates a manifest file in a folder depending on the file names ends."""
 
 import hashlib
 import json
 from pathlib import Path
 
-import argschema
+from ensembl.utils.argparse import ArgumentParser
 
 
 class ManifestMaker:
@@ -93,26 +91,18 @@ class ManifestMaker:
             return hashlib.md5(data_bytes).hexdigest()
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    # Server parameters
-    manifest_dir = argschema.fields.files.InputDir(
-        required=True, metadata={"description": "Folder where to create a manifest file."}
-    )
-
-
 def main() -> None:
     """Main entrypoint."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
+    parser = ArgumentParser(
+        description="Compare the genomic data between the files present in a manifest file."
+    )
+    parser.add_argument_dst_path(
+        "--manifest_dir", required=True, help="Folder where to create a manifest file"
+    )
+    args = parser.parse_args()
 
-    maker = ManifestMaker(Path(mod.args["manifest_dir"]))
-    manifest_path = maker.create_manifest()
-
-    if mod.args.get("output_json"):
-        out_data = {"manifest_path": str(manifest_path)}
-        with Path(mod.args["output_json"]).open("w") as output_fh:
-            output_fh.write(json.dumps(out_data))
+    maker = ManifestMaker(args.manifest_dir)
+    maker.create_manifest()
 
 
 if __name__ == "__main__":

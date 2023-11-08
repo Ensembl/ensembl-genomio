@@ -23,19 +23,18 @@ __all__ = [
 ]
 
 from collections import Counter
+import json
 from os import PathLike
 from pathlib import Path
 import re
 from typing import Dict, List, Optional
-
-import json
-import argschema
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
 from ensembl.io.genomio.gff3.functional_annotation import FunctionalAnnotations
+from ensembl.utils.argparse import ArgumentParser
 
 
 class Records(list):
@@ -353,9 +352,9 @@ class GFFSimplifier(GFFParserCommon):
             standard_name = transcript.qualifiers["standard_name"][0]
             biotype = transcript.type.replace("_segment", "")
             if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
-                biotype = f'IG_{biotype}'
+                biotype = f"IG_{biotype}"
             elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
-                biotype = f'TR_{biotype}'
+                biotype = f"TR_{biotype}"
             else:
                 print(f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}")
                 return transcript
@@ -639,6 +638,7 @@ class GFFSimplifier(GFFParserCommon):
 
         Args:
             A gene with only one transcript, to check and fix.
+
         Returns:
             The gene where the CDSs have been moved, if needed.
 
@@ -916,48 +916,46 @@ class GFFSimplifier(GFFParserCommon):
         return identifier
 
 
-class InputSchema(argschema.ArgSchema):
-    """Standardize the gene model representation of a GFF3 file, and extract the functional annotation
-    in a separate file. Input arguments expected by this script:
-    """
-
-    in_gff_path = argschema.fields.InputFile(required=True, metadata={"description": "Input gene.gff3 path"})
-    genome_data = argschema.fields.InputFile(metadata={"description": "genome.json path"})
-    make_missing_stable_ids = argschema.fields.Boolean(
-        default=True, metadata={"description": "Generate and add stable IDs when missing or invalid?"}
-    )
-    out_gff_path = argschema.fields.OutputFile(
-        default="gene_models.gff3", metadata={"description": "Output gff path"}
-    )
-    out_func_path = argschema.fields.OutputFile(
-        default="functional_annotation.json",
-        metadata={"description": "Output functional_annotation.json path"},
-    )
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-
-    in_gff_path = mod.args["in_gff_path"]
+    parser = ArgumentParser(
+        description=(
+            "Standardize the gene model representation of a GFF3 file, and extract the functional "
+            "annotation in a separate file."
+        )
+    )
+    parser.add_argument_src_path("--in_gff_path", required=True, help="Input GFF3 file")
+    parser.add_argument_src_path("--genome_data", required=True, help="Genome JSON file")
+    parser.add_argument(
+        "--make_missing_stable_ids", action="store_true", help="Generate stable IDs when missing or invalid"
+    )
+    parser.add_argument_dst_path("--out_gff_path", default=Path("gene_models.gff3"), help="Output GFF3 file")
+    parser.add_argument_dst_path(
+        "--out_func_path",
+        default=Path("functional_annotation.json"),
+        help="Output functional annotation JSON file",
+    )
+    args = parser.parse_args()
 
     # Merge multiline gene features in a separate file
-    interim_gff_path = Path(f"{in_gff_path}_INTERIM_MERGE")
+    interim_gff_path = Path(f"{args.in_gff_path}_INTERIM_MERGE")
     merger = GFFGeneMerger()
-    merged_genes = merger.merge(in_gff_path, interim_gff_path)
+    merged_genes = merger.merge(args.in_gff_path, interim_gff_path)
     num_merged_genes = len(merged_genes)
+    in_gff_path = args.in_gff_path
+    # If there are split genes, decide to merge, or just die
     if num_merged_genes > 0:
         # Report the list of merged genes in case something does not look right
         print(f"{num_merged_genes} genes merged:\n" + "\n".join(merged_genes))
         # Use the GFF with the merged genes for the next part
         in_gff_path = interim_gff_path
 
-    # Load gff3 data and write a simpler version that follows our specifications
-    # as well as a functional_annotation json file
-    gff_data = GFFSimplifier(mod.args.get("genome_data"), mod.args["make_missing_stable_ids"])
+    # Load GFF3 data and write a simpler version that follows our specifications as well as a
+    # functional annotation JSON file
+    gff_data = GFFSimplifier(args.genome_data, args.make_missing_stable_ids)
     gff_data.simpler_gff3(in_gff_path)
-    gff_data.records.to_gff(mod.args["out_gff_path"])
-    gff_data.annotations.to_json(mod.args["out_func_path"])
+    gff_data.records.to_gff(args.out_gff_path)
+    gff_data.annotations.to_json(args.out_func_path)
 
 
 if __name__ == "__main__":

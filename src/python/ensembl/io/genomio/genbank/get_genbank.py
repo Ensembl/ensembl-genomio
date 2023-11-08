@@ -12,20 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Download a Genbank file from NCBI from an accession.
-
-Raises:
-    DownloadError: if the download fails
-"""
+"""Download a Genbank file from NCBI from an accession."""
 
 __all__ = ["DownloadError", "download_genbank"]
 
 from os import PathLike
 from pathlib import Path
 
-import argschema
 import requests
+
+from ensembl.utils.argparse import ArgumentParser
 
 
 class DownloadError(Exception):
@@ -35,13 +31,18 @@ class DownloadError(Exception):
         self.msg = msg
 
 
-def download_genbank(accession: str, output_gb: PathLike) -> None:
-    """
-    Given a GenBank accession, download via NCBI Entrez service the corresponding file in GenBank format.
+def download_genbank(accession: str, output_file: PathLike) -> None:
+    """Given a GenBank accession, download the corresponding file in GenBank format.
+
+    Uses NCBI Entrez service to fetch the data.
 
     Args:
         accession: INSDC Genbank record accession.
-        output_gb: Path to the downloaded record in Genbank format.
+        output_file: Path to the downloaded record in Genbank format.
+
+    Raises:
+        DownloadError: If the download fails.
+
     """
 
     # Get the list of assemblies for this accession
@@ -54,30 +55,21 @@ def download_genbank(accession: str, output_gb: PathLike) -> None:
     entrez_params["id"] = accession
     result = requests.get(entrez_url, params=entrez_params, timeout=60)
     if result and result.status_code == 200:
-        with Path(output_gb).open("wb") as gbff:
+        with Path(output_file).open("wb") as gbff:
             gbff.write(result.content)
-        print(f"GBF file write to {output_gb}")
+        print(f"GBF file write to {output_file}")
         return
     raise DownloadError(f"Could not download the genbank ({accession}) file: {result}")
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    accession = argschema.fields.String(
-        metadata={"required": True, "description": "Sequence accession required"}
-    )
-    output_file = argschema.fields.OutputFile(
-        metadata={"required": True, "description": "Output Genbank path"}
-    )
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    accession = mod.args["accession"]
-    output_file = mod.args["output_file"]
-    download_genbank(accession, output_file)
+    parser = ArgumentParser(description="Download a sequence from GenBank.")
+    parser.add_argument("--accession", required=True, help="Sequence accession")
+    parser.add_argument_dst_path("--output_file", required=True, help="Output GenBank file")
+    args = parser.parse_args()
+
+    download_genbank(**vars(args))
 
 
 if __name__ == "__main__":

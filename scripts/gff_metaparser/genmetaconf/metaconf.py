@@ -32,7 +32,7 @@ from .seqregionconf import SeqRegionConf
 
 
 class MetaConf:
-    def __init__(self, config=None, add_generated_species_aliases = False):
+    def __init__(self, config=None, add_generated_species_aliases=False):
         self.tech_data = defaultdict(list)
         self._order = dict()
         self.data = defaultdict(list)

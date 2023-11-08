@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -13,22 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates a JSON file representing the genome metadata from a core database.
-"""
+"""Generates a JSON file representing the genome metadata from a core database."""
 
 __all__ = ["get_genome_metadata", "filter_genome_meta", "check_assembly_version"]
 
 import json
-from pathlib import Path
 from typing import Any, Dict
 
-import argschema
 from sqlalchemy import select
-from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
-from ensembl.database import DBConnection
 from ensembl.core.models import Meta
+from ensembl.database import DBConnection
+from ensembl.utils.argparse import ArgumentParser
 
 
 def get_genome_metadata(session: Session) -> Dict[str, Any]:
@@ -143,44 +139,21 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
             raise ValueError(f"Assembly version is not an integer in {assembly}")
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    # Server parameters
-    host = argschema.fields.String(
-        required=True, metadata={"description": "Host to the server with EnsEMBL databases"}
-    )
-    port = argschema.fields.Integer(required=True, metadata={"description": "Port to use"})
-    user = argschema.fields.String(required=True, metadata={"description": "User to use"})
-    password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
-    database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    args = mod.args
-
-    db_url = URL.create(
-        "mysql",
-        mod.args["user"],
-        mod.args.get("password"),
-        mod.args["host"],
-        mod.args["port"],
-        mod.args.get("database"),
+    parser = ArgumentParser(
+        description="Fetch the genome metadata from a core database and print it in JSON format."
     )
-    dbc = DBConnection(db_url)
+    parser.add_server_arguments(include_database=True)
+    args = parser.parse_args()
+
+    dbc = DBConnection(args.url)
 
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session)
         genome_meta = filter_genome_meta(genome_meta)
 
-    if args.get("output_json"):
-        output_file = Path(args.get("output_json"))
-        with output_file.open("w") as output_fh:
-            output_fh.write(json.dumps(genome_meta, indent=2, sort_keys=True))
-    else:
-        print(json.dumps(genome_meta, indent=2, sort_keys=True))
+    print(json.dumps(genome_meta, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

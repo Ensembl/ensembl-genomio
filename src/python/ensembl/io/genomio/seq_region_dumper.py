@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -13,22 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates one JSON file per metadata type inside `manifest`, including the manifest itself.
-
-Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
-"""
+"""Fetch all the sequence regions from a core database and print them in JSON format."""
 
 import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-import argschema
 from sqlalchemy import select
-from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session, joinedload
 
-from ensembl.database import DBConnection
 from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
+from ensembl.database import DBConnection
+from ensembl.utils.argparse import ArgumentParser
+
 
 ROOT_DIR = Path(__file__).parent / "../../../../.."
 DEFAULT_MAP = ROOT_DIR / "config/external_db_map/default.txt"
@@ -71,16 +67,14 @@ def get_coord_systems(session: Session) -> List[CoordSystem]:
 
 
 def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
-    """Retrieve the seq_region metadata from the current core.
-    Include synonyms, attribs and karyotypes.
-    Only the top level sequences are exported.
+    """Returns all the sequence regions from the current core database.
+
+    Include synonyms, attribs and karyotypes. Only the top level sequences are exported.
 
     Args:
         session (Session): Session from the current core.
         external_db_map (dict): Mapping of external_db names for the synonyms.
 
-    Returns:
-        List[SeqRegion]: All seq_regions in the core.
     """
     coord_systems = get_coord_systems(session)
     seq_regions = []
@@ -236,51 +230,26 @@ def get_karyotype(seq_region: SeqRegion) -> List:
     return kars
 
 
-class InputSchema(argschema.ArgSchema):
-    """Input arguments expected by this script."""
-
-    # Server parameters
-    host = argschema.fields.String(
-        required=True, metadata={"description": "Host to the server with EnsEMBL databases"}
-    )
-    port = argschema.fields.Integer(required=True, metadata={"description": "Port to use"})
-    user = argschema.fields.String(required=True, metadata={"description": "User to use"})
-    password = argschema.fields.String(required=False, metadata={"description": "Password to use"})
-    database = argschema.fields.String(required=True, metadata={"description": "Database to use"})
-    external_db_map = argschema.fields.files.InputFile(
-        required=False,
-        default=str(DEFAULT_MAP),
-        metadata={"description": "File with external_db mapping"},
-    )
-
-
 def main() -> None:
     """Main script entry-point."""
-    mod = argschema.ArgSchemaParser(schema_type=InputSchema)
-    args = mod.args
-
-    db_url = URL.create(
-        "mysql",
-        mod.args["user"],
-        mod.args.get("password"),
-        mod.args["host"],
-        mod.args["port"],
-        mod.args.get("database"),
+    parser = ArgumentParser(
+        description="Fetch all the sequence regions from a core database and print them in JSON format."
     )
-    dbc = DBConnection(db_url)
+    parser.add_server_arguments(include_database=True)
+    parser.add_argument_src_path(
+        "--external_db_map", default=DEFAULT_MAP.resolve(), help="File with external_db mapping"
+    )
+    args = parser.parse_args()
 
-    external_map_path = Path(mod.args.get("external_db_map"))
+    dbc = DBConnection(args.url)
+
+    external_map_path = Path(args.external_db_map)
     external_map = get_external_db_map(external_map_path)
 
     with dbc.session_scope() as session:
         seq_regions = get_seq_regions(session, external_map)
 
-    if args.get("output_json"):
-        output_file = Path(args.get("output_json"))
-        with output_file.open("w") as output_fh:
-            output_fh.write(json.dumps(seq_regions, indent=2, sort_keys=True))
-    else:
-        print(seq_regions)
+    print(json.dumps(seq_regions, indent=2))
 
 
 if __name__ == "__main__":

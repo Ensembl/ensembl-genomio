@@ -45,10 +45,10 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "argschema >= 3.0.4",
     "bcbio-gff == 0.7.0",
     "biopython == 1.81",
     "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
+    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v1.2.0
     "jsonschema >= 4.6.0",
     "importlib_resources",  # not needed from Python 3.9+
     "intervaltree >= 3.1.0",
@@ -61,7 +61,6 @@ dependencies = [
 dev = [
     "black",
     "coverage",
-    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",
     "genbadge[coverage]",
     "mock",
     "mypy",
@@ -164,9 +163,6 @@ warn_unused_configs = true
 addopts = "-v --tb=native --server=sqlite:///"
 testpaths = ["src/python/tests"]
 norecursedirs = ["data", "docs", "*.egg_info"]
-filterwarnings = [
-    "ignore::DeprecationWarning:argschema",
-]
 
 [tool.coverage.run]
 branch = true
