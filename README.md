@@ -43,16 +43,16 @@ If you need to install "editable" python package use '-e' option
 pip install -e ./ensembl-genomio
 ```
 
-To install additional dependencies (e.g. `[doc]` or `[dev]`) provide `[<tag>]` string. I.e.
+To install additional dependencies (e.g. `[doc]` or `[cicd]`) provide `[<tag>]` string. I.e.
 ```
-pip install -e ./ensembl-genomio[dev]
+pip install -e ./ensembl-genomio[doc]
 ```
 
 For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](./pyproject.toml). 
 
 
 ### Additional steps to use automated generation of the documentation (part of it)
-Install python part with the `[doc]` or `[dev]` tag.
+Install python part with the `[doc]` tag.
 Change into repo dir
 Run doc build script.
 
