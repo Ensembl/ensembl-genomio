@@ -19,7 +19,7 @@ params.help = false
 // Mandatory params
 params.accession = null
 params.prefix = null
-params.PROD_NAME = null
+params.production_name = null
 
 // Print usage
 def helpMessage() {
