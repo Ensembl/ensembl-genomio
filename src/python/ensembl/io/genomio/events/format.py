@@ -21,7 +21,7 @@ from pathlib import Path
 import re
 from typing import Dict, List
 
-from ensembl.io.genomio.events_loader import EventCollection
+from ensembl.io.genomio.events.load import EventCollection
 from ensembl.utils.argparse import ArgumentParser
 
 

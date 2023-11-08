@@ -15,4 +15,4 @@
 """GenomIO GFF3 modules."""
 
 from .extract_annotation import *
-from .process_gff3 import *
+from .process import *
