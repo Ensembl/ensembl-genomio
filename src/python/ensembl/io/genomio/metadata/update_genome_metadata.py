@@ -145,20 +145,20 @@ def amend_genomic_metadata(
     genome_infile: PathLike,
     genome_outfile: PathLike,
     report_file: Optional[PathLike] = None,
-    genbank_file: Optional[PathLike] = None,
+    genbank_infile: Optional[PathLike] = None,
 ) -> None:
     """
     Args:
         genome_infile: Genome data following the schemas/genome_schema.json.
         genome_outfile: Amended genome data file.
         report_file: INSDC/RefSeq sequences report file.
-        genbank_file: INSDC/RefSeq GBFF file.
+        genbank_infile: INSDC/RefSeq GBFF file.
     """
     genome_metadata = get_json(genome_infile)
 
     # Get additional sequences in the assembly but not in the data
     if report_file:
-        gbff_path = Path(genbank_file) if genbank_file else None
+        gbff_path = Path(genbank_infile) if genbank_infile else None
         additions = get_additions(Path(report_file), gbff_path)
         if additions:
             genome_metadata["added_seq"] = {"region_name": additions}
@@ -180,7 +180,7 @@ def main() -> None:
         "--genome_outfile", required=True, help="Path to the new amended genome metadata file"
     )
     parser.add_argument_src_path("--report_file", help="INSDC/RefSeq sequences report file")
-    parser.add_argument_src_path("--genbank_file", help="INSDC/RefSeq GBFF file")
+    parser.add_argument_src_path("--genbank_infile", help="INSDC/RefSeq GBFF file")
     args = parser.parse_args()
 
     amend_genomic_metadata(**vars(args))
