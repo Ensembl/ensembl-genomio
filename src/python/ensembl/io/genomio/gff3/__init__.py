@@ -15,4 +15,4 @@
 """GFF3 files processing module."""
 
 from .extract_annotation import *
-from .process_gff3 import *
+from .process import *
