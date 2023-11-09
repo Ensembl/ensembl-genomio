@@ -16,7 +16,6 @@
 
 __all__ = ["DownloadError", "download_genbank"]
 
-from importlib import reload
 import logging
 from os import PathLike
 from pathlib import Path
@@ -24,6 +23,11 @@ from pathlib import Path
 import requests
 
 from ensembl.utils.argparse import ArgumentParser
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.propagate = False
 
 
 class DownloadError(Exception):
@@ -55,12 +59,12 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
         "retmode": "text",
     }
     entrez_params["id"] = accession
-    logging.debug(f"Getting file from {entrez_url} with params {entrez_params}")
+    logger.debug(f"Getting file from {entrez_url} with params {entrez_params}")
     result = requests.get(entrez_url, params=entrez_params, timeout=60)
     if result and result.status_code == 200:
         with Path(output_file).open("wb") as gbff:
             gbff.write(result.content)
-        logging.info(f"GenBank file written to {output_file}")
+        logger.info(f"GenBank file written to {output_file}")
         return
     raise DownloadError(f"Could not download the genbank ({accession}) file: {result}")
 
@@ -74,15 +78,20 @@ def main() -> None:
     args = parser.parse_args()
 
     # Logging setup
+    logging_format = "%(asctime)s\t%(levelname)s\t%(message)s"
+    date_format = r"%Y-%m-%d_%H:%M:%S"
+    formatter = logging.Formatter(logging_format, datefmt=date_format)
+
+    # Console logging
     log_level = None
     if args.debug:
         log_level = logging.DEBUG
     elif args.verbose:
         log_level = logging.INFO
-    logging_format = "%(asctime)s\t%(levelname)s\t%(message)s"
-    date_format = r"%Y-%m-%d_%H:%M:%S"
-    reload(logging)
-    logging.basicConfig(format=logging_format, datefmt=date_format, level=log_level)
+    console = logging.StreamHandler()
+    console.setLevel(log_level)
+    console.setFormatter(formatter)
+    logger.addHandler(console)
 
     download_genbank(accession=args.accession, output_file=args.output_file)
 
