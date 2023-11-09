@@ -29,7 +29,7 @@ process EXTRACT_FROM_GB {
 
     shell:
     '''
-    extract_from_gb --prefix !{meta.prefix} --prod_name !{meta.production_name} --gb_file !{gb_file}
+    genbank_extract_data --prefix !{meta.prefix} --prod_name !{meta.production_name} --gb_file !{gb_file}
     '''
 }
 
