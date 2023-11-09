@@ -239,13 +239,6 @@ def retrieve_assembly_data(
     download_path = Path(download_dir)
     download_dir = download_path / accession
 
-    # Configure logging
-    log_file = f"{accession}_download.log"
-    reload(logging)
-    logging.basicConfig(
-        filename=log_file, format="%(levelname)s:%(message)s", filemode="w", level=logging.DEBUG
-    )
-
     # Set and create dedicated dir for download
     if not download_dir.is_dir():
         download_dir.mkdir(parents=True)
@@ -282,5 +275,21 @@ def main() -> None:
         "--download_dir", default=Path.cwd(), help="Folder where the data will be downloaded"
     )
     args = parser.parse_args()
+
+    # Configure logging
+    log_file = (f"assembly_download.log")
+    date_format='%m/%d/%Y_%I:%M:%S(%p)'
+    logging_format='%(asctime)s - %(levelname)s - %(message)s'
+    reload(logging)
+    if args.verbose:
+        logging.basicConfig(
+            filename=log_file, format=logging_format, datefmt=date_format,
+            filemode="w", level=logging.INFO
+            )
+    if args.debug:
+        logging.basicConfig(
+            filename=log_file, format=logging_format, datefmt=date_format,
+            filemode="w", level=logging.DEBUG
+            )
 
     retrieve_assembly_data(**vars(args))
