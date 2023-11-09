@@ -277,7 +277,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Configure logging
-    log_file = (f"assembly_download.log")
+    log_file = ("assembly_download.log")
     date_format='%m/%d/%Y_%I:%M:%S(%p)'
     logging_format='%(asctime)s - %(levelname)s - %(message)s'
     reload(logging)
