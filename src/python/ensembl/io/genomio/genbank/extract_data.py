@@ -483,13 +483,16 @@ def main() -> None:
     parser.add_argument("-d", "--debug", action="store_true", help="Debug level logging")
     args = parser.parse_args()
 
+    # Logging setup
+    log_level = None
+    if args.debug:
+        log_level = logging.DEBUG
+    elif args.verbose:
+        log_level = logging.INFO
     logging_format = "%(asctime)s\t%(levelname)s\t%(message)s"
     date_format = r"%Y-%m-%d_%H:%M:%S"
     reload(logging)
-    if args.verbose:
-        logging.basicConfig(format=logging_format, datefmt=date_format, level=logging.INFO)
-    if args.debug:
-        logging.basicConfig(format=logging_format, datefmt=date_format, level=logging.DEBUG)
+    logging.basicConfig(format=logging_format, datefmt=date_format, level=log_level)
 
     gb_extractor = FormattedFilesGenerator(prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file)
     gb_extractor.extract_gb(args.out_dir)
