@@ -16,8 +16,6 @@
 
 __all__ = ["GFFParserError", "get_peptides_to_exclude", "prep_fasta_data"]
 
-import logging
-
 from pathlib import Path
 from os import PathLike
 from typing import List, Optional, Set
@@ -27,6 +25,10 @@ from Bio import SeqIO
 from ensembl.io.genomio.utils.archive_utils import open_gz_file
 from ensembl.io.genomio.utils.logging import setup_logging
 from ensembl.utils.argparse import ArgumentParser
+
+# logging references module, but can be overridden by a specific logger
+import logging
+logger = logging # by default
 
 
 exclude_seq_regions: List[str] = []
@@ -44,14 +46,14 @@ def get_peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -
     with open_gz_file(genbank_path) as in_genbank:
         for record in SeqIO.parse(in_genbank, "genbank"):
             if record.id in seqr_to_exclude:
-                logging.info(f"Skip sequence {record.id}")
+                logger.info(f"Skip sequence {record.id}")
                 for feat in record.features:
                     if feat.type == "CDS":
                         if "protein_id" in feat.qualifiers:
                             feat_id = feat.qualifiers["protein_id"]
                             peptides_to_exclude.add(feat_id[0])
                         else:
-                            logging.critical(f"Peptide without peptide ID ${feat}")
+                            logger.critical(f"Peptide without peptide ID ${feat}")
                             raise GFFParserError(f"Peptide without peptide ID ${feat}")
     return peptides_to_exclude
 
@@ -86,7 +88,7 @@ def prep_fasta_data(
     with open_gz_file(file_path) as in_fasta:
         for record in SeqIO.parse(in_fasta, "fasta"):
             if record.id in to_exclude:
-                logging.info(f"Skip record ${record.id}")
+                logger.info(f"Skip record ${record.id}")
             else:
                 records.append(record)
     with Path(fasta_outfile).open("w") as out_fasta:
@@ -102,8 +104,9 @@ def main() -> None:
     parser.add_argument("--peptide_mode", action="store_true", help="Process proteins instead of DNA")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose level logging")
     parser.add_argument("-d", "--debug", action="store_true", help="Debug level logging")
+    parser.add_argument("-l", "--logfile", required=False, type=str, help="file to log to")
     args = parser.parse_args()
 
-    setup_logging(args)
+    logger = setup_logging(args, name = __name__)
 
     prep_fasta_data(**vars(args))
