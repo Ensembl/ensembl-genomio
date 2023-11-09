@@ -960,7 +960,8 @@ def main() -> None:
     elif args.verbose:
         log_level = logging.INFO
     console = logging.StreamHandler()
-    console.setLevel(log_level)
+    if log_level:
+        console.setLevel(log_level)
     console.setFormatter(formatter)
     logger.addHandler(console)
 
