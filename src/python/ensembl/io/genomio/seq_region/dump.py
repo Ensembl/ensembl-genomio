@@ -80,7 +80,6 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
     seq_regions = []
 
     for coord_system in coord_systems:
-        # print(f"Dump coord {coord_system.name}")
         seqr_stmt = (
             select(SeqRegion)
             .where(SeqRegion.coord_system_id == coord_system.coord_system_id)
@@ -251,6 +250,3 @@ def main() -> None:
 
     print(json.dumps(seq_regions, indent=2))
 
-
-if __name__ == "__main__":
-    main()

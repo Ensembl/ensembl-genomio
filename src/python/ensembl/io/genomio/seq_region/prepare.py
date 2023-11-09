@@ -45,7 +45,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+import logging
 import requests
+
+from importlib import reload
 
 from ensembl.io.genomio.utils import get_json, open_gz_file, print_json
 from ensembl.utils.argparse import ArgumentParser
@@ -89,7 +92,7 @@ def exclude_seq_regions(seq_regions: List[SeqRegion], to_exclude: List[str]) -> 
     filtered_seq_regions = []
     for seqr in seq_regions:
         if ("name" in seqr) and (seqr["name"] in to_exclude):
-            print(f'Remove seq_region {seqr["name"]}')
+            logging.info(f'Not considering seq_region {seqr["name"]}')
         else:
             filtered_seq_regions.append(seqr)
     return filtered_seq_regions
@@ -162,7 +165,7 @@ def add_mitochondrial_codon_table(seq_regions: List[SeqRegion], taxon_id: int) -
     response = requests.get(url, headers={"Content-Type": "application/json"}, timeout=60)
     decoded = response.json()
     if "mitochondrialGeneticCode" not in decoded:
-        print(f"No mitochondria genetic code found for taxon {taxon_id}")
+        logging.warn("No mitochondria genetic code found for taxon {taxon_id}")
     else:
         genetic_code = int(decoded["mitochondrialGeneticCode"])
         for seqr in seq_regions:
@@ -368,7 +371,7 @@ def make_seq_region(
     if accession_id and (accession_id != "na"):
         seq_region["name"] = accession_id
     else:
-        print(f'No {src} accession ID found for {data["Sequence-Name"]}')
+        logging.warn(f'No {src} accession ID found for {data["Sequence-Name"]}')
         return {}
     # Add synonyms
     synonyms = []
@@ -439,6 +442,8 @@ def prepare_seq_region_metadata(
     gbff_file: Optional[PathLike] = None,
     brc_mode: bool = False,
     to_exclude: Optional[List[str]] = None,
+    debug:  bool = False,
+    verbose:  bool = False,
 ) -> None:
     """Prepares the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
 
@@ -498,6 +503,19 @@ def main() -> None:
     parser.add_argument(
         "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
     )
+    parser.add_argument("-d", "--debug", action="store_true", help="Debug level logging")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose level logging")
+
     args = parser.parse_args()
+    
+    log_format = "%(asctime)s\t%(levelname)s\t%(message)s"
+    date_fmt = r"%Y-%m-%d %H:%M:%S"
+    reload(logging)
+    if args.verbose:
+        logging.basicConfig(format=log_format, datefmt=date_fmt, level=logging.INFO)
+    elif args.debug:
+        logging.basicConfig(format=log_format, datefmt=date_fmt, level=logging.DEBUG)
+    else:
+        logging.basicConfig(format=log_format, datefmt=date_fmt, level=logging.WARNING)
 
     prepare_seq_region_metadata(**vars(args))
