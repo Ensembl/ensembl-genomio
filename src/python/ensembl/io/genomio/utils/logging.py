@@ -12,8 +12,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Utils module."""
+"""Utils to deal with logging."""
 
-from .archive_utils import *
-from .json_utils import *
-from .logging import *
+__all__ = ["setup_logging"]
+
+import argparse
+import logging
+
+LOGGING_FORMAT = "%(asctime)s\t%(levelname)s\t%(message)s"
+DATE_FORMAT = r"%Y-%m-%d_%H:%M:%S"
+
+def setup_logging(args: argparse.Namespace):
+    """Setup logging infrustucture."""
+    """args: argparse.Namespace -- args with "debug" and "verbose" options."""
+    log_level = None
+    if args.debug:
+        log_level = logging.DEBUG
+    elif args.verbose:
+        log_level = logging.INFO
+
+    # reload(logging)
+    logging.basicConfig(
+        format=LOGGING_FORMAT,
+        datefmt=DATE_FORMAT,
+        level=log_level,
+    )
