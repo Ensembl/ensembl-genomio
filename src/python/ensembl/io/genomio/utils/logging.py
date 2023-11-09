@@ -18,22 +18,62 @@ __all__ = ["setup_logging"]
 
 import argparse
 import logging
+from typing import Optional
 
+
+# default logging formats
 LOGGING_FORMAT = "%(asctime)s\t%(levelname)s\t%(message)s"
 DATE_FORMAT = r"%Y-%m-%d_%H:%M:%S"
 
-def setup_logging(args: argparse.Namespace):
-    """Setup logging infrustucture."""
-    """args: argparse.Namespace -- args with "debug" and "verbose" options."""
-    log_level = None
-    if args.debug:
-        log_level = logging.DEBUG
-    elif args.verbose:
-        log_level = logging.INFO
+# helper functions
+def _prepare_console_handler(*, debug: bool = False, verbose: bool = False) -> logging.StreamHandler:
+    """setup console handler with different logging levels"""
+    console_h = logging.StreamHandler()
+    # set default logging level
+    if debug:
+        console_h.setLevel(logging.DEBUG)
+    elif verbose:
+        console_h.setLevel(logging.INFO)
+    return console_h
 
-    # reload(logging)
-    logging.basicConfig(
-        format=LOGGING_FORMAT,
-        datefmt=DATE_FORMAT,
-        level=log_level,
-    )
+
+def _prepare_file_handler(filename: Optional[str] = None, *, debug: bool = False) -> Optional[logging.FileHandler]:
+    """setup file handler with default loggin.INFO level"""
+    """retuns None if no file name defined"""
+    if filename is None:
+        return None
+
+    file_h = logging.FileHandler(filename)
+
+    file_h.setLevel(logging.INFO)
+    if debug:
+        file_h.setLevel(logging.DEBUG)
+
+    return file_h
+
+
+def setup_logging(
+        args: argparse.Namespace,
+        *, # no positional arguments allowed after this
+        name: Optional[str] = None,
+    ) -> logging.Logger:
+    """Setup logging infrustucture."""
+    """args: argparse.Namespace -- args with "debug", "verbose" and "logfile" options."""
+    # get logger with a specified name (or the default one)
+    logger = logging.getLogger(name)
+
+    # set up shared formatter
+    formatter = logging.Formatter(fmt = LOGGING_FORMAT, datefmt = DATE_FORMAT)
+
+    # adding console handler
+    console_h = _prepare_console_handler(debug = args.debug, verbose = args.verbose)
+    console_h.setFormatter(formatter)
+    logger.addHandler(console_h)
+
+    # adding logging to file
+    file_h = _prepare_file_handler(args.logfile)
+    if file_h:
+        file_h.setFormatter(formatter)
+        logger.addHandler(file_h)
+
+    return logger
