@@ -31,6 +31,8 @@ __all__ = ["GBParseError", "UnsupportedData", "GenomeFiles", "FormattedFilesGene
 
 from collections import Counter
 import json
+import logging
+from importlib import reload
 from os import PathLike
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -126,6 +128,7 @@ class FormattedFilesGenerator:
         """
 
         organella = self._get_organella(gb_file)
+        logging.debug(f"Organella loaded: {organella}")
 
         with open(gb_file, "r") as gbh:
             for record in SeqIO.parse(gbh, "genbank"):
@@ -157,6 +160,7 @@ class FormattedFilesGenerator:
         return organella
 
     def _write_fasta_dna(self):
+        logging.debug(f"Write {len(self.seq_records)} DNA sequences to {self.files['fasta_dna']}")
         with open(self.files["fasta_dna"], "w") as fasta_fh:
             SeqIO.write(self.seq_records, fasta_fh, "fasta")
 
@@ -173,21 +177,22 @@ class FormattedFilesGenerator:
             all_ids += rec_ids
             peptides += rec_peptides
 
-        # Write those records to a clean GFF
+        logging.debug(f"Write {len(records)} gff records to {self.files['gene_models']}")
         with self.files["gene_models"].open("w") as gff_fh:
             GFF.write(records, gff_fh)
 
-        # Write the peptide sequences to a fasta file
+        logging.debug(f"Write {len(peptides)} peptide sequences to {self.files['fasta_pep']}")
         with self.files["fasta_pep"].open("w") as fasta_fh:
             SeqIO.write(peptides, fasta_fh, "fasta")
 
         # Warn if some IDs are not unique
+        logging.debug("Check that IDs are unique")
         count = dict(Counter(all_ids))
         num_duplicates = 0
         for key in count:
             if count[key] > 1:
                 num_duplicates += 1
-                print(f"ID {key} is duplicated {count[key]} times")
+                logging.warning(f"ID {key} is duplicated {count[key]} times")
         if num_duplicates > 0:
             raise GBParseError(f"Some {num_duplicates} IDs are duplicated")
 
@@ -309,7 +314,7 @@ class FormattedFilesGenerator:
 
         parts = gene_id.split(" ")
         if len(parts) > 2:
-            print(f"Shortening gene_id to {parts[0]}")
+            logging.info(f"Shortening gene_id to {parts[0]}")
             gene_id = parts[0]
         gene_id = self._uniquify_id(gene_id, all_ids)
 
@@ -344,10 +349,10 @@ class FormattedFilesGenerator:
         new_id = gene_id
         num = 1
         while new_id in all_ids:
-            print(f"{new_id} exists, update")
+            logging.info(f"{new_id} already exists, append a number to the new one to make it unique")
             num += 1
             new_id = f"{gene_id}_{num}"
-        print(f"Using {new_id}")
+        logging.debug(f"Using {new_id}")
 
         return new_id
 
@@ -357,9 +362,9 @@ class FormattedFilesGenerator:
         for seq in self.seq_records:
             codon_table = self._get_codon_table(seq)
             if codon_table is None:
-                print(
+                logging.warning(
                     (
-                        "Warning: No codon table found. "
+                        "No codon table found. "
                         f"Make sure to change the codon table number in {self.files['seq_region']} manually "
                         "if it is not the standard codon table"
                     )
@@ -378,9 +383,9 @@ class FormattedFilesGenerator:
             if seq.organelle:
                 seq_obj["location"] = self._prepare_location(seq.organelle)
                 if not codon_table:
-                    print(
+                    logging.warning(
                         (
-                            f"Warning: '{seq.organelle}' is an organelle: "
+                            f"'{seq.organelle}' is an organelle: "
                             f"make sure to change the codon table number in {self.files['seq_region']} "
                             "manually if it is not the standard codon table"
                         )
@@ -395,16 +400,16 @@ class FormattedFilesGenerator:
                 },
             }
             if not seq_obj["added_sequence"]["assembly_provider"]["name"]:
-                print(
+                logging.warning(
                     (
-                        "Warning: please add the relevant provider name"
+                        "Please add the relevant provider name"
                         f"for the assembly in {self.files['seq_region']}"
                     )
                 )
             if not seq_obj["added_sequence"]["assembly_provider"]["url"]:
-                print(
+                logging.warning(
                     (
-                        "Warning: please add the relevant provider url"
+                        "Please add the relevant provider url"
                         f" for the assembly in {self.files['seq_region']}"
                     )
                 )
@@ -452,8 +457,8 @@ class FormattedFilesGenerator:
         }
 
         if not genome_data["species"]["production_name"]:
-            print(
-                f"Warning: please add the relevant production_name for this genome in {self.files['genome']}"
+            logging.warning(
+                f"Please add the relevant production_name for this genome in {self.files['genome']}"
             )
 
         ids = [seq.id for seq in self.seq_records]
@@ -472,7 +477,17 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--out_dir", default=Path.cwd(), help="Output folder where the generated files will be stored"
     )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose level logging")
+    parser.add_argument("-d", "--debug", action="store_true", help="Debug level logging")
     args = parser.parse_args()
+
+    logging_format = "%(asctime)s\t%(levelname)s\t%(message)s"
+    date_format = r"%Y-%m-%d_%H:%M:%S"
+    reload(logging)
+    if args.verbose:
+        logging.basicConfig(format=logging_format, datefmt=date_format, level=logging.INFO)
+    if args.debug:
+        logging.basicConfig(format=logging_format, datefmt=date_format, level=logging.DEBUG)
 
     gb_extractor = FormattedFilesGenerator(prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file)
     gb_extractor.extract_gb(args.out_dir)
