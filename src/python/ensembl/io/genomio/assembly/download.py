@@ -270,6 +270,8 @@ def retrieve_assembly_data(
 def main() -> None:
     """Module's entry-point."""
     parser = ArgumentParser(description="Download an assembly data files from INSDC or RefSeq.")
+    parser.add_argument("--verbose", action="store_true", required=False)
+    parser.add_argument("--debug", action="store_true", required=False)
     parser.add_argument("--accession", required=True, help="Genome assembly accession")
     parser.add_argument_dst_path(
         "--download_dir", default=Path.cwd(), help="Folder where the data will be downloaded"
@@ -291,5 +293,5 @@ def main() -> None:
             filename=log_file, format=logging_format, datefmt=date_format,
             filemode="w", level=logging.DEBUG
             )
-
-    retrieve_assembly_data(**vars(args))
+        
+    retrieve_assembly_data(args.accession, args.download_dir)
