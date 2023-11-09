@@ -27,7 +27,7 @@ process CHECK_INTEGRITY {
         tuple val(db), path(manifest_dir, includeInputs: true)
 
     script:
-        brc_mode = params.brc_mode ? '--brc_mode 1' : ''
+        brc_mode = params.brc_mode ? '--brc_mode' : ''
         """
         manifest_check_integrity --manifest_file ${manifest_dir}/manifest.json $brc_mode
         """

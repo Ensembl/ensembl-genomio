@@ -25,8 +25,8 @@ process DB_FACTORY {
         path "dbs.json"
 
     script:
-        brc_mode = params.brc_mode ? '--brc_mode 1' : ''
-        dbname_re = filter_map.dbname_re ? "--dbname_re $filter_map.dbname_re" : ''
+        brc_mode = params.brc_mode ? '--brc_mode' : ''
+        dbname_re = filter_map.dbname_re ? "--db_regex $filter_map.dbname_re" : ''
         """
         database_factory --host '${server.host}' \
             --port '${server.port}' \
