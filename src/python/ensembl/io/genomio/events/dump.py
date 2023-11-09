@@ -16,7 +16,9 @@
 
 from datetime import datetime
 from pathlib import Path
+from importlib import reload
 from typing import List, Dict, Optional, Set, Tuple
+import logging
 
 from ensembl.brc4.runnable.core_server import CoreServer
 from ensembl.utils.argparse import ArgumentParser
@@ -307,7 +309,7 @@ class DumpStableIDs:
 
         events = []
         for session in sessions:
-            print(f"Mapping session {session['release']}")
+            logging.info(f"Mapping session {session['release']}")
             pairs = self.get_pairs(session["id"])
             session_events = self.make_events(pairs)
             for event in session_events:
@@ -327,7 +329,7 @@ class DumpStableIDs:
 
         """
         if not events:
-            print("No events to print")
+            logging.info("No events to print")
             return
         with output_file.open("w") as out_fh:
             for event in events:
@@ -379,7 +381,7 @@ class DumpStableIDs:
         for db in cursor:
             pair = Pair(old_id=db[0], new_id=db[1])
             pairs.append(pair)
-        print(f"{len(pairs)} stable id events")
+        logging.debug(f"{len(pairs)} stable id events")
         return pairs
 
     def make_events(self, pairs: List[Pair]) -> List:
@@ -423,7 +425,7 @@ class DumpStableIDs:
                 stats[name] += 1
 
         for stat, value in stats.items():
-            print(f"\t{stat} = {value}")
+            logging.info(f"\t{stat} = {value}")
 
         return events
 
@@ -525,7 +527,26 @@ def main() -> None:
     )
     parser.add_server_arguments(include_database=True)
     parser.add_argument_dst_path("--output_file", required=True, help="Output file")
+    parser.add_argument("-v", "--verbose", action="store_true", required=False,
+        help="Verbose level logging")
+    parser.add_argument("-d", "--debug", action="store_true", required=False,
+        help="Debug level logging")
     args = parser.parse_args()
+
+    # Configure logging
+    date_format='%Y/%m/%d_%I:%M:%S(%p)'
+    logging_format='%(asctime)s - %(levelname)s - %(message)s'
+    reload(logging)
+    log_level = None
+    if args.debug:
+        log_level = logging.DEBUG
+    elif args.verbose:
+        log_level = logging.INFO
+
+    logging.basicConfig(
+        format=logging_format, datefmt=date_format,
+        filemode="w", level=log_level
+        )
 
     # Start
     factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
