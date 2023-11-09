@@ -281,24 +281,18 @@ def main() -> None:
     args = parser.parse_args()
 
     # Configure logging
-    log_file = ("assembly_download.log")
-    date_format='%m/%d/%Y_%I:%M:%S(%p)'
+    date_format='%Y/%m/%d_%I:%M:%S(%p)'
     logging_format='%(asctime)s - %(levelname)s - %(message)s'
     reload(logging)
-    if args.verbose:
-        logging.basicConfig(
-            filename=log_file, format=logging_format, datefmt=date_format,
-            filemode="w", level=logging.INFO
-            )
-    elif args.debug:
-        logging.basicConfig(
-            filename=log_file, format=logging_format, datefmt=date_format,
-            filemode="w", level=logging.DEBUG
-            )
-    else:
-        logging.basicConfig(
-            filename=log_file, format=logging_format, datefmt=date_format,
-            filemode="w", level=logging.WARNING
-            )
+    log_level = None
+    if args.debug:
+        log_level = logging.DEBUG
+    elif args.verbose:
+        log_level = logging.INFO
+
+    logging.basicConfig(
+        format=logging_format, datefmt=date_format,
+        filemode="w", level=log_level
+        )
         
     retrieve_assembly_data(args.accession, args.download_dir)
