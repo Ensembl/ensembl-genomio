@@ -28,8 +28,7 @@ process DUMP_GENOME_META {
 
     script:
         """
-        touch $output
-        genome_meta_dumper --host '${server.host}' \
+        genome_metadata_dump --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \

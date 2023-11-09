@@ -28,7 +28,7 @@ process DUMP_EVENTS {
     script:
         """
         touch "events.txt"
-        events_dumper --host '${server.host}' \
+        events_dump --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \

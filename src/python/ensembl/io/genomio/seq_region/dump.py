@@ -26,7 +26,7 @@ from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
 
 
-ROOT_DIR = Path(__file__).parent / "../../../../.."
+ROOT_DIR = Path(__file__).parent / "../../../../../.."
 DEFAULT_MAP = ROOT_DIR / "config/external_db_map/default.txt"
 KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
@@ -80,7 +80,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
     seq_regions = []
 
     for coord_system in coord_systems:
-        print(f"Dump coord {coord_system.name}")
+        # print(f"Dump coord {coord_system.name}")
         seqr_stmt = (
             select(SeqRegion)
             .where(SeqRegion.coord_system_id == coord_system.coord_system_id)

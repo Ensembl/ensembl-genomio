@@ -27,6 +27,6 @@ process DOWNLOAD_GENBANK {
     shell:
     output_file = "output.gb"
     '''
-    download_genbank --accession !{meta.accession} --output_file !{output_file}
+    genbank_download --accession !{meta.accession} --output_file !{output_file}
     '''
 }

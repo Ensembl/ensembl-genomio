@@ -25,6 +25,6 @@ process MANIFEST {
     
     shell:
         '''
-        manifest_maker --manifest_dir .
+        manifest_generate --manifest_dir .
         '''
 }
