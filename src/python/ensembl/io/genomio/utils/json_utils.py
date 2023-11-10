@@ -21,7 +21,6 @@ from os import PathLike
 from pathlib import Path
 from typing import Any
 
-
 def get_json(src_path: PathLike, **kwargs) -> Any:
     """Generic data JSON loader.
 
@@ -30,7 +29,11 @@ def get_json(src_path: PathLike, **kwargs) -> Any:
 
     """
     with Path(src_path).open("r") as json_file:
-        return json.load(json_file, **kwargs)
+        try:
+            return json.load(json_file, **kwargs)
+        # Empty JSON file
+        except:
+            return {}
 
 
 def print_json(dst_path: PathLike, data: Any, **kwargs) -> None:

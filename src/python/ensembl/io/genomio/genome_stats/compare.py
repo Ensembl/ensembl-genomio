@@ -22,6 +22,8 @@ __all__ = ["compare_assembly", "compare_annotation", "compare_stats"]
 import json
 import re
 from typing import Any, Dict
+import logging
+from importlib import reload
 
 from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
@@ -189,11 +191,32 @@ def main() -> None:
     )
     parser.add_argument_src_path("--ncbi_stats", required=True, help="NCBI dataset JSON file")
     parser.add_argument_src_path("--core_stats", required=True, help="Core database JSON file")
+    parser.add_argument("-v", "--verbose", action="store_true", required=False,
+        help="Verbose level logging")
+    parser.add_argument("-d", "--debug", action="store_true", required=False,
+        help="Debug level logging")
     args = parser.parse_args()
+
+    # Configure logging
+    date_format='%Y/%m/%d_%I:%M:%S(%p)'
+    logging_format='%(asctime)s - %(levelname)s - %(message)s'
+    reload(logging)
+    log_level = None
+    if args.debug:
+        log_level = logging.DEBUG
+    elif args.verbose:
+        log_level = logging.INFO
+
+    logging.basicConfig(
+        format=logging_format, datefmt=date_format,
+        filemode="w", level=log_level
+        )
 
     try:
         ncbi_stats = get_json(args.ncbi_stats)["reports"][0]
+        logging.info(f"{args.ncbi_stats} JSON .'reports' obtained")
     except KeyError:
+        logging.warning(f"{args.ncbi_stats} JSON is empty")
         ncbi_stats = {}
     core_stats = get_json(args.core_stats)
     all_stats = compare_stats(ncbi_stats, core_stats)
