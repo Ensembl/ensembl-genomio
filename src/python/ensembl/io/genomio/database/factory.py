@@ -18,10 +18,14 @@ Can be imported as a module and called as a script as well, with the same parame
 """
 
 import json
+import re
 from typing import Dict, List, Optional
 
 from ensembl.brc4.runnable.core_server import CoreServer
 from ensembl.utils.argparse import ArgumentParser
+
+
+db_pattern = re.compile(r".+_core_(\d+)_\d+_\d+")
 
 
 def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
@@ -45,6 +49,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
 
         species = get_metadata_value(metadata, "species.production_name")
         division = get_metadata_value(metadata, "species.division")
+        project_release = _get_project_release(db)
 
         if brc_mode:
             brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
@@ -61,6 +66,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
             "database": db,
             "species": species,
             "division": division,
+            "release": project_release,
         }
         databases_data.append(db_data)
     return databases_data
@@ -77,6 +83,15 @@ def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:
     if (key in metadata) and metadata[key]:
         return metadata[key][0]
     return None
+
+
+def _get_project_release(db_name: str) -> str:
+    """Return the project release number from the database name."""
+
+    match = re.search(db_pattern, db_name)
+    if match:
+        return match.group(1)
+    return ""
 
 
 def main() -> None:

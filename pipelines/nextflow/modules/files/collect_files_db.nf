@@ -57,7 +57,7 @@ process MANIFEST {
 }
 
 process PUBLISH_DIR {
-    publishDir "$out_dir/metadata/$db.division", mode: 'copy'
+    publishDir "$out_dir/build_$db.release/metadata/$db.division", mode: 'copy'
     tag "Publish_${db.species}"
     label 'default'
     time '5min'

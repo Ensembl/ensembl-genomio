@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process DUMP_DB {
-    publishDir "$out_dir/coredb/$db.division", mode: 'copy'
+    publishDir "$out_dir/build_$db.release/coredb/$db.division", mode: 'copy'
     tag "$db.species"
     label "variable_2_8_32"
     maxForks 10
