@@ -128,7 +128,7 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
     version = assembly.get("version")
 
     # Check the version is an integer
-    if version is not None and version.isdigit():
+    if version is not None and (isinstance(version, int) or version.isdigit()):
         assembly["version"] = int(version)
     else:
         # Get the version from the assembly accession
