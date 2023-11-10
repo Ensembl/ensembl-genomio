@@ -17,6 +17,7 @@
 process DUMP_EVENTS {
     tag "${db.species}"
     label "variable_2_8_32"
+    maxForks params.max_database_forks
 
     input:
         val server

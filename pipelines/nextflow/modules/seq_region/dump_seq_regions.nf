@@ -16,6 +16,7 @@
 process DUMP_SEQ_REGIONS {
     tag "${db.species}"
     label "variable_2_8_32"
+    maxForks params.max_database_forks
 
     input:
         val server
