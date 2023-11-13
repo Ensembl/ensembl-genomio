@@ -19,7 +19,6 @@ include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_met
 include { DUMP_GENOME_STATS } from '../../modules/genome_metadata/dump_genome_stats.nf'
 include { COMPARE_GENOME_STATS } from '../../modules/genome_metadata/compare_genome_stats.nf'
 include { DUMP_NCBI_STATS } from '../../modules/genome_metadata/dump_ncbi_stats.nf'
-include { CHECK_JSON_SCHEMA } from '../../modules/schema/check_json_schema_db.nf'
 
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
