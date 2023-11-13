@@ -27,12 +27,15 @@ process DUMP_GENOME_META {
         tuple val(db), val("genome"), path("*genome.json")
 
     script:
+        output = "${db.species}_genome.json"
+        schema = params.json_schemas["genome"]
         """
-        genome_metadata_dump --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
-            --password '${server.password}' \
-            --database '${db.database}' \
-            > ${db.species}_genome.json
+        genome_metadata_dump --host '$server.host' \
+            --port '$server.port' \
+            --user '$server.user' \
+            --password '$server.password' \
+            --database '$db.database' \
+            > $output
+        schemas_json_validate --json_file $output --json_schema $schema
         """
 }

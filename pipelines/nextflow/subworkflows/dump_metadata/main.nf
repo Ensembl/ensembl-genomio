@@ -40,8 +40,7 @@ workflow DUMP_METADATA {
         // Seq regions
         if (params.selection.contains("seq_regions")) {
             seq_regions = DUMP_SEQ_REGIONS(server, db)
-            seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
-            db_files = db_files.concat(seq_regions_checked)
+            db_files = db_files.concat(seq_regions)
         }
         
         // Events

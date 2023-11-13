@@ -26,12 +26,15 @@ process DUMP_SEQ_REGIONS {
         tuple val(db), val("seq_region"), path("*seq_region.json")
 
     script:
+        output = "${db.species}_seq_region.json"
+        schema = params.json_schemas["seq_region"]
         """
-        seq_region_dump --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
-            --password '${server.password}' \
-            --database '${db.database}' \
-            > ${db.species}_seq_region.json
+        seq_region_dump --host '$server.host' \
+            --port '$server.port' \
+            --user '$server.user' \
+            --password '$server.password' \
+            --database '$db.database' \
+            > $output
+        schemas_json_validate --json_file $output --json_schema $schema
         """
 }
