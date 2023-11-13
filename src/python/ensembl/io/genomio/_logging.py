@@ -16,10 +16,10 @@
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 
-def init_logging(log_level: str = "WARNING", log_file: Optional[Path] = None) -> None:
+def init_logging(log_level: Union[int, str] = "WARNING", log_file: Optional[Path] = None) -> None:
     """Initialises the logging system.
 
     By default, all the log messages corresponding to `log_level` (and) above will be printed in the standard
