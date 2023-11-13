@@ -21,10 +21,9 @@ include { COMPARE_GENOME_STATS } from '../../modules/genome_metadata/compare_gen
 include { DUMP_NCBI_STATS } from '../../modules/genome_metadata/dump_ncbi_stats.nf'
 include { CHECK_JSON_SCHEMA } from '../../modules/schema/check_json_schema_db.nf'
 
-include { COLLECT_FILES } from '../../modules/files/collect_files_db.nf'
-include { MANIFEST } from '../../modules/files/collect_files_db.nf'
-include { PUBLISH_DIR } from '../../modules/files/collect_files_db.nf'
-include { CHECK_INTEGRITY } from '../../modules/manifest/check_integrity_db.nf'
+include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
+include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
+include { PUBLISH_DIR } from '../../modules/files/publish_output_dump.nf'
 
 workflow DUMP_METADATA {
     take:
@@ -72,11 +71,10 @@ workflow DUMP_METADATA {
         // Only keep the files so they are easy to collect
         db_files = db_files
             .map{ db, name, file_name -> tuple(db, file_name) }
-            .groupTuple()
+            .groupTuple(size: params.selection_count)
 
         // Collect, create manifest, and publish
-        collect_dir = COLLECT_FILES(db_files)
-        manifested_dir = MANIFEST(collect_dir)
+        manifested_dir = MANIFEST(db_files)
         manifest_checked = CHECK_INTEGRITY(manifested_dir)
         PUBLISH_DIR(manifest_checked, params.output_dir)
 }

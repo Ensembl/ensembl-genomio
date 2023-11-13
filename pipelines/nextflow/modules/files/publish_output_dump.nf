@@ -14,51 +14,9 @@
 // limitations under the License.
 
 
-process COLLECT_FILES {
-    tag "Collect_files_${db.species}"
-    label 'default'
-    time '5min'
-
-    input:
-        tuple val(db), path(file_name)
-    
-    output:
-        tuple val(db), path("${db.species}")
-    
-    script:
-        """
-        DBDIR=${db.species}/
-        mkdir \$DBDIR
-
-        echo ${file_name}
-        for FILE in ${file_name}; do
-            if [ -s \$FILE ]; then
-                mv \$FILE \$DBDIR
-            fi
-        done
-        """
-}
-
-process MANIFEST {
-    tag "Manifest_${db.species}"
-    label 'default'
-    time '5min'
-
-    input:
-        tuple val(db), path(collect_dir)
-    
-    output:
-        tuple val(db), path(collect_dir, includeInputs: true)
-    
-    script:
-        """
-        manifest_generate --manifest_dir ${collect_dir}
-        """
-}
-
 process PUBLISH_DIR {
-    publishDir "$out_dir/build_$db.release/metadata/$db.division", mode: 'copy'
-    tag "Publish_${db.species}"
+    publishDir "$out_dir/build_$db.release/metadata/$db.division/$db.species", mode: 'copy'
+    tag "${db.species}"
     label 'default'
     time '5min'
 

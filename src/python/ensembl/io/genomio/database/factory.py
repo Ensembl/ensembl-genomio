@@ -49,6 +49,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
 
         species = get_metadata_value(metadata, "species.production_name")
         division = get_metadata_value(metadata, "species.division")
+        accession = get_metadata_value(metadata, "assembly.accession")
         project_release = _get_project_release(db)
 
         if brc_mode:
@@ -66,6 +67,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
             "database": db,
             "species": species,
             "division": division,
+            "accession": accession,
             "release": project_release,
         }
         databases_data.append(db_data)

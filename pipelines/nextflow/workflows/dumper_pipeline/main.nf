@@ -116,6 +116,16 @@ if (params.select_dump) {
     params.selection = default_selection
 }
 
+// Keep count for groupTuple
+selection_count = 0
+for (item in params.selection) {
+    if (item == "sql") {
+        continue
+    }
+    selection_count++
+}
+params.selection_count = selection_count
+
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
 include { DUMP_METADATA } from '../../subworkflows/dump_metadata/main.nf'
 include { DB_FACTORY } from '../../modules/database/db_factory.nf'
