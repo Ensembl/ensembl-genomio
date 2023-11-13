@@ -351,7 +351,7 @@ sub pipeline_analyses {
       -parameters  => {
         cmd => 'mkdir -p #log_path#; '
              . 'echo "checking #json# against #schema#" > #log_path#/#metadata_type#.log; '
-             . 'check_json_schema --json_file #json# --json_schema #schema# '
+             . 'schemas_json_validate --json_file #json# --json_schema #schema# '
              . '   >> #log_path#/#metadata_type#.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_schemas',
         json => '#metadata_json#',
