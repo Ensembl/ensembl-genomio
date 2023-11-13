@@ -24,7 +24,7 @@ process DUMP_GENOME_META {
         val db
 
     output:
-        tuple val(db), val("genome"), path("genome.json")
+        tuple val(db), val("genome"), path("*genome.json")
 
     script:
         """
@@ -33,6 +33,6 @@ process DUMP_GENOME_META {
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            > genome.json
+            > ${db.species}_genome.json
         """
 }

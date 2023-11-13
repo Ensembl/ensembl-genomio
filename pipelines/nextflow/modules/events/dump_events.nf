@@ -24,16 +24,16 @@ process DUMP_EVENTS {
         val db
 
     output:
-        tuple val(db), val("events"), path("events.txt")
+        tuple val(db), val("events"), path("ids_events.tab")
 
     script:
         """
-        touch "events.txt"
+        touch "ids_events.tab"
         events_dump --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            --output_file "events.txt"
+            --output_file "ids_events.tab"
         """
 }

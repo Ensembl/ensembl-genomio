@@ -23,16 +23,15 @@ process DUMP_SEQ_REGIONS {
         val db
 
     output:
-        tuple val(db), val("seq_region"), path("seq_region.json")
+        tuple val(db), val("seq_region"), path("*seq_region.json")
 
     script:
         """
-        touch seq_region.json
         seq_region_dump --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            > seq_region.json
+            > ${db.species}_seq_region.json
         """
 }
