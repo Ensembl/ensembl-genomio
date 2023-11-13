@@ -98,12 +98,11 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
             if synonyms:
                 seq_region["synonyms"] = synonyms
 
-            attribs = get_attribs(seqr)
+            attribs = get_attribs_dict(seqr)
             if attribs:
-                attrib_dict = {attrib["source"]: attrib["value"] for attrib in attribs}
-                if "toplevel" not in attrib_dict:
+                if "toplevel" not in attribs:
                     continue
-                add_attribs(seq_region, attrib_dict)
+                add_attribs(seq_region, attribs)
             else:
                 # Skip seq_region without attribs, not toplevel
                 continue
@@ -111,6 +110,10 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
             karyotype = get_karyotype(seqr)
             if karyotype:
                 seq_region["karyotype_bands"] = karyotype
+
+            added_seq = get_added_sequence(seqr)
+            if added_seq:
+                seq_region["added_sequence"] = added_seq
 
             if "coord_system_level" not in seq_region:
                 seq_region["coord_system_level"] = coord_system.name
@@ -192,7 +195,7 @@ def get_attribs(seq_region: SeqRegion) -> List:
         seq_region (SeqRegion): The seq_region from which the attribs are extracted.
 
     Returns:
-        List: All attribs as a dict with 'value' and 'source' keys.
+        List: All attribs as a list of dicts with 'value' and 'source' keys.
     """
     attribs = seq_region.seq_region_attrib
     atts = []
@@ -201,6 +204,14 @@ def get_attribs(seq_region: SeqRegion) -> List:
             att_obj = {"value": attrib.value, "source": attrib.attrib_type.code}
             atts.append(att_obj)
     return atts
+
+
+def get_attribs_dict(seq_region: SeqRegion) -> Dict:
+    """Given a seq_region, extracts the attribs as a dict with source as key."""
+
+    attribs = get_attribs(seq_region)
+    attrib_dict = {attrib["source"]: attrib["value"] for attrib in attribs}
+    return attrib_dict
 
 
 def get_karyotype(seq_region: SeqRegion) -> List:
@@ -228,6 +239,43 @@ def get_karyotype(seq_region: SeqRegion) -> List:
 
     kars = sorted(kars, key=lambda kar: kar["name"])
     return kars
+
+
+def get_added_sequence(seq_region: SeqRegion) -> Dict:
+    """Given a seq_region, extract added_sequence information.
+
+    Args:
+        seq_region (SeqRegion): The seq_region from which the attribs are extracted.
+
+    Returns:
+        Dict: accession, .
+    """
+    attribs = get_attribs_dict(seq_region)
+    accession = attribs.get("added_seq_accession")
+    if accession is None:
+        return {}
+
+    added_sequence = {
+        "accession": accession,
+    }
+
+    # Assembly provider
+    assembly_provider = {
+        "name": attribs.get("added_seq_asm_pr_nam"),
+        "url": attribs.get("added_seq_asm_pr_url"),
+    }
+    if assembly_provider["name"] and assembly_provider["url"]:
+        added_sequence["assembly_provider"] = assembly_provider
+
+    # annotation provider
+    annotation_provider = {
+        "name": attribs.get("added_seq_ann_pr_nam"),
+        "url": attribs.get("added_seq_ann_pr_url"),
+    }
+    if annotation_provider["name"] and annotation_provider["url"]:
+        added_sequence["annotation_provider"] = annotation_provider
+
+    return added_sequence
 
 
 def main() -> None:
