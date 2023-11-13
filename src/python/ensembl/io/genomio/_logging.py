@@ -12,23 +12,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TODO"""
+"""Internal logging system for the Ensembl GenomIO modules."""
 
 import logging
 from pathlib import Path
 from typing import Optional
 
 
-def init_logging(log_level: str = "WARNING", log_file: Optional[Path] = None) -> logging.Logger:
-    """TODO"""
-    formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s", datefmt=r"%Y-%m-%d_%H:%M:%S")
+def init_logging(log_level: str = "WARNING", log_file: Optional[Path] = None) -> None:
+    """Initialises the logging system.
 
+    By default, all the log messages corresponding to `log_level` (and) above will be printed in the standard
+    error. If `log_file` is provided, all debug messages (and above) will be written into the file.
+
+    Args:
+        log_level: Minimum logging level for the standard error.
+        log_file: Logging file where to write debug (and above) logging messages.
+
+    """
+    formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s", datefmt=r"%Y-%m-%d_%H:%M:%S")
+    # Set the standard error logging handler and replace the existing one in the root logging system
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(log_level)
     stream_handler.setFormatter(formatter)
     logging.root.handlers[0] = stream_handler
-
     if log_file:
+        # Set the debug-level logging file handler and add it to the root logging system
         logfile_handler = logging.FileHandler(log_file)
         logfile_handler.setLevel(logging.DEBUG)
         logfile_handler.setFormatter(formatter)

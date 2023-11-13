@@ -35,7 +35,7 @@ import re
 import time
 from typing import Dict
 
-from ensembl.io.genomio._logger import init_logging
+from ensembl.io.genomio._logging import init_logging
 from ensembl.utils.argparse import ArgumentParser
 
 
