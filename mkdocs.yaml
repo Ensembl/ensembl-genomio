@@ -1,0 +1,31 @@
+# mkdocs.yml
+site_name: Ensembl-GenomIO (v0.1)
+
+theme:
+  name: "material"
+  logo: img/logo.png
+
+plugins:
+- search
+- gen-files:
+     scripts:
+     - docs/gen_ref_pages.py
+- literate-nav:
+    nav_file: SUMMARY.md
+- section-index
+- mkdocstrings:
+    enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
+    default_handler: python
+    handlers:
+      python:
+        options:
+          show_source: true
+
+nav:
+  - Home: index.md
+  - Usage: usage.md
+  - Install: install.md
+  - Code Reference: reference/
+  - Running Nextflow: nextflow.md
+  - Ensembl-Genomio Pipelines: pipelines.md
+  - License: license.md
