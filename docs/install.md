@@ -17,6 +17,7 @@ Software
 --------------
 
 - Python 3.8+
+- Perl 5.26
 - Bioperl 1.6.9+
 
 Python Modules
