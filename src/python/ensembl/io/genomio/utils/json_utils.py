@@ -29,11 +29,7 @@ def get_json(src_path: PathLike, **kwargs) -> Any:
 
     """
     with Path(src_path).open("r") as json_file:
-        try:
-            return json.load(json_file, **kwargs)
-        # Empty JSON file
-        except:
-            return {}
+        return json.load(json_file, **kwargs)
 
 
 def print_json(dst_path: PathLike, data: Any, **kwargs) -> None:
