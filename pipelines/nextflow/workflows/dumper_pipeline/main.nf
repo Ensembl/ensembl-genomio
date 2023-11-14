@@ -119,12 +119,19 @@ if (params.select_dump) {
 // Keep count for groupTuple
 selection_count = 0
 for (item in params.selection) {
-    if (item == "sql") {
-        continue
+    switch (item) {
+        case "sql":
+            break;
+        case "stats":
+            selection_count += 3;
+            break;
+        default:
+            selection_count += 1;
+            break;
     }
-    selection_count++
 }
 params.selection_count = selection_count
+print("Selection count = ${params.selection_count} metadata files ($params.selection)")
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
 include { DUMP_METADATA } from '../../subworkflows/dump_metadata/main.nf'

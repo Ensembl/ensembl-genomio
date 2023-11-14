@@ -60,7 +60,7 @@ workflow DUMP_METADATA {
             stats = ncbi_stats.join(genome_stats)
             diff_stats = COMPARE_GENOME_STATS(stats)
             stats_files = genome_stats.concat(ncbi_stats).concat(diff_stats)
-                .groupTuple()
+                .groupTuple(size: 3)
                 .transpose(by: 1)
                 .map { db, files -> tuple(db, "stats", files) }
             db_files = db_files.concat(stats_files)
