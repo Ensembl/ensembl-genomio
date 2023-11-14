@@ -1,5 +1,5 @@
 # mkdocs.yml
-site_name: Ensembl-GenomIO (v0.1)
+site_name: Ensembl-GenomIO
 
 theme:
   name: "material"

@@ -1,4 +1,4 @@
-# [Ensembl-genomIO (v0.1)](https://github.com/Ensembl/ensembl-genomio)
+# [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio)
 
 *Ensembl-genomIO Base Library Documentation*
 
@@ -14,7 +14,6 @@ to install the project.
 
 1. [Usage](usage.md)
 2. [Install](install.md)
-3. [License](license.md)
 
 Ehive pipelines
 -------------------------------------------
@@ -90,3 +89,6 @@ Nextflow pipelines
 	        └── utils
 	            ├── archive_utils.py
 	            └── json_utils.py
+
+## License 
+Software as part of [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio) is distributed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.txt)
