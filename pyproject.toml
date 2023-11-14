@@ -68,9 +68,20 @@ cicd = [
     "pytest-workflow",
     "types-requests",
 ]
-doc = [
+sphinx = [
     "mock",
     "Sphinx",
+]
+doc = [
+    "mkdocs",
+    "mkdocs-autorefs",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-material",
+    "mkdocs-material-extensions",
+    "mkdocs-section-index",
+    "mkdocstrings",
+    "mkdocstrings-python",
 ]
 
 [project.urls]
