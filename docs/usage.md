@@ -12,7 +12,7 @@ python3.7 -m venv path/to/virtual_env
 pip install -e .
 ```
 
-*Do not forget to load this environment by sourcing virtual_env/bin/activate in order to run ensembl-genomio pipeline(s).*
+*Do not forget to load this environment by sourcing `virtual_env/bin/activate` in order to run ensembl-genomio pipeline(s).*
 
 
 
