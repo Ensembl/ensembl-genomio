@@ -25,9 +25,10 @@ Python Modules
 - bcbio-gff
 - biopython
 - jsonschema
+- intervaltree
 - mysql-connector-python
-- requests
 - python-redmine
+- requests
 
 
 ## Installation
