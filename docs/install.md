@@ -6,7 +6,7 @@ Requirements
 
 An Ensembl API checkout including:
 
-- [ensembl-genomio](https://github.com/Ensembl/ensembl-genomio)  (export /src/perl and /src/python into PERL5LIB and PYTHONPATH respectively)
+- [ensembl-genomio](https://github.com/Ensembl/ensembl-genomio)  (export /src/perl into PERL5LIB)
 - [ensembl-hive](https://github.com/Ensembl/ensembl-hive)
 - [ensembl-production](https://github.com/Ensembl/ensembl-production)
 - [ensembl-analysis](https://github.com/Ensembl/ensembl-analysis/tree/dev/hive_master) (on dev/hive_master branch)
