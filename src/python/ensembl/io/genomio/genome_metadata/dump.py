@@ -82,7 +82,7 @@ def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
             "annotation_source",
         },
         "assembly": {"accession", "date", "name", "version", "provider_name", "provider_url"},
-        "genebuild": {"version", "method", "start_date", "method_display"},
+        "genebuild": {"version", "method", "start_date", "method_display", "id"},
         "annotation": {"provider_name", "provider_url"},
         "BRC4": {"organism_abbrev", "component"},
         "added_seq": {"region_name"},
@@ -113,6 +113,7 @@ def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
             gmeta_out[key1] = value
 
     check_assembly_version(gmeta_out)
+    check_genebuild_version(gmeta_out)
 
     return gmeta_out
 
@@ -139,6 +140,29 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
             assembly["version"] = int(version)
         else:
             raise ValueError(f"Assembly version is not an integer in {assembly}")
+
+
+def check_genebuild_version(gmeta_out: Dict[str, Any]) -> None:
+    """Update the genebuild version if not set.
+    Get the version from the genebuild id (and remove that value if any).
+
+    Args:
+        gmeta (Dict[str, Any]): Nested metadata key values from the core metadata table.
+    """
+    genebuild = gmeta_out.get("genebuild")
+    if genebuild is None:
+        return
+    version = genebuild.get("version")
+
+    # Check there is a version
+    if version is None:
+        gb_id = genebuild.get("id")
+        if gb_id is None:
+            raise ValueError("No genebuild version or id")
+        gmeta_out["genebuild"]["version"] = str(gb_id)
+    
+    if "id" in genebuild:
+        del gmeta_out["genebuild"]["id"]
 
 
 def main() -> None:
