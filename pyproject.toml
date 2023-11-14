@@ -68,10 +68,6 @@ cicd = [
     "pytest-workflow",
     "types-requests",
 ]
-sphinx = [
-    "mock",
-    "Sphinx",
-]
 doc = [
     "mkdocs",
     "mkdocs-autorefs",
