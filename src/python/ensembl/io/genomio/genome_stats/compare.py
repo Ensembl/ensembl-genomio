@@ -28,6 +28,7 @@ from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging
 
+
 def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Any]:
     """Compare two dicts with the same keys and compute the difference of their values.
 
