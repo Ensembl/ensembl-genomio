@@ -12,7 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Manifest files handling module."""
 
-"""GenomIO FASTA preparation modules."""
-
-from .process_fasta import *
+from .check_integrity import *
+from .compute_stats import *
+from .generate import *

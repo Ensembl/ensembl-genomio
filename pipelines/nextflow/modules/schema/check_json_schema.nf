@@ -26,6 +26,6 @@ process CHECK_JSON_SCHEMA {
     shell:
         schema = params.json_schemas[json_file.baseName]
         '''
-        check_json_schema --json_file !{json_file} --json_schema !{schema}
+        schemas_json_validate --json_file !{json_file} --json_schema !{schema}
         '''
 }

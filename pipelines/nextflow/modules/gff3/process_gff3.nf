@@ -29,7 +29,7 @@ process PROCESS_GFF3 {
         out_func = "functional_annotation.json"
         out_gff = "gene_models.gff3"
         '''
-        process_gff3 --genome_data !{genome} --in_gff_path !{gff3} --out_gff_path !{out_gff} \
+        gff3_process --genome_data !{genome} --in_gff_path !{gff3} --out_gff_path !{out_gff} \
             --out_func_path !{out_func}
         '''
 }

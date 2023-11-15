@@ -22,7 +22,7 @@ process LOAD_EVENTS {
 
     script:
     """
-    events_loader \\
+    events_load \\
     --host $server.host \\
     --user $server.user \\
     --port $server.port \\
