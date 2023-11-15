@@ -36,7 +36,7 @@ import time
 from typing import Dict
 
 from ensembl.utils.argparse import ArgumentParser
-
+from ensembl.utils.logging import init_logging
 
 _FILE_ENDS = {
     "assembly_report.txt": "report",
@@ -281,6 +281,10 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--download_dir", default=Path.cwd(), help="Folder where the data will be downloaded"
     )
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 
-    retrieve_assembly_data(**vars(args))
+    # Configure and initialise logging
+    init_logging(args.log_level, args.log_file, args.log_file_level)
+
+    retrieve_assembly_data(args.accession, args.download_dir)
