@@ -69,8 +69,15 @@ cicd = [
     "types-requests",
 ]
 doc = [
-    "mock",
-    "Sphinx",
+    "mkdocs",
+    "mkdocs-autorefs",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-material",
+    "mkdocs-material-extensions",
+    "mkdocs-section-index",
+    "mkdocstrings",
+    "mkdocstrings-python",
 ]
 
 [project.urls]

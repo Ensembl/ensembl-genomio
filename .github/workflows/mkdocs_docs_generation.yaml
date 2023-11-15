@@ -1,6 +1,6 @@
-name: Documentation_deploy
-run-name: ${{ github.actor }} triggered doc generation
-on: 
+name: Documentation_deploy_mkdocs
+run-name: ${{ github.actor }} triggered mkdocs generation
+on:
   pull_request:
     types:
       - closed
@@ -16,9 +16,9 @@ on:
       - 'docs/**'
 permissions:
     contents: write
-
+    
 jobs:
-  Sphinx_Doc_generation:
+  Mkdocs_Doc_generation:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
@@ -34,19 +34,30 @@ jobs:
         cache-dependency-path: '**/pip'
         run: echo '${{ steps.cp38.outputs.cache-hit }}'
 
+    - name: Set pip cache directory path
+      id: pip-cache-dir-path
+      run: |
+        echo "PIPCACHE=(`pip cache dir`)" >> "$GITHUB_OUTPUT"
+    
+    - name: Get pip cache dir 
+      env:
+        PIPCACHE: ${{ steps.pip-cache-dir-path.outputs.PIPCACHE }}
+      run: echo "The pip cache dir located is $PIPCACHE"
+
     - name: Install Dependencies
       run: |
         pip install -e .[doc]
 
-    - name: Sphinx Build
+    - name: mkdocs deploy
       run: |
-        sh scripts/setup/docs/build_sphinx_docs.sh
+        mkdocs build
         
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       if: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' }}
       with:
-        publish_branch: gh-pages
+        publish_branch: mkdocs
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: docs/build/html
+        publish_dir: ./site
         force_orphan: true
+
