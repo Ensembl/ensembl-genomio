@@ -27,6 +27,6 @@ process COMPARE_GENOME_STATS {
 
     script:
         """
-        genome_stats_compare --ncbi $ncbi_stats --core $core_stats > diff_stats.json
+        genome_stats_compare --ncbi $ncbi_stats --core $core_stats --debug > diff_stats.json
         """
 }
