@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""GFF3 files processing module."""
+"""Genome statistics handling module."""
 
-from .extract_annotation import *
-from .process import *
+from .compare import *
+from .dump import *

@@ -31,6 +31,6 @@ process MANIFEST_STATS {
         if [ "!{ncbi_check}" == 1 ]; then
             CHECK_ASSEMBLY=" --datasets_bin !{datasets} --accession !{meta.accession}"
         fi
-        manifest_stats --manifest_dir ./ $CHECK_ASSEMBLY
+        manifest_compute_stats --manifest_dir ./ $CHECK_ASSEMBLY
         '''
 }

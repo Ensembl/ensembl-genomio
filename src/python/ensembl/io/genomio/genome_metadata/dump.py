@@ -91,24 +91,26 @@ def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
 
     gmeta_out: Dict[str, Any] = {}
     for key1, subkeys in meta_list.items():
-        if key1 in gmeta:
-            if subkeys:
-                gmeta_out[key1] = {}
-                for key2 in subkeys:
-                    if key2 in gmeta[key1]:
-                        value = gmeta[key1][key2]
-                        if len(value) == 1:
-                            value = value[0]
-                            if key2 in is_integer.get(key1, {}):
-                                value = int(value)
-                        gmeta_out[key1][key2] = value
-            else:
-                value = gmeta[key1]
+        if key1 not in gmeta:
+            continue
+        if subkeys:
+            gmeta_out[key1] = {}
+            for key2 in subkeys:
+                if key2 not in gmeta[key1]:
+                    continue
+                value = gmeta[key1][key2]
                 if len(value) == 1:
                     value = value[0]
-                    if is_integer.get(key1):
+                    if key2 in is_integer.get(key1, {}):
                         value = int(value)
-                gmeta_out[key1] = value
+                gmeta_out[key1][key2] = value
+        else:
+            value = gmeta[key1]
+            if len(value) == 1:
+                value = value[0]
+                if is_integer.get(key1):
+                    value = int(value)
+            gmeta_out[key1] = value
 
     check_assembly_version(gmeta_out)
 

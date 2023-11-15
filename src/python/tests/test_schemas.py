@@ -32,7 +32,7 @@ from jsonschema.exceptions import ValidationError
 import pytest
 from pytest import raises
 
-from ensembl.io.genomio import schemas
+from ensembl.io.genomio.schemas.json import json_schema_factory, json_schema_validator
 
 
 class TestSchemas:
@@ -68,7 +68,7 @@ class TestSchemas:
             output: Expected created files.
 
         """
-        schemas.json_schema_factory(self.test_data_dir, metadata_types, self.tmp_dir)
+        json_schema_factory(self.test_data_dir, metadata_types, self.tmp_dir)
         for file_name in output:
             print(f"Check {file_name} in {self.tmp_dir}")
             assert (self.tmp_dir / file_name).exists()
@@ -95,4 +95,4 @@ class TestSchemas:
         json_path = self.test_data_dir / json_file
         schema_path = self.schema_dir / json_schema
         with expected:
-            schemas.json_schema_validator(json_path, schema_path)
+            json_schema_validator(json_path, schema_path)

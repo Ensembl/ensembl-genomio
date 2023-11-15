@@ -26,7 +26,7 @@ process AMEND_GENOME_DATA {
     
     shell:
         '''
-        amend_genomic_data --genome_infile !{genome_json} \
+        genome_metadata_extend --genome_infile !{genome_json} \
             --report_file !{asm_report} \
             --genbank_infile !{genbank_gbff} \
             --genome_outfile genome.json

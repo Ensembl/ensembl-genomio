@@ -33,7 +33,7 @@ from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.io.genomio.gff3.functional_annotation import FunctionalAnnotations
+from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations
 from ensembl.utils.argparse import ArgumentParser
 
 

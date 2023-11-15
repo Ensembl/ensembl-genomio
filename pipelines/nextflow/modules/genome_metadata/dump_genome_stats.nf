@@ -28,7 +28,7 @@ process DUMP_GENOME_STATS {
 
     script:
         """
-        genome_stats_dumper --host '${server.host}' \
+        genome_stats_dump --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \

@@ -52,7 +52,7 @@ process MANIFEST {
     
     script:
         """
-        manifest_maker --manifest_dir ${collect_dir}
+        manifest_generate --manifest_dir ${collect_dir}
         """
 }
 

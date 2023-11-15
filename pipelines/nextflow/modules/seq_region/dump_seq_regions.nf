@@ -27,7 +27,7 @@ process DUMP_SEQ_REGIONS {
     script:
         """
         touch seq_region.json
-        seq_region_dumper --host '${server.host}' \
+        seq_region_dump --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
             --password '${server.password}' \

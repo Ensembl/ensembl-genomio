@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Assembly preparation module."""
 
-"""GenomIO assembly preparation modules."""
-
-from .get_assembly_data import *
+from .download import *

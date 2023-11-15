@@ -29,7 +29,7 @@ process PROCESS_FASTA {
     output_fasta = pep_mode == 1 ? "fasta_pep.fa" : "fasta_dna.fa"
     pep_mode_flag = pep_mode == 0 ? "" : "--peptide_mode"
     '''
-    prep_fasta_data --fasta_infile !{fasta_file} \
+    fasta_process --fasta_infile !{fasta_file} \
         --genbank_infile !{gbff_file} \
         --fasta_outfile !{output_fasta} \
         !{pep_mode_flag}

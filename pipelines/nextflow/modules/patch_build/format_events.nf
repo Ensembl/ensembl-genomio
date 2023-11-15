@@ -28,7 +28,7 @@ process FORMAT_EVENTS {
     script:
     def final_events = "events.tab"
     """
-    format_events \\
+    events_format \\
     --input_file $events \\
     --map $new_genes \\
     --deletes $deletes \\
