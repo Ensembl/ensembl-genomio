@@ -198,10 +198,11 @@ def main() -> None:
     
     try:
         ncbi_stats = get_json(args.ncbi_stats)["reports"][0]
-        logging.info(f"{args.ncbi_stats} JSON .'reports' obtained")
     except (json.decoder.JSONDecodeError, KeyError):
         logging.warning(f"{args.ncbi_stats} JSON file is empty")
         ncbi_stats = {}
+    else:
+        logging.info(f"{args.ncbi_stats} JSON .'reports' obtained")
     core_stats = get_json(args.core_stats)
     all_stats = compare_stats(ncbi_stats, core_stats)
 
