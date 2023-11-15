@@ -91,4 +91,4 @@ Nextflow pipelines
 	            └── json_utils.py
 
 ## License 
-Software as part of [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio) is distributed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.txt)
+Software as part of [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio) is distributed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.txt).
