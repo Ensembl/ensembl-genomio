@@ -14,5 +14,3 @@ pip install -e .
 
 *Do not forget to load this environment by sourcing `virtual_env/bin/activate` in order to run ensembl-genomio pipeline(s).*
 
-
-
