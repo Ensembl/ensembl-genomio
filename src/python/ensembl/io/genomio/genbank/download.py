@@ -23,11 +23,7 @@ from pathlib import Path
 import requests
 
 from ensembl.utils.argparse import ArgumentParser
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.propagate = False
+from ensembl.utils.logging import init_logging
 
 
 class DownloadError(Exception):
@@ -59,39 +55,24 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
         "retmode": "text",
     }
     entrez_params["id"] = accession
-    logger.debug(f"Getting file from {entrez_url} with params {entrez_params}")
+    logging.debug(f"Getting file from {entrez_url} with params {entrez_params}")
     result = requests.get(entrez_url, params=entrez_params, timeout=60)
     if result and result.status_code == 200:
         with Path(output_file).open("wb") as gbff:
             gbff.write(result.content)
-        logger.info(f"GenBank file written to {output_file}")
+        logging.info(f"GenBank file written to {output_file}")
         return
     raise DownloadError(f"Could not download the genbank ({accession}) file: {result}")
+
 
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(description="Download a sequence from GenBank.")
     parser.add_argument("--accession", required=True, help="Sequence accession")
     parser.add_argument_dst_path("--output_file", required=True, help="Output GenBank file")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose level logging")
-    parser.add_argument("-d", "--debug", action="store_true", help="Debug level logging")
+    parser.add_log_arguments()
     args = parser.parse_args()
-
-    # Logging setup
-    logging_format = "%(asctime)s\t%(levelname)s\t%(message)s"
-    date_format = r"%Y-%m-%d_%H:%M:%S"
-    formatter = logging.Formatter(logging_format, datefmt=date_format)
-
-    # Console logging
-    log_level = None
-    if args.debug:
-        log_level = logging.DEBUG
-    elif args.verbose:
-        log_level = logging.INFO
-    console = logging.StreamHandler()
-    console.setLevel(log_level)
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    init_logging(args.log_level)
 
     download_genbank(accession=args.accession, output_file=args.output_file)
 

@@ -43,11 +43,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
 from ensembl.utils.argparse import ArgumentParser
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.propagate = False
+from ensembl.utils.logging import init_logging
 
 
 class GBParseError(Exception):
@@ -132,7 +128,7 @@ class FormattedFilesGenerator:
         """
 
         organella = self._get_organella(gb_file)
-        logger.debug(f"Organella loaded: {organella}")
+        logging.debug(f"Organella loaded: {organella}")
 
         with open(gb_file, "r") as gbh:
             for record in SeqIO.parse(gbh, "genbank"):
@@ -164,7 +160,7 @@ class FormattedFilesGenerator:
         return organella
 
     def _write_fasta_dna(self):
-        logger.debug(f"Write {len(self.seq_records)} DNA sequences to {self.files['fasta_dna']}")
+        logging.debug(f"Write {len(self.seq_records)} DNA sequences to {self.files['fasta_dna']}")
         with open(self.files["fasta_dna"], "w") as fasta_fh:
             SeqIO.write(self.seq_records, fasta_fh, "fasta")
 
@@ -192,13 +188,13 @@ class FormattedFilesGenerator:
             with self.files["fasta_pep"].open("w") as fasta_fh:
                 SeqIO.write(peptides, fasta_fh, "fasta")
 
-        logger.debug("Check that IDs are unique")
+        logging.debug("Check that IDs are unique")
         count = dict(Counter(all_ids))
         num_duplicates = 0
         for key in count:
             if count[key] > 1:
                 num_duplicates += 1
-                logger.warning(f"ID {key} is duplicated {count[key]} times")
+                logging.warning(f"ID {key} is duplicated {count[key]} times")
         if num_duplicates > 0:
             raise GBParseError(f"Some {num_duplicates} IDs are duplicated")
 
@@ -320,7 +316,7 @@ class FormattedFilesGenerator:
 
         parts = gene_id.split(" ")
         if len(parts) > 2:
-            logger.info(f"Shortening gene_id to {parts[0]}")
+            logging.info(f"Shortening gene_id to {parts[0]}")
             gene_id = parts[0]
         gene_id = self._uniquify_id(gene_id, all_ids)
 
@@ -355,10 +351,10 @@ class FormattedFilesGenerator:
         new_id = gene_id
         num = 1
         while new_id in all_ids:
-            logger.info(f"{new_id} already exists, append a number to the new one to make it unique")
+            logging.info(f"{new_id} already exists, append a number to the new one to make it unique")
             num += 1
             new_id = f"{gene_id}_{num}"
-        logger.debug(f"Using {new_id}")
+        logging.debug(f"Using {new_id}")
 
         return new_id
 
@@ -368,7 +364,7 @@ class FormattedFilesGenerator:
         for seq in self.seq_records:
             codon_table = self._get_codon_table(seq)
             if codon_table is None:
-                logger.warning(
+                logging.warning(
                     (
                         "No codon table found. "
                         f"Make sure to change the codon table number in {self.files['seq_region']} manually "
@@ -389,7 +385,7 @@ class FormattedFilesGenerator:
             if seq.organelle:
                 seq_obj["location"] = self._prepare_location(seq.organelle)
                 if not codon_table:
-                    logger.warning(
+                    logging.warning(
                         (
                             f"'{seq.organelle}' is an organelle: "
                             f"make sure to change the codon table number in {self.files['seq_region']} "
@@ -406,14 +402,14 @@ class FormattedFilesGenerator:
                 },
             }
             if not seq_obj["added_sequence"]["assembly_provider"]["name"]:
-                logger.warning(
+                logging.warning(
                     (
                         "Please add the relevant provider name"
                         f"for the assembly in {self.files['seq_region']}"
                     )
                 )
             if not seq_obj["added_sequence"]["assembly_provider"]["url"]:
-                logger.warning(
+                logging.warning(
                     (
                         "Please add the relevant provider url"
                         f" for the assembly in {self.files['seq_region']}"
@@ -463,7 +459,7 @@ class FormattedFilesGenerator:
         }
 
         if not genome_data["species"]["production_name"]:
-            logger.warning(
+            logging.warning(
                 f"Please add the relevant production_name for this genome in {self.files['genome']}"
             )
 
@@ -477,41 +473,18 @@ class FormattedFilesGenerator:
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(description="Parse a GenBank file and create cleaned up files from it.")
-    parser.add_argument_src_path("--gb_file", required=True, help="Sequence accession file")
-    parser.add_argument("--prefix", required=True, help="Prefix to add to every feature ID")
-    parser.add_argument("--prod_name", required=True, help="Production name for the species")
+    parser.add_argument_src_path("--gb_file", required=True, help="sequence accession file")
+    parser.add_argument("--prefix", required=True, help="prefix to add to every feature ID")
+    parser.add_argument("--prod_name", required=True, help="production name for the species")
     parser.add_argument_dst_path(
-        "--out_dir", default=Path.cwd(), help="Output folder where the generated files will be stored"
+        "--out_dir", default=Path.cwd(), help="output folder where the generated files will be stored"
     )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose level logging")
-    parser.add_argument("-d", "--debug", action="store_true", help="Debug level logging")
+    parser.add_log_arguments()
     args = parser.parse_args()
-
-    # Logging setup
-    logging_format = "%(asctime)s\t%(levelname)s\t%(message)s"
-    date_format = r"%Y-%m-%d_%H:%M:%S"
-    formatter = logging.Formatter(logging_format, datefmt=date_format)
-
-    # Console logging
-    log_level = None
-    if args.debug:
-        log_level = logging.DEBUG
-    elif args.verbose:
-        log_level = logging.INFO
-    console = logging.StreamHandler()
-    console.setLevel(log_level)
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    init_logging(args.log_level)
 
     gb_extractor = FormattedFilesGenerator(prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file)
     gb_extractor.extract_gb(args.out_dir)
-
-
-    # Get the root logger
-    root_logger = logging.getLogger()
-    # Check the handlers
-    for handler in root_logger.handlers:
-        print(handler)
 
 
 if __name__ == "__main__":
