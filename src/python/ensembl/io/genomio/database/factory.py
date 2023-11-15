@@ -47,7 +47,8 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
         server.set_database(db)
         metadata = server.get_db_metadata()
 
-        species = get_metadata_value(metadata, "species.production_name")
+        prod_name = get_metadata_value(metadata, "species.production_name")
+        species = prod_name
         division = get_metadata_value(metadata, "species.division")
         accession = get_metadata_value(metadata, "assembly.accession")
         project_release = _get_project_release(db)
@@ -65,6 +66,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
 
         db_data = {
             "database": db,
+            "production_name": prod_name,
             "species": species,
             "division": division,
             "accession": accession,
