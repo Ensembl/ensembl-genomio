@@ -733,7 +733,6 @@ def main() -> None:
     # Configure and initialise logging
     init_logging(args.log_level, args.log_file, args.log_file_level)
 
-    # inspector = IntegrityTool(**vars(args))
     inspector = IntegrityTool(args.manifest_file, args.brc_mode, args.ignore_final_stops)
     inspector.check_integrity()
 
