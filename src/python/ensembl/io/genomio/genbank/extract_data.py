@@ -401,17 +401,11 @@ class FormattedFilesGenerator:
             }
             if not seq_obj["added_sequence"]["assembly_provider"]["name"]:
                 logging.warning(
-                    (
-                        "Please add the relevant provider name"
-                        f"for the assembly in {self.files['seq_region']}"
-                    )
+                    (f"Please add the relevant provider name for the assembly in {self.files['seq_region']}")
                 )
             if not seq_obj["added_sequence"]["assembly_provider"]["url"]:
                 logging.warning(
-                    (
-                        "Please add the relevant provider url"
-                        f" for the assembly in {self.files['seq_region']}"
-                    )
+                    (f"Please add the relevant provider URL for the assembly in {self.files['seq_region']}")
                 )
 
             json_array.append(seq_obj)
