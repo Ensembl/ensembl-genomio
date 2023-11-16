@@ -196,7 +196,7 @@ def main() -> None:
 
     # Configure and initialise logging
     init_logging(args.log_level, args.log_file, args.log_file_level)
-    
+
     try:
         ncbi_stats = get_json(args.ncbi_stats)["reports"][0]
     except (json.decoder.JSONDecodeError, KeyError):
@@ -208,6 +208,7 @@ def main() -> None:
     all_stats = compare_stats(ncbi_stats, core_stats)
 
     print(json.dumps(all_stats, indent=2, sort_keys=True))
+
 
 if __name__ == "__main__":
     main()

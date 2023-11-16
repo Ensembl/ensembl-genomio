@@ -132,7 +132,7 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
     # Check the version is an integer
     if version is not None and version.isdigit():
         assembly["version"] = int(version)
-        logging.info(f'Located version [v{int(version)}] info from meta data.')
+        logging.info(f"Located version [v{int(version)}] info from meta data.")
     else:
         # Get the version from the assembly accession
         accession = assembly["accession"]
@@ -140,7 +140,9 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
         if len(parts) == 2 and parts[1].isdigit():
             version = parts[1]
             assembly["version"] = int(version)
-            logging.info(f'Asm version [v{version}] obtained from: assembly accession ({assembly["accession"]}).')
+            logging.info(
+                f'Asm version [v{version}] obtained from: assembly accession ({assembly["accession"]}).'
+            )
         else:
             raise ValueError(f"Assembly version is not an integer in {assembly}")
 
@@ -158,7 +160,6 @@ def main() -> None:
 
     # Configure and initialise logging
     init_logging(args.log_level, args.log_file, args.log_file_level)
-
 
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session)

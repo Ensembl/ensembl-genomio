@@ -529,10 +529,10 @@ def main() -> None:
     parser.add_argument_dst_path("--output_file", required=True, help="Output file")
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
-    
+
     # Configure and initialise logging
     init_logging(args.log_level, args.log_file, args.log_file_level)
-    
+
     # Start
     factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
     factory.set_database(args.database)

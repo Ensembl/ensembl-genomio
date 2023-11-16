@@ -21,6 +21,7 @@ import logging
 
 import mysql.connector
 
+
 class CoreServer:
     """Basic interface to a MySQL server with core databases.
 
