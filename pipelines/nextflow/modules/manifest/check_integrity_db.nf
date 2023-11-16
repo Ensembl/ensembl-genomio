@@ -29,6 +29,6 @@ process CHECK_INTEGRITY {
     script:
         brc_mode = params.brc_mode ? '--brc_mode' : ''
         """
-        manifest_check_integrity --manifest_file ${manifest_dir}/manifest.json $brc_mode
+        manifest_check_integrity --manifest_file ${manifest_dir}/manifest.json $brc_mode -v
         """
 }
