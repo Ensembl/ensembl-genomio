@@ -16,11 +16,10 @@
 include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
 include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
 include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_meta.nf'
-include { DUMP_GENOME_STATS } from '../../modules/genome_metadata/dump_genome_stats.nf'
-include { COMPARE_GENOME_STATS } from '../../modules/genome_metadata/compare_genome_stats.nf'
+include { DUMP_GENOME_STATS } from '../../modules/genome_stats/dump_genome_stats.nf'
+include { COMPARE_GENOME_STATS } from '../../modules/genome_stats/compare_genome_stats.nf'
 include { DUMP_NCBI_STATS } from '../../modules/genome_metadata/dump_ncbi_stats.nf'
 include { CHECK_JSON_SCHEMA } from '../../modules/schema/check_json_schema_db.nf'
-
 include { COLLECT_FILES } from '../../modules/files/collect_files_db.nf'
 include { MANIFEST } from '../../modules/files/collect_files_db.nf'
 include { PUBLISH_DIR } from '../../modules/files/collect_files_db.nf'
