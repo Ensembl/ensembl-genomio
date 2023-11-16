@@ -1,6 +1,6 @@
 # [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio)
 
-*Ensembl-genomIO Base Library Documentation*
+*Ensembl GenomIO Base Library Documentation*
 
 A repository dedicated to pipelines used to turn basic genomic data into formatted 
 Ensembl core databases. Also allow users to dump core databases into various formats.
