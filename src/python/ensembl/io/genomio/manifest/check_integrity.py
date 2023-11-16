@@ -17,6 +17,7 @@ to ensure their contents are in sync.
 """
 
 import hashlib
+import logging
 import json
 from math import floor
 from os import PathLike
@@ -30,6 +31,7 @@ from Bio import SeqIO, SeqFeature
 
 from ensembl.io.genomio.utils import get_json, open_gz_file
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging
 
 
 # Record the lengths of the sequence for features/regions
@@ -148,20 +150,20 @@ class Manifest:
         """
         # First, get the Data
         if "gff3" in self.manifest_files:
-            print("Got a gff")
+            logging.info("Manifest contains GFF3")
             self.get_gff3(self.manifest_files["gff3"])
         if "fasta_dna" in self.manifest_files:
-            print("Got a fasta dna")
+            logging.info("Manifest contains DNA fasta")
             # Verify if the length and id for the sequence is unique
             self.lengths["dna_sequences"] = self.get_fasta_lengths(self.manifest_files["fasta_dna"])
         if "fasta_pep" in self.manifest_files:
-            print("Got a fasta pep")
+            logging.info("Manifest contains Peptide fasta")
             # Verify if the length and id for the sequence is unique
             self.lengths["peptide_sequences"] = self.get_fasta_lengths(
                 self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
             )
         if "seq_region" in self.manifest_files:
-            print("Got a seq_regions")
+            logging.info("Manifest contains seq_region JSON")
             seq_regions = get_json(Path(self.manifest_files["seq_region"]))
             seqr_seqlevel = {}
             seq_lengths = {}
@@ -176,13 +178,13 @@ class Manifest:
             self.circular["seq_regions"] = seq_circular
             self.seq_regions = seq_regions
         if "functional_annotation" in self.manifest_files:
-            print("Got a func_anns")
+            logging.info("Manifest contains functional annotation(s)")
             self.get_functional_annotation(self.manifest_files["functional_annotation"])
         if "agp" in self.manifest_files:
-            print("Got agp files")
+            logging.info("Manifest contains AGP files")
             self.lengths["agp"] = self.get_agp_seq_regions(self.manifest_files["agp"])
         if "genome" in self.manifest_files:
-            print("Got a genome")
+            logging.info("Manifest contains genome JSON")
             self.lengths["genome"] = get_json(Path(self.manifest_files["genome"]))
 
     def get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
@@ -539,11 +541,13 @@ class IntegrityTool:
 
         errors = []
         if common:
-            print(f"{len(common)} common elements in {name}")
+            logging.info(f"{len(common)} common elements in {name}")
         if only1:
             errors.append(f"{len(only1)} only in first list in {name} (first: {only1[0]})")
+            logging.debug(f"{len(only1)} only in first list in {name}")
         if only2:
             errors.append(f"{len(only2)} only in second list in {name} (first: {only2[0]})")
+            logging.debug(f"{len(only1)} only in second list in {name}")
 
         return errors
 
@@ -613,7 +617,7 @@ class IntegrityTool:
                     )
                 )
         if common_len > 0:
-            print(f"{common_len} common elements between lists for {name}", file=sys.stderr)
+            logging.warning(f"{common_len} common elements between lists for {name}")
 
         return errors
 
@@ -650,15 +654,15 @@ class IntegrityTool:
         only_feat = comp["only_feat"]
 
         if common:
-            print(f"{len(common)} common elements in {name}")
+            logging.info(f"{len(common)} common elements in {name}")
         if diff_circular:
             example = diff_circular[0]
-            print(f"{len(diff_circular)} differences for circular elements in {name} (e.g. {example})")
+            logging.info(f"{len(diff_circular)} differences for circular elements in {name} (e.g. {example})")
         if diff:
             self.add_errors(f"{len(diff)} common elements with higher length in {name} (e.g. {diff[0]})")
         if only_seqr:
             # Not an error!
-            print(f"{len(only_seqr)} only in seq_region list in {name} (first: {only_seqr[0]})")
+            logging.info(f"{len(only_seqr)} only in seq_region list in {name} (first: {only_seqr[0]})")
         if only_feat:
             self.add_errors(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
 
@@ -723,9 +727,13 @@ def main() -> None:
     parser.add_argument(
         "--ignore_final_stops", action="store_true", help="Ignore final stop when calculating peptide length"
     )
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 
-    inspector = IntegrityTool(**vars(args))
+    # Configure and initialise logging
+    init_logging(args.log_level, args.log_file, args.log_file_level)
+
+    inspector = IntegrityTool(args.manifest_file, args.brc_mode, args.ignore_final_stops)
     inspector.check_integrity()
 
 
