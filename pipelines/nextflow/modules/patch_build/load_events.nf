@@ -30,6 +30,6 @@ process LOAD_EVENTS {
     --database $server.database \\
     --input_file $events \\
     --update \\
-    --debug
+    --verbose
     """
 }

@@ -34,6 +34,6 @@ process DUMP_EVENTS {
             --password '${server.password}' \
             --database '${db.database}' \
             --output_file "events.txt" \
-            --debug
+            --verbose
         """
 }
