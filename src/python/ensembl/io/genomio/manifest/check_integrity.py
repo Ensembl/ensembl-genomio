@@ -23,7 +23,6 @@ from math import floor
 from os import PathLike
 from pathlib import Path
 import re
-import sys
 from typing import Any, Dict, List, Optional
 
 from BCBio import GFF
