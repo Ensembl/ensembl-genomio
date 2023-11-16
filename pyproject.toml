@@ -83,6 +83,7 @@ doc = [
 [project.urls]
 homepage = "https://www.ensembl.org"
 repository = "https://github.com/Ensembl/ensembl-genomio"
+documentation = "https://ensembl.github.io/ensembl-genomio"
 
 [project.scripts]
 # Assembly
