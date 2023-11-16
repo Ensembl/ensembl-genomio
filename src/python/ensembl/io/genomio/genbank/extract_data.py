@@ -351,10 +351,10 @@ class FormattedFilesGenerator:
         new_id = gene_id
         num = 1
         while new_id in all_ids:
-            logging.info(f"{new_id} already exists, append a number to the new one to make it unique")
             num += 1
             new_id = f"{gene_id}_{num}"
-        logging.debug(f"Using {new_id}")
+        if gene_id != new_id:
+            logging.info(f"Make gene id unique: {gene_id} -> {new_id}")
 
         return new_id
 
