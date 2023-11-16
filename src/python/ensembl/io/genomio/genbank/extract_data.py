@@ -178,7 +178,7 @@ class FormattedFilesGenerator:
             all_ids += rec_ids
             peptides += rec_peptides
 
-        logging.debug(f"Write {len(records)} gff records to {self.files['gene_models']}")
+        logging.debug(f"Write {len(records)} gene records to {self.files['gene_models']}")
         if records:
             with self.files["gene_models"].open("w") as gff_fh:
                 GFF.write(records, gff_fh)
@@ -366,9 +366,8 @@ class FormattedFilesGenerator:
             if codon_table is None:
                 logging.warning(
                     (
-                        "No codon table found. "
-                        f"Make sure to change the codon table number in {self.files['seq_region']} manually "
-                        "if it is not the standard codon table"
+                        "No codon table found. Make sure to change the codon table number in "
+                        f"{self.files['seq_region']} manually if it is not the standard codon table."
                     )
                 )
 
@@ -387,9 +386,8 @@ class FormattedFilesGenerator:
                 if not codon_table:
                     logging.warning(
                         (
-                            f"'{seq.organelle}' is an organelle: "
-                            f"make sure to change the codon table number in {self.files['seq_region']} "
-                            "manually if it is not the standard codon table"
+                            f"'{seq.organelle}' is an organelle: make sure to change the codon table number "
+                            f"in {self.files['seq_region']} manually if it is not the standard codon table"
                         )
                     )
 
