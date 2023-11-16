@@ -36,6 +36,6 @@ process DOWNLOAD_ASM_DATA {
 
     shell:
         '''
-        assembly_download --accession !{meta.accession} --asm_download_dir ./
+        assembly_download --accession !{meta.accession} --download_dir ./ --debug
         '''
 }
