@@ -104,7 +104,7 @@ if (params.host && params.port && params.user && params.output_dir) {
 }
 
 if (params.select_dump) {
-    items = params.select_dump.split(/,/)
+    items = params.select_dump.split(/,/).collect().unique()
     for (item in items) {
         if (!default_selection.contains(item)) {
             acceptable = default_selection.join(", ")
