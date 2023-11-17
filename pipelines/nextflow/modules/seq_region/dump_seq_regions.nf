@@ -21,6 +21,10 @@ process DUMP_SEQ_REGIONS {
     input:
         val server
         val db
+        val do_dump
+    
+    when:
+        do_dump
 
     output:
         tuple val(db), val("seq_region"), path("*seq_region.json")

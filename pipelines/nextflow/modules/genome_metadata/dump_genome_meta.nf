@@ -22,6 +22,10 @@ process DUMP_GENOME_META {
     input:
         val server
         val db
+        val do_dump
+    
+    when:
+        do_dump
 
     output:
         tuple val(db), val("genome"), path("*genome.json")

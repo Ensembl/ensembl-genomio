@@ -22,6 +22,10 @@ process DUMP_EVENTS {
     input:
         val server
         val db
+        val do_dump
+    
+    when:
+        do_dump
 
     output:
         tuple val(db), val("events"), path("ids_events.tab")

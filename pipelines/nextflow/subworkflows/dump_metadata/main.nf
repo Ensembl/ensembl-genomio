@@ -36,35 +36,27 @@ workflow DUMP_METADATA {
         db_files = Channel.of()
 
         // Seq regions
-        if (params.selection.contains("seq_regions")) {
-            seq_regions = DUMP_SEQ_REGIONS(server, db)
-            db_files = db_files.concat(seq_regions)
-        }
+        seq_regions = DUMP_SEQ_REGIONS(server, db, params.selection.contains("seq_regions"))
+        db_files = db_files.concat(seq_regions)
         
         // Events
-        if (params.selection.contains("events")) {
-            events = DUMP_EVENTS(server, db)
-            db_files = db_files.concat(events)
-        }
+        events = DUMP_EVENTS(server, db, params.selection.contains("events"))
+        db_files = db_files.concat(events)
 
         // Genome metadata
-        if (params.selection.contains("genome_metadata")) {
-            genome_meta = DUMP_GENOME_META(server, db)
-            db_files = db_files.concat(genome_meta)
-        }
+        genome_meta = DUMP_GENOME_META(server, db, params.selection.contains("genome_metadata"))
+        db_files = db_files.concat(genome_meta)
 
         // Genome stats
-        if (params.selection.contains("stats")) {
-            genome_stats = DUMP_GENOME_STATS(server, db)
-            ncbi_stats = DUMP_NCBI_STATS(server, db)
-            stats = ncbi_stats.join(genome_stats)
-            diff_stats = COMPARE_GENOME_STATS(stats)
-            stats_files = genome_stats.concat(ncbi_stats).concat(diff_stats)
-                .groupTuple(size: 3)
-                .transpose(by: 1)
-                .map { db, files -> tuple(db, "stats", files) }
-            db_files = db_files.concat(stats_files)
-        }
+        genome_stats = DUMP_GENOME_STATS(server, db, params.selection.contains("stats"))
+        ncbi_stats = DUMP_NCBI_STATS(server, db, params.selection.contains("stats"))
+        stats = ncbi_stats.join(genome_stats)
+        diff_stats = COMPARE_GENOME_STATS(stats)
+        stats_files = genome_stats.concat(ncbi_stats).concat(diff_stats)
+            .groupTuple(size: 3)
+            .transpose(by: 1)
+            .map { db, files -> tuple(db, "stats", files) }
+        db_files = db_files.concat(stats_files)
 
         // Group the files by db species (use the db object as key)
         // Only keep the files so they are easy to collect

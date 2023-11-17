@@ -22,6 +22,10 @@ process DUMP_NCBI_STATS {
     input:
         val server
         val db
+        val do_dump
+
+    when:
+        do_dump
 
     output:
         tuple val(db), path("ncbi_stats.json")
