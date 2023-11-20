@@ -20,6 +20,7 @@ from typing import Dict, List, Any
 import logging
 
 import mysql.connector
+from  sqlalchemy.exc import OperationalError
 
 
 class CoreServer:
@@ -59,8 +60,9 @@ class CoreServer:
         try:
             self._connector.database = db_name
         except:
-            logging.critical(f"Unknown database: '{db_name}' - Not located on host !")
-
+            logging.exception(f"Unknown database ! DB:'{db_name}' not located on host {self.host}")
+            raise OperationalError(f"Unknown database!", None, None)
+        
     def get_cursor(self):
         return self._connector.cursor()
 
