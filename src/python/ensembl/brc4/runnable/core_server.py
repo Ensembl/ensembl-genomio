@@ -61,7 +61,7 @@ class CoreServer:
         except mysql.connector.errors.ProgrammingError:
             logging.exception(f"Unknown database ! DB:'{db_name}' not located on host {self.host}")
             raise
-        
+
     def get_cursor(self):
         return self._connector.cursor()
 
