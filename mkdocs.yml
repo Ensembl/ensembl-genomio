@@ -13,10 +13,13 @@
 # limitations under the License.
 
 site_name: Ensembl-GenomIO
+site_url: "https://ensembl.github.io/ensembl-genomio"
+repo_url: "https://github.com/Ensembl/ensembl-genomio"
+repo_name: "Ensembl-GenomIO"
+copyright: Copyright &copy; [2016-2023] EMBL-European Bioinformatics Institute
 
 theme:
   name: "material"
-  logo: img/logo.png
 
 plugins:
 - search

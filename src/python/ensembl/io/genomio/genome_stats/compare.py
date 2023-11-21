@@ -22,9 +22,11 @@ __all__ = ["compare_assembly", "compare_annotation", "compare_stats"]
 import json
 import re
 from typing import Any, Dict
+import logging
 
 from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging
 
 
 def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Any]:
@@ -189,12 +191,19 @@ def main() -> None:
     )
     parser.add_argument_src_path("--ncbi_stats", required=True, help="NCBI dataset JSON file")
     parser.add_argument_src_path("--core_stats", required=True, help="Core database JSON file")
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
+
+    # Configure and initialise logging
+    init_logging(args.log_level, args.log_file, args.log_file_level)
 
     try:
         ncbi_stats = get_json(args.ncbi_stats)["reports"][0]
-    except KeyError:
+    except (json.decoder.JSONDecodeError, KeyError):
+        logging.warning(f"{args.ncbi_stats} JSON file is empty")
         ncbi_stats = {}
+    else:
+        logging.info(f"{args.ncbi_stats} JSON .'reports' obtained")
     core_stats = get_json(args.core_stats)
     all_stats = compare_stats(ncbi_stats, core_stats)
 

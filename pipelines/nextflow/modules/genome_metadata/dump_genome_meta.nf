@@ -33,6 +33,7 @@ process DUMP_GENOME_META {
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
+            --verbose \
             > genome.json
         """
 }

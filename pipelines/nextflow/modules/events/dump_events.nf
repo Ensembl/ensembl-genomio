@@ -33,6 +33,7 @@ process DUMP_EVENTS {
             --user '${server.user}' \
             --password '${server.password}' \
             --database '${db.database}' \
-            --output_file "events.txt"
+            --output_file "events.txt" \
+            --verbose
         """
 }
