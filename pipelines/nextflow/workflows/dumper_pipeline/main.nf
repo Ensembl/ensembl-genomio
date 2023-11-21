@@ -27,6 +27,8 @@ default_selection = [
     'events',
     'genome_metadata',
     'stats',
+    'fasta_pep',
+    'fasta_dna'
 ]
 
 // Print usage

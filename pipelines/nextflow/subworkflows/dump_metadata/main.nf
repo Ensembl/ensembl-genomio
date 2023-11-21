@@ -14,6 +14,8 @@
 // limitations under the License.
 
 include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
+include { DUMP_FASTA_DNA } from '../../modules/fasta/dump_fasta_dna.nf'
+include { DUMP_FASTA_PEPTIDES } from '../../modules/fasta/dump_fasta_peptides.nf'
 include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
 include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_meta.nf'
 include { DUMP_GENOME_STATS } from '../../modules/genome_metadata/dump_genome_stats.nf'
@@ -38,6 +40,17 @@ workflow DUMP_METADATA {
         // Seq regions
         seq_regions = DUMP_SEQ_REGIONS(server, db, params.selection.contains("seq_regions"))
         db_files = db_files.concat(seq_regions)
+
+        // Dump DNA sequences
+        fasta_dna = DUMP_FASTA_DNA(server, db, params.selection.contains("fasta_dna"))
+        db_files = db_files.concat(fasta_dna)
+
+        // Dump protein sequences
+        fasta_pep = DUMP_FASTA_PEPTIDES(server, db, params.selection.contains("fasta_pep"))
+        db_files = db_files.concat(fasta_pep)
+
+        // Dump gene models
+        // TODO
         
         // Events
         events = DUMP_EVENTS(server, db, params.selection.contains("events"))
