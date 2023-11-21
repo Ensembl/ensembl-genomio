@@ -105,11 +105,15 @@ if (params.host && params.port && params.user && params.output_dir) {
     exit 1, "Missing server parameters"
 }
 
+// Select the files to dump
+dump_meta = default_selection
+dump_sql = true
+dump_number = 8
 if (params.select_dump) {
-    items = params.select_dump.split(/,/).collect().unique()
-    new_items = []
+    dump_meta = []
     dump_sql = false
     dump_number = 0
+    items = params.select_dump.split(/,/).collect().unique()
     for (item in items) {
         if (!default_selection.contains(item)) {
             acceptable = default_selection.join(", ")
@@ -123,13 +127,11 @@ if (params.select_dump) {
             } else {
                 dump_number += 1
             }
-            new_items.add(item)
+            dump_meta.add(item)
         }
     }
-    dump_select = ["dump_selection": new_items, "dump_sql": dump_sql, "dump_number": dump_number]
-} else {
-    params.selection = default_selection
 }
+dump_select = ["dump_selection": dump_meta, "dump_sql": dump_sql, "dump_number": dump_number]
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
 include { DUMP_METADATA } from '../../subworkflows/dump_metadata/main.nf'
