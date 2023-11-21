@@ -50,8 +50,9 @@ def get_peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -
                             feat_id = feat.qualifiers["protein_id"]
                             peptides_to_exclude.add(feat_id[0])
                         else:
-                            logging.critical(f"Peptide without peptide ID ${feat}")
-                            raise FastaParserError(f"Peptide without peptide ID ${feat}")
+                            message = f"Peptide without peptide ID ${feat}"
+                            logging.critical(message)
+                            raise FastaParserError(message)
     return peptides_to_exclude
 
 
@@ -99,7 +100,7 @@ def main() -> None:
     parser.add_argument_src_path("--genbank_infile", help="Input GenBank GBFF file")
     parser.add_argument_dst_path("--fasta_outfile", required=True, help="Output FASTA file")
     parser.add_argument("--peptide_mode", action="store_true", help="Process proteins instead of DNA")
-    parser.add_log_arguments()
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 
     init_logging(
