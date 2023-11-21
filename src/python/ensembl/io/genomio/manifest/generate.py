@@ -62,6 +62,11 @@ class ManifestMaker:
             if subfile.is_dir():
                 print("Can't create manifest for subdirectory")
                 continue
+            
+            # Delete and skip empty files
+            if subfile.stat().st_size == 0:
+                subfile.unlink()
+                continue
 
             for name, standard_name in self.names.items():
                 if subfile.stem.endswith(name):
