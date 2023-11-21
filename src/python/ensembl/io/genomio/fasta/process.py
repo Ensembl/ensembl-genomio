@@ -61,6 +61,7 @@ def prep_fasta_data(
     genbank_infile: Optional[PathLike],
     fasta_outfile: PathLike,
     peptide_mode: bool = False,
+    **kwargs: dict,
 ) -> None:
     """
     Args:
