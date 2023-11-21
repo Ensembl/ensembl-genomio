@@ -28,7 +28,6 @@ include { PUBLISH_DIR } from '../../modules/files/publish_output_dump.nf'
 
 workflow DUMP_METADATA {
     take:
-        server
         db
 
     emit:
@@ -38,31 +37,31 @@ workflow DUMP_METADATA {
         db_files = Channel.of()
 
         // Seq regions
-        seq_regions = DUMP_SEQ_REGIONS(server, db, params.selection.contains("seq_regions"))
+        seq_regions = DUMP_SEQ_REGIONS(db)
         db_files = db_files.concat(seq_regions)
 
         // Dump DNA sequences
-        fasta_dna = DUMP_FASTA_DNA(server, db, params.selection.contains("fasta_dna"))
+        fasta_dna = DUMP_FASTA_DNA(db)
         db_files = db_files.concat(fasta_dna)
 
         // Dump protein sequences
-        fasta_pep = DUMP_FASTA_PEPTIDES(server, db, params.selection.contains("fasta_pep"))
+        fasta_pep = DUMP_FASTA_PEPTIDES(db)
         db_files = db_files.concat(fasta_pep)
 
         // Dump gene models
         // TODO
         
         // Events
-        events = DUMP_EVENTS(server, db, params.selection.contains("events"))
+        events = DUMP_EVENTS(db)
         db_files = db_files.concat(events)
 
         // Genome metadata
-        genome_meta = DUMP_GENOME_META(server, db, params.selection.contains("genome_metadata"))
+        genome_meta = DUMP_GENOME_META(db)
         db_files = db_files.concat(genome_meta)
 
         // Genome stats
-        genome_stats = DUMP_GENOME_STATS(server, db, params.selection.contains("stats"))
-        ncbi_stats = DUMP_NCBI_STATS(server, db, params.selection.contains("stats"))
+        genome_stats = DUMP_GENOME_STATS(db)
+        ncbi_stats = DUMP_NCBI_STATS(db)
         stats = ncbi_stats.join(genome_stats)
         stats_files = COMPARE_GENOME_STATS(stats).transpose()
         db_files = db_files.concat(stats_files)
@@ -70,8 +69,8 @@ workflow DUMP_METADATA {
         // Group the files by db species (use the db object as key)
         // Only keep the files so they are easy to collect
         db_files = db_files
-            .map{ db, name, file_name -> tuple(db, file_name) }
-            .groupTuple(size: params.selection_count)
+            .map{ db, name, file_name -> tuple(groupKey(db, db["dump_number"]), file_name) }
+            .groupTuple()
 
         // Collect, create manifest, and publish
         manifested_dir = MANIFEST(db_files)

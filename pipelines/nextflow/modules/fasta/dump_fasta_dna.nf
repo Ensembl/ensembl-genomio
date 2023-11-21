@@ -19,12 +19,10 @@ process DUMP_FASTA_DNA {
     maxForks params.max_database_forks
 
     input:
-        val server
         val db
-        val do_dump
-    
+
     when:
-        do_dump
+        "fasta_dna" in db.dump_selection
 
     output:
         tuple val(db), val("fasta_dna"), path("*.fasta")
@@ -33,10 +31,10 @@ process DUMP_FASTA_DNA {
         output = "${db.species}_fasta_dna.fasta"
         """
         perl ${params.ensembl_root_dir}/ensembl-analysis/scripts/sequence_dump.pl \
-            -dbhost ${server.host} \
-            -dbport ${server.port} \
-            -dbname ${db.database} \
-            -dbuser ${server.user} \
+            -dbhost ${db.server.host} \
+            -dbport ${db.server.port} \
+            -dbuser ${db.server.user} \
+            -dbname ${db.server.database} \
             -coord_system_name toplevel \
             -toplevel \
             -onefile \

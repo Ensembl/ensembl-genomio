@@ -20,9 +20,11 @@ process DUMP_DB {
     maxForks params.max_database_forks
 
     input:
-        val server
         val db
         val out_dir
+
+    when:
+        db.dump_db
 
     output:
         path "*.sql.gz"
@@ -30,14 +32,14 @@ process DUMP_DB {
     script:
         """
         db_pass=""
-        if [ "${server.password}" != "" ]; then
-            db_pass="--password '${server.password}'"
+        if [ "${db.server.password}" != "" ]; then
+            db_pass="--password '${db.server.password}'"
         fi
 
-        mysqldump '${db.database}' \
-            --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
+        mysqldump '${db.server.database}' \
+            --host '${db.server.host}' \
+            --port '${db.server.port}' \
+            --user '${db.server.user}' \
             \$db_pass \
             | gzip > ${db.species}.sql.gz
         """

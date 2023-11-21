@@ -107,33 +107,29 @@ if (params.host && params.port && params.user && params.output_dir) {
 
 if (params.select_dump) {
     items = params.select_dump.split(/,/).collect().unique()
+    new_items = []
+    dump_sql = false
+    dump_number = 0
     for (item in items) {
         if (!default_selection.contains(item)) {
             acceptable = default_selection.join(", ")
             exit 1, "Selection item unknown: " + item + " (accepted: " + acceptable + ")"
         }
+        if (item == "sql") {
+            dump_sql = true
+        } else {
+            if (item == "stats") {
+                dump_number += 3
+            } else {
+                dump_number += 1
+            }
+            new_items.add(item)
+        }
     }
-    params.selection = items
+    dump_select = ["dump_selection": new_items, "dump_sql": dump_sql, "dump_number": dump_number]
 } else {
     params.selection = default_selection
 }
-
-// Keep count for groupTuple
-selection_count = 0
-for (item in params.selection) {
-    switch (item) {
-        case "sql":
-            break;
-        case "stats":
-            selection_count += 3;
-            break;
-        default:
-            selection_count += 1;
-            break;
-    }
-}
-params.selection_count = selection_count
-print("Selection count = ${params.selection_count} metadata files ($params.selection)")
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
 include { DUMP_METADATA } from '../../subworkflows/dump_metadata/main.nf'
@@ -145,9 +141,8 @@ workflow {
     dbs = DB_FACTORY(server, filter_map)
         .map(it -> read_json(it))
         .flatten()
+        .map(it -> it + dump_select)
     
-    if (params.selection.contains('sql')) {
-        DUMP_SQL(server, dbs)
-    }
-    DUMP_METADATA(server, dbs)
+    DUMP_SQL(dbs)
+    DUMP_METADATA(dbs)
 }

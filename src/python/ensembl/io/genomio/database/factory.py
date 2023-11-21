@@ -42,6 +42,12 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
         List of dictionaries with 3 keys: "database", "species" and "division".
 
     """
+    server_data = {
+        "host": server.host,
+        "user": server.user,
+        "port": server.port,
+        "password": server.password,
+    }
     databases_data = []
     for db in dbs:
         server.set_database(db)
@@ -65,13 +71,15 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
             division = "all"
 
         db_data = {
-            "database": db,
+            "server": server_data,
             "production_name": prod_name,
             "species": species,
             "division": division,
             "accession": accession,
             "release": project_release,
         }
+        db_data["server"]["database"] = db
+
         databases_data.append(db_data)
     return databases_data
 

@@ -20,12 +20,10 @@ process DUMP_NCBI_STATS {
     label 'cached'
 
     input:
-        val server
         val db
-        val do_dump
 
     when:
-        do_dump
+        "stats" in db.dump_selection
 
     output:
         tuple val(db), path("ncbi_stats.json")
@@ -36,8 +34,8 @@ process DUMP_NCBI_STATS {
         function get_meta_value {
             meta_key=$1
 
-            mysql --host="!{server.host}" --port="!{server.port}" --user="!{server.user}" \
-                --password="!{server.password}" --database="!{db.database}" \
+            mysql --host="!{db.server.host}" --port="!{db.server.port}" --user="!{db.server.user}" \
+                --password="!{db.server.password}" --database="!{db.server.database}" \
                 -N -e "SELECT meta_value FROM meta WHERE meta_key='$meta_key'"
         }
 

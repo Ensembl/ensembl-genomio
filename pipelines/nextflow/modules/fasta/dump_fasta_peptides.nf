@@ -19,12 +19,10 @@ process DUMP_FASTA_PEPTIDES {
     maxForks params.max_database_forks
 
     input:
-        val server
         val db
-        val do_dump
-    
+
     when:
-        do_dump
+        "fasta_dna" in db.dump_selection
 
     output:
         tuple val(db), val("fasta_pep"), path("*.fasta")
@@ -33,14 +31,14 @@ process DUMP_FASTA_PEPTIDES {
         output = "${db.species}_fasta_pep.fasta"
         """
         perl ${params.ensembl_root_dir}/ensembl-analysis/scripts/protein/dump_translations.pl \
-            -host ${server.host} \
-            -port ${server.port} \
-            -user ${server.user} \
-            -dbname ${db.database} \
-            -dnadbhost ${server.host} \
-            -dnadbport ${server.port} \
-            -dnadbuser ${server.user} \
-            -dnadbname ${db.database} \
+            -host ${db.server.host} \
+            -port ${db.server.port} \
+            -user ${db.server.user} \
+            -dbname ${db.server.database} \
+            -dnadbhost ${db.server.host} \
+            -dnadbport ${db.server.port} \
+            -dnadbuser ${db.server.user} \
+            -dnadbname ${db.server.database} \
             -file $output
         """
 }

@@ -20,12 +20,10 @@ process DUMP_EVENTS {
     maxForks params.max_database_forks
 
     input:
-        val server
         val db
-        val do_dump
     
     when:
-        do_dump
+        "events" in db.dump_selection
 
     output:
         tuple val(db), val("events"), path("ids_events.tab")
@@ -33,11 +31,11 @@ process DUMP_EVENTS {
     script:
         """
         touch "ids_events.tab"
-        events_dump --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
-            --password '${server.password}' \
-            --database '${db.database}' \
+        events_dump --host '${db.server.host}' \
+            --port '${db.server.port}' \
+            --user '${db.server.user}' \
+            --password '${db.server.password}' \
+            --database '${db.server.database}' \
             --output_file "ids_events.tab"
         """
 }

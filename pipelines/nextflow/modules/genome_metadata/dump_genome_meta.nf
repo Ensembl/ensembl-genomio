@@ -20,12 +20,10 @@ process DUMP_GENOME_META {
     maxForks params.max_database_forks
 
     input:
-        val server
         val db
-        val do_dump
-    
+
     when:
-        do_dump
+        "genome_metadata" in db.dump_selection
 
     output:
         tuple val(db), val("genome"), path("*genome.json")
@@ -34,11 +32,11 @@ process DUMP_GENOME_META {
         output = "${db.species}_genome.json"
         schema = params.json_schemas["genome"]
         """
-        genome_metadata_dump --host '$server.host' \
-            --port '$server.port' \
-            --user '$server.user' \
-            --password '$server.password' \
-            --database '$db.database' \
+        genome_metadata_dump --host '$db.server.host' \
+            --port '$db.server.port' \
+            --user '$db.server.user' \
+            --password '$db.server.password' \
+            --database '$db.server.database' \
             > $output
         schemas_json_validate --json_file $output --json_schema $schema
         """
