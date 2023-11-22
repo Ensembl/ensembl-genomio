@@ -102,11 +102,7 @@ def main() -> None:
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 
-    init_logging(
-        args.log_level,
-        log_file=args.log_file,
-        log_file_level=args.log_file_level,
-    )
+    init_logging_with_args(args)
 
     prep_fasta_data(
         fasta_infile=args.fasta_infile,
