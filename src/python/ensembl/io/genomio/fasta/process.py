@@ -50,8 +50,7 @@ def get_peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -
                             feat_id = feat.qualifiers["protein_id"]
                             peptides_to_exclude.add(feat_id[0])
                         else:
-                            message = f"Peptide without peptide ID ${feat}"
-                            raise FastaParserError(message)
+                            raise FastaParserError(f"Peptide without peptide ID ${feat}")
     return peptides_to_exclude
 
 
