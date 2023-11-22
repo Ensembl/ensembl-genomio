@@ -24,7 +24,7 @@ process DUMP_DB {
         val out_dir
 
     when:
-        db.dump_sql
+        "sql" in db.dump_selection
 
     output:
         path "*.sql.gz"

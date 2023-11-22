@@ -113,25 +113,22 @@ if (params.select_dump) {
     dump_meta = []
     dump_sql = false
     dump_number = 0
-    items = params.select_dump.split(/,/).collect().unique()
-    for (item in items) {
+    dump_meta = params.select_dump.split(/,/).collect().unique()
+    for (item in dump_meta) {
         if (!default_selection.contains(item)) {
             acceptable = default_selection.join(", ")
             exit 1, "Selection item unknown: " + item + " (accepted: " + acceptable + ")"
         }
-        if (item == "sql") {
-            dump_sql = true
-        } else {
+        if (item != "sql") {
             if (item == "stats") {
                 dump_number += 3
             } else {
                 dump_number += 1
             }
-            dump_meta.add(item)
         }
     }
 }
-dump_select = ["dump_selection": dump_meta, "dump_sql": dump_sql, "dump_number": dump_number]
+dump_select = ["dump_selection": dump_meta, "dump_number": dump_number]
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
 include { DUMP_METADATA } from '../../subworkflows/dump_metadata/main.nf'
