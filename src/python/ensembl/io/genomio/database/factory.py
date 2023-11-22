@@ -25,7 +25,7 @@ from ensembl.brc4.runnable.core_server import CoreServer
 from ensembl.utils.argparse import ArgumentParser
 
 
-db_pattern = re.compile(r".+_core_(\d+)_\d+_\d+")
+db_pattern = re.compile(r".+_core_(\d+)_(\d+)_\d+")
 
 
 def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
@@ -52,6 +52,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
         division = get_metadata_value(metadata, "species.division")
         accession = get_metadata_value(metadata, "assembly.accession")
         project_release = _get_project_release(db)
+        ensembl_version = get_metadata_value(metadata, "schema_version")
 
         if brc_mode:
             brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
@@ -78,6 +79,7 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
             "division": division,
             "accession": accession,
             "release": project_release,
+            "ensembl_version": ensembl_version,
         }
 
         databases_data.append(db_data)

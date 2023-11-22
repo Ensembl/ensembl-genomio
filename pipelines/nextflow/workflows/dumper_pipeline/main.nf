@@ -28,7 +28,8 @@ default_selection = [
     'genome_metadata',
     'stats',
     'fasta_pep',
-    'fasta_dna'
+    'fasta_dna',
+    'gff3'
 ]
 
 // Print usage
