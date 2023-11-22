@@ -29,7 +29,7 @@ default_selection = [
     'stats',
     'fasta_pep',
     'fasta_dna',
-    'gff3'
+//    'gff3'
 ]
 
 // Print usage
