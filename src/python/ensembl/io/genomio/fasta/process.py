@@ -55,11 +55,11 @@ def get_peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -
 
 
 def prep_fasta_data(
+    *,  # disallow positional parameters
     fasta_infile: PathLike,
     genbank_infile: Optional[PathLike],
     fasta_outfile: PathLike,
     peptide_mode: bool = False,
-    **kwargs: dict,
 ) -> None:
     """
     Args:
@@ -108,4 +108,9 @@ def main() -> None:
         log_file_level=args.log_file_level,
     )
 
-    prep_fasta_data(**vars(args))
+    prep_fasta_data(
+        fasta_infile=args.fasta_infile,
+        genbank_infile=args.genbank_infile,
+        fasta_outfile=args.fasta_outfile,
+        peptide_mode=args.peptide_mode,
+    )
