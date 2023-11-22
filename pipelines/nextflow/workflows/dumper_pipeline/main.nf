@@ -131,7 +131,7 @@ if (params.select_dump) {
 dump_select = ["dump_selection": dump_meta, "dump_number": dump_number]
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
-include { DUMP_METADATA } from '../../subworkflows/dump_metadata/main.nf'
+include { DUMP_FILES } from '../../subworkflows/dump_files/main.nf'
 include { DB_FACTORY } from '../../modules/database/db_factory.nf'
 include { read_json } from '../../modules/utils/utils.nf'
 
@@ -143,5 +143,5 @@ workflow {
         .map(it -> it + dump_select)
     
     DUMP_SQL(dbs)
-    DUMP_METADATA(dbs)
+    DUMP_FILES(dbs)
 }
