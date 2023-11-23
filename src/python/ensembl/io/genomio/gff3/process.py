@@ -264,7 +264,7 @@ class GFFSimplifier(GFFParserCommon):
             for record in GFF.parse(in_gff_fh):
                 new_record = SeqRecord(record.seq, id=record.id)
                 if record.id in to_exclude:
-                    logging.info(f"Skip seq_region {record.id}")
+                    logging.debug(f"Skip seq_region {record.id}")
                     continue
 
                 # Root features (usually genes)
@@ -286,8 +286,7 @@ class GFFSimplifier(GFFParserCommon):
                         pass
                     else:
                         fail_types["gene=" + feat.type] = 1
-                        message = f"Unsupported feature type: {feat.type} (for {feat.id})"
-                        logging.warning(message)
+                        logging.debug(f"Unsupported feature type: {feat.type} (for {feat.id})")
                         if skip_unrecognized:
                             del feat
                             continue
@@ -380,7 +379,7 @@ class GFFSimplifier(GFFParserCommon):
 
         # Gene with no subfeatures: need to create a transcript at least
         if len(gene.sub_features) == 0:
-            logging.info(f"Insert transcript for lone gene {gene.id}")
+            logging.debug(f"Insert transcript for lone gene {gene.id}")
             transcript = self.transcript_for_gene(gene)
             gene.sub_features = [transcript]
 
@@ -391,14 +390,14 @@ class GFFSimplifier(GFFParserCommon):
         if len(fcounter) == 1:
             if fcounter.get("CDS"):
                 num_subs = len(gene.sub_features)
-                logging.info(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
+                logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
                 transcripts = self.gene_to_cds(gene)
                 gene.sub_features = transcripts
 
             # Transform gene - exon to gene-transcript-exon
             elif fcounter.get("exon"):
                 num_subs = len(gene.sub_features)
-                logging.info(f"Insert transcript for {gene.id} ({num_subs} exons)")
+                logging.debug(f"Insert transcript for {gene.id} ({num_subs} exons)")
                 transcript = self.gene_to_exon(gene)
                 gene.sub_features = [transcript]
         else:
@@ -542,7 +541,7 @@ class GFFSimplifier(GFFParserCommon):
         new_type = "ncRNA_gene"
         if ncrna.type in ("tRNA", "rRNA"):
             new_type = "gene"
-        logging.info(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
+        logging.debug(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
         gene = SeqFeature(ncrna.location, type=new_type)
         gene.qualifiers["source"] = ncrna.qualifiers["source"]
         gene.sub_features = [ncrna]
@@ -553,7 +552,7 @@ class GFFSimplifier(GFFParserCommon):
     def cds_gene(self, cds: SeqFeature) -> SeqFeature:
         """Returns a gene created for a lone CDS."""
 
-        logging.info("Put the lone CDS in gene-mRNA parent features")
+        logging.debug(f"Put the lone CDS in gene-mRNA parent features for {cds.id}")
 
         # Create a transcript, add the CDS
         transcript = SeqFeature(cds.location, type="mRNA")
@@ -607,7 +606,7 @@ class GFFSimplifier(GFFParserCommon):
 
             # Add to transcript or create a new one
             if cds.id not in transcripts_dict:
-                logging.info(f"Create new mRNA for {cds.id}")
+                logging.debug(f"Create new mRNA for {cds.id}")
                 transcript = self.build_transcript(gene)
                 transcripts_dict[cds.id] = transcript
             exon.qualifiers["source"] = gene.qualifiers["source"]
@@ -682,7 +681,7 @@ class GFFSimplifier(GFFParserCommon):
         self._check_sub_cdss(gene, sub_cdss)
         self._check_sub_exons(gene, cdss, sub_exons)
 
-        logging.info(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
+        logging.debug(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
         # No more issues? move the CDSs
         mrna.sub_features += cdss
         # And remove them from the gene
@@ -740,7 +739,7 @@ class GFFSimplifier(GFFParserCommon):
                     exon_has_id += 1
             if exon_has_id:
                 if exon_has_id == len(exons):
-                    logging.info(f"Remove {exon_has_id} extra exons from {gene.id}")
+                    logging.debug(f"Remove {exon_has_id} extra exons from {gene.id}")
                     gene.sub_features = mrnas
                     gene.sub_features += others
                 else:
@@ -785,13 +784,13 @@ class GFFSimplifier(GFFParserCommon):
                     (db, value) = xref.split(":")
                     if db == "GeneID":
                         new_gene_id = f"{db}_{value}"
-                        logging.info(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
+                        logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
                         return new_gene_id
 
             # Make a new stable_id
             if self.make_missing_stable_ids:
                 new_id = self.generate_stable_id()
-                logging.info(f"New id: {new_gene_id} -> {new_id}")
+                logging.debug(f"New id: {new_gene_id} -> {new_id}")
                 return new_id
             raise GFFParserError(f"Can't use invalid gene id for {gene}")
 
@@ -897,12 +896,12 @@ class GFFSimplifier(GFFParserCommon):
         gene_subfeats = []
         for transcript in gene.sub_features:
             if transcript.type == "CDS":
-                logging.info(f"Remove pseudo CDS {transcript.id}")
+                logging.debug(f"Remove pseudo CDS {transcript.id}")
                 continue
             new_subfeats = []
             for feat in transcript.sub_features:
                 if feat.type == "CDS":
-                    logging.info(f"Remove pseudo CDS {feat.id}")
+                    logging.debug(f"Remove pseudo CDS {feat.id}")
                     continue
                 new_subfeats.append(feat)
             transcript.sub_features = new_subfeats
