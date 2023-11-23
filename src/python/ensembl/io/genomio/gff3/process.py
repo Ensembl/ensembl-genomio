@@ -36,7 +36,7 @@ from Bio.SeqFeature import SeqFeature
 
 from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.logging import init_logging
+from ensembl.utils.logging import init_logging_with_args
 
 
 class Records(list):
@@ -441,10 +441,9 @@ class GFFSimplifier(GFFParserCommon):
                 and transcript.type not in self.ignored_transcript_types
             ):
                 fail_types["transcript=" + transcript.type] = 1
-                message = (
+                logging.warning(
                     f"Unrecognized transcript type: {transcript.type}" f" for {transcript.id} ({gene.id})"
                 )
-                logging.warning(message)
                 if skip_unrecognized:
                     transcripts_to_delete.append(count)
                     continue
@@ -514,11 +513,10 @@ class GFFSimplifier(GFFParserCommon):
                     continue
 
                 fail_types[f"sub_transcript={feat.type}"] = 1
-                message = (
+                logging.warning(
                     f"Unrecognized exon type for {feat.type}: {feat.id}"
                     f" (for transcript {transcript.id} of type {transcript.type})"
                 )
-                logging.warning(message)
                 if self.skip_unrecognized:
                     exons_to_delete.append(tcount)
                     continue
@@ -940,7 +938,7 @@ def main() -> None:
     )
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
-    init_logging(args.log_level, args.log_file, args.log_file_level)
+    init_logging_with_args(args)
 
     # Merge multiline gene features in a separate file
     logging.info("Checking for genes to merge...")
