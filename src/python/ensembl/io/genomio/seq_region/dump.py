@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session, joinedload
 from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
 from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 ROOT_DIR = Path(__file__).parent / "../../../../../.."
@@ -80,7 +81,6 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
     seq_regions = []
 
     for coord_system in coord_systems:
-        # print(f"Dump coord {coord_system.name}")
         seqr_stmt = (
             select(SeqRegion)
             .where(SeqRegion.coord_system_id == coord_system.coord_system_id)
@@ -239,7 +239,9 @@ def main() -> None:
     parser.add_argument_src_path(
         "--external_db_map", default=DEFAULT_MAP.resolve(), help="File with external_db mapping"
     )
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     dbc = DBConnection(args.url)
 
@@ -250,7 +252,3 @@ def main() -> None:
         seq_regions = get_seq_regions(session, external_map)
 
     print(json.dumps(seq_regions, indent=2))
-
-
-if __name__ == "__main__":
-    main()
