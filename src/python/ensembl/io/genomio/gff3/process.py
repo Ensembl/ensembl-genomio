@@ -24,6 +24,7 @@ __all__ = [
 
 from collections import Counter
 import json
+import logging
 from os import PathLike
 from pathlib import Path
 import re
@@ -35,6 +36,7 @@ from Bio.SeqFeature import SeqFeature
 
 from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging
 
 
 class Records(list):
@@ -193,11 +195,9 @@ class GFFGeneMerger(GFFParserCommon):
             to_merge: List of gff3 lines with gene parts.
 
         """
-        print(f"Merge gene in {len(to_merge)} parts")
         min_start = -1
         max_end = -1
         for gene in to_merge:
-            print(f"Merge part: {gene[8]}")
             start = int(gene[3])
             end = int(gene[4])
 
@@ -264,7 +264,7 @@ class GFFSimplifier(GFFParserCommon):
             for record in GFF.parse(in_gff_fh):
                 new_record = SeqRecord(record.seq, id=record.id)
                 if record.id in to_exclude:
-                    print(f"Skip seq_region {record.id}")
+                    logging.debug(f"Skip seq_region {record.id}")
                     continue
 
                 # Root features (usually genes)
@@ -286,8 +286,7 @@ class GFFSimplifier(GFFParserCommon):
                         pass
                     else:
                         fail_types["gene=" + feat.type] = 1
-                        message = f"Unsupported feature type: {feat.type} (for {feat.id})"
-                        print(message)
+                        logging.debug(f"Unsupported feature type: {feat.type} (for {feat.id})")
                         if skip_unrecognized:
                             del feat
                             continue
@@ -320,15 +319,17 @@ class GFFSimplifier(GFFParserCommon):
                     if not feat.qualifiers.get("product"):
                         feat.qualifiers["product"] = [description]
                 else:
-                    print(f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}")
+                    logging.warning(
+                        f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}"
+                    )
                     return feat
             else:
-                print("Mobile genetic element does not have a 'mobile_element_type' tag")
+                logging.warning("Mobile genetic element does not have a 'mobile_element_type' tag")
                 return feat
         elif feat.type == "transposable_element":
             pass
         else:
-            print(f"Feature {feat.id} is not a supported TE feature {feat.type}")
+            logging.warning(f"Feature {feat.id} is not a supported TE feature {feat.type}")
             return feat
 
         # Generate ID if needed and add it to the functional annotation
@@ -356,7 +357,9 @@ class GFFSimplifier(GFFParserCommon):
             elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
                 biotype = f"TR_{biotype}"
             else:
-                print(f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}")
+                logging.warning(
+                    f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}"
+                )
                 return transcript
             transcript.type = biotype
         return transcript
@@ -376,7 +379,7 @@ class GFFSimplifier(GFFParserCommon):
 
         # Gene with no subfeatures: need to create a transcript at least
         if len(gene.sub_features) == 0:
-            print(f"Insert transcript for lone gene {gene.id}")
+            logging.debug(f"Insert transcript for lone gene {gene.id}")
             transcript = self.transcript_for_gene(gene)
             gene.sub_features = [transcript]
 
@@ -387,14 +390,14 @@ class GFFSimplifier(GFFParserCommon):
         if len(fcounter) == 1:
             if fcounter.get("CDS"):
                 num_subs = len(gene.sub_features)
-                print(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
+                logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
                 transcripts = self.gene_to_cds(gene)
                 gene.sub_features = transcripts
 
             # Transform gene - exon to gene-transcript-exon
             elif fcounter.get("exon"):
                 num_subs = len(gene.sub_features)
-                print(f"Insert transcript for {gene.id} ({num_subs} exons)")
+                logging.debug(f"Insert transcript for {gene.id} ({num_subs} exons)")
                 transcript = self.gene_to_exon(gene)
                 gene.sub_features = [transcript]
         else:
@@ -441,7 +444,7 @@ class GFFSimplifier(GFFParserCommon):
                 message = (
                     f"Unrecognized transcript type: {transcript.type}" f" for {transcript.id} ({gene.id})"
                 )
-                print(message)
+                logging.warning(message)
                 if skip_unrecognized:
                     transcripts_to_delete.append(count)
                     continue
@@ -515,7 +518,7 @@ class GFFSimplifier(GFFParserCommon):
                     f"Unrecognized exon type for {feat.type}: {feat.id}"
                     f" (for transcript {transcript.id} of type {transcript.type})"
                 )
-                print(message)
+                logging.warning(message)
                 if self.skip_unrecognized:
                     exons_to_delete.append(tcount)
                     continue
@@ -538,7 +541,7 @@ class GFFSimplifier(GFFParserCommon):
         new_type = "ncRNA_gene"
         if ncrna.type in ("tRNA", "rRNA"):
             new_type = "gene"
-        print(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
+        logging.debug(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
         gene = SeqFeature(ncrna.location, type=new_type)
         gene.qualifiers["source"] = ncrna.qualifiers["source"]
         gene.sub_features = [ncrna]
@@ -549,7 +552,7 @@ class GFFSimplifier(GFFParserCommon):
     def cds_gene(self, cds: SeqFeature) -> SeqFeature:
         """Returns a gene created for a lone CDS."""
 
-        print("Put the lone CDS in gene-mRNA parent features")
+        logging.debug(f"Put the lone CDS in gene-mRNA parent features for {cds.id}")
 
         # Create a transcript, add the CDS
         transcript = SeqFeature(cds.location, type="mRNA")
@@ -603,7 +606,7 @@ class GFFSimplifier(GFFParserCommon):
 
             # Add to transcript or create a new one
             if cds.id not in transcripts_dict:
-                print(f"Create new mRNA for {cds.id}")
+                logging.debug(f"Create new mRNA for {cds.id}")
                 transcript = self.build_transcript(gene)
                 transcripts_dict[cds.id] = transcript
             exon.qualifiers["source"] = gene.qualifiers["source"]
@@ -678,7 +681,7 @@ class GFFSimplifier(GFFParserCommon):
         self._check_sub_cdss(gene, sub_cdss)
         self._check_sub_exons(gene, cdss, sub_exons)
 
-        print(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
+        logging.debug(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
         # No more issues? move the CDSs
         mrna.sub_features += cdss
         # And remove them from the gene
@@ -736,7 +739,7 @@ class GFFSimplifier(GFFParserCommon):
                     exon_has_id += 1
             if exon_has_id:
                 if exon_has_id == len(exons):
-                    print(f"Remove {exon_has_id} extra exons from {gene.id}")
+                    logging.debug(f"Remove {exon_has_id} extra exons from {gene.id}")
                     gene.sub_features = mrnas
                     gene.sub_features += others
                 else:
@@ -774,20 +777,20 @@ class GFFSimplifier(GFFParserCommon):
 
         # In case the gene id is not valid, use the GeneID
         if not self.valid_id(new_gene_id):
-            print(f"Gene id is not valid: {new_gene_id}")
+            logging.warning(f"Gene id is not valid: {new_gene_id}")
             qual = gene.qualifiers
             if "Dbxref" in qual:
                 for xref in qual["Dbxref"]:
                     (db, value) = xref.split(":")
                     if db == "GeneID":
                         new_gene_id = f"{db}_{value}"
-                        print(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
+                        logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
                         return new_gene_id
 
             # Make a new stable_id
             if self.make_missing_stable_ids:
                 new_id = self.generate_stable_id()
-                print(f"New id: {new_gene_id} -> {new_id}")
+                logging.debug(f"New id: {new_gene_id} -> {new_id}")
                 return new_id
             raise GFFParserError(f"Can't use invalid gene id for {gene}")
 
@@ -828,22 +831,22 @@ class GFFSimplifier(GFFParserCommon):
 
         # Trna (from tRNAscan)
         if re.search(r"^Trna", name):
-            print(f"Stable id is a Trna from tRNA-scan: {name}")
+            logging.debug(f"Stable ID is a tRNA from tRNA-scan: {name}")
             return False
 
         # Coordinates
         if re.search(r"^.+:\d+..\d+", name):
-            print(f"Stable id is a coordinate: {name}")
+            logging.debug(f"Stable id is a coordinate: {name}")
             return False
 
         # Special characters
         if re.search(r"[ |]", name):
-            print(f"Stable id contains special characters: {name}")
+            logging.debug(f"Stable id contains special characters: {name}")
             return False
 
         # Min length
         if len(name) < min_length:
-            print(f"Stable id is too short (<{min_length}) {name}")
+            logging.debug(f"Stable id is too short (<{min_length}) {name}")
             return False
 
         return True
@@ -893,12 +896,12 @@ class GFFSimplifier(GFFParserCommon):
         gene_subfeats = []
         for transcript in gene.sub_features:
             if transcript.type == "CDS":
-                print(f"Remove pseudo CDS {transcript.id}")
+                logging.debug(f"Remove pseudo CDS {transcript.id}")
                 continue
             new_subfeats = []
             for feat in transcript.sub_features:
                 if feat.type == "CDS":
-                    print(f"Remove pseudo CDS {feat.id}")
+                    logging.debug(f"Remove pseudo CDS {feat.id}")
                     continue
                 new_subfeats.append(feat)
             transcript.sub_features = new_subfeats
@@ -935,9 +938,12 @@ def main() -> None:
         default=Path("functional_annotation.json"),
         help="Output functional annotation JSON file",
     )
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
+    init_logging(args.log_level, args.log_file, args.log_file_level)
 
     # Merge multiline gene features in a separate file
+    logging.info("Checking for genes to merge...")
     interim_gff_path = Path(f"{args.in_gff_path}_INTERIM_MERGE")
     merger = GFFGeneMerger()
     merged_genes = merger.merge(args.in_gff_path, interim_gff_path)
@@ -946,12 +952,14 @@ def main() -> None:
     # If there are split genes, decide to merge, or just die
     if num_merged_genes > 0:
         # Report the list of merged genes in case something does not look right
-        print(f"{num_merged_genes} genes merged:\n" + "\n".join(merged_genes))
+        logging.info(f"{num_merged_genes} genes merged")
+        logging.debug("\n".join(merged_genes))
         # Use the GFF with the merged genes for the next part
         in_gff_path = interim_gff_path
 
     # Load GFF3 data and write a simpler version that follows our specifications as well as a
     # functional annotation JSON file
+    logging.info("Simplify and fix GFF3")
     gff_data = GFFSimplifier(args.genome_data, args.make_missing_stable_ids)
     gff_data.simpler_gff3(in_gff_path)
     gff_data.records.to_gff(args.out_gff_path)
