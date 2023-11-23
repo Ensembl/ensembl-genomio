@@ -252,4 +252,3 @@ def main() -> None:
         seq_regions = get_seq_regions(session, external_map)
 
     print(json.dumps(seq_regions, indent=2))
-

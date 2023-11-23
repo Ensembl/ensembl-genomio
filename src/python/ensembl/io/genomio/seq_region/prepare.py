@@ -38,6 +38,7 @@ __all__ = [
 ]
 
 import csv
+import logging
 from os import PathLike
 from pathlib import Path
 import re
@@ -45,10 +46,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
-import logging
 import requests
-
-from importlib import reload
 
 from ensembl.io.genomio.utils import get_json, open_gz_file, print_json
 from ensembl.utils.argparse import ArgumentParser
@@ -166,7 +164,7 @@ def add_mitochondrial_codon_table(seq_regions: List[SeqRegion], taxon_id: int) -
     response = requests.get(url, headers={"Content-Type": "application/json"}, timeout=60)
     decoded = response.json()
     if "mitochondrialGeneticCode" not in decoded:
-        logging.warn("No mitochondria genetic code found for taxon {taxon_id}")
+        logging.warning("No mitochondria genetic code found for taxon {taxon_id}")
     else:
         genetic_code = int(decoded["mitochondrialGeneticCode"])
         for seqr in seq_regions:
@@ -372,7 +370,7 @@ def make_seq_region(
     if accession_id and (accession_id != "na"):
         seq_region["name"] = accession_id
     else:
-        logging.warn(f'No {src} accession ID found for {data["Sequence-Name"]}')
+        logging.warning(f'No {src} accession ID found for {data["Sequence-Name"]}')
         return {}
     # Add synonyms
     synonyms = []
@@ -513,5 +511,5 @@ def main() -> None:
         dst_dir=args.dst_dir,
         gbff_file=args.gbff_file,
         brc_mode=args.brc_mode,
-        to_exclude=args.to_exclude
+        to_exclude=args.to_exclude,
     )
