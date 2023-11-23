@@ -16,7 +16,7 @@
 include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
 include { DUMP_FASTA_DNA } from '../../modules/fasta/dump_fasta_dna.nf'
 include { DUMP_FASTA_PEPTIDES } from '../../modules/fasta/dump_fasta_peptides.nf'
-include { DUMP_GFF3 } from '../../modules/gff3/dump_gff3.nf'
+// include { DUMP_GFF3 } from '../../modules/gff3/dump_gff3.nf'
 include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
 include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_meta.nf'
 include { DUMP_GENOME_STATS } from '../../modules/genome_stats/dump_genome_stats.nf'
@@ -50,8 +50,8 @@ workflow DUMP_FILES {
         db_files = db_files.concat(fasta_pep)
 
         // Dump gene models
-        gff3 = DUMP_GFF3(db)
-        db_files = db_files.concat(gff3)
+        // gff3 = DUMP_GFF3(db)
+        // db_files = db_files.concat(gff3)
         
         // Events
         events = DUMP_EVENTS(db)
