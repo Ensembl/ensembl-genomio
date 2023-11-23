@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session, joinedload
 from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
 from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 ROOT_DIR = Path(__file__).parent / "../../../../../.."
@@ -238,7 +239,9 @@ def main() -> None:
     parser.add_argument_src_path(
         "--external_db_map", default=DEFAULT_MAP.resolve(), help="File with external_db mapping"
     )
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     dbc = DBConnection(args.url)
 

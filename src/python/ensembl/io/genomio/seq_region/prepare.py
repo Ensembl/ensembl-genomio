@@ -52,6 +52,7 @@ from importlib import reload
 
 from ensembl.io.genomio.utils import get_json, open_gz_file, print_json
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 # Definition of SeqRegion types
@@ -442,8 +443,6 @@ def prepare_seq_region_metadata(
     gbff_file: Optional[PathLike] = None,
     brc_mode: bool = False,
     to_exclude: Optional[List[str]] = None,
-    debug:  bool = False,
-    verbose:  bool = False,
 ) -> None:
     """Prepares the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
 
@@ -503,19 +502,16 @@ def main() -> None:
     parser.add_argument(
         "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
     )
-    parser.add_argument("-d", "--debug", action="store_true", help="Debug level logging")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose level logging")
+    parser.add_log_arguments()
 
     args = parser.parse_args()
-    
-    log_format = "%(asctime)s\t%(levelname)s\t%(message)s"
-    date_fmt = r"%Y-%m-%d %H:%M:%S"
-    reload(logging)
-    if args.verbose:
-        logging.basicConfig(format=log_format, datefmt=date_fmt, level=logging.INFO)
-    elif args.debug:
-        logging.basicConfig(format=log_format, datefmt=date_fmt, level=logging.DEBUG)
-    else:
-        logging.basicConfig(format=log_format, datefmt=date_fmt, level=logging.WARNING)
+    init_logging_with_args(args)
 
-    prepare_seq_region_metadata(**vars(args))
+    prepare_seq_region_metadata(
+        genome_file=args.genome_file,
+        report_file=args.report_file,
+        dst_dir=args.dst_dir,
+        gbff_file=args.gbff_file,
+        brc_mode=args.brc_mode,
+        to_exclude=args.to_exclude
+    )
