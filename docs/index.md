@@ -28,9 +28,11 @@ Nextflow pipelines
 1. __Additional seq prepare__: BRC/Ensembl metazoa pipeline. Preparation of genome data loading files for new sequence(s) to existing species databases.  
 2. __Genome Prepare__: BRC/Ensembl metazoa pipeline. Retrieve data for genome(s), obtained from INSDC and RefSeq, validate and prepare GFF3, FASTA, JSON files for each genome accession.
 
+## License
+Software as part of [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio) is distributed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.txt).
 
 ## Project layout
-	src/ensembl/
+	src/python/ensembl/
 	├── brc4
 	│   └── runnable
 	│       ├── compare_fasta.py
@@ -89,6 +91,3 @@ Nextflow pipelines
 	        └── utils
 	            ├── archive_utils.py
 	            └── json_utils.py
-
-## License 
-Software as part of [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio) is distributed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.txt).
