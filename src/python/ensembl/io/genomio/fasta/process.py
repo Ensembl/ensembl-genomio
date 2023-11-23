@@ -55,7 +55,6 @@ def get_peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: Set[str]) -
 
 
 def prep_fasta_data(
-    *,  # disallow positional parameters
     fasta_infile: PathLike,
     genbank_infile: Optional[PathLike],
     fasta_outfile: PathLike,
