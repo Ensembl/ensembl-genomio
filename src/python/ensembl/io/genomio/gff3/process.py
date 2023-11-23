@@ -832,7 +832,7 @@ class GFFSimplifier(GFFParserCommon):
 
         # Trna (from tRNAscan)
         if re.search(r"^Trna", name):
-            logging.debug(f"Stable id is a Trna from tRNA-scan: {name}")
+            logging.debug(f"Stable ID is a tRNA from tRNA-scan: {name}")
             return False
 
         # Coordinates
@@ -944,7 +944,7 @@ def main() -> None:
     init_logging(args.log_level, args.log_file, args.log_file_level)
 
     # Merge multiline gene features in a separate file
-    logging.info("Check for genes to merge...")
+    logging.info("Checking for genes to merge...")
     interim_gff_path = Path(f"{args.in_gff_path}_INTERIM_MERGE")
     merger = GFFGeneMerger()
     merged_genes = merger.merge(args.in_gff_path, interim_gff_path)
