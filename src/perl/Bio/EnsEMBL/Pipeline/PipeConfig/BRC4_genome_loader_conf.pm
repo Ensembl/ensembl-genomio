@@ -148,7 +148,7 @@ sub default_options {
     # if loaded from RefSeq(GCF) change seq_region names to GenBank(GCA)
     swap_gcf_gca => 0,
 
-    # defautl xref display_db
+    # default xref display_db
     xref_display_db_default => 'BRC4_Community_Annotation',
     xref_load_logic_name => 'brc4_import',
 
@@ -158,17 +158,17 @@ sub default_options {
     # run ProdDBsync parts before adding ad-hoc sequences (add_sequence  mode on)
     prod_db_sync_before_adding => 1,
 
-    # default resoutce class name for Manifest_integrity
+    # default resource class name for Manifest_integrity
     manifest_integrity_rc_name => '8GB',
 
     # default resource class for 'LoadSequenceData' and 'AddSequence' steps
     load_sequence_data_rc_name => '8GB',
 
-    # defaul resource class for LoadFunctionalAnnotation step
+    # default resource class for LoadFunctionalAnnotation step
     load_func_ann_rc_name => '8GB',
 
     # size of chunks to split contigs into (0 -- no splitting)
-    sequence_data_chunck => 0,
+    sequence_data_chunk => 0,
     # coord system name for chunks
     chunk_cs_name => 'ensembl_internal',
   };
@@ -234,7 +234,7 @@ sub pipeline_wide_parameters {
     load_sequence_data_rc_name => $self->o('load_sequence_data_rc_name'),
     load_func_ann_rc_name => $self->o('load_func_ann_rc_name'),
 
-    sequence_data_chunck => $self->o('sequence_data_chunck'),
+    sequence_data_chunk => $self->o('sequence_data_chunk'),
     chunk_cs_name        => $self->o('chunk_cs_name'),
   };
 }
@@ -462,7 +462,7 @@ sub pipeline_analyses {
         work_dir => $self->o('pipeline_dir') . '/#db_name#/add_sequence',
         load_additional_sequences => $self->o('add_sequence'),
         # N.B. chunking will work correctly only if it was used for initial loading
-        sequence_data_chunck => $self->o('sequence_data_chunck'),
+        sequence_data_chunk => $self->o('sequence_data_chunk'),
         chunk_cs_name        => $self->o('chunk_cs_name'),
       },
       -analysis_capacity   => 10,
@@ -542,7 +542,7 @@ sub pipeline_analyses {
         cs_tag_for_ordered => $self->o('cs_tag_for_ordered'),
         no_contig_ena_attrib => $self->o('no_contig_ena_attrib'),
         swap_gcf_gca => $self->o('swap_gcf_gca'),
-        sequence_data_chunck => $self->o('sequence_data_chunck'),
+        sequence_data_chunk => $self->o('sequence_data_chunk'),
         chunk_cs_name        => $self->o('chunk_cs_name'),
       },
       -analysis_capacity   => 10,

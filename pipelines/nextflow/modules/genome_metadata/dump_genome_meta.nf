@@ -37,6 +37,7 @@ process DUMP_GENOME_META {
             --user '$db.server.user' \
             --password '$db.server.password' \
             --database '$db.server.database' \
+            --verbose
             > $output
         schemas_json_validate --json_file $output --json_schema $schema
         """

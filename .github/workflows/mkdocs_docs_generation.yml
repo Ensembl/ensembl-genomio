@@ -1,0 +1,77 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Documentation_deploy_mkdocs
+run-name: ${{ github.actor }} triggered mkdocs generation
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+      - '!jalvarez/**'
+      - '!mbarba/**'
+      - '!disha/**'
+      - '!vsitnik/**'
+      - '!lcampbell/**'
+    paths:
+      - 'src/python/ensembl/**'
+      - 'docs/**'
+permissions:
+    contents: write
+    
+jobs:
+  Mkdocs_Doc_generation:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.8
+        allow-prereleases: false
+        cache: 'pip'
+        cache-dependency-path: '**/pip'
+        run: echo '${{ steps.cp38.outputs.cache-hit }}'
+
+    - name: Set pip cache directory path
+      id: pip-cache-dir-path
+      run: |
+        echo "PIPCACHE=(`pip cache dir`)" >> "$GITHUB_OUTPUT"
+    
+    - name: Get pip cache dir 
+      env:
+        PIPCACHE: ${{ steps.pip-cache-dir-path.outputs.PIPCACHE }}
+      run: echo "The pip cache dir located is $PIPCACHE"
+
+    - name: Install Dependencies
+      run: |
+        pip install -e .[doc]
+
+    - name: mkdocs deploy
+      run: |
+        mkdocs build
+        
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' }}
+      with:
+        publish_branch: mkdocs
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./site
+        force_orphan: true
+

@@ -18,6 +18,7 @@ __all__ = ["get_genome_metadata", "filter_genome_meta", "check_assembly_version"
 
 import json
 from typing import Any, Dict
+import logging
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -25,6 +26,7 @@ from sqlalchemy.orm import Session
 from ensembl.core.models import Meta
 from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging
 
 
 def get_genome_metadata(session: Session) -> Dict[str, Any]:
@@ -131,6 +133,7 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
     # Check the version is an integer
     if version is not None and (isinstance(version, int) or version.isdigit()):
         assembly["version"] = int(version)
+        logging.info(f"Located version [v{int(version)}] info from meta data.")
     else:
         # Get the version from the assembly accession
         accession = assembly["accession"]
@@ -138,6 +141,9 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
         if len(parts) == 2 and parts[1].isdigit():
             version = parts[1]
             assembly["version"] = int(version)
+            logging.info(
+                f'Asm version [v{version}] obtained from: assembly accession ({assembly["accession"]}).'
+            )
         else:
             raise ValueError(f"Assembly version is not an integer in {assembly}")
 
@@ -171,9 +177,13 @@ def main() -> None:
         description="Fetch the genome metadata from a core database and print it in JSON format."
     )
     parser.add_server_arguments(include_database=True)
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 
     dbc = DBConnection(args.url)
+
+    # Configure and initialise logging
+    init_logging(args.log_level, args.log_file, args.log_file_level)
 
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session)

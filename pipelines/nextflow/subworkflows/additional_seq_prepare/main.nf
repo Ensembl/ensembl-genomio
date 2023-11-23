@@ -36,7 +36,12 @@ workflow additional_seq_prepare {
         gb_file = DOWNLOAD_GENBANK(meta)
 
         // Parse data from GB file into GFF3 and json files
-        (gff_genome, gb_genome, gb_seq_regions, gb_dna_fasta, gb_pep_fasta) = EXTRACT_FROM_GB(gb_file)
+        EXTRACT_FROM_GB(gb_file)
+        gb_genome = EXTRACT_FROM_GB.out.genome
+        gb_seq_regions = EXTRACT_FROM_GB.out.seq_regions
+        gb_dna_fasta = EXTRACT_FROM_GB.out.dna_fasta
+        gff_genome = EXTRACT_FROM_GB.out.gene_gff
+        gb_pep_fasta = EXTRACT_FROM_GB.out.pep_fasta
 
         // Process the GB and GFF3 files into a cleaned GFF3 and a functional_annotation files
         genome_gff_files = gb_genome.join(gff_genome)

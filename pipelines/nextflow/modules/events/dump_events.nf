@@ -29,13 +29,15 @@ process DUMP_EVENTS {
         tuple val(db), val("events"), path("ids_events.tab")
 
     script:
+        output = "ids_events.tab"
         """
-        touch "ids_events.tab"
+        touch $output
         events_dump --host '${db.server.host}' \
             --port '${db.server.port}' \
             --user '${db.server.user}' \
             --password '${db.server.password}' \
             --database '${db.server.database}' \
-            --output_file "ids_events.tab"
+            --output_file "$output" \
+            --verbose
         """
 }

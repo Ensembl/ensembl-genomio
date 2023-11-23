@@ -48,7 +48,7 @@ dependencies = [
     "bcbio-gff == 0.7.0",
     "biopython == 1.81",
     "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
-    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v1.2.0
+    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v1.2.1
     "jsonschema >= 4.6.0",
     "importlib_resources",  # not needed from Python 3.9+
     "intervaltree >= 3.1.0",
@@ -69,13 +69,21 @@ cicd = [
     "types-requests",
 ]
 doc = [
-    "mock",
-    "Sphinx",
+    "mkdocs",
+    "mkdocs-autorefs",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-material",
+    "mkdocs-material-extensions",
+    "mkdocs-section-index",
+    "mkdocstrings",
+    "mkdocstrings-python",
 ]
 
 [project.urls]
 homepage = "https://www.ensembl.org"
 repository = "https://github.com/Ensembl/ensembl-genomio"
+documentation = "https://ensembl.github.io/ensembl-genomio"
 
 [project.scripts]
 # Assembly
