@@ -160,7 +160,7 @@ def check_genebuild_version(gmeta_out: Dict[str, Any]) -> None:
         if gb_id is None:
             raise ValueError("No genebuild version or id")
         gmeta_out["genebuild"]["version"] = str(gb_id)
-    
+
     if "id" in genebuild:
         del gmeta_out["genebuild"]["id"]
 
