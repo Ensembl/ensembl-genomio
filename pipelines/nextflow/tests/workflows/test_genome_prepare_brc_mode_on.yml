@@ -48,3 +48,8 @@
       md5sum: 585da9f97f094e83702860ce43da652f
     - path: ./test_genome_prepare_output/GCA_017607445.1/stats.txt
       md5sum: 6104869d437ec4a9d13a2d070c307b0f
+  stdout:
+    contains:
+      - "N E X T F L O W"
+    must_not_contain:
+      - "Error executing process"

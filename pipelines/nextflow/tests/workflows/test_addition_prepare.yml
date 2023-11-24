@@ -44,3 +44,8 @@
       md5sum: 583d28280ee2929ac0b493bec2ffb8b7
     - path: ./test_addition_seq_prepare_output/NC_035159.1/stats.txt 
       md5sum: 6cf5fe5d61a9ca22e217c23bb46802d3
+  stdout:
+    contains:
+      - "N E X T F L O W"
+    must_not_contain:
+      - "Error executing process"
