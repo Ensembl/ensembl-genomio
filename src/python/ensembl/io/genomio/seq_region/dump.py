@@ -14,6 +14,17 @@
 # limitations under the License.
 """Fetch all the sequence regions from a core database and print them in JSON format."""
 
+__all__ = [
+    "MapFormatError",
+    "get_external_db_map",
+    "get_coord_systems",
+    "get_seq_regions",
+    "add_attribs",
+    "get_synonyms",
+    "get_attribs",
+    "get_karyotype",
+]
+
 import json
 from pathlib import Path
 from typing import Any, Dict, List

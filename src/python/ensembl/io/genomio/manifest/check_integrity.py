@@ -16,6 +16,8 @@
 to ensure their contents are in sync.
 """
 
+__all__ = ["InvalidIntegrityError", "Manifest", "IntegrityTool"]
+
 import hashlib
 import logging
 import json
