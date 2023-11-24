@@ -131,10 +131,9 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
     version = assembly.get("version")
 
     # Check the version is an integer
-    if version is not None and (isinstance(version, int) or version.isdigit()):
+    try:
         assembly["version"] = int(version)
-        logging.info(f"Located version [v{int(version)}] info from meta data.")
-    else:
+    except(ValueError, TypeError) as exc:
         # Get the version from the assembly accession
         accession = assembly["accession"]
         parts = accession.split(".")
@@ -145,7 +144,9 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
                 f'Asm version [v{version}] obtained from: assembly accession ({assembly["accession"]}).'
             )
         else:
-            raise ValueError(f"Assembly version is not an integer in {assembly}")
+            raise ValueError(f"Assembly version is not an integer in {assembly}") from exc
+    else:
+        logging.info(f"Located version [v{int(version)}] info from meta data.")
 
 
 def check_genebuild_version(metadata: Dict[str, Any]) -> None:
@@ -157,7 +158,7 @@ def check_genebuild_version(metadata: Dict[str, Any]) -> None:
     Raises:
         ValueError: If there is no genebuild version or ID available.
     """
-    genebuild = gmeta_out.get("genebuild")
+    genebuild = metadata.get("genebuild")
     if genebuild is None:
         return
     version = genebuild.get("version")
@@ -167,10 +168,10 @@ def check_genebuild_version(metadata: Dict[str, Any]) -> None:
         gb_id = genebuild.get("id")
         if gb_id is None:
             raise ValueError("No genebuild version or id")
-        gmeta_out["genebuild"]["version"] = str(gb_id)
+        metadata["genebuild"]["version"] = str(gb_id)
 
     if "id" in genebuild:
-        del gmeta_out["genebuild"]["id"]
+        del metadata["genebuild"]["id"]
 
 
 def main() -> None:
