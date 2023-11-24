@@ -17,7 +17,6 @@
 process CHECK_INTEGRITY {
     tag "${meta.accession}_${meta.production_name}"
     label 'variable_2_8_32'
-    errorStrategy 'finish'
     time '1h'
 
     input:
