@@ -148,12 +148,14 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
             raise ValueError(f"Assembly version is not an integer in {assembly}")
 
 
-def check_genebuild_version(gmeta_out: Dict[str, Any]) -> None:
-    """Update the genebuild version if not set.
-    Get the version from the genebuild id (and remove that value if any).
+def check_genebuild_version(metadata: Dict[str, Any]) -> None:
+    """Updates the genebuild version (if not present) from the genebuild ID, removing the latter.
 
     Args:
-        gmeta (Dict[str, Any]): Nested metadata key values from the core metadata table.
+        gmeta: Nested metadata key values from the core metadata table.
+
+    Raises:
+        ValueError: If there is no genebuild version or ID available.
     """
     genebuild = gmeta_out.get("genebuild")
     if genebuild is None:

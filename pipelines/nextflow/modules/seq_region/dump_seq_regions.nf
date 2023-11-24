@@ -25,7 +25,7 @@ process DUMP_SEQ_REGIONS {
         "seq_regions" in db.dump_selection
 
     output:
-        tuple val(db), val("seq_region"), path("*seq_region.json")
+        tuple val(db), val("seq_region"), path("*_seq_region.json")
 
     script:
         output = "${db.species}_seq_region.json"

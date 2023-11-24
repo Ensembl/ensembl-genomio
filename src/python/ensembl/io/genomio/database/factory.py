@@ -25,7 +25,7 @@ from ensembl.brc4.runnable.core_server import CoreServer
 from ensembl.utils.argparse import ArgumentParser
 
 
-db_pattern = re.compile(r".+_core_(\d+)_\d+_\d+")
+_DB_PATTERN = re.compile(r".+_core_(\d+)_\d+_\d+")
 
 
 def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
@@ -100,7 +100,7 @@ def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:
 def _get_project_release(db_name: str) -> str:
     """Return the project release number from the database name."""
 
-    match = re.search(db_pattern, db_name)
+    match = re.search(_DB_PATTERN, db_name)
     if match:
         return match.group(1)
     return ""

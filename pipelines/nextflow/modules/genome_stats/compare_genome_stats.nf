@@ -23,7 +23,7 @@ process COMPARE_GENOME_STATS {
             path(core_stats, stageAs: "core_stats.json")
 
     output:
-        tuple val(db), val("stats"), path("*stats.json", includeInputs: true)
+        tuple val(db), val("stats"), path("*_stats.json", includeInputs: true)
 
     script:
         """

@@ -195,7 +195,7 @@ def get_attribs(seq_region: SeqRegion) -> List:
         seq_region (SeqRegion): The seq_region from which the attribs are extracted.
 
     Returns:
-        List: All attribs as a list of dicts with 'value' and 'source' keys.
+        All attributes as a list of dictionaries with 'value' and 'source' keys.
     """
     attribs = seq_region.seq_region_attrib
     atts = []
@@ -206,8 +206,15 @@ def get_attribs(seq_region: SeqRegion) -> List:
     return atts
 
 
-def get_attribs_dict(seq_region: SeqRegion) -> Dict:
-    """Given a seq_region, extracts the attribs as a dict with source as key."""
+def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, any]:
+    """Extracts all the attributes of the given sequence region.
+    
+    Args:
+        seq_region: Sequence region.
+
+    Returns:
+        Pairs of source and value for each attribute.
+    """
 
     attribs = get_attribs(seq_region)
     attrib_dict = {attrib["source"]: attrib["value"] for attrib in attribs}
@@ -242,13 +249,13 @@ def get_karyotype(seq_region: SeqRegion) -> List:
 
 
 def get_added_sequence(seq_region: SeqRegion) -> Dict:
-    """Given a seq_region, extract added_sequence information.
+    """Extracts added sequence information of the given sequence region.
 
     Args:
-        seq_region (SeqRegion): The seq_region from which the attribs are extracted.
+        seq_region: Sequence region.
 
     Returns:
-        Dict: accession, .
+        Accession as well as assembly and annotation provider information of the added sequence.
     """
     attribs = get_attribs_dict(seq_region)
     accession = attribs.get("added_seq_accession")
