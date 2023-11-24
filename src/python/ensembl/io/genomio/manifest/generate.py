@@ -14,6 +14,8 @@
 # limitations under the License.
 """Creates a manifest file in a folder depending on the file names ends."""
 
+__all__ = ["ManifestMaker"]
+
 import hashlib
 import json
 from pathlib import Path

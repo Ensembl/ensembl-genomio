@@ -38,6 +38,7 @@ __all__ = [
 ]
 
 import csv
+import logging
 from os import PathLike
 from pathlib import Path
 import re
@@ -49,6 +50,7 @@ import requests
 
 from ensembl.io.genomio.utils import get_json, open_gz_file, print_json
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 # Definition of SeqRegion types
@@ -89,7 +91,7 @@ def exclude_seq_regions(seq_regions: List[SeqRegion], to_exclude: List[str]) -> 
     filtered_seq_regions = []
     for seqr in seq_regions:
         if ("name" in seqr) and (seqr["name"] in to_exclude):
-            print(f'Remove seq_region {seqr["name"]}')
+            logging.info(f'Not considering seq_region {seqr["name"]}')
         else:
             filtered_seq_regions.append(seqr)
     return filtered_seq_regions
@@ -162,7 +164,7 @@ def add_mitochondrial_codon_table(seq_regions: List[SeqRegion], taxon_id: int) -
     response = requests.get(url, headers={"Content-Type": "application/json"}, timeout=60)
     decoded = response.json()
     if "mitochondrialGeneticCode" not in decoded:
-        print(f"No mitochondria genetic code found for taxon {taxon_id}")
+        logging.warning("No mitochondria genetic code found for taxon {taxon_id}")
     else:
         genetic_code = int(decoded["mitochondrialGeneticCode"])
         for seqr in seq_regions:
@@ -368,7 +370,7 @@ def make_seq_region(
     if accession_id and (accession_id != "na"):
         seq_region["name"] = accession_id
     else:
-        print(f'No {src} accession ID found for {data["Sequence-Name"]}')
+        logging.warning(f'No {src} accession ID found for {data["Sequence-Name"]}')
         return {}
     # Add synonyms
     synonyms = []
@@ -498,6 +500,16 @@ def main() -> None:
     parser.add_argument(
         "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
     )
-    args = parser.parse_args()
+    parser.add_log_arguments()
 
-    prepare_seq_region_metadata(**vars(args))
+    args = parser.parse_args()
+    init_logging_with_args(args)
+
+    prepare_seq_region_metadata(
+        genome_file=args.genome_file,
+        report_file=args.report_file,
+        dst_dir=args.dst_dir,
+        gbff_file=args.gbff_file,
+        brc_mode=args.brc_mode,
+        to_exclude=args.to_exclude,
+    )

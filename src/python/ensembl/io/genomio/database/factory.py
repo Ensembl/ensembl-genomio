@@ -17,6 +17,8 @@
 Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
 """
 
+__all__ = ["format_db_data", "get_metadata_value"]
+
 import json
 import re
 from typing import Dict, List, Optional

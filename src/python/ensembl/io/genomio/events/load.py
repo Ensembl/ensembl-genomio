@@ -17,6 +17,8 @@
 cf the load_events functions for the events tab file format.
 """
 
+__all__ = ["IdEvent", "MapSession", "EventCollection"]
+
 from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path

@@ -96,9 +96,9 @@ class load_sequence_data(eHive.BaseRunnable):
             # loading additional sequences to the already exsisting core db
             "load_additional_sequences": 0,
             # size of the sequence data chunk, if 0 (default), no chunking is performed
-            "sequence_data_chunck": 0,
-            #   min size of the sequence chunk, no chunking is done if 'sequence_data_chunck' < 'sequence_data_chunck_min'
-            "sequence_data_chunck_min_len": 50_000,
+            "sequence_data_chunk": 0,
+            #   min size of the sequence chunk, no chunking is done if 'sequence_data_chunk' < 'sequence_data_chunk_min'
+            "sequence_data_chunk_min_len": 50_000,
             # coord system name for chunks
             "chunk_cs_name": "ensembl_internal",
         }
@@ -199,13 +199,13 @@ class load_sequence_data(eHive.BaseRunnable):
 
         # chunk sequence data if needed
         #   no chunking if chunk_size < 50k
-        chunk_size = int(self.param("sequence_data_chunck"))
+        chunk_size = int(self.param("sequence_data_chunk"))
         chunk_cs_name = self.param("chunk_cs_name")
         fasta_clean, cs_rank, agps_pruned = self.chunk_contigs(
             fasta_clean,
             cs_rank,
             agps_pruned,
-            pj(work_dir, "chuncking"),
+            pj(work_dir, "chunking"),
             chunk_size=chunk_size,
             chunks_cs_name=chunk_cs_name,
         )
@@ -215,7 +215,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         # mark all the "contig"s or noagp_cs as being sourced from ENA
         if not self.param_bool("no_contig_ena_attrib"):
-            # NB using original "agps" parameter (with no chuncking data added)
+            # NB using original "agps" parameter (with no chunking data added)
             agps_raw = self.from_param("manifest_data", "agp", not_throw=True)
             if agps_raw is None:
                 self.add_contig_ena_attrib(self.pjc(work_dir, "load", "set_ena"), cs_name=noagps_cs)
@@ -897,7 +897,7 @@ class load_sequence_data(eHive.BaseRunnable):
         chunk dna sequence fasta
           no chunking if chunk_size < 50k
         """
-        chunk_size_min_len = self.param_required("sequence_data_chunck_min_len")
+        chunk_size_min_len = self.param_required("sequence_data_chunk_min_len")
         if chunk_size < chunk_size_min_len:
             return fasta, cs_ranks, agps
 
