@@ -190,5 +190,5 @@ def main() -> None:
         genome_infile=args.genome_infile,
         genome_outfile=args.genome_outfile,
         report_file=args.report_file,
-        genbank_infile=args.genbank_infile
+        genbank_infile=args.genbank_infile,
     )

@@ -279,5 +279,5 @@ def main() -> None:
         input_file=args.input_file,
         output_file=args.output_file,
         gff3_file=args.gff3_file,
-        base_api_url=args.base_api_url
+        base_api_url=args.base_api_url,
     )
