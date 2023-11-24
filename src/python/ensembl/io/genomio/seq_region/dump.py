@@ -37,9 +37,9 @@ from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
 
 
-ROOT_DIR = Path(__file__).parent / "../../../../../.."
-DEFAULT_MAP = ROOT_DIR / "config/external_db_map/default.txt"
-KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
+_ROOT_DIR = Path(__file__).parent / "../../../../../.."
+_DEFAULT_MAP = _ROOT_DIR / "config/external_db_map/default.txt"
+_KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
 
 class MapFormatError(Exception):
@@ -232,7 +232,7 @@ def get_karyotype(seq_region: SeqRegion) -> List:
                 kar["name"] = band.band
             if band.stain:
                 kar["stain"] = band.stain
-                structure = KARYOTYPE_STRUCTURE.get(band.stain, "")
+                structure = _KARYOTYPE_STRUCTURE.get(band.stain, "")
                 if structure:
                     kar["structure"] = structure
             kars.append(kar)
@@ -248,7 +248,7 @@ def main() -> None:
     )
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path(
-        "--external_db_map", default=DEFAULT_MAP.resolve(), help="File with external_db mapping"
+        "--external_db_map", default=_DEFAULT_MAP.resolve(), help="File with external_db mapping"
     )
     args = parser.parse_args()
 
