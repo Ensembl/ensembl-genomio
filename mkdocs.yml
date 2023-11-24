@@ -20,6 +20,26 @@ copyright: Copyright &copy; [2016-2023] EMBL-European Bioinformatics Institute
 
 theme:
   name: "material"
+  logo: img/ebang.png
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: fontawesome/solid/lightbulb
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: fontawesome/regular/lightbulb
+        name: Switch to light mode
+
+markdown_extensions:
+  - toc:
+      permalink: true
 
 plugins:
 - search
@@ -35,7 +55,12 @@ plugins:
     handlers:
       python:
         options:
+          inherited_members: true
+          members: true
+          show_root_heading: true
           show_source: true
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
 
 nav:
   - Home: index.md
@@ -44,4 +69,3 @@ nav:
   - Code Reference: reference/
   - Running Nextflow: nextflow.md
   - Ensembl-Genomio Pipelines: pipelines.md
-  - License: license.md

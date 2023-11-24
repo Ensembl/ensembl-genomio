@@ -14,6 +14,17 @@
 # limitations under the License.
 """Fetch all the sequence regions from a core database and print them in JSON format."""
 
+__all__ = [
+    "MapFormatError",
+    "get_external_db_map",
+    "get_coord_systems",
+    "get_seq_regions",
+    "add_attribs",
+    "get_synonyms",
+    "get_attribs",
+    "get_karyotype",
+]
+
 import json
 from pathlib import Path
 from typing import Any, Dict, List
@@ -27,9 +38,9 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-ROOT_DIR = Path(__file__).parent / "../../../../../.."
-DEFAULT_MAP = ROOT_DIR / "config/external_db_map/default.txt"
-KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
+_ROOT_DIR = Path(__file__).parent / "../../../../../.."
+_DEFAULT_MAP = _ROOT_DIR / "config/external_db_map/default.txt"
+_KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
 
 class MapFormatError(Exception):
@@ -221,7 +232,7 @@ def get_karyotype(seq_region: SeqRegion) -> List:
                 kar["name"] = band.band
             if band.stain:
                 kar["stain"] = band.stain
-                structure = KARYOTYPE_STRUCTURE.get(band.stain, "")
+                structure = _KARYOTYPE_STRUCTURE.get(band.stain, "")
                 if structure:
                     kar["structure"] = structure
             kars.append(kar)
@@ -237,7 +248,7 @@ def main() -> None:
     )
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path(
-        "--external_db_map", default=DEFAULT_MAP.resolve(), help="File with external_db mapping"
+        "--external_db_map", default=_DEFAULT_MAP.resolve(), help="File with external_db mapping"
     )
     parser.add_log_arguments()
     args = parser.parse_args()

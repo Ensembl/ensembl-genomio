@@ -14,6 +14,16 @@
 # limitations under the License.
 """Module to dump stable id events from an Ensembl Core database"""
 
+__all__ = [
+    "IdsSet",
+    "DictToIdsSet",
+    "BRC4_START_DATE",
+    "Pair",
+    "UnsupportedEvent",
+    "StableIdEvent",
+    "DumpStableIDs",
+]
+
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Set, Tuple
