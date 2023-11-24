@@ -32,6 +32,7 @@ from Bio import SeqIO
 
 from ensembl.io.genomio.utils import get_json, open_gz_file, print_json
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 _VERSION_END = re.compile(r"\.\d+$")
@@ -181,6 +182,13 @@ def main() -> None:
     )
     parser.add_argument_src_path("--report_file", help="INSDC/RefSeq sequences report file")
     parser.add_argument_src_path("--genbank_infile", help="INSDC/RefSeq GBFF file")
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
-    amend_genomic_metadata(**vars(args))
+    amend_genomic_metadata(
+        genome_infile=args.genome_infile,
+        genome_outfile=args.genome_outfile,
+        report_file=args.report_file,
+        genbank_infile=args.genbank_infile
+    )

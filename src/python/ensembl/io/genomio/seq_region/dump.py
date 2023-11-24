@@ -81,6 +81,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
     seq_regions = []
 
     for coord_system in coord_systems:
+        logging.debug(f"Dump coord {coord_system.name}")
         seqr_stmt = (
             select(SeqRegion)
             .where(SeqRegion.coord_system_id == coord_system.coord_system_id)

@@ -21,7 +21,7 @@ import logging
 
 from ensembl.brc4.runnable.core_server import CoreServer
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.logging import init_logging
+from ensembl.utils.logging import init_logging_with_args
 
 
 BRC4_START_DATE = datetime(2020, 5, 1)
@@ -529,9 +529,7 @@ def main() -> None:
     parser.add_argument_dst_path("--output_file", required=True, help="Output file")
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
-
-    # Configure and initialise logging
-    init_logging(args.log_level, args.log_file, args.log_file_level)
+    init_logging_with_args(args)
 
     # Start
     factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)

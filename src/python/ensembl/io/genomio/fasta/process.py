@@ -100,7 +100,6 @@ def main() -> None:
     parser.add_argument("--peptide_mode", action="store_true", help="Process proteins instead of DNA")
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
-
     init_logging_with_args(args)
 
     prep_fasta_data(

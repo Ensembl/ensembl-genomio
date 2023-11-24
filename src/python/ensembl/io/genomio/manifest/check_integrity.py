@@ -30,7 +30,7 @@ from Bio import SeqIO, SeqFeature
 
 from ensembl.io.genomio.utils import get_json, open_gz_file
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.logging import init_logging
+from ensembl.utils.logging import init_logging_with_args
 
 
 # Record the lengths of the sequence for features/regions
@@ -728,9 +728,7 @@ def main() -> None:
     )
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
-
-    # Configure and initialise logging
-    init_logging(args.log_level, args.log_file, args.log_file_level)
+    init_logging_with_args(args)
 
     inspector = IntegrityTool(args.manifest_file, args.brc_mode, args.ignore_final_stops)
     inspector.check_integrity()

@@ -39,6 +39,7 @@ import requests
 
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 PROVIDER_DATA = {
@@ -270,6 +271,13 @@ def main() -> None:
     parser.add_argument(
         "--base_api_url", default=DEFAULT_API_URL, help="API URL to fetch the taxonomy data from"
     )
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
-    prepare_genome_metadata(**vars(args))
+    prepare_genome_metadata(
+        input_file=args.input_file,
+        output_file=args.output_file,
+        gff3_file=args.gff3_file,
+        base_api_url=args.base_api_url
+    )

@@ -43,7 +43,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.logging import init_logging
+from ensembl.utils.logging import init_logging_with_args
 
 
 class GBParseError(Exception):
@@ -471,9 +471,9 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--out_dir", default=Path.cwd(), help="output folder where the generated files will be stored"
     )
-    parser.add_log_arguments()
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
-    init_logging(args.log_level)
+    init_logging_with_args(args)
 
     gb_extractor = FormattedFilesGenerator(prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file)
     gb_extractor.extract_gb(args.out_dir)

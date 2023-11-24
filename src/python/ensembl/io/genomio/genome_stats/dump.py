@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
 from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 class StatsGenerator:
@@ -138,7 +139,9 @@ def main() -> None:
         description="Fetch all the sequence regions from a core database and print them in JSON format."
     )
     parser.add_server_arguments(include_database=True)
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     dbc = DBConnection(args.url)
 

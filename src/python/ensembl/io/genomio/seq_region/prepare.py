@@ -501,7 +501,6 @@ def main() -> None:
         "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
     )
     parser.add_log_arguments()
-
     args = parser.parse_args()
     init_logging_with_args(args)
 

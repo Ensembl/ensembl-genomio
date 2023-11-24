@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 from ensembl.core.models import Meta
 from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.logging import init_logging
+from ensembl.utils.logging import init_logging_with_args
 
 
 def get_genome_metadata(session: Session) -> Dict[str, Any]:
@@ -155,12 +155,9 @@ def main() -> None:
     parser.add_server_arguments(include_database=True)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     dbc = DBConnection(args.url)
-
-    # Configure and initialise logging
-    init_logging(args.log_level, args.log_file, args.log_file_level)
-
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session)
         genome_meta = filter_genome_meta(genome_meta)
