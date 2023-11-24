@@ -133,7 +133,7 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
     # Check the version is an integer
     try:
         assembly["version"] = int(version)
-    except(ValueError, TypeError) as exc:
+    except (ValueError, TypeError) as exc:
         # Get the version from the assembly accession
         accession = assembly["accession"]
         parts = accession.split(".")

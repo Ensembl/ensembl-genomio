@@ -206,7 +206,7 @@ def get_attribs(seq_region: SeqRegion) -> List:
     return atts
 
 
-def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, any]:
+def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
     """Extracts all the attributes of the given sequence region.
     
     Args:
