@@ -55,7 +55,12 @@ plugins:
     handlers:
       python:
         options:
+          inherited_members: true
+          members: true
+          show_root_heading: true
           show_source: true
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
 
 nav:
   - Home: index.md
