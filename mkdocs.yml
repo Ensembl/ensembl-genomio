@@ -37,6 +37,10 @@ theme:
         icon: fontawesome/regular/lightbulb
         name: Switch to light mode
 
+markdown_extensions:
+  - toc:
+      permalink: true
+
 plugins:
 - search
 - gen-files:
