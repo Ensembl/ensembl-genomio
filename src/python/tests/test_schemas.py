@@ -32,20 +32,18 @@ from jsonschema.exceptions import ValidationError
 import pytest
 from pytest import raises
 
-from ensembl.io.genomio.schemas.json import json_schema_factory, json_schema_validator
+from ensembl.io.genomio.schemas import json
 
 
-class TestSchemas:
+class TestJSONSchemas:
     """Tests for the schemas modules."""
 
     test_data_dir: Path
-    schema_dir: Path
     tmp_dir: Path
 
     @pytest.fixture(scope="class", autouse=True)
-    def setup(self, tmp_dir: Path, schemas_dir: Path, manifest_dir: Path):
+    def setup(self, tmp_dir: Path, manifest_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
-        type(self).schema_dir = schemas_dir
         type(self).test_data_dir = manifest_dir / "data1"
         type(self).tmp_dir = tmp_dir
 
@@ -59,8 +57,8 @@ class TestSchemas:
             ),
         ],
     )
-    def test_json_schema_factory(self, metadata_types: List[str], output: List[PathLike]) -> None:
-        """Tests :meth:`schemas.json_schema_factory()` method.
+    def test_schema_factory(self, metadata_types: List[str], output: List[PathLike]) -> None:
+        """Tests `ensembl.io.genomio.schemas.json.schema_factory()` method.
 
         Args:
             manifest_dir: Path to the folder with the manifest JSON file to check.
@@ -68,7 +66,7 @@ class TestSchemas:
             output: Expected created files.
 
         """
-        json_schema_factory(self.test_data_dir, metadata_types, self.tmp_dir)
+        json.schema_factory(self.test_data_dir, metadata_types, self.tmp_dir)
         for file_name in output:
             print(f"Check {file_name} in {self.tmp_dir}")
             assert (self.tmp_dir / file_name).exists()
@@ -76,14 +74,14 @@ class TestSchemas:
     @pytest.mark.parametrize(
         "json_file, json_schema, expected",
         [
-            ("manifest.json", "manifest_schema.json", does_not_raise()),
-            ("seq_region.json", "seq_region_schema.json", does_not_raise()),
-            ("functional_annotation.json", "functional_annotation_schema.json", does_not_raise()),
-            ("seq_region.json", "functional_annotation_schema.json", raises(ValidationError)),
+            ("manifest.json", "manifest", does_not_raise()),
+            ("seq_region.json", "seq_region", does_not_raise()),
+            ("functional_annotation.json", "functional_annotation", does_not_raise()),
+            ("seq_region.json", "functional_annotation", raises(ValidationError)),
         ],
     )
-    def test_validate_json_schema(self, json_file: str, json_schema: str, expected: ContextManager) -> None:
-        """Tests :meth:`schemas.json_schema_validator()` method.
+    def test_schema_validator(self, json_file: str, json_schema: str, expected: ContextManager) -> None:
+        """Tests `ensembl.io.genomio.schemas.json.schema_validator()` method.
 
         Args:
             json_file: Path to the JSON file to check.
@@ -93,6 +91,5 @@ class TestSchemas:
 
         """
         json_path = self.test_data_dir / json_file
-        schema_path = self.schema_dir / json_schema
         with expected:
-            json_schema_validator(json_path, schema_path)
+            json.schema_validator(json_path, json_schema)
