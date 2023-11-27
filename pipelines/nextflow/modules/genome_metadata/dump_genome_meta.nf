@@ -22,11 +22,11 @@ process DUMP_GENOME_META {
     input:
         val db
 
-    when:
-        "genome_metadata" in db.dump_selection
-
     output:
         tuple val(db), val("genome"), path("*_genome.json")
+
+    when:
+        "genome_metadata" in db.dump_selection
 
     script:
         output = "${db.species}_genome.json"

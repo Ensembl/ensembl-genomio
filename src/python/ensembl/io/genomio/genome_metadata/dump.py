@@ -153,7 +153,7 @@ def check_genebuild_version(metadata: Dict[str, Any]) -> None:
     """Updates the genebuild version (if not present) from the genebuild ID, removing the latter.
 
     Args:
-        gmeta: Nested metadata key values from the core metadata table.
+        metadata: Nested metadata key values from the core metadata table.
 
     Raises:
         ValueError: If there is no genebuild version or ID available.

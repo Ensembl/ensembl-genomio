@@ -22,11 +22,11 @@ process DUMP_NCBI_STATS {
     input:
         val db
 
-    when:
-        "stats" in db.dump_selection
-
     output:
         tuple val(db), path("ncbi_stats.json")
+
+    when:
+        "stats" in db.dump_selection
 
     shell:
         output = "ncbi_stats.json"

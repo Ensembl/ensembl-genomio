@@ -22,11 +22,11 @@ process DUMP_GENOME_STATS {
     input:
         val db
 
-    when:
-        "stats" in db.dump_selection
-
     output:
         tuple val(db), path("core_stats.json")
+
+    when:
+        "stats" in db.dump_selection
 
     script:
         """

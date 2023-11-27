@@ -22,11 +22,11 @@ process DUMP_EVENTS {
     input:
         val db
     
-    when:
-        "events" in db.dump_selection
-
     output:
         tuple val(db), val("events"), path("ids_events.tab")
+
+    when:
+        "events" in db.dump_selection
 
     script:
         output = "ids_events.tab"
