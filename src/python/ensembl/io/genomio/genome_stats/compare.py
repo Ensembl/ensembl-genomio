@@ -91,7 +91,7 @@ def compare_assembly(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, An
     core_num_scaffolds = core["coord_system"].get("scaffold", 0)
 
     # NCBI includes the chromosomes in its stats
-    core_adjusted_scaffolds = core_num_scaffolds + core_num_chrs
+    core_adjusted_scaffolds = core_num_scaffolds + core_adjusted_chrs
 
     # Compile the counts
     ncbi_counts = {

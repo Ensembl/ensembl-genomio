@@ -17,12 +17,18 @@
 Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
 """
 
+__all__ = ["format_db_data", "get_metadata_value"]
+
 import json
+import re
 from typing import Dict, List, Optional
 
 from ensembl.brc4.runnable.core_server import CoreServer
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+
+
+_DB_PATTERN = re.compile(r".+_core_(\d+)_\d+_\d+")
 
 
 def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
@@ -44,8 +50,11 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
         server.set_database(db)
         metadata = server.get_db_metadata()
 
-        species = get_metadata_value(metadata, "species.production_name")
+        prod_name = get_metadata_value(metadata, "species.production_name")
+        species = prod_name
         division = get_metadata_value(metadata, "species.division")
+        accession = get_metadata_value(metadata, "assembly.accession")
+        project_release = _get_project_release(db)
 
         if brc_mode:
             brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
@@ -58,11 +67,22 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
         if not division:
             division = "all"
 
-        db_data = {
+        server_data = {
+            "host": server.host,
+            "user": server.user,
+            "port": server.port,
+            "password": server.password,
             "database": db,
+        }
+        db_data = {
+            "server": server_data,
+            "production_name": prod_name,
             "species": species,
             "division": division,
+            "accession": accession,
+            "release": project_release,
         }
+
         databases_data.append(db_data)
     return databases_data
 
@@ -78,6 +98,15 @@ def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:
     if (key in metadata) and metadata[key]:
         return metadata[key][0]
     return None
+
+
+def _get_project_release(db_name: str) -> str:
+    """Return the project release number from the database name."""
+
+    match = re.search(_DB_PATTERN, db_name)
+    if match:
+        return match.group(1)
+    return ""
 
 
 def main() -> None:

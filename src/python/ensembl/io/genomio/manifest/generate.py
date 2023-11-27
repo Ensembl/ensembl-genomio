@@ -14,6 +14,8 @@
 # limitations under the License.
 """Creates a manifest file in a folder depending on the file names ends."""
 
+__all__ = ["ManifestMaker"]
+
 import hashlib
 import logging
 import json
@@ -63,6 +65,11 @@ class ManifestMaker:
             used_file = False
             if subfile.is_dir():
                 logging.warning("Can't create manifest for subdirectory")
+                continue
+
+            # Delete and skip empty files
+            if subfile.stat().st_size == 0:
+                subfile.unlink()
                 continue
 
             for name, standard_name in self.names.items():

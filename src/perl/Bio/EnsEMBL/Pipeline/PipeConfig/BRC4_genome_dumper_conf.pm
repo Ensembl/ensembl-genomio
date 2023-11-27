@@ -502,7 +502,7 @@ sub pipeline_analyses {
         schema => '#expr( #schemas#->{#metadata_type#} )expr#',
         cmd => 'mkdir -p #log_path#; '
              . 'echo "checking #json# against #schema#" > #log_path#/#metadata_type#.log; '
-             . 'check_json_schema --json_file #json# --json_schema #schema# '
+             . 'schemas_json_validate --json_file #json# --json_schema #schema# '
              . '   >> #log_path#/#metadata_type#.log 2>&1 ',
         hash_key => "#metadata_type#",
       },

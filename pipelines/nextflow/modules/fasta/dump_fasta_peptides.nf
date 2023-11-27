@@ -13,31 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-process DUMP_GENOME_META {
+process DUMP_FASTA_PEPTIDES {
     tag "${db.species}"
-    label "normal"
+    label "variable_2_8_32"
     maxForks params.max_database_forks
 
     input:
         val db
 
     output:
-        tuple val(db), val("genome"), path("*_genome.json")
+        tuple val(db), val("fasta_pep"), path("*.fasta")
 
     when:
-        "genome_metadata" in db.dump_selection
+        "fasta_dna" in db.dump_selection
 
     script:
-        output = "${db.species}_genome.json"
-        schema = params.json_schemas["genome"]
+        output = "${db.species}_fasta_pep.fasta"
         """
-        genome_metadata_dump --host '$db.server.host' \
-            --port '$db.server.port' \
-            --user '$db.server.user' \
-            --password '$db.server.password' \
-            --database '$db.server.database' \
-            --verbose > $output
-        schemas_json_validate --json_file $output --json_schema $schema
+        perl ${params.ensembl_root_dir}/ensembl-analysis/scripts/protein/dump_translations.pl \
+            -host ${db.server.host} \
+            -port ${db.server.port} \
+            -user ${db.server.user} \
+            -dbname ${db.server.database} \
+            -dnadbhost ${db.server.host} \
+            -dnadbport ${db.server.port} \
+            -dnadbuser ${db.server.user} \
+            -dnadbname ${db.server.database} \
+            -file $output
         """
 }

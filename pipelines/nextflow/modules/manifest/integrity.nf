@@ -15,7 +15,7 @@
 
 
 process CHECK_INTEGRITY {
-    tag "${meta.accession}_${meta.production_name}"
+    tag "${meta.accession}"
     label 'variable_2_8_32'
     time '1h'
 
