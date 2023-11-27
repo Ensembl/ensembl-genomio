@@ -84,7 +84,7 @@ def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
             "annotation_source",
         },
         "assembly": {"accession", "date", "name", "version", "provider_name", "provider_url"},
-        "genebuild": {"version", "method", "start_date", "method_display"},
+        "genebuild": {"version", "method", "start_date", "method_display", "id"},
         "annotation": {"provider_name", "provider_url"},
         "BRC4": {"organism_abbrev", "component"},
         "added_seq": {"region_name"},
@@ -115,6 +115,7 @@ def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
             gmeta_out[key1] = value
 
     check_assembly_version(gmeta_out)
+    check_genebuild_version(gmeta_out)
 
     return gmeta_out
 
@@ -130,10 +131,9 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
     version = assembly.get("version")
 
     # Check the version is an integer
-    if version is not None and version.isdigit():
+    try:
         assembly["version"] = int(version)
-        logging.info(f"Located version [v{int(version)}] info from meta data.")
-    else:
+    except (ValueError, TypeError) as exc:
         # Get the version from the assembly accession
         accession = assembly["accession"]
         parts = accession.split(".")
@@ -144,7 +144,34 @@ def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
                 f'Asm version [v{version}] obtained from: assembly accession ({assembly["accession"]}).'
             )
         else:
-            raise ValueError(f"Assembly version is not an integer in {assembly}")
+            raise ValueError(f"Assembly version is not an integer in {assembly}") from exc
+    else:
+        logging.info(f"Located version [v{int(version)}] info from meta data.")
+
+
+def check_genebuild_version(metadata: Dict[str, Any]) -> None:
+    """Updates the genebuild version (if not present) from the genebuild ID, removing the latter.
+
+    Args:
+        metadata: Nested metadata key values from the core metadata table.
+
+    Raises:
+        ValueError: If there is no genebuild version or ID available.
+    """
+    genebuild = metadata.get("genebuild")
+    if genebuild is None:
+        return
+    version = genebuild.get("version")
+
+    # Check there is a version
+    if version is None:
+        gb_id = genebuild.get("id")
+        if gb_id is None:
+            raise ValueError("No genebuild version or id")
+        metadata["genebuild"]["version"] = str(gb_id)
+
+    if "id" in genebuild:
+        del metadata["genebuild"]["id"]
 
 
 def main() -> None:

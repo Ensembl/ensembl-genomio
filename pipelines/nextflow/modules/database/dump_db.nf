@@ -14,30 +14,32 @@
 // limitations under the License.
 
 process DUMP_DB {
-    publishDir "$out_dir/coredb/$db.division", mode: 'copy'
+    publishDir "$out_dir/build_$db.release/coredb/$db.division", mode: 'copy'
     tag "$db.species"
     label "variable_2_8_32"
-    maxForks 10
+    maxForks params.max_database_forks
 
     input:
-        val server
         val db
         val out_dir
 
     output:
         path "*.sql.gz"
 
+    when:
+        "sql" in db.dump_selection
+
     script:
         """
         db_pass=""
-        if [ "${server.password}" != "" ]; then
-            db_pass="--password '${server.password}'"
+        if [ "${db.server.password}" != "" ]; then
+            db_pass="--password '${db.server.password}'"
         fi
 
-        mysqldump '${db.database}' \
-            --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
+        mysqldump '${db.server.database}' \
+            --host '${db.server.host}' \
+            --port '${db.server.port}' \
+            --user '${db.server.user}' \
             \$db_pass \
             | gzip > ${db.species}.sql.gz
         """

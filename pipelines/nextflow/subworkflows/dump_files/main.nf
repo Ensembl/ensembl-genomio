@@ -14,20 +14,21 @@
 // limitations under the License.
 
 include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
+include { DUMP_FASTA_DNA } from '../../modules/fasta/dump_fasta_dna.nf'
+include { DUMP_FASTA_PEPTIDES } from '../../modules/fasta/dump_fasta_peptides.nf'
+// include { DUMP_GFF3 } from '../../modules/gff3/dump_gff3.nf'
 include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
 include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_meta.nf'
 include { DUMP_GENOME_STATS } from '../../modules/genome_stats/dump_genome_stats.nf'
 include { COMPARE_GENOME_STATS } from '../../modules/genome_stats/compare_genome_stats.nf'
 include { DUMP_NCBI_STATS } from '../../modules/genome_metadata/dump_ncbi_stats.nf'
-include { CHECK_JSON_SCHEMA } from '../../modules/schema/check_json_schema_db.nf'
-include { COLLECT_FILES } from '../../modules/files/collect_files_db.nf'
-include { MANIFEST } from '../../modules/files/collect_files_db.nf'
-include { PUBLISH_DIR } from '../../modules/files/collect_files_db.nf'
-include { CHECK_INTEGRITY } from '../../modules/manifest/check_integrity_db.nf'
 
-workflow DUMP_METADATA {
+include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
+include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
+include { PUBLISH_DIR } from '../../modules/files/publish_output_dump.nf'
+
+workflow DUMP_FILES {
     take:
-        server
         db
 
     emit:
@@ -37,46 +38,44 @@ workflow DUMP_METADATA {
         db_files = Channel.of()
 
         // Seq regions
-        if (params.selection.contains("seq_regions")) {
-            seq_regions = DUMP_SEQ_REGIONS(server, db)
-            seq_regions_checked = CHECK_JSON_SCHEMA(seq_regions)
-            db_files = db_files.concat(seq_regions_checked)
-        }
+        seq_regions = DUMP_SEQ_REGIONS(db)
+        db_files = db_files.concat(seq_regions)
+
+        // Dump DNA sequences
+        fasta_dna = DUMP_FASTA_DNA(db)
+        db_files = db_files.concat(fasta_dna)
+
+        // Dump protein sequences
+        fasta_pep = DUMP_FASTA_PEPTIDES(db)
+        db_files = db_files.concat(fasta_pep)
+
+        // Dump gene models
+        // gff3 = DUMP_GFF3(db)
+        // db_files = db_files.concat(gff3)
         
         // Events
-        if (params.selection.contains("events")) {
-            events = DUMP_EVENTS(server, db)
-            db_files = db_files.concat(events)
-        }
+        events = DUMP_EVENTS(db)
+        db_files = db_files.concat(events)
 
         // Genome metadata
-        if (params.selection.contains("genome_metadata")) {
-            genome_meta = DUMP_GENOME_META(server, db)
-            db_files = db_files.concat(genome_meta)
-        }
+        genome_meta = DUMP_GENOME_META(db)
+        db_files = db_files.concat(genome_meta)
 
         // Genome stats
-        if (params.selection.contains("stats")) {
-            genome_stats = DUMP_GENOME_STATS(server, db)
-            ncbi_stats = DUMP_NCBI_STATS(server, db)
-            stats = ncbi_stats.join(genome_stats)
-            diff_stats = COMPARE_GENOME_STATS(stats)
-            stats_files = genome_stats.concat(ncbi_stats).concat(diff_stats)
-                .groupTuple()
-                .transpose(by: 1)
-                .map { db, files -> tuple(db, "stats", files) }
-            db_files = db_files.concat(stats_files)
-        }
+        genome_stats = DUMP_GENOME_STATS(db)
+        ncbi_stats = DUMP_NCBI_STATS(db)
+        stats = ncbi_stats.join(genome_stats)
+        stats_files = COMPARE_GENOME_STATS(stats).transpose()
+        db_files = db_files.concat(stats_files)
 
         // Group the files by db species (use the db object as key)
         // Only keep the files so they are easy to collect
         db_files = db_files
-            .map{ db, name, file_name -> tuple(db, file_name) }
+            .map{ db, name, file_name -> tuple(groupKey(db, db["dump_number"]), file_name) }
             .groupTuple()
 
         // Collect, create manifest, and publish
-        collect_dir = COLLECT_FILES(db_files)
-        manifested_dir = MANIFEST(collect_dir)
+        manifested_dir = MANIFEST(db_files)
         manifest_checked = CHECK_INTEGRITY(manifested_dir)
         PUBLISH_DIR(manifest_checked, params.output_dir)
 }

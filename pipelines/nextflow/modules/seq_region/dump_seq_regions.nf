@@ -16,22 +16,27 @@
 process DUMP_SEQ_REGIONS {
     tag "${db.species}"
     label "variable_2_8_32"
+    maxForks params.max_database_forks
 
     input:
-        val server
         val db
-
+    
     output:
-        tuple val(db), val("seq_region"), path("seq_region.json")
+        tuple val(db), val("seq_region"), path("*_seq_region.json")
+
+    when:
+        "seq_regions" in db.dump_selection
 
     script:
+        output = "${db.species}_seq_region.json"
+        schema = params.json_schemas["seq_region"]
         """
-        touch seq_region.json
-        seq_region_dump --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
-            --password '${server.password}' \
-            --database '${db.database}' \
-            > seq_region.json
+        seq_region_dump --host '$db.server.host' \
+            --port '$db.server.port' \
+            --user '$db.server.user' \
+            --password '$db.server.password' \
+            --database '$db.server.database' \
+            > $output
+        schemas_json_validate --json_file $output --json_schema $schema
         """
 }

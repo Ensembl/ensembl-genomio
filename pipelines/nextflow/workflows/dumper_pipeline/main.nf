@@ -27,6 +27,8 @@ default_selection = [
     'events',
     'genome_metadata',
     'stats',
+    'fasta_pep',
+    'fasta_dna'
 ]
 
 // Print usage
@@ -103,21 +105,33 @@ if (params.host && params.port && params.user && params.output_dir) {
     exit 1, "Missing server parameters"
 }
 
+// Select the files to dump
+dump_meta = default_selection
+dump_sql = true
+dump_number = 8
 if (params.select_dump) {
-    items = params.select_dump.split(/,/)
-    for (item in items) {
+    dump_meta = []
+    dump_sql = false
+    dump_number = 0
+    dump_meta = params.select_dump.split(/,/).collect().unique()
+    for (item in dump_meta) {
         if (!default_selection.contains(item)) {
             acceptable = default_selection.join(", ")
             exit 1, "Selection item unknown: " + item + " (accepted: " + acceptable + ")"
         }
+        if (item != "sql") {
+            if (item == "stats") {
+                dump_number += 3
+            } else {
+                dump_number += 1
+            }
+        }
     }
-    params.selection = items
-} else {
-    params.selection = default_selection
 }
+dump_select = ["dump_selection": dump_meta, "dump_number": dump_number]
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
-include { DUMP_METADATA } from '../../subworkflows/dump_metadata/main.nf'
+include { DUMP_FILES } from '../../subworkflows/dump_files/main.nf'
 include { DB_FACTORY } from '../../modules/database/db_factory.nf'
 include { read_json } from '../../modules/utils/utils.nf'
 
@@ -126,9 +140,8 @@ workflow {
     dbs = DB_FACTORY(server, filter_map)
         .map(it -> read_json(it))
         .flatten()
+        .map(it -> it + dump_select)
     
-    if (params.selection.contains('sql')) {
-        DUMP_SQL(server, dbs)
-    }
-    DUMP_METADATA(server, dbs)
+    DUMP_SQL(dbs)
+    DUMP_FILES(dbs)
 }

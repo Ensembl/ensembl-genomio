@@ -17,12 +17,11 @@ include { DUMP_DB } from '../../modules/database/dump_db.nf'
 
 workflow DUMP_SQL {
     take:
-        server
         dbs
 
     emit:
         dbs
 
     main:
-        DUMP_DB(server, dbs, params.output_dir)
+        DUMP_DB(dbs, params.output_dir)
 }

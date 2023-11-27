@@ -13,22 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-process CHECK_INTEGRITY {
+process DUMP_FASTA_DNA {
     tag "${db.species}"
-    label 'default'
-    errorStrategy 'finish'
-    time '1h'
+    label "variable_2_8_32"
+    maxForks params.max_database_forks
 
     input:
-        tuple val(db), path(manifest_dir)
-    
+        val db
+
     output:
-        tuple val(db), path(manifest_dir, includeInputs: true)
+        tuple val(db), val("fasta_dna"), path("*.fasta")
+
+    when:
+        "fasta_dna" in db.dump_selection
 
     script:
-        brc_mode = params.brc_mode ? '--brc_mode' : ''
+        output = "${db.species}_fasta_dna.fasta"
         """
-        manifest_check_integrity --manifest_file ${manifest_dir}/manifest.json $brc_mode --verbose
+        perl ${params.ensembl_root_dir}/ensembl-analysis/scripts/sequence_dump.pl \
+            -dbhost ${db.server.host} \
+            -dbport ${db.server.port} \
+            -dbuser ${db.server.user} \
+            -dbname ${db.server.database} \
+            -coord_system_name toplevel \
+            -toplevel \
+            -onefile \
+            -nonref \
+            -filename $output
         """
 }

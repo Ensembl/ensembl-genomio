@@ -17,23 +17,27 @@
 process DUMP_EVENTS {
     tag "${db.species}"
     label "variable_2_8_32"
+    maxForks params.max_database_forks
 
     input:
-        val server
         val db
-
+    
     output:
-        tuple val(db), val("events"), path("events.txt")
+        tuple val(db), val("events"), path("ids_events.tab")
+
+    when:
+        "events" in db.dump_selection
 
     script:
+        output = "ids_events.tab"
         """
-        touch "events.txt"
-        events_dump --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
-            --password '${server.password}' \
-            --database '${db.database}' \
-            --output_file "events.txt" \
+        touch $output
+        events_dump --host '${db.server.host}' \
+            --port '${db.server.port}' \
+            --user '${db.server.user}' \
+            --password '${db.server.password}' \
+            --database '${db.server.database}' \
+            --output_file "$output" \
             --verbose
         """
 }

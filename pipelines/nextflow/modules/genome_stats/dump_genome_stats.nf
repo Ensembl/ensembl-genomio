@@ -17,22 +17,24 @@
 process DUMP_GENOME_STATS {
     tag "${db.species}"
     label "normal"
-    maxForks 10
+    maxForks params.max_database_forks
 
     input:
-        val server
         val db
 
     output:
         tuple val(db), path("core_stats.json")
 
+    when:
+        "stats" in db.dump_selection
+
     script:
         """
-        genome_stats_dump --host '${server.host}' \
-            --port '${server.port}' \
-            --user '${server.user}' \
-            --password '${server.password}' \
-            --database '${db.database}' \
+        genome_stats_dump --host '${db.server.host}' \
+            --port '${db.server.port}' \
+            --user '${db.server.user}' \
+            --password '${db.server.password}' \
+            --database '${db.server.database}' \
             > core_stats.json
         """
 }
