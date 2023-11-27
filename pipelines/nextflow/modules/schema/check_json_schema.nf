@@ -24,8 +24,8 @@ process CHECK_JSON_SCHEMA {
         tuple val(meta), path(json_file), emit: verified_json
 
     shell:
-        schema = params.json_schemas[json_file.baseName]
+        schema_name = json_file.baseName
         '''
-        schemas_json_validate --json_file !{json_file} --json_schema !{schema}
+        schemas_json_validate --json_file !{json_file} --json_schema !{schema_name}
         '''
 }
