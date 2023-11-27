@@ -39,7 +39,6 @@ my $package_dir = dirname($package_path);
 my $root_dir = "$package_dir/../../../../../..";
 
 my $scripts_dir = "$root_dir/scripts";
-my $schema_dir = "$root_dir/schemas";
 my $config_dir = "$root_dir/config";
 
 sub default_options {
@@ -80,15 +79,6 @@ sub default_options {
     check_manifest => 1,
 
     debug => 0,
-
-    ## Metadata parameters
-    'schemas' => {
-      'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
-      'seq_attrib' => catfile($schema_dir, "seq_attrib_schema.json"),
-      'functional_annotation' => catfile($schema_dir, "functional_annotation_schema.json"),
-      'genome' => catfile($schema_dir, "genome_schema.json"),
-      'manifest' => catfile($schema_dir, "manifest_schema.json"),
-    },
     
     # External_db name map file
     external_db_map_name => 'default.txt',
@@ -181,7 +171,6 @@ sub pipeline_wide_parameters {
     %{$self->SUPER::pipeline_wide_parameters},
     debug          => $self->o('debug'),
     check_manifest => $self->o('check_manifest'),
-    'schemas'      => $self->o('schemas'),
     pipeline_dir   => $self->o('pipeline_dir'),
     ensembl_root_dir => $self->o('ensembl_root_dir'),
 
@@ -350,12 +339,11 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
         cmd => 'mkdir -p #log_path#; '
-             . 'echo "checking #json# against #schema#" > #log_path#/#metadata_type#.log; '
-             . 'schemas_json_validate --json_file #json# --json_schema #schema# '
+             . 'echo "checking #json# against #metadata_type#" > #log_path#/#metadata_type#.log; '
+             . 'schemas_json_validate --json_file #json# --json_schema #metadata_type# '
              . '   >> #log_path#/#metadata_type#.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_schemas',
         json => '#metadata_json#',
-        schema => '#expr( #schemas#->{#metadata_type#} )expr#', # N.B. no quotes around #metadata_type#
       },
       -analysis_capacity => 2,
       -failed_job_tolerance => 10, # in %

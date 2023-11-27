@@ -43,7 +43,6 @@ my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
 my $package_dir = dirname($package_path);
 my $root_dir = "$package_dir/../../../../../..";
 
-my $schema_dir = "$root_dir/schemas";
 my $config_dir = "$root_dir/config";
 my $runnables_dir = "$root_dir/src/python/ensembl/brc4/runnable";
 
@@ -125,15 +124,6 @@ sub default_options {
        'process_logic_names' => [],
        'skip_logic_names'    => [],
 
-
-      ## Metadata parameters
-      'schemas' => {
-        'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
-        'seq_attrib' => catfile($schema_dir, "seq_attrib_schema.json"),
-        'functional_annotation' => catfile($schema_dir, "functional_annotation_schema.json"),
-        'genome' => catfile($schema_dir, "genome_schema.json"),
-        'manifest' => catfile($schema_dir, "manifest_schema.json"),
-      },
       # Map back the external db names
       external_db_map => catfile($config_dir, 'external_db_map', 'default.txt'),
 	};
@@ -499,10 +489,9 @@ sub pipeline_analyses {
       -parameters  => {
         log_path => $self->o('tmp_dir') . '/check_schemas',
         json => '#metadata_json#',
-        schema => '#expr( #schemas#->{#metadata_type#} )expr#',
         cmd => 'mkdir -p #log_path#; '
-             . 'echo "checking #json# against #schema#" > #log_path#/#metadata_type#.log; '
-             . 'schemas_json_validate --json_file #json# --json_schema #schema# '
+             . 'echo "checking #json# against #metadata_type#" > #log_path#/#metadata_type#.log; '
+             . 'schemas_json_validate --json_file #json# --json_schema #metadata_type# '
              . '   >> #log_path#/#metadata_type#.log 2>&1 ',
         hash_key => "#metadata_type#",
       },
