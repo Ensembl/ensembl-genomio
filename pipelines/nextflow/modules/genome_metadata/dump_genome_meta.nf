@@ -30,7 +30,7 @@ process DUMP_GENOME_META {
 
     script:
         output = "${db.species}_genome.json"
-        schema = params.json_schemas["genome"]
+        schema = "genome"
         """
         genome_metadata_dump --host '$db.server.host' \
             --port '$db.server.port' \
