@@ -25,6 +25,7 @@ from typing import Dict, List, Optional
 
 from ensembl.brc4.runnable.core_server import CoreServer
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 _DB_PATTERN = re.compile(r".+_core_(\d+)_\d+_\d+")
@@ -125,7 +126,9 @@ def main() -> None:
         action="store_true",
         help="Enable BRC mode, i.e. use organism_abbrev for species, component for division",
     )
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     server = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
     databases = server.get_cores(

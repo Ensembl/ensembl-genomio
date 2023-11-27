@@ -26,7 +26,7 @@ import logging
 
 from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.logging import init_logging
+from ensembl.utils.logging import init_logging_with_args
 
 
 def _diff_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Any]:
@@ -195,7 +195,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Configure and initialise logging
-    init_logging(args.log_level, args.log_file, args.log_file_level)
+    init_logging_with_args(args)
 
     try:
         ncbi_stats = get_json(args.ncbi_stats)["reports"][0]

@@ -17,10 +17,12 @@
 __all__ = ["ManifestMaker"]
 
 import hashlib
+import logging
 import json
 from pathlib import Path
 
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 class ManifestMaker:
@@ -62,7 +64,7 @@ class ManifestMaker:
         for subfile in self.dir.iterdir():
             used_file = False
             if subfile.is_dir():
-                print("Can't create manifest for subdirectory")
+                logging.warning("Can't create manifest for subdirectory")
                 continue
 
             # Delete and skip empty files
@@ -87,7 +89,7 @@ class ManifestMaker:
                     break
 
             if not used_file:
-                print(f"File {subfile} was not included in the manifest")
+                logging.warning(f"File {subfile} was not included in the manifest")
 
         return manifest_files
 
@@ -106,7 +108,9 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--manifest_dir", required=True, help="Folder where to create a manifest file"
     )
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     maker = ManifestMaker(args.manifest_dir)
     maker.create_manifest()

@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 from ensembl.database import DBConnection
 from ensembl.core.models import MappingSession, StableIdEvent
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.logging import init_logging
+from ensembl.utils.logging import init_logging_with_args
 
 
 @dataclass
@@ -119,7 +119,7 @@ class EventCollection:
                         continue
                     fingerprint = f"{from_id} {to_id}"
                     if fingerprint in loaded_event:
-                        print(f"Duplicated event, skipped: {fingerprint}")
+                        logging.debug(f"Duplicated event, skipped: {fingerprint}")
                         continue
                     loaded_event.add(fingerprint)
                     event = IdEvent(
@@ -241,13 +241,10 @@ def main() -> None:
     parser.add_argument("--update", action="store_true", help="Make changes to the database")
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
-
-    # Configure and initialise logging
-    init_logging(args.log_level, args.log_file, args.log_file_level)
+    init_logging_with_args(args)
 
     # Start
     dbc = DBConnection(args.url)
-
     collection = EventCollection()
     collection.load_events(args.input_file)
 

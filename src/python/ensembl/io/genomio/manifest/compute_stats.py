@@ -26,6 +26,7 @@ from BCBio import GFF
 
 from ensembl.io.genomio.utils import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 class BiotypeCounter:
@@ -409,7 +410,9 @@ def main() -> None:
     parser.add_argument("--accession", help="Sequence accession ID to compare stats with NCBI")
     parser.add_argument("--datasets_bin", help="Datasets bin status")
     parser.add_argument_dst_path("--stats_file", help="Output file with the stats")
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     mstats = manifest_stats(args.manifest_dir, args.accession, args.datasets_bin)
     if args.accession is not None:

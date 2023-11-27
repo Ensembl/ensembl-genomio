@@ -23,6 +23,7 @@ import shutil
 from typing import List
 
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 def json_schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir: PathLike) -> None:
@@ -75,6 +76,8 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--output_dir", default=Path.cwd(), help="Folder to store the produced files"
     )
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     json_schema_factory(**vars(args))

@@ -23,7 +23,7 @@ from pathlib import Path
 import requests
 
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.logging import init_logging
+from ensembl.utils.logging import init_logging_with_args
 
 
 class DownloadError(Exception):
@@ -72,7 +72,7 @@ def main() -> None:
     parser.add_argument_dst_path("--output_file", required=True, help="Output GenBank file")
     parser.add_log_arguments()
     args = parser.parse_args()
-    init_logging(args.log_level)
+    init_logging_with_args(args)
 
     download_genbank(accession=args.accession, output_file=args.output_file)
 
