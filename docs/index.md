@@ -56,6 +56,14 @@ Software as part of [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio
 	    └── genomio
 	        ├── assembly
 	        │   └── download.py
+	        ├── data
+	        │   └── schemas
+	        │       ├── functional_annotation.json
+	        │       ├── genome.json
+	        │       ├── manifest.json
+	        │       ├── README.md
+	        │       ├── seq_attrib.json
+	        │       └── seq_region.json
 	        ├── database
 	        │   └── factory.py
 	        ├── events

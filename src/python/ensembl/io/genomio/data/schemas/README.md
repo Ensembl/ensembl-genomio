@@ -21,19 +21,19 @@ pip install jsonschema
 
 To validate JSON with schema just load it with python:
 ```
-python -c 'import json; import sys; json.load(open(sys.argv[1]))' seq_region_schema.json
+python -c 'import json; import sys; json.load(open(sys.argv[1]))' seq_region.json
 ``` 
 
 Copy example from example section to example.json
 ```
 python -c 'import sys; import json; \
     print("\n".join([ json.dumps(e) for e in json.load(open(sys.argv[1]))["examples"]]))' \
-  seq_region_schema.json > examples.json
+  seq_region.json > examples.json
 ```
 
 And run validation:
 ```
 cat examples.json |
   sed -n '2p' |
-  jsonschema -i /dev/stdin seq_region_schema.json && echo OK || echo FAIL
+  jsonschema -i /dev/stdin seq_region.json && echo OK || echo FAIL
 ```

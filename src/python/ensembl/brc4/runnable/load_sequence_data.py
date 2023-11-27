@@ -77,7 +77,7 @@ class load_sequence_data(eHive.BaseRunnable):
             #       { "added_sequence" : { "assembly_provider" : { "name" : ... } } } -> "added_sequence/assembly_provider/name"
             #   only flattable properties can be used, no arrays
             #   arrays should be processed separately (see `add_sr_synonyms` or `add_karyotype_bands` definitions)
-            # see schemas/seq_region_schema.json
+            # see src/python/ensembl/io/genomio/data/schemas/seq_region.json
             "sr_attrib_types": {
                 "circular": "circular_seq",
                 "codon_table": "codon_table",
@@ -249,8 +249,8 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Add seq_region_synonym from the seq_region_file meta data file.
 
-        Add seq_region_synonym from the schemas/seq_region_schema.json compatible meta data file.
-        Merge with the already exinsting ones in the db.
+        Add seq_region_synonym from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file.
+        Merge with the already existing ones in the db.
 
         If unversion is true:
           * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
@@ -355,11 +355,11 @@ class load_sequence_data(eHive.BaseRunnable):
 
         Explicit list is taken from "sr_attrib_types" module param.
 
-        Add seq_region_attrib(s) from the schemas/seq_region_schema.json compatible meta data file.
+        Add seq_region_attrib(s) from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file.
         Explicit list is taken from "sr_attrib_types" module param.
 
         "sr_attrib_types" defines { json_property -> attrib_type.name } map. If the value is dict,
-        its keys are treated as "/"-delimetered "json_path" (i.e. "added_sequence/assembly_provider/name").
+        its keys are treated as "/"-delimited "json_path" (i.e. "added_sequence/assembly_provider/name").
         No arrays can be processed. Only simple or "flattable" types.
 
         If unversion is true:
@@ -478,7 +478,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Add "(EBI|BRC4)_seq_region_name" seq_region_attrib(s) either from the seq_region_file meta data file, or from original seq_region names.
 
-        Add "(EBI|BRC4)_seq_region_name" seq_region_synonym from the schemas/seq_region_schema.json compatible meta data file or from the original seq_region_names.
+        Add "(EBI|BRC4)_seq_region_name" seq_region_synonym from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file or from the original seq_region_names.
         A special case of attributes adding with default values derived from seq_region names.
 
         If unversion is true:
@@ -536,7 +536,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Adds various karyotypic data from seq_region file and assembly metadata (if present).
 
-        Adds various karyotypic data from the schemas/seq_region_schema.json compatible meta data file and assembly metadata (if present).
+        Adds various karyotypic data from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file and assembly metadata (if present).
 
         If unversion is true:
           * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
@@ -585,7 +585,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Add karyotypic data from the seq_region metafile.
 
-        Add karyotypic data from the schemas/seq_region_schema.json compatible meta data file.
+        Add karyotypic data from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file.
         Returns list of [ (seq_region_name, seq_region_id, unversioned_name) ] trios for seq_regions having karyotype bands info.
 
         If unversion is true:
