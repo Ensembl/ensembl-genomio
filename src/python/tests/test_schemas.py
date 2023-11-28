@@ -42,9 +42,9 @@ class TestJSONSchemas:
     tmp_dir: Path
 
     @pytest.fixture(scope="class", autouse=True)
-    def setup(self, tmp_dir: Path, manifest_dir: Path):
+    def setup(self, tmp_dir: Path, schemas_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
-        type(self).test_data_dir = manifest_dir / "data1"
+        type(self).test_data_dir = schemas_dir
         type(self).tmp_dir = tmp_dir
 
     @pytest.mark.parametrize(
@@ -53,7 +53,7 @@ class TestJSONSchemas:
             (["new_metadata"], ["manifest.json"]),
             (
                 ["functional_annotation", "seq_region"],
-                ["manifest.json", "functional_annotation.json", "seq_region.json"],
+                ["manifest.json", "functional_annotation_category.json", "seq_region.json"],
             ),
         ],
     )
@@ -74,9 +74,8 @@ class TestJSONSchemas:
     @pytest.mark.parametrize(
         "json_file, json_schema, expected",
         [
-            ("manifest.json", "manifest", does_not_raise()),
             ("seq_region.json", "seq_region", does_not_raise()),
-            ("functional_annotation.json", "functional_annotation", does_not_raise()),
+            ("functional_annotation.json", "functional_annotation_schema.json", does_not_raise()),
             ("seq_region.json", "functional_annotation", raises(ValidationError)),
         ],
     )
@@ -91,5 +90,7 @@ class TestJSONSchemas:
 
         """
         json_path = self.test_data_dir / json_file
+        if Path(json_schema).suffix == ".json":
+            json_schema = self.test_data_dir / json_schema
         with expected:
             json.schema_validator(json_path, json_schema)

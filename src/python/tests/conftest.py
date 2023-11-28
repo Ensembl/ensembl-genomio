@@ -44,3 +44,8 @@ def files_dir() -> Path:
 def manifest_dir() -> Path:
     """Returns the folder that contains the manifest data test files."""
     return FILES_DIR_PATH / "manifest_data"
+
+@pytest.fixture(scope="package")
+def schemas_dir() -> Path:
+    """Returns the folder that contains the manifest data test files."""
+    return FILES_DIR_PATH / "schemas"
