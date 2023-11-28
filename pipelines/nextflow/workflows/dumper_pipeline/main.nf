@@ -64,7 +64,7 @@ def helpMessage() {
         nextflow run \\
             -w \${data_dir}/nextflow_work \\
             ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
-            --dump_sql --dump_files \\
+            --dump_sql --dump_all_files \\
             -profile lsf \\
             --host <DB_HOST> --port <DB_PORT> --user <DB_USER>
             --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
