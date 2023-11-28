@@ -25,9 +25,6 @@ process DUMP_NCBI_STATS {
     output:
         tuple val(db), path("ncbi_stats.json")
 
-    when:
-        "stats" in db.dump_selection
-
     shell:
         output = "ncbi_stats.json"
         '''

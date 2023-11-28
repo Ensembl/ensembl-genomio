@@ -25,9 +25,6 @@ process DUMP_GENOME_META {
     output:
         tuple val(db), val("genome"), path("*_genome.json")
 
-    when:
-        "genome_metadata" in db.dump_selection
-
     script:
         output = "${db.species}_genome.json"
         schema = params.json_schemas["genome"]

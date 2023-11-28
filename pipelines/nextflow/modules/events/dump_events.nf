@@ -25,9 +25,6 @@ process DUMP_EVENTS {
     output:
         tuple val(db), val("events"), path("ids_events.tab")
 
-    when:
-        "events" in db.dump_selection
-
     script:
         output = "ids_events.tab"
         """

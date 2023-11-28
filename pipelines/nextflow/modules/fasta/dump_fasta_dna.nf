@@ -24,9 +24,6 @@ process DUMP_FASTA_DNA {
     output:
         tuple val(db), val("fasta_dna"), path("*.fasta")
 
-    when:
-        "fasta_dna" in db.dump_selection
-
     script:
         output = "${db.species}_fasta_dna.fasta"
         """

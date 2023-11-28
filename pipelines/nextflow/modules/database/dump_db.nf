@@ -26,9 +26,6 @@ process DUMP_DB {
     output:
         path "*.sql.gz"
 
-    when:
-        "sql" in db.dump_selection
-
     script:
         """
         db_pass=""
