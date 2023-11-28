@@ -28,13 +28,15 @@ process DUMP_UNIPROT_MAP {
         output = "${db.species}_uniprot_map.tsv"
         """
         touch $output
-        events_dump --host '${db.server.host}' \
+        xrefs_dump_uniprot_map \
+            --host '${db.server.host}' \
             --port '${db.server.port}' \
             --user '${db.server.user}' \
             --password '${db.server.password}' \
             --database '${db.server.database}' \
-            --output_file "$output" \
-            --verbose
+            --verbose \
+            > "$output"
+        exit
         """
     
     stub:
