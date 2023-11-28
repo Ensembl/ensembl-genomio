@@ -91,6 +91,6 @@ class TestJSONSchemas:
         """
         json_path = self.test_data_dir / json_file
         if Path(json_schema).suffix == ".json":
-            json_schema = self.test_data_dir / json_schema
+            json_schema = str(self.test_data_dir / json_schema)
         with expected:
             json.schema_validator(json_path, json_schema)

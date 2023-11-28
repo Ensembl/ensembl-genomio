@@ -489,6 +489,7 @@ sub pipeline_analyses {
       -parameters  => {
         log_path => $self->o('tmp_dir') . '/check_schemas',
         json => '#metadata_json#',
+        # schemas_json_validate will automatically fetch the JSON schema file corresponding to metadata_type
         cmd => 'mkdir -p #log_path#; '
              . 'echo "checking #json# against #metadata_type#" > #log_path#/#metadata_type#.log; '
              . 'schemas_json_validate --json_file #json# --json_schema #metadata_type# '
