@@ -24,9 +24,6 @@ process DUMP_SEQ_REGIONS {
     output:
         tuple val(db), val("seq_region"), path("*_seq_region.json")
 
-    when:
-        "seq_regions" in db.dump_selection
-
     script:
         output = "${db.species}_seq_region.json"
         schema = params.json_schemas["seq_region"]

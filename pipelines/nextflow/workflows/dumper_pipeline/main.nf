@@ -106,15 +106,13 @@ if (params.host && params.port && params.user && params.output_dir) {
 }
 
 // Select the files to dump
-dump_meta = default_selection
-dump_sql = true
+dump_selection = default_selection
 dump_number = 8
 if (params.select_dump) {
-    dump_meta = []
-    dump_sql = false
+    dump_selection = []
     dump_number = 0
-    dump_meta = params.select_dump.split(/,/).collect().unique()
-    for (item in dump_meta) {
+    dump_selection = params.select_dump.split(/,/).collect().unique()
+    for (item in dump_selection) {
         if (!default_selection.contains(item)) {
             acceptable = default_selection.join(", ")
             exit 1, "Selection item unknown: " + item + " (accepted: " + acceptable + ")"
@@ -128,7 +126,7 @@ if (params.select_dump) {
         }
     }
 }
-dump_select = ["dump_selection": dump_meta, "dump_number": dump_number]
+print("Dump $dump_number files (excluding SQL)")
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
 include { DUMP_FILES } from '../../subworkflows/dump_files/main.nf'
@@ -140,8 +138,9 @@ workflow {
     dbs = DB_FACTORY(server, filter_map)
         .map(it -> read_json(it))
         .flatten()
-        .map(it -> it + dump_select)
     
-    DUMP_SQL(dbs)
-    DUMP_FILES(dbs)
+    if ("sql" in dump_selection) {
+        DUMP_SQL(dbs)
+    }
+    DUMP_FILES(dbs, dump_selection, dump_number)
 }

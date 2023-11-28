@@ -25,9 +25,6 @@ process DUMP_GENOME_STATS {
     output:
         tuple val(db), path("core_stats.json")
 
-    when:
-        "stats" in db.dump_selection
-
     script:
         """
         genome_stats_dump --host '${db.server.host}' \
