@@ -15,5 +15,5 @@
 """Ensembl core database interface module."""
 
 from .factory import *
-from .core_db import *
+from .core_database import *
 from .core_server import *
