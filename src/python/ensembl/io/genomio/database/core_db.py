@@ -1,0 +1,46 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""CoreDatabase interface to an Ensembl core database."""
+
+from typing import Dict, List
+
+from sqlalchemy import select
+
+from ensembl.database import DBConnection
+from ensembl.core.models import Meta
+
+class CoreDatabase(DBConnection):
+    """Add some basic interface for an Ensembl core database."""
+
+    def get_metadata(self) -> Dict[str, List]:
+        """Retrieve all metadata from a database.
+
+        Returns:
+            A dict of with key meta_key, and value=List of meta_value.
+
+        """
+        with self.session_scope() as session:
+            meta_stmt = select(Meta)
+
+            metadata: Dict[str, List] = {}
+            for meta_row in session.scalars(meta_stmt).unique().all():
+                meta_key = meta_row.meta_key
+                meta_value = meta_row.meta_value
+                if meta_key in metadata:
+                    metadata[meta_key].append(meta_value)
+                else:
+                    metadata[meta_key] = [meta_value]
+
+        return metadata
