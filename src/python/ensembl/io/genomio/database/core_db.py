@@ -14,6 +14,8 @@
 # limitations under the License.
 """CoreDatabase interface to an Ensembl core database."""
 
+__all__ = ["CoreDatabase"]
+
 from typing import Dict, List
 
 from sqlalchemy import select
@@ -21,8 +23,9 @@ from sqlalchemy import select
 from ensembl.database import DBConnection
 from ensembl.core.models import Meta
 
+
 class CoreDatabase(DBConnection):
-    """Add some basic interface for an Ensembl core database."""
+    """Add some useful interface for an Ensembl core database."""
 
     def get_metadata(self) -> Dict[str, List]:
         """Retrieve all metadata from a database.

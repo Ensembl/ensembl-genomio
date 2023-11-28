@@ -146,7 +146,10 @@ def main() -> None:
     )
     server = CoreServer(server_url)
     databases = server.get_cores(
-        prefix=args.prefix, build=args.build, version=args.version, dbname_re=args.db_regex,
+        prefix=args.prefix,
+        build=args.build,
+        version=args.version,
+        dbname_re=args.db_regex,
     )
 
     # Get all metadata for those databases
