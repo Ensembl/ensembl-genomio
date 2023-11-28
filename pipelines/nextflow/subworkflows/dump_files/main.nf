@@ -64,7 +64,6 @@ workflow DUMP_FILES {
         // }
         
         // Events
-
         if ("events" in selection) {
             events = DUMP_EVENTS(db)
             db_files = db_files.concat(events)

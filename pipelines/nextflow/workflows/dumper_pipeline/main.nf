@@ -109,7 +109,6 @@ if (params.host && params.port && params.user && params.output_dir) {
 dump_selection = default_selection
 dump_number = 8
 if (params.select_dump) {
-    dump_selection = []
     dump_number = 0
     dump_selection = params.select_dump.split(/,/).collect().unique()
     for (item in dump_selection) {
