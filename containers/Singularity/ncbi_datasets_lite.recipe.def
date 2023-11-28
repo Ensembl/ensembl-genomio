@@ -1,0 +1,46 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%environment
+    export SINGULARITY_SHELL=/bin/bash
+    export DEBIAN_FRONTEND=noninteractive
+    export LC_ALL=C
+
+%labels
+    Author lcampbell@ebi.ac.uk
+    Software "NCBI's datasets and dataformat"
+    Software.version v15.30.0
+    Software.website "https://github.com/ncbi/datasets/releases/tag/v15.30.0"
+    Description "NCBI Datasets is a new resource that lets you easily gather data from across NCBI databases."
+
+%post
+    apt-get update && apt-get -y upgrade
+    apt-get -y install \
+    wget \
+    unzip \
+    ca-certificates \
+    
+    rm -rf /var/lib/apt/lists/*
+    apt-get clean
+    
+    #Installing ncbi datasets & dataformat
+    cd /usr/local/bin/ && \
+    wget https://github.com/ncbi/datasets/releases/download/v15.30.0/linux-amd64.cli.package.zip && \
+    unzip linux-amd64.cli.package.zip && \
+    rm linux-amd64.cli.package.zip && \
+    chmod +x datasets dataformat
+
+%test
+    #!/usr/bin/bash
+
+    echo "Testing OS is Ubuntu...."
+    grep -q -e "PRETTY_NAME=\"Ubuntu 22.04.3 LTS\"" /etc/os-release
+    if [ $? -eq 0 ]; then
+       echo "Container base is Ubuntu as expected." 
+    else
+        echo "Container base is not Ubuntu."
+        exit 1
+    fi
+
+    echo "Checking we have datasets installed"
+    datasets --help
