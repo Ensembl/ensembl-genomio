@@ -26,5 +26,6 @@ process MANIFEST {
     shell:
         '''
         manifest_generate --manifest_dir .
+        schemas_json_validate --json_file manifest.json --json_schema "manifest"
         '''
 }
