@@ -28,12 +28,6 @@ class CoreServer:
     """Basic interface to a MySQL server with core databases.
 
     Allows to get a filtered list of databases.
-
-    Attributes:
-        host
-        port
-        user
-        password (optional)
     """
 
     def __init__(self, server_url: URL) -> None:
