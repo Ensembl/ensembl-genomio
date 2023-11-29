@@ -16,14 +16,15 @@
 
 """
 
-from typing import Dict, Union
+from typing import TypedDict
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import MagicMock
 
 from ensembl.io.genomio.database import CoreServer
 
 
-TEST_LIST = [
+TEST_CORES = [
     "speciesA_genus_core_60_110_1",
     "speciesB_genus_sp_core_60_110_1",
     "prefix_speciesC_genus_core_60_110_1",
@@ -32,14 +33,17 @@ TEST_LIST = [
     "speciesF_genus_core_61_111_1",
 ]
 
+Params = TypedDict("Params", {"build": str, "prefix": str, "version": str, "dbname_re": str})
+
 
 class TestCoreServer:
     """Tests for the database.core_server module."""
 
+    @patch("ensembl.io.genomio.database.CoreServer.get_all_core_names")
     @pytest.mark.parametrize(
         "parameters, output_size",
         [
-            ({}, len(TEST_LIST)),
+            ({}, len(TEST_CORES)),
             ({"build": 60}, 4),
             ({"build": 61}, 2),
             ({"prefix": "foobar"}, 0),
@@ -47,7 +51,7 @@ class TestCoreServer:
             ({"version": 110}, 5),
             ({"version": 111}, 1),
             ({"version": 999}, 0),
-            ({"dbname_re": r""}, len(TEST_LIST)),
+            ({"dbname_re": r""}, len(TEST_CORES)),
             ({"dbname_re": r"foobar"}, 0),
             ({"dbname_re": r"^species._.*"}, 4),
             ({"dbname_re": r"species._.*_sp_"}, 2),
@@ -56,14 +60,14 @@ class TestCoreServer:
             ({"build": 61, "version": 110}, 1),
         ],
     )
-    def test_get_cores(self, parameters: Dict[str, Union[str, int]], output_size: int):
+    def test_get_cores(self, mock_get: Mock, parameters: Params, output_size: int):
         """Test the CoreServer.get_cores() method."""
+        mock_get.return_value = TEST_CORES
 
         # Fake server with mock get_all_core_names()
         server_url = "sqlite:///:memory:"
         server = CoreServer(server_url)
-        server.get_all_core_names = MagicMock(return_value=TEST_LIST)
 
-        # NB: get_cores() gets its data from the mocked get_all_core_names()
+        # Checks the filters from get_cores
         all_cores = server.get_cores(**parameters)
         assert len(all_cores) == output_size
