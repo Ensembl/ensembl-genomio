@@ -435,9 +435,9 @@ def report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
 
 
 def prepare_seq_region_metadata(
+    dst_file: PathLike,
     genome_file: PathLike,
     report_file: PathLike,
-    dst_dir: PathLike,
     gbff_file: Optional[PathLike] = None,
     brc_mode: bool = False,
     to_exclude: Optional[List[str]] = None,
@@ -449,22 +449,18 @@ def prepare_seq_region_metadata(
     defined in "src/python/ensembl/io/genomio/data/schemas/seq_region.json".
 
     Args:
+        dst_file: JSON file output for the processed sequence regions JSON.
         genome_file: Genome metadata JSON file path.
         report_file: INSDC/RefSeq sequences report file path to parse.
-        dst_dir: Output folder for the processed sequence regions JSON file.
         gbff_file: INSDC/RefSeq GBFF file path to parse.
         brc_mode: Include INSDC sequence region names.
         to_exclude: Sequence region names to exclude.
 
     """
     genome_data = get_json(genome_file)
-    dst_dir = Path(dst_dir)
-    dst_dir.mkdir(parents=True, exist_ok=True)
-    # Final file name
-    metadata_type = "seq_region"
-    metadata_file = f"{metadata_type}.json"
-    final_path = dst_dir / metadata_file
+    dst_file = Path(dst_file)
     is_refseq = genome_data["assembly"]["accession"].startswith("GCF_")
+
     # Get the sequence regions from the report and gbff files, and merge them
     report_regions = get_report_regions(report_file, is_refseq)
     if gbff_file:
@@ -472,17 +468,21 @@ def prepare_seq_region_metadata(
         seq_regions = merge_seq_regions(report_regions, gbff_regions)
     else:
         seq_regions = list(report_regions.values())
+
     # Exclude seq_regions from a list
     if to_exclude is not None:
         seq_regions = exclude_seq_regions(seq_regions, to_exclude)
+
     # Setup the BRC4_seq_region_name
     if brc_mode:
         seq_regions = add_insdc_seq_region_name(seq_regions)
+
     # Add translation and mitochondrial codon tables
     add_translation_table(seq_regions)
     add_mitochondrial_codon_table(seq_regions, genome_data["species"]["taxonomy_id"])
+
     # Print out the file
-    print_json(final_path, seq_regions)
+    print_json(dst_file, seq_regions)
 
 
 def main() -> None:
@@ -494,7 +494,7 @@ def main() -> None:
     )
     parser.add_argument_src_path("--gbff_file", help="INSDC/RefSeq GBFF file to parse")
     parser.add_argument_dst_path(
-        "--dst_dir", default=Path.cwd(), help="Output folder for the processed sequence regions JSON file"
+        "--dst_file", default="seq_region.json", help="Output JSON file for the processed sequence regions"
     )
     parser.add_argument("--brc_mode", action="store_true", help="Enable BRC mode")
     parser.add_argument(
@@ -505,9 +505,9 @@ def main() -> None:
     init_logging_with_args(args)
 
     prepare_seq_region_metadata(
+        dst_file=args.dst_file,
         genome_file=args.genome_file,
         report_file=args.report_file,
-        dst_dir=args.dst_dir,
         gbff_file=args.gbff_file,
         brc_mode=args.brc_mode,
         to_exclude=args.to_exclude,
