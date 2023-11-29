@@ -19,6 +19,7 @@ __all__ = ["CoreDatabase"]
 from typing import Dict, List
 
 from sqlalchemy import select
+from sqlalchemy.engine import URL
 
 from ensembl.database import DBConnection
 from ensembl.core.models import Meta
@@ -26,6 +27,11 @@ from ensembl.core.models import Meta
 
 class CoreDatabase(DBConnection):
     """Add some useful interface for an Ensembl core database."""
+
+    def __init__(self, url: URL, **kwargs) -> None:
+        super().__init__(url, **kwargs)
+        if self.schema_type != "core":
+            raise TypeError(f"This is not a core database ({self.schema_type})")
 
     def get_metadata(self) -> Dict[str, List]:
         """Retrieve all metadata from the `meta` table in the core database.
@@ -47,3 +53,6 @@ class CoreDatabase(DBConnection):
                     metadata[meta_key] = [meta_value]
 
         return metadata
+
+    def get_events(self):
+        pass
