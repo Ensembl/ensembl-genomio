@@ -150,7 +150,7 @@ def amend_genomic_metadata(
 ) -> None:
     """
     Args:
-        genome_infile: Genome data following the schemas/genome_schema.json.
+        genome_infile: Genome data following the src/python/ensembl/io/genomio/data/schemas/genome.json.
         genome_outfile: Amended genome data file.
         report_file: INSDC/RefSeq sequences report file.
         genbank_infile: INSDC/RefSeq GBFF file.
@@ -175,7 +175,9 @@ def main() -> None:
         description="Update genome metadata file to include additional sequence regions (e.g. MT chromosome)."
     )
     parser.add_argument_src_path(
-        "--genome_infile", required=True, help="Input genome file (following the schemas/genome_schema.json)"
+        "--genome_infile",
+        required=True,
+        help="Input genome file (following the src/python/ensembl/io/genomio/data/schemas/genome.json)",
     )
     parser.add_argument_dst_path(
         "--genome_outfile", required=True, help="Path to the new amended genome metadata file"

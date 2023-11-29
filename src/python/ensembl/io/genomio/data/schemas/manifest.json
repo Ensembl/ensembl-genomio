@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "https://.../.../meta/schemas/v0.0.0/manifest_schema.json",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/manifest.json",
   "description" : "JSON schema for a manifest of files",
 
   "definitions" : {

@@ -27,11 +27,11 @@ limitations under the License.
 
 =head1 SYNOPSIS
 
-  Load JSON-stored functional annottation into coredb.
+  Load JSON-stored functional annotation into coredb.
 
 =head1 DESCRIPTION
 
-  Add functional annotation from JSON dumps, conforming functional_annotation_schema.json
+  Add functional annotation from JSON dumps, conforming src/python/ensembl/io/genomio/data/schemas/functional_annotation.json
 
 =head1 ARGUMENTS
 
