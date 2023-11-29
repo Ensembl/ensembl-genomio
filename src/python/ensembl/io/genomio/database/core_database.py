@@ -28,7 +28,7 @@ class CoreDatabase(DBConnection):
     """Add some useful interface for an Ensembl core database."""
 
     def get_metadata(self) -> Dict[str, List]:
-        """Retrieve all metadata from a database.
+        """Retrieve all metadata from the `meta` table in the core database.
 
         Returns:
             A dict of with key meta_key, and value=List of meta_value.

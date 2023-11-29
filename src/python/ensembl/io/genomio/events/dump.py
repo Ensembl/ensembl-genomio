@@ -369,7 +369,7 @@ class DumpStableIDs:
             session_id: id of a session from the connected database.
 
         Returns:
-            A list of all pairs of ids.
+            All pairs of IDs.
 
         """
 
