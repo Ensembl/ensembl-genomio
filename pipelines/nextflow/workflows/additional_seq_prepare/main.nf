@@ -20,6 +20,7 @@ params.help = false
 params.accession = null
 params.prefix = null
 params.production_name = null
+include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 
 // Print usage
 def helpMessage() {
@@ -35,32 +36,31 @@ Mandatory arguments:
   --production_name  Production name of the species
 
 Optional arguments:
-  --help             Show this help message and exit
   --output_dir       Output directory to place final formatted files
   --cache_dir        Cache directory for downloaded files
   --brc_mode         Set to 1 to use with BRC data (default: ${params.brc_mode})
     """
 }
 
-// Show help message
+
 if (params.help) {
-    helpMessage()
-    exit 0
+   log.info paramsHelp("nextflow run add_seq_prepare/main.nf --accession 'GB_ACCESSION' --prefix 'PREFIX_' --production_name 'SPECIES_PROD_NAME'")
+   exit 0
 }
+
+validateParameters()
 
 if (params.brc_mode) {
     params.brc_mode = params.brc_mode as Integer
 }
-
-assert params.accession, "Parameter 'accession' is not specified"
-assert params.prefix, "Parameter 'prefix' is not specified"
-assert params.production_name, "Parameter 'production_name' is not specified"
 
 params.meta = [
     "accession": params.accession,
     "production_name": params.production_name,
     "prefix": params.prefix
 ]
+
+log.info paramsSummaryLog(workflow)
 
 // Import modules/subworkflows
 include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepare/main.nf'
