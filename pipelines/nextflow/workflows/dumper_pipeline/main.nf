@@ -20,30 +20,41 @@ params.prefix = ''
 params.dbname_re = ''
 params.output_dir = './dumper_output'
 params.password = ''
-params.select_dump = ''
-default_selection = [
-    'sql',
-    'seq_regions',
-    'events',
-    'genome_metadata',
-    'stats',
-    'fasta_pep',
-    'fasta_dna'
+
+// Predefine the files that can be dumped and the number of files for each of them
+params.dump_sql = false
+params.dump_all_files = false
+params.dump_selection = ''
+default_selection_map = [
+    'seq_regions': 1,
+    'events': 1,
+    'genome_metadata': 1,
+    'stats': 3,
+    'fasta_pep': 1,
+    'fasta_dna': 1
 ]
+default_selection = default_selection_map.keySet() as ArrayList
 
 // Print usage
 def helpMessage() {
   log.info """
         Mandatory arguments:
         --host, --port, --user         Connection parameters to the SQL servers we getting core db(s) from
+        
+        Dump SQL:
+        --dump_sql                     Dump the whole database in SQL in a coredb subfolder
+
+        Dump files:
+        --dump_all_files               Dump all files (SQL excepted) in a metadata subfolder
+        or
+        --dump_selection               Dump files from a comma-separated list (among ${default_selection})
 
         Optional arguments:
         --password                     Password part of the connection parameters
         --prefix                       Core dabase(s) name prefixes
         --dbname_re                    Regexp to match core db name(s) against
-        --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC ones ('organism_abbrev' and 'component')
+        --brc_mode                     Override Ensembl 'species' and 'division' with the corresponding BRC ones ('organism_abbrev' and 'component')
         --output_dir                   Name of Output directory to gather prepared outfiles. (default: ${params.output_dir})
-        --select_dump                  Comma-separated list of items to dump (all by default, or choose among ${default_selection})
         --cache_dir                    Directory where some files are cached (e.g. NCBI stats files)
         --help                         This usage statement.
 
@@ -53,6 +64,7 @@ def helpMessage() {
         nextflow run \\
             -w \${data_dir}/nextflow_work \\
             ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
+            --dump_sql --dump_all_files \\
             -profile lsf \\
             --host <DB_HOST> --port <DB_PORT> --user <DB_USER>
             --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
@@ -106,26 +118,37 @@ if (params.host && params.port && params.user && params.output_dir) {
 }
 
 // Select the files to dump
-dump_selection = default_selection
-dump_number = 8
-if (params.select_dump) {
-    dump_number = 0
-    dump_selection = params.select_dump.split(/,/).collect().unique()
+dump_sql = false
+dump_selection = []
+if (params.dump_sql) {
+    dump_sql = true
+}
+if (params.dump_all_files) {
+    dump_selection = default_selection
+} else if (params.dump_selection) {
+    dump_selection = params.dump_selection.split(/,/).collect().unique()
     for (item in dump_selection) {
         if (!default_selection.contains(item)) {
             acceptable = default_selection.join(", ")
             exit 1, "Selection item unknown: " + item + " (accepted: " + acceptable + ")"
         }
-        if (item != "sql") {
-            if (item == "stats") {
-                dump_number += 3
-            } else {
-                dump_number += 1
-            }
-        }
     }
 }
-print("Dump $dump_number files (excluding SQL)")
+
+// Compute the number of files to dump
+dump_number = 0
+for (dump_key in dump_selection) {
+    dump_number += default_selection_map[dump_key]
+}
+if (!dump_sql and dump_number == 0) {
+    exit 1, "No dump option selected"
+}
+if (dump_sql) {
+    print("Will dump databases to SQL in $params.output_dir")
+}
+if (dump_number) {
+    print("Will dump $dump_number files per genome for $dump_selection in $params.output_dir")
+}
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
 include { DUMP_FILES } from '../../subworkflows/dump_files/main.nf'
@@ -138,7 +161,7 @@ workflow {
         .map(it -> read_json(it))
         .flatten()
     
-    if ("sql" in dump_selection) {
+    if (dump_sql) {
         DUMP_SQL(dbs)
     }
     DUMP_FILES(dbs, dump_selection, dump_number)
