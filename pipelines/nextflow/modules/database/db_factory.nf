@@ -37,4 +37,9 @@ process DB_FACTORY {
             $dbname_re \
             > dbs.json
         """
+    
+    stub:
+    """
+        echo "{'species': 'species_name'}" > dbs.json
+    """
 }

@@ -27,6 +27,7 @@ process DUMP_DB {
         path "*.sql.gz"
 
     script:
+        output = "${db.species}.sql.gz"
         """
         db_pass=""
         if [ "${db.server.password}" != "" ]; then
@@ -38,6 +39,12 @@ process DUMP_DB {
             --port '${db.server.port}' \
             --user '${db.server.user}' \
             \$db_pass \
-            | gzip > ${db.species}.sql.gz
+            | gzip > $output
+        """
+    
+    stub:
+        output = "${db.species}.sql.gz"
+        """
+        echo "-- Empty SQL" | gzip > $output
         """
 }
