@@ -13,14 +13,17 @@
             "properties": {
                 "accession": {
                     "type": "string",
+                    "pattern": "^[A-Z0-9_.]+$",
                     "description": "Genbank accession for the additional sequence to load."
                 },
                 "prefix": {
                     "type": "string",
+                    "pattern": "^[A-z0-9_]+$",
                     "description": "Prefix to prepend to the feature IDs to ensure their uniqueness."
                 },
                 "production_name": {
                     "type": "string",
+                    "pattern": "^[a-z0-9_]+$",
                     "description": "Production_name for the organism to which the additional sequence will be added."
                 },
                 "output_dir": {
@@ -38,7 +41,9 @@
             "description": "Additional non-mandatory parameters.",
             "properties": {
                 "brc_mode": {
-                    "type": "boolean",
+                    "type": "integer",
+                    "default": 0,
+                    "enum": [0, 1],
                     "description": "Activate BRC specific processing."
                 }
             }
