@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "https://.../.../schema/v0.0.0/fann_schema.json",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/functional_annotation.json",
   "description" : "JSON schema for exchanging functional annotation information",
 
   "definitions" : {

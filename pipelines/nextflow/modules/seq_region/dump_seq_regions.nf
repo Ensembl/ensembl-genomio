@@ -26,7 +26,7 @@ process DUMP_SEQ_REGIONS {
 
     script:
         output = "${db.species}_seq_region.json"
-        schema = params.json_schemas["seq_region"]
+        schema = "seq_region"
         """
         seq_region_dump --host '$db.server.host' \
             --port '$db.server.port' \

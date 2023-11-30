@@ -25,10 +25,8 @@ process CHECK_JSON_SCHEMA {
     output:
         tuple val(db), val(schema_name), path(json_file)
 
-    script:
-        script_dir = workflow.projectDir.toString()
-        schema_path = new File(script_dir + "/../../../../schemas", schema_name + "_schema.json")
-        """
-        schemas_json_validate --json_file ${json_file} --json_schema ${schema_path}
-        """
+    shell:
+        '''
+        schemas_json_validate --json_file !{json_file} --json_schema !{schema_name}
+        '''
 }

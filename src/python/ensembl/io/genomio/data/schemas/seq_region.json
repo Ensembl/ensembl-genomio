@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "https://.../.../schema/v0.0.0/seq_region_schema.json",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/seq_region.json",
   "description" : "JSON schema for exchanging meta information for seq regions",
 
   "definitions" : {

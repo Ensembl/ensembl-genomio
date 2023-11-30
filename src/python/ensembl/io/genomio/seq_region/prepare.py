@@ -446,7 +446,7 @@ def prepare_seq_region_metadata(
 
     The sequence region information is loaded from both sources and combined. Elements are added/excluded
     as requested, and the final sequence region metadata is dumped in a JSON file that follows the schema
-    defined in "schemas/seq_region_schema.json".
+    defined in "src/python/ensembl/io/genomio/data/schemas/seq_region.json".
 
     Args:
         genome_file: Genome metadata JSON file path.
