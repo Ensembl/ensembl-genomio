@@ -38,4 +38,10 @@ process DOWNLOAD_ASM_DATA {
         '''
         assembly_download --accession !{meta.accession} --download_dir ./ --verbose
         '''
+    
+    stub:
+        """
+        assembly_download --help
+        ln -s $workflow.projectDir/../../../../data/test/modules/download_asm_data/* .
+        """
 }
