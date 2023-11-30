@@ -53,6 +53,3 @@ class CoreDatabase(DBConnection):
                     metadata[meta_key] = [meta_value]
 
         return metadata
-
-    def get_events(self):
-        pass
