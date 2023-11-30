@@ -65,6 +65,7 @@ cicd = [
     "mypy",
     "pylint",
     "pytest",
+    "pytest-mock",
     "pytest-workflow",
     "types-requests",
 ]
