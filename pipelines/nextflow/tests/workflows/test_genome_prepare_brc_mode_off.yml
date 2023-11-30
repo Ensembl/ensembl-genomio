@@ -20,7 +20,7 @@
   command: nextflow run ./pipelines/nextflow/workflows/genome_prepare/main.nf \\
     -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
     -stub \\
-    --input_dir ./data/test/genome_prepare/inputDir_nobrc \\
+    --input_dir ./data/test/pipelines/genome_prepare/input_dir_brc_off \\
     --cache_dir ./cache/ \\
     --output_dir ./test_genome_prepare_output \\
     --brc_mode 0 \\
