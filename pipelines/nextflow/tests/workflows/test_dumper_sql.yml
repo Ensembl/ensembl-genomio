@@ -16,7 +16,7 @@
 # This test runs the additional_seq_prepare pipeline for the accession NC_035159.1 from Genbank
 # It uses a cache file to avoid downloading the genbank file (--cache_dir)
 # The cached data has been reduced to two genes, 1 protein_coding and 1 tRNA
-- name: dumper_all
+- name: dumper_sql
   command: nextflow run ./pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
     -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
     -stub \\
@@ -28,10 +28,10 @@
     --dbname_db 'species' \\
     --brc_mode 1 \\
     --storeDir_latency 0 \\
-    --select_all_files
+    --dump_sql
 
   # Check that all the expected files are produced
   # Make sure to update those if the processing of the files changes!
   files:
-    - path: ./test_addition_seq_prepare_output/NC_035159.1/dna.fasta
-      md5sum: 445faf45bd7a1c5186eefe1474a780b9
+    - path: ./test_dumper_output/build_60/coredb/VectorBase/aedes_aegypti.sql.gz
+    # No md5: gzip has a timestamp

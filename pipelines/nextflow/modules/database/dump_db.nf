@@ -27,7 +27,7 @@ process DUMP_DB {
         path "*.sql.gz"
 
     script:
-        output = "${db.species}.sql.gz"
+        output_file = "${db.species}.sql.gz"
         """
         db_pass=""
         if [ "${db.server.password}" != "" ]; then
@@ -39,12 +39,13 @@ process DUMP_DB {
             --port '${db.server.port}' \
             --user '${db.server.user}' \
             \$db_pass \
-            | gzip > $output
+            | gzip > $output_file
         """
     
     stub:
-        output = "${db.species}.sql.gz"
+        output_file = "${db.species}.sql.gz"
         """
-        echo "-- Empty SQL" | gzip > $output
+        cat $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_sql/dumped_db.sql \
+            | gzip > $output_file
         """
 }
