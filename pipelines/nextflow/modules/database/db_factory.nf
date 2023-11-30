@@ -45,4 +45,9 @@ process DB_FACTORY {
             $db_list \
             > dbs.json
         """
+    
+    stub:
+    """
+        echo "{'species': 'species_name'}" > dbs.json
+    """
 }
