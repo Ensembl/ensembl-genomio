@@ -449,10 +449,10 @@ def prepare_seq_region_metadata(
     defined in "src/python/ensembl/io/genomio/data/schemas/seq_region.json".
 
     Args:
-        dst_file: JSON file output for the processed sequence regions JSON.
         genome_file: Genome metadata JSON file path.
         report_file: INSDC/RefSeq sequences report file path to parse.
         gbff_file: INSDC/RefSeq GBFF file path to parse.
+        dst_file: JSON file output for the processed sequence regions JSON.
         brc_mode: Include INSDC sequence region names.
         to_exclude: Sequence region names to exclude.
 
@@ -505,10 +505,10 @@ def main() -> None:
     init_logging_with_args(args)
 
     prepare_seq_region_metadata(
-        dst_file=args.dst_file,
         genome_file=args.genome_file,
         report_file=args.report_file,
         gbff_file=args.gbff_file,
+        dst_file=args.dst_file,
         brc_mode=args.brc_mode,
         to_exclude=args.to_exclude,
     )
