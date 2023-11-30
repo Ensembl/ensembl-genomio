@@ -25,6 +25,7 @@ process DB_FACTORY {
         path "dbs.json"
 
     script:
+        output_file = "dbs.json"
         brc_mode = params.brc_mode ? '--brc_mode' : ''
         dbname_re = filter_map.dbname_re ? "--db_regex $filter_map.dbname_re" : ''
         """
@@ -35,11 +36,12 @@ process DB_FACTORY {
             --prefix '${filter_map.prefix}' \
             $brc_mode \
             $dbname_re \
-            > dbs.json
+            > $output_file
         """
     
     stub:
-    """
-        echo "{'species': 'species_name'}" > dbs.json
-    """
+    output_file = "dbs.json"
+        """
+            ln -s $workflow.projectDir/../../../../data/test/modules/db_factory/dbs.json $output_file
+        """
 }
