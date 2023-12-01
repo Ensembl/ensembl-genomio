@@ -435,9 +435,9 @@ def report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
 
 
 def prepare_seq_region_metadata(
-    dst_file: PathLike,
     genome_file: PathLike,
     report_file: PathLike,
+    dst_file: PathLike,
     gbff_file: Optional[PathLike] = None,
     brc_mode: bool = False,
     to_exclude: Optional[List[str]] = None,
@@ -507,8 +507,8 @@ def main() -> None:
     prepare_seq_region_metadata(
         genome_file=args.genome_file,
         report_file=args.report_file,
-        gbff_file=args.gbff_file,
         dst_file=args.dst_file,
+        gbff_file=args.gbff_file,
         brc_mode=args.brc_mode,
         to_exclude=args.to_exclude,
     )
