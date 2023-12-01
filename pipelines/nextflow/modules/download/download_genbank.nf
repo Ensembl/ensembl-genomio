@@ -31,9 +31,9 @@ process DOWNLOAD_GENBANK {
     '''
     
     stub:
-    output_file = "output.gb"
-    """
-    genbank_download --help
-    ln -s $workflow.projectDir/../../../../data/test/modules/download_genbank/output/*.gb $output_file
-    """
+        output_file = "output.gb"
+        """
+        genbank_download --help
+        ln -s $workflow.projectDir/../../../../data/test/modules/download_genbank/output/*.gb $output_file
+        """
 }
