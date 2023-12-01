@@ -28,7 +28,7 @@
     --dbname_db 'species' \\
     --brc_mode 1 \\
     --storeDir_latency 0 \\
-    --select_all_files
+    --dump_all_files
 
   # Check that all the expected files are produced
   # Make sure to update those if the processing of the files changes!

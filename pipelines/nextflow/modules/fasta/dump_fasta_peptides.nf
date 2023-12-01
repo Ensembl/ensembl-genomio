@@ -38,4 +38,11 @@ process DUMP_FASTA_PEPTIDES {
             -dnadbname ${db.server.database} \
             -file $output
         """
+    
+    stub:
+        output_file = "pep.fasta"
+        files_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        """
+        ln -s $files_dir/dumped_pep.fasta $output_file
+        """
 }
