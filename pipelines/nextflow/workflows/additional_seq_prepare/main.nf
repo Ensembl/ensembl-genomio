@@ -22,27 +22,6 @@ params.prefix = null
 params.production_name = null
 include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 
-// Print usage
-def helpMessage() {
-    log.info """
-Usage:
-  The typical command for running the pipeline is as follows:
-    nextflow run add_seq_prepare/main.nf --accession "GB_ACCESSION" \\
-      --prefix "PREFIX_" --production_name "SPECIES_PROD_NAME"
-
-Mandatory arguments:
-  --accession        GenBank accession of the sequence you are adding
-  --prefix           String to prepend to the gene IDs to ensure that they are unique
-  --production_name  Production name of the species
-
-Optional arguments:
-  --output_dir       Output directory to place final formatted files
-  --cache_dir        Cache directory for downloaded files
-  --brc_mode         Set to 1 to use with BRC data (default: ${params.brc_mode})
-    """
-}
-
-
 if (params.help) {
    log.info paramsHelp("nextflow run add_seq_prepare/main.nf --accession 'GB_ACCESSION' --prefix 'PREFIX_' --production_name 'SPECIES_PROD_NAME'")
    exit 0
