@@ -22,16 +22,20 @@ __all__ = ["format_db_data", "get_metadata_value"]
 import json
 import re
 from typing import Dict, List, Optional
+import logging
 
-from ensembl.brc4.runnable.core_server import CoreServer
+from sqlalchemy.engine import URL
+
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+from .core_server import CoreServer
+from .core_database import CoreDatabase
 
 
 _DB_PATTERN = re.compile(r".+_core_(\d+)_\d+_\d+")
 
 
-def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
+def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
     """Returns metadata from a list of databases on a server.
 
     Args:
@@ -46,15 +50,17 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
 
     """
     databases_data = []
-    for db in dbs:
-        server.set_database(db)
-        metadata = server.get_db_metadata()
+    for db_name in dbs:
+        logging.debug(f"Get metadata for {db_name}")
+        db_url = server_url.set(database=db_name)
+        core_db = CoreDatabase(db_url)
+        metadata = core_db.get_metadata()
 
         prod_name = get_metadata_value(metadata, "species.production_name")
         species = prod_name
         division = get_metadata_value(metadata, "species.division")
         accession = get_metadata_value(metadata, "assembly.accession")
-        project_release = _get_project_release(db)
+        project_release = _get_project_release(db_name)
 
         if brc_mode:
             brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
@@ -68,11 +74,11 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
             division = "all"
 
         server_data = {
-            "host": server.host,
-            "user": server.user,
-            "port": server.port,
-            "password": server.password,
-            "database": db,
+            "host": db_url.host,
+            "user": db_url.username,
+            "port": db_url.port,
+            "password": db_url.password,
+            "database": db_url.database,
         }
         db_data = {
             "server": server_data,
@@ -130,11 +136,24 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    server = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
-    databases = server.get_cores(
-        prefix=args.prefix, build=args.build, version=args.version, dbname_re=args.db_regex
+    # Get all db names
+    server_url = URL(
+        drivername="mysql",
+        host=args.host,
+        port=args.port,
+        username=args.user,
+        password=args.password,
     )
-    databases_data = format_db_data(server, databases, args.brc_mode)
+    server = CoreServer(server_url)
+    databases = server.get_cores(
+        prefix=args.prefix,
+        build=args.build,
+        version=args.version,
+        dbname_re=args.db_regex,
+    )
+
+    # Get all metadata for those databases
+    databases_data = format_db_data(server_url, databases, args.brc_mode)
     print(json.dumps(databases_data, sort_keys=True, indent=4))
 
 
