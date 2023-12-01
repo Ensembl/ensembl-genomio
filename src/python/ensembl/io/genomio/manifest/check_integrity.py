@@ -166,18 +166,21 @@ class Manifest:
         if "seq_region" in self.manifest_files:
             logging.info("Manifest contains seq_region JSON")
             seq_regions = get_json(Path(self.manifest_files["seq_region"]))
-            seqr_seqlevel = {}
-            seq_lengths = {}
-            seq_circular = {}
-            # Store the length as int
-            for seq in seq_regions:
-                seq_lengths[seq["name"]] = int(seq["length"])
-                seq_circular[seq["name"]] = seq.get("circular", False)
-                if seq["coord_system_level"] == "contig":
-                    seqr_seqlevel[seq["name"]] = int(seq["length"])
-            self.lengths["seq_regions"] = seq_lengths
-            self.circular["seq_regions"] = seq_circular
-            self.seq_regions = seq_regions
+            if len(seq_regions) == 0:
+                self._add_error(f"No sequences found in {self.manifest_files['seq_region']}")
+            else:
+                seqr_seqlevel = {}
+                seq_lengths = {}
+                seq_circular = {}
+                # Store the length as int
+                for seq in seq_regions:
+                    seq_lengths[seq["name"]] = int(seq["length"])
+                    seq_circular[seq["name"]] = seq.get("circular", False)
+                    if seq["coord_system_level"] == "contig":
+                        seqr_seqlevel[seq["name"]] = int(seq["length"])
+                self.lengths["seq_regions"] = seq_lengths
+                self.circular["seq_regions"] = seq_circular
+                self.seq_regions = seq_regions
         if "functional_annotation" in self.manifest_files:
             logging.info("Manifest contains functional annotation(s)")
             self.get_functional_annotation(self.manifest_files["functional_annotation"])
@@ -203,7 +206,10 @@ class Manifest:
         non_unique_count = 0
         empty_id_count = 0
         contains_stop_codon = 0
+        rec_count = 0
         for rec in SeqIO.parse(fasta_path, "fasta"):
+            rec_count += 1
+
             # Flag empty ids
             if rec.id == "":
                 empty_id_count += 1
@@ -227,6 +233,8 @@ class Manifest:
             self._add_error(f"{non_unique_count} non unique sequence ids in {fasta_path}")
         if contains_stop_codon > 0:
             self._add_error(f"{contains_stop_codon} sequences with stop codons in {fasta_path}")
+        if rec_count == 0:
+            self._add_error(f"No sequences found in {fasta_path}")
         return data
 
     def get_functional_annotation(self, json_path: Path) -> None:
@@ -404,8 +412,6 @@ class IntegrityTool:
         Compare sequence length from fasta_dna file to seq_region.json metadata.
         """
 
-        errors = []
-
         # Load the manifest integrity counts
         manifest = self.manifest
         manifest.prepare_integrity_data()
@@ -459,7 +465,7 @@ class IntegrityTool:
             # Gene ids, translated CDS ids and translated CDSs
             # including pseudogenes are compared to the gff
             if ann_genes:
-                errors += self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff")
+                self.add_errors(self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff"))
                 tr_errors = self.check_ids(
                     ann_translations, gff_translations, "Translation ids metadata vs gff"
                 )
@@ -470,11 +476,11 @@ class IntegrityTool:
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
                 self.add_errors(*tr_errors)
-                errors += self.check_ids(
+                self.add_errors(self.check_ids(
                     ann_transposable_elements,
                     gff_transposable_elements,
                     "TE ids metadata vs gff",
-                )
+                ))
 
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
@@ -491,8 +497,8 @@ class IntegrityTool:
         if agp_seqr and seq_lengths:
             self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
 
-        if errors:
-            errors_str = "\n".join(errors)
+        if manifest.errors:
+            errors_str = "\n".join(manifest.errors)
             raise InvalidIntegrityError(f"Integrity test failed:\n{errors_str}")
 
     def set_brc_mode(self, brc_mode: bool) -> None:
