@@ -20,7 +20,7 @@
 include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_GENOME } from '../../modules/schema/check_json_schema.nf'
 include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_SEQREG } from '../../modules/schema/check_json_schema.nf'
 include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_FUNCT } from '../../modules/schema/check_json_schema.nf'
-include { DOWNLOAD_ASM_DATA } from '../../modules/download/download_asm_data.nf'
+include { DOWNLOAD_ASM_NCBI_DATSETS } from '../../modules/download/download_asm_data_ncbidataset.nf'
 include { UNPACK_GFF3 } from '../../modules/gff3/unpack_gff3.nf'
 include { PROCESS_GFF3 } from '../../modules/gff3/process_gff3.nf'
 include { GFF3_VALIDATION } from '../../modules/gff3/gff3_validation.nf'
@@ -32,7 +32,6 @@ include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
-
 
 // Main workflow
 workflow GENOME_PREPARE {
@@ -47,9 +46,9 @@ workflow GENOME_PREPARE {
         checked_genome = CHECK_JSON_SCHEMA_GENOME(genomic_dataset).verified_json
 
         // Download genome data files. Files may or may not include gene models (GFF3) and/or peptides.
-        DOWNLOAD_ASM_DATA(checked_genome)
-        download_min = DOWNLOAD_ASM_DATA.out.min_set
-        download_opt = DOWNLOAD_ASM_DATA.out.opt_set
+        DOWNLOAD_ASM_NCBI_DATSETS(checked_genome)
+        download_min = DOWNLOAD_ASM_NCBI_DATSETS.out.min_set
+        download_opt = DOWNLOAD_ASM_NCBI_DATSETS.out.opt_set
 
         // Decompress GFF3 file, output with accession in tuple
         unpacked_gff = UNPACK_GFF3(download_opt, 'gff')

@@ -366,11 +366,11 @@ def make_seq_region(
     seq_region = {}
     # Set accession as the sequence region name
     src = "RefSeq" if is_refseq else "GenBank"
-    accession_id = data.get(f"{src}-Accn", "")
+    accession_id = data.get(f"{src} seq accession", "")
     if accession_id and (accession_id != "na"):
         seq_region["name"] = accession_id
     else:
-        logging.warning(f'No {src} accession ID found for {data["Sequence-Name"]}')
+        logging.warning(f'No {src} accession ID found for {data["Assembly Accession"]}')
         return {}
     # Add synonyms
     synonyms = []
@@ -382,18 +382,18 @@ def make_seq_region(
         synonyms.sort(key=lambda x: x["source"])
         seq_region["synonyms"] = synonyms
     # Add sequence length
-    field = "Sequence-Length"
+    field = "Seq length"
     if (field in data) and (data[field].casefold() != "na"):
         seq_region["length"] = int(data[field])
     # Add coordinate system and location
-    seq_role = data["Sequence-Role"]
+    seq_role = data["Role"]
     # Scaffold?
     if seq_role in ("unplaced-scaffold", "unlocalized-scaffold"):
         seq_region["coord_system_level"] = "scaffold"
     # Chromosome? Check location
     elif seq_role == "assembled-molecule":
         seq_region["coord_system_level"] = "chromosome"
-        location = data["Assigned-Molecule-Location/Type"].lower()
+        location = data["Molecule type"].lower()
         # Get location metadata
         try:
             seq_region["location"] = molecule_location[location]
