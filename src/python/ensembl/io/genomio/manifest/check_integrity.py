@@ -476,11 +476,13 @@ class IntegrityTool:
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
                 self.add_errors(*tr_errors)
-                self.add_errors(self.check_ids(
-                    ann_transposable_elements,
-                    gff_transposable_elements,
-                    "TE ids metadata vs gff",
-                ))
+                self.add_errors(
+                    self.check_ids(
+                        ann_transposable_elements,
+                        gff_transposable_elements,
+                        "TE ids metadata vs gff",
+                    )
+                )
 
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
