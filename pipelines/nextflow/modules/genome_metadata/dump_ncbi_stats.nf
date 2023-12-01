@@ -55,4 +55,11 @@ process DUMP_NCBI_STATS {
             datasets summary genome accession $accession | jq '.' > !{output}
         fi
         '''
+    
+    stub:
+        output_file = "ncbi_stats.json"
+        files_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        """
+        ln -s $files_dir/downloaded_ncbi_stats.json $output_file
+        """
 }

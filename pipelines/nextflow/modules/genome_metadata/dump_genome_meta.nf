@@ -37,4 +37,10 @@ process DUMP_GENOME_META {
             --verbose > $output
         schemas_json_validate --json_file $output --json_schema $schema
         """
+    
+    stub:
+        output_file = "test_genome.json"
+        """
+        ln -s $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files/dumped_genome.json $output_file
+        """
 }
