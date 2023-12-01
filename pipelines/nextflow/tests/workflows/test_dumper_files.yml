@@ -34,4 +34,12 @@
   # Make sure to update those if the processing of the files changes!
   files:
     - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/dna.fasta
-      # md5sum: 445faf45bd7a1c5186eefe1474a780b9
+    - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/pep.fasta
+    - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/core_stats.json
+    - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/ncbi_stats.json
+    - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/diff_stats.json
+    - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/manifest.json
+    - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/test_genome.json
+    - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/test_seq_region.json
+    # NB: no md5sum here since all of these are copied test files, without processing
+
