@@ -25,10 +25,13 @@ process AMEND_GENOME_DATA {
         tuple val(meta), path ("genome.json"), emit: amended_json
     
     shell:
+        output = "genome.json"
         '''
         genome_metadata_extend --genome_infile !{genome_json} \
             --report_file !{asm_report} \
             --genbank_infile !{genbank_gbff} \
-            --genome_outfile genome.json
+            --genome_outfile !{output}
+        
+        schemas_json_validate --json_file !{output} --json_schema genome
         '''
 }

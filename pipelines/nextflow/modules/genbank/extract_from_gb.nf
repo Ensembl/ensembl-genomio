@@ -34,5 +34,8 @@ process EXTRACT_FROM_GB {
         --prod_name !{meta.production_name} \
         --gb_file !{gb_file} \
         --debug
+
+    schemas_json_validate --json_file "genome.json" --json_schema "genome"
+    schemas_json_validate --json_file "seq_region.json" --json_schema "seq_region"
     '''
 }
