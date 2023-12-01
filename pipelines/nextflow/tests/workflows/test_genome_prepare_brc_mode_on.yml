@@ -16,11 +16,12 @@
 # This test runs the genome_prepare pipeline for the INSDC accession GCA_017607445.1 from Genbank
 # It uses a cache file to avoid downloading assembly related data files (--cache_dir)
 # The cached data has been reduced to two seq regions, 1 nuclear and 1 mitochondrial sequence
-- name: genome_prepare_pipeline
+- name: genome_prepare_pipeline_brc_on
   command: nextflow run ./pipelines/nextflow/workflows/genome_prepare/main.nf \\
     -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
-    --input_dir ./data/test/genome_prepare/inputDir_brc \\
-    --cache_dir ./data/test/genome_prepare/cache/ \\
+    -stub \\
+    --input_dir ./data/test/pipelines/genome_prepare/input_dir_brc_on \\
+    --cache_dir ./cache/ \\
     --output_dir ./test_genome_prepare_output \\
     --brc_mode 1 \\
     --ncbi_check 0
