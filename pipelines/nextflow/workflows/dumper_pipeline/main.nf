@@ -24,6 +24,7 @@ default_selection_map = [
     'fasta_dna': 1
 ]
 default_selection = default_selection_map.keySet() as ArrayList
+params.db_list = ''
 
 include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 if (params.help) {
@@ -60,6 +61,9 @@ def create_filter_map(params) {
     }
     if (params.dbname_re) {
         filter_map["dbname_re"] = params.dbname_re
+    }
+    if (params.db_list) {
+        filter_map["db_list"] = params.db_list
     }
     return filter_map
 }
