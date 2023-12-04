@@ -59,6 +59,7 @@ class TestCoreServer:
             ({"prefix": "prefix_", "build": 60}, 2),
             ({"build": 61, "version": 110}, 1),
             ({"db_list": TEST_CORES[0:2]}, 2),
+            ({"db_list": ["nonexistent_species"]}, 0),
         ],
     )
     def test_get_cores(self, mock_get: Mock, parameters: Params, output_size: int):

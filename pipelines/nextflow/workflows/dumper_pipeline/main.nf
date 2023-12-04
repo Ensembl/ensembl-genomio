@@ -34,6 +34,7 @@ default_selection_map = [
     'fasta_dna': 1
 ]
 default_selection = default_selection_map.keySet() as ArrayList
+params.db_list = ''
 
 // Print usage
 def helpMessage() {
@@ -53,6 +54,7 @@ def helpMessage() {
         --password                     Password part of the connection parameters
         --prefix                       Core dabase(s) name prefixes
         --dbname_re                    Regexp to match core db name(s) against
+        --db_list                      Path to a file with one database name per line
         --brc_mode                     Override Ensembl 'species' and 'division' with the corresponding BRC ones ('organism_abbrev' and 'component')
         --output_dir                   Name of Output directory to gather prepared outfiles. (default: ${params.output_dir})
         --cache_dir                    Directory where some files are cached (e.g. NCBI stats files)
@@ -106,6 +108,9 @@ def create_filter_map(params) {
     }
     if (params.dbname_re) {
         filter_map["dbname_re"] = params.dbname_re
+    }
+    if (params.db_list) {
+        filter_map["db_list"] = params.db_list
     }
     return filter_map
 }
