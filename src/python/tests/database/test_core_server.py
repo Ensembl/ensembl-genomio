@@ -58,6 +58,7 @@ class TestCoreServer:
             ({"dbname_re": r"^prefix_"}, 2),
             ({"prefix": "prefix_", "build": 60}, 2),
             ({"build": 61, "version": 110}, 1),
+            ({"db_list": TEST_CORES[0:2]}, 2),
         ],
     )
     def test_get_cores(self, mock_get: Mock, parameters: Params, output_size: int):
