@@ -20,11 +20,12 @@ params.help = false
 params.accession = null
 params.prefix = null
 params.production_name = null
+
 include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 
 if (params.help) {
-   log.info paramsHelp("nextflow run add_seq_prepare/main.nf --accession 'GB_ACCESSION' --prefix 'PREFIX_' --production_name 'SPECIES_PROD_NAME'")
-   exit 0
+     log.info paramsHelp("nextflow run add_seq_prepare/main.nf --accession 'GB_ACCESSION' --prefix 'PREFIX_' --production_name 'SPECIES_PROD_NAME'")
+    exit 0
 }
 
 validateParameters()
