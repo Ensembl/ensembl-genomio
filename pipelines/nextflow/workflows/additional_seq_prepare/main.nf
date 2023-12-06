@@ -13,10 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-params.accession = null
-params.prefix = null
-params.production_name = null
-
 include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 
 if (params.help) {
