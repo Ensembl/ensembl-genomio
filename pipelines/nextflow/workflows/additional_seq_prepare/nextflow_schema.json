@@ -4,8 +4,8 @@
   "description": "this is a test",
   "type": "object",
   "definitions": {
-    "main_options": {
-      "title": "Main options",
+    "main_parameters": {
+      "title": "Main parameters",
       "type": "object",
       "fa_icon": "fas fa-terminal",
       "description": "Define where the pipeline should find input data and save output data.",
@@ -34,8 +34,8 @@
         }
       }
     },
-    "general_options": {
-      "title": "General options",
+    "general_parameters": {
+      "title": "General parameters",
       "type": "object",
       "fa_icon": "fas fa-terminal",
       "description": "General parameters.",
@@ -78,10 +78,13 @@
   },
   "allOf": [
     {
-      "$ref": "#/definitions/main_options"
+      "$ref": "#/definitions/main_parameters"
     },
     {
-      "$ref": "#/definitions/general_options"
+      "$ref": "#/definitions/additional_parameters"
+    },
+    {
+      "$ref": "#/definitions/general_parameters"
     }
   ]
 }
