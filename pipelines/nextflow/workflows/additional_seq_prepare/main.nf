@@ -13,10 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Default params
-params.help = false
-
-// Mandatory params
 params.accession = null
 params.prefix = null
 params.production_name = null
@@ -29,6 +25,7 @@ if (params.help) {
 }
 
 validateParameters()
+log.info paramsSummaryLog(workflow)
 
 if (params.brc_mode) {
     params.brc_mode = params.brc_mode as Integer
@@ -39,8 +36,6 @@ meta = [
     "production_name": params.production_name,
     "prefix": params.prefix
 ]
-
-log.info paramsSummaryLog(workflow)
 
 // Import modules/subworkflows
 include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepare/main.nf'
