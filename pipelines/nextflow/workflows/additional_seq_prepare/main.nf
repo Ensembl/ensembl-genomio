@@ -34,7 +34,7 @@ if (params.brc_mode) {
     params.brc_mode = params.brc_mode as Integer
 }
 
-params.meta = [
+meta = [
     "accession": params.accession,
     "production_name": params.production_name,
     "prefix": params.prefix
@@ -47,5 +47,5 @@ include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepa
 
 // Run main workflow
 workflow {
-    additional_seq_prepare(params.meta)
+    additional_seq_prepare(meta)
 }
