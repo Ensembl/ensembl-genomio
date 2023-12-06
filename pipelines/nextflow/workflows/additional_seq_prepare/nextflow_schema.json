@@ -48,12 +48,17 @@
         }
       }
     },
-    "extra_resources": {
-      "title": "Extra resources options",
+    "general_options": {
+      "title": "General options",
       "type": "object",
       "fa_icon": "fas fa-terminal",
-      "description": "Additional parameters for extra resources.",
+      "description": "General parameters.",
       "properties": {
+        "help": {
+          "type": "boolean",
+          "format": "false",
+          "description": "Display this help message."
+        },
         "cache_dir": {
           "type": "string",
           "format": "directory-path",
@@ -87,7 +92,7 @@
       "$ref": "#/definitions/additional_options"
     },
     {
-      "$ref": "#/definitions/extra_resources"
+      "$ref": "#/definitions/general_options"
     }
   ]
 }
