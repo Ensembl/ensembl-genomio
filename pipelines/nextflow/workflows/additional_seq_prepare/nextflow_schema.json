@@ -29,6 +29,7 @@
         "output_dir": {
           "type": "string",
           "format": "directory-path",
+          "default": "output_addition_prepare",
           "description": "The output directory where the final formatted files will be saved.",
           "fa_icon": "fas fa-folder-open"
         }
