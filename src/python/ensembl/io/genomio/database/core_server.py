@@ -17,7 +17,7 @@
 __all__ = ["CoreServer"]
 
 import re
-from typing import List
+from typing import List, Optional
 import logging
 
 from sqlalchemy.engine import URL
@@ -48,7 +48,7 @@ class CoreServer:
         build: str = "",
         version: str = "",
         dbname_re: str = "",
-        db_list: List[str] = None,
+        db_list: Optional[List[str]] = None,
     ) -> List[str]:
         """Provide a list of core databases, filtered if requested.
         Args:
