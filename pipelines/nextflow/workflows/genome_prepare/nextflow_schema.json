@@ -10,6 +10,7 @@
       "type": "object",
       "fa_icon": "fas fa-terminal",
       "description": "Main parameters.",
+      "required": ["input_dir", "output_dir"],
       "properties": {
         "input_dir": {
           "type": "string",

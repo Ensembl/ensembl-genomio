@@ -39,6 +39,7 @@
       "type": "object",
       "fa_icon": "fas fa-terminal",
       "description": "Server parameters.",
+      "required": ["host", "port", "user"],
       "properties": {
         "host": {
           "type": "string",

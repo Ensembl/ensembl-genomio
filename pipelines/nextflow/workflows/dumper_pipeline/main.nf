@@ -64,12 +64,8 @@ def create_filter_map(params) {
     return filter_map
 }
 
-if (params.host && params.port && params.user && params.output_dir) {
-    server = create_server(params)
-    filter_map = create_filter_map(params)
-} else {
-    exit 1, "Missing server parameters"
-}
+server = create_server(params)
+filter_map = create_filter_map(params)
 
 // Select the files to dump
 dump_sql = false
