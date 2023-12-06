@@ -109,9 +109,6 @@ def create_filter_map(params) {
     if (params.dbname_re) {
         filter_map["dbname_re"] = params.dbname_re
     }
-    if (params.db_list) {
-        filter_map["db_list"] = params.db_list
-    }
     return filter_map
 }
 
@@ -162,7 +159,20 @@ include { read_json } from '../../modules/utils/utils.nf'
 
 // Run main workflow
 workflow {
-    dbs = DB_FACTORY(server, filter_map)
+    // Prepare db_factory filter
+    basic_filter = Channel.of(filter_map)
+    // Add db_list
+    filter = Channel.of()
+    if (params.db_list) {
+        // Get the list of databases from the file
+        db_list = Channel.fromPath(params.db_list).splitCsv().map{ row -> row[0] }.collect()
+        // Add that list to the filter_db map
+        filter = basic_filter.merge(db_list) { filters, db_list -> filters + ["db_list": db_list] }
+    } else {
+        filter = filter
+    }
+
+    dbs = DB_FACTORY(server, filter_db)
         .map(it -> read_json(it))
         .flatten()
     
