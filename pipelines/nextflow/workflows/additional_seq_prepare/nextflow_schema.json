@@ -56,7 +56,7 @@
       "properties": {
         "help": {
           "type": "boolean",
-          "format": "false",
+          "default": false,
           "description": "Display this help message."
         },
         "cache_dir": {
