@@ -15,7 +15,6 @@
 // limitations under the License.
 
 // default params
-params.help = false
 params.prefix = ''
 params.dbname_re = ''
 params.output_dir = './dumper_output'
@@ -35,49 +34,13 @@ default_selection_map = [
 ]
 default_selection = default_selection_map.keySet() as ArrayList
 
-// Print usage
-def helpMessage() {
-  log.info """
-        Mandatory arguments:
-        --host, --port, --user         Connection parameters to the SQL servers we getting core db(s) from
-        
-        Dump SQL:
-        --dump_sql                     Dump the whole database in SQL in a coredb subfolder
-
-        Dump files:
-        --dump_all_files               Dump all files (SQL excepted) in a metadata subfolder
-        or
-        --dump_selection               Dump files from a comma-separated list (among ${default_selection})
-
-        Optional arguments:
-        --password                     Password part of the connection parameters
-        --prefix                       Core dabase(s) name prefixes
-        --dbname_re                    Regexp to match core db name(s) against
-        --brc_mode                     Override Ensembl 'species' and 'division' with the corresponding BRC ones ('organism_abbrev' and 'component')
-        --output_dir                   Name of Output directory to gather prepared outfiles. (default: ${params.output_dir})
-        --cache_dir                    Directory where some files are cached (e.g. NCBI stats files)
-        --help                         This usage statement.
-
-        Usage:
-        The typical command for running the 'Dumper' pipeline is as follows:
-
-        nextflow run \\
-            -w \${data_dir}/nextflow_work \\
-            ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
-            --dump_sql --dump_all_files \\
-            -profile lsf \\
-            --host <DB_HOST> --port <DB_PORT> --user <DB_USER>
-            --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
-            --output_dir \${data_dir}/dumper_output
-
-        """
-}
-
-// Check mandatory parameters
+include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 if (params.help) {
-    helpMessage()
+     log.info paramsHelp("nextflow run genome_prepare/main.nf --input_dir <json_input_dir>")
     exit 0
 }
+validateParameters()
+log.info paramsSummaryLog(workflow)
 
 if (params.brc_mode) {
     params.brc_mode = params.brc_mode as Integer
