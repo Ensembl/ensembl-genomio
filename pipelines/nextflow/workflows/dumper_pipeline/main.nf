@@ -14,16 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// default params
-params.prefix = ''
-params.dbname_re = ''
-params.output_dir = './dumper_output'
-params.password = ''
-
 // Predefine the files that can be dumped and the number of files for each of them
-params.dump_sql = false
-params.dump_all_files = false
-params.dump_selection = ''
 default_selection_map = [
     'seq_regions': 1,
     'events': 1,

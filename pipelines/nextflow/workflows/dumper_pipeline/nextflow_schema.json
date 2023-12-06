@@ -9,7 +9,7 @@
       "type": "object",
       "fa_icon": "fas fa-terminal",
       "description": "Define where the pipeline should find input data and save output data.",
-      "required": ["prefix", "output_dir"],
+      "required": ["output_dir"],
       "properties": {
         "output_dir": {
           "type": "string",
@@ -45,7 +45,7 @@
           "description": "Host the server"
         },
         "port": {
-          "type": "string",
+          "type": "integer",
           "description": "Port to the server"
         },
         "user": {
@@ -72,6 +72,11 @@
           "type": "string",
           "pattern": "^[A-z0-9_]+$",
           "description": "Select databases with this prefix."
+        },
+        "db_list": {
+          "type": "string",
+          "format": "file-path",
+          "description": "File with a list of databases to dump."
         }
       }
     },
@@ -120,6 +125,12 @@
   "allOf": [
     {
       "$ref": "#/definitions/main_parameters"
+    },
+    {
+      "$ref": "#/definitions/server_parameters"
+    },
+    {
+      "$ref": "#/definitions/optional_parameters"
     },
     {
       "$ref": "#/definitions/general_parameters"
