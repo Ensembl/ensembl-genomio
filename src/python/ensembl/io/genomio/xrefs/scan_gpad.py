@@ -27,18 +27,71 @@ from ensembl.io.genomio.utils import open_gz_file
 
 
 _DATABASE = "UniProtKB"
+_ECO_TO_GO = {
+    "ECO:0000269": "EXP",
+    "ECO:0007005": "HDA",
+    "ECO:0007007": "HEP",
+    "ECO:0007003": "HGI",
+    "ECO:0007001": "HMP",
+    "ECO:0006056": "HTP",
+    "ECO:0000318": "IBA",
+    "ECO:0000319": "IBD",
+    "ECO:0000305": "IC",
+    "ECO:0000314": "IDA",
+    "ECO:0000501": "IEA",
+    "ECO:0000256": "IEA",
+    "ECO:0007322": "IEA",
+    "ECO:0000265": "IEA",
+    "ECO:0000249": "IEA",
+    "ECO:0000363": "IEA",
+    "ECO:0000270": "IEP",
+    "ECO:0000317": "IGC",
+    "ECO:0000354": "IGC",
+    "ECO:0000316": "IGI",
+    "ECO:0000320": "IKR",
+    "ECO:0000315": "IMP",
+    "ECO:0000353": "IPI",
+    "ECO:0000321": "IRD",
+    "ECO:0000247": "ISA",
+    "ECO:0000255": "ISM",
+    "ECO:0000266": "ISO",
+    "ECO:0000250": "ISS",
+    "ECO:0000031": "ISS",
+    "ECO:0000303": "NAS",
+    "ECO:0000307": "ND",
+    "ECO:0000245": "RCA",
+    "ECO:0000304": "TAS",
+}
+
+
+def get_mapping(map_file: PathLike) -> Dict[str, Any]:
+
+    mapping = {}
+    with open(map_file, "r") as map_fh:
+        for line in map_fh:
+            if line == "":
+                continue
+            (db_id, _, production_name) = line.strip().split("\t")
+
+            if db_id in mapping:
+                mapping[db_id].append(production_name)
+            else:
+                mapping[db_id] = [production_name]
+    return mapping
 
 
 def scan_gpad(gpad_file: PathLike, map_file: PathLike, output_file: PathLike) -> None:
+    mapping = get_mapping(map_file)
+
     with open_gz_file(gpad_file) as gpad_fh, Path(output_file).open("w") as output_fh:
-        logging.info("Get header")
+        logging.debug("Get header")
         line_one = gpad_fh.readline()
         if line_one.startswith("gpa-version:"):
             output_fh.write(line_one)
         else:
-            raise Exception(f"GPAD file must start with a header gpa-version. First line is {line_one}")
+            raise ValueError(f"GPAD file must start with a header gpa-version. First line is {line_one}")
 
-        logging.info("Get comments")
+        logging.debug("Get comments")
         for line in gpad_fh:
             if not line.startswith("!"):
                 break
@@ -46,20 +99,27 @@ def scan_gpad(gpad_file: PathLike, map_file: PathLike, output_file: PathLike) ->
                 continue
             output_fh.write(line)
 
-        logging.info("Get entries")
-        max_entries = 3
-        n_entries = 0
+        logging.debug("Get entries")
         for line in gpad_fh:
-            n_entries += 1
-            logging.debug(f"Reading entry {n_entries}")
-            if n_entries > max_entries:
-                break
 
             parts = line.split("\t")
-            if parts[0] != _DATABASE:
-                logging.debug(f"Wrong db '{parts[0]}'")
+            db = parts[0]
+            if db != _DATABASE:
                 continue
-            output_fh.write(line)
+
+            accession = parts[1]
+            if accession not in mapping:
+                continue
+
+            eco = parts[5]
+            go_evidence = ""
+            if eco in _ECO_TO_GO:
+                go_evidence = _ECO_TO_GO[eco]
+
+            prod_names = mapping[accession]
+            for production_name in prod_names:
+                parts[-1] = f"tgt_species={production_name}|go_evidence={go_evidence}\n"
+                output_fh.write("\t".join(parts))
 
 
 def main() -> None:
