@@ -23,16 +23,22 @@ process SCAN_GPAD {
         path uniprot_maps
     
     output:
-        path("*_species.gpad")
+        path("mapped.gpad")
 
     script:
+        all_maps = "all_maps.tsv"
+        output = "mapped.gpad"
         """
-        echo ""
+        cat $uniprot_maps > $all_maps
+        xrefs_scan_gpad --map $all_maps --gpad $gpad_file --output $output -v
         """
     
     stub:
+        all_maps = "all_maps.tsv"
+        output = "mapped.gpad"
         """
         touch species_species.gpad
-        cat $uniprot_maps > species_species.gpad
+        cat $uniprot_maps > $all_maps
+        touch $output
         """
 }

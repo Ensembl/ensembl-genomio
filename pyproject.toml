@@ -123,6 +123,7 @@ seq_region_prepare = "ensembl.io.genomio.seq_region.prepare:main"
 extract_file = "ensembl.io.genomio.utils.archive_utils:extract_file_cli"
 # Xrefs
 xrefs_dump_uniprot_map = "ensembl.io.genomio.xrefs.dump_uniprot_map:main"
+xrefs_scan_gpad = "ensembl.io.genomio.xrefs.scan_gpad:main"
 
 [tool.setuptools]
 package-dir = {"" = "src/python"}
