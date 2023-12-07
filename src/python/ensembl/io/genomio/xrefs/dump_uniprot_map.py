@@ -21,11 +21,12 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.orm import Session, joinedload
 
 from ensembl.core.models import Translation, ObjectXref, Xref, ExternalDb
-from ensembl.database import DBConnection
+# from ensembl.database import DBConnection
+from ensembl.io.genomio.database.core_database import CoreDatabase
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -39,23 +40,20 @@ def get_uniprot_map(session: Session) -> List[str]:
     """
     uniprot_dbs = ("Uniprot/SPTREMBL", "Uniprot/SWISSPROT")
     xref_stmt = (
-        select(Translation.stable_id, Xref.display_label, ExternalDb.db_name)
+        select(Xref.display_label, Translation.stable_id)
         .join(
             ObjectXref,
-            (Translation.translation_id == ObjectXref.object_xref_id)
-            and (ObjectXref.ensembl_object_type == "Translation"),
+            and_(Translation.translation_id == ObjectXref.ensembl_id,
+            ObjectXref.ensembl_object_type == "Translation"),
         )
         .join(Xref)
         .join(ExternalDb)
-        .where((ExternalDb.external_db_id == Xref.external_db_id) and ExternalDb.db_name.in_(uniprot_dbs))
+        .where(and_(ExternalDb.external_db_id == Xref.external_db_id, ExternalDb.db_name.in_(uniprot_dbs)))
     )
 
     uniprot_maps = []
     for row in session.execute(xref_stmt).unique().all():
-        tran: Translation = row[0]
-        logging.warning(f"row = {row}")
-        logging.warning(f"tran = {tran}")
-        raise Exception()
+        uniprot_maps.append(list(row))
 
     return uniprot_maps
 
@@ -68,9 +66,14 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    dbc = DBConnection(args.url)
+    dbc: CoreDatabase = CoreDatabase(args.url)
 
     with dbc.session_scope() as session:
         uniprot_map = get_uniprot_map(session)
+    metadata = dbc.get_metadata()
+    logging.info(metadata)
+    prod_name = metadata["species.production_name"][0]
 
-    print(json.dumps(uniprot_map, indent=2, sort_keys=True))
+    for umap in uniprot_map:
+        umap.append(prod_name)
+        print("\t".join(umap))
