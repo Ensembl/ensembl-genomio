@@ -14,8 +14,7 @@
 // limitations under the License.
 
 process SCAN_GPAD {
-    // label "variable_2_8_32"
-    label "normal"
+    label "long"
     publishDir "$params.output_dir", mode: 'copy'
 
     input:
