@@ -14,8 +14,7 @@
 # limitations under the License.
 """Fetch all Uniprot IDs mapped to proteins in a core database."""
 
-__all__ = [
-]
+__all__ = []
 
 import json
 import logging
@@ -38,11 +37,17 @@ def get_uniprot_map(session: Session) -> List[str]:
         session (Session): Session from the current core.
 
     """
+    uniprot_dbs = ("Uniprot/SPTREMBL", "Uniprot/SWISSPROT")
     xref_stmt = (
-        select(Translation.stable_id, Xref.display_label)
-        .join(ObjectXref, (Translation.translation_id == ObjectXref.object_xref_id) and (ObjectXref.ensembl_object_type == "Translation"))
+        select(Translation.stable_id, Xref.display_label, ExternalDb.db_name)
+        .join(
+            ObjectXref,
+            (Translation.translation_id == ObjectXref.object_xref_id)
+            and (ObjectXref.ensembl_object_type == "Translation"),
+        )
         .join(Xref)
-        .join(ExternalDb).where((ExternalDb.external_db_id == Xref.external_db_id) and )
+        .join(ExternalDb)
+        .where((ExternalDb.external_db_id == Xref.external_db_id) and ExternalDb.db_name.in_(uniprot_dbs))
     )
 
     uniprot_maps = []
@@ -57,9 +62,7 @@ def get_uniprot_map(session: Session) -> List[str]:
 
 def main() -> None:
     """Main script entry-point."""
-    parser = ArgumentParser(
-        description="Fetch all the Uniprot IDs linked to translation IDs."
-    )
+    parser = ArgumentParser(description="Fetch all the Uniprot IDs linked to translation IDs.")
     parser.add_server_arguments(include_database=True)
     parser.add_log_arguments()
     args = parser.parse_args()
