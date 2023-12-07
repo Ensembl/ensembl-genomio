@@ -80,14 +80,18 @@ def get_mapping(map_file: PathLike) -> Dict[str, Any]:
     return mapping
 
 
-def scan_gpad(gpad_file: PathLike, map_file: PathLike, output_file: PathLike) -> None:
+def scan_gpad(gpad_file: PathLike, map_file: PathLike, output_dir: PathLike) -> None:
     mapping = get_mapping(map_file)
 
-    with open_gz_file(gpad_file) as gpad_fh, Path(output_file).open("w") as output_fh:
+    with open_gz_file(gpad_file) as gpad_fh:
+        header = []
+        done = set()
+
+        # Get the header of all files
         logging.debug("Get header")
         line_one = gpad_fh.readline()
         if line_one.startswith("gpa-version:"):
-            output_fh.write(line_one)
+            header.append(line_one)
         else:
             raise ValueError(f"GPAD file must start with a header gpa-version. First line is {line_one}")
 
@@ -97,7 +101,7 @@ def scan_gpad(gpad_file: PathLike, map_file: PathLike, output_file: PathLike) ->
                 break
             if not (line.startswith("!Generated:") or line.startswith("!GO-version:")):
                 continue
-            output_fh.write(line)
+            header.append(line)
 
         logging.debug("Get entries")
         for line in gpad_fh:
@@ -119,7 +123,12 @@ def scan_gpad(gpad_file: PathLike, map_file: PathLike, output_file: PathLike) ->
             prod_names = mapping[accession]
             for production_name in prod_names:
                 parts[-1] = f"tgt_species={production_name}|go_evidence={go_evidence}\n"
-                output_fh.write("\t".join(parts))
+                with open(output_dir / f"{production_name}.gpad", "a") as output_fh:
+                    if production_name not in done:
+                        for header_line in header:
+                            output_fh.write(header_line)
+                        done.add(production_name)
+                    output_fh.write("\t".join(parts))
 
 
 def main() -> None:
@@ -127,9 +136,9 @@ def main() -> None:
     parser = ArgumentParser(description="Extract gpad entries from a list of IDs.")
     parser.add_argument_src_path("--map")
     parser.add_argument_src_path("--gpad")
-    parser.add_argument_dst_path("--output")
+    parser.add_argument_dst_path("--output_dir")
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    scan_gpad(args.gpad, args.map, args.output)
+    scan_gpad(args.gpad, args.map, args.output_dir)
