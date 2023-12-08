@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "title": "GenomIO addition prepare pipeline parameters",
+  "title": "GenomIO dumper pipeline parameters",
   "description": "Define the parameters to run the prepare pipeline",
   "type": "object",
   "definitions": {

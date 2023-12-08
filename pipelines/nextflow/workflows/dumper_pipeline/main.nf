@@ -27,7 +27,7 @@ default_selection = default_selection_map.keySet() as ArrayList
 
 include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 if (params.help) {
-     log.info paramsHelp("nextflow run genome_prepare/main.nf --input_dir <json_input_dir>")
+     log.info paramsHelp("nextflow run dumper_pipeline/main.nf --dump_sql --dump_all_files --host 'HOST' --port 'PORT' --user 'USER' --dbname_re 'DB_REGEX' --output_dir 'OUTPUT_DIR'")
     exit 0
 }
 validateParameters()
