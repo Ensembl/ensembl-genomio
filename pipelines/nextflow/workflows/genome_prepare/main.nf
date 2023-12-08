@@ -24,8 +24,6 @@ if (params.help) {
 validateParameters()
 log.info paramsSummaryLog(workflow)
 
-ch_genome_json = Channel.fromPath("${params.input_dir}/*.json", checkIfExists: true)
-
 if (params.brc_mode) {
     params.brc_mode = params.brc_mode as Integer
 }
@@ -58,6 +56,7 @@ def meta_from_genome_json(json_path) {
 
 // Run main workflow
 workflow {
+    ch_genome_json = Channel.fromPath("${params.input_dir}/*.json", checkIfExists: true)
     PREPARE_GENOME_METADATA(ch_genome_json)
 
     PREPARE_GENOME_METADATA.out.genomic_dataset
