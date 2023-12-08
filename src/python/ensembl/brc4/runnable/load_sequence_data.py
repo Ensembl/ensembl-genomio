@@ -44,6 +44,7 @@ class load_sequence_data(eHive.BaseRunnable):
         return {
             # relative order of the coord_systems types to infer their rank from
             "cs_order": "ensembl_internal,chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome",
+            "artificial_cs": "ensembl_internal,chunk",  # coord_systems to ignore when adding synonyms for sequence_level cs
             "IUPAC": "RYKMSWBDHV",  # symbols to be replaced with N in the DNA sequences (ensembl core(107) doesn't support the whole IUPAC alphabet for DNA)
             # unversion scaffold, remove ".\d$" from seq_region.names if there's a need
             "unversion_scaffolds": 0,
@@ -859,7 +860,11 @@ class load_sequence_data(eHive.BaseRunnable):
 
         Non-versioned syns for contigs (lower, sequence level), versioned for the rest.
         """
-        seq_cs, max_rank = max([(c, r) for c, r in cs_rank.items()], key=lambda k: k[1])
+        # coord_systems to ignore when adding synonyms for sequence_level cs
+        artificial_cs = frozenset(self.param("artificial_cs").split(","))
+        seq_cs, max_rank = max(
+            [(c, r) for c, r in cs_rank.items() if c not in artificial_cs], key=lambda k: k[1]
+        )
         for cs in cs_rank:
             if cs == seq_cs:
                 # for non-sequence level cs, store original name (with version) as "sr_syn_src" synonym
