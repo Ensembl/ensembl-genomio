@@ -176,7 +176,6 @@ sub pipeline_wide_parameters {
             'do_seq_reg'      => $self->o('do_seq_reg'),
             'do_seq_attr'      => $self->o('do_seq_attr'),
             'sql_dir'      => $self->o('sql_dir'),
-            'schemas'      => $self->o('schemas'),
             #'remove_features_prefix'      => $self->o('remove_features_prefix'),
     };
 }
@@ -226,10 +225,7 @@ sub pipeline_analyses {
      { -logic_name     => 'Manifest_check',
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
        -parameters     => {
-         json_file => '#manifest#',
-         metadata_type => 'manifest',
-         json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
-         cmd => 'jsonschema -i #json_file# #json_schema#',
+         cmd => 'schemas_json_validate --json_file #manifest# --json_schema manifest',
        },
        -max_retry_count => 0,
        -analysis_capacity => 1,
@@ -487,13 +483,7 @@ sub pipeline_analyses {
       -logic_name     => 'Check_json_schema',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
-        log_path => $self->o('tmp_dir') . '/check_schemas',
-        json => '#metadata_json#',
-        # schemas_json_validate will automatically fetch the JSON schema file corresponding to metadata_type
-        cmd => 'mkdir -p #log_path#; '
-             . 'echo "checking #json# against #metadata_type#" > #log_path#/#metadata_type#.log; '
-             . 'schemas_json_validate --json_file #json# --json_schema #metadata_type# '
-             . '   >> #log_path#/#metadata_type#.log 2>&1 ',
+        cmd => 'schemas_json_validate --json_file #metadata_json# --json_schema #metadata_type#',
         hash_key => "#metadata_type#",
       },
       -analysis_capacity => 2,
