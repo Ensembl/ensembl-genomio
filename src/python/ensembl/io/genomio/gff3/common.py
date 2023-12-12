@@ -19,7 +19,7 @@
 __all__ = ["GFFMeta"]
 
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 from importlib_resources import files
 
 from ensembl.io.genomio.utils.json_utils import get_json
@@ -38,25 +38,17 @@ class GFFMeta:
         cls._biotypes = get_json(biotype_json)
 
     @classmethod
-    def get_biotypes(
-        cls, gene_type: Optional[str] = None, support: Optional[str] = None
-    ) -> Union[Dict[str, Any], List[str]]:
-        """Returns biotypes support lists.
-
-        Without args, returns the whole biotypes data structure from the biotypes.json file.
-        With the gene_type, returns both supported and ignored lists in a dict.
-        With both gene_type and support, returns a list of biotypes.
+    def get_biotypes(cls, gene_type: str, support: str) -> List[str]:
+        """Returns a list of biotypes supported or ignored.
 
         Args:
             gene_type: Gene type among "gene", "non_gene" or "transcript".
-            support: Either "supported" or "ignored", returns a list of biotypes.
+            support: Either "supported" or "ignored".
         """
         if not cls._biotypes:
             cls._load_biotypes()
 
         biotypes: Dict[str, Any] = cls._biotypes
-        if gene_type:
-            if support:
-                return biotypes[gene_type][support]
-            return biotypes[gene_type]
-        return biotypes
+        if gene_type and support:
+            return biotypes[gene_type][support]
+        raise KeyError(f"Wrong keys {gene_type} and {support} from the biotype structure.")
