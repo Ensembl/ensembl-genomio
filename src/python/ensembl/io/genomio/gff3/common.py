@@ -19,7 +19,7 @@
 __all__ = ["GFFMeta"]
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Union
 from importlib_resources import files
 
 from ensembl.io.genomio.utils.json_utils import get_json
@@ -29,7 +29,7 @@ import ensembl.io.genomio.data.gff3
 class GFFMeta:
     """Heritable class to share the list of feature types supported or ignored by the parser"""
 
-    _biotypes = {}
+    _biotypes: Dict[str, Dict[str, str]] = {}
 
     @classmethod
     def _load_biotypes(cls) -> None:
@@ -38,7 +38,9 @@ class GFFMeta:
         cls._biotypes = get_json(biotype_json)
 
     @classmethod
-    def get_biotypes(cls, gene_type: str = None, support: str = None) -> Dict[str, Any]:
+    def get_biotypes(
+        cls, gene_type: Optional[str] = None, support: Optional[str] = None
+    ) -> Union[Dict[str, Any], List[str]]:
         """Returns biotypes support lists.
 
         Without args, returns the whole biotypes data structure from the biotypes.json file.
@@ -52,8 +54,9 @@ class GFFMeta:
         if not cls._biotypes:
             cls._load_biotypes()
 
+        biotypes: Dict[str, Any] = cls._biotypes
         if gene_type:
             if support:
-                return cls._biotypes[gene_type][support]
-            return cls._biotypes[gene_type]
-        return cls._biotypes
+                return biotypes[gene_type][support]
+            return biotypes[gene_type]
+        return biotypes
