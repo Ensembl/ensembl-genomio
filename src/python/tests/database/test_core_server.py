@@ -60,6 +60,10 @@ class TestCoreServer:
             ([], "", "", "", "", []),
             (TEST_CORES, "", "", "", "", TEST_CORES),
             (TEST_CORES, "prefix", "61", "111", r"_sp_", ["prefix_speciesF_genus_sp_core_61_111_1"]),
+            (TEST_CORES, "speciesC", "", "", "", []),
+            (TEST_CORES, "", "59", "", "", []),
+            (TEST_CORES, "", "", "109", "", []),
+            (TEST_CORES, "", "", "", r"_compara_", []),
         ],
     )
     def test_get_cores(
