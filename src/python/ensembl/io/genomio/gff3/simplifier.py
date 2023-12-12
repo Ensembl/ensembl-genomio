@@ -87,10 +87,10 @@ class GFFSimplifier:
         and also write a functional_annotation file
         """
 
-        allowed_gene_types = GFFMeta.get_biotypes("gene", "supported")
-        ignored_gene_types = GFFMeta.get_biotypes("gene", "ignored")
-        transcript_types = GFFMeta.get_biotypes("transcript", "supported")
-        allowed_non_gene_types = GFFMeta.get_biotypes("non_gene", "supported")
+        allowed_gene_types = GFFMeta.get_biotypes("gene")
+        ignored_gene_types = GFFMeta.get_biotypes("gene", supported=False)
+        transcript_types = GFFMeta.get_biotypes("transcript")
+        allowed_non_gene_types = GFFMeta.get_biotypes("non_gene")
         skip_unrecognized = self.skip_unrecognized
         to_exclude = self.exclude_seq_regions
 
@@ -268,8 +268,8 @@ class GFFSimplifier:
     def _normalize_transcripts(self, gene: SeqFeature, fail_types) -> SeqFeature:
         """Returns a normalized transcript."""
 
-        allowed_transcript_types = GFFMeta.get_biotypes("transcript", "supported")
-        ignored_transcript_types = GFFMeta.get_biotypes("transcript", "ignored")
+        allowed_transcript_types = GFFMeta.get_biotypes("transcript")
+        ignored_transcript_types = GFFMeta.get_biotypes("transcript", supported=False)
         skip_unrecognized = self.skip_unrecognized
 
         transcripts_to_delete = []
@@ -317,7 +317,7 @@ class GFFSimplifier:
         self, gene: SeqFeature, transcript: SeqFeature, fail_types
     ) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
-        ignored_transcript_types = GFFMeta.get_biotypes("transcript", "ignored")
+        ignored_transcript_types = GFFMeta.get_biotypes("transcript", supported=False)
         cds_found = False
         exons_to_delete = []
         for tcount, feat in enumerate(transcript.sub_features):

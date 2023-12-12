@@ -38,17 +38,18 @@ class GFFMeta:
         cls._biotypes = get_json(biotype_json)
 
     @classmethod
-    def get_biotypes(cls, gene_type: str, support: str) -> List[str]:
+    def get_biotypes(cls, gene_type: str, supported: bool = True) -> List[str]:
         """Returns a list of biotypes supported or ignored.
 
         Args:
             gene_type: Gene type among "gene", "non_gene" or "transcript".
-            support: Either "supported" or "ignored".
+            supported: The biotypes are supported (otherwise it's the list of biotypes that are ignored).
         """
         if not cls._biotypes:
             cls._load_biotypes()
 
         biotypes: Dict[str, Any] = cls._biotypes
-        if gene_type and support:
-            return biotypes[gene_type][support]
-        raise KeyError(f"Wrong keys {gene_type} and {support} from the biotype structure.")
+
+        if supported:
+            return biotypes[gene_type]["supported"]
+        return biotypes[gene_type]["ignored"]

@@ -54,7 +54,7 @@ class GFFGeneMerger:
                         attrs[key] = value
 
                     # Check this is a gene to merge; cache it then
-                    if fields[2] in GFFMeta.get_biotypes("gene", "supported") and (
+                    if fields[2] in GFFMeta.get_biotypes("gene") and (
                         "part" in attrs or "is_ordered" in attrs
                     ):
                         to_merge.append(fields)

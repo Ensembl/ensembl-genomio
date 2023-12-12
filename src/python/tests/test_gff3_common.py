@@ -14,6 +14,7 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.gff3.common` module."""
 
+from typing import Optional
 import pytest
 
 from ensembl.io.genomio.gff3 import GFFMeta
@@ -23,16 +24,20 @@ class TestGFF3Merge:
     """Tests for the GFF3GeneMerger module."""
 
     @pytest.mark.parametrize(
-        "gene_type, support, expected_contain",
+        "gene_type, supported, expected_contain",
         [
-            ("gene", "supported", "pseudogene"),
-            ("gene", "ignored", "gap"),
-            ("non_gene", "supported", "transposable_element"),
-            ("transcript", "supported", "mRNA"),
-            ("transcript", "ignored", "3'UTR"),
+            ("gene", None, "pseudogene"),
+            ("gene", True, "pseudogene"),
+            ("gene", False, "gap"),
+            ("non_gene", True, "transposable_element"),
+            ("transcript", True, "mRNA"),
+            ("transcript", False, "3'UTR"),
         ],
     )
-    def test_get_biotypes(self, gene_type: str, support: str, expected_contain: str) -> None:
+    def test_get_biotypes(self, gene_type: str, supported: Optional[bool], expected_contain: str) -> None:
         """Tests get_biotypes method."""
-        result = GFFMeta.get_biotypes(gene_type, support)
+        if supported is None:
+            result = GFFMeta.get_biotypes(gene_type)
+        else:
+            result = GFFMeta.get_biotypes(gene_type, supported=supported)
         assert expected_contain in result
