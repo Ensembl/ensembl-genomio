@@ -16,10 +16,10 @@
 
 """
 
-from typing import TypedDict
-from unittest.mock import Mock, patch
+from typing import List
 
 import pytest
+from pytest_mock import MockerFixture
 
 from ensembl.io.genomio.database import CoreServer
 
@@ -28,46 +28,79 @@ TEST_CORES = [
     "speciesA_genus_core_60_110_1",
     "speciesB_genus_sp_core_60_110_1",
     "prefix_speciesC_genus_core_60_110_1",
-    "prefix_speciesD_genus_sp_core_60_110_1",
-    "speciesE_genus_core_61_110_1",
-    "speciesF_genus_core_61_111_1",
+    "prefix_speciesD_genus_core_61_111_1",
+    "prefix_speciesE_genus_sp_core_61_110_1",
+    "prefix_speciesF_genus_sp_core_61_111_1",
 ]
 
-Params = TypedDict("Params", {"build": str, "prefix": str, "version": str, "dbname_re": str})
+
+class MockResult:
+    """Mocker of sqlalchemy.engine.Result class."""
+
+    def __init__(self, core_dbs: List[str]):
+        self.core_dbs = core_dbs
+
+    def fetchall(self) -> List[List[str]]:
+        """Return a list of lists, ech one containing a single core db."""
+        return [[x] for x in self.core_dbs]
+
+
+class MockEngine:
+    """Mocker of sqlalchemy.engine.Engine class."""
+
+    def __init__(self, core_dbs: List[str]) -> None:
+        self.result = MockResult(core_dbs)
+
+    def execute(self, *args, **kwargs) -> MockResult:  # pylint: disable=unused-argument
+        """Returns a MockResult object."""
+        return self.result
 
 
 class TestCoreServer:
     """Tests for the database.core_server module."""
 
-    @patch("ensembl.io.genomio.database.CoreServer.get_all_core_names")
     @pytest.mark.parametrize(
-        "parameters, output_size",
+        "dbs, prefix, build, version, dbname_re, output",
         [
-            ({}, len(TEST_CORES)),
-            ({"build": 60}, 4),
-            ({"build": 61}, 2),
-            ({"prefix": "foobar"}, 0),
-            ({"prefix": "prefix_"}, 2),
-            ({"version": 110}, 5),
-            ({"version": 111}, 1),
-            ({"version": 999}, 0),
-            ({"dbname_re": r""}, len(TEST_CORES)),
-            ({"dbname_re": r"foobar"}, 0),
-            ({"dbname_re": r"^species._.*"}, 4),
-            ({"dbname_re": r"species._.*_sp_"}, 2),
-            ({"dbname_re": r"^prefix_"}, 2),
-            ({"prefix": "prefix_", "build": 60}, 2),
-            ({"build": 61, "version": 110}, 1),
+            ([], "", "", "", "", []),
+            (TEST_CORES, "", "", "", "", TEST_CORES),
+            (TEST_CORES, "prefix", "61", "111", r"_sp_", ["prefix_speciesF_genus_sp_core_61_111_1"]),
+            (TEST_CORES, "speciesC", "", "", "", []),
+            (TEST_CORES, "", "59", "", "", []),
+            (TEST_CORES, "", "", "109", "", []),
+            (TEST_CORES, "", "", "", r"_compara_", []),
         ],
     )
-    def test_get_cores(self, mock_get: Mock, parameters: Params, output_size: int):
-        """Test the CoreServer.get_cores() method."""
-        mock_get.return_value = TEST_CORES
+    def test_get_cores(
+        self,
+        mocker: MockerFixture,
+        dbs: List[str],
+        prefix: str,
+        build: str,
+        version: str,
+        dbname_re: str,
+        output: List[str],
+    ) -> None:
+        """Test the CoreServer.get_cores() method.
+
+        Args:
+            mocker: Fixture to mock the connection to the server.
+            dbs: Mock list of databases found in the server.
+            prefix: Filter by prefix.
+            build: Filter by build.
+            version: Filter by Ensembl version.
+            dbname_re: Filter by dbname regular expression.
+            output: Expected list of databases.
+
+        """
+        # Mock the engine creation that connects to the server
+        mocked_engine = mocker.patch("sqlalchemy.create_engine")
+        mocked_engine.return_value = MockEngine(dbs)
 
         # Fake server with mock get_all_core_names()
         server_url = "sqlite:///:memory:"
         server = CoreServer(server_url)
 
         # Checks the filters from get_cores
-        all_cores = server.get_cores(**parameters)
-        assert len(all_cores) == output_size
+        all_cores = server.get_cores(prefix, build, version, dbname_re)
+        assert set(all_cores) == set(output)
