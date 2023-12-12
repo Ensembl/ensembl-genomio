@@ -75,9 +75,11 @@ class FunctionalAnnotations:
     def add_parent(self, parent_type: str, parent_id: str, child_id: str) -> None:
         """Record a parent-child IDs relationship for a given parent biotype."""
         if parent_type in self.parents:
+            if parent_id not in self.features[parent_type]:
+                raise MissingParentError(f"Parent {parent_type}:{parent_id} not found for {child_id}")
             self.parents[parent_type][child_id] = parent_id
         else:
-            raise MissingParentError(f"Unsupported parent type {parent_type}")
+            raise KeyError(f"Unsupported parent type {parent_type}")
 
     def get_parent(self, parent_type: str, child_id: str) -> str:
         """Returns the parent ID of a given child for a given parent biotype."""

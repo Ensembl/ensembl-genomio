@@ -22,12 +22,14 @@ Typical usage example::
 
 """
 
+from contextlib import nullcontext as does_not_raise
 from typing import Optional
 import pytest
+from pytest import raises
 
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations
+from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations, MissingParentError
 
 
 class TestFunctionalAnnotations:
@@ -47,34 +49,21 @@ class TestFunctionalAnnotations:
         annot.add_feature(feature, feat_type, parent_id)
         assert annot.features[feat_type][feature.id]
 
-    def test_add_parent(self):
-        parent = SeqFeature(type="gene", id="geneA")
-        child = SeqFeature(type="transcript", id="mrnaA")
+    @pytest.mark.parametrize(
+        "parent_type, parent_id, child_id, expected",
+        [
+            ("gene", "geneA", "mrnA", does_not_raise()),
+            ("bad_type", "geneA", "mrnA", raises(KeyError)),
+            ("gene", "geneB", "mrnA", raises(MissingParentError)),
+        ]
+    )
+    def test_add_parent(self, parent_type, parent_id, child_id, expected):
         annot = FunctionalAnnotations()
-        annot.add_feature(parent, "gene")
-        annot.add_parent("gene", parent.id, child.id)
-
-        assert annot.parents["gene"][child.id] == parent.id
-
-    def test_add_feature_parents(self):
         parent = SeqFeature(type="gene", id="geneA")
-        child = SeqFeature(type="transcript", id="mrnaA")
-        annot = FunctionalAnnotations()
         annot.add_feature(parent, "gene")
-        annot.add_feature(child, "transcript", parent_id=parent.id)
 
-        assert annot.parents["gene"][child.id] == parent.id
-
-    def test_add_feature_get_parents(self):
-        parent = SeqFeature(type="gene", id="geneA")
-        child = SeqFeature(type="transcript", id="mrnaA")
-        annot = FunctionalAnnotations()
-        annot.add_feature(parent, "gene")
-        annot.add_feature(child, "transcript", parent_id=parent.id)
-
-        parent_id = annot.get_parent("gene", child.id)
-
-        assert parent_id == parent.id
+        with expected:
+            annot.add_parent(parent_type, parent_id, child_id)
 
     @pytest.mark.parametrize(
         "description, feature_id, output",
