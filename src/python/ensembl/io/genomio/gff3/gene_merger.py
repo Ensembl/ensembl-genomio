@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Standardize the gene model representation of a GFF3 file, and extract the functional annotation
-in a separate file."""
+"""Merge split genes in a GFF file."""
 
 __all__ = [
     "GFFGeneMerger",
