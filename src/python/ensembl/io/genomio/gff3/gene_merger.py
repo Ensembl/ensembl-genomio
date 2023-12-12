@@ -35,7 +35,6 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
 from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations
-from ensembl.io.genomio.gff3.common import GFFMeta
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -57,7 +56,85 @@ class GFFParserError(Exception):
     """Error when parsing a GFF3 file."""
 
 
-class GFFGeneMerger:
+class GFFParserCommon:
+    """Heritable class to share the list of feature types supported or ignored by the parser"""
+
+    # Supported gene level biotypes
+    gene_types = [
+        "gene",
+        "pseudogene",
+        "ncRNA_gene",
+    ]
+
+    # Exception: non_gene_types that are nonetheless kept in the GFF3 file
+    non_gene_types = [
+        "transposable_element",
+    ]
+
+    # Supported transcript level biotypes
+    transcript_types = [
+        "C_gene_segment",
+        "guide_RNA",
+        "lnc_RNA",
+        "miRNA",
+        "misc_RNA",
+        "mRNA",
+        "ncRNA",
+        "piRNA",
+        "pseudogenic_rRNA",
+        "pseudogenic_transcript",
+        "pseudogenic_tRNA",
+        "ribozyme",
+        "RNase_MRP_RNA",
+        "RNase_P_RNA",
+        "rRNA",
+        "scRNA",
+        "snoRNA",
+        "snRNA",
+        "SRP_RNA",
+        "telomerase_RNA",
+        "transcript",
+        "tRNA",
+        "V_gene_segment",
+    ]
+
+    # Biotypes that are ignored, and removed from the final GFF3 file
+    ignored_gene_types = [
+        "cDNA_match",
+        "centromere",
+        "D_loop",
+        "direct_repeat",
+        "dispersed_repeat",
+        "gap",
+        "intron",
+        "inverted_repeat",
+        "long_terminal_repeat",
+        "microsatellite",
+        "origin_of_replication",
+        "region",
+        "repeat_region",
+        "satellite_DNA",
+        "sequence_feature",
+        "sequence_secondary_structure",
+        "sequence_uncertainty",
+        "STS",
+        "tandem_repeat",
+        "telomere",
+        "terminal%2Cinverted",
+    ]
+
+    # Ignored biotypes that are under a gene parent feature
+    ignored_transcript_types = [
+        "3'UTR",
+        "5'UTR",
+        "antisense_RNA",
+        "intron",
+        "non_canonical_five_prime_splice_site",
+        "non_canonical_three_prime_splice_site",
+    ]
+
+
+class GFFGeneMerger(GFFParserCommon):
     """Specialized class to merge split genes in a GFF3 file, prior to further parsing."""
 
     def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> List[str]:
@@ -83,7 +160,7 @@ class GFFGeneMerger:
                         attrs[key] = value
 
                     # Check this is a gene to merge; cache it then
-                    if fields[2] in GFFMeta.gene_types() and ("part" in attrs or "is_ordered" in attrs):
+                    if fields[2] in self.gene_types and ("part" in attrs or "is_ordered" in attrs):
                         to_merge.append(fields)
 
                     # If not, merge previous gene if needed, and print the line
@@ -142,7 +219,7 @@ class GFFGeneMerger:
         return "\t".join(new_gene) + "\n"
 
 
-class GFFSimplifier:
+class GFFSimplifier(GFFParserCommon):
     """Parse a GGF3 file and output a cleaned up GFF3 + annotation json file.
 
     Raises:
@@ -174,10 +251,10 @@ class GFFSimplifier:
         and also write a functional_annotation file
         """
 
-        allowed_gene_types = GFFMeta.gene_types()
-        ignored_gene_types = GFFMeta.ignored_gene_types()
-        transcript_types = GFFMeta.transcript_types()
-        allowed_non_gene_types = GFFMeta.non_gene_types()
+        allowed_gene_types = self.gene_types
+        ignored_gene_types = self.ignored_gene_types
+        transcript_types = self.transcript_types
+        allowed_non_gene_types = self.non_gene_types
         skip_unrecognized = self.skip_unrecognized
         to_exclude = self.exclude_seq_regions
 
@@ -354,16 +431,14 @@ class GFFSimplifier:
 
     def _normalize_transcripts(self, gene: SeqFeature, fail_types) -> SeqFeature:
         """Returns a normalized transcript."""
-
-        allowed_transcript_types = GFFMeta.transcript_types()
-        ignored_transcript_types = GFFMeta.ignored_transcript_types()
+        allowed_transcript_types = self.transcript_types
         skip_unrecognized = self.skip_unrecognized
 
         transcripts_to_delete = []
         for count, transcript in enumerate(gene.sub_features):
             if (
                 transcript.type not in allowed_transcript_types
-                and transcript.type not in ignored_transcript_types
+                and transcript.type not in self.ignored_transcript_types
             ):
                 fail_types["transcript=" + transcript.type] = 1
                 logging.warning(
@@ -404,7 +479,7 @@ class GFFSimplifier:
         self, gene: SeqFeature, transcript: SeqFeature, fail_types
     ) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
-        ignored_transcript_types = GFFMeta.ignored_transcript_types()
+        ignored_transcript_types = self.ignored_transcript_types
         cds_found = False
         exons_to_delete = []
         for tcount, feat in enumerate(transcript.sub_features):
