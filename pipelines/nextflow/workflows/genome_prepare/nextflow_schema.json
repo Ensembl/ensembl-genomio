@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://raw.githubusercontent.com/./pipelines/nextflow/workflows/genome_prepare/master/nextflow_schema.json",
+  "title": "GenomIO genome prepare pipeline parameters",
+  "description": "Define the parameters to run the genome pipeline",
+  "type": "object",
+  "definitions": {
+    "main_parameters": {
+      "title": "Main parameters",
+      "type": "object",
+      "fa_icon": "fas fa-terminal",
+      "description": "Main parameters.",
+      "required": ["input_dir", "output_dir"],
+      "properties": {
+        "input_dir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "Location of input json(s) with component/organism genome metadata."
+        },
+        "output_dir": {
+          "type": "string",
+          "format": "directory-path",
+          "default": "output_genome_prepare",
+          "description": "Name of Output directory to gather prepared outfiles."
+        }
+      }
+    },
+    "optional_parameters": {
+      "title": "Optional parameters",
+      "type": "object",
+      "fa_icon": "fas fa-terminal",
+      "description": "Optional parameters.",
+      "properties": {
+        "ncbi_check": {
+          "type": "integer",
+          "default": 1,
+          "description": "Set to 0 to skip the NCBI stats check."
+        }
+      }
+    },
+    "general_parameters": {
+      "title": "General parameters",
+      "type": "object",
+      "fa_icon": "fas fa-terminal",
+      "description": "General parameters.",
+      "properties": {
+        "brc_mode": {
+          "type": "integer",
+          "default": 0,
+          "enum": [0, 1],
+          "description": "Activate BRC specific processing."
+        },
+        "help": {
+          "type": "boolean",
+          "default": false,
+          "description": "Display this help message."
+        },
+        "cache_dir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "The path where downloaded files will be cached.",
+          "fa_icon": "fas fa-folder-open"
+        },
+        "ensembl_root_dir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "Location of the ensembl repositories root directory (defaults to env ENSEMBL_ROOT_DIR)."
+        },
+        "storeDir_latency": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Latency to introduce to allow Nextflow to find files that have been cached with storeDir."
+        },
+        "max_database_forks": {
+          "type": "integer",
+          "mininum": 1,
+          "maximum": 1000,
+          "description": "Limit the number of processes that can access a server in parallel (per process)"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/definitions/main_parameters"
+    },
+    {
+      "$ref": "#/definitions/optional_parameters"
+    },
+    {
+      "$ref": "#/definitions/general_parameters"
+    }
+  ]
+}
