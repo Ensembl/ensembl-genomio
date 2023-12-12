@@ -17,7 +17,6 @@
 """
 
 from typing import List
-from unittest.mock import Mock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -52,7 +51,7 @@ class MockEngine:
     def __init__(self, core_dbs: List[str]) -> None:
         self.result = MockResult(core_dbs)
 
-    def execute(self) -> MockResult:
+    def execute(self, *args, **kwargs) -> MockResult:  # pylint: disable=unused-argument
         """Returns a MockResult object."""
         return self.result
 
