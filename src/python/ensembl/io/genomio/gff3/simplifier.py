@@ -33,9 +33,8 @@ from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations
-
 from .common import GFFMeta
+from .extract_annotation import FunctionalAnnotations
 
 
 class Records(list):
