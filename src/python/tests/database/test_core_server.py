@@ -12,7 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of :mod:`ensembl.io.genomio.database.core_server` module.
+"""Unit testing of `ensembl.io.genomio.database.core_server` module.
+
+The unit testing is divided into one test class per submodule/class found in this module, and one test method
+per public function/class method.
+
+Typical usage example::
+    $ pytest test_core_server.py
 
 """
 
@@ -35,7 +41,7 @@ TEST_CORES = [
 
 
 class MockResult:
-    """Mocker of sqlalchemy.engine.Result class."""
+    """Mocker of `sqlalchemy.engine.Result` class."""
 
     def __init__(self, core_dbs: List[str]):
         self.core_dbs = core_dbs
@@ -46,7 +52,7 @@ class MockResult:
 
 
 class MockEngine:
-    """Mocker of sqlalchemy.engine.Engine class."""
+    """Mocker of `sqlalchemy.engine.Engine` class."""
 
     def __init__(self, core_dbs: List[str]) -> None:
         self.result = MockResult(core_dbs)
@@ -57,7 +63,7 @@ class MockEngine:
 
 
 class TestCoreServer:
-    """Tests for the database.core_server module."""
+    """Tests for the `CoreServer` class."""
 
     @pytest.mark.parametrize(
         "dbs, prefix, build, version, dbname_re, output",
@@ -81,7 +87,7 @@ class TestCoreServer:
         dbname_re: str,
         output: List[str],
     ) -> None:
-        """Test the CoreServer.get_cores() method.
+        """Tests the `CoreServer.get_cores()` method.
 
         Args:
             mocker: Fixture to mock the connection to the server.

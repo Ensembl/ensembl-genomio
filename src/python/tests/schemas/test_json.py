@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -13,13 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of :mod:`ensembl.io.genomio.schemas` module.
+"""Unit testing of `ensembl.io.genomio.schemas.json` module.
 
 The unit testing is divided into one test class per submodule/class found in this module, and one test method
 per public function/class method.
 
 Typical usage example::
-    $ pytest test_schemas.py
+    $ pytest test_json.py
 
 """
 
@@ -36,7 +35,7 @@ from ensembl.io.genomio.schemas import json
 
 
 class TestJSONSchemas:
-    """Tests for the schemas modules."""
+    """Tests for the JSON schemas modules."""
 
     test_data_dir: Path
     tmp_dir: Path
@@ -58,7 +57,7 @@ class TestJSONSchemas:
         ],
     )
     def test_schema_factory(self, metadata_types: List[str], output: List[PathLike]) -> None:
-        """Tests `ensembl.io.genomio.schemas.json.schema_factory()` method.
+        """Tests the `schema_factory()` method.
 
         Args:
             manifest_dir: Path to the folder with the manifest JSON file to check.
@@ -80,13 +79,13 @@ class TestJSONSchemas:
         ],
     )
     def test_schema_validator(self, json_file: str, json_schema: str, expected: ContextManager) -> None:
-        """Tests `ensembl.io.genomio.schemas.json.schema_validator()` method.
+        """Tests the `schema_validator()` method.
 
         Args:
             json_file: Path to the JSON file to check.
             json_schema: JSON schema to validate `json_file` against.
             expected: Context manager for the expected exception, i.e. the test will only pass if that
-                exception is raised. Use :class:`~contextlib.nullcontext` if no exception is expected.
+                exception is raised. Use `contextlib.nullcontext` if no exception is expected.
 
         """
         json_path = self.test_data_dir / json_file

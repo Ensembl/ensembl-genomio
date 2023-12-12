@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -13,13 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of :mod:`ensembl.io.genomio.schemas` module.
+"""Unit testing of `ensembl.io.genomio.manifest.check_integrity` module.
 
 The unit testing is divided into one test class per submodule/class found in this module, and one test method
 per public function/class method.
 
 Typical usage example::
-    $ pytest test_schemas.py
+    $ pytest test_check_integrity.py
 
 """
 
@@ -32,8 +31,8 @@ import pytest
 from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, Manifest
 
 
-class TestIntegrity:
-    """Tests for the integrity module."""
+class TestIntegrityTool:
+    """Tests for the `IntegrityTool` class."""
 
     tmp_dir: Path
     manifest_dir: Path
@@ -55,10 +54,10 @@ class TestIntegrity:
             ),
         ],
     )
-    def test_integrity(
+    def test_check_integrity(
         self, manifest_path: Path, brc_mode: bool, ignore_false_stops: bool, expected: ContextManager
     ) -> None:
-        """Tests `integrity:IntegrityTool` method.
+        """Tests the `IntegrityTool.check_integrity()` method.
 
         Args:
             brc_mode: BRC specific mode.
@@ -78,8 +77,8 @@ class TestIntegrity:
             ("data1/manifest.json", does_not_raise()),
         ],
     )
-    def test_get_manifest(self, manifest_path: Path, expected: ContextManager) -> None:
-        """Tests `integrity:IntegrityTool:get_manifest()` method."""
+    def test_manifest(self, manifest_path: Path, expected: ContextManager) -> None:
+        """Tests the `IntegrityTool.manifest` attribute."""
         manifest_dir = self.manifest_dir / manifest_path
         with expected:
             integrity = IntegrityTool(manifest_dir)
