@@ -23,9 +23,10 @@ from pathlib import Path
 
 import pytest
 
+
 TEST_DATA_DIR_PATH = Path(__file__).parent
 ROOT_DIR_PATH = TEST_DATA_DIR_PATH.parents[2]
-FILES_DIR_PATH = TEST_DATA_DIR_PATH / "flatfiles"
+FILES_DIR_PATH = TEST_DATA_DIR_PATH / "data" / "flatfiles"
 
 
 @pytest.fixture(scope="package")

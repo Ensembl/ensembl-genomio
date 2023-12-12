@@ -12,7 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of :mod:`ensembl.io.genomio.gff3.process_gff3` module.
+"""Unit testing of `ensembl.io.genomio.gff3.process` module.
+
+The unit testing is divided into one test class per submodule/class found in this module, and one test method
+per public function/class method.
+
+Typical usage example::
+    $ pytest test_process.py
 
 """
 
@@ -24,8 +30,8 @@ import pytest
 from ensembl.io.genomio.gff3.process import GFFGeneMerger
 
 
-class TestGFF3Merge:
-    """Tests for the GFF3GeneMerger module."""
+class TestGFFGeneMerger:
+    """Tests for the `GFFGeneMerger` class."""
 
     tmp_dir: Path
     data_dir: Path
@@ -43,7 +49,7 @@ class TestGFF3Merge:
         ],
     )
     def test_merge(self, tmp_path: Path, input_name: str, expected_name: str) -> None:
-        """Tests merge method.
+        """Tests the `GFFGeneMerger.merge()` method.
 
         Args:
             tmp_path: Where temporary files will be created.
