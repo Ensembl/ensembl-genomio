@@ -12,13 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of :mod:`ensembl.io.genomio.schemas` module.
+"""Unit testing of `ensembl.io.genomio.gff3.extract_annotation` module.
 
 The unit testing is divided into one test class per submodule/class found in this module, and one test method
 per public function/class method.
 
 Typical usage example::
-    $ pytest test_schemas.py
+    $ pytest test_extract_annotation.py
 
 """
 
@@ -28,8 +28,8 @@ import pytest
 from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations
 
 
-class TestMergeGFF3:
-    """Tests for the integrity module."""
+class TestFunctionalAnnotations:
+    """Tests for the `FunctionalAnnotations` class."""
 
     @pytest.mark.parametrize(
         "description, feature_id, output",
@@ -64,10 +64,12 @@ class TestMergeGFF3:
         ],
     )
     def test_product_is_informative(self, description: str, feature_id: Optional[str], output: bool) -> None:
-        """Tests `functional_annotation.product_is_informative` method.
+        """Tests the `FunctionalAnnotations.product_is_informative()` method.
+
         Args:
             description: Product description.
             feature_id: Feature ID that might be in the description.
-            output: True if description is informative, False otherwise.
+            output: Expected output, i.e. True if description is informative, False otherwise.
+
         """
         assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
