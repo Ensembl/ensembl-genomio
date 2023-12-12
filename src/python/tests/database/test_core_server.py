@@ -42,16 +42,18 @@ class MockResult:
         self.core_dbs = core_dbs
 
     def fetchall(self) -> List[List[str]]:
+        """Return a list of lists, ech one containing a single core db."""
         return [[x] for x in self.core_dbs]
 
 
 class MockEngine:
     """Mocker of sqlalchemy.engine.Engine class."""
 
-    def __init__(self, core_dbs: List[str], *args, **kwargs) -> None:
+    def __init__(self, core_dbs: List[str]) -> None:
         self.result = MockResult(core_dbs)
 
-    def execute(self, *args, **kwargs) -> MockResult:
+    def execute(self) -> MockResult:
+        """Returns a MockResult object."""
         return self.result
 
 
