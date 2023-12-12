@@ -156,7 +156,7 @@ class FunctionalAnnotations:
 
         return feature_object
 
-    def _transfer_descriptions(self) -> None:
+    def transfer_descriptions(self) -> None:
         """Transfers the feature descriptions in 2 steps:
         - from translations to transcripts (if the transcript description is empty)
         - from transcripts to genes (same case)
@@ -245,6 +245,6 @@ class FunctionalAnnotations:
             out_path: JSON file path where to write the data.
 
         """
-        self._transfer_descriptions()
+        self.transfer_descriptions()
         feats_list = self._to_list()
         print_json(Path(out_path), feats_list)

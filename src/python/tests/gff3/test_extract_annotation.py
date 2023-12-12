@@ -29,7 +29,11 @@ from pytest import raises
 
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations, MissingParentError, AnnotationError
+from ensembl.io.genomio.gff3.extract_annotation import (
+    FunctionalAnnotations,
+    MissingParentError,
+    AnnotationError,
+)
 
 
 class TestFunctionalAnnotations:
@@ -47,7 +51,7 @@ class TestFunctionalAnnotations:
             ("CDS", "translation", does_not_raise()),
             ("transposable_element", "transposable_element", does_not_raise()),
             ("gene", "bad_type", raises(KeyError)),
-        ]
+        ],
     )
     def test_add_feature_no_parent(self, seq_feat_type: str, feat_type: str, expected: ContextManager):
         annot = FunctionalAnnotations()
@@ -60,12 +64,14 @@ class TestFunctionalAnnotations:
         "child_type, child_id, parent_id, expected",
         [
             ("transcript", "mrna_A", "gene_A", does_not_raise()),
-            ("bad_type", "mrna_A", "gene_A", raises(KeyError)), # Child type does not exist
-            ("gene", "gene_A", None, raises(AnnotationError)), # Feature ID already loaded
-            ("gene", "gene_B", "gene_A", raises(AnnotationError)), # Cannot add a gene child of a gene
-        ]
+            ("bad_type", "mrna_A", "gene_A", raises(KeyError)),  # Child type does not exist
+            ("gene", "gene_A", None, raises(AnnotationError)),  # Feature ID already loaded
+            ("gene", "gene_B", "gene_A", raises(AnnotationError)),  # Cannot add a gene child of a gene
+        ],
     )
-    def test_add_feature_failures(self, child_type: str, child_id: str, parent_id: Optional[str], expected: ContextManager):
+    def test_add_feature_failures(
+        self, child_type: str, child_id: str, parent_id: Optional[str], expected: ContextManager
+    ):
         annot = FunctionalAnnotations()
         with expected:
             parent = SeqFeature(type="gene", id="gene_A")
@@ -80,7 +86,7 @@ class TestFunctionalAnnotations:
             ("gene", "geneA", "mrnA", does_not_raise()),
             ("bad_type", "geneA", "mrnA", raises(KeyError)),
             ("gene", "geneB", "mrnA", raises(MissingParentError)),
-        ]
+        ],
     )
     def test_add_parent(self, parent_type, parent_id, child_id, expected):
         annot = FunctionalAnnotations()
@@ -96,13 +102,17 @@ class TestFunctionalAnnotations:
             ("gene", "geneA", "mrnA", "gene", "mrnA", does_not_raise()),
             ("gene", "geneA", "mrnA", "bad_type", "mrnA", raises(KeyError)),
             ("gene", "geneA", "mrnA", "gene", "mrnB", raises(MissingParentError)),
-        ]
+        ],
     )
-    def test_get_parent(self, in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected):
+    def test_get_parent(
+        self, in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected
+    ):
         annot = FunctionalAnnotations()
         parent = SeqFeature(type=in_parent_type, id=in_parent_id)
         annot.add_feature(parent, "gene")
-        annot.add_feature(SeqFeature(type="mRNA", id=in_child_id), feat_type="transcript", parent_id=in_parent_id)
+        annot.add_feature(
+            SeqFeature(type="mRNA", id=in_child_id), feat_type="transcript", parent_id=in_parent_id
+        )
 
         with expected:
             out_parent = annot.get_parent(out_parent_type, out_child_id)
@@ -115,7 +125,7 @@ class TestFunctionalAnnotations:
             ("transcript", does_not_raise()),
             ("translation", does_not_raise()),
             ("bad_type", raises(KeyError)),
-        ]
+        ],
     )
     def test_get_features(self, feat_type: str, expected: ContextManager):
         annot = FunctionalAnnotations()
@@ -130,6 +140,47 @@ class TestFunctionalAnnotations:
             if feat_type in ("gene", "transcript"):
                 expected_number = 1
             assert len(out_feats) == expected_number
+
+    @pytest.mark.parametrize(
+        "gene_desc, transc_desc, transl_desc, out_gene_desc, out_transc_desc",
+        [
+            (None, None, None, None, None),
+            ("Foobar", None, None, "Foobar", None),  # Only gene descriptions
+            ("gene A", "transc B", "prod C", "gene A", "transc B"),  # All descriptions set
+            (None, None, "Foobar", "Foobar", "Foobar"),  # Transfer from transl
+            (None, "Foobar", None, "Foobar", "Foobar"),  # Transfer from transc
+            (None, "Foobar", "Lorem", "Foobar", "Foobar"),  # Transfer from transc, transl also set
+        ],
+    )
+    def test_transfer_descriptions(
+        self,
+        gene_desc: Optional[str],
+        transc_desc: Optional[str],
+        transl_desc: Optional[str],
+        out_gene_desc: Optional[str],
+        out_transc_desc: Optional[str],
+    ):
+        annot = FunctionalAnnotations()
+        gene_name = "gene_A"
+        transcript_name = "tran_A"
+        one_gene = SeqFeature(type="gene", id=gene_name)
+        if gene_desc:
+            one_gene.qualifiers["Name"] = [gene_desc]
+        one_transcript = SeqFeature(type="mRNA", id=transcript_name)
+        if transc_desc:
+            one_transcript.qualifiers = {"Name": [transc_desc]}
+        one_translation = SeqFeature(type="CDS", id="cds_A")
+        if transl_desc:
+            one_translation.qualifiers = {"product": [transl_desc]}
+        annot.add_feature(one_gene, "gene")
+        annot.add_feature(one_transcript, "transcript", parent_id=one_gene.id)
+        annot.add_feature(one_translation, "translation", parent_id=one_transcript.id)
+
+        annot.transfer_descriptions()
+        genes = annot.get_features("gene")
+        transcs = annot.get_features("transcript")
+        assert genes[gene_name].get("description") == out_gene_desc
+        assert transcs[transcript_name].get("description") == out_transc_desc
 
     @pytest.mark.parametrize(
         "description, feature_id, output",
