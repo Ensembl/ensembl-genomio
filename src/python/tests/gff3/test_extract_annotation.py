@@ -25,11 +25,56 @@ Typical usage example::
 from typing import Optional
 import pytest
 
+from Bio.SeqFeature import SeqFeature
+
 from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations
 
 
 class TestFunctionalAnnotations:
     """Tests for the `FunctionalAnnotations` class."""
+
+    @pytest.mark.parametrize(
+        "feature, feat_type, parent_id",
+        [
+            (SeqFeature(type="gene", id="geneA"), "gene", None),
+            (SeqFeature(type="mRNA", id="mrnaA"), "transcript", None),
+            (SeqFeature(type="CDS", id="cdsA"), "translation", None),
+            (SeqFeature(type="transposable_element", id="teA"), "transposable_element", None),
+        ]
+    )
+    def test_add_feature(self, feature: SeqFeature, feat_type: str, parent_id: Optional[str]):
+        annot = FunctionalAnnotations()
+        annot.add_feature(feature, feat_type, parent_id)
+        assert annot.features[feat_type][feature.id]
+
+    def test_add_parent(self):
+        parent = SeqFeature(type="gene", id="geneA")
+        child = SeqFeature(type="transcript", id="mrnaA")
+        annot = FunctionalAnnotations()
+        annot.add_feature(parent, "gene")
+        annot.add_parent("gene", parent.id, child.id)
+
+        assert annot.parents["gene"][child.id] == parent.id
+
+    def test_add_feature_parents(self):
+        parent = SeqFeature(type="gene", id="geneA")
+        child = SeqFeature(type="transcript", id="mrnaA")
+        annot = FunctionalAnnotations()
+        annot.add_feature(parent, "gene")
+        annot.add_feature(child, "transcript", parent_id=parent.id)
+
+        assert annot.parents["gene"][child.id] == parent.id
+
+    def test_add_feature_get_parents(self):
+        parent = SeqFeature(type="gene", id="geneA")
+        child = SeqFeature(type="transcript", id="mrnaA")
+        annot = FunctionalAnnotations()
+        annot.add_feature(parent, "gene")
+        annot.add_feature(child, "transcript", parent_id=parent.id)
+
+        parent_id = annot.get_parent("gene", child.id)
+
+        assert parent_id == parent.id
 
     @pytest.mark.parametrize(
         "description, feature_id, output",
