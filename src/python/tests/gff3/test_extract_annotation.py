@@ -150,6 +150,8 @@ class TestFunctionalAnnotations:
             (None, None, "Foobar", "Foobar", "Foobar"),  # Transfer from transl
             (None, "Foobar", None, "Foobar", "Foobar"),  # Transfer from transc
             (None, "Foobar", "Lorem", "Foobar", "Foobar"),  # Transfer from transc, transl also set
+            ("Hypothetical gene", "Predicted function", "Foobar", "Foobar", "Foobar"),  # Non informative
+            (None, None, "Unknown product", None, None), # Non informative source
         ],
     )
     def test_transfer_descriptions(
@@ -212,6 +214,8 @@ class TestFunctionalAnnotations:
             ("unspecified product", None, False),
             ("Unspecified product", None, False),
             ("conserved hypothetical transmembrane protein", None, True),
+            ("unknown gene", None, False),
+            ("unknown function", None, False),
         ],
     )
     def test_product_is_informative(self, description: str, feature_id: Optional[str], output: bool) -> None:
