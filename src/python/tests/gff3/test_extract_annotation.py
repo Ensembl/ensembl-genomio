@@ -23,31 +23,56 @@ Typical usage example::
 """
 
 from contextlib import nullcontext as does_not_raise
-from typing import Optional
+from typing import ContextManager, Optional
 import pytest
 from pytest import raises
 
 from Bio.SeqFeature import SeqFeature
 
-from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations, MissingParentError
+from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations, MissingParentError, AnnotationError
 
 
 class TestFunctionalAnnotations:
     """Tests for the `FunctionalAnnotations` class."""
 
+    def test_init(self):
+        annot = FunctionalAnnotations()
+        assert annot
+
     @pytest.mark.parametrize(
-        "feature, feat_type, parent_id",
+        "seq_feat_type, feat_type, expected",
         [
-            (SeqFeature(type="gene", id="geneA"), "gene", None),
-            (SeqFeature(type="mRNA", id="mrnaA"), "transcript", None),
-            (SeqFeature(type="CDS", id="cdsA"), "translation", None),
-            (SeqFeature(type="transposable_element", id="teA"), "transposable_element", None),
+            ("gene", "gene", does_not_raise()),
+            ("mRNA", "transcript", does_not_raise()),
+            ("CDS", "translation", does_not_raise()),
+            ("transposable_element", "transposable_element", does_not_raise()),
+            ("gene", "bad_type", raises(KeyError)),
         ]
     )
-    def test_add_feature(self, feature: SeqFeature, feat_type: str, parent_id: Optional[str]):
+    def test_add_feature_no_parent(self, seq_feat_type: str, feat_type: str, expected: ContextManager):
         annot = FunctionalAnnotations()
-        annot.add_feature(feature, feat_type, parent_id)
-        assert annot.features[feat_type][feature.id]
+        with expected:
+            feature = SeqFeature(type=seq_feat_type, id="featA")
+            annot.add_feature(feature, feat_type)
+            assert annot.features[feat_type][feature.id]
+
+    @pytest.mark.parametrize(
+        "child_type, child_id, parent_id, expected",
+        [
+            ("transcript", "mrna_A", "gene_A", does_not_raise()),
+            ("bad_type", "mrna_A", "gene_A", raises(KeyError)), # Child type does not exist
+            ("gene", "gene_A", None, raises(AnnotationError)), # Feature ID already loaded
+            ("gene", "gene_B", "gene_A", raises(AnnotationError)), # Cannot add a gene child of a gene
+        ]
+    )
+    def test_add_feature_failures(self, child_type: str, child_id: str, parent_id: Optional[str], expected: ContextManager):
+        annot = FunctionalAnnotations()
+        with expected:
+            parent = SeqFeature(type="gene", id="gene_A")
+
+            child = SeqFeature(type="mRNA", id=child_id)
+            annot.add_feature(parent, "gene")
+            annot.add_feature(child, child_type, parent_id)
 
     @pytest.mark.parametrize(
         "parent_type, parent_id, child_id, expected",

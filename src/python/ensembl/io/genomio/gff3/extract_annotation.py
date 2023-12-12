@@ -98,7 +98,7 @@ class FunctionalAnnotations:
             feat_type: Type of the feature to annotate.
         """
         if feat_type not in self.features:
-            raise AnnotationError(f"Unsupported feature type {feat_type}")
+            raise KeyError(f"Unsupported feature type {feat_type}")
 
         if feature.id in self.features[feat_type]:
             raise AnnotationError(f"Feature {feat_type} ID {feature.id} already added")
