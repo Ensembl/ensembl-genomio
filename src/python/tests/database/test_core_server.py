@@ -36,6 +36,8 @@ TEST_CORES = [
 
 
 class MockResult:
+    """Mocker of sqlalchemy.engine.Result class."""
+
     def __init__(self, core_dbs: List[str]):
         self.core_dbs = core_dbs
 
@@ -44,6 +46,8 @@ class MockResult:
 
 
 class MockEngine:
+    """Mocker of sqlalchemy.engine.Engine class."""
+
     def __init__(self, core_dbs: List[str], *args, **kwargs) -> None:
         self.result = MockResult(core_dbs)
 
@@ -79,7 +83,13 @@ class TestCoreServer:
         """Test the CoreServer.get_cores() method.
 
         Args:
-            ...
+            mocker: Fixture to mock the connection to the server.
+            dbs: Mock list of databases found in the server.
+            prefix: Filter by prefix.
+            build: Filter by build.
+            version: Filter by Ensembl version.
+            dbname_re: Filter by dbname regular expression.
+            output: Expected list of databases.
 
         """
         # Mock the engine creation that connects to the server
