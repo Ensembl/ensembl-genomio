@@ -27,7 +27,7 @@ from pathlib import Path
 
 import pytest
 
-from ensembl.io.genomio.gff3.process import GFFGeneMerger
+from ensembl.io.genomio.gff3 import GFFGeneMerger
 
 
 class TestGFFGeneMerger:
