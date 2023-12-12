@@ -109,6 +109,29 @@ class TestFunctionalAnnotations:
             assert out_parent == in_parent_id
 
     @pytest.mark.parametrize(
+        "feat_type, expected",
+        [
+            ("gene", does_not_raise()),
+            ("transcript", does_not_raise()),
+            ("translation", does_not_raise()),
+            ("bad_type", raises(KeyError)),
+        ]
+    )
+    def test_get_features(self, feat_type: str, expected: ContextManager):
+        annot = FunctionalAnnotations()
+        one_gene = SeqFeature(type="gene", id="gene_A")
+        one_transcript = SeqFeature(type="mRNA", id="mrna_A")
+        annot.add_feature(one_gene, "gene")
+        annot.add_feature(one_transcript, "transcript", parent_id=one_gene.id)
+
+        with expected:
+            out_feats = annot.get_features(feat_type)
+            expected_number = 0
+            if feat_type in ("gene", "transcript"):
+                expected_number = 1
+            assert len(out_feats) == expected_number
+
+    @pytest.mark.parametrize(
         "description, feature_id, output",
         [
             ("", None, False),

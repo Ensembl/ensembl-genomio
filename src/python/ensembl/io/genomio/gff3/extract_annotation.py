@@ -116,7 +116,7 @@ class FunctionalAnnotations:
         """Get all feature annotations for the requested type."""
         if feat_type in self.features:
             return self.features[feat_type]
-        raise AnnotationError(f"No such feature type {feat_type}")
+        raise KeyError(f"No such feature type {feat_type}")
 
     def _generic_feature(self, feature: SeqFeature, feat_type: str) -> Dict[str, Any]:
         """Create a feature object following the specifications.
