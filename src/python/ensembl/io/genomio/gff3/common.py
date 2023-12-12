@@ -16,12 +16,10 @@
 - biotypes (supported, ignored)
 """
 
-__all__ = [
-    "GFFMeta"
-]
+__all__ = ["GFFMeta"]
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 from importlib_resources import files
 
 from ensembl.io.genomio.utils.json_utils import get_json
@@ -30,6 +28,7 @@ import ensembl.io.genomio.data.gff3
 
 class GFFMeta:
     """Heritable class to share the list of feature types supported or ignored by the parser"""
+
     _biotypes = {}
 
     @classmethod
@@ -39,37 +38,22 @@ class GFFMeta:
         cls._biotypes = get_json(biotype_json)
 
     @classmethod
-    def get_biotypes(cls) -> Dict[str, Any]:
+    def get_biotypes(cls, gene_type: str = None, support: str = None) -> Dict[str, Any]:
+        """Returns biotypes support lists.
+
+        Without args, returns the whole biotypes data structure from the biotypes.json file.
+        With the gene_type, returns both supported and ignored lists in a dict.
+        With both gene_type and support, returns a list of biotypes.
+
+        Args:
+            gene_type: Gene type among "gene", "non_gene" or "transcript".
+            support: Either "supported" or "ignored", returns a list of biotypes.
+        """
         if not cls._biotypes:
             cls._load_biotypes()
+
+        if gene_type:
+            if support:
+                return cls._biotypes[gene_type][support]
+            return cls._biotypes[gene_type]
         return cls._biotypes
-
-    @classmethod
-    def gene_types(cls) -> List[str]:
-        if not cls._biotypes:
-            cls._load_biotypes()
-        return cls._biotypes["gene"]["supported"]
-
-    @classmethod
-    def ignored_gene_types(cls) -> List[str]:
-        if not cls._biotypes:
-            cls._load_biotypes()
-        return cls._biotypes["gene"]["ignored"]
-
-    @classmethod
-    def non_gene_types(cls) -> List[str]:
-        if not cls._biotypes:
-            cls._load_biotypes()
-        return cls._biotypes["non_gene"]["supported"]
-
-    @classmethod
-    def transcript_types(cls) -> List[str]:
-        if not cls._biotypes:
-            cls._load_biotypes()
-        return cls._biotypes["transcript"]["supported"]
-
-    @classmethod
-    def ignored_transcript_types(cls) -> List[str]:
-        if not cls._biotypes:
-            cls._load_biotypes()
-        return cls._biotypes["transcript"]["ignored"]

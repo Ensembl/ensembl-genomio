@@ -83,7 +83,9 @@ class GFFGeneMerger:
                         attrs[key] = value
 
                     # Check this is a gene to merge; cache it then
-                    if fields[2] in GFFMeta.gene_types() and ("part" in attrs or "is_ordered" in attrs):
+                    if fields[2] in GFFMeta.get_biotypes("gene", "supported") and (
+                        "part" in attrs or "is_ordered" in attrs
+                    ):
                         to_merge.append(fields)
 
                     # If not, merge previous gene if needed, and print the line
@@ -174,10 +176,10 @@ class GFFSimplifier:
         and also write a functional_annotation file
         """
 
-        allowed_gene_types = GFFMeta.gene_types()
-        ignored_gene_types = GFFMeta.ignored_gene_types()
-        transcript_types = GFFMeta.transcript_types()
-        allowed_non_gene_types = GFFMeta.non_gene_types()
+        allowed_gene_types = GFFMeta.get_biotypes("gene", "supported")
+        ignored_gene_types = GFFMeta.get_biotypes("gene", "ignored")
+        transcript_types = GFFMeta.get_biotypes("transcript", "supported")
+        allowed_non_gene_types = GFFMeta.get_biotypes("non_gene", "supported")
         skip_unrecognized = self.skip_unrecognized
         to_exclude = self.exclude_seq_regions
 
@@ -355,8 +357,8 @@ class GFFSimplifier:
     def _normalize_transcripts(self, gene: SeqFeature, fail_types) -> SeqFeature:
         """Returns a normalized transcript."""
 
-        allowed_transcript_types = GFFMeta.transcript_types()
-        ignored_transcript_types = GFFMeta.ignored_transcript_types()
+        allowed_transcript_types = GFFMeta.get_biotypes("transcript", "supported")
+        ignored_transcript_types = GFFMeta.get_biotypes("transcript", "ignored")
         skip_unrecognized = self.skip_unrecognized
 
         transcripts_to_delete = []
@@ -404,7 +406,7 @@ class GFFSimplifier:
         self, gene: SeqFeature, transcript: SeqFeature, fail_types
     ) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
-        ignored_transcript_types = GFFMeta.ignored_transcript_types()
+        ignored_transcript_types = GFFMeta.get_biotypes("transcript", "ignored")
         cds_found = False
         exons_to_delete = []
         for tcount, feat in enumerate(transcript.sub_features):
