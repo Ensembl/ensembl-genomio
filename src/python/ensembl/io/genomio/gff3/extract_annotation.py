@@ -88,7 +88,7 @@ class FunctionalAnnotations:
             if parent_id is None:
                 raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
             return parent_id
-        raise MissingParentError(f"Unsupported parent type {parent_type}")
+        raise KeyError(f"Unsupported parent type {parent_type}")
 
     def add_feature(self, feature: SeqFeature, feat_type: str, parent_id: Optional[str] = None) -> None:
         """Add annotation for a feature of a given type. If a parent_id is provided, record the relatioship.

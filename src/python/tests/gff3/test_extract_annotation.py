@@ -66,6 +66,24 @@ class TestFunctionalAnnotations:
             annot.add_parent(parent_type, parent_id, child_id)
 
     @pytest.mark.parametrize(
+        "in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected",
+        [
+            ("gene", "geneA", "mrnA", "gene", "mrnA", does_not_raise()),
+            ("gene", "geneA", "mrnA", "bad_type", "mrnA", raises(KeyError)),
+            ("gene", "geneA", "mrnA", "gene", "mrnB", raises(MissingParentError)),
+        ]
+    )
+    def test_get_parent(self, in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected):
+        annot = FunctionalAnnotations()
+        parent = SeqFeature(type=in_parent_type, id=in_parent_id)
+        annot.add_feature(parent, "gene")
+        annot.add_feature(SeqFeature(type="mRNA", id=in_child_id), feat_type="transcript", parent_id=in_parent_id)
+
+        with expected:
+            out_parent = annot.get_parent(out_parent_type, out_child_id)
+            assert out_parent == in_parent_id
+
+    @pytest.mark.parametrize(
         "description, feature_id, output",
         [
             ("", None, False),
