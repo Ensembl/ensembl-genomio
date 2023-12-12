@@ -14,5 +14,8 @@
 # limitations under the License.
 """GFF3 files processing module."""
 
+from .common import *
 from .extract_annotation import *
+from .gene_merger import *
 from .process import *
+from .simplifier import *
