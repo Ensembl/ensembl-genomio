@@ -1,0 +1,10 @@
+{
+  "assembly_diff": {
+    "same": {"num_organella": 1, "num_chromosomes": 2, "num_scaffolds": 2},
+    "different": {}
+  },
+  "annotation_diff": {
+    "same": {"protein_coding": 1, "pseudogene": 1, "total_genes": 2, "other": 1},
+    "different": {}
+  }
+}
