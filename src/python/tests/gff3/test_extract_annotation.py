@@ -40,6 +40,7 @@ class TestFunctionalAnnotations:
     """Tests for the `FunctionalAnnotations` class."""
 
     def test_init(self):
+        """Tests the `FunctionaAnnotation.__init__()` method."""
         annot = FunctionalAnnotations()
         assert annot
 
@@ -54,31 +55,18 @@ class TestFunctionalAnnotations:
         ],
     )
     def test_add_feature_no_parent(self, seq_feat_type: str, feat_type: str, expected: ContextManager):
+        """Tests the `FunctionaAnnotation.add_feature()` method with only one feature.
+
+        Args:
+            seq_feat_type: Type for the SeqFeature to add.
+            feat_type: Type category for that SeqFeature.
+
+        """
         annot = FunctionalAnnotations()
         with expected:
             feature = SeqFeature(type=seq_feat_type, id="featA")
             annot.add_feature(feature, feat_type)
             assert annot.features[feat_type][feature.id]
-
-    @pytest.mark.parametrize(
-        "child_type, child_id, parent_id, expected",
-        [
-            ("transcript", "mrna_A", "gene_A", does_not_raise()),
-            ("bad_type", "mrna_A", "gene_A", raises(KeyError)),  # Child type does not exist
-            ("gene", "gene_A", None, raises(AnnotationError)),  # Feature ID already loaded
-            ("gene", "gene_B", "gene_A", raises(AnnotationError)),  # Cannot add a gene child of a gene
-        ],
-    )
-    def test_add_feature_failures(
-        self, child_type: str, child_id: str, parent_id: Optional[str], expected: ContextManager
-    ):
-        annot = FunctionalAnnotations()
-        with expected:
-            parent = SeqFeature(type="gene", id="gene_A")
-
-            child = SeqFeature(type="mRNA", id=child_id)
-            annot.add_feature(parent, "gene")
-            annot.add_feature(child, child_type, parent_id)
 
     @pytest.mark.parametrize(
         "parent_type, parent_id, child_id, expected",
@@ -89,12 +77,23 @@ class TestFunctionalAnnotations:
         ],
     )
     def test_add_parent(self, parent_type, parent_id, child_id, expected):
+        """Tests the `FunctionaAnnotation.add_parent_link()` method.
+
+        Add a parent feature, and then add a parent link.
+
+        Args:
+            parent_type: Type for the SeqFeature parent.
+            parent_id: ID for the SeqFeature parent.
+            child_id: ID for the SeqFeature child.
+            expected: What exception is expected to be raised, if any.
+
+        """
         annot = FunctionalAnnotations()
         parent = SeqFeature(type="gene", id="geneA")
         annot.add_feature(parent, "gene")
 
         with expected:
-            annot.add_parent(parent_type, parent_id, child_id)
+            annot.add_parent_link(parent_type, parent_id, child_id)
 
     @pytest.mark.parametrize(
         "in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected",
@@ -107,6 +106,17 @@ class TestFunctionalAnnotations:
     def test_get_parent(
         self, in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected
     ):
+        """Tests the `FunctionaAnnotation.get_parent()` method.
+
+        Args:
+            in_parent_type: Type for the SeqFeature parent.
+            in_parent_id: ID for the SeqFeature parent.
+            in_child_id: ID for the SeqFeature child.
+            out_parent_type: Type for the parent stored in the FunctionalAnnotation.
+            out_parent_id: ID for the parent stored.
+            expected: What exception is expected to be raised, if any.
+
+        """
         annot = FunctionalAnnotations()
         parent = SeqFeature(type=in_parent_type, id=in_parent_id)
         annot.add_feature(parent, "gene")
@@ -119,6 +129,37 @@ class TestFunctionalAnnotations:
             assert out_parent == in_parent_id
 
     @pytest.mark.parametrize(
+        "child_type, child_id, out_parent_id, expected",
+        [
+            ("transcript", "mrna_A", "gene_A", does_not_raise()),
+            ("bad_type", "mrna_A", "gene_A", raises(KeyError)),  # Child type does not exist
+            ("gene", "gene_A", None, raises(AnnotationError)),  # Feature ID already loaded
+            ("gene", "gene_B", "gene_A", raises(AnnotationError)),  # Cannot add a gene child of a gene
+        ],
+    )
+    def test_add_feature_failures(
+        self, child_type: str, child_id: str, out_parent_id: Optional[str], expected: ContextManager
+    ):
+        """Tests the `FunctionaAnnotation.add_feature()` method failures.
+
+        Test the addition of a child feature after a parent has already been added.
+
+        Args:
+            child_type: Type for the SeqFeature child.
+            child_id: ID for the SeqFeature child.
+            out_parent_id: ID for the parent.
+            expected: What exception is expected to be raised, if any.
+
+        """
+        annot = FunctionalAnnotations()
+        with expected:
+            parent = SeqFeature(type="gene", id="gene_A")
+
+            child = SeqFeature(type="mRNA", id=child_id)
+            annot.add_feature(parent, "gene")
+            annot.add_feature(child, child_type, out_parent_id)
+
+    @pytest.mark.parametrize(
         "feat_type, expected",
         [
             ("gene", does_not_raise()),
@@ -128,6 +169,15 @@ class TestFunctionalAnnotations:
         ],
     )
     def test_get_features(self, feat_type: str, expected: ContextManager):
+        """Tests the `FunctionaAnnotation.get_features()` method.
+
+        Load 2 features, then test the fetching of those features.
+
+        Args:
+            feat_type: Type for the features to fetch.
+            expected: What exception is expected to be raised, if any.
+
+        """
         annot = FunctionalAnnotations()
         one_gene = SeqFeature(type="gene", id="gene_A")
         one_transcript = SeqFeature(type="mRNA", id="mrna_A")
@@ -151,7 +201,7 @@ class TestFunctionalAnnotations:
             (None, "Foobar", None, "Foobar", "Foobar"),  # Transfer from transc
             (None, "Foobar", "Lorem", "Foobar", "Foobar"),  # Transfer from transc, transl also set
             ("Hypothetical gene", "Predicted function", "Foobar", "Foobar", "Foobar"),  # Non informative
-            (None, None, "Unknown product", None, None), # Non informative source
+            (None, None, "Unknown product", None, None),  # Non informative source
         ],
     )
     def test_transfer_descriptions(
@@ -162,6 +212,18 @@ class TestFunctionalAnnotations:
         out_gene_desc: Optional[str],
         out_transc_desc: Optional[str],
     ):
+        """Tests the `FunctionaAnnotation.transfer_descriptions()` method.
+
+        Load 3 features (gene, transcript, translation) with or without a description for each one.
+
+        Args:
+            gene_desc: Description for the gene.
+            transc_desc: Description for the transcript.
+            transl_desc: Description for the translation.
+            out_gene_desc: Excpected description for the gene after transfer.
+            out_transc_desc: Excpected description for the transcript after transfer.
+
+        """
         annot = FunctionalAnnotations()
         gene_name = "gene_A"
         transcript_name = "tran_A"

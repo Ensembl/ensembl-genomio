@@ -72,7 +72,7 @@ class FunctionalAnnotations:
             "transcript": {},
         }
 
-    def add_parent(self, parent_type: str, parent_id: str, child_id: str) -> None:
+    def add_parent_link(self, parent_type: str, parent_id: str, child_id: str) -> None:
         """Record a parent-child IDs relationship for a given parent biotype."""
         if parent_type in self.parents:
             if parent_id not in self.features[parent_type]:
@@ -108,7 +108,7 @@ class FunctionalAnnotations:
         if parent_id:
             if feat_type in _PARENTS:
                 parent_type = _PARENTS[feat_type]
-                self.add_parent(parent_type, parent_id, feature.id)
+                self.add_parent_link(parent_type, parent_id, feature.id)
             else:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
 
