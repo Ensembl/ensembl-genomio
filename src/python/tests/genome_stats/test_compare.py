@@ -53,7 +53,7 @@ class TestCompare:
         type(self).output_annot_same = get_json(genome_stats_dir / "output_annotated_same.json")
         type(self).output_annot_diff = get_json(genome_stats_dir / "output_annotated_diff.json")
 
-    @pytest.mark.dependency(name="test_diff_dicts", scope="class")
+    @pytest.mark.dependency(name="test_compare_dicts", scope="class")
     @pytest.mark.parametrize(
         "ncbi, core, output",
         [
@@ -76,8 +76,8 @@ class TestCompare:
             ),
         ],
     )
-    def test_diff_dicts(self, ncbi: Dict[str, int], core: Dict[str, int], output: Dict[str, Dict]) -> None:
-        """Tests the `compare._diff_dicts()` method.
+    def test_compare_dicts(self, ncbi: Dict[str, int], core: Dict[str, int], output: Dict[str, Dict]) -> None:
+        """Tests the `compare._compare_dicts()` method.
 
         Args:
             ncbi: NCBI dataset statistics in key-value pairs.
@@ -85,10 +85,10 @@ class TestCompare:
             output: Expected output when comparing both dictionaries.
 
         """
-        result = compare._diff_dicts(ncbi, core)
+        result = compare._compare_dicts(ncbi, core)
         assert DeepDiff(result, output) == {}
 
-    @pytest.mark.dependency(name="test_compare_assembly", depends=["test_diff_dicts"], scope="class")
+    @pytest.mark.dependency(name="test_compare_assembly", depends=["test_compare_dicts"], scope="class")
     @pytest.mark.parametrize(
         "ncbi, core, output",
         [
@@ -119,7 +119,7 @@ class TestCompare:
         result = compare.compare_assembly(eval(ncbi), eval(core))
         assert DeepDiff(result, eval(output)) == {}
 
-    @pytest.mark.dependency(name="test_compare_annotation", depends=["test_diff_dicts"], scope="class")
+    @pytest.mark.dependency(name="test_compare_annotation", depends=["test_compare_dicts"], scope="class")
     @pytest.mark.parametrize(
         "ncbi, core, output",
         [
