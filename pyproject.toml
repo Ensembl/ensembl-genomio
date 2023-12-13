@@ -61,10 +61,12 @@ dependencies = [
 cicd = [
     "black",
     "coverage",
+    "deepdiff",
     "genbadge[coverage]",
     "mypy",
     "pylint",
     "pytest",
+    "pytest-dependency",
     "pytest-mock",
     "pytest-workflow",
     "types-requests",
