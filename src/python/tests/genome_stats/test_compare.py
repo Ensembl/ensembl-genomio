@@ -21,8 +21,8 @@ Typical usage example::
     $ pytest test_compare.py
 
 """
+# pylint: disable=eval-used,protected-access
 
-from os import PathLike
 from pathlib import Path
 from typing import Any, Dict
 
@@ -35,6 +35,15 @@ from ensembl.io.genomio.utils import get_json
 
 class TestCompare:
     """Tests `genome_stats.compare` methods."""
+
+    ncbi_annot_stats: Dict[str, Any]
+    ncbi_unannot_stats: Dict[str, Any]
+    core_annot_stats: Dict[str, Any]
+    core_unannot_stats: Dict[str, Any]
+    output_empty: Dict[str, Any]
+    output_unannot_diff: Dict[str, Any]
+    output_annot_same: Dict[str, Any]
+    output_annot_diff: Dict[str, Any]
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, genome_stats_dir: Path) -> None:
@@ -66,13 +75,13 @@ class TestCompare:
                 {"a": 3},
                 {"a": 5},
                 {"same": {}, "different": {"a": {"ncbi": 3, "core": 5, "diff": 2}}},
-                id="different_dicts"
+                id="different_dicts",
             ),
             pytest.param(
                 {"a": 3, "b": 5},
                 {"a": 3, "b": 3},
                 {"same": {"a": 3}, "different": {"b": {"ncbi": 5, "core": 3, "diff": -2}}},
-                id="partially_similar_dicts"
+                id="partially_similar_dicts",
             ),
         ],
     )
@@ -86,7 +95,7 @@ class TestCompare:
 
         """
         result = compare._compare_dicts(ncbi, core)
-        assert DeepDiff(result, output) == {}
+        assert not DeepDiff(result, output)
 
     @pytest.mark.dependency(name="test_compare_assembly", depends=["test_compare_dicts"], scope="class")
     @pytest.mark.parametrize(
@@ -97,15 +106,15 @@ class TestCompare:
                 "self.ncbi_unannot_stats['reports'][0]",
                 "self.core_unannot_stats['assembly_stats']",
                 "self.output_unannot_diff['assembly_diff']",
-                id="contig_assembly"
+                id="contig_assembly",
             ),
             pytest.param(
                 "self.ncbi_annot_stats['reports'][0]",
                 "self.core_annot_stats['assembly_stats']",
                 "self.output_annot_same['assembly_diff']",
-                id="chromosome_assembly"
+                id="chromosome_assembly",
             ),
-        ]
+        ],
     )
     def test_compare_assembly(self, ncbi: str, core: str, output: str) -> None:
         """Tests the `compare.compare_assembly()` method with simple data.
@@ -117,7 +126,7 @@ class TestCompare:
 
         """
         result = compare.compare_assembly(eval(ncbi), eval(core))
-        assert DeepDiff(result, eval(output)) == {}
+        assert not DeepDiff(result, eval(output))
 
     @pytest.mark.dependency(name="test_compare_annotation", depends=["test_compare_dicts"], scope="class")
     @pytest.mark.parametrize(
@@ -128,9 +137,9 @@ class TestCompare:
                 "self.ncbi_annot_stats['reports'][0]['annotation_info']['stats']['gene_counts']",
                 "self.core_annot_stats['annotation_stats']",
                 "self.output_annot_same['annotation_diff']",
-                id="annotated_assembly"
+                id="annotated_assembly",
             ),
-        ]
+        ],
     )
     def test_compare_annotation(self, ncbi: str, core: str, output: str) -> None:
         """Tests the `compare.compare_annotation()` method when the assembly has no annotation.
@@ -142,7 +151,7 @@ class TestCompare:
 
         """
         result = compare.compare_annotation(eval(ncbi), eval(core))
-        assert DeepDiff(result, eval(output)) == {}
+        assert not DeepDiff(result, eval(output))
 
     @pytest.mark.dependency(
         name="test_compare_stats", depends=["test_compare_assembly", "test_compare_annotation"], scope="class"
@@ -155,7 +164,7 @@ class TestCompare:
                 "self.ncbi_annot_stats['reports'][0]",
                 "self.core_annot_stats",
                 "self.output_annot_same",
-                id="annotated_assembly"
+                id="annotated_assembly",
             ),
         ],
     )
@@ -169,7 +178,7 @@ class TestCompare:
 
         """
         result = compare.compare_stats(eval(ncbi), eval(core))
-        assert DeepDiff(result, eval(output)) == {}
+        assert not DeepDiff(result, eval(output))
 
     @pytest.mark.dependency(name="test_compare_stats_files", depends=["test_compare_stats"], scope="class")
     @pytest.mark.parametrize(
@@ -193,7 +202,7 @@ class TestCompare:
         self, genome_stats_dir: Path, ncbi_file: str, core_file: str, output: str
     ) -> None:
         """Tests the `compare.compare_stats_files()` method.
-        
+
         Args:
             genome_stats_dir: Path to the genome stats test files (fixture).
             ncbi_file: NCBI dataset genome statistics JSON file.
@@ -202,4 +211,4 @@ class TestCompare:
 
         """
         result = compare.compare_stats_files(genome_stats_dir / ncbi_file, genome_stats_dir / core_file)
-        assert DeepDiff(result, eval(output)) == {}
+        assert not DeepDiff(result, eval(output))
