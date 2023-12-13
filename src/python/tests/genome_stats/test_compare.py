@@ -176,7 +176,7 @@ class TestCompare:
         "ncbi_file, core_file, output",
         [
             pytest.param(
-                "empty_file.json", "core_unannotated.json", "self.output_empty", id="empty_ncbi_file"
+                "empty_file.txt", "core_unannotated.json", "self.output_empty", id="empty_ncbi_file"
             ),
             pytest.param(
                 "ncbi_empty.json", "core_unannotated.json", "self.output_empty", id="wrong_ncbi_format"
