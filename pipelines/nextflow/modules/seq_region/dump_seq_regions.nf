@@ -38,10 +38,12 @@ process DUMP_SEQ_REGIONS {
         """
     
     stub:
-        output = "test_seq_region.json"
+        output_file = "test_seq_region.json"
         schema = "seq_region"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_seq_region.json"
         """
-        cp $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files/dumped_seq_region.json $output
-        schemas_json_validate --json_file $output --json_schema $schema
+        cp $dump_dir/$dump_file $output_file
+        schemas_json_validate --json_file $output_file --json_schema $schema
         """
 }

@@ -40,7 +40,9 @@ process DUMP_EVENTS {
     
     stub:
         output_file = "ids_events.tab"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_ids_events.tab"
         """
-        cp $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files/dumped_ids_events.tab $output_file
+        cp $dump_dir/$dump_file $output_file
         """
 }
