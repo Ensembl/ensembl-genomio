@@ -554,8 +554,8 @@ class IntegrityTool:
         if only2:
             errors.append(f"{len(only2)} only in second list in {name} (first: {only2[0]})")
             logging.debug(f"{len(only1)} only in second list in {name}")
-        
-        self.add_errors(errors)
+
+        self.add_errors(*errors)
 
         return len(errors) > 0
 
