@@ -465,23 +465,20 @@ class IntegrityTool:
             # Gene ids, translated CDS ids and translated CDSs
             # including pseudogenes are compared to the gff
             if ann_genes:
-                self.add_errors(self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff"))
-                tr_errors = self.check_ids(
+                self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff")
+                found_tr_errors = self.check_ids(
                     ann_translations, gff_translations, "Translation ids metadata vs gff"
                 )
-                if len(tr_errors) > 0:
-                    tr_errors = self.check_ids(
+                if found_tr_errors:
+                    self.check_ids(
                         ann_translations,
                         gff_all_translations,
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
-                self.add_errors(*tr_errors)
-                self.add_errors(
-                    self.check_ids(
-                        ann_transposable_elements,
-                        gff_transposable_elements,
-                        "TE ids metadata vs gff",
-                    )
+                self.check_ids(
+                    ann_transposable_elements,
+                    gff_transposable_elements,
+                    "TE ids metadata vs gff",
                 )
 
             # Check the seq.json intregrity
@@ -523,7 +520,7 @@ class IntegrityTool:
                     if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
                         self.add_errors(f"Genome assembly accession is wrong: '{genome_acc}'")
 
-    def check_ids(self, list1, list2, name):
+    def check_ids(self, list1, list2, name) -> bool:
         """Compare the ids in list1 and list2.
 
         Args:
@@ -532,7 +529,7 @@ class IntegrityTool:
             name:  string
 
         Return:
-            Error if the ids in functional.json and gff do not match.
+            Whether the checks found errors.
         """
 
         only1 = []
@@ -557,8 +554,10 @@ class IntegrityTool:
         if only2:
             errors.append(f"{len(only2)} only in second list in {name} (first: {only2[0]})")
             logging.debug(f"{len(only1)} only in second list in {name}")
+        
+        self.add_errors(errors)
 
-        return errors
+        return len(errors) > 0
 
     def check_lengths(self, list1, list2, name, allowed_len_diff=None, special_diff=False):
         """Check the difference in ids and length between list1 and list2.
