@@ -49,7 +49,9 @@ process DB_FACTORY {
     
     stub:
         output_file = "dbs.json"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/"
+        dump_file = "db_factory_dbs.json"
         """
-        cp $workflow.projectDir/../../../../data/test/pipelines/dumper/db_factory_dbs.json $output_file
+        cp $dump_dir/$dump_file $output_file
         """
 }

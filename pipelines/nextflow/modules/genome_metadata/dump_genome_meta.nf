@@ -39,10 +39,12 @@ process DUMP_GENOME_META {
         """
     
     stub:
-        output = "test_genome.json"
+        output_file = "test_genome.json"
         schema = "genome"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_genome.json"
         """
-        cp $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files/dumped_genome.json $output
-        schemas_json_validate --json_file $output --json_schema $schema
+        cp $dump_dir/$dump_file $output_file
+        schemas_json_validate --json_file $output_file --json_schema $schema
         """
 }

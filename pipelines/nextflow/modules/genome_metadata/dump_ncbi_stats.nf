@@ -58,8 +58,9 @@ process DUMP_NCBI_STATS {
     
     stub:
         output_file = "ncbi_stats.json"
-        files_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "downloaded_ncbi_stats.json"
         """
-        cp $files_dir/downloaded_ncbi_stats.json $output_file
+        cp $dump_dir/$dump_file $output_file
         """
 }

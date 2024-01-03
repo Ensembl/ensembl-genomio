@@ -37,7 +37,9 @@ process DUMP_GENOME_STATS {
     
     stub:
         output_file = "core_stats.json"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_core_stats.json"
         """
-        cp $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files/dumped_core_stats.json $output_file
+        cp $dump_dir/$dump_file $output_file
         """
 }

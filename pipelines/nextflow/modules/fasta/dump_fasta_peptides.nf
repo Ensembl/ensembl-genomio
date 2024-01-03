@@ -41,8 +41,9 @@ process DUMP_FASTA_PEPTIDES {
     
     stub:
         output_file = "pep.fasta"
-        files_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_pep.fasta"
         """
-        cp $files_dir/dumped_pep.fasta $output_file
+        cp $dump_dir/$dump_file $output_file
         """
 }

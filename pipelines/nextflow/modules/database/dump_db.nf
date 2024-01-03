@@ -44,8 +44,9 @@ process DUMP_DB {
     
     stub:
         output_file = "${db.species}.sql.gz"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_sql"
+        dump_file = "dumped_db.sql"
         """
-        cat $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_sql/dumped_db.sql \
-            | gzip > $output_file
+        cat $dump_dir/$dump_file | gzip > $output_file
         """
 }
