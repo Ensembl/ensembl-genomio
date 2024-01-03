@@ -20,7 +20,6 @@ import json
 from os import PathLike
 import re
 from typing import Any, Dict
-import logging
 
 from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
@@ -54,7 +53,12 @@ def _compare_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Dict
                 same[key] = ncbi_count
         else:
             diff[key] = {"ncbi": ncbi_count, "core": core_count, "diff": core_count - ncbi_count}
-    return {"same": same, "different": diff}
+    comparison: Dict[str, Dict] = {}
+    if same:
+        comparison["same"] = same
+    if diff:
+        comparison["different"] = diff
+    return comparison
 
 
 def compare_assembly(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Dict]:
@@ -120,8 +124,11 @@ def compare_assembly(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Di
 def compare_annotation(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Dict]:
     """Extracts the annotation statistics and returns the comparison between both sources.
 
-    The annotation statistics compared are the number of: protein coding genes, pseudogenes (including
-    all pseudogene biotypes), other genes (e.g. miscellaneous RNA) and total.
+    Annotation statistics compared:
+        - protein_coding
+        - pseudogene (all pseudogene biotypes)
+        - other (number of misc_RNA)
+        - total
 
     Args:
         ncbi: NCBI dataset annotation statistics.
@@ -202,16 +209,7 @@ def compare_stats_files(ncbi_file: PathLike, core_file: PathLike) -> Dict[str, D
 
     """
     ncbi_stats = {}
-    try:
-        ncbi_stats = get_json(ncbi_file)["reports"][0]
-    except json.decoder.JSONDecodeError:
-        logging.warning(f"{ncbi_file} JSON file is empty")
-    except KeyError:
-        logging.warning(f"{ncbi_file} JSON file is missing the 'reports' key")
-    except IndexError:
-        logging.warning(f"{ncbi_file} JSON file does not have any reports")
-    else:
-        logging.info(f"{ncbi_file} JSON .'reports' obtained")
+    ncbi_stats = get_json(ncbi_file)["reports"][0]
     core_stats = get_json(core_file)
     all_stats = compare_stats(ncbi_stats, core_stats)
     return all_stats
