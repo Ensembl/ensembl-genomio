@@ -42,7 +42,7 @@ process DUMP_GENOME_META {
         output = "test_genome.json"
         schema = "genome"
         """
-        ln -s $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files/dumped_genome.json $output
+        cp $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files/dumped_genome.json $output
         schemas_json_validate --json_file $output --json_schema $schema
         """
 }

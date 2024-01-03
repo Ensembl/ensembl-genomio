@@ -43,6 +43,6 @@ process DUMP_FASTA_DNA {
         output_file = "dna.fasta"
         files_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
         """
-        ln -s $files_dir/dumped_dna.fasta $output_file
+        cp $files_dir/dumped_dna.fasta $output_file
         """
 }

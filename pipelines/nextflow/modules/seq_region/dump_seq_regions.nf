@@ -41,7 +41,7 @@ process DUMP_SEQ_REGIONS {
         output = "test_seq_region.json"
         schema = "seq_region"
         """
-        ln -s $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files/dumped_seq_region.json $output
+        cp $workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files/dumped_seq_region.json $output
         schemas_json_validate --json_file $output --json_schema $schema
         """
 }

@@ -60,6 +60,6 @@ process DUMP_NCBI_STATS {
         output_file = "ncbi_stats.json"
         files_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
         """
-        ln -s $files_dir/downloaded_ncbi_stats.json $output_file
+        cp $files_dir/downloaded_ncbi_stats.json $output_file
         """
 }

@@ -43,6 +43,6 @@ process DUMP_FASTA_PEPTIDES {
         output_file = "pep.fasta"
         files_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
         """
-        ln -s $files_dir/dumped_pep.fasta $output_file
+        cp $files_dir/dumped_pep.fasta $output_file
         """
 }
