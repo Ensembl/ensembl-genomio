@@ -1,6 +1,5 @@
 {
   "assembly_diff": {
-    "same": {},
     "different": {
       "num_organella": {"ncbi": 0, "core": 1, "diff": 1},
       "num_chromosomes": {"ncbi": 0, "core": 2, "diff": 2},
@@ -8,7 +7,6 @@
     }
   },
   "annotation_diff": {
-    "same": {},
     "different": {
       "protein_coding": {"ncbi": 0, "core": 1, "diff": 1},
       "pseudogene": {"ncbi": 0, "core": 1, "diff": 1},

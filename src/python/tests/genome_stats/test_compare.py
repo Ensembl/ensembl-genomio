@@ -23,8 +23,10 @@ Typical usage example::
 """
 # pylint: disable=eval-used,protected-access
 
+from contextlib import nullcontext as does_not_raise
+import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, ContextManager, Dict
 
 from deepdiff import DeepDiff
 import pytest
@@ -66,15 +68,13 @@ class TestCompare:
     @pytest.mark.parametrize(
         "ncbi, core, output",
         [
-            pytest.param({}, {}, {"same": {}, "different": {}}, id="empty_dicts"),
-            pytest.param({"a": 0}, {"a": 0}, {"same": {}, "different": {}}, id="same_dicts_zero_values"),
-            pytest.param(
-                {"a": 3}, {"a": 3}, {"same": {"a": 3}, "different": {}}, id="same_dicts_non_zero_values"
-            ),
+            pytest.param({}, {}, {}, id="empty_dicts"),
+            pytest.param({"a": 0}, {"a": 0}, {}, id="same_dicts_zero_values"),
+            pytest.param({"a": 3}, {"a": 3}, {"same": {"a": 3}}, id="same_dicts_non_zero_values"),
             pytest.param(
                 {"a": 3},
                 {"a": 5},
-                {"same": {}, "different": {"a": {"ncbi": 3, "core": 5, "diff": 2}}},
+                {"different": {"a": {"ncbi": 3, "core": 5, "diff": 2}}},
                 id="different_dicts",
             ),
             pytest.param(
@@ -182,24 +182,40 @@ class TestCompare:
 
     @pytest.mark.dependency(name="test_compare_stats_files", depends=["test_compare_stats"], scope="class")
     @pytest.mark.parametrize(
-        "ncbi_file, core_file, output",
+        "ncbi_file, core_file, output, expectation",
         [
             pytest.param(
-                "empty_file.txt", "core_unannotated.json", "self.output_empty", id="empty_ncbi_file"
+                "empty_file.txt",
+                "core_unannotated.json",
+                "self.output_empty",
+                pytest.raises(json.decoder.JSONDecodeError),
+                id="empty_ncbi_file",
             ),
             pytest.param(
-                "ncbi_empty.json", "core_unannotated.json", "self.output_empty", id="wrong_ncbi_format"
+                "ncbi_empty.json",
+                "core_unannotated.json",
+                "self.output_empty",
+                pytest.raises(KeyError),
+                id="wrong_ncbi_format",
             ),
             pytest.param(
-                "ncbi_no_reports.json", "core_annotated.json", "self.output_annot_diff", id="no_ncbi_reports"
+                "ncbi_no_reports.json",
+                "core_annotated.json",
+                "self.output_annot_diff",
+                pytest.raises(IndexError),
+                id="no_ncbi_reports",
             ),
             pytest.param(
-                "ncbi_annotated.json", "core_annotated.json", "self.output_annot_same", id="annotated_genome"
+                "ncbi_annotated.json",
+                "core_annotated.json",
+                "self.output_annot_same",
+                does_not_raise(),
+                id="annotated_genome",
             ),
         ],
     )
     def test_compare_stats_files(
-        self, genome_stats_dir: Path, ncbi_file: str, core_file: str, output: str
+        self, genome_stats_dir: Path, ncbi_file: str, core_file: str, output: str, expectation: ContextManager
     ) -> None:
         """Tests the `compare.compare_stats_files()` method.
 
@@ -208,7 +224,10 @@ class TestCompare:
             ncbi_file: NCBI dataset genome statistics JSON file.
             core_file: Core database genome statistics JSON file.
             output: Expected output when comparing both sources.
+            expectation: Context manager for the expected exception, i.e. the test will only pass if that
+                exception is raised. Use `contextlib.nullcontext` if no exception is expected.
 
         """
-        result = compare.compare_stats_files(genome_stats_dir / ncbi_file, genome_stats_dir / core_file)
-        assert not DeepDiff(result, eval(output))
+        with expectation:
+            result = compare.compare_stats_files(genome_stats_dir / ncbi_file, genome_stats_dir / core_file)
+            assert not DeepDiff(result, eval(output))
