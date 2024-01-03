@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This test runs the additional_seq_prepare pipeline for the accession NC_035159.1 from Genbank
-# It uses a cache file to avoid downloading the genbank file (--cache_dir)
-# The cached data has been reduced to two genes, 1 protein_coding and 1 tRNA
+# This test runs the dumper pipeline for files, with only stubs to fake the dumping
 - name: dumper_all
   command: nextflow run ./pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
     -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
@@ -42,4 +40,3 @@
     - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/test_genome.json
     - path: ./test_dumper_output/build_60/metadata/VectorBase/aaegL5/test_seq_region.json
     # NB: no md5sum here since all of these are copied test files, without processing
-
