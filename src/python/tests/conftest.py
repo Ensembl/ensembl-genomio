@@ -22,10 +22,10 @@ will have access to the plugins, hooks and fixtures defined here.
 from pathlib import Path
 
 import pytest
+from pytest import Config, FixtureRequest
 
 
 TEST_DATA_DIR_PATH = Path(__file__).parent
-ROOT_DIR_PATH = TEST_DATA_DIR_PATH.parents[2]
 FILES_DIR_PATH = TEST_DATA_DIR_PATH / "data" / "flatfiles"
 
 
@@ -47,7 +47,23 @@ def manifest_dir() -> Path:
     return FILES_DIR_PATH / "manifest_data"
 
 
+@pytest.fixture(scope="module")
+def datadir(request: FixtureRequest) -> Path:
+    """Returns the path to the test data folder matching the test's name.
+
+    Args:
+        request: Fixture providing information of the requesting test function.
+
+    """
+    return Path(request.module.__file__).with_suffix("")
+
+
 @pytest.fixture(scope="package")
-def schemas_dir() -> Path:
-    """Returns the folder that contains the manifest data test files."""
-    return FILES_DIR_PATH / "schemas"
+def shared_datadir(pytestconfig: Config) -> Path:
+    """Returns the path to the shared test data folder.
+
+    Args:
+        pytestconfig: Session-scoped fixture that returns the session's `pytest.Config` object.
+
+    """
+    return Path(pytestconfig.rootpath) / "src" / "python" / "tests" / "data"

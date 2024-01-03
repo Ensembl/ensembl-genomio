@@ -34,62 +34,56 @@ from pytest import raises
 from ensembl.io.genomio.schemas import json
 
 
-class TestJSONSchemas:
-    """Tests for the JSON schemas modules."""
+@pytest.mark.parametrize(
+    "metadata_types, output",
+    [
+        (["new_metadata"], ["manifest.json"]),
+        (
+            ["functional_annotation", "seq_region"],
+            ["manifest.json", "functional_annotation_category.json", "seq_region.json"],
+        ),
+    ],
+)
+def test_schema_factory(
+    tmp_dir: Path, data_dir: Path, metadata_types: List[str], output: List[PathLike]
+) -> None:
+    """Tests the `schema_factory()` method.
 
-    test_data_dir: Path
-    tmp_dir: Path
+    Args:
+        tmp_dir: Session-scoped temporary directory fixture.
+        data_dir: Module's test data directory fixture.
+        manifest_dir: Path to the folder with the manifest JSON file to check.
+        metadata_types: Metadata types to extract from `manifest` as JSON files.
+        output: Expected created files.
 
-    @pytest.fixture(scope="class", autouse=True)
-    def setup(self, tmp_dir: Path, schemas_dir: Path):
-        """Loads necessary fixtures and values as class attributes."""
-        type(self).test_data_dir = schemas_dir
-        type(self).tmp_dir = tmp_dir
+    """
+    json.schema_factory(data_dir, metadata_types, tmp_dir)
+    for file_name in output:
+        print(f"Check {file_name} in {tmp_dir}")
+        assert (tmp_dir / file_name).exists()
 
-    @pytest.mark.parametrize(
-        "metadata_types, output",
-        [
-            (["new_metadata"], ["manifest.json"]),
-            (
-                ["functional_annotation", "seq_region"],
-                ["manifest.json", "functional_annotation_category.json", "seq_region.json"],
-            ),
-        ],
-    )
-    def test_schema_factory(self, metadata_types: List[str], output: List[PathLike]) -> None:
-        """Tests the `schema_factory()` method.
 
-        Args:
-            manifest_dir: Path to the folder with the manifest JSON file to check.
-            metadata_types: Metadata types to extract from `manifest` as JSON files.
-            output: Expected created files.
+@pytest.mark.parametrize(
+    "json_file, json_schema, expected",
+    [
+        ("seq_region.json", "seq_region", does_not_raise()),
+        ("functional_annotation.json", "functional_annotation_schema.json", does_not_raise()),
+        ("seq_region.json", "functional_annotation", raises(ValidationError)),
+    ],
+)
+def test_schema_validator(data_dir: Path, json_file: str, json_schema: str, expected: ContextManager) -> None:
+    """Tests the `schema_validator()` method.
 
-        """
-        json.schema_factory(self.test_data_dir, metadata_types, self.tmp_dir)
-        for file_name in output:
-            print(f"Check {file_name} in {self.tmp_dir}")
-            assert (self.tmp_dir / file_name).exists()
+    Args:
+        data_dir: Module's test data directory fixture.
+        json_file: Path to the JSON file to check.
+        json_schema: JSON schema to validate `json_file` against.
+        expected: Context manager for the expected exception, i.e. the test will only pass if that
+            exception is raised. Use `contextlib.nullcontext` if no exception is expected.
 
-    @pytest.mark.parametrize(
-        "json_file, json_schema, expected",
-        [
-            ("seq_region.json", "seq_region", does_not_raise()),
-            ("functional_annotation.json", "functional_annotation_schema.json", does_not_raise()),
-            ("seq_region.json", "functional_annotation", raises(ValidationError)),
-        ],
-    )
-    def test_schema_validator(self, json_file: str, json_schema: str, expected: ContextManager) -> None:
-        """Tests the `schema_validator()` method.
-
-        Args:
-            json_file: Path to the JSON file to check.
-            json_schema: JSON schema to validate `json_file` against.
-            expected: Context manager for the expected exception, i.e. the test will only pass if that
-                exception is raised. Use `contextlib.nullcontext` if no exception is expected.
-
-        """
-        json_path = self.test_data_dir / json_file
-        if Path(json_schema).suffix == ".json":
-            json_schema = str(self.test_data_dir / json_schema)
-        with expected:
-            json.schema_validator(json_path, json_schema)
+    """
+    json_path = data_dir / json_file
+    if Path(json_schema).suffix == ".json":
+        json_schema = str(data_dir / json_schema)
+    with expected:
+        json.schema_validator(json_path, json_schema)
