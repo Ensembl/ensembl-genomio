@@ -93,57 +93,40 @@ class TestFastaProcess:
 
         assert filecmp.cmp(fasta_output_path, expected_path)
 
-    @pytest.mark.parametrize(
-        "input_gbff, excluded_seq_region, output, scenario",
+@pytest.mark.parametrize(
+        "input_gbff, excluded_seq_region, output, expectation",
         [
             (
                 "input.gbff.gz",
-                ["LR605957.1"],
-                ["VWP78966.1", "VWP78967.1", "VWP78968.1"],
-                "Normal",
+                set(["LR605957.1"]),
+                set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
+                does_not_raise()
             ),
             (  
-                "input.mod.gbff.gz", 
-                ["LR605957.1"], 
-                ["VWP78966.1", "VWP78967.1", "VWP78968.1"],
-                "Modified"
+                "input.mod.gbff.gz",
+                set(["LR605957.1"]),
+                set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
+                pytest.raises(FastaProcessing.FastaParserError)
             ),
         ],
     )
     def test_exclude_seq_regions(
-        self,
-        input_gbff: str,
-        excluded_seq_region: List[str],
-        output: List[str],
-        scenario: str,
+        self, input_gbff: str, excluded_seq_regions: Set[str], output: Set[str], expectation: ContextManager,
     ) -> None:
         """Tests the `process.get_peptides_to_exclude()` function.
 
         Args:
             input_gbff: Name of the input GBFF example input, in the test folder.
-            excluded_seq_region: Set of sequence regions to be excluded.
+            excluded_seq_regions: Set of sequence regions to be excluded.
             output: Set of proteins expected to be excluded given excluded_seq_region
-            scenario: Normal or modified function test.
-        """
+            expectation: Context manager for the expected exception, i.e. the test will only pass if that
+                exception is raised. Use `~contextlib.nullcontext` if no exception is expected.
 
+        """
         if input_gbff is not None:
             gbff_input_path = self.data_dir / input_gbff
         else:
             gbff_input_path = input_gbff
-
-        seq_region_to_exclude = set(excluded_seq_region)
-
-        # Testing 'Normal' operation i.e. intact and correct GenBank gbff
-        if scenario == "Normal":
-            excluded_proteins = FastaProcessing.get_peptides_to_exclude(
-                gbff_input_path, seq_region_to_exclude
-            )
-            assert set(excluded_proteins) == set(output)  # Expecting 3 peptides on seq_region (LR605957.1)
-        # Improper operation with corrupt GenBank gbff
-        else:
-            pytest.raises(
-                FastaProcessing.FastaParserError,
-                FastaProcessing.get_peptides_to_exclude,
-                gbff_input_path,
-                seq_region_to_exclude,
-            )
+        with expectation:
+            excluded_proteins = FastaProcessing.get_peptides_to_exclude(gbff_input_path, excluded_seq_regions)
+            assert set(excluded_proteins) == set(output)
