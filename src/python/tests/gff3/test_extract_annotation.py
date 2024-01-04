@@ -28,48 +28,45 @@ import pytest
 from ensembl.io.genomio.gff3.extract_annotation import FunctionalAnnotations
 
 
-class TestFunctionalAnnotations:
-    """Tests for the `FunctionalAnnotations` class."""
+@pytest.mark.parametrize(
+    "description, feature_id, output",
+    [
+        ("", None, False),
+        ("", "PROTID12345", False),
+        ("PROTID12345", "PROTID12345", False),
+        ("ProtId12345", "PROTID12345", False),
+        ("hypothetical PROTID12345 (ProtId12345)", "PROTID12345", False),
+        ("hypothetical protein", None, False),
+        ("hypothetical_protein", None, False),
+        ("Hypothetical protein", None, False),
+        ("hypothetical protein PROTID12345", "PROTID12345", False),
+        ("hypothetical protein ProtId12345", "PROTID12345", False),
+        ("hypothetical protein (ProtId12345)", "PROTID12345", False),
+        ("hypothetical protein (fragment)", None, False),
+        ("hypothetical protein, variant", None, False),
+        ("hypothetical protein, variant 2", None, False),
+        ("hypothetical protein - conserved", None, False),
+        ("hypothetical protein, conserved", None, False),
+        ("Hypothetical_protein_conserved", None, False),
+        ("Hypothetical conserved protein", None, False),
+        ("conserved hypothetical protein", None, False),
+        ("conserved hypothetical protein, putative", None, False),
+        ("conserved protein, unknown function", None, False),
+        ("putative protein", None, False),
+        ("putative_protein", None, False),
+        ("hypothetical RNA", None, False),
+        ("unspecified product", None, False),
+        ("Unspecified product", None, False),
+        ("conserved hypothetical transmembrane protein", None, True),
+    ],
+)
+def test_product_is_informative(description: str, feature_id: Optional[str], output: bool) -> None:
+    """Tests the `FunctionalAnnotations.product_is_informative()` method.
 
-    @pytest.mark.parametrize(
-        "description, feature_id, output",
-        [
-            ("", None, False),
-            ("", "PROTID12345", False),
-            ("PROTID12345", "PROTID12345", False),
-            ("ProtId12345", "PROTID12345", False),
-            ("hypothetical PROTID12345 (ProtId12345)", "PROTID12345", False),
-            ("hypothetical protein", None, False),
-            ("hypothetical_protein", None, False),
-            ("Hypothetical protein", None, False),
-            ("hypothetical protein PROTID12345", "PROTID12345", False),
-            ("hypothetical protein ProtId12345", "PROTID12345", False),
-            ("hypothetical protein (ProtId12345)", "PROTID12345", False),
-            ("hypothetical protein (fragment)", None, False),
-            ("hypothetical protein, variant", None, False),
-            ("hypothetical protein, variant 2", None, False),
-            ("hypothetical protein - conserved", None, False),
-            ("hypothetical protein, conserved", None, False),
-            ("Hypothetical_protein_conserved", None, False),
-            ("Hypothetical conserved protein", None, False),
-            ("conserved hypothetical protein", None, False),
-            ("conserved hypothetical protein, putative", None, False),
-            ("conserved protein, unknown function", None, False),
-            ("putative protein", None, False),
-            ("putative_protein", None, False),
-            ("hypothetical RNA", None, False),
-            ("unspecified product", None, False),
-            ("Unspecified product", None, False),
-            ("conserved hypothetical transmembrane protein", None, True),
-        ],
-    )
-    def test_product_is_informative(self, description: str, feature_id: Optional[str], output: bool) -> None:
-        """Tests the `FunctionalAnnotations.product_is_informative()` method.
+    Args:
+        description: Product description.
+        feature_id: Feature ID that might be in the description.
+        output: Expected output, i.e. True if description is informative, False otherwise.
 
-        Args:
-            description: Product description.
-            feature_id: Feature ID that might be in the description.
-            output: Expected output, i.e. True if description is informative, False otherwise.
-
-        """
-        assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
+    """
+    assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
