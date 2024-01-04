@@ -59,11 +59,11 @@ def data_dir(request: FixtureRequest) -> Path:
 
 
 @pytest.fixture(scope="package")
-def shared_datadir(pytestconfig: Config) -> Path:
+def shared_data_dir(pytestconfig: Config) -> Path:
     """Returns the path to the shared test data folder.
 
     Args:
         pytestconfig: Session-scoped fixture that returns the session's `pytest.Config` object.
 
     """
-    return Path(pytestconfig.rootpath) / "src" / "python" / "tests" / "data"
+    return pytestconfig.rootpath / "src" / "python" / "tests" / "data"
