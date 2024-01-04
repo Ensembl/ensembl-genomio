@@ -25,28 +25,6 @@ import pytest
 from pytest import Config, FixtureRequest
 
 
-TEST_DATA_DIR_PATH = Path(__file__).parent
-FILES_DIR_PATH = TEST_DATA_DIR_PATH / "data" / "flatfiles"
-
-
-@pytest.fixture(scope="package")
-def dbs_dir() -> Path:
-    """Returns the folder that contains the database test files."""
-    return TEST_DATA_DIR_PATH / "databases"
-
-
-@pytest.fixture(scope="package")
-def files_dir() -> Path:
-    """Returns the folder that contains the flat test files."""
-    return FILES_DIR_PATH
-
-
-@pytest.fixture(scope="package")
-def manifest_dir() -> Path:
-    """Returns the folder that contains the manifest data test files."""
-    return FILES_DIR_PATH / "manifest_data"
-
-
 @pytest.fixture(scope="module")
 def data_dir(request: FixtureRequest) -> Path:
     """Returns the path to the test data folder matching the test's name.

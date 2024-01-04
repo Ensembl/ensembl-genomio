@@ -31,56 +31,48 @@ import pytest
 from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, Manifest
 
 
-class TestIntegrityTool:
-    """Tests for the `IntegrityTool` class."""
+@pytest.mark.parametrize(
+    "manifest_file, brc_mode, ignore_false_stops, expected",
+    [
+        ("manifest.json", True, False, does_not_raise()),
+    ],
+)
+def test_check_integrity(
+    data_dir: Path, manifest_file: str, brc_mode: bool, ignore_false_stops: bool, expected: ContextManager
+) -> None:
+    """Tests the `IntegrityTool.check_integrity()` method.
 
-    tmp_dir: Path
-    manifest_dir: Path
+    Args:
+        data_dir: Module's test data directory fixture.
+        manifest_file: Manifest file to load.
+        brc_mode: BRC specific mode.
+        ignore_false_stops: Ignore false stops.
+        expected: Context manager for the expected exception, i.e. the test will only pass if that
+            exception is raised. Use `contextlib.nullcontext` if no exception is expected.
 
-    @pytest.fixture(scope="class", autouse=True)
-    def setup(self, tmp_dir: Path, manifest_dir: Path):
-        """Loads necessary fixtures and values as class attributes."""
-        type(self).tmp_dir = tmp_dir
-        type(self).manifest_dir = manifest_dir
+    """
+    with expected:
+        integrity = IntegrityTool(data_dir / manifest_file, brc_mode, ignore_false_stops)
+        assert integrity.brc_mode == brc_mode
+        assert integrity.manifest.brc_mode == brc_mode
 
-    @pytest.mark.parametrize(
-        "manifest_path, brc_mode, ignore_false_stops, expected",
-        [
-            (
-                "data1/manifest.json",
-                [None, True, False],
-                [None, True, False],
-                does_not_raise(),
-            ),
-        ],
-    )
-    def test_check_integrity(
-        self, manifest_path: Path, brc_mode: bool, ignore_false_stops: bool, expected: ContextManager
-    ) -> None:
-        """Tests the `IntegrityTool.check_integrity()` method.
 
-        Args:
-            brc_mode: BRC specific mode.
-            ignore_false_stops: Ignore false stops.
+@pytest.mark.parametrize(
+    "manifest_file, expected",
+    [
+        ("manifest.json", does_not_raise()),
+    ],
+)
+def test_manifest(data_dir: Path, manifest_file: str, expected: ContextManager) -> None:
+    """Tests the `IntegrityTool.manifest` attribute.
 
-        """
-        manifest_path = self.manifest_dir / manifest_path
-        with expected:
-            integrity = IntegrityTool(manifest_path, brc_mode, ignore_false_stops)
-            assert isinstance(integrity, IntegrityTool)
-            assert integrity.brc_mode == brc_mode
-            assert integrity.manifest.brc_mode == brc_mode
+    Args:
+        data_dir: Module's test data directory fixture.
+        manifest_file: Manifest file to load.
+        expected: Context manager for the expected exception, i.e. the test will only pass if that
+            exception is raised. Use `contextlib.nullcontext` if no exception is expected.
 
-    @pytest.mark.parametrize(
-        "manifest_path, expected",
-        [
-            ("data1/manifest.json", does_not_raise()),
-        ],
-    )
-    def test_manifest(self, manifest_path: Path, expected: ContextManager) -> None:
-        """Tests the `IntegrityTool.manifest` attribute."""
-        manifest_dir = self.manifest_dir / manifest_path
-        with expected:
-            integrity = IntegrityTool(manifest_dir)
-            manifest = integrity.manifest
-            assert isinstance(manifest, Manifest)
+    """
+    with expected:
+        integrity = IntegrityTool(data_dir / manifest_file)
+        assert isinstance(integrity.manifest, Manifest)
