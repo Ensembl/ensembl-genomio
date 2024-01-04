@@ -66,4 +66,4 @@ def shared_data_dir(pytestconfig: Config) -> Path:
         pytestconfig: Session-scoped fixture that returns the session's `pytest.Config` object.
 
     """
-    return pytestconfig.rootpath / "src" / "python" / "tests" / "data"
+    return pytestconfig.rootpath / "src/python/tests/data"
