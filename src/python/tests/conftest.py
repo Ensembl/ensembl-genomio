@@ -48,7 +48,7 @@ def manifest_dir() -> Path:
 
 
 @pytest.fixture(scope="module")
-def datadir(request: FixtureRequest) -> Path:
+def data_dir(request: FixtureRequest) -> Path:
     """Returns the path to the test data folder matching the test's name.
 
     Args:
