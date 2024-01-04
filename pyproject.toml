@@ -173,7 +173,12 @@ show_error_codes = true
 warn_unused_configs = true
 
 [tool.pytest.ini_options]
-addopts = "-v --tb=native --server=sqlite:///"
+addopts = [
+    "--import-mode=importlib",
+    "--tb=native",
+    "--verbose",
+    "--server=sqlite:///",
+]
 testpaths = ["src/python/tests"]
 norecursedirs = ["data", "docs", "*.egg_info"]
 
