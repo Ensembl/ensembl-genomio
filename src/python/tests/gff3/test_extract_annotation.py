@@ -196,15 +196,15 @@ def test_add_feature_failures(
         annot.add_feature(child, child_type, out_parent_id)
 
 @pytest.mark.parametrize(
-    "feat_type, expected",
+    "feat_type, expected_number, expected",
     [
-        ("gene", does_not_raise()),
-        ("transcript", does_not_raise()),
-        ("translation", does_not_raise()),
-        ("bad_type", raises(KeyError)),
+        ("gene", 1, does_not_raise()),
+        ("transcript", 1, does_not_raise()),
+        ("translation", 0, does_not_raise()),
+        ("bad_type", 0, raises(KeyError)),
     ],
 )
-def test_get_features(feat_type: str, expected: ContextManager):
+def test_get_features(feat_type: str, expected_number: int, expected: ContextManager):
     """Tests the `FunctionaAnnotation.get_features()` method.
 
     Load 2 features, then test the fetching of those features.
@@ -222,9 +222,6 @@ def test_get_features(feat_type: str, expected: ContextManager):
 
     with expected:
         out_feats = annot.get_features(feat_type)
-        expected_number = 0
-        if feat_type in ("gene", "transcript"):
-            expected_number = 1
         assert len(out_feats) == expected_number
 
 @pytest.mark.parametrize(
