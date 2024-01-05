@@ -34,4 +34,12 @@ process DUMP_GENOME_STATS {
             --database '${db.server.database}' \
             > core_stats.json
         """
+    
+    stub:
+        output_file = "core_stats.json"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_core_stats.json"
+        """
+        cp $dump_dir/$dump_file $output_file
+        """
 }

@@ -17,7 +17,7 @@
 __all__ = ["CoreServer"]
 
 import re
-from typing import List
+from typing import List, Optional
 import logging
 
 import sqlalchemy
@@ -43,7 +43,12 @@ class CoreServer:
         return dbs
 
     def get_cores(
-        self, prefix: str = "", build: str = "", version: str = "", dbname_re: str = ""
+        self,
+        prefix: str = "",
+        build: str = "",
+        version: str = "",
+        dbname_re: str = "",
+        db_list: Optional[List[str]] = None,
     ) -> List[str]:
         """Provide a list of core databases, filtered if requested.
         Args:
@@ -51,6 +56,7 @@ class CoreServer:
             build: filter by build
             version: filter by Ensembl version
             dbname_re: filter by dbname regular expression
+            db_list: explicit list of database names
 
         Returns:
             A list of database names
@@ -63,6 +69,9 @@ class CoreServer:
         if not dbs:
             logging.warning("No databases returned from query")
 
+        if db_list:
+            logging.debug(f"Filter with db list: {db_list}")
+            dbs = [db for db in dbs if db in db_list]
         if prefix:
             dbs = [db for db in dbs if db.startswith(f"{prefix}")]
         if dbname_re:

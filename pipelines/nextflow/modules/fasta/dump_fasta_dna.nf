@@ -38,4 +38,12 @@ process DUMP_FASTA_DNA {
             -nonref \
             -filename $output
         """
+    
+    stub:
+        output_file = "dna.fasta"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_dna.fasta"
+        """
+        cp $dump_dir/$dump_file $output_file
+        """
 }
