@@ -72,23 +72,34 @@ class FunctionalAnnotations:
             "transcript": {},
         }
 
+    def _get_parents(self, parent_type: str) -> Dict[str, str]:
+        """Get all parent for a given type."""
+        try:
+            return self.parents[parent_type]
+        except KeyError as err:
+            raise KeyError(f"Unsupported parent type {parent_type}") from err
+
+    def get_features(self, feat_type: str) -> Dict[str, Annotation]:
+        """Get all feature annotations for the requested type."""
+        try:
+            return self.features[feat_type]
+        except KeyError as err:
+            raise KeyError(f"No such feature type {feat_type}") from err
+
     def add_parent_link(self, parent_type: str, parent_id: str, child_id: str) -> None:
         """Record a parent-child IDs relationship for a given parent biotype."""
-        if parent_type in self.parents:
-            if parent_id not in self.features[parent_type]:
-                raise MissingParentError(f"Parent {parent_type}:{parent_id} not found for {child_id}")
-            self.parents[parent_type][child_id] = parent_id
-        else:
-            raise KeyError(f"Unsupported parent type {parent_type}")
+        features = self.get_features(parent_type)
+        if parent_id not in features:
+            raise MissingParentError(f"Parent {parent_type}:{parent_id} not found for {child_id}")
+        self.parents[parent_type][child_id] = parent_id
 
     def get_parent(self, parent_type: str, child_id: str) -> str:
         """Returns the parent ID of a given child for a given parent biotype."""
-        if parent_type in self.parents:
-            parent_id = self.parents[parent_type].get(child_id)
-            if parent_id is None:
-                raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
-            return parent_id
-        raise KeyError(f"Unsupported parent type {parent_type}")
+        parents = self._get_parents(parent_type)
+        parent_id = parents.get(child_id)
+        if parent_id is None:
+            raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
+        return parent_id
 
     def add_feature(self, feature: SeqFeature, feat_type: str, parent_id: Optional[str] = None) -> None:
         """Add annotation for a feature of a given type. If a parent_id is provided, record the relatioship.
@@ -97,11 +108,10 @@ class FunctionalAnnotations:
             feature: The feature to create an annotation.
             feat_type: Type of the feature to annotate.
         """
-        if feat_type not in self.features:
-            raise KeyError(f"Unsupported feature type {feat_type}")
-
-        if feature.id in self.features[feat_type]:
+        features = self.get_features(feat_type)
+        if feature.id in features:
             raise AnnotationError(f"Feature {feat_type} ID {feature.id} already added")
+
         feature_object = self._generic_feature(feature, feat_type)
         self.features[feat_type][feature.id] = feature_object
 
@@ -111,12 +121,6 @@ class FunctionalAnnotations:
                 self.add_parent_link(parent_type, parent_id, feature.id)
             else:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
-
-    def get_features(self, feat_type: str) -> Dict[str, Annotation]:
-        """Get all feature annotations for the requested type."""
-        if feat_type in self.features:
-            return self.features[feat_type]
-        raise KeyError(f"No such feature type {feat_type}")
 
     def _generic_feature(self, feature: SeqFeature, feat_type: str) -> Dict[str, Any]:
         """Create a feature object following the specifications.
