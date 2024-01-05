@@ -144,7 +144,7 @@ def test_get_parent(
         in_parent_id: ID for the SeqFeature parent.
         in_child_id: ID for the SeqFeature child.
         out_parent_type: Type for the parent stored in the FunctionalAnnotation.
-        out_parent_id: ID for the parent stored.
+        out_child_id: ID for the child stored.
         expected: What exception is expected to be raised, if any.
 
     """
