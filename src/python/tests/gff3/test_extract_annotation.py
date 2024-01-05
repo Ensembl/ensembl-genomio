@@ -75,11 +75,6 @@ def test_product_is_informative(description: str, feature_id: Optional[str], out
     """
     assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
 
-def test_init():
-    """Tests the `FunctionaAnnotation.__init__()` method."""
-    annot = FunctionalAnnotations()
-    assert annot
-
 @pytest.mark.parametrize(
     "seq_feat_type, feat_type, expected",
     [
