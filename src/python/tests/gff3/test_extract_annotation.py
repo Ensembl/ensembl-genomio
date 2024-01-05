@@ -85,7 +85,8 @@ def test_product_is_informative(description: str, feature_id: Optional[str], out
         ("gene", "bad_type", raises(KeyError)),
     ],
 )
-def test_add_feature_no_parent(seq_feat_type: str, feat_type: str, expected: ContextManager):
+@pytest.mark.dependency(name="add_feature")
+def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManager):
     """Tests the `FunctionaAnnotation.add_feature()` method with only one feature.
 
     Args:
@@ -108,6 +109,7 @@ def test_add_feature_no_parent(seq_feat_type: str, feat_type: str, expected: Con
         ("gene", "geneB", "mrnA", raises(MissingParentError)),
     ],
 )
+@pytest.mark.dependency(name="add_parent", depends=['add_feature'])
 def test_add_parent(parent_type, parent_id, child_id, expected):
     """Tests the `FunctionaAnnotation.add_parent_link()` method.
 
@@ -136,6 +138,7 @@ def test_add_parent(parent_type, parent_id, child_id, expected):
         ("gene", "geneA", "mrnA", "gene", "mrnB", raises(MissingParentError)),
     ],
 )
+@pytest.mark.dependency(name="get_parent", depends=["add_parent"])
 def test_get_parent(in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected):
     """Tests the `FunctionaAnnotation.get_parent()` method.
 
@@ -169,7 +172,8 @@ def test_get_parent(in_parent_type, in_parent_id, in_child_id, out_parent_type, 
         ),
     ],
 )
-def test_add_feature_failures(
+@pytest.mark.dependency(name="add_feature_fail", depends=['add_feature', 'get_parent'])
+def test_add_feature_fail(
     child_type: str, child_id: str, out_parent_id: Optional[str], expected: ContextManager
 ):
     """Tests the `FunctionaAnnotation.add_feature()` method failures.
@@ -200,6 +204,7 @@ def test_add_feature_failures(
         ("bad_type", 0, raises(KeyError)),
     ],
 )
+@pytest.mark.dependency(name="get_features", depends=['add_feature_fail'])
 def test_get_features(feat_type: str, expected_number: int, expected: ContextManager):
     """Tests the `FunctionaAnnotation.get_features()` method.
 
@@ -234,6 +239,7 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
         (None, None, "Unknown product", None, None),  # Non informative source
     ],
 )
+@pytest.mark.dependency(depends=['get_features'])
 def test_transfer_descriptions(
     gene_desc: Optional[str],
     transc_desc: Optional[str],
