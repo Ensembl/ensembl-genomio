@@ -168,6 +168,7 @@ def main() -> None:
         db_list=db_list_file,
     )
     logging.info(f"Got {len(databases)} databases")
+    logging.debug("\n".join(databases))
 
     # Get all metadata for those databases
     databases_data = format_db_data(server_url, databases, args.brc_mode)
