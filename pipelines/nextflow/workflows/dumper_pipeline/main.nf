@@ -111,14 +111,14 @@ workflow {
     // Prepare db_factory filter
     basic_filter = Channel.of(filter_map)
     // Add db_list
-    filter = Channel.of()
+    filter_db = Channel.of()
     if (params.db_list) {
         // Get the list of databases from the file
         db_list = Channel.fromPath(params.db_list).splitCsv().map{ row -> row[0] }.collect()
         // Add that list to the filter_db map
-        filter = basic_filter.merge(db_list) { filters, db_list -> filters + ["db_list": db_list] }
+        filter_db = basic_filter.merge(db_list) { filters, db_list -> filters + ["db_list": db_list] }
     } else {
-        filter = filter
+        filter_db = basic_filter
     }
 
     dbs = DB_FACTORY(server, filter_db)
