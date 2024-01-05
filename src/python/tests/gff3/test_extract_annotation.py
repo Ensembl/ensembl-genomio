@@ -94,8 +94,8 @@ def test_add_feature_no_parent(seq_feat_type: str, feat_type: str, expected: Con
 
     """
     annot = FunctionalAnnotations()
+    feature = SeqFeature(type=seq_feat_type, id="featA")
     with expected:
-        feature = SeqFeature(type=seq_feat_type, id="featA")
         annot.add_feature(feature, feat_type)
         assert annot.features[feat_type][feature.id]
 
@@ -184,10 +184,10 @@ def test_add_feature_failures(
 
     """
     annot = FunctionalAnnotations()
+    parent = SeqFeature(type="gene", id="gene_A")
+    child = SeqFeature(type="mRNA", id=child_id)
+    annot.add_feature(parent, "gene")
     with expected:
-        parent = SeqFeature(type="gene", id="gene_A")
-        child = SeqFeature(type="mRNA", id=child_id)
-        annot.add_feature(parent, "gene")
         annot.add_feature(child, child_type, out_parent_id)
 
 
