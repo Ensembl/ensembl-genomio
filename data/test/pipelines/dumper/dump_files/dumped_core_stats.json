@@ -1,0 +1,43 @@
+{
+    "annotation_stats": {
+      "genes": {
+        "biotypes": {
+          "protein_coding": 3892,
+          "pseudogene": 1,
+          "rRNA": 10,
+          "snRNA": 87,
+          "tRNA": 45
+        },
+        "description": {
+          "empty": 0,
+          "normal": 3791,
+          "source_xref": 244
+        },
+        "total": 4035
+      },
+      "transcripts": {
+        "biotypes": {
+          "protein_coding": 3896,
+          "pseudogene": 1,
+          "rRNA": 10,
+          "snRNA": 87,
+          "tRNA": 45
+        },
+        "description": {
+          "empty": 0,
+          "normal": 4039,
+          "source_xref": 0
+        },
+        "total": 4039
+      }
+    },
+    "assembly_stats": {
+      "codon_table": {},
+      "coord_system": {
+        "chromosome": 8
+      },
+      "locations": {
+        "nuclear_chromosome": 8
+      }
+    }
+  }

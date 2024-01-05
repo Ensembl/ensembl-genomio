@@ -25,6 +25,7 @@ process DB_FACTORY {
         path "dbs.json"
 
     script:
+        output_file = "dbs.json"
         brc_mode = params.brc_mode ? '--brc_mode' : ''
         dbname_re = filter_map.dbname_re ? "--db_regex $filter_map.dbname_re" : ''
 
@@ -43,6 +44,14 @@ process DB_FACTORY {
             $brc_mode \
             $dbname_re \
             $db_list \
-            > dbs.json
+            > $output_file
+        """
+    
+    stub:
+        output_file = "dbs.json"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/"
+        dump_file = "db_factory_dbs.json"
+        """
+        cp $dump_dir/$dump_file $output_file
         """
 }

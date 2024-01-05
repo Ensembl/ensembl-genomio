@@ -16,38 +16,13 @@
 // Genome prepare pipeline
 // See full documentation in docs/genome_prepare.md
 
-// default params
-params.help = false
-
-// Print usage
-def helpMessage() {
-  log.info """
-        Usage:
-        The typical command for running the 'Genome prepare' pipeline is as follows:
-
-        nextflow run workflows/genome_prepare/main.nf --input_dir <json_input_dir>
-
-        Mandatory arguments:
-        --input_dir                    Location of input json(s) with component/organism genome metadata
-        --cache_dir                    Cache dir for the downloaded assembly data
-
-        Optional arguments:
-        --output_dir                   Name of Output directory to gather prepared outfiles. Default -> 'Output_GenomePrepare'.
-        --ncbi_check                   Set to 0 to skip the NCBI stats check.
-        --help                         This usage statement.
-        """
-}
-
-// Check mandatory parameters
+include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 if (params.help) {
-    helpMessage()
+     log.info paramsHelp("nextflow run genome_prepare/main.nf --input_dir <json_input_dir>")
     exit 0
 }
-if (params.input_dir) {
-    ch_genome_json = Channel.fromPath("${params.input_dir}/*.json", checkIfExists: true)
-} else {
-    exit 1, 'Input directory not specified!'
-}
+validateParameters()
+log.info paramsSummaryLog(workflow)
 
 if (params.brc_mode) {
     params.brc_mode = params.brc_mode as Integer
@@ -81,6 +56,7 @@ def meta_from_genome_json(json_path) {
 
 // Run main workflow
 workflow {
+    ch_genome_json = Channel.fromPath("${params.input_dir}/*.json", checkIfExists: true)
     PREPARE_GENOME_METADATA(ch_genome_json)
 
     PREPARE_GENOME_METADATA.out.genomic_dataset
