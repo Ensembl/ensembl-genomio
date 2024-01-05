@@ -71,9 +71,9 @@ from ensembl.io.genomio.gff3.extract_annotation import (
     ],
 )
 def test_product_is_informative(description: str, feature_id: Optional[str], output: bool) -> None:
-    """Tests the `FunctionalAnnotations.product_is_informative()` method.
-    """
+    """Tests the `FunctionalAnnotations.product_is_informative()` method."""
     assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
+
 
 @pytest.mark.parametrize(
     "seq_feat_type, feat_type, expected",
@@ -98,6 +98,7 @@ def test_add_feature_no_parent(seq_feat_type: str, feat_type: str, expected: Con
         feature = SeqFeature(type=seq_feat_type, id="featA")
         annot.add_feature(feature, feat_type)
         assert annot.features[feat_type][feature.id]
+
 
 @pytest.mark.parametrize(
     "parent_type, parent_id, child_id, expected",
@@ -126,6 +127,7 @@ def test_add_parent(parent_type, parent_id, child_id, expected):
     with expected:
         annot.add_parent_link(parent_type, parent_id, child_id)
 
+
 @pytest.mark.parametrize(
     "in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected",
     [
@@ -134,9 +136,7 @@ def test_add_parent(parent_type, parent_id, child_id, expected):
         ("gene", "geneA", "mrnA", "gene", "mrnB", raises(MissingParentError)),
     ],
 )
-def test_get_parent(
-    in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected
-):
+def test_get_parent(in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected):
     """Tests the `FunctionaAnnotation.get_parent()` method.
 
     Args:
@@ -151,21 +151,22 @@ def test_get_parent(
     annot = FunctionalAnnotations()
     parent = SeqFeature(type=in_parent_type, id=in_parent_id)
     annot.add_feature(parent, "gene")
-    annot.add_feature(
-        SeqFeature(type="mRNA", id=in_child_id), feat_type="transcript", parent_id=in_parent_id
-    )
+    annot.add_feature(SeqFeature(type="mRNA", id=in_child_id), feat_type="transcript", parent_id=in_parent_id)
 
     with expected:
         out_parent = annot.get_parent(out_parent_type, out_child_id)
         assert out_parent == in_parent_id
 
+
 @pytest.mark.parametrize(
     "child_type, child_id, out_parent_id, expected",
     [
         ("transcript", "mrna_A", "gene_A", does_not_raise()),
-        ("bad_type", "mrna_A", "gene_A", raises(KeyError)),  # Child type does not exist
-        ("gene", "gene_A", None, raises(AnnotationError)),  # Feature ID already loaded
-        ("gene", "gene_B", "gene_A", raises(AnnotationError)),  # Cannot add a gene child of a gene
+        pytest.param("bad_type", "mrna_A", "gene_A", raises(KeyError), id="Child type does not exist"),
+        pytest.param("gene", "gene_A", None, raises(AnnotationError), id="Feature ID already loaded"),
+        pytest.param(
+            "gene", "gene_B", "gene_A", raises(AnnotationError), id="Cannot add a gene child of a gene"
+        ),
     ],
 )
 def test_add_feature_failures(
@@ -185,10 +186,10 @@ def test_add_feature_failures(
     annot = FunctionalAnnotations()
     with expected:
         parent = SeqFeature(type="gene", id="gene_A")
-
         child = SeqFeature(type="mRNA", id=child_id)
         annot.add_feature(parent, "gene")
         annot.add_feature(child, child_type, out_parent_id)
+
 
 @pytest.mark.parametrize(
     "feat_type, expected_number, expected",
@@ -218,6 +219,7 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
     with expected:
         out_feats = annot.get_features(feat_type)
         assert len(out_feats) == expected_number
+
 
 @pytest.mark.parametrize(
     "gene_desc, transc_desc, transl_desc, out_gene_desc, out_transc_desc",
