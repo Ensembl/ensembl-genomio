@@ -24,10 +24,10 @@ Typical usage example::
 
 from contextlib import nullcontext as does_not_raise
 from typing import ContextManager, Optional
-import pytest
-from pytest import raises
 
 from Bio.SeqFeature import SeqFeature
+import pytest
+from pytest import raises
 
 from ensembl.io.genomio.gff3.extract_annotation import (
     FunctionalAnnotations,
