@@ -28,7 +28,14 @@ process DB_FACTORY {
         output_file = "dbs.json"
         brc_mode = params.brc_mode ? '--brc_mode' : ''
         dbname_re = filter_map.dbname_re ? "--db_regex $filter_map.dbname_re" : ''
+
+        // Prepare db_list to write in a file
+        db_list_str = filter_map.db_list.join("\n")
+        db_list_file = "db_list.tsv"
+        db_list = filter_map.db_list ? "--db_list $db_list_file" : ''
         """
+        echo "$db_list_str" > $db_list_file
+
         database_factory --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
@@ -36,6 +43,7 @@ process DB_FACTORY {
             --prefix '${filter_map.prefix}' \
             $brc_mode \
             $dbname_re \
+            $db_list \
             > $output_file
         """
     

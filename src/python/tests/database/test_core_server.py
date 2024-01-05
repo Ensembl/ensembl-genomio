@@ -16,7 +16,7 @@
 
 """
 
-from typing import TypedDict
+from typing import List, TypedDict
 from unittest.mock import Mock, patch
 
 import pytest
@@ -33,7 +33,9 @@ TEST_CORES = [
     "speciesF_genus_core_61_111_1",
 ]
 
-Params = TypedDict("Params", {"build": str, "prefix": str, "version": str, "dbname_re": str})
+Params = TypedDict(
+    "Params", {"build": str, "prefix": str, "version": str, "dbname_re": str, "db_list": List[str]}
+)
 
 
 class TestCoreServer:
@@ -58,6 +60,8 @@ class TestCoreServer:
             ({"dbname_re": r"^prefix_"}, 2),
             ({"prefix": "prefix_", "build": 60}, 2),
             ({"build": 61, "version": 110}, 1),
+            ({"db_list": TEST_CORES[0:2]}, 2),
+            ({"db_list": ["nonexistent_species"]}, 0),
         ],
     )
     def test_get_cores(self, mock_get: Mock, parameters: Params, output_size: int):

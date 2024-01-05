@@ -20,6 +20,8 @@ Can be imported as a module and called as a script as well, with the same parame
 __all__ = ["format_db_data", "get_metadata_value"]
 
 import json
+from os import PathLike
+from pathlib import Path
 import re
 from typing import Dict, List, Optional
 import logging
@@ -115,6 +117,13 @@ def _get_project_release(db_name: str) -> str:
     return ""
 
 
+def _load_multine_file(infile: PathLike) -> List[str]:
+    data_list = []
+    with Path(infile).open("r") as infile_fh:
+        data_list = [line.strip() for line in infile_fh]
+    return data_list
+
+
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(
@@ -126,6 +135,7 @@ def main() -> None:
     parser.add_argument("--build", default="", help="Build to filter the databases")
     parser.add_argument("--version", default="", help="EnsEMBL version to filter the databases")
     parser.add_argument("--db_regex", default="", help="Regular expression to match database names against")
+    parser.add_argument_src_path("--db_list", help="File with one database per line to load")
     # Add flags
     parser.add_argument(
         "--brc_mode",
@@ -136,6 +146,10 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
+    db_list_file = None
+    if args.db_list:
+        db_list_file = _load_multine_file(args.db_list)
+
     # Get all db names
     server_url = URL(
         drivername="mysql",
@@ -145,12 +159,16 @@ def main() -> None:
         password=args.password,
     )
     server = CoreServer(server_url)
+    logging.debug("Get databases...")
     databases = server.get_cores(
         prefix=args.prefix,
         build=args.build,
         version=args.version,
         dbname_re=args.db_regex,
+        db_list=db_list_file,
     )
+    logging.info(f"Got {len(databases)} databases")
+    logging.debug("\n".join(databases))
 
     # Get all metadata for those databases
     databases_data = format_db_data(server_url, databases, args.brc_mode)

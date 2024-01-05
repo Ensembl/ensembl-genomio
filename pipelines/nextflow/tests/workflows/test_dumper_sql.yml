@@ -22,8 +22,8 @@
     --output_dir ./test_dumper_output \\
     --host fakehost \\
     --user fakeuser \\
-    --port fakeport \\
-    --dbname_db 'species' \\
+    --port 9999 \\
+    --dbname_re 'species' \\
     --brc_mode 1 \\
     --storeDir_latency 0 \\
     --dump_sql
