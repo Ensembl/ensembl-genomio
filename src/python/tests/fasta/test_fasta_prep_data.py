@@ -42,32 +42,32 @@ class TestFastaProcess:
         type(self).data_dir = files_dir / "process_fasta"
 
     @pytest.mark.parametrize(
-        "input_fasta, input_gbff, expected_output_fasta, pep_mode",
+        "input_fasta, input_gbff, pep_mode, expected_output_fasta",
         [
             (
                 "input.protein.fa.gz",
                 "input.gbff.gz",
-                "output.protein.fa",
                 True,
+                "output.protein.fa",
             ),
             (
                 "input.protein.fa.gz",
                 None,
-                "output.protein.fa",
                 True,
+                "output.protein.fa",
             ),
             (
                 "input.protein.fa.gz",
                 None,
-                "output.protein.fa",
                 False,
+                "output.protein.fa",
             ),
-            ("input.fna.gz", None, "output.nuc.fna", False),
-            ("input.fna.gz", None, "output.nuc.fna", True),
+            ("input.fna.gz", None, False, "output.nuc.fna"),
+            ("input.fna.gz", None, True, "output.nuc.fna"),
         ],
     )
     def test_fasta_prep(
-        self, tmp_path: Path, input_fasta: str, input_gbff: str, expected_output_fasta: str, pep_mode: bool
+        self, tmp_path: Path, input_fasta: str, input_gbff: str, pep_mode: bool, expected_output_fasta: str
     ) -> None:
         """Tests the `process.prep_fasta_data()` function.
 
@@ -75,8 +75,8 @@ class TestFastaProcess:
             tmp_path: Where temporary files will be created.
             input_fasta: Name of the fasta file with example input, in the test folder.
             input_gbff: Name of the input GBFF example input, in the test folder.
-            expected_output_fasta: Name of the output fasta file with expected output, in the test folder.
             pep_mode: Boolean flag to set processing in peptide mode.
+            expected_output_fasta: Name of the output fasta file with expected output, in the test folder.
         """
 
         fasta_input_path = self.data_dir / input_fasta
