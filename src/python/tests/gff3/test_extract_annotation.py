@@ -109,7 +109,7 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
         ("gene", "geneB", "mrnA", raises(MissingParentError)),
     ],
 )
-@pytest.mark.dependency(name="add_parent", depends=['add_feature'])
+@pytest.mark.dependency(name="add_parent", depends=["add_feature"])
 def test_add_parent(parent_type, parent_id, child_id, expected):
     """Tests the `FunctionaAnnotation.add_parent_link()` method.
 
@@ -172,7 +172,7 @@ def test_get_parent(in_parent_type, in_parent_id, in_child_id, out_parent_type, 
         ),
     ],
 )
-@pytest.mark.dependency(name="add_feature_fail", depends=['add_feature', 'get_parent'])
+@pytest.mark.dependency(name="add_feature_fail", depends=["add_feature", "get_parent"])
 def test_add_feature_fail(
     child_type: str, child_id: str, out_parent_id: Optional[str], expected: ContextManager
 ):
@@ -204,7 +204,7 @@ def test_add_feature_fail(
         ("bad_type", 0, raises(KeyError)),
     ],
 )
-@pytest.mark.dependency(name="get_features", depends=['add_feature_fail'])
+@pytest.mark.dependency(name="get_features", depends=["add_feature_fail"])
 def test_get_features(feat_type: str, expected_number: int, expected: ContextManager):
     """Tests the `FunctionaAnnotation.get_features()` method.
 
@@ -239,7 +239,7 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
         (None, None, "Unknown product", None, None),  # Non informative source
     ],
 )
-@pytest.mark.dependency(depends=['get_features'])
+@pytest.mark.dependency(depends=["get_features"])
 def test_transfer_descriptions(
     gene_desc: Optional[str],
     transc_desc: Optional[str],
