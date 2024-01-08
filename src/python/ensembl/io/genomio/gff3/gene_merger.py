@@ -24,11 +24,18 @@ from pathlib import Path
 import re
 from typing import List
 
-from .common import GFFMeta
+from importlib_resources import files
+
+import ensembl.io.genomio.data.gff3
+from ensembl.io.genomio.utils.json_utils import get_json
 
 
 class GFFGeneMerger:
     """Specialized class to merge split genes in a GFF3 file, prior to further parsing."""
+
+    def __init__(self) -> None:
+        biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
+        self._biotypes = get_json(biotypes_json)
 
     def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> List[str]:
         """
@@ -60,7 +67,7 @@ class GFFGeneMerger:
                         attrs[key] = value
 
                     # Check this is a gene to merge; cache it then
-                    if fields[2] in GFFMeta.get_biotypes("gene") and (
+                    if fields[2] in self._biotypes["gene"]["supported"] and (
                         "part" in attrs or "is_ordered" in attrs
                     ):
                         to_merge.append(fields)
