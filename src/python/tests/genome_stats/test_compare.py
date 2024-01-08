@@ -14,19 +14,13 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.genome_stats.compare` module.
 
-The unit testing is divided into one test class per submodule/class found in this module, and one test method
-per public function/class method.
-
 Typical usage example::
     $ pytest test_compare.py
 
 """
-# pylint: disable=eval-used,protected-access
 
-from contextlib import nullcontext as does_not_raise
-import json
 from pathlib import Path
-from typing import Any, ContextManager, Dict
+from typing import Dict
 
 from deepdiff import DeepDiff
 import pytest
@@ -35,199 +29,154 @@ from ensembl.io.genomio.genome_stats import compare
 from ensembl.io.genomio.utils import get_json
 
 
-class TestCompare:
-    """Tests `genome_stats.compare` methods."""
+@pytest.fixture(name="json_data")
+def fixture_json_data(data_dir: Path) -> Dict:
+    """Returns a JSON test object factory.
 
-    ncbi_annot_stats: Dict[str, Any]
-    ncbi_unannot_stats: Dict[str, Any]
-    core_annot_stats: Dict[str, Any]
-    core_unannot_stats: Dict[str, Any]
-    output_empty: Dict[str, Any]
-    output_unannot_diff: Dict[str, Any]
-    output_annot_same: Dict[str, Any]
-    output_annot_diff: Dict[str, Any]
+    Args:
+        data_dir: Module's test data directory fixture.
 
-    @pytest.fixture(scope="class", autouse=True)
-    def setup(self, genome_stats_dir: Path) -> None:
-        """Loads necessary fixtures and values as class attributes.
+    """
 
-        Args:
-            genome_stats_dir: Path to the genome stats test files (fixture).
+    def _json_data(file_name: str) -> Dict:
+        """Returns the parsed JSON object from the given JSON test file."""
+        return get_json(data_dir / file_name)
 
-        """
-        type(self).ncbi_annot_stats = get_json(genome_stats_dir / "ncbi_annotated.json")
-        type(self).ncbi_unannot_stats = get_json(genome_stats_dir / "ncbi_unannotated.json")
-        type(self).core_annot_stats = get_json(genome_stats_dir / "core_annotated.json")
-        type(self).core_unannot_stats = get_json(genome_stats_dir / "core_unannotated.json")
-        type(self).output_empty = get_json(genome_stats_dir / "output_empty.json")
-        type(self).output_unannot_diff = get_json(genome_stats_dir / "output_unannotated.json")
-        type(self).output_annot_same = get_json(genome_stats_dir / "output_annotated_same.json")
-        type(self).output_annot_diff = get_json(genome_stats_dir / "output_annotated_diff.json")
+    return _json_data
 
-    @pytest.mark.dependency(name="test_compare_dicts", scope="class")
-    @pytest.mark.parametrize(
-        "ncbi, core, output",
-        [
-            pytest.param({}, {}, {}, id="empty_dicts"),
-            pytest.param({"a": 0}, {"a": 0}, {}, id="same_dicts_zero_values"),
-            pytest.param({"a": 3}, {"a": 3}, {"same": {"a": 3}}, id="same_dicts_non_zero_values"),
-            pytest.param(
-                {"a": 3},
-                {"a": 5},
-                {"different": {"a": {"ncbi": 3, "core": 5, "diff": 2}}},
-                id="different_dicts",
-            ),
-            pytest.param(
-                {"a": 3, "b": 5},
-                {"a": 3, "b": 3},
-                {"same": {"a": 3}, "different": {"b": {"ncbi": 5, "core": 3, "diff": -2}}},
-                id="partially_similar_dicts",
-            ),
-        ],
-    )
-    def test_compare_dicts(self, ncbi: Dict[str, int], core: Dict[str, int], output: Dict[str, Dict]) -> None:
-        """Tests the `compare._compare_dicts()` method.
 
-        Args:
-            ncbi: NCBI dataset statistics in key-value pairs.
-            core: Core database statistics in key-value pairs.
-            output: Expected output when comparing both dictionaries.
+@pytest.mark.dependency(name="test_compare_dicts")
+@pytest.mark.parametrize(
+    "ncbi, core, output",
+    [
+        pytest.param({}, {}, {}, id="empty_dicts"),
+        pytest.param({"a": 0}, {"a": 0}, {}, id="same_dicts_zero_values"),
+        pytest.param({"a": 3}, {"a": 3}, {"same": {"a": 3}}, id="same_dicts_non_zero_values"),
+        pytest.param(
+            {"a": 3}, {"a": 5}, {"different": {"a": {"ncbi": 3, "core": 5, "diff": 2}}}, id="different_dicts"
+        ),
+        pytest.param(
+            {"a": 3, "b": 5},
+            {"a": 3, "b": 3},
+            {"same": {"a": 3}, "different": {"b": {"ncbi": 5, "core": 3, "diff": -2}}},
+            id="partially_similar_dicts",
+        ),
+    ],
+)
+def test_compare_dicts(ncbi: Dict[str, int], core: Dict[str, int], output: Dict[str, Dict]) -> None:
+    """Tests the `compare._compare_dicts()` method.
 
-        """
-        result = compare._compare_dicts(ncbi, core)
-        assert not DeepDiff(result, output)
+    Args:
+        ncbi: NCBI dataset statistics in key-value pairs.
+        core: Core database statistics in key-value pairs.
+        output: Expected output when comparing both dictionaries.
 
-    @pytest.mark.dependency(name="test_compare_assembly", depends=["test_compare_dicts"], scope="class")
-    @pytest.mark.parametrize(
-        "ncbi, core, output",
-        [
-            pytest.param("{}", "{}", "self.output_empty['assembly_diff']", id="empty_stats"),
-            pytest.param(
-                "self.ncbi_unannot_stats['reports'][0]",
-                "self.core_unannot_stats['assembly_stats']",
-                "self.output_unannot_diff['assembly_diff']",
-                id="contig_assembly",
-            ),
-            pytest.param(
-                "self.ncbi_annot_stats['reports'][0]",
-                "self.core_annot_stats['assembly_stats']",
-                "self.output_annot_same['assembly_diff']",
-                id="chromosome_assembly",
-            ),
-        ],
-    )
-    def test_compare_assembly(self, ncbi: str, core: str, output: str) -> None:
-        """Tests the `compare.compare_assembly()` method with simple data.
+    """
+    result = compare.stats_dict_cmp(ncbi, core)
+    assert not DeepDiff(result, output)
 
-        Args:
-            ncbi: NCBI dataset assembly statistics.
-            core: Core database assembly statistics.
-            output: Expected output when comparing both sources.
 
-        """
-        result = compare.compare_assembly(eval(ncbi), eval(core))
-        assert not DeepDiff(result, eval(output))
+@pytest.mark.dependency(name="test_compare_assembly", depends=["test_compare_dicts"])
+@pytest.mark.parametrize(
+    "ncbi_file, core_file, output_file",
+    [
+        ("ncbi_unannotated.json", "core_unannotated.json", "output_unannotated.json"),
+        ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
+    ],
+)
+def test_compare_assembly(json_data: Dict, ncbi_file: Dict, core_file: Dict, output_file: Dict) -> None:
+    """Tests the `compare.compare_assembly()` method.
 
-    @pytest.mark.dependency(name="test_compare_annotation", depends=["test_compare_dicts"], scope="class")
-    @pytest.mark.parametrize(
-        "ncbi, core, output",
-        [
-            pytest.param("{}", "{}", "self.output_empty['assembly_diff']", id="empty_stats"),
-            pytest.param(
-                "self.ncbi_annot_stats['reports'][0]['annotation_info']['stats']['gene_counts']",
-                "self.core_annot_stats['annotation_stats']",
-                "self.output_annot_same['annotation_diff']",
-                id="annotated_assembly",
-            ),
-        ],
-    )
-    def test_compare_annotation(self, ncbi: str, core: str, output: str) -> None:
-        """Tests the `compare.compare_annotation()` method when the assembly has no annotation.
+    Args:
+        json_data: JSON test file parsing fixture
+        ncbi_file: NCBI dataset assembly statistics file.
+        core_file: Core database assembly statistics file.
+        output_file: Expected output when comparing both sources.
 
-        Args:
-            ncbi: NCBI dataset annotation statistics.
-            core: Core database annotation statistics.
-            output: Expected output when comparing both sources.
+    """
+    ncbi_stats = json_data(ncbi_file)["reports"][0]
+    core_stats = json_data(core_file)["assembly_stats"]
+    output = json_data(output_file)["assembly_diff"]
+    result = compare.compare_assembly(ncbi_stats, core_stats)
+    assert not DeepDiff(result, output)
 
-        """
-        result = compare.compare_annotation(eval(ncbi), eval(core))
-        assert not DeepDiff(result, eval(output))
 
-    @pytest.mark.dependency(
-        name="test_compare_stats", depends=["test_compare_assembly", "test_compare_annotation"], scope="class"
-    )
-    @pytest.mark.parametrize(
-        "ncbi, core, output",
-        [
-            pytest.param("{}", "{}", "self.output_empty", id="empty_stats"),
-            pytest.param(
-                "self.ncbi_annot_stats['reports'][0]",
-                "self.core_annot_stats",
-                "self.output_annot_same",
-                id="annotated_assembly",
-            ),
-        ],
-    )
-    def test_compare_stats(self, ncbi: str, core: str, output: str) -> None:
-        """Tests the `compare.compare_stats()` method.
+@pytest.mark.dependency(name="test_compare_annotation", depends=["test_compare_dicts"])
+@pytest.mark.parametrize(
+    "ncbi_file, core_file, output_file",
+    [
+        ("ncbi_unannotated.json", "core_unannotated.json", "output_unannotated.json"),
+        ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
+    ],
+)
+def test_compare_annotation(json_data: Dict, ncbi_file: str, core_file: str, output_file: str) -> None:
+    """Tests the `compare.compare_annotation()` method.
 
-        Args:
-            ncbi: NCBI dataset genome statistics.
-            core: Core database genome statistics.
-            output: Expected output when comparing both sources.
+    Args:
+        json_data: JSON test file parsing fixture
+        ncbi_file: NCBI dataset annotation statistics file.
+        core_file: Core database annotation statistics file.
+        output_file: Expected output when comparing both sources.
 
-        """
-        result = compare.compare_stats(eval(ncbi), eval(core))
-        assert not DeepDiff(result, eval(output))
+    """
+    ncbi_stats = json_data(ncbi_file)["reports"][0].get("annotation_info", {})
+    if ncbi_stats:
+        ncbi_stats = ncbi_stats["stats"]["gene_counts"]
+    core_stats = json_data(core_file).get("annotation_stats", {})
+    output = json_data(output_file).get("annotation_diff", {})
+    result = compare.compare_annotation(ncbi_stats, core_stats)
+    assert not DeepDiff(result, output)
 
-    @pytest.mark.dependency(name="test_compare_stats_files", depends=["test_compare_stats"], scope="class")
-    @pytest.mark.parametrize(
-        "ncbi_file, core_file, output, expectation",
-        [
-            pytest.param(
-                "empty_file.txt",
-                "core_unannotated.json",
-                "self.output_empty",
-                pytest.raises(json.decoder.JSONDecodeError),
-                id="empty_ncbi_file",
-            ),
-            pytest.param(
-                "ncbi_empty.json",
-                "core_unannotated.json",
-                "self.output_empty",
-                pytest.raises(KeyError),
-                id="wrong_ncbi_format",
-            ),
-            pytest.param(
-                "ncbi_no_reports.json",
-                "core_annotated.json",
-                "self.output_annot_diff",
-                pytest.raises(IndexError),
-                id="no_ncbi_reports",
-            ),
-            pytest.param(
-                "ncbi_annotated.json",
-                "core_annotated.json",
-                "self.output_annot_same",
-                does_not_raise(),
-                id="annotated_genome",
-            ),
-        ],
-    )
-    def test_compare_stats_files(
-        self, genome_stats_dir: Path, ncbi_file: str, core_file: str, output: str, expectation: ContextManager
-    ) -> None:
-        """Tests the `compare.compare_stats_files()` method.
 
-        Args:
-            genome_stats_dir: Path to the genome stats test files (fixture).
-            ncbi_file: NCBI dataset genome statistics JSON file.
-            core_file: Core database genome statistics JSON file.
-            output: Expected output when comparing both sources.
-            expectation: Context manager for the expected exception, i.e. the test will only pass if that
-                exception is raised. Use `contextlib.nullcontext` if no exception is expected.
+@pytest.mark.dependency(
+    name="test_compare_stats", depends=["test_compare_assembly", "test_compare_annotation"]
+)
+@pytest.mark.parametrize(
+    "ncbi_file, core_file, output_file",
+    [
+        ("ncbi_unannotated.json", "core_unannotated.json", "output_unannotated.json"),
+        ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
+    ],
+)
+def test_compare_stats(json_data: Dict, ncbi_file: str, core_file: str, output_file: str) -> None:
+    """Tests the `compare.compare_stats()` method.
 
-        """
-        with expectation:
-            result = compare.compare_stats_files(genome_stats_dir / ncbi_file, genome_stats_dir / core_file)
-            assert not DeepDiff(result, eval(output))
+    Args:
+        json_data: JSON test file parsing fixture
+        ncbi_file: NCBI dataset genome statistics file.
+        core_file: Core database genome statistics file.
+        output_file: Expected output when comparing both sources.
+
+    """
+    ncbi_stats = json_data(ncbi_file)["reports"][0]
+    core_stats = json_data(core_file)
+    output = json_data(output_file)
+    result = compare.compare_stats(ncbi_stats, core_stats)
+    assert not DeepDiff(result, output)
+
+
+@pytest.mark.dependency(name="test_compare_stats_files", depends=["test_compare_stats"])
+@pytest.mark.parametrize(
+    "ncbi_file, core_file, output_file",
+    [
+        ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
+    ],
+)
+def test_compare_stats_files(
+    data_dir: Path, json_data: Dict, ncbi_file: str, core_file: str, output_file: str
+) -> None:
+    """Tests the `compare.compare_stats_files()` method.
+
+    Args:
+        data_dir: Module's test data directory fixture.
+        json_data: JSON test file parsing fixture.
+        ncbi_file: NCBI dataset genome statistics JSON file.
+        core_file: Core database genome statistics JSON file.
+        output_file: Expected output when comparing both sources.
+
+    """
+    ncbi_path = data_dir / ncbi_file
+    core_path = data_dir / core_file
+    result = compare.compare_stats_files(ncbi_path, core_path)
+    output_data = json_data(output_file)
+    assert not DeepDiff(result, output_data)

@@ -14,7 +14,7 @@
 # limitations under the License.
 """Tool set to compare genome statistic between NCBI datasets and Ensembl's core databases."""
 
-__all__ = ["compare_assembly", "compare_annotation", "compare_stats", "compare_stats_files"]
+__all__ = ["stats_dict_cmp", "compare_assembly", "compare_annotation", "compare_stats", "compare_stats_files"]
 
 import json
 from os import PathLike
@@ -26,7 +26,7 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def _compare_dicts(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Dict]:
+def stats_dict_cmp(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Dict]:
     """Compares both dictionaries and returns the similar and different elements between both.
 
     The method assumes both dictionaries have the same set of keys. A key would be considered the
@@ -118,7 +118,7 @@ def compare_assembly(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Di
         del ncbi_counts["num_contigs"]
         del core_counts["num_contigs"]
 
-    return _compare_dicts(ncbi_counts, core_counts)
+    return stats_dict_cmp(ncbi_counts, core_counts)
 
 
 def compare_annotation(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Dict]:
@@ -165,7 +165,7 @@ def compare_annotation(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, 
         "other": num_others,
     }
 
-    return _compare_dicts(ncbi_counts, core_counts)
+    return stats_dict_cmp(ncbi_counts, core_counts)
 
 
 def compare_stats(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Dict]:
