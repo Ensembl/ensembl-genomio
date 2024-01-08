@@ -98,44 +98,44 @@ class TestFastaProcess:
         assert filecmp.cmp(fasta_output_path, expected_path)
 
 
-@pytest.mark.parametrize(
-    "input_gbff, excluded_seq_region, output, expectation",
-    [
-        (
-            "input.gbff.gz",
-            set(["LR605957.1"]),
-            set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
-            does_not_raise(),
-        ),
-        (
-            "input.mod.gbff.gz",
-            set(["LR605957.1"]),
-            set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
-            pytest.raises(FastaProcessing.FastaParserError),
-        ),
-    ],
-)
-def test_exclude_seq_regions(
-    self,
-    input_gbff: str,
-    excluded_seq_regions: Set[str],
-    output: Set[str],
-    expectation: ContextManager,
-) -> None:
-    """Tests the `process.get_peptides_to_exclude()` function.
-
-    Args:
-        input_gbff: Name of the input GBFF example input, in the test folder.
-        excluded_seq_regions: Set of sequence regions to be excluded.
-        output: Set of proteins expected to be excluded given excluded_seq_region
-        expectation: Context manager for the expected exception, i.e. the test will only pass if that
-            exception is raised. Use `~contextlib.nullcontext` if no exception is expected.
-
-    """
-    if input_gbff is not None:
-        gbff_input_path = self.data_dir / input_gbff
-    else:
-        gbff_input_path = input_gbff
-    with expectation:
-        excluded_proteins = FastaProcessing.get_peptides_to_exclude(gbff_input_path, excluded_seq_regions)
-        assert set(excluded_proteins) == set(output)
+    @pytest.mark.parametrize(
+        "input_gbff, excluded_seq_region, output, expectation",
+        [
+            (
+                "input.gbff.gz",
+                set(["LR605957.1"]),
+                set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
+                does_not_raise(),
+            ),
+            (
+                "input.mod.gbff.gz",
+                set(["LR605957.1"]),
+                set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
+                pytest.raises(FastaProcessing.FastaParserError),
+            ),
+        ],
+    )
+    def test_exclude_seq_regions(
+        self,
+        input_gbff: str,
+        excluded_seq_regions: Set[str],
+        output: Set[str],
+        expectation: ContextManager,
+    ) -> None:
+        """Tests the `process.get_peptides_to_exclude()` function.
+    
+        Args:
+            input_gbff: Name of the input GBFF example input, in the test folder.
+            excluded_seq_regions: Set of sequence regions to be excluded.
+            output: Set of proteins expected to be excluded given excluded_seq_region
+            expectation: Context manager for the expected exception, i.e. the test will only pass if that
+                exception is raised. Use `~contextlib.nullcontext` if no exception is expected.
+    
+        """
+        if input_gbff is not None:
+            gbff_input_path = self.data_dir / input_gbff
+        else:
+            gbff_input_path = input_gbff
+        with expectation:
+            excluded_proteins = FastaProcessing.get_peptides_to_exclude(gbff_input_path, excluded_seq_regions)
+            assert set(excluded_proteins) == set(output)
