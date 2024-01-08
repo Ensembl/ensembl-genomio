@@ -14,6 +14,9 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.fasta.process` module.
 
+Typical usage example::
+    $ pytest test_prep_data.py
+
 """
 
 from contextlib import nullcontext as does_not_raise
