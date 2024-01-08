@@ -32,7 +32,14 @@ class GFFGeneMerger:
 
     def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> List[str]:
         """
-        Merge genes in a gff that are split in multiple lines
+        Merge genes in a gff that are split in multiple lines.
+
+        Args:
+            in_gff_path: Input GFF3 that may have split merge.
+            out_gff_path: Output GFF3 with those genes merged.
+
+        Returns:
+            List of all merged genes, each represented as a string of the GFF3 lines of all their parts.
         """
         to_merge = []
         merged: List[str] = []
