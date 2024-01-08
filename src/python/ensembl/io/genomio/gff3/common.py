@@ -27,29 +27,23 @@ import ensembl.io.genomio.data.gff3
 
 
 class GFFMeta:
-    """Heritable class to share the list of feature types supported or ignored by the parser"""
+    """Class to share the list of feature types supported or ignored by the parser."""
 
-    _biotypes: Dict[str, Dict[str, str]] = {}
+    _biotypes: Dict[str, Dict[str, List[str]]] = {}
 
-    @classmethod
-    def _load_biotypes(cls) -> None:
+    def __init__(self) -> None:
         biotype_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
-        logging.debug(f"Import data from {biotype_json}")
-        cls._biotypes = get_json(biotype_json)
+        self._biotypes = get_json(biotype_json)
+        logging.debug(f"Imported data from {biotype_json}")
 
-    @classmethod
-    def get_biotypes(cls, gene_type: str, supported: bool = True) -> List[str]:
+    def get_biotypes(self, gene_type: str, supported: bool = True) -> List[str]:
         """Returns a list of biotypes supported or ignored.
 
         Args:
             gene_type: Gene type among "gene", "non_gene" or "transcript".
-            supported: The biotypes are supported (otherwise it's the list of biotypes that are ignored).
+            supported: Fetch supported biotypes (otherwise returns the list of ignored biotypes).
+
         """
-        if not cls._biotypes:
-            cls._load_biotypes()
-
-        biotypes: Dict[str, Any] = cls._biotypes
-
         if supported:
-            return biotypes[gene_type]["supported"]
-        return biotypes[gene_type]["ignored"]
+            return self._biotypes[gene_type]["supported"]
+        return self._biotypes[gene_type]["ignored"]

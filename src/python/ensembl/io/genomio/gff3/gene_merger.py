@@ -30,6 +30,9 @@ from .common import GFFMeta
 class GFFGeneMerger:
     """Specialized class to merge split genes in a GFF3 file, prior to further parsing."""
 
+    def __init__(self) -> None:
+        self._biotypes = GFFMeta()
+
     def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> List[str]:
         """
         Merge genes in a gff that are split in multiple lines.
@@ -60,7 +63,7 @@ class GFFGeneMerger:
                         attrs[key] = value
 
                     # Check this is a gene to merge; cache it then
-                    if fields[2] in GFFMeta.get_biotypes("gene") and (
+                    if fields[2] in self._biotypes.get_biotypes("gene") and (
                         "part" in attrs or "is_ordered" in attrs
                     ):
                         to_merge.append(fields)
