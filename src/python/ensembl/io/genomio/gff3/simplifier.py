@@ -73,6 +73,7 @@ class GFFSimplifier:
     min_id_length = 8
     stable_id_prefix = None
     current_stable_id_number: int = 0
+    gene_id_cache = set()
 
     def __init__(self, genome_path: Optional[PathLike] = None, make_missing_stable_ids: bool = False):
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
@@ -640,7 +641,16 @@ class GFFSimplifier:
                 for xref in qual["Dbxref"]:
                     (db, value) = xref.split(":")
                     if db == "GeneID":
-                        new_gene_id = f"{db}_{value}"
+                        new_gene_id_base = f"{db}_{value}"
+                        new_gene_id = new_gene_id_base
+
+                        if new_gene_id in self.gene_id_cache:
+                            gene_id_num = 2
+                            while(new_gene_id in self.gene_id_cache):
+                                new_gene_id = f"{new_gene_id_base}_{gene_id_num}"
+                                if gene_id_num >= 10:
+                                    raise ValueError(f"Generating a lot of similar gene ids: {new_gene_id}?")
+                        self.gene_id_cache.add(new_gene_id)
                         logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
                         return new_gene_id
 
