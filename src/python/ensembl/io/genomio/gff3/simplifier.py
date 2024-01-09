@@ -123,7 +123,6 @@ class GFFSimplifier:
                     # Normalize the gene structure
                     if feat.type in allowed_gene_types:
                         feat = self.normalize_gene(feat, fail_types)
-                        self.store_gene_annotations(feat)
                     elif feat.type in allowed_non_gene_types:
                         pass
                     else:
@@ -133,7 +132,8 @@ class GFFSimplifier:
                             del feat
                             continue
 
-                    # Remove functional bits and store
+                    # Store the annotation, clean up the structure and record it
+                    self.store_gene_annotations(feat)
                     clean_gene = self.clean_gene(feat)
                     new_record.features.append(clean_gene)
                 self.records.append(new_record)
