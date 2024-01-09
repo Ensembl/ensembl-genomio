@@ -123,7 +123,6 @@ class GFFSimplifier:
                     # Normalize the gene structure
                     if feat.type in allowed_gene_types:
                         feat = self.normalize_gene(feat, fail_types)
-                        self.store_gene_annotations(feat)
                     elif feat.type in allowed_non_gene_types:
                         pass
                     else:
