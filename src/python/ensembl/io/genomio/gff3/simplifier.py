@@ -363,8 +363,12 @@ class GFFSimplifier:
         """Returns a transcript with normalized sub-features."""
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
         exons_to_delete = []
+        exon_number = 1
         for tcount, feat in enumerate(transcript.sub_features):
             if feat.type == "exon":
+                # New exon ID
+                feat.id = f"{transcript.id}-E{exon_number}"
+                exon_number += 1
                 # Replace qualifiers
                 old_exon_qualifiers = feat.qualifiers
                 feat.qualifiers = {"Parent": transcript.id}
