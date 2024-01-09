@@ -29,8 +29,12 @@ process PROCESS_GFF3 {
         out_func = "functional_annotation.json"
         out_gff = "gene_models.gff3"
         '''
-        gff3_process --genome_data !{genome} --in_gff_path !{gff3} --out_gff_path !{out_gff} \
-            --out_func_path !{out_func} -v \
+        gff3_process --genome_data !{genome} \
+            --in_gff_path !{gff3} \
+            --out_gff_path !{out_gff} \
+            --out_func_path !{out_func} \
+            --make_missing_stable_ids \
+            -v \
             --log_file gff3_process.log && \
         schemas_json_validate --json_file !{out_func} --json_schema functional_annotation
         '''
