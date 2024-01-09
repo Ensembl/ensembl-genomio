@@ -46,7 +46,7 @@ classifiers = [
 ]
 dependencies = [
     "bcbio-gff == 0.7.0",
-    "biopython == 1.81",
+    "biopython < 1.82",
     "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
     "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v1.2.2
     "jsonschema >= 4.6.0",
