@@ -142,6 +142,8 @@ class GFFSimplifier:
                 raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
 
     def clean_gene(self, gene: SeqFeature) -> SeqFeature:
+        """Return the same gene without qualifiers unrelated to the gene structure."""
+
         old_gene_qualifiers = gene.qualifiers
         gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
         for transcript in gene.sub_features:
@@ -167,6 +169,7 @@ class GFFSimplifier:
         return gene
 
     def store_gene_annotations(self, gene: SeqFeature) -> None:
+        """Record the functional_annotations of the gene and its children features."""
         self.annotations.add_feature(gene, "gene")
 
         cds_found = False
@@ -179,8 +182,6 @@ class GFFSimplifier:
                 if not cds_found:
                     cds_found = True
                     self.annotations.add_feature(feat, "translation", transcript.id)
-
-        return
 
     def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
@@ -328,7 +329,7 @@ class GFFSimplifier:
 
             # New transcript ID
             transcript_number = count + 1
-            transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
+            transcript.id = self._normalize_transcript_id(gene.id, transcript_number)
 
             transcript = self.format_gene_segments(transcript)
 
@@ -352,7 +353,7 @@ class GFFSimplifier:
         for tcount, feat in enumerate(transcript.sub_features):
             if feat.type == "exon":
                 # New exon ID
-                feat.id = self.normalize_exon_id(feat.id)
+                feat.id = self._normalize_exon_id(feat.id)
                 if feat.id in ("", gene.id, transcript.id):
                     feat.id = f"{transcript.id}_exon{exon_number}"
                     exon_number += 1
@@ -363,7 +364,7 @@ class GFFSimplifier:
                     feat.qualifiers["source"] = old_exon_qualifiers["source"]
             elif feat.type == "CDS":
                 # New CDS ID
-                feat.id = self.normalize_cds_id(feat.id)
+                feat.id = self._normalize_cds_id(feat.id)
                 if feat.id in ("", gene.id, transcript.id):
                     feat.id = f"{transcript.id}_cds"
 
@@ -709,13 +710,13 @@ class GFFSimplifier:
 
         return True
 
-    def normalize_transcript_id(self, gene_id: str, number: int) -> str:
+    def _normalize_transcript_id(self, gene_id: str, number: int) -> str:
         """Use a gene ID and a number to make a formatted transcript ID."""
 
         transcript_id = f"{gene_id}_t{number}"
         return transcript_id
 
-    def normalize_cds_id(self, cds_id: str) -> str:
+    def _normalize_cds_id(self, cds_id: str) -> str:
         """
         Check the CDS ID is proper:
         - Remove any unnecessary prefixes around the CDS ID
@@ -732,7 +733,7 @@ class GFFSimplifier:
 
         return cds_id
 
-    def normalize_exon_id(self, exon_id: str) -> str:
+    def _normalize_exon_id(self, exon_id: str) -> str:
         """
         Check the exon ID is proper:
         - Remove any unnecessary prefixes around the exon ID
@@ -758,7 +759,7 @@ class GFFSimplifier:
         for transcript in gene.sub_features:
             for feat in transcript.sub_features:
                 if feat.type == "CDS":
-                    feat.id = self.normalize_cds_id(feat.id)
+                    feat.id = self._normalize_cds_id(feat.id)
                     if feat.id in ("", gene.id):
                         feat.id = f"{transcript.id}_cds"
                         feat.qualifiers["ID"] = feat.id
