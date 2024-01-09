@@ -348,8 +348,14 @@ class GFFSimplifier:
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
         cds_found = False
         exons_to_delete = []
+        exon_number = 1
         for tcount, feat in enumerate(transcript.sub_features):
             if feat.type == "exon":
+                # New exon ID
+                feat.id = self.normalize_exon_id(feat.id)
+                if feat.id in ("", gene.id, transcript.id):
+                    feat.id = f"{transcript.id}_exon{exon_number}"
+                    exon_number += 1
                 # Replace qualifiers
                 old_exon_qualifiers = feat.qualifiers
                 feat.qualifiers = {"Parent": transcript.id}
@@ -725,6 +731,23 @@ class GFFSimplifier:
             cds_id = ""
 
         return cds_id
+
+    def normalize_exon_id(self, exon_id: str) -> str:
+        """
+        Check the exon ID is proper:
+        - Remove any unnecessary prefixes around the exon ID
+        - Delete the ID if it is not proper
+        """
+
+        prefixes = ["exon-", "exon:"]
+        exon_id = self.remove_prefixes(exon_id, prefixes)
+
+        # Special case: if the ID doesn't look like one, remove it
+        # It needs to be regenerated
+        if not self.valid_id(exon_id):
+            exon_id = ""
+
+        return exon_id
 
     def normalize_pseudogene_cds(self, gene: SeqFeature) -> None:
         """Ensure CDS from a pseudogene have a proper ID
