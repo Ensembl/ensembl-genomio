@@ -117,10 +117,12 @@ class GFFSimplifier:
                         feat = self.cds_gene(feat)
                     elif feat.type in ("mobile_genetic_element", "transposable_element"):
                         feat = self.format_mobile_element(feat)
+                        self.annotations.add_feature(feat, "transposable_element")
 
                     # Normalize the gene structure
                     if feat.type in allowed_gene_types:
                         feat = self.normalize_gene(feat, fail_types)
+                        self.store_gene_annotations(feat)
                     elif feat.type in allowed_non_gene_types:
                         pass
                     else:
@@ -130,12 +132,55 @@ class GFFSimplifier:
                             del feat
                             continue
 
-                    new_record.features.append(feat)
+                    # Remove functional bits and store
+                    clean_gene = self.clean_gene(feat)
+                    new_record.features.append(clean_gene)
                 self.records.append(new_record)
 
             if fail_types and not skip_unrecognized:
                 fail_errors = "\n   ".join(fail_types.keys())
                 raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
+
+    def clean_gene(self, gene: SeqFeature) -> SeqFeature:
+        old_gene_qualifiers = gene.qualifiers
+        gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
+        for transcript in gene.sub_features:
+            # Replace qualifiers
+            old_transcript_qualifiers = transcript.qualifiers
+            transcript.qualifiers = {
+                "ID": transcript.id,
+                "Parent": gene.id,
+            }
+            if "source" in old_transcript_qualifiers:
+                transcript.qualifiers["source"] = old_transcript_qualifiers["source"]
+
+            for feat in transcript.sub_features:
+                old_qualifiers = feat.qualifiers
+                feat.qualifiers = {
+                    "ID": feat.id,
+                    "Parent": transcript.id,
+                    "source": old_qualifiers["source"],
+                }
+                if feat.type == "CDS":
+                    feat.qualifiers["phase"] = old_qualifiers["phase"]
+
+        return gene
+
+    def store_gene_annotations(self, gene: SeqFeature) -> None:
+        self.annotations.add_feature(gene, "gene")
+
+        cds_found = False
+        for transcript in gene.sub_features:
+            self.annotations.add_feature(transcript, "transcript", gene.id)
+            for feat in transcript.sub_features:
+                if feat.type != "CDS":
+                    continue
+                # Store CDS functional annotation only once
+                if not cds_found:
+                    cds_found = True
+                    self.annotations.add_feature(feat, "translation", transcript.id)
+
+        return
 
     def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
@@ -173,7 +218,6 @@ class GFFSimplifier:
 
         # Generate ID if needed and add it to the functional annotation
         feat.id = self.normalize_gene_id(feat)
-        self.annotations.add_feature(feat, "transposable_element")
         feat.qualifiers = {"ID": feat.id}
 
         return feat
@@ -259,13 +303,6 @@ class GFFSimplifier:
         if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
             self.normalize_pseudogene_cds(gene)
 
-        # Finally, store gene functional annotation
-        self.annotations.add_feature(gene, "gene")
-
-        # replace qualifiers
-        old_gene_qualifiers = gene.qualifiers
-        gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
-
         return gene
 
     def _normalize_transcripts(self, gene: SeqFeature, fail_types) -> SeqFeature:
@@ -294,18 +331,6 @@ class GFFSimplifier:
             transcript.id = self.normalize_transcript_id(gene.id, transcript_number)
 
             transcript = self.format_gene_segments(transcript)
-
-            # Store transcript functional annotation
-            self.annotations.add_feature(transcript, "transcript", gene.id)
-
-            # Replace qualifiers
-            old_transcript_qualifiers = transcript.qualifiers
-            transcript.qualifiers = {
-                "ID": transcript.id,
-                "Parent": gene.id,
-            }
-            if "source" in old_transcript_qualifiers:
-                transcript.qualifiers["source"] = old_transcript_qualifiers["source"]
 
             # EXONS AND CDS
             transcript = self._normalize_transcript_subfeatures(gene, transcript, fail_types)
@@ -336,18 +361,6 @@ class GFFSimplifier:
                 if feat.id in ("", gene.id, transcript.id):
                     feat.id = f"{transcript.id}_cds"
 
-                # Store CDS functional annotation (only once)
-                if not cds_found:
-                    cds_found = True
-                    self.annotations.add_feature(feat, "translation", transcript.id)
-
-                # Replace qualifiers
-                feat.qualifiers = {
-                    "ID": feat.id,
-                    "Parent": transcript.id,
-                    "phase": feat.qualifiers["phase"],
-                    "source": feat.qualifiers["source"],
-                }
             else:
                 if feat.type in ignored_transcript_types:
                     exons_to_delete.append(tcount)
