@@ -658,7 +658,7 @@ class GFFSimplifier:
 
         The id is made up of a prefix and a number, which is auto incremented.
         Define the prefix with the param "stable_id_prefix",
-        or use the genome organism_abbrev and prepend "TMP_" to it.
+        or automatically use the genome organism_abbrev (uppercase) and prepend "TMP_" to it.
 
         """
         if self.stable_id_prefix:
@@ -669,7 +669,7 @@ class GFFSimplifier:
             if org is None:
                 prefix = "TMP_PREFIX_"
             else:
-                prefix = "TMP_" + org + "_"
+                prefix = "TMP_" + org.upper() + "_"
             self.stable_id_prefix = prefix
 
         number = self.current_stable_id_number + 1
