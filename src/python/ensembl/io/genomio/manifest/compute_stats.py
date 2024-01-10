@@ -276,18 +276,25 @@ class manifest_stats:
                     # Check if the gene contains proteins (CDSs),
                     # and keep a count of all hierarchies (e.g. gene-mRNA-CDS)
                     is_protein = False
+                    subtypes = set()
                     for feat2 in feat1.sub_features:
+                        subtypes.add(feat2.type)
                         if feat2.type == "mRNA":
                             types2 = {f.type for f in feat2.sub_features}
                             if "CDS" in types2:
                                 is_protein = True
-                        manifest_stats.increment_biotype(biotypes, feat2.id, f"{feat1.type}-{feat2.type}")
+                        manifest_stats.increment_biotype(biotypes, feat2.id, f"SUB_{feat1.type}-{feat2.type}")
                         for feat3 in feat2.sub_features:
                             if feat3.type == "exon":
                                 continue
                             manifest_stats.increment_biotype(
-                                biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}"
+                                biotypes, feat3.id, f"SUB_{feat1.type}-{feat2.type}-{feat3.type}"
                             )
+                    
+                    subtype = "+".join(sorted(list(subtypes)))
+                    manifest_stats.increment_biotype(
+                        biotypes, feat1.id, f"{feat1.type}-{subtype}"
+                    )
 
                     # Main categories counts
                     if feat1.type == "pseudogene":
