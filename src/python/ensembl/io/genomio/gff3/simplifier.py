@@ -32,8 +32,10 @@ from typing import Dict, List, Optional
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
+from importlib_resources import files
 
-from .common import GFFMeta
+import ensembl.io.genomio.data.gff3
+from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 
 
@@ -72,6 +74,8 @@ class GFFSimplifier:
     current_stable_id_number: int = 0
 
     def __init__(self, genome_path: Optional[PathLike] = None, make_missing_stable_ids: bool = False):
+        biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
+        self._biotypes = get_json(biotypes_json)
         self.records = Records()
         self.annotations = FunctionalAnnotations()
         self.genome = {}
@@ -86,10 +90,10 @@ class GFFSimplifier:
         and also write a functional_annotation file
         """
 
-        allowed_gene_types = GFFMeta.get_biotypes("gene")
-        ignored_gene_types = GFFMeta.get_biotypes("gene", supported=False)
-        transcript_types = GFFMeta.get_biotypes("transcript")
-        allowed_non_gene_types = GFFMeta.get_biotypes("non_gene")
+        allowed_gene_types = self._biotypes["gene"]["supported"]
+        ignored_gene_types = self._biotypes["gene"]["ignored"]
+        transcript_types = self._biotypes["transcript"]["supported"]
+        allowed_non_gene_types = self._biotypes["non_gene"]["supported"]
         skip_unrecognized = self.skip_unrecognized
         to_exclude = self.exclude_seq_regions
 
@@ -267,8 +271,8 @@ class GFFSimplifier:
     def _normalize_transcripts(self, gene: SeqFeature, fail_types) -> SeqFeature:
         """Returns a normalized transcript."""
 
-        allowed_transcript_types = GFFMeta.get_biotypes("transcript")
-        ignored_transcript_types = GFFMeta.get_biotypes("transcript", supported=False)
+        allowed_transcript_types = self._biotypes["transcript"]["supported"]
+        ignored_transcript_types = self._biotypes["transcript"]["ignored"]
         skip_unrecognized = self.skip_unrecognized
 
         transcripts_to_delete = []
@@ -316,7 +320,7 @@ class GFFSimplifier:
         self, gene: SeqFeature, transcript: SeqFeature, fail_types
     ) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
-        ignored_transcript_types = GFFMeta.get_biotypes("transcript", supported=False)
+        ignored_transcript_types = self._biotypes["transcript"]["ignored"]
         cds_found = False
         exons_to_delete = []
         for tcount, feat in enumerate(transcript.sub_features):
