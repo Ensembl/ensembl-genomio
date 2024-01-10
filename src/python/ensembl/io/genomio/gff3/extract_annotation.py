@@ -72,13 +72,6 @@ class FunctionalAnnotations:
             "transcript": {},
         }
 
-    def _get_parents(self, parent_type: str) -> Dict[str, str]:
-        """Get all parent for a given type."""
-        try:
-            return self.parents[parent_type]
-        except KeyError as err:
-            raise KeyError(f"Unsupported parent type {parent_type}") from err
-
     def get_features(self, feat_type: str) -> Dict[str, Annotation]:
         """Get all feature annotations for the requested type."""
         try:
@@ -95,7 +88,11 @@ class FunctionalAnnotations:
 
     def get_parent(self, parent_type: str, child_id: str) -> str:
         """Returns the parent ID of a given child for a given parent biotype."""
-        parents = self._get_parents(parent_type)
+        try:
+            parents = self.parents[parent_type]
+        except KeyError as err:
+            raise KeyError(f"Unsupported parent type {parent_type}") from err
+
         parent_id = parents.get(child_id)
         if parent_id is None:
             raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
