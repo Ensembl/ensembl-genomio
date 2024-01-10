@@ -358,9 +358,11 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
         cmd => 'mkdir -p #log_path#; '
-             . 'manifest_check_integrity --brc_mode --ignore_final_stops --manifest_file #manifest# '
+             . 'manifest_check_integrity --manifest_file #manifest# #brc4_mode_param# #ignore_final_stops_param#'
              . '   > #log_path#/check.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_integrity',
+        brc4_mode_param => '#expr( #brc4_mode# ? "--brc_mode" : "")expr#',
+        ignore_final_stops_param => '#expr( #ignore_final_stops# ? "--ignore_final_stops" : "")expr#',
       },
       -analysis_capacity   => 10,
       -rc_name         => $self->o('manifest_integrity_rc_name'),
