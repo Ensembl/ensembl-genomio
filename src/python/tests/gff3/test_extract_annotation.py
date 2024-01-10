@@ -90,8 +90,8 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
     """Tests the `FunctionaAnnotation.add_feature()` method with only one feature.
 
     Args:
-        seq_feat_type: Type for the SeqFeature to add.
-        feat_type: Type category for that SeqFeature.
+        seq_feat_type: Type for the sequence feature to add.
+        feat_type: Category type for that sequence feature.
 
     """
     annot = FunctionalAnnotations()
@@ -116,9 +116,9 @@ def test_add_parent(parent_type, parent_id, child_id, expected):
     Add a parent feature, and then add a parent link.
 
     Args:
-        parent_type: Type for the SeqFeature parent.
-        parent_id: ID for the SeqFeature parent.
-        child_id: ID for the SeqFeature child.
+        parent_type: Type for the parent sequence feature.
+        parent_id: ID for the parent sequence feature.
+        child_id: ID for the child sequence feature.
         expected: What exception is expected to be raised, if any.
 
     """
@@ -143,10 +143,10 @@ def test_get_parent(in_parent_type, in_parent_id, in_child_id, out_parent_type, 
     """Tests the `FunctionaAnnotation.get_parent()` method.
 
     Args:
-        in_parent_type: Type for the SeqFeature parent.
-        in_parent_id: ID for the SeqFeature parent.
-        in_child_id: ID for the SeqFeature child.
-        out_parent_type: Type for the parent stored in the FunctionalAnnotation.
+        in_parent_type: Type for the parent sequence feature.
+        in_parent_id: ID for the parent sequence feature.
+        in_child_id: ID for the child sequence feature.
+        out_parent_type: Type for the parent stored in the functional annotation.
         out_child_id: ID for the child stored.
         expected: What exception is expected to be raised, if any.
 
@@ -181,8 +181,8 @@ def test_add_feature_fail(
     Test the addition of a child feature after a parent has already been added.
 
     Args:
-        child_type: Type for the SeqFeature child.
-        child_id: ID for the SeqFeature child.
+        child_type: Type for the child sequence feature.
+        child_id: ID for the child sequence feature.
         out_parent_id: ID for the parent.
         expected: What exception is expected to be raised, if any.
 

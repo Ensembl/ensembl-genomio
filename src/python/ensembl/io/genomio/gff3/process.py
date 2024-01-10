@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Simplify and fix a GFF file and returns both a cleaned up GFF file and a functional annotation json file.
+"""Simplify and fix a GFF3 file and returns both a cleaned up GFF3 file and a functional annotation JSON file.
 """
 
 import logging

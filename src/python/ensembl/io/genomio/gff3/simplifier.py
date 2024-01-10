@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Standardize the gene model representation of a GFF3 file, and extract the functional annotation
-in a separate file."""
+in a separate file.
+"""
 
 __all__ = [
     "Records",
@@ -85,9 +86,8 @@ class GFFSimplifier:
         self.make_missing_stable_ids: bool = make_missing_stable_ids
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
-        """
-        Load a GFF3 from INSDC and rewrite it in a simpler version,
-        and also write a functional_annotation file
+        """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a
+        functional annotation file.
         """
 
         allowed_gene_types = self._biotypes["gene"]["supported"]
