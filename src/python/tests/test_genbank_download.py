@@ -17,8 +17,8 @@ from ensembl.io.genomio.genbank.download import download_genbank
 class TestGenbank_download:
     """Tests for the 'download_genbank' class"""   
         
-        data_dir: Path
-        tmp_dir: Path
+    data_dir: Path
+    tmp_dir: Path
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, tmp_dir: Path, files_dir: Path):
