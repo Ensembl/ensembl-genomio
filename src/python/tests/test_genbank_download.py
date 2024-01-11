@@ -1,4 +1,4 @@
-"""Unit testing of `ensembl.io.genomio.genbank.download` module.
+"""Unit testing of 'ensembl.io.genomio.genbank.download' module.
 
 The unit testing is divided into one test class per submodule/class found in this module, and one test method
 per public function/class method.
@@ -27,7 +27,7 @@ class TestGenbank_download:
         type(self).data_dir = files_dir /"genbank_download"
 
     def test_successful_download(self):
-        """Tests the `download_genbank()` method.
+        """Tests the 'download_genbank()' method.
     
         Args:
         accession: Genbank accession to be downloaded
