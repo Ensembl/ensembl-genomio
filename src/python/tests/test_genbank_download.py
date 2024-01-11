@@ -28,28 +28,22 @@ import requests
 
 from ensembl.io.genomio.genbank.download import download_genbank
 
-class TestGenbank_download:
-    """Tests for the 'download_genbank' class"""   
-        
-    data_dir: Path
-    tmp_dir: Path
+@pytest.mark.parametrize(
+    "accession",
+    [
+        ("CM023531.1"),
+    ],
+)
+def test_successful_download(tmp_dir: Path, data_dir: Path, accession: str):
+    """Tests the 'download_genbank()' method.
 
-    @pytest.fixture(scope="class", autouse=True)
-    def setup(self, tmp_dir: Path, files_dir: Path):
-        """Loads necessary fixtures and values as class attributes."""
-        type(self).tmp_dir = tmp_dir
-        type(self).data_dir = files_dir /"genbank_download"
+    Args:
+        tmp_dir: Session-scoped temporary directory fixture.
+        data_dir: Module's test data directory fixture.
+        accession: Genbank accession to be downloaded.
 
-    def test_successful_download(self):
-        """Tests the 'download_genbank()' method.
-    
-        Args:
-        accession: Genbank accession to be downloaded
-        output: path to the expected output file 
-        """
-
-        accession = "CM023531.1"
-        output_file = self.tmp_dir/f"{accession}.gb"
-        download_genbank(accession, output_file)
-        expected_output = self.data_dir/f"{accession}.gb"
-        assert filecmp.cmp(output_file, expected_output)
+    """
+    output_file = self.tmp_dir / f"{accession}.gb"
+    download_genbank(accession, output_file)
+    expected_output = self.data_dir / f"{accession}.gb"
+    assert filecmp.cmp(output_file, expected_output)
