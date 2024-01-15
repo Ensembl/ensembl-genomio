@@ -459,22 +459,21 @@ class IntegrityTool:
             # Gene ids, translated CDS ids and translated CDSs
             # including pseudogenes are compared to the gff
             if ann_genes:
-                self.add_errors(self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff"))
+                self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff")
                 tr_errors = self.check_ids(
                     ann_translations, gff_translations, "Translation ids metadata vs gff"
                 )
-                if len(tr_errors) > 0:
+                if tr_errors:
                     tr_errors = self.check_ids(
                         ann_translations,
                         gff_all_translations,
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
-                self.add_errors(*tr_errors)
-                self.add_errors(self.check_ids(
+                self.check_ids(
                     ann_transposable_elements,
                     gff_transposable_elements,
                     "TE ids metadata vs gff",
-                ))
+                )
 
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
@@ -515,7 +514,7 @@ class IntegrityTool:
                     if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
                         self.add_errors(f"Genome assembly accession is wrong: '{genome_acc}'")
 
-    def check_ids(self, list1, list2, name):
+    def check_ids(self, list1, list2, name) -> int:
         """Compare the ids in list1 and list2.
 
         Args:
@@ -540,17 +539,18 @@ class IntegrityTool:
             if item_id not in common:
                 only2.append(item_id)
 
-        errors = []
+        n_errors = 0
         if common:
             logging.info(f"{len(common)} common elements in {name}")
         if only1:
             self.add_errors(f"{len(only1)} only in first list in {name} (first: {only1[0]})")
             logging.debug(f"{len(only1)} only in first list in {name}")
+            n_errors += 1
         if only2:
             self.add_errors(f"{len(only2)} only in second list in {name} (first: {only2[0]})")
             logging.debug(f"{len(only1)} only in second list in {name}")
-
-        return errors
+            n_errors += 1
+        return n_errors
 
     def check_lengths(self, list1, list2, name, allowed_len_diff=None, special_diff=False):
         """Check the difference in ids and length between list1 and list2.
