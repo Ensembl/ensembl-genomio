@@ -394,7 +394,7 @@ class IntegrityTool:
     def add_errors(self, *args: str) -> None:
         """Store the given errors in the list."""
         for error in args:
-            self.errors += error
+            self.errors.append(error)
 
     def check_integrity(self):
         """Load files listed in the manifest.json and check the integrity.
@@ -424,12 +424,12 @@ class IntegrityTool:
         self._check_genome(genome)
 
         # Check gff3
-        if manifest.has_lengths("gff_genes"):
-            gff_genes = manifest.get_lengths("gff_genes")
-            gff_seq_regions = manifest.get_lengths("gff_seq_regions")
-            gff_translations = manifest.get_lengths("gff_translations")
-            gff_all_translations = manifest.get_lengths("gff_all_translations")
-            gff_transposable_elements = manifest.get_lengths("gff_transposable_elements")
+        if manifest.has_lengths("gff3_genes"):
+            gff_genes = manifest.get_lengths("gff3_genes")
+            gff_seq_regions = manifest.get_lengths("gff3_seq_regions")
+            gff_translations = manifest.get_lengths("gff3_translations")
+            gff_all_translations = manifest.get_lengths("gff3_all_translations")
+            gff_transposable_elements = manifest.get_lengths("gff3_transposable_elements")
 
             ann_genes = manifest.get_lengths("ann_genes")
             ann_translations = manifest.get_lengths("ann_translations")
@@ -459,7 +459,7 @@ class IntegrityTool:
             # Gene ids, translated CDS ids and translated CDSs
             # including pseudogenes are compared to the gff
             if ann_genes:
-                errors += self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff")
+                self.add_errors(self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff"))
                 tr_errors = self.check_ids(
                     ann_translations, gff_translations, "Translation ids metadata vs gff"
                 )
@@ -470,11 +470,11 @@ class IntegrityTool:
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
                 self.add_errors(*tr_errors)
-                errors += self.check_ids(
+                self.add_errors(self.check_ids(
                     ann_transposable_elements,
                     gff_transposable_elements,
                     "TE ids metadata vs gff",
-                )
+                ))
 
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
@@ -491,8 +491,8 @@ class IntegrityTool:
         if agp_seqr and seq_lengths:
             self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
 
-        if errors:
-            errors_str = "\n".join(errors)
+        if self.errors:
+            errors_str = "\n".join(self.errors)
             raise InvalidIntegrityError(f"Integrity test failed:\n{errors_str}")
 
     def set_brc_mode(self, brc_mode: bool) -> None:
@@ -544,10 +544,10 @@ class IntegrityTool:
         if common:
             logging.info(f"{len(common)} common elements in {name}")
         if only1:
-            errors.append(f"{len(only1)} only in first list in {name} (first: {only1[0]})")
+            self.add_errors(f"{len(only1)} only in first list in {name} (first: {only1[0]})")
             logging.debug(f"{len(only1)} only in first list in {name}")
         if only2:
-            errors.append(f"{len(only2)} only in second list in {name} (first: {only2[0]})")
+            self.add_errors(f"{len(only2)} only in second list in {name} (first: {only2[0]})")
             logging.debug(f"{len(only1)} only in second list in {name}")
 
         return errors
@@ -646,6 +646,7 @@ class IntegrityTool:
             Error if there are common sequences with difference in ids
             and if the sequences are not consistent in the files.
         """
+        logging.info(f"Compare {name} ({len(seqrs)} vs {len(feats)})")
         comp = self._compare_seqs(seqrs, feats, circular)
 
         common = comp["common"]
