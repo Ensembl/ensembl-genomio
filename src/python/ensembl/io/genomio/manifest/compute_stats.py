@@ -71,7 +71,7 @@ class manifest_stats:
         self.manifest = f"{manifest_dir}/manifest.json"
         self.error_file = f"{manifest_dir}/stats_errors.txt"
         self.accession: Optional[str] = accession
-        self.errors = []
+        self.errors: List[str] = []
         if datasets_bin is None:
             datasets_bin = "datasets"
         self.datasets_bin = datasets_bin
@@ -290,11 +290,9 @@ class manifest_stats:
                             manifest_stats.increment_biotype(
                                 biotypes, feat3.id, f"SUB_{feat1.type}-{feat2.type}-{feat3.type}"
                             )
-                    
+
                     subtype = "+".join(sorted(list(subtypes)))
-                    manifest_stats.increment_biotype(
-                        biotypes, feat1.id, f"{feat1.type}-{subtype}"
-                    )
+                    manifest_stats.increment_biotype(biotypes, feat1.id, f"{feat1.type}-{subtype}")
 
                     # Main categories counts
                     if feat1.type == "pseudogene":

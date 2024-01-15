@@ -28,7 +28,7 @@ import logging
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
@@ -73,7 +73,7 @@ class GFFSimplifier:
     min_id_length = 7
     stable_id_prefix = None
     current_stable_id_number: int = 0
-    gene_id_cache = set()
+    gene_id_cache: Set[str] = set()
 
     def __init__(self, genome_path: Optional[PathLike] = None, make_missing_stable_ids: bool = False):
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
@@ -348,7 +348,6 @@ class GFFSimplifier:
     ) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
-        cds_found = False
         exons_to_delete = []
         exon_number = 1
         for tcount, feat in enumerate(transcript.sub_features):
@@ -646,7 +645,7 @@ class GFFSimplifier:
 
                         if new_gene_id in self.gene_id_cache:
                             gene_id_num = 2
-                            while(new_gene_id in self.gene_id_cache):
+                            while new_gene_id in self.gene_id_cache:
                                 new_gene_id = f"{new_gene_id_base}_{gene_id_num}"
                                 if gene_id_num >= 10:
                                     raise ValueError(f"Generating a lot of similar gene ids: {new_gene_id}?")

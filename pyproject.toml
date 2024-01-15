@@ -167,6 +167,7 @@ max-attributes = 12
 [tool.mypy]
 mypy_path = "src/python"
 explicit_package_bases = true
+namespace_packages = true
 ignore_missing_imports = true
 show_error_codes = true
 warn_unused_configs = true
