@@ -354,7 +354,7 @@ class GFFSimplifier:
         for tcount, feat in enumerate(transcript.sub_features):
             if feat.type == "exon":
                 # New exon ID
-                feat.id = f"{transcript.id}_exon{exon_number}"
+                feat.id = f"{transcript.id}-E{exon_number}"
                 exon_number += 1
                 # Replace qualifiers
                 old_exon_qualifiers = feat.qualifiers
