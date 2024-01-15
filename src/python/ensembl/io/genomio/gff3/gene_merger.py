@@ -55,6 +55,9 @@ class GFFGeneMerger:
             for line in in_gff_fh:
                 # Skip comments
                 if line.startswith("#"):
+                    if line.startswith("##FASTA"):
+                        logging.warning("This GFF3 file contains FASTA sequences")
+                        break
                     out_gff_fh.write(line)
                 else:
                     # Parse one line
