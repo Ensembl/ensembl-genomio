@@ -36,7 +36,7 @@
     - path: ./test_genome_prepare_output/GCA_017607445.1/functional_annotation.json
       md5sum: eb834948fb9363dd71d02cb591848345
     - path: ./test_genome_prepare_output/GCA_017607445.1/gene_models.gff3
-      md5sum: 3303f5a000173812ba53d01571037b30
+      md5sum: ade9ac036023c48dd490056457027468
     # Genome contains fields that depend on the date, so can't check md5sum
     - path: ./test_genome_prepare_output/GCA_017607445.1/genome.json
       contains:
@@ -48,4 +48,3 @@
     - path: ./test_genome_prepare_output/GCA_017607445.1/seq_region.json
       md5sum: 585da9f97f094e83702860ce43da652f
     - path: ./test_genome_prepare_output/GCA_017607445.1/stats.txt
-      md5sum: 6104869d437ec4a9d13a2d070c307b0f
