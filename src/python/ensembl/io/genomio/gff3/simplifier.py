@@ -557,12 +557,12 @@ class GFFSimplifier:
         return gene
 
     @staticmethod
-    def _check_sub_cdss(gene, sub_cdss) -> None:
+    def _check_sub_cdss(gene: SeqFeature, sub_cdss: List[SeqFeature]) -> None:
         if len(sub_cdss) > 0:
             raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
 
     @staticmethod
-    def _check_sub_exons(gene, cdss, sub_exons) -> None:
+    def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
         """Check that the exons of the mRNA and the CDSs match"""
 
         if len(sub_exons) > 0:
@@ -725,7 +725,7 @@ class GFFSimplifier:
 
     def normalize_cds_id(self, cds_id: str) -> str:
         """Returns a normalised version of the provided CDS ID.
-        
+
         The normalisation implies to remove any unnecessary prefixes around the CDS ID. However, if
         the CDS ID is still not proper, an empty string will be returned.
 
@@ -743,7 +743,7 @@ class GFFSimplifier:
 
     def normalize_pseudogene_cds(self, gene: SeqFeature) -> None:
         """Normalises the CDS ID of the provided pseudogene.
-        
+
         Ensure CDS from a pseudogene have a proper ID:
         - Different from the gene
         - Derived from the gene if it is not proper
