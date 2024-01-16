@@ -1,0 +1,124 @@
+{
+  "reports": [
+    {
+      "accession": "GCA_015245375.1",
+      "annotation_info": {
+        "name": "Annotation submitted by The University of Georgia",
+        "provider": "The University of Georgia",
+        "release_date": "2022-10-21",
+        "stats": {
+          "gene_counts": {
+            "non_coding": 142,
+            "protein_coding": 3892,
+            "pseudogene": 1,
+            "total": 4035
+          }
+        }
+      },
+      "assembly_info": {
+        "assembly_level": "Complete Genome",
+        "assembly_name": "ASM1524537v1",
+        "assembly_status": "current",
+        "assembly_type": "haploid",
+        "bioproject_lineage": [
+          {
+            "bioprojects": [
+              {
+                "accession": "PRJNA573722",
+                "title": "Cryptosporidium parvum strain:IOWA-ATCC Genome sequencing and assembly"
+              }
+            ]
+          }
+        ],
+        "biosample": {
+          "accession": "SAMN12822784",
+          "attributes": [
+            {
+              "name": "strain",
+              "value": "IOWA-ATCC"
+            },
+            {
+              "name": "host",
+              "value": "Calves"
+            },
+            {
+              "name": "collection_date",
+              "value": "1980"
+            },
+            {
+              "name": "geo_loc_name",
+              "value": "USA:Iowa"
+            },
+            {
+              "name": "sample_type",
+              "value": "Cell culture"
+            }
+          ],
+          "bioprojects": [
+            {
+              "accession": "PRJNA573722"
+            }
+          ],
+          "description": {
+            "comment": "Cryptosporidium parvum Iowa from ATCC, originated from sporozoites/oocysts originally isolated from the feces of a calf near Ames, Iowa in the mid-1980's and have been passaged continually in calves in Arizona since that time. This sample DNA is currently sold by the ATCC company",
+            "organism": {
+              "organism_name": "Cryptosporidium parvum",
+              "tax_id": 5807
+            },
+            "title": "Cryptosporidium parvum IOWA-ATCC"
+          },
+          "last_updated": "2020-10-23T00:50:09.620",
+          "models": [
+            "Microbe, viral or environmental"
+          ],
+          "owner": {
+            "contacts": [
+              {}
+            ],
+            "name": "The University of Georgia"
+          },
+          "package": "Microbe.1.0",
+          "publication_date": "2020-10-23T00:50:09.620",
+          "sample_ids": [
+            {
+              "label": "Sample name",
+              "value": "Cryptosporidium parvum IOWA-ATCC"
+            }
+          ],
+          "status": {
+            "status": "live",
+            "when": "2020-10-23T00:50:09.620"
+          },
+          "submission_date": "2019-09-23T15:42:03.007"
+        },
+        "blast_url": "https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastSearch&PROG_DEF=blastn&BLAST_SPEC=GDH_GCA_015245375.1",
+        "sequencing_tech": "Illumina HiSeq; PacBio",
+        "submitter": "The University of Georgia"
+      },
+      "assembly_stats": {
+        "contig_l50": 4,
+        "contig_n50": 1108396,
+        "gc_count": "2752724",
+        "gc_percent": 30,
+        "number_of_component_sequences": 8,
+        "number_of_contigs": 8,
+        "number_of_scaffolds": 8,
+        "scaffold_l50": 4,
+        "scaffold_n50": 1108396,
+        "total_number_of_chromosomes": 8,
+        "total_sequence_length": "9122263",
+        "total_ungapped_length": "9122263"
+      },
+      "current_accession": "GCA_015245375.1",
+      "organism": {
+        "infraspecific_names": {
+          "strain": "IOWA-ATCC"
+        },
+        "organism_name": "Cryptosporidium parvum",
+        "tax_id": 5807
+      },
+      "source_database": "SOURCE_DATABASE_GENBANK"
+    }
+  ],
+  "total_count": 1
+}

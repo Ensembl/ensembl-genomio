@@ -66,15 +66,17 @@ class TestCoreServer:
     """Tests for the `CoreServer` class."""
 
     @pytest.mark.parametrize(
-        "dbs, prefix, build, version, dbname_re, output",
+        "dbs, prefix, build, version, dbname_re, db_list, output",
         [
-            ([], "", "", "", "", []),
-            (TEST_CORES, "", "", "", "", TEST_CORES),
-            (TEST_CORES, "prefix", "61", "111", r"_sp_", ["prefix_speciesF_genus_sp_core_61_111_1"]),
-            (TEST_CORES, "speciesC", "", "", "", []),
-            (TEST_CORES, "", "59", "", "", []),
-            (TEST_CORES, "", "", "109", "", []),
-            (TEST_CORES, "", "", "", r"_compara_", []),
+            ([], "", "", "", "", [], []),
+            (TEST_CORES, "", "", "", "", [], TEST_CORES),
+            (TEST_CORES, "prefix", "61", "111", r"_sp_", [], ["prefix_speciesF_genus_sp_core_61_111_1"]),
+            (TEST_CORES, "speciesC", "", "", "", [], []),
+            (TEST_CORES, "", "59", "", "", [], []),
+            (TEST_CORES, "", "", "109", "", [], []),
+            (TEST_CORES, "", "", "", r"_compara_", [], []),
+            (TEST_CORES, "", "", "", r"", TEST_CORES[0:2], TEST_CORES[0:2]),
+            (TEST_CORES, "", "", "", r"", ["nonexistent_species"], []),
         ],
     )
     def test_get_cores(
@@ -85,6 +87,7 @@ class TestCoreServer:
         build: str,
         version: str,
         dbname_re: str,
+        db_list: List[str],
         output: List[str],
     ) -> None:
         """Tests the `CoreServer.get_cores()` method.
@@ -96,6 +99,7 @@ class TestCoreServer:
             build: Filter by build.
             version: Filter by Ensembl version.
             dbname_re: Filter by dbname regular expression.
+            db_list: Explicit list of database names.
             output: Expected list of databases.
 
         """
@@ -108,5 +112,5 @@ class TestCoreServer:
         server = CoreServer(server_url)
 
         # Checks the filters from get_cores
-        all_cores = server.get_cores(prefix, build, version, dbname_re)
+        all_cores = server.get_cores(prefix, build, version, dbname_re, db_list)
         assert set(all_cores) == set(output)
