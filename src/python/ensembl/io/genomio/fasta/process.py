@@ -69,10 +69,12 @@ def prep_fasta_data(
     """
     file_path = Path(fasta_infile)
 
+    to_exclude = set()
     seqr_to_exclude = set(exclude_seq_regions)
-    if peptide_mode and genbank_infile is not None:
-        genbank_path = Path(genbank_infile)
-        to_exclude = get_peptides_to_exclude(genbank_path, seqr_to_exclude)
+    if peptide_mode:
+        if genbank_infile is not None:
+            genbank_path = Path(genbank_infile)
+            to_exclude = get_peptides_to_exclude(genbank_path, seqr_to_exclude)
     else:
         to_exclude = seqr_to_exclude
 
