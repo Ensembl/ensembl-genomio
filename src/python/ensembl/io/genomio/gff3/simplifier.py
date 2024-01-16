@@ -639,19 +639,19 @@ class GFFSimplifier:
             if "Dbxref" in qual:
                 for xref in qual["Dbxref"]:
                     (db, value) = xref.split(":")
-                    if db == "GeneID":
-                        new_gene_id_base = f"{db}_{value}"
-                        new_gene_id = new_gene_id_base
+                    if db != "GeneID":
+                        continue
+                    new_gene_id_base = f"{db}_{value}"
+                    new_gene_id = new_gene_id_base
 
-                        if new_gene_id in self.gene_id_cache:
-                            gene_id_num = 2
-                            while new_gene_id in self.gene_id_cache:
-                                new_gene_id = f"{new_gene_id_base}_{gene_id_num}"
-                                if gene_id_num >= 10:
-                                    raise ValueError(f"Generating a lot of similar gene ids: {new_gene_id}?")
-                        self.gene_id_cache.add(new_gene_id)
-                        logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
-                        return new_gene_id
+                    gene_id_num = 2
+                    while new_gene_id in self.gene_id_cache:
+                        new_gene_id = f"{new_gene_id_base}_{gene_id_num}"
+                        if gene_id_num >= 10:
+                            raise ValueError(f"Generating a lot of similar gene ids: {new_gene_id}?")
+                    self.gene_id_cache.add(new_gene_id)
+                    logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
+                    return new_gene_id
 
             # Make a new stable_id
             if self.make_missing_stable_ids:
