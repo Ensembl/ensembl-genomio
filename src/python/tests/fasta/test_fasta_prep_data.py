@@ -99,7 +99,7 @@ class TestFastaProcess:
 
 
     @pytest.mark.parametrize(
-        "input_gbff, excluded_seq_region, output, expectation",
+        "input_gbff, excluded_seq_regions, output, expectation",
         [
             (
                 "input.gbff.gz",
