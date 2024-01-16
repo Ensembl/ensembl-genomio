@@ -20,29 +20,12 @@ Typical usage example::
 """
 
 from pathlib import Path
-from typing import Dict
+from typing import Callable, Dict
 
 from deepdiff import DeepDiff
 import pytest
 
 from ensembl.io.genomio.genome_stats import compare
-from ensembl.io.genomio.utils import get_json
-
-
-@pytest.fixture(name="json_data")
-def fixture_json_data(data_dir: Path) -> Dict:
-    """Returns a JSON test object factory.
-
-    Args:
-        data_dir: Module's test data directory fixture.
-
-    """
-
-    def _json_data(file_name: str) -> Dict:
-        """Returns the parsed JSON object from the given JSON test file."""
-        return get_json(data_dir / file_name)
-
-    return _json_data
 
 
 @pytest.mark.dependency(name="test_compare_dicts")
@@ -84,7 +67,7 @@ def test_compare_dicts(ncbi: Dict[str, int], core: Dict[str, int], output: Dict[
         ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
     ],
 )
-def test_compare_assembly(json_data: Dict, ncbi_file: Dict, core_file: Dict, output_file: Dict) -> None:
+def test_compare_assembly(json_data: Callable, ncbi_file: Dict, core_file: Dict, output_file: Dict) -> None:
     """Tests the `compare.compare_assembly()` method.
 
     Args:
@@ -109,7 +92,7 @@ def test_compare_assembly(json_data: Dict, ncbi_file: Dict, core_file: Dict, out
         ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
     ],
 )
-def test_compare_annotation(json_data: Dict, ncbi_file: str, core_file: str, output_file: str) -> None:
+def test_compare_annotation(json_data: Callable, ncbi_file: str, core_file: str, output_file: str) -> None:
     """Tests the `compare.compare_annotation()` method.
 
     Args:
@@ -138,7 +121,7 @@ def test_compare_annotation(json_data: Dict, ncbi_file: str, core_file: str, out
         ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
     ],
 )
-def test_compare_stats(json_data: Dict, ncbi_file: str, core_file: str, output_file: str) -> None:
+def test_compare_stats(json_data: Callable, ncbi_file: str, core_file: str, output_file: str) -> None:
     """Tests the `compare.compare_stats()` method.
 
     Args:
@@ -163,7 +146,7 @@ def test_compare_stats(json_data: Dict, ncbi_file: str, core_file: str, output_f
     ],
 )
 def test_compare_stats_files(
-    data_dir: Path, json_data: Dict, ncbi_file: str, core_file: str, output_file: str
+    data_dir: Path, json_data: Callable, ncbi_file: str, core_file: str, output_file: str
 ) -> None:
     """Tests the `compare.compare_stats_files()` method.
 

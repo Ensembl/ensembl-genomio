@@ -20,13 +20,16 @@ will have access to the plugins, hooks and fixtures defined here.
 """
 
 from pathlib import Path
+from typing import Any, Callable
 
 import pytest
 from pytest import Config, FixtureRequest
 
+from ensembl.io.genomio.utils import get_json
 
-@pytest.fixture(scope="module")
-def data_dir(request: FixtureRequest) -> Path:
+
+@pytest.fixture(name="data_dir", scope="module")
+def local_data_dir(request: FixtureRequest) -> Path:
     """Returns the path to the test data folder matching the test's name.
 
     Args:
@@ -45,3 +48,19 @@ def shared_data_dir(pytestconfig: Config) -> Path:
 
     """
     return pytestconfig.rootpath / "src/python/tests/data"
+
+
+@pytest.fixture(name="json_data")
+def fixture_json_data(data_dir: Path) -> Callable:
+    """Returns a JSON test object factory.
+
+    Args:
+        data_dir: Module's test data directory fixture.
+
+    """
+
+    def _json_data(file_name: str) -> Any:
+        """Returns the parsed JSON object from the given JSON test file."""
+        return get_json(data_dir / file_name)
+
+    return _json_data
