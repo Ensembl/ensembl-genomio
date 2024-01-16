@@ -37,4 +37,12 @@ process DUMP_EVENTS {
             --output_file "$output" \
             --verbose
         """
+    
+    stub:
+        output_file = "ids_events.tab"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_ids_events.tab"
+        """
+        cp $dump_dir/$dump_file $output_file
+        """
 }

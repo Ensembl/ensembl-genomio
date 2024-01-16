@@ -24,6 +24,7 @@ default_selection_map = [
     'fasta_dna': 1
 ]
 default_selection = default_selection_map.keySet() as ArrayList
+params.db_list = ''
 
 include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 if (params.help) {
@@ -107,7 +108,20 @@ include { read_json } from '../../modules/utils/utils.nf'
 
 // Run main workflow
 workflow {
-    dbs = DB_FACTORY(server, filter_map)
+    // Prepare db_factory filter
+    basic_filter = Channel.of(filter_map)
+    // Add db_list
+    filter_db = Channel.of()
+    if (params.db_list) {
+        // Get the list of databases from the file
+        db_list = Channel.fromPath(params.db_list).splitCsv().map{ row -> row[0] }.collect()
+        // Add that list to the filter_db map
+        filter_db = basic_filter.merge(db_list) { filters, db_list -> filters + ["db_list": db_list] }
+    } else {
+        filter_db = basic_filter
+    }
+
+    dbs = DB_FACTORY(server, filter_db)
         .map(it -> read_json(it))
         .flatten()
     

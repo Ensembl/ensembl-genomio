@@ -34,6 +34,6 @@ process DOWNLOAD_GENBANK {
         output_file = "output.gb"
         """
         genbank_download --help
-        ln -s $workflow.projectDir/../../../../data/test/modules/download_genbank/output/*.gb $output_file
+        cp $workflow.projectDir/../../../../data/test/modules/download_genbank/output/*.gb $output_file
         """
 }
