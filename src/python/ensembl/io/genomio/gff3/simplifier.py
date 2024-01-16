@@ -64,6 +64,9 @@ class GFFSimplifier:
         GFFParserError: If an error cannot be automatically fixed.
     """
 
+    #pylint: disable=too-many-public-methods
+    # Some rework needed at some point
+
     # Multiple parameters to automate various fixes
     skip_unrecognized = True
     gene_cds_skip_others = False
@@ -92,7 +95,6 @@ class GFFSimplifier:
         """
 
         with Path(in_gff_path).open("r") as in_gff_fh:
-
             for record in GFF.parse(in_gff_fh):
                 if record.id in self.exclude_seq_regions:
                     logging.debug(f"Skip seq_region {record.id}")
@@ -115,7 +117,7 @@ class GFFSimplifier:
         """Creates a simpler version of a GFF3 feature.
 
         If the feature is invalid/skippable, returns None.
-        
+
         """
 
         allowed_gene_types = self._biotypes["gene"]["supported"]
@@ -153,7 +155,6 @@ class GFFSimplifier:
         # Finalize and store
         self.store_gene_annotations(gene)
         return self.clean_gene(gene)
-
 
     def store_gene_annotations(self, gene: SeqFeature) -> None:
         """Record the functional_annotations of the gene and its children features."""
@@ -364,8 +365,7 @@ class GFFSimplifier:
 
         return gene
 
-    def _normalize_transcript_subfeatures(
-        self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
+    def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
         exons_to_delete = []
