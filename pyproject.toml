@@ -63,7 +63,7 @@ cicd = [
     "coverage",
     "genbadge[coverage]",
     "mypy",
-    "pylint >= 2.5",
+    "pylint >= 3.0",
     "pytest",
     "pytest-workflow",
     "types-requests",
