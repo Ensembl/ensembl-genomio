@@ -92,6 +92,7 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
     Args:
         seq_feat_type: Type for the sequence feature to add.
         feat_type: Category type for that sequence feature.
+        expected: What exception is expected to be raised, if any.
 
     """
     annot = FunctionalAnnotations()
@@ -109,8 +110,8 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
         ("gene", "geneB", "mrnA", raises(MissingParentError)),
     ],
 )
-@pytest.mark.dependency(name="add_parent", depends=["add_feature"])
-def test_add_parent(parent_type, parent_id, child_id, expected):
+@pytest.mark.dependency(name="add_parent_link", depends=["add_feature"])
+def test_add_parent_link(parent_type, parent_id, child_id, expected):
     """Tests the `FunctionaAnnotation.add_parent_link()` method.
 
     Add a parent feature, and then add a parent link.
@@ -138,7 +139,7 @@ def test_add_parent(parent_type, parent_id, child_id, expected):
         ("gene", "geneA", "mrnA", "gene", "mrnB", raises(MissingParentError)),
     ],
 )
-@pytest.mark.dependency(name="get_parent", depends=["add_parent"])
+@pytest.mark.dependency(name="get_parent", depends=["add_parent_link"])
 def test_get_parent(in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected):
     """Tests the `FunctionaAnnotation.get_parent()` method.
 

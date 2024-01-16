@@ -724,10 +724,11 @@ class GFFSimplifier:
         return transcript_id
 
     def normalize_cds_id(self, cds_id: str) -> str:
-        """
-        Check the CDS ID is proper:
-        - Remove any unnecessary prefixes around the CDS ID
-        - Delete the ID if it is not proper
+        """Returns a normalised version of the provided CDS ID.
+        
+        The normalisation implies to remove any unnecessary prefixes around the CDS ID. However, if
+        the CDS ID is still not proper, an empty string will be returned.
+
         """
 
         prefixes = ["cds-", "cds:"]
@@ -741,9 +742,12 @@ class GFFSimplifier:
         return cds_id
 
     def normalize_pseudogene_cds(self, gene: SeqFeature) -> None:
-        """Ensure CDS from a pseudogene have a proper ID
-        - different from the gene
-        - derived from the gene if it is not proper
+        """Normalises the CDS ID of the provided pseudogene.
+        
+        Ensure CDS from a pseudogene have a proper ID:
+        - Different from the gene
+        - Derived from the gene if it is not proper
+
         """
 
         for transcript in gene.sub_features:
@@ -755,10 +759,11 @@ class GFFSimplifier:
                         feat.qualifiers["ID"] = feat.id
 
     def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
-        """Remove CDS from a pseudogene
-        This assumes the CDSs are sub features of the transcript or the gene
-        """
+        """Removes the CDS from a pseudogene.
 
+        This assumes the CDSs are sub features of the transcript or the gene.
+
+        """
         gene_subfeats = []
         for transcript in gene.sub_features:
             if transcript.type == "CDS":
@@ -775,10 +780,7 @@ class GFFSimplifier:
         gene.sub_features = gene_subfeats
 
     def remove_prefixes(self, identifier: str, prefixes: List[str]) -> str:
-        """
-        Remove prefixes from an identifier if they are found
-        Return the unaltered identifier otherwise
-        """
+        """Returns the identifier after removing all the prefixes found in it (if any)."""
         for prefix in prefixes:
             if identifier.startswith(prefix):
                 identifier = identifier[len(prefix) :]
