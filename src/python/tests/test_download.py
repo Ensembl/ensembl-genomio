@@ -48,8 +48,8 @@ class TestDownload:
 
         #Set success_code and content as an attribute to the mock object
         mock_requests_get.return_value.status_code = 200
-        content = b"The genbank download for the following accession"
-        mock_requests_get.return_value.content = content
+        mock_content = b"The genbank download for the following accession"
+        mock_requests_get.return_value.content = mock_content
         
         #Temporary location where we want to store the mock output file
         output_file = tmp_dir / f"{accession}.gb"
@@ -64,8 +64,8 @@ class TestDownload:
         
         # Assert that the content was written to the temporary file
         with open(output_file, 'rb') as f:
-            content = f.read()
-        assert content == content
+            file_content = f.read()
+        assert file_content == mock_content
 
     def test_failed_download(self, mock_requests_failed, tmp_dir: Path, accession):
         """Tests the failure in downloading the files.
