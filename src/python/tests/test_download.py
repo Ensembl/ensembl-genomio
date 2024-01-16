@@ -22,7 +22,6 @@ Typical usage example::
 
 """
 
-
 import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -37,37 +36,51 @@ from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
     )
 @patch('ensembl.io.genomio.genbank.download.requests.get')
 class TestDownload:
+    """Tests for the 'download_genbank' class"""
     
     def test_successful_download(self, mock_requests_get, tmp_dir: Path, accession):
-        """Tests the 'download_genbank()' method.
+        """Tests the successful download of 'download_genbank()' method.
 
         Args:
             tmp_dir: Session-scoped temporary directory fixture.
             accession: Genbank accession to be downloaded.
         """
-        content = b"The genbank download for the following accession"
+
+        #Set success_code and content as an attribute to the mock object
         mock_requests_get.return_value.status_code = 200
+        content = b"The genbank download for the following accession"
         mock_requests_get.return_value.content = content
+        
+        #Temporary location where we want to store the mock output file
         output_file = tmp_dir / f"{accession}.gb"
         download_genbank(accession, output_file)
 
+        #checking if the url has been called
         mock_requests_get.assert_called_once_with(
             "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
             params={"db": "nuccore", "rettype": "gbwithparts", "retmode": "text", "id": accession},
             timeout=60
         )
         
-        all_calls = mock_requests_get.call_args_list
-        print(all_calls)
         # Assert that the content was written to the temporary file
         with open(output_file, 'rb') as f:
             content = f.read()
         assert content == content
 
     def test_failed_download(self, mock_requests_failed, tmp_dir: Path, accession):
-        output_file = tmp_dir / f"{accession}.gb"
-        mock_requests_failed.return_value.status_code = 400
+        """Tests the failure in downloading the files.
 
+        Args:
+            tmp_dir: Session-scoped temporary directory fixture.
+            accession: Genbank accession to be downloaded.
+        """
+
+        output_file = tmp_dir / f"{accession}.gb"
+
+        #Set the mock status code to 404 for request not found
+        mock_requests_failed.return_value.status_code = 404
+
+        #Raise an error 
         with pytest.raises(DownloadError, match='Could not download the genbank') as error:
             download_genbank(accession, output_file)
         
