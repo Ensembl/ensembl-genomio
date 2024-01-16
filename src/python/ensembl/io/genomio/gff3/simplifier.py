@@ -69,6 +69,7 @@ class GFFSimplifier:
     gene_cds_skip_others = False
     allow_pseudogene_with_CDS = False
     exclude_seq_regions: List = []
+    fail_types: Dict[str, int] = {}
     validate_gene_id = True
     min_id_length = 8
     stable_id_prefix = None
@@ -90,62 +91,69 @@ class GFFSimplifier:
         functional annotation file.
         """
 
+        with Path(in_gff_path).open("r") as in_gff_fh:
+
+            for record in GFF.parse(in_gff_fh):
+                if record.id in self.exclude_seq_regions:
+                    logging.debug(f"Skip seq_region {record.id}")
+                    continue
+
+                # Clean all root features and make clean record
+                clean_record = SeqRecord(record.seq, id=record.id)
+                for feature in record.features:
+                    clean_feature = self.simpler_gff3_feature(feature)
+                    if clean_feature is not None:
+                        clean_record.features.append(clean_feature)
+                self.records.append(clean_record)
+
+            if self.fail_types:
+                fail_errors = "\n   ".join(self.fail_types.keys())
+                if self.skip_unrecognized:
+                    raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
+
+    def simpler_gff3_feature(self, feat: SeqFeature) -> Optional[SeqFeature]:
+        """Creates a simpler version of a GFF3 feature.
+
+        If the feature is invalid/skippable, returns None.
+        
+        """
+
         allowed_gene_types = self._biotypes["gene"]["supported"]
         ignored_gene_types = self._biotypes["gene"]["ignored"]
         transcript_types = self._biotypes["transcript"]["supported"]
         allowed_non_gene_types = self._biotypes["non_gene"]["supported"]
-        skip_unrecognized = self.skip_unrecognized
-        to_exclude = self.exclude_seq_regions
 
-        with Path(in_gff_path).open("r") as in_gff_fh:
-            fail_types: Dict[str, int] = {}
+        if feat.type == "protein_coding_gene":
+            feat.type = "gene"
+        # Skip or format depending on the feature type
+        if feat.type in ignored_gene_types:
+            return None
+        if feat.type in transcript_types:
+            feat = self.transcript_gene(feat)
+        elif feat.type == "CDS":
+            feat = self.cds_gene(feat)
+        # Special case: transposable_element
+        elif feat.type in ("mobile_genetic_element", "transposable_element"):
+            feat = self.format_mobile_element(feat)
+            return feat
 
-            for record in GFF.parse(in_gff_fh):
-                new_record = SeqRecord(record.seq, id=record.id)
-                if record.id in to_exclude:
-                    logging.debug(f"Skip seq_region {record.id}")
-                    continue
+        # Normalize the gene structure
+        gene = feat
+        if gene.type in allowed_gene_types:
+            gene = self.normalize_gene(gene)
+        elif gene.type in allowed_non_gene_types:
+            pass
+        else:
+            self.fail_types["gene=" + gene.type] = 1
+            logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
+            if self.skip_unrecognized:
+                del gene
+                return None
 
-                # Root features (usually genes)
-                for feat in record.features:
-                    if feat.type == "protein_coding_gene":
-                        feat.type = "gene"
-                    # Skip or format depending on the feature type
-                    if feat.type in ignored_gene_types:
-                        continue
-                    if feat.type in transcript_types:
-                        feat = self.transcript_gene(feat)
-                    elif feat.type == "CDS":
-                        feat = self.cds_gene(feat)
-                    # Special case: transposable_element
-                    elif feat.type in ("mobile_genetic_element", "transposable_element"):
-                        feat = self.format_mobile_element(feat)
-                        new_record.features.append(feat)
-                        continue
+        # Finalize and store
+        self.store_gene_annotations(gene)
+        return self.clean_gene(gene)
 
-                    # Normalize the gene structure
-                    gene = feat
-                    if gene.type in allowed_gene_types:
-                        gene = self.normalize_gene(gene, fail_types)
-                    elif gene.type in allowed_non_gene_types:
-                        pass
-                    else:
-                        fail_types["gene=" + gene.type] = 1
-                        logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
-                        if skip_unrecognized:
-                            del gene
-                            continue
-
-                    # Finalize and store
-                    self.store_gene_annotations(gene)
-                    cleaned_gene = self.clean_gene(gene)
-                    new_record.features.append(cleaned_gene)
-                self.records.append(new_record)
-
-            if fail_types:
-                fail_errors = "\n   ".join(fail_types.keys())
-                if skip_unrecognized:
-                    raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
 
     def store_gene_annotations(self, gene: SeqFeature) -> None:
         """Record the functional_annotations of the gene and its children features."""
@@ -263,13 +271,12 @@ class GFFSimplifier:
             transcript.type = biotype
         return transcript
 
-    def normalize_gene(self, gene: SeqFeature, fail_types: Dict[str, int]) -> SeqFeature:
+    def normalize_gene(self, gene: SeqFeature) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
         Args:
             gene: Gene object to normalize.
             functional_annotation: List of feature annotations (appended by this method).
-            fail_types: List of feature types that are not supported (appended by this method).
 
         """
 
@@ -313,7 +320,7 @@ class GFFSimplifier:
             self.remove_cds_from_pseudogene(gene)
 
         # TRANSCRIPTS
-        gene = self._normalize_transcripts(gene, fail_types)
+        gene = self._normalize_transcripts(gene)
 
         # PSEUDOGENE CDS IDs
         if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
@@ -321,7 +328,7 @@ class GFFSimplifier:
 
         return gene
 
-    def _normalize_transcripts(self, gene: SeqFeature, fail_types) -> SeqFeature:
+    def _normalize_transcripts(self, gene: SeqFeature) -> SeqFeature:
         """Returns a normalized transcript."""
 
         allowed_transcript_types = self._biotypes["transcript"]["supported"]
@@ -334,7 +341,7 @@ class GFFSimplifier:
                 transcript.type not in allowed_transcript_types
                 and transcript.type not in ignored_transcript_types
             ):
-                fail_types["transcript=" + transcript.type] = 1
+                self.fail_types["transcript=" + transcript.type] = 1
                 logging.warning(
                     f"Unrecognized transcript type: {transcript.type}" f" for {transcript.id} ({gene.id})"
                 )
@@ -349,7 +356,7 @@ class GFFSimplifier:
             transcript = self.format_gene_segments(transcript)
 
             # EXONS AND CDS
-            transcript = self._normalize_transcript_subfeatures(gene, transcript, fail_types)
+            transcript = self._normalize_transcript_subfeatures(gene, transcript)
 
         if transcripts_to_delete:
             for elt in sorted(transcripts_to_delete, reverse=True):
@@ -358,8 +365,7 @@ class GFFSimplifier:
         return gene
 
     def _normalize_transcript_subfeatures(
-        self, gene: SeqFeature, transcript: SeqFeature, fail_types
-    ) -> SeqFeature:
+        self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
         exons_to_delete = []
@@ -384,7 +390,7 @@ class GFFSimplifier:
                     exons_to_delete.append(tcount)
                     continue
 
-                fail_types[f"sub_transcript={feat.type}"] = 1
+                self.fail_types[f"sub_transcript={feat.type}"] = 1
                 logging.warning(
                     f"Unrecognized exon type for {feat.type}: {feat.id}"
                     f" (for transcript {transcript.id} of type {transcript.type})"
