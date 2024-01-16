@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pytest import raises
 from unittest.mock import patch, MagicMock
 
 from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
@@ -86,6 +87,6 @@ class TestDownloadGenbank:
         mock_requests_failed.return_value.status_code = 404
 
         # Raise an error 
-        with pytest.raises(DownloadError, match='Could not download the genbank') as error:
+        with raises(DownloadError, match='Could not download the genbank') as error:
             download_genbank(accession, output_file)
         
