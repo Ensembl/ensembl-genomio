@@ -61,7 +61,7 @@ dependencies = [
 cicd = [
     "black",
     "coverage",
-    "deepdiff",
+    "deepdiff >= 6.7.1",
     "genbadge[coverage]",
     "mypy",
     "pylint",
