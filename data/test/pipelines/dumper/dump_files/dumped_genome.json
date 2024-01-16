@@ -1,0 +1,15 @@
+{
+    "assembly": {
+        "accession": "GCA_002204515.2",
+        "version": 2
+    },
+    "species": {
+        "taxonomy_id": 7159,
+        "production_name": "aedes_aegypti"
+    },
+    "BRC4": {
+        "organism_abbrev": "aaegL5",
+        "component": "VectorBase"
+
+    }
+}
