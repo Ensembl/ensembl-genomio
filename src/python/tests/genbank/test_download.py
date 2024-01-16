@@ -87,6 +87,6 @@ class TestDownloadGenbank:
         mock_requests_failed.return_value.status_code = 404
 
         # Raise an error 
-        with raises(DownloadError, match='Could not download the genbank') as error:
+        with raises(DownloadError, match='Could not download the genbank'):
             download_genbank(accession, output_file)
         
