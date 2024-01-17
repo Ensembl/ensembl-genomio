@@ -27,7 +27,7 @@ from typing import Any
 
 import pytest
 from pytest import raises
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
 
@@ -82,10 +82,8 @@ class TestDownloadGenbank:
         """
 
         output_file = tmp_dir / f"{accession}.gb"
-
         # Set the mock status code to 404 for request not found
         mock_requests_failed.return_value.status_code = 404
-
         # Raise an error 
         with raises(DownloadError):
             download_genbank(accession, output_file)
