@@ -22,7 +22,7 @@ Typical usage example::
 from contextlib import nullcontext as does_not_raise
 import filecmp
 from pathlib import Path
-from typing import ContextManager, List, Set
+from typing import ContextManager, Set
 
 import pytest
 
@@ -36,10 +36,10 @@ class TestFastaProcess:
     data_dir: Path
 
     @pytest.fixture(scope="class", autouse=True)
-    def setup(self, tmp_dir: Path, files_dir: Path):
+    def setup(self, tmp_dir: Path, data_dir: Path):
         """Loads necessary fixtures and values as class attributes."""
         type(self).tmp_dir = tmp_dir
-        type(self).data_dir = files_dir / "process_fasta"
+        type(self).data_dir = data_dir
 
     @pytest.mark.parametrize(
         "input_fasta, input_gbff, pep_mode, expected_output_fasta",
