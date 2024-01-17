@@ -64,7 +64,7 @@ class GFFSimplifier:
         GFFParserError: If an error cannot be automatically fixed.
     """
 
-    #pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-public-methods
     # Some rework needed at some point
 
     # Multiple parameters to automate various fixes
