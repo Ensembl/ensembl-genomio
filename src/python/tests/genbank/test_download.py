@@ -72,7 +72,7 @@ class TestDownloadGenbank:
             file_content = f.read()
         assert file_content == mock_content
 
-    def test_failed_download(self, mock_requests_failed: Any, tmp_dir: Path, accession: str) -> None:
+    def test_failed_download(self, mock_requests_failed: Mock, tmp_dir: Path, accession: str) -> None:
         """Tests the failure in downloading the files.
 
         Args:
