@@ -73,7 +73,7 @@ class TestDownloadGenbank:
         assert file_content == mock_content
 
     def test_failed_download(self, mock_requests_failed: Mock, tmp_dir: Path, accession: str) -> None:
-        """Tests the failure in downloading the files.
+        """Tests the downloading failure of `download_genbank()` method.
 
         Args:
             mock_requests_failed: A MagicMock object that mocks the request in @patch 
