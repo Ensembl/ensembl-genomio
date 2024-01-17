@@ -120,39 +120,43 @@ class GFFSimplifier:
 
         """
 
-        allowed_gene_types = self._biotypes["gene"]["supported"]
         ignored_gene_types = self._biotypes["gene"]["ignored"]
-        transcript_types = self._biotypes["transcript"]["supported"]
         allowed_non_gene_types = self._biotypes["non_gene"]["supported"]
+        allowed_gene_types = self._biotypes["gene"]["supported"]
+        transcript_types = self._biotypes["transcript"]["supported"]
 
-        if feat.type == "protein_coding_gene":
-            feat.type = "gene"
-        # Skip or format depending on the feature type
+        # Skip explictly ignored features
         if feat.type in ignored_gene_types:
             return None
-        if feat.type in transcript_types:
-            feat = self.transcript_gene(feat)
-        elif feat.type == "CDS":
-            feat = self.cds_gene(feat)
-        # Special case: transposable_element
-        elif feat.type in ("mobile_genetic_element", "transposable_element"):
-            feat = self.format_mobile_element(feat)
-            return feat
 
-        # Normalize the gene structure
+        # Special processing of non-gene features
+        if feat.type in allowed_non_gene_types:
+            if feat.type in ("mobile_genetic_element", "transposable_element"):
+                feat = self.format_mobile_element(feat)
+                return feat
+            return None
+
+        # From here we expect only genes
         gene = feat
-        if gene.type in allowed_gene_types:
-            gene = self.normalize_gene(gene)
-        elif gene.type in allowed_non_gene_types:
-            pass
-        else:
+
+        # What to do with unsupported gene types
+        if gene.type not in allowed_gene_types:
             self.fail_types["gene=" + gene.type] = 1
             logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
             if self.skip_unrecognized:
-                del gene
                 return None
 
-        # Finalize and store
+        if gene.type == "protein_coding_gene":
+            gene.type = "gene"
+
+        # Create actual genes from transcripts/CDS top level features
+        if gene.type in transcript_types:
+            gene = self.transcript_gene(gene)
+        elif gene.type == "CDS":
+            gene = self.cds_gene(gene)
+        
+        # Normalize, store annotation, and return the cleaned up gene
+        gene = self.normalize_gene(gene)
         self.store_gene_annotations(gene)
         return self.clean_gene(gene)
 
