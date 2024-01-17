@@ -32,15 +32,6 @@ import ensembl.io.genomio.fasta.process as FastaProcessing
 class TestFastaProcess:
     """Tests for the Fasta module, submodule 'process'."""
 
-    tmp_dir: Path
-    data_dir: Path
-
-    @pytest.fixture(scope="class", autouse=True)
-    def setup(self, tmp_dir: Path, data_dir: Path):
-        """Loads necessary fixtures and values as class attributes."""
-        type(self).tmp_dir = tmp_dir
-        type(self).data_dir = data_dir
-
     @pytest.mark.parametrize(
         "input_fasta, input_gbff, pep_mode, expected_output_fasta",
         [
@@ -67,7 +58,7 @@ class TestFastaProcess:
         ],
     )
     def test_fasta_prep(
-        self, tmp_path: Path, input_fasta: str, input_gbff: str, pep_mode: bool, expected_output_fasta: str
+        self, tmp_path: Path, data_dir: Path, input_fasta: str, input_gbff: str, pep_mode: bool, expected_output_fasta: str
     ) -> None:
         """Tests the `process.prep_fasta_data()` function.
 
@@ -79,9 +70,9 @@ class TestFastaProcess:
             expected_output_fasta: Name of the output fasta file with expected output, in the test folder.
         """
 
-        fasta_input_path = self.data_dir / input_fasta
+        fasta_input_path = data_dir / input_fasta
         if input_gbff is not None:
-            gbff_input_path = self.data_dir / input_gbff
+            gbff_input_path = data_dir / input_gbff
         else:
             gbff_input_path = input_gbff
         fasta_output_path = tmp_path / f"{input_fasta}.test.fasta"
@@ -93,7 +84,7 @@ class TestFastaProcess:
             peptide_mode=pep_mode,
         )
 
-        expected_path = self.data_dir / expected_output_fasta
+        expected_path = data_dir / expected_output_fasta
 
         assert filecmp.cmp(fasta_output_path, expected_path)
 
@@ -117,6 +108,7 @@ class TestFastaProcess:
     )
     def test_exclude_seq_regions(
         self,
+        data_dir: Path,
         input_gbff: str,
         excluded_seq_regions: Set[str],
         output: Set[str],
@@ -133,7 +125,7 @@ class TestFastaProcess:
     
         """
         if input_gbff is not None:
-            gbff_input_path = self.data_dir / input_gbff
+            gbff_input_path = data_dir / input_gbff
         else:
             gbff_input_path = input_gbff
         with expectation:
