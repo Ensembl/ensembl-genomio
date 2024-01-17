@@ -23,10 +23,10 @@ Typical usage example::
 """
 
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 from pytest import raises
-from unittest.mock import MagicMock, Mock, patch
 
 from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
 
@@ -35,12 +35,12 @@ from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
     "accession",
     [
         ("CM023531.1"),
-    ], 
+    ],
 )
-@patch('ensembl.io.genomio.genbank.download.requests.get')
+@patch("ensembl.io.genomio.genbank.download.requests.get")
 class TestDownloadGenbank:
     """Tests for the `download_genbank` class"""
-    
+
     def test_successful_download(self, mock_requests_get: Mock, tmp_dir: Path, accession: str) -> None:
         """Tests the successful download of `download_genbank()` method.
 
@@ -54,7 +54,7 @@ class TestDownloadGenbank:
         mock_requests_get.return_value.status_code = 200
         mock_content = b"The genbank download for the following accession"
         mock_requests_get.return_value.content = mock_content
-        
+
         # Temporary location where we want to store the mock output file
         output_file = tmp_dir / f"{accession}.gb"
         download_genbank(accession, output_file)
@@ -63,11 +63,11 @@ class TestDownloadGenbank:
         mock_requests_get.assert_called_once_with(
             "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
             params={"db": "nuccore", "rettype": "gbwithparts", "retmode": "text", "id": accession},
-            timeout=60
+            timeout=60,
         )
-        
+
         # Assert that the content was written to the temporary file
-        with open(output_file, 'rb') as f:
+        with open(output_file, "rb") as f:
             file_content = f.read()
         assert file_content == mock_content
 
@@ -83,7 +83,6 @@ class TestDownloadGenbank:
         output_file = tmp_dir / f"{accession}.gb"
         # Set the mock status code to 404 for request not found
         mock_requests_failed.return_value.status_code = 404
-        # Raise an error 
+        # Raise an error
         with raises(DownloadError):
             download_genbank(accession, output_file)
-        
