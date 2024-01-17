@@ -23,7 +23,6 @@ Typical usage example::
 """
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 from pytest import raises
