@@ -86,7 +86,7 @@ def test_product_is_informative(description: str, feature_id: Optional[str], out
     ],
 )
 @pytest.mark.dependency(name="add_feature")
-def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManager):
+def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManager) -> None:
     """Tests the `FunctionaAnnotation.add_feature()` method with only one feature.
 
     Args:
@@ -111,7 +111,7 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
     ],
 )
 @pytest.mark.dependency(name="add_parent_link", depends=["add_feature"])
-def test_add_parent_link(parent_type, parent_id, child_id, expected):
+def test_add_parent_link(parent_type: str, parent_id: str, child_id: str, expected: ContextManager) -> None:
     """Tests the `FunctionaAnnotation.add_parent_link()` method.
 
     Add a parent feature, and then add a parent link.
@@ -140,7 +140,14 @@ def test_add_parent_link(parent_type, parent_id, child_id, expected):
     ],
 )
 @pytest.mark.dependency(name="get_parent", depends=["add_parent_link"])
-def test_get_parent(in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected):
+def test_get_parent(
+    in_parent_type: str,
+    in_parent_id: str,
+    in_child_id: str,
+    out_parent_type: str,
+    out_child_id: str,
+    expected: ContextManager,
+) -> None:
     """Tests the `FunctionaAnnotation.get_parent()` method.
 
     Args:
@@ -176,7 +183,7 @@ def test_get_parent(in_parent_type, in_parent_id, in_child_id, out_parent_type, 
 @pytest.mark.dependency(name="add_feature_fail", depends=["add_feature", "get_parent"])
 def test_add_feature_fail(
     child_type: str, child_id: str, out_parent_id: Optional[str], expected: ContextManager
-):
+) -> None:
     """Tests the `FunctionaAnnotation.add_feature()` method failures.
 
     Test the addition of a child feature after a parent has already been added.
@@ -206,7 +213,7 @@ def test_add_feature_fail(
     ],
 )
 @pytest.mark.dependency(name="get_features", depends=["add_feature_fail"])
-def test_get_features(feat_type: str, expected_number: int, expected: ContextManager):
+def test_get_features(feat_type: str, expected_number: int, expected: ContextManager) -> None:
     """Tests the `FunctionaAnnotation.get_features()` method.
 
     Load 2 features, then test the fetching of those features.
@@ -247,7 +254,7 @@ def test_transfer_descriptions(
     transl_desc: Optional[str],
     out_gene_desc: Optional[str],
     out_transc_desc: Optional[str],
-):
+) -> None:
     """Tests the `FunctionaAnnotation.transfer_descriptions()` method.
 
     Load 3 features (gene, transcript, translation) with or without a description for each one.
