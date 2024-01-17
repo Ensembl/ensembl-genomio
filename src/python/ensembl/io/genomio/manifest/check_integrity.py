@@ -430,12 +430,12 @@ class IntegrityTool:
         self._check_genome(genome)
 
         # Check gff3
-        if manifest.has_lengths("gff_genes"):
-            gff_genes = manifest.get_lengths("gff_genes")
-            gff_seq_regions = manifest.get_lengths("gff_seq_regions")
-            gff_translations = manifest.get_lengths("gff_translations")
-            gff_all_translations = manifest.get_lengths("gff_all_translations")
-            gff_transposable_elements = manifest.get_lengths("gff_transposable_elements")
+        if manifest.has_lengths("gff3_genes"):
+            gff_genes = manifest.get_lengths("gff3_genes")
+            gff_seq_regions = manifest.get_lengths("gff3_seq_regions")
+            gff_translations = manifest.get_lengths("gff3_translations")
+            gff_all_translations = manifest.get_lengths("gff3_all_translations")
+            gff_transposable_elements = manifest.get_lengths("gff3_transposable_elements")
 
             ann_genes = manifest.get_lengths("ann_genes")
             ann_translations = manifest.get_lengths("ann_translations")
