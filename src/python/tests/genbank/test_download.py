@@ -75,7 +75,7 @@ class TestDownloadGenbank:
         """Tests the downloading failure of `download_genbank()` method.
 
         Args:
-            mock_requests_failed: A `MagicMock` object that mocks the `request.get()` method.
+            mock_requests_failed: A mock of `request.get()` method.
             tmp_dir: Session-scoped temporary directory fixture.
             accession: Genbank accession to be downloaded.
         """
