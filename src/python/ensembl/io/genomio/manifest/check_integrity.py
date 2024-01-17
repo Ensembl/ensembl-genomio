@@ -78,22 +78,32 @@ class Manifest:
         self.brc_mode = False
 
     def has_lengths(self, name: str) -> bool:
-        """Check if a given name has lengths records."""
-        if name in self.lengths:
-            return True
-        return False
+        """Check if a given name has lengths records.
+        
+        Raise KeyError if the name is not supported.
+
+        """
+        try:
+            if self.lengths[name]:
+                return True
+            return False
+        except KeyError as err:
+            raise KeyError(f"There is no length record for {name}") from err
+
 
     def get_lengths(self, name: str) -> Dict[str, Any]:
         """Returns a dict associating IDs with their length from a given file name."""
-        if name in self.lengths:
+        try:
             return self.lengths[name]
-        raise KeyError(f"No length available for key {name}")
+        except KeyError as err:
+            raise KeyError(f"There is no length record for {name}") from err
 
     def get_circular(self, name: str) -> Dict[str, Any]:
         """Returns a dict associating IDs with their is_circular flag from a given file name."""
-        if name in self.circular:
+        try:
             return self.circular[name]
-        raise KeyError(f"No length available for key {name}")
+        except KeyError as err:
+            raise KeyError(f"No length available for key {name}") from err
 
     def _add_error(self, error: str) -> None:
         self.errors.append(error)
