@@ -154,7 +154,7 @@ class GFFSimplifier:
             logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
             if self.skip_unrecognized:
                 return None
-        
+
         # Normalize, store annotation, and return the cleaned up gene
         gene = self.normalize_gene(gene)
         self.store_gene_annotations(gene)
