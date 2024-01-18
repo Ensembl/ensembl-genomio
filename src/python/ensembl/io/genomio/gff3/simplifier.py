@@ -139,13 +139,6 @@ class GFFSimplifier:
         # From here we expect only genes
         gene = feat
 
-        # What to do with unsupported gene types
-        if gene.type not in allowed_gene_types:
-            self.fail_types["gene=" + gene.type] = 1
-            logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
-            if self.skip_unrecognized:
-                return None
-
         if gene.type == "protein_coding_gene":
             gene.type = "gene"
 
@@ -154,6 +147,13 @@ class GFFSimplifier:
             gene = self.transcript_gene(gene)
         elif gene.type == "CDS":
             gene = self.cds_gene(gene)
+
+        # What to do with unsupported gene types
+        if gene.type not in allowed_gene_types:
+            self.fail_types["gene=" + gene.type] = 1
+            logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
+            if self.skip_unrecognized:
+                return None
         
         # Normalize, store annotation, and return the cleaned up gene
         gene = self.normalize_gene(gene)
