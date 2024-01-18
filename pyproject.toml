@@ -59,20 +59,20 @@ dependencies = [
 
 [project.optional-dependencies]
 cicd = [
-    "black",
-    "coverage",
+    "black >= 23.11.0",
+    "coverage >= 7.3.2",
     "deepdiff >= 6.7.1",
     "genbadge[coverage]",
-    "mypy",
-    "pylint >= 3.0",
-    "pytest",
+    "mypy >= 1.2.0",
+    "pylint >= 3.0.2",
+    "pytest >= 7.4.3",
     "pytest-dependency",
     "pytest-mock",
     "pytest-workflow",
     "types-requests",
 ]
 doc = [
-    "mkdocs",
+    "mkdocs >= 1.5.3",
     "mkdocs-autorefs",
     "mkdocs-gen-files",
     "mkdocs-literate-nav",
