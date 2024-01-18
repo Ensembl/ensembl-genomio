@@ -12,22 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.gff3.process` module.
-
-The unit testing is divided into one test class per submodule/class found in this module, and one test method
-per public function/class method.
-
-Typical usage example::
-    $ pytest test_process.py
-
-"""
+"""Unit testing of `ensembl.io.genomio.gff3.gene_merger` module."""
 
 import filecmp
 from pathlib import Path
 
 import pytest
 
-from ensembl.io.genomio.gff3.process import GFFGeneMerger
+from ensembl.io.genomio.gff3 import GFFGeneMerger
 
 
 @pytest.mark.parametrize(
