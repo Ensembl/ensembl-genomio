@@ -1,0 +1,7 @@
+{
+  "assembly_diff": {
+    "different": {
+      "num_contigs": {"ncbi": 0, "core": 2, "diff": 2}
+    }
+  }
+}

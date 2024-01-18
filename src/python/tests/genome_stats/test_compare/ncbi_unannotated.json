@@ -1,0 +1,12 @@
+{
+  "reports": [
+    {
+      "assembly_info": {
+        "assembly_level": "Contig"
+      },
+      "assembly_stats": {
+        "num_contigs": 2
+      }
+    }
+  ]
+}
