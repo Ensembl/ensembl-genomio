@@ -48,6 +48,20 @@ class SeqRegionReplacement:
         return f"{self.name} -> {self.brc_name} ({self.operation})"
 
 
+def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
+    """Load requested renaming from a tab file."""
+
+    seq_regions: List[SeqRegionReplacement] = []
+    with map_file.open("r") as input_fh:
+        for line in input_fh:
+            try:
+                (name, brc_name) = [item.strip() for item in line.split("\t")]
+            except ValueError:
+                continue
+            seq_regions.append(SeqRegionReplacement(name=name, brc_name=brc_name, operation=Operation.do_nothing))
+    return seq_regions
+
+
 def get_seq_regions_to_replace(session: Session, rename_map: List[SeqRegionReplacement]) -> List[SeqRegionReplacement]:
     """Check each seq_region replacement against the database.
 
@@ -59,11 +73,10 @@ def get_seq_regions_to_replace(session: Session, rename_map: List[SeqRegionRepla
 
     """
 
-            # .where(or_(SeqRegion.name == seqr.name, SeqRegionSynonym.synonym == seqr.name))
     for seqr in rename_map:
         seqr_stmt = (
             select(SeqRegion)
-            .where(SeqRegion.name == seqr.name)
+            .where(or_(SeqRegion.name == seqr.name, SeqRegionSynonym.synonym == seqr.name))
             .options(
                 joinedload(SeqRegion.seq_region_synonym).joinedload(SeqRegionSynonym.external_db),
                 joinedload(SeqRegion.seq_region_attrib).joinedload(SeqRegionAttrib.attrib_type),
@@ -73,7 +86,6 @@ def get_seq_regions_to_replace(session: Session, rename_map: List[SeqRegionRepla
             db_seqr: SeqRegion = row[0]
             if not db_seqr:
                 seqr.operation = Operation.not_found
-            print(db_seqr)
             attribs = get_attribs_dict(db_seqr)
             db_brc_name = attribs.get("BRC4_seq_region_name")
             if db_brc_name:
@@ -88,8 +100,6 @@ def get_seq_regions_to_replace(session: Session, rename_map: List[SeqRegionRepla
                 seqr.operation = Operation.insert
 
     return rename_map
-
-
 
 
 def get_attribs(seq_region: SeqRegion) -> List:
@@ -123,17 +133,6 @@ def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
     attribs = get_attribs(seq_region)
     attrib_dict = {attrib["source"]: attrib["value"] for attrib in attribs}
     return attrib_dict
-
-
-def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
-    """Load requested renaming from a tab file."""
-
-    seq_regions: List[SeqRegionReplacement] = []
-    with map_file.open("r") as input_fh:
-        for line in input_fh:
-            (name, brc_name) = [item.strip() for item in line.split("\t")]
-            seq_regions.append(SeqRegionReplacement(name=name, brc_name=brc_name, operation=Operation.do_nothing))
-    return seq_regions
 
 
 def main() -> None:
