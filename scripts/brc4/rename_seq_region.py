@@ -15,16 +15,15 @@
 """Rename seq_region BRC4 names in a given core database."""
 
 from dataclasses import dataclass
-import json
 import logging
 from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Dict, List
 
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import Session, joinedload
 
-from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
+from ensembl.core.models import SeqRegion, SeqRegionSynonym, SeqRegionAttrib
 from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -33,6 +32,7 @@ class Operation(Enum):
     do_nothing = auto()
     update = auto()
     insert = auto()
+    not_found = auto()
 
     def __str__(self) -> str:
         return f"{self.name}"
@@ -48,105 +48,48 @@ class SeqRegionReplacement:
         return f"{self.name} -> {self.brc_name} ({self.operation})"
 
 
-def get_seq_regions(session: Session) -> List[SeqRegion]:
-    """Returns all the sequence regions from the current core database.
-
-    Include synonyms, attribs and karyotypes. Only the top level sequences are exported.
+def get_seq_regions_to_replace(session: Session, rename_map: List[SeqRegionReplacement]) -> List[SeqRegionReplacement]:
+    """Check each seq_region replacement against the database.
 
     Args:
-        session (Session): Session from the current core.
-        external_db_map (dict): Mapping of external_db names for the synonyms.
+        session: Session from the current core.
+        rename_map: List of remappings to check.
+    
+    Returns: same list with the operation changed to the operation it can do.
 
     """
-    seq_regions = []
 
-    seqr_stmt = (
-        select(SeqRegion)
-        .options(
-            joinedload(SeqRegion.seq_region_synonym).joinedload(SeqRegionSynonym.external_db),
-            joinedload(SeqRegion.seq_region_attrib).joinedload(SeqRegionAttrib.attrib_type),
+            # .where(or_(SeqRegion.name == seqr.name, SeqRegionSynonym.synonym == seqr.name))
+    for seqr in rename_map:
+        seqr_stmt = (
+            select(SeqRegion)
+            .where(SeqRegion.name == seqr.name)
+            .options(
+                joinedload(SeqRegion.seq_region_synonym).joinedload(SeqRegionSynonym.external_db),
+                joinedload(SeqRegion.seq_region_attrib).joinedload(SeqRegionAttrib.attrib_type),
+            )
         )
-    )
-    for row in session.execute(seqr_stmt).unique().all():
-        seqr: SeqRegion = row[0]
-        seq_region: Dict[str, Any] = {}
-        seq_region = {"name": seqr.name}
-        synonyms = get_synonyms(seqr)
-        if synonyms:
-            seq_region["synonyms"] = synonyms
-
-        attribs = get_attribs_dict(seqr)
-        if attribs:
-            if "toplevel" not in attribs:
-                continue
-            add_attribs(seq_region, attribs)
-        else:
-            # Skip seq_region without attribs, not toplevel
-            continue
-
-        seq_regions.append(seq_region)
-
-    return seq_regions
-
-
-def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
-    """Map seq_regions attribs to a specific name and type defined below.
-
-    Args:
-        seq_region (Dict): A seq_region dict to modify.
-        attrib_dict (Dict): The attribs for this seq_region.
-    """
-    bool_attribs = {
-        "circular_seq": "circular",
-        "non_ref": "non_ref",
-    }
-    int_attribs = {
-        "codon_table": "codon_table",
-    }
-    string_attribs = {
-        "BRC4_seq_region_name": "BRC4_seq_region_name",
-        "EBI_seq_region_name": "EBI_seq_region_name",
-        "coord_system_tag": "coord_system_level",
-        "sequence_location": "location",
-    }
-
-    for name, key in bool_attribs.items():
-        value = attrib_dict.get(name)
-        if value:
-            seq_region[key] = bool(value)
-
-    for name, key in int_attribs.items():
-        value = attrib_dict.get(name)
-        if value:
-            seq_region[key] = int(value)
-
-    for name, key in string_attribs.items():
-        value = attrib_dict.get(name)
-        if value:
-            seq_region[key] = str(value)
-
-
-def get_synonyms(seq_region: SeqRegion) -> List:
-    """Get all synonyms for a given seq_region. Use the mapping for synonym source names.
-
-    Args:
-        seq_region (SeqRegion): Seq_region from which the synonyms are extracted.
-
-    Returns:
-        List: All synonyms as a dict with 'name' and 'source' keys.
-    """
-    synonyms = seq_region.seq_region_synonym
-    syns = []
-    if synonyms:
-        for syn in synonyms:
-            if syn.external_db:
-                source = syn.external_db.db_name
-                syn_obj = {"name": syn.synonym, "source": source}
+        for row in session.execute(seqr_stmt).unique().all():
+            db_seqr: SeqRegion = row[0]
+            if not db_seqr:
+                seqr.operation = Operation.not_found
+            print(db_seqr)
+            attribs = get_attribs_dict(db_seqr)
+            db_brc_name = attribs.get("BRC4_seq_region_name")
+            if db_brc_name:
+                if seqr.brc_name == db_brc_name:
+                    logging.info(f"Seq region {seqr.name} already exists with same name")
+                    seqr.operation = Operation.do_nothing
+                else:
+                    logging.info(f"Seq region {seqr.name} already exists with a different name ({db_brc_name} instead of {seqr.brc_name})")
+                    seqr.operation = Operation.update
             else:
-                syn_obj = {"name": syn.synonym}
-            syns.append(syn_obj)
+                logging.info(f"Seq region {seqr.name} doesn't have a BRC name")
+                seqr.operation = Operation.insert
 
-    return syns
+    return rename_map
+
+
 
 
 def get_attribs(seq_region: SeqRegion) -> List:
@@ -181,6 +124,7 @@ def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
     attrib_dict = {attrib["source"]: attrib["value"] for attrib in attribs}
     return attrib_dict
 
+
 def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
     """Load requested renaming from a tab file."""
 
@@ -190,6 +134,7 @@ def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
             (name, brc_name) = [item.strip() for item in line.split("\t")]
             seq_regions.append(SeqRegionReplacement(name=name, brc_name=brc_name, operation=Operation.do_nothing))
     return seq_regions
+
 
 def main() -> None:
     """Main script entry-point."""
@@ -204,10 +149,11 @@ def main() -> None:
 
     rename_map = get_rename_map(args.input_map)
     print(rename_map)
-    # dbc = DBConnection(args.url)
+    dbc = DBConnection(args.url)
 
-    # with dbc.session_scope() as session:
-        # seq_regions = get_seq_regions_to_replace(session, rename_map)
+    with dbc.session_scope() as session:
+        seq_regions = get_seq_regions_to_replace(session, rename_map)
+        print(seq_regions)
         # if args.update:
         #     logging.info("Replacing all seq_region names.")
         #     for seqr in seq_regions:
