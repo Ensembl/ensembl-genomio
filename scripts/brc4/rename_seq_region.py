@@ -61,6 +61,7 @@ def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
             try:
                 (name, brc_name) = [item.strip() for item in line.split("\t")]
             except ValueError:
+                logging.warning(f"Skipping line '{line.strip()}', wrong format")
                 continue
             seq_regions.append(
                 SeqRegionReplacement(name=name, brc_name=brc_name, operation=Operation.do_nothing)
@@ -81,6 +82,7 @@ def get_seq_regions_to_replace(
 
     """
 
+    seq_regions = []
     for seqr in rename_map:
         seqr_stmt = (
             select(SeqRegion)
@@ -89,7 +91,13 @@ def get_seq_regions_to_replace(
             .join(SeqRegion.seq_region_synonym)
             .where(or_(SeqRegion.name == seqr.name, SeqRegionSynonym.synonym == seqr.name))
         )
-        for row in session.execute(seqr_stmt).unique().all():
+
+        rows = session.execute(seqr_stmt).unique().all() 
+        if not rows:
+            logging.warning(f"Seq region not found: {seqr}")
+            seqr.operation = Operation.not_found
+            continue
+        for row in rows:
             db_seqr: SeqRegion = row[0]
             if not db_seqr:
                 seqr.operation = Operation.not_found
@@ -108,8 +116,9 @@ def get_seq_regions_to_replace(
             )
             seqr.operation = Operation.update
             seqr.seq_region_id = db_seqr.seq_region_id
+            seq_regions.append(seqr)
 
-    return rename_map
+    return seq_regions
 
 
 def get_attribs(seq_region: SeqRegion) -> List:
