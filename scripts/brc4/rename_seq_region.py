@@ -46,10 +46,11 @@ class SeqRegionReplacement:
     name: str
     brc_name: str
     operation: Operation
+    old_brc_name: str = ""
     seq_region_id: int = 0
 
     def __repr__(self) -> str:
-        return f"{self.name} -> {self.brc_name} ({self.seq_region_id}: {self.operation})"
+        return f"{self.name}: {self.old_brc_name} -> {self.brc_name} ({self.seq_region_id}: {self.operation})"
 
 
 def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
@@ -92,7 +93,7 @@ def get_seq_regions_to_replace(
             .where(or_(SeqRegion.name == seqr.name, SeqRegionSynonym.synonym == seqr.name))
         )
 
-        rows = session.execute(seqr_stmt).unique().all() 
+        rows = session.execute(seqr_stmt).unique().all()
         if not rows:
             logging.warning(f"Seq region not found: {seqr}")
             seqr.operation = Operation.not_found
@@ -103,6 +104,7 @@ def get_seq_regions_to_replace(
                 seqr.operation = Operation.not_found
             attribs = get_attribs_dict(db_seqr)
             db_brc_name = attribs.get("BRC4_seq_region_name")
+            seqr.old_brc_name = db_brc_name
             if not db_brc_name:
                 logging.info(f"Seq region {seqr.name} doesn't have a BRC name")
                 seqr.operation = Operation.insert
@@ -111,9 +113,7 @@ def get_seq_regions_to_replace(
                 logging.info(f"Seq region {seqr.name} already exists with same name")
                 seqr.operation = Operation.do_nothing
                 continue
-            logging.info(
-                f"Seq region {seqr.name} already exists as {db_brc_name} instead of {seqr.brc_name}"
-            )
+            logging.info(f"Seq region {seqr.name} already exists as {db_brc_name} instead of {seqr.brc_name}")
             seqr.operation = Operation.update
             seqr.seq_region_id = db_seqr.seq_region_id
             seq_regions.append(seqr)
@@ -164,14 +164,12 @@ def update_seq_region_name(
 
     brc_attrib_id = 548
     if seq_region.operation == Operation.update:
-        session.execute(
-            update(SeqRegionAttrib)
-            .where(
-                SeqRegionAttrib.seq_region_id == seq_region.seq_region_id,
-                SeqRegionAttrib.attrib_type_id == brc_attrib_id,
-            )
-            .values(value=seq_region.brc_name)
+        stmt = select(SeqRegionAttrib).where(
+            SeqRegionAttrib.seq_region_id == seq_region.seq_region_id,
+            SeqRegionAttrib.attrib_type_id == brc_attrib_id,
         )
+        seq_attrib = session.scalars(stmt).one()
+        seq_attrib.value = seq_region.brc_name
     elif seq_region.operation == Operation.insert:
         logging.warning(f"Not supported: insertion for {seq_region}")
     else:
