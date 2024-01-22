@@ -30,6 +30,8 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 class Operation(Enum):
+    """Controlled list of operations for the seq_region replacement."""
+
     do_nothing = auto()
     update = auto()
     insert = auto()
@@ -103,7 +105,7 @@ def get_seq_regions_to_replace(
             if not db_seqr:
                 seqr.operation = Operation.not_found
             attribs = get_attribs_dict(db_seqr)
-            db_brc_name = attribs.get("BRC4_seq_region_name")
+            db_brc_name = attribs.get("BRC4_seq_region_name", "")
             seqr.old_brc_name = db_brc_name
             if not db_brc_name:
                 logging.info(f"Seq region {seqr.name} doesn't have a BRC name")
@@ -157,6 +159,14 @@ def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
 def update_seq_region_name(
     session: DBConnection, seq_region: SeqRegionReplacement, update: bool = False
 ) -> None:
+    """Update BRC seq_region based on the operation provided.
+
+    Args:
+        session: SQLAlchemy session.
+        seq_region: Seq region replacement.
+        update: Make actual changes to the database.
+
+    """
     if not update:
         logging.info(f"Rename {seq_region} (fake update)")
         return
