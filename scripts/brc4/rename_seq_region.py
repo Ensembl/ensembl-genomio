@@ -21,12 +21,13 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from sqlalchemy import select, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
-from ensembl.core.models import SeqRegion, SeqRegionSynonym, SeqRegionAttrib
+from ensembl.core.models import SeqRegion, SeqRegionSynonym
 from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+
 
 class Operation(Enum):
     do_nothing = auto()
@@ -37,15 +38,18 @@ class Operation(Enum):
     def __str__(self) -> str:
         return f"{self.name}"
 
+
 @dataclass
 class SeqRegionReplacement:
     """Simple record of what to rename and how."""
+
     name: str
     brc_name: str
     operation: Operation
+    seq_region_id: int = 0
 
     def __repr__(self) -> str:
-        return f"{self.name} -> {self.brc_name} ({self.operation})"
+        return f"{self.name} -> {self.brc_name} ({self.seq_region_id}: {self.operation})"
 
 
 def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
@@ -58,17 +62,21 @@ def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
                 (name, brc_name) = [item.strip() for item in line.split("\t")]
             except ValueError:
                 continue
-            seq_regions.append(SeqRegionReplacement(name=name, brc_name=brc_name, operation=Operation.do_nothing))
+            seq_regions.append(
+                SeqRegionReplacement(name=name, brc_name=brc_name, operation=Operation.do_nothing)
+            )
     return seq_regions
 
 
-def get_seq_regions_to_replace(session: Session, rename_map: List[SeqRegionReplacement]) -> List[SeqRegionReplacement]:
+def get_seq_regions_to_replace(
+    session: Session, rename_map: List[SeqRegionReplacement]
+) -> List[SeqRegionReplacement]:
     """Check each seq_region replacement against the database.
 
     Args:
         session: Session from the current core.
         rename_map: List of remappings to check.
-    
+
     Returns: same list with the operation changed to the operation it can do.
 
     """
@@ -76,11 +84,10 @@ def get_seq_regions_to_replace(session: Session, rename_map: List[SeqRegionRepla
     for seqr in rename_map:
         seqr_stmt = (
             select(SeqRegion)
+            .select_from(SeqRegion)
+            .join(SeqRegion.seq_region_attrib)
+            .join(SeqRegion.seq_region_synonym)
             .where(or_(SeqRegion.name == seqr.name, SeqRegionSynonym.synonym == seqr.name))
-            .options(
-                joinedload(SeqRegion.seq_region_synonym).joinedload(SeqRegionSynonym.external_db),
-                joinedload(SeqRegion.seq_region_attrib).joinedload(SeqRegionAttrib.attrib_type),
-            )
         )
         for row in session.execute(seqr_stmt).unique().all():
             db_seqr: SeqRegion = row[0]
@@ -88,16 +95,19 @@ def get_seq_regions_to_replace(session: Session, rename_map: List[SeqRegionRepla
                 seqr.operation = Operation.not_found
             attribs = get_attribs_dict(db_seqr)
             db_brc_name = attribs.get("BRC4_seq_region_name")
-            if db_brc_name:
-                if seqr.brc_name == db_brc_name:
-                    logging.info(f"Seq region {seqr.name} already exists with same name")
-                    seqr.operation = Operation.do_nothing
-                else:
-                    logging.info(f"Seq region {seqr.name} already exists with a different name ({db_brc_name} instead of {seqr.brc_name})")
-                    seqr.operation = Operation.update
-            else:
+            if not db_brc_name:
                 logging.info(f"Seq region {seqr.name} doesn't have a BRC name")
                 seqr.operation = Operation.insert
+                continue
+            if seqr.brc_name == db_brc_name:
+                logging.info(f"Seq region {seqr.name} already exists with same name")
+                seqr.operation = Operation.do_nothing
+                continue
+            logging.info(
+                f"Seq region {seqr.name} already exists with a different name ({db_brc_name} instead of {seqr.brc_name})"
+            )
+            seqr.operation = Operation.update
+            seqr.seq_region_id = db_seqr.seq_region_id
 
     return rename_map
 
@@ -137,10 +147,10 @@ def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
 
 def main() -> None:
     """Main script entry-point."""
-    parser = ArgumentParser(
-        description="Replace seq_region names in a core database."
+    parser = ArgumentParser(description="Replace seq_region names in a core database.")
+    parser.add_argument_src_path(
+        "input_map", help="List of seq_region names and their BRC4 name in tab format."
     )
-    parser.add_argument_src_path("input_map", help="List of seq_region names and their BRC4 name in tab format.")
     parser.add_server_arguments(include_database=True)
     parser.add_log_arguments()
     args = parser.parse_args()
