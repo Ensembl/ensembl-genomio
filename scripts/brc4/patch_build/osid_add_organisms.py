@@ -14,43 +14,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Add or update one organism in an OSID server.
+
+You can update an organism by setting a new pattern without setting the gene and transcript starts.
+"""
+
 
 import argparse
-import requests
 import json
+from typing import Dict, Optional
+
+import requests
 
 
-def get_organism(url, user, key, org_data):
+def get_organism(url: str, user: str, key: str, org_data: Dict[str, str]) -> Optional[int]:
+    """Retrieve the organism ID from OSID for a given organism.
+
+    Returns None if no organism could be found with that name.
+    """
     species = org_data["organismName"]
 
     body = {"organismName": species}
 
     get_org = url + "/organisms"
-    result = requests.get(get_org, auth=(user, key), params=body)
+    result = requests.get(get_org, auth=(user, key), params=body, timeout=10)
 
     if result and result.status_code == 200:
         organisms = json.loads(result.content)
-        count = len(organisms)
 
         if len(organisms) == 1:
             return organisms[0]["organismId"]
-        elif len(organisms) == 0:
-            return False
-        else:
-            raise Exception("Found several organisms for the name '%s'" % species)
-    else:
-        print("Error: " + str(result))
+        if len(organisms) == 0:
+            return None
+        raise ValueError(f"Found several organisms for the name '{species}'")
+    print("Error: " + str(result))
+    return None
 
 
-def add_organism(url, user, key, org_data):
+def add_organism(url: str, user: str, key: str, org_data: Dict[str, str]) -> None:
+    """Add a new organism to OSID."""
+
     # Species is new, check we have all the keys
-    expected = { "organismName", "template", "geneIntStart", "transcriptIntStart" }
+    expected = {"organismName", "template", "geneIntStart", "transcriptIntStart"}
     if set(expected) != set(org_data):
         raise ValueError(f"Missing values expected for a new organism: {org_data}")
 
     add_org_url = url + "/organisms"
     headers = {"Content-type": "application/json", "Accept": "application/json"}
-    result = requests.post(add_org_url, auth=(user, key), headers=headers, json=org_data)
+    result = requests.post(add_org_url, auth=(user, key), headers=headers, json=org_data, timeout=10)
 
     if result and result.status_code == 200:
         print("Successfully added organism")
@@ -59,11 +70,13 @@ def add_organism(url, user, key, org_data):
         print(json.dumps(json.loads(result.content), indent=4))
 
 
-def update_organism(url, user, key, org_data, organism_id):
+def update_organism(url: str, user: str, key: str, org_data: Dict[str, str], organism_id: int):
+    """Update an organism in OSID."""
+
     del org_data["organismName"]
     update_org_url = url + "/organisms" + "/" + str(organism_id)
     headers = {"Content-type": "application/json", "Accept": "application/json"}
-    result = requests.put(update_org_url, auth=(user, key), headers=headers, json=org_data)
+    result = requests.put(update_org_url, auth=(user, key), headers=headers, json=org_data, timeout=10)
 
     if result and result.status_code == 204:
         print("Successfully updated organism")
@@ -72,7 +85,9 @@ def update_organism(url, user, key, org_data, organism_id):
         print(json.dumps(json.loads(result.content), indent=4))
 
 
-def add_or_update_organism(url, user, key, organism_data, update):
+def add_or_update_organism(url: str, user, key: str, organism_data: Dict[str, str], update: bool) -> None:
+    """Either add an organism or update it if it's already in OSID."""
+
     organism_id = get_organism(url, user, key, organism_data)
     if organism_id:
         print("Species already exist in the server")
@@ -87,7 +102,8 @@ def add_or_update_organism(url, user, key, organism_data, update):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Add one organism in an OSID server")
+    """Main script access point."""
+    parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument("--url", type=str, required=True, help="OSID server url")
     parser.add_argument("--user", type=str, required=True, help="OSID user")
