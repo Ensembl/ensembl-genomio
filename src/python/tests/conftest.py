@@ -20,33 +20,47 @@ will have access to the plugins, hooks and fixtures defined here.
 """
 
 from pathlib import Path
+from typing import Any, Callable
 
 import pytest
+from pytest import Config, FixtureRequest
 
-TEST_DATA_DIR_PATH = Path(__file__).parent
-ROOT_DIR_PATH = TEST_DATA_DIR_PATH.parents[2]
-FILES_DIR_PATH = TEST_DATA_DIR_PATH / "flatfiles"
-
-
-@pytest.fixture(scope="package")
-def dbs_dir() -> Path:
-    """Returns the folder that contains the database test files."""
-    return TEST_DATA_DIR_PATH / "databases"
+from ensembl.io.genomio.utils import get_json
 
 
-@pytest.fixture(scope="package")
-def files_dir() -> Path:
-    """Returns the folder that contains the flat test files."""
-    return FILES_DIR_PATH
+@pytest.fixture(name="data_dir", scope="module")
+def local_data_dir(request: FixtureRequest) -> Path:
+    """Returns the path to the test data folder matching the test's name.
+
+    Args:
+        request: Fixture providing information of the requesting test function.
+
+    """
+    return Path(request.module.__file__).with_suffix("")
 
 
 @pytest.fixture(scope="package")
-def manifest_dir() -> Path:
-    """Returns the folder that contains the manifest data test files."""
-    return FILES_DIR_PATH / "manifest_data"
+def shared_data_dir(pytestconfig: Config) -> Path:
+    """Returns the path to the shared test data folder.
+
+    Args:
+        pytestconfig: Session-scoped fixture that returns the session's `pytest.Config` object.
+
+    """
+    return pytestconfig.rootpath / "src/python/tests/data"
 
 
-@pytest.fixture(scope="package")
-def schemas_dir() -> Path:
-    """Returns the folder that contains the manifest data test files."""
-    return FILES_DIR_PATH / "schemas"
+@pytest.fixture(name="json_data")
+def fixture_json_data(data_dir: Path) -> Callable:
+    """Returns a JSON test object factory.
+
+    Args:
+        data_dir: Module's test data directory fixture.
+
+    """
+
+    def _json_data(file_name: str) -> Any:
+        """Returns the parsed JSON object from the given JSON test file."""
+        return get_json(data_dir / file_name)
+
+    return _json_data

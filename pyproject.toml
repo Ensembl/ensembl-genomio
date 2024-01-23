@@ -61,6 +61,7 @@ dependencies = [
 cicd = [
     "black >= 23.11.0",
     "coverage >= 7.3.2",
+    "deepdiff >= 6.7.1",
     "genbadge[coverage]",
     "mypy >= 1.2.0",
     "pylint >= 3.0.2",
@@ -172,7 +173,12 @@ show_error_codes = true
 warn_unused_configs = true
 
 [tool.pytest.ini_options]
-addopts = "-v --tb=native --server=sqlite:///"
+addopts = [
+    "--import-mode=importlib",
+    "--tb=native",
+    "--verbose",
+    "--server=sqlite:///",
+]
 testpaths = ["src/python/tests"]
 norecursedirs = ["data", "docs", "*.egg_info"]
 

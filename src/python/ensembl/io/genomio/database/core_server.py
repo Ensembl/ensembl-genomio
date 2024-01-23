@@ -20,8 +20,8 @@ import re
 from typing import List, Optional
 import logging
 
+import sqlalchemy
 from sqlalchemy.engine import URL
-from sqlalchemy import create_engine
 
 
 class CoreServer:
@@ -32,7 +32,7 @@ class CoreServer:
 
     def __init__(self, server_url: URL) -> None:
         logging.debug(f"Connect to {server_url}")
-        self.engine = create_engine(server_url)
+        self.engine = sqlalchemy.create_engine(server_url)
 
     def get_all_core_names(self) -> List[str]:
         """Query the server and retrieve all database names that look like Ensembl cores."""

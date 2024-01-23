@@ -72,21 +72,31 @@ class FunctionalAnnotations:
             "transcript": {},
         }
 
-    def add_parent(self, parent_type: str, parent_id: str, child_id: str) -> None:
+    def get_features(self, feat_type: str) -> Dict[str, Annotation]:
+        """Get all feature annotations for the requested type."""
+        try:
+            return self.features[feat_type]
+        except KeyError as err:
+            raise KeyError(f"No such feature type {feat_type}") from err
+
+    def add_parent_link(self, parent_type: str, parent_id: str, child_id: str) -> None:
         """Record a parent-child IDs relationship for a given parent biotype."""
-        if parent_type in self.parents:
-            self.parents[parent_type][child_id] = parent_id
-        else:
-            raise MissingParentError(f"Unsupported parent type {parent_type}")
+        features = self.get_features(parent_type)
+        if parent_id not in features:
+            raise MissingParentError(f"Parent {parent_type}:{parent_id} not found for {child_id}")
+        self.parents[parent_type][child_id] = parent_id
 
     def get_parent(self, parent_type: str, child_id: str) -> str:
         """Returns the parent ID of a given child for a given parent biotype."""
-        if parent_type in self.parents:
-            parent_id = self.parents[parent_type].get(child_id)
-            if parent_id is None:
-                raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
-            return parent_id
-        raise MissingParentError(f"Unsupported parent type {parent_type}")
+        try:
+            parents = self.parents[parent_type]
+        except KeyError as err:
+            raise KeyError(f"Unsupported parent type {parent_type}") from err
+
+        parent_id = parents.get(child_id)
+        if parent_id is None:
+            raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
+        return parent_id
 
     def add_feature(self, feature: SeqFeature, feat_type: str, parent_id: Optional[str] = None) -> None:
         """Add annotation for a feature of a given type. If a parent_id is provided, record the relatioship.
@@ -95,26 +105,19 @@ class FunctionalAnnotations:
             feature: The feature to create an annotation.
             feat_type: Type of the feature to annotate.
         """
-        if feat_type not in self.features:
-            raise AnnotationError(f"Unsupported feature type {feat_type}")
-
-        if feature.id in self.features[feat_type]:
+        features = self.get_features(feat_type)
+        if feature.id in features:
             raise AnnotationError(f"Feature {feat_type} ID {feature.id} already added")
+
         feature_object = self._generic_feature(feature, feat_type)
         self.features[feat_type][feature.id] = feature_object
 
         if parent_id:
             if feat_type in _PARENTS:
                 parent_type = _PARENTS[feat_type]
-                self.add_parent(parent_type, parent_id, feature.id)
+                self.add_parent_link(parent_type, parent_id, feature.id)
             else:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
-
-    def get_features(self, feat_type: str) -> Dict[str, Annotation]:
-        """Get all feature annotations for the requested type."""
-        if feat_type in self.features:
-            return self.features[feat_type]
-        raise AnnotationError(f"No such feature type {feat_type}")
 
     def _generic_feature(self, feature: SeqFeature, feat_type: str) -> Dict[str, Any]:
         """Create a feature object following the specifications.
@@ -154,7 +157,7 @@ class FunctionalAnnotations:
 
         return feature_object
 
-    def _transfer_descriptions(self) -> None:
+    def transfer_descriptions(self) -> None:
         """Transfers the feature descriptions in 2 steps:
         - from translations to transcripts (if the transcript description is empty)
         - from transcripts to genes (same case)
@@ -203,12 +206,15 @@ class FunctionalAnnotations:
             "putative",
             "uncharacterized",
             "unspecified",
+            "unknown",
             r"(of )?unknown function",
             "conserved",
             "predicted",
             "fragment",
             "product",
+            "function",
             "protein",
+            "gene",
             "RNA",
             r"variant( \d+)?",
         ]
@@ -243,6 +249,6 @@ class FunctionalAnnotations:
             out_path: JSON file path where to write the data.
 
         """
-        self._transfer_descriptions()
+        self.transfer_descriptions()
         feats_list = self._to_list()
         print_json(Path(out_path), feats_list)

@@ -69,6 +69,7 @@ def prep_fasta_data(
     """
     file_path = Path(fasta_infile)
 
+    to_exclude = set()
     seqr_to_exclude = set(exclude_seq_regions)
     if peptide_mode:
         if genbank_infile is not None:
