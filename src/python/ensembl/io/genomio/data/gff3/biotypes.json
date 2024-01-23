@@ -35,6 +35,7 @@
     },
     "non_gene": {
         "supported": [
+            "mobile_genetic_element",
             "transposable_element"
         ]
     },
