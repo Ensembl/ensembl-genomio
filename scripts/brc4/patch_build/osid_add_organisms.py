@@ -43,6 +43,11 @@ def get_organism(url, user, key, org_data):
 
 
 def add_organism(url, user, key, org_data):
+    # Species is new, check we have all the keys
+    expected = { "organismName", "template", "geneIntStart", "transcriptIntStart" }
+    if set(expected) != set(org_data):
+        raise ValueError(f"Missing values expected for a new organism: {org_data}")
+
     add_org_url = url + "/organisms"
     headers = {"Content-type": "application/json", "Accept": "application/json"}
     result = requests.post(add_org_url, auth=(user, key), headers=headers, json=org_data)
@@ -93,17 +98,18 @@ def main():
 
     parser.add_argument("--name", type=str, required=True, help="Species name to add")
     parser.add_argument("--template", type=str, required=True, help="Stable_id template")
-    parser.add_argument("--gene_start", type=str, required=True, help="Start of gene numbering")
-    parser.add_argument("--transcript_start", type=str, required=True, help="Start of transcript numbering")
+    parser.add_argument("--gene_start", type=str, help="Start of gene numbering")
+    parser.add_argument("--transcript_start", type=str, help="Start of transcript numbering")
 
     args = parser.parse_args()
 
     organism_data = {
         "organismName": args.name,
         "template": args.template,
-        "geneIntStart": args.gene_start,
-        "transcriptIntStart": args.transcript_start,
     }
+    if args.gene_start and args.transcript_start:
+        organism_data["geneIntStart"] = args.gene_start
+        organism_data["transcriptIntStart"] = args.transcript_start
 
     add_or_update_organism(args.url, args.user, args.key, organism_data, args.update)
 
