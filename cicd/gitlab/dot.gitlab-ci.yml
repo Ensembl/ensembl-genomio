@@ -25,6 +25,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH =~ /hackathon\/.+/
 
 variables:
+  PYTHON_IMAGE: python:3.8
   RUN_DIR: ./cicd/runtime
 
 # Using default stages (https://docs.gitlab.com/ee/ci/yaml/#stages): .pre > build > test > deploy > .post

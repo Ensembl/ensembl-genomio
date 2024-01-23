@@ -20,7 +20,7 @@
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
 .python:
   stage: test
-  image: python:3.8
+  image: $PYTHON_IMAGE
   only:
     changes:
       - cicd/gitlab/parts/python.gitlab-ci.yml
