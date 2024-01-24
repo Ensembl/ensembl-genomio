@@ -47,7 +47,7 @@ def get_organism(url: str, user: str, key: str, org_data: Dict[str, str]) -> Opt
         if len(organisms) == 0:
             return None
         raise ValueError(f"Found several organisms for the name '{species}'")
-    print("Error: " + str(result))
+    print(f"Error: {result}")
     return None
 
 
@@ -70,7 +70,7 @@ def add_organism(url: str, user: str, key: str, org_data: Dict[str, str]) -> Non
         print(json.dumps(json.loads(result.content), indent=4))
 
 
-def update_organism(url: str, user: str, key: str, org_data: Dict[str, str], organism_id: int):
+def update_organism(url: str, user: str, key: str, org_data: Dict[str, str], organism_id: int) -> None:
     """Update an organism in OSID."""
 
     del org_data["organismName"]
