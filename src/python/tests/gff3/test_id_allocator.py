@@ -14,11 +14,43 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.gff3.id_allocator` module."""
 
+from difflib import unified_diff
+import filecmp
+from pathlib import Path
 from typing import List
 
 import pytest
 
+from BCBio import GFF
+from Bio.SeqRecord import SeqRecord
 from ensembl.io.genomio.gff3.id_allocator import IDAllocator
+
+
+def _read_record(in_gff: Path) -> SeqRecord:
+    """Get one clean record from a GFF3 file."""
+    with in_gff.open("r") as in_gff_fh:
+        for record in GFF.parse(in_gff_fh):
+            new_record = SeqRecord(seq=record.seq, id=record.id)
+            new_record.features = record.features
+            return new_record
+
+    raise ValueError(f"No feature loaded from {in_gff}")
+
+
+def _write_record(out_record: SeqRecord, out_gff: Path) -> None:
+    """Write one record to a GFF3 file."""
+    with out_gff.open("w") as out_gff_fh:
+        GFF.write([out_record], out_gff_fh)
+
+
+def _show_diff(result_path: Path, expected_path: Path) -> str:
+    """Create a useful diff between 2 files."""
+    with open(result_path, "r") as result_fh:
+        results = result_fh.readlines()
+    with open(expected_path, "r") as expected_fh:
+        expected = expected_fh.readlines()
+    diff = list(unified_diff(expected, results))
+    return "".join(diff)
 
 
 @pytest.mark.parametrize(
@@ -74,7 +106,7 @@ def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
         pytest.param("LOREM-IPSUM1", ["LOREM-", "IPSUM"], "IPSUM1", id="Only 1 prefix is removed"),
     ],
 )
-def test_remove_prefixes(test_id: int, prefixes: List[str], outcome: str) -> None:
+def test_remove_prefixes(test_id: str, prefixes: List[str], outcome: str) -> None:
     """Test prefix removal."""
     ids = IDAllocator()
 
@@ -91,7 +123,7 @@ def test_remove_prefixes(test_id: int, prefixes: List[str], outcome: str) -> Non
         pytest.param("cds:bad..id", "", id="Invalid id with cds:"),
     ],
 )
-def test_normalize_cds_id(test_id: int, outcome: str) -> None:
+def test_normalize_cds_id(test_id: str, outcome: str) -> None:
     """Test CDS id normalization."""
     ids = IDAllocator()
 
@@ -106,7 +138,7 @@ def test_normalize_cds_id(test_id: int, outcome: str) -> None:
         pytest.param("LOREM-IPSUM1", [1, 1], ["LOREM-IPSUM1_t1", "LOREM-IPSUM1_t1"], id="Same number (!)"),
     ],
 )
-def test_normalize_transcript_id(test_id: int, numbers: List[int], outcomes: List[str]) -> None:
+def test_normalize_transcript_id(test_id: str, numbers: List[int], outcomes: List[str]) -> None:
     """Test transcript id normalization."""
     ids = IDAllocator()
 
@@ -115,3 +147,33 @@ def test_normalize_transcript_id(test_id: int, numbers: List[int], outcomes: Lis
         new_ids.append(ids.normalize_transcript_id(test_id, number))
 
     assert new_ids == outcomes
+
+
+@pytest.mark.parametrize(
+    "input_gff, expected_gff",
+    [
+        pytest.param("pseudo_01_in.gff3", "pseudo_01_out.gff3", id="No change"),
+        pytest.param("pseudo_02_in.gff3", "pseudo_02_out.gff3", id="invalid ID"),
+        pytest.param("pseudo_03_in.gff3", "pseudo_03_out.gff3", id="Using gene ID"),
+    ],
+)
+def test_normalize_pseudogene_cds_id(
+    tmp_dir: Path, data_dir: Path, input_gff: str, expected_gff: str
+) -> None:
+    """Test pseudogene CDS ID normalization."""
+    ids = IDAllocator()
+
+    # Load record and update feature
+    record = _read_record(data_dir / input_gff)
+    features = record.features
+    record.features = []
+    for feature in features:
+        ids.normalize_pseudogene_cds_id(feature)
+        record.features.append(feature)
+
+    # Write it out and compare the GFF3 files
+    out_path = tmp_dir / "result.gff3"
+    _write_record(record, out_path)
+    expected_path = data_dir / expected_gff
+    diff = _show_diff(out_path, expected_path)
+    assert filecmp.cmp(out_path, expected_path), f"Files differ: {diff}"
