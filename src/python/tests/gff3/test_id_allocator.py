@@ -152,9 +152,10 @@ def test_normalize_transcript_id(test_id: str, numbers: List[int], outcomes: Lis
 @pytest.mark.parametrize(
     "input_gff, expected_gff",
     [
-        pytest.param("pseudo_01_in.gff3", "pseudo_01_out.gff3", id="No change"),
+        pytest.param("pseudo_01.gff3", "pseudo_01.gff3", id="Good ID, no change"),
         pytest.param("pseudo_02_in.gff3", "pseudo_02_out.gff3", id="invalid ID"),
         pytest.param("pseudo_03_in.gff3", "pseudo_03_out.gff3", id="Using gene ID"),
+        pytest.param("pseudo_04.gff3", "pseudo_04.gff3", id="Without CDS"),
     ],
 )
 def test_normalize_pseudogene_cds_id(
