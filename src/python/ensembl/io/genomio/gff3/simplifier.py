@@ -210,6 +210,7 @@ class GFFSimplifier:
 
         return gene
 
+# FORMATTERS
     def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
 
@@ -329,7 +330,7 @@ class GFFSimplifier:
 
         # PSEUDOGENE CDS IDs
         if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
-            self.normalize_pseudogene_cds(gene)
+            self.normalize_pseudogene_cds_id(gene)
 
         return gene
 
@@ -408,6 +409,7 @@ class GFFSimplifier:
                 transcript.sub_features.pop(elt)
         return transcript
 
+# COMPLETION
     def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
         """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
 
@@ -639,6 +641,28 @@ class GFFSimplifier:
 
         return transcript
 
+    def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
+        """Removes the CDS from a pseudogene.
+
+        This assumes the CDSs are sub features of the transcript or the gene.
+
+        """
+        gene_subfeats = []
+        for transcript in gene.sub_features:
+            if transcript.type == "CDS":
+                logging.debug(f"Remove pseudo CDS {transcript.id}")
+                continue
+            new_subfeats = []
+            for feat in transcript.sub_features:
+                if feat.type == "CDS":
+                    logging.debug(f"Remove pseudo CDS {feat.id}")
+                    continue
+                new_subfeats.append(feat)
+            transcript.sub_features = new_subfeats
+            gene_subfeats.append(transcript)
+        gene.sub_features = gene_subfeats
+
+# IDS
     def normalize_gene_id(self, gene: SeqFeature) -> str:
         """Remove any unnecessary prefixes around the gene ID.
 
@@ -755,7 +779,7 @@ class GFFSimplifier:
 
         return cds_id
 
-    def normalize_pseudogene_cds(self, gene: SeqFeature) -> None:
+    def normalize_pseudogene_cds_id(self, gene: SeqFeature) -> None:
         """Normalises the CDS ID of the provided pseudogene.
 
         Ensure CDS from a pseudogene have a proper ID:
@@ -771,27 +795,6 @@ class GFFSimplifier:
                     if feat.id in ("", gene.id):
                         feat.id = f"{transcript.id}_cds"
                         feat.qualifiers["ID"] = feat.id
-
-    def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
-        """Removes the CDS from a pseudogene.
-
-        This assumes the CDSs are sub features of the transcript or the gene.
-
-        """
-        gene_subfeats = []
-        for transcript in gene.sub_features:
-            if transcript.type == "CDS":
-                logging.debug(f"Remove pseudo CDS {transcript.id}")
-                continue
-            new_subfeats = []
-            for feat in transcript.sub_features:
-                if feat.type == "CDS":
-                    logging.debug(f"Remove pseudo CDS {feat.id}")
-                    continue
-                new_subfeats.append(feat)
-            transcript.sub_features = new_subfeats
-            gene_subfeats.append(transcript)
-        gene.sub_features = gene_subfeats
 
     def remove_prefixes(self, identifier: str, prefixes: List[str]) -> str:
         """Returns the identifier after removing all the prefixes found in it (if any)."""
