@@ -91,7 +91,7 @@ class GFFSimplifier:
         """Set the ID prefix using the organism abbrev if it exists in the genome metadata."""
         try:
             org = self.genome["BRC4"]["organism_abbrev"]
-        except ValueError:
+        except KeyError:
             prefix = "TMP_PREFIX_"
         else:
             prefix = "TMP_" + org + "_"
