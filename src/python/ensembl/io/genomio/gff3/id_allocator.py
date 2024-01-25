@@ -58,8 +58,6 @@ class IDAllocator:
         if not self.validate_gene_id:
             return True
 
-        min_length = self.min_id_length
-
         # Trna (from tRNAscan)
         if re.search(r"^Trna", name, re.IGNORECASE):
             logging.debug(f"Stable ID is a tRNA from tRNA-scan: {name}")
@@ -76,8 +74,8 @@ class IDAllocator:
             return False
 
         # Min length
-        if len(name) < min_length:
-            logging.debug(f"Stable id is too short (<{min_length}) {name}")
+        if len(name) < self.min_id_length:
+            logging.debug(f"Stable id is too short (<{self.min_id_length}) {name}")
             return False
 
         return True
