@@ -76,7 +76,7 @@ class GFFSimplifier:
     fail_types: Dict[str, int] = {}
     ids = IDAllocator()
 
-    def __init__(self, genome_path: Optional[PathLike] = None, make_missing_stable_ids: bool = False):
+    def __init__(self, genome_path: Optional[PathLike] = None):
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
         self._biotypes = get_json(biotypes_json)
         self.records = Records()
@@ -85,7 +85,17 @@ class GFFSimplifier:
         if genome_path:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
-        self.ids.make_missing_stable_ids = make_missing_stable_ids
+        self._set_id_prefix()
+
+    def _set_id_prefix(self) -> None:
+        """Set the ID prefix using the organism abbrev if it exists in the genome metadata."""
+        try:
+            org = self.genome["BRC4"]["organism_abbrev"]
+        except ValueError:
+            prefix = "TMP_PREFIX_"
+        else:
+            prefix = "TMP_" + org + "_"
+        self.ids.id_prefix = prefix
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a
@@ -208,7 +218,7 @@ class GFFSimplifier:
 
         return gene
 
-# FORMATTERS
+    # FORMATTERS
     def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
 
@@ -407,7 +417,7 @@ class GFFSimplifier:
                 transcript.sub_features.pop(elt)
         return transcript
 
-# COMPLETION
+    # COMPLETION
     def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
         """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
 

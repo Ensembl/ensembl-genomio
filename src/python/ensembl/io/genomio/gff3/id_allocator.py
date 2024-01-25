@@ -14,9 +14,7 @@
 # limitations under the License.
 """Check and allocate stable ids."""
 
-__all__ = [
-    "IDAllocator"
-]
+__all__ = ["IDAllocator"]
 
 from dataclasses import dataclass
 import logging
@@ -32,8 +30,8 @@ class InvalidID(ValueError):
 
 @dataclass
 class IDAllocator:
-    """Set of tools to check and allocate stable ids.
-    """
+    """Set of tools to check and allocate stable ids."""
+
     # Multiple parameters to automate various fixes
     validate_gene_id = True
     min_id_length = 8
@@ -82,17 +80,11 @@ class IDAllocator:
         """Returns a new unique gene stable_id with a prefix.
 
         The id is made up of a prefix and a number, which is auto incremented.
-        Define the prefix with the param "stable_id_prefix",
-        or use the genome organism_abbrev and prepend "TMP_" to it.
+        Define the prefix with the param "id_prefix",
 
         """
-        if self.id_prefix:
-            prefix = self.id_prefix
-        else:
-            self.id_prefix = prefix
-
         number = self.current_id_number + 1
-        new_id = f"{prefix}{number}"
+        new_id = f"{self.id_prefix}{number}"
         self.current_id_number = number
 
         return new_id
