@@ -14,6 +14,7 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.gff3.gene_merger` module."""
 
+from difflib import unified_diff
 import filecmp
 from pathlib import Path
 
@@ -22,10 +23,23 @@ import pytest
 from ensembl.io.genomio.gff3 import GFFGeneMerger
 
 
+def _show_diff(result_path: Path, expected_path: Path) -> str:
+    """Create a useful diff between 2 files."""
+    with open(result_path, "r") as result_fh:
+        results = result_fh.readlines()
+    with open(expected_path, "r") as expected_fh:
+        expected = expected_fh.readlines()
+    diff = list(unified_diff(expected, results))
+    return "".join(diff)
+
+
 @pytest.mark.parametrize(
     "input_file, expected_file",
     [
-        ("input1.gff3", "output1.gff3"),
+        pytest.param("merge_split_in.gff3", "merge_split_out.gff3", id="Split gene"),
+        pytest.param("merge_fasta_in.gff3", "merge_fasta_out.gff3", id="Split gene with fasta"),
+        pytest.param("merge_gene_only_in.gff3", "merge_gene_only_out.gff3", id="Split gene only"),
+        pytest.param("merge_unordered_in.gff3", "merge_unordered_out.gff3", id="Unordered split gene"),
     ],
 )
 def test_merge(data_dir: Path, tmp_path: Path, input_file: str, expected_file: str) -> None:
@@ -43,4 +57,4 @@ def test_merge(data_dir: Path, tmp_path: Path, input_file: str, expected_file: s
     test_output_path = tmp_path / f"{input_file}.test.gff3"
     expected_path = data_dir / expected_file
     merger.merge(gff_input_path, test_output_path)
-    assert filecmp.cmp(test_output_path, expected_path)
+    assert filecmp.cmp(test_output_path, expected_path), _show_diff(test_output_path, expected_path)
