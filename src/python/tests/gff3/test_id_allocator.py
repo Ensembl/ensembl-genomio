@@ -197,8 +197,11 @@ def test_normalize_pseudogene_cds_id(
 @pytest.mark.parametrize(
     "input_gff, expected_id, make_id, expected",
     [
-        pytest.param("geneid_01_LOREMIPSUM1.gff3", "LOREMIPSUM1", None, does_not_raise(), id="Good ID, no change"),
-        pytest.param("geneid_02_bad.gff3", "", False, raises(InvalidID), id="Bad ID, fail"),
+        pytest.param("geneid_ok.gff3", "LOREMIPSUM1", None, does_not_raise(), id="Good ID, no change"),
+        pytest.param("geneid_makeid.gff3", "TMP_1", True, does_not_raise(), id="Make ID"),
+        pytest.param("geneid_bad.gff3", "", False, raises(InvalidID), id="Bad ID, fail"),
+        pytest.param("geneid_GeneID.gff3", "GeneID_000001", None, does_not_raise(), id="Replace with GeneID"),
+        pytest.param("geneid_noGeneID.gff3", "TMP_1", True, does_not_raise(), id="Dbxref without Gene ID"),
     ],
 )
 def test_normalize_gene_id(
