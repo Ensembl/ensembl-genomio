@@ -79,7 +79,7 @@ class Manifest:
 
     def has_lengths(self, name: str) -> bool:
         """Check if a given name has lengths records.
-        
+
         Raise KeyError if the name is not supported.
 
         """
@@ -89,7 +89,6 @@ class Manifest:
             return False
         except KeyError as err:
             raise KeyError(f"There is no length record for {name}") from err
-
 
     def get_lengths(self, name: str) -> Dict[str, Any]:
         """Returns a dict associating IDs with their length from a given file name."""
@@ -737,9 +736,7 @@ class IntegrityTool:
 
 def main() -> None:
     """Main entrypoint."""
-    parser = ArgumentParser(
-        description="Compare the genomic data between the files present in a manifest file."
-    )
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path("--manifest_file", required=True, help="Manifest file for the data to check")
     parser.add_argument("--brc_mode", action="store_true", help="Enable BRC mode")
     parser.add_argument(
