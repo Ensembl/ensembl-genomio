@@ -14,16 +14,18 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.gff3.id_allocator` module."""
 
+from contextlib import nullcontext as does_not_raise
 from difflib import unified_diff
 import filecmp
 from pathlib import Path
-from typing import List
+from typing import ContextManager, List
 
 import pytest
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
-from ensembl.io.genomio.gff3.id_allocator import IDAllocator
+from ensembl.io.genomio.gff3.id_allocator import IDAllocator, InvalidID
+from pytest import raises
 
 
 def _read_record(in_gff: Path) -> SeqRecord:
@@ -91,7 +93,7 @@ def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
 def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
     """Test ID validity check."""
     ids = IDAllocator()
-    if min_id_length:
+    if min_id_length is not None:
         ids.min_id_length = min_id_length
 
     assert ids.valid_id(test_id) == outcome
@@ -190,3 +192,30 @@ def test_normalize_pseudogene_cds_id(
     expected_path = data_dir / expected_gff
     diff = _show_diff(out_path, expected_path)
     assert filecmp.cmp(out_path, expected_path), f"Files differ: {diff}"
+
+
+@pytest.mark.parametrize(
+    "input_gff, expected_id, make_id, expected",
+    [
+        pytest.param("geneid_01_LOREMIPSUM1.gff3", "LOREMIPSUM1", None, does_not_raise(), id="Good ID, no change"),
+        pytest.param("geneid_02_bad.gff3", "", False, raises(InvalidID), id="Bad ID, fail"),
+    ],
+)
+def test_normalize_gene_id(
+    data_dir: Path, input_gff: str, expected_id: str, make_id: bool, expected: ContextManager
+) -> None:
+    """Test gene ID normalization."""
+    ids = IDAllocator()
+    if make_id is not None:
+        ids.make_missing_stable_ids = make_id
+
+
+    # Load record and update feature
+    record = _read_record(data_dir / input_gff)
+    features = record.features
+    record.features = []
+
+    with expected:
+        for feature in features:
+            feature.id = ids.normalize_gene_id(feature)
+            assert feature.id == expected_id
