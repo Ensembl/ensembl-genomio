@@ -88,6 +88,12 @@ class IDAllocator:
                 break
         return identifier
 
+    def normalize_transcript_id(self, gene_id: str, number: int) -> str:
+        """Use a gene ID and a number to make a formatted transcript ID."""
+
+        transcript_id = f"{gene_id}_t{number}"
+        return transcript_id
+
     def normalize_cds_id(self, cds_id: str) -> str:
         """Returns a normalised version of the provided CDS ID.
 
@@ -106,11 +112,22 @@ class IDAllocator:
 
         return cds_id
 
-    def normalize_transcript_id(self, gene_id: str, number: int) -> str:
-        """Use a gene ID and a number to make a formatted transcript ID."""
+    def normalize_pseudogene_cds_id(self, gene: SeqFeature) -> None:
+        """Normalises the CDS ID of the provided pseudogene.
 
-        transcript_id = f"{gene_id}_t{number}"
-        return transcript_id
+        Ensure CDS from a pseudogene have a proper ID:
+        - Different from the gene
+        - Derived from the gene if it is not proper
+
+        """
+
+        for transcript in gene.sub_features:
+            for feat in transcript.sub_features:
+                if feat.type == "CDS":
+                    feat.id = self.normalize_cds_id(feat.id)
+                    if feat.id in ("", gene.id):
+                        feat.id = f"{transcript.id}_cds"
+                        feat.qualifiers["ID"] = feat.id
 
     def normalize_gene_id(self, gene: SeqFeature) -> str:
         """Remove any unnecessary prefixes around the gene ID.
@@ -148,20 +165,3 @@ class IDAllocator:
             raise InvalidID(f"Can't use invalid gene id for {gene}")
 
         return new_gene_id
-
-    def normalize_pseudogene_cds_id(self, gene: SeqFeature) -> None:
-        """Normalises the CDS ID of the provided pseudogene.
-
-        Ensure CDS from a pseudogene have a proper ID:
-        - Different from the gene
-        - Derived from the gene if it is not proper
-
-        """
-
-        for transcript in gene.sub_features:
-            for feat in transcript.sub_features:
-                if feat.type == "CDS":
-                    feat.id = self.normalize_cds_id(feat.id)
-                    if feat.id in ("", gene.id):
-                        feat.id = f"{transcript.id}_cds"
-                        feat.qualifiers["ID"] = feat.id
