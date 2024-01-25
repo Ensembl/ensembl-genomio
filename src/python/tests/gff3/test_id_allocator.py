@@ -39,6 +39,7 @@ def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
     new_ids = [id1, id2]
     assert new_ids == expected_ids
 
+
 @pytest.mark.parametrize(
     "min_id_length, test_id, outcome",
     [
@@ -63,6 +64,7 @@ def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
 
     assert ids.valid_id(test_id) == outcome
 
+
 @pytest.mark.parametrize(
     "test_id, prefixes, outcome",
     [
@@ -77,3 +79,39 @@ def test_remove_prefixes(test_id: int, prefixes: List[str], outcome: str) -> Non
     ids = IDAllocator()
 
     assert ids.remove_prefixes(test_id, prefixes) == outcome
+
+
+@pytest.mark.parametrize(
+    "test_id, outcome",
+    [
+        pytest.param("LOREM-IPSUM1", "LOREM-IPSUM1", id="No prefixes"),
+        pytest.param("cds-LOREM-IPSUM1", "LOREM-IPSUM1", id="Prefix cds-"),
+        pytest.param("cds:LOREM-IPSUM1", "LOREM-IPSUM1", id="Prefix cds-"),
+        pytest.param("bad", "", id="Short id without prefix"),
+        pytest.param("cds:bad..id", "", id="Invalid id with cds:"),
+    ],
+)
+def test_normalize_cds_id(test_id: int, outcome: str) -> None:
+    """Test CDS id normalization."""
+    ids = IDAllocator()
+
+    assert ids.normalize_cds_id(test_id) == outcome
+
+
+@pytest.mark.parametrize(
+    "test_id, numbers, outcomes",
+    [
+        pytest.param("LOREM-IPSUM1", [1], ["LOREM-IPSUM1_t1"], id="1 transcript ID"),
+        pytest.param("LOREM-IPSUM1", [1, 2], ["LOREM-IPSUM1_t1", "LOREM-IPSUM1_t2"], id="2 transcript IDs"),
+        pytest.param("LOREM-IPSUM1", [1, 1], ["LOREM-IPSUM1_t1", "LOREM-IPSUM1_t1"], id="Same number (!)"),
+    ],
+)
+def test_normalize_transcript_id(test_id: int, numbers: List[int], outcomes: List[str]) -> None:
+    """Test transcript id normalization."""
+    ids = IDAllocator()
+
+    new_ids = []
+    for number in numbers:
+        new_ids.append(ids.normalize_transcript_id(test_id, number))
+
+    assert new_ids == outcomes

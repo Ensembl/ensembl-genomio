@@ -88,6 +88,30 @@ class IDAllocator:
                 break
         return identifier
 
+    def normalize_cds_id(self, cds_id: str) -> str:
+        """Returns a normalised version of the provided CDS ID.
+
+        The normalisation implies to remove any unnecessary prefixes around the CDS ID. However, if
+        the CDS ID is still not proper, an empty string will be returned.
+
+        """
+
+        prefixes = ["cds-", "cds:"]
+        cds_id = self.remove_prefixes(cds_id, prefixes)
+
+        # Special case: if the ID doesn't look like one, remove it
+        # It needs to be regenerated
+        if not self.valid_id(cds_id):
+            cds_id = ""
+
+        return cds_id
+
+    def normalize_transcript_id(self, gene_id: str, number: int) -> str:
+        """Use a gene ID and a number to make a formatted transcript ID."""
+
+        transcript_id = f"{gene_id}_t{number}"
+        return transcript_id
+
     def normalize_gene_id(self, gene: SeqFeature) -> str:
         """Remove any unnecessary prefixes around the gene ID.
 
@@ -124,30 +148,6 @@ class IDAllocator:
             raise InvalidID(f"Can't use invalid gene id for {gene}")
 
         return new_gene_id
-
-    def normalize_transcript_id(self, gene_id: str, number: int) -> str:
-        """Use a gene ID and a number to make a formatted transcript ID."""
-
-        transcript_id = f"{gene_id}_t{number}"
-        return transcript_id
-
-    def normalize_cds_id(self, cds_id: str) -> str:
-        """Returns a normalised version of the provided CDS ID.
-
-        The normalisation implies to remove any unnecessary prefixes around the CDS ID. However, if
-        the CDS ID is still not proper, an empty string will be returned.
-
-        """
-
-        prefixes = ["cds-", "cds:"]
-        cds_id = self.remove_prefixes(cds_id, prefixes)
-
-        # Special case: if the ID doesn't look like one, remove it
-        # It needs to be regenerated
-        if not self.valid_id(cds_id):
-            cds_id = ""
-
-        return cds_id
 
     def normalize_pseudogene_cds_id(self, gene: SeqFeature) -> None:
         """Normalises the CDS ID of the provided pseudogene.
