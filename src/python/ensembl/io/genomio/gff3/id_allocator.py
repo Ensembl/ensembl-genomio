@@ -61,7 +61,7 @@ class IDAllocator:
         min_length = self.min_id_length
 
         # Trna (from tRNAscan)
-        if re.search(r"^Trna", name):
+        if re.search(r"^Trna", name, re.IGNORECASE):
             logging.debug(f"Stable ID is a tRNA from tRNA-scan: {name}")
             return False
 
