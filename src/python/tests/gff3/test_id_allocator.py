@@ -62,3 +62,18 @@ def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
         ids.min_id_length = min_id_length
 
     assert ids.valid_id(test_id) == outcome
+
+@pytest.mark.parametrize(
+    "test_id, prefixes, outcome",
+    [
+        pytest.param("LOREM-IPSUM1", [], "LOREM-IPSUM1", id="No prefixes"),
+        pytest.param("LOREM-IPSUM1", ["DOLOR"], "LOREM-IPSUM1", id="Unused prefix"),
+        pytest.param("LOREM-IPSUM1", ["LOREM-"], "IPSUM1", id="Found 1 prefix"),
+        pytest.param("LOREM-IPSUM1", ["LOREM-", "IPSUM"], "IPSUM1", id="Only 1 prefix is removed"),
+    ],
+)
+def test_remove_prefixes(test_id: int, prefixes: List[str], outcome: str) -> None:
+    """Test prefix removal."""
+    ids = IDAllocator()
+
+    assert ids.remove_prefixes(test_id, prefixes) == outcome

@@ -80,6 +80,14 @@ class IDAllocator:
 
         return True
 
+    def remove_prefixes(self, identifier: str, prefixes: List[str]) -> str:
+        """Returns the identifier after removing all the prefixes found in it (if any)."""
+        for prefix in prefixes:
+            if identifier.startswith(prefix):
+                identifier = identifier[len(prefix) :]
+                break
+        return identifier
+
     def normalize_gene_id(self, gene: SeqFeature) -> str:
         """Remove any unnecessary prefixes around the gene ID.
 
@@ -157,10 +165,3 @@ class IDAllocator:
                     if feat.id in ("", gene.id):
                         feat.id = f"{transcript.id}_cds"
                         feat.qualifiers["ID"] = feat.id
-
-    def remove_prefixes(self, identifier: str, prefixes: List[str]) -> str:
-        """Returns the identifier after removing all the prefixes found in it (if any)."""
-        for prefix in prefixes:
-            if identifier.startswith(prefix):
-                identifier = identifier[len(prefix) :]
-        return identifier
