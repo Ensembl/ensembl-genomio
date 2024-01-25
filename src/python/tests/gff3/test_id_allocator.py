@@ -98,6 +98,7 @@ def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
 
     assert ids.valid_id(test_id) == outcome
 
+
 @pytest.mark.parametrize(
     "test_id, outcome",
     [
@@ -110,6 +111,7 @@ def test_valid_id_skip(test_id: str, outcome: bool) -> None:
     ids = IDAllocator()
     ids.validate_gene_id = False
     assert ids.valid_id(test_id) == outcome
+
 
 @pytest.mark.parametrize(
     "test_id, prefixes, outcome",
@@ -211,7 +213,6 @@ def test_normalize_gene_id(
     ids = IDAllocator()
     if make_id is not None:
         ids.make_missing_stable_ids = make_id
-
 
     # Load record and update feature
     record = _read_record(data_dir / input_gff)
