@@ -96,6 +96,18 @@ def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
 
     assert ids.valid_id(test_id) == outcome
 
+@pytest.mark.parametrize(
+    "test_id, outcome",
+    [
+        pytest.param("LOREMIPSUM_01", True, id="Skip Good ID"),
+        pytest.param("LO..rem|ipsum", True, id="Skip Bad ID"),
+    ],
+)
+def test_valid_id_skip(test_id: str, outcome: bool) -> None:
+    """Test ID validity check without the validation flag."""
+    ids = IDAllocator()
+    ids.validate_gene_id = False
+    assert ids.valid_id(test_id) == outcome
 
 @pytest.mark.parametrize(
     "test_id, prefixes, outcome",
