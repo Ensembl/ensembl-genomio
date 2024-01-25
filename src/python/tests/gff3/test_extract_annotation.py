@@ -23,7 +23,7 @@ Typical usage example::
 """
 
 from contextlib import nullcontext as does_not_raise
-from typing import ContextManager, Optional
+from typing import ContextManager, List, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest
@@ -79,6 +79,7 @@ def test_product_is_informative(description: str, feature_id: Optional[str], out
     "seq_feat_type, feat_type, expected",
     [
         ("gene", "gene", does_not_raise()),
+        ("pseudogene", "gene", does_not_raise()),
         ("mRNA", "transcript", does_not_raise()),
         ("CDS", "translation", does_not_raise()),
         ("transposable_element", "transposable_element", does_not_raise()),
@@ -100,6 +101,30 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
     with expected:
         annot.add_feature(feature, feat_type)
         assert annot.features[feat_type][feature.id]
+
+
+@pytest.mark.parametrize(
+    "feat_id, feat_name, expected_synonyms",
+    [
+        pytest.param("featA", "featA", [], id="Same name and ID"),
+        pytest.param("featA", "featA_name", ["featA_name"], id="Diff name and ID"),
+    ],
+)
+def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[str]) -> None:
+    """Tests the `FunctionaAnnotation.add_feature()` method with a feature name."""
+    annot = FunctionalAnnotations()
+
+    seq_feat_type = "gene"
+    feat_type = "gene"
+    feature = SeqFeature(type=seq_feat_type, id=feat_id)
+    feature.qualifiers["Name"] = [feat_name]
+    annot.add_feature(feature, feat_type)
+    loaded_feat = annot.features[feat_type][feature.id]
+    try:
+        loaded_synonyms = [syn["synonym"] for syn in loaded_feat.get("synonyms") if syn["default"] is True]
+    except TypeError:
+        loaded_synonyms = []
+    assert loaded_synonyms == expected_synonyms
 
 
 @pytest.mark.parametrize(

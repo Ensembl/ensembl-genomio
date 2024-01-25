@@ -149,7 +149,7 @@ class FunctionalAnnotations:
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
             if feat_name != feature.id:
-                feature_object["synonyms"] = {"synonym": feat_name, "default": True}
+                feature_object["synonyms"] = [{"synonym": feat_name, "default": True}]
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
