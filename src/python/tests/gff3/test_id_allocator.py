@@ -38,3 +38,27 @@ def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
     id2 = ids.generate_id()
     new_ids = [id1, id2]
     assert new_ids == expected_ids
+
+@pytest.mark.parametrize(
+    "min_id_length, test_id, outcome",
+    [
+        pytest.param(None, "LOREMIPSUM_01", True, id="OK ID"),
+        pytest.param(None, "", False, id="Empty"),
+        pytest.param(None, "A", False, id="Too short"),
+        pytest.param(None, "Abc", False, id="Too short 2"),
+        pytest.param(5, "Abcde", True, id="At custom min length"),
+        pytest.param(5, "Abcd", False, id="Below custom min length"),
+        pytest.param(None, "CHR1:100..200", False, id="Coordinates"),
+        pytest.param(None, "LOREM|IPSUM", False, id="Special char |"),
+        pytest.param(None, "LOREM IPSUM", False, id="Special char space"),
+        pytest.param(None, "Trnaa-UAA", False, id="Trna ID, lower case"),
+        pytest.param(None, "TRNAA-UAA", False, id="Trna ID, upper case"),
+    ],
+)
+def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
+    """Test ID validity check."""
+    ids = IDAllocator()
+    if min_id_length:
+        ids.min_id_length = min_id_length
+
+    assert ids.valid_id(test_id) == outcome
