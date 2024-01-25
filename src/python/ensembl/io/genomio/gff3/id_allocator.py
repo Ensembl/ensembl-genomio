@@ -37,46 +37,9 @@ class IDAllocator:
     min_id_length = 8
     current_id_number: int = 0
     make_missing_stable_ids: bool = True
-    id_prefix = "TMP_"
+    prefix = "TMP_"
 
-    def normalize_gene_id(self, gene: SeqFeature) -> str:
-        """Remove any unnecessary prefixes around the gene ID.
-
-        Generate a new stable id if it is not recognized as valid.
-
-        Args:
-            gene: Gene feature to normalize.
-
-        Returns:
-            A normalized gene id.
-
-        """
-
-        prefixes = ["gene-", "gene:"]
-        new_gene_id = self.remove_prefixes(gene.id, prefixes)
-
-        # In case the gene id is not valid, use the GeneID
-        if not self.valid_id(new_gene_id):
-            logging.warning(f"Gene id is not valid: {new_gene_id}")
-            qual = gene.qualifiers
-            if "Dbxref" in qual:
-                for xref in qual["Dbxref"]:
-                    (db, value) = xref.split(":")
-                    if db == "GeneID":
-                        new_gene_id = f"{db}_{value}"
-                        logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
-                        return new_gene_id
-
-            # Make a new stable_id
-            if self.make_missing_stable_ids:
-                new_id = self.generate_stable_id()
-                logging.debug(f"New id: {new_gene_id} -> {new_id}")
-                return new_id
-            raise InvalidID(f"Can't use invalid gene id for {gene}")
-
-        return new_gene_id
-
-    def generate_stable_id(self) -> str:
+    def generate_id(self) -> str:
         """Returns a new unique gene stable_id with a prefix.
 
         The id is made up of a prefix and a number, which is auto incremented.
@@ -84,7 +47,7 @@ class IDAllocator:
 
         """
         number = self.current_id_number + 1
-        new_id = f"{self.id_prefix}{number}"
+        new_id = f"{self.prefix}{number}"
         self.current_id_number = number
 
         return new_id
@@ -118,6 +81,43 @@ class IDAllocator:
             return False
 
         return True
+
+    def normalize_gene_id(self, gene: SeqFeature) -> str:
+        """Remove any unnecessary prefixes around the gene ID.
+
+        Generate a new stable id if it is not recognized as valid.
+
+        Args:
+            gene: Gene feature to normalize.
+
+        Returns:
+            A normalized gene id.
+
+        """
+
+        prefixes = ["gene-", "gene:"]
+        new_gene_id = self.remove_prefixes(gene.id, prefixes)
+
+        # In case the gene id is not valid, use the GeneID
+        if not self.valid_id(new_gene_id):
+            logging.warning(f"Gene id is not valid: {new_gene_id}")
+            qual = gene.qualifiers
+            if "Dbxref" in qual:
+                for xref in qual["Dbxref"]:
+                    (db, value) = xref.split(":")
+                    if db == "GeneID":
+                        new_gene_id = f"{db}_{value}"
+                        logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
+                        return new_gene_id
+
+            # Make a new stable_id
+            if self.make_missing_stable_ids:
+                new_id = self.generate_id()
+                logging.debug(f"New id: {new_gene_id} -> {new_id}")
+                return new_id
+            raise InvalidID(f"Can't use invalid gene id for {gene}")
+
+        return new_gene_id
 
     def normalize_transcript_id(self, gene_id: str, number: int) -> str:
         """Use a gene ID and a number to make a formatted transcript ID."""

@@ -95,7 +95,7 @@ class GFFSimplifier:
             prefix = "TMP_PREFIX_"
         else:
             prefix = "TMP_" + org + "_"
-        self.ids.id_prefix = prefix
+        self.ids.prefix = prefix
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a
@@ -461,7 +461,7 @@ class GFFSimplifier:
         gene = SeqFeature(cds.location, type=gene_type)
         gene.qualifiers["source"] = cds.qualifiers["source"]
         gene.sub_features = [transcript]
-        gene.id = self.ids.generate_stable_id()
+        gene.id = self.ids.generate_id()
 
         return gene
 
