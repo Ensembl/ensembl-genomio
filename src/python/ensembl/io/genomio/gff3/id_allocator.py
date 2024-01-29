@@ -38,7 +38,11 @@ class StableIDAllocator:
     current_id_number: int = 0
     make_missing_stable_ids: bool = True
     prefix: str = "TMP_"
-    _loaded_ids = set()
+    _loaded_ids: set = None
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._loaded_ids = set()
 
     def generate_gene_id(self) -> str:
         """Returns a new unique gene stable_id with a prefix.
