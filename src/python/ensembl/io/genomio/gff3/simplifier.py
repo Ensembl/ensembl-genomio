@@ -94,7 +94,7 @@ class GFFSimplifier:
         except KeyError:
             prefix = "TMP_PREFIX_"
         else:
-            prefix = "TMP_" + org + "_"
+            prefix = "TMP_" + org.upper() + "_"
         self.stable_ids.prefix = prefix
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
