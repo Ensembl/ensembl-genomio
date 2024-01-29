@@ -174,14 +174,14 @@ class GFFSimplifier:
 
         cds_found = False
         for transcript in gene.sub_features:
-            self.annotations.add_feature(transcript, "transcript", gene.id)
+            self.annotations.add_feature(transcript, "transcript", gene.id, all_parent_ids=[gene.id])
             for feat in transcript.sub_features:
                 if feat.type != "CDS":
                     continue
                 # Store CDS functional annotation only once
                 if not cds_found:
                     cds_found = True
-                    self.annotations.add_feature(feat, "translation", transcript.id)
+                    self.annotations.add_feature(feat, "translation", transcript.id, all_parent_ids=[gene.id, transcript.id])
 
     def clean_gene(self, gene: SeqFeature) -> SeqFeature:
         """Return the same gene without qualifiers unrelated to the gene structure."""
