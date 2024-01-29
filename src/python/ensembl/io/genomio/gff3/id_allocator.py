@@ -38,6 +38,7 @@ class StableIDAllocator:
     current_id_number: int = 0
     make_missing_stable_ids: bool = True
     prefix: str = "TMP_"
+    _loaded_ids = set()
 
     def generate_gene_id(self) -> str:
         """Returns a new unique gene stable_id with a prefix.
@@ -167,7 +168,15 @@ class StableIDAllocator:
                 for xref in qual["Dbxref"]:
                     (db, value) = xref.split(":")
                     if db == "GeneID":
-                        new_gene_id = f"{db}_{value}"
+                        new_gene_id_base = f"{db}_{value}"
+                        new_gene_id = new_gene_id_base
+                        number = 1
+                        while new_gene_id in self._loaded_ids:
+                            number += 1
+                            new_gene_id = f"{new_gene_id_base}_{number}"
+                            if number > 10:
+                                raise InvalidStableID(f"Duplicate ID {new_gene_id_base} (up to {new_gene_id})")
+                        self._loaded_ids.add(new_gene_id)
                         logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
                         return new_gene_id
 
