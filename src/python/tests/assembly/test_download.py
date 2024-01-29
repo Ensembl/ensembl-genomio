@@ -18,22 +18,49 @@ The unit testing is divided into one test class per submodule/class found in thi
 per public function/class method.
 
 Typical usage example::
-    $ pytest test_download.py
+    $ pytest ./assembly/test_download.py
 
 """
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
+from contextlib import nullcontext as does_not_raise
+from typing import ContextManager
 
 import pytest
-from pytest import raises
+from ftplib import FTP
 
-from ensembl.io.genomio.assembly.download import download_files, md5_files
 
-@pytest.mark.parametrize(
-    "accession",
-    [
-        ("GCA_000002765.3"),
-    ],
-)
-@patch("ensembl.io.genomio.genbank.download.requests.get")
+from ensembl.io.genomio.assembly.download import FTPConnection, FTPConnectionError
+
+
+class TestDownloadAssembly:
+    """Tests class for `download_assembly` module."""
+   
+    @pytest.mark.parametrize(
+        "ftp_url, sub_dir, expectation",
+        [
+            ("ftp.ncbi.nlm.nih.gov", "genomes/all/GCA/017/607/445", does_not_raise()), # normal case
+            ("ftp.ncbi.nlm.nih.gov", "genomes/all/GCA/017/607/445", pytest.raises(FTPConnectionError)), # abnormal case, should run, but fail assert
+            ("ftp.ncbi.nlm.nih.gov", None, pytest.raises(FTPConnectionError)), # bad case no subdir path
+            ("ftp.remote.fake.gov", "genomes/all/GCA/017/607/445", pytest.raises(FTPConnectionError)), # bad case incorrect ftp_url
+            ("ftp.ncbi.nlm.nih.gov", "genomes/GCA/017/607/445", pytest.raises(FTPConnectionError)), # bad case malformed subdir path
+        ],
+    )
+    @patch("ensembl.io.genomio.assembly.download.FTP", autospec=True)
+    def test_ftp_connection (self, mock_ftp_constructor: Mock, ftp_url: str, sub_dir: str, expectation: ContextManager,):
+        """ Tests the FTPConnection class method 'establish_ftp()'
+        
+        Args:
+            mock_ftp_constructor:
+            ftp_url:
+            sub_dir:            
+        """
+        
+        mock_ftp = mock_ftp_constructor.return_value
+        mock_ftp.pwd = MagicMock (return_value='ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/')
+        connected_ftp = FTPConnection.establish_ftp(mock_ftp, ftp_url, sub_dir)
+        listing = connected_ftp.pwd()
+        assert listing == 'ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/'
+        connected_ftp.pwd.assert_called_once()
+
