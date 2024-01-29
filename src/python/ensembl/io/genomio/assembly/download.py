@@ -25,6 +25,7 @@ __all__ = [
     "retrieve_assembly_data",
 ]
 
+import ftplib
 from ftplib import FTP
 import hashlib
 from importlib import reload
@@ -50,9 +51,34 @@ _FILE_ENDS = {
 class FileDownloadError(Exception):
     """When a file download fails or there is a problem with that file."""
 
+class FTPConnectionError(Exception):
+    """Error while initialising an FTP connection."""
 
 class UnsupportedFormatError(Exception):
     """When a string does not have the expected format."""
+
+class FTPConnection:
+    """Custom Class for establishing an FTP connection."""
+
+    def establish_ftp (ftp_conn: FTP, ftp_url: str, sub_dir_path: Path) -> FTP:
+        """Function to establish an FTP connection (FTP Class).
+
+            Args:
+                ftp_conn: FTP Class object
+                ftp_url: specific FTP url in connection request
+                sub_dir_path: Path of sub directory housing required data for download.
+
+            Returns:
+                An open connection via FTP() class object
+        """
+
+        try:
+            ftp_conn.connect(ftp_url)
+            ftp_conn.login()
+            ftp_conn.cwd(str(sub_dir_path))
+            return ftp_conn
+        except:
+            raise FTPConnectionError(f"Could not create FTP connection on {ftp_url} remote path {sub_dir_path}")
 
 
 def md5_files(dl_dir: Path) -> bool:
@@ -101,7 +127,6 @@ def get_checksums(checksum_path: Path) -> Dict[str, str]:
                 sums[file_path] = checksum
     return sums
 
-
 def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     """
     Given an INSDC accession, download all available files from the ftp to the download dir
@@ -114,29 +139,28 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     part2 = match.group(3)
     part3 = match.group(4)
 
-    # Get the list of assemblies for this accession
+    # Establish connection to remote FTP server
     ftp_url = "ftp.ncbi.nlm.nih.gov"
     sub_dir = Path("genomes", "all", gca, part1, part2, part3)
-    ftp_conn = FTP()
-    ftp_conn.connect(ftp_url)
-    ftp_conn.login()
-    ftp_conn.cwd(str(sub_dir))
+    ftp_instance = FTP()
+    ftp_connection = FTPConnection.establish_ftp(ftp_instance, ftp_url, sub_dir)
 
-    for ftp_dir, _ in ftp_conn.mlsd():
+    # # Get the list of assemblies for this accession
+    for ftp_dir, _ in ftp_connection.mlsd():
         if re.match(accession, ftp_dir):
-            ftp_conn.cwd(ftp_dir)
+            ftp_connection.cwd(ftp_dir)
             # First, get the md5sum file
             md5_file = "md5checksums.txt"
             md5_path = dl_dir / md5_file
             with md5_path.open("wb") as fp:
-                ftp_conn.retrbinary(f"RETR {md5_file}", fp.write)
+                ftp_connection.retrbinary(f"RETR {md5_file}", fp.write)
             md5_sums = get_checksums(md5_path)
 
             # Get all the files
-            for ftp_file, _ in ftp_conn.mlsd():
+            for ftp_file, _ in ftp_connection.mlsd():
                 for end in _FILE_ENDS:
                     if ftp_file.endswith(end) and not ftp_file.endswith(f"_from_{end}"):
-                        _download_file(ftp_conn, ftp_file, md5_sums, dl_dir, max_redo)
+                        _download_file(ftp_connection, ftp_file, md5_sums, dl_dir, max_redo)
 
 
 def _download_file(
