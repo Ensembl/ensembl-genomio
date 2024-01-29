@@ -27,11 +27,14 @@ from unittest.mock import Mock, patch, MagicMock
 from contextlib import nullcontext as does_not_raise
 from typing import ContextManager
 
+from typing import Dict
+
 import pytest
 from ftplib import FTP
 
 
 from ensembl.io.genomio.assembly.download import FTPConnection, FTPConnectionError
+from ensembl.io.genomio.assembly.download import get_checksums
 
 
 class TestDownloadAssembly:
@@ -81,3 +84,19 @@ class TestDownloadAssembly:
         listing = connected_ftp.pwd()
         assert listing == "ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/"
         connected_ftp.pwd.assert_called_once()
+
+@pytest.mark.parametrize(
+    'checksum_file, expectation',
+    [
+        ("normal_md5_checksums.txt", does_not_raise()), #Normal case
+        ("malformed_md5_checksums.txt", pytest.raises(ValueError)), #Bad md5sum file (tab separated)
+        (None, pytest.raises(TypeError)), #No md5 checksum File
+    ]
+)
+def test_checksums(data_dir: Path, checksum_file: Path, expectation: ContextManager) -> None:
+    """Tests the 'download.get_checksums() function"""
+
+    with expectation:
+        md5_input_path = data_dir / checksum_file
+        obtained_checksums = get_checksums(md5_input_path)
+        assert obtained_checksums["annotation_hashes.txt"] == "40df91d5c40cb55621c4c92201da6834"
