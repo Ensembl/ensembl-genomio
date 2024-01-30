@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates a JSON file representing various stats for the assembly and annotation from a core db."""
+"""Generates a JSON representation of the genome stats (assembly and annotation) from a core database."""
 
 __all__ = ["StatsGenerator"]
 
@@ -24,7 +24,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
-from ensembl.database import DBConnection
+from ensembl.database import DBConnection, URL
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -126,6 +126,20 @@ class StatsGenerator:
         return genome_stats
 
 
+def dump_genome_stats(url: URL) -> Dict[str, Any]:
+    """Returns JSON object containing the genome stats (assembly and annotation) of the given core database.
+
+    Args:
+        url: Core database URL.
+
+    """
+    dbc = DBConnection(url)
+    with dbc.session_scope() as session:
+        generator = StatsGenerator(session)
+        genome_stats = generator.get_genome_stats()
+        return genome_stats
+
+
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(description=__doc__)
@@ -134,8 +148,5 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    dbc = DBConnection(args.url)
-    with dbc.session_scope() as session:
-        generator = StatsGenerator(session)
-        all_stats = generator.get_genome_stats()
-        print(json.dumps(all_stats, indent=2, sort_keys=True))
+    genome_stats = dump_genome_stats(args.url)
+    print(json.dumps(genome_stats, indent=2, sort_keys=True))
