@@ -17,16 +17,15 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, Tuple
 
-from ensembl.database import DBConnection
 from ensembl.core.models import Gene, Transcript, ObjectXref, Xref
+from ensembl.database import DBConnection
+from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
-
-from ensembl.io.genomio.utils import get_json
 
 
 FEAT_TABLE = {
@@ -36,7 +35,7 @@ FEAT_TABLE = {
 }
 
 
-def get_core_data(session: Session, table: str) -> Dict[str, str]:
+def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str]]:
     """Load descriptions from a core."""
 
     if table == "gene":
@@ -65,7 +64,9 @@ def get_core_data(session: Session, table: str) -> Dict[str, str]:
     return feat_data
 
 
-def load_descriptions(session: Session, func_file: Path, report: bool = False, update: bool = False) -> None:
+def load_descriptions(
+    session: Session, func_file: Path, report: bool = False, do_update: bool = False
+) -> None:
     """Load gene and transcript descriptions in a core database."""
     func = get_json(func_file)
     logging.info(f"{len(func)} annotations from {func_file}")
@@ -109,7 +110,7 @@ def load_descriptions(session: Session, func_file: Path, report: bool = False, u
             if report:
                 line = (table, new_id, cur_id, cur_desc, new_desc)
                 print("\t".join(line))
-            if update:
+            if do_update:
                 update_key = f"{table}_id"
                 to_update.append({update_key: row_id, "description": new_desc})
 
@@ -119,13 +120,12 @@ def load_descriptions(session: Session, func_file: Path, report: bool = False, u
                 continue
             logging.info(f"{stat} = {count}")
 
-        if update:
+        if do_update:
             logging.info(f"Now updating {len(to_update)} rows...")
             if table == "gene":
-                table_object = Gene
+                session.execute(update(Gene), to_update)
             elif table == "transcript":
-                table_object = Transcript
-            session.execute(update(table_object), to_update)
+                session.execute(update(Transcript), to_update)
 
 
 def main() -> None:
