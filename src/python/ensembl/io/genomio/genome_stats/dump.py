@@ -117,13 +117,13 @@ class StatsGenerator:
         }
         return feat_stats
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_genome_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the assembly and annotation."""
-        all_stats = {
+        genome_stats = {
             "assembly_stats": self.get_assembly_stats(),
             "annotation_stats": self.get_annotation_stats(),
         }
-        return all_stats
+        return genome_stats
 
 
 def main() -> None:
@@ -135,13 +135,7 @@ def main() -> None:
     init_logging_with_args(args)
 
     dbc = DBConnection(args.url)
-
     with dbc.session_scope() as session:
         generator = StatsGenerator(session)
-        all_stats = generator.get_stats()
-
-    print(json.dumps(all_stats, indent=2, sort_keys=True))
-
-
-if __name__ == "__main__":
-    main()
+        all_stats = generator.get_genome_stats()
+        print(json.dumps(all_stats, indent=2, sort_keys=True))
