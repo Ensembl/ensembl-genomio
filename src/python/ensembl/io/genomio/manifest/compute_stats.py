@@ -69,7 +69,8 @@ class manifest_stats:
     def __init__(self, manifest_dir: str, accession: Optional[str], datasets_bin: Optional[str]):
         self.manifest = f"{manifest_dir}/manifest.json"
         self.accession: Optional[str] = accession
-        self.error = False
+        self.errors = []
+        self.errors_file = f"{manifest_dir}/stats_diff.json"
         if datasets_bin is None:
             datasets_bin = "datasets"
         self.datasets_bin = datasets_bin
@@ -101,8 +102,10 @@ class manifest_stats:
             stats_out.write("\n".join(stats))
 
         # Die if there were errors in stats comparison
-        if self.error:
-            raise StatsError(f"Stats count errors, check the file {stats_path}")
+        if self.errors:
+            with open(self.errors_file, "w") as errors_fh:
+                for error_line in self.errors:
+                    errors_fh.write(error_line)
 
     def get_manifest(self) -> Dict:
         """Get the files metadata from the manifest json file.
@@ -378,8 +381,7 @@ class manifest_stats:
 
             if prep_count != ncbi_count:
                 diff = prep_count - ncbi_count
-                stats.append(f"DIFF gene count for {count_map}: {prep_count} - {ncbi_count} = {diff}")
-                self.error = True
+                self.errors.append(f"DIFF gene count for {count_map}: {prep_count} - {ncbi_count} = {diff}")
             else:
                 stats.append(f"Same count for {count_map}: {prep_count}")
 
