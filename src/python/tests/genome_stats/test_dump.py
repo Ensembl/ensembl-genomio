@@ -37,6 +37,7 @@ from ensembl.io.genomio.utils import get_json
 @dataclass
 class MockResult:
     """Mocker of `sqlalchemy.engine.Result` class."""
+
     rows: List
 
     def __iter__(self) -> Any:

@@ -32,6 +32,7 @@ from ensembl.utils.logging import init_logging_with_args
 @dataclass
 class StatsGenerator:
     """Interface to extract genome stats from a core database."""
+
     session: Session
 
     def get_assembly_stats(self) -> Dict[str, Any]:
