@@ -30,12 +30,14 @@ __all__ = [
 ]
 
 import datetime
+import logging
 from os import PathLike
 from typing import Dict, Optional
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
 import requests
+from requests.exceptions import ReadTimeout
 
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.utils.argparse import ArgumentParser
@@ -157,13 +159,17 @@ def add_species_metadata(genome_data: Dict, base_api_url: str = DEFAULT_API_URL)
     """
     species = genome_data["species"]
     if not "taxonomy_id" in species:
-        accession = genome_data["assembly"]["accession"]
-        taxonomy = get_taxonomy_from_accession(accession, base_api_url)
-        species["taxonomy_id"] = taxonomy["taxon_id"]
-        if (not "strain" in species) and ("strain" in taxonomy):
-            species["strain"] = taxonomy["strain"]
-        if not "scientific_name" in species:
-            species["scientific_name"] = taxonomy["scientific_name"]
+        try:
+            accession = genome_data["assembly"]["accession"]
+            taxonomy = get_taxonomy_from_accession(accession, base_api_url)
+            species["taxonomy_id"] = taxonomy["taxon_id"]
+            if (not "strain" in species) and ("strain" in taxonomy):
+                species["strain"] = taxonomy["strain"]
+            if not "scientific_name" in species:
+                species["scientific_name"] = taxonomy["scientific_name"]
+        except KeyError:
+            logging.warning("Could not extract taxonomy data")
+
 
 
 def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_URL) -> Dict:
@@ -183,25 +189,33 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
     """
     # Use the GenBank accession without version
     gb_accession = accession.replace("GCF", "GCA").split(".")[0]
-    response = requests.get(f"{base_api_url}/{gb_accession}", timeout=60)
-    entry = ElementTree.fromstring(response.text)
 
-    taxon_node = entry.find(".//TAXON")
-    if taxon_node is None:
-        raise MissingNodeError("Can't find the TAXON node")
+    try:
+        response = requests.get(f"{base_api_url}/{gb_accession}", timeout=5)
+        response.raise_for_status()
 
-    # Fetch taxon ID, scientific_name and strain
-    taxon_id = _get_node_text(taxon_node, "TAXON_ID")
-    scientific_name = _get_node_text(taxon_node, "SCIENTIFIC_NAME")
-    strain = _get_node_text(taxon_node, "STRAIN", optional=True)
+        entry = ElementTree.fromstring(response.text)
 
-    if taxon_id and scientific_name:
-        taxonomy = {
-            "taxon_id": int(taxon_id),
-            "scientific_name": scientific_name,
-        }
-    if strain:
-        taxonomy["strain"] = strain
+        taxon_node = entry.find(".//TAXON")
+        if taxon_node is None:
+            raise MissingNodeError("Can't find the TAXON node")
+
+        # Fetch taxon ID, scientific_name and strain
+        taxon_id = _get_node_text(taxon_node, "TAXON_ID")
+        scientific_name = _get_node_text(taxon_node, "SCIENTIFIC_NAME")
+        strain = _get_node_text(taxon_node, "STRAIN", optional=True)
+
+        if taxon_id and scientific_name:
+            taxonomy = {
+                "taxon_id": int(taxon_id),
+                "scientific_name": scientific_name,
+            }
+        if strain:
+            taxonomy["strain"] = strain
+    except ReadTimeout:
+        logging.warning("Can't get taxonomy from ENA")
+        taxonomy = {"taxon_id": 0, "scientific_name": ""}
+
     return taxonomy
 
 
