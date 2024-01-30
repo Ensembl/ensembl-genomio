@@ -16,6 +16,7 @@
 
 __all__ = ["StatsGenerator"]
 
+from dataclasses import dataclass
 import json
 from typing import Any, Dict
 
@@ -28,11 +29,10 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
+@dataclass
 class StatsGenerator:
-    """Interface to extract stats from a core database."""
-
-    def __init__(self, session: Session) -> None:
-        self.session = session
+    """Interface to extract genome stats from a core database."""
+    session: Session
 
     def get_assembly_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the assembly."""
@@ -60,22 +60,19 @@ class StatsGenerator:
 
         Args:
             code: Ensembl database attrib_type code.
-        """
-        session = self.session
 
+        """
         seqs_st = (
             select(SeqRegionAttrib.value, func.count(SeqRegionAttrib.value))
             .join(AttribType)
             .filter(AttribType.code == code)
             .group_by(SeqRegionAttrib.value)
         )
-
-        attribs = {}
-        for row in session.execute(seqs_st):
-            (attrib_name, count) = row
-            attribs[attrib_name] = count
-
-        return attribs
+        attributes = {}
+        for row in self.session.execute(seqs_st):
+            (attribute_name, count) = row
+            attributes[attribute_name] = count
+        return attributes
 
     def get_annotation_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
@@ -89,12 +86,10 @@ class StatsGenerator:
 
     def get_biotypes(self, table) -> Dict[str, int]:
         """Returns a dict of stats about the feature biotypes."""
-        session = self.session
-
         seqs_st = select(table.biotype, func.count()).group_by(table.biotype)
 
         biotypes = {}
-        for row in session.execute(seqs_st):
+        for row in self.session.execute(seqs_st):
             (biotype, count) = row
             biotypes[biotype] = count
 
