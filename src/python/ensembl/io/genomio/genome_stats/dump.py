@@ -41,7 +41,6 @@ class StatsGenerator:
             "locations": self.get_attrib_counts("sequence_location"),
             "codon_table": self.get_attrib_counts("codon_table"),
         }
-
         # Special: rename supercontigs to scaffolds for homogeneity
         stats = self._fix_scaffolds(stats)
         return stats
@@ -76,38 +75,31 @@ class StatsGenerator:
 
     def get_annotation_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
-
         stats = {
             "genes": self.get_feature_stats(Gene),
             "transcripts": self.get_feature_stats(Transcript),
         }
-
         return stats
 
-    def get_biotypes(self, table) -> Dict[str, int]:
+    def get_biotypes(self, table: Any) -> Dict[str, int]:
         """Returns a dict of stats about the feature biotypes."""
         seqs_st = select(table.biotype, func.count()).group_by(table.biotype)
-
         biotypes = {}
         for row in self.session.execute(seqs_st):
             (biotype, count) = row
             biotypes[biotype] = count
-
         return biotypes
 
-    def get_feature_stats(self, table) -> Dict[str, int]:
+    def get_feature_stats(self, table: Any) -> Dict[str, int]:
         """Returns a dict of stats about a given feature."""
         session = self.session
-
         totals_st = select(func.count(table.stable_id))
         (total,) = session.execute(totals_st).one()
         no_desc_st = select(func.count(table.stable_id)).filter(table.description is None)
         (no_desc,) = session.execute(no_desc_st).one()
         xref_desc_st = select(func.count(table.stable_id)).where(table.description.like("%[Source:%"))
         (xref_desc,) = session.execute(xref_desc_st).one()
-
         left_over = total - no_desc - xref_desc
-
         feat_stats = {
             "total": total,
             "biotypes": self.get_biotypes(table),
@@ -130,9 +122,7 @@ class StatsGenerator:
 
 def main() -> None:
     """Main script entry-point."""
-    parser = ArgumentParser(
-        description="Fetch all the sequence regions from a core database and print them in JSON format."
-    )
+    parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments(include_database=True)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
