@@ -96,7 +96,7 @@ def load_func(session: Session, func_file: Path, report: bool = False, update: b
             logging.debug(f"Gene {gene.stable_id} has a different description")
             stats["differs"] += 1
             if report:
-                line = (feat['id'], gene.stable_id, gene_description, feat['description'])
+                line = (table, feat['id'], gene.stable_id, gene_description, feat['description'])
                 print("\t".join(line))
             if update:
                 logging.debug("TODO: add actual change")
@@ -125,7 +125,7 @@ def load_func(session: Session, func_file: Path, report: bool = False, update: b
             logging.debug(f"Transcript {transc.stable_id} has a different description")
             stats["differs"] += 1
             if report:
-                line = (feat['id'], transc.stable_id, gene.description, feat['description'])
+                line = (table, feat['id'], transc.stable_id, gene.description, feat['description'])
                 print("\t".join(line))
             if update:
                 logging.debug("TODO: add actual change")
