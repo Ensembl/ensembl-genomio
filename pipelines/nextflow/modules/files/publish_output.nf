@@ -16,7 +16,7 @@
 process PUBLISH_DIR {
     tag "publish_${meta.accession}"
     label 'default'
-    publishDir "$out_dir/${meta.accession}", mode: 'copy', overwrite: false
+    publishDir "$out_dir/${meta.publish_dir}", mode: 'copy', overwrite: false
     time '5min'
 
     input:
