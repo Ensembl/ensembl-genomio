@@ -42,17 +42,23 @@ class StatsGenerator:
             "codon_table": self.get_attrib_counts("codon_table"),
         }
         # Special: rename supercontigs to scaffolds for homogeneity
-        stats = self._fix_scaffolds(stats)
+        StatsGenerator._fix_scaffolds(stats)
         return stats
 
-    def _fix_scaffolds(self, stats: Dict[str, Any]) -> Dict[str, Any]:
-        """Rename supercontigs to scaffolds in a stats dict and return it."""
+    @staticmethod
+    def _fix_scaffolds(stats: Dict[str, Any]) -> None:
+        """Renames supercontigs to scaffolds in the provided stats.
+
+        If scaffolds are present already, nothing is done.
+
+        Args:
+            stats: Statistics dictionary.
+
+        """
         coords = stats.get("coord_system", {})
-        if "supercontig" in coords:
-            if "scaffold" not in coords:
-                coords["scaffold"] = coords["supercontig"]
-                del coords["supercontig"]
-        return stats
+        if "supercontig" in coords and "scaffold" not in coords:
+            coords["scaffold"] = coords["supercontig"]
+            del coords["supercontig"]
 
     def get_attrib_counts(self, code: str) -> Dict[str, Any]:
         """Returns a dict of count for each value counted with the attrib_type code provided.
