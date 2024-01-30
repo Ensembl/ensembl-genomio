@@ -101,7 +101,7 @@ class StatsGenerator:
         session = self.session
         totals_st = select(func.count(table.stable_id))
         (total,) = session.execute(totals_st).one()
-        no_desc_st = select(func.count(table.stable_id)).filter(table.description is None)
+        no_desc_st = select(func.count(table.stable_id)).filter(table.description == None)
         (no_desc,) = session.execute(no_desc_st).one()
         xref_desc_st = select(func.count(table.stable_id)).where(table.description.like("%[Source:%"))
         (xref_desc,) = session.execute(xref_desc_st).one()
