@@ -36,107 +36,84 @@ FEAT_TABLE = {
 }
 
 
-def load_func(session: Session, func_file: Path, report: bool = False, update: bool = False) -> None:
-    """Load functional annotation in a core, can report or replace."""
+def get_core_data(session: Session, table: str) -> Dict[str, str]:
+    """Load descriptions from a core."""
 
+    if table == "gene":
+        stmt = (
+            select(Gene.stable_id, Gene.description, Xref.dbprimary_acc)
+            .select_from(Gene).join(ObjectXref, Gene.gene_id == ObjectXref.ensembl_id)
+            .join(Xref)
+            .where(ObjectXref.ensembl_object_type == "gene")
+        )
+    elif table == "transcript":
+        stmt = (
+            select(Transcript.stable_id, Transcript.description, Xref.dbprimary_acc)
+            .select_from(Transcript).join(ObjectXref, Transcript.transcript_id == ObjectXref.ensembl_id)
+            .join(Xref)
+            .where(ObjectXref.ensembl_object_type == "transcript")
+        )
+
+    feat_data = {}
+    for row in session.execute(stmt):
+        (name, desc, xref_name) = row
+        feat_struct = (name, desc)
+        feat_data[name] = feat_struct
+        feat_data[xref_name] = feat_struct
+    return feat_data
+
+
+def load_descriptions(session: Session, func_file: Path, report: bool = False, update: bool = False) -> None:
+    """Load gene and transcript descriptions in a core database.
+    """
     func = get_json(func_file)
     logging.info(f"{len(func)} annotations from {func_file}")
+    for table in ("gene", "transcript"):
+        logging.info(f"Checking {table} descriptions")
+        feat_func = [feat for feat in func if feat["object_type"] == table]
+        logging.info(f"{len(feat_func)} {table} annotations from {func_file}")
+        feat_data = get_core_data(session, table)
+        logging.info(f"Loaded {len(feat_data)} {table} data")
 
-    stats = {
-        "not_supported": 0,
-        "not_found": 0,
-        "differs": 0,
-        "same": 0,
-        "no_new": 0,
-    }
-    all_num = 0
-    for feat in func:
-        all_num += 1
-        if all_num % 500 == 0:
-            logging.info(f"Processed {all_num} features")
-
-        if "description" not in feat:
-            stats["no_new"] += 1
-            continue
-        logging.debug(f"Look for {feat}")
-        # Check which table to compare to
-        try:
-            table = FEAT_TABLE[feat["object_type"]]
-        except KeyError:
-            logging.debug(f"Ignore feat {feat} not supported for loading")
-            stats["not_supported"] += 1
-            continue
-        
-        # Get the feature from the database
-        if table == "gene":
-            stmt = (
-                select(Gene)
-                .select_from(Gene)
-                .join(ObjectXref, Gene.gene_id == ObjectXref.ensembl_id)
-                .join(Xref)
-                .where(ObjectXref.ensembl_object_type == "gene")
-                .where(or_(Gene.stable_id == feat["id"], Xref.dbprimary_acc == feat["id"]))
-            )
-            gene = session.scalars(stmt).one()
-            if not gene:
-                logging.debug(f"No gene found with this name: {feat['id']}")
-                stats["not_found"] += 1
+        stats = {
+            "not_supported": 0,
+            "not_found": 0,
+            "differs": 0,
+            "same": 0,
+            "no_new": 0,
+        }
+        # Compare, only keep the descriptions that have changed
+        for new_feat in feat_func:
+            if "description" not in new_feat:
+                stats["no_new"] += 1
                 continue
-
-            gene_description = "(NULL)"
-            if gene.description:
-                gene_description = gene.description
-            
-            # Check that the description differs
-            new_desc = feat["description"]
-            if new_desc == gene_description:
-                logging.debug(f"Gene {gene.stable_id} has the same description")
-                stats["same"] += 1
-                continue
-            logging.debug(f"Gene {gene.stable_id} has a different description")
-            stats["differs"] += 1
-            if report:
-                line = (table, feat['id'], gene.stable_id, gene_description, feat['description'])
-                print("\t".join(line))
-            if update:
-                logging.debug("TODO: add actual change")
-
-        elif table == "transcript":
-            stmt = (
-                select(Transcript)
-                .select_from(Transcript)
-                .join(ObjectXref, Transcript.transcript_id == ObjectXref.ensembl_id)
-                .join(Xref)
-                .where(ObjectXref.ensembl_object_type == "transcript")
-                .where(or_(Transcript.stable_id == feat["id"], Xref.dbprimary_acc == feat["id"]))
-            )
-            transc = session.scalars(stmt).one()
-            if not transc:
-                logging.debug(f"No transcript found with this name: {feat['id']}")
+            try:
+                current_feat = feat_data[new_feat["id"]]
+            except KeyError:
                 stats["not_found"] += 1
                 continue
             
-            # Check that the description differs
-            new_desc = feat["description"]
-            if new_desc == transc.description:
-                logging.debug(f"Transcript {transc.stable_id} has the same description")
+            new_id = new_feat["id"]
+            cur_id = current_feat[0]
+            new_desc = new_feat["description"]
+            cur_desc = current_feat[1]
+            if not cur_desc:
+                cur_desc = ""
+
+            if new_desc == cur_desc:
                 stats["same"] += 1
                 continue
-            logging.debug(f"Transcript {transc.stable_id} has a different description")
+            
             stats["differs"] += 1
             if report:
-                line = (table, feat['id'], transc.stable_id, gene.description, feat['description'])
+                line = (table, new_id, cur_id, cur_desc, new_desc)
                 print("\t".join(line))
-            if update:
-                logging.debug("TODO: add actual change")
-        else:
-            logging.info(f"Not checking {feat}: not table")
-    
-    for stat, count in stats.items():
-        if count == 0:
-            continue
-        logging.info(f"{stat} = {count}")
 
+        # Show stats for this feature type
+        for stat, count in stats.items():
+            if count == 0:
+                continue
+            logging.info(f"{stat} = {count}")
 
 
 def main() -> None:
@@ -152,7 +129,7 @@ def main() -> None:
 
     dbc = DBConnection(args.url)
     with dbc.session_scope() as session:
-        load_func(session, args.func_file, args.report, args.update)
+        load_descriptions(session, args.func_file, args.report, args.update)
 
 if __name__ == "__main__":
     main()
