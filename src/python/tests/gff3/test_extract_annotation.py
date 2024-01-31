@@ -315,7 +315,7 @@ def test_transfer_descriptions(
     genes = annot.get_features("gene")
     transcs = annot.get_features("transcript")
     assert genes[gene_name].get("description") == out_gene_desc
-    # assert transcs[transcript_name].get("description") == out_transc_desc
+    assert transcs[transcript_name].get("description") == out_transc_desc
 
 
 @pytest.mark.parametrize(
