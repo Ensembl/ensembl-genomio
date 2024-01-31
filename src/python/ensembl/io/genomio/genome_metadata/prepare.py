@@ -171,7 +171,6 @@ def add_species_metadata(genome_data: Dict, base_api_url: str = DEFAULT_API_URL)
             logging.warning("Could not extract taxonomy data")
 
 
-
 def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_URL) -> Dict:
     """Returns the taxonomy metadata associated to the given accession.
 

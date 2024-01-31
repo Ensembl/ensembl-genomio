@@ -69,7 +69,7 @@ class manifest_stats:
     def __init__(self, manifest_dir: str, accession: Optional[str], datasets_bin: Optional[str]):
         self.manifest = f"{manifest_dir}/manifest.json"
         self.accession: Optional[str] = accession
-        self.errors = []
+        self.errors: List[str] = []
         self.errors_file = f"{manifest_dir}/stats_diff.json"
         if datasets_bin is None:
             datasets_bin = "datasets"

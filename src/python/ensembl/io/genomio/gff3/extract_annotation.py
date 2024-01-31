@@ -99,13 +99,21 @@ class FunctionalAnnotations:
             raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
         return parent_id
 
-    def add_feature(self, feature: SeqFeature, feat_type: str, parent_id: Optional[str] = None, all_parent_ids: Optional[List[str]] = []) -> None:
+    def add_feature(
+        self,
+        feature: SeqFeature,
+        feat_type: str,
+        parent_id: Optional[str] = None,
+        all_parent_ids: Optional[List[str]] = None,
+    ) -> None:
         """Add annotation for a feature of a given type. If a parent_id is provided, record the relatioship.
 
         Args:
             feature: The feature to create an annotation.
             feat_type: Type of the feature to annotate.
         """
+        if all_parent_ids is None:
+            all_parent_ids = []
         features = self.get_features(feat_type)
         if feature.id in features:
             raise AnnotationError(f"Feature {feat_type} ID {feature.id} already added")
@@ -120,7 +128,9 @@ class FunctionalAnnotations:
             else:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
 
-    def _generic_feature(self, feature: SeqFeature, feat_type: str, parent_ids: Optional[List[str]] = []) -> Dict[str, Any]:
+    def _generic_feature(
+        self, feature: SeqFeature, feat_type: str, parent_ids: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """Create a feature object following the specifications.
 
         Args:
@@ -128,6 +138,8 @@ class FunctionalAnnotations:
             feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
 
         """
+        if parent_ids is None:
+            parent_ids = []
 
         feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
 
@@ -135,7 +147,8 @@ class FunctionalAnnotations:
         for qname in ("description", "product"):
             if qname in feature.qualifiers:
                 description = feature.qualifiers[qname][0]
-                all_ids = [feature.id, *parent_ids]
+                all_ids = list(parent_ids)
+                all_ids.append(feature.id)
                 if self.product_is_informative(description, feat_ids=all_ids):
                     feature_object["description"] = description
                     break
@@ -154,7 +167,7 @@ class FunctionalAnnotations:
         return feature_object
 
     @staticmethod
-    def product_is_informative(product: str, feat_ids: Optional[List[str]] = []) -> bool:
+    def product_is_informative(product: str, feat_ids: Optional[List[str]] = None) -> bool:
         """Returns True if the product name contains informative words, False otherwise.
 
         It is considered uninformative when the description contains words such as "hypothetical" or
@@ -166,6 +179,8 @@ class FunctionalAnnotations:
             feat_ids: List of feature ID.
 
         """
+        if feat_ids is None:
+            feat_ids = []
         non_informative_words = [
             "hypothetical",
             "putative",

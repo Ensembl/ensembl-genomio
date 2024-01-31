@@ -219,10 +219,13 @@ def test_normalize_gene_id(
             feature.id = ids.normalize_gene_id(feature)
             assert feature.id == expected_id
 
+
 @pytest.mark.parametrize(
     "input_gff, expected_ids, expected",
     [
-        pytest.param("geneid_GeneID2.gff3", ["GeneID_000001", "GeneID_000001_2"], does_not_raise(), id="Same GeneIDs"),
+        pytest.param(
+            "geneid_GeneID2.gff3", ["GeneID_000001", "GeneID_000001_2"], does_not_raise(), id="Same GeneIDs"
+        ),
     ],
 )
 def test_normalize_gene_id_duplicate(

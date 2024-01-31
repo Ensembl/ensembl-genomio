@@ -124,7 +124,9 @@ def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[
     annot.add_feature(feature, feat_type)
     loaded_feat = annot.features[feat_type][feature.id]
     try:
-        loaded_synonyms = [syn["synonym"] for syn in loaded_feat.get("synonyms") if syn["default"] is True]
+        loaded_synonyms = [
+            syn["synonym"] for syn in loaded_feat.get("synonyms", []) if syn["default"] is True
+        ]
     except TypeError:
         loaded_synonyms = []
     assert loaded_synonyms == expected_synonyms
@@ -329,7 +331,9 @@ def test_transfer_descriptions(
             id="No annotation",
         ),
         pytest.param(
-            SeqFeature(type="gene", id="gene_A", qualifiers={"description": ["Gene description"], "Name": ["GeneA"]}),
+            SeqFeature(
+                type="gene", id="gene_A", qualifiers={"description": ["Gene description"], "Name": ["GeneA"]}
+            ),
             SeqFeature(type="mRNA", id="tran_A"),
             SeqFeature(type="CDS", id="cds_A"),
             "dump_syn.json",
@@ -344,7 +348,14 @@ def test_transfer_descriptions(
         ),
     ],
 )
-def test_to_json(tmp_dir: Path, data_dir: Path, gene: SeqFeature, transcript: SeqFeature, translation: SeqFeature, expected_json: Path) -> None:
+def test_to_json(
+    tmp_dir: Path,
+    data_dir: Path,
+    gene: SeqFeature,
+    transcript: SeqFeature,
+    translation: SeqFeature,
+    expected_json: Path,
+) -> None:
     """Test the dumping of the functional annotation to json."""
     annot = FunctionalAnnotations()
     annot.add_feature(gene, "gene")
@@ -357,7 +368,8 @@ def test_to_json(tmp_dir: Path, data_dir: Path, gene: SeqFeature, transcript: Se
     # Need to check output!
     _assert_files(output_path, data_dir / expected_json)
 
-def _assert_files(result_path: Path, expected_path: Path) -> str:
+
+def _assert_files(result_path: Path, expected_path: Path) -> None:
     """Create a useful diff between 2 files."""
     with open(result_path, "r") as result_fh:
         results = result_fh.readlines()
