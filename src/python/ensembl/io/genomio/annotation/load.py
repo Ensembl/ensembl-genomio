@@ -70,7 +70,8 @@ def load_descriptions(
     """Load gene and transcript descriptions in a core database."""
     func = get_json(func_file)
     logging.info(f"{len(func)} annotations from {func_file}")
-    for table in ("gene", "transcript"):
+    tables_to_lookup = ("gene", "transcript")
+    for table in tables_to_lookup:
         logging.info(f"Checking {table} descriptions")
         feat_func = [feat for feat in func if feat["object_type"] == table]
         logging.info(f"{len(feat_func)} {table} annotations from {func_file}")
@@ -93,6 +94,7 @@ def load_descriptions(
             try:
                 current_feat = feat_data[new_feat["id"]]
             except KeyError:
+                logging.debug(f"Not found: {table} {new_feat['id']}")
                 stats["not_found"] += 1
                 continue
 
