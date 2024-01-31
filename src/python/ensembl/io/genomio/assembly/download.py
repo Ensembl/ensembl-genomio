@@ -16,6 +16,7 @@
 
 __all__ = [
     "FileDownloadError",
+    "FTPConnectionError",
     "UnsupportedFormatError",
     "md5_files",
     "get_checksums",
@@ -25,7 +26,6 @@ __all__ = [
     "retrieve_assembly_data",
 ]
 
-import ftplib
 from ftplib import FTP
 import hashlib
 from importlib import reload
@@ -81,12 +81,17 @@ class FTPConnection:
             raise FTPConnectionError(f"Could not create FTP connection on {ftp_url} remote path {sub_dir_path}")
 
 
-def md5_files(dl_dir: Path) -> bool:
+def md5_files(dl_dir: Path, md5: Path) -> bool:
     """
     Check all files checksums with the sums listed in a checksum file, if available.
     Return False if there is no checksum file, or a file is missing, or has a wrong checksum.
     """
-    md5_file = "md5checksums.txt"
+    # Get or set md5 file to user or default setting
+    if md5 is None:
+        md5_file = "md5checksums.txt"
+    else:
+        md5_file = md5
+        
     # Get checksums and compare
     md5_path = dl_dir / md5_file
     sums = get_checksums(md5_path)
@@ -274,7 +279,7 @@ def retrieve_assembly_data(
         download_dir.mkdir(parents=True)
 
     # Download if files don't exist or fail checksum
-    if not md5_files(download_dir):
+    if not md5_files(download_dir, None):
         logging.info(" Download the files")
 
         for increment in range(0, max_increment + 1):
@@ -286,7 +291,7 @@ def retrieve_assembly_data(
                 download_dir.mkdir(parents=True, exist_ok=True)
             download_files(accession, download_dir, max_redo)
 
-        if not md5_files(download_dir):
+        if not md5_files(download_dir, None):
             raise FileDownloadError("Failed md5sum of downloaded files")
 
     # Select specific files and give them a name
