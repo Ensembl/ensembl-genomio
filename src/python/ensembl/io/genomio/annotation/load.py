@@ -24,7 +24,6 @@ from ensembl.database import DBConnection
 from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
@@ -40,27 +39,29 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
 
     if table == "gene":
         stmt = (
-            select(Gene.gene_id, Gene.stable_id, Gene.description, Xref.dbprimary_acc)
+            session.query(Gene.gene_id, Gene.stable_id, Gene.description, Xref.dbprimary_acc)
             .select_from(Gene)
-            .join(ObjectXref, Gene.gene_id == ObjectXref.ensembl_id)
-            .join(Xref)
+            .outerjoin(ObjectXref, Gene.gene_id == ObjectXref.ensembl_id)
+            .outerjoin(Xref)
             .where(ObjectXref.ensembl_object_type == "gene")
         )
     elif table == "transcript":
         stmt = (
-            select(Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc)
+            session.query(Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc)
             .select_from(Transcript)
-            .join(ObjectXref, Transcript.transcript_id == ObjectXref.ensembl_id)
-            .join(Xref)
+            .outerjoin(ObjectXref, Transcript.transcript_id == ObjectXref.ensembl_id)
+            .outerjoin(Xref)
             .where(ObjectXref.ensembl_object_type == "transcript")
         )
 
     feat_data = {}
     for row in session.execute(stmt):
-        (feat_id, name, desc, xref_name) = row
-        feat_struct = (feat_id, name, desc)
-        feat_data[name] = feat_struct
-        feat_data[xref_name] = feat_struct
+        (feat_id, stable_id, desc, xref_name) = row
+        feat_struct = (feat_id, stable_id, desc)
+        feat_data[stable_id] = feat_struct
+        if xref_name:
+            feat_data[xref_name] = feat_struct
+    
     return feat_data
 
 
@@ -94,13 +95,13 @@ def load_descriptions(
             try:
                 current_feat = feat_data[new_feat["id"]]
             except KeyError:
-                logging.debug(f"Not found: {table} {new_feat['id']}")
+                logging.debug(f"Not found: {table} '{new_feat['id']}'")
                 stats["not_found"] += 1
                 continue
 
-            new_id = new_feat["id"]
+            new_stable_id = new_feat["id"]
             new_desc = new_feat["description"]
-            (row_id, cur_id, cur_desc) = current_feat
+            (row_id, cur_stable_id, cur_desc) = current_feat
             if not cur_desc:
                 cur_desc = ""
 
@@ -110,7 +111,7 @@ def load_descriptions(
 
             stats["differs"] += 1
             if report:
-                line = (table, new_id, cur_id, cur_desc, new_desc)
+                line = (table, new_stable_id, cur_stable_id, cur_desc, new_desc)
                 print("\t".join(line))
             if do_update:
                 update_key = f"{table}_id"
