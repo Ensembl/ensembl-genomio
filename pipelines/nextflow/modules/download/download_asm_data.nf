@@ -18,6 +18,7 @@ process DOWNLOAD_ASM_DATA {
     tag "${meta.accession}"
     label 'adaptive'
     label 'cached'
+    maxForks 2
 
     input:
         tuple val(meta), path(json_file)

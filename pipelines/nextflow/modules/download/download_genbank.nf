@@ -17,6 +17,7 @@ process DOWNLOAD_GENBANK {
     tag "${meta.production_name}"
     label 'normal'
     label 'cached'
+    maxForks 2
 
     input:
         val(meta)
