@@ -16,10 +16,10 @@
 
 __all__ = ["StableIDAllocator", "InvalidStableID"]
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import re
-from typing import List
+from typing import List, Set
 
 from Bio.SeqFeature import SeqFeature
 
@@ -38,11 +38,7 @@ class StableIDAllocator:
     current_id_number: int = 0
     make_missing_stable_ids: bool = True
     prefix: str = "TMP_"
-    _loaded_ids: set = None
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._loaded_ids = set()
+    _loaded_ids: Set = field(default_factory=set)
 
     def generate_gene_id(self) -> str:
         """Returns a new unique gene stable_id with a prefix.
