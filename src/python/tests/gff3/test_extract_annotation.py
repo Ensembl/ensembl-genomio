@@ -72,6 +72,7 @@ from ensembl.io.genomio.gff3.extract_annotation import (
         ("unknown gene", [], False),
         ("unknown function", [], False),
         ("uncharacterized PROTID12345", ["PROTID12345"], False),
+        ("LOW QUALITY PROTEIN: uncharacterized protein PROTID12345", ["PROTID12345"], False),
     ],
 )
 def test_product_is_informative(description: str, feature_id: Optional[List[str]], output: bool) -> None:
