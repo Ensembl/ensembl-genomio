@@ -24,7 +24,7 @@ from ensembl.database import DBConnection
 from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
@@ -121,13 +121,17 @@ def load_descriptions(
             if count == 0:
                 continue
             logging.info(f"{stat} = {count}")
-
+        
         if do_update:
             logging.info(f"Now updating {len(to_update)} rows...")
             if table == "gene":
-                session.execute(update(Gene), to_update)
+                # session.execute(update(Gene), to_update)
+                session.bulk_update_mappings(Gene, to_update)
+                session.commit()
             elif table == "transcript":
-                session.execute(update(Transcript), to_update)
+                # session.execute(update(Transcript), to_update)
+                session.bulk_update_mappings(Transcript, to_update)
+                session.commit()
 
 
 def main() -> None:
