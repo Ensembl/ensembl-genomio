@@ -71,8 +71,14 @@ FEATURE_STATS_SOURCE_QUERY = Template(
 class MockSession(Session):
     """Mocker of `sqlalchemy.orm.Session` class that replaces its `execute()` method for testing."""
 
-    def execute(self, statement: Executable, *args, **kwargs) -> MockResult:
-        """TODO"""
+    # pylint: disable-next=too-many-return-statements
+    def execute(self, statement: Executable) -> MockResult:
+        """Returns a `MockResult` object representing results of the statement execution.
+
+        Args:
+            statement: An executable statement.
+
+        """
         compiled_statement = str(statement.compile(compile_kwargs={"literal_binds": True}))
         query = compiled_statement.replace("\n", "")
         # Expected statements for test_get_attrib_counts()
@@ -108,7 +114,8 @@ class MockSession(Session):
 class TestStatsGenerator:
     """Tests for the `StatsGenerator` class."""
 
-    stats_gen: dump.StatsGenerator = None
+    stats_gen: dump.StatsGenerator
+    genome_stats: Dict[str, Any]
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, data_dir: Path) -> None:
@@ -141,7 +148,7 @@ class TestStatsGenerator:
             output: Expected output.
 
         """
-        dump.StatsGenerator._fix_scaffolds(stats)
+        dump.StatsGenerator._fix_scaffolds(stats)  # pylint: disable=protected-access
         assert stats == output
 
     @pytest.mark.parametrize(
