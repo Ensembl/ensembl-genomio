@@ -1,0 +1,15 @@
+{
+    "species": {
+        "production_name": "TEST_prod",
+        "taxonomy_id": 0
+    },
+    "assembly": {
+        "accession": "GCA_000000000",
+        "version": 1
+    },
+    "added_seq": {
+        "region_name": [
+            "NC_000884.1"
+        ]
+    }
+}

@@ -1,0 +1,17 @@
+[
+    {
+        "name": "NC_000884.1",
+        "coord_system_level": "chromosome",
+        "circular": true,
+        "codon_table": 2,
+        "length": 3720,
+        "location": "mitochondrial_chromosome",
+        "added_sequence": {
+            "accession": "NC_000884.1",
+            "assembly_provider": {
+                "name": "GenBank",
+                "url": "https://www.ncbi.nlm.nih.gov/genbank"
+            }
+        }
+    }
+]
