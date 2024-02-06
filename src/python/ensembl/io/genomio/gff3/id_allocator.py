@@ -30,11 +30,11 @@ class InvalidID(ValueError):
 
 @dataclass
 class IDAllocator:
-    """Set of tools to check and allocate stable ids."""
+    """Set of tools to check and allocate stable IDs."""
 
     # Multiple parameters to automate various fixes
-    validate_gene_id = True
-    min_id_length = 8
+    validate_gene_id: bool = True
+    min_id_length: int = 8
     current_id_number: int = 0
     make_missing_stable_ids: bool = True
     prefix = "TMP_"
@@ -42,20 +42,18 @@ class IDAllocator:
     def generate_id(self) -> str:
         """Returns a new unique gene stable_id with a prefix.
 
-        The id is made up of a prefix and a number, which is auto incremented.
-        Define the prefix with the param "id_prefix",
+        The ID is made up of a prefix and a number, which is auto incremented.
 
         """
-        number = self.current_id_number + 1
-        new_id = f"{self.prefix}{number}"
-        self.current_id_number = number
-
+        self.current_id_number += 1
+        new_id = f"{self.prefix}{self.current_id_number}"
         return new_id
 
     def valid_id(self, name: str) -> bool:
         """Check that the format of a stable id is valid."""
 
         if not self.validate_gene_id:
+            logging.debug(f"Validation deactivated by user: '{name}' not checked")
             return True
 
         # Trna (from tRNAscan)
@@ -112,42 +110,39 @@ class IDAllocator:
 
         return cds_id
 
-    def normalize_pseudogene_cds_id(self, gene: SeqFeature) -> None:
-        """Normalises the CDS ID of the provided pseudogene.
+    def normalize_pseudogene_cds_id(self, pseudogene: SeqFeature) -> None:
+        """Normalizes every CDS ID of the provided pseudogene.
 
-        Ensure CDS from a pseudogene have a proper ID:
+        Ensure each CDS from a pseudogene has a proper ID:
         - Different from the gene
         - Derived from the gene if it is not proper
 
+        Args:
+            pseudogene: Pseudogene feature.
         """
-
-        for transcript in gene.sub_features:
+        for transcript in pseudogene.sub_features:
             for feat in transcript.sub_features:
                 if feat.type == "CDS":
                     feat.id = self.normalize_cds_id(feat.id)
-                    if feat.id in ("", gene.id):
+                    if feat.id in ("", pseudogene.id):
                         feat.id = f"{transcript.id}_cds"
                         feat.qualifiers["ID"] = feat.id
 
     def normalize_gene_id(self, gene: SeqFeature) -> str:
-        """Remove any unnecessary prefixes around the gene ID.
+        """Returns a normalized gene stable ID.
 
-        Generate a new stable id if it is not recognized as valid.
+        Removes any unnecessary prefixes, but will generate a new stable ID if the normalized one is
+        not recognized as valid.
 
         Args:
             gene: Gene feature to normalize.
-
-        Returns:
-            A normalized gene id.
-
         """
-
         prefixes = ["gene-", "gene:"]
         new_gene_id = self.remove_prefixes(gene.id, prefixes)
 
-        # In case the gene id is not valid, use the GeneID
+        # In case the normalized gene ID is not valid, use the GeneID
         if not self.valid_id(new_gene_id):
-            logging.warning(f"Gene id is not valid: {new_gene_id}")
+            logging.warning(f"Gene ID is not valid: {new_gene_id}")
             qual = gene.qualifiers
             if "Dbxref" in qual:
                 for xref in qual["Dbxref"]:
