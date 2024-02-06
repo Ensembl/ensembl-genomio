@@ -90,7 +90,7 @@ def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
         pytest.param(None, "TRNAA-UAA", False, id="Trna ID, upper case"),
     ],
 )
-def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
+def test_valid_id(min_id_length: Optional[int], test_id: str, outcome: bool) -> None:
     """Test ID validity check."""
     ids = StableIDAllocator()
     if min_id_length is not None:
@@ -139,7 +139,6 @@ def test_remove_prefixes(test_id: str, prefixes: List[str], outcome: str) -> Non
 def test_normalize_cds_id(test_id: str, outcome: str) -> None:
     """Test CDS id normalization."""
     ids = StableIDAllocator()
-
     assert ids.normalize_cds_id(test_id) == outcome
 
 
@@ -202,7 +201,7 @@ def test_normalize_pseudogene_cds_id(
     ],
 )
 def test_normalize_gene_id(
-    data_dir: Path, input_gff: str, expected_id: str, make_id: bool, expected: ContextManager
+    data_dir: Path, input_gff: str, expected_id: str, make_id: Optional[bool], expected: ContextManager
 ) -> None:
     """Test gene ID normalization."""
     ids = StableIDAllocator()
