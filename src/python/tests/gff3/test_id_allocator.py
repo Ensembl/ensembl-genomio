@@ -108,8 +108,7 @@ def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
 )
 def test_valid_id_skip(test_id: str, outcome: bool) -> None:
     """Test ID validity check without the validation flag."""
-    ids = StableIDAllocator()
-    ids.validate_gene_id = False
+    ids = StableIDAllocator(validate_gene_id=False)
     assert ids.is_valid(test_id) == outcome
 
 
@@ -124,9 +123,7 @@ def test_valid_id_skip(test_id: str, outcome: bool) -> None:
 )
 def test_remove_prefixes(test_id: str, prefixes: List[str], outcome: str) -> None:
     """Test prefix removal."""
-    ids = StableIDAllocator()
-
-    assert ids.remove_prefix(test_id, prefixes) == outcome
+    assert StableIDAllocator.remove_prefix(test_id, prefixes) == outcome
 
 
 @pytest.mark.parametrize(
@@ -156,11 +153,9 @@ def test_normalize_cds_id(test_id: str, outcome: str) -> None:
 )
 def test_normalize_transcript_id(test_id: str, numbers: List[int], outcomes: List[str]) -> None:
     """Test transcript id normalization."""
-    ids = StableIDAllocator()
-
     new_ids = []
     for number in numbers:
-        new_ids.append(ids.generate_transcript_id(test_id, number))
+        new_ids.append(StableIDAllocator.generate_transcript_id(test_id, number))
 
     assert new_ids == outcomes
 

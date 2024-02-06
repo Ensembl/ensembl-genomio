@@ -78,7 +78,8 @@ class StableIDAllocator:
 
         return True
 
-    def remove_prefix(self, stable_id: str, prefixes: List[str]) -> str:
+    @staticmethod
+    def remove_prefix(stable_id: str, prefixes: List[str]) -> str:
         """Returns the identifier after removing all the prefixes found in it (if any)."""
         for prefix in prefixes:
             if stable_id.startswith(prefix):
@@ -86,7 +87,8 @@ class StableIDAllocator:
                 break
         return stable_id
 
-    def generate_transcript_id(self, gene_id: str, number: int) -> str:
+    @staticmethod
+    def generate_transcript_id(gene_id: str, number: int) -> str:
         """Use a gene ID and a number to make a formatted transcript ID."""
 
         transcript_id = f"{gene_id}_t{number}"
@@ -101,7 +103,7 @@ class StableIDAllocator:
         """
 
         prefixes = ["cds-", "cds:"]
-        cds_id = self.remove_prefix(cds_id, prefixes)
+        cds_id = StableIDAllocator.remove_prefix(cds_id, prefixes)
 
         # Special case: if the ID doesn't look like one, remove it
         # It needs to be regenerated
