@@ -134,7 +134,7 @@ def test_remove_prefixes(test_id: str, prefixes: List[str], outcome: str) -> Non
         pytest.param("cds-LOREM-IPSUM1", "LOREM-IPSUM1", id="Prefix cds-"),
         pytest.param("cds:LOREM-IPSUM1", "LOREM-IPSUM1", id="Prefix cds-"),
         pytest.param("bad", "", id="Short id without prefix"),
-        pytest.param("cds:bad..id", "", id="Invalid id with cds:"),
+        pytest.param("cds:bad", "", id="Invalid id with cds:"),
     ],
 )
 def test_normalize_cds_id(test_id: str, outcome: str) -> None:

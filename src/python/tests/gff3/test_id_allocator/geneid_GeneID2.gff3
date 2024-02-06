@@ -1,0 +1,10 @@
+##gff-version 3
+##sequence-region scaffold1 1 1000
+scaffold1	Source	gene	1	1000	.	-	.	ID=bad1;Dbxref=GeneID:000001
+scaffold1	Source	mRNA	1	1000	.	-	0	ID=LOREMIPSUM1_t1;Parent=bad1
+scaffold1	Source	exon	1	1000	.	-	0	ID=LOREMIPSUM1_t1_exon1;Parent=LOREMIPSUM1_t1
+scaffold1	Source	CDS	100	900	.	-	0	ID=LOREMIPSUM1_t1_cds;Parent=LOREMIPSUM1_t1
+scaffold1	Source	gene	2000	3000	.	-	.	ID=bad2;Dbxref=GeneID:000001
+scaffold1	Source	mRNA	2000	3000	.	-	0	ID=LOREMIPSUM2_t1;Parent=bad2
+scaffold1	Source	exon	2000	3000	.	-	0	ID=LOREMIPSUM2_t1_exon1;Parent=LOREMIPSUM2_t1
+scaffold1	Source	CDS	2100	2900	.	-	0	ID=LOREMIPSUM2_t1_cds;Parent=LOREMIPSUM2_t1
