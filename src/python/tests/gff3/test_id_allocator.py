@@ -232,7 +232,7 @@ def test_normalize_gene_id_duplicate(
     data_dir: Path, input_gff: str, expected_ids: List[str], expected: ContextManager
 ) -> None:
     """Test gene ID normalization with duplicate Gene ID features."""
-    ids = IDAllocator()
+    ids = StableIDAllocator()
 
     # Load record and update feature
     record = _read_record(data_dir / input_gff)
