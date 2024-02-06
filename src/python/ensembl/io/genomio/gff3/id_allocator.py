@@ -14,7 +14,7 @@
 # limitations under the License.
 """Check and allocate IDs for gene features in a GFF3 file."""
 
-__all__ = ["IDAllocator"]
+__all__ = ["StableIDAllocator", "InvalidStableID"]
 
 from dataclasses import dataclass
 import logging
@@ -24,12 +24,12 @@ from typing import List
 from Bio.SeqFeature import SeqFeature
 
 
-class InvalidID(ValueError):
+class InvalidStableID(ValueError):
     """Raised when there is a problem with an ID."""
 
 
 @dataclass
-class IDAllocator:
+class StableIDAllocator:
     """Set of tools to check and allocate stable IDs."""
 
     # Multiple parameters to automate various fixes
@@ -39,7 +39,7 @@ class IDAllocator:
     make_missing_stable_ids: bool = True
     prefix = "TMP_"
 
-    def generate_id(self) -> str:
+    def generate_gene_id(self) -> str:
         """Returns a new unique gene stable_id with a prefix.
 
         The ID is made up of a prefix and a number, which is auto incremented.
@@ -49,44 +49,44 @@ class IDAllocator:
         new_id = f"{self.prefix}{self.current_id_number}"
         return new_id
 
-    def valid_id(self, name: str) -> bool:
+    def is_valid(self, stable_id: str) -> bool:
         """Check that the format of a stable id is valid."""
 
         if not self.validate_gene_id:
-            logging.debug(f"Validation deactivated by user: '{name}' not checked")
+            logging.debug(f"Validation deactivated by user: '{stable_id}' not checked")
             return True
 
         # Trna (from tRNAscan)
-        if re.search(r"^Trna", name, re.IGNORECASE):
-            logging.debug(f"Stable ID is a tRNA from tRNA-scan: {name}")
+        if re.search(r"^Trna", stable_id, re.IGNORECASE):
+            logging.debug(f"Stable ID is a tRNA from tRNA-scan: {stable_id}")
             return False
 
         # Coordinates
-        if re.search(r"^.+:\d+..\d+", name):
-            logging.debug(f"Stable id is a coordinate: {name}")
+        if re.search(r"^.+:\d+..\d+", stable_id):
+            logging.debug(f"Stable id is a coordinate: {stable_id}")
             return False
 
         # Special characters
-        if re.search(r"[ |]", name):
-            logging.debug(f"Stable id contains special characters: {name}")
+        if re.search(r"[ |]", stable_id):
+            logging.debug(f"Stable id contains special characters: {stable_id}")
             return False
 
         # Min length
-        if len(name) < self.min_id_length:
-            logging.debug(f"Stable id is too short (<{self.min_id_length}) {name}")
+        if len(stable_id) < self.min_id_length:
+            logging.debug(f"Stable id is too short (<{self.min_id_length}) {stable_id}")
             return False
 
         return True
 
-    def remove_prefixes(self, identifier: str, prefixes: List[str]) -> str:
+    def remove_prefix(self, stable_id: str, prefixes: List[str]) -> str:
         """Returns the identifier after removing all the prefixes found in it (if any)."""
         for prefix in prefixes:
-            if identifier.startswith(prefix):
-                identifier = identifier[len(prefix) :]
+            if stable_id.startswith(prefix):
+                stable_id = stable_id[len(prefix) :]
                 break
-        return identifier
+        return stable_id
 
-    def normalize_transcript_id(self, gene_id: str, number: int) -> str:
+    def generate_transcript_id(self, gene_id: str, number: int) -> str:
         """Use a gene ID and a number to make a formatted transcript ID."""
 
         transcript_id = f"{gene_id}_t{number}"
@@ -101,11 +101,11 @@ class IDAllocator:
         """
 
         prefixes = ["cds-", "cds:"]
-        cds_id = self.remove_prefixes(cds_id, prefixes)
+        cds_id = self.remove_prefix(cds_id, prefixes)
 
         # Special case: if the ID doesn't look like one, remove it
         # It needs to be regenerated
-        if not self.valid_id(cds_id):
+        if not self.is_valid(cds_id):
             cds_id = ""
 
         return cds_id
@@ -138,10 +138,10 @@ class IDAllocator:
             gene: Gene feature to normalize.
         """
         prefixes = ["gene-", "gene:"]
-        new_gene_id = self.remove_prefixes(gene.id, prefixes)
+        new_gene_id = self.remove_prefix(gene.id, prefixes)
 
         # In case the normalized gene ID is not valid, use the GeneID
-        if not self.valid_id(new_gene_id):
+        if not self.is_valid(new_gene_id):
             logging.warning(f"Gene ID is not valid: {new_gene_id}")
             qual = gene.qualifiers
             if "Dbxref" in qual:
@@ -154,9 +154,9 @@ class IDAllocator:
 
             # Make a new stable_id
             if self.make_missing_stable_ids:
-                new_id = self.generate_id()
+                new_id = self.generate_gene_id()
                 logging.debug(f"New id: {new_gene_id} -> {new_id}")
                 return new_id
-            raise InvalidID(f"Can't use invalid gene id for {gene}")
+            raise InvalidStableID(f"Can't use invalid gene id for {gene}")
 
         return new_gene_id

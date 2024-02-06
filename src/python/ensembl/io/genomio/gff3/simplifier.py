@@ -38,7 +38,7 @@ from importlib_resources import files
 import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
-from .id_allocator import IDAllocator
+from .id_allocator import StableIDAllocator
 
 
 class Records(list):
@@ -74,7 +74,7 @@ class GFFSimplifier:
     allow_pseudogene_with_CDS = False
     exclude_seq_regions: List = []
     fail_types: Dict[str, int] = {}
-    ids = IDAllocator()
+    ids = StableIDAllocator()
 
     def __init__(self, genome_path: Optional[PathLike] = None):
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
@@ -365,7 +365,7 @@ class GFFSimplifier:
 
             # New transcript ID
             transcript_number = count + 1
-            transcript.id = self.ids.normalize_transcript_id(gene.id, transcript_number)
+            transcript.id = self.ids.generate_transcript_id(gene.id, transcript_number)
 
             transcript = self.format_gene_segments(transcript)
 
@@ -461,7 +461,7 @@ class GFFSimplifier:
         gene = SeqFeature(cds.location, type=gene_type)
         gene.qualifiers["source"] = cds.qualifiers["source"]
         gene.sub_features = [transcript]
-        gene.id = self.ids.generate_id()
+        gene.id = self.ids.generate_gene_id()
 
         return gene
 

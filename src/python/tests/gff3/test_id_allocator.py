@@ -24,7 +24,7 @@ import pytest
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
-from ensembl.io.genomio.gff3.id_allocator import IDAllocator, InvalidID
+from ensembl.io.genomio.gff3.id_allocator import StableIDAllocator, InvalidStableID
 from pytest import raises
 
 
@@ -64,12 +64,12 @@ def _show_diff(result_path: Path, expected_path: Path) -> str:
 )
 def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
     """Test IDs generation."""
-    ids = IDAllocator()
+    ids = StableIDAllocator()
     if prefix:
         ids.prefix = prefix
 
-    id1 = ids.generate_id()
-    id2 = ids.generate_id()
+    id1 = ids.generate_gene_id()
+    id2 = ids.generate_gene_id()
     new_ids = [id1, id2]
     assert new_ids == expected_ids
 
@@ -92,11 +92,11 @@ def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
 )
 def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
     """Test ID validity check."""
-    ids = IDAllocator()
+    ids = StableIDAllocator()
     if min_id_length is not None:
         ids.min_id_length = min_id_length
 
-    assert ids.valid_id(test_id) == outcome
+    assert ids.is_valid(test_id) == outcome
 
 
 @pytest.mark.parametrize(
@@ -108,9 +108,9 @@ def test_valid_id(min_id_length: int, test_id: str, outcome: bool) -> None:
 )
 def test_valid_id_skip(test_id: str, outcome: bool) -> None:
     """Test ID validity check without the validation flag."""
-    ids = IDAllocator()
+    ids = StableIDAllocator()
     ids.validate_gene_id = False
-    assert ids.valid_id(test_id) == outcome
+    assert ids.is_valid(test_id) == outcome
 
 
 @pytest.mark.parametrize(
@@ -124,9 +124,9 @@ def test_valid_id_skip(test_id: str, outcome: bool) -> None:
 )
 def test_remove_prefixes(test_id: str, prefixes: List[str], outcome: str) -> None:
     """Test prefix removal."""
-    ids = IDAllocator()
+    ids = StableIDAllocator()
 
-    assert ids.remove_prefixes(test_id, prefixes) == outcome
+    assert ids.remove_prefix(test_id, prefixes) == outcome
 
 
 @pytest.mark.parametrize(
@@ -141,7 +141,7 @@ def test_remove_prefixes(test_id: str, prefixes: List[str], outcome: str) -> Non
 )
 def test_normalize_cds_id(test_id: str, outcome: str) -> None:
     """Test CDS id normalization."""
-    ids = IDAllocator()
+    ids = StableIDAllocator()
 
     assert ids.normalize_cds_id(test_id) == outcome
 
@@ -156,11 +156,11 @@ def test_normalize_cds_id(test_id: str, outcome: str) -> None:
 )
 def test_normalize_transcript_id(test_id: str, numbers: List[int], outcomes: List[str]) -> None:
     """Test transcript id normalization."""
-    ids = IDAllocator()
+    ids = StableIDAllocator()
 
     new_ids = []
     for number in numbers:
-        new_ids.append(ids.normalize_transcript_id(test_id, number))
+        new_ids.append(ids.generate_transcript_id(test_id, number))
 
     assert new_ids == outcomes
 
@@ -178,7 +178,7 @@ def test_normalize_pseudogene_cds_id(
     tmp_dir: Path, data_dir: Path, input_gff: str, expected_gff: str
 ) -> None:
     """Test pseudogene CDS ID normalization."""
-    ids = IDAllocator()
+    ids = StableIDAllocator()
 
     # Load record and update feature
     record = _read_record(data_dir / input_gff)
@@ -201,7 +201,7 @@ def test_normalize_pseudogene_cds_id(
     [
         pytest.param("geneid_ok.gff3", "LOREMIPSUM1", None, does_not_raise(), id="Good ID, no change"),
         pytest.param("geneid_makeid.gff3", "TMP_1", True, does_not_raise(), id="Make ID"),
-        pytest.param("geneid_bad.gff3", "", False, raises(InvalidID), id="Bad ID, fail"),
+        pytest.param("geneid_bad.gff3", "", False, raises(InvalidStableID), id="Bad ID, fail"),
         pytest.param("geneid_GeneID.gff3", "GeneID_000001", None, does_not_raise(), id="Replace with GeneID"),
         pytest.param("geneid_noGeneID.gff3", "TMP_1", True, does_not_raise(), id="Dbxref without Gene ID"),
     ],
@@ -210,7 +210,7 @@ def test_normalize_gene_id(
     data_dir: Path, input_gff: str, expected_id: str, make_id: bool, expected: ContextManager
 ) -> None:
     """Test gene ID normalization."""
-    ids = IDAllocator()
+    ids = StableIDAllocator()
     if make_id is not None:
         ids.make_missing_stable_ids = make_id
 
