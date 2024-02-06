@@ -18,7 +18,7 @@ from contextlib import nullcontext as does_not_raise
 from difflib import unified_diff
 import filecmp
 from pathlib import Path
-from typing import ContextManager, List
+from typing import ContextManager, List, Optional
 
 import pytest
 
@@ -59,13 +59,14 @@ def _show_diff(result_path: Path, expected_path: Path) -> str:
     "prefix, expected_ids",
     [
         pytest.param(None, ["TMP_1", "TMP_2"], id="Default prefix"),
+        pytest.param("", ["1", "2"], id="No prefix as empty string"),
         pytest.param("MYPREF_", ["MYPREF_1", "MYPREF_2"], id="Prefix MYPREF_"),
     ],
 )
 def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
     """Test IDs generation."""
     ids = StableIDAllocator()
-    if prefix:
+    if prefix is not None:
         ids.prefix = prefix
 
     id1 = ids.generate_gene_id()
