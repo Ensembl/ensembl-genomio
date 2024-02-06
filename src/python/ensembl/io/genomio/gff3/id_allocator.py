@@ -50,7 +50,10 @@ class StableIDAllocator:
         return new_id
 
     def is_valid(self, stable_id: str) -> bool:
-        """Check that the format of a stable id is valid."""
+        """Checks that the format of a stable ID is valid.
+        Args:
+            stable_id: Stable ID to validate.
+        """
 
         if not self.validate_gene_id:
             logging.debug(f"Validation deactivated by user: '{stable_id}' not checked")
@@ -80,37 +83,51 @@ class StableIDAllocator:
 
     @staticmethod
     def remove_prefix(stable_id: str, prefixes: List[str]) -> str:
-        """Returns the identifier after removing all the prefixes found in it (if any)."""
+        """Returns the stable ID after removing its prefix (if any).
+        Args:
+            stable_id: Stable ID to process.
+            prefixes: List of prefixes to search for.
+        """
+
         for prefix in prefixes:
             if stable_id.startswith(prefix):
-                stable_id = stable_id[len(prefix) :]
-                break
+                return stable_id[len(prefix) :]
         return stable_id
 
     @staticmethod
     def generate_transcript_id(gene_id: str, number: int) -> str:
-        """Use a gene ID and a number to make a formatted transcript ID."""
+        """Returns a formatted transcript ID generated from a gene ID and number.
+        Args:
+            gene_id: Gene stable ID.
+            number: Positive number.
+        Raises:
+            ValueError: If the number provided is not greater than zero.
+
+        """
+        if number < 1:
+            raise ValueError("Number has to be a positive integer.")
 
         transcript_id = f"{gene_id}_t{number}"
         return transcript_id
 
     def normalize_cds_id(self, cds_id: str) -> str:
-        """Returns a normalised version of the provided CDS ID.
+        """Returns a normaliSed version of the provided CDS ID.
 
         The normalisation implies to remove any unnecessary prefixes around the CDS ID. However, if
         the CDS ID is still not proper, an empty string will be returned.
 
+        Args:
+            cds_id: CDS ID to normalize.
+
         """
 
         prefixes = ["cds-", "cds:"]
-        cds_id = StableIDAllocator.remove_prefix(cds_id, prefixes)
+        normalized_cds_id = StableIDAllocator.remove_prefix(cds_id, prefixes)
 
-        # Special case: if the ID doesn't look like one, remove it
-        # It needs to be regenerated
-        if not self.is_valid(cds_id):
-            cds_id = ""
-
-        return cds_id
+        # Special case: if the ID doesn't look like one, remove it - it needs to be regenerated
+        if not self.is_valid(normalized_cds_id):
+            return ""
+        return normalized_cds_id
 
     def normalize_pseudogene_cds_id(self, pseudogene: SeqFeature) -> None:
         """Normalizes every CDS ID of the provided pseudogene.
