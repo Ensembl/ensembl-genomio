@@ -230,7 +230,7 @@ class GFFSimplifier:
             if mobile_element_type:
                 # Get the type (and name) from the attrib
                 if ":" in mobile_element_type[0]:
-                    element_type, element_name = mobile_element_type[0].split(":")
+                    element_type, element_name = mobile_element_type[0].split(":", maxsplit=1)
                     description = f"{element_type} ({element_name})"
                 else:
                     element_type = mobile_element_type[0]
@@ -407,7 +407,7 @@ class GFFSimplifier:
 
                 self.fail_types[f"sub_transcript={feat.type}"] = 1
                 logging.warning(
-                    f"Unrecognized exon type for {feat.type}: {feat.id}"
+                    f"Unrecognized exon type {feat.type}: {feat.id}"
                     f" (for transcript {transcript.id} of type {transcript.type})"
                 )
                 if self.skip_unrecognized:
