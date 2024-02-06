@@ -5,31 +5,9 @@ VERSION     NC_000884.1
 DBLINK      BioProject: PRJNA927338
 KEYWORDS    RefSeq.
 SOURCE      mitochondrion Cavia porcellus (domestic guinea pig)
-  ORGANISM  Cavia porcellus
-            Eukaryota; Metazoa; Chordata; Craniata; Vertebrata; Euteleostomi;
-            Mammalia; Eutheria; Euarchontoglires; Glires; Rodentia;
-            Hystricomorpha; Caviidae; Cavia.
-REFERENCE   1  (bases 1 to 16801)
-  AUTHORS   D'Erchia,A.M., Gissi,C., Pesole,G., Saccone,C. and Arnason,U.
-  TITLE     The guinea-pig is not a rodent
-  JOURNAL   Nature 381 (6583), 597-600 (1996)
-   PUBMED   8637593
-REFERENCE   2  (bases 1 to 16801)
-  CONSRTM   NCBI Genome Project
-  TITLE     Direct Submission
-  JOURNAL   Submitted (08-SEP-1999) National Center for Biotechnology
-            Information, NIH, Bethesda, MD 20894, USA
-REFERENCE   3  (bases 1 to 16801)
-  AUTHORS   D'erchia,A.M.
-  TITLE     Direct Submission
-  JOURNAL   Submitted (03-DEC-1997) Dept of Genetics, Division of Evolutionary
-            Systematics, University of Lund, Solvegatan 29, Lund S-22362,
-            Sweden
-COMMENT     REVIEWED REFSEQ: This record has been curated by NCBI staff. The
-            reference sequence was derived from AJ222767.
-            COMPLETENESS: full length.
+
 FEATURES             Location/Qualifiers
-     source          1..16801
+     source          1..3720
                      /organism="Cavia porcellus"
                      /organelle="mitochondrion"
                      /mol_type="genomic DNA"
