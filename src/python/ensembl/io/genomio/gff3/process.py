@@ -67,7 +67,7 @@ def main() -> None:
     # functional annotation JSON file
     logging.info("Simplify and fix GFF3")
     gff_data = GFFSimplifier(args.genome_data)
-    gff_data.ids.make_missing_stable_ids = args.make_missing_stable_ids
+    gff_data.stable_ids.make_missing_stable_ids = args.make_missing_stable_ids
     gff_data.simpler_gff3(in_gff_path)
     gff_data.records.to_gff(args.out_gff_path)
     gff_data.annotations.to_json(args.out_func_path)

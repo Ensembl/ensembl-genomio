@@ -74,7 +74,7 @@ class GFFSimplifier:
     allow_pseudogene_with_CDS = False
     exclude_seq_regions: List = []
     fail_types: Dict[str, int] = {}
-    ids = StableIDAllocator()
+    stable_ids = StableIDAllocator()
 
     def __init__(self, genome_path: Optional[PathLike] = None):
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
@@ -95,7 +95,7 @@ class GFFSimplifier:
             prefix = "TMP_PREFIX_"
         else:
             prefix = "TMP_" + org + "_"
-        self.ids.prefix = prefix
+        self.stable_ids.prefix = prefix
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a
@@ -254,7 +254,7 @@ class GFFSimplifier:
             return feat
 
         # Generate ID if needed and add it to the functional annotation
-        feat.id = self.ids.normalize_gene_id(feat)
+        feat.id = self.stable_ids.normalize_gene_id(feat)
         self.annotations.add_feature(feat, "transposable_element")
         feat.qualifiers = {"ID": feat.id}
 
@@ -295,7 +295,7 @@ class GFFSimplifier:
         """
 
         # New gene ID
-        gene.id = self.ids.normalize_gene_id(gene)
+        gene.id = self.stable_ids.normalize_gene_id(gene)
 
         # Gene with no subfeatures: need to create a transcript at least
         if len(gene.sub_features) == 0:
@@ -338,7 +338,7 @@ class GFFSimplifier:
 
         # PSEUDOGENE CDS IDs
         if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
-            self.ids.normalize_pseudogene_cds_id(gene)
+            self.stable_ids.normalize_pseudogene_cds_id(gene)
 
         return gene
 
@@ -365,7 +365,7 @@ class GFFSimplifier:
 
             # New transcript ID
             transcript_number = count + 1
-            transcript.id = self.ids.generate_transcript_id(gene.id, transcript_number)
+            transcript.id = self.stable_ids.generate_transcript_id(gene.id, transcript_number)
 
             transcript = self.format_gene_segments(transcript)
 
@@ -395,7 +395,7 @@ class GFFSimplifier:
                     feat.qualifiers["source"] = old_exon_qualifiers["source"]
             elif feat.type == "CDS":
                 # New CDS ID
-                feat.id = self.ids.normalize_cds_id(feat.id)
+                feat.id = self.stable_ids.normalize_cds_id(feat.id)
                 if feat.id in ("", gene.id, transcript.id):
                     feat.id = f"{transcript.id}_cds"
             else:
@@ -461,7 +461,7 @@ class GFFSimplifier:
         gene = SeqFeature(cds.location, type=gene_type)
         gene.qualifiers["source"] = cds.qualifiers["source"]
         gene.sub_features = [transcript]
-        gene.id = self.ids.generate_gene_id()
+        gene.id = self.stable_ids.generate_gene_id()
 
         return gene
 
