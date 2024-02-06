@@ -218,3 +218,31 @@ def test_normalize_gene_id(
         for feature in features:
             feature.id = ids.normalize_gene_id(feature)
             assert feature.id == expected_id
+
+
+@pytest.mark.parametrize(
+    "input_gff, expected_ids, expected",
+    [
+        pytest.param(
+            "geneid_GeneID2.gff3", ["GeneID_000001", "GeneID_000001_2"], does_not_raise(), id="Same GeneIDs"
+        ),
+    ],
+)
+def test_normalize_gene_id_duplicate(
+    data_dir: Path, input_gff: str, expected_ids: List[str], expected: ContextManager
+) -> None:
+    """Test gene ID normalization with duplicate Gene ID features."""
+    ids = StableIDAllocator()
+
+    # Load record and update feature
+    record = _read_record(data_dir / input_gff)
+    features = record.features
+    record.features = []
+
+    found_ids = []
+    with expected:
+        for feature in features:
+            new_feature_id = ids.normalize_gene_id(feature)
+            if new_feature_id and feature.id != new_feature_id:
+                found_ids.append(new_feature_id)
+        assert found_ids == expected_ids
