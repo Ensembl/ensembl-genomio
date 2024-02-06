@@ -18,7 +18,8 @@ Typical usage example::
     $ pytest test_compare.py
 
 """
-
+from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature
 import filecmp
 import pytest
 
@@ -76,13 +77,16 @@ class TestFormattedFilesGenerator:
         expected_path = data_dir/ f"output_dna.fasta"
         assert filecmp.cmp(output, expected_path)
 
-    def test_get_codon_table(self, data_dir):
+    @pytest.mark.parametrize("type_feature, expected_value", [("gene", None), 
+                                    ("mRNA", None), ("CDS", 2), ("CDS", 5)])
+    def test_get_codon_table(self, type_feature, expected_value, data_dir):
         gb_file_path = data_dir / self.gb_file
-        gb = FormattedFilesGenerator(self.prod_name,self.gb_file)
-        gb.parse_genbank(gb_file_path)
-        for seq in gb.seq_records:
-            codon_table = gb._get_codon_table(seq)
-        assert codon_table == '2'
+        gb = FormattedFilesGenerator(self.prod_name,gb_file_path)
+        rec = SeqRecord(seq="", id="1JOY", name="EnvZ")
+        seq_feature = SeqFeature(type=type_feature, qualifiers={"transl_table": [expected_value]})
+        rec.features.append(seq_feature)
+        codon_table = gb._get_codon_table(rec)
+        assert codon_table == expected_value
 
     def test_write_seq_region_json(self, tmp_path, data_dir):
         gb_file_path = data_dir / self.gb_file
