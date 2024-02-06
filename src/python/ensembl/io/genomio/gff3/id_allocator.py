@@ -140,7 +140,7 @@ class StableIDAllocator:
             gene: Gene feature to normalize.
         """
         prefixes = ["gene-", "gene:"]
-        new_gene_id = self.remove_prefix(gene.id, prefixes)
+        new_gene_id = StableIDAllocator.remove_prefix(gene.id, prefixes)
 
         # In case the normalized gene ID is not valid, use the GeneID
         if not self.is_valid(new_gene_id):
@@ -156,9 +156,9 @@ class StableIDAllocator:
 
             # Make a new stable_id
             if self.make_missing_stable_ids:
-                new_id = self.generate_gene_id()
-                logging.debug(f"New id: {new_gene_id} -> {new_id}")
-                return new_id
+                new_gene_id = self.generate_gene_id()
+                logging.debug(f"New ID: {new_gene_id} -> {new_gene_id}")
+                return new_gene_id
             raise InvalidStableID(f"Can't use invalid gene id for {gene}")
 
         return new_gene_id
