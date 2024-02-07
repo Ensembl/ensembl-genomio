@@ -29,22 +29,22 @@
   # Check that all the expected files are produced
   # Make sure to update those if the processing of the files changes!
   files:
-    - path: ./test_genome_prepare_output/GCA_017607445.1/fasta_dna.fa
+    - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/fasta_dna.fa
       md5sum: 68d26226b04950883edecd6095d1db1f
-    - path: ./test_genome_prepare_output/GCA_017607445.1/fasta_pep.fa
+    - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/fasta_pep.fa
       md5sum: d3be87e392cc53ded62987c28952cc3d
-    - path: ./test_genome_prepare_output/GCA_017607445.1/functional_annotation.json
+    - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/functional_annotation.json
       md5sum: eb834948fb9363dd71d02cb591848345
-    - path: ./test_genome_prepare_output/GCA_017607445.1/gene_models.gff3
+    - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/gene_models.gff3
       md5sum: ade9ac036023c48dd490056457027468
     # Genome contains fields that depend on the date, so can't check md5sum
-    - path: ./test_genome_prepare_output/GCA_017607445.1/genome.json
+    - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/genome.json
       contains:
         - GCA_017607445.1
         - organAbrev123
         - OrganismDB
     # Manifest depends on the genome checksum, so also date dependent
-    - path: ./test_genome_prepare_output/GCA_017607445.1/manifest.json
-    - path: ./test_genome_prepare_output/GCA_017607445.1/seq_region.json
+    - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/manifest.json
+    - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/seq_region.json
       md5sum: 585da9f97f094e83702860ce43da652f
-    - path: ./test_genome_prepare_output/GCA_017607445.1/stats.txt
+    - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/stats.txt
