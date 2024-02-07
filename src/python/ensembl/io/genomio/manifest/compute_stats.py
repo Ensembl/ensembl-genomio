@@ -70,7 +70,7 @@ class manifest_stats:
         self.manifest = f"{manifest_dir}/manifest.json"
         self.accession: Optional[str] = accession
         self.errors: List[str] = []
-        self.errors_file = f"{manifest_dir}/stats_diff.json"
+        self.errors_file = Path(manifest_dir) / "stats_diff.log"
         if datasets_bin is None:
             datasets_bin = "datasets"
         self.datasets_bin = datasets_bin
@@ -103,7 +103,7 @@ class manifest_stats:
 
         # Die if there were errors in stats comparison
         if self.errors:
-            with open(self.errors_file, "w") as errors_fh:
+            with self.errors_file.open("w") as errors_fh:
                 for error_line in self.errors:
                     errors_fh.write(error_line)
 
