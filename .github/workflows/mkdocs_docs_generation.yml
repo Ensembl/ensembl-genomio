@@ -20,11 +20,7 @@ on:
       - closed
     branches:
       - main
-      - '!jalvarez/**'
-      - '!mbarba/**'
-      - '!disha/**'
-      - '!vsitnik/**'
-      - '!lcampbell/**'
+      - 'hackathon/**'
     paths:
       - 'src/python/ensembl/**'
       - 'docs/**'
