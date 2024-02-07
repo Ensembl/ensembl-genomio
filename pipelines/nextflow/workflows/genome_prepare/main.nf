@@ -42,12 +42,12 @@ def meta_from_genome_json(json_path) {
 
     prod_name = data.assembly.accession
     publish_dir = data.assembly.accession
-    if (params.brc_mode) {
+    if ( params.brc_mode ) {
         prod_name = data.BRC4.organism_abbrev
         publish_dir = "${data.BRC4.component}/${data.BRC4.organism_abbrev}"
     } else if ( data.species && data.species.production_name ) {
         prod_name = data.species.production_name
-        publish_dir = "${prod_name}"
+        publish_dir = prod_name
     }
 
     return [
