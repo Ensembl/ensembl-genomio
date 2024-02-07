@@ -19,7 +19,7 @@ Typical usage example::
 
 """
 from Bio.SeqRecord import SeqRecord
-from Bio.SeqFeature import SeqFeature
+from Bio.SeqFeature import SeqFeature, SimpleLocation
 import filecmp
 import pytest
 
@@ -35,6 +35,7 @@ class TestFormattedFilesGenerator:
 
     prod_name= "TEST_prod"
     gb_file = "input_file.gb"
+    prefix = "TEST"
 
     @pytest.mark.parametrize("expected",
                         [
@@ -55,9 +56,47 @@ class TestFormattedFilesGenerator:
         gb.parse_genbank(gb_file_path)
         assert len(gb.seq_records) >= 1
 
+    @pytest.mark.parametrize("type_feature, gene_name, test_qualifiers, expected_id", 
+                             [("gene", "AGR90MT_t01", "pseudogene", "TESTAGR90MT_t01" ), 
+                              ("tRNA", "AGR90MT_t01", "" , "TESTAGR90MT_t01_t1"),
+                              ("CDS", "AGR90MT_t01", "translation", "TESTAGR90MT_t01_p1"),
+                              ("CDS", "AGR_01", "", "TESTAGR_01_p1")])
+    
+    def test_parse_gene_feat(self, expected_id: str, gene_name: str, type_feature: str, test_qualifiers: str):
+        seq_dict={}
+        gb = FormattedFilesGenerator(self.prod_name,self.gb_file, prefix="TEST")
+        seq_feature = SeqFeature(SimpleLocation(5, 10),type=type_feature, id= gene_name)
+        seq_feature.qualifiers[test_qualifiers] = "unkown"
+        # Check the returned feature is as expected
+        result_seq_feature, result_seq_id, result_peptide = gb._parse_gene_feat(seq_feature, gene_name)
+        # check this here. But it should be a string if one exists.
+        if seq_feature.type == "CDS":
+            gene_id = self.prefix + gene_name
+            tr_id = gene_id + "_t1"
+            tr_qualifiers = {"ID": tr_id, "Name": gene_name, "Parent": gene_id}
+            gff_tr = SeqFeature(
+                location=seq_feature.location,
+                type="mRNA",
+                strand=seq_feature.location.strand,
+                qualifiers=tr_qualifiers,
+            )
+            seq_dict[str(tr_id)] = gff_tr
+            seq_dict[str(expected_id)] = seq_feature
+
+            # Peptides aren't always present in the genbank file so we can't guarantee they will exist
+            if  "translation" in seq_feature.qualifiers:
+                assert len(result_peptide) > 0
+
+            assert  result_seq_feature == seq_dict
+            assert result_seq_id == [tr_id, expected_id]
+
+        else:
+            seq_dict[str(expected_id)] = seq_feature
+            assert  result_seq_feature == seq_dict
+            assert result_seq_id == [expected_id]
+
     def test_write_genome_json(self, data_dir, tmp_path):
         """Test that organellas are correctly identified."""
-
         gb_file_path = data_dir / self.gb_file
         out_dir = tmp_path
         gb = FormattedFilesGenerator(self.prod_name,gb_file_path)
@@ -68,7 +107,6 @@ class TestFormattedFilesGenerator:
 
     def test_write_fasta_dna(self, data_dir, tmp_path):
         """Test that organellas are correctly identified."""
-
         gb_file_path = data_dir / self.gb_file
         out_dir = tmp_path
         gb = FormattedFilesGenerator(self.prod_name,gb_file_path)
