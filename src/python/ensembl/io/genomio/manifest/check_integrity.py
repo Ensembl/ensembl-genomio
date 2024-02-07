@@ -79,7 +79,7 @@ class Manifest:
 
     def has_lengths(self, name: str) -> bool:
         """Check if a given name has lengths records.
-        
+
         Raise KeyError if the name is not supported.
 
         """
@@ -89,7 +89,6 @@ class Manifest:
             return False
         except KeyError as err:
             raise KeyError(f"There is no length record for {name}") from err
-
 
     def get_lengths(self, name: str) -> Dict[str, Any]:
         """Returns a dict associating IDs with their length from a given file name."""
