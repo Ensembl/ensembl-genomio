@@ -109,7 +109,7 @@ def test_valid_id(min_id_length: Optional[int], test_id: str, outcome: bool) -> 
 )
 def test_valid_id_skip(test_id: str, outcome: bool) -> None:
     """Test ID validity check without the validation flag."""
-    ids = StableIDAllocator(validate_gene_id=False)
+    ids = StableIDAllocator(skip_gene_id_validation=True)
     assert ids.is_valid(test_id) == outcome
 
 

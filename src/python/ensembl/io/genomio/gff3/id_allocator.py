@@ -33,7 +33,7 @@ class StableIDAllocator:
     """Set of tools to check and allocate stable IDs."""
 
     # Multiple parameters to automate various fixes
-    validate_gene_id: bool = True
+    skip_gene_id_validation: bool = False
     min_id_length: int = 7
     current_id_number: int = 0
     make_missing_stable_ids: bool = True
@@ -56,7 +56,7 @@ class StableIDAllocator:
             stable_id: Stable ID to validate.
         """
 
-        if not self.validate_gene_id:
+        if self.skip_gene_id_validation:
             logging.debug(f"Validation deactivated by user: '{stable_id}' not checked")
             return True
 
