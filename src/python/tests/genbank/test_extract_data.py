@@ -66,7 +66,7 @@ class TestFormattedFilesGenerator:
         gb = FormattedFilesGenerator(self.prod_name,self.gb_file, prefix="TEST")
         
         seq_feature = SeqFeature(SimpleLocation(5, 10),type=type_feature, id= gene_name)
-        seq_feature.qualifiers[test_qualifiers] = "test_unkown"
+        seq_feature.qualifiers[test_qualifiers] = "test_qual"
         # Check the returned feature is as expected
         result_seq_feature, result_seq_id, result_peptide = gb._parse_gene_feat(seq_feature, gene_name)
         if type_feature != "CDS":
@@ -83,6 +83,30 @@ class TestFormattedFilesGenerator:
             # Peptides aren't always present in the genbank file so we can't guarantee they will exist
             if  "translation" in seq_feature.qualifiers:
                 assert len(result_peptide) > 0
+
+
+    @pytest.mark.parametrize("rna_name, expected_rna_id, expected_gene_id", 
+                             [("AGR90MT t01", "AGR90MT t01_t1", "AGR90MT t01"),
+                              ("AGR90MT t01 t2", "AGR90MT_t1", "AGR90MT"),
+                              ("AGR90MT_t01_t2", "AGR90MT_t01_t2_t1", "AGR90MT_t01_t2")
+                              ])
+    def test_parse_rna_feat(self, rna_name, expected_gene_id, expected_rna_id):
+        gb = FormattedFilesGenerator(self.prod_name,self.gb_file, prefix="TEST")
+        
+        seq_feature = SeqFeature(SimpleLocation(5, 10),type="tRNA")
+        seq_feature.qualifiers["product"] = [rna_name]
+        rna_feature, all_expected_id = gb._parse_rna_feat(seq_feature)
+        assert len(rna_feature) == 2
+        assert all_expected_id == [self.prefix+expected_gene_id,self.prefix+expected_rna_id ]
+    
+    @pytest.mark.parametrize("gene_id, all_ids, expected_id",  
+                             [("gene_name",["gene_name"],"gene_name_2"),
+                              ("gene_test",[""],"gene_test")])
+    def test_uniquify_id(self, gene_id, all_ids, expected_id):
+        """Test that _uniquify_id adds a version number to an existing ID"""
+        gb = FormattedFilesGenerator(self.prod_name,self.gb_file)
+        new_id = gb._uniquify_id(gene_id,all_ids)
+        assert new_id == expected_id
         
     def test_write_genome_json(self, data_dir, tmp_path):
         """Test that organellas are correctly identified."""
