@@ -14,23 +14,12 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.gff3.gene_merger` module."""
 
-from difflib import unified_diff
-import filecmp
 from pathlib import Path
+from typing import Callable
 
 import pytest
 
 from ensembl.io.genomio.gff3 import GFFGeneMerger
-
-
-def _show_diff(result_path: Path, expected_path: Path) -> str:
-    """Create a useful diff between 2 files."""
-    with open(result_path, "r") as result_fh:
-        results = result_fh.readlines()
-    with open(expected_path, "r") as expected_fh:
-        expected = expected_fh.readlines()
-    diff = list(unified_diff(expected, results))
-    return "".join(diff)
 
 
 @pytest.mark.parametrize(
@@ -42,7 +31,13 @@ def _show_diff(result_path: Path, expected_path: Path) -> str:
         pytest.param("merge_unordered_in.gff3", "merge_unordered_out.gff3", id="Unordered split gene"),
     ],
 )
-def test_merge(data_dir: Path, tmp_path: Path, input_file: str, expected_file: str) -> None:
+def test_merge(
+    assert_files: Callable[[Path, Path], None],
+    data_dir: Path,
+    tmp_path: Path,
+    input_file: str,
+    expected_file: str,
+) -> None:
     """Tests the `GFFGeneMerger.merge()` method.
 
     Args:
@@ -55,6 +50,7 @@ def test_merge(data_dir: Path, tmp_path: Path, input_file: str, expected_file: s
     merger = GFFGeneMerger()
     gff_input_path = data_dir / input_file
     test_output_path = tmp_path / f"{input_file}.test.gff3"
-    expected_path = data_dir / expected_file
     merger.merge(gff_input_path, test_output_path)
-    assert filecmp.cmp(test_output_path, expected_path), _show_diff(test_output_path, expected_path)
+
+    expected_path = data_dir / expected_file
+    assert_files(test_output_path, expected_path)

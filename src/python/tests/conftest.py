@@ -19,6 +19,8 @@ will have access to the plugins, hooks and fixtures defined here.
 
 """
 
+from difflib import unified_diff
+import filecmp
 from pathlib import Path
 from typing import Any, Callable
 
@@ -64,3 +66,19 @@ def fixture_json_data(data_dir: Path) -> Callable:
         return get_json(data_dir / file_name)
 
     return _json_data
+
+
+@pytest.fixture(name="assert_files")
+def assert_files() -> Callable[[Path, Path], None]:
+    """Provide a function that asserts two files and show a diff if they differ."""
+
+    def _assert_files(result_path: Path, expected_path: Path) -> None:
+        with open(result_path, "r") as result_fh:
+            results = result_fh.readlines()
+        with open(expected_path, "r") as expected_fh:
+            expected = expected_fh.readlines()
+        files_diff = list(unified_diff(results, expected, fromfile="Test-made file", tofile="Expected file"))
+        assert_message = f"Test-made and expected files differ\n{' '.join(files_diff)}"
+        assert filecmp.cmp(result_path, expected_path), assert_message
+
+    return _assert_files
