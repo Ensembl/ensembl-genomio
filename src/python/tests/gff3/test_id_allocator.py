@@ -101,15 +101,17 @@ def test_valid_id(min_id_length: Optional[int], test_id: str, outcome: bool) -> 
 
 
 @pytest.mark.parametrize(
-    "test_id, outcome",
+    "test_id, skip_flag, outcome",
     [
-        pytest.param("LOREMIPSUM_01", True, id="Skip Good ID"),
-        pytest.param("LO..rem|ipsum", True, id="Skip Bad ID"),
+        pytest.param("LOREMIPSUM_01", True, True, id="Skip Good ID"),
+        pytest.param("LO..rem|ipsum", True, True, id="Skip Bad ID"),
+        pytest.param("LOREMIPSUM_01", False, True, id="No skip Good ID"),
+        pytest.param("LO..rem|ipsum", False, False, id="No skip Bad ID"),
     ],
 )
-def test_valid_id_skip(test_id: str, outcome: bool) -> None:
+def test_valid_id_skip(test_id: str, skip_flag: bool, outcome: bool) -> None:
     """Test ID validity check without the validation flag."""
-    ids = StableIDAllocator(skip_gene_id_validation=True)
+    ids = StableIDAllocator(skip_gene_id_validation=skip_flag)
     assert ids.is_valid(test_id) == outcome
 
 
