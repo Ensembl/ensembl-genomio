@@ -482,7 +482,7 @@ class FormattedFilesGenerator:
         """
         if organelle in self.locations:
             return self.locations[organelle]
-        raise UnsupportedData(f"Unkown organelle: {organelle}")
+        raise UnsupportedData(f"Unknown organelle: {organelle}")
 
     def _format_genome_data(self) -> None:
         """
