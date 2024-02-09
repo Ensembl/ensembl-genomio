@@ -88,7 +88,7 @@ class GFFSimplifier:
         self._set_id_prefix()
 
     def _set_id_prefix(self) -> None:
-        """Set the ID prefix using the organism abbrev if it exists in the genome metadata."""
+        """Sets the ID prefix using the organism abbrev if it exists in the genome metadata."""
         try:
             org = self.genome["BRC4"]["organism_abbrev"]
         except KeyError:

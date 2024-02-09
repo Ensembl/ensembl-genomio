@@ -25,7 +25,7 @@ from Bio.SeqFeature import SeqFeature
 
 
 class InvalidStableID(ValueError):
-    """Raised when there is a problem with an ID."""
+    """Raised when there is a problem with an stable ID."""
 
 
 @dataclass
@@ -85,6 +85,9 @@ class StableIDAllocator:
     @staticmethod
     def remove_prefix(stable_id: str, prefixes: List[str]) -> str:
         """Returns the stable ID after removing its prefix (if any).
+
+        If more than one prefix may be found, only the first one is removed.
+
         Args:
             stable_id: Stable ID to process.
             prefixes: List of prefixes to search for.
@@ -112,7 +115,7 @@ class StableIDAllocator:
         return transcript_id
 
     def normalize_cds_id(self, cds_id: str) -> str:
-        """Returns a normaliSed version of the provided CDS ID.
+        """Returns a normalized version of the provided CDS ID.
 
         The normalisation implies to remove any unnecessary prefixes around the CDS ID. However, if
         the CDS ID is still not proper, an empty string will be returned.
