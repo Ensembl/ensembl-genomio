@@ -85,6 +85,13 @@ def md5_files(dl_dir: Path, md5: Path) -> bool:
     """
     Check all files checksums with the sums listed in a checksum file, if available.
     Return False if there is no checksum file, or a file is missing, or has a wrong checksum.
+
+    Args:
+        dl_dir: Path location to containing downloaded FTP files.
+        md5:
+
+    Returns:
+        Bool: True if dl files match checksum, False otherwise. 
     """
     # Get or set md5 file to user or default setting
     if md5 is None:
@@ -120,6 +127,12 @@ def md5_files(dl_dir: Path, md5: Path) -> bool:
 def get_checksums(checksum_path: Path) -> Dict[str, str]:
     """
     Get a dict of checksums from a file, with file names as keys and sums as values
+
+    Args:
+        checksum_path: Path location to MD5 checksum file.
+
+    Returns:
+        Dict: key value pairs of server side ftp file name & its md5 checksum.
     """
     sums: Dict[str, str] = {}
     if not checksum_path.is_file():
@@ -135,6 +148,14 @@ def get_checksums(checksum_path: Path) -> Dict[str, str]:
 def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     """
     Given an INSDC accession, download all available files from the ftp to the download dir
+
+    Args:
+        accession: Genome Assembly accession.
+        dl_dir: Path to downloaded FTP files.
+        max_redo: Maximum ftp connection retry attempts.
+
+    Returns:
+        None
     """
     match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
     if not match:
@@ -171,7 +192,18 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
 def _download_file(
     ftp_conn: FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
 ) -> None:
-    """TODO"""
+    """Download individual files from FTP server.
+    
+    Args:
+        ftp_conn: Established connection FTP object.
+        ftp_file: Name of ftp file to download.
+        md5_sums: Dict of key value pairs filename<=>md5_checksums.
+        dl_dir: Path to downloaded FTP files.
+        max_redo: Maximum number of connection retry attempts. 
+
+    Returns:
+        None
+    """
     has_md5 = True
     expected_sum = ""
     if not ftp_file in md5_sums:
@@ -222,10 +254,14 @@ def _download_file(
 
 def get_files_selection(dl_dir: Path) -> Dict[str, str]:
     """
-    Among all the files downloaded, only keep a subset for which we use a controlled name.
-    Return a dict[name] = file_path
-    The file_path is relative to the download dir
-    Current names are defined in _FILE_ENDS
+    Among all downloaded files only keep a subset for which we use a controlled name.
+    Current names are defined in dict: '_FILE_ENDS'
+
+    Args:
+        dl_dir: Local path to downloaded FTP files. The file_path is relative to the download dir.
+
+    Returns:
+        Dict: Subset target files. File name end (key)<=>file name(value)
     """
     files = {}
     root_name = get_root_name(dl_dir)
@@ -240,7 +276,14 @@ def get_files_selection(dl_dir: Path) -> Dict[str, str]:
 
 
 def get_root_name(dl_dir: Path) -> str:
-    """Get root name for assembly files, using the report file as base"""
+    """Get root name for assembly files, using the report file as base
+    
+    Args:
+        dl_dir: Path location of downloaded FTP files.
+
+    Returns:
+        Str: Shared download files basename prefix, obtained from asm report file. 
+    """
     root_name = ""
     for dl_file in dl_dir.iterdir():
         matches = re.search("^(.+_)assembly_report.txt", dl_file.name)
@@ -256,14 +299,17 @@ def retrieve_assembly_data(
     max_increment: int = 0,
     max_redo: int = 3,
 ) -> None:
-    """TODO
+    """Establish FTP connection and download a predefined subset of assembly data files from either 
+    INSDC or RefSeq. For subset of files see Dict: '_FILE_ENDS'
 
     Args:
-        accession: Genome Assembly accession
-        download_dir: Path to directory used to store retrieved
-        max_increment: If you want to allow assembly versions
-        max_redo: Set max number of times to retry downloading a file
+        accession: Genome Assembly accession.
+        download_dir: Path to download FTP files.
+        max_increment: If you want to allow assembly versions.
+        max_redo: Maximum ftp connection retry attempts.
 
+    Returns:
+        None
     """
     download_dir = Path(download_dir)
 
