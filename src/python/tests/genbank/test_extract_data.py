@@ -21,6 +21,9 @@ Typical usage example::
 from pathlib import Path
 import filecmp
 import pytest
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
+from Bio.SeqFeature import SeqFeature, SimpleLocation
 
 from ensembl.io.genomio.genbank.extract_data import (
     FormattedFilesGenerator
@@ -36,6 +39,18 @@ class TestWriteFormattedFiles:
         gb_file_path = data_dir/gb_file
         prefix = "TEST"
         return FormattedFilesGenerator(prod_name, gb_file_path, prefix)
+    
+    @pytest.mark.parametrize(
+        "expected",
+        [
+            ({"S43128.1": "mitochondrion"}),
+        ],
+    )
+    def test_get_organella(self, data_dir: Path, expected: str, formatted_files_generator) -> None:
+        """Test that organellas are correctly identified."""
+        gb_file_path = data_dir / formatted_files_generator.gb_file
+        organella = formatted_files_generator._get_organella(gb_file_path)
+        assert organella == expected
 
     def test_parse_genbank(self, data_dir: Path, formatted_files_generator) -> None:
         """Test that parse_genbank method correctly parses genbank files."""
@@ -66,4 +81,11 @@ class TestWriteFormattedFiles:
         output= tmp_path/ "seq_region.json"
         expected_path = data_dir/ f"output_seq_region.json"
         assert filecmp.cmp(output, expected_path)
+    
+    def test_write_genes_gff(self, data_dir: Path, tmp_path: Path, formatted_files_generator):
+        """Check gene features in GFF3 format are generated as expected."""
+        rec = SeqRecord(seq="", id="1JOY", name="EnvZ")
+        seq_feature = SeqFeature(type=type_feature, qualifiers={"transl_table": [expected_value]})
+
+
 
