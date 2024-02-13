@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.genome_stats.compare` module.
+"""Unit testing of `ensembl.io.genomio.genbank.extract_data` module.
 
 Typical usage example::
-    $ pytest test_compare.py
+    $ pytest test_extract_data.py
 
 """
 from Bio.SeqRecord import SeqRecord
@@ -32,6 +32,7 @@ from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBP
 class TestFormattedFilesGenerator:
     @pytest.fixture
     def formatted_files_generator(self, data_dir):
+        """Call the function `FormattedFilesGenerator` with set parameters"""
         prod_name = "TEST_prod"
         gb_file = "input_file.gb"
         gb_file_path = data_dir / gb_file
