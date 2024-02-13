@@ -20,7 +20,6 @@ will have access to the plugins, hooks and fixtures defined here.
 """
 
 from difflib import unified_diff
-import filecmp
 from pathlib import Path
 from typing import Any, Callable
 
@@ -79,6 +78,6 @@ def assert_files() -> Callable[[Path, Path], None]:
             expected = expected_fh.readlines()
         files_diff = list(unified_diff(results, expected, fromfile="Test-made file", tofile="Expected file"))
         assert_message = f"Test-made and expected files differ\n{' '.join(files_diff)}"
-        assert filecmp.cmp(result_path, expected_path), assert_message
+        assert len(files_diff) == 0, assert_message
 
     return _assert_files
