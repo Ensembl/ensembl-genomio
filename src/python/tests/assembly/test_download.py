@@ -22,16 +22,17 @@ Typical usage example::
 
 """
 
+import filecmp
+import logging
 from pathlib import Path
-import unittest
 from unittest.mock import Mock, patch, MagicMock
 from contextlib import nullcontext as does_not_raise
 from typing import ContextManager
 
 from typing import Dict
 
+from ftplib import FTP, error_reply as ftp_error_reply
 import pytest
-from ftplib import FTP
 
 
 from ensembl.io.genomio.assembly.download import FTPConnection, FTPConnectionError
@@ -161,54 +162,52 @@ def test_md5_files(data_dir: Path, md5file: Path, checksum_bool: bool) -> None:
 #         # stop after all tests
 #         cls.addClassCleanup(cls.patcher.stop)
 
-@patch("ensembl.io.genomio.assembly.download.FTP", return_value='226 Transfer complete.', autospec=True)
-def download_single_file(data_dir: Path,
-    mock_ftp_constructor: Mock, 
-    ftp_url: str, 
-    sub_dir: str,
-    ftp_file: str, 
-    md5_sums: Dict[str, str],  
-    ) -> None:
-    
-    mock_ftp = mock_ftp_constructor.return_value
-    mock_ftp.pwd = MagicMock(return_value="ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/")
-    connected_ftp = FTPConnection.establish_ftp(mock_ftp, ftp_url, sub_dir)
-    _download_file(connected_ftp, ftp_file, md5_sums, data_dir)
-    
-    func_call = mock_ftp.retrbinary.assert_called_once_with(f"RETR {ftp_file}", Path(data_dir, ftp_file).open().write())
-    
-    return func_call
 
 @pytest.mark.parametrize(
-"ftp_url, sub_dir, ftp_file, md5_sums, expectation",
-[
-    (
-        "ftp.ncbi.nlm.nih.gov",
-        "genomes/all/GCA/017/607/445",
-        "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
-        dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
-        True,
-    ),
-    (
-        "ftp.ncbi.nlm.nih.gov",
-        "genomes/all/GCA/017/607/445",
-        "non-existing-file.txt",
-        dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
-        False,
-    ),
-],
+    "ftp_file, md5_sums, expectation",
+    [
+        pytest.param(
+            "test_ftp_file.txt",
+            {"test_ftp_file.txt": "e98b980b442fdb2a21877dcc55e11848"},
+            does_not_raise(),
+            id="Download OK file",
+        ),
+        pytest.param(
+            "non-existing-file.txt",
+            {"test_ftp_file.txt": "e98b980b442fdb2a21877dcc55e11848"},
+            pytest.raises(FileNotFoundError),
+            id="Can't download non-existing file",
+        ),
+        pytest.param(
+            "non-existing-file.txt",
+            {"non-existing-file.txt": "e98b980b442fdb2a21877dcc55e11848"},
+            pytest.raises(ftp_error_reply),
+            id="File has md5sum but does not exist",
+        ),
+    ],
 )
-def test_download_single_file(data_dir:Path,ftp_url: str, sub_dir:str, ftp_file:str, md5_sums:dict, expectation:bool) -> None:
-    
-    download_file_return = download_single_file(data_dir, ftp_url, sub_dir, ftp_file, md5_sums)
-    
-    assert download_file_return == expectation 
+@patch("ftplib.FTP")
+def test_download_single_file(
+    mock_ftp: FTP, data_dir: Path, tmp_dir: Path, ftp_file: str, md5_sums: dict, expectation: ContextManager
+) -> None:
+    """Tests the private function _download_single_file."""
 
+    data_file = data_dir / ftp_file
+    retr_file = tmp_dir / ftp_file
 
+    def mock_retr_binary(command: str, callback: object):
+        logging.info(f"Faking the download of {command}")
+        try:
+            with data_file.open("rb") as data_fh:
+                callback(data_fh.read())
+        except OSError as err:
+            raise ftp_error_reply from err
 
+    mock_ftp.retrbinary = MagicMock(side_effect=mock_retr_binary)
+    with expectation:
+        _download_file(mock_ftp, ftp_file, md5_sums, tmp_dir)
+        assert filecmp.cmp(data_file, retr_file)
 
-
-        
 
 # @pytest.mark.dependency(depends=["test_md5_files"])
 # @patch("ensembl.io.genomio.assembly.download._download_file", autospec=True)
