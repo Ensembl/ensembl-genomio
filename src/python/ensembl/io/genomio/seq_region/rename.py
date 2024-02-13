@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Rename seq_region BRC4 names in a given core database."""
+"""Rename seq_region BRC names in a given core database."""
 
 from dataclasses import dataclass
 import logging
@@ -190,9 +190,9 @@ def update_seq_region_name(
 
 def main() -> None:
     """Main script entry-point."""
-    parser = ArgumentParser(description="Replace seq_region names in a core database.")
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
-        "input_map", help="List of seq_region names and their BRC4 name in tab format."
+        "input_map", help="List of seq_region names and their BRC name in tab format."
     )
     parser.add_argument("--update", action="store_true", help="Make changes to the database.")
     parser.add_server_arguments(include_database=True)
@@ -210,7 +210,3 @@ def main() -> None:
             update_seq_region_name(session, seqr, args.update)
         if not args.update:
             logging.warning("No change made (use --update to update the database).")
-
-
-if __name__ == "__main__":
-    main()
