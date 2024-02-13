@@ -1,0 +1,2 @@
+##gff-version 3
+CAIX01000001.1	EMBL	gene	4264	4847	.	+	.	ID=gene-BN9_000020;Name=BN9_000020;gbkey=Gene;gene_biotype=protein_coding;locus_tag=BN9_000020;partial=true;start_range=.,4264
