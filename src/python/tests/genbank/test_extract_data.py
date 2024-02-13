@@ -26,7 +26,7 @@ from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, SimpleLocation
 
 from ensembl.io.genomio.genbank.extract_data import (
-    FormattedFilesGenerator
+    FormattedFilesGenerator, GBParseError
 )
 
 class TestWriteFormattedFiles:
@@ -82,10 +82,35 @@ class TestWriteFormattedFiles:
         expected_path = data_dir/ f"output_seq_region.json"
         assert filecmp.cmp(output, expected_path)
     
-    def test_write_genes_gff(self, data_dir: Path, tmp_path: Path, formatted_files_generator):
+    def test_write_genes_gff(self, assert_files, data_dir: Path, tmp_path: Path,  formatted_files_generator, ):
         """Check gene features in GFF3 format are generated as expected."""
-        rec = SeqRecord(seq="", id="1JOY", name="EnvZ")
-        seq_feature = SeqFeature(type=type_feature, qualifiers={"transl_table": [expected_value]})
+        peptides=[]
+        formatted_files_generator.files["gene_models"] = tmp_path / "genes.gff"
+        output= formatted_files_generator.files["gene_models"]
+        expected_path = data_dir/ f"output_genes.gff"
+        if peptides:
+            formatted_files_generator.files["fasta_pep"] = tmp_path / "pep.fasta"
+            output_pep =  formatted_files_generator.files["fasta_pep"] 
+            expected_pep = data_dir/ f"output_pep.fasta"
+            assert_files(output_pep, expected_pep)
+
+        assert_files(output, expected_path)
+
+    def test_duplicate_features(self, formatted_files_generator, tmp_path):
+        record1 = SeqRecord(Seq("ATGC"), id="record1")
+        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene")
+        record1.features.append(gene_feature1)
+
+        record2 = SeqRecord(Seq("ATGC"), id="record1")
+        gene_feature2 = SeqFeature(SimpleLocation(10,30), type="gene")
+        record2.features.append(gene_feature2)
+
+        formatted_files_generator.seq_records = [record1, record2]
+        formatted_files_generator.files["gene_models"] = tmp_path / "genes.gff"
+        
+        with pytest.raises(GBParseError):
+            formatted_files_generator._write_genes_gff()
+    
 
 
 
