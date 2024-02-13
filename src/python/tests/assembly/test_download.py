@@ -23,6 +23,7 @@ Typical usage example::
 """
 
 from pathlib import Path
+import unittest
 from unittest.mock import Mock, patch, MagicMock
 from contextlib import nullcontext as does_not_raise
 from typing import ContextManager
@@ -34,7 +35,7 @@ from ftplib import FTP
 
 
 from ensembl.io.genomio.assembly.download import FTPConnection, FTPConnectionError
-from ensembl.io.genomio.assembly.download import get_checksums, md5_files
+from ensembl.io.genomio.assembly.download import get_checksums, md5_files, _download_file
 
 
 # class TestDownloadAssembly:
@@ -83,6 +84,7 @@ def test_ftp_connection(
     assert listing == "ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/"
     connected_ftp.pwd.assert_called_once()
 
+
 #################
 @pytest.mark.dependency(name="test_checksums")
 @pytest.mark.parametrize(
@@ -105,6 +107,7 @@ def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectati
         obtained_checksums = get_checksums(md5_input_path)
         assert obtained_checksums.get("annotation_hashes.txt", None) == checksum
 
+
 #################
 @pytest.mark.dependency(name="test_md5_files")
 @pytest.mark.parametrize(
@@ -123,6 +126,107 @@ def test_md5_files(data_dir: Path, md5file: Path, checksum_bool: bool) -> None:
     return_bool_on_md5files = md5_files(data_dir, md5file)
     assert return_bool_on_md5files == checksum_bool
 
+
 #################
+# @pytest.mark.dependency(name="test_download_file")
+# @pytest.mark.parametrize(
+#     "ftp_url, sub_dir, ftp_file, md5_sums",
+#     [
+#         (
+#             "ftp.ncbi.nlm.nih.gov",
+#             "genomes/all/GCA/017/607/445",
+#             "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
+#             dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
+#         ),
+#         (
+#             "ftp.ncbi.nlm.nih.gov",
+#             "genomes/all/GCA/017/607/445",
+#             "non-existing-file.txt",
+#             dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
+#         ),
+#     ],
+# )
+    
+
+# class TestDownloadFile(unittest.TestCase):
+
+#     @classmethod
+#     def setUpClass(cls):
+#         # mock return value
+#         cls.patcher = patch('ensembl.io.genomio.assembly.download.FTP', return_value='226 Transfer complete.', autospec=True)
+
+#         # start the patch
+#         cls.patcher.start()
+
+#         # stop after all tests
+#         cls.addClassCleanup(cls.patcher.stop)
+
+@patch("ensembl.io.genomio.assembly.download.FTP", return_value='226 Transfer complete.', autospec=True)
+def download_single_file(data_dir: Path,
+    mock_ftp_constructor: Mock, 
+    ftp_url: str, 
+    sub_dir: str,
+    ftp_file: str, 
+    md5_sums: Dict[str, str],  
+    ) -> None:
+    
+    mock_ftp = mock_ftp_constructor.return_value
+    mock_ftp.pwd = MagicMock(return_value="ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/")
+    connected_ftp = FTPConnection.establish_ftp(mock_ftp, ftp_url, sub_dir)
+    _download_file(connected_ftp, ftp_file, md5_sums, data_dir)
+    
+    func_call = mock_ftp.retrbinary.assert_called_once_with(f"RETR {ftp_file}", Path(data_dir, ftp_file).open().write())
+    
+    return func_call
+
+@pytest.mark.parametrize(
+"ftp_url, sub_dir, ftp_file, md5_sums, expectation",
+[
+    (
+        "ftp.ncbi.nlm.nih.gov",
+        "genomes/all/GCA/017/607/445",
+        "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
+        dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
+        True,
+    ),
+    (
+        "ftp.ncbi.nlm.nih.gov",
+        "genomes/all/GCA/017/607/445",
+        "non-existing-file.txt",
+        dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
+        False,
+    ),
+],
+)
+def test_download_single_file(data_dir:Path,ftp_url: str, sub_dir:str, ftp_file:str, md5_sums:dict, expectation:bool) -> None:
+    
+    download_file_return = download_single_file(data_dir, ftp_url, sub_dir, ftp_file, md5_sums)
+    
+    assert download_file_return == expectation 
 
 
+
+
+
+        
+
+# @pytest.mark.dependency(depends=["test_md5_files"])
+# @patch("ensembl.io.genomio.assembly.download._download_file", autospec=True)
+# def test_download_single_file(
+#     mock_ftp_constructor: Mock, 
+#     ftp_url: str, 
+#     sub_dir: str,
+#     ftp_file: str, 
+#     md5_sums: Dict[str, str], 
+#     data_dir: Path, 
+# ) -> None:
+#     """
+#     """
+#     mock_ftp = mock_ftp_constructor.return_value
+#     mock_ftp.pwd = MagicMock(return_value="ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/")
+#     connected_ftp = FTPConnection.establish_ftp(mock_ftp, ftp_url, sub_dir)
+
+#     _download_file(connected_ftp, ftp_file, md5_sums, data_dir)
+#     .is_file.assert_called_once_with(Path(data_dir, ftp_file))
+#     connected_ftp.retrbinary.assert_called()
+#     connected_ftp.retrbinary.assert_called()
