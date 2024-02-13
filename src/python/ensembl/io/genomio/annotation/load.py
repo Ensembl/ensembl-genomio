@@ -17,7 +17,7 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 from ensembl.core.models import Gene, Transcript, ObjectXref, Xref
 from ensembl.database import DBConnection
@@ -47,7 +47,9 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
         )
     elif table == "transcript":
         stmt = (
-            session.query(Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc)
+            session.query(
+                Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc
+            )
             .select_from(Transcript)
             .outerjoin(ObjectXref, Transcript.transcript_id == ObjectXref.ensembl_id)
             .outerjoin(Xref)
@@ -61,7 +63,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
         feat_data[stable_id] = feat_struct
         if xref_name:
             feat_data[xref_name] = feat_struct
-    
+
     return feat_data
 
 
@@ -87,52 +89,75 @@ def load_descriptions(
             "no_new": 0,
         }
         # Compare, only keep the descriptions that have changed
-        to_update = []
-        for new_feat in feat_func:
-            if "description" not in new_feat:
-                stats["no_new"] += 1
-                continue
-            try:
-                current_feat = feat_data[new_feat["id"]]
-            except KeyError:
-                logging.debug(f"Not found: {table} '{new_feat['id']}'")
-                stats["not_found"] += 1
-                continue
-
-            new_stable_id = new_feat["id"]
-            new_desc = new_feat["description"]
-            (row_id, cur_stable_id, cur_desc) = current_feat
-            if not cur_desc:
-                cur_desc = ""
-
-            if new_desc == cur_desc:
-                stats["same"] += 1
-                continue
-
-            stats["differs"] += 1
-            if report:
-                line = (table, new_stable_id, cur_stable_id, cur_desc, new_desc)
-                print("\t".join(line))
-            if do_update:
-                update_key = f"{table}_id"
-                to_update.append({update_key: row_id, "description": new_desc})
+        features_to_update = _get_features_to_update(table, feat_func, feat_data, stats, report, do_update)
 
         # Show stats for this feature type
         for stat, count in stats.items():
             if count == 0:
                 continue
             logging.info(f"{stat} = {count}")
-        
+
         if do_update:
-            logging.info(f"Now updating {len(to_update)} rows...")
+            logging.info(f"Now updating {len(features_to_update)} rows...")
             if table == "gene":
                 # session.execute(update(Gene), to_update)
-                session.bulk_update_mappings(Gene, to_update)
+                session.bulk_update_mappings(Gene, features_to_update)
                 session.commit()
             elif table == "transcript":
                 # session.execute(update(Transcript), to_update)
-                session.bulk_update_mappings(Transcript, to_update)
+                session.bulk_update_mappings(Transcript, features_to_update)
                 session.commit()
+
+
+def _get_features_to_update(
+    table: str,
+    feat_func: List[Dict[str, str]],
+    feat_data: Dict[str, Any],
+    stats: Dict[str, int],
+    report: bool,
+    do_update: bool,
+) -> List[Dict[str, Any]]:
+    to_update = []
+    for new_feat in feat_func:
+        # Skip if there is no description to transfer
+        if "description" not in new_feat:
+            stats["no_new"] += 1
+            continue
+
+        # Check we can find that feature in the core db
+        try:
+            current_feat = feat_data[new_feat["id"]]
+        except KeyError:
+            logging.debug(f"Not found: {table} '{new_feat['id']}'")
+            stats["not_found"] += 1
+            continue
+
+        # Prepare some data to compare
+        new_stable_id = new_feat["id"]
+        new_desc = new_feat["description"]
+        (row_id, cur_stable_id, cur_desc) = current_feat
+
+        # Compare the descriptions
+        if not cur_desc:
+            cur_desc = ""
+        if new_desc == cur_desc:
+            stats["same"] += 1
+            continue
+
+        # At this point, we have a new description to update
+        stats["differs"] += 1
+
+        # Directly print the mapping
+        if report:
+            line = (table, new_stable_id, cur_stable_id, cur_desc, new_desc)
+            print("\t".join(line))
+
+        # Add to the batch list of updates for the core db
+        if do_update:
+            update_key = f"{table}_id"
+            to_update.append({update_key: row_id, "description": new_desc})
+
+    return to_update
 
 
 def main() -> None:
