@@ -1,13 +1,13 @@
 [
     {
-        "name": "NC_000884.1",
+        "name": "S43128.1",
         "coord_system_level": "chromosome",
-        "circular": true,
+        "circular": false,
         "codon_table": 2,
-        "length": 3720,
+        "length": 1527,
         "location": "mitochondrial_chromosome",
         "added_sequence": {
-            "accession": "NC_000884.1",
+            "accession": "S43128.1",
             "assembly_provider": {
                 "name": "GenBank",
                 "url": "https://www.ncbi.nlm.nih.gov/genbank"
