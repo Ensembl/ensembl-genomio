@@ -1,0 +1,19 @@
+{
+  "annotation_stats": {
+    "genes": {
+      "biotypes": {"protein_coding": 40, "pseudogene": 1},
+      "description": {"empty": 2, "normal": 7, "source_xref": 1},
+      "total": 10
+    },
+    "transcripts": {
+      "biotypes": {},
+      "description": {"empty": 0, "normal": 0, "source_xref": 0},
+      "total": 0
+    }
+  },
+  "assembly_stats": {
+    "codon_table": {},
+    "coord_system": {"chromosome": 7, "scaffold": 2},
+    "locations": {}
+  }
+}
