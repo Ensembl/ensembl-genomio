@@ -17,6 +17,7 @@
 __all__ = ["DBConnectionLite"]
 
 import logging
+import re
 from typing import Dict, List
 
 from sqlalchemy import create_engine, select
@@ -26,6 +27,9 @@ from ensembl.database import DBConnection
 from ensembl.core.models import Meta
 
 
+_DB_PATTERN_RELEASE = re.compile(r".+_(?:core|otherfeatures|variation)_(?P<release>\d+)_\d+_\d+")
+
+
 class DatabaseExtension:
     """Extension to get metadata directly from a database, assuming it has a metadata table.
     Not meant to be used directly: use DBConnectionLite to get all the DBConnection methods.
@@ -33,6 +37,11 @@ class DatabaseExtension:
     def __init__(self, url, **kwargs) -> None:
         self._engine = create_engine(url, **kwargs)
         self._metadata: Dict[str, List] = {}
+    
+    @property
+    def db_name(self) -> str:
+        """Returns the database name."""
+        return self._engine.url.database
 
     def get_metadata(self) -> Dict[str, List]:
         """Retrieves all metadata from the `meta` table in the database.
@@ -70,6 +79,14 @@ class DatabaseExtension:
         except KeyError:
             logging.debug(f"No meta_key {meta_key}")
             return None
+
+    def get_project_release(self) -> str:
+        """Returns the project release number from the database name."""
+
+        match = re.search(_DB_PATTERN_RELEASE, self.db_name)
+        if match:
+            return match.group(1)
+        return ""
 
 
 class DBConnectionLite(DatabaseExtension, DBConnection):

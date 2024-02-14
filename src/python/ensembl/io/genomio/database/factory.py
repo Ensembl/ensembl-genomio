@@ -22,7 +22,6 @@ __all__ = ["format_db_data"]
 import json
 from os import PathLike
 from pathlib import Path
-import re
 from typing import Dict, List
 import logging
 
@@ -32,9 +31,6 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 from .core_server import CoreServer
 from .dbconnection_lite import DBConnectionLite
-
-
-_DB_PATTERN = re.compile(r".+_core_(\d+)_\d+_\d+")
 
 
 def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
@@ -61,7 +57,7 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
         species = prod_name
         division = core_db.get_meta_value("species.division")
         accession = core_db.get_meta_value("assembly.accession")
-        project_release = _get_project_release(db_name)
+        project_release = core_db.get_project_release()
 
         if brc_mode:
             brc_organism = core_db.get_meta_value("BRC4.organism_abbrev")
@@ -92,15 +88,6 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
 
         databases_data.append(db_data)
     return databases_data
-
-
-def _get_project_release(db_name: str) -> str:
-    """Return the project release number from the database name."""
-
-    match = re.search(_DB_PATTERN, db_name)
-    if match:
-        return match.group(1)
-    return ""
 
 
 def _load_multine_file(infile: PathLike) -> List[str]:
