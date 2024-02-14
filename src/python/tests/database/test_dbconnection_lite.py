@@ -17,8 +17,8 @@
 
 from pathlib import Path
 from typing import Optional
-import pytest
 from unittest.mock import patch
+import pytest
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
@@ -34,14 +34,16 @@ _METADATA_CONTENT = {
     "species.classification": ["Insecta", "Lorem"],
 }
 
-# Create a database with only a meta table
-@pytest.fixture(name="db_file", scope='session')
+
+# Create a SQLite database fixture with only a meta table and limited data
+@pytest.fixture(name="db_file", scope="session")
 def db_file_test(tmp_dir: Path) -> Path:
     """Get a path to a db file."""
     test_db_file = tmp_dir / f"tmp_sqlite_core_{_PROJECT_RELEASE}_111_1.db"
     return test_db_file
 
-@pytest.fixture(name="db_engine", scope='session')
+
+@pytest.fixture(name="db_engine", scope="session")
 def db_engine_test(db_file: Path):
     """Get a SQLalchemy engine to a populated database."""
     db_url = f"sqlite:///{db_file}"
@@ -56,44 +58,57 @@ def db_engine_test(db_file: Path):
                 metas.append(Meta(meta_key=meta_key, meta_value=meta_value))
         session.add_all(metas)
         session.commit()
-
     return test_db_engine
 
 
 @pytest.fixture(name="dbc", scope="session")
 @patch("ensembl.io.genomio.database.dbconnection_lite.create_engine")
-def dbc_test(mock_create_engine, db_file: Path, db_engine) -> None:
+def dbc_test(mock_create_engine, db_file: Path, db_engine) -> DBConnectionLite:
+    """Provide a DBConnectionLite to the test database."""
     mock_create_engine.return_value = db_engine
     test_url = URL.create(f"sqlite://{db_file}")
     dbc = DBConnectionLite(test_url)
     return dbc
 
-def test_db_name(dbc, db_file: Path) -> None:
+
+# Tests start here
+
+
+def test_db_name(dbc: DBConnectionLite, db_file: Path) -> None:
+    """Tests the propery db_name"""
     assert Path(dbc.db_name) == Path(db_file)
 
 
-def test_load_metadata(dbc) -> None:
-    dbc._load_metadata()
-    assert dbc._metadata == _METADATA_CONTENT
-
-
-def test_get_metadata(dbc) -> None:
+def test_get_metadata(dbc: DBConnectionLite) -> None:
+    """Tests the method get_metadata()"""
     assert dbc.get_metadata() == _METADATA_CONTENT
-
 
 
 @pytest.mark.parametrize(
     "meta_key, meta_value",
     [
-        pytest.param("species.scientific_name", _METADATA_CONTENT["species.scientific_name"][0], id="Unique key exists"),
-        pytest.param("species.classification", _METADATA_CONTENT["species.classification"][0], id="First key exists"),
+        pytest.param(
+            "species.scientific_name", _METADATA_CONTENT["species.scientific_name"][0], id="Unique key exists"
+        ),
+        pytest.param(
+            "species.classification", _METADATA_CONTENT["species.classification"][0], id="First key exists"
+        ),
         pytest.param("lorem.ipsum", None, id="Non-existing key, 2 parts"),
         pytest.param("lorem_ipsum", None, id="Non-existing key, 1 part"),
     ],
 )
-def test_get_meta_value(dbc, meta_key: str, meta_value: Optional[str]) -> None:
+def test_get_meta_value(dbc: DBConnectionLite, meta_key: str, meta_value: Optional[str]) -> None:
+    """Tests the method get_meta_value()"""
     assert dbc.get_meta_value(meta_key) == meta_value
 
 
 def test_get_project_release(dbc: DBConnectionLite) -> None:
+    """Tests the method get_project_release()"""
     assert dbc.get_project_release() == str(_PROJECT_RELEASE)
+
+
+def test_get_project_release_not_defined() -> None:
+    """Tests the method get_project_release() with no recognizable release in the db name"""
+    db_url = "sqlite:///coredb_core_111_1"
+    dbc = DBConnectionLite(db_url)
+    assert dbc.get_project_release() == ""

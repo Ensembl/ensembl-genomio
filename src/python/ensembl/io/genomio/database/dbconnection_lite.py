@@ -34,10 +34,11 @@ class DatabaseExtension:
     """Extension to get metadata directly from a database, assuming it has a metadata table.
     Not meant to be used directly: use DBConnectionLite to get all the DBConnection methods.
     """
+
     def __init__(self, url, **kwargs) -> None:
         self._engine = create_engine(url, **kwargs)
         self._metadata: Dict[str, List] = {}
-    
+
     @property
     def db_name(self) -> str:
         """Returns the database name."""
@@ -52,13 +53,13 @@ class DatabaseExtension:
         """
         self._load_metadata()
         return self._metadata
-    
+
     def _load_metadata(self) -> None:
         """Caches the metadata values."""
 
         if self._metadata:
             return
-        
+
         with Session(self._engine) as session:
             meta_stmt = select(Meta)
 
@@ -69,7 +70,7 @@ class DatabaseExtension:
                     self._metadata[meta_key].append(meta_value)
                 else:
                     self._metadata[meta_key] = [meta_value]
-    
+
     def get_meta_value(self, meta_key: str) -> Optional[str]:
         """Returns the first meta_value for a given meta_key."""
 
