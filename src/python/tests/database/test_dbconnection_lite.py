@@ -27,7 +27,6 @@ from sqlalchemy.orm import Session
 from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.core.models import Base, Meta
 
-_PROJECT_RELEASE = 66
 _METADATA_CONTENT = {
     "species.scientific_name": ["Lorem Ipsum"],
     "species.taxonomy_id": ["123456"],
@@ -39,7 +38,7 @@ _METADATA_CONTENT = {
 @pytest.fixture(name="db_file", scope="session")
 def db_file_test(tmp_dir: Path) -> Path:
     """Get a path to a db file."""
-    test_db_file = tmp_dir / f"tmp_sqlite_core_{_PROJECT_RELEASE}_111_1.db"
+    test_db_file = tmp_dir / "tmp_sqlite_core.db"
     return test_db_file
 
 
@@ -102,13 +101,16 @@ def test_get_meta_value(dbc: DBConnectionLite, meta_key: str, meta_value: Option
     assert dbc.get_meta_value(meta_key) == meta_value
 
 
-def test_get_project_release(dbc: DBConnectionLite) -> None:
-    """Tests the method get_project_release()"""
-    assert dbc.get_project_release() == str(_PROJECT_RELEASE)
-
-
-def test_get_project_release_not_defined() -> None:
-    """Tests the method get_project_release() with no recognizable release in the db name"""
-    db_url = "sqlite:///coredb_core_111_1"
+@pytest.mark.parametrize(
+    "db_name, release_version",
+    [
+        pytest.param("coredb_core_66_111_1", "66", id="Release version in name"),
+        pytest.param("coredb_core_111_1", "", id="No release version in name"),
+        pytest.param("lorem_ipsum_66_111_1", "", id="Some release version but wrong format for the rest"),
+    ],
+)
+def test_get_project_release(db_name: str, release_version: str) -> None:
+    """Tests the method get_project_release()."""
+    db_url = f"sqlite:///{db_name}"
     dbc = DBConnectionLite(db_url)
-    assert dbc.get_project_release() == ""
+    assert dbc.get_project_release() == release_version
