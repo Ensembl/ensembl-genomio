@@ -31,7 +31,7 @@ from sqlalchemy.engine import URL
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 from .core_server import CoreServer
-from .core_database import DBConnectionLite
+from .dbconnection_lite import DBConnectionLite
 
 
 _DB_PATTERN = re.compile(r".+_core_(\d+)_\d+_\d+")
