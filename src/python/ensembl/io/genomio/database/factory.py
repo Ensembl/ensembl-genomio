@@ -17,13 +17,13 @@
 Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
 """
 
-__all__ = ["format_db_data", "get_metadata_value"]
+__all__ = ["format_db_data"]
 
 import json
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List
 import logging
 
 from sqlalchemy.engine import URL
@@ -56,17 +56,16 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
         logging.debug(f"Get metadata for {db_name}")
         db_url = server_url.set(database=db_name)
         core_db = DBConnectionLite(db_url)
-        metadata = core_db.get_metadata()
 
-        prod_name = get_metadata_value(metadata, "species.production_name")
+        prod_name = core_db.get_meta_value("species.production_name")
         species = prod_name
-        division = get_metadata_value(metadata, "species.division")
-        accession = get_metadata_value(metadata, "assembly.accession")
+        division = core_db.get_meta_value("species.division")
+        accession = core_db.get_meta_value("assembly.accession")
         project_release = _get_project_release(db_name)
 
         if brc_mode:
-            brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
-            brc_component = get_metadata_value(metadata, "BRC4.component")
+            brc_organism = core_db.get_meta_value("BRC4.organism_abbrev")
+            brc_component = core_db.get_meta_value("BRC4.component")
             if brc_organism is not None:
                 species = brc_organism
             if brc_component is not None:
@@ -93,19 +92,6 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
 
         databases_data.append(db_data)
     return databases_data
-
-
-def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:
-    """Returns the first element in the list assigned to `key` in `metadata`.
-
-    Args:
-        metadata: Map of metadata information to lists of values.
-        key: Metadata key to search for.
-
-    """
-    if (key in metadata) and metadata[key]:
-        return metadata[key][0]
-    return None
 
 
 def _get_project_release(db_name: str) -> str:

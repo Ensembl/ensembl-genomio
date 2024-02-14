@@ -16,6 +16,7 @@
 
 __all__ = ["DBConnectionLite"]
 
+import logging
 from typing import Dict, List
 
 from sqlalchemy import create_engine, select
@@ -39,8 +40,13 @@ class DatabaseExtension:
             A dict of with key meta_key, and value=List of meta_value.
 
         """
+        self._load_metadata()
+        return self._metadata
+    
+    def _load_metadata(self) -> None:
         if self._metadata:
-            return self._metadata
+            return
+        
         with Session(self._engine) as session:
             meta_stmt = select(Meta)
 
@@ -51,8 +57,14 @@ class DatabaseExtension:
                     self._metadata[meta_key].append(meta_value)
                 else:
                     self._metadata[meta_key] = [meta_value]
-
-        return self._metadata
+    
+    def get_meta_value(self, meta_key: str) -> str:
+        self._load_metadata()
+        try:
+            return self._metadata[meta_key][0]
+        except KeyError:
+            logging.debug(f"No meta_key {meta_key}")
+            return None
 
 
 class DBConnectionLite(DatabaseExtension, DBConnection):
