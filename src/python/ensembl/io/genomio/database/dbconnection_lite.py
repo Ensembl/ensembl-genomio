@@ -18,7 +18,7 @@ __all__ = ["DBConnectionLite"]
 
 import logging
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -70,7 +70,7 @@ class DatabaseExtension:
                 else:
                     self._metadata[meta_key] = [meta_value]
     
-    def get_meta_value(self, meta_key: str) -> str:
+    def get_meta_value(self, meta_key: str) -> Optional[str]:
         """Returns the first meta_value for a given meta_key."""
 
         self._load_metadata()

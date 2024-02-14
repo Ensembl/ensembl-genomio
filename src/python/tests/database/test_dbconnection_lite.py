@@ -16,6 +16,7 @@
 """
 
 from pathlib import Path
+from typing import Optional
 import pytest
 from unittest.mock import patch
 
@@ -26,16 +27,18 @@ from sqlalchemy.orm import Session
 from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.core.models import Base, Meta
 
-metadata_content = {
-    "species": ["Lorem Ipsum"],
-    "classification": ["Insecta", "Lorem"],
+_PROJECT_RELEASE = 66
+_METADATA_CONTENT = {
+    "species.scientific_name": ["Lorem Ipsum"],
+    "species.taxonomy_id": ["123456"],
+    "species.classification": ["Insecta", "Lorem"],
 }
 
 # Create a database with only a meta table
 @pytest.fixture(name="db_file", scope='session')
 def db_file_test(tmp_dir: Path) -> Path:
     """Get a path to a db file."""
-    test_db_file = tmp_dir / "tmp_sqlite.db"
+    test_db_file = tmp_dir / f"tmp_sqlite_core_{_PROJECT_RELEASE}_111_1.db"
     return test_db_file
 
 @pytest.fixture(name="db_engine", scope='session')
@@ -48,7 +51,7 @@ def db_engine_test(db_file: Path):
     # Add some basic data
     with Session(test_db_engine) as session:
         metas = []
-        for meta_key, meta_values in metadata_content.items():
+        for meta_key, meta_values in _METADATA_CONTENT.items():
             for meta_value in meta_values:
                 metas.append(Meta(meta_key=meta_key, meta_value=meta_value))
         session.add_all(metas)
@@ -71,8 +74,26 @@ def test_db_name(dbc, db_file: Path) -> None:
 
 def test_load_metadata(dbc) -> None:
     dbc._load_metadata()
-    assert dbc._metadata == metadata_content
+    assert dbc._metadata == _METADATA_CONTENT
 
 
 def test_get_metadata(dbc) -> None:
-    assert dbc.get_metadata() == metadata_content
+    assert dbc.get_metadata() == _METADATA_CONTENT
+
+
+
+@pytest.mark.parametrize(
+    "meta_key, meta_value",
+    [
+        pytest.param("species.scientific_name", _METADATA_CONTENT["species.scientific_name"][0], id="Unique key exists"),
+        pytest.param("species.classification", _METADATA_CONTENT["species.classification"][0], id="First key exists"),
+        pytest.param("lorem.ipsum", None, id="Non-existing key, 2 parts"),
+        pytest.param("lorem_ipsum", None, id="Non-existing key, 1 part"),
+    ],
+)
+def test_get_meta_value(dbc, meta_key: str, meta_value: Optional[str]) -> None:
+    assert dbc.get_meta_value(meta_key) == meta_value
+
+
+def test_get_project_release(dbc: DBConnectionLite) -> None:
+    assert dbc.get_project_release() == str(_PROJECT_RELEASE)
