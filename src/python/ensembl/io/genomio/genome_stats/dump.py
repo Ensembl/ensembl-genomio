@@ -23,7 +23,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
-from ensembl.database import DBConnection
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -143,7 +143,7 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    dbc = DBConnection(args.url)
+    dbc = DBConnectionLite(args.url)
 
     with dbc.session_scope() as session:
         generator = StatsGenerator(session)
