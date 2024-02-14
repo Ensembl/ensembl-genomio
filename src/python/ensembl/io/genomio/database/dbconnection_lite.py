@@ -28,9 +28,9 @@ from ensembl.core.models import Meta
 class DatabaseExtension:
     """Extension to get metadata directly from a database, assuming it has a metadata table. Do use directly.
     """
-    
     def __init__(self, url, **kwargs) -> None:
         self._engine = create_engine(url, **kwargs)
+        self._metadata: Dict[str, List] = {}
 
     def get_metadata(self) -> Dict[str, List]:
         """Retrieves all metadata from the `meta` table in the database.
@@ -39,19 +39,20 @@ class DatabaseExtension:
             A dict of with key meta_key, and value=List of meta_value.
 
         """
+        if self._metadata:
+            return self._metadata
         with Session(self._engine) as session:
             meta_stmt = select(Meta)
 
-            metadata: Dict[str, List] = {}
             for meta_row in session.scalars(meta_stmt).unique().all():
                 meta_key = meta_row.meta_key
                 meta_value = meta_row.meta_value
-                if meta_key in metadata:
-                    metadata[meta_key].append(meta_value)
+                if meta_key in self._metadata:
+                    self._metadata[meta_key].append(meta_value)
                 else:
-                    metadata[meta_key] = [meta_value]
+                    self._metadata[meta_key] = [meta_value]
 
-        return metadata
+        return self._metadata
 
 
 class DBConnectionLite(DatabaseExtension, DBConnection):
