@@ -27,7 +27,8 @@ from ensembl.core.models import Meta
 
 
 class DatabaseExtension:
-    """Extension to get metadata directly from a database, assuming it has a metadata table. Do use directly.
+    """Extension to get metadata directly from a database, assuming it has a metadata table.
+    Not meant to be used directly: use DBConnectionLite to get all the DBConnection methods.
     """
     def __init__(self, url, **kwargs) -> None:
         self._engine = create_engine(url, **kwargs)
@@ -44,6 +45,8 @@ class DatabaseExtension:
         return self._metadata
     
     def _load_metadata(self) -> None:
+        """Caches the metadata values."""
+
         if self._metadata:
             return
         
@@ -59,6 +62,8 @@ class DatabaseExtension:
                     self._metadata[meta_key] = [meta_value]
     
     def get_meta_value(self, meta_key: str) -> str:
+        """Returns the first meta_value for a given meta_key."""
+
         self._load_metadata()
         try:
             return self._metadata[meta_key][0]
@@ -68,4 +73,9 @@ class DatabaseExtension:
 
 
 class DBConnectionLite(DatabaseExtension, DBConnection):
-    """DBConnection without the schema loading from DB: faster but some methods will not work."""
+    """DBConnection without the schema loading from DB: faster but some methods will not work.
+
+    Things from DBConnection that will not work: tables, and anything that relies on metadata like
+    schema_type and schema_version. Instead for those, get them as ordinary values with
+    get_meta_value("schema_type") or get_meta_value("schema_version")
+    """
