@@ -72,3 +72,7 @@ def test_db_name(dbc, db_file: Path) -> None:
 def test_load_metadata(dbc) -> None:
     dbc._load_metadata()
     assert dbc._metadata == metadata_content
+
+
+def test_get_metadata(dbc) -> None:
+    assert dbc.get_metadata() == metadata_content
