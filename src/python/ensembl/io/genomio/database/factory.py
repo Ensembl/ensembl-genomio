@@ -31,7 +31,7 @@ from sqlalchemy.engine import URL
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 from .core_server import CoreServer
-from .core_database import CoreDatabase
+from .core_database import DBConnectionLite
 
 
 _DB_PATTERN = re.compile(r".+_core_(\d+)_\d+_\d+")
@@ -55,7 +55,7 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
     for db_name in dbs:
         logging.debug(f"Get metadata for {db_name}")
         db_url = server_url.set(database=db_name)
-        core_db = CoreDatabase(db_url)
+        core_db = DBConnectionLite(db_url)
         metadata = core_db.get_metadata()
 
         prod_name = get_metadata_value(metadata, "species.production_name")

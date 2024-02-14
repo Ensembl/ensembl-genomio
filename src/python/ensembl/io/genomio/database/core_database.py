@@ -12,35 +12,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""CoreDatabase interface to an Ensembl core database."""
+"""Simplified Database interface to an Ensembl database, to make access to metadata easier and faster."""
 
-__all__ = ["CoreDatabase"]
+__all__ = ["DBConnectionLite"]
 
 from typing import Dict, List
 
-from sqlalchemy import select
-from sqlalchemy.engine import URL
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
 
 from ensembl.database import DBConnection
 from ensembl.core.models import Meta
 
 
-class CoreDatabase(DBConnection):
-    """Add some useful interface for an Ensembl core database."""
-
-    def __init__(self, url: URL, **kwargs) -> None:
-        super().__init__(url, **kwargs)
-        if self.schema_type != "core":
-            raise TypeError(f"This is not a core database ({self.schema_type})")
+class DatabaseExtension:
+    """Extension to get metadata directly from a database, assuming it has a metadata table. Do use directly.
+    """
+    
+    def __init__(self, url, **kwargs) -> None:
+        self._engine = create_engine(url, **kwargs)
 
     def get_metadata(self) -> Dict[str, List]:
-        """Retrieve all metadata from the `meta` table in the core database.
+        """Retrieves all metadata from the `meta` table in the database.
 
         Returns:
             A dict of with key meta_key, and value=List of meta_value.
 
         """
-        with self.session_scope() as session:
+        with Session(self._engine) as session:
             meta_stmt = select(Meta)
 
             metadata: Dict[str, List] = {}
@@ -53,3 +52,7 @@ class CoreDatabase(DBConnection):
                     metadata[meta_key] = [meta_value]
 
         return metadata
+
+
+class DBConnectionLite(DatabaseExtension, DBConnection):
+    """DBConnection without the schema loading from DB: faster but some methods will not work."""
