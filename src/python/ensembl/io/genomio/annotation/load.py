@@ -25,6 +25,7 @@ from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 
 
 FEAT_TABLE = {
@@ -41,9 +42,8 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
         stmt = (
             session.query(Gene.gene_id, Gene.stable_id, Gene.description, Xref.dbprimary_acc)
             .select_from(Gene)
-            .outerjoin(ObjectXref, Gene.gene_id == ObjectXref.ensembl_id)
+            .outerjoin(ObjectXref, and_(Gene.gene_id == ObjectXref.ensembl_id, ObjectXref.ensembl_object_type == "gene"))
             .outerjoin(Xref)
-            .where(ObjectXref.ensembl_object_type == "gene")
         )
     elif table == "transcript":
         stmt = (
@@ -51,9 +51,8 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
                 Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc
             )
             .select_from(Transcript)
-            .outerjoin(ObjectXref, Transcript.transcript_id == ObjectXref.ensembl_id)
+            .outerjoin(ObjectXref, and_(Transcript.gene_id == ObjectXref.ensembl_id, ObjectXref.ensembl_object_type == "transcript"))
             .outerjoin(Xref)
-            .where(ObjectXref.ensembl_object_type == "transcript")
         )
 
     feat_data = {}
