@@ -86,6 +86,8 @@ def load_descriptions(
             "differs": 0,
             "same": 0,
             "no_new": 0,
+            "no_new_xref": 0,
+            "no_new_remove": 0,
         }
         # Compare, only keep the descriptions that have changed
         features_to_update = _get_features_to_update(table, feat_func, feat_data, stats, report, do_update)
@@ -118,11 +120,6 @@ def _get_features_to_update(
 ) -> List[Dict[str, Any]]:
     to_update = []
     for new_feat in feat_func:
-        # Skip if there is no description to transfer
-        if "description" not in new_feat:
-            stats["no_new"] += 1
-            continue
-
         # Check we can find that feature in the core db
         try:
             current_feat = feat_data[new_feat["id"]]
@@ -133,12 +130,19 @@ def _get_features_to_update(
 
         # Prepare some data to compare
         new_stable_id = new_feat["id"]
-        new_desc = new_feat["description"]
+        new_desc = new_feat.get("description")
         (row_id, cur_stable_id, cur_desc) = current_feat
 
-        # Compare the descriptions
+        # No description: replace unless the current description is from an Xref
         if not cur_desc:
             cur_desc = ""
+        if not new_desc:
+            if "[Source:" in cur_desc:
+                stats["no_new_xref"] += 1
+                continue
+            stats["no_new_remove"] += 1
+
+        # Compare the descriptions
         if new_desc == cur_desc:
             stats["same"] += 1
             continue
@@ -148,6 +152,8 @@ def _get_features_to_update(
 
         # Directly print the mapping
         if report:
+            if new_desc is None:
+                new_desc = ""
             line = (table, new_stable_id, cur_stable_id, cur_desc, new_desc)
             print("\t".join(line))
 
