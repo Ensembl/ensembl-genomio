@@ -83,11 +83,11 @@ def load_descriptions(
         stats = {
             "not_supported": 0,
             "not_found": 0,
-            "differs": 0,
             "same": 0,
-            "no_new": 0,
-            "no_new_xref": 0,
-            "no_new_remove": 0,
+            "same_empty": 0,
+            "empty_but_xref": 0,
+            "to_update_replace": 0,
+            "to_update_remove": 0,
         }
         # Compare, only keep the descriptions that have changed
         features_to_update = _get_features_to_update(table, feat_func, feat_data, stats, report, do_update)
@@ -137,18 +137,21 @@ def _get_features_to_update(
         if not cur_desc:
             cur_desc = ""
         if not new_desc:
-            if "[Source:" in cur_desc:
-                stats["no_new_xref"] += 1
+            if cur_desc == "":
+                stats["same_empty"] += 1
                 continue
-            stats["no_new_remove"] += 1
+            if "[Source:" in cur_desc:
+                stats["empty_but_xref"] += 1
+                continue
+            stats["to_update_remove"] += 1
 
         # Compare the descriptions
-        if new_desc == cur_desc:
+        elif new_desc == cur_desc:
             stats["same"] += 1
             continue
-
         # At this point, we have a new description to update
-        stats["differs"] += 1
+        else:
+            stats["to_update_replace"] += 1
 
         # Directly print the mapping
         if report:
