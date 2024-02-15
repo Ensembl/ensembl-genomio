@@ -23,7 +23,6 @@ from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, SimpleLocation
 import pytest
 
-from Bio.SeqRecord import SeqRecord
 from pathlib import Path
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError, UnsupportedData

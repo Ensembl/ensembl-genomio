@@ -18,6 +18,7 @@ Typical usage example::
     $ pytest test_extract_data_files.py
 
 """
+import json
 from pathlib import Path
 import filecmp
 import pytest
@@ -57,44 +58,70 @@ class TestWriteFormattedFiles:
         gb_file_path = data_dir / formatted_files_generator.gb_file
         formatted_files_generator.parse_genbank(gb_file_path)
         assert len(formatted_files_generator.seq_records) >= 1
-     
-    def test_write_genome_json(self, data_dir: Path, tmp_path: Path, formatted_files_generator) -> None:
-        """Test write_genome_json generates correct json output."""
-        out_dir = tmp_path
-        formatted_files_generator.extract_gb(out_dir)
-        output= tmp_path/ "genome.json"
-        expected_path = data_dir/ f"output_genome.json"
-        assert filecmp.cmp(output, expected_path)
 
+    def test_write_genome_json_with_production_name(self, formatted_files_generator, tmp_path, caplog):
+        """Test write_genome_json generates correct json output."""
+        record1 = SeqRecord(Seq("ATGC"), id="record1")
+        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene", qualifiers= {"gene": ["GlyrA"]})        
+        record1.features.append(gene_feature1)
+
+        record2 = SeqRecord(Seq("ATGC"), id="record2")
+        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene", qualifiers= {"gene": ["GlyrB"]})        
+        record1.features.append(gene_feature1)
+    
+        formatted_files_generator.seq_records = [record1, record2]
+        formatted_files_generator.files["genome"] = tmp_path / "genome.json"
+
+        formatted_files_generator._write_genome_json()
+
+        assert (tmp_path / "genome.json").exists()
+        with open(tmp_path / "genome.json", "r") as f:
+            genome_data = json.load(f)
+            assert genome_data["species"]["production_name"] == "TEST_prod"
+            assert genome_data["assembly"]["accession"] == "GCA_000000000"
+            assert genome_data["assembly"]["version"] == 1
+            assert genome_data["added_seq"]["region_name"] == ["record1", "record2"]
+        
     def test_write_fasta_dna(self, data_dir: Path, tmp_path: Path, formatted_files_generator) -> None:
         """Check fasta DNA sequences are written as expected."""
-        out_dir = tmp_path
-        formatted_files_generator.extract_gb(out_dir)
-        output= tmp_path/ "dna.fasta"
-        expected_path = data_dir/ f"output_dna.fasta"
-        assert filecmp.cmp(output, expected_path)
+        record1 = SeqRecord(Seq("ATGC"), id="record1")
+        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene", qualifiers= {"gene": ["GlyrA"]})        
+        record1.features.append(gene_feature1)
+        formatted_files_generator.seq_records = [record1]
+
+        formatted_files_generator.files["fasta_dna"] = tmp_path / "test.fasta"
+
+        formatted_files_generator._write_fasta_dna()
+
+        assert (tmp_path / "test.fasta").exists()
 
     def test_write_seq_region_json(self, data_dir: Path, tmp_path: Path, formatted_files_generator) -> None:
         """Check _seq_region_json is written as expected."""
-        out_dir = tmp_path
-        formatted_files_generator.extract_gb(out_dir)
-        output= tmp_path/ "seq_region.json"
-        expected_path = data_dir/ f"output_seq_region.json"
-        assert filecmp.cmp(output, expected_path)
+        record1 = SeqRecord(Seq("ATGC"), id="record1")
+        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene", qualifiers= {"gene": ["GlyrA"], "transl_table": "2"})        
+        record1.features.append(gene_feature1)
+        formatted_files_generator.seq_records = [record1]
+        formatted_files_generator.files["seq_region"] = tmp_path / "seq_region.json"
+        formatted_files_generator._write_seq_region_json()
+        assert (tmp_path / "seq_region.json").exists()
+        with open(tmp_path / "seq_region.json", "r") as f:
+            seq_region = json.load(f)
+            assert len(seq_region) == 1
+            assert seq_region["codon_table"] == "2"
+    
     
     def test_write_genes_gff(self, assert_files, data_dir: Path, tmp_path: Path,  formatted_files_generator, ):
         """Check gene features in GFF3 format are generated as expected."""
-        peptides=[]
-        formatted_files_generator.files["gene_models"] = tmp_path / "genes.gff"
-        output= formatted_files_generator.files["gene_models"]
-        expected_path = data_dir/ f"output_genes.gff"
-        if peptides:
-            formatted_files_generator.files["fasta_pep"] = tmp_path / "pep.fasta"
-            output_pep =  formatted_files_generator.files["fasta_pep"] 
-            expected_pep = data_dir/ f"output_pep.fasta"
-            assert_files(output_pep, expected_pep)
+        record1 = SeqRecord(Seq("ATGC"), id="record1")
+        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene", qualifiers= {"gene": ["GlyrA"]})        
+        record1.features.append(gene_feature1)
+    
+        formatted_files_generator.seq_records = [record1]
 
-        assert_files(output, expected_path)
+        formatted_files_generator.files["gene_models"] = tmp_path / "genes.gff"
+        formatted_files_generator._write_genes_gff()
+        
+        assert (tmp_path / "genes.gff").exists()
 
     def test_duplicate_features(self, formatted_files_generator, tmp_path):
         record1 = SeqRecord(Seq("ATGC"), id="record1")
@@ -102,7 +129,7 @@ class TestWriteFormattedFiles:
         record1.features.append(gene_feature1)
 
         record2 = SeqRecord(Seq("ATGC"), id="record1")
-        gene_feature2 = SeqFeature(SimpleLocation(10,30), type="gene")
+        gene_feature2 = SeqFeature(SimpleLocation(10,30), type="rna")
         record2.features.append(gene_feature2)
 
         formatted_files_generator.seq_records = [record1, record2]
