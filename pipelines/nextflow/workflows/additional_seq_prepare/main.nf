@@ -30,7 +30,8 @@ if (params.brc_mode) {
 meta = [
     "accession": params.accession,
     "production_name": params.production_name,
-    "prefix": params.prefix
+    "prefix": params.prefix,
+    "publish_dir": params.accession,
 ]
 
 // Import modules/subworkflows
