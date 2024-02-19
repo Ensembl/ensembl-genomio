@@ -32,10 +32,10 @@ from ensembl.utils.logging import init_logging_with_args
 class Operation(Enum):
     """Controlled list of operations for the seq_region replacement."""
 
-    do_nothing = auto()
-    update = auto()
-    insert = auto()
-    not_found = auto()
+    DO_NOTHING = auto()
+    UPDATE = auto()
+    INSERT = auto()
+    NOT_FOUND = auto()
 
     def __str__(self) -> str:
         return f"{self.name}"
@@ -67,7 +67,7 @@ def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
                 logging.warning(f"Skipping line '{line.strip()}', wrong format")
                 continue
             seq_regions.append(
-                SeqRegionReplacement(name=name, brc_name=brc_name, operation=Operation.do_nothing)
+                SeqRegionReplacement(name=name, brc_name=brc_name, operation=Operation.DO_NOTHING)
             )
     return seq_regions
 
@@ -98,25 +98,25 @@ def get_seq_regions_to_replace(
         rows = session.execute(seqr_stmt).unique().all()
         if not rows:
             logging.warning(f"Seq region not found: {seqr}")
-            seqr.operation = Operation.not_found
+            seqr.operation = Operation.NOT_FOUND
             continue
         for row in rows:
             db_seqr: SeqRegion = row[0]
             if not db_seqr:
-                seqr.operation = Operation.not_found
+                seqr.operation = Operation.NOT_FOUND
             attribs = get_attribs_dict(db_seqr)
             db_brc_name = attribs.get("BRC4_seq_region_name", "")
             seqr.old_brc_name = db_brc_name
             if not db_brc_name:
                 logging.info(f"Seq region {seqr.name} doesn't have a BRC name")
-                seqr.operation = Operation.insert
+                seqr.operation = Operation.INSERT
                 continue
             if seqr.brc_name == db_brc_name:
                 logging.info(f"Seq region {seqr.name} already exists with same name")
-                seqr.operation = Operation.do_nothing
+                seqr.operation = Operation.DO_NOTHING
                 continue
             logging.info(f"Seq region {seqr.name} already exists as {db_brc_name} instead of {seqr.brc_name}")
-            seqr.operation = Operation.update
+            seqr.operation = Operation.UPDATE
             seqr.seq_region_id = db_seqr.seq_region_id
             seq_regions.append(seqr)
 
@@ -173,14 +173,14 @@ def update_seq_region_name(
     logging.info(f"Rename {seq_region}")
 
     brc_attrib_id = 548
-    if seq_region.operation == Operation.update:
+    if seq_region.operation == Operation.UPDATE:
         stmt = select(SeqRegionAttrib).where(
             SeqRegionAttrib.seq_region_id == seq_region.seq_region_id,
             SeqRegionAttrib.attrib_type_id == brc_attrib_id,
         )
         seq_attrib = session.scalars(stmt).one()
         seq_attrib.value = seq_region.brc_name
-    elif seq_region.operation == Operation.insert:
+    elif seq_region.operation == Operation.INSERT:
         logging.warning(f"Not supported: insertion for {seq_region}")
     else:
         logging.warning(f"Cannot update/insert seq_region without clear operation {seq_region}")
