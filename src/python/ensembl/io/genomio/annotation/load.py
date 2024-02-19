@@ -39,7 +39,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
 
     Args:
         session: Session open on a core database.
-        table: "Gene" or "Trancript" table from the core database.
+        table: "gene" or "trancript" table from the core database.
     """
 
     if table == "gene":
@@ -129,6 +129,19 @@ def _get_features_to_update(
     report: bool,
     do_update: bool,
 ) -> List[Dict[str, Any]]:
+    """Checks a list of features and returns those whose description we want to update.
+
+    Args:
+        table: "gene" or "transcript" table for the features.
+        feat_func: The features to check.
+        feat_data: The features in the database.
+        stats: Record the number of features checked in different cases.
+        report: Print a report line for each feature to standard output.
+        do_update: Actually update the database.
+
+    Returns:
+        The list of features with their operation changed to update or insert.
+    """
     to_update = []
     for new_feat in feat_func:
         # Check we can find that feature in the core db
