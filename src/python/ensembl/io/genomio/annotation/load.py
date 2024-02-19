@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Load functional annotation from a file into a core database.
-"""
+"""Loads functional annotation from a file into a core database."""
 
 import logging
 from pathlib import Path
@@ -36,7 +35,12 @@ FEAT_TABLE = {
 
 
 def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str]]:
-    """Load descriptions from a core."""
+    """Returns the table descriptions from a core database.
+
+    Args:
+        session: Session open on a core database.
+        table: "Gene" or "Trancript" table from the core database.
+    """
 
     if table == "gene":
         stmt = (
@@ -69,7 +73,14 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
 def load_descriptions(
     session: Session, func_file: Path, report: bool = False, do_update: bool = False
 ) -> None:
-    """Load gene and transcript descriptions in a core database."""
+    """Loads gene and transcript descriptions into a core database.
+
+    Args:
+        session: Session open on a core database.
+        func_file: JSON file with the annotation information.
+        report: Print the mapping of changes to perform in the standard output?
+        do_update: Update core database?
+    """
     func = get_json(func_file)
     logging.info(f"{len(func)} annotations from {func_file}")
     tables_to_lookup = ("gene", "transcript")
@@ -172,7 +183,7 @@ def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments(include_database=True)
-    parser.add_argument_src_path("--func_file", required=True, help="Input Functional annotation json")
+    parser.add_argument_src_path("--func_file", required=True, help="Input functional annotation JSON")
     parser.add_argument("--report", action="store_true", help="Show what change would be made")
     parser.add_argument("--update", action="store_true", help="Make the changes to the database")
     parser.add_log_arguments(add_log_file=True)
@@ -183,6 +194,3 @@ def main() -> None:
     with dbc.session_scope() as session:
         load_descriptions(session, args.func_file, args.report, args.update)
 
-
-if __name__ == "__main__":
-    main()
