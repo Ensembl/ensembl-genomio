@@ -18,8 +18,8 @@
 from pathlib import Path
 from typing import Optional
 from unittest.mock import patch
-import pytest
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
