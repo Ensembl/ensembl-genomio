@@ -105,20 +105,24 @@ def get_seq_regions_to_replace(
             db_seqr: SeqRegion = row[0]
             if not db_seqr:
                 seqr.operation = Operation.NOT_FOUND
+                continue
+            seqr.seq_region_id = db_seqr.seq_region_id
+
             attribs = get_attribs(db_seqr)
             db_brc_name = attribs.get("BRC4_seq_region_name", "")
             seqr.old_brc_name = db_brc_name
             if not db_brc_name:
-                logging.info(f"Seq region {seqr.name} doesn't have a BRC name")
+                logging.info(f"Seq region '{seqr.name}' doesn't have a BRC name")
                 seqr.operation = Operation.INSERT
-                continue
-            if seqr.brc_name == db_brc_name:
+            elif seqr.brc_name == db_brc_name:
                 logging.info(f"Seq region {seqr.name} already exists with same name")
                 seqr.operation = Operation.DO_NOTHING
                 continue
-            logging.info(f"Seq region {seqr.name} already exists as {db_brc_name} instead of {seqr.brc_name}")
-            seqr.operation = Operation.UPDATE
-            seqr.seq_region_id = db_seqr.seq_region_id
+            else:
+                logging.info(
+                    f"Seq region {seqr.name} already exists as {db_brc_name} instead of {seqr.brc_name}"
+                )
+                seqr.operation = Operation.UPDATE
             seq_regions.append(seqr)
 
     return seq_regions
