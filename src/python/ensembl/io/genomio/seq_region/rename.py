@@ -52,7 +52,7 @@ class SeqRegionReplacement:
     seq_region_id: int = 0
 
     def __repr__(self) -> str:
-        return f"{self.name}: {self.old_brc_name} -> {self.brc_name} ({self.seq_region_id}: {self.operation})"
+        return f"{self.name}: '{self.old_brc_name}' -> '{self.brc_name}' ({self.operation})"
 
 
 def get_rename_map(map_file: Path) -> List[SeqRegionReplacement]:
