@@ -91,8 +91,8 @@ def get_seq_regions_to_replace(
         seqr_stmt = (
             select(SeqRegion)
             .select_from(SeqRegion)
-            .join(SeqRegion.seq_region_attrib)
-            .join(SeqRegion.seq_region_synonym)
+            .outerjoin(SeqRegion.seq_region_attrib)
+            .outerjoin(SeqRegion.seq_region_synonym)
             .where(or_(SeqRegion.name == seqr.name, SeqRegionSynonym.synonym == seqr.name))
         )
 
