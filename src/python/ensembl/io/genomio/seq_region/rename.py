@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import logging
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
@@ -170,6 +170,25 @@ def update_seq_region_name(
         logging.warning(f"Cannot update/insert seq_region without clear operation {seq_region}")
 
 
+def rename_seq_regions(dbc: DBConnection, input_map: Path, do_update: bool = False) -> None:
+    """Rename seq_regions in a core from a list of replacements.
+    Args:
+
+        dbc: Connection to a core database.
+        input_map: Path to a file with 2 columns: current_name, new_name.
+        do_update: Flag to do actual change to the database.
+    """
+    rename_map = get_rename_map(input_map)
+
+    with dbc.session_scope() as session:
+        seq_regions = get_seq_regions_to_replace(session, rename_map)
+        logging.info(f"Replacing {len(seq_regions)} seq_region names")
+        for seqr in seq_regions:
+            update_seq_region_name(session, seqr, do_update)
+        if not do_update:
+            logging.warning("No change made (use --update to update the database).")
+
+
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(description=__doc__)
@@ -182,13 +201,5 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    rename_map = get_rename_map(args.input_map)
     dbc = DBConnection(args.url)
-
-    with dbc.session_scope() as session:
-        seq_regions = get_seq_regions_to_replace(session, rename_map)
-        logging.info(f"Replacing {len(seq_regions)} seq_region names")
-        for seqr in seq_regions:
-            update_seq_region_name(session, seqr, args.update)
-        if not args.update:
-            logging.warning("No change made (use --update to update the database).")
+    rename_seq_regions(dbc, args.input_map, args.update)
