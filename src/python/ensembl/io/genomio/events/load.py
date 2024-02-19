@@ -28,7 +28,7 @@ from typing import Dict, Generator, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from ensembl.database import DBConnection
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.core.models import MappingSession, StableIdEvent
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -244,7 +244,7 @@ def main() -> None:
     init_logging_with_args(args)
 
     # Start
-    dbc = DBConnection(args.url)
+    dbc = DBConnectionLite(args.url)
     collection = EventCollection()
     collection.load_events(args.input_file)
 
