@@ -105,7 +105,7 @@ def get_seq_regions_to_replace(
             db_seqr: SeqRegion = row[0]
             if not db_seqr:
                 seqr.operation = Operation.NOT_FOUND
-            attribs = get_attribs_dict(db_seqr)
+            attribs = get_attribs(db_seqr)
             db_brc_name = attribs.get("BRC4_seq_region_name", "")
             seqr.old_brc_name = db_brc_name
             if not db_brc_name:
@@ -124,37 +124,20 @@ def get_seq_regions_to_replace(
     return seq_regions
 
 
-def get_attribs(seq_region: SeqRegion) -> List:
+def get_attribs(seq_region: SeqRegion) -> Dict[str, str]:
     """Given a seq_region, extract the attribs as value-source items.
 
     Args:
-        seq_region (SeqRegion): The seq_region from which the attribs are extracted.
-
-    Returns:
-        All attributes as a list of dictionaries with 'value' and 'source' keys.
-    """
-    attribs = seq_region.seq_region_attrib
-    atts = []
-    if attribs:
-        for attrib in attribs:
-            att_obj = {"value": attrib.value, "source": attrib.attrib_type.code}
-            atts.append(att_obj)
-    return atts
-
-
-def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
-    """Extracts all the attributes of the given sequence region.
-
-    Args:
-        seq_region: Sequence region.
+        seq_region: The seq_region from which the attribs are extracted.
 
     Returns:
         Pairs of source and value for each attribute.
     """
-
-    attribs = get_attribs(seq_region)
-    attrib_dict = {attrib["source"]: attrib["value"] for attrib in attribs}
-    return attrib_dict
+    db_attribs = seq_region.seq_region_attrib
+    attribs_dict = {}
+    for attrib in db_attribs:
+        attribs_dict[attrib.attrib_type.code] = attrib.value
+    return attribs_dict
 
 
 def update_seq_region_name(
