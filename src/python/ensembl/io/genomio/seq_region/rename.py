@@ -81,7 +81,8 @@ def get_seq_regions_to_replace(
         session: Session from the current core.
         rename_map: List of remappings to check.
 
-    Returns: same list with the operation changed to the operation it can do.
+    Returns:
+        Same list of remappings with the operation changed to the operation it can do.
 
     """
 
@@ -184,8 +185,6 @@ def update_seq_region_name(
         logging.warning(f"Not supported: insertion for {seq_region}")
     else:
         logging.warning(f"Cannot update/insert seq_region without clear operation {seq_region}")
-
-    return
 
 
 def main() -> None:
