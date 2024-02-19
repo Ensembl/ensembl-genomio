@@ -17,13 +17,12 @@
 Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
 """
 
-__all__ = ["format_db_data", "get_metadata_value"]
+__all__ = ["format_db_data"]
 
 import json
 from os import PathLike
 from pathlib import Path
-import re
-from typing import Dict, List, Optional
+from typing import Dict, List
 import logging
 
 from sqlalchemy.engine import URL
@@ -31,10 +30,7 @@ from sqlalchemy.engine import URL
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 from .core_server import CoreServer
-from .core_database import CoreDatabase
-
-
-_DB_PATTERN = re.compile(r".+_core_(\d+)_\d+_\d+")
+from .dbconnection_lite import DBConnectionLite
 
 
 def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
@@ -55,18 +51,17 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
     for db_name in dbs:
         logging.debug(f"Get metadata for {db_name}")
         db_url = server_url.set(database=db_name)
-        core_db = CoreDatabase(db_url)
-        metadata = core_db.get_metadata()
+        core_db = DBConnectionLite(db_url)
 
-        prod_name = get_metadata_value(metadata, "species.production_name")
+        prod_name = core_db.get_meta_value("species.production_name")
         species = prod_name
-        division = get_metadata_value(metadata, "species.division")
-        accession = get_metadata_value(metadata, "assembly.accession")
-        project_release = _get_project_release(db_name)
+        division = core_db.get_meta_value("species.division")
+        accession = core_db.get_meta_value("assembly.accession")
+        project_release = core_db.get_project_release()
 
         if brc_mode:
-            brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
-            brc_component = get_metadata_value(metadata, "BRC4.component")
+            brc_organism = core_db.get_meta_value("BRC4.organism_abbrev")
+            brc_component = core_db.get_meta_value("BRC4.component")
             if brc_organism is not None:
                 species = brc_organism
             if brc_component is not None:
@@ -93,28 +88,6 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
 
         databases_data.append(db_data)
     return databases_data
-
-
-def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:
-    """Returns the first element in the list assigned to `key` in `metadata`.
-
-    Args:
-        metadata: Map of metadata information to lists of values.
-        key: Metadata key to search for.
-
-    """
-    if (key in metadata) and metadata[key]:
-        return metadata[key][0]
-    return None
-
-
-def _get_project_release(db_name: str) -> str:
-    """Return the project release number from the database name."""
-
-    match = re.search(_DB_PATTERN, db_name)
-    if match:
-        return match.group(1)
-    return ""
 
 
 def _load_multine_file(infile: PathLike) -> List[str]:

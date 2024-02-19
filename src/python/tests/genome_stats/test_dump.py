@@ -228,12 +228,12 @@ class TestStatsGenerator:
 
 
 @pytest.mark.dependency(depends=["get_genome_stats"])
-@patch("ensembl.io.genomio.genome_stats.dump.DBConnection")
+@patch("ensembl.io.genomio.genome_stats.dump.DBConnectionLite")
 def test_dump_genome_stats(mock_dbconnection: MagicMock, json_data: Callable) -> None:
     """Tests the `dump_genome_stats()` method.
 
     Args:
-        mock_dbconnection: Mock of DBConnection to avoid needing an actual core database.
+        mock_dbconnection: Mock of DBConnectionLite to avoid needing an actual core database.
         json_data: JSON test file parsing fixture.
 
     """

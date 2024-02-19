@@ -24,7 +24,8 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
-from ensembl.database import DBConnection, URL
+from ensembl.database import URL
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -135,7 +136,7 @@ def dump_genome_stats(url: URL) -> Dict[str, Any]:
         url: Core database URL.
 
     """
-    dbc = DBConnection(url)
+    dbc = DBConnectionLite(url)
     with dbc.session_scope() as session:
         generator = StatsGenerator(session)
         genome_stats = generator.get_genome_stats()

@@ -45,7 +45,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "bcbio-gff == 0.7.0",
+    "bcbio-gff == 0.7.1",
     "biopython == 1.81",
     "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
     "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v1.2.2
@@ -112,6 +112,8 @@ genome_stats_dump = "ensembl.io.genomio.genome_stats.dump:main"
 # GFF3
 gff3_extract_annotation = "ensembl.io.genomio.gff3.extract_annotation:main"
 gff3_process = "ensembl.io.genomio.gff3.process:main"
+# annotation
+annotation_load = "ensembl.io.genomio.annotation.load:main"
 # Manifest
 manifest_check_integrity = "ensembl.io.genomio.manifest.check_integrity:main"
 manifest_compute_stats = "ensembl.io.genomio.manifest.compute_stats:main"
@@ -122,6 +124,7 @@ schemas_json_validate = "ensembl.io.genomio.schemas.json.validate:main"
 # Sequence region
 seq_region_dump = "ensembl.io.genomio.seq_region.dump:main"
 seq_region_prepare = "ensembl.io.genomio.seq_region.prepare:main"
+seq_region_rename = "ensembl.io.genomio.seq_region.rename:main"
 # Utils
 extract_file = "ensembl.io.genomio.utils.archive_utils:extract_file_cli"
 

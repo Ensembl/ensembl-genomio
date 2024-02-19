@@ -24,7 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import Meta
-from ensembl.database import DBConnection
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -184,7 +184,7 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    dbc = DBConnection(args.url)
+    dbc = DBConnectionLite(args.url)
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session)
         genome_meta = filter_genome_meta(genome_meta)

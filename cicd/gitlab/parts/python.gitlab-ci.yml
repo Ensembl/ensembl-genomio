@@ -90,7 +90,7 @@ python:black:
   extends: .python:test
   allow_failure: true
   script:
-    - black --config pyproject.toml --verbose --check .
+    - black --config pyproject.toml --check .
 
 ## Unit tests and coverage
 
