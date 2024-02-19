@@ -176,8 +176,8 @@ def update_seq_region_name(
 
 def rename_seq_regions(dbc: DBConnection, input_map: Path, do_update: bool = False) -> None:
     """Rename seq_regions in a core from a list of replacements.
-    Args:
 
+    Args:
         dbc: Connection to a core database.
         input_map: Path to a file with 2 columns: current_name, new_name.
         do_update: Flag to do actual change to the database.
