@@ -58,6 +58,8 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
             .outerjoin(ObjectXref, and_(Transcript.gene_id == ObjectXref.ensembl_id, ObjectXref.ensembl_object_type == "transcript"))
             .outerjoin(Xref)
         )
+    else:
+        raise ValueError(f"Table {table} is not supported")
 
     feat_data = {}
     for row in session.execute(stmt):
