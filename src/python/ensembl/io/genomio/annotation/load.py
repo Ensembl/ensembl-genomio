@@ -158,7 +158,7 @@ def _get_features_to_update(
     for new_feat in feat_func:
         # Check we can find that feature in the core db
         try:
-            current_feat = feat_data[new_feat["id"]]
+            cur_feat = feat_data[new_feat["id"]]
         except KeyError:
             logging.debug(f"Not found: {table} '{new_feat['id']}'")
             stats["not_found"] += 1
@@ -167,7 +167,7 @@ def _get_features_to_update(
         # Prepare some data to compare
         new_stable_id = new_feat["id"]
         new_desc = new_feat.get("description")
-        (row_id, cur_stable_id, cur_desc) = current_feat
+        (row_id, cur_stable_id, cur_desc) = cur_feat
 
         # No description: replace unless the current description is from an Xref
         if not cur_desc:
