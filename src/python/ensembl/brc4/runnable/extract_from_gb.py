@@ -166,7 +166,6 @@ class FormattedFilesGenerator:
                     gff_feat = SeqFeature(
                         location=feat.location,
                         type=feat.type,
-                        strand=feat.location.strand,
                         qualifiers=gff_qualifiers,
                     )
 
@@ -210,7 +209,6 @@ class FormattedFilesGenerator:
                             gff_tr = SeqFeature(
                                 location=feat.location,
                                 type="mRNA",
-                                strand=feat.location.strand,
                                 qualifiers=tr_qualifiers,
                             )
                             feats[str(tr_id)] = gff_tr
@@ -241,7 +239,6 @@ class FormattedFilesGenerator:
                         gff_gene = SeqFeature(
                             location=feat.location,
                             type="gene",
-                            strand=feat.location.strand,
                             qualifiers=gene_qualifiers,
                         )
                         feats[str(gene_id)] = gff_gene

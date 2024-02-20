@@ -124,7 +124,7 @@ class GFF3Walker:
             _TYPE=feat.type,
             _START=loc.start,
             _END=loc.end,
-            _STRAND=feat.strand,
+            _STRAND=feat.location.strand,
             _LOCATION=feat.location,
             _PHASE=phase,
             _FULLTAG=fulltag,
