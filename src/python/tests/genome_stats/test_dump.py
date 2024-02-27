@@ -42,8 +42,7 @@ class MockResult:
 
     def __iter__(self) -> Any:
         """Iterates over the elements in `rows` attribute."""
-        for row in self.rows:
-            yield row
+        yield from self.rows
 
     def one(self) -> Tuple:
         """Returns the first element in `rows` attribute."""
