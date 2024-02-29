@@ -41,8 +41,8 @@ class GFFStandard:
         return transcript
 
     @staticmethod
-    def gene_to_cds(gene: SeqFeature, skip_non_cds: bool = False) -> List[SeqFeature]:
-        """Returns a list of transcripts (with exons), from a gene with only CDS children."""
+    def gene_to_cds(gene: SeqFeature, skip_non_cds: bool = False) -> SeqFeature:
+        """Add intermediate transcripts to a gene with only CDS children."""
 
         transcripts_dict = {}
         del_transcript = []
@@ -74,7 +74,8 @@ class GFFStandard:
 
         transcripts = list(transcripts_dict.values())
 
-        return transcripts
+        gene.sub_features = transcripts
+        return gene
 
     @staticmethod
     def build_transcript(gene: SeqFeature) -> SeqFeature:

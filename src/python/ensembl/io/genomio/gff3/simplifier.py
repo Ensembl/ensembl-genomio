@@ -294,8 +294,7 @@ class GFFSimplifier:
             if fcounter.get("CDS"):
                 num_subs = len(gene.sub_features)
                 logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
-                transcripts = GFFStandard.gene_to_cds(gene)
-                gene.sub_features = transcripts
+                gene = GFFStandard.gene_to_cds(gene)
 
             # Transform gene - exon to gene-transcript-exon
             elif fcounter.get("exon"):
