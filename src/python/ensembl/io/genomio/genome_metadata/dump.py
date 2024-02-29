@@ -172,6 +172,7 @@ def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
         try:
             genebuild_id = genebuild["id"]
         except KeyError:
+            # pylint: disable=raise-missing-from
             raise ValueError("No genebuild version or ID found")
         genome_metadata["genebuild"]["version"] = str(genebuild_id)
     # Drop genebuild ID since there is a genebuild version
