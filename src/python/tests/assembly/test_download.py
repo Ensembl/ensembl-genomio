@@ -22,86 +22,138 @@ Typical usage example::
 
 """
 
+import filecmp
+import logging
 from pathlib import Path
-import unittest
 from unittest.mock import Mock, patch, MagicMock
 from contextlib import nullcontext as does_not_raise
 from typing import ContextManager
 
-from typing import Dict
+# from typing import Dict
 
+from ftplib import FTP, error_reply as ftp_error_reply
 import pytest
-from ftplib import FTP
 
-
-from ensembl.io.genomio.assembly.download import FTPConnection, FTPConnectionError
+from ensembl.io.genomio.assembly.download import establish_ftp
 from ensembl.io.genomio.assembly.download import get_checksums, md5_files, _download_file
+from ensembl.io.genomio.assembly.download import download_files, get_files_selection
+from ensembl.io.genomio.assembly.download import UnsupportedFormatError
+from ensembl.io.genomio.assembly.download import FileDownloadError
+from ensembl.io.genomio.assembly.download import FTPConnectionError
 
 
 # class TestDownloadAssembly:
 #     """Tests class for `download_assembly` module."""
 
+#################
+# @pytest.mark.dependency(name="test_FTP_connection")
+# @pytest.mark.parametrize(
+#     "ftp_url, sub_dir, expectation",
+#     [
+#         pytest.param(
+#             "ftp.ncbi.nlm.nih.gov", "genomes/all/GCA/017/607/445", does_not_raise(), id="Successful ftp connection"
+#         ),
+#         pytest.param(
+#             "", "genomes/all/GCA/017/607/445", pytest.raises(FTPConnectionError), id="Failed connection case"
+#         ),
+#     ],
+# )
+# @patch("ftplib.FTP")
+# def test_ftp_connection(
+#     mock_ftp: Mock,
+#     ftp_url: str,
+#     sub_dir: str,
+#     expectation: ContextManager,
+#     ):
+#     """Tests the FTPConnection method 'establish_ftp()'
+#     Args:
+#         mock_ftp: Mock FTP Object 
+#         ftp_url: FTP url
+#         sub_dir: Sub directory path
+#         expectation: Context manager expected raise exception
+#     """
 
+#     def side_eff_conn(url:str):
+#         if not url:
+#             raise Exception()
+
+#     mock_ftp.connect.side_effect = side_eff_conn
+
+#     with expectation:
+#         connected_ftp = establish_ftp(mock_ftp, ftp_url, sub_dir)
+#         connected_ftp.connect.assert_called_once_with(ftp_url)
+#         connected_ftp.login.assert_called_once()
+#         connected_ftp.cwd.assert_called_once_with(sub_dir)
+
+### TEST NEW TEST FTP CONNECTION:
+@pytest.mark.dependency(name="test_ftp_connection_new")
 @pytest.mark.parametrize(
-    "ftp_url, sub_dir, expectation",
+    "ftp_url, accession, expectation",
     [
-        ("ftp.ncbi.nlm.nih.gov", "genomes/all/GCA/017/607/445", does_not_raise()),  # normal case
-        (
-            "ftp.ncbi.nlm.nih.gov",
-            "genomes/all/GCA/017/607/445",
-            pytest.raises(FTPConnectionError),
-        ),  # abnormal case, should run, but fail assert
-        ("ftp.ncbi.nlm.nih.gov", None, pytest.raises(FTPConnectionError)),  # bad case no subdir path
-        (
-            "ftp.remote.fake.gov",
-            "genomes/all/GCA/017/607/445",
-            pytest.raises(FTPConnectionError),
-        ),  # bad case incorrect ftp_url
-        (
-            "ftp.ncbi.nlm.nih.gov",
-            "genomes/GCA/017/607/445",
-            pytest.raises(FTPConnectionError),
-        ),  # bad case malformed subdir path
+        pytest.param(
+            "ftp.ncbi.nlm.nih.gov", "GCA_017607445.1", does_not_raise(), id="Successful ftp connection"
+        ),
+        pytest.param(
+            "", "GCA_017607445.1", pytest.raises(FTPConnectionError), id="Failed connection case bad url"
+        ),
+        pytest.param(
+            "ftp.ncbi.nlm.nih.gov", "gcx_017607445.1", pytest.raises(UnsupportedFormatError), id="Failed connection improper INSDC accession"
+        ),
     ],
 )
-@patch("ensembl.io.genomio.assembly.download.FTP", autospec=True)
-def test_ftp_connection(
-    mock_ftp_constructor: Mock,
+@patch("ftplib.FTP")
+def test_ftp_connection_new(
+    mock_ftp: Mock,
     ftp_url: str,
-    sub_dir: str,
+    accession: str,
     expectation: ContextManager,
-):
-    """Tests the FTPConnection class method 'establish_ftp()'
+    ):
+    """Tests the FTPConnection method 'establish_ftp()'
     Args:
-        mock_ftp_constructor:
-        ftp_url:
-        sub_dir:
+        mock_ftp: Mock FTP Object 
+        ftp_url: FTP url
+        sub_dir: Sub directory path
+        expectation: Context manager expected raise exception
     """
-    mock_ftp = mock_ftp_constructor.return_value
-    mock_ftp.pwd = MagicMock(return_value="ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/")
-    connected_ftp = FTPConnection.establish_ftp(mock_ftp, ftp_url, sub_dir)
-    listing = connected_ftp.pwd()
-    assert listing == "ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/"
-    connected_ftp.pwd.assert_called_once()
 
+    def side_eff_conn(url:str):
+        if not url:
+            raise Exception()
+
+    mock_ftp.connect.side_effect = side_eff_conn
+
+    with expectation:
+        connected_ftp = establish_ftp(mock_ftp, ftp_url, accession)
+        connected_ftp.connect.assert_called_once_with(ftp_url)
+        connected_ftp.login.assert_called_once()
+        connected_ftp.cwd.assert_called_once_with("genomes/all/GCA/017/607/445")
 
 #################
 @pytest.mark.dependency(name="test_checksums")
 @pytest.mark.parametrize(
     "checksum_file, checksum, expectation",
     [
-        (Path("md5checksums.txt"), "40df91d5c40cb55621c4c92201da6834", does_not_raise()),  # Normal case
-        (
+        pytest.param(
+            Path("md5checksums.txt"), "40df91d5c40cb55621c4c92201da6834", does_not_raise(), id="Normal case"
+        ),
+        pytest.param(
             Path("malformed_md5_checksums.txt"),
             None,
             pytest.raises(ValueError),
-        ),  # Bad md5sum file (tab separated, expects two \w)
-        (Path("dir_name"), None, does_not_raise()),  # pass a dir instead of checksum
+            id="Bad md5 file - tab separated",
+        ),
+        pytest.param(Path("dir_name"), None, does_not_raise(), id="Dir passed instead of file"),
     ],
 )
 def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectation: ContextManager) -> None:
-    """Tests the 'download.get_checksums() function"""
-
+    """Tests the 'download.get_checksums() function
+    
+    Args:
+        data_dir:
+        checksum_file:
+        checksum:
+        expectation:
+    """
     with expectation:
         md5_input_path = data_dir / checksum_file
         obtained_checksums = get_checksums(md5_input_path)
@@ -113,11 +165,11 @@ def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectati
 @pytest.mark.parametrize(
     "md5file, checksum_bool",
     [
-        ("md5checksums.txt", True),  # Normal case
-        ("wrong_md5_checksums.txt", False),  # Bad md5sum file (in correct md5)
-        (None, True),  # No md5file specified, resort to default
-        (Path("*"), False),  # Pass checksum_file as incompatible os path '*'
-        ("missingfile_md5.txt", False),  # Pass md5_checksum file with reference to missing file
+        pytest.param("md5checksums.txt", True, id="Normal case"),
+        pytest.param("wrong_md5_checksums.txt", False, id="Incorrect md5 checksum"),
+        pytest.param(None, True, id="No md5file specified, resort to default"),
+        pytest.param(Path("*"), False, id="Incompatible os path '*'"),
+        pytest.param("missingfile_md5.txt", False, id="md5 checksum with ref of missing file"),
     ],
 )
 @pytest.mark.dependency(depends=["test_checksums"])
@@ -128,105 +180,198 @@ def test_md5_files(data_dir: Path, md5file: Path, checksum_bool: bool) -> None:
 
 
 #################
-# @pytest.mark.dependency(name="test_download_file")
-# @pytest.mark.parametrize(
-#     "ftp_url, sub_dir, ftp_file, md5_sums",
-#     [
-#         (
-#             "ftp.ncbi.nlm.nih.gov",
-#             "genomes/all/GCA/017/607/445",
-#             "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
-#             dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
-#         ),
-#         (
-#             "ftp.ncbi.nlm.nih.gov",
-#             "genomes/all/GCA/017/607/445",
-#             "non-existing-file.txt",
-#             dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
-#         ),
-#     ],
-# )
-    
-
-# class TestDownloadFile(unittest.TestCase):
-
-#     @classmethod
-#     def setUpClass(cls):
-#         # mock return value
-#         cls.patcher = patch('ensembl.io.genomio.assembly.download.FTP', return_value='226 Transfer complete.', autospec=True)
-
-#         # start the patch
-#         cls.patcher.start()
-
-#         # stop after all tests
-#         cls.addClassCleanup(cls.patcher.stop)
-
-@patch("ensembl.io.genomio.assembly.download.FTP", return_value='226 Transfer complete.', autospec=True)
-def download_single_file(data_dir: Path,
-    mock_ftp_constructor: Mock, 
-    ftp_url: str, 
-    sub_dir: str,
-    ftp_file: str, 
-    md5_sums: Dict[str, str],  
-    ) -> None:
-    
-    mock_ftp = mock_ftp_constructor.return_value
-    mock_ftp.pwd = MagicMock(return_value="ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/")
-    connected_ftp = FTPConnection.establish_ftp(mock_ftp, ftp_url, sub_dir)
-    _download_file(connected_ftp, ftp_file, md5_sums, data_dir)
-    
-    func_call = mock_ftp.retrbinary.assert_called_once_with(f"RETR {ftp_file}", Path(data_dir, ftp_file).open().write())
-    
-    return func_call
-
+@pytest.mark.dependency(name="test_download_single_file")
 @pytest.mark.parametrize(
-"ftp_url, sub_dir, ftp_file, md5_sums, expectation",
-[
-    (
-        "ftp.ncbi.nlm.nih.gov",
-        "genomes/all/GCA/017/607/445",
-        "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
-        dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
-        True,
-    ),
-    (
-        "ftp.ncbi.nlm.nih.gov",
-        "genomes/all/GCA/017/607/445",
-        "non-existing-file.txt",
-        dict([('GCA_017607445.1_ASM1760744v1_assembly_report.txt','a03f39d1de753fcd380bf0775d5205d0')]),
-        False,
-    ),
-],
+    "ftp_file, md5_sums, max_redo, expectation",
+    [
+        pytest.param(
+            "test_ftp_file.txt",
+            {"test_ftp_file.txt": "e98b980b442fdb2a21877dcc55e11848"},
+            2,
+            does_not_raise(),
+            id="Download OK file",
+        ),
+        pytest.param(
+            "non-existing-file.txt",
+            {"test_ftp_file.txt": "e98b980b442fdb2a21877dcc55e11848"},
+            0,
+            pytest.raises(FileNotFoundError),
+            id="Can't download non-existing file",
+        ),
+        pytest.param(
+            "non-existing-file.txt",
+            {"non-existing-file.txt": "e98b980b442fdb2a21877dcc55e11848"},
+            0,
+            pytest.raises(ftp_error_reply),
+            id="File has md5sum but does not exist",
+        ),
+        pytest.param(
+            "test_ftp_file.txt",
+            {"test_ftp_file.txt": ""},
+            2,
+            does_not_raise(),
+            id="Max retry attempts non-zero",
+        ),
+        pytest.param(
+            "test_ftp_file.txt",
+            {"test_ftp_file.txt": "e98b980b442fdb2a21877XxxXxxXxxXx"},
+            3,
+            pytest.raises(FileDownloadError),
+            id="Incorrect md5sum",
+        ),
+    ],
 )
-def test_download_single_file(data_dir:Path,ftp_url: str, sub_dir:str, ftp_file:str, md5_sums:dict, expectation:bool) -> None:
+@patch("ftplib.FTP")
+def test_download_single_file(
+    mock_ftp: Mock, data_dir: Path, tmp_dir: Path, ftp_file: str, md5_sums: dict, max_redo: int, expectation: ContextManager
+    ) -> None:
+    """Tests the private function _download_file.
     
-    download_file_return = download_single_file(data_dir, ftp_url, sub_dir, ftp_file, md5_sums)
+    Args:
+        mock_ftp: Mock FTP object
+        data_dir: Path to test data root dir
+        tmp_dir: Temp dir created for test
+        ftp_file: FTP file which to mock download
+        md5_sums: FTP file and md5_sum value pair
+        expectation: Context manager expected raise exception
+    """
+
+    data_file = data_dir / ftp_file
+    retr_file = tmp_dir / ftp_file
+
+    def mock_retr_binary(command: str, callback: object):
+        logging.info(f"Faking the download of {command}")
+        try:
+            with data_file.open("rb") as data_fh:
+                callback(data_fh.read())
+        except OSError as err:
+            raise ftp_error_reply from err
+
+    mock_ftp.retrbinary.side_effect=mock_retr_binary
+
+    with expectation:
+        _download_file(mock_ftp, ftp_file, md5_sums, tmp_dir)
+        assert filecmp.cmp(data_file, retr_file)
+
+#################
+@pytest.mark.dependency(name="test_download_all_files")
+@pytest.mark.parametrize(
+    "accession, exception, max_redo",
+    [
+        pytest.param(
+            "gca_000111222.1",
+            pytest.raises(UnsupportedFormatError),
+            1,
+            id="Bad case: Unrecognised INSDC accession format",
+        ),
+        pytest.param(
+            "GCA_017607445.1",
+            does_not_raise(),
+            2,
+            id="Normal case: Properly formatted GC[A/F] accession",
+        ),
+    ]
+)
+# @pytest.mark.dependency(depends=["test_download_single_file"])
+@patch("ftplib.FTP")
+@patch("ensembl.io.genomio.assembly.download.establish_ftp")
+def test_download_all_files(mock_ftp: Mock, mock_establish_ftp: Mock,
+                            data_dir: Path, accession: str, exception: ContextManager, 
+                            max_redo: int
+                            ) -> None:
+
+    # data_download_dir = data_dir
+    md5_file = str(data_dir) + "md5checksums.txt"
+
+    def mocked_ftp(command: str, callback_ftp: object):
+        logging.info(f"Faking FTP connection {command}")
+        callback_ftp(mock_ftp.cwd(str(data_dir)))
     
-    assert download_file_return == expectation 
+    def side_eff_ftp_mlsd(cwd: str, callback: object):
+        mlsd_ret = {}
+        if not cwd:
+            raise Exception()
+        else:
+            files = Path(data_dir).glob("*GCA_017607445.1*.gz")    
+            for file_path in files:
+                mlsd_ret[str(file_path)] = ["fact_1","fact_2"]
+            callback(mlsd_ret)
+
+    def mock_retr_binary(command: str, callback: object):
+        logging.info(f"Faking the download of {command}")
+        try:
+            with md5_file.open("rb") as data_fh:
+                callback(data_fh.read())
+        except OSError as err:
+            raise ftp_error_reply from err
+
+    mock_establish_ftp.mlsd.side_effect = side_eff_ftp_mlsd
+    mock_ftp.cwd.side_effect=mocked_ftp
+    mock_establish_ftp.retrbinary.side_effect=mock_retr_binary
+ 
+    with exception:
+        download_files(accession, data_dir, max_redo)
+        mock_establish_ftp.cwd.assert_called_once()
 
 
+#################
+@pytest.mark.dependency(name="test_get_files_selection")
+@pytest.mark.parametrize(
+    "download_dir, files_expected, expectation",
+    [
+        pytest.param(
+            False,
+            {},
+            pytest.raises(FileDownloadError),
+            id="Error case, data dir not provided",
+        ),
+        pytest.param(
+            True,
+            {
+            "report" : "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
+            "fasta_dna" : "GCA_017607445.1_ASM1760744v1_genomic.fna.gz",
+            "fasta_pep" : "GCA_017607445.1_ASM1760744v1_protein.faa.gz",
+            "gff3_raw" : "GCA_017607445.1_ASM1760744v1_genomic.gff.gz",
+            "gbff" : "GCA_017607445.1_ASM1760744v1_genomic.gbff.gz",
+            },
+            does_not_raise(),
+            id="Normal case, data dir provided",
+        ),
+    ],
+)
+def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected: dict, expectation: ContextManager) -> None:
+    """Test the get a subset of downloaded files function `get_files_selection()`
+    
+    Args:
+        download_dir: Path to specific location of downloaded files.
+    """
 
+    if download_dir:
+        download_dir = data_dir
+    else:
+        download_dir = Path("")
 
+    with expectation:
+        subset_files = get_files_selection(download_dir)
+        for file_end_name in subset_files.keys():
+            expected_file = files_expected[file_end_name]
+            test_data_file_name = subset_files[file_end_name].split("/")[-1]
+            assert test_data_file_name == expected_file
+    
+# Before adding test on file_selection:
+# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       172     67    61%   158-187, 221-224, 231, 239, 241-242, 250, 268-273, 289-290, 312-345, 350-359
 
-        
+# After adding test on file_selection:
+# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       172     59    66%   158-187, 221-224, 231, 239, 241-242, 250, 312-345, 350-359
 
-# @pytest.mark.dependency(depends=["test_md5_files"])
-# @patch("ensembl.io.genomio.assembly.download._download_file", autospec=True)
-# def test_download_single_file(
-#     mock_ftp_constructor: Mock, 
-#     ftp_url: str, 
-#     sub_dir: str,
-#     ftp_file: str, 
-#     md5_sums: Dict[str, str], 
-#     data_dir: Path, 
-# ) -> None:
-#     """
-#     """
-#     mock_ftp = mock_ftp_constructor.return_value
-#     mock_ftp.pwd = MagicMock(return_value="ftp.ncbi.nlm.nih.gov/genomes/all/GCA/017/607/445/")
-#     connected_ftp = FTPConnection.establish_ftp(mock_ftp, ftp_url, sub_dir)
+# After adding test for could not download file (_download_file)
+# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       164     51    69%   158-187, 221-224, 231, 239, 241-242, 312-345
 
-#     _download_file(connected_ftp, ftp_file, md5_sums, data_dir)
-#     .is_file.assert_called_once_with(Path(data_dir, ftp_file))
-#     connected_ftp.retrbinary.assert_called()
-#     connected_ftp.retrbinary.assert_called()
+# After adding inital tests on main download_files()
+# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       164     26    84%   223, 230, 238, 240-241, 311-344
+
+## Post adding proper test on download_files
+# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       164     26    84%   223, 230, 238, 240-241, 311-344
+
+## Latest changes to download_files      
+# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       164     40    76%   172-188, 222-225, 232, 240,242-243, 313-346
