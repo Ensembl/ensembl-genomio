@@ -67,8 +67,7 @@ def test_check_assembly_version(
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
         output: Expected change in the genome metadata dictionary.
-        expectation: Context manager for the expected exception, i.e. the test will only pass if that
-            exception is raised. Use `~contextlib.nullcontext` if no exception is expected.
+        expectation: Context manager for the expected exception (if any).
     """
     with expectation:
         dump.check_assembly_version(genome_metadata)
@@ -109,8 +108,7 @@ def test_check_genebuild_version(
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
         output: Expected change in the genome metadata dictionary.
-        expectation: Context manager for the expected exception, i.e. the test will only pass if that
-            exception is raised. Use `~contextlib.nullcontext` if no exception is expected.
+        expectation: Context manager for the expected exception (if any).
     """
     with expectation:
         dump.check_genebuild_version(genome_metadata)
