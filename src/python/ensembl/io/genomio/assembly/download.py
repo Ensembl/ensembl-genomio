@@ -18,6 +18,7 @@ __all__ = [
     "FileDownloadError",
     "FTPConnectionError",
     "UnsupportedFormatError",
+    "establish_ftp",
     "md5_files",
     "get_checksums",
     "download_files",
@@ -47,7 +48,6 @@ _FILE_ENDS = {
     "genomic.gbff.gz": "gbff",
 }
 
-
 class FileDownloadError(Exception):
     """When a file download fails or there is a problem with that file."""
 
@@ -57,29 +57,55 @@ class FTPConnectionError(Exception):
 class UnsupportedFormatError(Exception):
     """When a string does not have the expected format."""
 
-class FTPConnection:
-    """Custom Class for establishing an FTP connection."""
 
-    def establish_ftp (ftp_conn: FTP, ftp_url: str, sub_dir_path: Path) -> FTP:
-        """Function to establish an FTP connection (FTP Class).
 
-            Args:
-                ftp_conn: FTP Class object
-                ftp_url: specific FTP url in connection request
-                sub_dir_path: Path of sub directory housing required data for download.
+# def establish_ftp (ftp_conn: FTP, ftp_url: str, sub_dir_path: PathLike) -> FTP:
+#     """Function to establish an FTP connection (FTP Class).
+#         Args:
+#             ftp_conn: FTP Class object
+#             ftp_url: specific FTP url in connection request
+#             sub_dir_path: Path of sub directory housing required data for download.
+#         Returns:
+#             An open connection via FTP() class object
+#     """
+    
+#     try:
+#         ftp_conn.connect(ftp_url)
+#         ftp_conn.login()
+#         ftp_conn.cwd(str(sub_dir_path))
+#     except:
+#         raise FTPConnectionError(f"Could not create FTP connection on {ftp_url} remote path {sub_dir_path}")
+    
+#     return ftp_conn
 
-            Returns:
-                An open connection via FTP() class object
-        """
+def establish_ftp (ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
+    """Function to establish an FTP connection (FTP Class).
+        Args:
+            ftp_conn: FTP Class object
+            ftp_url: specific FTP url in connection request
+            sub_dir_path: Path of sub directory housing required data for download.
+        Returns:
+            An open connection via FTP() class object
+    """
 
-        try:
-            ftp_conn.connect(ftp_url)
-            ftp_conn.login()
-            ftp_conn.cwd(str(sub_dir_path))
-            return ftp_conn
-        except:
-            raise FTPConnectionError(f"Could not create FTP connection on {ftp_url} remote path {sub_dir_path}")
+    match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+    if not match:
+        raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
+    gca = match.group(1)
+    part1 = match.group(2)
+    part2 = match.group(3)
+    part3 = match.group(4)
+    sub_dir = Path("genomes", "all", gca, part1, part2, part3)
 
+    # Establish connection to remote FTP server
+    try:
+        ftp_conn.connect(ftp_url)
+        ftp_conn.login()
+        ftp_conn.cwd(str(sub_dir))
+    except:
+        raise FTPConnectionError(f"Could not create FTP connection on {ftp_url} remote path {sub_dir}")
+    
+    return ftp_conn
 
 def md5_files(dl_dir: Path, md5: Path) -> bool:
     """
@@ -157,24 +183,26 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
     Returns:
         None
     """
-    match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
-    if not match:
-        raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
-    gca = match.group(1)
-    part1 = match.group(2)
-    part2 = match.group(3)
-    part3 = match.group(4)
+    # match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+    # if not match:
+    #     raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
+    # gca = match.group(1)
+    # part1 = match.group(2)
+    # part2 = match.group(3)
+    # part3 = match.group(4)
 
-    # Establish connection to remote FTP server
+    # # Establish connection to remote FTP server
+    # sub_dir = Path("genomes", "all", gca, part1, part2, part3)
+    # ftp_connection = establish_ftp(ftp_instance, ftp_url, sub_dir)
     ftp_url = "ftp.ncbi.nlm.nih.gov"
-    sub_dir = Path("genomes", "all", gca, part1, part2, part3)
     ftp_instance = FTP()
-    ftp_connection = FTPConnection.establish_ftp(ftp_instance, ftp_url, sub_dir)
+    ftp_connection = establish_ftp(ftp_instance, ftp_url, accession)
 
     # # Get the list of assemblies for this accession
     for ftp_dir, _ in ftp_connection.mlsd():
         if re.match(accession, ftp_dir):
             ftp_connection.cwd(ftp_dir)
+
             # First, get the md5sum file
             md5_file = "md5checksums.txt"
             md5_path = dl_dir / md5_file
@@ -187,6 +215,8 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
                 for end in _FILE_ENDS:
                     if ftp_file.endswith(end) and not ftp_file.endswith(f"_from_{end}"):
                         _download_file(ftp_connection, ftp_file, md5_sums, dl_dir, max_redo)
+        else:
+            logging.warning(f"Could not detect accession '{accession}' from ftp download dir path {ftp_dir} in open FTP connection")
 
 
 def _download_file(
