@@ -34,6 +34,32 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
+METADATA_FILTER = {
+    "added_seq": {"region_name": str},
+    "annotation": {"provider_name": str, "provider_url": str},
+    "assembly": {
+        "accession": str,
+        "date": str,
+        "name": str,
+        "provider_name": str,
+        "provider_url": str,
+        "version": int,
+    },
+    "BRC4": {"organism_abbrev": str, "component": str},
+    "genebuild": {"id": str, "method": str, "method_display": str, "start_date": str, "version": str},
+    "species": {
+        "alias": str,
+        "annotation_source": str,
+        "display_name": str,
+        "division": str,
+        "production_name": str,
+        "scientific_name": str,
+        "strain": str,
+        "taxonomy_id": int,
+    },
+}
+
+
 def get_genome_metadata(session: Session) -> Dict[str, Any]:
     """Retrieve a select list of metadata from the core database.
 
@@ -70,59 +96,30 @@ def get_genome_metadata(session: Session) -> Dict[str, Any]:
     return gmeta
 
 
-def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
-    """Returns a filtered metadata dict with only predefined keys.
-    Also converts expected numbers to integers (to follow the genome json schema).
+def filter_genome_meta(genome_metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """Returns a filtered metadata dictionary with only the predefined keys in METADATA_FILTER.
+
+    Also converts to expected data types (to follow the genome JSON schema).
 
     Args:
-        gmeta (Dict[str, Any]): Nested metadata key values from the core metadata table.
+        genome_metadata: Nested metadata key values from the core metadata table.
     """
-    meta_list = {
-        "species": {
-            "taxonomy_id",
-            "production_name",
-            "scientific_name",
-            "strain",
-            "display_name",
-            "division",
-            "alias",
-            "annotation_source",
-        },
-        "assembly": {"accession", "date", "name", "version", "provider_name", "provider_url"},
-        "genebuild": {"version", "method", "start_date", "method_display", "id"},
-        "annotation": {"provider_name", "provider_url"},
-        "BRC4": {"organism_abbrev", "component"},
-        "added_seq": {"region_name"},
-    }
-    is_integer = {"species": {"taxonomy_id"}, "assembly": {"version"}}
-
-    gmeta_out: Dict[str, Any] = {}
-    for key1, subkeys in meta_list.items():
-        if key1 not in gmeta:
-            continue
-        if subkeys:
-            gmeta_out[key1] = {}
-            for key2 in subkeys:
-                if key2 not in gmeta[key1]:
-                    continue
-                value = gmeta[key1][key2]
-                if len(value) == 1:
-                    value = value[0]
-                    if key2 in is_integer.get(key1, {}):
-                        value = int(value)
-                gmeta_out[key1][key2] = value
-        else:
-            value = gmeta[key1]
-            if len(value) == 1:
-                value = value[0]
-                if is_integer.get(key1):
-                    value = int(value)
-            gmeta_out[key1] = value
-
-    check_assembly_version(gmeta_out)
-    check_genebuild_version(gmeta_out)
-
-    return gmeta_out
+    filtered_metadata: Dict[str, Any] = {}
+    for key, subfilter in METADATA_FILTER.items():
+        if key in genome_metadata:
+            filtered_metadata[key] = {}
+            for subkey, value_type in subfilter.items():
+                if subkey in genome_metadata[key]:
+                    value = genome_metadata[key][subkey]
+                    if isinstance(value, list):
+                        value = [value_type(x) for x in value]
+                    else:
+                        value = value_type(value)
+                    filtered_metadata[key][subkey] = value
+    # Check assembly and genebuild versions
+    check_assembly_version(filtered_metadata)
+    check_genebuild_version(filtered_metadata)
+    return filtered_metadata
 
 
 def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:

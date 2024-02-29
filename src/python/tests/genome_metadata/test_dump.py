@@ -21,6 +21,7 @@ Typical usage example::
 
 from contextlib import nullcontext as does_not_raise
 from typing import Any, ContextManager, Dict
+from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
@@ -106,10 +107,43 @@ def test_check_genebuild_version(
     """Tests the `dump.check_genebuild_version()` method.
 
     Args:
-        genome_metadata: Nested metadata key values from the core metadata table.
+        genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
     """
     with expectation:
         dump.check_genebuild_version(genome_metadata)
         assert not DeepDiff(genome_metadata, output)
+
+
+@patch("ensembl.io.genomio.genome_metadata.dump.check_assembly_version")
+@patch("ensembl.io.genomio.genome_metadata.dump.check_genebuild_version")
+@pytest.mark.parametrize(
+    "genome_metadata, output",
+    [
+        ({"species": {"taxonomy_id": "5485"}}, {"species": {"taxonomy_id": 5485}}),
+        ({"species": {"display_name": "Dog"}}, {"species": {"display_name": "Dog"}}),
+        ({"genebuild": {"new_key": "_"}}, {"genebuild": {}}),
+        ({"BRC5": "new_value"}, {}),
+        ({"meta": "key", "species": {"alias": "woof"}}, {"species": {"alias": "woof"}}),
+        ({"added_seq": {"region_name": [1, 2]}}, {"added_seq": {"region_name": ["1", "2"]}}),
+    ],
+)
+def test_filter_genome_meta(
+    mock_check_assembly_version: Mock,
+    mock_check_genebuild_version: Mock,
+    genome_metadata: Dict[str, Any],
+    output: Dict[str, Any],
+) -> None:
+    """Tests the `dump.check_genebuild_version()` method.
+
+    Args:
+        mock_check_assembly_version: A mock of `dump.check_assembly_version()` method.
+        mock_check_genebuild_version: A mock of `dump.check_genebuild_version()` method.
+        genome_metadata: Nested genome metadata key values.
+        output: Expected change in the genome metadata dictionary.
+    """
+    mock_check_assembly_version.return_value = None
+    mock_check_genebuild_version.return_value = None
+    result = dump.filter_genome_meta(genome_metadata)
+    assert not DeepDiff(result, output)
