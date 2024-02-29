@@ -66,7 +66,7 @@ def test_check_assembly_version(
     """Tests the `dump.check_assembly_version()` method.
 
     Args:
-        genome_metadata: Nested metadata key values from the core metadata table.
+        genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
     """
