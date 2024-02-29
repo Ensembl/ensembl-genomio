@@ -15,12 +15,13 @@
 """Unit testing of `ensembl.io.genomio.gff3.standardize` module."""
 
 from contextlib import nullcontext as does_not_raise
-from typing import ContextManager, Optional
+from typing import ContextManager, List, Optional
 
 from Bio.SeqFeature import SeqFeature, SimpleLocation
 import pytest
 from pytest import raises
 
+from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.standardize import GFFStandard
 
 
@@ -42,13 +43,35 @@ def test_transcript_for_gene(base_gene: SeqFeature):
     assert tr.qualifiers["source"] == base_gene.qualifiers["source"]
 
 
-def test_gene_to_cds(base_gene: SeqFeature):
+@pytest.mark.parametrize(
+    "children, skip_non_cds, expected_mrna_children, expectation",
+    [
+        pytest.param(["CDS"], None, 2, does_not_raise(), id="One CDS"),
+        pytest.param(["CDS", "CDS"], None, 4, does_not_raise(), id="Two CDS"),
+        pytest.param(["exon"], None, 0, raises(GFFParserError), id="One exon"),
+        pytest.param(["CDS", "exon"], True, 2, does_not_raise(), id="1 CDS + 1 exon, skip exon"),
+    ],
+)
+def test_gene_to_cds(
+    base_gene: SeqFeature,
+    children: List[str],
+    skip_non_cds: Optional[bool],
+    expected_mrna_children: int,
+    expectation: ContextManager,
+):
     """Test the addition of intermediate transcripts."""
 
-    cds = SeqFeature(base_gene.location, type="CDS")
-    base_gene.sub_features.append(cds)
+    for child in children:
+        sub_feat = SeqFeature(base_gene.location, type=child)
+        base_gene.sub_features.append(sub_feat)
 
-    gene = GFFStandard.gene_to_cds(base_gene)
-    child = gene.sub_features[0]
-    assert child.type == "mRNA"
-    assert len(child.sub_features) == 2
+    with expectation:
+        if skip_non_cds is not None:
+            gene = GFFStandard.gene_to_cds(base_gene, skip_non_cds=skip_non_cds)
+        else:
+            gene = GFFStandard.gene_to_cds(base_gene)
+
+        # We should get only one mRNA and CDS + exons
+        gene_child = gene.sub_features[0]
+        assert gene_child.type == "mRNA"
+        assert len(gene_child.sub_features) == expected_mrna_children
