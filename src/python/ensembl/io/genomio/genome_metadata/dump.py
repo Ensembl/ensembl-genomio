@@ -125,58 +125,57 @@ def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
     return gmeta_out
 
 
-def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
-    """Update the assembly version of the genome metadata provided to use an integer.
-    Get the version from the assembly accession as alternative.
+def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:
+    """Updates the assembly version of the genome metadata provided.
+
+    If `version` meta key is not and integer or it is not available, the assembly accession's version
+    will be used instead.
 
     Args:
-        gmeta (Dict[str, Any]): Nested metadata key values from the core metadata table.
-    """
-    assembly = gmeta_out["assembly"]
-    version = assembly.get("version")
+        genome_metadata: Nested metadata key values from the core metadata table.
 
+    Raises:
+        ValueError: If both `version` and the assembly accession's version are not integers or are missing.
+    """
+    assembly = genome_metadata["assembly"]
+    version = assembly.get("version")
     # Check the version is an integer
     try:
         assembly["version"] = int(version)
     except (ValueError, TypeError) as exc:
         # Get the version from the assembly accession
         accession = assembly["accession"]
-        parts = accession.split(".")
-        if len(parts) == 2 and parts[1].isdigit():
-            version = parts[1]
+        version = accession.partition(".")[2]
+        try:
             assembly["version"] = int(version)
-            logging.info(
-                f'Asm version [v{version}] obtained from: assembly accession ({assembly["accession"]}).'
-            )
-        else:
+        except ValueError:
             raise ValueError(f"Assembly version is not an integer in {assembly}") from exc
+        logging.info(f"Assembly version [v{version}] obtained from assembly accession ({accession}).")
     else:
-        logging.info(f"Located version [v{int(version)}] info from meta data.")
+        logging.info(f'Located version [v{assembly["version"]}] info from meta data.')
 
 
-def check_genebuild_version(metadata: Dict[str, Any]) -> None:
+def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
     """Updates the genebuild version (if not present) from the genebuild ID, removing the latter.
 
     Args:
-        metadata: Nested metadata key values from the core metadata table.
+        genome_metadata: Nested metadata key values from the core metadata table.
 
     Raises:
         ValueError: If there is no genebuild version or ID available.
     """
-    genebuild = metadata.get("genebuild")
-    if genebuild is None:
+    try:
+        genebuild = genome_metadata["genebuild"]
+    except KeyError:
         return
-    version = genebuild.get("version")
-
-    # Check there is a version
-    if version is None:
-        gb_id = genebuild.get("id")
-        if gb_id is None:
-            raise ValueError("No genebuild version or id")
-        metadata["genebuild"]["version"] = str(gb_id)
-
-    if "id" in genebuild:
-        del metadata["genebuild"]["id"]
+    if "version" not in genebuild:
+        try:
+            genebuild_id = genebuild["id"]
+        except KeyError:
+            raise ValueError("No genebuild version or ID found")
+        genome_metadata["genebuild"]["version"] = str(genebuild_id)
+    # Drop genebuild ID since there is a genebuild version
+    genome_metadata["genebuild"].pop("id", None)
 
 
 def main() -> None:
