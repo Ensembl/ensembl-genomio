@@ -57,9 +57,8 @@ class UnsupportedData(Exception):
 class GenomeFiles(dict):
     """Store the representation of the genome files created."""
 
-    def __init__(self, out_dir: PathLike = Path.cwd()) -> None:
-        super().__init__()
-        out_dir = Path(out_dir)
+    def __init__(self, out_dir: PathLike) -> None:
+        super().__init__()   
         self["genome"] = out_dir / "genome.json"
         self["seq_region"] = out_dir / "seq_region.json"
         self["fasta_dna"] = out_dir / "dna.fasta"
@@ -90,19 +89,33 @@ class FormattedFilesGenerator:
         "CDS",
     ]
 
-    def __init__(self, prod_name: str, gb_file: Path, prefix: str = ""):
-        self.prefix = prefix
+    def __init__(self, prod_name: str, gb_file: Path, prefix: str = "", out_dir: Optional[PathLike]= None):
+        self.prefix = self.set_prefix(prefix)
+        
         self.seq_records: List[SeqRecord] = []
-        self.prod_name = prod_name
+        self.prod_name = self.set_production_name(prod_name)
         self.gb_file = gb_file
-        self.files = GenomeFiles()
+
+        # Output the gff3 file
+        self.out_dir = self.set_output_dir(out_dir)
+        self.files = GenomeFiles(self.out_dir)
 
     def set_prefix(self, prefix):
         """
         Define a prefix to add to the feature IDs
         """
         if prefix:
-            self.prefix = prefix
+            return prefix
+
+    def set_output_dir(self, out_dir: Optional[PathLike]):
+        """
+        Define a prefix to add to the feature IDs
+        """
+        if out_dir is None:
+            out_dir = Path.cwd()
+        out_dir = Path(out_dir)
+
+        return out_dir
 
     def set_production_name(self, prod_name):
         """
@@ -110,17 +123,10 @@ class FormattedFilesGenerator:
         """
         if prod_name:
             self.prod_name = prod_name
+        else:
+            self.prod_name = ""
+        return prod_name
 
-    def extract_gb(self, out_dir: Optional[PathLike]) -> Dict[str, Path]:
-        """Extract data from a Genbank file and create files from it."""
-        if out_dir is not None:
-            self.files = GenomeFiles(out_dir)
-        self.set_prefix(self.prefix)
-        self.set_production_name(self.prod_name)
-        self.parse_genbank(Path(self.gb_file))
-
-        # Output the gff3 file
-        return self.files
 
     def parse_genbank(self, gb_file):
         """
@@ -138,11 +144,13 @@ class FormattedFilesGenerator:
                 if record.id in organella:
                     record.organelle = organella[record.id]
                 self.seq_records.append(record)
-
-            self._write_genome_json()
-            self._write_genes_gff()
-            self._write_seq_region_json()
-            self._write_fasta_dna()
+                self.format_write_files()
+    
+    def format_write_files(self):
+        self._format_genome_data()
+        self._format_genes_gff()
+        self._format_write_seq_json()
+        self._write_fasta_dna()
 
     def _get_organella(self, gb_file):
         """
@@ -164,30 +172,26 @@ class FormattedFilesGenerator:
         with open(self.files["fasta_dna"], "w") as fasta_fh:
             SeqIO.write(self.seq_records, fasta_fh, "fasta")
 
-    def _write_genes_gff(self) -> None:
+    def _format_genes_gff(self) -> None:
         """Extract gene models from the record, and write a GFF and peptide fasta file.
         Raise GBParseError If the IDs in all the records are not unique."""
         peptides = []
-        records = []
+        gff_records = []
         all_ids = []
 
         for record in self.seq_records:
             new_record, rec_ids, rec_peptides = self._parse_record(record)
             if new_record.features:
-                records.append(new_record)
+                gff_records.append(new_record)
             all_ids += rec_ids
             peptides += rec_peptides
 
-        logging.debug(f"Write {len(records)} gene records to {self.files['gene_models']}")
-        if records:
-            with self.files["gene_models"].open("w") as gff_fh:
-                GFF.write(records, gff_fh)
-
-        logging.debug(f"Write {len(peptides)} peptide sequences to {self.files['fasta_pep']}")
+        if gff_records:
+            self._write_genes_gff(gff_records)
+            
         if peptides:
-            with self.files["fasta_pep"].open("w") as fasta_fh:
-                SeqIO.write(peptides, fasta_fh, "fasta")
-
+            self._write_pep_fasta(peptides)
+            
         logging.debug("Check that IDs are unique")
         count = dict(Counter(all_ids))
         num_duplicates = 0
@@ -197,6 +201,19 @@ class FormattedFilesGenerator:
                 logging.warning(f"ID {key} is duplicated {count[key]} times")
         if num_duplicates > 0:
             raise GBParseError(f"Some {num_duplicates} IDs are duplicated")
+        
+    def _write_genes_gff(self, gff_records):
+
+        logging.debug(f"Write {len(gff_records)} gene records to {self.files['gene_models']}")
+        with self.files["gene_models"].open("w") as gff_fh:
+                GFF.write(gff_records, gff_fh)
+    
+    def _write_pep_fasta(self, peptides):
+
+        logging.debug(f"Write {len(peptides)} peptide sequences to {self.files['fasta_pep']}")
+        with self.files["fasta_pep"].open("w") as fasta_fh:
+                SeqIO.write(peptides, fasta_fh, "fasta")
+
 
     def _parse_record(self, record: SeqRecord) -> Tuple[SeqRecord, List[SeqRecord], List[str]]:
         all_ids: List[str] = []
@@ -358,7 +375,7 @@ class FormattedFilesGenerator:
 
         return new_id
 
-    def _write_seq_region_json(self):
+    def _format_write_seq_json(self):
         json_array = []
 
         for seq in self.seq_records:
@@ -370,10 +387,10 @@ class FormattedFilesGenerator:
                         f"{self.files['seq_region']} manually if it is not the standard codon table."
                     )
                 )
-
                 codon_table = 1
             else:
                 codon_table = int(codon_table)
+                
             seq_obj = {
                 "name": seq.id,
                 "coord_system_level": "chromosome",
@@ -409,6 +426,10 @@ class FormattedFilesGenerator:
                 )
 
             json_array.append(seq_obj)
+            self._write_seq_region_json(seq_obj)
+    
+    def _write_seq_region_json(self, json_array):
+        logging.debug(f"Write {len(json_array)} seq_region to {self.files['seq_region']}")
         with open(self.files["seq_region"], "w") as seq_fh:
             seq_fh.write(json.dumps(json_array, indent=4))
 
@@ -432,18 +453,16 @@ class FormattedFilesGenerator:
             return self.locations[organelle]
         raise UnsupportedData(f"Unkown organelle: {organelle}")
 
-    def _write_genome_json(self):
+    def _format_genome_data(self):
         """
         Write a draft for the genome json file
         Only the production_name is needed, but the rest of the fields need to be given
         for the validation of the json file
         """
 
-        prod_name = self.prod_name if self.prod_name else ""
-
         genome_data = {
             "species": {
-                "production_name": prod_name,
+                "production_name": self.prod_name,
                 "taxonomy_id": 0,
             },
             "assembly": {"accession": "GCA_000000000", "version": 1},
@@ -456,8 +475,11 @@ class FormattedFilesGenerator:
             )
 
         ids = [seq.id for seq in self.seq_records]
-        genome_data["added_seq"]["region_name"] = ids
-
+        if ids:
+            genome_data["added_seq"]["region_name"] = ids
+            self._write_genome_json(genome_data)
+    
+    def _write_genome_json(self, genome_data):
         with open(self.files["genome"], "w") as genome_fh:
             genome_fh.write(json.dumps(genome_data, indent=4))
 
@@ -476,7 +498,7 @@ def main() -> None:
     init_logging_with_args(args)
 
     gb_extractor = FormattedFilesGenerator(prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file)
-    gb_extractor.extract_gb(args.out_dir)
+    gb_extractor.parse_genbank(args.gb_file)
 
 
 if __name__ == "__main__":
