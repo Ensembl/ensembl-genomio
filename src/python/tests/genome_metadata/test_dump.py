@@ -37,7 +37,7 @@ from ensembl.io.genomio.genome_metadata import dump
             {"assembly": {"version": "1"}},
             {"assembly": {"version": 1}},
             does_not_raise(),
-            id="Version is '1'"
+            id="Version is '1'",
         ),
         param(
             {"assembly": {"accession": "GCA_00000001.1", "version": "a"}},
