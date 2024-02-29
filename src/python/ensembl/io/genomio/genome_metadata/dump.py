@@ -195,7 +195,3 @@ def main() -> None:
         genome_meta = filter_genome_meta(genome_meta)
 
     print(json.dumps(genome_meta, indent=2, sort_keys=True))
-
-
-if __name__ == "__main__":
-    main()
