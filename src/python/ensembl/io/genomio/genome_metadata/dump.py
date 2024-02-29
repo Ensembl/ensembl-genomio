@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Type
 import logging
 
 from sqlalchemy import select
@@ -34,7 +34,7 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-METADATA_FILTER = {
+METADATA_FILTER: Dict[str, Dict[str, Type]] = {
     "added_seq": {"region_name": str},
     "annotation": {"provider_name": str, "provider_url": str},
     "assembly": {
