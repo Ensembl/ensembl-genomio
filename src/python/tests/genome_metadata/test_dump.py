@@ -20,7 +20,7 @@ Typical usage example::
 """
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any, ContextManager, Dict
+from typing import Any, ContextManager, Dict, Optional
 from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
@@ -34,45 +34,40 @@ from ensembl.io.genomio.genome_metadata import dump
 @pytest.mark.parametrize(
     "genome_metadata, output, expectation",
     [
-        param(
-            {"assembly": {"version": "1"}},
-            {"assembly": {"version": 1}},
-            does_not_raise(),
-            id="Version is '1'",
-        ),
+        param({"assembly": {"version": "1"}}, 1, does_not_raise(), id="Version is '1'"),
         param(
             {"assembly": {"accession": "GCA_00000001.1", "version": "a"}},
-            {"assembly": {"accession": "GCA_00000001.1", "version": 1}},
+            1,
             does_not_raise(),
-            id="Version is 'a', accession is '1'",
+            id="Version is 'a', accession's version is 1",
         ),
         param(
             {"assembly": {"accession": "GCA_00000001.1"}},
-            {"assembly": {"accession": "GCA_00000001.1", "version": 1}},
+            1,
             does_not_raise(),
-            id="No version, accession with version",
+            id="No version, accession's version is 1",
         ),
         param(
             {"assembly": {"accession": "GCA_00000001"}},
-            {},
+            0,
             pytest.raises(ValueError),
             id="No version, accession without version",
         ),
     ],
 )
 def test_check_assembly_version(
-    genome_metadata: Dict[str, Any], output: Dict[str, Any], expectation: ContextManager
+    genome_metadata: Dict[str, Any], output: int, expectation: ContextManager
 ) -> None:
     """Tests the `dump.check_assembly_version()` method.
 
     Args:
         genome_metadata: Nested genome metadata key values.
-        output: Expected change in the genome metadata dictionary.
+        output: Expected assembly version.
         expectation: Context manager for the expected exception (if any).
     """
     with expectation:
         dump.check_assembly_version(genome_metadata)
-        assert not DeepDiff(genome_metadata, output)
+        assert genome_metadata["assembly"]["version"] == output
 
 
 @pytest.mark.dependency(name="test_check_genebuild_version")
