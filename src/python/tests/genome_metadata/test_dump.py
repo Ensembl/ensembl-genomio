@@ -20,7 +20,7 @@ Typical usage example::
 """
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any, ContextManager, Dict, Optional
+from typing import Any, ContextManager, Dict
 from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
