@@ -46,5 +46,5 @@
     # Manifest depends on the genome checksum, so also date dependent
     - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/manifest.json
     - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/seq_region.json
-      md5sum: 585da9f97f094e83702860ce43da652f
+      md5sum: 96038c0cdbebd57d07b0da4c8977af38
     - path: ./test_genome_prepare_output/OrganismDB/organAbrev123/stats.txt
