@@ -292,13 +292,14 @@ def test_transfer_descriptions(
 
 @pytest.mark.dependency(depends=["add_feature"])
 @pytest.mark.parametrize(
-    "with_cds, num_genes, num_tr, num_cds",
+    "cds_parts, num_genes, num_tr, num_cds",
     [
-        pytest.param(False, 1, 1, 0, id="Store gene without CDS"),
-        pytest.param(True, 1, 1, 1, id="Store gene with CDS"),
+        pytest.param(0, 1, 1, 0, id="Store gene without CDS"),
+        pytest.param(1, 1, 1, 1, id="Store gene with CDS in one part"),
+        pytest.param(2, 1, 1, 1, id="Store gene with CDS in 2 parts"),
     ],
 )
-def test_store_gene(with_cds: bool, num_genes: int, num_tr: int, num_cds: int) -> None:
+def test_store_gene(cds_parts: int, num_genes: int, num_tr: int, num_cds: int) -> None:
     """Test store_gene given a gene Feature with transcripts and optional translations.
     ."""
     annot = FunctionalAnnotations()
@@ -308,9 +309,17 @@ def test_store_gene(with_cds: bool, num_genes: int, num_tr: int, num_cds: int) -
     one_gene.sub_features = []
     one_transcript = SeqFeature(type="mRNA", id=transcript_name)
     one_transcript.sub_features = []
-    if with_cds:
-        one_translation = SeqFeature(type="CDS", id="cds_A")
-        one_transcript.sub_features.append(one_translation)
+
+    # Add one exon
+    one_exon = SeqFeature(type="exon", id="exon_A")
+    one_transcript.sub_features.append(one_exon)
+
+    # Add a translation (possibly in parts)
+    if cds_parts > 0:
+        for _ in range(1, cds_parts + 1):
+            one_translation = SeqFeature(type="CDS", id="cds_A")
+            one_transcript.sub_features.append(one_translation)
+
     one_gene.sub_features.append(one_transcript)
 
     annot.store_gene(one_gene)
