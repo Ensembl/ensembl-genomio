@@ -300,8 +300,14 @@ def test_transfer_descriptions(
     ],
 )
 def test_store_gene(cds_parts: int, num_genes: int, num_tr: int, num_cds: int) -> None:
-    """Test store_gene given a gene Feature with transcripts and optional translations.
-    ."""
+    """Test store_gene given a gene Feature with a transcript and optional translation.
+
+    Args:
+        cds_parts: Number of parts of the one CDS (0 means no CDS)
+        num_genes: Number of genes stored as expected
+        num_tr: Number of transcripts stored as expected
+        num_cds: Number of CDSs stored as expected
+    """
     annot = FunctionalAnnotations()
     gene_name = "gene_A"
     transcript_name = "tran_A"
