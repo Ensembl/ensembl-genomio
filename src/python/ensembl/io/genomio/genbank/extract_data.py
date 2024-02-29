@@ -489,7 +489,7 @@ class FormattedFilesGenerator:
                 return None
         return None
 
-    def _prepare_location(self, organelle) -> str:
+    def _prepare_location(self, organelle: str) -> str:
         """
         Given an organelle name, returns the SO term corresponding to its location
 
