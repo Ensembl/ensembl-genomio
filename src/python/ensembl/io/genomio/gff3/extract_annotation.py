@@ -21,7 +21,7 @@ __all__ = [
     "AnnotationError",
     "FunctionalAnnotations",
 ]
-
+import logging
 from os import PathLike
 from pathlib import Path
 import re
@@ -55,9 +55,10 @@ class AnnotationError(Exception):
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
-    def __init__(self) -> None:
+    def __init__(self, provider_name: Optional[str]= None) -> None:
         self.annotations: List[Annotation] = []
-
+        self.provider_name = provider_name
+        logging.info(provider_name)
         # Annotated features
         # Under each feature, each dict's key is a feature ID
         self.features: Dict[str, Dict[str, Annotation]] = {
@@ -118,6 +119,7 @@ class FunctionalAnnotations:
                 self.add_parent_link(parent_type, parent_id, feature.id)
             else:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
+            
 
     def _generic_feature(self, feature: SeqFeature, feat_type: str) -> Dict[str, Any]:
         """Create a feature object following the specifications.
@@ -150,6 +152,8 @@ class FunctionalAnnotations:
             feat_name = feature.qualifiers["Name"][0]
             if feat_name != feature.id:
                 feature_object["synonyms"] = {"synonym": feat_name, "default": True}
+                if self.provider_name:
+                    feature_object["xref"] = [{"db_name": self.provider_name, "id": feat_name}]
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
