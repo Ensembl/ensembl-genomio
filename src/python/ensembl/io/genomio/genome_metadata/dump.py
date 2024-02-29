@@ -14,7 +14,12 @@
 # limitations under the License.
 """Generates a JSON file representing the genome metadata from a core database."""
 
-__all__ = ["get_genome_metadata", "filter_genome_meta", "check_assembly_version"]
+__all__ = [
+    "get_genome_metadata",
+    "filter_genome_meta",
+    "check_assembly_version",
+    "check_genebuild_version",
+]
 
 import json
 from typing import Any, Dict
