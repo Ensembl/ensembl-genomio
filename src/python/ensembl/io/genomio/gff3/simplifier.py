@@ -162,23 +162,8 @@ class GFFSimplifier:
 
         # Normalize, store annotation, and return the cleaned up gene
         gene = self.normalize_gene(gene)
-        self.store_gene_annotations(gene)
+        self.annotations.store_gene(gene)
         return self.clean_gene(gene)
-
-    def store_gene_annotations(self, gene: SeqFeature) -> None:
-        """Record the functional_annotations of the gene and its children features."""
-        self.annotations.add_feature(gene, "gene")
-
-        cds_found = False
-        for transcript in gene.sub_features:
-            self.annotations.add_feature(transcript, "transcript", gene.id)
-            for feat in transcript.sub_features:
-                if feat.type != "CDS":
-                    continue
-                # Store CDS functional annotation only once
-                if not cds_found:
-                    cds_found = True
-                    self.annotations.add_feature(feat, "translation", transcript.id)
 
     def clean_gene(self, gene: SeqFeature) -> SeqFeature:
         """Return the same gene without qualifiers unrelated to the gene structure."""

@@ -252,3 +252,18 @@ class FunctionalAnnotations:
         self.transfer_descriptions()
         feats_list = self._to_list()
         print_json(Path(out_path), feats_list)
+
+    def store_gene(self, gene: SeqFeature) -> None:
+        """Record the functional_annotations of a gene and its children features."""
+        self.add_feature(gene, "gene")
+
+        cds_found = False
+        for transcript in gene.sub_features:
+            self.add_feature(transcript, "transcript", gene.id)
+            for feat in transcript.sub_features:
+                if feat.type != "CDS":
+                    continue
+                # Store CDS functional annotation only once
+                if not cds_found:
+                    cds_found = True
+                    self.add_feature(feat, "translation", transcript.id)

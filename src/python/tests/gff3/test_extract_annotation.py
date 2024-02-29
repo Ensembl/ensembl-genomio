@@ -288,3 +288,32 @@ def test_transfer_descriptions(
     transcs = annot.get_features("transcript")
     assert genes[gene_name].get("description") == out_gene_desc
     assert transcs[transcript_name].get("description") == out_transc_desc
+
+
+@pytest.mark.dependency(depends=["add_feature"])
+@pytest.mark.parametrize(
+    "with_cds, num_genes, num_tr, num_cds",
+    [
+        pytest.param(False, 1, 1, 0, id="Store gene without CDS"),
+        pytest.param(True, 1, 1, 1, id="Store gene with CDS"),
+    ],
+)
+def test_store_gene(with_cds: bool, num_genes: int, num_tr: int, num_cds: int) -> None:
+    """Test store_gene given a gene Feature with transcripts and optional translations.
+    ."""
+    annot = FunctionalAnnotations()
+    gene_name = "gene_A"
+    transcript_name = "tran_A"
+    one_gene = SeqFeature(type="gene", id=gene_name)
+    one_gene.sub_features = []
+    one_transcript = SeqFeature(type="mRNA", id=transcript_name)
+    one_transcript.sub_features = []
+    if with_cds:
+        one_translation = SeqFeature(type="CDS", id="cds_A")
+        one_transcript.sub_features.append(one_translation)
+    one_gene.sub_features.append(one_transcript)
+
+    annot.store_gene(one_gene)
+    assert len(annot.features["gene"]) == num_genes
+    assert len(annot.features["transcript"]) == num_tr
+    assert len(annot.features["translation"]) == num_cds
