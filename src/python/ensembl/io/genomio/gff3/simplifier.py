@@ -82,11 +82,13 @@ class GFFSimplifier:
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
         self._biotypes = get_json(biotypes_json)
         self.records = Records()
-        self.annotations = FunctionalAnnotations()
         self.genome = {}
         if genome_path:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
+                provider_name = self.genome["assembly"]["provider_name"]
+                logging.info(provider_name)
+        self.annotations = FunctionalAnnotations(provider_name)
         self.make_missing_stable_ids: bool = make_missing_stable_ids
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
