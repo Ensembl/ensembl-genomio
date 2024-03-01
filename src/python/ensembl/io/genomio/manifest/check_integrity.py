@@ -28,7 +28,8 @@ import re
 from typing import Any, Dict, List, Optional
 
 from BCBio import GFF
-from Bio import SeqIO, SeqFeature
+from Bio import SeqIO
+from Bio.SeqFeature import SeqFeature
 
 from ensembl.io.genomio.utils import get_json, open_gz_file
 from ensembl.utils.argparse import ArgumentParser
