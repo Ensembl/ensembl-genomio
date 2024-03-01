@@ -576,7 +576,7 @@ class GFFSimplifier:
             raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
 
     @staticmethod
-    def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
+    def _check_sub_exons(gene: SeqFeature, cdss: List[SeqFeature], sub_exons: List[SeqFeature]) -> None:
         """Check that the exons of the mRNA and the CDSs match"""
 
         if len(sub_exons) > 0:
