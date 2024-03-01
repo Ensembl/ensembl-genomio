@@ -167,9 +167,9 @@ class FormattedFilesGenerator:
     def _write_genes_gff(self) -> None:
         """Extract gene models from the record, and write a GFF and peptide fasta file.
         Raise GBParseError If the IDs in all the records are not unique."""
-        peptides = []
-        records = []
-        all_ids = []
+        peptides: List[SeqRecord] = []
+        records: List[SeqRecord] = []
+        all_ids: List[str] = []
 
         for record in self.seq_records:
             new_record, rec_ids, rec_peptides = self._parse_record(record)
@@ -198,9 +198,9 @@ class FormattedFilesGenerator:
         if num_duplicates > 0:
             raise GBParseError(f"Some {num_duplicates} IDs are duplicated")
 
-    def _parse_record(self, record: SeqRecord) -> Tuple[SeqRecord, List[SeqRecord], List[str]]:
+    def _parse_record(self, record: SeqRecord) -> Tuple[SeqRecord, List[str], List[SeqRecord]]:
         all_ids: List[str] = []
-        peptides: List[SeqFeature] = []
+        peptides: List[SeqRecord] = []
         feats: Dict[str, SeqFeature] = {}
 
         for feat in record.features:
@@ -243,11 +243,11 @@ class FormattedFilesGenerator:
 
     def _parse_gene_feat(
         self, gene_feat: SeqFeature, gene_name: str
-    ) -> Tuple[Dict[str, SeqFeature], List[str], List[SeqFeature]]:
+    ) -> Tuple[Dict[str, SeqFeature], List[str], List[SeqRecord]]:
         gene_id = self.prefix + gene_name
         gene_qualifiers = gene_feat.qualifiers
         new_feats: Dict[str, Any] = {}
-        peptides: List[SeqFeature] = []
+        peptides: List[SeqRecord] = []
         all_ids: List[str] = []
 
         if gene_feat.type == "gene":
@@ -304,7 +304,7 @@ class FormattedFilesGenerator:
 
         return new_feats, all_ids, peptides
 
-    def _parse_rna_feat(self, rna_feat: SeqFeature) -> Tuple[Dict[str, SeqFeature], List[SeqFeature]]:
+    def _parse_rna_feat(self, rna_feat: SeqFeature) -> Tuple[Dict[str, SeqFeature], List[str]]:
         new_feats: Dict[str, Any] = {}
         all_ids: List[str] = []
 

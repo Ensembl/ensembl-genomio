@@ -259,7 +259,7 @@ def get_genbank_id(record: SeqRecord) -> Optional[str]:
     genbank_id = None
     if "comment" in record.annotations:
         comment = record.annotations["comment"]
-        comment = re.sub(r"[ \n\r]+", " ", comment)
+        comment = re.sub(r"[ \n\r]+", " ", str(comment))
         match = re.search(r"The reference sequence was derived from ([^\.]+)\.", comment)
         if match:
             genbank_id = match.group(1)
