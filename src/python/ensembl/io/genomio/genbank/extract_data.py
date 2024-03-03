@@ -93,7 +93,7 @@ class FormattedFilesGenerator:
     ]
 
     def __init__(
-        self, prod_name: str, gb_file: PathLike, prefix: str, out_dir: Optional[PathLike] = Path.cwd()
+        self, prod_name: str, gb_file: PathLike, prefix: str, out_dir: PathLike = Path.cwd()
     ) -> None:
         self.prefix = prefix
         self.seq_records: List[SeqRecord] = []
@@ -101,7 +101,7 @@ class FormattedFilesGenerator:
         self.gb_file = gb_file
 
         # Output the gff3 file
-        self.files = GenomeFiles(out_dir)
+        self.files = GenomeFiles(Path(out_dir))
 
     def parse_genbank(self, gb_file: PathLike) -> None:
         """
@@ -489,10 +489,10 @@ class FormattedFilesGenerator:
         Only the production_name is needed, but the rest of the fields need to be given
         for the validation of the json file
         """
-
+        prod_name = self.prod_name
         genome_data = {
             "species": {
-                "production_name": self.prod_name,
+                "production_name": prod_name,
                 "taxonomy_id": 0,
             },
             "assembly": {"accession": "GCA_000000000", "version": 1},
@@ -508,7 +508,7 @@ class FormattedFilesGenerator:
         genome_data["added_seq"]["region_name"] = ids
         self._write_genome_json(genome_data)
 
-    def _write_genome_json(self, genome_data: Dict[str, Any]):
+    def _write_genome_json(self, genome_data: Dict[str,]):
         """
         Generate genome.json file with metadata for the assembly
 
