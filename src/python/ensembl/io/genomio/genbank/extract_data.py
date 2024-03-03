@@ -340,7 +340,7 @@ class FormattedFilesGenerator:
     def _parse_rna_feat(self, rna_feat: SeqFeature) -> Tuple[Dict[str, SeqFeature], List[SeqFeature]]:
         """
         Parse an RNA feature
-        
+
         Args:
             gene_feat: list of RNA features found in the record
         """
