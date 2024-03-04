@@ -66,7 +66,6 @@ use Getopt::Long;
 use Pod::Usage qw(pod2usage);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use JSON;
-use Data::Dumper;
 
 my ($host, $port, $user, $pass, $dbname);
 my ($filename, $display_db_default, $feature_version_default);
@@ -380,7 +379,6 @@ sub add_to_db_map {
   $db_map->{$feature}->{$from} //= [];
   #we are adding duplicates to as an array
   my %uniq_dict = map {"val:".$_->{val}."with:".($_->{pat} // "_undef_") => 1 } @{$db_map->{$feature}->{$from}};
-  
   my $k = "val:".$val."with:".($pat // "_undef_");
   if (!exists $uniq_dict{$k} ) {
     push @{$db_map->{$feature}->{$from} }, {val => $val, pat => $pat };

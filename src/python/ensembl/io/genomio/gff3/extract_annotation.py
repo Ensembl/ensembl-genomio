@@ -163,7 +163,7 @@ class FunctionalAnnotations:
                 if feature.type == "gene":
                     feature_object["synonyms"] = {"synonym": feat_name, "default": True}
                 else:
-                    feature_object["xref"] = [{"dbname": self.provider_name, "id": feat_name}]
+                    feature_object["xrefs"] = [{"dbname": self.provider_name, "id": feat_name}]
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
