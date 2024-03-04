@@ -86,10 +86,9 @@ class GFFSimplifier:
         if genome_path:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
-                provider_name = self.genome["assembly"]["provider_name"]
-                logging.info(provider_name)
-        self.annotations = FunctionalAnnotations(provider_name)
+                
         self.make_missing_stable_ids: bool = make_missing_stable_ids
+        self.annotations = FunctionalAnnotations(self.genome)
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a

@@ -55,10 +55,9 @@ class AnnotationError(Exception):
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
-    def __init__(self, provider_name: Optional[str]= None) -> None:
+    def __init__(self, genome: Optional[Dict[str, Any]]= None) -> None:
         self.annotations: List[Annotation] = []
-        self.provider_name = provider_name
-        logging.info(provider_name)
+        self.provider_name = self.get_genome_metadata(genome)
         # Annotated features
         # Under each feature, each dict's key is a feature ID
         self.features: Dict[str, Dict[str, Annotation]] = {
@@ -72,6 +71,14 @@ class FunctionalAnnotations:
             "gene": {},
             "transcript": {},
         }
+        
+    def get_genome_metadata(self, genome :Optional[Dict[str, Any]]):
+        """Get the provider name for xrefs."""
+        provider_name = genome.get("assembly", {}).get("provider_name")
+        if not provider_name:
+            logging.warning("No provider name is provided in the genome file addind default as BRC4_Community_Annotation")
+            provider_name = "BRC4_Community_Annotation"
+        return provider_name
 
     def get_features(self, feat_type: str) -> Dict[str, Annotation]:
         """Get all feature annotations for the requested type."""
@@ -129,7 +136,6 @@ class FunctionalAnnotations:
             feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
 
         """
-
         feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
 
         # Description?
@@ -151,8 +157,9 @@ class FunctionalAnnotations:
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
             if feat_name != feature.id:
-                feature_object["synonyms"] = {"synonym": feat_name, "default": True}
-                if self.provider_name:
+                if feature.type == "gene":
+                    feature_object["synonyms"] = {"synonym": feat_name, "default": True}
+                else:
                     feature_object["xref"] = [{"db_name": self.provider_name, "id": feat_name}]
 
         # is_pseudogene?
