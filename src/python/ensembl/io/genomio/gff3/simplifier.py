@@ -28,7 +28,7 @@ import logging
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
@@ -82,11 +82,11 @@ class GFFSimplifier:
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
         self._biotypes = get_json(biotypes_json)
         self.records = Records()
-        self.genome = {}
+        self.genome: Dict[str, Dict[str, Any]] = {}
         if genome_path:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
-                
+
         self.make_missing_stable_ids: bool = make_missing_stable_ids
         self.annotations = FunctionalAnnotations(self.genome)
 

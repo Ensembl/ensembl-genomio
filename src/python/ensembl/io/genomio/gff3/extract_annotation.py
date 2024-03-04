@@ -55,9 +55,10 @@ class AnnotationError(Exception):
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
-    def __init__(self, genome: Optional[Dict[str, Any]]= None) -> None:
+    def __init__(self, genome: Dict[str, Dict[str, Any]]) -> None:
         self.annotations: List[Annotation] = []
-        self.provider_name = self.get_genome_metadata(genome)
+        self.genome: Dict[str, Dict[str, Any]] = genome
+        self.provider_name = self.get_genome_metadata()
         # Annotated features
         # Under each feature, each dict's key is a feature ID
         self.features: Dict[str, Dict[str, Annotation]] = {
@@ -71,12 +72,15 @@ class FunctionalAnnotations:
             "gene": {},
             "transcript": {},
         }
-        
-    def get_genome_metadata(self, genome :Optional[Dict[str, Any]]):
+
+    def get_genome_metadata(self) -> str:
         """Get the provider name for xrefs."""
-        provider_name = genome.get("assembly", {}).get("provider_name")
+        provider_name = self.genome["assembly"]["provider_name"]
+        logging.info(provider_name)
         if not provider_name:
-            logging.warning("No provider name is provided in the genome file addind default as BRC4_Community_Annotation")
+            logging.warning(
+                "No provider name is provided in the genome file addind default as BRC4_Community_Annotation"
+            )
             provider_name = "BRC4_Community_Annotation"
         return provider_name
 
@@ -126,7 +130,6 @@ class FunctionalAnnotations:
                 self.add_parent_link(parent_type, parent_id, feature.id)
             else:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
-            
 
     def _generic_feature(self, feature: SeqFeature, feat_type: str) -> Dict[str, Any]:
         """Create a feature object following the specifications.
@@ -160,7 +163,7 @@ class FunctionalAnnotations:
                 if feature.type == "gene":
                     feature_object["synonyms"] = {"synonym": feat_name, "default": True}
                 else:
-                    feature_object["xref"] = [{"db_name": self.provider_name, "id": feat_name}]
+                    feature_object["xref"] = [{"dbname": self.provider_name, "id": feat_name}]
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
