@@ -113,8 +113,8 @@ def test_check_genebuild_version(
         assert not DeepDiff(genome_metadata, output)
 
 
-@patch("ensembl.io.genomio.genome_metadata.dump.check_assembly_version")
-@patch("ensembl.io.genomio.genome_metadata.dump.check_genebuild_version")
+@patch("ensembl.io.genomio.genome_metadata.dump.check_genebuild_version", Mock())
+@patch("ensembl.io.genomio.genome_metadata.dump.check_assembly_version", Mock())
 @pytest.mark.parametrize(
     "genome_metadata, output",
     [
@@ -126,22 +126,13 @@ def test_check_genebuild_version(
         ({"added_seq": {"region_name": [1, 2]}}, {"added_seq": {"region_name": ["1", "2"]}}),
     ],
 )
-def test_filter_genome_meta(
-    mock_check_assembly_version: Mock,
-    mock_check_genebuild_version: Mock,
-    genome_metadata: Dict[str, Any],
-    output: Dict[str, Any],
-) -> None:
+def test_filter_genome_meta(genome_metadata: Dict[str, Any], output: Dict[str, Any]) -> None:
     """Tests the `dump.check_genebuild_version()` method.
 
     Args:
-        mock_check_assembly_version: A mock of `dump.check_assembly_version()` method.
-        mock_check_genebuild_version: A mock of `dump.check_genebuild_version()` method.
         genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
     """
-    mock_check_assembly_version.return_value = None
-    mock_check_genebuild_version.return_value = None
     result = dump.filter_genome_meta(genome_metadata)
     assert not DeepDiff(result, output)
 
