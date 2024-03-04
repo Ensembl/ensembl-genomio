@@ -26,7 +26,6 @@ from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.genome_metadata import dump
 
@@ -37,20 +36,20 @@ MetaRow = namedtuple("MetaRow", "meta_key meta_value")
 @pytest.mark.parametrize(
     "genome_metadata, output, expectation",
     [
-        param({"assembly": {"version": "1"}}, 1, does_not_raise(), id="Version is '1'"),
-        param(
+        pytest.param({"assembly": {"version": "1"}}, 1, does_not_raise(), id="Version is '1'"),
+        pytest.param(
             {"assembly": {"accession": "GCA_00000001.1", "version": "a"}},
             1,
             does_not_raise(),
             id="Version is 'a', accession's version is 1",
         ),
-        param(
+        pytest.param(
             {"assembly": {"accession": "GCA_00000001.1"}},
             1,
             does_not_raise(),
             id="No version, accession's version is 1",
         ),
-        param(
+        pytest.param(
             {"assembly": {"accession": "GCA_00000001"}},
             0,
             pytest.raises(ValueError),
@@ -76,26 +75,26 @@ def test_check_assembly_version(
 @pytest.mark.parametrize(
     "genome_metadata, output, expectation",
     [
-        param({}, {}, does_not_raise(), id="No 'genebuild' entry"),
-        param(
+        pytest.param({}, {}, does_not_raise(), id="No 'genebuild' entry"),
+        pytest.param(
             {"genebuild": {"version": "v1"}},
             {"genebuild": {"version": "v1"}},
             does_not_raise(),
             id="Version is 'v1', no ID",
         ),
-        param(
+        pytest.param(
             {"genebuild": {"version": "v1", "id": "v1"}},
             {"genebuild": {"version": "v1"}},
             does_not_raise(),
             id="Version is 'v1', ID dropped",
         ),
-        param(
+        pytest.param(
             {"genebuild": {"id": "v1"}},
             {"genebuild": {"version": "v1"}},
             does_not_raise(),
             id="No version, ID moved to version",
         ),
-        param({"genebuild": {}}, {}, pytest.raises(ValueError), id="No version or ID"),
+        pytest.param({"genebuild": {}}, {}, pytest.raises(ValueError), id="No version or ID"),
     ],
 )
 def test_check_genebuild_version(
@@ -142,29 +141,29 @@ def test_filter_genome_meta(genome_metadata: Dict[str, Any], output: Dict[str, A
 @pytest.mark.parametrize(
     "meta_data, output, expectation",
     [
-        param([], {}, does_not_raise(), id="Empty meta table"),
-        param(
+        pytest.param([], {}, does_not_raise(), id="Empty meta table"),
+        pytest.param(
             [
                 [MetaRow("sample", "gene1")],
                 [MetaRow("species.name", "dog")],
-                [MetaRow("species.synonym", "puppy")]
+                [MetaRow("species.synonym", "puppy")],
             ],
             {"sample": "gene1", "species": {"name": "dog", "synonym": "puppy"}},
             does_not_raise(),
             id="Meta table with simple values",
         ),
-        param(
+        pytest.param(
             [
                 [MetaRow("sample", "gene1")],
                 [MetaRow("sample", "gene2")],
                 [MetaRow("species.synonym", "dog")],
-                [MetaRow("species.synonym", "puppy")]
+                [MetaRow("species.synonym", "puppy")],
             ],
             {"sample": ["gene1", "gene2"], "species": {"synonym": ["dog", "puppy"]}},
             does_not_raise(),
             id="Meta table with lists",
         ),
-        param(
+        pytest.param(
             [[MetaRow("species", "dog")], [MetaRow("species.synonym", "puppy")]],
             {},
             pytest.raises(ValueError),
