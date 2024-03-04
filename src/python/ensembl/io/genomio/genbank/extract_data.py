@@ -490,7 +490,7 @@ class FormattedFilesGenerator:
         for the validation of the json file
         """
         prod_name = self.prod_name
-        genome_data = {
+        genome_data: Dict[str, Dict[str, Any]] = {
             "species": {
                 "production_name": prod_name,
                 "taxonomy_id": 0,
@@ -508,7 +508,7 @@ class FormattedFilesGenerator:
         genome_data["added_seq"]["region_name"] = ids
         self._write_genome_json(genome_data)
 
-    def _write_genome_json(self, genome_data: Dict[str,]):
+    def _write_genome_json(self, genome_data: Dict[str, Any]):
         """
         Generate genome.json file with metadata for the assembly
 
