@@ -59,20 +59,18 @@ def get_additions(report_path: Path, gbff_path: Optional[Path]) -> List[str]:
     return additions
 
 
-def get_gbff_regions(gbff_path: Optional[Path]) -> List[str]:
-    """Returns the `seq_region` data from the GBFF file.
+def get_gbff_regions(gbff_path: Optional[PathLike]) -> List[str]:
+    """Returns the `seq_region` data from a GBFF file.
 
     Args:
-        gbff_path: Gbff file path to use.
+        gbff_path: GBFF file path to use.
     """
-    if not gbff_path:
-        return []
-
     seq_regions = []
-    with open_gz_file(gbff_path) as gbff_file:
-        for record in SeqIO.parse(gbff_file, "genbank"):
-            record_id = re.sub(_VERSION_END, "", record.id)
-            seq_regions.append(record_id)
+    if gbff_path:
+        with open_gz_file(gbff_path) as gbff_file:
+            for record in SeqIO.parse(gbff_file, "genbank"):
+                record_id = re.sub(_VERSION_END, "", record.id)
+                seq_regions.append(record_id)
     return seq_regions
 
 
