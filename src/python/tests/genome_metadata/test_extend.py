@@ -51,21 +51,26 @@ def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> 
     assert result == output
 
 
+@pytest.mark.dependency(name="test_report_to_csv")
 @pytest.mark.parametrize(
     "report_file, output",
     [
         pytest.param(
             "no_metadata_report.txt",
-            ("1\t1\tChromosome\tCP089274.1\t5935961", {}),
+            ("1\t1\tChromosome\tCP089274.1\tRefChr0001.1\t5935961", {}),
             id="no_metadata_report.txt",
         ),
         pytest.param(
             "assembly_report.txt",
             (
-                "Name\tMolecule\tLocation\tGenBank-Accn\tLength\n1\t1\tChromosome\tCP089274.1\t5935961",
+                (
+                    "Name\tMolecule\tLocation\tGenBank-Accn\tRefSeq-Accn\tLength\n"
+                    "1\t1\tChromosome\tCP089274.1\tRefChr0001.1\t5935961\n"
+                    "2\t2\tChromosome\tCP089275.1\tna\t5880203\n3\t3\tChromosome\tna\tRefChr0002.1\t5901247"
+                ),
                 {"Assembly name": "ASM2392016v1", "Organism name": "Curvularia clavata", "Taxid": "95742"},
             ),
-            id="assembly_report.txt"
+            id="assembly_report.txt",
         ),
     ],
 )
@@ -74,10 +79,34 @@ def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict
 
     Args:
         data_dir: Module's test data directory fixture.
-        report_file: TODO
-        output: TODO
+        report_file: Assembly report file name.
+        output: Expected returned value for the given assembly report file.
     """
     report_path = data_dir / report_file
     result = extend._report_to_csv(report_path)
     assert result[0] == output[0]
     assert not DeepDiff(result[1], output[1])
+
+
+@pytest.mark.dependency(depends=["test_report_to_csv"])
+@pytest.mark.parametrize(
+    "report_file, output",
+    [
+        pytest.param(
+            "assembly_report.txt",
+            [("CP089274", "RefChr0001"), ("CP089275", ""), ("", "RefChr0002")],
+            id="assembly_report.txt",
+        ),
+    ],
+)
+def test_get_report_regions_names(data_dir: Path, report_file: str, output: List[Tuple[str, str]]) -> None:
+    """Tests the `extend.get_report_regions_names` class.
+
+    Args:
+        data_dir: Module's test data directory fixture.
+        report_file: Assembly report file name.
+        output: Expected returned value for the given assembly report file.
+    """
+    report_path = data_dir / report_file
+    result = extend.get_report_regions_names(report_path)
+    assert result == output

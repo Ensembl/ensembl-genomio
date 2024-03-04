@@ -101,23 +101,20 @@ def _report_to_csv(report_path: Path) -> Tuple[str, Dict]:
 
 
 def get_report_regions_names(report_path: Path) -> List[Tuple[str, str]]:
-    """Returns a list of `seq_region` names from the report file.
+    """Returns a list of GenBank-RefSeq `seq_region` names from the assembly report file.
 
     Args:
-        report_path: Path to the seq_regions report from INSDC/RefSeq.
+        report_path: Path to the assembly report file from INSDC/RefSeq.
     """
     # Get the report in a CSV format, easier to manipulate
     report_csv, _ = _report_to_csv(report_path)
-
-    # Feed the csv string to the CSV reader
+    # Feed the CSV string to the CSV reader
     reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
-
     # Create the seq_regions
     seq_regions = []
     for row in reader:
         refseq_name = row["RefSeq-Accn"]
         genbank_name = row["GenBank-Accn"]
-
         if refseq_name == "na":
             refseq_name = ""
         if genbank_name == "na":

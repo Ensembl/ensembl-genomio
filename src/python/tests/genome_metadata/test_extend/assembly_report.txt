@@ -2,5 +2,7 @@
 # Organism name:  Curvularia clavata
 # Taxid:          95742
 #
-# Name	Molecule	Location	GenBank-Accn	Length
-1	1	Chromosome	CP089274.1	5935961
+# Name	Molecule	Location	GenBank-Accn	RefSeq-Accn	Length
+1	1	Chromosome	CP089274.1	RefChr0001.1	5935961
+2	2	Chromosome	CP089275.1	na	5880203
+3	3	Chromosome	na	RefChr0002.1	5901247
