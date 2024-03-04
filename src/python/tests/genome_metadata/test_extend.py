@@ -20,8 +20,9 @@ Typical usage example::
 """
 
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Tuple
 
+from deepdiff import DeepDiff
 import pytest
 
 from ensembl.io.genomio.genome_metadata import extend
@@ -48,3 +49,35 @@ def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> 
         gbff_path = None
     result = extend.get_gbff_regions(gbff_path)
     assert result == output
+
+
+@pytest.mark.parametrize(
+    "report_file, output",
+    [
+        pytest.param(
+            "no_metadata_report.txt",
+            ("1\t1\tChromosome\tCP089274.1\t5935961", {}),
+            id="no_metadata_report.txt",
+        ),
+        pytest.param(
+            "assembly_report.txt",
+            (
+                "Name\tMolecule\tLocation\tGenBank-Accn\tLength\n1\t1\tChromosome\tCP089274.1\t5935961",
+                {"Assembly name": "ASM2392016v1", "Organism name": "Curvularia clavata", "Taxid": "95742"},
+            ),
+            id="assembly_report.txt"
+        ),
+    ],
+)
+def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict]) -> None:
+    """Tests the `extend._report_to_csv` class.
+
+    Args:
+        data_dir: Module's test data directory fixture.
+        report_file: TODO
+        output: TODO
+    """
+    report_path = data_dir / report_file
+    result = extend._report_to_csv(report_path)
+    assert result[0] == output[0]
+    assert not DeepDiff(result[1], output[1])

@@ -1,0 +1,6 @@
+# Assembly name:  ASM2392016v1
+# Organism name:  Curvularia clavata
+# Taxid:          95742
+#
+# Name	Molecule	Location	GenBank-Accn	Length
+1	1	Chromosome	CP089274.1	5935961

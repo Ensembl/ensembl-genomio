@@ -25,7 +25,7 @@ import csv
 from os import PathLike
 from pathlib import Path
 import re
-from typing import List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
 from Bio import SeqIO
 
@@ -74,30 +74,29 @@ def get_gbff_regions(gbff_path: Optional[PathLike]) -> List[str]:
     return seq_regions
 
 
-def _report_to_csv(report_path: Path) -> Tuple[str, dict]:
-    """Returns an assembly report as a CSV string, and the head metadata as a dict.
+def _report_to_csv(report_path: Path) -> Tuple[str, Dict]:
+    """Returns the assembly report as a CSV string, and its metadata as a dictionary.
 
     Args:
-        report_path: Path to a `seq_region` file from INSDC/RefSeq.
-
+        report_path: Path to the assembly report file from INSDC/RefSeq.
     """
     data = ""
     metadata = {}
     with report_path.open("r") as report:
-        last_head = ""
+        prev_line = ""
         for line in report:
-            # Ignore header
             if line.startswith("#"):
                 # Get metadata values if possible
                 match = re.search("# (.+?): (.+?)$", line)
                 if match:
-                    metadata[match.group(1)] = match.group(2)
-                last_head = line
-                continue
-            if last_head:
-                data += last_head[2:].strip() + "\n"
-                last_head = ""
-            data += line
+                    metadata[match.group(1)] = match.group(2).strip()
+                prev_line = line
+            else:
+                if prev_line:
+                    # Add previous line as header of CSV string, removing the initial "# "
+                    data += prev_line[2:].strip() + "\n"
+                    prev_line = ""
+                data += line
     return data, metadata
 
 
