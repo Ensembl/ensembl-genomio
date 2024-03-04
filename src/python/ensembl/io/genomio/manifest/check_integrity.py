@@ -736,9 +736,7 @@ class IntegrityTool:
 
 def main() -> None:
     """Main entrypoint."""
-    parser = ArgumentParser(
-        description="Compare the genomic data between the files present in a manifest file."
-    )
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path("--manifest_file", required=True, help="Manifest file for the data to check")
     parser.add_argument("--brc_mode", action="store_true", help="Enable BRC mode")
     parser.add_argument(
