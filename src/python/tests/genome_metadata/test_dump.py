@@ -137,8 +137,8 @@ def test_filter_genome_meta(genome_metadata: Dict[str, Any], output: Dict[str, A
     assert not DeepDiff(result, output)
 
 
-@patch("sqlalchemy.orm.Session")
 @patch("sqlalchemy.engine.Result")
+@patch("sqlalchemy.orm.Session")
 @pytest.mark.parametrize(
     "meta_data, output, expectation",
     [
