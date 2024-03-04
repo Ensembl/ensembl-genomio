@@ -15,7 +15,6 @@
 """Add more metadata to the genome metadata file, including added seq_regions (e.g. MT chromosome)."""
 
 __all__ = [
-    "MissingDataError",
     "get_additions",
     "get_gbff_regions",
     "get_report_regions_names",
@@ -36,16 +35,6 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 _VERSION_END = re.compile(r"\.\d+$")
-
-
-class MissingDataError(Exception):
-    """Used if some data is missing from the report file."""
-
-    def __init__(self, report_path: PathLike, accession: str, msg: str):
-        report_msg = f"Can't get data for {accession} in report {report_path}"
-        if msg:
-            report_msg = f"{report_msg}: {msg}"
-        self.msg = report_msg
 
 
 def get_additions(report_path: Path, gbff_path: Optional[Path]) -> List[str]:
