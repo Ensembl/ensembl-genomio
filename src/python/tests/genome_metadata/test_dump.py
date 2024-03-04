@@ -19,8 +19,9 @@ Typical usage example::
 
 """
 
+from collections import namedtuple
 from contextlib import nullcontext as does_not_raise
-from typing import Any, ContextManager, Dict
+from typing import Any, ContextManager, Dict, List
 from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
@@ -30,7 +31,9 @@ from pytest import param
 from ensembl.io.genomio.genome_metadata import dump
 
 
-@pytest.mark.dependency(name="test_check_assembly_version")
+MetaRow = namedtuple("MetaRow", "meta_key meta_value")
+
+
 @pytest.mark.parametrize(
     "genome_metadata, output, expectation",
     [
@@ -70,7 +73,6 @@ def test_check_assembly_version(
         assert genome_metadata["assembly"]["version"] == output
 
 
-@pytest.mark.dependency(name="test_check_genebuild_version")
 @pytest.mark.parametrize(
     "genome_metadata, output, expectation",
     [
@@ -142,3 +144,61 @@ def test_filter_genome_meta(
     mock_check_genebuild_version.return_value = None
     result = dump.filter_genome_meta(genome_metadata)
     assert not DeepDiff(result, output)
+
+
+@patch("sqlalchemy.orm.Session")
+@patch("sqlalchemy.engine.Result")
+@pytest.mark.parametrize(
+    "meta_data, output, expectation",
+    [
+        param([], {}, does_not_raise(), id="Empty meta table"),
+        param(
+            [
+                [MetaRow("sample", "gene1")],
+                [MetaRow("species.name", "dog")],
+                [MetaRow("species.synonym", "puppy")]
+            ],
+            {"sample": "gene1", "species": {"name": "dog", "synonym": "puppy"}},
+            does_not_raise(),
+            id="Meta table with simple values",
+        ),
+        param(
+            [
+                [MetaRow("sample", "gene1")],
+                [MetaRow("sample", "gene2")],
+                [MetaRow("species.synonym", "dog")],
+                [MetaRow("species.synonym", "puppy")]
+            ],
+            {"sample": ["gene1", "gene2"], "species": {"synonym": ["dog", "puppy"]}},
+            does_not_raise(),
+            id="Meta table with lists",
+        ),
+        param(
+            [[MetaRow("species", "dog")], [MetaRow("species.synonym", "puppy")]],
+            {},
+            pytest.raises(ValueError),
+            id="'species' and 'species.synonym' meta keys",
+        ),
+    ],
+)
+def test_get_genome_metadata(
+    mock_session: Mock,
+    mock_result: Mock,
+    meta_data: List[MetaRow],
+    output: Dict[str, Any],
+    expectation: ContextManager,
+) -> None:
+    """Tests the `dump.get_genome_metadata()` method.
+
+    Args:
+        mock_session: A mock of `sqlalchemy.orm.Session()` class.
+        meta_data: `meta` table content in a list of named tuples.
+        output: Expected genome metadata dictionary.
+        expectation: Context manager for the expected exception (if any).
+    """
+    mock_result.unique.return_value = mock_result
+    mock_result.all.return_value = meta_data
+    mock_session.execute.return_value = mock_result
+    with expectation:
+        result = dump.get_genome_metadata(mock_session)
+        assert not DeepDiff(result, output)

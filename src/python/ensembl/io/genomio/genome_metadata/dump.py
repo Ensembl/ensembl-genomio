@@ -61,39 +61,39 @@ METADATA_FILTER: Dict[str, Dict[str, Type]] = {
 
 
 def get_genome_metadata(session: Session) -> Dict[str, Any]:
-    """Retrieve a select list of metadata from the core database.
+    """Returns the meta table content from the core database in a nested dictionary.
 
     Args:
         session: Session for the current core.
 
-    Returns:
-        A nested dict.
     """
-    gmeta: Dict[str, Any] = {}
-
-    gmeta_st = select(Meta)
-    for row in session.execute(gmeta_st).unique().all():
-        dat = row[0]
-        meta_key = dat.meta_key
-        meta_value = dat.meta_value
-
-        if "." in meta_key:
-            (high_key, low_key) = meta_key.split(".")
-            if high_key in gmeta:
-                if low_key in gmeta[high_key]:
-                    gmeta[high_key][low_key].append(meta_value)
-                else:
-                    gmeta[high_key][low_key] = [meta_value]
+    genome_metadata: Dict[str, Any] = {}
+    meta_statement = select(Meta)
+    for row in session.execute(meta_statement).unique().all():
+        meta_key = row[0].meta_key
+        meta_value = row[0].meta_value
+        (main_key, _, subkey) = meta_key.partition(".")
+        # Use empty string as subkey when no "." found to simplify dictionary creation
+        if main_key in genome_metadata:
+            if subkey in genome_metadata[main_key]:
+                genome_metadata[main_key][subkey].append(meta_value)
             else:
-                gmeta[high_key] = {}
-                gmeta[high_key][low_key] = [meta_value]
+                genome_metadata[main_key][subkey] = [meta_value]
         else:
-            if meta_key in gmeta:
-                gmeta[meta_key].append(meta_value)
+            genome_metadata[main_key] = {subkey: [meta_value]}
+    # Parse genome metadata to simplify dictionary and check data consistency
+    for main_key, subkeys_dict in genome_metadata.items():
+        # Replace single-value lists by the value itself
+        for subkey, value in subkeys_dict.items():
+            if len(value) == 1:
+                subkeys_dict[subkey] = value[0]
+        # Remove nested dictionary if it only has "" as key, passing its value to the main key
+        if "" in subkeys_dict:
+            if len(subkeys_dict) == 1:
+                genome_metadata[main_key] = subkeys_dict.pop("")
             else:
-                gmeta[meta_key] = [meta_value]
-
-    return gmeta
+                raise ValueError(f"Unexpected meta keys for '{main_key}': {', '.join(subkeys_dict.keys())}")
+    return genome_metadata
 
 
 def filter_genome_meta(genome_metadata: Dict[str, Any]) -> Dict[str, Any]:
