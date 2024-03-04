@@ -279,8 +279,6 @@ for my $it (@$data) {
     # Used mapped external db name if it exists
     my $dbname = db_name_for_feature($extdb_map, $lc_type, $xref, $skip_unknown_xref_source);
     next if (!$dbname);
-    print Dumper($dbname );
-    print "dbname!!!!!: ", "\n";
     
     my $xref_db_entry = store_xref(
       $dbea,
@@ -385,13 +383,7 @@ sub add_to_db_map {
   
   my $k = "val:".$val."with:".($pat // "_undef_");
   if (!exists $uniq_dict{$k} ) {
-    #print Dumper(\%uniq_dict);
     push @{$db_map->{$feature}->{$from} }, {val => $val, pat => $pat };
-    #print Dumper($db_map)
-  }
-  else{
-    print Dumper($from);
-    print Dumper(\%uniq_dict);
   }
 }
 
