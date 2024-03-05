@@ -55,6 +55,9 @@ class AnnotationError(Exception):
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
+    allowed_xrefs=["RefSeq", "GenBank"]
+    ignored_xrefs=["GO", "Interpro", "UniProt"]
+
     def __init__(self, genome: Optional[Dict[str, Dict[str, Any]]]) -> None:
         self.annotations: List[Annotation] = []
         self.genome = genome
@@ -76,19 +79,26 @@ class FunctionalAnnotations:
     def get_provider_dbxref(self, feature) -> str:
         """Get the provider name for xrefs."""
         all_xref=[]
+
+        #Using provider name to modify the xref
         provider_name = self.genome["assembly"]["provider_name"]
-        logging.info(provider_name)
         if not provider_name:
             logging.warning(
                 "No provider name is provided in the genome file addind default as BRC4_Community_Annotation"
             )
             provider_name = "BRC4_Community_Annotation"
+        
+        #Extract the Dbxrefs
         for xref in  feature.qualifiers["Dbxref"]:
             dbname, name = xref.split(":")
             if dbname == "GenBank" and provider_name == "RefSeq": 
-                dbname="RefSeq"
+                dbname = "RefSeq"
+
+            if dbname in self.ignored_xrefs:
+                continue
+
             xrefs = {"dbname": dbname, "id": name}
-            all_xref.append(xrefs)
+            all_xref.append(xrefs)   
         return all_xref
             
     def get_features(self, feat_type: str) -> Dict[str, Annotation]:
