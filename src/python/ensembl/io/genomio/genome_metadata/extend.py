@@ -37,7 +37,7 @@ from ensembl.utils.logging import init_logging_with_args
 _VERSION_END = re.compile(r"\.\d+$")
 
 
-def get_additions(report_path: Path, gbff_path: Optional[Path]) -> List[str]:
+def get_additions(report_path: PathLike, gbff_path: Optional[PathLike]) -> List[str]:
     """Returns all `seq_regions` that are mentioned in the report but that are not in the data.
 
     Args:
@@ -73,7 +73,7 @@ def get_gbff_regions(gbff_path: Optional[PathLike]) -> List[str]:
     return seq_regions
 
 
-def _report_to_csv(report_path: Path) -> Tuple[str, Dict]:
+def _report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
     """Returns the assembly report as a CSV string, and its metadata as a dictionary.
 
     Args:
@@ -81,7 +81,7 @@ def _report_to_csv(report_path: Path) -> Tuple[str, Dict]:
     """
     data = ""
     metadata = {}
-    with report_path.open("r") as report:
+    with Path(report_path).open("r") as report:
         prev_line = ""
         for line in report:
             if line.startswith("#"):
@@ -99,7 +99,7 @@ def _report_to_csv(report_path: Path) -> Tuple[str, Dict]:
     return data, metadata
 
 
-def get_report_regions_names(report_path: Path) -> List[Tuple[str, str]]:
+def get_report_regions_names(report_path: PathLike) -> List[Tuple[str, str]]:
     """Returns a list of GenBank-RefSeq `seq_region` names from the assembly report file.
 
     Args:
