@@ -85,6 +85,8 @@ class FunctionalAnnotations:
             provider_name = "BRC4_Community_Annotation"
         for xref in  feature.qualifiers["Dbxref"]:
             dbname, name = xref.split(":")
+            if dbname == "GenBank" and provider_name == "RefSeq": 
+                dbname="RefSeq"
             xrefs = {"dbname": dbname, "id": name}
             all_xref.append(xrefs)
         return all_xref
