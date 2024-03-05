@@ -46,15 +46,14 @@ def get_additions(report_path: Path, gbff_path: Optional[Path]) -> List[str]:
     """
     gbff_regions = set(get_gbff_regions(gbff_path))
     report_regions = get_report_regions_names(report_path)
-
     additions = []
-    for rep_seq in report_regions:
-        (rs_seq, gb_seq) = rep_seq
-        if rs_seq not in gbff_regions and gb_seq not in gbff_regions:
-            if rs_seq:
-                additions.append(rs_seq)
+    for seq_region_name in report_regions:
+        (genbank_seq_name, refseq_seq_name) = seq_region_name
+        if genbank_seq_name not in gbff_regions and refseq_seq_name not in gbff_regions:
+            if refseq_seq_name:
+                additions.append(refseq_seq_name)
             else:
-                additions.append(gb_seq)
+                additions.append(genbank_seq_name)
     additions = sorted(additions)
     return additions
 
