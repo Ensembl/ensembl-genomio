@@ -32,7 +32,7 @@ from ensembl.io.genomio.genome_metadata import extend
     "gbff_file, output",
     [
         pytest.param("", [], id="No GBFF file"),
-        ("input.gbff.gz", ["LR605957", "LR605956"]),
+        ("sequences.gbff", ["CP089274", "CP089275"]),
     ],
 )
 def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> None:
@@ -68,7 +68,7 @@ def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> 
                     "1\t1\tChromosome\tCP089274.1\tRefChr0001.1\t5935961\n"
                     "2\t2\tChromosome\tCP089275.1\tna\t5880203\n3\t3\tChromosome\tna\tRefChr0002.1\t5901247"
                 ),
-                {"Assembly name": "ASM2392016v1", "Organism name": "Curvularia clavata", "Taxid": "95742"},
+                {"Assembly name": "GCA000002765", "Organism name": "Plasmodium falciparum", "Taxid": "36329"},
             ),
             id="assembly_report.txt",
         ),

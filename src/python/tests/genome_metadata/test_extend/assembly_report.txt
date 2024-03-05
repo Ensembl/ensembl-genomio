@@ -1,6 +1,6 @@
-# Assembly name:  ASM2392016v1
-# Organism name:  Curvularia clavata
-# Taxid:          95742
+# Assembly name:  GCA000002765
+# Organism name:  Plasmodium falciparum
+# Taxid:          36329
 #
 # Name	Molecule	Location	GenBank-Accn	RefSeq-Accn	Length
 1	1	Chromosome	CP089274.1	RefChr0001.1	5935961
