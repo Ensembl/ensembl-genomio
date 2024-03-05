@@ -34,16 +34,17 @@ from typing import ContextManager
 from ftplib import FTP, error_reply as ftp_error_reply
 import pytest
 
-from ensembl.io.genomio.assembly.download import establish_ftp
-from ensembl.io.genomio.assembly.download import get_checksums, md5_files, _download_file
-from ensembl.io.genomio.assembly.download import download_files, get_files_selection, retrieve_assembly_data
 from ensembl.io.genomio.assembly.download import UnsupportedFormatError
 from ensembl.io.genomio.assembly.download import FileDownloadError
 from ensembl.io.genomio.assembly.download import FTPConnectionError
+from ensembl.io.genomio.assembly.download import establish_ftp
+from ensembl.io.genomio.assembly.download import get_checksums, md5_files, _download_file
+from ensembl.io.genomio.assembly.download import download_files, get_files_selection, retrieve_assembly_data
 
 
 # class TestDownloadAssembly:
 #     """Tests class for `download_assembly` module."""
+
 
 #################
 @pytest.mark.dependency(name="test_ftp_connection")
@@ -57,7 +58,10 @@ from ensembl.io.genomio.assembly.download import FTPConnectionError
             "", "GCA_017607445.1", pytest.raises(FTPConnectionError), id="Failed connection case bad url"
         ),
         pytest.param(
-            "ftp.ncbi.nlm.nih.gov", "gcx_017607445.1", pytest.raises(UnsupportedFormatError), id="Failed connection improper INSDC accession"
+            "ftp.ncbi.nlm.nih.gov",
+            "gcx_017607445.1",
+            pytest.raises(UnsupportedFormatError),
+            id="Failed connection improper INSDC accession",
         ),
     ],
 )
@@ -67,16 +71,16 @@ def test_ftp_connection(
     ftp_url: str,
     accession: str,
     expectation: ContextManager,
-    ):
+):
     """Tests the FTPConnection method 'establish_ftp()'
     Args:
-        mock_ftp: Mock FTP Object 
+        mock_ftp: Mock FTP Object
         ftp_url: FTP url
         sub_dir: Sub directory path
         expectation: Context manager expected raise exception
     """
 
-    def side_eff_conn(url:str):
+    def side_eff_conn(url: str):
         if not url:
             raise Exception()
 
@@ -87,6 +91,7 @@ def test_ftp_connection(
         connected_ftp.connect.assert_called_once_with(ftp_url)
         connected_ftp.login.assert_called_once()
         connected_ftp.cwd.assert_called_once_with("genomes/all/GCA/017/607/445")
+
 
 #################
 @pytest.mark.dependency(name="test_checksums")
@@ -107,7 +112,7 @@ def test_ftp_connection(
 )
 def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectation: ContextManager) -> None:
     """Tests the 'download.get_checksums() function
-    
+
     Args:
         data_dir: Path to test data root dir
         checksum_file: File name containing checksums
@@ -142,40 +147,35 @@ def test_md5_files(data_dir: Path, md5file: Path, checksum_bool: bool) -> None:
 #################
 @pytest.mark.dependency(name="test_download_single_file")
 @pytest.mark.parametrize(
-    "ftp_file, md5_sums, max_redo, expectation",
+    "ftp_file, md5_sums, expectation",
     [
         pytest.param(
             "test_ftp_file.txt",
             {"test_ftp_file.txt": "e98b980b442fdb2a21877dcc55e11848"},
-            2,
             does_not_raise(),
             id="Download OK file",
         ),
         pytest.param(
             "non-existing-file.txt",
             {"test_ftp_file.txt": "e98b980b442fdb2a21877dcc55e11848"},
-            0,
             pytest.raises(FileNotFoundError),
             id="Can't download non-existing file",
         ),
         pytest.param(
             "non-existing-file.txt",
             {"non-existing-file.txt": "e98b980b442fdb2a21877dcc55e11848"},
-            0,
             pytest.raises(ftp_error_reply),
             id="File has md5sum but does not exist",
         ),
         pytest.param(
             "test_ftp_file.txt",
             {"test_ftp_file.txt": ""},
-            2,
             does_not_raise(),
             id="Max retry attempts non-zero",
         ),
         pytest.param(
             "test_ftp_file.txt",
             {"test_ftp_file.txt": "e98b980b442fdb2a21877XxxXxxXxxXx"},
-            3,
             pytest.raises(FileDownloadError),
             id="Incorrect md5sum",
         ),
@@ -183,10 +183,15 @@ def test_md5_files(data_dir: Path, md5file: Path, checksum_bool: bool) -> None:
 )
 @patch("ftplib.FTP")
 def test_download_single_file(
-    mock_ftp: Mock, data_dir: Path, tmp_dir: Path, ftp_file: str, md5_sums: dict, max_redo: int, expectation: ContextManager
-    ) -> None:
+    mock_ftp: Mock,
+    data_dir: Path,
+    tmp_dir: Path,
+    ftp_file: str,
+    md5_sums: dict,
+    expectation: ContextManager,
+) -> None:
     """Tests the private function _download_file.
-    
+
     Args:
         mock_ftp: Mock FTP object
         data_dir: Path to test data root dir
@@ -207,16 +212,17 @@ def test_download_single_file(
         except OSError as err:
             raise ftp_error_reply from err
 
-    mock_ftp.retrbinary.side_effect=mock_retr_binary
+    mock_ftp.retrbinary.side_effect = mock_retr_binary
 
     with expectation:
         _download_file(mock_ftp, ftp_file, md5_sums, tmp_dir)
         assert filecmp.cmp(data_file, retr_file)
 
+
 #################
 @pytest.mark.dependency(name="test_download_all_files")
 @pytest.mark.parametrize(
-    "ftp_url, ftp_accession, test_accession, md5, exception, max_redo",
+    "ftp_url, ftp_accession, compare_accession, md5, exception, max_redo",
     [
         pytest.param(
             "ftp.ncbi.nlm.nih.gov",
@@ -236,23 +242,28 @@ def test_download_single_file(
             2,
             id="Error case: GCA doesn't match ftp_dir path",
         ),
-    ]
+    ],
 )
 @pytest.mark.dependency(depends=["test_download_single_file"])
 @patch("ftplib.FTP")
-def test_download_all_files(mock_ftp: MagicMock, data_dir: Path, ftp_url: str,
-                            ftp_accession: str, test_accession: str, md5: str,
-                            exception: ContextManager, 
-                            max_redo: int
-                            ) -> None:
-    """ Tests the download.download_files() function
-    
+def test_download_all_files(
+    mock_ftp: MagicMock,
+    data_dir: Path,
+    ftp_url: str,
+    ftp_accession: str,
+    compare_accession: str,
+    md5: str,
+    exception: ContextManager,
+    max_redo: int,
+) -> None:
+    """Tests the download.download_files() function
+
     Args:
         mock_ftp: Magic Mock of ftplib.FTP object
         data_dir: Path to local test data folder
         ftp_url: Test param to specify ftp connection url
         ftp_accession: Defines expected accession
-        test_accession: Defines test of expected accession
+        compare_accession: Defines test of expected accession
         md5: Source file for md5 checksums to inspect
         expectation: Context manager expected raise exception
     """
@@ -260,12 +271,11 @@ def test_download_all_files(mock_ftp: MagicMock, data_dir: Path, ftp_url: str,
     data_file = data_dir / md5
 
     def side_eff_ftp_mlsd():
-        
-        mlsd_ret = []        
+        mlsd_ret = []
         files = data_dir.glob("*GCA_017607445.1*.gz")
         for file_path in files:
             ftp_file = str(file_path).split("/")[-1]
-            mlsd_ret.append((str(ftp_file), ["fact_1","fact_2"]))
+            mlsd_ret.append((str(ftp_file), ["fact_1", "fact_2"]))
 
         return mlsd_ret
 
@@ -280,22 +290,23 @@ def test_download_all_files(mock_ftp: MagicMock, data_dir: Path, ftp_url: str,
             raise ftp_error_reply from err
 
     mock_ftp.retrbinary.side_effect = mock_retr_binary
-    
+
     with exception:
         connected_ftp = establish_ftp(mock_ftp, ftp_url, ftp_accession)
         mock_ftp.connect.assert_called()
         mock_ftp.login.assert_called()
         mock_ftp.cwd.assert_called_with("genomes/all/GCA/017/607/445")
-    
+
     with exception:
-        download_files(connected_ftp, test_accession, data_dir, max_redo)
+        download_files(connected_ftp, compare_accession, data_dir, max_redo)
         mock_ftp.cwd.assert_called()
         mock_ftp.mlsd.assert_called()
-        
-        if ftp_accession == test_accession:
+
+        if ftp_accession == compare_accession:
             mock_ftp.retrbinary.assert_called()
-        elif ftp_accession != test_accession:
+        elif ftp_accession != compare_accession:
             mock_ftp.retrbinary.not_called()
+
 
 #################
 @pytest.mark.dependency(name="test_get_files_selection")
@@ -305,11 +316,11 @@ def test_download_all_files(mock_ftp: MagicMock, data_dir: Path, ftp_url: str,
         pytest.param(
             True,
             {
-            "report" : "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
-            "fasta_dna" : "GCA_017607445.1_ASM1760744v1_genomic.fna.gz",
-            "fasta_pep" : "GCA_017607445.1_ASM1760744v1_protein.faa.gz",
-            "gff3_raw" : "GCA_017607445.1_ASM1760744v1_genomic.gff.gz",
-            "gbff" : "GCA_017607445.1_ASM1760744v1_genomic.gbff.gz",
+                "report": "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
+                "fasta_dna": "GCA_017607445.1_ASM1760744v1_genomic.fna.gz",
+                "fasta_pep": "GCA_017607445.1_ASM1760744v1_protein.faa.gz",
+                "gff3_raw": "GCA_017607445.1_ASM1760744v1_genomic.gff.gz",
+                "gbff": "GCA_017607445.1_ASM1760744v1_genomic.gbff.gz",
             },
             does_not_raise(),
             id="Normal case, data dir provided",
@@ -322,9 +333,11 @@ def test_download_all_files(mock_ftp: MagicMock, data_dir: Path, ftp_url: str,
         ),
     ],
 )
-def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected: dict, expectation: ContextManager) -> None:
+def test_get_files_selection(
+    data_dir: Path, download_dir: bool, files_expected: dict, expectation: ContextManager
+) -> None:
     """Test the get a subset of download.get_files_selection() files function `
-    
+
     Args:
         download_dir: Path to specific location of downloaded files.
         files_expected: Defines contents of test files downloaded
@@ -343,6 +356,7 @@ def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected:
             test_data_file_name = subset_files[file_end_name].split("/")[-1]
             assert test_data_file_name == expected_file
 
+
 ##################
 @pytest.mark.dependency(name="test_retrieve_assembly_data")
 @pytest.mark.parametrize(
@@ -352,11 +366,11 @@ def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected:
             "GCA_017607445.1",
             True,
             {
-            "report" : "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
-            "fasta_dna" : "GCA_017607445.1_ASM1760744v1_genomic.fna.gz",
-            "fasta_pep" : "GCA_017607445.1_ASM1760744v1_protein.faa.gz",
-            "gff3_raw" : "GCA_017607445.1_ASM1760744v1_genomic.gff.gz",
-            "gbff" : "GCA_017607445.1_ASM1760744v1_genomic.gbff.gz",
+                "report": "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
+                "fasta_dna": "GCA_017607445.1_ASM1760744v1_genomic.fna.gz",
+                "fasta_pep": "GCA_017607445.1_ASM1760744v1_protein.faa.gz",
+                "gff3_raw": "GCA_017607445.1_ASM1760744v1_genomic.gff.gz",
+                "gbff": "GCA_017607445.1_ASM1760744v1_genomic.gbff.gz",
             },
             True,
             does_not_raise(),
@@ -378,7 +392,7 @@ def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected:
             pytest.raises(FileDownloadError),
             id="Case 3: Download files list empty",
         ),
-    ]
+    ],
 )
 @patch("ftplib.FTP")
 @patch("os.mkdir")
@@ -386,18 +400,26 @@ def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected:
 @patch("ensembl.io.genomio.assembly.download.download_files")
 @patch("ensembl.io.genomio.assembly.download._download_file")
 @patch("ensembl.io.genomio.assembly.download.md5_files")
-def test_retrieve_assembly_data(mock_retrieve: Mock, mock_download_singlefile: Mock, 
-                                mock_download_files: Mock, mock_file_select: Mock, 
-                                mock_os: MagicMock, mock_ftp: Mock, data_dir: Path, 
-                                accession: str, is_dir: bool, files_downloaded: dict, 
-                                md5_return: bool, exception: ContextManager
-                                ) -> None:
-    """Test of master function download.retrieve_assembly_data() which calls sub 
+def test_retrieve_assembly_data(
+    mock_retrieve: Mock,
+    mock_download_singlefile: Mock,
+    mock_download_files: Mock,
+    mock_file_select: Mock,
+    mock_os: MagicMock,
+    mock_ftp: Mock,
+    data_dir: Path,
+    accession: str,
+    is_dir: bool,
+    files_downloaded: dict,
+    md5_return: bool,
+    exception: ContextManager,
+) -> None:
+    """Test of master function download.retrieve_assembly_data() which calls sub
     functions for downloading assembly data files.
 
     Args:
         accession: Accession of desired genome assembly
-        is_dir: Param to define state of result output dir 
+        is_dir: Param to define state of result output dir
         files_downloaded: Defines contents of test files marked as downloaded
         expectation: Context manager expected raise exception
     """
@@ -407,19 +429,19 @@ def test_retrieve_assembly_data(mock_retrieve: Mock, mock_download_singlefile: M
     else:
         download_dir = data_dir
 
-    def side_eff_conn(url:str):
+    def side_eff_conn(url: str):
         if not url:
             raise Exception()
 
     mock_ftp.connect.side_effect = side_eff_conn
-    
+
     def mock_mkdir(command: str):
         logging.info(f"Faking the creation of directory {command} on path {download_dir}")
         try:
             return download_dir
         except OSError as err:
             raise FileExistsError from err
-        
+
     mock_os.mkdir.side_effect = mock_mkdir
     mock_file_select.return_value = files_downloaded
     mock_retrieve.return_value = md5_return
@@ -431,22 +453,3 @@ def test_retrieve_assembly_data(mock_retrieve: Mock, mock_download_singlefile: M
         assert mock_download_files.download_files.called_once()
         assert mock_download_singlefile._download_file.called_once()
         assert mock_file_select.get_files_selection.called_with(files_downloaded)
-
-
-# Before adding test on file_selection:
-# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       172     67    61%   158-187, 221-224, 231, 239, 241-242, 250, 268-273, 289-290, 312-345, 350-359
-
-# After adding test on file_selection:
-# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       172     59    66%   158-187, 221-224, 231, 239, 241-242, 250, 312-345, 350-359
-
-# After adding test for could not download file (_download_file)
-# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       164     51    69%   158-187, 221-224, 231, 239, 241-242, 312-345
-
-# After adding inital tests on main download_files()
-# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       164     26    84%   223, 230, 238, 240-241, 311-344
-
-## Post adding proper test on download_files
-# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       164     26    84%   223, 230, 238, 240-241, 311-344
-
-## Latest changes to download_files      
-# /homes/lcampbell/MyDevelopmentSpace/2024_hackathons/EnsMetazoaHackathon_Jan24/ensembl-genomio/src/python/ensembl/io/genomio/assembly/download.py       164     40    76%   172-188, 222-225, 232, 240,242-243, 313-346
