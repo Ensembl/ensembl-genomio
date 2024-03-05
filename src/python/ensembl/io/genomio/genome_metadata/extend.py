@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Add more metadata to the genome metadata file, including added seq_regions (e.g. MT chromosome)."""
+"""Updates a genome metadata file to include additional sequence regions (e.g. MT chromosome)."""
 
 __all__ = [
     "get_additions",
@@ -151,9 +151,7 @@ def amend_genomic_metadata(
 
 def main() -> None:
     """Module's entry-point."""
-    parser = ArgumentParser(
-        description="Update genome metadata file to include additional sequence regions (e.g. MT chromosome)."
-    )
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
         "--genome_infile",
         required=True,
