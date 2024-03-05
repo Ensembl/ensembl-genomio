@@ -84,8 +84,6 @@ class GFFSimplifier:
         if genome_path:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
-
-        self.make_missing_stable_ids: bool = make_missing_stable_ids
         self.annotations = FunctionalAnnotations(self.genome)
         self._set_id_prefix()
 
