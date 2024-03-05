@@ -55,10 +55,12 @@ class AnnotationError(Exception):
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
-    def __init__(self, genome: Dict[str, Dict[str, Any]]) -> None:
+    def __init__(self, genome: Optional[Dict[str, Dict[str, Any]]]) -> None:
         self.annotations: List[Annotation] = []
-        self.genome: Dict[str, Dict[str, Any]] = genome
-        self.provider_name = self.get_genome_metadata()
+        self.provider_name = None
+        if genome:
+            self.genome: Dict[str, Dict[str, Any]] = genome
+            self.provider_name = self.get_genome_metadata()
         # Annotated features
         # Under each feature, each dict's key is a feature ID
         self.features: Dict[str, Dict[str, Annotation]] = {
@@ -162,7 +164,7 @@ class FunctionalAnnotations:
             if feat_name != feature.id:
                 if feature.type == "gene":
                     feature_object["synonyms"] = {"synonym": feat_name, "default": True}
-                else:
+                elif self.provider_name:
                     feature_object["xrefs"] = [{"dbname": self.provider_name, "id": feat_name}]
 
         # is_pseudogene?
