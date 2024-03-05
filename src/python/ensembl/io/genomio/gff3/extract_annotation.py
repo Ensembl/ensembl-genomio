@@ -57,10 +57,8 @@ class FunctionalAnnotations:
 
     def __init__(self, genome: Optional[Dict[str, Dict[str, Any]]]) -> None:
         self.annotations: List[Annotation] = []
+        self.genome = genome
         self.provider_name = None
-        if genome:
-            self.genome: Dict[str, Dict[str, Any]] = genome
-            self.provider_name = self.get_genome_metadata()
         # Annotated features
         # Under each feature, each dict's key is a feature ID
         self.features: Dict[str, Dict[str, Annotation]] = {
@@ -75,8 +73,9 @@ class FunctionalAnnotations:
             "transcript": {},
         }
 
-    def get_genome_metadata(self) -> str:
+    def get_provider_dbxref(self, feature) -> str:
         """Get the provider name for xrefs."""
+        all_xref=[]
         provider_name = self.genome["assembly"]["provider_name"]
         logging.info(provider_name)
         if not provider_name:
@@ -84,8 +83,12 @@ class FunctionalAnnotations:
                 "No provider name is provided in the genome file addind default as BRC4_Community_Annotation"
             )
             provider_name = "BRC4_Community_Annotation"
-        return provider_name
-
+        for xref in  feature.qualifiers["Dbxref"]:
+            dbname, name = xref.split(":")
+            xrefs = {"dbname": dbname, "id": name}
+            all_xref.append(xrefs)
+        return all_xref
+            
     def get_features(self, feat_type: str) -> Dict[str, Annotation]:
         """Get all feature annotations for the requested type."""
         try:
@@ -157,16 +160,18 @@ class FunctionalAnnotations:
             feature_object["description"], feature.id
         ):
             del feature_object["description"]
-
+    
         # Synonyms?
+        # We add synonyms to the external_synonym table which is associated with the first xref of that feature type
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
             if feat_name != feature.id:
-                if feature.type == "gene":
-                    feature_object["synonyms"] = {"synonym": feat_name, "default": True}
-                elif self.provider_name:
-                    feature_object["xrefs"] = [{"dbname": self.provider_name, "id": feat_name}]
-
+                feature_object["synonyms"] = {"synonym": feat_name}
+        
+        if "Dbxref" in feature.qualifiers:
+            all_xref= self.get_provider_dbxref(feature)
+            feature_object["xrefs"] = all_xref
+        
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
             feature_object["is_pseudogene"] = True
