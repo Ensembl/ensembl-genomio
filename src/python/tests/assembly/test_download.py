@@ -29,7 +29,7 @@ from unittest.mock import Mock, patch, MagicMock
 from contextlib import nullcontext as does_not_raise
 from typing import ContextManager
 
-from ftplib import FTP, error_reply as ftp_error_reply
+from ftplib import error_reply as ftp_error_reply
 import pytest
 
 from ensembl.io.genomio.assembly.download import UnsupportedFormatError
