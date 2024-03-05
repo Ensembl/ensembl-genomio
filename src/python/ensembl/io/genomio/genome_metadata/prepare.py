@@ -64,7 +64,7 @@ PROVIDER_DATA = {
         },
     },
 }
-DEFAULT_API_URL = "https://www.ebi.ac.uk/ena/browser/api/xml/"
+DEFAULT_API_URL = "https://www.ebi.ac.uk/ena/browser/api/xml"
 
 
 class MissingNodeError(Exception):
