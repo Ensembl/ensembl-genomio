@@ -48,38 +48,23 @@ _FILE_ENDS = {
     "genomic.gbff.gz": "gbff",
 }
 
+
 class FileDownloadError(Exception):
     """When a file download fails or there is a problem with that file."""
 
+
 class FTPConnectionError(Exception):
     """Error while initialising an FTP connection."""
+
 
 class UnsupportedFormatError(Exception):
     """When a string does not have the expected format."""
 
 
+def establish_ftp(ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
+    """Function to test assembly accession format then attempt to
+    establish an FTP connection (FTP object) based on 'accession -> sub_dir'.
 
-# def establish_ftp (ftp_conn: FTP, ftp_url: str, sub_dir_path: PathLike) -> FTP:
-#     """Function to establish an FTP connection (FTP Class).
-#         Args:
-#             ftp_conn: FTP Class object
-#             ftp_url: specific FTP url in connection request
-#             sub_dir_path: Path of sub directory housing required data for download.
-#         Returns:
-#             An open connection via FTP() class object
-#     """
-    
-#     try:
-#         ftp_conn.connect(ftp_url)
-#         ftp_conn.login()
-#         ftp_conn.cwd(str(sub_dir_path))
-#     except:
-#         raise FTPConnectionError(f"Could not create FTP connection on {ftp_url} remote path {sub_dir_path}")
-    
-#     return ftp_conn
-
-def establish_ftp (ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
-    """Function to establish an FTP connection (FTP Class).
         Args:
             ftp_conn: FTP Class object
             ftp_url: specific FTP url in connection request
@@ -97,15 +82,16 @@ def establish_ftp (ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
     part3 = match.group(4)
     sub_dir = Path("genomes", "all", gca, part1, part2, part3)
 
-    # Establish connection to remote FTP server
+    # Try now to establish connection to remote FTP server
     try:
         ftp_conn.connect(ftp_url)
         ftp_conn.login()
         ftp_conn.cwd(str(sub_dir))
     except:
         raise FTPConnectionError(f"Could not create FTP connection on {ftp_url} remote path {sub_dir}")
-    
+
     return ftp_conn
+
 
 def md5_files(dl_dir: Path, md5: Path) -> bool:
     """
@@ -114,17 +100,17 @@ def md5_files(dl_dir: Path, md5: Path) -> bool:
 
     Args:
         dl_dir: Path location to containing downloaded FTP files.
-        md5:
+        md5: Path location of checksum file
 
     Returns:
-        Bool: True if dl files match checksum, False otherwise. 
+        Bool: True if dl files match checksum, False otherwise.
     """
     # Get or set md5 file to user or default setting
     if md5 is None:
         md5_file = "md5checksums.txt"
     else:
         md5_file = md5
-        
+
     # Get checksums and compare
     md5_path = dl_dir / md5_file
     sums = get_checksums(md5_path)
@@ -171,36 +157,25 @@ def get_checksums(checksum_path: Path) -> Dict[str, str]:
                 sums[file_path] = checksum
     return sums
 
-def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
+
+# def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
+def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: int) -> None:
     """
     Given an INSDC accession, download all available files from the ftp to the download dir
 
     Args:
-        accession: Genome Assembly accession.
+        ftp_connection: An open FTP connection object
+        accession: Genome assembly accession.
         dl_dir: Path to downloaded FTP files.
         max_redo: Maximum ftp connection retry attempts.
 
     Returns:
         None
     """
-    # match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
-    # if not match:
-    #     raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
-    # gca = match.group(1)
-    # part1 = match.group(2)
-    # part2 = match.group(3)
-    # part3 = match.group(4)
-
-    # # Establish connection to remote FTP server
-    # sub_dir = Path("genomes", "all", gca, part1, part2, part3)
-    # ftp_connection = establish_ftp(ftp_instance, ftp_url, sub_dir)
-    ftp_url = "ftp.ncbi.nlm.nih.gov"
-    ftp_instance = FTP()
-    ftp_connection = establish_ftp(ftp_instance, ftp_url, accession)
 
     # # Get the list of assemblies for this accession
     for ftp_dir, _ in ftp_connection.mlsd():
-        if re.match(accession, ftp_dir):
+        if re.search(accession, ftp_dir):
             ftp_connection.cwd(ftp_dir)
 
             # First, get the md5sum file
@@ -216,20 +191,22 @@ def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
                     if ftp_file.endswith(end) and not ftp_file.endswith(f"_from_{end}"):
                         _download_file(ftp_connection, ftp_file, md5_sums, dl_dir, max_redo)
         else:
-            logging.warning(f"Could not detect accession '{accession}' from ftp download dir path {ftp_dir} in open FTP connection")
+            logging.warning(
+                f"Could not detect accession '{accession}' from ftp download dir path {ftp_dir} in open FTP connection"
+            )
 
 
 def _download_file(
-    ftp_conn: FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
+    ftp_connection: FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
 ) -> None:
     """Download individual files from FTP server.
-    
+
     Args:
-        ftp_conn: Established connection FTP object.
+        ftp_connection: Established connection FTP object.
         ftp_file: Name of ftp file to download.
         md5_sums: Dict of key value pairs filename<=>md5_checksums.
         dl_dir: Path to downloaded FTP files.
-        max_redo: Maximum number of connection retry attempts. 
+        max_redo: Maximum number of connection retry attempts.
 
     Returns:
         None
@@ -266,12 +243,10 @@ def _download_file(
         logging.info(f" Downloading file {ftp_file}, try {redo}...")
         try:
             with local_path.open(mode="wb") as fp:
-                ftp_conn.retrbinary(f"RETR {ftp_file}", fp.write)
+                ftp_connection.retrbinary(f"RETR {ftp_file}", fp.write)
         except EOFError:
             continue
-        if not has_md5:
-            file_sum = ""
-            continue
+
         # Compute checksum
         with local_path.open(mode="rb") as fp:
             content = fp.read()
@@ -307,12 +282,12 @@ def get_files_selection(dl_dir: Path) -> Dict[str, str]:
 
 def get_root_name(dl_dir: Path) -> str:
     """Get root name for assembly files, using the report file as base
-    
+
     Args:
         dl_dir: Path location of downloaded FTP files.
 
     Returns:
-        Str: Shared download files basename prefix, obtained from asm report file. 
+        Str: Shared download files basename prefix, obtained from asm report file.
     """
     root_name = ""
     for dl_file in dl_dir.iterdir():
@@ -329,7 +304,7 @@ def retrieve_assembly_data(
     max_increment: int = 0,
     max_redo: int = 3,
 ) -> None:
-    """Establish FTP connection and download a predefined subset of assembly data files from either 
+    """Establish FTP connection and download a predefined subset of assembly data files from either
     INSDC or RefSeq. For subset of files see Dict: '_FILE_ENDS'
 
     Args:
@@ -365,7 +340,10 @@ def retrieve_assembly_data(
                 version += 1
                 accession = accession[:-1] + str(version)
                 download_dir.mkdir(parents=True, exist_ok=True)
-            download_files(accession, download_dir, max_redo)
+            ftp_url = "ftp.ncbi.nlm.nih.gov"
+            ftp_instance = FTP()
+            open_ftp_connection = establish_ftp(ftp_instance, ftp_url, accession)
+            download_files(open_ftp_connection, accession, download_dir, max_redo)
 
         if not md5_files(download_dir, None):
             raise FileDownloadError("Failed md5sum of downloaded files")
