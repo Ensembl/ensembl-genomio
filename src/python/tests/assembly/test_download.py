@@ -109,10 +109,10 @@ def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectati
     """Tests the 'download.get_checksums() function
     
     Args:
-        data_dir:
-        checksum_file:
-        checksum:
-        expectation:
+        data_dir: Path to test data root dir
+        checksum_file: File name containing checksums
+        checksum: Test MD5 checksum
+        expectation: Context manager expected raise exception
     """
     with expectation:
         md5_input_path = data_dir / checksum_file
@@ -216,25 +216,47 @@ def test_download_single_file(
 #################
 @pytest.mark.dependency(name="test_download_all_files")
 @pytest.mark.parametrize(
-    "ftp_url, accession, md5, exception, max_redo",
+    "ftp_url, ftp_accession, test_accession, md5, exception, max_redo",
     [
         pytest.param(
             "ftp.ncbi.nlm.nih.gov",
+            "GCA_017607445.1",
             "GCA_017607445.1",
             "md5checksums_ftp_source.txt",
             does_not_raise(),
             2,
             id="Normal case: Properly formatted GC[A/F] accession",
         ),
+        pytest.param(
+            "ftp.ncbi.nlm.nih.gov",
+            "GCA_017607445.1",
+            "GCA_544706710.1",
+            "md5checksums_ftp_source.txt",
+            does_not_raise(),
+            2,
+            id="Error case: GCA doesn't match ftp_dir path",
+        ),
     ]
 )
 @pytest.mark.dependency(depends=["test_download_single_file"])
 @patch("ftplib.FTP")
 def test_download_all_files(mock_ftp: MagicMock, data_dir: Path, ftp_url: str,
-                            md5: str, accession: str, exception: ContextManager, 
+                            ftp_accession: str, test_accession: str, md5: str,
+                            exception: ContextManager, 
                             max_redo: int
                             ) -> None:
+    """ Tests the download.download_files() function
     
+    Args:
+        mock_ftp: Magic Mock of ftplib.FTP object
+        data_dir: Path to local test data folder
+        ftp_url: Test param to specify ftp connection url
+        ftp_accession: Defines expected accession
+        test_accession: Defines test of expected accession
+        md5: Source file for md5 checksums to inspect
+        expectation: Context manager expected raise exception
+    """
+
     data_file = data_dir / md5
 
     def side_eff_ftp_mlsd():
@@ -260,28 +282,26 @@ def test_download_all_files(mock_ftp: MagicMock, data_dir: Path, ftp_url: str,
     mock_ftp.retrbinary.side_effect = mock_retr_binary
     
     with exception:
-        connected_ftp = establish_ftp(mock_ftp, ftp_url, accession)
+        connected_ftp = establish_ftp(mock_ftp, ftp_url, ftp_accession)
         mock_ftp.connect.assert_called()
         mock_ftp.login.assert_called()
         mock_ftp.cwd.assert_called_with("genomes/all/GCA/017/607/445")
     
     with exception:
-        download_files(connected_ftp, accession, data_dir, max_redo)
+        download_files(connected_ftp, test_accession, data_dir, max_redo)
         mock_ftp.cwd.assert_called()
         mock_ftp.mlsd.assert_called()
-        mock_ftp.retrbinary.assert_called()
+        
+        if ftp_accession == test_accession:
+            mock_ftp.retrbinary.assert_called()
+        elif ftp_accession != test_accession:
+            mock_ftp.retrbinary.not_called()
 
 #################
 @pytest.mark.dependency(name="test_get_files_selection")
 @pytest.mark.parametrize(
     "download_dir, files_expected, expectation",
     [
-        pytest.param(
-            False,
-            {},
-            pytest.raises(FileDownloadError),
-            id="Error case, data dir not provided",
-        ),
         pytest.param(
             True,
             {
@@ -294,13 +314,21 @@ def test_download_all_files(mock_ftp: MagicMock, data_dir: Path, ftp_url: str,
             does_not_raise(),
             id="Normal case, data dir provided",
         ),
+        pytest.param(
+            False,
+            {},
+            pytest.raises(FileDownloadError),
+            id="Error case, data dir not provided",
+        ),
     ],
 )
 def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected: dict, expectation: ContextManager) -> None:
-    """Test the get a subset of downloaded files function `get_files_selection()`
+    """Test the get a subset of download.get_files_selection() files function `
     
     Args:
         download_dir: Path to specific location of downloaded files.
+        files_expected: Defines contents of test files downloaded
+        expectation: Context manager expected raise exception
     """
 
     if download_dir:
@@ -316,7 +344,7 @@ def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected:
             assert test_data_file_name == expected_file
 
 ##################
-# @pytest.mark.dependency(name="test_download_all_files")
+@pytest.mark.dependency(name="test_retrieve_assembly_data")
 @pytest.mark.parametrize(
     "accession, is_dir, files_downloaded, md5_return, exception",
     [
@@ -337,13 +365,7 @@ def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected:
         pytest.param(
             "GCA_017607445.1",
             False,
-            {
-            "report" : "GCA_017607445.1_ASM1760744v1_assembly_report.txt",
-            "fasta_dna" : "GCA_017607445.1_ASM1760744v1_genomic.fna.gz",
-            "fasta_pep" : "GCA_017607445.1_ASM1760744v1_protein.faa.gz",
-            "gff3_raw" : "GCA_017607445.1_ASM1760744v1_genomic.gff.gz",
-            "gbff" : "GCA_017607445.1_ASM1760744v1_genomic.gbff.gz",
-            },
+            0,
             False,
             pytest.raises(FileExistsError),
             id="Case 2: Good accession, Not a dir",
@@ -351,10 +373,10 @@ def test_get_files_selection(data_dir: Path, download_dir: bool, files_expected:
         pytest.param(
             "GCA_017607445.1",
             True,
-            {},
+            0,
             False,
             pytest.raises(FileDownloadError),
-            id="Bad case: Download files list empty",
+            id="Case 3: Download files list empty",
         ),
     ]
 )
@@ -370,17 +392,18 @@ def test_retrieve_assembly_data(mock_retrieve: Mock, mock_download_singlefile: M
                                 accession: str, is_dir: bool, files_downloaded: dict, 
                                 md5_return: bool, exception: ContextManager
                                 ) -> None:
-    """Test of main assembly downloading function:
+    """Test of master function download.retrieve_assembly_data() which calls sub 
+    functions for downloading assembly data files.
 
     Args:
-        accession:
-        is_dir:
-        files_downloaded:
-        expectation:
+        accession: Accession of desired genome assembly
+        is_dir: Param to define state of result output dir 
+        files_downloaded: Defines contents of test files marked as downloaded
+        expectation: Context manager expected raise exception
     """
 
     if is_dir == False:
-        download_dir = Path(data_dir / str("NotADir"))
+        download_dir = Path(data_dir / str("test_ftp_file.txt"))
     else:
         download_dir = data_dir
 
@@ -402,8 +425,7 @@ def test_retrieve_assembly_data(mock_retrieve: Mock, mock_download_singlefile: M
     mock_retrieve.return_value = md5_return
 
     with exception:
-        retrieve_assembly_data(accession, download_dir)
-        print(f"retrieve_assembly_data({accession}, {download_dir})")
+        retrieve_assembly_data(accession, download_dir, 2)
         assert mock_os.mkdir.called_with(download_dir)
         assert mock_os.md5_files.called_once_with("md5checksums.txt")
         assert mock_download_files.download_files.called_once()
