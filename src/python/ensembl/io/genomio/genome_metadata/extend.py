@@ -128,24 +128,22 @@ def amend_genomic_metadata(
     genome_infile: PathLike,
     genome_outfile: PathLike,
     report_file: Optional[PathLike] = None,
-    genbank_infile: Optional[PathLike] = None,
+    genbank_file: Optional[PathLike] = None,
 ) -> None:
     """
     Args:
-        genome_infile: Genome data following the src/python/ensembl/io/genomio/data/schemas/genome.json.
+        genome_infile: Genome data following the `src/python/ensembl/io/genomio/data/schemas/genome.json`.
         genome_outfile: Amended genome data file.
         report_file: INSDC/RefSeq sequences report file.
-        genbank_infile: INSDC/RefSeq GBFF file.
+        genbank_file: INSDC/RefSeq GBFF file.
     """
     genome_metadata = get_json(genome_infile)
-
     # Get additional sequences in the assembly but not in the data
     if report_file:
-        gbff_path = Path(genbank_infile) if genbank_infile else None
-        additions = get_additions(Path(report_file), gbff_path)
+        genbank_path = Path(genbank_file) if genbank_file else None
+        additions = get_additions(report_file, genbank_path)
         if additions:
             genome_metadata["added_seq"] = {"region_name": additions}
-
     # Print out the file
     genome_outfile = Path(genome_outfile)
     print_json(genome_outfile, genome_metadata)
@@ -165,7 +163,7 @@ def main() -> None:
         "--genome_outfile", required=True, help="Path to the new amended genome metadata file"
     )
     parser.add_argument_src_path("--report_file", help="INSDC/RefSeq sequences report file")
-    parser.add_argument_src_path("--genbank_infile", help="INSDC/RefSeq GBFF file")
+    parser.add_argument_src_path("--genbank_file", help="INSDC/RefSeq GBFF file")
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
@@ -174,5 +172,5 @@ def main() -> None:
         genome_infile=args.genome_infile,
         genome_outfile=args.genome_outfile,
         report_file=args.report_file,
-        genbank_infile=args.genbank_infile,
+        genbank_file=args.genbank_file,
     )
