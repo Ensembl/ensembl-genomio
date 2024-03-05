@@ -20,7 +20,7 @@ Typical usage example::
 """
 
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from deepdiff import DeepDiff
 import pytest
@@ -33,7 +33,7 @@ from ensembl.io.genomio.genome_metadata import extend
     "gbff_file, output",
     [
         pytest.param("", [], id="No GBFF file"),
-        ("sequences.gbff", ["CP089274", "CP089275"]),
+        pytest.param("sequences.gbff", ["CP089274", "CP089275", "RefChr0002"], id="sequences.gbff"),
     ],
 )
 def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> None:
@@ -119,8 +119,10 @@ def test_get_report_regions_names(data_dir: Path, report_file: str, output: List
 @pytest.mark.parametrize(
     "report_file, gbff_file, output",
     [
-        ("assembly_report.txt", None, ["CP089275", "RefChr0001", "RefChr0002"]),
-        ("assembly_report.txt", "sequences.gbff", ["RefChr0002"]),
+        pytest.param(
+            "assembly_report.txt", "", ["CP089275", "RefChr0001", "RefChr0002"], id="Additional regions found"
+        ),
+        pytest.param("assembly_report.txt", "sequences.gbff", [], id="No additional regions"),
     ],
 )
 def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output: List[str]) -> None:
@@ -133,9 +135,47 @@ def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output:
         output: Expected sequence regions names that need to be added.
     """
     report_path = data_dir / report_file
-    if gbff_file:
-        gbff_path = data_dir / gbff_file
-    else:
-        gbff_path = gbff_file
+    gbff_path = data_dir / gbff_file if gbff_file else None
     result = extend.get_additions(report_path, gbff_path)
     assert result == output
+
+
+@pytest.mark.dependency(depends=["test_get_additions"])
+@pytest.mark.parametrize(
+    "genome_infile, report_file, genbank_file, output_file",
+    [
+        pytest.param("genome.json", "", "", "genome.json", id="No report file"),
+        pytest.param(
+            "genome.json", "assembly_report.txt", "", "updated_genome.json", id="Additional seq regions"
+        ),
+        pytest.param(
+            "genome.json", "assembly_report.txt", "sequences.gbff", "genome.json", id="No additional regions"
+        ),
+    ],
+)
+def test_amend_genomic_metadata(
+    tmp_path: Path,
+    data_dir: Path,
+    assert_files: Callable[[Path, Path], None],
+    genome_infile: str,
+    report_file: str,
+    genbank_file: str,
+    output_file: str,
+) -> None:
+    """Tests the `extend.amend_genomic_metadata` class.
+
+    Args:
+        tmp_path: Test's unique temporary directory fixture.
+        data_dir: Module's test data directory fixture.
+        assert_files: File diff assertion fixture.
+        genome_infile: Input genome data file.
+        report_file: INSDC/RefSeq sequences report file.
+        genbank_file: INSDC/RefSeq GBFF file.
+        output_file: Expected amended genome data file.
+    """
+    genome_inpath = data_dir / genome_infile
+    report_path = data_dir / report_file if report_file else None
+    genbank_path = data_dir / genbank_file if genbank_file else None
+    genome_outpath = tmp_path / "genome.out"
+    extend.amend_genomic_metadata(genome_inpath, genome_outpath, report_path, genbank_path)
+    assert_files(genome_outpath, data_dir / output_file)
