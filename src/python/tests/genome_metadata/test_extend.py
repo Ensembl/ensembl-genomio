@@ -28,6 +28,7 @@ import pytest
 from ensembl.io.genomio.genome_metadata import extend
 
 
+@pytest.mark.dependency(name="test_get_gbff_regions")
 @pytest.mark.parametrize(
     "gbff_file, output",
     [
@@ -88,7 +89,7 @@ def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict
     assert not DeepDiff(result[1], output[1])
 
 
-@pytest.mark.dependency(depends=["test_report_to_csv"])
+@pytest.mark.dependency(name="test_get_report_regions_names", depends=["test_report_to_csv"])
 @pytest.mark.parametrize(
     "report_file, output",
     [
@@ -109,4 +110,32 @@ def test_get_report_regions_names(data_dir: Path, report_file: str, output: List
     """
     report_path = data_dir / report_file
     result = extend.get_report_regions_names(report_path)
+    assert result == output
+
+
+@pytest.mark.dependency(
+    name="test_get_additions", depends=["test_get_gbff_regions", "test_get_report_regions_names"]
+)
+@pytest.mark.parametrize(
+    "report_file, gbff_file, output",
+    [
+        ("assembly_report.txt", None, ["CP089275", "RefChr0001", "RefChr0002"]),
+        ("assembly_report.txt", "sequences.gbff", ["RefChr0002"]),
+    ],
+)
+def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output: List[str]) -> None:
+    """Tests the `extend.get_additions` class.
+
+    Args:
+        data_dir: Module's test data directory fixture.
+        report_file: Assembly report file name.
+        gbff_path: GBFF file name.
+        output: Expected sequence regions names that need to be added.
+    """
+    report_path = data_dir / report_file
+    if gbff_file:
+        gbff_path = data_dir / gbff_file
+    else:
+        gbff_path = gbff_file
+    result = extend.get_additions(report_path, gbff_path)
     assert result == output
