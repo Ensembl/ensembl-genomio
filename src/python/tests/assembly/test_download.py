@@ -29,8 +29,6 @@ from unittest.mock import Mock, patch, MagicMock
 from contextlib import nullcontext as does_not_raise
 from typing import ContextManager
 
-# from typing import Dict
-
 from ftplib import FTP, error_reply as ftp_error_reply
 import pytest
 
@@ -40,10 +38,6 @@ from ensembl.io.genomio.assembly.download import FTPConnectionError
 from ensembl.io.genomio.assembly.download import establish_ftp
 from ensembl.io.genomio.assembly.download import get_checksums, md5_files, _download_file
 from ensembl.io.genomio.assembly.download import download_files, get_files_selection, retrieve_assembly_data
-
-
-# class TestDownloadAssembly:
-#     """Tests class for `download_assembly` module."""
 
 
 #################
