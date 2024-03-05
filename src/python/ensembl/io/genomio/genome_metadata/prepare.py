@@ -64,7 +64,7 @@ PROVIDER_DATA = {
         },
     },
 }
-DEFAULT_API_URL = "https://www.ebi.ac.uk/ena/browser/api/xml/"
+DEFAULT_API_URL = "https://www.ebi.ac.uk/ena/browser/api/xml"
 
 
 class MissingNodeError(Exception):
@@ -184,6 +184,7 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
     # Use the GenBank accession without version
     gb_accession = accession.replace("GCF", "GCA").split(".")[0]
     response = requests.get(f"{base_api_url}/{gb_accession}", timeout=60)
+    response.raise_for_status()
     entry = ElementTree.fromstring(response.text)
 
     taxon_node = entry.find(".//TAXON")
