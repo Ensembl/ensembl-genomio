@@ -105,7 +105,7 @@ class FormattedFilesGenerator:
 
     def parse_genbank(self, gb_file: PathLike) -> None:
         """
-        Load a sequence from a Genbank file
+        Load records metadata from a Genbank file
 
         Args:
             gb_file: Path to downloaded genbank file
@@ -121,10 +121,11 @@ class FormattedFilesGenerator:
                 if record.id in organella:
                     record.organelle = organella[record.id]
                 self.seq_records.append(record)
-                if len(self.seq_records) >= 1:
-                    self.format_write_record()
-                else:
-                    logging.warning("No records are found in gb_file")
+
+        if len(self.seq_records) >= 1:
+            self.format_write_record()
+        else:
+            logging.warning("No records are found in gb_file")
 
     def format_write_record(self) -> None:
         """
