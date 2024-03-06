@@ -52,7 +52,7 @@ def shared_data_dir(pytestconfig: Config) -> Path:
 
 
 @pytest.fixture(name="json_data")
-def fixture_json_data(data_dir: Path) -> Callable:
+def fixture_json_data(data_dir: Path) -> Callable[[str], Any]:
     """Returns a JSON test object factory.
 
     Args:
