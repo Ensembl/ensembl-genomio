@@ -68,8 +68,8 @@ def fixture_json_data(data_dir: Path) -> Callable[[str], Any]:
 
 
 @pytest.fixture(name="assert_files")
-def assert_files() -> Callable[[Path, Path], None]:
-    """Provide a function that asserts two files and show a diff if they differ."""
+def fixture_assert_files() -> Callable[[Path, Path], None]:
+    """Returns a function that asserts if two files are equal and shows a diff if they differ."""
 
     def _assert_files(result_path: Path, expected_path: Path) -> None:
         with open(result_path, "r") as result_fh:
