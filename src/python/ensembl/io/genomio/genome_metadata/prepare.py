@@ -46,21 +46,21 @@ PROVIDER_DATA = {
     "GenBank": {
         "assembly": {
             "provider_name": "GenBank",
-            "provider_url": "https://www.ncbi.nlm.nih.gov/assembly",
+            "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome",
         },
         "annotation": {
             "provider_name": "GenBank",
-            "provider_url": "https://www.ncbi.nlm.nih.gov/assembly",
+            "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome",
         },
     },
     "RefSeq": {
         "assembly": {
             "provider_name": "RefSeq",
-            "provider_url": "https://www.ncbi.nlm.nih.gov/refseq",
+            "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome",
         },
         "annotation": {
             "provider_name": "RefSeq",
-            "provider_url": "https://www.ncbi.nlm.nih.gov/refseq",
+            "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome",
         },
     },
 }
@@ -75,41 +75,41 @@ class MetadataError(Exception):
     """When a metadata value is not expected."""
 
 
-def add_provider(genome_data: Dict, gff3_file: Optional[PathLike] = None) -> None:
-    """Adds provider metadata for assembly and gene models in `genome_data`.
+def add_provider(genome_metadata: Dict, gff3_file: Optional[PathLike] = None) -> None:
+    """Updates the genome metadata adding provider information for assembly and gene models.
 
-    Assembly provider metadata will only be added if it is missing, i.e. neither ``provider_name`` or
-    ``provider_url`` are present. The gene model metadata will only be added if `gff3_file` is provided.
+    Assembly provider metadata will only be added if it is missing, i.e. neither `provider_name` or
+    `provider_url` are present. The gene model metadata will only be added if `gff3_file` is provided.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
         gff3_file: Path to GFF3 file to use as annotation source for this genome.
 
+    Raises:
+        MetadataError: If accession's format in genome metadata does not match with a known provider.
     """
     # Get accession provider
-    accession = genome_data["assembly"]["accession"]
+    accession = genome_metadata["assembly"]["accession"]
     if accession.startswith("GCF"):
         provider = PROVIDER_DATA["RefSeq"]
     elif accession.startswith("GCA"):
         provider = PROVIDER_DATA["GenBank"]
     else:
-        raise MetadataError(f"Accession doesn't look like an INSDC or RefSeq accession: {accession}")
+        raise MetadataError(f"Accession does not look like an INSDC or RefSeq accession: {accession}")
 
     # Add assembly provider (if missing)
-    assembly = genome_data["assembly"]
+    assembly = genome_metadata["assembly"]
     if (not "provider_name" in assembly) and (not "provider_url" in assembly):
         assembly["provider_name"] = provider["assembly"]["provider_name"]
-        assembly["provider_url"] = provider["assembly"]["provider_url"]
+        assembly["provider_url"] = f'{provider["assembly"]["provider_url"]}/{accession}'
 
     # Add annotation provider if there are gene models
     if gff3_file:
-        annotation = {}
-        if "annotation" in genome_data:
-            annotation = genome_data["annotation"]
+        annotation = genome_metadata.get("annotation", {})
         if ("provider_name" not in annotation) and ("provider_url" not in annotation):
             annotation["provider_name"] = provider["annotation"]["provider_name"]
-            annotation["provider_url"] = provider["annotation"]["provider_url"]
-        genome_data["annotation"] = annotation
+            annotation["provider_url"] = f'{provider["annotation"]["provider_url"]}/{accession}'
+        genome_metadata["annotation"] = annotation
 
 
 def add_assembly_version(genome_data: Dict) -> None:

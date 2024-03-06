@@ -1,0 +1,17 @@
+{
+    "BRC4": {
+        "component": "VectorBase",
+        "organism_abbrev": "rannulKG"
+    },
+    "annotation": {
+        "provider_name": "GenBank"
+    },
+    "assembly": {
+        "accession": "GCA_013436015.1",
+        "provider_name": "GenBank"
+    },
+    "species": {
+        "scientific_name": "Rhipicephalus annulatus",
+        "strain": "Klein Grass"
+    }
+}
