@@ -82,9 +82,9 @@ def test_ftp_connection(
 
     with expectation:
         connected_ftp = establish_ftp(mock_ftp, ftp_url, accession)
-        connected_ftp.connect.assert_called_once_with(ftp_url)
-        connected_ftp.login.assert_called_once()
-        connected_ftp.cwd.assert_called_once_with("genomes/all/GCA/017/607/445")
+        connected_ftp.connect.assert_called_once_with(ftp_url)  # type: ignore[attr-defined]
+        connected_ftp.login.assert_called_once()  # type: ignore[attr-defined]
+        connected_ftp.cwd.assert_called_once_with("genomes/all/GCA/017/607/445")  # type: ignore[attr-defined]
 
 
 #################
