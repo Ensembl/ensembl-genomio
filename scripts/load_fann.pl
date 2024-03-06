@@ -427,7 +427,6 @@ sub db_name_for_feature {
   my $res = $skip_unknown_xref_source ?  undef : $raw_dbname;
 
   return $res if !$db_map;
-  
   my $feature = uc($lc_type);
   my $from_name = uc($raw_dbname);
   my $ignore_map = $db_map->{IGNORE};
