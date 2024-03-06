@@ -448,5 +448,5 @@ def test_retrieve_assembly_data(
         assert mock_os.mkdir.called_with(download_dir)
         assert mock_os.md5_files.called_once_with("md5checksums.txt")
         assert mock_download_files.download_files.called_once()
-        assert mock_download_singlefile._download_file.called_once()
+        assert mock_download_singlefile._download_file.called_once()  # pylint: disable=protected-access
         assert mock_file_select.get_files_selection.called_with(files_downloaded)
