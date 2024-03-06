@@ -29,7 +29,6 @@ __all__ = [
 
 from ftplib import FTP
 import hashlib
-from importlib import reload
 import logging
 from os import PathLike
 from pathlib import Path
@@ -315,13 +314,6 @@ def retrieve_assembly_data(
         None
     """
     download_dir = Path(download_dir)
-
-    # Configure logging
-    log_file = f"{accession}_download.log"
-    reload(logging)
-    logging.basicConfig(
-        filename=log_file, format="%(levelname)s:%(message)s", filemode="w", level=logging.DEBUG
-    )
 
     # Set and create dedicated dir for download
     if not download_dir.is_dir():
