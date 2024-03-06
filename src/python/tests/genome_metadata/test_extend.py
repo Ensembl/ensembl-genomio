@@ -41,7 +41,7 @@ def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> 
 
     Args:
         data_dir: Module's test data directory fixture.
-        gbff_path: GBFF file name.
+        gbff_file: GBFF file name.
         output: Expected list of sequence region IDs.
     """
     if gbff_file:
