@@ -27,7 +27,7 @@ import logging
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from contextlib import nullcontext as does_not_raise
-from typing import ContextManager
+from typing import Callable, ContextManager
 
 from ftplib import error_reply as ftp_error_reply
 import pytest
@@ -201,7 +201,7 @@ def test_download_single_file(
     data_file = data_dir / ftp_file
     retr_file = tmp_dir / ftp_file
 
-    def mock_retr_binary(command: str, callback: object):
+    def mock_retr_binary(command: str, callback: Callable):
         logging.info(f"Faking the download of {command}")
         try:
             with data_file.open("rb") as data_fh:
@@ -278,7 +278,7 @@ def test_download_all_files(
 
     mock_ftp.mlsd.side_effect = side_eff_ftp_mlsd
 
-    def mock_retr_binary(command: str, callback: object):
+    def mock_retr_binary(command: str, callback: Callable):
         logging.info(f"Faking the download of {command}")
         try:
             with data_file.open("rb") as data_fh:
