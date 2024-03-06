@@ -233,7 +233,7 @@ def prepare_genome_metadata(
     output_file: PathLike,
     gff3_file: Optional[PathLike] = None,
     base_api_url: str = DEFAULT_API_URL,
-    mock_run: bool = True,
+    mock_run: bool = False,
 ) -> None:
     """Updates the genome metadata JSON file with additional information.
 
@@ -254,8 +254,7 @@ def prepare_genome_metadata(
     add_assembly_version(genome_data)
     add_genebuild_metadata(genome_data)
     if mock_run:
-        if not "taxonomy_id" in genome_data["species"]:
-            genome_data["species"]["taxonomy_id"] = 9999999
+        genome_data["species"].setdefault("taxonomy_id", 9999999)
     else:
         add_species_metadata(genome_data, base_api_url)
     # Dump updated genome metadata
