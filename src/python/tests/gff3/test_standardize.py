@@ -35,7 +35,29 @@ def _base_gene() -> SeqFeature:
     return gene
 
 
-def test_transcript_for_gene(base_gene: SeqFeature):
+class FeatGenerator:
+    start = 1
+    end = 1000
+    strand = -1
+    region = "LOREM"
+    source = "Foo"
+
+    def make(self, ftype: str, number: int) -> List[SeqFeature]:
+        feats = []
+        for i in range(0, number):
+            loc = SimpleLocation(self.start, self.end, self.strand)
+            feat = SeqFeature(loc, type=ftype)
+            feat.qualifiers["source"] = self.source
+            feat.sub_features = []
+            feats.append(feat)
+        return feats
+    
+    def append(self, feat: SeqFeature, ftype: str, number: int) -> SeqFeature:
+        subs = self.make(ftype, number)
+        feat.sub_features = subs
+        return feat
+
+
     """Test the creation of a transcript from a gene feature."""
     tr = GFFStandard.transcript_for_gene(base_gene)
 
