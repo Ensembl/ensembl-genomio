@@ -183,7 +183,7 @@ class FunctionalAnnotations:
         # which is associated with the first xref of that feature type
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
-            if feat_name != feature.id and feat_name not in xref_values:
+            if feat_name.lower() != feature.id.lower() and feat_name.lower() not in xref_values:
                 feature_object["synonyms"] = {"synonym": feat_name}
 
         # is_pseudogene?
