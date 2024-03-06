@@ -134,7 +134,10 @@ def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectati
 @pytest.mark.dependency(depends=["test_checksums"])
 def test_md5_files(data_dir: Path, md5file: Path, checksum_bool: bool) -> None:
     """Tests the md5_files() function"""
-    return_bool_on_md5files = md5_files(data_dir, md5file)
+    if md5file is None:
+        return_bool_on_md5files = md5_files(data_dir)
+    else:
+        return_bool_on_md5files = md5_files(data_dir, md5_filename=md5file)
     assert return_bool_on_md5files == checksum_bool
 
 
