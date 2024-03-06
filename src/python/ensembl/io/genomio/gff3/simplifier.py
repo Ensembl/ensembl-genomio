@@ -22,7 +22,6 @@ __all__ = [
     "GFFSimplifier",
 ]
 
-from collections import Counter
 import json
 import logging
 from os import PathLike
@@ -72,7 +71,7 @@ class GFFSimplifier:
     # Multiple parameters to automate various fixes
     skip_unrecognized = True
     gene_cds_skip_others = False
-    allow_pseudogene_with_CDS = False
+    allow_pseudogene_with_cds = False
 
     def __init__(self, genome_path: Optional[PathLike] = None):
         # Load biotypes
@@ -280,43 +279,15 @@ class GFFSimplifier:
         # New gene ID
         gene.id = self.stable_ids.normalize_gene_id(gene)
 
-        # Gene with no subfeatures: need to create a transcript at least
-        gene = GFFStandard.transcript_for_gene(gene)
-
-        # Count features
-        fcounter = Counter([feat.type for feat in gene.sub_features])
-
-        # Transform gene - CDS to gene-transcript-exon-CDS
-        if len(fcounter) == 1:
-            if fcounter.get("CDS"):
-                num_subs = len(gene.sub_features)
-                logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
-                gene = GFFStandard.gene_to_cds(gene)
-
-            # Transform gene - exon to gene-transcript-exon
-            elif fcounter.get("exon"):
-                num_subs = len(gene.sub_features)
-                logging.debug(f"Insert transcript for {gene.id} ({num_subs} exons)")
-                transcript = GFFStandard.gene_to_exon(gene)
-                gene.sub_features = [transcript]
-        else:
-            # Check that we don't mix
-            if fcounter.get("mRNA") and fcounter.get("CDS"):
-                # Move CDS(s) from parent gene to parent mRNA if needed
-                gene = GFFStandard.move_cds_to_mrna(gene)
-            if fcounter.get("mRNA") and fcounter.get("exon"):
-                # Special case with extra exons
-                gene = GFFStandard.clean_extra_exons(gene)
-
-        # Remove CDS from pseudogenes
-        if gene.type == "pseudogene" and not self.allow_pseudogene_with_CDS:
-            GFFStandard.remove_cds_from_pseudogene(gene)
+        # Standardization
+        standard = GFFStandard(allow_pseudogene_with_cds=self.allow_pseudogene_with_cds)
+        gene = standard.standardize_gene(gene)
 
         # TRANSCRIPTS
         gene = self._normalize_transcripts(gene)
 
         # PSEUDOGENE CDS IDs
-        if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
+        if gene.type == "pseudogene" and self.allow_pseudogene_with_cds:
             self.stable_ids.normalize_pseudogene_cds_id(gene)
 
         return gene

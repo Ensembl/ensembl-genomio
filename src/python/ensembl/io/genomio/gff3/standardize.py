@@ -19,6 +19,7 @@ __all__ = [
     "GFFStandard",
 ]
 
+from collections import Counter
 import logging
 from typing import List
 
@@ -29,6 +30,9 @@ from .exceptions import GFFParserError
 
 class GFFStandard:
     """Collection of standardization functions."""
+
+    def __init__(self, allow_pseudogene_with_cds: False) -> None:
+        self.allow_pseudogene_with_cds = allow_pseudogene_with_cds
 
     @staticmethod
     def transcript_for_gene(gene: SeqFeature) -> SeqFeature:
@@ -44,6 +48,39 @@ class GFFStandard:
         gene.sub_features = [transcript]
 
         return gene
+    
+    def standardize_gene(self, gene: SeqFeature) -> SeqFeature:
+        """Standardize the structure of a gene model."""
+
+        gene = self.transcript_for_gene(gene)
+        # Count features
+        fcounter = Counter([feat.type for feat in gene.sub_features])
+
+        # Transform gene - CDS to gene-transcript-exon-CDS
+        if len(fcounter) == 1:
+            if fcounter.get("CDS"):
+                num_subs = len(gene.sub_features)
+                logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
+                gene = GFFStandard.gene_to_cds(gene)
+
+            # Transform gene - exon to gene-transcript-exon
+            elif fcounter.get("exon"):
+                num_subs = len(gene.sub_features)
+                logging.debug(f"Insert transcript for {gene.id} ({num_subs} exons)")
+                transcript = GFFStandard.gene_to_exon(gene)
+                gene.sub_features = [transcript]
+        else:
+            # Check that we don't mix
+            if fcounter.get("mRNA") and fcounter.get("CDS"):
+                # Move CDS(s) from parent gene to parent mRNA if needed
+                gene = GFFStandard.move_cds_to_mrna(gene)
+            if fcounter.get("mRNA") and fcounter.get("exon"):
+                # Special case with extra exons
+                gene = GFFStandard.clean_extra_exons(gene)
+
+        # Remove CDS from pseudogenes
+        if gene.type == "pseudogene" and not self.allow_pseudogene_with_cds:
+            GFFStandard.remove_cds_from_pseudogene(gene)
 
     @staticmethod
     def build_transcript(gene: SeqFeature) -> SeqFeature:
