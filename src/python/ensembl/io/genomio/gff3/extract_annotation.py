@@ -81,8 +81,9 @@ class FunctionalAnnotations:
         # Using provider name to modify the xref
         provider_name = None
         if self.genome:
-            provider_name = self.genome["assembly"]["provider_name"]
-            if not provider_name:
+            try:
+                provider_name = self.genome["assembly"]["provider_name"]
+            except KeyError:
                 logging.warning("No provider name is provided in the genome file")
 
         # Extract the Dbxrefs
@@ -170,6 +171,10 @@ class FunctionalAnnotations:
         ):
             del feature_object["description"]
 
+        if "Dbxref" in feature.qualifiers:
+            all_xref = self.get_xrefs(feature)
+            feature_object["xrefs"] = all_xref
+
         # Synonyms?
         # We add synonyms to the external_synonym table
         # which is associated with the first xref of that feature type
@@ -177,10 +182,6 @@ class FunctionalAnnotations:
             feat_name = feature.qualifiers["Name"][0]
             if feat_name != feature.id:
                 feature_object["synonyms"] = {"synonym": feat_name}
-
-        if "Dbxref" in feature.qualifiers:
-            all_xref = self.get_xrefs(feature)
-            feature_object["xrefs"] = all_xref
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
