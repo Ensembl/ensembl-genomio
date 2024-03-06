@@ -43,6 +43,16 @@ def test_transcript_for_gene(base_gene: SeqFeature):
     assert tr.qualifiers["source"] == base_gene.qualifiers["source"]
 
 
+@pytest.mark.dependency(name="build_transcript")
+def test_build_transcript(
+    base_gene: SeqFeature,
+):
+    """Test the creation of a transcript from a gene."""
+    tr = GFFStandard.build_transcript(base_gene)
+    assert tr.qualifiers["source"] == base_gene.qualifiers["source"]
+    assert tr.sub_features == []
+
+
 @pytest.mark.parametrize(
     "children, skip_non_cds, expected_mrna_children, expectation",
     [
@@ -52,6 +62,7 @@ def test_transcript_for_gene(base_gene: SeqFeature):
         pytest.param(["CDS", "exon"], True, 2, does_not_raise(), id="1 CDS + 1 exon, skip exon"),
     ],
 )
+@pytest.mark.dependency(name="gene_to_cds", depends=["build_transcript"])
 def test_gene_to_cds(
     base_gene: SeqFeature,
     children: List[str],

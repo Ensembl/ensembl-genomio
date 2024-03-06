@@ -41,6 +41,15 @@ class GFFStandard:
         return transcript
 
     @staticmethod
+    def build_transcript(gene: SeqFeature) -> SeqFeature:
+        """Returns a transcript with same metadata as the gene provided."""
+
+        transcript = SeqFeature(gene.location, type="mRNA")
+        transcript.qualifiers["source"] = gene.qualifiers["source"]
+        transcript.sub_features = []
+        return transcript
+
+    @staticmethod
     def gene_to_cds(gene: SeqFeature, skip_non_cds: bool = False) -> SeqFeature:
         """Add intermediate transcripts to a gene with only CDS children."""
 
@@ -76,15 +85,6 @@ class GFFStandard:
 
         gene.sub_features = transcripts
         return gene
-
-    @staticmethod
-    def build_transcript(gene: SeqFeature) -> SeqFeature:
-        """Returns a transcript with same metadata as the gene provided."""
-
-        transcript = SeqFeature(gene.location, type="mRNA")
-        transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
-        return transcript
 
     @staticmethod
     def move_cds_to_mrna(gene: SeqFeature) -> SeqFeature:
