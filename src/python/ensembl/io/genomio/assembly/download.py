@@ -186,7 +186,7 @@ def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: 
                         _download_file(ftp_connection, ftp_file, md5_sums, dl_dir, max_redo)
         else:
             logging.warning(
-                f"Could not detect accession '{accession}' from ftp download dir path {ftp_dir} in open FTP connection"
+                f"Could not find accession '{accession}' from ftp {ftp_dir} in open FTP connection"
             )
 
 
