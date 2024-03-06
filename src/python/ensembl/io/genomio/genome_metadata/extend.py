@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Updates a genome metadata file to include additional sequence regions (e.g. MT chromosome)."""
+"""Update a genome metadata file to include additional sequence regions (e.g. MT chromosome)."""
 
 __all__ = [
     "get_additions",

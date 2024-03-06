@@ -37,7 +37,7 @@ from ensembl.io.genomio.genome_metadata import extend
     ],
 )
 def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> None:
-    """Tests the `extend.get_gbff_regions` class.
+    """Tests the `extend.get_gbff_regions()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -76,7 +76,7 @@ def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> 
     ],
 )
 def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict]) -> None:
-    """Tests the `extend._report_to_csv` class.
+    """Tests the `extend._report_to_csv()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -101,7 +101,7 @@ def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict
     ],
 )
 def test_get_report_regions_names(data_dir: Path, report_file: str, output: List[Tuple[str, str]]) -> None:
-    """Tests the `extend.get_report_regions_names` class.
+    """Tests the `extend.get_report_regions_names()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -126,7 +126,7 @@ def test_get_report_regions_names(data_dir: Path, report_file: str, output: List
     ],
 )
 def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output: List[str]) -> None:
-    """Tests the `extend.get_additions` class.
+    """Tests the `extend.get_additions()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -162,7 +162,7 @@ def test_amend_genome_metadata(
     genbank_file: str,
     output_file: str,
 ) -> None:
-    """Tests the `extend.amend_genome_metadata` class.
+    """Tests the `extend.amend_genome_metadata()` method.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
