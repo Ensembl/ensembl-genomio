@@ -27,4 +27,10 @@ process PREPARE_GENOME_METADATA {
     '''
     genome_metadata_prepare --input_file !{input_json} --output_file !{output_json}
     '''
+    
+    stub:
+        output_json = "genome.json"
+        """
+        genome_metadata_prepare --input_file $input_json --output_file $output_json --mock_run
+        """
 }
