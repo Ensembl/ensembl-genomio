@@ -269,11 +269,11 @@ class FormattedFilesGenerator:
         self, gene_feat: SeqFeature, gene_name: str
     ) -> Tuple[Dict[str, SeqFeature], List[str], List[SeqFeature]]:
         """
-        Parse the gene records in the genbank file
+        Parse a gene feature from the genbank file
 
         Args:
-            gene_feat: Gene features in the record
-            gene_name: Gene name associated with the gene_feat
+            gene_feat: Gene feature to parse
+            gene_name: Gene name associated with the gene feature
         """
 
         gene_id = self.prefix + gene_name
