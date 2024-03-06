@@ -8,7 +8,8 @@
     },
     "assembly": {
         "accession": "GCA_013436015.1",
-        "provider_name": "GenBank"
+        "provider_name": "GenBank",
+        "version": 1
     },
     "species": {
         "scientific_name": "Rhipicephalus annulatus",

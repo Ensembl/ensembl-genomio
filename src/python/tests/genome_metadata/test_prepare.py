@@ -39,7 +39,7 @@ from ensembl.io.genomio.genome_metadata import prepare
             {
                 "assembly": {
                     "provider_name": "GenBank",
-                    "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_013436015.1",
+                    "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_013436015.2",
                 },
             },
             does_not_raise(),
@@ -98,3 +98,23 @@ def test_add_provider(
         for section, metadata in output.items():
             for key, value in metadata.items():
                 assert genome_metadata[section].get(key, None) == value
+
+
+@pytest.mark.parametrize(
+    "genome_file, output",
+    [
+        ("genbank_genome.json", 2),
+        ("updated_genome.json", 1),
+    ],
+)
+def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str, output: int) -> None:
+    """Tests the `prepare.add_assembly_version()` method.
+
+    Args:
+        json_data: JSON test file parsing fixture.
+        genome_file: Genome metadata JSON file.
+        output: Assembly version expected in the updated genome metadata.
+    """
+    genome_metadata = json_data(genome_file)
+    prepare.add_assembly_version(genome_metadata)
+    assert genome_metadata["assembly"]["version"] == output

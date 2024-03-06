@@ -113,7 +113,7 @@ def add_provider(genome_metadata: Dict, gff3_file: Optional[PathLike] = None) ->
 
 
 def add_assembly_version(genome_data: Dict) -> None:
-    """Adds version number to the genome's assembly if one is not present already.
+    """Adds version number to the genome's assembly information if one is not present already.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
@@ -122,9 +122,9 @@ def add_assembly_version(genome_data: Dict) -> None:
     assembly = genome_data["assembly"]
     if not "version" in assembly:
         accession = assembly["accession"]
-        values = accession.split(".")
-        if (len(values) == 2) and values[1]:
-            assembly["version"] = int(values[1])
+        version = accession.partition(".")[2]
+        if version:
+            assembly["version"] = int(version)
 
 
 def add_genebuild_metadata(genome_data: Dict) -> None:
