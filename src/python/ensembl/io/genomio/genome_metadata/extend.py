@@ -86,9 +86,9 @@ def _report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
         for line in report:
             if line.startswith("#"):
                 # Get metadata values if possible
-                match = re.search("# (.+?): (.+?)$", line)
+                match = re.search(r"^#\s*([^:]+?):\s+(.+?)\s*$", line)
                 if match:
-                    metadata[match.group(1)] = match.group(2).strip()
+                    metadata[match.group(1)] = match.group(2)
                 prev_line = line
             else:
                 if prev_line:
