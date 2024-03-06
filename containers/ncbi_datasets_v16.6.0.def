@@ -1,0 +1,53 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%environment
+    export SINGULARITY_SHELL=/bin/bash
+    export DEBIAN_FRONTEND=noninteractive
+    export LC_ALL=C
+
+%labels
+    Author lcampbell@ebi.ac.uk
+    Software "NCBI's datasets and dataformat"
+    Software.version v16.6.0
+    Software.website "https://github.com/ncbi/datasets/releases/tag/v16.6.0"
+    Description "NCBI Datasets is a new resource that lets you easily gather data from across NCBI databases."
+
+%post
+    apt-get update && apt-get -y upgrade
+    apt-get -y install \
+    wget \
+    unzip \
+    procps \
+    ca-certificates \
+    
+    rm -rf /var/lib/apt/lists/*
+    apt-get clean
+    
+    #Installing ncbi datasets & dataformat
+    cd /usr/local/bin/ && \
+    wget https://github.com/ncbi/datasets/releases/download/v16.6.0/linux-amd64.cli.package.zip && \
+    unzip linux-amd64.cli.package.zip && \
+    rm linux-amd64.cli.package.zip && \
+    chmod +x datasets dataformat
+
+%test
+    #!/usr/bin/bash
+
+    #!/usr/bin/bash
+
+    echo "Testing OS is Ubuntu...."
+    source /etc/os-release
+    grep -q -e "PRETTY_NAME=\"Ubuntu" /etc/os-release
+    if [ $? -eq 0 ]; then
+        if [ $VERSION_ID == "24.04" ]; then
+	   echo "Container base is Ubuntu version ${VERSION_ID} as expected."
+        fi
+    else
+        echo "Container base is not Ubuntu."
+        exit 1
+    fi
+
+    echo -e -n "\n** Checking we have datasets installed **\n"
+    datasets --version
+    datasets --help
