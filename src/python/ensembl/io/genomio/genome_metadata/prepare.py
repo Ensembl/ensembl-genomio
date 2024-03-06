@@ -12,8 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Expand the genome_metadata with more details for:
-the provider, assembly and gene build version, and the taxonomy.
+"""Expand the genome metadata file adding information about the provider, taxonomy, and assembly and
+gene build versions.
 """
 
 __all__ = [
@@ -257,12 +257,7 @@ def prepare_genome_metadata(
 
 def main() -> None:
     """Module's entry-point."""
-    parser = ArgumentParser(
-        description=(
-            "Add information about provider, taxonomy and assembly and gene build version to the genome "
-            "metadata file."
-        )
-    )
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path("--input_file", required=True, help="Genome metadata JSON file")
     parser.add_argument_dst_path(
         "--output_file", required=True, help="Output path for the new genome metadata file"
