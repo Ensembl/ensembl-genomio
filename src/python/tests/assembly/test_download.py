@@ -76,7 +76,7 @@ def test_ftp_connection(
 
     def side_eff_conn(url: str):
         if not url:
-            raise Exception()
+            raise FTPConnectionError()
 
     mock_ftp.connect.side_effect = side_eff_conn
 

@@ -82,12 +82,9 @@ def establish_ftp(ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
     sub_dir = Path("genomes", "all", gca, part1, part2, part3)
 
     # Try now to establish connection to remote FTP server
-    try:
-        ftp_conn.connect(ftp_url)
-        ftp_conn.login()
-        ftp_conn.cwd(str(sub_dir))
-    except:
-        raise FTPConnectionError(f"Could not create FTP connection on {ftp_url} remote path {sub_dir}")
+    ftp_conn.connect(ftp_url)
+    ftp_conn.login()
+    ftp_conn.cwd(str(sub_dir))
 
     return ftp_conn
 
