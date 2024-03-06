@@ -171,16 +171,19 @@ class FunctionalAnnotations:
         ):
             del feature_object["description"]
 
+        feature_object["xrefs"] = []
         if "Dbxref" in feature.qualifiers:
             all_xref = self.get_xrefs(feature)
             feature_object["xrefs"] = all_xref
+
+        xref_values = {xref["id"].lower() for xref in feature_object["xrefs"]}
 
         # Synonyms?
         # We add synonyms to the external_synonym table
         # which is associated with the first xref of that feature type
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
-            if feat_name != feature.id:
+            if feat_name != feature.id and feat_name not in xref_values:
                 feature_object["synonyms"] = {"synonym": feat_name}
 
         # is_pseudogene?
