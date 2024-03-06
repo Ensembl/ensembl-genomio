@@ -32,13 +32,18 @@ class GFFStandard:
 
     @staticmethod
     def transcript_for_gene(gene: SeqFeature) -> SeqFeature:
-        """Returns a transcript, from a gene without one."""
+        """Add an mRNA to a protein coding gene if it doesn't have one."""
 
+        if len(gene.sub_features) > 0 or gene.type != "gene":
+            return gene
+
+        logging.debug(f"Insert transcript for lone gene {gene.id}")
         transcript = SeqFeature(gene.location, type="transcript")
         transcript.qualifiers["source"] = gene.qualifiers["source"]
         transcript.sub_features = []
+        gene.sub_features = [transcript]
 
-        return transcript
+        return gene
 
     @staticmethod
     def build_transcript(gene: SeqFeature) -> SeqFeature:

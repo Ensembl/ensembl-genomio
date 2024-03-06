@@ -19,7 +19,7 @@ from typing import ContextManager, List, Optional
 
 from Bio.SeqFeature import SeqFeature, SimpleLocation
 import pytest
-from pytest import raises
+from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.standardize import GFFStandard
@@ -58,11 +58,25 @@ class FeatGenerator:
         return feat
 
 
+@pytest.mark.parametrize(
+    "gene_type, ntr_before, ntr_after",
+    [
+        param("ncRNA_gene", 1, 1, id="ncRNA_gene with 1 transcript"),
+        param("ncRNA_gene", 0, 0, id="ncRNA_gene with no transcript"),
+        param("gene", 1, 1, id="Gene with 1 transcript"),
+        param("gene", 2, 2, id="Gene with 2 transcripts"),
+        param("gene", 0, 1, id="Gene with no transcript"),
+    ],
+)
+def test_transcript_for_gene(gene_type: str, ntr_before: int, ntr_after: int):
     """Test the creation of a transcript from a gene feature."""
-    tr = GFFStandard.transcript_for_gene(base_gene)
-
-    assert tr.location == base_gene.location
-    assert tr.qualifiers["source"] == base_gene.qualifiers["source"]
+    gen = FeatGenerator()
+    gene = gen.make(gene_type, 1)[0]
+    if ntr_before > 0:
+        gene = gen.append(gene, "mRNA", ntr_before)
+    
+    fixed_gene = GFFStandard.transcript_for_gene(gene)
+    assert len(fixed_gene.sub_features) == ntr_after
 
 
 @pytest.mark.dependency(name="build_transcript")

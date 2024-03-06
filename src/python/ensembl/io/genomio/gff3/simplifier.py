@@ -281,10 +281,7 @@ class GFFSimplifier:
         gene.id = self.stable_ids.normalize_gene_id(gene)
 
         # Gene with no subfeatures: need to create a transcript at least
-        if len(gene.sub_features) == 0:
-            logging.debug(f"Insert transcript for lone gene {gene.id}")
-            transcript = GFFStandard.transcript_for_gene(gene)
-            gene.sub_features = [transcript]
+        gene = GFFStandard.transcript_for_gene(gene)
 
         # Count features
         fcounter = Counter([feat.type for feat in gene.sub_features])
