@@ -271,7 +271,7 @@ def test_download_all_files(
         mlsd_ret = []
         files = data_dir.glob("*GCA_017607445.1*.gz")
         for file_path in files:
-            ftp_file = str(file_path).split("/")[-1]
+            ftp_file = Path(file_path).name
             mlsd_ret.append((str(ftp_file), ["fact_1", "fact_2"]))
 
         return mlsd_ret
@@ -308,7 +308,7 @@ def test_download_all_files(
 #################
 @pytest.mark.dependency(name="test_get_files_selection")
 @pytest.mark.parametrize(
-    "download_dir, files_expected, expectation",
+    "has_download_dir, files_expected, expectation",
     [
         pytest.param(
             True,
@@ -331,7 +331,7 @@ def test_download_all_files(
     ],
 )
 def test_get_files_selection(
-    data_dir: Path, download_dir: bool, files_expected: dict, expectation: ContextManager
+    data_dir: Path, has_download_dir: bool, files_expected: dict, expectation: ContextManager
 ) -> None:
     """Test the get a subset of download.get_files_selection() files function `
 
@@ -341,16 +341,16 @@ def test_get_files_selection(
         expectation: Context manager expected raise exception
     """
 
-    if download_dir:
+    if has_download_dir:
         download_dir = data_dir
     else:
-        download_dir = Path("")
+        download_dir = Path()
 
     with expectation:
         subset_files = get_files_selection(download_dir)
-        for file_end_name in subset_files.keys():
+        for file_end_name, file_path in subset_files.items():
             expected_file = files_expected[file_end_name]
-            test_data_file_name = subset_files[file_end_name].split("/")[-1]
+            test_data_file_name = Path(file_path).name
             assert test_data_file_name == expected_file
 
 
