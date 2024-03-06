@@ -22,6 +22,7 @@ Typical usage example::
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
 from typing import Any, Callable, ContextManager, Dict, Optional
+from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
@@ -118,3 +119,29 @@ def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str,
     genome_metadata = json_data(genome_file)
     prepare.add_assembly_version(genome_metadata)
     assert genome_metadata["assembly"]["version"] == output
+
+
+@patch("datetime.date")
+@pytest.mark.parametrize(
+    "genome_file, output",
+    [
+        ("genbank_genome.json", "03-2024"),
+        ("updated_genome.json", "01-2021"),
+    ],
+)
+def test_add_genebuild_metadata(
+    mock_date: Mock, json_data: Callable[[str], Any], genome_file: str, output: str
+) -> None:
+    """Tests the `prepare.add_genebuild_metadata()` method.
+
+    Args:
+        json_data: JSON test file parsing fixture.
+        genome_file: Genome metadata JSON file.
+        output: Expected date for genebuild's `start_date` and `version` in the updated genome metadata.
+    """
+    mock_date.today.return_value = mock_date
+    mock_date.isoformat.return_value = output
+    genome_metadata = json_data(genome_file)
+    prepare.add_genebuild_metadata(genome_metadata)
+    assert genome_metadata["genebuild"]["start_date"] == output
+    assert genome_metadata["genebuild"]["version"] == output

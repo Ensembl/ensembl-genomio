@@ -11,6 +11,10 @@
         "provider_name": "GenBank",
         "version": 1
     },
+    "genebuild": {
+        "start_date": "01-2021",
+        "version": "01-2021"
+    },
     "species": {
         "scientific_name": "Rhipicephalus annulatus",
         "strain": "Klein Grass"

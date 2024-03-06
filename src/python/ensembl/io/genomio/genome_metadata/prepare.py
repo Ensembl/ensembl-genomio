@@ -117,7 +117,6 @@ def add_assembly_version(genome_data: Dict) -> None:
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
-
     """
     assembly = genome_data["assembly"]
     if not "version" in assembly:
@@ -128,20 +127,20 @@ def add_assembly_version(genome_data: Dict) -> None:
 
 
 def add_genebuild_metadata(genome_data: Dict) -> None:
-    """Adds missing genebuild metadata.
+    """Adds genebuild metadata to genome information if not present already.
 
-    The default convention is to use the current date as ``version`` and ``start_date``.
+    The default convention is to use the current date as `version` and `start_date`.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
-
     """
-    genebuild = genome_data["genebuild"]
+    genebuild = genome_data.get("genebuild", {})
     current_date = datetime.date.today().isoformat()
     if not "version" in genebuild:
         genebuild["version"] = current_date
     if not "start_date" in genebuild:
         genebuild["start_date"] = current_date
+    genome_data["genebuild"] = genebuild
 
 
 def add_species_metadata(genome_data: Dict, base_api_url: str = DEFAULT_API_URL) -> None:
