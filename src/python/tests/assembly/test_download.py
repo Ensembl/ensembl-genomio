@@ -122,22 +122,22 @@ def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectati
 #################
 @pytest.mark.dependency(name="test_md5_files")
 @pytest.mark.parametrize(
-    "md5file, checksum_bool",
+    "md5_file, md5_path, checksum_bool",
     [
-        pytest.param("md5checksums.txt", True, id="Normal case"),
-        pytest.param("wrong_md5_checksums.txt", False, id="Incorrect md5 checksum"),
-        pytest.param(None, True, id="No md5file specified, resort to default"),
-        pytest.param(Path("*"), False, id="Incompatible os path '*'"),
-        pytest.param("missingfile_md5.txt", False, id="md5 checksum with ref of missing file"),
+        pytest.param("md5checksums.txt", None, True, id="Normal case"),
+        pytest.param("wrong_md5_checksums.txt", None, False, id="Incorrect md5 checksum"),
+        pytest.param(None, None, True, id="No md5file specified, resort to default"),
+        pytest.param(None, Path("*"), False, id="Incompatible os path '*'"),
+        pytest.param("missingfile_md5.txt", None, False, id="md5 checksum with ref of missing file"),
     ],
 )
 @pytest.mark.dependency(depends=["test_checksums"])
-def test_md5_files(data_dir: Path, md5file: Path, checksum_bool: bool) -> None:
+def test_md5_files(data_dir: Path, md5_file: str, md5_path: Path, checksum_bool: bool) -> None:
     """Tests the md5_files() function"""
-    if md5file is None:
-        return_bool_on_md5files = md5_files(data_dir)
+    if md5_file is None:
+        return_bool_on_md5files = md5_files(data_dir, md5_path=md5_path)
     else:
-        return_bool_on_md5files = md5_files(data_dir, md5_filename=md5file)
+        return_bool_on_md5files = md5_files(data_dir, md5_path=md5_path, md5_filename=md5_file)
     assert return_bool_on_md5files == checksum_bool
 
 
