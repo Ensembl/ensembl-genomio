@@ -410,7 +410,7 @@ sub load_external_db_map {
     } else {
       add_to_db_map($db_map->{VALID}, $feature, $from_name, $to_name, $pat);
       add_to_db_map($db_map->{VALID}, '_OTHER_', $from_name, 1, undef) if ($feature ne "_ANY_");
-    } 
+    }
 }
   return $db_map;
 }
