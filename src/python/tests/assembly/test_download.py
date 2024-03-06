@@ -27,7 +27,7 @@ import logging
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from contextlib import nullcontext as does_not_raise
-from typing import ContextManager
+from typing import Callable, ContextManager
 
 from ftplib import error_reply as ftp_error_reply
 import pytest
@@ -76,15 +76,15 @@ def test_ftp_connection(
 
     def side_eff_conn(url: str):
         if not url:
-            raise Exception()
+            raise FTPConnectionError()
 
     mock_ftp.connect.side_effect = side_eff_conn
 
     with expectation:
         connected_ftp = establish_ftp(mock_ftp, ftp_url, accession)
-        connected_ftp.connect.assert_called_once_with(ftp_url)
-        connected_ftp.login.assert_called_once()
-        connected_ftp.cwd.assert_called_once_with("genomes/all/GCA/017/607/445")
+        connected_ftp.connect.assert_called_once_with(ftp_url)  # type: ignore[attr-defined]
+        connected_ftp.login.assert_called_once()  # type: ignore[attr-defined]
+        connected_ftp.cwd.assert_called_once_with("genomes/all/GCA/017/607/445")  # type: ignore[attr-defined]
 
 
 #################
@@ -122,19 +122,22 @@ def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectati
 #################
 @pytest.mark.dependency(name="test_md5_files")
 @pytest.mark.parametrize(
-    "md5file, checksum_bool",
+    "md5_file, md5_path, checksum_bool",
     [
-        pytest.param("md5checksums.txt", True, id="Normal case"),
-        pytest.param("wrong_md5_checksums.txt", False, id="Incorrect md5 checksum"),
-        pytest.param(None, True, id="No md5file specified, resort to default"),
-        pytest.param(Path("*"), False, id="Incompatible os path '*'"),
-        pytest.param("missingfile_md5.txt", False, id="md5 checksum with ref of missing file"),
+        pytest.param("md5checksums.txt", None, True, id="Normal case"),
+        pytest.param("wrong_md5_checksums.txt", None, False, id="Incorrect md5 checksum"),
+        pytest.param(None, None, True, id="No md5file specified, resort to default"),
+        pytest.param(None, Path("*"), False, id="Incompatible os path '*'"),
+        pytest.param("missingfile_md5.txt", None, False, id="md5 checksum with ref of missing file"),
     ],
 )
 @pytest.mark.dependency(depends=["test_checksums"])
-def test_md5_files(data_dir: Path, md5file: Path, checksum_bool: bool) -> None:
+def test_md5_files(data_dir: Path, md5_file: str, md5_path: Path, checksum_bool: bool) -> None:
     """Tests the md5_files() function"""
-    return_bool_on_md5files = md5_files(data_dir, md5file)
+    if md5_file is None:
+        return_bool_on_md5files = md5_files(data_dir, md5_path=md5_path)
+    else:
+        return_bool_on_md5files = md5_files(data_dir, md5_path=md5_path, md5_filename=md5_file)
     assert return_bool_on_md5files == checksum_bool
 
 
@@ -198,7 +201,7 @@ def test_download_single_file(
     data_file = data_dir / ftp_file
     retr_file = tmp_dir / ftp_file
 
-    def mock_retr_binary(command: str, callback: object):
+    def mock_retr_binary(command: str, callback: Callable):
         logging.info(f"Faking the download of {command}")
         try:
             with data_file.open("rb") as data_fh:
@@ -268,14 +271,14 @@ def test_download_all_files(
         mlsd_ret = []
         files = data_dir.glob("*GCA_017607445.1*.gz")
         for file_path in files:
-            ftp_file = str(file_path).split("/")[-1]
+            ftp_file = Path(file_path).name
             mlsd_ret.append((str(ftp_file), ["fact_1", "fact_2"]))
 
         return mlsd_ret
 
     mock_ftp.mlsd.side_effect = side_eff_ftp_mlsd
 
-    def mock_retr_binary(command: str, callback: object):
+    def mock_retr_binary(command: str, callback: Callable):
         logging.info(f"Faking the download of {command}")
         try:
             with data_file.open("rb") as data_fh:
@@ -305,7 +308,7 @@ def test_download_all_files(
 #################
 @pytest.mark.dependency(name="test_get_files_selection")
 @pytest.mark.parametrize(
-    "download_dir, files_expected, expectation",
+    "has_download_dir, files_expected, expectation",
     [
         pytest.param(
             True,
@@ -328,7 +331,7 @@ def test_download_all_files(
     ],
 )
 def test_get_files_selection(
-    data_dir: Path, download_dir: bool, files_expected: dict, expectation: ContextManager
+    data_dir: Path, has_download_dir: bool, files_expected: dict, expectation: ContextManager
 ) -> None:
     """Test the get a subset of download.get_files_selection() files function `
 
@@ -338,16 +341,16 @@ def test_get_files_selection(
         expectation: Context manager expected raise exception
     """
 
-    if download_dir:
+    if has_download_dir:
         download_dir = data_dir
     else:
-        download_dir = Path("")
+        download_dir = Path()
 
     with expectation:
         subset_files = get_files_selection(download_dir)
-        for file_end_name in subset_files.keys():
+        for file_end_name, file_path in subset_files.items():
             expected_file = files_expected[file_end_name]
-            test_data_file_name = subset_files[file_end_name].split("/")[-1]
+            test_data_file_name = Path(file_path).name
             assert test_data_file_name == expected_file
 
 
@@ -418,14 +421,14 @@ def test_retrieve_assembly_data(
         expectation: Context manager expected raise exception
     """
 
-    if is_dir == False:
+    if is_dir is False:
         download_dir = Path(data_dir / str("test_ftp_file.txt"))
     else:
         download_dir = data_dir
 
     def side_eff_conn(url: str):
         if not url:
-            raise Exception()
+            raise FileDownloadError()
 
     mock_ftp.connect.side_effect = side_eff_conn
 
@@ -445,5 +448,5 @@ def test_retrieve_assembly_data(
         assert mock_os.mkdir.called_with(download_dir)
         assert mock_os.md5_files.called_once_with("md5checksums.txt")
         assert mock_download_files.download_files.called_once()
-        assert mock_download_singlefile._download_file.called_once()
+        assert mock_download_singlefile._download_file.called_once()  # pylint: disable=protected-access
         assert mock_file_select.get_files_selection.called_with(files_downloaded)
