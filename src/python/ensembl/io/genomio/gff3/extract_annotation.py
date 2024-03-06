@@ -57,7 +57,7 @@ class FunctionalAnnotations:
 
     ignored_xrefs = {"go", "interpro", "uniprot"}
 
-    def __init__(self, genome: Optional[Dict[str, Dict[str, Any]]]) -> None:
+    def __init__(self, genome: Optional[Dict[str, Dict[str, Any]]] = None) -> None:
         self.annotations: List[Annotation] = []
         self.genome = genome
         # Annotated features
