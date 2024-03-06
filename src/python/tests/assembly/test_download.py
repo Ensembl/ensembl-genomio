@@ -421,14 +421,14 @@ def test_retrieve_assembly_data(
         expectation: Context manager expected raise exception
     """
 
-    if is_dir == False:
+    if is_dir is False:
         download_dir = Path(data_dir / str("test_ftp_file.txt"))
     else:
         download_dir = data_dir
 
     def side_eff_conn(url: str):
         if not url:
-            raise Exception()
+            raise FileDownloadError()
 
     mock_ftp.connect.side_effect = side_eff_conn
 
