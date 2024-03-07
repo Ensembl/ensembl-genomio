@@ -311,3 +311,34 @@ def test_add_species_metadata(
     genome_metadata = json_data(genome_file)
     prepare.add_species_metadata(genome_metadata)
     assert not DeepDiff(genome_metadata["species"], output)
+
+
+@patch("ensembl.io.genomio.genome_metadata.prepare.add_species_metadata")
+@patch("ensembl.io.genomio.genome_metadata.prepare.add_genebuild_metadata")
+@patch("ensembl.io.genomio.genome_metadata.prepare.add_assembly_version")
+@patch("ensembl.io.genomio.genome_metadata.prepare.add_provider")
+def test_prepare_genome_metadata(
+    mock_add_provider: Mock,
+    mock_add_assembly_version: Mock,
+    mock_add_genebuild_metadata: Mock,
+    mock_add_species_metadata: Mock,
+    tmp_path: Path,
+    data_dir: Path,
+    assert_files: Callable[[Path, Path], None],
+):
+    """Tests the `prepare.prepare_genome_metadata()` method.
+
+    Args:
+        mock_*: A mock of `ensembl.io.genomio.genome_metadata.prepare.*` functions.
+        tmp_path: Test's unique temporary directory fixture.
+        data_dir: Module's test data directory fixture.
+        assert_files: File diff assertion fixture.
+    """
+    input_file = data_dir / "updated_genome.json"
+    output_file = tmp_path / "output.json"
+    prepare.prepare_genome_metadata(input_file, output_file)
+    mock_add_provider.assert_called_once()
+    mock_add_assembly_version.assert_called_once()
+    mock_add_genebuild_metadata.assert_called_once()
+    mock_add_species_metadata.assert_called_once()
+    assert_files(input_file, output_file)
