@@ -37,11 +37,11 @@ from ensembl.io.genomio.genome_metadata import extend
     ],
 )
 def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> None:
-    """Tests the `extend.get_gbff_regions` class.
+    """Tests the `extend.get_gbff_regions()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
-        gbff_path: GBFF file name.
+        gbff_file: GBFF file name.
         output: Expected list of sequence region IDs.
     """
     if gbff_file:
@@ -76,7 +76,7 @@ def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> 
     ],
 )
 def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict]) -> None:
-    """Tests the `extend._report_to_csv` class.
+    """Tests the `extend._report_to_csv()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -101,7 +101,7 @@ def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict
     ],
 )
 def test_get_report_regions_names(data_dir: Path, report_file: str, output: List[Tuple[str, str]]) -> None:
-    """Tests the `extend.get_report_regions_names` class.
+    """Tests the `extend.get_report_regions_names()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -126,7 +126,7 @@ def test_get_report_regions_names(data_dir: Path, report_file: str, output: List
     ],
 )
 def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output: List[str]) -> None:
-    """Tests the `extend.get_additions` class.
+    """Tests the `extend.get_additions()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -153,7 +153,7 @@ def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output:
         ),
     ],
 )
-def test_amend_genomic_metadata(
+def test_amend_genome_metadata(
     tmp_path: Path,
     data_dir: Path,
     assert_files: Callable[[Path, Path], None],
@@ -162,20 +162,20 @@ def test_amend_genomic_metadata(
     genbank_file: str,
     output_file: str,
 ) -> None:
-    """Tests the `extend.amend_genomic_metadata` class.
+    """Tests the `extend.amend_genome_metadata()` method.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
         data_dir: Module's test data directory fixture.
         assert_files: File diff assertion fixture.
-        genome_infile: Input genome data file.
+        genome_infile: Input genome metadata file.
         report_file: INSDC/RefSeq sequences report file.
         genbank_file: INSDC/RefSeq GBFF file.
-        output_file: Expected amended genome data file.
+        output_file: Expected amended genome metadata file.
     """
     genome_inpath = data_dir / genome_infile
     report_path = data_dir / report_file if report_file else None
     genbank_path = data_dir / genbank_file if genbank_file else None
     genome_outpath = tmp_path / "genome.out"
-    extend.amend_genomic_metadata(genome_inpath, genome_outpath, report_path, genbank_path)
+    extend.amend_genome_metadata(genome_inpath, genome_outpath, report_path, genbank_path)
     assert_files(genome_outpath, data_dir / output_file)

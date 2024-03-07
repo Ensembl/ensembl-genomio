@@ -441,6 +441,7 @@ def prepare_seq_region_metadata(
     gbff_file: Optional[PathLike] = None,
     brc_mode: bool = False,
     to_exclude: Optional[List[str]] = None,
+    mock_run: bool = False,
 ) -> None:
     """Prepares the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
 
@@ -455,6 +456,7 @@ def prepare_seq_region_metadata(
         dst_file: JSON file output for the processed sequence regions JSON.
         brc_mode: Include INSDC sequence region names.
         to_exclude: Sequence region names to exclude.
+        mock_run: Do not call external taxonomy service.
 
     """
     genome_data = get_json(genome_file)
@@ -479,7 +481,8 @@ def prepare_seq_region_metadata(
 
     # Add translation and mitochondrial codon tables
     add_translation_table(seq_regions)
-    add_mitochondrial_codon_table(seq_regions, genome_data["species"]["taxonomy_id"])
+    if not mock_run:
+        add_mitochondrial_codon_table(seq_regions, genome_data["species"]["taxonomy_id"])
 
     # Print out the file
     print_json(dst_file, seq_regions)
@@ -500,6 +503,7 @@ def main() -> None:
     parser.add_argument(
         "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
     )
+    parser.add_argument("--mock_run", action="store_true", help="Do not call external APIs")
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
@@ -511,4 +515,5 @@ def main() -> None:
         gbff_file=args.gbff_file,
         brc_mode=args.brc_mode,
         to_exclude=args.to_exclude,
+        mock_run=args.mock_run,
     )

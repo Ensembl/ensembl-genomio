@@ -12,13 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Updates a genome metadata file to include additional sequence regions (e.g. MT chromosome)."""
+"""Update a genome metadata file to include additional sequence regions (e.g. MT chromosome)."""
 
 __all__ = [
     "get_additions",
     "get_gbff_regions",
     "get_report_regions_names",
-    "amend_genomic_metadata",
+    "amend_genome_metadata",
 ]
 
 import csv
@@ -86,9 +86,9 @@ def _report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
         for line in report:
             if line.startswith("#"):
                 # Get metadata values if possible
-                match = re.search("# (.+?): (.+?)$", line)
+                match = re.search(r"^#\s*([^:]+?):\s+(.+?)\s*$", line)
                 if match:
-                    metadata[match.group(1)] = match.group(2).strip()
+                    metadata[match.group(1)] = match.group(2)
                 prev_line = line
             else:
                 if prev_line:
@@ -124,7 +124,7 @@ def get_report_regions_names(report_path: PathLike) -> List[Tuple[str, str]]:
     return seq_regions
 
 
-def amend_genomic_metadata(
+def amend_genome_metadata(
     genome_infile: PathLike,
     genome_outfile: PathLike,
     report_file: Optional[PathLike] = None,
@@ -132,8 +132,8 @@ def amend_genomic_metadata(
 ) -> None:
     """
     Args:
-        genome_infile: Genome data following the `src/python/ensembl/io/genomio/data/schemas/genome.json`.
-        genome_outfile: Amended genome data file.
+        genome_infile: Genome metadata following the `src/python/ensembl/io/genomio/data/schemas/genome.json`.
+        genome_outfile: Amended genome metadata file.
         report_file: INSDC/RefSeq sequences report file.
         genbank_file: INSDC/RefSeq GBFF file.
     """
@@ -155,7 +155,7 @@ def main() -> None:
     parser.add_argument_src_path(
         "--genome_infile",
         required=True,
-        help="Input genome file (following the src/python/ensembl/io/genomio/data/schemas/genome.json)",
+        help="Input genome metadata file (following src/python/ensembl/io/genomio/data/schemas/genome.json)",
     )
     parser.add_argument_dst_path(
         "--genome_outfile", required=True, help="Path to the new amended genome metadata file"
@@ -166,7 +166,7 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    amend_genomic_metadata(
+    amend_genome_metadata(
         genome_infile=args.genome_infile,
         genome_outfile=args.genome_outfile,
         report_file=args.report_file,

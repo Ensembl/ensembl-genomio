@@ -18,7 +18,7 @@ from contextlib import nullcontext as does_not_raise
 from difflib import unified_diff
 import filecmp
 from pathlib import Path
-from typing import ContextManager, List, Optional
+from typing import ContextManager, Dict, List, Optional
 
 import pytest
 
@@ -53,6 +53,20 @@ def _show_diff(result_path: Path, expected_path: Path) -> str:
         expected = expected_fh.readlines()
     diff = list(unified_diff(expected, results))
     return "".join(diff)
+
+
+@pytest.mark.parametrize(
+    "genome, expected_prefix",
+    [
+        pytest.param({}, "TMP_PREFIX_", id="Default prefix"),
+        pytest.param({"BRC4": {"organism_abbrev": "LOREM"}}, "TMP_LOREM_", id="Prefix from genome meta"),
+    ],
+)
+def test_set_prefix(genome: Dict, expected_prefix: str) -> None:
+    """Test prefix setting from genome metadata."""
+    ids = StableIDAllocator()
+    ids.set_prefix(genome)
+    assert ids.prefix == expected_prefix
 
 
 @pytest.mark.parametrize(
