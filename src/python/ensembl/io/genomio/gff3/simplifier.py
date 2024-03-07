@@ -38,7 +38,7 @@ import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
-from .standardize import GFFStandard
+from .standardize import standardize_gene
 
 
 class Records(list):
@@ -276,23 +276,20 @@ class GFFSimplifier:
 
         """
 
-        # New gene ID
         gene.id = self.stable_ids.normalize_gene_id(gene)
-
-        # Standardization
-        standard = GFFStandard(allow_pseudogene_with_cds=self.allow_pseudogene_with_cds)
-        gene = standard.standardize_gene(gene)
-
-        # TRANSCRIPTS
-        gene = self._normalize_transcripts(gene)
+        standardize_gene(gene)
+        self._normalize_transcripts(gene)
 
         # PSEUDOGENE CDS IDs
         if gene.type == "pseudogene" and self.allow_pseudogene_with_cds:
             self.stable_ids.normalize_pseudogene_cds_id(gene)
 
+        # Remove CDS from pseudogenes
+        self.remove_cds_from_pseudogene(gene)
+
         return gene
 
-    def _normalize_transcripts(self, gene: SeqFeature) -> SeqFeature:
+    def _normalize_transcripts(self, gene: SeqFeature) -> None:
         """Returns a normalized transcript."""
 
         allowed_transcript_types = self._biotypes["transcript"]["supported"]
@@ -325,8 +322,6 @@ class GFFSimplifier:
         if transcripts_to_delete:
             for elt in sorted(transcripts_to_delete, reverse=True):
                 gene.sub_features.pop(elt)
-
-        return gene
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
@@ -414,3 +409,26 @@ class GFFSimplifier:
         gene.id = self.stable_ids.generate_gene_id()
 
         return gene
+
+    def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
+        """Removes the CDS from a pseudogene.
+
+        This assumes the CDSs are sub features of the transcript or the gene.
+
+        """
+        if gene.type != "pseudogene" or self.allow_pseudogene_with_cds:
+            return
+        gene_subfeats = []
+        for transcript in gene.sub_features:
+            if transcript.type == "CDS":
+                logging.debug(f"Remove pseudo CDS {transcript.id}")
+                continue
+            new_subfeats = []
+            for feat in transcript.sub_features:
+                if feat.type == "CDS":
+                    logging.debug(f"Remove pseudo CDS {feat.id}")
+                    continue
+                new_subfeats.append(feat)
+            transcript.sub_features = new_subfeats
+            gene_subfeats.append(transcript)
+        gene.sub_features = gene_subfeats

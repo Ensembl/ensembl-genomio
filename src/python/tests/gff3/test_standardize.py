@@ -22,7 +22,7 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
-from ensembl.io.genomio.gff3.standardize import GFFStandard
+from ensembl.io.genomio.gff3.standardize import standardize_gene, transcript_for_gene, build_transcript, gene_to_cds
 
 
 @pytest.fixture(name="base_gene")
@@ -75,7 +75,7 @@ def test_transcript_for_gene(gene_type: str, ntr_before: int, ntr_after: int):
     if ntr_before > 0:
         gene = gen.append(gene, "mRNA", ntr_before)
     
-    fixed_gene = GFFStandard.transcript_for_gene(gene)
+    fixed_gene = transcript_for_gene(gene)
     assert len(fixed_gene.sub_features) == ntr_after
 
 
@@ -84,7 +84,7 @@ def test_build_transcript(
     base_gene: SeqFeature,
 ):
     """Test the creation of a transcript from a gene."""
-    tr = GFFStandard.build_transcript(base_gene)
+    tr = build_transcript(base_gene)
     assert tr.qualifiers["source"] == base_gene.qualifiers["source"]
     assert tr.sub_features == []
 
@@ -114,9 +114,9 @@ def test_gene_to_cds(
 
     with expectation:
         if skip_non_cds is not None:
-            gene = GFFStandard.gene_to_cds(base_gene, skip_non_cds=skip_non_cds)
+            gene = gene_to_cds(base_gene, skip_non_cds=skip_non_cds)
         else:
-            gene = GFFStandard.gene_to_cds(base_gene)
+            gene = gene_to_cds(base_gene)
 
         # We should get only one mRNA and CDS + exons
         gene_child = gene.sub_features[0]

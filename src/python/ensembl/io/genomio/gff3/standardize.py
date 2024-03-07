@@ -16,7 +16,10 @@
 """
 
 __all__ = [
-    "GFFStandard",
+    "standardize_gene",
+    "transcript_for_gene",
+    "build_transcript",
+    "gene_to_cds",
 ]
 
 from collections import Counter
@@ -28,258 +31,218 @@ from Bio.SeqFeature import SeqFeature
 from .exceptions import GFFParserError
 
 
-class GFFStandard:
-    """Collection of standardization functions."""
+def standardize_gene(gene: SeqFeature) -> None:
+    """Standardize the structure of a gene model."""
 
-    def __init__(self, allow_pseudogene_with_cds: False) -> None:
-        self.allow_pseudogene_with_cds = allow_pseudogene_with_cds
+    transcript_for_gene(gene)
+    # Count features
+    fcounter = Counter([feat.type for feat in gene.sub_features])
 
-    @staticmethod
-    def transcript_for_gene(gene: SeqFeature) -> SeqFeature:
-        """Add an mRNA to a protein coding gene if it doesn't have one."""
+    # Transform gene - CDS to gene-transcript-exon-CDS
+    if len(fcounter) == 1:
+        if fcounter.get("CDS"):
+            num_subs = len(gene.sub_features)
+            logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
+            gene_to_cds(gene)
 
-        if len(gene.sub_features) > 0 or gene.type != "gene":
-            return gene
+        # Transform gene - exon to gene-transcript-exon
+        elif fcounter.get("exon"):
+            num_subs = len(gene.sub_features)
+            logging.debug(f"Insert transcript for {gene.id} ({num_subs} exons)")
+            transcript = gene_to_exon(gene)
+            gene.sub_features = [transcript]
+    else:
+        # Check that we don't mix
+        if fcounter.get("mRNA") and fcounter.get("CDS"):
+            # Move CDS(s) from parent gene to parent mRNA if needed
+            move_cds_to_mrna(gene)
+        if fcounter.get("mRNA") and fcounter.get("exon"):
+            # Special case with extra exons
+            clean_extra_exons(gene)
 
-        logging.debug(f"Insert transcript for lone gene {gene.id}")
-        transcript = SeqFeature(gene.location, type="transcript")
-        transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
-        gene.sub_features = [transcript]
+def transcript_for_gene(gene: SeqFeature) -> SeqFeature:
+    """Add an mRNA to a protein coding gene if it doesn't have one."""
 
-        return gene
-    
-    def standardize_gene(self, gene: SeqFeature) -> SeqFeature:
-        """Standardize the structure of a gene model."""
-
-        gene = self.transcript_for_gene(gene)
-        # Count features
-        fcounter = Counter([feat.type for feat in gene.sub_features])
-
-        # Transform gene - CDS to gene-transcript-exon-CDS
-        if len(fcounter) == 1:
-            if fcounter.get("CDS"):
-                num_subs = len(gene.sub_features)
-                logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
-                gene = GFFStandard.gene_to_cds(gene)
-
-            # Transform gene - exon to gene-transcript-exon
-            elif fcounter.get("exon"):
-                num_subs = len(gene.sub_features)
-                logging.debug(f"Insert transcript for {gene.id} ({num_subs} exons)")
-                transcript = GFFStandard.gene_to_exon(gene)
-                gene.sub_features = [transcript]
-        else:
-            # Check that we don't mix
-            if fcounter.get("mRNA") and fcounter.get("CDS"):
-                # Move CDS(s) from parent gene to parent mRNA if needed
-                gene = GFFStandard.move_cds_to_mrna(gene)
-            if fcounter.get("mRNA") and fcounter.get("exon"):
-                # Special case with extra exons
-                gene = GFFStandard.clean_extra_exons(gene)
-
-        # Remove CDS from pseudogenes
-        if gene.type == "pseudogene" and not self.allow_pseudogene_with_cds:
-            GFFStandard.remove_cds_from_pseudogene(gene)
-
-    @staticmethod
-    def build_transcript(gene: SeqFeature) -> SeqFeature:
-        """Returns a transcript with same metadata as the gene provided."""
-
-        transcript = SeqFeature(gene.location, type="mRNA")
-        transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
-        return transcript
-
-    @staticmethod
-    def gene_to_cds(gene: SeqFeature, skip_non_cds: bool = False) -> SeqFeature:
-        """Add intermediate transcripts to a gene with only CDS children."""
-
-        transcripts_dict = {}
-        del_transcript = []
-
-        for count, cds in enumerate(gene.sub_features):
-            if cds.type != "CDS":
-                if skip_non_cds:
-                    del_transcript.append(count)
-                    continue
-                raise GFFParserError(
-                    "Can not create a chain 'transcript - exon - CDS'"
-                    f" when the gene children are not all CDSs"
-                    f" ({cds.id} of type {cds.type} is child of gene {gene.id})"
-                )
-
-            exon = SeqFeature(cds.location, type="exon")
-
-            # Add to transcript or create a new one
-            if cds.id not in transcripts_dict:
-                logging.debug(f"Create new mRNA for {cds.id}")
-                transcript = GFFStandard.build_transcript(gene)
-                transcripts_dict[cds.id] = transcript
-            exon.qualifiers["source"] = gene.qualifiers["source"]
-            transcripts_dict[cds.id].sub_features.append(exon)
-            transcripts_dict[cds.id].sub_features.append(cds)
-
-        for elt in sorted(del_transcript, reverse=True):
-            gene.sub_features.pop(elt)
-
-        transcripts = list(transcripts_dict.values())
-
-        gene.sub_features = transcripts
+    if len(gene.sub_features) > 0 or gene.type != "gene":
         return gene
 
-    @staticmethod
-    def move_cds_to_mrna(gene: SeqFeature) -> SeqFeature:
-        """Move CDS child features of a gene, to the mRNA.
+    logging.debug(f"Insert transcript for lone gene {gene.id}")
+    transcript = SeqFeature(gene.location, type="transcript")
+    transcript.qualifiers["source"] = gene.qualifiers["source"]
+    transcript.sub_features = []
+    gene.sub_features = [transcript]
 
-        This is to fix the case where we have the following structure:
-        gene -> [ mRNA, CDSs ]
-        and change it to
-        gene -> [ mRNA -> [ CDSs ] ]
-        The mRNA might have exons, in which case check that they match the CDS coordinates.
+    return gene
 
-        Raises an exception if the feature structure is not recognized.
+def build_transcript(gene: SeqFeature) -> SeqFeature:
+    """Returns a transcript with same metadata as the gene provided."""
 
-        Args:
-            A gene with only one transcript, to check and fix.
+    transcript = SeqFeature(gene.location, type="mRNA")
+    transcript.qualifiers["source"] = gene.qualifiers["source"]
+    transcript.sub_features = []
+    return transcript
 
-        Returns:
-            The gene where the CDSs have been moved, if needed.
+def gene_to_cds(gene: SeqFeature, skip_non_cds: bool = False) -> SeqFeature:
+    """Add intermediate transcripts to a gene with only CDS children."""
 
-        """
-        # First, count the types
-        mrnas = []
-        cdss = []
+    transcripts_dict = {}
+    del_transcript = []
 
-        gene_subf_clean = []
-        for subf in gene.sub_features:
-            if subf.type == "mRNA":
-                mrnas.append(subf)
-            elif subf.type == "CDS":
-                cdss.append(subf)
-            else:
-                gene_subf_clean.append(subf)
-
-        if len(cdss) == 0:
-            # Nothing to fix here, no CDSs to move
-            return gene
-        if len(mrnas) > 1:
+    for count, cds in enumerate(gene.sub_features):
+        if cds.type != "CDS":
+            if skip_non_cds:
+                del_transcript.append(count)
+                continue
             raise GFFParserError(
-                f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene"
+                "Can not create a chain 'transcript - exon - CDS'"
+                f" when the gene children are not all CDSs"
+                f" ({cds.id} of type {cds.type} is child of gene {gene.id})"
             )
 
-        mrna = mrnas[0]
+        exon = SeqFeature(cds.location, type="exon")
 
-        # Check if there are exons (or CDSs) under the mRNA
-        sub_exons = []
-        sub_cdss = []
-        for subf in mrna.sub_features:
-            if subf.type == "CDS":
-                sub_cdss.append(subf)
-            elif subf.type == "exon":
-                sub_exons.append(subf)
+        # Add to transcript or create a new one
+        if cds.id not in transcripts_dict:
+            logging.debug(f"Create new mRNA for {cds.id}")
+            transcript = build_transcript(gene)
+            transcripts_dict[cds.id] = transcript
+        exon.qualifiers["source"] = gene.qualifiers["source"]
+        transcripts_dict[cds.id].sub_features.append(exon)
+        transcripts_dict[cds.id].sub_features.append(cds)
 
-        GFFStandard._check_sub_cdss(gene, sub_cdss)
-        GFFStandard._check_sub_exons(gene, cdss, sub_exons)
+    for elt in sorted(del_transcript, reverse=True):
+        gene.sub_features.pop(elt)
 
-        logging.debug(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
-        # No more issues? move the CDSs
-        mrna.sub_features += cdss
-        # And remove them from the gene
-        gene.sub_features = gene_subf_clean
-        gene.sub_features.append(mrna)
+    transcripts = list(transcripts_dict.values())
 
+    gene.sub_features = transcripts
+    return gene
+
+def move_cds_to_mrna(gene: SeqFeature) -> SeqFeature:
+    """Move CDS child features of a gene, to the mRNA.
+
+    This is to fix the case where we have the following structure:
+    gene -> [ mRNA, CDSs ]
+    and change it to
+    gene -> [ mRNA -> [ CDSs ] ]
+    The mRNA might have exons, in which case check that they match the CDS coordinates.
+
+    Raises an exception if the feature structure is not recognized.
+
+    Args:
+        A gene with only one transcript, to check and fix.
+
+    Returns:
+        The gene where the CDSs have been moved, if needed.
+
+    """
+    # First, count the types
+    mrnas = []
+    cdss = []
+
+    gene_subf_clean = []
+    for subf in gene.sub_features:
+        if subf.type == "mRNA":
+            mrnas.append(subf)
+        elif subf.type == "CDS":
+            cdss.append(subf)
+        else:
+            gene_subf_clean.append(subf)
+
+    if len(cdss) == 0:
+        # Nothing to fix here, no CDSs to move
         return gene
+    if len(mrnas) > 1:
+        raise GFFParserError(
+            f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene"
+        )
 
-    @staticmethod
-    def _check_sub_cdss(gene: SeqFeature, sub_cdss: List[SeqFeature]) -> None:
-        if len(sub_cdss) > 0:
-            raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
+    mrna = mrnas[0]
 
-    @staticmethod
-    def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
-        """Check that the exons of the mRNA and the CDSs match"""
+    # Check if there are exons (or CDSs) under the mRNA
+    sub_exons = []
+    sub_cdss = []
+    for subf in mrna.sub_features:
+        if subf.type == "CDS":
+            sub_cdss.append(subf)
+        elif subf.type == "exon":
+            sub_exons.append(subf)
 
-        if len(sub_exons) > 0:
-            # Check that they match the CDS outside
-            if len(sub_exons) == len(cdss):
-                # Now that all coordinates are the same
-                coord_exons = [f"{exon.location}" for exon in sub_exons]
-                coord_cdss = [f"{cds.location}" for cds in cdss]
+    _check_sub_cdss(gene, sub_cdss)
+    _check_sub_exons(gene, cdss, sub_exons)
 
-                if coord_exons != coord_cdss:
-                    raise GFFParserError(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
+    logging.debug(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
+    # No more issues? move the CDSs
+    mrna.sub_features += cdss
+    # And remove them from the gene
+    gene.sub_features = gene_subf_clean
+    gene.sub_features.append(mrna)
+
+    return gene
+
+def _check_sub_cdss(gene: SeqFeature, sub_cdss: List[SeqFeature]) -> None:
+    if len(sub_cdss) > 0:
+        raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
+
+def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
+    """Check that the exons of the mRNA and the CDSs match"""
+
+    if len(sub_exons) > 0:
+        # Check that they match the CDS outside
+        if len(sub_exons) == len(cdss):
+            # Now that all coordinates are the same
+            coord_exons = [f"{exon.location}" for exon in sub_exons]
+            coord_cdss = [f"{cds.location}" for cds in cdss]
+
+            if coord_exons != coord_cdss:
+                raise GFFParserError(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
+        else:
+            raise GFFParserError(
+                f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)"
+            )
+
+def clean_extra_exons(gene: SeqFeature) -> SeqFeature:
+    """Remove extra exons, already existing in the mRNA.
+
+    This is a special case where a gene contains proper mRNAs, etc. but also
+    extra exons for the same features. Those exons usually have an ID starting with
+    "id-", so that's what we use to detect them.
+    """
+    exons = []
+    mrnas = []
+    others = []
+    for subf in gene.sub_features:
+        if subf.type == "exon":
+            exons.append(subf)
+        elif subf.type == "mRNA":
+            mrnas.append(subf)
+        else:
+            others.append(subf)
+
+    if exons and mrnas:
+        exon_has_id = 0
+        # Check if the exon ids start with "id-", which is an indication that they do not belong here
+        for exon in exons:
+            if exon.id.startswith("id-"):
+                exon_has_id += 1
+        if exon_has_id:
+            if exon_has_id == len(exons):
+                logging.debug(f"Remove {exon_has_id} extra exons from {gene.id}")
+                gene.sub_features = mrnas
+                gene.sub_features += others
             else:
-                raise GFFParserError(
-                    f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)"
-                )
+                raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
 
-    @staticmethod
-    def clean_extra_exons(gene: SeqFeature) -> SeqFeature:
-        """Remove extra exons, already existing in the mRNA.
+    return gene
 
-        This is a special case where a gene contains proper mRNAs, etc. but also
-        extra exons for the same features. Those exons usually have an ID starting with
-        "id-", so that's what we use to detect them.
-        """
-        exons = []
-        mrnas = []
-        others = []
-        for subf in gene.sub_features:
-            if subf.type == "exon":
-                exons.append(subf)
-            elif subf.type == "mRNA":
-                mrnas.append(subf)
-            else:
-                others.append(subf)
+def gene_to_exon(gene: SeqFeature) -> SeqFeature:
+    """Returns an intermediary transcript for a gene with direct exon children."""
 
-        if exons and mrnas:
-            exon_has_id = 0
-            # Check if the exon ids start with "id-", which is an indication that they do not belong here
-            for exon in exons:
-                if exon.id.startswith("id-"):
-                    exon_has_id += 1
-            if exon_has_id:
-                if exon_has_id == len(exons):
-                    logging.debug(f"Remove {exon_has_id} extra exons from {gene.id}")
-                    gene.sub_features = mrnas
-                    gene.sub_features += others
-                else:
-                    raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
+    transcript = SeqFeature(gene.location, type="mRNA")
+    transcript.qualifiers["source"] = gene.qualifiers["source"]
+    transcript.sub_features = []
 
-        return gene
+    for exon in gene.sub_features:
+        transcript.sub_features.append(exon)
 
-    @staticmethod
-    def gene_to_exon(gene: SeqFeature) -> SeqFeature:
-        """Returns an intermediary transcript for a gene with direct exon children."""
-
-        transcript = SeqFeature(gene.location, type="mRNA")
-        transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
-
-        for exon in gene.sub_features:
-            transcript.sub_features.append(exon)
-
-        return transcript
-
-    @staticmethod
-    def remove_cds_from_pseudogene(gene: SeqFeature) -> None:
-        """Removes the CDS from a pseudogene.
-
-        This assumes the CDSs are sub features of the transcript or the gene.
-
-        """
-        gene_subfeats = []
-        for transcript in gene.sub_features:
-            if transcript.type == "CDS":
-                logging.debug(f"Remove pseudo CDS {transcript.id}")
-                continue
-            new_subfeats = []
-            for feat in transcript.sub_features:
-                if feat.type == "CDS":
-                    logging.debug(f"Remove pseudo CDS {feat.id}")
-                    continue
-                new_subfeats.append(feat)
-            transcript.sub_features = new_subfeats
-            gene_subfeats.append(transcript)
-        gene.sub_features = gene_subfeats
+    return transcript
