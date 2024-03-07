@@ -283,7 +283,6 @@ for my $it (@$data) {
       $xref->{info_type},
       $xref->{info_text}
     );
-   
     # update 'display_xref' only for the first time or for the $set_display_xref_4
     if ( defined $display_xref && ( $display_xref eq $xref->{id} || $xref->{display_id} && $xref->{display_id} eq $display_xref ) ) {
       if ($lc_type eq "gene" || $lc_type eq "transcript") {
@@ -432,7 +431,6 @@ sub db_name_for_feature {
       return if ($xref_id =~ m/$pat/);
     }
   }
-  
   # check if there's a specific valid rule
   if ($valid_feature && @$valid_feature) {
     for my $case (@$valid_feature) {
