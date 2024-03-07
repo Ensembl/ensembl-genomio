@@ -74,7 +74,7 @@ class FunctionalAnnotations:
             "transcript": {},
         }
 
-    def get_xrefs(self, feature) -> List[Dict[str, Any]]:
+    def get_xrefs(self, feature: SeqFeature) -> List[Dict[str, Any]]:
         """Get the xrefs from the Dbxref field."""
         all_xref = []
 

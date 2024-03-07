@@ -364,7 +364,7 @@ sub add_to_db_map {
   my ($db_map, $feature, $from, $val, $pat) = @_;
   $db_map->{$feature} //= {};
   $db_map->{$feature}->{$from} //= [];
-  # We are adding same dbname to the database as an array
+  # We are adding same dbname but different pat to the database as an array
   my %uniq_dict = map {"val:".$_->{val}."with:".($_->{pat} // "_undef_") => 1 } @{$db_map->{$feature}->{$from}};
   my $k = "val:".$val."with:".($pat // "_undef_");
   if (!exists $uniq_dict{$k} ) {
