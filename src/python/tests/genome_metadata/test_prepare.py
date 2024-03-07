@@ -96,8 +96,8 @@ def test_add_provider(
         output: Expected elements present in the updated genome metadata.
         expectation: Context manager for the expected exception (if any).
     """
+    genome_metadata = json_data(genome_file)
     with expectation:
-        genome_metadata = json_data(genome_file)
         prepare.add_provider(genome_metadata, gff3_file)
         for section, metadata in output.items():
             for key, value in metadata.items():
@@ -109,6 +109,7 @@ def test_add_provider(
     [
         ("genbank_genome.json", 2),
         ("updated_genome.json", 1),
+        ("cncb_genome.json", 0),
     ],
 )
 def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str, output: int) -> None:
@@ -121,7 +122,7 @@ def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str,
     """
     genome_metadata = json_data(genome_file)
     prepare.add_assembly_version(genome_metadata)
-    assert genome_metadata["assembly"]["version"] == output
+    assert genome_metadata["assembly"].get("version", 0) == output
 
 
 @patch("datetime.date")
@@ -138,6 +139,7 @@ def test_add_genebuild_metadata(
     """Tests the `prepare.add_genebuild_metadata()` method.
 
     Args:
+        mock_date: A mock of `datetime.date` class.
         json_data: JSON test file parsing fixture.
         genome_file: Genome metadata JSON file.
         output: Expected date for genebuild's `start_date` and `version` in the updated genome metadata.
