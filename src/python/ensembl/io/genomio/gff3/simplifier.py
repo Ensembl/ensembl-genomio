@@ -278,18 +278,21 @@ class GFFSimplifier:
 
         gene.id = self.stable_ids.normalize_gene_id(gene)
         standardize_gene(gene)
-        self._normalize_transcripts(gene)
-
-        # PSEUDOGENE CDS IDs
-        if gene.type == "pseudogene" and self.allow_pseudogene_with_cds:
-            self.stable_ids.normalize_pseudogene_cds_id(gene)
-
-        # Remove CDS from pseudogenes
-        self.remove_cds_from_pseudogene(gene)
+        self.normalize_transcripts(gene)
+        self.normalize_pseudogene(gene)
 
         return gene
 
-    def _normalize_transcripts(self, gene: SeqFeature) -> None:
+    def normalize_pseudogene(self, gene) -> None:
+        if gene.type != "pseudogene":
+            return
+
+        if self.allow_pseudogene_with_cds:
+            self.stable_ids.normalize_pseudogene_cds_id(gene)
+        else:
+            self.remove_cds_from_pseudogene(gene)
+
+    def normalize_transcripts(self, gene: SeqFeature) -> None:
         """Returns a normalized transcript."""
 
         allowed_transcript_types = self._biotypes["transcript"]["supported"]
@@ -416,8 +419,9 @@ class GFFSimplifier:
         This assumes the CDSs are sub features of the transcript or the gene.
 
         """
-        if gene.type != "pseudogene" or self.allow_pseudogene_with_cds:
+        if gene.type != "pseudogene":
             return
+
         gene_subfeats = []
         for transcript in gene.sub_features:
             if transcript.type == "CDS":
