@@ -49,7 +49,7 @@ from ensembl.io.genomio.genome_metadata import prepare
         ),
         pytest.param(
             "refseq_genome.json",
-            "fake.gff3",
+            Path("fake.gff3"),
             {
                 "assembly": {
                     "provider_name": "RefSeq",
@@ -65,7 +65,7 @@ from ensembl.io.genomio.genome_metadata import prepare
         ),
         pytest.param(
             "updated_genome.json",
-            "fake.gff3",
+            Path("fake.gff3"),
             {
                 "assembly": {"provider_name": "GenBank", "provider_url": None},
                 "annotation": {"provider_name": "GenBank", "provider_url": None},
@@ -81,7 +81,7 @@ from ensembl.io.genomio.genome_metadata import prepare
 def test_add_provider(
     json_data: Callable[[str], Any],
     genome_file: str,
-    gff3_file: Optional[str],
+    gff3_file: Optional[Path],
     output: Dict[str, Dict[str, Optional[str]]],
     expectation: ContextManager,
 ) -> None:
@@ -198,7 +198,7 @@ def test_get_node_text(
     else:
         node = None
     with expectation:
-        result = prepare._get_node_text(node, tag, optional)
+        result = prepare._get_node_text(node, tag, optional)  # pylint: disable=protected-access
         assert result == output
 
 
@@ -292,7 +292,7 @@ def test_get_taxonomy_from_accession(
 )
 def test_add_species_metadata(
     mock_get_taxonomy_data: Mock,
-    json_data: Path,
+    json_data: Callable[[str], Any],
     genome_file: str,
     taxonomy: Dict[str, Any],
     output: Dict[str, Any],

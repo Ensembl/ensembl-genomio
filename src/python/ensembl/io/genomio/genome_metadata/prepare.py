@@ -193,7 +193,8 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
     scientific_name = _get_node_text(taxon_node, "SCIENTIFIC_NAME")
     strain = _get_node_text(taxon_node, "STRAIN", optional=True)
     taxonomy = {
-        "taxon_id": int(taxon_id),
+        # Ignore arg-type check in the following line since taxon_id cannot be None
+        "taxon_id": int(taxon_id),  # type: ignore[arg-type]
         "scientific_name": scientific_name,
     }
     if strain:
