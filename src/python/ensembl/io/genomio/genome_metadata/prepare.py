@@ -105,11 +105,10 @@ def add_provider(genome_metadata: Dict, gff3_file: Optional[PathLike] = None) ->
 
     # Add annotation provider if there are gene models
     if gff3_file:
-        annotation = genome_metadata.get("annotation", {})
+        annotation = genome_metadata.setdefault("annotation", {})
         if ("provider_name" not in annotation) and ("provider_url" not in annotation):
             annotation["provider_name"] = provider["annotation"]["provider_name"]
             annotation["provider_url"] = f'{provider["annotation"]["provider_url"]}/{accession}'
-        genome_metadata["annotation"] = annotation
 
 
 def add_assembly_version(genome_data: Dict) -> None:
@@ -134,13 +133,12 @@ def add_genebuild_metadata(genome_data: Dict) -> None:
     Args:
         genome_data: Genome information of assembly, accession and annotation.
     """
-    genebuild = genome_data.get("genebuild", {})
+    genebuild = genome_data.setdefault("genebuild", {})
     current_date = datetime.date.today().isoformat()
     if not "version" in genebuild:
         genebuild["version"] = current_date
     if not "start_date" in genebuild:
         genebuild["start_date"] = current_date
-    genome_data["genebuild"] = genebuild
 
 
 def add_species_metadata(genome_metadata: Dict, base_api_url: str = DEFAULT_API_URL) -> None:
