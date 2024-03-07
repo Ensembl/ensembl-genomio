@@ -208,21 +208,27 @@ def test_get_node_text(
 @patch("requests.Response")
 @patch("requests.get")
 @pytest.mark.parametrize(
-    "xml_file, output, expectation",
+    "accession, base_api_url, xml_file, output, expectation",
     [
         pytest.param(
+            "GCF_013436015.2",
+            prepare.DEFAULT_API_URL,
             "default_taxonomy.xml",
             {"taxon_id": 34611, "scientific_name": "Rhipicephalus annulatus"},
             does_not_raise(),
             id="Basic taxonomy data",
         ),
         pytest.param(
+            "GCA_013436015.2",
+            "/",
             "strain_taxonomy.xml",
             {"taxon_id": 34611, "scientific_name": "Rhipicephalus annulatus", "strain": "Klein Grass"},
             does_not_raise(),
             id="Taxonomy with strain data",
         ),
         pytest.param(
+            "GCA_013436015.2",
+            "",
             "no_taxonomy.xml",
             {},
             pytest.raises(prepare.MissingNodeError, match="Cannot find the TAXON node"),
@@ -234,6 +240,8 @@ def test_get_taxonomy_from_accession(
     mock_requests_get: Mock,
     mock_response: Mock,
     data_dir: Path,
+    accession: str,
+    base_api_url: str,
     xml_file: str,
     output: Dict[str, Any],
     expectation: ContextManager,
@@ -244,6 +252,8 @@ def test_get_taxonomy_from_accession(
         mock_requests_get: A mock of `requests.get()` function.
         mock_response: A mock of `requests.Response` class.
         data_dir: Module's test data directory fixture.
+        accession: INSDC accession ID.
+        base_api_url: Base API URL to fetch the taxonomy data from.
         xml_file: XML file with assembly's taxonomy data.
         output: Expected taxonomy data returned.
         expectation: Context manager for the expected exception (if any).
@@ -254,5 +264,5 @@ def test_get_taxonomy_from_accession(
     mock_response.text = text
     mock_requests_get.return_value = mock_response
     with expectation:
-        result = prepare.get_taxonomy_from_accession("GCA_013436015.2")
+        result = prepare.get_taxonomy_from_accession(accession, base_api_url)
         assert not DeepDiff(result, output)
