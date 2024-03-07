@@ -22,7 +22,12 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
-from ensembl.io.genomio.gff3.standardize import standardize_gene, transcript_for_gene, build_transcript, gene_to_cds
+from ensembl.io.genomio.gff3.standardize import (
+    # standardize_gene,
+    transcript_for_gene,
+    build_transcript,
+    gene_to_cds,
+)
 
 
 @pytest.fixture(name="base_gene")
@@ -36,6 +41,8 @@ def _base_gene() -> SeqFeature:
 
 
 class FeatGenerator:
+    """Generates feature of a given type for testing."""
+
     start = 1
     end = 1000
     strand = -1
@@ -43,16 +50,18 @@ class FeatGenerator:
     source = "Foo"
 
     def make(self, ftype: str, number: int) -> List[SeqFeature]:
+        """Create a defined bnumber of features of a given type."""
         feats = []
-        for i in range(0, number):
+        for _ in range(0, number):
             loc = SimpleLocation(self.start, self.end, self.strand)
             feat = SeqFeature(loc, type=ftype)
             feat.qualifiers["source"] = self.source
             feat.sub_features = []
             feats.append(feat)
         return feats
-    
+
     def append(self, feat: SeqFeature, ftype: str, number: int) -> SeqFeature:
+        """Create a defined bnumber of features of a given type and append them to the gene."""
         subs = self.make(ftype, number)
         feat.sub_features = subs
         return feat
@@ -74,7 +83,7 @@ def test_transcript_for_gene(gene_type: str, ntr_before: int, ntr_after: int):
     gene = gen.make(gene_type, 1)[0]
     if ntr_before > 0:
         gene = gen.append(gene, "mRNA", ntr_before)
-    
+
     fixed_gene = transcript_for_gene(gene)
     assert len(fixed_gene.sub_features) == ntr_after
 
@@ -86,7 +95,7 @@ def test_build_transcript(
     """Test the creation of a transcript from a gene."""
     tr = build_transcript(base_gene)
     assert tr.qualifiers["source"] == base_gene.qualifiers["source"]
-    assert tr.sub_features == []
+    assert not tr.sub_features
 
 
 @pytest.mark.parametrize(

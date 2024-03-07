@@ -283,7 +283,8 @@ class GFFSimplifier:
 
         return gene
 
-    def normalize_pseudogene(self, gene) -> None:
+    def normalize_pseudogene(self, gene: SeqFeature) -> None:
+        """Normalize CDSs if allowed, otherwise remove them."""
         if gene.type != "pseudogene":
             return
 

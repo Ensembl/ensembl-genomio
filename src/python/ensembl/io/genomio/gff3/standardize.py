@@ -60,6 +60,7 @@ def standardize_gene(gene: SeqFeature) -> None:
             # Special case with extra exons
             clean_extra_exons(gene)
 
+
 def transcript_for_gene(gene: SeqFeature) -> SeqFeature:
     """Add an mRNA to a protein coding gene if it doesn't have one."""
 
@@ -74,6 +75,7 @@ def transcript_for_gene(gene: SeqFeature) -> SeqFeature:
 
     return gene
 
+
 def build_transcript(gene: SeqFeature) -> SeqFeature:
     """Returns a transcript with same metadata as the gene provided."""
 
@@ -81,6 +83,7 @@ def build_transcript(gene: SeqFeature) -> SeqFeature:
     transcript.qualifiers["source"] = gene.qualifiers["source"]
     transcript.sub_features = []
     return transcript
+
 
 def gene_to_cds(gene: SeqFeature, skip_non_cds: bool = False) -> SeqFeature:
     """Add intermediate transcripts to a gene with only CDS children."""
@@ -117,6 +120,7 @@ def gene_to_cds(gene: SeqFeature, skip_non_cds: bool = False) -> SeqFeature:
 
     gene.sub_features = transcripts
     return gene
+
 
 def move_cds_to_mrna(gene: SeqFeature) -> SeqFeature:
     """Move CDS child features of a gene, to the mRNA.
@@ -180,9 +184,11 @@ def move_cds_to_mrna(gene: SeqFeature) -> SeqFeature:
 
     return gene
 
+
 def _check_sub_cdss(gene: SeqFeature, sub_cdss: List[SeqFeature]) -> None:
     if len(sub_cdss) > 0:
         raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
+
 
 def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
     """Check that the exons of the mRNA and the CDSs match"""
@@ -200,6 +206,7 @@ def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeat
             raise GFFParserError(
                 f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)"
             )
+
 
 def clean_extra_exons(gene: SeqFeature) -> SeqFeature:
     """Remove extra exons, already existing in the mRNA.
@@ -234,6 +241,7 @@ def clean_extra_exons(gene: SeqFeature) -> SeqFeature:
                 raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
 
     return gene
+
 
 def gene_to_exon(gene: SeqFeature) -> SeqFeature:
     """Returns an intermediary transcript for a gene with direct exon children."""
