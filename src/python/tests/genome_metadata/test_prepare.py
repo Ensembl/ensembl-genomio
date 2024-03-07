@@ -264,3 +264,50 @@ def test_get_taxonomy_from_accession(
     with expectation:
         result = prepare.get_taxonomy_from_accession(accession, base_api_url)
         assert not DeepDiff(result, output)
+
+
+@patch("ensembl.io.genomio.genome_metadata.prepare.get_taxonomy_from_accession")
+@pytest.mark.parametrize(
+    "genome_file, taxonomy, output",
+    [
+        pytest.param(
+            "genbank_genome.json",
+            {"taxon_id": 34611, "scientific_name": "Rhipicephalus annulatus"},
+            {"taxonomy_id": 34611, "scientific_name": "Rhipicephalus annulatus"},
+            id="Add taxonomy information",
+        ),
+        pytest.param(
+            "refseq_genome.json",
+            {"taxon_id": 34611, "scientific_name": "Rhipicephalus annulatus", "strain": "Klein Grass"},
+            {"taxonomy_id": 34611, "scientific_name": "Rhipicephalus annulatus", "strain": "Klein Grass"},
+            id="Add strain taxonomy information",
+        ),
+        pytest.param(
+            "updated_genome.json",
+            {"taxon_id": 34611},
+            {"taxonomy_id": 10092, "scientific_name": "Mus musculus", "strain": "domesticus"},
+            id="Nothing to add",
+        ),
+    ],
+)
+def test_add_species_metadata(
+    mock_get_taxonomy_data: Mock,
+    json_data: Path,
+    genome_file: str,
+    taxonomy: Dict[str, Any],
+    output: Dict[str, Any],
+):
+    """Tests the `prepare.add_species_metadata()` method.
+
+    Args:
+        mock_get_taxonomy_data: A mock of
+            `ensembl.io.genomio.genome_metadata.prepare.get_taxonomy_from_accession()` function.
+        json_data: JSON test file parsing fixture.
+        genome_file: Genome metadata JSON file.
+        taxonomy: Taxonomy metadata to add.
+        output: Expected `"species"` genome metadata content.
+    """
+    mock_get_taxonomy_data.return_value = taxonomy
+    genome_metadata = json_data(genome_file)
+    prepare.add_species_metadata(genome_metadata)
+    assert not DeepDiff(genome_metadata["species"], output)

@@ -1,13 +1,8 @@
 {
-    "BRC4": {
-        "component": "AmoebaDB",
-        "organism_abbrev": "ddisAX4"
-    },
     "assembly": {
         "accession": "GCF_000004695.1"
     },
     "species": {
-        "scientific_name": "Dictyostelium discoideum AX4",
-        "strain": "AX4"
+        "scientific_name": "Rhipicephalus annulatus"
     }
 }

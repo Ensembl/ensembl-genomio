@@ -1,8 +1,4 @@
 {
-    "BRC4": {
-        "component": "VectorBase",
-        "organism_abbrev": "rannulKG"
-    },
     "annotation": {
         "provider_name": "GenBank"
     },
@@ -16,7 +12,8 @@
         "version": "01-2021"
     },
     "species": {
-        "scientific_name": "Rhipicephalus annulatus",
-        "strain": "Klein Grass"
+        "scientific_name": "Mus musculus",
+        "strain": "domesticus",
+        "taxonomy_id": 10092
     }
 }
