@@ -24,11 +24,9 @@ from pathlib import Path
 from typing import Any, Callable, ContextManager, Dict, Optional
 from unittest.mock import Mock, patch
 from xml.etree import ElementTree
-from xml.etree.ElementTree import Element
 
 from deepdiff import DeepDiff
 import pytest
-import requests
 
 from ensembl.io.genomio.genome_metadata import prepare
 
@@ -142,7 +140,7 @@ def test_add_genebuild_metadata(
         mock_date: A mock of `datetime.date` class.
         json_data: JSON test file parsing fixture.
         genome_file: Genome metadata JSON file.
-        output: Expected date for genebuild's `start_date` and `version` in the updated genome metadata.
+        output: Expected date for genebuild's `"start_date"` and `"version"` in the updated genome metadata.
     """
     mock_date.today.return_value = mock_date
     mock_date.isoformat.return_value = output
@@ -204,7 +202,7 @@ def test_get_node_text(
         assert result == output
 
 
-@pytest.mark.dependency(name="test_get_taxonomy_from_accession", depends=["test_get_node_text"])
+@pytest.mark.dependency(depends=["test_get_node_text"])
 @patch("requests.Response")
 @patch("requests.get")
 @pytest.mark.parametrize(

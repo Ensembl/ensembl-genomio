@@ -78,8 +78,8 @@ class MetadataError(Exception):
 def add_provider(genome_metadata: Dict, gff3_file: Optional[PathLike] = None) -> None:
     """Updates the genome metadata adding provider information for assembly and gene models.
 
-    Assembly provider metadata will only be added if it is missing, i.e. neither `provider_name` or
-    `provider_url` are present. The gene model metadata will only be added if `gff3_file` is provided.
+    Assembly provider metadata will only be added if it is missing, i.e. neither `"provider_name"` or
+    `"provider_url"` are present. The gene model metadata will only be added if `gff3_file` is provided.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
@@ -129,7 +129,7 @@ def add_assembly_version(genome_data: Dict) -> None:
 def add_genebuild_metadata(genome_data: Dict) -> None:
     """Adds genebuild metadata to genome information if not present already.
 
-    The default convention is to use the current date as `version` and `start_date`.
+    The default convention is to use the current date as `"version"` and `"start_date"`.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
@@ -143,20 +143,21 @@ def add_genebuild_metadata(genome_data: Dict) -> None:
     genome_data["genebuild"] = genebuild
 
 
-def add_species_metadata(genome_data: Dict, base_api_url: str = DEFAULT_API_URL) -> None:
-    """Adds missing species metadata based on the genome's accession.
+def add_species_metadata(genome_metadata: Dict, base_api_url: str = DEFAULT_API_URL) -> None:
+    """Adds missing species metadata from its taxonomy based on the genome's accession.
 
-    The ``taxonomy_id``, ``strain`` and ``scientific_name`` will be fetched from the taxonomy information
-    linked to the given accession.
+    If `"taxonomy_id"` is already present in the species metadata, nothing is added. The `"taxonomy_id"`,
+    `"scientific_name"` and `"strain"` will be fetched from the taxonomy information linked to the given
+    accession.
 
     Args:
-        genome_data: Genome information of assembly, accession and annotation.
+        genome_metadata: Genome information of assembly, accession and annotation.
         base_api_url: Base API URL to fetch the taxonomy data from.
 
     """
-    species = genome_data["species"]
+    species = genome_metadata.setdefault("species", {})
     if not "taxonomy_id" in species:
-        accession = genome_data["assembly"]["accession"]
+        accession = genome_metadata["assembly"]["accession"]
         taxonomy = get_taxonomy_from_accession(accession, base_api_url)
         species["taxonomy_id"] = taxonomy["taxon_id"]
         if (not "strain" in species) and ("strain" in taxonomy):
@@ -173,11 +174,11 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
         base_api_url: Base API URL to fetch the taxonomy data from.
 
     Returns:
-        Dictionary with key-value pairs for `taxon_id` and `scientific_name`. `strain` will also be
+        Dictionary with key-value pairs for `"taxon_id"` and `"scientific_name"`. `"strain"` will also be
         included if it is present in the fetched taxonomy data.
 
     Raises:
-        MissingNodeError: If `TAXON` node is missing in the taxonomy data fetched.
+        MissingNodeError: If `"TAXON"` node is missing in the taxonomy data fetched.
 
     """
     # Use the GenBank accession without version
