@@ -31,7 +31,7 @@ __all__ = [
 
 import datetime
 from os import PathLike
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
@@ -165,7 +165,7 @@ def add_species_metadata(genome_data: Dict, base_api_url: str = DEFAULT_API_URL)
             species["scientific_name"] = taxonomy["scientific_name"]
 
 
-def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_URL) -> Dict:
+def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_URL) -> Dict[str, Any]:
     """Returns the taxonomy metadata associated to the given accession.
 
     Args:
@@ -173,57 +173,52 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
         base_api_url: Base API URL to fetch the taxonomy data from.
 
     Returns:
-        Dictionary with key-value pairs for ``taxon_id`` and ``scientific_name``. ``strain`` will be added
-        only if present in the fetched taxonomy data.
+        Dictionary with key-value pairs for `taxon_id` and `scientific_name`. `strain` will also be
+        included if it is present in the fetched taxonomy data.
 
     Raises:
-        MissinDataException: If ``TAXON_ID`` or ``SCIENTIFIC_NAME`` are missing in the taxonomy data fetched.
+        MissingNodeError: If `TAXON` node is missing in the taxonomy data fetched.
 
     """
     # Use the GenBank accession without version
     gb_accession = accession.replace("GCF", "GCA").split(".")[0]
     response = requests.get(f"{base_api_url}/{gb_accession}", timeout=60)
     entry = ElementTree.fromstring(response.text)
-
     taxon_node = entry.find(".//TAXON")
     if taxon_node is None:
-        raise MissingNodeError("Can't find the TAXON node")
-
+        raise MissingNodeError("Cannot find the TAXON node")
     # Fetch taxon ID, scientific_name and strain
     taxon_id = _get_node_text(taxon_node, "TAXON_ID")
     scientific_name = _get_node_text(taxon_node, "SCIENTIFIC_NAME")
     strain = _get_node_text(taxon_node, "STRAIN", optional=True)
-
-    if taxon_id and scientific_name:
-        taxonomy = {
-            "taxon_id": int(taxon_id),
-            "scientific_name": scientific_name,
-        }
+    taxonomy = {
+        "taxon_id": int(taxon_id),
+        "scientific_name": scientific_name,
+    }
     if strain:
         taxonomy["strain"] = strain
     return taxonomy
 
 
-def _get_node_text(node: Element, tag: str, optional: bool = False) -> Optional[str]:
+def _get_node_text(node: Optional[Element], tag: str, optional: bool = False) -> Optional[str]:
     """Returns the value of the field matching the provided tag inside `node`.
-    By default raise a MissingNodeException if the tag is not found.
-    If optional is True and no tag is found, return None.
+
+    If the tag is not present and `optional` is True, returns `None` instead.
 
     Args:
         node: Node of an XML tree.
         tag: Tag to fetch within the node.
-        optional: Don't raise an exception if the tag doesn't exist.
+        optional: Do not raise an exception if the tag does not exist.
 
+    Raises:
+        MissingNodeError: If no node is provided or if the tag is missing (if `optional == False`).
     """
     if node is None:
-        raise MissingNodeError(f"No node provided to look for {tag}")
-    tag_node = node.find(tag)
-
-    if tag_node is not None:
-        return tag_node.text
-    if optional:
-        return None
-    raise MissingNodeError(f"No node found for tag {tag}")
+        raise MissingNodeError(f"No node provided to look for '{tag}'")
+    tag_text = node.findtext(tag)
+    if not optional and (tag_text is None):
+        raise MissingNodeError(f"No node found for tag '{tag}'")
+    return tag_text
 
 
 def prepare_genome_metadata(

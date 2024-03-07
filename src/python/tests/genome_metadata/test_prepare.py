@@ -23,9 +23,12 @@ from contextlib import nullcontext as does_not_raise
 from pathlib import Path
 from typing import Any, Callable, ContextManager, Dict, Optional
 from unittest.mock import Mock, patch
+from xml.etree import ElementTree
+from xml.etree.ElementTree import Element
 
 from deepdiff import DeepDiff
 import pytest
+import requests
 
 from ensembl.io.genomio.genome_metadata import prepare
 
@@ -145,3 +148,109 @@ def test_add_genebuild_metadata(
     prepare.add_genebuild_metadata(genome_metadata)
     assert genome_metadata["genebuild"]["start_date"] == output
     assert genome_metadata["genebuild"]["version"] == output
+
+
+@pytest.mark.dependency(name="test_get_node_text")
+@pytest.mark.parametrize(
+    "xml_file, tag, optional, output, expectation",
+    [
+        pytest.param(
+            "",
+            "tag",
+            False,
+            "",
+            pytest.raises(prepare.MissingNodeError, match="No node provided to look for 'tag'"),
+            id="No node provided",
+        ),
+        pytest.param("default_taxonomy.xml", "TAXON_ID", False, "34611", does_not_raise(), id="Tag present"),
+        pytest.param("default_taxonomy.xml", "tag", True, None, does_not_raise(), id="Missing optional tag"),
+        pytest.param(
+            "default_taxonomy.xml",
+            "tag",
+            False,
+            "",
+            pytest.raises(prepare.MissingNodeError, match="No node found for tag 'tag'"),
+            id="Missing mandatory tag",
+        ),
+    ],
+)
+def test_get_node_text(
+    data_dir: Path,
+    xml_file: str,
+    tag: str,
+    optional: bool,
+    output: Optional[str],
+    expectation: ContextManager,
+) -> None:
+    """Tests the `prepare._get_node_text()` method.
+
+    Args:
+        data_dir: Module's test data directory fixture.
+        xml_file: XML file with assembly's taxonomy data.
+        tag: Tag to fetch within the node.
+        optional: Do not raise an exception if the tag does not exist.
+        output: Expected field value returned.
+        expectation: Context manager for the expected exception (if any).
+    """
+    if xml_file:
+        tree = ElementTree.parse(data_dir / xml_file)
+        node = tree.find(".//TAXON")
+    else:
+        node = None
+    with expectation:
+        result = prepare._get_node_text(node, tag, optional)
+        assert result == output
+
+
+@pytest.mark.dependency(name="test_get_taxonomy_from_accession", depends=["test_get_node_text"])
+@patch("requests.Response")
+@patch("requests.get")
+@pytest.mark.parametrize(
+    "xml_file, output, expectation",
+    [
+        pytest.param(
+            "default_taxonomy.xml",
+            {"taxon_id": 34611, "scientific_name": "Rhipicephalus annulatus"},
+            does_not_raise(),
+            id="Basic taxonomy data",
+        ),
+        pytest.param(
+            "strain_taxonomy.xml",
+            {"taxon_id": 34611, "scientific_name": "Rhipicephalus annulatus", "strain": "Klein Grass"},
+            does_not_raise(),
+            id="Taxonomy with strain data",
+        ),
+        pytest.param(
+            "no_taxonomy.xml",
+            {},
+            pytest.raises(prepare.MissingNodeError, match="Cannot find the TAXON node"),
+            id="Missing TAXON node",
+        ),
+    ],
+)
+def test_get_taxonomy_from_accession(
+    mock_requests_get: Mock,
+    mock_response: Mock,
+    data_dir: Path,
+    xml_file: str,
+    output: Dict[str, Any],
+    expectation: ContextManager,
+):
+    """Tests the `prepare.get_taxonomy_from_accession()` method.
+
+    Args:
+        mock_requests_get: A mock of `requests.get()` function.
+        mock_response: A mock of `requests.Response` class.
+        data_dir: Module's test data directory fixture.
+        xml_file: XML file with assembly's taxonomy data.
+        output: Expected taxonomy data returned.
+        expectation: Context manager for the expected exception (if any).
+    """
+    xml_path = data_dir / xml_file
+    with xml_path.open() as xml:
+        text = "".join(xml.readlines())
+    mock_response.text = text
+    mock_requests_get.return_value = mock_response
+    with expectation:
+        result = prepare.get_taxonomy_from_accession("GCA_013436015.2")
+        assert not DeepDiff(result, output)
