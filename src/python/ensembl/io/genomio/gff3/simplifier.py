@@ -28,7 +28,7 @@ import logging
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
