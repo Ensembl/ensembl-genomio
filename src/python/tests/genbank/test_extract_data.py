@@ -20,7 +20,6 @@ Typical usage example::
 """
 import json
 from pathlib import Path
-import filecmp
 import pytest
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -41,6 +40,12 @@ class TestWriteFormattedFiles:
         prefix = "TEST"
         return FormattedFilesGenerator(prod_name, gb_file_path, prefix)
     
+    def test_parse_genbank(self, data_dir: Path, formatted_files_generator) -> None:
+        """Test that parse_genbank method correctly parses genbank files."""
+        gb_file_path = data_dir / formatted_files_generator.gb_file
+        formatted_files_generator.parse_genbank(gb_file_path)
+        assert len(formatted_files_generator.seq_records) >= 1
+
     @pytest.mark.parametrize(
         "expected",
         [
@@ -52,12 +57,6 @@ class TestWriteFormattedFiles:
         gb_file_path = data_dir / formatted_files_generator.gb_file
         organella = formatted_files_generator._get_organella(gb_file_path)
         assert organella == expected
-
-    def test_parse_genbank(self, data_dir: Path, formatted_files_generator) -> None:
-        """Test that parse_genbank method correctly parses genbank files."""
-        gb_file_path = data_dir / formatted_files_generator.gb_file
-        formatted_files_generator.parse_genbank(gb_file_path)
-        assert len(formatted_files_generator.seq_records) >= 1
 
     def test_write_genome_json_with_production_name(self, formatted_files_generator, tmp_path, caplog):
         """Test write_genome_json generates correct json output."""

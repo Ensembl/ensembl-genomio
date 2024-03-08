@@ -62,20 +62,33 @@ class TestFormattedFilesGenerator:
         result_seq_feature, result_seq_id, result_peptide = formatted_files_generator._parse_gene_feat(
             seq_feature, gene_name
         )
-        if type_feature != "CDS":
+
+        gene_id = formatted_files_generator.prefix + gene_name
+        if type_feature == "gene":
             seq_dict = {expected_id: seq_feature}
             assert result_seq_feature == seq_dict
             assert result_seq_id == [expected_id]
-        else:
-            gene_id = formatted_files_generator.prefix + gene_name
+            # Verify the transformation results
+            assert "gene" not in seq_feature.qualifiers
+            assert "locus_tag" not in seq_feature.qualifiers
+            assert "Name" in seq_feature.qualifiers
+
+        if type_feature in ("tRNA", "rRNA"):
+            assert "gene" not in seq_feature.qualifiers
+            assert "locus_tag" not in seq_feature.qualifiers
+            assert seq_feature.qualifiers["Parent"] == gene_id
+            assert result_seq_id == [expected_id]
+        
+        if type_feature == "CDS":
             tr_id = gene_id + "_t1"
             assert len(result_seq_feature) > 1
+            assert seq_feature.qualifiers["Parent"] == tr_id
             assert result_seq_id == [tr_id, expected_id]
             if "pseudo" in seq_feature.qualifiers:
                 assert result_seq_feature[expected_id].type == "exon"
             # Peptides aren't always present in the genbank file so we can't guarantee they will exist
             if "translation" in seq_feature.qualifiers:
-                assert len(result_peptide) > 0
+                assert len(result_peptide) > 0           
 
     @pytest.mark.parametrize(
         "rna_name, expected_rna_id, expected_gene_id",
