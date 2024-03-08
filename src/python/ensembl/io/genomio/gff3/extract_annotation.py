@@ -21,6 +21,7 @@ __all__ = [
     "AnnotationError",
     "FunctionalAnnotations",
 ]
+
 import logging
 from os import PathLike
 from pathlib import Path
