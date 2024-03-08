@@ -105,9 +105,9 @@ def test_add_provider(
 @pytest.mark.parametrize(
     "genome_file, output",
     [
-        ("genbank_genome.json", 2),
-        ("updated_genome.json", 1),
-        ("cncb_genome.json", 0),
+        pytest.param("genbank_genome.json", 2, id="Added assembly version"),
+        pytest.param("updated_genome.json", 1, id="Version found, nothing to add"),
+        pytest.param("cncb_genome.json", 0, id="No version available, nothing to add"),
     ],
 )
 def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str, output: int) -> None:
@@ -127,8 +127,8 @@ def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str,
 @pytest.mark.parametrize(
     "genome_file, output",
     [
-        ("genbank_genome.json", "03-2024"),
-        ("updated_genome.json", "01-2021"),
+        pytest.param("genbank_genome.json", "03-2024", id="Added '03-2024' as genebuild metadata"),
+        pytest.param("updated_genome.json", "01-2021", id="Found '01-2021', nothing to add"),
     ],
 )
 def test_add_genebuild_metadata(
