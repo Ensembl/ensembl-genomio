@@ -32,13 +32,12 @@
     - path: ./tmp/addition/NC_035159.1/dna.fasta
       md5sum: 445faf45bd7a1c5186eefe1474a780b9
     - path: ./tmp/addition/NC_035159.1/functional_annotation.json
-      md5sum: c134a548687b2363672c0bbdcf1dc95f
+      md5sum: 6dd67397eb6d3f4555a5c432a19c9c62
     - path: ./tmp/addition/NC_035159.1/gene_models.gff3
       md5sum: 8ae7f6b32c0743c0171050ec1ede96cd
     - path: ./tmp/addition/NC_035159.1/genome.json
       md5sum: bb00e618ddcd4efcf430ef1c29bcde98
     - path: ./tmp/addition/NC_035159.1/manifest.json
-      md5sum: ab5f473080cdb9b20b0da075e53ee6a5
     - path: ./tmp/addition/NC_035159.1/pep.fasta
       md5sum: 61b0a45ee3038d42a02b55fe63ad34fe
     - path: ./tmp/addition/NC_035159.1/seq_region.json
