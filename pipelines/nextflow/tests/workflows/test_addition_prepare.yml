@@ -20,8 +20,8 @@
   command: nextflow run ./pipelines/nextflow/workflows/additional_seq_prepare/main.nf \\
     -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
     -stub \\
-    --cache_dir ./cache/ \\
-    --output_dir ./test_addition_seq_prepare_output \\
+    --cache_dir ./tmp/cache/ \\
+    --output_dir ./tmp/addition \\
     --accession NC_035159.1 \\
     --prefix TEMP_PREF_ \\
     --production_name species_name
@@ -29,18 +29,18 @@
   # Check that all the expected files are produced
   # Make sure to update those if the processing of the files changes!
   files:
-    - path: ./test_addition_seq_prepare_output/NC_035159.1/dna.fasta
+    - path: ./tmp/addition/NC_035159.1/dna.fasta
       md5sum: 445faf45bd7a1c5186eefe1474a780b9
-    - path: ./test_addition_seq_prepare_output/NC_035159.1/functional_annotation.json
+    - path: ./tmp/addition/NC_035159.1/functional_annotation.json
       md5sum: c134a548687b2363672c0bbdcf1dc95f
-    - path: ./test_addition_seq_prepare_output/NC_035159.1/gene_models.gff3
+    - path: ./tmp/addition/NC_035159.1/gene_models.gff3
       md5sum: 8ae7f6b32c0743c0171050ec1ede96cd
-    - path: ./test_addition_seq_prepare_output/NC_035159.1/genome.json
+    - path: ./tmp/addition/NC_035159.1/genome.json
       md5sum: bb00e618ddcd4efcf430ef1c29bcde98
-    - path: ./test_addition_seq_prepare_output/NC_035159.1/manifest.json
+    - path: ./tmp/addition/NC_035159.1/manifest.json
       md5sum: ab5f473080cdb9b20b0da075e53ee6a5
-    - path: ./test_addition_seq_prepare_output/NC_035159.1/pep.fasta
+    - path: ./tmp/addition/NC_035159.1/pep.fasta
       md5sum: 61b0a45ee3038d42a02b55fe63ad34fe
-    - path: ./test_addition_seq_prepare_output/NC_035159.1/seq_region.json
+    - path: ./tmp/addition/NC_035159.1/seq_region.json
       md5sum: 583d28280ee2929ac0b493bec2ffb8b7
-    - path: ./test_addition_seq_prepare_output/NC_035159.1/stats.txt 
+    - path: ./tmp/addition/NC_035159.1/stats.txt 

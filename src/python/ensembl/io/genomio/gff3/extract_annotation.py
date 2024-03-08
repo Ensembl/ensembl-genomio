@@ -191,6 +191,9 @@ class FunctionalAnnotations:
         if feature.type.startswith("pseudogen"):
             feature_object["is_pseudogene"] = True
 
+        # Don't keep empty xref
+        if not feature_object["xrefs"]:
+            del feature_object["xrefs"]
         return feature_object
 
     def transfer_descriptions(self) -> None:
