@@ -22,6 +22,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, SimpleLocation
 import pytest
+import json
 
 from pathlib import Path
 
@@ -158,4 +159,26 @@ class TestFormattedFilesGenerator:
 
         with pytest.raises(GBParseError):
             formatted_files_generator._parse_record(record)
+
+    def test_format_genome_json_with_production_name(self, formatted_files_generator, tmp_path, caplog):
+        """Test write_genome_json generates correct json output."""
+        record1 = SeqRecord(Seq("ATGC"), id="record1")
+        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene", qualifiers= {"gene": ["GlyrA"]})        
+        record1.features.append(gene_feature1)
+
+        record2 = SeqRecord(Seq("ATGC"), id="record2")
+        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene", qualifiers= {"gene": ["GlyrB"]})        
+        record1.features.append(gene_feature1)
+    
+        formatted_files_generator.seq_records = [record1, record2]
+        formatted_files_generator.files["genome"] = tmp_path / "genome.json"
+
+        formatted_files_generator._format_genome_data()
+        assert (tmp_path / "genome.json").exists()
+        with open(tmp_path / "genome.json", "r") as f:
+            genome_data = json.load(f)
+            assert genome_data["species"]["production_name"] == "TEST_prod"
+            assert genome_data["assembly"]["accession"] == "GCA_000000000"
+            assert genome_data["assembly"]["version"] == 1
+            assert genome_data["added_seq"]["region_name"] == ["record1", "record2"]
 
