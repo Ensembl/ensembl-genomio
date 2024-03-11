@@ -26,7 +26,7 @@ from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.standardize import (
     # standardize_gene,
     add_transcript_to_naked_gene,
-    add_mrna_to_gene_with_only_cds,
+    move_only_cdss_to_new_mrna,
 )
 
 
@@ -77,7 +77,7 @@ class FeatGenerator:
         param("gene", 0, 1, id="Gene with no transcript"),
     ],
 )
-def test_transcript_for_gene(gene_type: str, ntr_before: int, ntr_after: int):
+def test_add_transcript_to_naked_gene(gene_type: str, ntr_before: int, ntr_after: int):
     """Test the creation of a transcript from a gene feature."""
     gen = FeatGenerator()
     gene = gen.make(gene_type, 1)[0]
@@ -97,7 +97,7 @@ def test_transcript_for_gene(gene_type: str, ntr_before: int, ntr_after: int):
         pytest.param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="1 CDS + 1 exon, skip"),
     ],
 )
-def test_gene_to_cds(
+def test_add_mrna_to_gene_with_only_cds(
     base_gene: SeqFeature,
     children: List[str],
     expected_children: Dict[str, int],
@@ -111,10 +111,9 @@ def test_gene_to_cds(
         base_gene.sub_features.append(sub_feat)
 
     with expectation:
-        add_mrna_to_gene_with_only_cds(base_gene)
-        fcounter = dict(Counter([feat.type for feat in base_gene.sub_features]))
+        move_only_cdss_to_new_mrna(base_gene)
 
-        # We should get only one mRNA with and CDS + exons
+        fcounter = dict(Counter([feat.type for feat in base_gene.sub_features]))
         assert fcounter == expected_children
 
         gene_child = base_gene.sub_features[0]
