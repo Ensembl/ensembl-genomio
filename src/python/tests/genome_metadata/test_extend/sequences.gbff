@@ -1,0 +1,116 @@
+LOCUS       CP089274                1047 bp    DNA     linear   INV 14-OCT-2019
+DEFINITION  Plasmodium falciparum 3D7 genome assembly, chromosome: MIT.
+ACCESSION   CP089274
+VERSION     CP089274.1
+DBLINK      BioProject: PRJNA13173
+            BioSample: SAMN00102897
+KEYWORDS    .
+SOURCE      Plasmodium falciparum 3D7
+  ORGANISM  Plasmodium falciparum 3D7
+            Eukaryota; Sar; Alveolata; Apicomplexa; Aconoidasida; Haemosporida;
+            Plasmodiidae; Plasmodium; Plasmodium (Laverania).
+REFERENCE   1
+  CONSRTM   Pathogen Informatics
+  TITLE     Direct Submission
+  JOURNAL   Submitted (28-JUN-2019) WTSI, Pathogen Informatics, Wellcome Trust
+            Sanger Institute, CB10 1SA, United Kingdom
+FEATURES             Location/Qualifiers
+     source          1..1047
+                     /organism="Plasmodium falciparum 3D7"
+                     /mol_type="genomic DNA"
+                     /isolate="3D7"
+                     /db_xref="taxon:36329"
+                     /chromosome="MIT"
+ORIGIN      
+        1 aagcttttgg tatctcgtaa tgtagaacaa tattgagttg accgtcaaat ccttttcatt
+       61 aaaagagtgg attaaatgcc cagccaacac catccaattt gattgggaat tatctgtgtt
+      121 acaaattttt gatcccaggc tggtaaaaaa tgtaaacttt tagcccataa gaatagaaac
+      181 agatgccagg ccaataactc aaacagagct atgacgctat caatttttag caagacggat
+      241 aaatttttca tagaacttaa cgtatcatca tccatgcaaa gataaaacgg tagataggga
+      301 acaaactgcc tcaagacgtt cttaacccag ctcacgcatc gcttctaacg gtgaactctc
+      361 attccaatgg aaccttgttc aagttcaaat agattggtaa ggtatagtgt ttactatcaa
+      421 atgaaacaat gtgttccacc gctagtgttt gcttctaaca ttccacttgc ttataactgt
+      481 atggacgtaa cctccaggca aagaaaatga ccggtcaaaa cggaatcaat taactatgga
+      541 tagctgatac tatcaattta tcattactca agtcagcata gtatatatga aggtttctat
+      601 ggaaacacac ttcccttctc gccatttgat agcggttaac ctttcctttt ccttacgtac
+      661 tctagctatg aacacaattg tctattcgta caattattca tatatatatt tgaaacagga
+      721 catacatgtt catttattct gaatagaata agaactctat aaataaccag actatttcaa
+      781 caaaatgcca atataaaatt gtaatttgat cagtgtgagg tataacaata tatgatatac
+      841 cgaaagaatt tataaaccat tcggtagaag tatcatatat ttctattatt cttataaagt
+      901 atattattaa taataataaa cctattacta catgagaaaa atgtaatcct gtaacacaat
+      961 aaaataatgt agtatataca gtatcattta tatgatatga taaatgtaaa tactctgtag
+     1021 tttgtagaga tgcaaaacat tctccta
+//
+LOCUS       CP089275                1070 bp    DNA     linear   INV 02-DEC-2019
+DEFINITION  Plasmodium falciparum 3D7 genome assembly, chromosome: API.
+ACCESSION   CP089275
+VERSION     CP089275.1
+DBLINK      BioProject: PRJNA13173
+            BioSample: SAMN00102897
+KEYWORDS    .
+SOURCE      Plasmodium falciparum 3D7
+  ORGANISM  Plasmodium falciparum 3D7
+            Eukaryota; Sar; Alveolata; Apicomplexa; Aconoidasida; Haemosporida;
+            Plasmodiidae; Plasmodium; Plasmodium (Laverania).
+REFERENCE   1
+  CONSRTM   Pathogen Informatics
+  TITLE     Direct Submission
+  JOURNAL   Submitted (28-JUN-2019) WTSI, Pathogen Informatics, Wellcome Trust
+            Sanger Institute, CB10 1SA, United Kingdom
+FEATURES             Location/Qualifiers
+     source          1..1070
+                     /organism="Plasmodium falciparum 3D7"
+                     /mol_type="genomic DNA"
+                     /isolate="3D7"
+                     /db_xref="taxon:36329"
+                     /chromosome="API"
+ORIGIN      
+        1 atgataaaat ttttaaaacc taaaataaaa atattaaaaa aattaaatat acctttttta
+       61 ttatatttat ctagtaaata taattataaa tatttaaatt ataaaatttc atataaatct
+      121 tattttgatt taaaattaaa atttattaga tatatatgtt ataattattg tataacatat
+      181 aaaaaatatt tatattattt gaataaaata gataataaaa atataaatat tttatatttt
+      241 aaattattaa aaatattaga attaagattg gatatatttt tagttaatat aggttttttt
+      301 aaaactatat tgcaatcaag gtattatatt aaatataaaa atatttatat taataatatt
+      361 ataaataaat attataatat taatttaaaa aataatgata ttttattttt taataataaa
+      421 ataaaatata taatattaaa aaatttaatt tataaatata atatttatat ttacatatct
+      481 aatttatata aatataattt tattaaaata tatagttata ataaatattt tataatatgt
+      541 atttataatt ttaaaattaa aatattaaat ataaataata tattaaataa tatattatat
+      601 atttataatg atatatatta tatataatta atagttttta tgataaatat aatctaatgg
+      661 ttaagatgaa gaattgtggt ttcttttata tgagttcaaa tctctttatt tatctgttaa
+      721 atataaaaat ttaatgatat aacttaattg ataaagtaaa taattgcaaa ttattatatt
+      781 tcagtttgaa tctgaatatc atttaaagag agatatggtg aaatttggta tacacaatgg
+      841 acttaaaata atttgagtta attattatta atattaaatt tttaagaaaa tatataatat
+      901 atttttttaa attctgtaat atattttaaa atttatatat tcaaaagact ttatttataa
+      961 aaagtctaaa tttattaaga aaatccatta acattattgt tgtaagggtt caaatccctt
+     1021 tatctctaac tataacattt atagctaagt ggtcgaaagc aatggactca
+//
+LOCUS       RefChr0002               192 bp    DNA     linear   INV 11-NOV-2019
+DEFINITION  Plasmodium falciparum 3D7 genome assembly, chromosome: API.
+ACCESSION   RefChr0002
+VERSION     RefChr0002.1
+DBLINK      BioProject: PRJNA13173
+            BioSample: SAMN00102897
+KEYWORDS    .
+SOURCE      Plasmodium falciparum 3D7
+  ORGANISM  Plasmodium falciparum 3D7
+            Eukaryota; Sar; Alveolata; Apicomplexa; Aconoidasida; Haemosporida;
+            Plasmodiidae; Plasmodium; Plasmodium (Laverania).
+REFERENCE   1
+  CONSRTM   Pathogen Informatics
+  TITLE     Direct Submission
+  JOURNAL   Submitted (28-JUN-2019) WTSI, Pathogen Informatics, Wellcome Trust
+            Sanger Institute, CB10 1SA, United Kingdom
+COMMENT     On Jan 10, 2020 this sequence version replaced LN999985.1.
+FEATURES             Location/Qualifiers
+     source          1..192
+                     /organism="Plasmodium falciparum 3D7"
+                     /mol_type="genomic DNA"
+                     /isolate="3D7"
+                     /db_xref="taxon:36329"
+                     /chromosome="NUC"
+ORIGIN      
+        1 tcagtttgaa tctgaatatc atttaaagag agatatggtg aaatttggta tacacaatgg
+       61 atttataatg atatatatta tatataatta atagttttta tgataaatat aatctaatgg
+      121 tattttgatt taaaattaaa atttattaga tatatatgtt ataattattg tataacatat
+      181 aaaaaatatt ta
+//

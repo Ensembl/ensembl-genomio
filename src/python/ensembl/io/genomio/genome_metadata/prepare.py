@@ -64,7 +64,7 @@ PROVIDER_DATA = {
         },
     },
 }
-DEFAULT_API_URL = "https://www.ebi.ac.uk/ena/browser/api/xml/"
+DEFAULT_API_URL = "https://www.ebi.ac.uk/ena/browser/api/xml"
 
 
 class MissingNodeError(Exception):
@@ -184,6 +184,7 @@ def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_
     # Use the GenBank accession without version
     gb_accession = accession.replace("GCF", "GCA").split(".")[0]
     response = requests.get(f"{base_api_url}/{gb_accession}", timeout=60)
+    response.raise_for_status()
     entry = ElementTree.fromstring(response.text)
 
     taxon_node = entry.find(".//TAXON")
@@ -232,6 +233,7 @@ def prepare_genome_metadata(
     output_file: PathLike,
     gff3_file: Optional[PathLike] = None,
     base_api_url: str = DEFAULT_API_URL,
+    mock_run: bool = False,
 ) -> None:
     """Updates the genome metadata JSON file with additional information.
 
@@ -243,6 +245,7 @@ def prepare_genome_metadata(
         output_file: Output directory where to generate the final `genome.json` file.
         gff3_file: Path to GFF3 file to use as annotation source for this genome.
         base_api_url: Base API URL to fetch the taxonomy data from.
+        mock_run: Do not call external taxonomy service.
 
     """
     genome_data = get_json(input_file)
@@ -250,7 +253,10 @@ def prepare_genome_metadata(
     add_provider(genome_data, gff3_file)
     add_assembly_version(genome_data)
     add_genebuild_metadata(genome_data)
-    add_species_metadata(genome_data, base_api_url)
+    if mock_run:
+        genome_data["species"].setdefault("taxonomy_id", 9999999)
+    else:
+        add_species_metadata(genome_data, base_api_url)
     # Dump updated genome metadata
     print_json(output_file, genome_data)
 
@@ -271,6 +277,7 @@ def main() -> None:
     parser.add_argument(
         "--base_api_url", default=DEFAULT_API_URL, help="API URL to fetch the taxonomy data from"
     )
+    parser.add_argument("--mock_run", action="store_true", help="Do not call external APIs")
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
@@ -280,4 +287,5 @@ def main() -> None:
         output_file=args.output_file,
         gff3_file=args.gff3_file,
         base_api_url=args.base_api_url,
+        mock_run=args.mock_run,
     )
