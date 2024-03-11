@@ -17,9 +17,8 @@
 
 __all__ = [
     "standardize_gene",
-    "transcript_for_gene",
-    "build_transcript",
-    "gene_to_cds",
+    "add_transcript_to_naked_gene",
+    "add_mrna_to_gene_with_only_cds",
 ]
 
 from collections import Counter
@@ -32,25 +31,25 @@ from .exceptions import GFFParserError
 
 
 def standardize_gene(gene: SeqFeature) -> None:
-    """Standardize the structure of a gene model."""
+    """Standardize the structure of a gene model:
+    - Add a transcript if there are no children
+    - Move the CDS and exons if they are directly under the gene
+    - Check that no CDS or exons remain under the gene
+    """
 
-    transcript_for_gene(gene)
-    # Count features
+    # Make sure the gene has a transcript if nothing else
+    add_transcript_to_naked_gene(gene)
+
+    # Count the children types of the gene
     fcounter = Counter([feat.type for feat in gene.sub_features])
 
-    # Transform gene - CDS to gene-transcript-exon-CDS
+    # We can add intermediates if all are CDS or exons
     if len(fcounter) == 1:
         if fcounter.get("CDS"):
-            num_subs = len(gene.sub_features)
-            logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
-            gene_to_cds(gene)
+            add_mrna_to_gene_with_only_cds(gene)
 
-        # Transform gene - exon to gene-transcript-exon
         elif fcounter.get("exon"):
-            num_subs = len(gene.sub_features)
-            logging.debug(f"Insert transcript for {gene.id} ({num_subs} exons)")
-            transcript = gene_to_exon(gene)
-            gene.sub_features = [transcript]
+            move_exons_to_new_mrna(gene)
     else:
         # Check that we don't mix
         if fcounter.get("mRNA") and fcounter.get("CDS"):
@@ -59,67 +58,57 @@ def standardize_gene(gene: SeqFeature) -> None:
         if fcounter.get("mRNA") and fcounter.get("exon"):
             # Special case with extra exons
             clean_extra_exons(gene)
+    
+    # Check that no CDS or exon remain under the gene
+    fcounter = Counter([feat.type for feat in gene.sub_features])
+    if fcounter.get("CDS") or fcounter("exon"):
+        GFFParserError(f"Gene {gene.id} contains direct CDSs and exons children")
 
 
-def transcript_for_gene(gene: SeqFeature) -> SeqFeature:
-    """Add an mRNA to a protein coding gene if it doesn't have one."""
+def add_transcript_to_naked_gene(gene: SeqFeature) -> None:
+    """Add a transcript to a gene without any sub features."""
 
     if len(gene.sub_features) > 0 or gene.type != "gene":
         return gene
 
-    logging.debug(f"Insert transcript for lone gene {gene.id}")
     transcript = SeqFeature(gene.location, type="transcript")
     transcript.qualifiers["source"] = gene.qualifiers["source"]
     transcript.sub_features = []
     gene.sub_features = [transcript]
-
-    return gene
-
-
-def build_transcript(gene: SeqFeature) -> SeqFeature:
-    """Returns a transcript with same metadata as the gene provided."""
-
-    transcript = SeqFeature(gene.location, type="mRNA")
-    transcript.qualifiers["source"] = gene.qualifiers["source"]
-    transcript.sub_features = []
-    return transcript
+    logging.debug(f"Inserted 1 transcript for a lone gene {gene.id}")
 
 
-def gene_to_cds(gene: SeqFeature, skip_non_cds: bool = False) -> SeqFeature:
-    """Add intermediate transcripts to a gene with only CDS children."""
+def add_mrna_to_gene_with_only_cds(gene: SeqFeature) -> None:
+    """Add intermediate mRNAs to a gene with only CDS children.
+    Do nothing if some sub-features are not CDS.
+    """
 
     transcripts_dict = {}
-    del_transcript = []
 
-    for count, cds in enumerate(gene.sub_features):
+    for cds in gene.sub_features:
         if cds.type != "CDS":
-            if skip_non_cds:
-                del_transcript.append(count)
-                continue
-            raise GFFParserError(
-                "Can not create a chain 'transcript - exon - CDS'"
-                f" when the gene children are not all CDSs"
-                f" ({cds.id} of type {cds.type} is child of gene {gene.id})"
-            )
+            return
 
-        exon = SeqFeature(cds.location, type="exon")
-
-        # Add to transcript or create a new one
+        # We create as many transcripts as there are different CDS IDs
         if cds.id not in transcripts_dict:
-            logging.debug(f"Create new mRNA for {cds.id}")
-            transcript = build_transcript(gene)
+            logging.debug(f"Create a new mRNA for {cds.id}")
+            transcript = SeqFeature(gene.location, type="mRNA")
+            transcript.qualifiers["source"] = gene.qualifiers["source"]
+            transcript.sub_features = []
             transcripts_dict[cds.id] = transcript
-        exon.qualifiers["source"] = gene.qualifiers["source"]
-        transcripts_dict[cds.id].sub_features.append(exon)
+        
+        # Add the CDS to the transcript
         transcripts_dict[cds.id].sub_features.append(cds)
 
-    for elt in sorted(del_transcript, reverse=True):
-        gene.sub_features.pop(elt)
+        # Also add an exon in the same location
+        exon = SeqFeature(cds.location, type="exon")
+        exon.qualifiers["source"] = gene.qualifiers["source"]
+        transcripts_dict[cds.id].sub_features.append(exon)
 
     transcripts = list(transcripts_dict.values())
-
     gene.sub_features = transcripts
-    return gene
+
+    logging.debug(f"Insert transcript-exon feats for {gene.id} ({len(transcripts)} CDSs)")
 
 
 def move_cds_to_mrna(gene: SeqFeature) -> SeqFeature:
@@ -243,14 +232,19 @@ def clean_extra_exons(gene: SeqFeature) -> SeqFeature:
     return gene
 
 
-def gene_to_exon(gene: SeqFeature) -> SeqFeature:
-    """Returns an intermediary transcript for a gene with direct exon children."""
+def move_exons_to_new_mrna(gene: SeqFeature) -> None:
+    """Add an mRNA for a gene that one has exons and move the exons under the mRNA.
+    No change if the gene has other sub_features than exon.
+    """
 
     transcript = SeqFeature(gene.location, type="mRNA")
     transcript.qualifiers["source"] = gene.qualifiers["source"]
     transcript.sub_features = []
 
-    for exon in gene.sub_features:
-        transcript.sub_features.append(exon)
+    for feat in gene.sub_features:
+        if feat.type != "exon":
+            return
+        transcript.sub_features.append(feat)
+    gene.sub_features = [transcript]
 
-    return transcript
+    logging.debug(f"Insert transcript for {gene.id} ({len(gene.sub_features)} exons)")

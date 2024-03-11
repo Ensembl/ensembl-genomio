@@ -14,8 +14,9 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.gff3.standardize` module."""
 
+from collections import Counter
 from contextlib import nullcontext as does_not_raise
-from typing import ContextManager, List, Optional
+from typing import ContextManager, Dict, List, Optional
 
 from Bio.SeqFeature import SeqFeature, SimpleLocation
 import pytest
@@ -24,9 +25,8 @@ from pytest import param, raises
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.standardize import (
     # standardize_gene,
-    transcript_for_gene,
-    build_transcript,
-    gene_to_cds,
+    add_transcript_to_naked_gene,
+    add_mrna_to_gene_with_only_cds,
 )
 
 
@@ -84,35 +84,24 @@ def test_transcript_for_gene(gene_type: str, ntr_before: int, ntr_after: int):
     if ntr_before > 0:
         gene = gen.append(gene, "mRNA", ntr_before)
 
-    fixed_gene = transcript_for_gene(gene)
-    assert len(fixed_gene.sub_features) == ntr_after
-
-
-@pytest.mark.dependency(name="build_transcript")
-def test_build_transcript(
-    base_gene: SeqFeature,
-):
-    """Test the creation of a transcript from a gene."""
-    tr = build_transcript(base_gene)
-    assert tr.qualifiers["source"] == base_gene.qualifiers["source"]
-    assert not tr.sub_features
+    add_transcript_to_naked_gene(gene)
+    assert len(gene.sub_features) == ntr_after
 
 
 @pytest.mark.parametrize(
-    "children, skip_non_cds, expected_mrna_children, expectation",
+    "children, expected_children, expected_mrna_children, expectation",
     [
-        pytest.param(["CDS"], None, 2, does_not_raise(), id="One CDS"),
-        pytest.param(["CDS", "CDS"], None, 4, does_not_raise(), id="Two CDS"),
-        pytest.param(["exon"], None, 0, raises(GFFParserError), id="One exon"),
-        pytest.param(["CDS", "exon"], True, 2, does_not_raise(), id="1 CDS + 1 exon, skip exon"),
+        pytest.param(["CDS"], {"mRNA": 1}, {"CDS": 1, "exon": 1}, does_not_raise(), id="One CDS, add mRNA"),
+        pytest.param(["CDS", "CDS"], {"mRNA": 1}, {"CDS": 2, "exon": 2}, does_not_raise(), id="Two CDS, add mRNA"),
+        pytest.param(["exon"], {"exon": 1}, {}, does_not_raise(), id="One exon, skip"),
+        pytest.param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="1 CDS + 1 exon, skip"),
     ],
 )
-@pytest.mark.dependency(name="gene_to_cds", depends=["build_transcript"])
 def test_gene_to_cds(
     base_gene: SeqFeature,
     children: List[str],
-    skip_non_cds: Optional[bool],
-    expected_mrna_children: int,
+    expected_children: Dict[str, int],
+    expected_mrna_children: Dict[str, int],
     expectation: ContextManager,
 ):
     """Test the addition of intermediate transcripts."""
@@ -122,12 +111,13 @@ def test_gene_to_cds(
         base_gene.sub_features.append(sub_feat)
 
     with expectation:
-        if skip_non_cds is not None:
-            gene = gene_to_cds(base_gene, skip_non_cds=skip_non_cds)
-        else:
-            gene = gene_to_cds(base_gene)
+        add_mrna_to_gene_with_only_cds(base_gene)
+        fcounter = dict(Counter([feat.type for feat in base_gene.sub_features]))
 
-        # We should get only one mRNA and CDS + exons
-        gene_child = gene.sub_features[0]
-        assert gene_child.type == "mRNA"
-        assert len(gene_child.sub_features) == expected_mrna_children
+        # We should get only one mRNA with and CDS + exons
+        assert fcounter == expected_children
+
+        gene_child = base_gene.sub_features[0]
+        if gene_child.type == "mRNA":
+            fcounter_mrna = dict(Counter([feat.type for feat in gene_child.sub_features]))
+            assert fcounter_mrna == expected_mrna_children
