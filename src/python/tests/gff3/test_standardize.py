@@ -60,11 +60,10 @@ class FeatGenerator:
             feats.append(feat)
         return feats
 
-    def append(self, feat: SeqFeature, ftype: str, number: int) -> SeqFeature:
+    def append(self, feat: SeqFeature, ftype: str, number: int) -> None:
         """Create a defined bnumber of features of a given type and append them to the gene."""
         subs = self.make(ftype, number)
-        feat.sub_features = subs
-        return feat
+        feat.sub_features += subs
 
 
 @pytest.mark.parametrize(
@@ -82,7 +81,7 @@ def test_add_transcript_to_naked_gene(gene_type: str, ntr_before: int, ntr_after
     gen = FeatGenerator()
     gene = gen.make(gene_type, 1)[0]
     if ntr_before > 0:
-        gene = gen.append(gene, "mRNA", ntr_before)
+        gen.append(gene, "mRNA", ntr_before)
 
     add_transcript_to_naked_gene(gene)
     assert len(gene.sub_features) == ntr_after
@@ -92,31 +91,33 @@ def test_add_transcript_to_naked_gene(gene_type: str, ntr_before: int, ntr_after
     "children, expected_children, expected_mrna_children, expectation",
     [
         pytest.param(["CDS"], {"mRNA": 1}, {"CDS": 1, "exon": 1}, does_not_raise(), id="One CDS, add mRNA"),
-        pytest.param(["CDS", "CDS"], {"mRNA": 1}, {"CDS": 2, "exon": 2}, does_not_raise(), id="Two CDS, add mRNA"),
+        pytest.param(
+            ["CDS", "CDS"], {"mRNA": 1}, {"CDS": 2, "exon": 2}, does_not_raise(), id="Two CDS, add mRNA"
+        ),
         pytest.param(["exon"], {"exon": 1}, {}, does_not_raise(), id="One exon, skip"),
         pytest.param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="1 CDS + 1 exon, skip"),
     ],
 )
 def test_add_mrna_to_gene_with_only_cds(
-    base_gene: SeqFeature,
     children: List[str],
     expected_children: Dict[str, int],
     expected_mrna_children: Dict[str, int],
     expectation: ContextManager,
 ):
     """Test the addition of intermediate transcripts."""
+    gen = FeatGenerator()
+    gene = gen.make("gene", 1)[0]
 
-    for child in children:
-        sub_feat = SeqFeature(base_gene.location, type=child)
-        base_gene.sub_features.append(sub_feat)
+    for child_type in children:
+        gen.append(gene, child_type, 1)
 
     with expectation:
-        move_only_cdss_to_new_mrna(base_gene)
+        move_only_cdss_to_new_mrna(gene)
 
-        fcounter = dict(Counter([feat.type for feat in base_gene.sub_features]))
+        fcounter = dict(Counter([feat.type for feat in gene.sub_features]))
         assert fcounter == expected_children
 
-        gene_child = base_gene.sub_features[0]
+        gene_child = gene.sub_features[0]
         if gene_child.type == "mRNA":
             fcounter_mrna = dict(Counter([feat.type for feat in gene_child.sub_features]))
             assert fcounter_mrna == expected_mrna_children
