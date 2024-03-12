@@ -26,7 +26,7 @@ import logging
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List, Optional
+from typing import List, Optional, Set
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
@@ -83,7 +83,7 @@ class GFFSimplifier:
         self.stable_ids = StableIDAllocator()
         self.stable_ids.set_prefix(self.genome)
         self.exclude_seq_regions: List = []
-        self.fail_types: Dict[str, int] = {}
+        self.fail_types: Set = {}
 
         # Init the actual data we will store
         self.records = Records()
@@ -109,7 +109,7 @@ class GFFSimplifier:
                 self.records.append(clean_record)
 
             if self.fail_types:
-                fail_errors = "\n   ".join(self.fail_types.keys())
+                fail_errors = "\n   ".join(self.fail_types)
                 if self.skip_unrecognized:
                     raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
 
@@ -150,7 +150,7 @@ class GFFSimplifier:
 
         # What to do with unsupported gene types
         if gene.type not in allowed_gene_types:
-            self.fail_types["gene=" + gene.type] = 1
+            self.fail_types.add(f"gene={gene.type}")
             logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
             if self.skip_unrecognized:
                 return None
@@ -342,7 +342,6 @@ class GFFSimplifier:
 
         allowed_transcript_types = self._biotypes["transcript"]["supported"]
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
-        skip_unrecognized = self.skip_unrecognized
 
         transcripts_to_delete = []
         for count, transcript in enumerate(gene.sub_features):
@@ -350,11 +349,11 @@ class GFFSimplifier:
                 transcript.type not in allowed_transcript_types
                 and transcript.type not in ignored_transcript_types
             ):
-                self.fail_types["transcript=" + transcript.type] = 1
+                self.fail_types.add(f"transcript={transcript.type}")
                 logging.warning(
                     f"Unrecognized transcript type: {transcript.type}" f" for {transcript.id} ({gene.id})"
                 )
-                if skip_unrecognized:
+                if self.skip_unrecognized:
                     transcripts_to_delete.append(count)
                     continue
 
@@ -421,7 +420,7 @@ class GFFSimplifier:
                     exons_to_delete.append(tcount)
                     continue
 
-                self.fail_types[f"sub_transcript={feat.type}"] = 1
+                self.fail_types.add(f"sub_transcript={feat.type}")
                 logging.warning(
                     f"Unrecognized exon type for {feat.type}: {feat.id}"
                     f" (for transcript {transcript.id} of type {transcript.type})"
