@@ -282,8 +282,8 @@ def retrieve_assembly_data(
     max_increment: int = 0,
     max_redo: int = 3,
 ) -> None:
-    """Establish FTP connection and download a predefined subset of assembly data files from either
-    INSDC or RefSeq. For subset of files see Dict: '_FILE_ENDS'
+    """Establishes an FTP connection and downloads a predefined subset of assembly data files from either
+    INSDC or RefSeq.
 
     Args:
         accession: Genome Assembly accession.
