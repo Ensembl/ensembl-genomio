@@ -123,12 +123,7 @@ def move_only_exons_to_new_mrna(gene: SeqFeature) -> None:
 
     transcript = SeqFeature(gene.location, type="mRNA")
     transcript.qualifiers["source"] = gene.qualifiers["source"]
-    transcript.sub_features = []
-
-    for feat in gene.sub_features:
-        if feat.type != "exon":
-            return
-        transcript.sub_features.append(feat)
+    transcript.sub_features = gene.sub_features
     gene.sub_features = [transcript]
 
     logging.debug(f"Insert transcript for {gene.id} ({len(gene.sub_features)} exons)")
@@ -141,13 +136,17 @@ def move_cds_to_existing_mrna(gene: SeqFeature) -> None:
     gene -> [ mRNA, CDSs ]
     and change it to
     gene -> [ mRNA -> [ CDSs ] ]
-    The mRNA might have exons, in which case check that they match the CDS coordinates.
+    The mRNA itself might have exons, in which case check that they match the CDS coordinates.
 
     Raises an exception if the feature structure is not recognized.
     """
     counts = _get_feat_counts(gene)
-    if len(counts) != 2 and not counts.get("mRNA") and not counts.get("CDS"):
+    if not counts.get("mRNA") or not counts.get("CDS"):
         return
+    if counts.get("mRNA") > 1:
+        raise GFFParserError(
+            f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene"
+        )
 
     # First, count the types
     mrnas = []
@@ -162,39 +161,39 @@ def move_cds_to_existing_mrna(gene: SeqFeature) -> None:
         else:
             gene_subf_clean.append(subf)
 
-    if len(cdss) == 0:
-        # Nothing to fix here, no CDSs to move
-        return
-    if len(mrnas) > 1:
-        raise GFFParserError(
-            f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene"
-        )
-
     mrna = mrnas[0]
 
     # Check if there are exons (or CDSs) under the mRNA
-    sub_exons = []
     sub_cdss = []
+    sub_exons = []
     for subf in mrna.sub_features:
         if subf.type == "CDS":
             sub_cdss.append(subf)
         elif subf.type == "exon":
             sub_exons.append(subf)
 
-    _check_sub_cdss(gene, sub_cdss)
-    _check_sub_exons(gene, cdss, sub_exons)
+    # Check sub CDSs
+    if sub_cdss:
+        raise GFFParserError(f"Gene {gene.id} has CDSs as children in both the gene and mRNA")
+
+    # If there are exons, check they overlap with the CDSs
+    new_sub_exons = []
+    if sub_exons:
+        _check_sub_exons(gene, cdss, sub_exons)
+    else:
+        # We need to create exons with the same coords as the CDSs
+        for cur_cds in cdss:
+            sub_exon = SeqFeature(cur_cds.location, type="exon")
+            new_sub_exons.append(sub_exon)
 
     logging.debug(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
-    # No more issues? move the CDSs
+
+    # No more issues? move the CDSs, and add any new exons
     mrna.sub_features += cdss
+    mrna.sub_features += new_sub_exons
     # And remove them from the gene
     gene.sub_features = gene_subf_clean
     gene.sub_features.append(mrna)
-
-
-def _check_sub_cdss(gene: SeqFeature, sub_cdss: List[SeqFeature]) -> None:
-    if len(sub_cdss) > 0:
-        raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
 
 
 def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
@@ -223,7 +222,7 @@ def remove_extra_exons(gene: SeqFeature) -> None:
     "id-", so that's what we use to detect them.
     """
     counts = _get_feat_counts(gene)
-    if len(counts) != 2 and not counts.get("mRNA") and not counts.get("exon"):
+    if not counts.get("mRNA") and not counts.get("exon"):
         return
 
     exons = []
