@@ -223,7 +223,7 @@ def test_download_single_file(
 
 
 #################
-@pytest.mark.dependency(name="test_download_all_files")
+@pytest.mark.dependency(name="test_download_all_files", depends=["test_download_single_file"])
 @pytest.mark.parametrize(
     "ftp_url, ftp_accession, compare_accession, md5, exception, max_redo",
     [
