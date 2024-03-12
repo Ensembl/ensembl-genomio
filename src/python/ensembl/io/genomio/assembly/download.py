@@ -157,7 +157,7 @@ def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: 
         max_redo: Maximum FTP connection retry attempts.
     """
 
-    # # Get the list of assemblies for this accession
+    # Get the list of assemblies for this accession
     for ftp_dir, _ in ftp_connection.mlsd():
         if re.search(accession, ftp_dir):
             ftp_connection.cwd(ftp_dir)
