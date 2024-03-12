@@ -154,7 +154,7 @@ def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: 
         ftp_connection: An open FTP connection object
         accession: Genome assembly accession.
         dl_dir: Path to downloaded FTP files.
-        max_redo: Maximum ftp connection retry attempts.
+        max_redo: Maximum FTP connection retry attempts.
     """
 
     # # Get the list of assemblies for this accession
