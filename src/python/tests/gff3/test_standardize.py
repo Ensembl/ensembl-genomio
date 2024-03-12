@@ -24,7 +24,7 @@ from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.standardize import (
-    # standardize_gene,
+    standardize_gene,
     add_transcript_to_naked_gene,
     move_only_cdss_to_new_mrna,
     move_only_exons_to_new_mrna,
@@ -289,4 +289,24 @@ def test_remove_extra_exons(
 
     with expectation:
         remove_extra_exons(gene)
+        assert gen.get_sub_structure(gene) == {"gene": expected_children}
+
+
+@pytest.mark.parametrize(
+    "children, expected_children, expectation",
+    [
+        param([{"mRNA": ["CDS", "exon"]}], [{"mRNA": ["CDS", "exon"]}], does_not_raise(), id="OK gene"),
+        param(["mRNA", "CDS"], [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="mRNA + CDS, fixed"),
+        param([{"mRNA": ["CDS", "exon"]}, "CDS"], [], raises(GFFParserError), id="Gene + extra CDS, fail"),
+        param([{"mRNA": ["CDS", "exon"]}, "exon"], [], raises(GFFParserError), id="Gene + extra exon, fail"),
+    ]
+)
+def test_standardize(children: List[Any], expected_children: List[Any], expectation: ContextManager) -> None:
+    """Test the standardize() main function."""
+    
+    gen = FeatGenerator()
+    gene = gen.make("gene", 1)[0]
+    gen.append_structure(gene, children)
+    with expectation:
+        standardize_gene(gene)
         assert gen.get_sub_structure(gene) == {"gene": expected_children}
