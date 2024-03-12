@@ -177,29 +177,23 @@ def move_cds_to_existing_mrna(gene: SeqFeature) -> None:
         raise GFFParserError(f"Gene {gene.id} has CDSs as children in both the gene and mRNA")
 
     # If there are exons, check they overlap with the CDSs
-    new_sub_exons = []
-    if sub_exons:
-        _check_sub_exons(gene, cdss, sub_exons)
-    else:
-        # We need to create exons with the same coords as the CDSs
-        for cur_cds in cdss:
-            sub_exon = SeqFeature(cur_cds.location, type="exon")
-            new_sub_exons.append(sub_exon)
-
-    logging.debug(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
+    _check_sub_exons(mrna, cdss, sub_exons)
 
     # No more issues? move the CDSs, and add any new exons
     mrna.sub_features += cdss
-    mrna.sub_features += new_sub_exons
     # And remove them from the gene
     gene.sub_features = gene_subf_clean
     gene.sub_features.append(mrna)
+    logging.debug(f"Gene {gene.id}: moved {len(cdss)} CDSs to the mRNA")
 
 
-def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
-    """Check that the exons of the mRNA and the CDSs match"""
+def _check_sub_exons(mrna: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
+    """Check that the exons of the mRNA and the CDSs match.
+    If there are no exons, create them from the CDSs.
+    """
 
-    if len(sub_exons) > 0:
+    new_sub_exons = []
+    if sub_exons:
         # Check that they match the CDS outside
         if len(sub_exons) == len(cdss):
             # Now that all coordinates are the same
@@ -207,11 +201,17 @@ def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeat
             coord_cdss = [f"{cds.location}" for cds in cdss]
 
             if coord_exons != coord_cdss:
-                raise GFFParserError(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
+                raise GFFParserError(f"Gene CDSs and exons under the mRNA {mrna.id} do not match")
         else:
             raise GFFParserError(
-                f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)"
+                f"Gene CDSs and exons under the mRNA {mrna.id} do not match (different count)"
             )
+    else:
+        # No exons in the mRNA? Create them with the CDS coordinates
+        for cur_cds in cdss:
+            sub_exon = SeqFeature(cur_cds.location, type="exon")
+            new_sub_exons.append(sub_exon)
+    mrna.sub_features += new_sub_exons
 
 
 def remove_extra_exons(gene: SeqFeature) -> None:

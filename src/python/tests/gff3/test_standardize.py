@@ -93,13 +93,11 @@ def test_add_transcript_to_naked_gene(gene_type: str, ntr_before: int, ntr_after
 @pytest.mark.parametrize(
     "children, expected_children, expected_mrna_children, expectation",
     [
-        pytest.param(["mRNA"], {"mRNA": 1}, {}, does_not_raise(), id="One mRNA, skip"),
-        pytest.param(["CDS"], {"mRNA": 1}, {"CDS": 1, "exon": 1}, does_not_raise(), id="One CDS, add mRNA"),
-        pytest.param(
-            ["CDS", "CDS"], {"mRNA": 1}, {"CDS": 2, "exon": 2}, does_not_raise(), id="Two CDS, add mRNA"
-        ),
-        pytest.param(["exon"], {"exon": 1}, {}, does_not_raise(), id="One exon, skip"),
-        pytest.param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="1 CDS + 1 exon, skip"),
+        param(["mRNA"], {"mRNA": 1}, {}, does_not_raise(), id="One mRNA, skip"),
+        param(["CDS"], {"mRNA": 1}, {"CDS": 1, "exon": 1}, does_not_raise(), id="One CDS, add mRNA"),
+        param(["CDS", "CDS"], {"mRNA": 1}, {"CDS": 2, "exon": 2}, does_not_raise(), id="Two CDS, add mRNA"),
+        param(["exon"], {"exon": 1}, {}, does_not_raise(), id="One exon, skip"),
+        param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="1 CDS + 1 exon, skip"),
     ],
 )
 def test_move_only_cdss_to_new_mrna(
@@ -130,11 +128,11 @@ def test_move_only_cdss_to_new_mrna(
 @pytest.mark.parametrize(
     "children, expected_children, expected_mrna_children, expectation",
     [
-        pytest.param(["mRNA"], {"mRNA": 1}, {}, does_not_raise(), id="mRNA only, skip"),
-        pytest.param(["CDS"], {"CDS": 1}, {}, does_not_raise(), id="One CDS, skip"),
-        pytest.param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="One CDS, skip"),
-        pytest.param(["exon"], {"mRNA": 1}, {"exon": 1}, does_not_raise(), id="One exon"),
-        pytest.param(["exon", "exon"], {"mRNA": 1}, {"exon": 2}, does_not_raise(), id="Two exons"),
+        param(["mRNA"], {"mRNA": 1}, {}, does_not_raise(), id="mRNA only, skip"),
+        param(["CDS"], {"CDS": 1}, {}, does_not_raise(), id="One CDS, skip"),
+        param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="One CDS, skip"),
+        param(["exon"], {"mRNA": 1}, {"exon": 1}, does_not_raise(), id="One exon"),
+        param(["exon", "exon"], {"mRNA": 1}, {"exon": 2}, does_not_raise(), id="Two exons"),
     ],
 )
 def test_move_only_exons_to_new_mrna(
@@ -165,18 +163,16 @@ def test_move_only_exons_to_new_mrna(
 @pytest.mark.parametrize(
     "children, expected_children, expected_mrna_children, expectation",
     [
-        pytest.param(["mRNA"], {"mRNA": 1}, {}, does_not_raise(), id="mRNA only, skip"),
-        pytest.param(["mRNA", "mRNA"], {"mRNA": 2}, {}, does_not_raise(), id="2 mRNA only, skip"),
-        pytest.param(["CDS"], {"CDS": 1}, {}, does_not_raise(), id="One CDS, skip"),
-        pytest.param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="CDS+exon, skip"),
-        pytest.param(
-            ["mRNA", "CDS"], {"mRNA": 1}, {"CDS": 1, "exon": 1}, does_not_raise(), id="1 mRNA + 1 CDS"
-        ),
-        pytest.param(
+        param(["mRNA"], {"mRNA": 1}, {}, does_not_raise(), id="mRNA only, skip"),
+        param(["mRNA", "mRNA"], {"mRNA": 2}, {}, does_not_raise(), id="2 mRNA only, skip"),
+        param(["CDS"], {"CDS": 1}, {}, does_not_raise(), id="One CDS, skip"),
+        param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="CDS+exon, skip"),
+        param(["mRNA", "CDS"], {"mRNA": 1}, {"CDS": 1, "exon": 1}, does_not_raise(), id="1 mRNA + 1 CDS"),
+        param(
             ["mRNA", "CDS", "CDS"], {"mRNA": 1}, {"CDS": 2, "exon": 2}, does_not_raise(), id="1 mRNA + 2 CDS"
         ),
-        pytest.param(["mRNA", "mRNA", "CDS"], {}, {}, raises(GFFParserError), id="2 mRNA only + CDS, fail"),
-        pytest.param(
+        param(["mRNA", "mRNA", "CDS"], {}, {}, raises(GFFParserError), id="2 mRNA only + CDS, fail"),
+        param(
             ["mRNA", "mRNA", "CDS", "exon"],
             {"mRNA": 2, "CDS": 1, "exon": 1},
             {},
@@ -212,4 +208,16 @@ def test_move_cds_to_existing_mrna(
 
 def test_remove_extra_exons():
     """Test the addition of intermediate transcripts."""
-    # TODO
+    gen = FeatGenerator()
+    gene = gen.make("gene", 1)[0]
+
+    gen.append(gene, "mRNA", 1)
+    gen.append(gene, "exon", 2)
+    exon_num = 1
+    for subfeat in gene.sub_features:
+        if subfeat.type == "exon":
+            subfeat.id = f"id-{exon_num}"
+            exon_num += 1
+
+    remove_extra_exons(gene)
+    assert len(gene.sub_features) == 1
