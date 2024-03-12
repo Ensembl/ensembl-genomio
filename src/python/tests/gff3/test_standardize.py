@@ -14,7 +14,6 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.gff3.standardize` module."""
 
-from collections import Counter
 from contextlib import nullcontext as does_not_raise
 from typing import Any, ContextManager, Dict, List, Union
 
@@ -79,7 +78,7 @@ class FeatGenerator:
                 feat = self.make(feat_type)[0]
                 feat.sub_features += self.make_structure(feat_children)
                 output.append(feat)
-            
+
         return output
 
     def get_sub_structure(self, feat: SeqFeature) -> Union[Dict, str]:
@@ -99,8 +98,10 @@ class FeatGenerator:
         param([{"gene": ["mRNA"]}], [{"gene": ["mRNA"]}], id="gene + mRNA"),
         param([{"gene": ["mRNA", "mRNA"]}], [{"gene": ["mRNA", "mRNA"]}], id="gene + 2 mRNA"),
         param(["ncRNA_gene"], ["ncRNA_gene"], id="1 ncRNA_gene, no transcript"),
-        param([{"ncRNA_gene": ["transcript"]}], [{"ncRNA_gene": ["transcript"]}], id="1 ncRNA_gene + transcript"),
-    ]
+        param(
+            [{"ncRNA_gene": ["transcript"]}], [{"ncRNA_gene": ["transcript"]}], id="1 ncRNA_gene + transcript"
+        ),
+    ],
 )
 def test_add_transcript_to_naked_gene(children: List[Any], expected_children: List[Any]):
     """Test the creation of a transcript for a gene without one."""
@@ -115,7 +116,12 @@ def test_add_transcript_to_naked_gene(children: List[Any], expected_children: Li
     [
         param(["mRNA"], ["mRNA"], does_not_raise(), id="One mRNA, skip"),
         param(["CDS"], [{"mRNA": ["CDS", "exon"]}], does_not_raise(), id="One CDS, add mRNA"),
-        param(["CDS", "CDS"], [{"mRNA": ["CDS", "exon", "CDS", "exon"]}], does_not_raise(), id="2 CDSs, add mRNA"),
+        param(
+            ["CDS", "CDS"],
+            [{"mRNA": ["CDS", "exon", "CDS", "exon"]}],
+            does_not_raise(),
+            id="2 CDSs, add mRNA",
+        ),
         param(["exon"], ["exon"], does_not_raise(), id="One exon, skip"),
         param(["CDS", "exon"], ["CDS", "exon"], does_not_raise(), id="1 CDS + 1 exon, skip"),
     ],
