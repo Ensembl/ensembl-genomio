@@ -12,11 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Standardize the gene model representation of SeqFeatures.
+"""Restructure a gene model to a standard representation gene -> [ mRNAs -> [CDSs, exons] ]
 """
 
 __all__ = [
-    "standardize_gene",
+    "restructure_gene",
     "add_transcript_to_naked_gene",
     "move_only_cdss_to_new_mrna",
     "move_only_exons_to_new_mrna",
@@ -37,7 +37,7 @@ def _get_feat_counts(gene: SeqFeature):
     return Counter([feat.type for feat in gene.sub_features])
 
 
-def standardize_gene(gene: SeqFeature) -> None:
+def restructure_gene(gene: SeqFeature) -> None:
     """Standardize the structure of a gene model:
     - Add a transcript if there are no children
     - Move the CDS and exons to an mRNA if they are directly under the gene

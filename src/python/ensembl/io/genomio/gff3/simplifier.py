@@ -38,7 +38,7 @@ import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
-from .standardize import standardize_gene
+from .restructure import restructure_gene
 
 
 class Records(list):
@@ -277,7 +277,7 @@ class GFFSimplifier:
         """
 
         gene.id = self.stable_ids.normalize_gene_id(gene)
-        standardize_gene(gene)
+        restructure_gene(gene)
         self.normalize_transcripts(gene)
         self.normalize_pseudogene(gene)
 

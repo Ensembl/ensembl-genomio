@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.gff3.standardize` module."""
+"""Unit testing of `ensembl.io.genomio.gff3.restructure` module."""
 
 from contextlib import nullcontext as does_not_raise
 from typing import Any, ContextManager, Dict, List, Union
@@ -22,24 +22,14 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
-from ensembl.io.genomio.gff3.standardize import (
-    standardize_gene,
+from ensembl.io.genomio.gff3.restructure import (
+    restructure_gene,
     add_transcript_to_naked_gene,
     move_only_cdss_to_new_mrna,
     move_only_exons_to_new_mrna,
     move_cds_to_existing_mrna,
     remove_extra_exons,
 )
-
-
-@pytest.fixture(name="base_gene")
-def _base_gene() -> SeqFeature:
-    gene_location = SimpleLocation(1, 100, 1)
-    gene_source = "LOREM"
-    gene = SeqFeature(gene_location, type="gene")
-    gene.qualifiers["source"] = gene_source
-    gene.sub_features = []
-    return gene
 
 
 class FeatGenerator:
@@ -225,7 +215,11 @@ def test_move_cds_to_existing_mrna(
     expected_children: Dict[str, int],
     expectation: ContextManager,
 ):
-    """Test moving CDSs under a gene to under the mRNA."""
+    """Test moving CDSs under a gene to under the mRNA.
+
+    Args:
+        diff_exons: use exons with different coordinates than the CDSs.
+    """
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gene.sub_features += gen.make_structure(children)
@@ -275,7 +269,11 @@ def test_move_cds_to_existing_mrna(
 def test_remove_extra_exons(
     children: List[Any], has_id: int, expected_children: List[Any], expectation: ContextManager
 ):
-    """Test removing extra unneeded exons."""
+    """Test removing extra unneeded exons.
+
+    Args:
+        has_id: add an ID starting with 'id-' for this number of exons (if any).
+    """
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gene.sub_features += gen.make_structure(children)
@@ -303,12 +301,14 @@ def test_remove_extra_exons(
         param([{"mRNA": ["CDS", "exon"]}, "exon"], [], raises(GFFParserError), id="Gene + extra exon, fail"),
     ],
 )
-def test_standardize(children: List[Any], expected_children: List[Any], expectation: ContextManager) -> None:
-    """Test the standardize() main function."""
+def test_restructure_gene(
+    children: List[Any], expected_children: List[Any], expectation: ContextManager
+) -> None:
+    """Test the restructure_gene() main function."""
 
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gene.sub_features += gen.make_structure(children)
     with expectation:
-        standardize_gene(gene)
+        restructure_gene(gene)
         assert gen.get_sub_structure(gene) == {"gene": expected_children}
