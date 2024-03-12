@@ -98,9 +98,6 @@ def md5_files(dl_dir: Path, md5_path: Optional[Path] = None, md5_filename: str =
         dl_dir: Path location to containing downloaded FTP files.
         md5_path: Full path to an md5 checksum file.
         md5_filename: Name of a checksum file in the `dl_dir` (used if no `md5_path` is given).
-
-    Returns:
-        Bool: True if dl files match checksum, False otherwise.
     """
     # Get or set md5 file to user or default setting
     if md5_path is None:
