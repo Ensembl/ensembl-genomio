@@ -72,7 +72,7 @@ def establish_ftp(ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
         UnsupportedFormatError: If `accession` does not follow INSDC's accession format.
     """
 
-    match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+    match = re.match(r"^(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})(\.[0-9]+)?$", accession)
     if not match:
         raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
     gca = match.group(1)
