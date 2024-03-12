@@ -299,7 +299,6 @@ def test_download_all_files(
         mock_ftp.login.assert_called()
         mock_ftp.cwd.assert_called_with("genomes/all/GCA/017/607/445")
 
-    with exception:
         download_files(connected_ftp, compare_accession, data_dir, max_redo)
         mock_ftp.cwd.assert_called()
         mock_ftp.mlsd.assert_called()
