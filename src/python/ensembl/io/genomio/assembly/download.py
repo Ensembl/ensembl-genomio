@@ -188,7 +188,7 @@ def _download_file(
     Args:
         ftp_connection: Established connection FTP object.
         ftp_file: Name of ftp file to download.
-        md5_sums: Dict of key value pairs filename<=>md5_checksums.
+        md5_sums: Dictionary of key value pairs filename - md5_checksums.
         dl_dir: Path to downloaded FTP files.
         max_redo: Maximum number of connection retry attempts.
 
