@@ -16,7 +16,7 @@
 
 from collections import Counter
 from contextlib import nullcontext as does_not_raise
-from typing import Any, ContextManager, Dict, List, Optional
+from typing import Any, ContextManager, Dict, List, Union
 
 from Bio.SeqFeature import SeqFeature, SimpleLocation
 import pytest
@@ -67,7 +67,7 @@ class FeatGenerator:
         """Create a defined bnumber of features of a given type and append them to the gene."""
         subs = self.make(ftype, number)
         feat.sub_features += subs
-    
+
     def append_structure(self, parent: SeqFeature, children: List[Any]) -> None:
         """Load a structure in the form:
         struct = ["mRNA"]
@@ -75,9 +75,9 @@ class FeatGenerator:
         struct = [{"mRNA": ["CDS", "exon"]}, "exon", "exon"]
         """
         for child in children:
-            if type(child) is str:
+            if isinstance(child, str):
                 self.append(parent, child)
-            elif type(child) is dict:
+            elif isinstance(child, dict):
                 feat_type = list(child.keys())[0]
                 feat_children = list(child.values())[0]
 
@@ -86,15 +86,15 @@ class FeatGenerator:
 
                 for feat_child in feat_children:
                     self.append(feat, feat_child)
-    
-    def get_sub_structure(self, feat: SeqFeature) -> List[Any]:
+
+    def get_sub_structure(self, feat: SeqFeature) -> Union[Dict, str]:
+        """Create a children structure from a SeqFeature."""
         if feat.sub_features:
             feat_subs = []
             for sub in feat.sub_features:
                 feat_subs.append(self.get_sub_structure(sub))
             return {feat.type: feat_subs}
-        else:
-            return feat.type
+        return feat.type
 
 
 @pytest.mark.parametrize(
@@ -197,7 +197,10 @@ def test_move_only_exons_to_new_mrna(
         param(["CDS", "exon"], ["CDS", "exon"], does_not_raise(), id="CDS+exon, skip"),
         param(["mRNA", "CDS"], [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="1 mRNA + 1 CDS"),
         param(
-            ["mRNA", "CDS", "CDS"], [{"mRNA": ["exon", "exon", "CDS", "CDS"]}], does_not_raise(), id="1 mRNA + 2 CDS"
+            ["mRNA", "CDS", "CDS"],
+            [{"mRNA": ["exon", "exon", "CDS", "CDS"]}],
+            does_not_raise(),
+            id="1 mRNA + 2 CDS",
         ),
         param(["mRNA", "mRNA", "CDS"], [], raises(GFFParserError), id="2 mRNA only + CDS, fail"),
         param(
@@ -226,14 +229,36 @@ def test_move_cds_to_existing_mrna(
 @pytest.mark.parametrize(
     "children, has_id, expected_children, expectation",
     [
+        param(["tRNA"], 0, ["tRNA"], does_not_raise(), id="tRNA only, skip"),
         param(["mRNA"], 0, ["mRNA"], does_not_raise(), id="mRNA only, skip"),
         param(["mRNA", "exon"], 0, ["mRNA", "exon"], does_not_raise(), id="mRNA and 1 exon without id"),
         param(["mRNA", "exon"], 1, ["mRNA"], does_not_raise(), id="mRNA and 1 exon with id"),
-        param([{"mRNA": ["exon"]}, "exon"], 1, [{"mRNA": ["exon"]}], does_not_raise(), id="mRNA and 1 exon with id"),
-        param([{"mRNA": ["exon"]}, "exon", "exon"], 1, [], raises(GFFParserError), id="mRNA and 2 exons with partial id-"),
-    ]
+        param(
+            [{"mRNA": ["exon"]}, "exon"],
+            1,
+            [{"mRNA": ["exon"]}],
+            does_not_raise(),
+            id="mRNA and 1 exon with id",
+        ),
+        param(
+            [{"mRNA": ["exon"]}, "exon", "exon"],
+            1,
+            [],
+            raises(GFFParserError),
+            id="mRNA and 2 exons with partial id-",
+        ),
+        param(
+            ["mRNA", "exon", "extra"],
+            1,
+            ["mRNA", "extra"],
+            does_not_raise(),
+            id="mRNA + extra + 1 exon with id",
+        ),
+    ],
 )
-def test_remove_extra_exons(children: List[Any], has_id: int, expected_children: List[Any], expectation: ContextManager):
+def test_remove_extra_exons(
+    children: List[Any], has_id: int, expected_children: List[Any], expectation: ContextManager
+):
     """Test the addition of intermediate transcripts."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
