@@ -337,7 +337,7 @@ def test_download_all_files(
 def test_get_files_selection(
     data_dir: Path, has_download_dir: bool, files_expected: dict, expectation: ContextManager
 ) -> None:
-    """Test the get a subset of download.get_files_selection() files function `
+    """Tests the `download.get_files_selection()` function.
 
     Args:
         download_dir: Path to specific location of downloaded files.
