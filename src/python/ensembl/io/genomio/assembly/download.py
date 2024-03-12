@@ -146,7 +146,6 @@ def get_checksums(checksum_path: Path) -> Dict[str, str]:
     return sums
 
 
-# def download_files(accession: str, dl_dir: Path, max_redo: int) -> None:
 def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: int) -> None:
     """
     Given an INSDC accession, download all available files from the ftp to the download dir
