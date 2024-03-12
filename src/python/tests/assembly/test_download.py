@@ -247,7 +247,6 @@ def test_download_single_file(
         ),
     ],
 )
-@pytest.mark.dependency(depends=["test_download_single_file"])
 @patch("ftplib.FTP")
 def test_download_all_files(
     mock_ftp: MagicMock,
