@@ -191,9 +191,6 @@ def _download_file(
         md5_sums: Dictionary of key value pairs filename - md5_checksums.
         dl_dir: Path to downloaded FTP files.
         max_redo: Maximum number of connection retry attempts.
-
-    Returns:
-        None
     """
     has_md5 = True
     expected_sum = ""
