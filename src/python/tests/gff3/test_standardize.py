@@ -226,14 +226,14 @@ def test_move_cds_to_existing_mrna(
 @pytest.mark.parametrize(
     "children, has_id, expected_children, expectation",
     [
-        param(["mRNA"], False, ["mRNA"], does_not_raise(), id="mRNA only, skip"),
-        param(["mRNA", "exon"], False, ["mRNA", "exon"], does_not_raise(), id="mRNA and 1 exon without id"),
-        param(["mRNA", "exon"], True, ["mRNA"], does_not_raise(), id="mRNA and 1 exon with id"),
-        param([{"mRNA": ["exon"]}, "exon"], True, [{"mRNA": ["exon"]}], does_not_raise(), id="mRNA and 1 exon with id"),
-        param([{"mRNA": ["exon"]}, "exon"], False, [{"mRNA": ["exon"]}, "exon"], raises(GFFParserError), id="mRNA and 1 exon without id"),
+        param(["mRNA"], 0, ["mRNA"], does_not_raise(), id="mRNA only, skip"),
+        param(["mRNA", "exon"], 0, ["mRNA", "exon"], does_not_raise(), id="mRNA and 1 exon without id"),
+        param(["mRNA", "exon"], 1, ["mRNA"], does_not_raise(), id="mRNA and 1 exon with id"),
+        param([{"mRNA": ["exon"]}, "exon"], 1, [{"mRNA": ["exon"]}], does_not_raise(), id="mRNA and 1 exon with id"),
+        param([{"mRNA": ["exon"]}, "exon", "exon"], 1, [], raises(GFFParserError), id="mRNA and 2 exons with partial id-"),
     ]
 )
-def test_remove_extra_exons(children: List[Any], has_id: bool, expected_children: List[Any], expectation: ContextManager):
+def test_remove_extra_exons(children: List[Any], has_id: int, expected_children: List[Any], expectation: ContextManager):
     """Test the addition of intermediate transcripts."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
@@ -245,6 +245,9 @@ def test_remove_extra_exons(children: List[Any], has_id: bool, expected_children
             if subfeat.type == "exon":
                 subfeat.id = f"id-{exon_num}"
                 exon_num += 1
+            if exon_num > has_id:
+                break
 
-    remove_extra_exons(gene)
-    assert gen.get_sub_structure(gene) == {"gene": expected_children}
+    with expectation:
+        remove_extra_exons(gene)
+        assert gen.get_sub_structure(gene) == {"gene": expected_children}
