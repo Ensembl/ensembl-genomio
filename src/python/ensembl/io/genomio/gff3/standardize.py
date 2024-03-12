@@ -104,6 +104,7 @@ def move_only_cdss_to_new_mrna(gene: SeqFeature) -> None:
         # Also add an exon in the same location
         exon = SeqFeature(cds.location, type="exon")
         exon.qualifiers["source"] = gene.qualifiers["source"]
+        exon.sub_features = []
         transcripts_dict[cds.id].sub_features.append(exon)
 
     transcripts = list(transcripts_dict.values())

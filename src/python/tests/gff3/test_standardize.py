@@ -44,7 +44,7 @@ def _base_gene() -> SeqFeature:
 
 
 class FeatGenerator:
-    """Generates feature of a given type for testing."""
+    """Generates features of a given type for testing."""
 
     start = 1
     end = 1000
@@ -53,7 +53,7 @@ class FeatGenerator:
     source = "Foo"
 
     def make(self, ftype: str, number: int = 1) -> List[SeqFeature]:
-        """Create a defined bnumber of features of a given type."""
+        """Create a defined number of features of a given type."""
         feats = []
         for _ in range(0, number):
             loc = SimpleLocation(self.start, self.end, self.strand)
@@ -64,12 +64,12 @@ class FeatGenerator:
         return feats
 
     def append(self, feat: SeqFeature, ftype: str, number: int = 1) -> None:
-        """Create a defined bnumber of features of a given type and append them to the gene."""
+        """Create a defined number of features of a given type and append them to the gene."""
         subs = self.make(ftype, number)
         feat.sub_features += subs
 
     def append_structure(self, parent: SeqFeature, children: List[Any]) -> None:
-        """Load a structure in the form:
+        """Add a children structure to a parent SeqFeature in the form:
         struct = ["mRNA"]
         struct = [{"mRNA": ["CDS"]}]
         struct = [{"mRNA": ["CDS", "exon"]}, "exon", "exon"]
@@ -119,73 +119,51 @@ def test_add_transcript_to_naked_gene(gene_type: str, ntr_before: int, ntr_after
 
 
 @pytest.mark.parametrize(
-    "children, expected_children, expected_mrna_children, expectation",
+    "children, expected_children, expectation",
     [
-        param(["mRNA"], {"mRNA": 1}, {}, does_not_raise(), id="One mRNA, skip"),
-        param(["CDS"], {"mRNA": 1}, {"CDS": 1, "exon": 1}, does_not_raise(), id="One CDS, add mRNA"),
-        param(["CDS", "CDS"], {"mRNA": 1}, {"CDS": 2, "exon": 2}, does_not_raise(), id="Two CDS, add mRNA"),
-        param(["exon"], {"exon": 1}, {}, does_not_raise(), id="One exon, skip"),
-        param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="1 CDS + 1 exon, skip"),
+        param(["mRNA"], ["mRNA"], does_not_raise(), id="One mRNA, skip"),
+        param(["CDS"], [{"mRNA": ["CDS", "exon"]}], does_not_raise(), id="One CDS, add mRNA"),
+        param(["CDS", "CDS"], [{"mRNA": ["CDS", "exon", "CDS", "exon"]}], does_not_raise(), id="2 CDSs, add mRNA"),
+        param(["exon"], ["exon"], does_not_raise(), id="One exon, skip"),
+        param(["CDS", "exon"], ["CDS", "exon"], does_not_raise(), id="1 CDS + 1 exon, skip"),
     ],
 )
 def test_move_only_cdss_to_new_mrna(
     children: List[str],
     expected_children: Dict[str, int],
-    expected_mrna_children: Dict[str, int],
     expectation: ContextManager,
 ):
     """Test the addition of intermediate transcripts."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
-
-    for child_type in children:
-        gen.append(gene, child_type, 1)
-
+    gen.append_structure(gene, children)
     with expectation:
         move_only_cdss_to_new_mrna(gene)
-
-        fcounter = dict(Counter([feat.type for feat in gene.sub_features]))
-        assert fcounter == expected_children
-
-        gene_child = gene.sub_features[0]
-        if gene_child.type == "mRNA":
-            fcounter_mrna = dict(Counter([feat.type for feat in gene_child.sub_features]))
-            assert fcounter_mrna == expected_mrna_children
+        assert gen.get_sub_structure(gene) == {"gene": expected_children}
 
 
 @pytest.mark.parametrize(
-    "children, expected_children, expected_mrna_children, expectation",
+    "children, expected_children, expectation",
     [
-        param(["mRNA"], {"mRNA": 1}, {}, does_not_raise(), id="mRNA only, skip"),
-        param(["CDS"], {"CDS": 1}, {}, does_not_raise(), id="One CDS, skip"),
-        param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="One CDS, skip"),
-        param(["exon"], {"mRNA": 1}, {"exon": 1}, does_not_raise(), id="One exon"),
-        param(["exon", "exon"], {"mRNA": 1}, {"exon": 2}, does_not_raise(), id="Two exons"),
+        param(["mRNA"], ["mRNA"], does_not_raise(), id="mRNA only, skip"),
+        param(["CDS"], ["CDS"], does_not_raise(), id="1 CDS, skip"),
+        param(["CDS", "exon"], ["CDS", "exon"], does_not_raise(), id="CDS + exon, skip"),
+        param(["exon"], [{"mRNA": ["exon"]}], does_not_raise(), id="1 exon moved"),
+        param(["exon", "exon"], [{"mRNA": ["exon", "exon"]}], does_not_raise(), id="2 exons moved"),
     ],
 )
 def test_move_only_exons_to_new_mrna(
     children: List[str],
     expected_children: Dict[str, int],
-    expected_mrna_children: Dict[str, int],
     expectation: ContextManager,
 ):
     """Test the addition of intermediate transcripts."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
-
-    for child_type in children:
-        gen.append(gene, child_type, 1)
-
+    gen.append_structure(gene, children)
     with expectation:
         move_only_exons_to_new_mrna(gene)
-
-        fcounter = dict(Counter([feat.type for feat in gene.sub_features]))
-        assert fcounter == expected_children
-
-        gene_child = gene.sub_features[0]
-        if gene_child.type == "mRNA":
-            fcounter_mrna = dict(Counter([feat.type for feat in gene_child.sub_features]))
-            assert fcounter_mrna == expected_mrna_children
+        assert gen.get_sub_structure(gene) == {"gene": expected_children}
 
 
 @pytest.mark.parametrize(
@@ -196,25 +174,51 @@ def test_move_only_exons_to_new_mrna(
         param(["CDS"], False, ["CDS"], does_not_raise(), id="One CDS, skip"),
         param(["CDS", "exon"], False, ["CDS", "exon"], does_not_raise(), id="CDS+exon, skip"),
         param(["mRNA", "CDS"], False, [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="1 mRNA + 1 CDS"),
-        param(["mRNA", "CDS", "extra"], False, ["extra", {"mRNA": ["exon", "CDS"]}], does_not_raise(), id="1 mRNA + 1 CDS + extra"),
         param(
-            ["mRNA", "CDS", "CDS"], False,
+            ["mRNA", "CDS", "extra"],
+            False,
+            ["extra", {"mRNA": ["exon", "CDS"]}],
+            does_not_raise(),
+            id="1 mRNA + 1 CDS + extra",
+        ),
+        param(
+            ["mRNA", "CDS", "CDS"],
+            False,
             [{"mRNA": ["exon", "exon", "CDS", "CDS"]}],
             does_not_raise(),
             id="1 mRNA + 2 CDS",
         ),
         param(["mRNA", "mRNA", "CDS"], False, [], raises(GFFParserError), id="2 mRNA only + CDS, fail"),
         param(
-            ["mRNA", "mRNA", "CDS", "exon"], False,
+            ["mRNA", "mRNA", "CDS", "exon"],
+            False,
             [],
             raises(GFFParserError),
             id="2 mRNA only + CDS + exon, fail",
         ),
         param([{"mRNA": ["CDS"]}, "CDS"], False, [], raises(GFFParserError), id="1 mRNA/CDS + 1 CDS, fail"),
-        param([{"mRNA": ["exon"]}, "CDS"], False, [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="1 mRNA/exon + 1 CDS same"),
+        param(
+            [{"mRNA": ["exon"]}, "CDS"],
+            False,
+            [{"mRNA": ["exon", "CDS"]}],
+            does_not_raise(),
+            id="1 mRNA/exon + 1 CDS same",
+        ),
         param([{"mRNA": ["exon"]}, "CDS"], True, [], raises(GFFParserError), id="1 mRNA/exon + 1 CDS diff"),
-        param([{"mRNA": ["extra"]}, "CDS"], False, [{"mRNA": ["extra", "exon", "CDS"]}], does_not_raise(), id="1 mRNA/extra + 1 CDS"),
-        param([{"mRNA": ["exon", "exon"]}, "CDS"], True, [], raises(GFFParserError), id="1 mRNA/2exon + 1 CDS same"),
+        param(
+            [{"mRNA": ["extra"]}, "CDS"],
+            False,
+            [{"mRNA": ["extra", "exon", "CDS"]}],
+            does_not_raise(),
+            id="1 mRNA/extra + 1 CDS",
+        ),
+        param(
+            [{"mRNA": ["exon", "exon"]}, "CDS"],
+            True,
+            [],
+            raises(GFFParserError),
+            id="1 mRNA/2exon + 1 CDS same",
+        ),
     ],
 )
 def test_move_cds_to_existing_mrna(
@@ -230,7 +234,7 @@ def test_move_cds_to_existing_mrna(
 
     if diff_exon:
         for sub in gene.sub_features:
-            if sub.type == 'mRNA':
+            if sub.type == "mRNA":
                 for sub2 in sub.sub_features:
                     if sub2.type == "exon":
                         sub2.location += 10
@@ -299,11 +303,11 @@ def test_remove_extra_exons(
         param(["mRNA", "CDS"], [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="mRNA + CDS, fixed"),
         param([{"mRNA": ["CDS", "exon"]}, "CDS"], [], raises(GFFParserError), id="Gene + extra CDS, fail"),
         param([{"mRNA": ["CDS", "exon"]}, "exon"], [], raises(GFFParserError), id="Gene + extra exon, fail"),
-    ]
+    ],
 )
 def test_standardize(children: List[Any], expected_children: List[Any], expectation: ContextManager) -> None:
     """Test the standardize() main function."""
-    
+
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gen.append_structure(gene, children)
