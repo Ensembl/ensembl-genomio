@@ -133,9 +133,6 @@ def get_checksums(checksum_path: Path) -> Dict[str, str]:
 
     Args:
         checksum_path: Path location to MD5 checksum file.
-
-    Returns:
-        Dict: key value pairs of server side ftp file name & its md5 checksum.
     """
     sums: Dict[str, str] = {}
     if not checksum_path.is_file():
