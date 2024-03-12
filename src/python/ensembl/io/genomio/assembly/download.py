@@ -240,14 +240,16 @@ def _download_file(
 
 def get_files_selection(dl_dir: Path) -> Dict[str, str]:
     """
-    Among all downloaded files only keep a subset for which we use a controlled name.
-    Current names are defined in dict: '_FILE_ENDS'
+    """Returns a dictionary with the relevant downloaded files classified.
 
     Args:
-        dl_dir: Local path to downloaded FTP files. The file_path is relative to the download dir.
+        dl_dir: Local path to downloaded FTP files.
 
     Returns:
-        Dict: Subset target files. File name end (key)<=>file name(value)
+        Dictionary of file type (e.g.`"report"`) as keys and the relative file path (from `dl_dir`) as values.
+
+    Raises:
+        FileDownloadError: If `dl_dir` tree does not include a file named `*_assembly_report.txt`.
     """
     files = {}
     root_name = get_root_name(dl_dir)
@@ -286,13 +288,13 @@ def retrieve_assembly_data(
     INSDC or RefSeq.
 
     Args:
-        accession: Genome Assembly accession.
-        download_dir: Path to download FTP files.
+        accession: Genome assembly accession.
+        download_dir: Path to where to download FTP files.
         max_increment: If you want to allow assembly versions.
-        max_redo: Maximum ftp connection retry attempts.
+        max_redo: Maximum FTP connection retry attempts.
 
-    Returns:
-        None
+    Raises:
+        FileDownloadError: If no files are downloaded or if any does not match its MD5 checksum.
     """
     download_dir = Path(download_dir)
 
