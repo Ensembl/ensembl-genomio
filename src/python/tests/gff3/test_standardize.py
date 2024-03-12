@@ -189,30 +189,37 @@ def test_move_only_exons_to_new_mrna(
 
 
 @pytest.mark.parametrize(
-    "children, expected_children, expectation",
+    "children, diff_exon, expected_children, expectation",
     [
-        param(["mRNA"], ["mRNA"], does_not_raise(), id="mRNA only, skip"),
-        param(["mRNA", "mRNA"], ["mRNA", "mRNA"], does_not_raise(), id="2 mRNA only, skip"),
-        param(["CDS"], ["CDS"], does_not_raise(), id="One CDS, skip"),
-        param(["CDS", "exon"], ["CDS", "exon"], does_not_raise(), id="CDS+exon, skip"),
-        param(["mRNA", "CDS"], [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="1 mRNA + 1 CDS"),
+        param(["mRNA"], False, ["mRNA"], does_not_raise(), id="mRNA only, skip"),
+        param(["mRNA", "mRNA"], False, ["mRNA", "mRNA"], does_not_raise(), id="2 mRNA only, skip"),
+        param(["CDS"], False, ["CDS"], does_not_raise(), id="One CDS, skip"),
+        param(["CDS", "exon"], False, ["CDS", "exon"], does_not_raise(), id="CDS+exon, skip"),
+        param(["mRNA", "CDS"], False, [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="1 mRNA + 1 CDS"),
+        param(["mRNA", "CDS", "extra"], False, ["extra", {"mRNA": ["exon", "CDS"]}], does_not_raise(), id="1 mRNA + 1 CDS + extra"),
         param(
-            ["mRNA", "CDS", "CDS"],
+            ["mRNA", "CDS", "CDS"], False,
             [{"mRNA": ["exon", "exon", "CDS", "CDS"]}],
             does_not_raise(),
             id="1 mRNA + 2 CDS",
         ),
-        param(["mRNA", "mRNA", "CDS"], [], raises(GFFParserError), id="2 mRNA only + CDS, fail"),
+        param(["mRNA", "mRNA", "CDS"], False, [], raises(GFFParserError), id="2 mRNA only + CDS, fail"),
         param(
-            ["mRNA", "mRNA", "CDS", "exon"],
+            ["mRNA", "mRNA", "CDS", "exon"], False,
             [],
             raises(GFFParserError),
             id="2 mRNA only + CDS + exon, fail",
         ),
+        param([{"mRNA": ["CDS"]}, "CDS"], False, [], raises(GFFParserError), id="1 mRNA/CDS + 1 CDS, fail"),
+        param([{"mRNA": ["exon"]}, "CDS"], False, [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="1 mRNA/exon + 1 CDS same"),
+        param([{"mRNA": ["exon"]}, "CDS"], True, [], raises(GFFParserError), id="1 mRNA/exon + 1 CDS diff"),
+        param([{"mRNA": ["extra"]}, "CDS"], False, [{"mRNA": ["extra", "exon", "CDS"]}], does_not_raise(), id="1 mRNA/extra + 1 CDS"),
+        param([{"mRNA": ["exon", "exon"]}, "CDS"], True, [], raises(GFFParserError), id="1 mRNA/2exon + 1 CDS same"),
     ],
 )
 def test_move_cds_to_existing_mrna(
     children: List[str],
+    diff_exon: bool,
     expected_children: Dict[str, int],
     expectation: ContextManager,
 ):
@@ -220,6 +227,13 @@ def test_move_cds_to_existing_mrna(
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gen.append_structure(gene, children)
+
+    if diff_exon:
+        for sub in gene.sub_features:
+            if sub.type == 'mRNA':
+                for sub2 in sub.sub_features:
+                    if sub2.type == "exon":
+                        sub2.location += 10
 
     with expectation:
         move_cds_to_existing_mrna(gene)
