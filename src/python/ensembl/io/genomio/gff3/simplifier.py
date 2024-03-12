@@ -18,7 +18,6 @@ in a separate file.
 
 __all__ = [
     "Records",
-    "GFFParserError",
     "GFFSimplifier",
 ]
 
@@ -39,6 +38,7 @@ from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
 from .restructure import restructure_gene
+from .exceptions import GFFParserError
 
 
 class Records(list):
@@ -52,10 +52,6 @@ class Records(list):
         """
         with Path(out_gff_path).open("w") as out_gff_fh:
             GFF.write(self, out_gff_fh)
-
-
-class GFFParserError(Exception):
-    """Error when parsing a GFF3 file."""
 
 
 class GFFSimplifier:
