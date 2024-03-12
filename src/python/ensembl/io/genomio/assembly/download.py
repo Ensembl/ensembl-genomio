@@ -61,15 +61,15 @@ class UnsupportedFormatError(Exception):
 
 
 def establish_ftp(ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
-    """Function to test assembly accession format then attempt to
-    establish an FTP connection (FTP object) based on 'accession -> sub_dir'.
+    """Return an FTP connection based on the provided `accession` and `sub_dir`.
 
-        Args:
-            ftp_conn: FTP Class object
-            ftp_url: specific FTP url in connection request
-            sub_dir_path: Path of sub directory housing required data for download.
-        Returns:
-            An open connection via FTP() class object
+    Args:
+        ftp_conn: FTP class object.
+        ftp_url: Specific FTP URL in connection request.
+        sub_dir_path: Path of sub directory housing required data for download.
+
+    Raises:
+        UnsupportedFormatError: If `accession` does not follow INSDC's accession format.
     """
 
     match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
