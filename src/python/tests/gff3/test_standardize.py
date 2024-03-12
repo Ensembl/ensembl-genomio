@@ -44,7 +44,7 @@ def _base_gene() -> SeqFeature:
 
 
 class FeatGenerator:
-    """Generates features of a given type for testing."""
+    """Generates features and structures for testing."""
 
     start = 1
     end = 1000
@@ -63,29 +63,24 @@ class FeatGenerator:
             feats.append(feat)
         return feats
 
-    def append(self, feat: SeqFeature, ftype: str, number: int = 1) -> None:
-        """Create a defined number of features of a given type and append them to the gene."""
-        subs = self.make(ftype, number)
-        feat.sub_features += subs
-
-    def append_structure(self, parent: SeqFeature, children: List[Any]) -> None:
-        """Add a children structure to a parent SeqFeature in the form:
+    def make_structure(self, children: List[Any]) -> List[SeqFeature]:
+        """Return a SeqFeature children structure from the form:
         struct = ["mRNA"]
-        struct = [{"mRNA": ["CDS"]}]
         struct = [{"mRNA": ["CDS", "exon"]}, "exon", "exon"]
         """
+        output = []
         for child in children:
             if isinstance(child, str):
-                self.append(parent, child)
+                output += self.make(child)
             elif isinstance(child, dict):
                 feat_type = list(child.keys())[0]
                 feat_children = list(child.values())[0]
 
                 feat = self.make(feat_type)[0]
-                parent.sub_features.append(feat)
-
-                for feat_child in feat_children:
-                    self.append(feat, feat_child)
+                feat.sub_features += self.make_structure(feat_children)
+                output.append(feat)
+            
+        return output
 
     def get_sub_structure(self, feat: SeqFeature) -> Union[Dict, str]:
         """Create a children structure from a SeqFeature."""
@@ -98,24 +93,21 @@ class FeatGenerator:
 
 
 @pytest.mark.parametrize(
-    "gene_type, ntr_before, ntr_after",
+    "children, expected_children",
     [
-        param("ncRNA_gene", 1, 1, id="ncRNA_gene with 1 transcript"),
-        param("ncRNA_gene", 0, 0, id="ncRNA_gene with no transcript"),
-        param("gene", 1, 1, id="Gene with 1 transcript"),
-        param("gene", 2, 2, id="Gene with 2 transcripts"),
-        param("gene", 0, 1, id="Gene with no transcript"),
-    ],
+        param(["gene"], [{"gene": ["transcript"]}], id="gene, no transcript: add"),
+        param([{"gene": ["mRNA"]}], [{"gene": ["mRNA"]}], id="gene + mRNA"),
+        param([{"gene": ["mRNA", "mRNA"]}], [{"gene": ["mRNA", "mRNA"]}], id="gene + 2 mRNA"),
+        param(["ncRNA_gene"], ["ncRNA_gene"], id="1 ncRNA_gene, no transcript"),
+        param([{"ncRNA_gene": ["transcript"]}], [{"ncRNA_gene": ["transcript"]}], id="1 ncRNA_gene + transcript"),
+    ]
 )
-def test_add_transcript_to_naked_gene(gene_type: str, ntr_before: int, ntr_after: int):
-    """Test the creation of a transcript from a gene feature."""
+def test_add_transcript_to_naked_gene(children: List[Any], expected_children: List[Any]):
+    """Test the creation of a transcript for a gene without one."""
     gen = FeatGenerator()
-    gene = gen.make(gene_type, 1)[0]
-    if ntr_before > 0:
-        gen.append(gene, "mRNA", ntr_before)
-
-    add_transcript_to_naked_gene(gene)
-    assert len(gene.sub_features) == ntr_after
+    genes = gen.make_structure(children)
+    add_transcript_to_naked_gene(genes[0])
+    assert gen.get_sub_structure(genes[0]) == expected_children[0]
 
 
 @pytest.mark.parametrize(
@@ -133,10 +125,10 @@ def test_move_only_cdss_to_new_mrna(
     expected_children: Dict[str, int],
     expectation: ContextManager,
 ):
-    """Test the addition of intermediate transcripts."""
+    """Test the creation of a new mRNA for CDSs under a gene."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
-    gen.append_structure(gene, children)
+    gene.sub_features += gen.make_structure(children)
     with expectation:
         move_only_cdss_to_new_mrna(gene)
         assert gen.get_sub_structure(gene) == {"gene": expected_children}
@@ -157,10 +149,10 @@ def test_move_only_exons_to_new_mrna(
     expected_children: Dict[str, int],
     expectation: ContextManager,
 ):
-    """Test the addition of intermediate transcripts."""
+    """Test the creation of a new mRNA for exons under a gene."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
-    gen.append_structure(gene, children)
+    gene.sub_features += gen.make_structure(children)
     with expectation:
         move_only_exons_to_new_mrna(gene)
         assert gen.get_sub_structure(gene) == {"gene": expected_children}
@@ -227,10 +219,10 @@ def test_move_cds_to_existing_mrna(
     expected_children: Dict[str, int],
     expectation: ContextManager,
 ):
-    """Test the addition of intermediate transcripts."""
+    """Test moving CDSs under a gene to under the mRNA."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
-    gen.append_structure(gene, children)
+    gene.sub_features += gen.make_structure(children)
 
     if diff_exon:
         for sub in gene.sub_features:
@@ -277,10 +269,10 @@ def test_move_cds_to_existing_mrna(
 def test_remove_extra_exons(
     children: List[Any], has_id: int, expected_children: List[Any], expectation: ContextManager
 ):
-    """Test the addition of intermediate transcripts."""
+    """Test removing extra unneeded exons."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
-    gen.append_structure(gene, children)
+    gene.sub_features += gen.make_structure(children)
 
     if has_id:
         exon_num = 1
@@ -310,7 +302,7 @@ def test_standardize(children: List[Any], expected_children: List[Any], expectat
 
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
-    gen.append_structure(gene, children)
+    gene.sub_features += gen.make_structure(children)
     with expectation:
         standardize_gene(gene)
         assert gen.get_sub_structure(gene) == {"gene": expected_children}
