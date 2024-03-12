@@ -66,7 +66,6 @@ class GFFSimplifier:
 
     # Multiple parameters to automate various fixes
     skip_unrecognized = True
-    gene_cds_skip_others = False
     allow_pseudogene_with_cds = False
 
     def __init__(self, genome_path: Optional[PathLike] = None):
