@@ -210,6 +210,7 @@ def _check_sub_exons(mrna: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeat
         # No exons in the mRNA? Create them with the CDS coordinates
         for cur_cds in cdss:
             sub_exon = SeqFeature(cur_cds.location, type="exon")
+            sub_exon.sub_features = []
             new_sub_exons.append(sub_exon)
     mrna.sub_features += new_sub_exons
 

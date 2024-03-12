@@ -189,21 +189,20 @@ def test_move_only_exons_to_new_mrna(
 
 
 @pytest.mark.parametrize(
-    "children, expected_children, expected_mrna_children, expectation",
+    "children, expected_children, expectation",
     [
-        param(["mRNA"], {"mRNA": 1}, {}, does_not_raise(), id="mRNA only, skip"),
-        param(["mRNA", "mRNA"], {"mRNA": 2}, {}, does_not_raise(), id="2 mRNA only, skip"),
-        param(["CDS"], {"CDS": 1}, {}, does_not_raise(), id="One CDS, skip"),
-        param(["CDS", "exon"], {"CDS": 1, "exon": 1}, {}, does_not_raise(), id="CDS+exon, skip"),
-        param(["mRNA", "CDS"], {"mRNA": 1}, {"CDS": 1, "exon": 1}, does_not_raise(), id="1 mRNA + 1 CDS"),
+        param(["mRNA"], ["mRNA"], does_not_raise(), id="mRNA only, skip"),
+        param(["mRNA", "mRNA"], ["mRNA", "mRNA"], does_not_raise(), id="2 mRNA only, skip"),
+        param(["CDS"], ["CDS"], does_not_raise(), id="One CDS, skip"),
+        param(["CDS", "exon"], ["CDS", "exon"], does_not_raise(), id="CDS+exon, skip"),
+        param(["mRNA", "CDS"], [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="1 mRNA + 1 CDS"),
         param(
-            ["mRNA", "CDS", "CDS"], {"mRNA": 1}, {"CDS": 2, "exon": 2}, does_not_raise(), id="1 mRNA + 2 CDS"
+            ["mRNA", "CDS", "CDS"], [{"mRNA": ["exon", "exon", "CDS", "CDS"]}], does_not_raise(), id="1 mRNA + 2 CDS"
         ),
-        param(["mRNA", "mRNA", "CDS"], {}, {}, raises(GFFParserError), id="2 mRNA only + CDS, fail"),
+        param(["mRNA", "mRNA", "CDS"], [], raises(GFFParserError), id="2 mRNA only + CDS, fail"),
         param(
             ["mRNA", "mRNA", "CDS", "exon"],
-            {"mRNA": 2, "CDS": 1, "exon": 1},
-            {},
+            [],
             raises(GFFParserError),
             id="2 mRNA only + CDS + exon, fail",
         ),
@@ -212,26 +211,16 @@ def test_move_only_exons_to_new_mrna(
 def test_move_cds_to_existing_mrna(
     children: List[str],
     expected_children: Dict[str, int],
-    expected_mrna_children: Dict[str, int],
     expectation: ContextManager,
 ):
     """Test the addition of intermediate transcripts."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
-
-    for child_type in children:
-        gen.append(gene, child_type, 1)
+    gen.append_structure(gene, children)
 
     with expectation:
         move_cds_to_existing_mrna(gene)
-
-        fcounter = dict(Counter([feat.type for feat in gene.sub_features]))
-        assert fcounter == expected_children
-
-        gene_child = gene.sub_features[0]
-        if gene_child.type == "mRNA":
-            fcounter_mrna = dict(Counter([feat.type for feat in gene_child.sub_features]))
-            assert fcounter_mrna == expected_mrna_children
+        assert gen.get_sub_structure(gene) == {"gene": expected_children}
 
 
 @pytest.mark.parametrize(
@@ -241,7 +230,7 @@ def test_move_cds_to_existing_mrna(
         param(["mRNA", "exon"], False, ["mRNA", "exon"], does_not_raise(), id="mRNA and 1 exon without id"),
         param(["mRNA", "exon"], True, ["mRNA"], does_not_raise(), id="mRNA and 1 exon with id"),
         param([{"mRNA": ["exon"]}, "exon"], True, [{"mRNA": ["exon"]}], does_not_raise(), id="mRNA and 1 exon with id"),
-        param([{"mRNA": ["exon"]}, "exon"], False, [{"mRNA": ["exon"]}, "exon"], does_not_raise(), id="mRNA and 1 exon without id"),
+        param([{"mRNA": ["exon"]}, "exon"], False, [{"mRNA": ["exon"]}, "exon"], raises(GFFParserError), id="mRNA and 1 exon without id"),
     ]
 )
 def test_remove_extra_exons(children: List[Any], has_id: bool, expected_children: List[Any], expectation: ContextManager):
