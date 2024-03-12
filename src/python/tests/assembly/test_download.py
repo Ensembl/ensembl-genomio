@@ -66,12 +66,13 @@ def test_ftp_connection(
     accession: str,
     expectation: ContextManager,
 ):
-    """Tests the FTPConnection method 'establish_ftp()'
+    """Tests the FTPConnection method `establish_ftp()`.
+
     Args:
-        mock_ftp: Mock FTP Object
-        ftp_url: FTP url
-        sub_dir: Sub directory path
-        expectation: Context manager expected raise exception
+        mock_ftp: Mock FTP object.
+        ftp_url: FTP URL.
+        sub_dir: Subdirectory path.
+        expectation: Context manager expected raise exception.
     """
 
     def side_eff_conn(url: str):
@@ -104,8 +105,10 @@ def test_ftp_connection(
         pytest.param(Path("dir_name"), None, does_not_raise(), id="Dir passed instead of file"),
     ],
 )
-def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectation: ContextManager) -> None:
-    """Tests the 'download.get_checksums() function
+def test_checksums(
+    data_dir: Path, checksum_file: Optional[Path], checksum: str, expectation: ContextManager
+) -> None:
+    """Tests the `download.get_checksums()` function.
 
     Args:
         data_dir: Path to test data root dir
@@ -120,7 +123,7 @@ def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectati
 
 
 #################
-@pytest.mark.dependency(name="test_md5_files")
+@pytest.mark.dependency(name="test_md5_files", depends=["test_checksums"])
 @pytest.mark.parametrize(
     "md5_file, md5_path, checksum_bool",
     [
@@ -131,8 +134,7 @@ def test_checksums(data_dir: Path, checksum_file: Path, checksum: str, expectati
         pytest.param("missingfile_md5.txt", None, False, id="md5 checksum with ref of missing file"),
     ],
 )
-@pytest.mark.dependency(depends=["test_checksums"])
-def test_md5_files(data_dir: Path, md5_file: str, md5_path: Path, checksum_bool: bool) -> None:
+def test_md5_files(data_dir: Path, md5_file: str, md5_path: Optional[Path], checksum_bool: bool) -> None:
     """Tests the md5_files() function
     Args:
         data_dir: Path to test data root dir
