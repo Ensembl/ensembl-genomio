@@ -22,12 +22,12 @@ Typical usage example::
 
 """
 
+from contextlib import nullcontext as does_not_raise
 import filecmp
 import logging
 from pathlib import Path
+from typing import Callable, ContextManager, Optional
 from unittest.mock import Mock, patch, MagicMock
-from contextlib import nullcontext as does_not_raise
-from typing import Callable, ContextManager
 
 from ftplib import error_reply as ftp_error_reply
 import pytest
