@@ -262,13 +262,10 @@ def get_files_selection(dl_dir: Path) -> Dict[str, str]:
 
 
 def get_root_name(dl_dir: Path) -> str:
-    """Get root name for assembly files, using the report file as base
+    """Returns the root name, i.e. shared files basename prefix, using the assembly report file as base.
 
     Args:
         dl_dir: Path location of downloaded FTP files.
-
-    Returns:
-        Str: Shared download files basename prefix, obtained from asm report file.
     """
     root_name = ""
     for dl_file in dl_dir.iterdir():
