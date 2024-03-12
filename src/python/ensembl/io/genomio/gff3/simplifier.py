@@ -160,9 +160,9 @@ class GFFSimplifier:
 
         # Create actual genes from transcripts/CDS top level features
         if gene.type in transcript_types:
-            gene = self.transcript_gene(gene)
+            gene = self.create_gene_for_lone_transcript(gene)
         elif gene.type == "CDS":
-            gene = self.cds_gene(gene)
+            gene = self.create_gene_for_lone_cds(gene)
 
         # What to do with unsupported gene types
         if gene.type not in allowed_gene_types:
@@ -175,42 +175,54 @@ class GFFSimplifier:
         self.annotations.store_gene(gene)
         return self.clean_gene(gene)
 
-    def clean_gene(self, gene: SeqFeature) -> SeqFeature:
-        """Return the same gene without qualifiers unrelated to the gene structure."""
+    # COMPLETION
+    def create_gene_for_lone_transcript(self, ncrna: SeqFeature) -> SeqFeature:
+        """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
 
-        old_gene_qualifiers = gene.qualifiers
-        try:
-            gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
-        except KeyError as err:
-            raise KeyError(f"Missing source for {gene.id}") from err
-        for transcript in gene.sub_features:
-            # Replace qualifiers
-            old_transcript_qualifiers = transcript.qualifiers
-            transcript.qualifiers = {
-                "ID": transcript.id,
-                "Parent": gene.id,
-            }
-            if "source" in old_transcript_qualifiers:
-                transcript.qualifiers["source"] = old_transcript_qualifiers["source"]
+        Args:
+            ncrna: the transcript for which we want to create a gene.
 
-            for feat in transcript.sub_features:
-                old_qualifiers = feat.qualifiers
-                feat.qualifiers = {
-                    "ID": feat.id,
-                    "Parent": transcript.id,
-                    "source": old_qualifiers["source"],
-                }
-                if feat.type == "CDS":
-                    try:
-                        feat.qualifiers["phase"] = old_qualifiers["phase"]
-                    except KeyError as err:
-                        raise KeyError(
-                            f"Missing phase for gene {gene.type} {gene.id}, CDS {feat.id} ({old_qualifiers})"
-                        ) from err
+        Returns:
+            The gene that contains the transcript.
+
+        """
+        new_type = "ncRNA_gene"
+        if ncrna.type in ("tRNA", "rRNA"):
+            new_type = "gene"
+        logging.debug(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
+        gene = SeqFeature(ncrna.location, type=new_type)
+        gene.qualifiers["source"] = ncrna.qualifiers["source"]
+        gene.sub_features = [ncrna]
+        gene.id = ncrna.id
 
         return gene
 
-    # FORMATTERS
+    def create_gene_for_lone_cds(self, cds: SeqFeature) -> SeqFeature:
+        """Returns a gene created for a lone CDS."""
+
+        logging.debug(f"Put the lone CDS in gene-mRNA parent features for {cds.id}")
+
+        # Create a transcript, add the CDS
+        transcript = SeqFeature(cds.location, type="mRNA")
+        transcript.qualifiers["source"] = cds.qualifiers["source"]
+        transcript.sub_features = [cds]
+
+        # Add an exon too
+        exon = SeqFeature(cds.location, type="exon")
+        exon.qualifiers["source"] = cds.qualifiers["source"]
+        transcript.sub_features.append(exon)
+
+        # Create a gene, add the transcript
+        gene_type = "gene"
+        if ("pseudo" in cds.qualifiers) and (cds.qualifiers["pseudo"][0] == "true"):
+            gene_type = "pseudogene"
+        gene = SeqFeature(cds.location, type=gene_type)
+        gene.qualifiers["source"] = cds.qualifiers["source"]
+        gene.sub_features = [transcript]
+        gene.id = self.stable_ids.generate_gene_id()
+
+        return gene
+
     def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
 
@@ -252,30 +264,41 @@ class GFFSimplifier:
 
         return feat
 
-    def format_gene_segments(self, transcript: SeqFeature) -> SeqFeature:
-        """Returns the equivalent Ensembl biotype feature for gene segment transcript features.
+    # GENES
+    def clean_gene(self, gene: SeqFeature) -> SeqFeature:
+        """Return the same gene without qualifiers unrelated to the gene structure."""
 
-        Supported features: "C_gene_segment" and "V_gene_segment".
+        old_gene_qualifiers = gene.qualifiers
+        try:
+            gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
+        except KeyError as err:
+            raise KeyError(f"Missing source for {gene.id}") from err
+        for transcript in gene.sub_features:
+            # Replace qualifiers
+            old_transcript_qualifiers = transcript.qualifiers
+            transcript.qualifiers = {
+                "ID": transcript.id,
+                "Parent": gene.id,
+            }
+            if "source" in old_transcript_qualifiers:
+                transcript.qualifiers["source"] = old_transcript_qualifiers["source"]
 
-        Args:
-            transcript: Gene segment transcript feature.
+            for feat in transcript.sub_features:
+                old_qualifiers = feat.qualifiers
+                feat.qualifiers = {
+                    "ID": feat.id,
+                    "Parent": transcript.id,
+                    "source": old_qualifiers["source"],
+                }
+                if feat.type == "CDS":
+                    try:
+                        feat.qualifiers["phase"] = old_qualifiers["phase"]
+                    except KeyError as err:
+                        raise KeyError(
+                            f"Missing phase for gene {gene.type} {gene.id}, CDS {feat.id} ({old_qualifiers})"
+                        ) from err
 
-        """
-        # Change V/C_gene_segment into a its corresponding transcript names
-        if transcript.type in ("C_gene_segment", "V_gene_segment"):
-            standard_name = transcript.qualifiers["standard_name"][0]
-            biotype = transcript.type.replace("_segment", "")
-            if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
-                biotype = f"IG_{biotype}"
-            elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
-                biotype = f"TR_{biotype}"
-            else:
-                logging.warning(
-                    f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}"
-                )
-                return transcript
-            transcript.type = biotype
-        return transcript
+        return gene
 
     def normalize_gene(self, gene: SeqFeature) -> SeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
@@ -293,6 +316,7 @@ class GFFSimplifier:
 
         return gene
 
+    # PSEUDOGENES
     def normalize_pseudogene(self, gene: SeqFeature) -> None:
         """Normalize CDSs if allowed, otherwise remove them."""
         if gene.type != "pseudogene":
@@ -303,6 +327,31 @@ class GFFSimplifier:
         else:
             self.remove_cds_from_pseudogene(gene)
 
+    def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
+        """Removes the CDS from a pseudogene.
+
+        This assumes the CDSs are sub features of the transcript or the gene.
+
+        """
+        if gene.type != "pseudogene":
+            return
+
+        gene_subfeats = []
+        for transcript in gene.sub_features:
+            if transcript.type == "CDS":
+                logging.debug(f"Remove pseudo CDS {transcript.id}")
+                continue
+            new_subfeats = []
+            for feat in transcript.sub_features:
+                if feat.type == "CDS":
+                    logging.debug(f"Remove pseudo CDS {feat.id}")
+                    continue
+                new_subfeats.append(feat)
+            transcript.sub_features = new_subfeats
+            gene_subfeats.append(transcript)
+        gene.sub_features = gene_subfeats
+
+    # TRANSCRIPTS
     def normalize_transcripts(self, gene: SeqFeature) -> None:
         """Normalizes a transcript."""
 
@@ -334,6 +383,31 @@ class GFFSimplifier:
         if transcripts_to_delete:
             for elt in sorted(transcripts_to_delete, reverse=True):
                 gene.sub_features.pop(elt)
+
+    def format_gene_segments(self, transcript: SeqFeature) -> SeqFeature:
+        """Returns the equivalent Ensembl biotype feature for gene segment transcript features.
+
+        Supported features: "C_gene_segment" and "V_gene_segment".
+
+        Args:
+            transcript: Gene segment transcript feature.
+
+        """
+        # Change V/C_gene_segment into a its corresponding transcript names
+        if transcript.type in ("C_gene_segment", "V_gene_segment"):
+            standard_name = transcript.qualifiers["standard_name"][0]
+            biotype = transcript.type.replace("_segment", "")
+            if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
+                biotype = f"IG_{biotype}"
+            elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
+                biotype = f"TR_{biotype}"
+            else:
+                logging.warning(
+                    f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}"
+                )
+                return transcript
+            transcript.type = biotype
+        return transcript
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
@@ -372,75 +446,3 @@ class GFFSimplifier:
             for elt in sorted(exons_to_delete, reverse=True):
                 transcript.sub_features.pop(elt)
         return transcript
-
-    # COMPLETION
-    def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
-        """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
-
-        Args:
-            ncrna: the transcript for which we want to create a gene.
-
-        Returns:
-            The gene that contains the transcript.
-
-        """
-        new_type = "ncRNA_gene"
-        if ncrna.type in ("tRNA", "rRNA"):
-            new_type = "gene"
-        logging.debug(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
-        gene = SeqFeature(ncrna.location, type=new_type)
-        gene.qualifiers["source"] = ncrna.qualifiers["source"]
-        gene.sub_features = [ncrna]
-        gene.id = ncrna.id
-
-        return gene
-
-    def cds_gene(self, cds: SeqFeature) -> SeqFeature:
-        """Returns a gene created for a lone CDS."""
-
-        logging.debug(f"Put the lone CDS in gene-mRNA parent features for {cds.id}")
-
-        # Create a transcript, add the CDS
-        transcript = SeqFeature(cds.location, type="mRNA")
-        transcript.qualifiers["source"] = cds.qualifiers["source"]
-        transcript.sub_features = [cds]
-
-        # Add an exon too
-        exon = SeqFeature(cds.location, type="exon")
-        exon.qualifiers["source"] = cds.qualifiers["source"]
-        transcript.sub_features.append(exon)
-
-        # Create a gene, add the transcript
-        gene_type = "gene"
-        if ("pseudo" in cds.qualifiers) and (cds.qualifiers["pseudo"][0] == "true"):
-            gene_type = "pseudogene"
-        gene = SeqFeature(cds.location, type=gene_type)
-        gene.qualifiers["source"] = cds.qualifiers["source"]
-        gene.sub_features = [transcript]
-        gene.id = self.stable_ids.generate_gene_id()
-
-        return gene
-
-    def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
-        """Removes the CDS from a pseudogene.
-
-        This assumes the CDSs are sub features of the transcript or the gene.
-
-        """
-        if gene.type != "pseudogene":
-            return
-
-        gene_subfeats = []
-        for transcript in gene.sub_features:
-            if transcript.type == "CDS":
-                logging.debug(f"Remove pseudo CDS {transcript.id}")
-                continue
-            new_subfeats = []
-            for feat in transcript.sub_features:
-                if feat.type == "CDS":
-                    logging.debug(f"Remove pseudo CDS {feat.id}")
-                    continue
-                new_subfeats.append(feat)
-            transcript.sub_features = new_subfeats
-            gene_subfeats.append(transcript)
-        gene.sub_features = gene_subfeats
