@@ -183,7 +183,7 @@ def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: 
 def _download_file(
     ftp_connection: FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
 ) -> None:
-    """Download individual files from FTP server.
+    """Downloads individual files from FTP server.
 
     Args:
         ftp_connection: Established connection FTP object.
