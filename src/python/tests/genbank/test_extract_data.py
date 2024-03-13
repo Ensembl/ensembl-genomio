@@ -42,7 +42,7 @@ class TestWriteFormattedFiles:
         prefix = "TEST"
         return FormattedFilesGenerator(prod_name, gb_file_path, prefix)
 
-    def test_parse_genbank(self, data_dir: Path, formatted_files_generator : FormattedFilesGenerator) -> None:
+    def test_parse_genbank(self, data_dir: Path, formatted_files_generator: FormattedFilesGenerator) -> None:
         """Test that parse_genbank method correctly parses genbank files."""
         gb_file_path = data_dir / formatted_files_generator.gb_file
         formatted_files_generator.parse_genbank(gb_file_path)
@@ -54,13 +54,17 @@ class TestWriteFormattedFiles:
             ({"S43128.1": "mitochondrion"}),
         ],
     )
-    def test_get_organella(self, data_dir: Path, expected: str, formatted_files_generator : FormattedFilesGenerator) -> None:
+    def test_get_organella(
+        self, data_dir: Path, expected: str, formatted_files_generator: FormattedFilesGenerator
+    ) -> None:
         """Test that organellas are correctly identified."""
         gb_file_path = data_dir / formatted_files_generator.gb_file
         organella = formatted_files_generator._get_organella(gb_file_path)
         assert organella == expected
 
-    def test_write_fasta_dna(self, formatted_files_generator : FormattedFilesGenerator, tmp_path: Path) -> None:
+    def test_write_fasta_dna(
+        self, formatted_files_generator: FormattedFilesGenerator, tmp_path: Path
+    ) -> None:
         """Check fasta DNA sequences are written as expected."""
         record1 = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature1 = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
@@ -76,7 +80,7 @@ class TestWriteFormattedFiles:
         assert fasta_pep.id == record1.id
         assert fasta_pep.seq == record1.seq
 
-    def test_format_genome_json(self, formatted_files_generator : FormattedFilesGenerator, tmp_path: Path):
+    def test_format_genome_json(self, formatted_files_generator: FormattedFilesGenerator, tmp_path: Path):
         """Test write_genome_json generates correct json output."""
         record1 = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature1 = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
@@ -102,7 +106,11 @@ class TestWriteFormattedFiles:
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._prepare_location")
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._write_seq_region_json")
     def test_format_seq_region_json(
-        self, mock_codon_table: Mock, mock_org_location: Mock, mock_write_seq_json: Mock, formatted_files_generator : FormattedFilesGenerator
+        self,
+        mock_codon_table: Mock,
+        mock_org_location: Mock,
+        mock_write_seq_json: Mock,
+        formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Check _seq_region_json is written as expected."""
         record1 = SeqRecord(Seq("ATGC"), id="record1", annotations={"topology": "circular"})
@@ -120,11 +128,16 @@ class TestWriteFormattedFiles:
         mock_org_location.assert_called_once()
         mock_write_seq_json.assert_called_once()
 
-    
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._parse_record")
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._write_genes_gff")
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._write_pep_fasta")
-    def test_format_write_genes_gff(self,mock_write_pep : Mock, mock_write_genes: Mock, mock_parse_record: Mock, formatted_files_generator : FormattedFilesGenerator):
+    def test_format_write_genes_gff(
+        self,
+        mock_write_pep: Mock,
+        mock_write_genes: Mock,
+        mock_parse_record: Mock,
+        formatted_files_generator: FormattedFilesGenerator,
+    ):
         """Check gene features in GFF3 format are generated as expected."""
         record1 = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature1 = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
@@ -136,11 +149,11 @@ class TestWriteFormattedFiles:
         mock_peptides = ["pep1", "pep2"]
 
         mock_parse_record.return_value = (
-                mock_new_record,  # Mock the new record
-                mock_all_ids,  # Mock the list of all IDs
-                mock_peptides,  # Mock the list of peptides
-            )
-        
+            mock_new_record,  # Mock the new record
+            mock_all_ids,  # Mock the list of all IDs
+            mock_peptides,  # Mock the list of peptides
+        )
+
         # Call the method to be tested
         formatted_files_generator._format_write_genes_gff()
 
@@ -150,16 +163,16 @@ class TestWriteFormattedFiles:
         mock_write_pep.assert_called_once()
 
         mock_all_ids_with_duplicates = ["ID1", "ID2", "ID1"]
-        mock_parse_record.return_value =(
-                mock_new_record,  # Mock the new record
-                mock_all_ids_with_duplicates,  # Mock the list of all IDs
-                mock_peptides,  # Mock the list of peptides
-            )
-        
+        mock_parse_record.return_value = (
+            mock_new_record,  # Mock the new record
+            mock_all_ids_with_duplicates,  # Mock the list of all IDs
+            mock_peptides,  # Mock the list of peptides
+        )
+
         with pytest.raises(GBParseError):
             formatted_files_generator._format_write_genes_gff()
 
-    def test_write_genes_gff(self, formatted_files_generator : FormattedFilesGenerator, tmp_path: Path):
+    def test_write_genes_gff(self, formatted_files_generator: FormattedFilesGenerator, tmp_path: Path):
         record1 = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature1 = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
         CDS_feature1 = SeqFeature(
@@ -176,7 +189,7 @@ class TestWriteFormattedFiles:
             assert rec.id == record1.id
             assert len(rec.features) == len(record1.features)
 
-    def test_write_pep_fasta(self, formatted_files_generator : FormattedFilesGenerator, tmp_path: Path):
+    def test_write_pep_fasta(self, formatted_files_generator: FormattedFilesGenerator, tmp_path: Path):
         record1 = SeqRecord(Seq("MFLRTQARFFHATTKKM"), id="cds-record1")
         CDS_feature1 = SeqFeature(
             FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}

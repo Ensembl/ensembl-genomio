@@ -22,7 +22,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 import pytest
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import Mock, patch
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError, UnsupportedData
 
@@ -98,7 +98,11 @@ class TestFormattedFilesGenerator:
         ],
     )
     def test_parse_rna_feat(
-        self, expected_gene_id: str, expected_rna_id: str, formatted_files_generator: FormattedFilesGenerator, rna_name: str
+        self,
+        expected_gene_id: str,
+        expected_rna_id: str,
+        formatted_files_generator: FormattedFilesGenerator,
+        rna_name: str,
     ) -> None:
         """Test for a successful parsing of `_parse_rna_feat()` method"""
         seq_feature = SeqFeature(FeatureLocation(5, 10), type="tRNA")
@@ -142,7 +146,9 @@ class TestFormattedFilesGenerator:
     @pytest.mark.parametrize(
         "type_feature, expected_value", [("gene", None), ("mRNA", None), ("CDS", 2), ("CDS", 5)]
     )
-    def test_get_codon_table(self, expected_value: str, formatted_files_generator: FormattedFilesGenerator, type_feature: str) -> None:
+    def test_get_codon_table(
+        self, expected_value: str, formatted_files_generator: FormattedFilesGenerator, type_feature: str
+    ) -> None:
         """Test that `get_number_of_codons` returns correct value based on feature type and qualifier"""
         rec = SeqRecord(seq="", id="1JOY", name="EnvZ")
         seq_feature = SeqFeature(type=type_feature, qualifiers={"transl_table": [expected_value]})
@@ -154,13 +160,22 @@ class TestFormattedFilesGenerator:
         "type_feature, gene_name, expected_name, expected_id",
         [
             ("rRNA", "locus_tag", "gene1", "TESTGlyrA"),
-            ("tRNA", "gene", "gene2","TESTGlyrA"),
+            ("tRNA", "gene", "gene2", "TESTGlyrA"),
             ("mRNA", "gene", "gene3", "TESTGlyrA"),
         ],
     )
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._parse_gene_feat")
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._parse_rna_feat")
-    def test_parse_record(self, mock_parse_rna_feat, mock_parse_gene_feat,type_feature, gene_name, expected_name, expected_id, formatted_files_generator: FormattedFilesGenerator):
+    def test_parse_record(
+        self,
+        mock_parse_rna_feat: Mock,
+        mock_parse_gene_feat: Mock,
+        expected_name: str,
+        expected_id: str,
+        formatted_files_generator: FormattedFilesGenerator,
+        gene_name: str,
+        wtype_feature: str,
+    ):
         record = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={gene_name: expected_name})
         rna_feature = SeqFeature(FeatureLocation(10, 15), type=type_feature)
@@ -168,20 +183,20 @@ class TestFormattedFilesGenerator:
             FeatureLocation(10, 20), type="CDS", qualifiers={gene_name: "GlyrA", "transl_table": "2"}
         )
         record.features = [gene_feature, rna_feature, CDS_feature]
-        mock_peptides=[]
+        mock_peptides = []
 
         assert gene_feature.qualifiers[gene_name] == expected_name
-        gene_feature_feat ={expected_id: gene_feature}
+        gene_feature_feat = {expected_id: gene_feature}
         mock_parse_gene_feat.return_value = (
-                gene_feature_feat,  # Mock the new record
-                gene_name,  # Mock the list of all IDs
-                mock_peptides,  # Mock the list of peptides
-            )
-        rna_feature_feat ={expected_id: rna_feature}
+            gene_feature_feat,  # Mock the new record
+            gene_name,  # Mock the list of all IDs
+            mock_peptides,  # Mock the list of peptides
+        )
+        rna_feature_feat = {expected_id: rna_feature}
         mock_parse_rna_feat.return_value = (
-                rna_feature_feat,  # Mock the new record
-                gene_name, # Mock the list of peptides
-            )
+            rna_feature_feat,  # Mock the new record
+            gene_name,  # Mock the list of peptides
+        )
         formatted_files_generator._parse_record(record)
         if gene_feature.qualifiers[gene_name]:
             mock_parse_gene_feat.assert_called()
@@ -196,5 +211,3 @@ class TestFormattedFilesGenerator:
 
         with pytest.raises(GBParseError):
             formatted_files_generator._parse_record(record)
-
-
