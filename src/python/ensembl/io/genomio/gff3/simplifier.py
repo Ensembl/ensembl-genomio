@@ -138,7 +138,6 @@ class GFFSimplifier:
         ignored_gene_types = self._biotypes["gene"]["ignored"]
         allowed_non_gene_types = self._biotypes["non_gene"]["supported"]
         allowed_gene_types = self._biotypes["gene"]["supported"]
-        transcript_types = self._biotypes["transcript"]["supported"]
 
         # Skip explictly ignored features
         if feat.type in ignored_gene_types:
@@ -159,10 +158,8 @@ class GFFSimplifier:
             gene.type = "gene"
 
         # Create actual genes from transcripts/CDS top level features
-        if gene.type in transcript_types:
-            gene = self.create_gene_for_lone_transcript(gene)
-        elif gene.type == "CDS":
-            gene = self.create_gene_for_lone_cds(gene)
+        gene = self.create_gene_for_lone_transcript(gene)
+        gene = self.create_gene_for_lone_cds(gene)
 
         # What to do with unsupported gene types
         if gene.type not in allowed_gene_types:
@@ -176,7 +173,7 @@ class GFFSimplifier:
         return self.clean_gene(gene)
 
     # COMPLETION
-    def create_gene_for_lone_transcript(self, ncrna: SeqFeature) -> SeqFeature:
+    def create_gene_for_lone_transcript(self, feat: SeqFeature) -> SeqFeature:
         """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA_gene' for all others
 
         Args:
@@ -186,42 +183,53 @@ class GFFSimplifier:
             The gene that contains the transcript.
 
         """
+        transcript_types = self._biotypes["transcript"]["supported"]
+        if feat.type not in transcript_types:
+            return feat
+
         new_type = "ncRNA_gene"
-        if ncrna.type in ("tRNA", "rRNA"):
+        if feat.type in ("tRNA", "rRNA"):
             new_type = "gene"
-        logging.debug(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
-        gene = SeqFeature(ncrna.location, type=new_type)
-        gene.qualifiers["source"] = ncrna.qualifiers["source"]
-        gene.sub_features = [ncrna]
-        gene.id = ncrna.id
+        logging.debug(f"Put the transcript {feat.type} in a {new_type} parent feature")
+        new_gene = SeqFeature(feat.location, type=new_type)
+        new_gene.qualifiers["source"] = feat.qualifiers["source"]
+        new_gene.sub_features = [feat]
 
-        return gene
+        # Use the transcript ID for the gene, and generate a sub ID for the transcript
+        new_gene.id = feat.id
+        new_gene.qualifiers["ID"] = new_gene.id
+        feat.id = self.stable_ids.generate_transcript_id(new_gene.id, 1)
+        feat.qualifiers["ID"] = feat.id
 
-    def create_gene_for_lone_cds(self, cds: SeqFeature) -> SeqFeature:
+        return new_gene
+
+    def create_gene_for_lone_cds(self, feat: SeqFeature) -> SeqFeature:
         """Returns a gene created for a lone CDS."""
+        if feat.type != "CDS":
+            return feat
 
-        logging.debug(f"Put the lone CDS in gene-mRNA parent features for {cds.id}")
+        logging.debug(f"Put the lone CDS in gene-mRNA parent features for {feat.id}")
 
         # Create a transcript, add the CDS
-        transcript = SeqFeature(cds.location, type="mRNA")
-        transcript.qualifiers["source"] = cds.qualifiers["source"]
-        transcript.sub_features = [cds]
+        transcript = SeqFeature(feat.location, type="mRNA")
+        transcript.qualifiers["source"] = feat.qualifiers["source"]
+        transcript.sub_features = [feat]
 
         # Add an exon too
-        exon = SeqFeature(cds.location, type="exon")
-        exon.qualifiers["source"] = cds.qualifiers["source"]
+        exon = SeqFeature(feat.location, type="exon")
+        exon.qualifiers["source"] = feat.qualifiers["source"]
         transcript.sub_features.append(exon)
 
         # Create a gene, add the transcript
         gene_type = "gene"
-        if ("pseudo" in cds.qualifiers) and (cds.qualifiers["pseudo"][0] == "true"):
+        if ("pseudo" in feat.qualifiers) and (feat.qualifiers["pseudo"][0] == "true"):
             gene_type = "pseudogene"
-        gene = SeqFeature(cds.location, type=gene_type)
-        gene.qualifiers["source"] = cds.qualifiers["source"]
-        gene.sub_features = [transcript]
-        gene.id = self.stable_ids.generate_gene_id()
+        new_gene = SeqFeature(feat.location, type=gene_type)
+        new_gene.qualifiers["source"] = feat.qualifiers["source"]
+        new_gene.sub_features = [transcript]
+        new_gene.id = self.stable_ids.generate_gene_id()
 
-        return gene
+        return new_gene
 
     def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
         """Given a mobile_genetic_element feature, transform it into a transposable_element"""
