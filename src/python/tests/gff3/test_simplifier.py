@@ -17,13 +17,13 @@
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
 from pathlib import Path
-from typing import Any, Callable, ContextManager, Dict, List, Union
+from typing import Any, Callable, ContextManager, Dict, List, Optional, Union
 
 # from Bio.SeqFeature import SeqFeature, SimpleLocation
 import pytest
 from pytest import param, raises
 
-# from ensembl.io.genomio.gff3.exceptions import GFFParserError
+from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
 
 
@@ -31,6 +31,9 @@ from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
     "in_gff, expected_gff, expectation",
     [
         param("ok_genes.gff", "ok_genes_simped.gff", does_not_raise(), id="ok gene"),
+        param("bad_gene_type.gff", "", raises(GFFParserError), id="Unsupported gene type"),
+        param("bad_tr_type.gff", "", raises(GFFParserError), id="Unsupported transcript type"),
+        param("bad_subtr_type.gff", "", raises(GFFParserError), id="Unsupported subtranscript type"),
     ],
 )
 def test_simpler_gff3(
@@ -46,6 +49,36 @@ def test_simpler_gff3(
     output_gff = tmp_dir / in_gff
     with expectation:
         simp = GFFSimplifier()
+        simp.simpler_gff3(input_gff)
+        simp.records.to_gff(output_gff)
+        assert_files(output_gff, data_dir / expected_gff)
+
+
+@pytest.mark.parametrize(
+    "genome_file, in_gff, expected_gff, expectation",
+    [
+        param(None, "genes_badnames.gff", "genes_badnames_noname.gff", does_not_raise(), id="Genes with bad names, no genome"),
+        param("genome_no_brc4.json", "genes_badnames.gff", "genes_badnames_noname.gff", does_not_raise(), id="Genes with bad names, genome not BRC4"),
+        param("genome_brc4.json", "genes_badnames.gff", "genes_badnames_brc4name.gff", does_not_raise(), id="Genes with bad names, genome BRC4"),
+    ],
+)
+def test_gffsimplifier_with_genome(
+    data_dir: Path,
+    tmp_dir: Path,
+    assert_files: Callable,
+    genome_file: Optional[PathLike],
+    in_gff: PathLike,
+    expected_gff: PathLike,
+    expectation: ContextManager,
+) -> None:
+    """Test simplifying genes from GFF3 files."""
+    input_gff = data_dir / in_gff
+    output_gff = tmp_dir / in_gff
+    with expectation:
+        if genome_file is None:
+            simp = GFFSimplifier()
+        else:
+            simp = GFFSimplifier(genome_path=data_dir / genome_file)
         simp.simpler_gff3(input_gff)
         simp.records.to_gff(output_gff)
         assert_files(output_gff, data_dir / expected_gff)
