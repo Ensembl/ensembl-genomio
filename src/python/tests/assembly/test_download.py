@@ -220,7 +220,7 @@ def test_download_single_file(
     mock_ftp.retrbinary.side_effect = mock_retr_binary
 
     with expectation:
-        _download_file(mock_ftp, ftp_file, md5_sums, tmp_dir)
+        _download_file(mock_ftp, ftp_file, md5_sums, tmp_path)
         assert filecmp.cmp(data_file, retr_file)
 
 
