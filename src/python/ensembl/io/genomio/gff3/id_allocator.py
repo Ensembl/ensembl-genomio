@@ -19,7 +19,7 @@ __all__ = ["StableIDAllocator", "InvalidStableID"]
 from dataclasses import dataclass, field
 import logging
 import re
-from typing import List, Set
+from typing import Dict, List, Set
 
 from Bio.SeqFeature import SeqFeature
 
@@ -39,6 +39,16 @@ class StableIDAllocator:
     make_missing_stable_ids: bool = True
     prefix: str = "TMP_"
     _loaded_ids: Set = field(default_factory=set)
+
+    def set_prefix(self, genome: Dict) -> None:
+        """Sets the ID prefix using the organism abbrev if it exists in the genome metadata."""
+        try:
+            org = genome["BRC4"]["organism_abbrev"]
+        except KeyError:
+            prefix = "TMP_PREFIX_"
+        else:
+            prefix = "TMP_" + org + "_"
+        self.prefix = prefix
 
     def generate_gene_id(self) -> str:
         """Returns a new unique gene stable_id with a prefix.

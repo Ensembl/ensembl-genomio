@@ -40,4 +40,17 @@ process PROCESS_SEQ_REGION {
         
         schemas_json_validate --json_file !{output} --json_schema seq_region
         '''
+    
+    stub:
+        brc_mode = params.brc_mode ? '--brc_mode' : ''
+        output = "seq_region.json"
+        """
+        seq_region_prepare \
+            --genome_file $genome_json \
+            --report_file $assembly_report \
+            --gbff_file $genomic_gbff \
+            --dst_file $output \
+            --mock_run \
+            $brc_mode \
+        """
 }

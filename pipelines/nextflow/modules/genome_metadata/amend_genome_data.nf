@@ -29,7 +29,7 @@ process AMEND_GENOME_DATA {
         '''
         genome_metadata_extend --genome_infile !{genome_json} \
             --report_file !{asm_report} \
-            --genbank_infile !{genbank_gbff} \
+            --genbank_file !{genbank_gbff} \
             --genome_outfile !{output}
         
         schemas_json_validate --json_file !{output} --json_schema genome

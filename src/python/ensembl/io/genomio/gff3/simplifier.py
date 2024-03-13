@@ -28,7 +28,7 @@ import logging
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
@@ -72,30 +72,27 @@ class GFFSimplifier:
     skip_unrecognized = True
     gene_cds_skip_others = False
     allow_pseudogene_with_CDS = False
-    exclude_seq_regions: List = []
-    fail_types: Dict[str, int] = {}
-    stable_ids = StableIDAllocator()
 
     def __init__(self, genome_path: Optional[PathLike] = None):
+        # Load biotypes
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
         self._biotypes = get_json(biotypes_json)
-        self.records = Records()
-        self.genome: Dict[str, Dict[str, Any]] = {}
+
+        # Load genome metadata
+        self.genome = {}
         if genome_path:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
-        self.annotations = FunctionalAnnotations(self.genome)
-        self._set_id_prefix()
 
-    def _set_id_prefix(self) -> None:
-        """Sets the ID prefix using the organism abbrev if it exists in the genome metadata."""
-        try:
-            org = self.genome["BRC4"]["organism_abbrev"]
-        except KeyError:
-            prefix = "TMP_PREFIX_"
-        else:
-            prefix = "TMP_" + org + "_"
-        self.stable_ids.prefix = prefix
+        # Other preparations
+        self.stable_ids = StableIDAllocator()
+        self.stable_ids.set_prefix(self.genome)
+        self.exclude_seq_regions: List = []
+        self.fail_types: Dict[str, int] = {}
+
+        # Init the actual data we will store
+        self.records = Records()
+        self.annotations = FunctionalAnnotations()
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a
@@ -165,23 +162,8 @@ class GFFSimplifier:
 
         # Normalize, store annotation, and return the cleaned up gene
         gene = self.normalize_gene(gene)
-        self.store_gene_annotations(gene)
+        self.annotations.store_gene(gene)
         return self.clean_gene(gene)
-
-    def store_gene_annotations(self, gene: SeqFeature) -> None:
-        """Record the functional_annotations of the gene and its children features."""
-        self.annotations.add_feature(gene, "gene")
-
-        cds_found = False
-        for transcript in gene.sub_features:
-            self.annotations.add_feature(transcript, "transcript", gene.id)
-            for feat in transcript.sub_features:
-                if feat.type != "CDS":
-                    continue
-                # Store CDS functional annotation only once
-                if not cds_found:
-                    cds_found = True
-                    self.annotations.add_feature(feat, "translation", transcript.id)
 
     def clean_gene(self, gene: SeqFeature) -> SeqFeature:
         """Return the same gene without qualifiers unrelated to the gene structure."""

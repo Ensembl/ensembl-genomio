@@ -185,12 +185,15 @@ class FunctionalAnnotations:
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
             if feat_name.lower() != feature.id.lower() and feat_name.lower() not in xref_values:
-                feature_object["synonyms"] = {"synonym": feat_name}
+                feature_object["synonyms"] = [feat_name]
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
             feature_object["is_pseudogene"] = True
 
+        # Don't keep empty xref
+        if not feature_object["xrefs"]:
+            del feature_object["xrefs"]
         return feature_object
 
     def transfer_descriptions(self) -> None:
@@ -288,3 +291,18 @@ class FunctionalAnnotations:
         self.transfer_descriptions()
         feats_list = self._to_list()
         print_json(Path(out_path), feats_list)
+
+    def store_gene(self, gene: SeqFeature) -> None:
+        """Record the functional_annotations of a gene and its children features."""
+        self.add_feature(gene, "gene")
+
+        cds_found = False
+        for transcript in gene.sub_features:
+            self.add_feature(transcript, "transcript", gene.id)
+            for feat in transcript.sub_features:
+                if feat.type != "CDS":
+                    continue
+                # Store CDS functional annotation only once
+                if not cds_found:
+                    cds_found = True
+                    self.add_feature(feat, "translation", transcript.id)
