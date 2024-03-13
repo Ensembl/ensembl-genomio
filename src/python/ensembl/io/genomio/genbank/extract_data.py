@@ -523,7 +523,7 @@ class FormattedFilesGenerator:
 
 def main() -> None:
     """Main script entry-point."""
-    parser = ArgumentParser(description="Parse a GenBank file and create cleaned up files from it.")
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path("--gb_file", required=True, help="sequence accession file")
     parser.add_argument("--prefix", required=True, help="prefix to add to every feature ID")
     parser.add_argument("--prod_name", required=True, help="production name for the species")
