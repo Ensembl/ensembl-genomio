@@ -149,7 +149,8 @@ class GFFSimplifier:
             if feat.type in ("mobile_genetic_element", "transposable_element"):
                 feat = self.format_mobile_element(feat)
                 return feat
-            return None
+            else:
+                GFFParserError(f"Allowed non-genes but not supported: {feat.type} for {feat.id}")
 
         # From here we expect only genes
         gene = feat
