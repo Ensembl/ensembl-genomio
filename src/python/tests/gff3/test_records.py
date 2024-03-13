@@ -35,7 +35,7 @@ from ensembl.io.genomio.gff3.simplifier import Records
             param("record_n1.gff", ["Lorem"], ["scaffold1"], id="1 record, exclude not in record"),
         ],
 )
-def test_from_gff(tmp_dir: Path, data_dir: Path, in_gff: PathLike, excluded: Optional[List[str]], expected_loaded: List[str]) -> None:
+def test_from_gff(data_dir: Path, in_gff: PathLike, excluded: Optional[List[str]], expected_loaded: List[str]) -> None:
     input = data_dir / in_gff
 
     records = Records()
@@ -45,6 +45,13 @@ def test_from_gff(tmp_dir: Path, data_dir: Path, in_gff: PathLike, excluded: Opt
         records.from_gff(input, excluded)
     record_names = [record.id for record in records]
     assert record_names == expected_loaded
+
+
+def test_from_gff_invalid(data_dir: Path) -> None:
+    input = data_dir / "invalid.gff3"
+    records = Records()
+    with raises(AssertionError):
+        records.from_gff(input)
 
 
 @pytest.mark.parametrize(
