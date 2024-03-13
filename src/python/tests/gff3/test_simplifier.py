@@ -27,17 +27,20 @@ from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
 
 
-def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function: str) -> None:
-        simp = GFFSimplifier()
-        simp.records.from_gff(input_gff)
-        # Get the only feature
-        feat = simp.records[0].features[0]
-        # Apply the named function
-        check_method = simp.__getattribute__(check_function)
-        new_feat = check_method(feat)
+def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function: str) -> SeqFeature:
+    simp = GFFSimplifier()
+    simp.records.from_gff(input_gff)
+    # Get the only feature
+    feat = simp.records[0].features[0]
+    # Apply the named function
+    check_method = simp.__getattribute__(check_function)
+    new_feat = check_method(feat)
+
+    if new_feat is not None:
         # Put it back
         simp.records[0].features = [new_feat]
         simp.records.to_gff(output_gff)
+    return new_feat
 
 
 @pytest.mark.parametrize(
@@ -59,8 +62,9 @@ def test_create_gene_for_lone_transcript(
     input_gff = data_dir / in_gff
     output_gff = tmp_dir / in_gff
     with expectation:
-        check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
-        assert_files(output_gff, Path(data_dir / expected_gff))
+        new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
+        if new_feat:
+            assert_files(output_gff, Path(data_dir / expected_gff))
 
 @pytest.mark.parametrize(
     "in_gff, expected_gff, expectation",
@@ -83,20 +87,10 @@ def test_simpler_gff3_feature(
 ) -> None:
     """Test simplifying one gene (from a GFF3 file)."""
     input_gff = data_dir / in_gff
+    output_gff = tmp_dir / in_gff
     with expectation:
-        # check_one_feature(input_gff, output_gff, "simpler_gff3_feature")
-        simp = GFFSimplifier()
-        simp.records.from_gff(input_gff)
-        # Get the only feature
-        feat = simp.records[0].features[0]
-        feat = simp.simpler_gff3_feature(feat)
-        if expected_gff is None:
-            assert feat is None
-        else:
-            output_gff = tmp_dir / in_gff
-            # Put it back
-            simp.records[0].features = [feat]
-            simp.records.to_gff(output_gff)
+        new_feat = check_one_feature(input_gff, output_gff, "simpler_gff3_feature")
+        if new_feat:
             assert_files(output_gff, Path(data_dir / expected_gff))
 
 
