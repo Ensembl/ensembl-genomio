@@ -33,6 +33,9 @@ from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
         param("ok_gene.gff", "ok_gene_simped.gff", does_not_raise(), id="ok gene"),
         param("gene_ignored.gff", None, does_not_raise(), id="gene ignored"),
         param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
+        param("ok_protein_coding_gene.gff", "ok_gene_simped.gff", does_not_raise(), id="ok protein_coding_gene"),
+        param("lone_transcript.gff", "lone_transcript_simped.gff", does_not_raise(), id="lone transcript"),
+        param("lone_cds.gff", "lone_cds_simped.gff", does_not_raise(), id="lone CDS"),
     ],
 )
 def test_simpler_gff3_feature(
