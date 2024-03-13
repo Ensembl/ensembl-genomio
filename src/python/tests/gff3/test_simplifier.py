@@ -30,7 +30,7 @@ from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
 @pytest.mark.parametrize(
     "in_gff, expected_gff, expectation",
     [
-        param("ok_genes.gff", "ok_genes_simped.gff", does_not_raise(), id="ok gene"),
+        param("ok_gene.gff", "ok_gene_simped.gff", does_not_raise(), id="ok gene"),
         param("gene_ignored.gff", None, does_not_raise(), id="gene ignored"),
         param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
     ],
@@ -64,7 +64,7 @@ def test_simpler_gff3_feature(
 @pytest.mark.parametrize(
     "in_gff, expected_gff, expectation",
     [
-        param("ok_genes.gff", "ok_genes_simped.gff", does_not_raise(), id="ok gene"),
+        param("ok_gene.gff", "ok_gene_simped.gff", does_not_raise(), id="ok gene"),
         param("bad_gene_type.gff", "", raises(GFFParserError), id="Unsupported gene type"),
         param("bad_tr_type.gff", "", raises(GFFParserError), id="Unsupported transcript type"),
         param("bad_subtr_type.gff", "", raises(GFFParserError), id="Unsupported subtranscript type"),
@@ -94,7 +94,7 @@ def test_simpler_gff3(
         param("bad_gene_type.gff", "", None, raises(GFFParserError), id="Unset skip unrecognized, fail"),
         param("bad_gene_type.gff", "", True, raises(GFFParserError), id="True skip unrecognized, fail"),
         param("bad_gene_type.gff", "bad_gene_type.gff", False, does_not_raise(), id="bad type, Keep"),
-        param("ok_genes.gff", "ok_genes_simped.gff", False, does_not_raise(), id="ok type, Keep"),
+        param("ok_gene.gff", "ok_gene_simped.gff", False, does_not_raise(), id="ok type, Keep"),
     ],
 )
 def test_simpler_gff3_skip(
