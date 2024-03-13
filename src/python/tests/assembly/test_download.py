@@ -200,7 +200,7 @@ def test_download_single_file(
     Args:
         mock_ftp: Mock FTP object
         data_dir: Path to test data root dir
-        tmp_dir: Temp dir created for test
+        tmp_path: Temp dir created for test
         ftp_file: FTP file which to mock download
         md5_sums: FTP file and md5_sum value pair
         expectation: Context manager expected raise exception
