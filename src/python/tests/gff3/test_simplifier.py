@@ -28,12 +28,13 @@ from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
 
 
 def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function: str) -> SeqFeature:
+    """Load 1 feature from a GFF, apply a function, then write it back to a GFF."""
     simp = GFFSimplifier()
     simp.records.from_gff(input_gff)
     # Get the only feature
     feat = simp.records[0].features[0]
     # Apply the named function
-    check_method = simp.__getattribute__(check_function)
+    check_method = getattr(simp, check_function)
     new_feat = check_method(feat)
 
     if new_feat is not None:
@@ -55,7 +56,7 @@ def test_create_gene_for_lone_transcript(
     tmp_dir: Path,
     assert_files: Callable,
     in_gff: PathLike,
-    expected_gff: Optional[PathLike],
+    expected_gff: PathLike,
     expectation: ContextManager,
 ) -> None:
     """Test gene create gene for lone transcript."""
@@ -65,6 +66,7 @@ def test_create_gene_for_lone_transcript(
         new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
         if new_feat:
             assert_files(output_gff, Path(data_dir / expected_gff))
+
 
 @pytest.mark.parametrize(
     "in_gff, expected_gff, expectation",
@@ -90,7 +92,9 @@ def test_simpler_gff3_feature(
     output_gff = tmp_dir / in_gff
     with expectation:
         new_feat = check_one_feature(input_gff, output_gff, "simpler_gff3_feature")
-        if new_feat:
+        if expected_gff is None:
+            assert new_feat is None
+        else:
             assert_files(output_gff, Path(data_dir / expected_gff))
 
 
