@@ -239,7 +239,6 @@ def _download_file(
 
 
 def get_files_selection(dl_dir: Path) -> Dict[str, str]:
-    """
     """Returns a dictionary with the relevant downloaded files classified.
 
     Args:
