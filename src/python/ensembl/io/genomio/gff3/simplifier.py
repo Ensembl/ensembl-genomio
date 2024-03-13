@@ -260,7 +260,7 @@ class GFFSimplifier:
         # Generate ID if needed and add it to the functional annotation
         feat.id = self.stable_ids.normalize_gene_id(feat)
         self.annotations.add_feature(feat, "transposable_element")
-        feat.qualifiers = {"ID": feat.id}
+        feat = self.clean_gene(feat)
 
         return feat
 
