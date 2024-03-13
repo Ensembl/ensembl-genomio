@@ -136,7 +136,8 @@ python:nextflow:
       artifacts: true
   when: manual
   script:
-    - pytest --git-aware pipelines/nextflow/tests/workflows/
+    - nextflow -version
+    - pytest --git-aware --kwd --basetemp=$RUN_DIR/tmp pipelines/nextflow/tests/workflows/
 
 
 # Deploy stage instances
