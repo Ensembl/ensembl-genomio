@@ -33,7 +33,7 @@ from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
         param("ok_genes.gff", "ok_genes_simped.gff", does_not_raise(), id="ok gene"),
         param("gene_ignored.gff", None, does_not_raise(), id="gene ignored"),
         param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
-    ]
+    ],
 )
 def test_simpler_gff3_feature(
     data_dir: Path,
@@ -52,7 +52,7 @@ def test_simpler_gff3_feature(
         feat = simp.records[0].features[0]
         feat = simp.simpler_gff3_feature(feat)
         if expected_gff is None:
-            assert feat == None
+            assert feat is None
         else:
             output_gff = tmp_dir / in_gff
             # Put it back
@@ -117,12 +117,31 @@ def test_simpler_gff3_skip(
         simp.records.to_gff(output_gff)
         assert_files(output_gff, data_dir / expected_gff)
 
+
 @pytest.mark.parametrize(
     "genome_file, in_gff, expected_gff, expectation",
     [
-        param(None, "genes_badnames.gff", "genes_badnames_noname.gff", does_not_raise(), id="Genes with bad names, no genome"),
-        param("genome_no_brc4.json", "genes_badnames.gff", "genes_badnames_noname.gff", does_not_raise(), id="Genes with bad names, genome not BRC4"),
-        param("genome_brc4.json", "genes_badnames.gff", "genes_badnames_brc4name.gff", does_not_raise(), id="Genes with bad names, genome BRC4"),
+        param(
+            None,
+            "genes_badnames.gff",
+            "genes_badnames_noname.gff",
+            does_not_raise(),
+            id="Genes with bad names, no genome",
+        ),
+        param(
+            "genome_no_brc4.json",
+            "genes_badnames.gff",
+            "genes_badnames_noname.gff",
+            does_not_raise(),
+            id="Genes with bad names, genome not BRC4",
+        ),
+        param(
+            "genome_brc4.json",
+            "genes_badnames.gff",
+            "genes_badnames_brc4name.gff",
+            does_not_raise(),
+            id="Genes with bad names, genome BRC4",
+        ),
     ],
 )
 def test_gffsimplifier_with_genome(
