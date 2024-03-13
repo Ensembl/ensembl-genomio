@@ -190,7 +190,7 @@ def test_md5_files(data_dir: Path, md5_file: str, md5_path: Optional[Path], chec
 def test_download_single_file(
     mock_ftp: Mock,
     data_dir: Path,
-    tmp_dir: Path,
+    tmp_path: Path,
     ftp_file: str,
     md5_sums: dict,
     expectation: ContextManager,
