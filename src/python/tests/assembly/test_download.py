@@ -307,8 +307,8 @@ def test_download_all_files(
 
         if ftp_accession == compare_accession:
             mock_ftp.retrbinary.assert_called()
-        elif ftp_accession != compare_accession:
-            mock_ftp.retrbinary.not_called()
+        else:
+            mock_ftp.retrbinary.assert_not_called()
 
 
 #################
