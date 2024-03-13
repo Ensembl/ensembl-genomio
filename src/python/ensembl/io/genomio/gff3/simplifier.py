@@ -103,7 +103,7 @@ class GFFSimplifier:
         self.stable_ids = StableIDAllocator()
         self.stable_ids.set_prefix(self.genome)
         self.exclude_seq_regions: List[str] = []
-        self.fail_types: Set = {}
+        self.fail_types: Set = set()
 
         # Init the actual data we will store
         self.records = Records()
