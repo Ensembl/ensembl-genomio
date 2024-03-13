@@ -49,6 +49,8 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
     [
         param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
         param("lone_transcript.gff", "lone_transcript_simped.gff", does_not_raise(), id="lone transcript"),
+        param("lone_trna.gff", "lone_trna_simped.gff", does_not_raise(), id="lone tRNA"),
+        param("lone_rrna.gff", "lone_rrna_simped.gff", does_not_raise(), id="lone rRNA"),
     ],
 )
 def test_create_gene_for_lone_transcript(
@@ -64,6 +66,30 @@ def test_create_gene_for_lone_transcript(
     output_gff = tmp_dir / in_gff
     with expectation:
         new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
+        if new_feat:
+            assert_files(output_gff, Path(data_dir / expected_gff))
+
+
+@pytest.mark.parametrize(
+    "in_gff, expected_gff, expectation",
+    [
+        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
+        param("lone_cds.gff", "lone_cds_simped.gff", does_not_raise(), id="lone CDS"),
+    ],
+)
+def test_create_gene_for_lone_cds(
+    data_dir: Path,
+    tmp_dir: Path,
+    assert_files: Callable,
+    in_gff: PathLike,
+    expected_gff: PathLike,
+    expectation: ContextManager,
+) -> None:
+    """Test gene create gene for lone CDS."""
+    input_gff = data_dir / in_gff
+    output_gff = tmp_dir / in_gff
+    with expectation:
+        new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_cds")
         if new_feat:
             assert_files(output_gff, Path(data_dir / expected_gff))
 
