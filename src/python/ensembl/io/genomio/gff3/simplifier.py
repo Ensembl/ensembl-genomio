@@ -44,12 +44,21 @@ from .exceptions import GFFParserError
 class Records(list):
     """List of GFF3 SeqRecords."""
 
-    def to_gff(self, out_gff_path: PathLike) -> None:
-        """Print out the current list of records in a GFF3 file.
+    def from_gff(self, in_gff_path: PathLike, excluded: Optional[List[str]] = None) -> None:
+        """Load records from a GFF3 file."""
+        if excluded is None:
+            excluded = []
+        with Path(in_gff_path).open("r") as in_gff_fh:
+            for record in GFF.parse(in_gff_fh):
+                if record.id in excluded:
+                    logging.debug(f"Skip seq_region {record.id}")
+                    continue
+                clean_record = SeqRecord(record.seq, id=record.id)
+                clean_record.features = record.features
+                self.append(clean_record)
 
-        Args:
-            out_gff_path: Path to GFF3 file where to write the records.
-        """
+    def to_gff(self, out_gff_path: PathLike) -> None:
+        """Print out the current list of records in a GFF3 file."""
         with Path(out_gff_path).open("w") as out_gff_fh:
             GFF.write(self, out_gff_fh)
 
@@ -82,7 +91,7 @@ class GFFSimplifier:
         # Other preparations
         self.stable_ids = StableIDAllocator()
         self.stable_ids.set_prefix(self.genome)
-        self.exclude_seq_regions: List = []
+        self.exclude_seq_regions: List[str] = []
         self.fail_types: Set = {}
 
         # Init the actual data we will store
@@ -93,25 +102,19 @@ class GFFSimplifier:
         """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a
         functional annotation file.
         """
+        self.records.from_gff(in_gff_path, self.exclude_seq_regions)
+        for record in self.records:
+            cleaned_features = []
+            for feature in record.features:
+                clean_feature = self.simpler_gff3_feature(feature)
+                if clean_feature is not None:
+                    cleaned_features.append(clean_feature)
+            record.features = cleaned_features
 
-        with Path(in_gff_path).open("r") as in_gff_fh:
-            for record in GFF.parse(in_gff_fh):
-                if record.id in self.exclude_seq_regions:
-                    logging.debug(f"Skip seq_region {record.id}")
-                    continue
-
-                # Clean all root features and make clean record
-                clean_record = SeqRecord(record.seq, id=record.id)
-                for feature in record.features:
-                    clean_feature = self.simpler_gff3_feature(feature)
-                    if clean_feature is not None:
-                        clean_record.features.append(clean_feature)
-                self.records.append(clean_record)
-
-            if self.fail_types:
-                fail_errors = "\n   ".join(self.fail_types)
-                if self.skip_unrecognized:
-                    raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
+        if self.fail_types:
+            fail_errors = "\n   ".join(self.fail_types)
+            if self.skip_unrecognized:
+                raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
 
     def simpler_gff3_feature(self, feat: SeqFeature) -> Optional[SeqFeature]:
         """Creates a simpler version of a GFF3 feature.
@@ -162,7 +165,7 @@ class GFFSimplifier:
 
     # COMPLETION
     def create_gene_for_lone_transcript(self, ncrna: SeqFeature) -> SeqFeature:
-        """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
+        """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA_gene' for all others
 
         Args:
             ncrna: the transcript for which we want to create a gene.
