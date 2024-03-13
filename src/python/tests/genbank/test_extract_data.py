@@ -20,32 +20,34 @@ Typical usage example::
 """
 import json
 from pathlib import Path
-import pytest
+from unittest.mock import Mock, patch
+from Bio import SeqIO
+from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
-from unittest.mock import MagicMock, patch, Mock
-from Bio import SeqIO
-from BCBio import GFF
-
+import pytest
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError
 
 
 class TestWriteFormattedFiles:
+
+    prod_name = "TEST_prod"
+    gb_file = "input_file.gb"
+    prefix = "TEST"
+
     @pytest.fixture
-    def formatted_files_generator(self, data_dir: Path) -> FormattedFilesGenerator:
+    def formatted_files_generator(self, data_dir):
         """Call the function `FormattedFilesGenerator` with set parameters"""
-        prod_name = "TEST_prod"
-        gb_file = "input_file.gb"
+        gb_file = self.gb_file
         gb_file_path = data_dir / gb_file
-        prefix = "TEST"
-        return FormattedFilesGenerator(prod_name, gb_file_path, prefix)
+        return FormattedFilesGenerator(self.prod_name, gb_file_path, self.prefix)
 
     @pytest.mark.dependency(name="parse_genbank")
     def test_parse_genbank(self, data_dir: Path, formatted_files_generator: FormattedFilesGenerator) -> None:
         """Test that parse_genbank method correctly parses genbank files."""
-        gb_file_path = data_dir / formatted_files_generator.gb_file
+        gb_file_path = data_dir / self.gb_file
         formatted_files_generator.parse_genbank(gb_file_path)
         assert len(formatted_files_generator.seq_records) >= 1
 
@@ -60,10 +62,10 @@ class TestWriteFormattedFiles:
         self, data_dir: Path, expected: str, formatted_files_generator: FormattedFilesGenerator
     ) -> None:
         """Test that organellas are correctly identified."""
-        gb_file_path = data_dir / formatted_files_generator.gb_file
+        gb_file_path = data_dir / self.gb_file
         organella = formatted_files_generator._get_organella(gb_file_path)
         assert organella == expected
-    
+
     @pytest.mark.dependency(depends=["parse_genbank"])
     def test_write_fasta_dna(
         self, formatted_files_generator: FormattedFilesGenerator, tmp_path: Path

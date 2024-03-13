@@ -18,25 +18,31 @@ Typical usage example::
     $ pytest test_extract_data.py
 
 """
+from unittest.mock import Mock, patch
+from typing import List
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 import pytest
-from unittest.mock import Mock, patch
+
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError, UnsupportedData
 
 
 class TestFormattedFilesGenerator:
+    """Call the function `FormattedFilesGenerator` with set parameters"""
+
+    prod_name = "TEST_prod"
+    gb_file = "input_file.gb"
+    prefix = "TEST"
+
     @pytest.fixture
     def formatted_files_generator(self, data_dir):
         """Call the function `FormattedFilesGenerator` with set parameters"""
-        prod_name = "TEST_prod"
-        gb_file = "input_file.gb"
+        gb_file = self.gb_file
         gb_file_path = data_dir / gb_file
-        prefix = "TEST"
-        return FormattedFilesGenerator(prod_name, gb_file_path, prefix)
-    
+        return FormattedFilesGenerator(self.prod_name, gb_file_path, self.prefix)
+
     @pytest.mark.dependency(name="parse_record")
     @pytest.mark.parametrize(
         "type_feature, gene_name, expected_name, expected_id",
@@ -58,6 +64,7 @@ class TestFormattedFilesGenerator:
         gene_name: str,
         type_feature: str,
     ):
+        """Test to pasrse the features correctly"""
         record = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={gene_name: expected_name})
         rna_feature = SeqFeature(FeatureLocation(10, 15), type=type_feature)
@@ -65,7 +72,7 @@ class TestFormattedFilesGenerator:
             FeatureLocation(10, 20), type="CDS", qualifiers={gene_name: "GlyrA", "transl_table": "2"}
         )
         record.features = [gene_feature, rna_feature, CDS_feature]
-        mock_peptides = []
+        mock_peptides: List = []
 
         assert gene_feature.qualifiers[gene_name] == expected_name
         gene_feature_feat = {expected_id: gene_feature}
@@ -87,6 +94,7 @@ class TestFormattedFilesGenerator:
             mock_parse_rna_feat.assert_called()
 
     def test_parse_record_with_unsupported_feature(self, formatted_files_generator: FormattedFilesGenerator):
+        """Raises error then there is unspported feature"""
         record = SeqRecord(Seq("ATGC"))
         unsupported_feature = SeqFeature(FeatureLocation(5, 10), type="gene")
         record.features.append(unsupported_feature)
@@ -155,7 +163,7 @@ class TestFormattedFilesGenerator:
             ("AGR90MT_t01_t2", "AGR90MT_t01_t2_t1", "AGR90MT_t01_t2"),
         ],
     )
-    @pytest.mark.dependency(name="rna_parse",depends=["parse_record"])
+    @pytest.mark.dependency(name="rna_parse", depends=["parse_record"])
     def test_parse_rna_feat(
         self,
         expected_gene_id: str,
@@ -179,7 +187,11 @@ class TestFormattedFilesGenerator:
         [("gene_name", ["gene_name"], "gene_name_2"), ("gene_test", [""], "gene_test")],
     )
     def test_uniquify_id(
-        self, all_ids: str, expected_id: str, formatted_files_generator: FormattedFilesGenerator, gene_id: str
+        self,
+        all_ids: List[str],
+        expected_id: str,
+        formatted_files_generator: FormattedFilesGenerator,
+        gene_id: str,
     ) -> None:
         """Test that _uniquify_id adds a version number to an existing ID"""
         new_id = formatted_files_generator._uniquify_id(gene_id, all_ids)
