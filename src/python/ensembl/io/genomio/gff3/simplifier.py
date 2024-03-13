@@ -228,6 +228,9 @@ class GFFSimplifier:
         new_gene.qualifiers["source"] = feat.qualifiers["source"]
         new_gene.sub_features = [transcript]
         new_gene.id = self.stable_ids.generate_gene_id()
+        new_gene.qualifiers["ID"] = new_gene.id
+        transcript.id = self.stable_ids.generate_transcript_id(new_gene.id, 1)
+        transcript.qualifiers["ID"] = transcript.id
 
         return new_gene
 
