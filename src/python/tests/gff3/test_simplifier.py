@@ -31,6 +31,40 @@ from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
     "in_gff, expected_gff, expectation",
     [
         param("ok_genes.gff", "ok_genes_simped.gff", does_not_raise(), id="ok gene"),
+        param("gene_ignored.gff", None, does_not_raise(), id="gene ignored"),
+        param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
+    ]
+)
+def test_simpler_gff3_feature(
+    data_dir: Path,
+    tmp_dir: Path,
+    assert_files: Callable,
+    in_gff: PathLike,
+    expected_gff: Optional[PathLike],
+    expectation: ContextManager,
+) -> None:
+    """Test simplifying one gene (from a GFF3 file)."""
+    input_gff = data_dir / in_gff
+    with expectation:
+        simp = GFFSimplifier()
+        simp.records.from_gff(input_gff)
+        # Get the only feature
+        feat = simp.records[0].features[0]
+        feat = simp.simpler_gff3_feature(feat)
+        if expected_gff is None:
+            assert feat == None
+        else:
+            output_gff = tmp_dir / in_gff
+            # Put it back
+            simp.records[0].features = [feat]
+            simp.records.to_gff(output_gff)
+            assert_files(output_gff, Path(data_dir / expected_gff))
+
+
+@pytest.mark.parametrize(
+    "in_gff, expected_gff, expectation",
+    [
+        param("ok_genes.gff", "ok_genes_simped.gff", does_not_raise(), id="ok gene"),
         param("bad_gene_type.gff", "", raises(GFFParserError), id="Unsupported gene type"),
         param("bad_tr_type.gff", "", raises(GFFParserError), id="Unsupported transcript type"),
         param("bad_subtr_type.gff", "", raises(GFFParserError), id="Unsupported subtranscript type"),
