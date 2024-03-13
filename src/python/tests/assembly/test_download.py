@@ -59,7 +59,7 @@ from ensembl.io.genomio.assembly.download import download_files, get_files_selec
         ),
     ],
 )
-@patch("ftplib.FTP")
+@patch("ensembl.io.genomio.assembly.download.FTP", autospec=True)
 def test_ftp_connection(
     mock_ftp: Mock,
     ftp_url: str,
@@ -186,7 +186,7 @@ def test_md5_files(data_dir: Path, md5_file: str, md5_path: Optional[Path], chec
         ),
     ],
 )
-@patch("ftplib.FTP")
+@patch("ensembl.io.genomio.assembly.download.FTP", autospec=True)
 def test_download_single_file(
     mock_ftp: Mock,
     data_dir: Path,
@@ -249,7 +249,7 @@ def test_download_single_file(
         ),
     ],
 )
-@patch("ftplib.FTP")
+@patch("ensembl.io.genomio.assembly.download.FTP", autospec=True)
 def test_download_all_files(
     mock_ftp: MagicMock,
     data_dir: Path,
@@ -263,7 +263,7 @@ def test_download_all_files(
     """Tests the download.download_files() function
 
     Args:
-        mock_ftp: Magic Mock of ftplib.FTP object
+        mock_ftp: Mock of `ensembl.io.genomio.assembly.download.FTP` object
         data_dir: Path to local test data folder
         ftp_url: Test param to specify ftp connection url
         ftp_accession: Defines expected accession
@@ -397,7 +397,7 @@ def test_get_files_selection(
         ),
     ],
 )
-@patch("ftplib.FTP")
+@patch("ensembl.io.genomio.assembly.download.FTP", autospec=True)
 @patch("os.mkdir")
 @patch("ensembl.io.genomio.assembly.download.get_files_selection")
 @patch("ensembl.io.genomio.assembly.download.download_files")
