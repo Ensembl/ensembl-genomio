@@ -30,7 +30,7 @@ from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBP
 
 
 class TestFormattedFilesGenerator:
-    """Call the function `FormattedFilesGenerator` with set parameters"""
+    """Test if all the internal methods of `FormattedFilesGenerator` are giving the correct output"""
 
     prod_name = "TEST_prod"
     gb_file = "input_file.gb"
@@ -64,7 +64,7 @@ class TestFormattedFilesGenerator:
         gene_name: str,
         type_feature: str,
     ):
-        """Test to pasrse the features correctly"""
+        """Test to parse the features correctly"""
         record = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={gene_name: expected_name})
         rna_feature = SeqFeature(FeatureLocation(10, 15), type=type_feature)
@@ -120,7 +120,7 @@ class TestFormattedFilesGenerator:
         test_qualifiers: str,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test for a successful parsing of `_parse_gene_feat()` method"""
+        """Test for a successful parsing of features in `_parse_gene_feat()` method"""
         seq_feature = SeqFeature(FeatureLocation(5, 10), type=type_feature, id=gene_name)
         seq_feature.qualifiers[test_qualifiers] = "test_qual"
         # Check the returned feature is as expected
@@ -128,7 +128,7 @@ class TestFormattedFilesGenerator:
             seq_feature, gene_name
         )
 
-        gene_id = formatted_files_generator.prefix + gene_name
+        gene_id = self.prefix + gene_name
         if type_feature == "gene":
             seq_dict = {expected_id: seq_feature}
             assert result_seq_feature == seq_dict
@@ -171,14 +171,14 @@ class TestFormattedFilesGenerator:
         formatted_files_generator: FormattedFilesGenerator,
         rna_name: str,
     ) -> None:
-        """Test for a successful parsing of `_parse_rna_feat()` method"""
+        """Test for a successful parsing of transcript features `_parse_rna_feat()` method"""
         seq_feature = SeqFeature(FeatureLocation(5, 10), type="tRNA")
         seq_feature.qualifiers["product"] = [rna_name]
         rna_feature, all_expected_id = formatted_files_generator._parse_rna_feat(seq_feature)
         assert len(rna_feature) == 2
         assert all_expected_id == [
-            formatted_files_generator.prefix + expected_gene_id,
-            formatted_files_generator.prefix + expected_rna_id,
+            self.prefix + expected_gene_id,
+            self.prefix + expected_rna_id,
         ]
 
     @pytest.mark.dependency(depends=["rna_parse"])
