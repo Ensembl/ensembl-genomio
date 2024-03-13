@@ -179,7 +179,6 @@ warn_unused_configs = true
 addopts = [
     "--import-mode=importlib",
     "--tb=native",
-    "--verbose",
     "--server=sqlite:///",
 ]
 testpaths = ["src/python/tests"]
