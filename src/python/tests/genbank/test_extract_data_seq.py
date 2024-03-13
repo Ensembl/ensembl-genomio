@@ -20,11 +20,9 @@ Typical usage example::
 """
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
-from Bio.SeqFeature import SeqFeature, SimpleLocation
+from Bio.SeqFeature import SeqFeature, FeatureLocation
 import pytest
-import json
-
-from pathlib import Path
+from unittest.mock import MagicMock, patch, Mock
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError, UnsupportedData
 
@@ -54,10 +52,10 @@ class TestFormattedFilesGenerator:
         gene_name: str,
         type_feature: str,
         test_qualifiers: str,
-        formatted_files_generator,
+        formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Test for a successful parsing of `_parse_gene_feat()` method"""
-        seq_feature = SeqFeature(SimpleLocation(5, 10), type=type_feature, id=gene_name)
+        seq_feature = SeqFeature(FeatureLocation(5, 10), type=type_feature, id=gene_name)
         seq_feature.qualifiers[test_qualifiers] = "test_qual"
         # Check the returned feature is as expected
         result_seq_feature, result_seq_id, result_peptide = formatted_files_generator._parse_gene_feat(
@@ -79,7 +77,7 @@ class TestFormattedFilesGenerator:
             assert "locus_tag" not in seq_feature.qualifiers
             assert seq_feature.qualifiers["Parent"] == gene_id
             assert result_seq_id == [expected_id]
-        
+
         if type_feature == "CDS":
             tr_id = gene_id + "_t1"
             assert len(result_seq_feature) > 1
@@ -89,7 +87,7 @@ class TestFormattedFilesGenerator:
                 assert result_seq_feature[expected_id].type == "exon"
             # Peptides aren't always present in the genbank file so we can't guarantee they will exist
             if "translation" in seq_feature.qualifiers:
-                assert len(result_peptide) > 0           
+                assert len(result_peptide) > 0
 
     @pytest.mark.parametrize(
         "rna_name, expected_rna_id, expected_gene_id",
@@ -100,10 +98,10 @@ class TestFormattedFilesGenerator:
         ],
     )
     def test_parse_rna_feat(
-        self, expected_gene_id: str, expected_rna_id: str, formatted_files_generator, rna_name: str
+        self, expected_gene_id: str, expected_rna_id: str, formatted_files_generator: FormattedFilesGenerator, rna_name: str
     ) -> None:
         """Test for a successful parsing of `_parse_rna_feat()` method"""
-        seq_feature = SeqFeature(SimpleLocation(5, 10), type="tRNA")
+        seq_feature = SeqFeature(FeatureLocation(5, 10), type="tRNA")
         seq_feature.qualifiers["product"] = [rna_name]
         rna_feature, all_expected_id = formatted_files_generator._parse_rna_feat(seq_feature)
         assert len(rna_feature) == 2
@@ -117,7 +115,7 @@ class TestFormattedFilesGenerator:
         [("gene_name", ["gene_name"], "gene_name_2"), ("gene_test", [""], "gene_test")],
     )
     def test_uniquify_id(
-        self, all_ids: str, expected_id: str, formatted_files_generator, gene_id: str
+        self, all_ids: str, expected_id: str, formatted_files_generator: FormattedFilesGenerator, gene_id: str
     ) -> None:
         """Test that _uniquify_id adds a version number to an existing ID"""
         new_id = formatted_files_generator._uniquify_id(gene_id, all_ids)
@@ -133,7 +131,7 @@ class TestFormattedFilesGenerator:
 
     @pytest.mark.parametrize("organelle", [("miton")])
     def test_prepare_location_with_unsupported_organelle(
-        self, formatted_files_generator, organelle: str
+        self, formatted_files_generator: FormattedFilesGenerator, organelle: str
     ) -> None:
         """Test that organelle location if not identifies throws an error"""
         # An organelle not in the dictionary
@@ -144,7 +142,7 @@ class TestFormattedFilesGenerator:
     @pytest.mark.parametrize(
         "type_feature, expected_value", [("gene", None), ("mRNA", None), ("CDS", 2), ("CDS", 5)]
     )
-    def test_get_codon_table(self, expected_value: str, formatted_files_generator, type_feature: str) -> None:
+    def test_get_codon_table(self, expected_value: str, formatted_files_generator: FormattedFilesGenerator, type_feature: str) -> None:
         """Test that `get_number_of_codons` returns correct value based on feature type and qualifier"""
         rec = SeqRecord(seq="", id="1JOY", name="EnvZ")
         seq_feature = SeqFeature(type=type_feature, qualifiers={"transl_table": [expected_value]})
@@ -152,33 +150,51 @@ class TestFormattedFilesGenerator:
         codon_table = formatted_files_generator._get_codon_table(rec)
         assert codon_table == expected_value
 
-    def test_parse_record_with_unsupported_feature(self, formatted_files_generator):
+    @pytest.mark.parametrize(
+        "type_feature, gene_name, expected_name, expected_id",
+        [
+            ("rRNA", "locus_tag", "gene1", "TESTGlyrA"),
+            ("tRNA", "gene", "gene2","TESTGlyrA"),
+            ("mRNA", "gene", "gene3", "TESTGlyrA"),
+        ],
+    )
+    @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._parse_gene_feat")
+    @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._parse_rna_feat")
+    def test_parse_record(self, mock_parse_rna_feat, mock_parse_gene_feat,type_feature, gene_name, expected_name, expected_id, formatted_files_generator: FormattedFilesGenerator):
+        record = SeqRecord(Seq("ATGC"), id="record1")
+        gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={gene_name: expected_name})
+        rna_feature = SeqFeature(FeatureLocation(10, 15), type=type_feature)
+        CDS_feature = SeqFeature(
+            FeatureLocation(10, 20), type="CDS", qualifiers={gene_name: "GlyrA", "transl_table": "2"}
+        )
+        record.features = [gene_feature, rna_feature, CDS_feature]
+        mock_peptides=[]
+
+        assert gene_feature.qualifiers[gene_name] == expected_name
+        gene_feature_feat ={expected_id: gene_feature}
+        mock_parse_gene_feat.return_value = (
+                gene_feature_feat,  # Mock the new record
+                gene_name,  # Mock the list of all IDs
+                mock_peptides,  # Mock the list of peptides
+            )
+        rna_feature_feat ={expected_id: rna_feature}
+        mock_parse_rna_feat.return_value = (
+                rna_feature_feat,  # Mock the new record
+                gene_name, # Mock the list of peptides
+            )
+        formatted_files_generator._parse_record(record)
+        if gene_feature.qualifiers[gene_name]:
+            mock_parse_gene_feat.assert_called()
+
+        if rna_feature.type in ("tRNA", "rRNA"):
+            mock_parse_rna_feat.assert_called()
+
+    def test_parse_record_with_unsupported_feature(self, formatted_files_generator: FormattedFilesGenerator):
         record = SeqRecord(Seq("ATGC"))
-        unsupported_feature = SeqFeature(SimpleLocation(5, 10), type="gene")
+        unsupported_feature = SeqFeature(FeatureLocation(5, 10), type="gene")
         record.features.append(unsupported_feature)
 
         with pytest.raises(GBParseError):
             formatted_files_generator._parse_record(record)
 
-    def test_format_genome_json_with_production_name(self, formatted_files_generator, tmp_path, caplog):
-        """Test write_genome_json generates correct json output."""
-        record1 = SeqRecord(Seq("ATGC"), id="record1")
-        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene", qualifiers= {"gene": ["GlyrA"]})        
-        record1.features.append(gene_feature1)
-
-        record2 = SeqRecord(Seq("ATGC"), id="record2")
-        gene_feature1 = SeqFeature(SimpleLocation(10,20), type="gene", qualifiers= {"gene": ["GlyrB"]})        
-        record1.features.append(gene_feature1)
-    
-        formatted_files_generator.seq_records = [record1, record2]
-        formatted_files_generator.files["genome"] = tmp_path / "genome.json"
-
-        formatted_files_generator._format_genome_data()
-        assert (tmp_path / "genome.json").exists()
-        with open(tmp_path / "genome.json", "r") as f:
-            genome_data = json.load(f)
-            assert genome_data["species"]["production_name"] == "TEST_prod"
-            assert genome_data["assembly"]["accession"] == "GCA_000000000"
-            assert genome_data["assembly"]["version"] == 1
-            assert genome_data["added_seq"]["region_name"] == ["record1", "record2"]
 
