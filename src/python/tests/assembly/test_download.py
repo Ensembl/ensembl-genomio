@@ -106,7 +106,7 @@ def test_ftp_connection(
     ],
 )
 def test_checksums(
-    data_dir: Path, checksum_file: Optional[Path], checksum: str, expectation: ContextManager
+    data_dir: Path, checksum_file: Path, checksum: Optional[str], expectation: ContextManager
 ) -> None:
     """Tests the `download.get_checksums()` function.
 
