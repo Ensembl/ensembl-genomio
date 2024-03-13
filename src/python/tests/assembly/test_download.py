@@ -174,7 +174,7 @@ def test_md5_files(data_dir: Path, md5_file: str, md5_path: Optional[Path], chec
         ),
         pytest.param(
             "test_ftp_file.txt",
-            {"test_ftp_file.txt": ""},
+            {"test_ftp_file.txt": "e98b980b442fdb2a21877dcc55e11848"},
             does_not_raise(),
             id="Max retry attempts non-zero",
         ),
