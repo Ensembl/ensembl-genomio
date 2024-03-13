@@ -55,6 +55,35 @@ def test_simpler_gff3(
 
 
 @pytest.mark.parametrize(
+    "in_gff, expected_gff, skip_unrecognized, expectation",
+    [
+        param("bad_gene_type.gff", "", None, raises(GFFParserError), id="Unset skip unrecognized, fail"),
+        param("bad_gene_type.gff", "", True, raises(GFFParserError), id="True skip unrecognized, fail"),
+        param("bad_gene_type.gff", "bad_gene_type.gff", False, does_not_raise(), id="bad type, Keep"),
+        param("ok_genes.gff", "ok_genes_simped.gff", False, does_not_raise(), id="ok type, Keep"),
+    ],
+)
+def test_simpler_gff3_skip(
+    data_dir: Path,
+    tmp_dir: Path,
+    assert_files: Callable,
+    in_gff: PathLike,
+    expected_gff: PathLike,
+    skip_unrecognized: Optional[bool],
+    expectation: ContextManager,
+) -> None:
+    """Test simplifying genes from GFF3 files."""
+    input_gff = data_dir / in_gff
+    output_gff = tmp_dir / in_gff
+    with expectation:
+        simp = GFFSimplifier()
+        if skip_unrecognized is not None:
+            simp.skip_unrecognized = skip_unrecognized
+        simp.simpler_gff3(input_gff)
+        simp.records.to_gff(output_gff)
+        assert_files(output_gff, data_dir / expected_gff)
+
+@pytest.mark.parametrize(
     "genome_file, in_gff, expected_gff, expectation",
     [
         param(None, "genes_badnames.gff", "genes_badnames_noname.gff", does_not_raise(), id="Genes with bad names, no genome"),
