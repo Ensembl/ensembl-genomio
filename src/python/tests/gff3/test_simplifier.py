@@ -19,7 +19,7 @@ from os import PathLike
 from pathlib import Path
 from typing import Any, Callable, ContextManager, Dict, List, Optional, Union
 
-# from Bio.SeqFeature import SeqFeature, SimpleLocation
+from Bio.SeqFeature import SeqFeature
 import pytest
 from pytest import param, raises
 
@@ -27,13 +27,48 @@ from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
 
 
+def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function: str) -> None:
+        simp = GFFSimplifier()
+        simp.records.from_gff(input_gff)
+        # Get the only feature
+        feat = simp.records[0].features[0]
+        # Apply the named function
+        check_method = simp.__getattribute__(check_function)
+        new_feat = check_method(feat)
+        # Put it back
+        simp.records[0].features = [new_feat]
+        simp.records.to_gff(output_gff)
+
+
 @pytest.mark.parametrize(
     "in_gff, expected_gff, expectation",
     [
-        param("ok_gene.gff", "ok_gene_simped.gff", does_not_raise(), id="ok gene"),
+        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
+        param("lone_transcript.gff", "lone_transcript_simped.gff", does_not_raise(), id="lone transcript"),
+    ],
+)
+def test_create_gene_for_lone_transcript(
+    data_dir: Path,
+    tmp_dir: Path,
+    assert_files: Callable,
+    in_gff: PathLike,
+    expected_gff: Optional[PathLike],
+    expectation: ContextManager,
+) -> None:
+    """Test gene create gene for lone transcript."""
+    input_gff = data_dir / in_gff
+    output_gff = tmp_dir / in_gff
+    with expectation:
+        check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
+        assert_files(output_gff, Path(data_dir / expected_gff))
+
+@pytest.mark.parametrize(
+    "in_gff, expected_gff, expectation",
+    [
+        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
         param("gene_ignored.gff", None, does_not_raise(), id="gene ignored"),
         param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
-        param("ok_protein_coding_gene.gff", "ok_gene_simped.gff", does_not_raise(), id="ok protein_coding_gene"),
+        param("ok_protein_coding_gene.gff", "ok_gene.gff", does_not_raise(), id="ok protein_coding_gene"),
         param("lone_transcript.gff", "lone_transcript_simped.gff", does_not_raise(), id="lone transcript"),
         param("lone_cds.gff", "lone_cds_simped.gff", does_not_raise(), id="lone CDS"),
     ],
@@ -49,6 +84,7 @@ def test_simpler_gff3_feature(
     """Test simplifying one gene (from a GFF3 file)."""
     input_gff = data_dir / in_gff
     with expectation:
+        # check_one_feature(input_gff, output_gff, "simpler_gff3_feature")
         simp = GFFSimplifier()
         simp.records.from_gff(input_gff)
         # Get the only feature
@@ -67,7 +103,7 @@ def test_simpler_gff3_feature(
 @pytest.mark.parametrize(
     "in_gff, expected_gff, expectation",
     [
-        param("ok_gene.gff", "ok_gene_simped.gff", does_not_raise(), id="ok gene"),
+        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
         param("bad_gene_type.gff", "", raises(GFFParserError), id="Unsupported gene type"),
         param("bad_tr_type.gff", "", raises(GFFParserError), id="Unsupported transcript type"),
         param("bad_subtr_type.gff", "", raises(GFFParserError), id="Unsupported subtranscript type"),
@@ -97,7 +133,7 @@ def test_simpler_gff3(
         param("bad_gene_type.gff", "", None, raises(GFFParserError), id="Unset skip unrecognized, fail"),
         param("bad_gene_type.gff", "", True, raises(GFFParserError), id="True skip unrecognized, fail"),
         param("bad_gene_type.gff", "bad_gene_type.gff", False, does_not_raise(), id="bad type, Keep"),
-        param("ok_gene.gff", "ok_gene_simped.gff", False, does_not_raise(), id="ok type, Keep"),
+        param("ok_gene.gff", "ok_gene.gff", False, does_not_raise(), id="ok type, Keep"),
     ],
 )
 def test_simpler_gff3_skip(
