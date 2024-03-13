@@ -26,6 +26,7 @@ workflow:
 
 variables:
   PYTHON_IMAGE: python:3.8
+  NEXTFLOW_IMAGE: nextflow:23.10.1
   RUN_DIR: ./cicd/runtime
 
 # Using default stages (https://docs.gitlab.com/ee/ci/yaml/#stages): .pre > build > test > deploy > .post

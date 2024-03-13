@@ -123,6 +123,21 @@ python:coverage:
     paths:
       - $RUN_DIR/coverage
 
+## Nextflow tests
+
+python:nextflow:
+  extends: .python:test
+  services:
+    - $NEXTFLOW_IMAGE
+  needs:
+    # "extends" cannot merge arrays (https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#merge-details)
+    - !reference [.python:test, needs]
+    - job: python:pytest
+      artifacts: true
+  when: manual
+  script:
+    - pytest --git-aware pipelines/nextflow/tests/workflows/
+
 
 # Deploy stage instances
 
