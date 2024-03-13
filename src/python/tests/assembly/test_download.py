@@ -207,7 +207,7 @@ def test_download_single_file(
     """
 
     data_file = data_dir / ftp_file
-    retr_file = tmp_dir / ftp_file
+    retr_file = tmp_path / ftp_file
 
     def mock_retr_binary(command: str, callback: Callable):
         logging.info(f"Faking the download of {command}")
