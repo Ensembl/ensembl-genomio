@@ -17,7 +17,7 @@
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
 from pathlib import Path
-from typing import Any, Callable, ContextManager, Dict, List, Optional, Union
+from typing import Callable, ContextManager, Dict, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest
@@ -93,6 +93,40 @@ def test_create_gene_for_lone_cds(
         new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_cds")
         if new_feat:
             assert_files(output_gff, Path(data_dir / expected_gff))
+
+
+@pytest.mark.parametrize(
+    "in_type, in_mobile_type, out_type, out_description, expectation",
+    [
+        param("gene", None, "gene", None, does_not_raise(), id="Gene, skip"),
+        param("transposable_element", None, "transposable_element", None, does_not_raise(), id="TE"),
+        param("mobile_genetic_element", None, "transposable_element", None, does_not_raise(), id="MGE"),
+        param("transposable_element", "transposon", "transposable_element", "transposon", does_not_raise(), id="MGE, transposon"),
+        param("transposable_element", "transposon:LOREM", "transposable_element", "transposon (LOREM)", does_not_raise(), id="MGE, transposon named"),
+        param("transposable_element", "retrotransposon:LOREM", "transposable_element", "retrotransposon (LOREM)", does_not_raise(), id="MGE, retrotransposon named"),
+        param("transposable_element", "UNKNOWNtransposon:LOREM", "transposable_element", None, raises(GFFParserError), id="MGE, unknown type"),
+    ],
+)
+def test_normalize_non_gene(
+    in_type: str,
+    in_mobile_type: Optional[str],
+    out_type: str,
+    out_description: Optional[str],
+    expectation: ContextManager,
+) -> None:
+    """Test gene create gene for lone CDS."""
+    simp = GFFSimplifier()
+    feat = SeqFeature(None, in_type)
+    feat.qualifiers = {"source": "LOREM"}
+    if in_mobile_type is not None:
+        feat.qualifiers["mobile_element_type"] = [in_mobile_type]
+    feat.sub_features = []
+    with expectation:
+        new_feat = simp.normalize_non_gene(feat)
+        if new_feat is not None:
+            assert new_feat.type == out_type
+            if out_description is not None:
+                assert new_feat.qualifiers == feat.qualifiers
 
 
 @pytest.mark.parametrize(
