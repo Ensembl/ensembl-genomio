@@ -15,7 +15,7 @@
 """Unit testing of `ensembl.io.genomio.genbank.extract_data` module.
 
 Typical usage example::
-    $ pytest test_extract_data_files.py
+    $ pytest test_extract_data.py
 
 """
 import json
@@ -23,8 +23,9 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import pytest
 
-from Bio import SeqIO, Seq
+
 from BCBio import GFF
+from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
@@ -67,6 +68,7 @@ class TestWriteFormattedFiles:
     ) -> None:
         """Test that organellas are correctly identified in the genbank file"""
         gb_file_path = data_dir / self.gb_file
+        # pylint: disable=protected-access
         organella = formatted_files_generator._get_organella(gb_file_path)
         assert organella == expected
 
@@ -81,7 +83,7 @@ class TestWriteFormattedFiles:
         formatted_files_generator.seq_records = [record1]
 
         formatted_files_generator.files["fasta_dna"] = tmp_path / "test.fasta"
-
+        # pylint: disable=protected-access
         formatted_files_generator._write_fasta_dna()
 
         assert (tmp_path / "test.fasta").exists()
@@ -104,7 +106,7 @@ class TestWriteFormattedFiles:
 
         formatted_files_generator.seq_records = [record1, record2]
         formatted_files_generator.files["genome"] = tmp_path / "genome.json"
-
+        # pylint: disable=protected-access
         formatted_files_generator._format_genome_data()
         assert (tmp_path / "genome.json").exists()
         with open(tmp_path / "genome.json", "r") as f:
@@ -131,7 +133,7 @@ class TestWriteFormattedFiles:
         record1.features.append(CDS_feature1)
         record1.organelle = "mitochondrion"
         formatted_files_generator.seq_records = [record1]
-
+        # pylint: disable=protected-access
         formatted_files_generator._format_write_seq_json()
 
         # Call the method to be tested
@@ -169,6 +171,7 @@ class TestWriteFormattedFiles:
         )
 
         # Call the method to be tested
+        # pylint: disable=protected-access
         formatted_files_generator._format_write_genes_gff()
 
         # Assert that _parse_record was called
@@ -201,7 +204,7 @@ class TestWriteFormattedFiles:
         formatted_files_generator.seq_records = [record1]
 
         formatted_files_generator.files["gene_models"] = tmp_path / "genes.gff"
-
+        # pylint: disable=protected-access
         formatted_files_generator._write_genes_gff(formatted_files_generator.seq_records)
         assert (formatted_files_generator.files["gene_models"]).exists()
         for rec in GFF.parse(formatted_files_generator.files["gene_models"]):
@@ -219,7 +222,7 @@ class TestWriteFormattedFiles:
         )
         record1.features.append(CDS_feature1)
         formatted_files_generator.files["fasta_pep"] = tmp_path / "pep.fasta"
-
+        # pylint: disable=protected-access
         formatted_files_generator._write_pep_fasta(record1)
         assert (tmp_path / "pep.fasta").exists()
 

@@ -15,7 +15,7 @@
 """Unit testing of `ensembl.io.genomio.genbank.extract_data` module.
 
 Typical usage example::
-    $ pytest test_extract_data.py
+    $ pytest test_extract_data_seq.py
 
 """
 from unittest.mock import Mock, patch
@@ -86,6 +86,7 @@ class TestFormattedFilesGenerator:
             rna_feature_feat,  # Mock the new record
             gene_name,  # Mock the list of peptides
         )
+        # pylint: disable=protected-access
         formatted_files_generator._parse_record(record)
         if gene_feature.qualifiers[gene_name]:
             mock_parse_gene_feat.assert_called()
@@ -100,6 +101,7 @@ class TestFormattedFilesGenerator:
         record.features.append(unsupported_feature)
 
         with pytest.raises(GBParseError):
+            # pylint: disable=protected-access
             formatted_files_generator._parse_record(record)
 
     @pytest.mark.dependency(depends=["parse_record"])
@@ -124,6 +126,7 @@ class TestFormattedFilesGenerator:
         seq_feature = SeqFeature(FeatureLocation(5, 10), type=type_feature, id=gene_name)
         seq_feature.qualifiers[test_qualifiers] = "test_qual"
         # Check the returned feature is as expected
+        # pylint: disable=protected-access
         result_seq_feature, result_seq_id, result_peptide = formatted_files_generator._parse_gene_feat(
             seq_feature, gene_name
         )
@@ -174,6 +177,7 @@ class TestFormattedFilesGenerator:
         """Test for a successful parsing of transcript features `_parse_rna_feat()` method"""
         seq_feature = SeqFeature(FeatureLocation(5, 10), type="tRNA")
         seq_feature.qualifiers["product"] = [rna_name]
+        # pylint: disable=protected-access
         rna_feature, all_expected_id = formatted_files_generator._parse_rna_feat(seq_feature)
         assert len(rna_feature) == 2
         assert all_expected_id == [
@@ -194,6 +198,7 @@ class TestFormattedFilesGenerator:
         gene_id: str,
     ) -> None:
         """Test that _uniquify_id adds a version number to an existing ID"""
+        # pylint: disable=protected-access
         new_id = formatted_files_generator._uniquify_id(gene_id, all_ids)
         assert new_id == expected_id
 
@@ -202,6 +207,7 @@ class TestFormattedFilesGenerator:
         self, expected_location: str, formatted_files_generator, organelle: str
     ) -> None:
         """Test that organelle location is present in the allowed types"""
+        # pylint: disable=protected-access
         result = formatted_files_generator._prepare_location(organelle)
         assert result == expected_location
 
@@ -212,6 +218,7 @@ class TestFormattedFilesGenerator:
         """Test that organelle location if not identifies throws an error"""
         # An organelle not in the dictionary
         with pytest.raises(UnsupportedData) as exc_info:
+            # pylint: disable=protected-access
             formatted_files_generator._prepare_location(organelle)
         assert str(exc_info.value) == f"Unknown organelle: {organelle}"
 
@@ -225,5 +232,6 @@ class TestFormattedFilesGenerator:
         rec = SeqRecord(seq="", id="1JOY", name="EnvZ")
         seq_feature = SeqFeature(type=type_feature, qualifiers={"transl_table": [expected_value]})
         rec.features.append(seq_feature)
+        # pylint: disable=protected-access
         codon_table = formatted_files_generator._get_codon_table(rec)
         assert codon_table == expected_value
