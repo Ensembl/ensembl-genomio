@@ -224,6 +224,7 @@ class GFFSimplifier:
         gene_type = "gene"
         if ("pseudo" in feat.qualifiers) and (feat.qualifiers["pseudo"][0] == "true"):
             gene_type = "pseudogene"
+            del feat.qualifiers["pseudo"]
         new_gene = SeqFeature(feat.location, type=gene_type)
         new_gene.qualifiers["source"] = feat.qualifiers["source"]
         new_gene.sub_features = [transcript]
