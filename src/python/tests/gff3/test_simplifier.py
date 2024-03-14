@@ -17,7 +17,7 @@
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
 from pathlib import Path
-from typing import Callable, ContextManager, Dict, Optional
+from typing import Callable, ContextManager, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest
@@ -101,11 +101,51 @@ def test_create_gene_for_lone_cds(
         param("gene", None, None, "gene", None, does_not_raise(), id="Gene, skip"),
         param("transposable_element", None, None, "transposable_element", None, does_not_raise(), id="TE"),
         param("mobile_genetic_element", None, None, "transposable_element", None, does_not_raise(), id="MGE"),
-        param("transposable_element", "transposon", None, "transposable_element", "transposon", does_not_raise(), id="MGE, transposon"),
-        param("transposable_element", "transposon:LOREM", None, "transposable_element", "transposon (LOREM)", does_not_raise(), id="MGE, transposon named"),
-        param("transposable_element", "retrotransposon:LOREM", None, "transposable_element", "retrotransposon (LOREM)", does_not_raise(), id="MGE, retrotransposon named"),
-        param("transposable_element", "UNKNOWNtransposon:LOREM", None, "transposable_element", None, raises(GFFParserError), id="MGE, unknown type"),
-        param("transposable_element", "transposon", "PROD", "transposable_element", "PROD", does_not_raise(), id="MGE, transposon, product exists"),
+        param(
+            "transposable_element",
+            "transposon",
+            None,
+            "transposable_element",
+            "transposon",
+            does_not_raise(),
+            id="MGE, transposon",
+        ),
+        param(
+            "transposable_element",
+            "transposon:LOREM",
+            None,
+            "transposable_element",
+            "transposon (LOREM)",
+            does_not_raise(),
+            id="MGE, transposon named",
+        ),
+        param(
+            "transposable_element",
+            "retrotransposon:LOREM",
+            None,
+            "transposable_element",
+            "retrotransposon (LOREM)",
+            does_not_raise(),
+            id="MGE, retrotransposon named",
+        ),
+        param(
+            "transposable_element",
+            "UNKNOWNtransposon:LOREM",
+            None,
+            "transposable_element",
+            None,
+            raises(GFFParserError),
+            id="MGE, unknown type",
+        ),
+        param(
+            "transposable_element",
+            "transposon",
+            "PROD",
+            "transposable_element",
+            "PROD",
+            does_not_raise(),
+            id="MGE, transposon, product exists",
+        ),
     ],
 )
 def test_normalize_non_gene(
