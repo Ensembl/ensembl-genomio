@@ -96,20 +96,22 @@ def test_create_gene_for_lone_cds(
 
 
 @pytest.mark.parametrize(
-    "in_type, in_mobile_type, out_type, out_description, expectation",
+    "in_type, in_mobile_type, in_product, out_type, out_description, expectation",
     [
-        param("gene", None, "gene", None, does_not_raise(), id="Gene, skip"),
-        param("transposable_element", None, "transposable_element", None, does_not_raise(), id="TE"),
-        param("mobile_genetic_element", None, "transposable_element", None, does_not_raise(), id="MGE"),
-        param("transposable_element", "transposon", "transposable_element", "transposon", does_not_raise(), id="MGE, transposon"),
-        param("transposable_element", "transposon:LOREM", "transposable_element", "transposon (LOREM)", does_not_raise(), id="MGE, transposon named"),
-        param("transposable_element", "retrotransposon:LOREM", "transposable_element", "retrotransposon (LOREM)", does_not_raise(), id="MGE, retrotransposon named"),
-        param("transposable_element", "UNKNOWNtransposon:LOREM", "transposable_element", None, raises(GFFParserError), id="MGE, unknown type"),
+        param("gene", None, None, "gene", None, does_not_raise(), id="Gene, skip"),
+        param("transposable_element", None, None, "transposable_element", None, does_not_raise(), id="TE"),
+        param("mobile_genetic_element", None, None, "transposable_element", None, does_not_raise(), id="MGE"),
+        param("transposable_element", "transposon", None, "transposable_element", "transposon", does_not_raise(), id="MGE, transposon"),
+        param("transposable_element", "transposon:LOREM", None, "transposable_element", "transposon (LOREM)", does_not_raise(), id="MGE, transposon named"),
+        param("transposable_element", "retrotransposon:LOREM", None, "transposable_element", "retrotransposon (LOREM)", does_not_raise(), id="MGE, retrotransposon named"),
+        param("transposable_element", "UNKNOWNtransposon:LOREM", None, "transposable_element", None, raises(GFFParserError), id="MGE, unknown type"),
+        param("transposable_element", "transposon", "PROD", "transposable_element", "PROD", does_not_raise(), id="MGE, transposon, product exists"),
     ],
 )
 def test_normalize_non_gene(
     in_type: str,
     in_mobile_type: Optional[str],
+    in_product: Optional[str],
     out_type: str,
     out_description: Optional[str],
     expectation: ContextManager,
@@ -120,6 +122,8 @@ def test_normalize_non_gene(
     feat.qualifiers = {"source": "LOREM"}
     if in_mobile_type is not None:
         feat.qualifiers["mobile_element_type"] = [in_mobile_type]
+    if in_product is not None:
+        feat.qualifiers["product"] = [in_product]
     feat.sub_features = []
     with expectation:
         new_feat = simp.normalize_non_gene(feat)
