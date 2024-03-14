@@ -52,13 +52,13 @@ class ReportStructure(dict):
             'Isolate' : '',
             'Isolate/Strain' : '',
             'Asm name' : '',
+            'Assembly type' : '',
             'Asm accession' : '',
             'Paired assembly' : '',
             'Asm last updated' : '',
             'Asm status' : '',
             'Asm notes' : '',
         })
-
 
 def fetch_asm_accn(database_names: list, server_details: str) -> dict:
     """Obtain the associated INSDC accession [meta.assembly.accession] given a set of core(s) names
@@ -98,7 +98,7 @@ def fetch_asm_accn(database_names: list, server_details: str) -> dict:
     return core_accn_meta
 
 def datasets_asm_reports(sif_image: str, assembly_accessions: dict,
-                        download_directory: PathLike, batch_size: int = 2) -> dict:
+                        download_directory: PathLike, batch_size: int = 20) -> dict:
     """Obtain multiple assembly report JSONs in one or more querys to datasets,
     i.e. make individual since accn query to datasets tool.
 
@@ -177,12 +177,13 @@ def extract_assembly_metadata(assembly_reports: Dict[str,dict]) -> Dict[str,Repo
         # Mandatory meta key parsing:
         asm_meta_info["Asm accession"] = asm_report["accession"]
         asm_meta_info["Asm name"] = asm_report["assembly_info"]["assembly_name"]
+        asm_meta_info["Assembly type"] = asm_report["assembly_info"]["assembly_type"]
         asm_meta_info["Asm status"] = asm_report["assembly_info"]["assembly_status"]
-        asm_meta_info["Asm last updated"] = asm_report["assembly_info"]["biosample"]["last_updated"]
         asm_meta_info["Species Name"] = asm_report["organism"]["organism_name"]
         asm_meta_info["Taxon ID"] = asm_report["organism"]["tax_id"]
 
         ## Non-mandatory meta key parsing:
+        # asm_meta_info["Asm last updated"] = asm_report["assembly_info"]["biosample"]["last_updated"]
         assembly_meta_keys = asm_report["assembly_info"].keys()
         organism_keys = asm_report["organism"].keys()
 
@@ -191,7 +192,13 @@ def extract_assembly_metadata(assembly_reports: Dict[str,dict]) -> Dict[str,Repo
             complete_notes = ", ".join(asm_report["assembly_info"]["genome_notes"])
             asm_meta_info["Asm notes"] = complete_notes
         else:
-            asm_meta_info["Asm notes"] = "-NA-"
+            asm_meta_info["Asm notes"] = "NA"
+
+        # check for biosample:
+        if "biosample" in assembly_meta_keys:
+            asm_meta_info["Asm last updated"] = asm_report["assembly_info"]["biosample"]["last_updated"]
+        else:
+            asm_meta_info["Asm last updated"] = "NA"
 
         # check for paired assembly:
         if "paired_assembly" in assembly_meta_keys:
@@ -224,24 +231,35 @@ def extract_assembly_metadata(assembly_reports: Dict[str,dict]) -> Dict[str,Repo
 
     return parsed_meta
 
-def generate_report_tsv(parsed_asm_reports: dict, output_directoy: PathLike = Path(getcwd())) -> None:
-    """Generate and write the assembly report to a TSV file"""
+def generate_report_tsv(parsed_asm_reports: dict,  
+                        outfile_prefix: str, 
+                        output_directoy: PathLike = Path(getcwd())
+                        ) -> None:
+    """Generate and write the assembly report to a TSV file
+    
+    Args:
+        parsed_asm_reports: Parsed assembly report meta
+        output_directoy: Path to directory where output TSV is stored.
+    """
 
-    tsv_outfile = f"{output_directoy}/Parsed_assembly_report.tsv"
+    tsv_outfile = f"{output_directoy}/{outfile_prefix}.tsv"
 
     header_list = list(ReportStructure().keys())
     header_list.remove('Strain')
     header_list.remove('Isolate')
-    header_list = ["Core DB"] + header_list 
+    header_list = ["Core DB"] + header_list
 
     with open(tsv_outfile, "w+") as tsv_out:
+
         writer = csv.writer(tsv_out, delimiter="\t", lineterminator="\n")
         writer.writerow(header_list)
-        
+
         for core, report_meta in parsed_asm_reports.items():
             final_asm_report = [core] + list(report_meta.values())
             writer.writerow(final_asm_report)
         tsv_out.close()
+
+# def isolate_pertinent_status(parsed_asm_reports: dict) -> None:
 
 # def classify_assembly_status(core_accessions: dict) -> None:
 #     """Main function to pare set of core list and call ncbi datasets"""
@@ -253,7 +271,14 @@ def main() -> None:
         description="Track the assembly status of a set of input core(s) using NCBI 'datasets'")
     parser.add_argument_src_path("--input_cores", required=True, help="List of ensembl core db names")
     parser.add_argument_dst_path(
-        "--download_dir", default=Path.cwd(), help="Folder where the assembly report JSON file(s) are stored"
+        "--download_dir",
+        default=Path.cwd(),
+        help="Folder where the assembly report JSON file(s) are stored"
+    )
+    parser.add_argument_dst_path(
+        "--assembly_report_prefix",
+        default="AssemblyStatusReport",
+        help="Prefix used in assembly report TSV output file."
     )
     parser.add_argument("--host", type=str, required=True, help="Server hostname (fmt: mysql-ens-XXXXX-YY)")
     parser.add_argument("--port", type=str, required=True, help="Server port")
@@ -268,11 +293,20 @@ def main() -> None:
         "--cache_dir",
         type=Path,
         required=False,
+        default="$NXF_SINGULARITY_CACHEDIR",
         metavar="SINGULARITY_CACHE",
         help="Custom path to user generated singularity container housing ncbi tool 'datasets'",
     )
+    parser.add_argument(
+        "--datasets_batch_size", 
+        type=int,
+        required=False,
+        default=20,
+        metavar="BATCH_SIZE",
+        help="Number of accessions requested in one query to datasets"
+    )
 
-    parser.add_log_arguments()
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 
     init_logging_with_args(args)
@@ -328,6 +362,6 @@ def main() -> None:
     # Extract the key assembly report meta information for reporting status
     key_asmreport_meta = extract_assembly_metadata(assembly_reports)
 
-    generate_report_tsv(key_asmreport_meta, args.download_dir)
+    generate_report_tsv(key_asmreport_meta, args.assembly_report_prefix, args.download_dir)
 
-
+    ## Parse reports and email key assembly report status (not current)
