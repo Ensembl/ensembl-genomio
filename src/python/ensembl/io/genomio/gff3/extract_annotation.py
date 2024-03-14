@@ -22,6 +22,7 @@ __all__ = [
     "FunctionalAnnotations",
 ]
 
+import logging
 from os import PathLike
 from pathlib import Path
 import re
@@ -55,9 +56,11 @@ class AnnotationError(Exception):
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
-    def __init__(self) -> None:
-        self.annotations: List[Annotation] = []
+    ignored_xrefs = {"go", "interpro", "uniprot"}
 
+    def __init__(self, genome: Optional[Dict[str, Dict[str, Any]]] = None) -> None:
+        self.annotations: List[Annotation] = []
+        self.genome = genome
         # Annotated features
         # Under each feature, each dict's key is a feature ID
         self.features: Dict[str, Dict[str, Annotation]] = {
@@ -71,6 +74,31 @@ class FunctionalAnnotations:
             "gene": {},
             "transcript": {},
         }
+
+    def get_xrefs(self, feature: SeqFeature) -> List[Dict[str, Any]]:
+        """Get the xrefs from the Dbxref field."""
+        all_xref = []
+
+        # Using provider name to modify the xref
+        provider_name = None
+        if self.genome:
+            try:
+                provider_name = self.genome["assembly"]["provider_name"]
+            except KeyError:
+                logging.warning("No provider name is provided in the genome file")
+
+        # Extract the Dbxrefs
+        for xref in feature.qualifiers["Dbxref"]:
+            dbname, name = xref.split(":")
+            if dbname == "GenBank" and provider_name == "RefSeq":
+                dbname = "RefSeq"
+
+            if dbname.lower() in self.ignored_xrefs:
+                continue
+
+            xrefs = {"dbname": dbname, "id": name}
+            all_xref.append(xrefs)
+        return all_xref
 
     def get_features(self, feat_type: str) -> Dict[str, Annotation]:
         """Get all feature annotations for the requested type."""
@@ -127,7 +155,6 @@ class FunctionalAnnotations:
             feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
 
         """
-
         feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
 
         # Description?
@@ -145,16 +172,28 @@ class FunctionalAnnotations:
         ):
             del feature_object["description"]
 
+        feature_object["xrefs"] = []
+        if "Dbxref" in feature.qualifiers:
+            all_xref = self.get_xrefs(feature)
+            feature_object["xrefs"] = all_xref
+
+        xref_values = {xref["id"].lower() for xref in feature_object["xrefs"]}
+
         # Synonyms?
+        # We add synonyms to the external_synonym table
+        # which is associated with the first xref of that feature type
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
-            if feat_name != feature.id:
-                feature_object["synonyms"] = {"synonym": feat_name, "default": True}
+            if feat_name.lower() != feature.id.lower() and feat_name.lower() not in xref_values:
+                feature_object["synonyms"] = [feat_name]
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
             feature_object["is_pseudogene"] = True
 
+        # Don't keep empty xref
+        if not feature_object["xrefs"]:
+            del feature_object["xrefs"]
         return feature_object
 
     def transfer_descriptions(self) -> None:
