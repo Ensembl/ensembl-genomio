@@ -16,15 +16,19 @@
 
 __all__ = [
     "fetch_asm_accn",
-    "datasets_asm_report",
+    "datasets_asm_reports",
+    "extract_assembly_metadata",
+    "generate_report_tsv",
 ]
 
+import csv
 import json
 import os
 from os import PathLike, getcwd
 from pathlib import Path
 import re
 import logging
+from typing import Dict
 
 from spython.main import Client
 
@@ -37,33 +41,23 @@ DATASETS_SINGULARITY = {
     "datasets_version_url": "library://lcampbell/ensembl-genomio/ncbi-datasets-v16.6.0:latest",
 }
 
-# class ImageDoesNotExist(Exception):
-#     """When spython client.pull fails to locate a specified sif image"""
-
-# def fetch_datasets_singularity(image_url: str, image_dl_path: str) -> Client.instance:
-#     """Obtain the requested image container from singularity hub using spython package
-
-#     Args:
-#         image_url:
-#         image_dl_path:
-
-#     Returns:
-#         container_image: Client.instance of singularity sif image loaded
-#     """
-
-#     # Pull container image to specified download path, if exists do nothing
-#     datasets_image = Client.pull(image_url,
-#                     stream=False,
-#                     pull_folder=image_dl_path,
-#                     quiet=True)
-
-#     return datasets_image
-# except ImageDoesNotExist:
-#     logging.warning("While pulling library image: error fetching image: \
-#                     image does not exist in the library")
-# else:
-#     print(type(datasets_image))
-#     print(datasets_image)
+class ReportStructure(dict):
+    """Dict setter class of key report meta information"""
+    def __init__(self):
+        dict.__init__(self)
+        self.update({
+            'Species Name' : '',
+            'Taxon ID' : '',
+            'Strain' : '',
+            'Isolate' : '',
+            'Isolate/Strain' : '',
+            'Asm name' : '',
+            'Asm accession' : '',
+            'Paired assembly' : '',
+            'Asm last updated' : '',
+            'Asm status' : '',
+            'Asm notes' : '',
+        })
 
 
 def fetch_asm_accn(database_names: list, server_details: str) -> dict:
@@ -103,50 +97,8 @@ def fetch_asm_accn(database_names: list, server_details: str) -> dict:
 
     return core_accn_meta
 
-
-# def single_datasets_asm_report(sif_image: str, assembly_accessions: dict, download_directory: PathLike) -> None:
-#     """Obtain one single assembly report JSON per assembly accession,
-#     i.e. make individual since accn query to datasets tool.
-
-#     Args:
-#         sif_image: Instance of Client.loaded singularity image.
-#         assembly_accessions: Dict of core accessions.
-#         download_directory: Dir path to store assembly report JSON files.
-#     """
-
-#     ## Attempt to run container to pull assembly reports
-#     for accession in assembly_accessions.values():
-#         asm_json_outfile = f"{getcwd()}/{download_directory}/{accession}.asm_report.json"
-
-#         # Actually make call to singularity:
-#         client_return = Client.execute(image=sif_image,
-#                                            command=['datasets','summary' ,'genome' ,'accession', accession],
-#                                            return_result=True,
-#                                            quiet=True)
-
-#         result = client_return["message"]
-
-#         ## Test what result we have returned following execution of sif image and accession value
-#         # Returned a str, i.e. no datasets result obtained exited with fatal error
-#         if isinstance(result, str) and re.search("^FATAL", result):
-#             logging.critical(f"Singularity image execution failed! -> '{result.strip()}'")
-#         # Returned a list, i.e. datasets returned a result to client.execute
-#         elif isinstance(result, list):
-#             tmp_asm_dict = json.loads(result.pop(0))
-
-#             if tmp_asm_dict['total_count'] == 0:
-#                 logging.warning(f"No assembly report found for accession {accession}")
-#             elif tmp_asm_dict['reports']:
-#                 logging.info(f"Asm report obtained for accession [{accession}]")
-#                 final_asm_json = tmp_asm_dict['reports'][0]
-#                 print_json(Path(asm_json_outfile), final_asm_json)
-#             else:
-#                 print("Something not right!")
-#         else:
-#             logging.warning(f"Something not right while running datasets with singularity client {client_return}")
-
-
-def datasets_asm_report(sif_image: str, assembly_accessions: dict, download_directory: PathLike, batch_size: int = 2) -> None:
+def datasets_asm_reports(sif_image: str, assembly_accessions: dict,
+                        download_directory: PathLike, batch_size: int = 2) -> dict:
     """Obtain multiple assembly report JSONs in one or more querys to datasets,
     i.e. make individual since accn query to datasets tool.
 
@@ -154,10 +106,14 @@ def datasets_asm_report(sif_image: str, assembly_accessions: dict, download_dire
         sif_image: Instance of Client.loaded singularity image.
         assembly_accessions: Dict of core accessions.
         download_directory: Dir path to store assembly report JSON files.
+        batch_size: Number of assembly accessions to batch submit to 'datasets'.
+    
+    Returns:
+        Dictionary of core name and its assoicated assembly report
     """
 
-    ## Attempt to run container to pull assembly reports
     master_accn_list = list(assembly_accessions.values())
+    combined_asm_reports = {}
 
     # Setting the number of combined accessions to query in a single call to datasets
     list_split = [i for i in range(0, len(master_accn_list), batch_size)]  ## Note best to use >=10
@@ -190,13 +146,102 @@ def datasets_asm_report(sif_image: str, assembly_accessions: dict, download_dire
                     accession = assembly_report["accession"]
                     asm_json_outfile = f"{getcwd()}/{download_directory}/{accession}.asm_report.json"
                     print_json(Path(asm_json_outfile), assembly_report)
+
+                    # Save assembly report into master core<>report dict
+                    for core, accession_core in assembly_accessions.items():
+                        if accession == accession_core:
+                            combined_asm_reports[core] = assembly_report
             else:
-                print("Somethings not right!")
+                print("Something is not right!")
         else:
             logging.warning(
                 f"Something not right while running datasets with singularity client.execute {client_return}"
             )
+    return combined_asm_reports
 
+def extract_assembly_metadata(assembly_reports: Dict[str,dict]) -> Dict[str,ReportStructure]:
+    """"Function to parse assembly reports and extract specific key information on 
+    status and related fields.
+    
+    Args:
+        assembly_reports: Key value pair of core_name : assembly report.
+
+    Returns:
+        Parsed assembly report meta (core, meta).
+    """
+    parsed_meta = {}
+
+    for core, asm_report in assembly_reports.items():
+        asm_meta_info = ReportStructure()
+
+        # Mandatory meta key parsing:
+        asm_meta_info["Asm accession"] = asm_report["accession"]
+        asm_meta_info["Asm name"] = asm_report["assembly_info"]["assembly_name"]
+        asm_meta_info["Asm status"] = asm_report["assembly_info"]["assembly_status"]
+        asm_meta_info["Asm last updated"] = asm_report["assembly_info"]["biosample"]["last_updated"]
+        asm_meta_info["Species Name"] = asm_report["organism"]["organism_name"]
+        asm_meta_info["Taxon ID"] = asm_report["organism"]["tax_id"]
+
+        ## Non-mandatory meta key parsing:
+        assembly_meta_keys = asm_report["assembly_info"].keys()
+        organism_keys = asm_report["organism"].keys()
+
+        # check for genome_notes:
+        if "genome_notes" in assembly_meta_keys:
+            complete_notes = ", ".join(asm_report["assembly_info"]["genome_notes"])
+            asm_meta_info["Asm notes"] = complete_notes
+        else:
+            asm_meta_info["Asm notes"] = "-NA-"
+
+        # check for paired assembly:
+        if "paired_assembly" in assembly_meta_keys:
+            asm_meta_info["Paired assembly"] = asm_report["assembly_info"]["paired_assembly"]["accession"]
+        else:
+            asm_meta_info["Paired assembly"] = "NA"
+
+        # check for isolate/strain type:
+        if "infraspecific_names" in organism_keys:
+            organism_type_keys = asm_report["organism"]["infraspecific_names"].keys()
+            if "isolate" in organism_type_keys:
+                asm_meta_info["Isolate"] = asm_report["organism"]["infraspecific_names"]["isolate"]
+                asm_meta_info.pop("Strain")
+                asm_meta_info.pop("Isolate/Strain")
+            elif "strain" in organism_type_keys:
+                asm_meta_info["Strain"] = asm_report["organism"]["infraspecific_names"]["strain"]
+                asm_meta_info.pop("Isolate")
+                asm_meta_info.pop("Isolate/Strain")
+            else:
+                asm_meta_info["Isolate/Strain"] = 'NA'
+                asm_meta_info.pop("Strain")
+                asm_meta_info.pop("Isolate")
+        else:
+            # elif ("strain" not in organism_type_keys) and ("isolate" not in organism_type_keys):
+            asm_meta_info["Isolate/Strain"] = 'NA'
+            asm_meta_info.pop("Strain")
+            asm_meta_info.pop("Isolate")
+
+        parsed_meta[core] = asm_meta_info
+
+    return parsed_meta
+
+def generate_report_tsv(parsed_asm_reports: dict, output_directoy: PathLike = Path(getcwd())) -> None:
+    """Generate and write the assembly report to a TSV file"""
+
+    tsv_outfile = f"{output_directoy}/Parsed_assembly_report.tsv"
+
+    header_list = list(ReportStructure().keys())
+    header_list.remove('Strain')
+    header_list.remove('Isolate')
+    header_list = ["Core DB"] + header_list 
+
+    with open(tsv_outfile, "w+") as tsv_out:
+        writer = csv.writer(tsv_out, delimiter="\t", lineterminator="\n")
+        writer.writerow(header_list)
+        
+        for core, report_meta in parsed_asm_reports.items():
+            final_asm_report = [core] + list(report_meta.values())
+            writer.writerow(final_asm_report)
+        tsv_out.close()
 
 # def classify_assembly_status(core_accessions: dict) -> None:
 #     """Main function to pare set of core list and call ncbi datasets"""
@@ -204,7 +249,8 @@ def datasets_asm_report(sif_image: str, assembly_accessions: dict, download_dire
 
 def main() -> None:
     """Module's entry-point."""
-    parser = ArgumentParser(description="test")
+    parser = ArgumentParser(
+        description="Track the assembly status of a set of input core(s) using NCBI 'datasets'")
     parser.add_argument_src_path("--input_cores", required=True, help="List of ensembl core db names")
     parser.add_argument_dst_path(
         "--download_dir", default=Path.cwd(), help="Folder where the assembly report JSON file(s) are stored"
@@ -274,12 +320,14 @@ def main() -> None:
     core_db_accessions = fetch_asm_accn(cores_list, server_details)
 
     # Pull or load pre-existing 'datasets' singularity container image.
-    # datasets_image = fetch_datasets_singularity(container_url, image_dl_path)
     datasets_image = Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
 
-    # ## Attempt to run container to pull assembly reports
-    # Test case implementing one ncbi datasets query per accession(s)
-    # single_datasets_asm_report(datasets_image, core_db_accessions, args.download_dir)
-
     # Datasets query implementation for one or more bacthed accessions
-    datasets_asm_report(datasets_image, core_db_accessions, args.download_dir)
+    assembly_reports = datasets_asm_reports(datasets_image, core_db_accessions, args.download_dir)
+
+    # Extract the key assembly report meta information for reporting status
+    key_asmreport_meta = extract_assembly_metadata(assembly_reports)
+
+    generate_report_tsv(key_asmreport_meta, args.download_dir)
+
+
