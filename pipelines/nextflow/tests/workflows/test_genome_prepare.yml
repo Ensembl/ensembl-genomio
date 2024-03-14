@@ -21,31 +21,31 @@
     -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
     -stub \\
     --input_dir ./data/test/pipelines/genome_prepare/input_dir_brc_off \\
-    --cache_dir ./cache/ \\
-    --output_dir ./test_genome_prepare_output \\
+    --cache_dir ./tmp/cache/ \\
+    --output_dir ./tmp/genome_prepare \\
     --brc_mode 0 \\
     --ncbi_check 0
 
   # Check that all the expected files are produced
   # Make sure to update those if the processing of the files changes!
   files:
-    - path: ./test_genome_prepare_output/GCA_017607445.1/fasta_dna.fa
+    - path: ./tmp/genome_prepare/GCA_017607445.1/fasta_dna.fa
       md5sum: 68d26226b04950883edecd6095d1db1f
-    - path: ./test_genome_prepare_output/GCA_017607445.1/fasta_pep.fa
+    - path: ./tmp/genome_prepare/GCA_017607445.1/fasta_pep.fa
       md5sum: d3be87e392cc53ded62987c28952cc3d
-    - path: ./test_genome_prepare_output/GCA_017607445.1/functional_annotation.json
-      md5sum: eb834948fb9363dd71d02cb591848345
-    - path: ./test_genome_prepare_output/GCA_017607445.1/gene_models.gff3
+    - path: ./tmp/genome_prepare/GCA_017607445.1/functional_annotation.json
+      md5sum: e2c71a55085897a005ff9ca6ebe03cb3
+    - path: ./tmp/genome_prepare/GCA_017607445.1/gene_models.gff3
       md5sum: ade9ac036023c48dd490056457027468
     # Genome contains fields that depend on the date, so can't check md5sum
-    - path: ./test_genome_prepare_output/GCA_017607445.1/genome.json
+    - path: ./tmp/genome_prepare/GCA_017607445.1/genome.json
       contains:
         - GCA_017607445.1
       must_not_contain:
         - organAbrev123
         - OrganismDB
     # Manifest depends on the genome checksum, so also date dependent
-    - path: ./test_genome_prepare_output/GCA_017607445.1/manifest.json
-    - path: ./test_genome_prepare_output/GCA_017607445.1/seq_region.json
+    - path: ./tmp/genome_prepare/GCA_017607445.1/manifest.json
+    - path: ./tmp/genome_prepare/GCA_017607445.1/seq_region.json
       md5sum: 28518b0c7cbc19a2890a6b347367a82f
-    - path: ./test_genome_prepare_output/GCA_017607445.1/stats.txt
+    - path: ./tmp/genome_prepare/GCA_017607445.1/stats.txt

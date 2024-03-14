@@ -18,8 +18,8 @@
   command: nextflow run ./pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
     -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
     -stub \\
-    --cache_dir ./cache/ \\
-    --output_dir ./test_dumper_output \\
+    --cache_dir ./tmp/cache/ \\
+    --output_dir ./tmp/dumper \\
     --host fakehost \\
     --user fakeuser \\
     --port 9999 \\
@@ -31,5 +31,5 @@
   # Check that all the expected files are produced
   # Make sure to update those if the processing of the files changes!
   files:
-    - path: ./test_dumper_output/build_60/coredb/VectorBase/aaegL5.sql.gz
+    - path: ./tmp/dumper/build_60/coredb/VectorBase/aaegL5.sql.gz
     # No md5: gzip has a timestamp
