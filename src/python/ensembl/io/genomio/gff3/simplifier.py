@@ -128,46 +128,34 @@ class GFFSimplifier:
             if not self.skip_unrecognized:
                 raise GFFParserError("Unrecognized types found, abort")
 
-    def simpler_gff3_feature(self, feat: SeqFeature) -> Optional[SeqFeature]:
+    def simpler_gff3_feature(self, gene: SeqFeature) -> Optional[SeqFeature]:
         """Creates a simpler version of a GFF3 feature.
 
         If the feature is invalid/skippable, returns None.
 
         """
-
-        ignored_gene_types = self._biotypes["gene"]["ignored"]
-        allowed_non_gene_types = self._biotypes["non_gene"]["supported"]
-        allowed_gene_types = self._biotypes["gene"]["supported"]
-
-        # Skip explictly ignored features
-        if feat.type in ignored_gene_types:
+        # Special cases
+        non_gene = self.normalize_non_gene(gene)
+        if non_gene:
+            return non_gene
+        if gene.type in self._biotypes["gene"]["ignored"]:
             return None
 
-        # Special processing of non-gene features
-        if feat.type in allowed_non_gene_types:
-            if feat.type in ("mobile_genetic_element", "transposable_element"):
-                feat = self.format_mobile_element(feat)
-                return feat
-            # This check is a failsafe in case you add supported non-genes
-            raise NotImplementedError(f"Unsupported non-gene: {feat.type} for {feat.id}")  # pragma: no cover
-
-        # From here we expect only genes
-        gene = feat
-
+        # Synonym
         if gene.type == "protein_coding_gene":
             gene.type = "gene"
 
-        # Create actual genes from transcripts/CDS top level features
+        # Lone sub-gene features, create a gene
         gene = self.create_gene_for_lone_transcript(gene)
         gene = self.create_gene_for_lone_cds(gene)
 
         # What to do with unsupported gene types
-        if gene.type not in allowed_gene_types:
+        if gene.type not in self._biotypes["gene"]["supported"]:
             self.fail_types.add(f"gene={gene.type}")
             logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
             return None
 
-        # Normalize, store annotation, and return the cleaned up gene
+        # Normalize and store
         gene = self.normalize_gene(gene)
         self.annotations.store_gene(gene)
         return self.clean_gene(gene)
@@ -235,46 +223,52 @@ class GFFSimplifier:
 
         return new_gene
 
-    def format_mobile_element(self, feat: SeqFeature) -> SeqFeature:
-        """Given a mobile_genetic_element feature, transform it into a transposable_element"""
+    def normalize_non_gene(self, feat: SeqFeature) -> SeqFeature:
+        """Special case for non-genes (currently transposable elements only).
+        Returns None if not applicable
+        """
 
-        # Change mobile_genetic_element into a transposable_element feature
-        if feat.type == "mobile_genetic_element":
-            mobile_element_type = feat.qualifiers.get("mobile_element_type", [])
-            if mobile_element_type:
-                # Get the type (and name) from the attrib
-                if ":" in mobile_element_type[0]:
-                    element_type, element_name = mobile_element_type[0].split(":")
-                    description = f"{element_type} ({element_name})"
-                else:
-                    element_type = mobile_element_type[0]
-                    description = element_type
+        if feat.type not in self._biotypes["non_gene"]["supported"]:
+            return
+        if feat.type in ("mobile_genetic_element", "transposable_element"):
+            feat = self._normalize_mobile_genetic_element(feat)
+            # Generate ID if needed
+            feat.id = self.stable_ids.normalize_gene_id(feat)
+            feat.qualifiers["ID"] = feat.id
 
-                # Keep the metadata in the description if the type is known
-                if element_type in ("transposon", "retrotransposon"):
-                    feat.type = "transposable_element"
-                    if not feat.qualifiers.get("product"):
-                        feat.qualifiers["product"] = [description]
-                else:
-                    logging.warning(
-                        f"Mobile genetic element 'mobile_element_type' is not transposon: {element_type}"
-                    )
-                    return feat
-            else:
-                logging.warning("Mobile genetic element does not have a 'mobile_element_type' tag")
-                return feat
-        elif feat.type == "transposable_element":
-            pass
+            self.annotations.add_feature(feat, "transposable_element")
+            return self.clean_gene(feat)
         else:
-            logging.warning(f"Feature {feat.id} is not a supported TE feature {feat.type}")
+            # This check is a failsafe in case you add supported non-genes
+            raise NotImplementedError(f"Unsupported non-gene: {feat.type} for {feat.id}")  # pragma: no cover
+
+    def _normalize_mobile_genetic_element(self, feat: SeqFeature) -> SeqFeature:
+        """Normalize a mobile element if it has a mobile_element_type field."""
+
+        if feat.type != "mobile_genetic_element":
             return feat
 
-        # Generate ID if needed and add it to the functional annotation
-        feat.id = self.stable_ids.normalize_gene_id(feat)
-        self.annotations.add_feature(feat, "transposable_element")
-        feat = self.clean_gene(feat)
+        try:
+            mobile_element_type = feat.qualifiers["mobile_element_type"]
+        except KeyError:
+            logging.warning("No 'mobile_element_type' tag found")
+            return feat
+            
+        # Get the type (and name) from the attrib
+        if ":" in mobile_element_type[0]:
+            element_type, element_name = mobile_element_type[0].split(":")
+            description = f"{element_type} ({element_name})"
+        else:
+            description = mobile_element_type[0]
 
-        return feat
+        # Keep the metadata in the description if the type is known
+        if element_type in ("transposon", "retrotransposon"):
+            feat.type = "transposable_element"
+            if not feat.qualifiers.get("product"):
+                feat.qualifiers["product"] = [description]
+            return feat
+        else:
+            raise GFFParserError(f"'mobile_element_type' is not a transposon: {element_type}")
 
     # GENES
     def clean_gene(self, gene: SeqFeature) -> SeqFeature:
