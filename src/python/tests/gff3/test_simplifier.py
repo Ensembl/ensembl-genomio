@@ -75,6 +75,7 @@ def test_create_gene_for_lone_transcript(
     [
         param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
         param("lone_cds.gff", "lone_cds_simped.gff", does_not_raise(), id="lone CDS"),
+        param("lone_cds_pseudo.gff", "lone_cds_pseudo_simped.gff", does_not_raise(), id="lone pseudo CDS"),
     ],
 )
 def test_create_gene_for_lone_cds(
