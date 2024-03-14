@@ -84,6 +84,7 @@ def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict
         output: Expected returned value for the given assembly report file.
     """
     report_path = data_dir / report_file
+    # pylint: disable=protected-access
     result = extend._report_to_csv(report_path)
     assert result[0] == output[0]
     assert not DeepDiff(result[1], output[1])
