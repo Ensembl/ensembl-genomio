@@ -223,7 +223,7 @@ class GFFSimplifier:
 
         return new_gene
 
-    def normalize_non_gene(self, feat: SeqFeature) -> SeqFeature:
+    def normalize_non_gene(self, feat: SeqFeature) -> Optional[SeqFeature]:
         """Special case for non-genes (currently transposable elements only).
         Returns None if not applicable
         """
@@ -231,6 +231,7 @@ class GFFSimplifier:
         if feat.type not in self._biotypes["non_gene"]["supported"]:
             return
         if feat.type in ("mobile_genetic_element", "transposable_element"):
+            feat.type = "transposable_element"
             feat = self._normalize_mobile_genetic_element(feat)
             # Generate ID if needed
             feat.id = self.stable_ids.normalize_gene_id(feat)
@@ -244,10 +245,6 @@ class GFFSimplifier:
 
     def _normalize_mobile_genetic_element(self, feat: SeqFeature) -> SeqFeature:
         """Normalize a mobile element if it has a mobile_element_type field."""
-
-        if feat.type != "mobile_genetic_element":
-            return feat
-
         try:
             mobile_element_type = feat.qualifiers["mobile_element_type"]
         except KeyError:
@@ -259,11 +256,11 @@ class GFFSimplifier:
             element_type, element_name = mobile_element_type[0].split(":")
             description = f"{element_type} ({element_name})"
         else:
-            description = mobile_element_type[0]
+            element_type = mobile_element_type[0]
+            description = element_type
 
         # Keep the metadata in the description if the type is known
         if element_type in ("transposon", "retrotransposon"):
-            feat.type = "transposable_element"
             if not feat.qualifiers.get("product"):
                 feat.qualifiers["product"] = [description]
             return feat
