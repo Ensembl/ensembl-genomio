@@ -229,7 +229,7 @@ class GFFSimplifier:
         """
 
         if feat.type not in self._biotypes["non_gene"]["supported"]:
-            return
+            return None
         if feat.type in ("mobile_genetic_element", "transposable_element"):
             feat.type = "transposable_element"
             feat = self._normalize_mobile_genetic_element(feat)
@@ -239,9 +239,8 @@ class GFFSimplifier:
 
             self.annotations.add_feature(feat, "transposable_element")
             return self.clean_gene(feat)
-        else:
-            # This check is a failsafe in case you add supported non-genes
-            raise NotImplementedError(f"Unsupported non-gene: {feat.type} for {feat.id}")  # pragma: no cover
+        # This is a failsafe in case you add supported non-genes
+        raise NotImplementedError(f"Unsupported non-gene: {feat.type} for {feat.id}")  # pragma: no cover
 
     def _normalize_mobile_genetic_element(self, feat: SeqFeature) -> SeqFeature:
         """Normalize a mobile element if it has a mobile_element_type field."""
@@ -250,7 +249,7 @@ class GFFSimplifier:
         except KeyError:
             logging.warning("No 'mobile_element_type' tag found")
             return feat
-            
+
         # Get the type (and name) from the attrib
         if ":" in mobile_element_type[0]:
             element_type, element_name = mobile_element_type[0].split(":")
@@ -264,8 +263,7 @@ class GFFSimplifier:
             if not feat.qualifiers.get("product"):
                 feat.qualifiers["product"] = [description]
             return feat
-        else:
-            raise GFFParserError(f"'mobile_element_type' is not a transposon: {element_type}")
+        raise GFFParserError(f"'mobile_element_type' is not a transposon: {element_type}")
 
     # GENES
     def clean_gene(self, gene: SeqFeature) -> SeqFeature:
