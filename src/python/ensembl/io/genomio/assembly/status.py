@@ -41,24 +41,29 @@ DATASETS_SINGULARITY = {
     "datasets_version_url": "library://lcampbell/ensembl-genomio/ncbi-datasets-v16.6.0:latest",
 }
 
+
 class ReportStructure(dict):
     """Dict setter class of key report meta information"""
+
     def __init__(self):
         dict.__init__(self)
-        self.update({
-            'Species Name' : '',
-            'Taxon ID' : '',
-            'Strain' : '',
-            'Isolate' : '',
-            'Isolate/Strain' : '',
-            'Asm name' : '',
-            'Assembly type' : '',
-            'Asm accession' : '',
-            'Paired assembly' : '',
-            'Asm last updated' : '',
-            'Asm status' : '',
-            'Asm notes' : '',
-        })
+        self.update(
+            {
+                "Species Name": "",
+                "Taxon ID": "",
+                "Strain": "",
+                "Isolate": "",
+                "Isolate/Strain": "",
+                "Asm name": "",
+                "Assembly type": "",
+                "Asm accession": "",
+                "Paired assembly": "",
+                "Asm last updated": "",
+                "Asm status": "",
+                "Asm notes": "",
+            }
+        )
+
 
 def fetch_asm_accn(database_names: list, server_details: str) -> dict:
     """Obtain the associated INSDC accession [meta.assembly.accession] given a set of core(s) names
@@ -97,8 +102,10 @@ def fetch_asm_accn(database_names: list, server_details: str) -> dict:
 
     return core_accn_meta
 
-def datasets_asm_reports(sif_image: str, assembly_accessions: dict,
-                        download_directory: PathLike, batch_size: int = 20) -> dict:
+
+def datasets_asm_reports(
+    sif_image: str, assembly_accessions: dict, download_directory: PathLike, batch_size: int = 20
+) -> dict:
     """Obtain multiple assembly report JSONs in one or more querys to datasets,
     i.e. make individual since accn query to datasets tool.
 
@@ -107,7 +114,7 @@ def datasets_asm_reports(sif_image: str, assembly_accessions: dict,
         assembly_accessions: Dict of core accessions.
         download_directory: Dir path to store assembly report JSON files.
         batch_size: Number of assembly accessions to batch submit to 'datasets'.
-    
+
     Returns:
         Dictionary of core name and its assoicated assembly report
     """
@@ -159,10 +166,11 @@ def datasets_asm_reports(sif_image: str, assembly_accessions: dict,
             )
     return combined_asm_reports
 
-def extract_assembly_metadata(assembly_reports: Dict[str,dict]) -> Dict[str,ReportStructure]:
-    """"Function to parse assembly reports and extract specific key information on 
+
+def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, ReportStructure]:
+    """ "Function to parse assembly reports and extract specific key information on
     status and related fields.
-    
+
     Args:
         assembly_reports: Key value pair of core_name : assembly report.
 
@@ -218,12 +226,12 @@ def extract_assembly_metadata(assembly_reports: Dict[str,dict]) -> Dict[str,Repo
                 asm_meta_info.pop("Isolate")
                 asm_meta_info.pop("Isolate/Strain")
             else:
-                asm_meta_info["Isolate/Strain"] = 'NA'
+                asm_meta_info["Isolate/Strain"] = "NA"
                 asm_meta_info.pop("Strain")
                 asm_meta_info.pop("Isolate")
         else:
             # elif ("strain" not in organism_type_keys) and ("isolate" not in organism_type_keys):
-            asm_meta_info["Isolate/Strain"] = 'NA'
+            asm_meta_info["Isolate/Strain"] = "NA"
             asm_meta_info.pop("Strain")
             asm_meta_info.pop("Isolate")
 
@@ -231,12 +239,12 @@ def extract_assembly_metadata(assembly_reports: Dict[str,dict]) -> Dict[str,Repo
 
     return parsed_meta
 
-def generate_report_tsv(parsed_asm_reports: dict,  
-                        outfile_prefix: str, 
-                        output_directoy: PathLike = Path(getcwd())
-                        ) -> None:
+
+def generate_report_tsv(
+    parsed_asm_reports: dict, outfile_prefix: str, output_directoy: PathLike = Path(getcwd())
+) -> None:
     """Generate and write the assembly report to a TSV file
-    
+
     Args:
         parsed_asm_reports: Parsed assembly report meta
         output_directoy: Path to directory where output TSV is stored.
@@ -245,8 +253,8 @@ def generate_report_tsv(parsed_asm_reports: dict,
     tsv_outfile = f"{output_directoy}/{outfile_prefix}.tsv"
 
     header_list = list(ReportStructure().keys())
-    header_list.remove('Strain')
-    header_list.remove('Isolate')
+    header_list.remove("Strain")
+    header_list.remove("Isolate")
     header_list = ["Core DB"] + header_list
 
     with open(tsv_outfile, "w+") as tsv_out:
@@ -259,6 +267,7 @@ def generate_report_tsv(parsed_asm_reports: dict,
             writer.writerow(final_asm_report)
         tsv_out.close()
 
+
 # def isolate_pertinent_status(parsed_asm_reports: dict) -> None:
 
 # def classify_assembly_status(core_accessions: dict) -> None:
@@ -268,17 +277,16 @@ def generate_report_tsv(parsed_asm_reports: dict,
 def main() -> None:
     """Module's entry-point."""
     parser = ArgumentParser(
-        description="Track the assembly status of a set of input core(s) using NCBI 'datasets'")
+        description="Track the assembly status of a set of input core(s) using NCBI 'datasets'"
+    )
     parser.add_argument_src_path("--input_cores", required=True, help="List of ensembl core db names")
     parser.add_argument_dst_path(
-        "--download_dir",
-        default=Path.cwd(),
-        help="Folder where the assembly report JSON file(s) are stored"
+        "--download_dir", default=Path.cwd(), help="Folder where the assembly report JSON file(s) are stored"
     )
     parser.add_argument_dst_path(
         "--assembly_report_prefix",
         default="AssemblyStatusReport",
-        help="Prefix used in assembly report TSV output file."
+        help="Prefix used in assembly report TSV output file.",
     )
     parser.add_argument("--host", type=str, required=True, help="Server hostname (fmt: mysql-ens-XXXXX-YY)")
     parser.add_argument("--port", type=str, required=True, help="Server port")
@@ -298,12 +306,12 @@ def main() -> None:
         help="Custom path to user generated singularity container housing ncbi tool 'datasets'",
     )
     parser.add_argument(
-        "--datasets_batch_size", 
+        "--datasets_batch_size",
         type=int,
         required=False,
         default=20,
         metavar="BATCH_SIZE",
-        help="Number of accessions requested in one query to datasets"
+        help="Number of accessions requested in one query to datasets",
     )
 
     parser.add_log_arguments(add_log_file=True)
