@@ -28,6 +28,7 @@ from os import PathLike, getcwd
 from pathlib import Path
 import re
 import logging
+from sys import exit
 from typing import Dict
 
 from spython.main import Client
@@ -41,6 +42,8 @@ DATASETS_SINGULARITY = {
     "datasets_version_url": "library://lcampbell/ensembl-genomio/ncbi-datasets-v16.6.0:latest",
 }
 
+class UnsupportedFormatError(Exception):
+    """When a string does not have the expected format."""
 
 class ReportStructure(dict):
     """Dict setter class of key report meta information"""
@@ -93,7 +96,7 @@ def fetch_asm_accn(database_names: list, server_details: str) -> dict:
         elif len(qry_result) == 1:
             count_accn_found += 1
             asm_accession = qry_result.pop()[0]
-            print(f"{core} -> assembly.accession[{asm_accession}]")
+            logging.info(f"{core} -> assembly.accession[{asm_accession}]")
             core_accn_meta[core] = asm_accession
         else:
             logging.warning(f"Core {core} Has {len(qry_result)} assembly.accessions")
@@ -104,8 +107,7 @@ def fetch_asm_accn(database_names: list, server_details: str) -> dict:
 
 
 def datasets_asm_reports(
-    sif_image: str, assembly_accessions: dict, download_directory: PathLike, batch_size: int = 20
-) -> dict:
+    sif_image: str, assembly_accessions: dict, download_directory: PathLike, batch_size: int) -> dict:
     """Obtain multiple assembly report JSONs in one or more querys to datasets,
     i.e. make individual since accn query to datasets tool.
 
@@ -151,7 +153,7 @@ def datasets_asm_reports(
                 batch_reports_json = tmp_asm_dict["reports"]
                 for assembly_report in batch_reports_json:
                     accession = assembly_report["accession"]
-                    asm_json_outfile = f"{getcwd()}/{download_directory}/{accession}.asm_report.json"
+                    asm_json_outfile = f"{download_directory}/{accession}.asm_report.json"
                     print_json(Path(asm_json_outfile), assembly_report)
 
                     # Save assembly report into master core<>report dict
@@ -241,7 +243,7 @@ def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, Re
 
 
 def generate_report_tsv(
-    parsed_asm_reports: dict, outfile_prefix: str, output_directoy: PathLike = Path(getcwd())
+    parsed_asm_reports: dict, outfile_prefix: str, query_type: str, output_directoy: PathLike = Path(getcwd())
 ) -> None:
     """Generate and write the assembly report to a TSV file
 
@@ -255,7 +257,7 @@ def generate_report_tsv(
     header_list = list(ReportStructure().keys())
     header_list.remove("Strain")
     header_list.remove("Isolate")
-    header_list = ["Core DB"] + header_list
+    header_list = [query_type] + header_list
 
     with open(tsv_outfile, "w+") as tsv_out:
 
@@ -279,17 +281,23 @@ def main() -> None:
     parser = ArgumentParser(
         description="Track the assembly status of a set of input core(s) using NCBI 'datasets'"
     )
-    parser.add_argument_src_path("--input_cores", required=True, help="List of ensembl core db names")
+    parser.add_argument_src_path("--input_cores", required=False, 
+                        help="List of ensembl core db names to retrieve accessions")
+    parser.add_argument_src_path("--input_accns", required=False, 
+                        help="List of query assembly accessions")
     parser.add_argument_dst_path(
-        "--download_dir", default=Path.cwd(), help="Folder where the assembly report JSON file(s) are stored"
+        "--download_dir", 
+        default="Assembly_report_jsons", help="Folder where the assembly report JSON file(s) are stored"
     )
     parser.add_argument_dst_path(
         "--assembly_report_prefix",
         default="AssemblyStatusReport",
         help="Prefix used in assembly report TSV output file.",
     )
-    parser.add_argument("--host", type=str, required=True, help="Server hostname (fmt: mysql-ens-XXXXX-YY)")
-    parser.add_argument("--port", type=str, required=True, help="Server port")
+    parser.add_argument("--host", type=str, required=False, 
+                        help="Server hostname (fmt: mysql-ens-XXXXX-YY); required with '--input_cores'")
+    parser.add_argument("--port", type=str, required=False, 
+                        help="Server port (fmt: 1234); required with '--input_cores'")
     parser.add_argument(
         "--datasets_version_url",
         type=str,
@@ -309,7 +317,7 @@ def main() -> None:
         "--datasets_batch_size",
         type=int,
         required=False,
-        default=20,
+        default=100,
         metavar="BATCH_SIZE",
         help="Number of accessions requested in one query to datasets",
     )
@@ -323,13 +331,30 @@ def main() -> None:
     if not args.download_dir.is_dir():
         args.download_dir.mkdir(parents=True)
 
-    ## Main starts here:
-    cores_list = []
+    # Check for required input in the form of cores/accessions
+    if args.input_cores is None and args.input_accns is None:
+        logging.critical(
+            f"Did not detect user required input. Please supply core db list, OR list of query INSDC accessions."
+        )
+        exit()
+    # Input core names centered run
+    elif args.input_cores and args.input_accns is None:
+        user_query_file = args.input_cores
+        logging.info(f"Performing assembly status report using core db list file: {user_query_file}")
+        if args.host is None or args.port is None:
+            print(f"User must specify both arguments '--host' and '--port' when providing core database names. Exiting !")
+            exit()
+    # Accession centered run
+    elif args.input_cores is None and args.input_accns:
+        user_query_file = args.input_accns
+        print(f"Using accession list {user_query_file}")
+    
+    ## Parse and store cores/accessions from user input query file
     try:
-        with args.input_cores.open(mode="r") as f:
-            cores_list = f.read().splitlines()
+        with user_query_file.open(mode="r") as f:
+            query_list = f.read().splitlines()
     except IOError as err:
-        logging.critical(f"Unable to read from database list inputfile '{args.input_cores}' due to {err}.")
+        logging.error(f"Unable to read user queries from inputfile '{user_query_file}' due to {err}.")
 
     # Set singularity cache dir from user defined path or use environment
     if args.cache_dir and args.cache_dir.is_dir():
@@ -357,19 +382,36 @@ def main() -> None:
         container_url = args.datasets_version_url
         logging.info(f"Using user defined 'ncbi datasets' version '{container_url}'")
 
-    ## Get accessions on cores
-    server_details = f"mysql://ensro@{args.host}:{args.port}/"
-    core_db_accessions = fetch_asm_accn(cores_list, server_details)
+    
+    ## Get accessions on cores list or use user accession list directly
+    query_accessions = {}
+    if args.input_cores and args.input_accns is None:
+        server_details = f"mysql://ensro@{args.host}:{args.port}/"
+        query_accessions = fetch_asm_accn(query_list, server_details)
+        query_type = "CoreDB"
+    elif args.input_cores is None and args.input_accns:
+        query_count = 1
+        query_type = "Accession"
+        for accession in query_list:
+            match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+            if not match:
+                raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
+            else:                
+                query_name = f"Query_#{query_count}"
+                query_count += 1
+                query_accessions[query_name] = accession
+    else:
+        logging.warning(f"Something not right with input query parameterisation. Exiting !")
+        exit()
+
 
     # Pull or load pre-existing 'datasets' singularity container image.
     datasets_image = Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
 
     # Datasets query implementation for one or more bacthed accessions
-    assembly_reports = datasets_asm_reports(datasets_image, core_db_accessions, args.download_dir)
+    assembly_reports = datasets_asm_reports(datasets_image, query_accessions, args.download_dir, args.datasets_batch_size)
 
     # Extract the key assembly report meta information for reporting status
     key_asmreport_meta = extract_assembly_metadata(assembly_reports)
 
-    generate_report_tsv(key_asmreport_meta, args.assembly_report_prefix, args.download_dir)
-
-    ## Parse reports and email key assembly report status (not current)
+    generate_report_tsv(key_asmreport_meta, args.assembly_report_prefix, query_type, args.download_dir)
