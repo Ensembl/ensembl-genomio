@@ -391,8 +391,7 @@ class GFFSimplifier:
                 # Replace qualifiers
                 old_exon_qualifiers = feat.qualifiers
                 feat.qualifiers = {"Parent": transcript.id}
-                if "source" in old_exon_qualifiers:
-                    feat.qualifiers["source"] = old_exon_qualifiers["source"]
+                feat.qualifiers["source"] = old_exon_qualifiers["source"]
             elif feat.type == "CDS":
                 # New CDS ID
                 feat.id = self.stable_ids.normalize_cds_id(feat.id)
