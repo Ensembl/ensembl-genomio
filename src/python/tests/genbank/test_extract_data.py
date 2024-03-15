@@ -21,14 +21,13 @@ Typical usage example::
 import json
 from pathlib import Path
 from unittest.mock import Mock, patch
-import pytest
-
 
 from BCBio import GFF
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
+import pytest
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError
 

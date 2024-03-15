@@ -18,13 +18,13 @@ Typical usage example::
     $ pytest test_extract_data_seq.py
 
 """
-from unittest.mock import Mock, patch
 from typing import List
+from unittest.mock import Mock, patch
+
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 import pytest
-
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError, UnsupportedData
 
