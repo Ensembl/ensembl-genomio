@@ -15,6 +15,7 @@
 """Record the assembly status for a set of INSDC accessions using ncbi 'datasets' tool"""
 
 __all__ = [
+    "resolve_query_type",
     "fetch_asm_accn",
     "datasets_asm_reports",
     "extract_assembly_metadata",
@@ -66,6 +67,40 @@ class ReportStructure(dict):
                 "Asm notes": "",
             }
         )
+
+def resolve_query_type(query_list: list, host_server: str, host_port: str, input_cores: str, input_accessions: str):
+    """Function to indentify the kind of querys being passed by user, 
+    then extract the queries (core names or accesisons) and store each with appropriate identifier.
+    
+    Args:
+        query_list: List of user defined queries either core names, or accessions
+        input_cores: arg parse param '--input_cores'
+        input_accessions: arg parse param '--input_accns'
+    
+    Returns:
+        User queries stored as indentifier[(core db name | UniqueID#)] : accession
+    """
+
+    query_accessions: Dict = {}
+
+    if input_cores and input_accessions is None:
+        server_details = f"mysql://ensro@{host_server}:{host_port}/" ## Requires some more dev !!
+        query_accessions = fetch_asm_accn(query_list, server_details)
+        query_type = "CoreDB"
+    elif input_cores is None and input_accessions:
+        query_count = 1
+        query_type = "Accession"
+        for accession in query_list:
+            match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+            if not match:
+                raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
+            else:                
+                query_name = f"Query_#{query_count}"
+                query_count += 1
+                query_accessions[query_name] = accession
+
+    return query_accessions, query_type
+
 
 
 def fetch_asm_accn(database_names: list, server_details: str) -> dict:
@@ -281,9 +316,9 @@ def main() -> None:
     parser = ArgumentParser(
         description="Track the assembly status of a set of input core(s) using NCBI 'datasets'"
     )
-    parser.add_argument_src_path("--input_cores", required=False, 
+    parser.add_argument_src_path("--input_cores", required=False, default=None,
                         help="List of ensembl core db names to retrieve accessions")
-    parser.add_argument_src_path("--input_accns", required=False, 
+    parser.add_argument_src_path("--input_accns", required=False, default=None,
                         help="List of query assembly accessions")
     parser.add_argument_dst_path(
         "--download_dir", 
@@ -334,7 +369,7 @@ def main() -> None:
     # Check for required input in the form of cores/accessions
     if args.input_cores is None and args.input_accns is None:
         logging.critical(
-            f"Did not detect user required input. Please supply core db list, OR list of query INSDC accessions."
+            f"Did not detect user required input. Please specify inputfile: core names with '--input_cores'; OR INSDC accessions with '--input_accns'."
         )
         exit()
     # Input core names centered run
@@ -355,6 +390,7 @@ def main() -> None:
             query_list = f.read().splitlines()
     except IOError as err:
         logging.error(f"Unable to read user queries from inputfile '{user_query_file}' due to {err}.")
+        exit()
 
     # Set singularity cache dir from user defined path or use environment
     if args.cache_dir and args.cache_dir.is_dir():
@@ -384,26 +420,7 @@ def main() -> None:
 
     
     ## Get accessions on cores list or use user accession list directly
-    query_accessions = {}
-    if args.input_cores and args.input_accns is None:
-        server_details = f"mysql://ensro@{args.host}:{args.port}/"
-        query_accessions = fetch_asm_accn(query_list, server_details)
-        query_type = "CoreDB"
-    elif args.input_cores is None and args.input_accns:
-        query_count = 1
-        query_type = "Accession"
-        for accession in query_list:
-            match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
-            if not match:
-                raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
-            else:                
-                query_name = f"Query_#{query_count}"
-                query_count += 1
-                query_accessions[query_name] = accession
-    else:
-        logging.warning(f"Something not right with input query parameterisation. Exiting !")
-        exit()
-
+    query_accessions, query_type = resolve_query_type(query_list, args.host, args.port, args.input_cores, args.input_accns)
 
     # Pull or load pre-existing 'datasets' singularity container image.
     datasets_image = Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
