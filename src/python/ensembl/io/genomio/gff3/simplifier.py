@@ -288,12 +288,7 @@ class GFFSimplifier:
                     "source": old_qualifiers["source"],
                 }
                 if feat.type == "CDS":
-                    try:
-                        feat.qualifiers["phase"] = old_qualifiers["phase"]
-                    except KeyError as err:
-                        raise KeyError(
-                            f"Missing phase for gene {gene.type} {gene.id}, CDS {feat.id} ({old_qualifiers})"
-                        ) from err
+                    feat.qualifiers["phase"] = old_qualifiers["phase"]
 
         return gene
 
