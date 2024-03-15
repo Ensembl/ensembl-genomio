@@ -177,6 +177,30 @@ def test_normalize_non_gene(
     "in_gff, expected_gff, expectation",
     [
         param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
+        param("clean/extra.gff", "clean/extra_clean.gff", does_not_raise(), id="ok gene with extra attribs"),
+    ],
+)
+def test_clean_gene(
+    data_dir: Path,
+    tmp_dir: Path,
+    assert_files: Callable,
+    in_gff: PathLike,
+    expected_gff: PathLike,
+    expectation: ContextManager,
+) -> None:
+    """Test clean gene."""
+    input_gff = data_dir / in_gff
+    output_gff = tmp_dir / Path(in_gff).name
+    with expectation:
+        new_feat = check_one_feature(input_gff, output_gff, "clean_gene")
+        if new_feat:
+            assert_files(output_gff, Path(data_dir / expected_gff))
+
+
+@pytest.mark.parametrize(
+    "in_gff, expected_gff, expectation",
+    [
+        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
         param("gene_ignored.gff", None, does_not_raise(), id="gene ignored"),
         param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
         param("ok_protein_coding_gene.gff", "ok_gene.gff", does_not_raise(), id="ok protein_coding_gene"),
