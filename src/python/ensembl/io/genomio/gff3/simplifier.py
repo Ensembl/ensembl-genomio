@@ -385,20 +385,21 @@ class GFFSimplifier:
             transcript: Gene segment transcript feature.
 
         """
+        if transcript.type not in ("C_gene_segment", "V_gene_segment"):
+            return transcript
+
         # Change V/C_gene_segment into a its corresponding transcript names
-        if transcript.type in ("C_gene_segment", "V_gene_segment"):
+        try:
             standard_name = transcript.qualifiers["standard_name"][0]
-            biotype = transcript.type.replace("_segment", "")
-            if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
-                biotype = f"IG_{biotype}"
-            elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
-                biotype = f"TR_{biotype}"
-            else:
-                logging.warning(
-                    f"Unexpected 'standard_name' content for feature {transcript.id}: {standard_name}"
-                )
-                return transcript
-            transcript.type = biotype
+        except KeyError as err:
+            raise GFFParserError(f"No standard_name for {transcript.type}") from err
+        biotype = transcript.type.replace("_segment", "")
+        if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
+            transcript.type = f"IG_{biotype}"
+        elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
+            transcript.type = f"TR_{biotype}"
+        else:
+            raise GFFParserError(f"Unexpected 'standard_name' for {transcript.id}: {standard_name}")
         return transcript
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
