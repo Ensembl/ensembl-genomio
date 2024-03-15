@@ -37,7 +37,7 @@ import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
-from .restructure import restructure_gene
+from .restructure import restructure_gene, remove_cds_from_pseudogene
 from .exceptions import GFFParserError
 
 
@@ -277,7 +277,7 @@ class GFFSimplifier:
             transcript.qualifiers = {
                 "ID": transcript.id,
                 "Parent": gene.id,
-                "source": old_transcript_qualifiers["source"]
+                "source": old_transcript_qualifiers["source"],
             }
 
             for feat in transcript.sub_features:
@@ -317,31 +317,7 @@ class GFFSimplifier:
         if self.allow_pseudogene_with_cds:
             self.stable_ids.normalize_pseudogene_cds_id(gene)
         else:
-            self.remove_cds_from_pseudogene(gene)
-
-    def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
-        """Removes the CDS from a pseudogene.
-
-        This assumes the CDSs are sub features of the transcript or the gene.
-
-        """
-        if gene.type != "pseudogene":
-            return
-
-        gene_subfeats = []
-        for transcript in gene.sub_features:
-            if transcript.type == "CDS":
-                logging.debug(f"Remove pseudo CDS {transcript.id}")
-                continue
-            new_subfeats = []
-            for feat in transcript.sub_features:
-                if feat.type == "CDS":
-                    logging.debug(f"Remove pseudo CDS {feat.id}")
-                    continue
-                new_subfeats.append(feat)
-            transcript.sub_features = new_subfeats
-            gene_subfeats.append(transcript)
-        gene.sub_features = gene_subfeats
+            remove_cds_from_pseudogene(gene)
 
     # TRANSCRIPTS
     def normalize_transcripts(self, gene: SeqFeature) -> None:

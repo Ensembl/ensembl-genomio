@@ -22,6 +22,7 @@ __all__ = [
     "move_only_exons_to_new_mrna",
     "move_cds_to_existing_mrna",
     "remove_extra_exons",
+    "remove_cds_from_pseudogene",
 ]
 
 from collections import Counter
@@ -264,3 +265,28 @@ def remove_extra_exons(gene: SeqFeature) -> None:
             gene.sub_features += others
         else:
             raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
+
+
+def remove_cds_from_pseudogene(gene: SeqFeature) -> None:
+    """Removes the CDS from a pseudogene.
+
+    This assumes the CDSs are sub features of the transcript or the gene.
+
+    """
+    if gene.type != "pseudogene":
+        return
+
+    gene_subfeats = []
+    for transcript in gene.sub_features:
+        if transcript.type == "CDS":
+            logging.debug(f"Remove pseudo CDS {transcript.id}")
+            continue
+        new_subfeats = []
+        for feat in transcript.sub_features:
+            if feat.type == "CDS":
+                logging.debug(f"Remove pseudo CDS {feat.id}")
+                continue
+            new_subfeats.append(feat)
+        transcript.sub_features = new_subfeats
+        gene_subfeats.append(transcript)
+    gene.sub_features = gene_subfeats
