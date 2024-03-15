@@ -270,19 +270,15 @@ class GFFSimplifier:
         """Return the same gene without qualifiers unrelated to the gene structure."""
 
         old_gene_qualifiers = gene.qualifiers
-        try:
-            gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
-        except KeyError as err:
-            raise KeyError(f"Missing source for {gene.id}") from err
+        gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
         for transcript in gene.sub_features:
             # Replace qualifiers
             old_transcript_qualifiers = transcript.qualifiers
             transcript.qualifiers = {
                 "ID": transcript.id,
                 "Parent": gene.id,
+                "source": old_transcript_qualifiers["source"]
             }
-            if "source" in old_transcript_qualifiers:
-                transcript.qualifiers["source"] = old_transcript_qualifiers["source"]
 
             for feat in transcript.sub_features:
                 old_qualifiers = feat.qualifiers
