@@ -43,8 +43,10 @@ DATASETS_SINGULARITY = {
     "datasets_version_url": "library://lcampbell/ensembl-genomio/ncbi-datasets-v16.6.0:latest",
 }
 
+
 class UnsupportedFormatError(Exception):
     """When a string does not have the expected format."""
+
 
 class ReportStructure(dict):
     """Dict setter class of key report meta information"""
@@ -68,15 +70,18 @@ class ReportStructure(dict):
             }
         )
 
-def resolve_query_type(query_list: list, host_server: str, host_port: str, input_cores: str, input_accessions: str):
-    """Function to indentify the kind of querys being passed by user, 
+
+def resolve_query_type(
+    query_list: list, host_server: str, host_port: str, input_cores: str, input_accessions: str
+):
+    """Function to indentify the kind of querys being passed by user,
     then extract the queries (core names or accesisons) and store each with appropriate identifier.
-    
+
     Args:
         query_list: List of user defined queries either core names, or accessions
         input_cores: arg parse param '--input_cores'
         input_accessions: arg parse param '--input_accns'
-    
+
     Returns:
         User queries stored as indentifier[(core db name | UniqueID#)] : accession
     """
@@ -84,7 +89,7 @@ def resolve_query_type(query_list: list, host_server: str, host_port: str, input
     query_accessions: Dict = {}
 
     if input_cores and input_accessions is None:
-        server_details = f"mysql://ensro@{host_server}:{host_port}/" ## Requires some more dev !!
+        server_details = f"mysql://ensro@{host_server}:{host_port}/"  ## Requires some more dev !!
         query_accessions = fetch_asm_accn(query_list, server_details)
         query_type = "CoreDB"
     elif input_cores is None and input_accessions:
@@ -94,13 +99,12 @@ def resolve_query_type(query_list: list, host_server: str, host_port: str, input
             match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
             if not match:
                 raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
-            else:                
+            else:
                 query_name = f"Query_#{query_count}"
                 query_count += 1
                 query_accessions[query_name] = accession
 
     return query_accessions, query_type
-
 
 
 def fetch_asm_accn(database_names: list, server_details: str) -> dict:
@@ -142,7 +146,8 @@ def fetch_asm_accn(database_names: list, server_details: str) -> dict:
 
 
 def datasets_asm_reports(
-    sif_image: str, assembly_accessions: dict, download_directory: PathLike, batch_size: int) -> dict:
+    sif_image: str, assembly_accessions: dict, download_directory: PathLike, batch_size: int
+) -> dict:
     """Obtain multiple assembly report JSONs in one or more querys to datasets,
     i.e. make individual since accn query to datasets tool.
 
@@ -316,23 +321,34 @@ def main() -> None:
     parser = ArgumentParser(
         description="Track the assembly status of a set of input core(s) using NCBI 'datasets'"
     )
-    parser.add_argument_src_path("--input_cores", required=False, default=None,
-                        help="List of ensembl core db names to retrieve accessions")
-    parser.add_argument_src_path("--input_accns", required=False, default=None,
-                        help="List of query assembly accessions")
+    parser.add_argument_src_path(
+        "--input_cores",
+        required=False,
+        default=None,
+        help="List of ensembl core db names to retrieve accessions",
+    )
+    parser.add_argument_src_path(
+        "--input_accns", required=False, default=None, help="List of query assembly accessions"
+    )
     parser.add_argument_dst_path(
-        "--download_dir", 
-        default="Assembly_report_jsons", help="Folder where the assembly report JSON file(s) are stored"
+        "--download_dir",
+        default="Assembly_report_jsons",
+        help="Folder where the assembly report JSON file(s) are stored",
     )
     parser.add_argument_dst_path(
         "--assembly_report_prefix",
         default="AssemblyStatusReport",
         help="Prefix used in assembly report TSV output file.",
     )
-    parser.add_argument("--host", type=str, required=False, 
-                        help="Server hostname (fmt: mysql-ens-XXXXX-YY); required with '--input_cores'")
-    parser.add_argument("--port", type=str, required=False, 
-                        help="Server port (fmt: 1234); required with '--input_cores'")
+    parser.add_argument(
+        "--host",
+        type=str,
+        required=False,
+        help="Server hostname (fmt: mysql-ens-XXXXX-YY); required with '--input_cores'",
+    )
+    parser.add_argument(
+        "--port", type=str, required=False, help="Server port (fmt: 1234); required with '--input_cores'"
+    )
     parser.add_argument(
         "--datasets_version_url",
         type=str,
@@ -377,13 +393,15 @@ def main() -> None:
         user_query_file = args.input_cores
         logging.info(f"Performing assembly status report using core db list file: {user_query_file}")
         if args.host is None or args.port is None:
-            print(f"User must specify both arguments '--host' and '--port' when providing core database names. Exiting !")
+            print(
+                f"User must specify both arguments '--host' and '--port' when providing core database names. Exiting !"
+            )
             exit()
     # Accession centered run
     elif args.input_cores is None and args.input_accns:
         user_query_file = args.input_accns
         print(f"Using accession list {user_query_file}")
-    
+
     ## Parse and store cores/accessions from user input query file
     try:
         with user_query_file.open(mode="r") as f:
@@ -418,15 +436,18 @@ def main() -> None:
         container_url = args.datasets_version_url
         logging.info(f"Using user defined 'ncbi datasets' version '{container_url}'")
 
-    
     ## Get accessions on cores list or use user accession list directly
-    query_accessions, query_type = resolve_query_type(query_list, args.host, args.port, args.input_cores, args.input_accns)
+    query_accessions, query_type = resolve_query_type(
+        query_list, args.host, args.port, args.input_cores, args.input_accns
+    )
 
     # Pull or load pre-existing 'datasets' singularity container image.
     datasets_image = Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
 
     # Datasets query implementation for one or more bacthed accessions
-    assembly_reports = datasets_asm_reports(datasets_image, query_accessions, args.download_dir, args.datasets_batch_size)
+    assembly_reports = datasets_asm_reports(
+        datasets_image, query_accessions, args.download_dir, args.datasets_batch_size
+    )
 
     # Extract the key assembly report meta information for reporting status
     key_asmreport_meta = extract_assembly_metadata(assembly_reports)
