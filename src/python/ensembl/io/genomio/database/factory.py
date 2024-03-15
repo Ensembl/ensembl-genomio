@@ -12,17 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates one JSON file per metadata type inside `manifest`, including the manifest itself.
+"""Generates one JSON file per metadata type inside `manifest`, including the manifest itself."""
 
-Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
-"""
-
-__all__ = ["format_db_data"]
+__all__ = ["format_db_data", "get_core_dbs_metadata"]
 
 import json
-from os import PathLike
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 import logging
 
 from sqlalchemy.engine import URL
@@ -34,10 +30,10 @@ from .dbconnection_lite import DBConnectionLite
 
 
 def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
-    """Returns metadata from a list of databases on a server.
+    """Returns a metadata list from the given databases on a server.
 
     Args:
-        server: Server where all the databases are hosted.
+        server: Server URL where all the databases are hosted.
         dbs: List of database names.
         brc_mode: If true, assign ``BRC4.organism_abbrev`` as the species, and ``BRC4.component`` as the
             division. Otherwise, the species will be ``species.production_name`` and the division will be
@@ -45,7 +41,6 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
 
     Returns:
         List of dictionaries with 3 keys: "database", "species" and "division".
-
     """
     databases_data = []
     for db_name in dbs:
@@ -90,23 +85,52 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
     return databases_data
 
 
-def _load_multine_file(infile: PathLike) -> List[str]:
-    data_list = []
-    with Path(infile).open("r") as infile_fh:
-        data_list = [line.strip() for line in infile_fh]
-    return data_list
+def get_core_dbs_metadata(
+    server_url: URL,
+    prefix: str = "",
+    build: Optional[int] = None,
+    version: Optional[int] = None,
+    db_regex: str = "",
+    db_list: Optional[Path] = None,
+    brc_mode: bool = False,
+) -> List[Dict]:
+    """Returns all the metadata fetched for the selected core databases.
+
+    Args:
+        server_url: Server URL where the core databases are stored.
+        prefix: Filter by prefix (no "_" is added automatically).
+        build: Filter by VEuPathDB build number.
+        version: Filter by Ensembl version.
+        db_regex: Filter by dbname regular expression.
+        db_list: Explicit list of database names.
+        brc_mode: Enable BRC mode.
+
+    Returns:
+        List of dictionaries with 3 keys: "database", "species" and "division".
+    """
+    db_list_file = None
+    if db_list:
+        with db_list.open("r") as infile_fh:
+            db_list_file = [line.strip() for line in infile_fh]
+    # Get all database names
+    server = CoreServer(server_url)
+    logging.debug("Fetching databases...")
+    databases = server.get_cores(
+        prefix=prefix, build=build, version=version, dbname_re=db_regex, db_list=db_list_file,
+    )
+    logging.info(f"Got {len(databases)} databases")
+    logging.debug("\n".join(databases))
+    return format_db_data(server_url, databases, brc_mode)
 
 
 def main() -> None:
     """Main script entry-point."""
-    parser = ArgumentParser(
-        description="Get the metadata from a list of databases on a server (in JSON format)."
-    )
+    parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments()
     # Add filter arguments
     parser.add_argument("--prefix", default="", help="Prefix to filter the databases")
-    parser.add_argument("--build", default="", help="Build to filter the databases")
-    parser.add_argument("--version", default="", help="EnsEMBL version to filter the databases")
+    parser.add_argument("--build", type=int, default=None, help="Build to filter the databases")
+    parser.add_argument("--version", type=int, default=None, help="EnsEMBL version to filter the databases")
     parser.add_argument("--db_regex", default="", help="Regular expression to match database names against")
     parser.add_argument_src_path("--db_list", help="File with one database per line to load")
     # Add flags
@@ -119,34 +143,13 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    db_list_file = None
-    if args.db_list:
-        db_list_file = _load_multine_file(args.db_list)
-
-    # Get all db names
-    server_url = URL(
-        drivername="mysql",
-        host=args.host,
-        port=args.port,
-        username=args.user,
-        password=args.password,
-    )
-    server = CoreServer(server_url)
-    logging.debug("Get databases...")
-    databases = server.get_cores(
+    databases_data = get_core_dbs_metadata(
+        server_url=args.url,
         prefix=args.prefix,
         build=args.build,
         version=args.version,
-        dbname_re=args.db_regex,
-        db_list=db_list_file,
+        db_regex=args.db_regex,
+        db_list=args.db_list,
+        brc_mode=args.brc_mode,
     )
-    logging.info(f"Got {len(databases)} databases")
-    logging.debug("\n".join(databases))
-
-    # Get all metadata for those databases
-    databases_data = format_db_data(server_url, databases, args.brc_mode)
     print(json.dumps(databases_data, sort_keys=True, indent=4))
-
-
-if __name__ == "__main__":
-    main()
