@@ -76,7 +76,7 @@ def fixture_assert_files() -> Callable[[Path, Path], None]:
             results = result_fh.readlines()
         with open(expected_path, "r") as expected_fh:
             expected = expected_fh.readlines()
-        files_diff = list(unified_diff(results, expected, fromfile="Test-made file", tofile="Expected file"))
+        files_diff = list(unified_diff(results, expected, fromfile=f"Test-made file {result_path.name}", tofile=f"Expected file {expected_path.name}"))
         assert_message = f"Test-made and expected files differ\n{' '.join(files_diff)}"
         assert len(files_diff) == 0, assert_message
 
