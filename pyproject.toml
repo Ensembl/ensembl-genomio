@@ -88,6 +88,7 @@ documentation = "https://ensembl.github.io/ensembl-genomio"
 [project.scripts]
 # Assembly
 assembly_download = "ensembl.io.genomio.assembly.download:main"
+assembly_tracker = "ensembl.io.genomio.assembly.status:main"
 # Database
 database_factory = "ensembl.io.genomio.database.factory:main"
 # Events
