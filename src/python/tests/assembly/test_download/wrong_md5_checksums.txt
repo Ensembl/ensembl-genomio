@@ -1,0 +1,2 @@
+40df91d5c40cb55621c4c92201da6834  ./annotation_hashes.txt
+b03f39d1de753fcd380bf0775d5205d0  ./GCA_017607445.1_ASM1760744v1_assembly_report.txt
