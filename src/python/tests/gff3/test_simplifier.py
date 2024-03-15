@@ -48,9 +48,9 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
     "in_gff, expected_gff, expectation",
     [
         param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
-        param("lone_transcript.gff", "lone_transcript_simped.gff", does_not_raise(), id="lone transcript"),
-        param("lone_trna.gff", "lone_trna_simped.gff", does_not_raise(), id="lone tRNA"),
-        param("lone_rrna.gff", "lone_rrna_simped.gff", does_not_raise(), id="lone rRNA"),
+        param("lone/transcript.gff", "lone/transcript_simped.gff", does_not_raise(), id="lone transcript"),
+        param("lone/trna.gff", "lone/trna_simped.gff", does_not_raise(), id="lone tRNA"),
+        param("lone/rrna.gff", "lone/rrna_simped.gff", does_not_raise(), id="lone rRNA"),
     ],
 )
 def test_create_gene_for_lone_transcript(
@@ -63,7 +63,7 @@ def test_create_gene_for_lone_transcript(
 ) -> None:
     """Test gene create gene for lone transcript."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / in_gff
+    output_gff = tmp_dir / Path(in_gff).name
     with expectation:
         new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
         if new_feat:
@@ -74,8 +74,8 @@ def test_create_gene_for_lone_transcript(
     "in_gff, expected_gff, expectation",
     [
         param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
-        param("lone_cds.gff", "lone_cds_simped.gff", does_not_raise(), id="lone CDS"),
-        param("lone_cds_pseudo.gff", "lone_cds_pseudo_simped.gff", does_not_raise(), id="lone pseudo CDS"),
+        param("lone/cds.gff", "lone/cds_simped.gff", does_not_raise(), id="lone CDS"),
+        param("lone/cds_pseudo.gff", "lone/cds_pseudo_simped.gff", does_not_raise(), id="lone pseudo CDS"),
     ],
 )
 def test_create_gene_for_lone_cds(
@@ -88,7 +88,7 @@ def test_create_gene_for_lone_cds(
 ) -> None:
     """Test gene create gene for lone CDS."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / in_gff
+    output_gff = tmp_dir / Path(in_gff).name
     with expectation:
         new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_cds")
         if new_feat:
