@@ -17,7 +17,7 @@
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
 from pathlib import Path
-from typing import Callable, ContextManager, Optional
+from typing import Callable, ContextManager, List, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest
@@ -171,6 +171,35 @@ def test_normalize_non_gene(
             assert new_feat.type == out_type
             if out_description is not None:
                 assert new_feat.qualifiers == feat.qualifiers
+
+
+@pytest.mark.parametrize(
+    "in_type, name, out_type, expectation",
+    [
+        param("mRNA", "", "mRNA", does_not_raise(), id="mRNA no change"),
+        param("C_gene_segment", "", "C_gene_segment", raises(GFFParserError), id="no standard name"),
+        param("C_gene_segment", "immunoglobulin", "IG_C_gene", does_not_raise(), id="C immunoglobulin"),
+        param("C_gene_segment", "ig", "IG_C_gene", does_not_raise(), id="C ig"),
+        param("V_gene_segment", "t-cell", "TR_V_gene", does_not_raise(), id="V t-cell"),
+        param("V_gene_segment", "T_cell", "TR_V_gene", does_not_raise(), id="V T_cell"),
+        param("V_gene_segment", "Lorem Ipsum", "", raises(GFFParserError), id="V T_cell"),
+    ],
+)
+def test_format_gene_segments(
+    in_type: str,
+    name: Optional[List[str]],
+    out_type: str,
+    expectation: ContextManager,
+) -> None:
+    """Test gene create gene for lone CDS."""
+    simp = GFFSimplifier()
+    feat = SeqFeature(None, in_type)
+    if name:
+        feat.qualifiers["standard_name"] = [name]
+    feat.sub_features = []
+    with expectation:
+        new_feat = simp.format_gene_segments(feat)
+        assert new_feat.type == out_type
 
 
 @pytest.mark.parametrize(
