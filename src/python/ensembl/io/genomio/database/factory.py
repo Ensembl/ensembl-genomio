@@ -116,7 +116,7 @@ def get_core_dbs_metadata(
     server = CoreServer(server_url)
     logging.debug("Fetching databases...")
     databases = server.get_cores(
-        prefix=prefix, build=build, version=version, dbname_re=db_regex, db_list=db_list_file,
+        prefix=prefix, build=build, version=version, dbname_re=db_regex, db_list=db_list_file
     )
     logging.info(f"Got {len(databases)} databases")
     logging.debug("\n".join(databases))

@@ -83,7 +83,7 @@ _META = {
                     "division": "brc_db",
                     "accession": "GCA_000111222.3",
                     "release": "110",
-                }
+                },
             ],
             id="VEuPathDB core databases",
         ),
@@ -108,14 +108,14 @@ _META = {
                     "division": "all",
                     "accession": "GCA_000111222.3",
                     "release": "110",
-                }
+                },
             ],
             id="VEuPathDB core databases",
         ),
     ],
 )
 def test_format_db_data(
-    mock_dbconn: Mock, server_url: URL, dbs: List[str], brc_mode: bool, skip_keys:bool, output: List[Dict]
+    mock_dbconn: Mock, server_url: URL, dbs: List[str], brc_mode: bool, skip_keys: bool, output: List[Dict]
 ) -> None:
     """Tests the `factory.format_db_data()` function.
 
@@ -124,7 +124,7 @@ def test_format_db_data(
         server_url: Server URL where all the databases are hosted.
         dbs: List of database names.
         brc_mode: BRC mode?
-        skip_keys: 
+        skip_keys: Return `None` instead of the assigned value for "BRC4.*" meta keys.
         output: Expected list of dictionaries with metadata per database.
     """
 
@@ -132,7 +132,7 @@ def test_format_db_data(
         """Return empty string if "species.division" is requested in BRC mode, "Metazoa" otherwise."""
         if (meta_key == "species.division") and brc_mode:
             return ""
-        elif meta_key.startswith("BRC4.") and skip_keys:
+        if meta_key.startswith("BRC4.") and skip_keys:
             return None
         return _META[meta_key]
 
@@ -162,9 +162,7 @@ def test_format_db_data(
             [{"database": "db1", "species": "dog"}, {"database": "db2", "species": "dog"}],
             id="Get metadata for all databases",
         ),
-        param(
-            True, [{"database": "db1", "species": "dog"}], id="Use file to filter databases"
-        ),
+        param(True, [{"database": "db1", "species": "dog"}], id="Use file to filter databases"),
     ],
 )
 def test_get_core_dbs_metadata(
@@ -184,6 +182,7 @@ def test_get_core_dbs_metadata(
         output: Expected list of dictionaries with some metadata for each selected database.
     """
 
+    # pylint: disable=unused-argument
     def _format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
         """Returns metadata from a list of databases."""
         return [{"database": db, "species": "dog"} for db in dbs]
