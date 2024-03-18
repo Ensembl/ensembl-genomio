@@ -117,9 +117,21 @@ def filter_genome_meta(genome_metadata: Dict[str, Any]) -> Dict[str, Any]:
                         value = value_type(value)
                     filtered_metadata[key][subkey] = value
     # Check assembly and genebuild versions
+    check_assembly_refseq(filtered_metadata)
     check_assembly_version(filtered_metadata)
     check_genebuild_version(filtered_metadata)
     return filtered_metadata
+
+
+def check_assembly_refseq(gmeta_out: Dict[str, Any]) -> None:
+    """Update the GCA accession to use GCF if it is from RefSeq.
+
+    Args:
+        genome_metadata: Nested metadata key values from the core metadata table.
+    """
+    assembly = gmeta_out["assembly"]
+    if assembly.get("provider_name", "") == "RefSeq":
+        assembly["accession"] = assembly["accession"].replace("GCA", "GCF")
 
 
 def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:
