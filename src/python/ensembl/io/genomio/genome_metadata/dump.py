@@ -129,7 +129,7 @@ def check_assembly_refseq(gmeta_out: Dict[str, Any]) -> None:
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
     """
-    assembly = gmeta_out["assembly"]
+    assembly = gmeta_out.get("assembly", {})
     if assembly.get("provider_name", "") == "RefSeq":
         assembly["accession"] = assembly["accession"].replace("GCA", "GCF")
 
