@@ -36,7 +36,7 @@ def main() -> None:
     parser.add_argument_src_path("--in_gff_path", required=True, help="Input GFF3 file")
     parser.add_argument_src_path("--genome_data", required=True, help="Genome JSON file")
     parser.add_argument(
-        "--make_missing_stable_ids", action="store_true", help="Generate stable IDs when missing or invalid"
+        "--fail_missing_stable_ids", action="store_true", help="Do not generate IDs when missing/invalid"
     )
     parser.add_argument_dst_path("--out_gff_path", default=Path("gene_models.gff3"), help="Output GFF3 file")
     parser.add_argument_dst_path(
@@ -67,7 +67,8 @@ def main() -> None:
     # functional annotation JSON file
     logging.info("Simplify and fix GFF3")
     gff_data = GFFSimplifier(args.genome_data)
-    gff_data.stable_ids.make_missing_stable_ids = args.make_missing_stable_ids
+    if args.fail_missing_stable_ids:
+        gff_data.stable_ids.make_missing_stable_ids = False
     gff_data.simpler_gff3(in_gff_path)
     gff_data.records.to_gff(args.out_gff_path)
     gff_data.annotations.to_json(args.out_func_path)
