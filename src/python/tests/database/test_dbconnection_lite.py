@@ -36,9 +36,9 @@ _METADATA_CONTENT = {
 
 # Create a SQLite database fixture with only a meta table and limited data
 @pytest.fixture(name="db_file", scope="session")
-def db_file_test(tmp_path: Path) -> Path:
+def db_file_test(tmp_path_factory: Path) -> Path:
     """Get a path to a db file."""
-    test_db_file = tmp_path / "tmp_sqlite_core.db"
+    test_db_file = tmp_path_factory.mktemp("database") / "tmp_sqlite_core.db"
     return test_db_file
 
 
