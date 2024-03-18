@@ -20,12 +20,14 @@ from typing import Optional
 from unittest.mock import patch
 
 import pytest
+from pytest import TempPathFactory
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
 from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.core.models import Base, Meta
+
 
 _METADATA_CONTENT = {
     "species.scientific_name": ["Lorem Ipsum"],
@@ -36,7 +38,7 @@ _METADATA_CONTENT = {
 
 # Create a SQLite database fixture with only a meta table and limited data
 @pytest.fixture(name="db_file", scope="session")
-def db_file_test(tmp_path_factory: Path) -> Path:
+def db_file_test(tmp_path_factory: TempPathFactory) -> Path:
     """Get a path to a db file."""
     test_db_file = tmp_path_factory.mktemp("database") / "tmp_sqlite_core.db"
     return test_db_file
