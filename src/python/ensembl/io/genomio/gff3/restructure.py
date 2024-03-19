@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Restructure a gene model to a standard representation gene -> [ mRNAs -> [CDSs, exons] ]
+"""Restructure a gene model to a standard representation: `gene -> [ mRNAs -> [CDSs, exons] ]`
 """
 
 __all__ = [
@@ -42,12 +42,15 @@ def restructure_gene(gene: SeqFeature) -> None:
     - Add a transcript if there are no children
     - Move the CDS and exons to an mRNA if they are directly under the gene
 
-    Exception:
-    GFFParserError if there are CDS/exons remaining under the gene after fixes
+    Args:
+        gene: Gene feature to restructure.
+
+    Raises:
+        GFFParserError: If there are CDSs/exons remaining under the gene after applying the fixes.
     """
     # Skip if the children of the gene look ok
     counts = _get_feat_counts(gene)
-    if len(counts) > 0 and not counts.get("CDS") and not counts.get("exon"):
+    if (len(counts) > 0) and not counts.get("CDS") and not counts.get("exon"):
         return
 
     # Make sure the gene has a transcript if nothing else
@@ -68,7 +71,7 @@ def restructure_gene(gene: SeqFeature) -> None:
 def add_transcript_to_naked_gene(gene: SeqFeature) -> None:
     """Add a transcript to a gene without any sub features."""
 
-    if len(gene.sub_features) > 0 or gene.type != "gene":
+    if (len(gene.sub_features) > 0) or (gene.type != "gene"):
         return
 
     transcript = SeqFeature(gene.location, type="transcript")
@@ -84,7 +87,7 @@ def move_only_cdss_to_new_mrna(gene: SeqFeature) -> None:
     """
 
     counts = _get_feat_counts(gene)
-    if len(counts) != 1 or not counts.get("CDS"):
+    if (len(counts) != 1) or not counts.get("CDS"):
         return
 
     transcripts_dict = {}
@@ -119,7 +122,7 @@ def move_only_exons_to_new_mrna(gene: SeqFeature) -> None:
     """
 
     counts = _get_feat_counts(gene)
-    if len(counts) != 1 or not counts.get("exon"):
+    if (len(counts) != 1) or not counts.get("exon"):
         return
 
     transcript = SeqFeature(gene.location, type="mRNA")
@@ -133,13 +136,17 @@ def move_only_exons_to_new_mrna(gene: SeqFeature) -> None:
 def move_cds_to_existing_mrna(gene: SeqFeature) -> None:
     """Move CDS child features of a gene, to the mRNA.
 
-    This is to fix the case where we have the following structure:
-    gene -> [ mRNA, CDSs ]
-    and change it to
-    gene -> [ mRNA -> [ CDSs ] ]
+    This is to fix the case where we have the following structure::
+        gene -> [ mRNA, CDSs ]
+    and change it to::
+        gene -> [ mRNA -> [ CDSs ] ]
     The mRNA itself might have exons, in which case check that they match the CDS coordinates.
 
-    Raises an exception if the feature structure is not recognized.
+    Args:
+        gene: Gene feature to update.
+
+    Raises:
+        GFFParserError: If the feature structure is not recognized.
     """
     counts = _get_feat_counts(gene)
     if not counts.get("mRNA") or not counts.get("CDS"):
@@ -180,7 +187,7 @@ def move_cds_to_existing_mrna(gene: SeqFeature) -> None:
     # If there are exons, check they overlap with the CDSs
     _check_sub_exons(mrna, cdss, sub_exons)
 
-    # No more issues? move the CDSs, and add any new exons
+    # No more issues? Move the CDSs, and add any new exons
     mrna.sub_features += cdss
     # And remove them from the gene
     gene.sub_features = gene_subf_clean
@@ -219,9 +226,14 @@ def _check_sub_exons(mrna: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeat
 def remove_extra_exons(gene: SeqFeature) -> None:
     """Remove duplicated exons existing in both the gene and the mRNAs.
 
-    This is a special case where a gene contains proper mRNAs, etc. but also
-    extra exons for the same features. Those exons usually have an ID starting with
-    "id-", so that's what we use to detect them.
+    This is a special case where a gene contains proper mRNAs, etc. but also extra exons for the same
+    features. Those exons usually have an ID starting with "id-", so that is what we use to detect them.
+    
+    Args:
+        gene: Gene feature to update.
+
+    Raises:
+        GFFParserError: If not all exons of this gene start with "id-".
     """
     counts = _get_feat_counts(gene)
     if not counts.get("mRNA") and not counts.get("exon"):
@@ -244,10 +256,9 @@ def remove_extra_exons(gene: SeqFeature) -> None:
         for exon in exons:
             if exon.id.startswith("id-"):
                 exon_has_id += 1
-        if exon_has_id:
-            if exon_has_id == len(exons):
-                logging.debug(f"Remove {exon_has_id} extra exons from {gene.id}")
-                gene.sub_features = mrnas
-                gene.sub_features += others
-            else:
-                raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
+        if exon_has_id == len(exons):
+            logging.debug(f"Remove {exon_has_id} extra exons from {gene.id}")
+            gene.sub_features = mrnas
+            gene.sub_features += others
+        else:
+            raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
