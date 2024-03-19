@@ -143,11 +143,20 @@ def add_species_metadata(genome_metadata: Dict, ncbi_data: Dict) -> None:
 
     """
     species = genome_metadata.setdefault("species", {})
-    taxon_data = ncbi_data["assembly_info"]["biosample"]["description"]
-    if not "taxonomy_id" in species:
-        species["taxonomy_id"] = taxon_data["organism"]["tax_id"]
-    if not "scientific_name" in species:
-        species["scientific_name"] = taxon_data["title"]
+    try:
+        organism = ncbi_data["organism"]
+    except KeyError:
+        return
+
+    if "tax_id" in organism:
+        species.setdefault("taxonomy_id", organism["tax_id"])
+    if "organism_name" in organism:
+        species.setdefault("scientific_name", organism["organism_name"])
+
+    try:
+        species.setdefault("strain", organism["infraspecific_names"]["strain"])
+    except KeyError:
+        pass
 
 
 def prepare_genome_metadata(
