@@ -25,7 +25,7 @@ process PREPARE_GENOME_METADATA {
     shell:
     output_json = "genome.json"
     '''
-    accession=$(jq '.["assembly"]["accession"]' genome.json | sed 's/"//g')
+    accession=$(jq '.["assembly"]["accession"]' !{input_json} | sed 's/"//g')
     datasets summary genome accession $accession | jq '.' > ncbi_meta.json
     genome_metadata_prepare --input_file !{input_json} --output_file !{output_json} --ncbi_meta ncbi_meta.json
     '''

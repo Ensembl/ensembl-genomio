@@ -77,7 +77,7 @@ workflow GENOME_PREPARE {
         amended_genome = AMEND_GENOME_DATA(genome_data_files).amended_json
 
         // Group files
-        prepared_files = amended_genome.concat(
+        prepared_files = amended_genome.mix(
                 gene_models,
                 functional_annotation,
                 fasta_pep,
