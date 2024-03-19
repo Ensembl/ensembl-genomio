@@ -69,7 +69,7 @@ def restructure_gene(gene: SeqFeature) -> None:
 
 
 def add_transcript_to_naked_gene(gene: SeqFeature) -> None:
-    """Add a transcript to a gene without any sub features."""
+    """Add an unspecific transcript to a gene without any sub features."""
 
     if (len(gene.sub_features) > 0) or (gene.type != "gene"):
         return
