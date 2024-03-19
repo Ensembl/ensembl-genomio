@@ -122,8 +122,9 @@ class GFFSimplifier:
 
             if self.fail_types:
                 fail_errors = "\n   ".join(self.fail_types.keys())
-                if self.skip_unrecognized:
-                    raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
+                logging.warning(f"Unrecognized types found:\n   {fail_errors}")
+                if not self.skip_unrecognized:
+                    raise GFFParserError(f"Unrecognized types found, abort")
 
     def simpler_gff3_feature(self, feat: SeqFeature) -> Optional[SeqFeature]:
         """Creates a simpler version of a GFF3 feature.
@@ -164,8 +165,7 @@ class GFFSimplifier:
         if gene.type not in allowed_gene_types:
             self.fail_types["gene=" + gene.type] = 1
             logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
-            if self.skip_unrecognized:
-                return None
+            return None
 
         # Normalize, store annotation, and return the cleaned up gene
         gene = self.normalize_gene(gene)
@@ -305,7 +305,6 @@ class GFFSimplifier:
 
         allowed_transcript_types = self._biotypes["transcript"]["supported"]
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
-        skip_unrecognized = self.skip_unrecognized
 
         transcripts_to_delete = []
         for count, transcript in enumerate(gene.sub_features):
@@ -317,9 +316,8 @@ class GFFSimplifier:
                 logging.warning(
                     f"Unrecognized transcript type: {transcript.type}" f" for {transcript.id} ({gene.id})"
                 )
-                if skip_unrecognized:
-                    transcripts_to_delete.append(count)
-                    continue
+                transcripts_to_delete.append(count)
+                continue
 
             # New transcript ID
             transcript_number = count + 1
@@ -364,9 +362,8 @@ class GFFSimplifier:
                     f"Unrecognized exon type for {feat.type}: {feat.id}"
                     f" (for transcript {transcript.id} of type {transcript.type})"
                 )
-                if self.skip_unrecognized:
-                    exons_to_delete.append(tcount)
-                    continue
+                exons_to_delete.append(tcount)
+                continue
 
         if exons_to_delete:
             for elt in sorted(exons_to_delete, reverse=True):
