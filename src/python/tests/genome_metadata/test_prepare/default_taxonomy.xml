@@ -1,0 +1,8 @@
+<ASSEMBLY_SET>
+  <ASSEMBLY accession="GCA_013436015.2" alias="TxGen Rann" center_name="USDA-Agricultural Research Service, USA">
+    <TAXON>
+      <TAXON_ID>34611</TAXON_ID>
+      <SCIENTIFIC_NAME>Rhipicephalus annulatus</SCIENTIFIC_NAME>
+    </TAXON>
+  </ASSEMBLY>
+</ASSEMBLY_SET>
