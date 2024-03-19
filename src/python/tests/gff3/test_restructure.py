@@ -241,14 +241,14 @@ def test_move_cds_to_existing_mrna(
     [
         param(["tRNA"], 0, ["tRNA"], does_not_raise(), id="tRNA only, skip"),
         param(["mRNA"], 0, ["mRNA"], does_not_raise(), id="mRNA only, skip"),
-        param(["mRNA", "exon"], 0, ["mRNA", "exon"], does_not_raise(), id="mRNA and 1 exon without id"),
+        param(["mRNA", "exon"], 0, ["mRNA", "exon"], raises(GFFParserError), id="mRNA and 1 exon without id"),
         param(["mRNA", "exon"], 1, ["mRNA"], does_not_raise(), id="mRNA and 1 exon with id"),
         param(
             [{"mRNA": ["exon"]}, "exon"],
             1,
             [{"mRNA": ["exon"]}],
             does_not_raise(),
-            id="mRNA and 1 exon with id",
+            id="mRNA with exon and 1 exon with id",
         ),
         param(
             [{"mRNA": ["exon"]}, "exon", "exon"],
