@@ -196,13 +196,13 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--output_file", required=True, help="Output path for the new genome metadata file"
     )
-    parser.add_argument_src_path("--ncbi_meta", required=True, help="JSON file from NCBI datasets for this accession.")
+    parser.add_argument_src_path(
+        "--ncbi_meta", required=True, help="JSON file from NCBI datasets for this accession."
+    )
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
 
     prepare_genome_metadata(
-        input_file=args.input_file,
-        output_file=args.output_file,
-        ncbi_meta=args.ncbi_meta
+        input_file=args.input_file, output_file=args.output_file, ncbi_meta=args.ncbi_meta
     )

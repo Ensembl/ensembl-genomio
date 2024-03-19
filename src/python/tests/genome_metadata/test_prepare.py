@@ -154,7 +154,11 @@ def test_add_genebuild_metadata(
         ),
         pytest.param(
             "refseq_genome.json",
-            {"tax_id": 34611, "organism_name": "Rhipicephalus annulatus", "infraspecific_names": {"strain": "Klein Grass"}},
+            {
+                "tax_id": 34611,
+                "organism_name": "Rhipicephalus annulatus",
+                "infraspecific_names": {"strain": "Klein Grass"},
+            },
             {"taxonomy_id": 34611, "scientific_name": "Rhipicephalus annulatus", "strain": "Klein Grass"},
             id="Add strain taxonomy information",
         ),
