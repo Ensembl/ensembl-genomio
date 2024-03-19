@@ -301,7 +301,7 @@ class GFFSimplifier:
             self.remove_cds_from_pseudogene(gene)
 
     def normalize_transcripts(self, gene: SeqFeature) -> None:
-        """Returns a normalized transcript."""
+        """Normalizes a transcript."""
 
         allowed_transcript_types = self._biotypes["transcript"]["supported"]
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
