@@ -78,12 +78,20 @@ workflow GENOME_PREPARE {
 
         // Group files
         prepared_files = amended_genome.mix(
+                seq_region,
+                fasta_dna,
                 gene_models,
                 functional_annotation,
                 fasta_pep,
-                seq_region,
-                fasta_dna
             )
+            .map{ meta, file ->
+                key = meta
+                if (meta["annotations"]) {
+                    key = groupKey(meta, 6)
+                } else {
+                    key = groupKey(meta, 3)
+                }
+                [key, file] }
             .groupTuple()
 
         // Checks and generate sequence stats for manifest
