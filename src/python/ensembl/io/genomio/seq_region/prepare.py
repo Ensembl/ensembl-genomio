@@ -160,9 +160,14 @@ def add_mitochondrial_codon_table(seq_regions: List[SeqRegion], taxon_id: int) -
         taxon_id: The species taxon ID.
 
     """
-    url = f"https://www.ebi.ac.uk/ena/data/taxonomy/v1/taxon/tax-id/{str(taxon_id)}"
+    url = f"https://www.ebi.ac.uk/ena/taxonomy/rest/tax-id/{str(taxon_id)}"
     response = requests.get(url, headers={"Content-Type": "application/json"}, timeout=60)
+    response.raise_for_status()
+    # In case we've been redirected, check for html opening tag
+    if response.text.startswith("<"):
+        raise ValueError(f"Response from {url} is not JSON")
     decoded = response.json()
+
     if "mitochondrialGeneticCode" not in decoded:
         logging.warning("No mitochondria genetic code found for taxon {taxon_id}")
     else:
