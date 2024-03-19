@@ -102,56 +102,51 @@ def test_add_transcript_to_naked_gene(children: List[Any], expected_children: Li
 
 
 @pytest.mark.parametrize(
-    "children, expected_children, expectation",
+    "children, expected_children",
     [
-        param(["mRNA"], ["mRNA"], does_not_raise(), id="One mRNA, skip"),
-        param(["CDS"], [{"mRNA": ["CDS", "exon"]}], does_not_raise(), id="One CDS, add mRNA"),
+        param(["mRNA"], ["mRNA"], id="One mRNA, skip"),
+        param(["CDS"], [{"mRNA": ["CDS", "exon"]}], id="One CDS, add mRNA"),
         param(
             ["CDS", "CDS"],
             [{"mRNA": ["CDS", "exon", "CDS", "exon"]}],
-            does_not_raise(),
             id="2 CDSs, add mRNA",
         ),
-        param(["exon"], ["exon"], does_not_raise(), id="One exon, skip"),
-        param(["CDS", "exon"], ["CDS", "exon"], does_not_raise(), id="1 CDS + 1 exon, skip"),
+        param(["exon"], ["exon"], id="One exon, skip"),
+        param(["CDS", "exon"], ["CDS", "exon"], id="1 CDS + 1 exon, skip"),
     ],
 )
 def test_move_only_cdss_to_new_mrna(
     children: List[str],
     expected_children: Dict[str, int],
-    expectation: ContextManager,
 ) -> None:
     """Test the creation of a new mRNA for CDSs under a gene."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gene.sub_features += gen.make_structure(children)
-    with expectation:
-        move_only_cdss_to_new_mrna(gene)
-        assert gen.get_sub_structure(gene) == {"gene": expected_children}
+    move_only_cdss_to_new_mrna(gene)
+    assert gen.get_sub_structure(gene) == {"gene": expected_children}
 
 
 @pytest.mark.parametrize(
-    "children, expected_children, expectation",
+    "children, expected_children",
     [
-        param(["mRNA"], ["mRNA"], does_not_raise(), id="mRNA only, skip"),
-        param(["CDS"], ["CDS"], does_not_raise(), id="1 CDS, skip"),
-        param(["CDS", "exon"], ["CDS", "exon"], does_not_raise(), id="CDS + exon, skip"),
-        param(["exon"], [{"mRNA": ["exon"]}], does_not_raise(), id="1 exon moved"),
-        param(["exon", "exon"], [{"mRNA": ["exon", "exon"]}], does_not_raise(), id="2 exons moved"),
+        param(["mRNA"], ["mRNA"], id="mRNA only, skip"),
+        param(["CDS"], ["CDS"], id="1 CDS, skip"),
+        param(["CDS", "exon"], ["CDS", "exon"], id="CDS + exon, skip"),
+        param(["exon"], [{"mRNA": ["exon"]}], id="1 exon moved"),
+        param(["exon", "exon"], [{"mRNA": ["exon", "exon"]}], id="2 exons moved"),
     ],
 )
 def test_move_only_exons_to_new_mrna(
     children: List[str],
     expected_children: Dict[str, int],
-    expectation: ContextManager,
 ) -> None:
     """Test the creation of a new mRNA for exons under a gene."""
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gene.sub_features += gen.make_structure(children)
-    with expectation:
-        move_only_exons_to_new_mrna(gene)
-        assert gen.get_sub_structure(gene) == {"gene": expected_children}
+    move_only_exons_to_new_mrna(gene)
+    assert gen.get_sub_structure(gene) == {"gene": expected_children}
 
 
 @pytest.mark.parametrize(
