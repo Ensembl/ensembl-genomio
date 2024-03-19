@@ -65,15 +65,22 @@ class GFFSimplifier:
         GFFParserError: If an error cannot be automatically fixed.
     """
 
-    # pylint: disable=too-many-public-methods
-    # Some rework needed at some point
+    def __init__(
+        self,
+        genome_path: Optional[PathLike] = None,
+        skip_unrecognized: Optional[bool] = True,
+        allow_pseudogene_with_cds: Optional[bool] = False,
+    ):
+        """Create an object that simplifies `SeqFeature` objects.
 
-    # Multiple parameters to automate various fixes
-    skip_unrecognized = True
-    gene_cds_skip_others = False
-    allow_pseudogene_with_cds = False
+        Args:
+            genome_path: Genome metadata file.
+            skip_unrecognized: If a biotype is unknown, don't include it. Raise GFFParserError otherwise.
+            allow_pseudogene_with_cds: Keep CDSs under pseudogenes that have them. Delete them otherwise.
+        """
+        self.skip_unrecognized = skip_unrecognized
+        self.allow_pseudogene_with_cds = allow_pseudogene_with_cds
 
-    def __init__(self, genome_path: Optional[PathLike] = None):
         # Load biotypes
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
         self._biotypes = get_json(biotypes_json)
