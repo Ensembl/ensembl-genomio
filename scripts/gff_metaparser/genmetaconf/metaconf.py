@@ -25,6 +25,7 @@ import sys
 
 from collections import defaultdict
 from os.path import abspath, dirname, join as pj
+from typing import Dict, List, Optional
 
 from Bio import SeqIO  # type: ignore
 
@@ -117,6 +118,7 @@ class MetaConf:
             if "organism" in qualifiers:
                 sci_name = qualifiers["organism"][0]
                 self.update("species.scientific_name", sci_name)
+                self.update("organism.scientific_name", sci_name)
             if "strain" in qualifiers:
                 strain = qualifiers["strain"][0]
                 self.update("species.strain", strain)
@@ -141,6 +143,23 @@ class MetaConf:
                         asm_name = self.normalise_asm_name(asm_name)
                         self.update("assembly.name", asm_name)
 
+    def report_meta_value(self, line: str, pat: str) -> Optional[str]:
+        if not line: return None
+        if not pat: return None
+        if re.match(pat, line):
+            (_tag, value, *_rest) = line.split(sep=":", maxsplit=1)
+            value = self.normalise_asm_name(value)
+            return value
+        return None
+
+    def update_from_report_meta_value(self, line: str, pat: str, meta_key: str):
+        if not line: return None
+        if not pat: return None
+        if not meta_key: return None
+        value = self.report_meta_value(line, pat)
+        if value:
+            self.update(meta_key, value)
+
     def merge_from_asm_rep(self, asm_rep_file):
         if not asm_rep_file:
             return
@@ -150,12 +169,14 @@ class MetaConf:
         with _open(asm_rep_file, "rt") as asm_rep:
             for line in asm_rep:
                 # Assembly name:  cgigas_uk_roslin_v1
-                if re.match(r"#\s+Assembly name:", line):
-                    (_tag, asm_name, *_rest) = line.split(sep=":", maxsplit=1)
-                    asm_name = self.normalise_asm_name(asm_name)
-                    self.update("assembly.name", asm_name)
-                    break
-        return
+                self.update_from_report_meta_value(line, r"#\s+Assembly name:", "assembly.name")
+                # BioSample:      SAMEA110187692
+                self.update_from_report_meta_value(line, r"#\s+Biosample:", "organism.biosample_id")
+                # GenBank assembly accession: GCA_947086385.1
+                self.update_from_report_meta_value(line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc")
+                # RefSeq assembly accession: GCF_947086385.1
+                self.update_from_report_meta_value(line, r"#\s+RefSeq assembly accession:", "assembly.accession_refseq")
+                # RefSeq assembly and GenBank assemblies identical: yes
 
     def update_from_dict(self, d, k, tech=False):
         if d is None:
@@ -184,6 +205,12 @@ class MetaConf:
         _prod_name = _sci_name.strip().lower()
         _prod_name = "_".join(re.sub(r"[^a-z0-9A-Z]+", "_", _prod_name).split("_")[:2])
         _prod_name = ("%s_%s" % (_prod_name, _acc)).lower().replace(" ", "_")
+        # organism metadata
+        taxon_id = int(self.get("TAXON_ID", tech=True))
+        # adding duplicates of taxonomy_ids to deal with RapidRelease/MVP requirements
+        self.update("organism.taxonomy_id", taxon_id)
+        self.update("organism.species_taxonomy_id", taxon_id)
+
         # possibly add annotation source suffix
         _ann_source_sfx = self.get("ANNOTATION_SOURCE_SFX", tech=True, default="").strip()
         _ann_source_sfx = self.normalise_asm_name(_ann_source_sfx).replace("_", "").lower()[:2]
@@ -238,11 +265,16 @@ class MetaConf:
             "assembly.provider_name",
             "assembly.provider_url",
             "assembly.accession",
+            "assembly.accession_insdc",
+            "assembly.accession_refseq",
             "assembly.name",
             "genebuild.method",
             "genebuild.method_display",
             "genebuild.start_date",
             "genebuild.version",
+            # NO organism metadata part at the moment
+            # "organism.biosample_id",
+            # "organism.scientific_name",
             "*species.alias",
             "species.annotation_source",
             "species.display_name",
