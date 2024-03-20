@@ -265,8 +265,9 @@ class MetaConf:
             "assembly.provider_name",
             "assembly.provider_url",
             "assembly.accession",
-            "assembly.accession_insdc",
-            "assembly.accession_refseq",
+            # not yet supported in genome.json schema
+            # "assembly.accession_insdc",
+            # "assembly.accession_refseq",
             "assembly.name",
             "genebuild.method",
             "genebuild.method_display",
