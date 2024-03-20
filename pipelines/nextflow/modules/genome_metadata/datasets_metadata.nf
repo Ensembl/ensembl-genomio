@@ -15,6 +15,7 @@
 
 process DATASETS_METADATA {
     label 'local'
+    label 'cached'
 
     input:
         path(input_json, stageAs: "input_genome.json")
