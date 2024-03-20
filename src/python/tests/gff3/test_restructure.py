@@ -22,14 +22,7 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
-from ensembl.io.genomio.gff3.restructure import (
-    restructure_gene,
-    add_transcript_to_naked_gene,
-    move_only_cdss_to_new_mrna,
-    move_only_exons_to_new_mrna,
-    move_cds_to_existing_mrna,
-    remove_extra_exons,
-)
+from ensembl.io.genomio.gff3 import restructure
 
 
 class FeatGenerator:
@@ -97,7 +90,7 @@ def test_add_transcript_to_naked_gene(children: List[Any], expected_children: Li
     """Test the creation of a transcript for a gene without one."""
     gen = FeatGenerator()
     genes = gen.make_structure(children)
-    add_transcript_to_naked_gene(genes[0])
+    restructure.add_transcript_to_naked_gene(genes[0])
     assert gen.get_sub_structure(genes[0]) == expected_children[0]
 
 
@@ -123,7 +116,7 @@ def test_move_only_cdss_to_new_mrna(
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gene.sub_features += gen.make_structure(children)
-    move_only_cdss_to_new_mrna(gene)
+    restructure.move_only_cdss_to_new_mrna(gene)
     assert gen.get_sub_structure(gene) == {"gene": expected_children}
 
 
@@ -145,7 +138,7 @@ def test_move_only_exons_to_new_mrna(
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gene.sub_features += gen.make_structure(children)
-    move_only_exons_to_new_mrna(gene)
+    restructure.move_only_exons_to_new_mrna(gene)
     assert gen.get_sub_structure(gene) == {"gene": expected_children}
 
 
@@ -227,7 +220,7 @@ def test_move_cds_to_existing_mrna(
                         sub2.location += 10
 
     with expectation:
-        move_cds_to_existing_mrna(gene)
+        restructure.move_cds_to_existing_mrna(gene)
         assert gen.get_sub_structure(gene) == {"gene": expected_children}
 
 
@@ -283,7 +276,7 @@ def test_remove_extra_exons(
                 break
 
     with expectation:
-        remove_extra_exons(gene)
+        restructure.remove_extra_exons(gene)
         assert gen.get_sub_structure(gene) == {"gene": expected_children}
 
 
@@ -305,5 +298,5 @@ def test_restructure_gene(
     gene = gen.make("gene", 1)[0]
     gene.sub_features += gen.make_structure(children)
     with expectation:
-        restructure_gene(gene)
+        restructure.restructure_gene(gene)
         assert gen.get_sub_structure(gene) == {"gene": expected_children}
