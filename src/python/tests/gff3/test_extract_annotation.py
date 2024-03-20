@@ -12,22 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.gff3.extract_annotation` module.
-
-The unit testing is divided into one test class per submodule/class found in this module, and one test method
-per public function/class method.
-
-Typical usage example::
-    $ pytest test_extract_annotation.py
-
-"""
+"""Unit testing of `ensembl.io.genomio.gff3.extract_annotation` module."""
 
 from contextlib import nullcontext as does_not_raise
-from typing import ContextManager, Optional
+from typing import ContextManager, Dict, List, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest
-from pytest import raises
+from pytest import raises, param
 
 from ensembl.io.genomio.gff3.extract_annotation import (
     FunctionalAnnotations,
@@ -201,6 +193,50 @@ def test_add_feature_fail(
     annot.add_feature(parent, "gene")
     with expected:
         annot.add_feature(child, child_type, out_parent_id)
+
+
+@pytest.mark.parametrize(
+    "in_xrefs, genome, expected_xrefs",
+    [
+        param(None, None, [], id="No xref"),
+        param([], None, [], id="Empty xref"),
+        param(["DBname:Value"], None, [{"dbname": "DBname", "id": "Value"}], id="One xref"),
+        param(
+            ["DBname:Value:parts"],
+            None,
+            [{"dbname": "DBname", "id": "Value:parts"}],
+            id="One xref with colon",
+        ),
+        param(["GO:XXX"], None, [], id="Ignore GO"),
+        param(["GenBank:XXX"], None, [{"dbname": "GenBank", "id": "XXX"}], id="Genbank"),
+        param(
+            ["GenBank:XXX"],
+            {"assembly": {"provider_name": "RefSeq"}},
+            [{"dbname": "RefSeq", "id": "XXX"}],
+            id="RefSeq",
+        ),
+        param(["GenBank:XXX"], {}, [{"dbname": "GenBank", "id": "XXX"}], id="Empty genome"),
+        param(
+            ["GenBank:XXX"],
+            {"assembly": {}},
+            [{"dbname": "GenBank", "id": "XXX"}],
+            id="No provider in genome",
+        ),
+    ],
+)
+def test_get_xrefs(
+    in_xrefs: Optional[List[str]], genome: Optional[Dict], expected_xrefs: List[Dict[str, str]]
+) -> None:
+    """Tests the `FunctionaAnnotation.get_xrefs()` method."""
+    annot = FunctionalAnnotations()
+    one_gene = SeqFeature(type="gene")
+    if in_xrefs is not None:
+        one_gene.qualifiers["Dbxref"] = in_xrefs
+    if genome is not None:
+        annot.genome = genome
+
+    out_xrefs = annot.get_xrefs(one_gene)
+    assert out_xrefs == expected_xrefs
 
 
 @pytest.mark.parametrize(
