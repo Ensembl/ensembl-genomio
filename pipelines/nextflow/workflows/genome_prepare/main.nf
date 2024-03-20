@@ -32,6 +32,7 @@ if (params.brc_mode) {
 include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/main.nf'
 // Import module
 include { PREPARE_GENOME_METADATA } from '../../modules/genome_metadata/prepare_genome_metadata.nf'
+include { DATASETS_METADATA } from '../../modules/genome_metadata/datasets_metadata.nf'
 // Utilities
 include { read_json } from '../../modules/utils/utils.nf'
 
@@ -61,7 +62,7 @@ def meta_from_genome_json(json_path) {
 // Run main workflow
 workflow {
     ch_genome_json = Channel.fromPath("${params.input_dir}/*.json", checkIfExists: true)
-    PREPARE_GENOME_METADATA(ch_genome_json)
+    PREPARE_GENOME_METADATA(DATASETS_METADATA(ch_genome_json))
 
     PREPARE_GENOME_METADATA.out.genomic_dataset
         .map{ json_file -> tuple(meta_from_genome_json(json_file), json_file) }

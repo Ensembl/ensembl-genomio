@@ -13,18 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process PREPARE_GENOME_METADATA {
+process DATASETS_METADATA {
     label 'local'
 
     input:
-        tuple path(input_json), path(ncbi_json)
+        path(input_json, stageAs: "input_genome.json")
 
     output:
-        path ("genome.json"), emit: genomic_dataset
+        tuple path("input_genome.json", includeInputs: true), path("ncbi_meta.json")
         
     shell:
-    output_json = "genome.json"
-    '''
-    genome_metadata_prepare --input_file !{input_json} --output_file !{output_json} --ncbi_meta !{ncbi_json}
-    '''
+        '''
+        accession=$(jq -r '.["assembly"]["accession"]' !{input_json})
+        datasets summary genome accession $accession | jq '.' > ncbi_meta.json
+        '''
+    
+    stub:
+        """
+        echo '{"reports":[{"organism":{"tax_id":1000}}]}' > ncbi_meta.json
+        """
 }
