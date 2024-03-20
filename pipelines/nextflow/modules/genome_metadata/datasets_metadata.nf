@@ -27,6 +27,10 @@ process DATASETS_METADATA {
         '''
         accession=$(jq -r '.["assembly"]["accession"]' !{input_json})
         datasets summary genome accession $accession | jq '.' > ncbi_meta.json
+        if [ ! -s "ncbi_meta.json" ]; then
+            echo "No Metadata from datasets for $accession"
+            exit 1
+        fi
         '''
     
     stub:
