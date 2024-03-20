@@ -164,15 +164,27 @@ def test_move_only_exons_to_new_mrna(
             does_not_raise(),
             id="1 mRNA + 2 CDS",
         ),
-        param(["mRNA", "mRNA", "CDS"], False, [], raises(GFFParserError), id="2 mRNA only + CDS, fail"),
+        param(
+            ["mRNA", "mRNA", "CDS"],
+            False,
+            [],
+            raises(GFFParserError, match="contains several mRNAs"),
+            id="2 mRNA only + CDS, fail",
+        ),
         param(
             ["mRNA", "mRNA", "CDS", "exon"],
             False,
             [],
-            raises(GFFParserError),
+            raises(GFFParserError, match="contains several mRNAs"),
             id="2 mRNA only + CDS + exon, fail",
         ),
-        param([{"mRNA": ["CDS"]}, "CDS"], False, [], raises(GFFParserError), id="1 mRNA/CDS + 1 CDS, fail"),
+        param(
+            [{"mRNA": ["CDS"]}, "CDS"],
+            False,
+            [],
+            raises(GFFParserError, match="children in both"),
+            id="1 mRNA/CDS + 1 CDS, fail",
+        ),
         param(
             [{"mRNA": ["exon"]}, "CDS"],
             False,
@@ -180,7 +192,13 @@ def test_move_only_exons_to_new_mrna(
             does_not_raise(),
             id="1 mRNA/exon + 1 CDS same",
         ),
-        param([{"mRNA": ["exon"]}, "CDS"], True, [], raises(GFFParserError), id="1 mRNA/exon + 1 CDS diff"),
+        param(
+            [{"mRNA": ["exon"]}, "CDS"],
+            True,
+            [],
+            raises(GFFParserError, match="do not match"),
+            id="1 mRNA/exon + 1 CDS diff",
+        ),
         param(
             [{"mRNA": ["extra"]}, "CDS"],
             False,
@@ -192,7 +210,7 @@ def test_move_only_exons_to_new_mrna(
             [{"mRNA": ["exon", "exon"]}, "CDS"],
             True,
             [],
-            raises(GFFParserError),
+            raises(GFFParserError, match="different count"),
             id="1 mRNA/2exon + 1 CDS same",
         ),
     ],
@@ -229,7 +247,13 @@ def test_move_cds_to_existing_mrna(
     [
         param(["tRNA"], 0, ["tRNA"], does_not_raise(), id="tRNA only, skip"),
         param(["mRNA"], 0, ["mRNA"], does_not_raise(), id="mRNA only, skip"),
-        param(["mRNA", "exon"], 0, ["mRNA", "exon"], raises(GFFParserError), id="mRNA and 1 exon without id"),
+        param(
+            ["mRNA", "exon"],
+            0,
+            ["mRNA", "exon"],
+            raises(GFFParserError, match="not all start"),
+            id="mRNA and 1 exon without id",
+        ),
         param(["mRNA", "exon"], 1, ["mRNA"], does_not_raise(), id="mRNA and 1 exon with id"),
         param(
             [{"mRNA": ["exon"]}, "exon"],
@@ -242,7 +266,7 @@ def test_move_cds_to_existing_mrna(
             [{"mRNA": ["exon"]}, "exon", "exon"],
             1,
             [],
-            raises(GFFParserError),
+            raises(GFFParserError, match="not all start"),
             id="mRNA and 2 exons with partial id-",
         ),
         param(
@@ -285,8 +309,18 @@ def test_remove_extra_exons(
     [
         param([{"mRNA": ["CDS", "exon"]}], [{"mRNA": ["CDS", "exon"]}], does_not_raise(), id="OK gene"),
         param(["mRNA", "CDS"], [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="mRNA + CDS, fixed"),
-        param([{"mRNA": ["CDS", "exon"]}, "CDS"], [], raises(GFFParserError), id="Gene + extra CDS, fail"),
-        param([{"mRNA": ["CDS", "exon"]}, "exon"], [], raises(GFFParserError), id="Gene + extra exon, fail"),
+        param(
+            [{"mRNA": ["CDS", "exon"]}, "CDS"],
+            [],
+            raises(GFFParserError, match="in both"),
+            id="Gene + extra CDS, fail",
+        ),
+        param(
+            [{"mRNA": ["CDS", "exon"]}, "exon"],
+            [],
+            raises(GFFParserError, match="not all start"),
+            id="Gene + extra exon, fail",
+        ),
     ],
 )
 def test_restructure_gene(
