@@ -124,7 +124,7 @@ class GFFSimplifier:
                 fail_errors = "\n   ".join(self.fail_types.keys())
                 logging.warning(f"Unrecognized types found:\n   {fail_errors}")
                 if not self.skip_unrecognized:
-                    raise GFFParserError(f"Unrecognized types found, abort")
+                    raise GFFParserError("Unrecognized types found, abort")
 
     def simpler_gff3_feature(self, feat: SeqFeature) -> Optional[SeqFeature]:
         """Creates a simpler version of a GFF3 feature.

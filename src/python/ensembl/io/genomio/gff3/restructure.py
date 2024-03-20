@@ -228,7 +228,7 @@ def remove_extra_exons(gene: SeqFeature) -> None:
 
     This is a special case where a gene contains proper mRNAs, etc. but also extra exons for the same
     features. Those exons usually have an ID starting with "id-", so that is what we use to detect them.
-    
+
     Args:
         gene: Gene feature to update.
 
