@@ -14,21 +14,21 @@
 // limitations under the License.
 
 process DATASETS_METADATA {
+    tag "$accession"
     label 'local'
     label 'cached'
 
     input:
-        path(input_json, stageAs: "input_genome.json")
+        val(accession)
 
     output:
-        tuple path("input_genome.json", includeInputs: true), path("ncbi_meta.json")
+        tuple val(accession), path("ncbi_meta.json")
         
     shell:
         '''
-        accession=$(jq -r '.["assembly"]["accession"]' !{input_json})
-        datasets summary genome accession $accession | jq '.' > ncbi_meta.json
+        datasets summary genome accession !{accession} | jq '.' > ncbi_meta.json
         if [ ! -s "ncbi_meta.json" ]; then
-            echo "No Metadata from datasets for $accession"
+            echo "No Metadata from datasets for !{accession}"
             exit 1
         fi
         '''
