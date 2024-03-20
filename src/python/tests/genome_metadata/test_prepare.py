@@ -190,6 +190,7 @@ def test_add_species_metadata(
     assert not DeepDiff(genome_metadata["species"], output)
 
 
+@patch("datetime.date")
 @pytest.mark.parametrize(
     "input_filename, ncbi_filename, expected_filename",
     [
@@ -208,6 +209,7 @@ def test_add_species_metadata(
     ],
 )
 def test_prepare_genome_metadata(
+    mock_date: Mock,
     tmp_path: Path,
     data_dir: Path,
     assert_files: Callable[[Path, Path], None],
@@ -222,6 +224,9 @@ def test_prepare_genome_metadata(
         ncbi_filename: NCBI dataset json input.
         expected_filename: Genome json input expected output.
     """
+    mock_date.today.return_value = mock_date
+    mock_date.isoformat.return_value = "2024-03-19"
+
     input_file = data_dir / input_filename
     ncbi_meta = data_dir / ncbi_filename
     output_file = tmp_path / expected_filename
