@@ -50,12 +50,17 @@ def meta_from_genome_json(json_path) {
         prod_name = data.species.production_name
         publish_dir = prod_name
     }
+    has_annotation = false
+    if (data.annotation) {
+        has_annotation = true
+    }
 
     return [
         accession: data.assembly.accession,
         production_name: prod_name,
         publish_dir: publish_dir,
         prefix: "",
+        has_annotation: has_annotation,
     ]
 }
 

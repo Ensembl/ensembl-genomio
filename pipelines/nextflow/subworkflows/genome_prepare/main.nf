@@ -86,7 +86,7 @@ workflow GENOME_PREPARE {
             )
             .map{ meta, file ->
                 key = meta
-                if (meta["annotation"]) {
+                if (meta["has_annotation"]) {
                     key = groupKey(meta, 6)
                 } else {
                     key = groupKey(meta, 3)
