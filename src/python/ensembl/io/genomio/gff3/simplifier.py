@@ -452,10 +452,14 @@ class GFFSimplifier:
 
         Change the representation from the form `gene[ primary_transcript[ exon, miRNA[ exon ] ] ]`
         to `gene[ primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
+
+        Raises:
+            GFFParserError: If gene has more than 1 transcript, the transcript was not formatted
+                correctly or there are unknown sub-features.
         """
 
         transcript = gene.sub_features
-        if len(transcript) == 0 or transcript[0].type != "primary_transcript":
+        if (len(transcript) == 0) or (transcript[0].type != "primary_transcript"):
             return []
         if len(transcript) > 1:
             raise GFFParserError(f"Gene has too many sub_features for miRNA {gene.id}")
@@ -485,7 +489,7 @@ class GFFSimplifier:
 
         all_genes = [gene] + new_genes
 
-        # Normalize like normal genes
+        # Normalize like other genes
         all_genes_cleaned = []
         for new_gene in all_genes:
             new_gene = self.normalize_gene(new_gene)
