@@ -22,7 +22,6 @@ __all__ = [
     "GFFSimplifier",
 ]
 
-from collections import Counter
 import json
 import logging
 from os import PathLike
@@ -39,6 +38,7 @@ import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
+from .restructure import restructure_gene
 
 
 class Records(list):
@@ -65,15 +65,25 @@ class GFFSimplifier:
         GFFParserError: If an error cannot be automatically fixed.
     """
 
-    # pylint: disable=too-many-public-methods
-    # Some rework needed at some point
+    def __init__(
+        self,
+        genome_path: Optional[PathLike] = None,
+        skip_unrecognized: Optional[bool] = True,
+        allow_pseudogene_with_cds: Optional[bool] = False,
+    ):
+        """Create an object that simplifies `SeqFeature` objects.
 
-    # Multiple parameters to automate various fixes
-    skip_unrecognized = True
-    gene_cds_skip_others = False
-    allow_pseudogene_with_CDS = False
+        Args:
+            genome_path: Genome metadata file.
+            skip_unrecognized: Do not include unknown biotypes instead of raising an exception.
+            allow_pseudogene_with_cds: Keep CDSs under pseudogenes that have them. Delete them otherwise.
 
-    def __init__(self, genome_path: Optional[PathLike] = None):
+        Raises:
+            GFFParserError: If a biotype is unknown and `skip_unrecognized` is False.
+        """
+        self.skip_unrecognized = skip_unrecognized
+        self.allow_pseudogene_with_cds = allow_pseudogene_with_cds
+
         # Load biotypes
         biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
         self._biotypes = get_json(biotypes_json)
@@ -115,8 +125,9 @@ class GFFSimplifier:
 
             if self.fail_types:
                 fail_errors = "\n   ".join(self.fail_types.keys())
-                if self.skip_unrecognized:
-                    raise GFFParserError(f"Unrecognized types found:\n   {fail_errors}")
+                logging.warning(f"Unrecognized types found:\n   {fail_errors}")
+                if not self.skip_unrecognized:
+                    raise GFFParserError("Unrecognized types found, abort")
 
     def simpler_gff3_feature(self, feat: SeqFeature) -> Optional[SeqFeature]:
         """Creates a simpler version of a GFF3 feature.
@@ -157,8 +168,7 @@ class GFFSimplifier:
         if gene.type not in allowed_gene_types:
             self.fail_types["gene=" + gene.type] = 1
             logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
-            if self.skip_unrecognized:
-                return None
+            return None
 
         # Normalize, store annotation, and return the cleaned up gene
         gene = self.normalize_gene(gene)
@@ -276,60 +286,28 @@ class GFFSimplifier:
 
         """
 
-        # New gene ID
         gene.id = self.stable_ids.normalize_gene_id(gene)
-
-        # Gene with no subfeatures: need to create a transcript at least
-        if len(gene.sub_features) == 0:
-            logging.debug(f"Insert transcript for lone gene {gene.id}")
-            transcript = self.transcript_for_gene(gene)
-            gene.sub_features = [transcript]
-
-        # Count features
-        fcounter = Counter([feat.type for feat in gene.sub_features])
-
-        # Transform gene - CDS to gene-transcript-exon-CDS
-        if len(fcounter) == 1:
-            if fcounter.get("CDS"):
-                num_subs = len(gene.sub_features)
-                logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
-                transcripts = self.gene_to_cds(gene)
-                gene.sub_features = transcripts
-
-            # Transform gene - exon to gene-transcript-exon
-            elif fcounter.get("exon"):
-                num_subs = len(gene.sub_features)
-                logging.debug(f"Insert transcript for {gene.id} ({num_subs} exons)")
-                transcript = self.gene_to_exon(gene)
-                gene.sub_features = [transcript]
-        else:
-            # Check that we don't mix
-            if fcounter.get("mRNA") and fcounter.get("CDS"):
-                # Move CDS(s) from parent gene to parent mRNA if needed
-                gene = self.move_cds_to_mrna(gene)
-            if fcounter.get("mRNA") and fcounter.get("exon"):
-                # Special case with extra exons
-                gene = self.clean_extra_exons(gene)
-
-        # Remove CDS from pseudogenes
-        if gene.type == "pseudogene" and not self.allow_pseudogene_with_CDS:
-            self.remove_cds_from_pseudogene(gene)
-
-        # TRANSCRIPTS
-        gene = self._normalize_transcripts(gene)
-
-        # PSEUDOGENE CDS IDs
-        if gene.type == "pseudogene" and self.allow_pseudogene_with_CDS:
-            self.stable_ids.normalize_pseudogene_cds_id(gene)
+        restructure_gene(gene)
+        self.normalize_transcripts(gene)
+        self.normalize_pseudogene(gene)
 
         return gene
 
-    def _normalize_transcripts(self, gene: SeqFeature) -> SeqFeature:
-        """Returns a normalized transcript."""
+    def normalize_pseudogene(self, gene: SeqFeature) -> None:
+        """Normalize CDSs if allowed, otherwise remove them."""
+        if gene.type != "pseudogene":
+            return
+
+        if self.allow_pseudogene_with_cds:
+            self.stable_ids.normalize_pseudogene_cds_id(gene)
+        else:
+            self.remove_cds_from_pseudogene(gene)
+
+    def normalize_transcripts(self, gene: SeqFeature) -> None:
+        """Normalizes a transcript."""
 
         allowed_transcript_types = self._biotypes["transcript"]["supported"]
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
-        skip_unrecognized = self.skip_unrecognized
 
         transcripts_to_delete = []
         for count, transcript in enumerate(gene.sub_features):
@@ -341,9 +319,8 @@ class GFFSimplifier:
                 logging.warning(
                     f"Unrecognized transcript type: {transcript.type}" f" for {transcript.id} ({gene.id})"
                 )
-                if skip_unrecognized:
-                    transcripts_to_delete.append(count)
-                    continue
+                transcripts_to_delete.append(count)
+                continue
 
             # New transcript ID
             transcript_number = count + 1
@@ -357,8 +334,6 @@ class GFFSimplifier:
         if transcripts_to_delete:
             for elt in sorted(transcripts_to_delete, reverse=True):
                 gene.sub_features.pop(elt)
-
-        return gene
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
@@ -390,9 +365,8 @@ class GFFSimplifier:
                     f"Unrecognized exon type for {feat.type}: {feat.id}"
                     f" (for transcript {transcript.id} of type {transcript.type})"
                 )
-                if self.skip_unrecognized:
-                    exons_to_delete.append(tcount)
-                    continue
+                exons_to_delete.append(tcount)
+                continue
 
         if exons_to_delete:
             for elt in sorted(exons_to_delete, reverse=True):
@@ -447,196 +421,15 @@ class GFFSimplifier:
 
         return gene
 
-    def transcript_for_gene(self, gene: SeqFeature) -> SeqFeature:
-        """Returns a transcript, from a gene without one."""
-
-        transcript = SeqFeature(gene.location, type="transcript")
-        transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
-
-        return transcript
-
-    def gene_to_cds(self, gene: SeqFeature) -> List[SeqFeature]:
-        """Returns a list of transcripts (with exons), from a gene with only CDS children."""
-
-        gene_cds_skip_others = self.gene_cds_skip_others
-        transcripts_dict = {}
-        del_transcript = []
-
-        for count, cds in enumerate(gene.sub_features):
-            if cds.type != "CDS":
-                if gene_cds_skip_others:
-                    del_transcript.append(count)
-                    continue
-                raise GFFParserError(
-                    "Can not create a chain 'transcript - exon - CDS'"
-                    f" when the gene children are not all CDSs"
-                    f" ({cds.id} of type {cds.type} is child of gene {gene.id})"
-                )
-
-            exon = SeqFeature(cds.location, type="exon")
-
-            # Add to transcript or create a new one
-            if cds.id not in transcripts_dict:
-                logging.debug(f"Create new mRNA for {cds.id}")
-                transcript = self.build_transcript(gene)
-                transcripts_dict[cds.id] = transcript
-            exon.qualifiers["source"] = gene.qualifiers["source"]
-            transcripts_dict[cds.id].sub_features.append(exon)
-            transcripts_dict[cds.id].sub_features.append(cds)
-
-        for elt in sorted(del_transcript, reverse=True):
-            gene.sub_features.pop(elt)
-
-        transcripts = list(transcripts_dict.values())
-
-        return transcripts
-
-    def build_transcript(self, gene: SeqFeature) -> SeqFeature:
-        """Returns a transcript with same metadata as the gene provided."""
-
-        transcript = SeqFeature(gene.location, type="mRNA")
-        transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
-        return transcript
-
-    def move_cds_to_mrna(self, gene: SeqFeature) -> SeqFeature:
-        """Move CDS child features of a gene, to the mRNA.
-
-        This is to fix the case where we have the following structure:
-        gene -> [ mRNA, CDSs ]
-        and change it to
-        gene -> [ mRNA -> [ CDSs ] ]
-        The mRNA might have exons, in which case check that they match the CDS coordinates.
-
-        Raises an exception if the feature structure is not recognized.
-
-        Args:
-            A gene with only one transcript, to check and fix.
-
-        Returns:
-            The gene where the CDSs have been moved, if needed.
-
-        """
-        # First, count the types
-        mrnas = []
-        cdss = []
-
-        gene_subf_clean = []
-        for subf in gene.sub_features:
-            if subf.type == "mRNA":
-                mrnas.append(subf)
-            elif subf.type == "CDS":
-                cdss.append(subf)
-            else:
-                gene_subf_clean.append(subf)
-
-        if len(cdss) == 0:
-            # Nothing to fix here, no CDSs to move
-            return gene
-        if len(mrnas) > 1:
-            raise GFFParserError(
-                f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene"
-            )
-
-        mrna = mrnas[0]
-
-        # Check if there are exons (or CDSs) under the mRNA
-        sub_exons = []
-        sub_cdss = []
-        for subf in mrna.sub_features:
-            if subf.type == "CDS":
-                sub_cdss.append(subf)
-            elif subf.type == "exon":
-                sub_exons.append(subf)
-
-        self._check_sub_cdss(gene, sub_cdss)
-        self._check_sub_exons(gene, cdss, sub_exons)
-
-        logging.debug(f"Gene {gene.id}: move {len(cdss)} CDSs to the mRNA")
-        # No more issues? move the CDSs
-        mrna.sub_features += cdss
-        # And remove them from the gene
-        gene.sub_features = gene_subf_clean
-        gene.sub_features.append(mrna)
-
-        return gene
-
-    @staticmethod
-    def _check_sub_cdss(gene: SeqFeature, sub_cdss: List[SeqFeature]) -> None:
-        if len(sub_cdss) > 0:
-            raise GFFParserError(f"Gene {gene.id} has CDSs as children of the gene and mRNA")
-
-    @staticmethod
-    def _check_sub_exons(gene: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
-        """Check that the exons of the mRNA and the CDSs match"""
-
-        if len(sub_exons) > 0:
-            # Check that they match the CDS outside
-            if len(sub_exons) == len(cdss):
-                # Now that all coordinates are the same
-                coord_exons = [f"{exon.location}" for exon in sub_exons]
-                coord_cdss = [f"{cds.location}" for cds in cdss]
-
-                if coord_exons != coord_cdss:
-                    raise GFFParserError(f"Gene {gene.id} CDSs and exons under the mRNA do not match")
-            else:
-                raise GFFParserError(
-                    f"Gene {gene.id} CDSs and exons under the mRNA do not match (different count)"
-                )
-
-    def clean_extra_exons(self, gene: SeqFeature) -> SeqFeature:
-        """Remove extra exons, already existing in the mRNA.
-
-        This is a special case where a gene contains proper mRNAs, etc. but also
-        extra exons for the same features. Those exons usually have an ID starting with
-        "id-", so that's what we use to detect them.
-        """
-        exons = []
-        mrnas = []
-        others = []
-        for subf in gene.sub_features:
-            if subf.type == "exon":
-                exons.append(subf)
-            elif subf.type == "mRNA":
-                mrnas.append(subf)
-            else:
-                others.append(subf)
-
-        if exons and mrnas:
-            exon_has_id = 0
-            # Check if the exon ids start with "id-", which is an indication that they do not belong here
-            for exon in exons:
-                if exon.id.startswith("id-"):
-                    exon_has_id += 1
-            if exon_has_id:
-                if exon_has_id == len(exons):
-                    logging.debug(f"Remove {exon_has_id} extra exons from {gene.id}")
-                    gene.sub_features = mrnas
-                    gene.sub_features += others
-                else:
-                    raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
-
-        return gene
-
-    def gene_to_exon(self, gene: SeqFeature) -> SeqFeature:
-        """Returns an intermediary transcript for a gene with direct exon children."""
-
-        transcript = SeqFeature(gene.location, type="mRNA")
-        transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
-
-        for exon in gene.sub_features:
-            transcript.sub_features.append(exon)
-
-        return transcript
-
     def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
         """Removes the CDS from a pseudogene.
 
         This assumes the CDSs are sub features of the transcript or the gene.
 
         """
+        if gene.type != "pseudogene":
+            return
+
         gene_subfeats = []
         for transcript in gene.sub_features:
             if transcript.type == "CDS":
