@@ -115,9 +115,13 @@ class GFFSimplifier:
                 # Clean all root features and make clean record
                 clean_record = SeqRecord(record.seq, id=record.id)
                 for feature in record.features:
-                    clean_feature = self.simpler_gff3_feature(feature)
-                    if clean_feature is not None:
-                        clean_record.features.append(clean_feature)
+                    split_genes = self.normalize_mirna(feature)
+                    if split_genes:
+                        clean_record.features += split_genes
+                    else:
+                        clean_feature = self.simpler_gff3_feature(feature)
+                        if clean_feature is not None:
+                            clean_record.features.append(clean_feature)
                 self.records.append(clean_record)
 
             if self.fail_types:
@@ -441,3 +445,50 @@ class GFFSimplifier:
             transcript.sub_features = new_subfeats
             gene_subfeats.append(transcript)
         gene.sub_features = gene_subfeats
+
+
+    def normalize_mirna(self, gene: SeqFeature) -> List[SeqFeature]:
+        """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
+
+        Change the representation from the form `gene[ primary_transcript[ exon, miRNA[ exon ] ] ]`
+        to `gene[ primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
+        """
+
+        transcript = gene.sub_features
+        if len(transcript) == 0 or transcript[0].type != "primary_transcript":
+            return []
+        if len(transcript) > 1:
+            raise GFFParserError(f"Gene has too many sub_features for miRNA {gene.id}")
+        
+        logging.debug(f"Formatting miRNA gene {gene.id}")
+        
+        primary = transcript[0]
+        new_genes = []
+        new_primary_subfeatures = []
+        num = 1
+        for sub in primary.sub_features:
+            if sub.type == "exon":
+                new_primary_subfeatures.append(sub)
+            elif sub.type == "miRNA":
+                new_gene_id = f"{gene.id}_{num}"
+                num += 1
+                new_gene = SeqFeature(sub.location, "gene", id=new_gene_id)
+                new_gene.qualifiers = {"source": sub.qualifiers["source"], "ID": new_gene_id}
+                new_gene.sub_features = [sub]
+                new_genes.append(new_gene)
+            else:
+                raise GFFParserError(f"Unknown subtypes for miRNA features: {sub.id}")
+        primary.sub_features = new_primary_subfeatures
+
+        if not new_genes:
+            raise GFFParserError(f"Could not parse a primary_transcript for {gene.id}")
+
+        all_genes = [gene] + new_genes
+
+        # Normalize like normal genes
+        all_genes_cleaned = []
+        for new_gene in all_genes:
+            new_gene = self.normalize_gene(new_gene)
+            self.annotations.store_gene(new_gene)
+            all_genes_cleaned.append(self.clean_gene(new_gene))
+        return all_genes_cleaned
