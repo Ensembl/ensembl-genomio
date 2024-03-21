@@ -68,7 +68,7 @@ class GFFSimplifier:
     def __init__(
         self,
         genome_path: Optional[PathLike] = None,
-        skip_unrecognized: Optional[bool] = False,
+        skip_unrecognized: bool = False,
         allow_pseudogene_with_cds: Optional[bool] = False,
     ):
         """Create an object that simplifies `SeqFeature` objects.
