@@ -446,7 +446,6 @@ class GFFSimplifier:
             gene_subfeats.append(transcript)
         gene.sub_features = gene_subfeats
 
-
     def normalize_mirna(self, gene: SeqFeature) -> List[SeqFeature]:
         """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
 
@@ -463,9 +462,9 @@ class GFFSimplifier:
             return []
         if len(transcript) > 1:
             raise GFFParserError(f"Gene has too many sub_features for miRNA {gene.id}")
-        
+
         logging.debug(f"Formatting miRNA gene {gene.id}")
-        
+
         primary = transcript[0]
         new_genes = []
         new_primary_subfeatures = []
