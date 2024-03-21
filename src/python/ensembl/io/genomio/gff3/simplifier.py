@@ -125,8 +125,8 @@ class GFFSimplifier:
                 self.records.append(clean_record)
 
             if self.fail_types:
-                fail_errors = "\n   ".join(self.fail_types.keys())
-                logging.warning(f"Unrecognized types found:\n   {fail_errors}")
+                fail_errors = ", ".join(self.fail_types.keys())
+                logging.warning(f"Unrecognized types found: {fail_errors}")
                 if not self.skip_unrecognized:
                     raise GFFParserError("Unrecognized types found, abort")
 
