@@ -122,9 +122,11 @@ class MetaConf:
             if "strain" in qualifiers:
                 strain = qualifiers["strain"][0]
                 self.update("species.strain", strain)
+                self.update("strain.type", "strain")
             elif "isolate" in qualifiers:
                 strain = qualifiers["isolate"][0]
                 self.update("species.strain", strain)
+                self.update("strain.type", "isolate")
             if "db_xref" in qualifiers:
                 taxon_id_pre = list(filter(lambda x: x.startswith("taxon:"), qualifiers["db_xref"]))[0]
                 if taxon_id_pre:
@@ -171,7 +173,9 @@ class MetaConf:
                 # Assembly name:  cgigas_uk_roslin_v1
                 self.update_from_report_meta_value(line, r"#\s+Assembly name:", "assembly.name")
                 # BioSample:      SAMEA110187692
-                self.update_from_report_meta_value(line, r"#\s+Biosample:", "organism.biosample_id")
+                self.update_from_report_meta_value(line, r"#\s+BioSample:", "organism.biosample_id")
+                # Assembly level: Chromosome
+                self.update_from_report_meta_value(line, r"#\s+Assembly level:", "assembly.level")
                 # GenBank assembly accession: GCA_947086385.1
                 self.update_from_report_meta_value(line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc")
                 # RefSeq assembly accession: GCF_947086385.1
@@ -202,6 +206,8 @@ class MetaConf:
         _sci_name = self.get("species.scientific_name", default="")
         _acc = str(asm_acc).replace("_", "").replace(".", "v")
         _strain = self.get("species.strain")
+        self.update("organism.strain", _strain)
+        self.update("organism.strain_type", self.get("strain.type"))
         _prod_name = _sci_name.strip().lower()
         _prod_name = "_".join(re.sub(r"[^a-z0-9A-Z]+", "_", _prod_name).split("_")[:2])
         _prod_name = ("%s_%s" % (_prod_name, _acc)).lower().replace(" ", "_")
@@ -218,7 +224,9 @@ class MetaConf:
             self.update("ANNOTATION_SOURCE_SFX", _ann_source_sfx, tech=True)
             _prod_name += _ann_source_sfx
         self.update("species.production_name", _prod_name)
+        self.update("organism.ensembl_name", _prod_name)
         _comm_name = self.get("species.common_name")
+        self.update("organism.common_name", _comm_name)
         _display_name = _sci_name
         if _strain or _comm_name:
             _strain_comm_part = ", ".join(map(lambda s: str(s), filter(None, [_comm_name, _strain])))
@@ -229,6 +237,7 @@ class MetaConf:
         _ann_source = self.normalise_asm_name(_ann_source)
         if _ann_source:
             self.update("species.annotation_source", _ann_source)
+            self.update("genebuild.annotation_source", _ann_source)
             _display_name = f"{_display_name} [{_ann_source} annotation]"
         self.update("species.display_name", _display_name)
         # back to using "Binomial_name_GCA_000001.1rs" names, only for GenBank ('GCA') accessions
@@ -244,6 +253,18 @@ class MetaConf:
             syns.append((sci_name_words[0][0] + sci_name_words[1][:5]).lower())
         if syns and self.add_generated_species_aliases:
             self.update("species.alias", syns)
+        # picking assembly.alt_accession
+        if not self.get("assembly.alt_accession"):
+            asm_acc_insdc = self.get("assembly.accession_insdc")
+            asm_acc_refseq = self.get("assembly.accession_refseq")
+            if asm_acc_refseq and asm_acc_insdc:
+                if "refseq" in _ann_source.lower() or \
+                       "refseq" in self.get("annotation.provider_url").lower():
+                    if asm_acc.startswith("GCF_"):
+                        self.update("assembly.alt_accession", asm_acc_insdc)
+                    else:
+                        self.update("assembly.alt_accession", asm_acc_refseq)
+
         # genebuild metadata
         if update_annotation_related:
             self.update_from_dict(defaults, "genebuild.method")
@@ -256,6 +277,9 @@ class MetaConf:
             )
             self.update("genebuild.initial_release_date", "%s-%02d" % (today.year, today.month))
             self.update("genebuild.last_geneset_update", "%s-%02d" % (today.year, today.month))
+            # MVP/RR duplicates
+            self.update("genebuild.provider_name", self.get("annotation.provider_name"))
+            self.update("genebuild.provider_url", self.get("annotation.provider_url"))
 
     def dump_genome_conf(self, json_out):
         out = {}
@@ -268,14 +292,24 @@ class MetaConf:
             # not yet supported in genome.json schema
             # "assembly.accession_insdc",
             # "assembly.accession_refseq",
+            # "assembly.alt_accession",
+            # "assembly.level",
             "assembly.name",
             "genebuild.method",
             "genebuild.method_display",
+            # "genebuild.provider_name",
+            # "genebuild.provider_url",
+            # "genebuild.annotation_source",
             "genebuild.start_date",
             "genebuild.version",
-            # NO organism metadata part at the moment
             # "organism.biosample_id",
+            # "organism.common_name",
+            # "organism.ensembl_name",
             # "organism.scientific_name",
+            # "organism.strain",
+            # "organism.strain_type",
+            # "organism.species_taxonomy_id",
+            # "organism.taxonomy_id",
             "*species.alias",
             "species.annotation_source",
             "species.display_name",
@@ -283,6 +317,7 @@ class MetaConf:
             "species.production_name",
             "species.scientific_name",
             "species.strain",
+            # "strain.type",
         ]
         for f in fields:
             if f.startswith("*"):
