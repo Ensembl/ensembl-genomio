@@ -285,9 +285,15 @@ def test_simpler_gff3(
     "in_gff, expected_gff, skip_unrecognized, expectation",
     [
         param("bad_gene_type.gff", "", None, raises(GFFParserError), id="Unset skip unrecognized, fail"),
-        param("bad_gene_type.gff", "", True, raises(GFFParserError), id="True skip unrecognized, fail"),
-        param("bad_gene_type.gff", "bad_gene_type.gff", False, does_not_raise(), id="bad type, Keep"),
-        param("ok_gene.gff", "ok_gene.gff", False, does_not_raise(), id="ok type, Keep"),
+        param(
+            "bad_gene_type.gff",
+            "bad_gene_type_skipped.gff",
+            True,
+            does_not_raise(),
+            id="True skip unrecognized, no fail",
+        ),
+        param("bad_gene_type.gff", "", False, raises(GFFParserError), id="bad type, fail"),
+        param("ok_gene.gff", "ok_gene.gff", False, does_not_raise(), id="ok type, fail"),
     ],
 )
 def test_simpler_gff3_skip(

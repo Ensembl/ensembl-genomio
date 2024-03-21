@@ -73,7 +73,7 @@ class GFFSimplifier:
     def __init__(
         self,
         genome_path: Optional[PathLike] = None,
-        skip_unrecognized: Optional[bool] = True,
+        skip_unrecognized: Optional[bool] = False,
         allow_pseudogene_with_cds: Optional[bool] = False,
     ):
         """Create an object that simplifies `SeqFeature` objects.
@@ -123,7 +123,7 @@ class GFFSimplifier:
             record.features = cleaned_features
 
         if self.fail_types:
-            fail_errors = "\n   ".join(self.fail_types.keys())
+            fail_errors = "\n   ".join(list(self.fail_types))
             logging.warning(f"Unrecognized types found:\n   {fail_errors}")
             if not self.skip_unrecognized:
                 raise GFFParserError("Unrecognized types found, abort")
