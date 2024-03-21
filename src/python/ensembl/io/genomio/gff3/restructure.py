@@ -134,12 +134,14 @@ def move_only_exons_to_new_mrna(gene: SeqFeature) -> None:
 
 
 def move_cds_to_existing_mrna(gene: SeqFeature) -> None:
-    """Move CDS child features of a gene, to the mRNA.
+    """Move CDS child features of a gene to the mRNA.
 
     This is to fix the case where we have the following structure::
         gene -> [ mRNA, CDSs ]
+
     and change it to::
         gene -> [ mRNA -> [ CDSs ] ]
+
     The mRNA itself might have exons, in which case check that they match the CDS coordinates.
 
     Args:

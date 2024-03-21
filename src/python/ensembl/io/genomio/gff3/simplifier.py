@@ -75,8 +75,11 @@ class GFFSimplifier:
 
         Args:
             genome_path: Genome metadata file.
-            skip_unrecognized: If a biotype is unknown, don't include it. Raise GFFParserError otherwise.
+            skip_unrecognized: Do not include unknown biotypes instead of raising an exception.
             allow_pseudogene_with_cds: Keep CDSs under pseudogenes that have them. Delete them otherwise.
+
+        Raises:
+            GFFParserError: If a biotype is unknown and `skip_unrecognized` is False.
         """
         self.skip_unrecognized = skip_unrecognized
         self.allow_pseudogene_with_cds = allow_pseudogene_with_cds
