@@ -300,9 +300,10 @@ def test_simpler_gff3_skip(
     """Test simplifying genes from GFF3 files."""
     input_gff = data_dir / in_gff
     output_gff = tmp_dir / in_gff
+    simp = GFFSimplifier(skip_unrecognized=skip_unrecognized)
     with expectation:
-        simp = GFFSimplifier(skip_unrecognized=skip_unrecognized)
         simp.simpler_gff3(input_gff)
+    if expected_gff:
         simp.records.to_gff(output_gff)
         assert_files(output_gff, data_dir / expected_gff)
 
