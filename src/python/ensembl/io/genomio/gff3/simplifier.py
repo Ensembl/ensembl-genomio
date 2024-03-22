@@ -470,30 +470,6 @@ class GFFSimplifier:
 
         return gene
 
-    def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
-        """Removes the CDS from a pseudogene.
-
-        This assumes the CDSs are sub features of the transcript or the gene.
-
-        """
-        if gene.type != "pseudogene":
-            return
-
-        gene_subfeats = []
-        for transcript in gene.sub_features:
-            if transcript.type == "CDS":
-                logging.debug(f"Remove pseudo CDS {transcript.id}")
-                continue
-            new_subfeats = []
-            for feat in transcript.sub_features:
-                if feat.type == "CDS":
-                    logging.debug(f"Remove pseudo CDS {feat.id}")
-                    continue
-                new_subfeats.append(feat)
-            transcript.sub_features = new_subfeats
-            gene_subfeats.append(transcript)
-        gene.sub_features = gene_subfeats
-
     def normalize_mirna(self, gene: SeqFeature) -> List[SeqFeature]:
         """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
 
