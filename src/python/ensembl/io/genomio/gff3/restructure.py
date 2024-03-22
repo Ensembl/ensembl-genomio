@@ -268,7 +268,7 @@ def remove_extra_exons(gene: SeqFeature) -> None:
 
 
 def remove_cds_from_pseudogene(gene: SeqFeature) -> None:
-    """Removes the CDS from a pseudogene.
+    """Removes the CDSs from a pseudogene.
 
     This assumes the CDSs are sub features of the transcript or the gene.
 
@@ -280,13 +280,13 @@ def remove_cds_from_pseudogene(gene: SeqFeature) -> None:
     for transcript in gene.sub_features:
         if transcript.type == "CDS":
             logging.debug(f"Remove pseudo CDS {transcript.id}")
-            continue
-        new_subfeats = []
-        for feat in transcript.sub_features:
-            if feat.type == "CDS":
-                logging.debug(f"Remove pseudo CDS {feat.id}")
-                continue
-            new_subfeats.append(feat)
-        transcript.sub_features = new_subfeats
-        gene_subfeats.append(transcript)
+        else:
+            new_subfeats = []
+            for feat in transcript.sub_features:
+                if feat.type == "CDS":
+                    logging.debug(f"Remove pseudo CDS {feat.id}")
+                else:
+                    new_subfeats.append(feat)
+                transcript.sub_features = new_subfeats
+                gene_subfeats.append(transcript)
     gene.sub_features = gene_subfeats

@@ -54,8 +54,8 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
     ],
 )
 def test_create_gene_for_lone_transcript(
+    tmp_path: Path,
     data_dir: Path,
-    tmp_dir: Path,
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
@@ -63,7 +63,7 @@ def test_create_gene_for_lone_transcript(
 ) -> None:
     """Test gene create gene for lone transcript."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / Path(in_gff).name
+    output_gff = tmp_path / Path(in_gff).name
     with expectation:
         new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
         if new_feat:
@@ -187,7 +187,7 @@ def test_normalize_non_gene(
 )
 def test_format_gene_segments(
     in_type: str,
-    name: Optional[List[str]],
+    name: str,
     out_type: str,
     expectation: ContextManager,
 ) -> None:
@@ -284,7 +284,7 @@ def test_simpler_gff3(
 @pytest.mark.parametrize(
     "in_gff, expected_gff, skip_unrecognized, expectation",
     [
-        param("bad_gene_type.gff", "", None, raises(GFFParserError), id="Unset skip unrecognized, fail"),
+        param("bad_gene_type.gff", "", False, raises(GFFParserError), id="Unset skip unrecognized, fail"),
         param(
             "bad_gene_type.gff",
             "bad_gene_type_skipped.gff",
@@ -302,16 +302,14 @@ def test_simpler_gff3_skip(
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
-    skip_unrecognized: Optional[bool],
+    skip_unrecognized: bool,
     expectation: ContextManager,
 ) -> None:
     """Test simplifying genes from GFF3 files."""
     input_gff = data_dir / in_gff
     output_gff = tmp_dir / in_gff
     with expectation:
-        simp = GFFSimplifier()
-        if skip_unrecognized is not None:
-            simp.skip_unrecognized = skip_unrecognized
+        simp = GFFSimplifier(skip_unrecognized=skip_unrecognized)
         simp.simpler_gff3(input_gff)
         simp.records.to_gff(output_gff)
         assert_files(output_gff, data_dir / expected_gff)

@@ -360,6 +360,5 @@ def test_remove_cds_from_pseudogene(
     """Test CDS removal from pseudogene."""
     gen = FeatGenerator()
     gene = gen.make_structure([children])[0]
-    # raise Exception(gene)
     restructure.remove_cds_from_pseudogene(gene)
     assert gen.get_sub_structure(gene) == expected_children

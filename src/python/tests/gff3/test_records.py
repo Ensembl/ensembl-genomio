@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.gff3.simplifier` Record object."""
+"""Unit testing of `ensembl.io.genomio.gff3.simplifier.Records` class."""
 
 from os import PathLike
 from pathlib import Path
