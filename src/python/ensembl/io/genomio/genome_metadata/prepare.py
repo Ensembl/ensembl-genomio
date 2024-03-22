@@ -135,7 +135,7 @@ def add_genebuild_metadata(genome_data: Dict) -> None:
 
 
 def add_species_metadata(genome_metadata: Dict, ncbi_data: Dict) -> None:
-    """Adds tax_id and name from the NCBI dataset report.
+    """Adds taxonomy ID, scientific name and strain (if present) from the NCBI dataset report.
 
     Args:
         genome_metadata: Genome information of assembly, accession and annotation.
