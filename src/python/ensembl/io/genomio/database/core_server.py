@@ -45,21 +45,19 @@ class CoreServer:
     def get_cores(
         self,
         prefix: str = "",
-        build: str = "",
-        version: str = "",
+        build: Optional[int] = None,
+        version: Optional[int] = None,
         dbname_re: str = "",
         db_list: Optional[List[str]] = None,
     ) -> List[str]:
-        """Provide a list of core databases, filtered if requested.
-        Args:
-            prefix: filter by prefix (no _ is added automatically)
-            build: filter by build
-            version: filter by Ensembl version
-            dbname_re: filter by dbname regular expression
-            db_list: explicit list of database names
+        """Returns a list of core databases, filtered if requested.
 
-        Returns:
-            A list of database names
+        Args:
+            prefix: Filter by prefix (no "_" is added automatically).
+            build: Filter by VEuPathDB build number.
+            version: Filter by Ensembl version.
+            dbname_re: Filter by dbname regular expression.
+            db_list: Explicit list of database names.
         """
         dbs = []
 
@@ -77,9 +75,9 @@ class CoreServer:
         if dbname_re:
             dbname_m = re.compile(dbname_re)
             dbs = list(filter(dbname_m.search, dbs))
-        if build:
+        if build is not None:
             dbs = [db for db in dbs if re.search(rf"_core_{build}_\d+_\d+$", db)]
-        if version:
+        if version is not None:
             dbs = [db for db in dbs if re.search(rf"_core_\d+_{version}_\d+$", db)]
 
         logging.info(f"{len(dbs)} core databases remain after filtering")
