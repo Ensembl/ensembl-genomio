@@ -69,7 +69,7 @@ class GFFSimplifier:
         self,
         genome_path: Optional[PathLike] = None,
         skip_unrecognized: bool = False,
-        allow_pseudogene_with_cds: Optional[bool] = False,
+        allow_pseudogene_with_cds: bool = False,
     ):
         """Create an object that simplifies `SeqFeature` objects.
 
