@@ -45,12 +45,12 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    "in_gff, expected_gff",
     [
-        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
-        param("lone/transcript.gff", "lone/transcript_simped.gff", does_not_raise(), id="lone transcript"),
-        param("lone/trna.gff", "lone/trna_simped.gff", does_not_raise(), id="lone tRNA"),
-        param("lone/rrna.gff", "lone/rrna_simped.gff", does_not_raise(), id="lone rRNA"),
+        param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
+        param("lone/transcript.gff", "lone/transcript_simped.gff", id="lone transcript"),
+        param("lone/trna.gff", "lone/trna_simped.gff", id="lone tRNA"),
+        param("lone/rrna.gff", "lone/rrna_simped.gff", id="lone rRNA"),
     ],
 )
 def test_create_gene_for_lone_transcript(
@@ -59,23 +59,21 @@ def test_create_gene_for_lone_transcript(
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
-    expectation: ContextManager,
 ) -> None:
     """Test gene create gene for lone transcript."""
     input_gff = data_dir / in_gff
     output_gff = tmp_path / Path(in_gff).name
-    with expectation:
-        new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
-        if new_feat:
-            assert_files(output_gff, Path(data_dir / expected_gff))
+    new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
+    if new_feat:
+        assert_files(output_gff, Path(data_dir / expected_gff))
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    "in_gff, expected_gff",
     [
-        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
-        param("lone/cds.gff", "lone/cds_simped.gff", does_not_raise(), id="lone CDS"),
-        param("lone/cds_pseudo.gff", "lone/cds_pseudo_simped.gff", does_not_raise(), id="lone pseudo CDS"),
+        param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
+        param("lone/cds.gff", "lone/cds_simped.gff", id="lone CDS"),
+        param("lone/cds_pseudo.gff", "lone/cds_pseudo_simped.gff", id="lone pseudo CDS"),
     ],
 )
 def test_create_gene_for_lone_cds(
@@ -84,15 +82,13 @@ def test_create_gene_for_lone_cds(
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
-    expectation: ContextManager,
 ) -> None:
     """Test gene create gene for lone CDS."""
     input_gff = data_dir / in_gff
     output_gff = tmp_dir / Path(in_gff).name
-    with expectation:
-        new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_cds")
-        if new_feat:
-            assert_files(output_gff, Path(data_dir / expected_gff))
+    new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_cds")
+    if new_feat:
+        assert_files(output_gff, Path(data_dir / expected_gff))
 
 
 @pytest.mark.parametrize(
@@ -203,10 +199,10 @@ def test_format_gene_segments(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    "in_gff, expected_gff",
     [
-        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
-        param("clean/extra.gff", "clean/extra_clean.gff", does_not_raise(), id="ok gene with extra attribs"),
+        param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
+        param("clean/extra.gff", "clean/extra_clean.gff", id="ok gene with extra attribs"),
     ],
 )
 def test_clean_gene(
@@ -215,24 +211,22 @@ def test_clean_gene(
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
-    expectation: ContextManager,
 ) -> None:
     """Test clean gene."""
     input_gff = data_dir / in_gff
     output_gff = tmp_dir / Path(in_gff).name
-    with expectation:
-        new_feat = check_one_feature(input_gff, output_gff, "clean_gene")
-        if new_feat:
-            assert_files(output_gff, Path(data_dir / expected_gff))
+    new_feat = check_one_feature(input_gff, output_gff, "clean_gene")
+    if new_feat:
+        assert_files(output_gff, Path(data_dir / expected_gff))
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    "in_gff, expected_gff",
     [
-        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
-        param("gene_ignored.gff", None, does_not_raise(), id="gene ignored"),
-        param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
-        param("ok_protein_coding_gene.gff", "ok_gene.gff", does_not_raise(), id="ok protein_coding_gene"),
+        param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
+        param("gene_ignored.gff", None, id="gene ignored"),
+        param("mobile_te.gff", "mobile_te.gff", id="TE"),
+        param("ok_protein_coding_gene.gff", "ok_gene.gff", id="ok protein_coding_gene"),
     ],
 )
 def test_simpler_gff3_feature(
@@ -241,17 +235,15 @@ def test_simpler_gff3_feature(
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: Optional[PathLike],
-    expectation: ContextManager,
 ) -> None:
     """Test simplifying one gene (from a GFF3 file)."""
     input_gff = data_dir / in_gff
     output_gff = tmp_dir / in_gff
-    with expectation:
-        new_feat = check_one_feature(input_gff, output_gff, "simpler_gff3_feature")
-        if expected_gff is None:
-            assert new_feat is None
-        else:
-            assert_files(output_gff, Path(data_dir / expected_gff))
+    new_feat = check_one_feature(input_gff, output_gff, "simpler_gff3_feature")
+    if expected_gff is None:
+        assert new_feat is None
+    else:
+        assert_files(output_gff, Path(data_dir / expected_gff))
 
 
 @pytest.mark.parametrize(
@@ -316,27 +308,24 @@ def test_simpler_gff3_skip(
 
 
 @pytest.mark.parametrize(
-    "genome_file, in_gff, expected_gff, expectation",
+    "genome_file, in_gff, expected_gff",
     [
         param(
             None,
             "genes_badnames.gff",
             "genes_badnames_noname.gff",
-            does_not_raise(),
             id="Genes with bad names, no genome",
         ),
         param(
             "genome_no_brc4.json",
             "genes_badnames.gff",
             "genes_badnames_noname.gff",
-            does_not_raise(),
             id="Genes with bad names, genome not BRC4",
         ),
         param(
             "genome_brc4.json",
             "genes_badnames.gff",
             "genes_badnames_brc4name.gff",
-            does_not_raise(),
             id="Genes with bad names, genome BRC4",
         ),
     ],
@@ -348,16 +337,14 @@ def test_gffsimplifier_with_genome(
     genome_file: Optional[PathLike],
     in_gff: PathLike,
     expected_gff: PathLike,
-    expectation: ContextManager,
 ) -> None:
     """Test simplifying genes from GFF3 files."""
     input_gff = data_dir / in_gff
     output_gff = tmp_dir / in_gff
-    with expectation:
-        if genome_file is None:
-            simp = GFFSimplifier()
-        else:
-            simp = GFFSimplifier(genome_path=data_dir / genome_file)
-        simp.simpler_gff3(input_gff)
-        simp.records.to_gff(output_gff)
-        assert_files(output_gff, data_dir / expected_gff)
+    if genome_file is None:
+        simp = GFFSimplifier()
+    else:
+        simp = GFFSimplifier(genome_path=data_dir / genome_file)
+    simp.simpler_gff3(input_gff)
+    simp.records.to_gff(output_gff)
+    assert_files(output_gff, data_dir / expected_gff)
