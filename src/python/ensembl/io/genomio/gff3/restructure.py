@@ -287,6 +287,6 @@ def remove_cds_from_pseudogene(gene: SeqFeature) -> None:
                     logging.debug(f"Remove pseudo CDS {feat.id}")
                 else:
                     new_subfeats.append(feat)
-                transcript.sub_features = new_subfeats
-                gene_subfeats.append(transcript)
+            transcript.sub_features = new_subfeats
+            gene_subfeats.append(transcript)
     gene.sub_features = gene_subfeats
