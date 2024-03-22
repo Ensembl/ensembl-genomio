@@ -144,8 +144,10 @@ class MetaConf:
                         self.update("assembly.name", asm_name)
 
     def report_meta_value(self, line: str, pat: str) -> Optional[str]:
-        if not line: return None
-        if not pat: return None
+        if not line:
+            return None
+        if not pat:
+            return None
         if re.match(pat, line):
             (_tag, value, *_rest) = line.split(sep=":", maxsplit=1)
             value = self.normalise_asm_name(value)
@@ -153,9 +155,12 @@ class MetaConf:
         return None
 
     def update_from_report_meta_value(self, line: str, pat: str, meta_key: str):
-        if not line: return None
-        if not pat: return None
-        if not meta_key: return None
+        if not line:
+            return None
+        if not pat:
+            return None
+        if not meta_key:
+            return None
         value = self.report_meta_value(line, pat)
         if value:
             self.update(meta_key, value)
@@ -173,9 +178,13 @@ class MetaConf:
                 # BioSample:      SAMEA110187692
                 self.update_from_report_meta_value(line, r"#\s+Biosample:", "organism.biosample_id")
                 # GenBank assembly accession: GCA_947086385.1
-                self.update_from_report_meta_value(line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc")
+                self.update_from_report_meta_value(
+                    line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc"
+                )
                 # RefSeq assembly accession: GCF_947086385.1
-                self.update_from_report_meta_value(line, r"#\s+RefSeq assembly accession:", "assembly.accession_refseq")
+                self.update_from_report_meta_value(
+                    line, r"#\s+RefSeq assembly accession:", "assembly.accession_refseq"
+                )
                 # RefSeq assembly and GenBank assemblies identical: yes
 
     def update_from_dict(self, d, k, tech=False):
