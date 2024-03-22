@@ -45,7 +45,12 @@ class Records(list):
     """List of GFF3 SeqRecords."""
 
     def from_gff(self, in_gff_path: PathLike, excluded: Optional[List[str]] = None) -> None:
-        """Load records from a GFF3 file."""
+        """Loads records from a GFF3 file.
+
+        Args:
+            in_gff_path: Input GFF3 file path.
+            excluded: Record IDs to not load from the GFF3 file.
+        """
         if excluded is None:
             excluded = []
         with Path(in_gff_path).open("r") as in_gff_fh:
@@ -163,16 +168,11 @@ class GFFSimplifier:
         self.annotations.store_gene(gene)
         return self.clean_gene(gene)
 
-    # COMPLETION
     def create_gene_for_lone_transcript(self, feat: SeqFeature) -> SeqFeature:
-        """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA_gene' for all others
+        """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA_gene' for all others.
 
         Args:
-            ncrna: the transcript for which we want to create a gene.
-
-        Returns:
-            The gene that contains the transcript.
-
+            ncrna: The transcript for which we want to create a gene.
         """
         transcript_types = self._biotypes["transcript"]["supported"]
         if feat.type not in transcript_types:
@@ -227,8 +227,15 @@ class GFFSimplifier:
         return new_gene
 
     def normalize_non_gene(self, feat: SeqFeature) -> Optional[SeqFeature]:
-        """Special case for non-genes (currently transposable elements only).
-        Returns None if not applicable
+        """Returns a normalised "non-gene" or `None` if not applicable.
+        
+        Only transposable elements supported at the moment.
+        
+        Args:
+            feat: Feature to normalise.
+            
+        Raises:
+            NotImplementedError: If the feature is a not supported non-gene.
         """
 
         if feat.type not in self._biotypes["non_gene"]["supported"]:
@@ -254,12 +261,10 @@ class GFFSimplifier:
             return feat
 
         # Get the type (and name) from the attrib
-        if ":" in mobile_element_type[0]:
-            element_type, element_name = mobile_element_type[0].split(":")
-            description = f"{element_type} ({element_name})"
-        else:
-            element_type = mobile_element_type[0]
-            description = element_type
+        element_type, _, element_name = mobile_element_type[0].partition(":")
+        description = element_type
+        if element_name:
+            description += f" ({element_name})"
 
         # Keep the metadata in the description if the type is known
         if element_type in ("transposon", "retrotransposon"):
@@ -268,7 +273,6 @@ class GFFSimplifier:
             return feat
         raise GFFParserError(f"'mobile_element_type' is not a transposon: {element_type}")
 
-    # GENES
     def clean_gene(self, gene: SeqFeature) -> SeqFeature:
         """Return the same gene without qualifiers unrelated to the gene structure."""
 
@@ -311,7 +315,6 @@ class GFFSimplifier:
 
         return gene
 
-    # PSEUDOGENES
     def normalize_pseudogene(self, gene: SeqFeature) -> None:
         """Normalize CDSs if allowed, otherwise remove them."""
         if gene.type != "pseudogene":
@@ -322,7 +325,6 @@ class GFFSimplifier:
         else:
             remove_cds_from_pseudogene(gene)
 
-    # TRANSCRIPTS
     def normalize_transcripts(self, gene: SeqFeature) -> None:
         """Normalizes a transcript."""
 
@@ -363,6 +365,8 @@ class GFFSimplifier:
         Args:
             transcript: Gene segment transcript feature.
 
+        Raises:
+            GFFParserError: Missing or unexpected transcript's standard name.
         """
         if transcript.type not in ("C_gene_segment", "V_gene_segment"):
             return transcript
