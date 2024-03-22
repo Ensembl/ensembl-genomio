@@ -73,8 +73,8 @@ class GFFSimplifier:
     def __init__(
         self,
         genome_path: Optional[PathLike] = None,
-        skip_unrecognized: Optional[bool] = False,
-        allow_pseudogene_with_cds: Optional[bool] = False,
+        skip_unrecognized: bool = False,
+        allow_pseudogene_with_cds: bool = False,
     ):
         """Create an object that simplifies `SeqFeature` objects.
 
@@ -117,9 +117,13 @@ class GFFSimplifier:
         for record in self.records:
             cleaned_features = []
             for feature in record.features:
-                clean_feature = self.simpler_gff3_feature(feature)
-                if clean_feature is not None:
-                    cleaned_features.append(clean_feature)
+                split_genes = self.normalize_mirna(feature)
+                if split_genes:
+                    cleaned_features += split_genes
+                else:
+                    clean_feature = self.simpler_gff3_feature(feature)
+                    if clean_feature is not None:
+                        cleaned_features.append(clean_feature)
             record.features = cleaned_features
 
         if self.fail_types:
@@ -132,7 +136,6 @@ class GFFSimplifier:
         """Creates a simpler version of a GFF3 feature.
 
         If the feature is invalid/skippable, returns None.
-
         """
         # Special cases
         non_gene = self.normalize_non_gene(gene)
@@ -414,3 +417,125 @@ class GFFSimplifier:
             for elt in sorted(exons_to_delete, reverse=True):
                 transcript.sub_features.pop(elt)
         return transcript
+
+    # COMPLETION
+    def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
+        """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
+
+        Args:
+            ncrna: the transcript for which we want to create a gene.
+
+        Returns:
+            The gene that contains the transcript.
+
+        """
+        new_type = "ncRNA_gene"
+        if ncrna.type in ("tRNA", "rRNA"):
+            new_type = "gene"
+        logging.debug(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
+        gene = SeqFeature(ncrna.location, type=new_type)
+        gene.qualifiers["source"] = ncrna.qualifiers["source"]
+        gene.sub_features = [ncrna]
+        gene.id = ncrna.id
+
+        return gene
+
+    def cds_gene(self, cds: SeqFeature) -> SeqFeature:
+        """Returns a gene created for a lone CDS."""
+
+        logging.debug(f"Put the lone CDS in gene-mRNA parent features for {cds.id}")
+
+        # Create a transcript, add the CDS
+        transcript = SeqFeature(cds.location, type="mRNA")
+        transcript.qualifiers["source"] = cds.qualifiers["source"]
+        transcript.sub_features = [cds]
+
+        # Add an exon too
+        exon = SeqFeature(cds.location, type="exon")
+        exon.qualifiers["source"] = cds.qualifiers["source"]
+        transcript.sub_features.append(exon)
+
+        # Create a gene, add the transcript
+        gene_type = "gene"
+        if ("pseudo" in cds.qualifiers) and (cds.qualifiers["pseudo"][0] == "true"):
+            gene_type = "pseudogene"
+        gene = SeqFeature(cds.location, type=gene_type)
+        gene.qualifiers["source"] = cds.qualifiers["source"]
+        gene.sub_features = [transcript]
+        gene.id = self.stable_ids.generate_gene_id()
+
+        return gene
+
+    def remove_cds_from_pseudogene(self, gene: SeqFeature) -> None:
+        """Removes the CDS from a pseudogene.
+
+        This assumes the CDSs are sub features of the transcript or the gene.
+
+        """
+        if gene.type != "pseudogene":
+            return
+
+        gene_subfeats = []
+        for transcript in gene.sub_features:
+            if transcript.type == "CDS":
+                logging.debug(f"Remove pseudo CDS {transcript.id}")
+                continue
+            new_subfeats = []
+            for feat in transcript.sub_features:
+                if feat.type == "CDS":
+                    logging.debug(f"Remove pseudo CDS {feat.id}")
+                    continue
+                new_subfeats.append(feat)
+            transcript.sub_features = new_subfeats
+            gene_subfeats.append(transcript)
+        gene.sub_features = gene_subfeats
+
+    def normalize_mirna(self, gene: SeqFeature) -> List[SeqFeature]:
+        """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
+
+        Change the representation from the form `gene[ primary_transcript[ exon, miRNA[ exon ] ] ]`
+        to `gene[ primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
+
+        Raises:
+            GFFParserError: If gene has more than 1 transcript, the transcript was not formatted
+                correctly or there are unknown sub-features.
+        """
+
+        transcript = gene.sub_features
+        if (len(transcript) == 0) or (transcript[0].type != "primary_transcript"):
+            return []
+        if len(transcript) > 1:
+            raise GFFParserError(f"Gene has too many sub_features for miRNA {gene.id}")
+
+        logging.debug(f"Formatting miRNA gene {gene.id}")
+
+        primary = transcript[0]
+        new_genes = []
+        new_primary_subfeatures = []
+        num = 1
+        for sub in primary.sub_features:
+            if sub.type == "exon":
+                new_primary_subfeatures.append(sub)
+            elif sub.type == "miRNA":
+                new_gene_id = f"{gene.id}_{num}"
+                num += 1
+                new_gene = SeqFeature(sub.location, "gene", id=new_gene_id)
+                new_gene.qualifiers = {"source": sub.qualifiers["source"], "ID": new_gene_id}
+                new_gene.sub_features = [sub]
+                new_genes.append(new_gene)
+            else:
+                raise GFFParserError(f"Unknown subtypes for miRNA features: {sub.id}")
+        primary.sub_features = new_primary_subfeatures
+
+        if not new_genes:
+            raise GFFParserError(f"Could not parse a primary_transcript for {gene.id}")
+
+        all_genes = [gene] + new_genes
+
+        # Normalize like other genes
+        all_genes_cleaned = []
+        for new_gene in all_genes:
+            new_gene = self.normalize_gene(new_gene)
+            self.annotations.store_gene(new_gene)
+            all_genes_cleaned.append(self.clean_gene(new_gene))
+        return all_genes_cleaned
