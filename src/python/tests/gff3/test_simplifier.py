@@ -17,7 +17,7 @@
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
 from pathlib import Path
-from typing import Callable, ContextManager, List, Optional
+from typing import Callable, ContextManager, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest

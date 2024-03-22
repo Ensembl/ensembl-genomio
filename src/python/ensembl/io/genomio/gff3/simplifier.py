@@ -228,12 +228,12 @@ class GFFSimplifier:
 
     def normalize_non_gene(self, feat: SeqFeature) -> Optional[SeqFeature]:
         """Returns a normalised "non-gene" or `None` if not applicable.
-        
+
         Only transposable elements supported at the moment.
-        
+
         Args:
             feat: Feature to normalise.
-            
+
         Raises:
             NotImplementedError: If the feature is a not supported non-gene.
         """
