@@ -142,7 +142,6 @@ def test_format_db_data(
     mock_dbconn.return_value = dbconnection
 
     result = factory.format_db_data(server_url, dbs, brc_mode)
-    print(result)
     assert not DeepDiff(result, output)
     if dbs:
         calls = [call("species.production_name"), call("species.division"), call("assembly.accession")]
@@ -182,9 +181,9 @@ def test_get_core_dbs_metadata(
         output: Expected list of dictionaries with some metadata for each selected database.
     """
 
-    # pylint: disable=unused-argument
     def _format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
         """Returns metadata from a list of databases."""
+        _ = (server_url, brc_mode)  # Unused by mock
         return [{"database": db, "species": "dog"} for db in dbs]
 
     if use_db_file:
