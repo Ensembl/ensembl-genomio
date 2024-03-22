@@ -57,7 +57,6 @@ def meta_from_genome_json(json_path) {
     }
 
     return [
-        // id: prod_name,
         accession: data.assembly.accession,
         production_name: prod_name,
         publish_dir: publish_dir,

@@ -83,7 +83,7 @@ def test_add_provider(
     Args:
         json_data: JSON test file parsing fixture.
         genome_file: Genome metadata JSON file.
-        ncbi_data: Report from datasets.
+        ncbi_data: Report from NCBI datasets.
         output: Expected elements present in the updated genome metadata.
         expectation: Context manager for the expected exception (if any).
     """
@@ -220,9 +220,9 @@ def test_prepare_genome_metadata(
     """Tests the `prepare.prepare_genome_metadata()` method.
 
     Args:
-        input_filename: Genome json input.
-        ncbi_filename: NCBI dataset json input.
-        expected_filename: Genome json input expected output.
+        input_filename: Input genome JSON file.
+        ncbi_filename: NCBI dataset report JSON file.
+        expected_filename: Expected output genome JSON file.
     """
     mock_date.today.return_value = mock_date
     mock_date.isoformat.return_value = "2024-03-19"

@@ -76,7 +76,7 @@ def add_provider(genome_metadata: Dict, ncbi_data: Dict) -> None:
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
-        ncbi_data: Report data from datasets for this accession.
+        ncbi_data: Report data from NCBI datasets.
 
     Raises:
         MetadataError: If accession's format in genome metadata does not match with a known provider.
@@ -139,7 +139,7 @@ def add_species_metadata(genome_metadata: Dict, ncbi_data: Dict) -> None:
 
     Args:
         genome_metadata: Genome information of assembly, accession and annotation.
-        ncbi_data: Report data from datasets for this accession.
+        ncbi_data: Report data from NCBI datasets.
 
     """
     species = genome_metadata.setdefault("species", {})
@@ -172,7 +172,7 @@ def prepare_genome_metadata(
     Args:
         input_file: Path to JSON file with genome metadata.
         output_file: Output directory where to generate the final `genome.json` file.
-        ncbi_meta: JSON file from NCBI datasets for the accession.
+        ncbi_meta: JSON file from NCBI datasets.
 
     """
     genome_data = get_json(input_file)
@@ -197,7 +197,7 @@ def main() -> None:
         "--output_file", required=True, help="Output path for the new genome metadata file"
     )
     parser.add_argument_src_path(
-        "--ncbi_meta", required=True, help="JSON file from NCBI datasets for this accession."
+        "--ncbi_meta", required=True, help="JSON file from NCBI datasets for this genome."
     )
     parser.add_log_arguments()
     args = parser.parse_args()

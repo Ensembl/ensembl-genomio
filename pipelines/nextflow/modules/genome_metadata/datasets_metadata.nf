@@ -26,9 +26,12 @@ process DATASETS_METADATA {
         
     shell:
         '''
-        datasets summary genome accession !{accession} | jq '.' > ncbi_meta.json
-        if [ ! -s "ncbi_meta.json" ]; then
-            echo "No Metadata from datasets for !{accession}"
+        datasets summary genome accession !{accession} > ncbi_meta.json
+        if [ "$?" -ne 0 ]; then
+            echo "Invalid or unsupported assembly accession: !{accession}"
+            exit 1
+        elif [[ $(jq -r '.total_count' ncbi_meta.json) -eq 0 ]]; then
+            echo "No metadata returned for !{accession}"
             exit 1
         fi
         '''
