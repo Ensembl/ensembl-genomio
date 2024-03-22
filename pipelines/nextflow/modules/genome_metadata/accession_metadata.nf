@@ -13,19 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process PREPARE_GENOME_METADATA {
-    tag "$accession"
+process ACCESSION_METADATA {
+    tag "$input_json"
     label 'local'
 
     input:
-        tuple val(accession), path(input_json), path(ncbi_json)
+        path(input_json)
 
     output:
-        tuple val(accession), path("genome.json"), emit: genomic_dataset
+        tuple env(accession), path(input_json)
         
     shell:
-    output_json = "genome.json"
-    '''
-    genome_metadata_prepare --input_file !{input_json} --output_file !{output_json} --ncbi_meta !{ncbi_json}
-    '''
+        '''
+        accession=$(jq -r '.["assembly"]["accession"]' !{input_json})
+        '''
 }
