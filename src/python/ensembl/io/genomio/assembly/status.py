@@ -30,7 +30,7 @@ from os import PathLike, getcwd
 from pathlib import Path
 import re
 import logging
-from sys import exit
+import sys
 from typing import Dict, Tuple, Union
 
 from spython.main import Client
@@ -93,10 +93,10 @@ def examine_parameterization(input_cores: PathLike,
         logging.critical(
             "Missing required input: '--input_cores' (core db names) OR '--input_accns' (INSDC accessions)."
         )
-        exit()
+        sys.exit()
     elif input_cores and input_accessions:
         logging.critical("Detected '--input_cores' AND '--input_accns'. Please provide just one such option.")
-        exit()
+        sys.exit()
     # Input core names centered run
     elif input_cores and input_accessions is None:
         user_query_file = input_cores
@@ -105,7 +105,7 @@ def examine_parameterization(input_cores: PathLike,
             logging.critical(
                 "User must specify both arguments '--host' and '--port' when providing core database names."
             )
-            exit()
+            sys.exit()
     # Accession centered run
     elif input_cores is None and input_accessions:
         user_query_file = input_accessions
@@ -225,29 +225,23 @@ def datasets_asm_reports(
         if isinstance(result, str) and re.search("^FATAL", result):
             logging.critical(f"Singularity image execution failed! -> '{result.strip()}'")
         # Returned a list, i.e. datasets returned a result to client.execute
-        elif isinstance(result, str):
-            tmp_asm_dict = json.loads(result)
 
-            if tmp_asm_dict["total_count"] == 0:
-                logging.warning(f"No assembly report found for accession(s) {accessions}")
-            elif tmp_asm_dict["reports"]:
-                logging.info(f"Asm report obtained for accession(s) [{accessions}]")
-                batch_reports_json = tmp_asm_dict["reports"]
-                for assembly_report in batch_reports_json:
-                    accession = assembly_report["accession"]
-                    asm_json_outfile = f"{download_directory}/{accession}.asm_report.json"
-                    print_json(Path(asm_json_outfile), assembly_report)
+        tmp_asm_dict = json.loads(result)
+        if isinstance(result, str) and tmp_asm_dict["total_count"] >= 1:
+            logging.info(f"Asm report obtained for accession(s) [{accessions}]")
 
-                    # Save assembly report into master core<>report dict
-                    for core, accession_core in assembly_accessions.items():
-                        if accession == accession_core:
-                            combined_asm_reports[core] = assembly_report
-            else:
-                logging.critical("Something is not right parsing 'datasets' results !")
-        else:
-            logging.critical(
-                f"Something not right while running datasets with singularity client.execute {result}"
-            )
+            batch_reports_json = tmp_asm_dict["reports"]
+            for assembly_report in batch_reports_json:
+                accession = assembly_report["accession"]
+                asm_json_outfile = f"{download_directory}/{accession}.asm_report.json"
+                print_json(Path(asm_json_outfile), assembly_report)
+                # Save assembly report into master core<>report dict
+                for core, accession_core in assembly_accessions.items():
+                    if accession == accession_core:
+                        combined_asm_reports[core] = assembly_report
+        elif isinstance(result, str) and tmp_asm_dict["total_count"] == 0:
+            logging.warning(f"No assembly report found for accession(s) {accessions}")
+
     return combined_asm_reports
 
 
@@ -430,7 +424,7 @@ def main() -> None:
             query_list = f.read().splitlines()
     except IOError as err:
         logging.error(f"Unable to read user queries from inputfile '{user_query_file}' due to {err}.")
-        exit()
+        sys.exit()
 
     # Set singularity cache dir from user defined path or use environment
     if args.cache_dir and args.cache_dir.is_dir():
