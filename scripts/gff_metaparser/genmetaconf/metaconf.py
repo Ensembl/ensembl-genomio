@@ -258,8 +258,8 @@ class MetaConf:
             asm_acc_insdc = self.get("assembly.accession_insdc")
             asm_acc_refseq = self.get("assembly.accession_refseq")
             if asm_acc_refseq and asm_acc_insdc:
-                if "refseq" in _ann_source.lower() or \
-                       "refseq" in self.get("annotation.provider_url").lower():
+                # only if species.annotaion_source is ~ "RefSeq"
+                if "refseq" in _ann_source.lower():
                     if asm_acc.startswith("GCF_"):
                         self.update("assembly.alt_accession", asm_acc_insdc)
                     else:
