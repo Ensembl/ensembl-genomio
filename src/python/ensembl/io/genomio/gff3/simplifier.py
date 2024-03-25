@@ -250,7 +250,7 @@ class GFFSimplifier:
             self.annotations.add_feature(feat, "transposable_element")
             return self.clean_gene(feat)
         # This is a failsafe in case you add supported non-genes
-        raise NotImplementedError(f"Unsupported non-gene: {feat.type} for {feat.id}")  # pragma: no cover
+        raise NotImplementedError(f"Unsupported non-gene: {feat.type} for {feat.id}")
 
     def _normalize_mobile_genetic_element(self, feat: SeqFeature) -> SeqFeature:
         """Normalize a mobile element if it has a mobile_element_type field."""

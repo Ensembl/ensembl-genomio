@@ -152,7 +152,7 @@ def test_normalize_non_gene(
     out_description: Optional[str],
     expectation: ContextManager,
 ) -> None:
-    """Test gene create gene for lone CDS."""
+    """Test non-gene normalization."""
     simp = GFFSimplifier()
     feat = SeqFeature(None, in_type)
     feat.qualifiers = {"source": "LOREM"}
@@ -167,6 +167,15 @@ def test_normalize_non_gene(
             assert new_feat.type == out_type
             if out_description is not None:
                 assert new_feat.qualifiers == feat.qualifiers
+
+
+def test_normalize_non_gene_not_implemented() -> None:
+    """Test non-gene not in the biotype list."""
+    simp = GFFSimplifier()
+    simp._biotypes = {"non_gene": {"supported": ["non_gene_name"]}}  # pylint: disable=protected-access
+    feat = SeqFeature(None, "non_gene_name")
+    with raises(NotImplementedError):
+        simp.normalize_non_gene(feat)
 
 
 @pytest.mark.parametrize(
