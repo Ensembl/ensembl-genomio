@@ -353,7 +353,7 @@ def main() -> None:
         type=str,
         required=False,
         metavar="URL",
-        help="Custom datasets version. E.g. library://lcampbell/ensembl-genomio/ncbi-datasets-v16.10.0:latest",
+        help="datasets version: E.g. library://lcampbell/ensembl-genomio/ncbi-datasets-v16.10.0:latest",
     )
     parser.add_argument(
         "--cache_dir",
@@ -384,12 +384,12 @@ def main() -> None:
     # Check for required input in the form of cores/accessions
     if args.input_cores is None and args.input_accns is None:
         logging.critical(
-            f"Did not detect user required input. Please specify option: '--input_cores' (core db names); OR '--input_accns' (INSDC accessions)."
+            "Missing required input: '--input_cores' (core db names) OR '--input_accns' (INSDC accessions)."
         )
         exit()
     elif args.input_cores and args.input_accns:
         logging.critical(
-            f"Detected both '--input_cores' AND '--input_accns' user inputs. Please provide just one such option."
+            "Detected '--input_cores' AND '--input_accns'. Please provide just one such option."
         )
         exit()
     # Input core names centered run
@@ -397,8 +397,8 @@ def main() -> None:
         user_query_file = args.input_cores
         logging.info(f"Performing assembly status report using core db list file: {user_query_file}")
         if args.host is None or args.port is None:
-            print(
-                f"User must specify both arguments '--host' and '--port' when providing core database names. Exiting !"
+            logging.critical(
+                "User must specify both arguments '--host' and '--port' when providing core database names."
             )
             exit()
     # Accession centered run
