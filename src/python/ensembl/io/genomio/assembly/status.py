@@ -71,10 +71,11 @@ class ReportStructure(dict):
             }
         )
 
-def examine_parameterization(input_cores: PathLike,
-    input_accessions: PathLike, db_host: str, db_port: int
-    ) -> Path:
-    """Detect the kind of user input (cores/accessions) and determine any missing or 
+
+def examine_parameterization(
+    input_cores: PathLike, input_accessions: PathLike, db_host: str, db_port: int
+) -> Path:
+    """Detect the kind of user input (cores/accessions) and determine any missing or
     incorrect parameterization.
 
     Args:
@@ -112,6 +113,7 @@ def examine_parameterization(input_cores: PathLike,
         logging.info(f"Performing assembly status report using INSDC accession list file: {user_query_file}")
 
     return user_query_file
+
 
 def resolve_query_type(
     query_list: list, host_server: str, host_port: str, input_cores: str, input_accessions: str
