@@ -39,10 +39,7 @@ def test_from_gff(
     input_gff = data_dir / in_gff
 
     records = Records()
-    if excluded is None:
-        records.from_gff(input_gff)
-    else:
-        records.from_gff(input_gff, excluded)
+    records.from_gff(input_gff, excluded)
     record_names = [record.id for record in records]
     assert record_names == expected_loaded
 
