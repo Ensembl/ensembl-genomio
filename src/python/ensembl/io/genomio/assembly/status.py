@@ -15,6 +15,7 @@
 """Record the assembly status for a set of INSDC accessions using ncbi 'datasets' tool"""
 
 __all__ = [
+    "examine_parameterization",
     "resolve_query_type",
     "fetch_asm_accn",
     "datasets_asm_reports",
@@ -70,6 +71,47 @@ class ReportStructure(dict):
             }
         )
 
+def examine_parameterization(input_cores: PathLike,
+    input_accessions: PathLike, db_host: str, db_port: int
+    ) -> Path:
+    """Detect the kind of user input (cores/accessions) and determine any missing or 
+    incorrect parameterization.
+
+    Args:
+        input_cores: input core(s) list file name.
+        input_accessions: input accession (s) list file name.
+        db_host: host server name
+        db_port: host serer port
+
+    Returns:
+        User input file used in assembly status querying
+    """
+    user_query_file: Path
+
+    # Check for required input in the form of cores/accessions
+    if input_cores is None and input_accessions is None:
+        logging.critical(
+            "Missing required input: '--input_cores' (core db names) OR '--input_accns' (INSDC accessions)."
+        )
+        exit()
+    elif input_cores and input_accessions:
+        logging.critical("Detected '--input_cores' AND '--input_accns'. Please provide just one such option.")
+        exit()
+    # Input core names centered run
+    elif input_cores and input_accessions is None:
+        user_query_file = input_cores
+        logging.info(f"Performing assembly status report using core db list file: {user_query_file}")
+        if db_host is None or db_port is None:
+            logging.critical(
+                "User must specify both arguments '--host' and '--port' when providing core database names."
+            )
+            exit()
+    # Accession centered run
+    elif input_cores is None and input_accessions:
+        user_query_file = input_accessions
+        logging.info(f"Performing assembly status report using INSDC accession list file: {user_query_file}")
+
+    return user_query_file
 
 def resolve_query_type(
     query_list: list, host_server: str, host_port: str, input_cores: str, input_accessions: str
@@ -379,28 +421,8 @@ def main() -> None:
     if not args.download_dir.is_dir():
         args.download_dir.mkdir(parents=True)
 
-    # Check for required input in the form of cores/accessions
-    if args.input_cores is None and args.input_accns is None:
-        logging.critical(
-            "Missing required input: '--input_cores' (core db names) OR '--input_accns' (INSDC accessions)."
-        )
-        exit()
-    elif args.input_cores and args.input_accns:
-        logging.critical("Detected '--input_cores' AND '--input_accns'. Please provide just one such option.")
-        exit()
-    # Input core names centered run
-    elif args.input_cores and args.input_accns is None:
-        user_query_file = args.input_cores
-        logging.info(f"Performing assembly status report using core db list file: {user_query_file}")
-        if args.host is None or args.port is None:
-            logging.critical(
-                "User must specify both arguments '--host' and '--port' when providing core database names."
-            )
-            exit()
-    # Accession centered run
-    elif args.input_cores is None and args.input_accns:
-        user_query_file = args.input_accns
-        logging.info(f"Performing assembly status report using INSDC accession list file: {user_query_file}")
+    # Set input file and determine if proper parameterization options are defined.
+    user_query_file = examine_parameterization(args.input_cores, args.input_accns, args.host, args.port)
 
     ## Parse and store cores/accessions from user input query file
     try:
