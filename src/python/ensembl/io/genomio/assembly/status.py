@@ -165,7 +165,7 @@ def datasets_asm_reports(
     combined_asm_reports = {}
 
     # Setting the number of combined accessions to query in a single call to datasets
-    list_split = list(range(0, len(master_accn_list), batch_size)) ## Note best to use >=10
+    list_split = list(range(0, len(master_accn_list), batch_size))  ## Note best to use >=10
     accn_subsample = [master_accn_list[ind : ind + batch_size] for ind in list_split]
 
     for accessions in accn_subsample:
@@ -300,7 +300,6 @@ def generate_report_tsv(
     header_list = [query_type] + header_list
 
     with open(tsv_outfile, "w+") as tsv_out:
-
         writer = csv.writer(tsv_out, delimiter="\t", lineterminator="\n")
         writer.writerow(header_list)
 
@@ -387,9 +386,7 @@ def main() -> None:
         )
         exit()
     elif args.input_cores and args.input_accns:
-        logging.critical(
-            "Detected '--input_cores' AND '--input_accns'. Please provide just one such option."
-        )
+        logging.critical("Detected '--input_cores' AND '--input_accns'. Please provide just one such option.")
         exit()
     # Input core names centered run
     elif args.input_cores and args.input_accns is None:
