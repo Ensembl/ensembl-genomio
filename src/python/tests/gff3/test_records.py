@@ -27,7 +27,6 @@ from ensembl.io.genomio.gff3.simplifier import Records
 @pytest.mark.parametrize(
     "in_gff, excluded, expected_loaded",
     [
-        param("record_n1.gff", None, ["scaffold1"], id="1 record"),
         param("record_n2.gff", None, ["scaffold1", "scaffold2"], id="2 records"),
         param("record_n2.gff", ["scaffold1"], ["scaffold2"], id="2 records, exclude 1"),
         param("record_n1.gff", ["Lorem"], ["scaffold1"], id="1 record, exclude not in record"),
