@@ -73,7 +73,7 @@ class ReportStructure(dict):
 
 def resolve_query_type(
     query_list: list, host_server: str, host_port: str, input_cores: str, input_accessions: str
-) -> Union[Tuple[Dict,str]]:
+) -> Union[Tuple[Dict, str]]:
     """Function to indentify the kind of querys being passed by user,
     then extract the queries (core names or accesisons) and store each with appropriate identifier.
 
@@ -313,6 +313,7 @@ def generate_report_tsv(
 
 # def classify_assembly_status(core_accessions: dict) -> None:
 #     """Main function to pare set of core list and call ncbi datasets"""
+
 
 def main() -> None:
     """Module's entry-point."""
