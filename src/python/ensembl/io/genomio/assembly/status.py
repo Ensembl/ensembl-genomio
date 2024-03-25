@@ -100,10 +100,9 @@ def resolve_query_type(
             match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
             if not match:
                 raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
-            else:
-                query_name = f"Query_#{query_count}"
-                query_count += 1
-                query_accessions[query_name] = accession
+            query_name = f"Query_#{query_count}"
+            query_count += 1
+            query_accessions[query_name] = accession
 
     return query_accessions, query_type
 
@@ -166,7 +165,7 @@ def datasets_asm_reports(
     combined_asm_reports = {}
 
     # Setting the number of combined accessions to query in a single call to datasets
-    list_split = [i for i in range(0, len(master_accn_list), batch_size)]  ## Note best to use >=10
+    list_split = list(range(0, len(master_accn_list), batch_size)) ## Note best to use >=10
     accn_subsample = [master_accn_list[ind : ind + batch_size] for ind in list_split]
 
     for accessions in accn_subsample:
