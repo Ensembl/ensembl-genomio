@@ -391,6 +391,18 @@ def test_gffsimplifier_with_genome(
             does_not_raise(),
             id="Gene with Primary_transcript with 1 miRNA",
         ),
+        param(
+            "mirna/mirna4_unsupported.gff",
+            "",
+            raises(GFFParserError, match="Unknown subtype"),
+            id="Gene with Primary_transcript with mRNA, not supported",
+        ),
+        param(
+            "mirna/mirna5_unsupported.gff",
+            "",
+            raises(GFFParserError, match="too many sub_features"),
+            id="Gene with Primary_transcript with 2 miRNAs, not supported",
+        ),
     ],
 )
 def test_normalize_mirna(
