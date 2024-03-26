@@ -99,7 +99,7 @@ def examine_parameterization(
         logging.critical("Detected '--input_cores' AND '--input_accns'. Please provide just one such option.")
         sys.exit()
     # Input core names centered run
-    elif input_cores and input_accessions is None:
+    elif input_cores:
         user_query_file = input_cores
         logging.info(f"Performing assembly status report using core db list file: {user_query_file}")
         if db_host is None or db_port is None:
