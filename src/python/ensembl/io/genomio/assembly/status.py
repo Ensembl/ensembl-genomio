@@ -108,7 +108,7 @@ def examine_parameterization(
             )
             sys.exit()
     # Accession centered run
-    elif input_cores is None and input_accessions:
+    else:
         user_query_file = input_accessions
         logging.info(f"Performing assembly status report using INSDC accession list file: {user_query_file}")
 
