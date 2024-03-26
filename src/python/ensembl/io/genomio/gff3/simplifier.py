@@ -123,7 +123,7 @@ class GFFSimplifier:
             cleaned_features = []
             for feature in record.features:
                 split_genes = self.normalize_mirna(feature)
-                if split_genes:
+                if len(split_genes) > 1:
                     cleaned_features += split_genes
                 else:
                     clean_feature = self.simpler_gff3_feature(feature)
@@ -480,16 +480,24 @@ class GFFSimplifier:
             GFFParserError: If gene has more than 1 transcript, the transcript was not formatted
                 correctly or there are unknown sub-features.
         """
-
-        transcript = gene.sub_features
-        if (len(transcript) == 0) or (transcript[0].type != "primary_transcript"):
-            return []
-        if len(transcript) > 1:
-            raise GFFParserError(f"Gene has too many sub_features for miRNA {gene.id}")
+        base_id = gene.id
+        if gene.type == "primary_transcript":
+            primary = gene
+            gene = SeqFeature(primary.location, type="gene")
+            gene.sub_features = [primary]
+            gene.qualifiers = primary.qualifiers
+            gene.id = f"{base_id}_0"
+            gene.qualifiers["ID"] = gene.id
+        else:
+            transcripts = gene.sub_features
+            if (len(transcripts) == 0) or (transcripts[0].type != "primary_transcript"):
+                return [gene]
+            if len(transcripts) > 1:
+                raise GFFParserError(f"Gene has too many sub_features for miRNA {gene.id}")
+            primary = transcripts[0]
 
         logging.debug(f"Formatting miRNA gene {gene.id}")
 
-        primary = transcript[0]
         new_genes = []
         new_primary_subfeatures = []
         num = 1
@@ -497,7 +505,7 @@ class GFFSimplifier:
             if sub.type == "exon":
                 new_primary_subfeatures.append(sub)
             elif sub.type == "miRNA":
-                new_gene_id = f"{gene.id}_{num}"
+                new_gene_id = f"{base_id}_{num}"
                 num += 1
                 new_gene = SeqFeature(sub.location, "gene", id=new_gene_id)
                 new_gene.qualifiers = {"source": sub.qualifiers["source"], "ID": new_gene_id}

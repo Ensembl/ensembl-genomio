@@ -39,7 +39,10 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
 
     if new_feat is not None:
         # Put it back
-        simp.records[0].features = [new_feat]
+        if isinstance(new_feat, list):
+            simp.records[0].features = new_feat
+        else:
+            simp.records[0].features = [new_feat]
         simp.records.to_gff(output_gff)
     return new_feat
 
@@ -358,3 +361,37 @@ def test_gffsimplifier_with_genome(
     simp.simpler_gff3(input_gff)
     simp.records.to_gff(output_gff)
     assert_files(output_gff, data_dir / expected_gff)
+
+
+
+@pytest.mark.parametrize(
+    "in_gff, expected_gff, expectation",
+    [
+        param(
+            "ok_gene.gff",
+            "ok_gene.gff",
+            does_not_raise(),
+            id="Gene without miRNA",
+        ),
+        param(
+            "mirna/mirna1.gff",
+            "mirna/mirna1_simped.gff",
+            does_not_raise(),
+            id="Gene with 1 miRNA",
+        ),
+    ],
+)
+def test_normalize_mirna(
+    data_dir: Path,
+    tmp_dir: Path,
+    assert_files: Callable,
+    in_gff: PathLike,
+    expected_gff: PathLike,
+    expectation: ContextManager,
+) -> None:
+    """Test normalizing miRNA genes."""
+    input_gff = data_dir / in_gff
+    output_gff = tmp_dir / Path(in_gff).name
+    with expectation:
+        check_one_feature(input_gff, output_gff, "normalize_mirna")
+        assert_files(output_gff, Path(data_dir / expected_gff))
