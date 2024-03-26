@@ -1,0 +1,59 @@
+LOCUS       S43128                  1527 bp    DNA     linear   PLN 24-JUL-2016
+DEFINITION  RIM1=replication in mitochondria [Saccharomyces cerevisiae=yeast,
+            Genomic, 1527 nt].
+ACCESSION   S43128
+VERSION     S43128.1
+KEYWORDS    .
+SOURCE      mitochondrion Saccharomyces cerevisiae (brewer's yeast)
+  ORGANISM  Saccharomyces cerevisiae
+            Eukaryota; Fungi; Dikarya; Ascomycota; Saccharomycotina;
+            Saccharomycetes; Saccharomycetales; Saccharomycetaceae;
+            Saccharomyces.
+FEATURES             Location/Qualifiers
+     source          1..1527
+                     /organism="Saccharomyces cerevisiae"
+                     /organelle="mitochondrion"
+                     /mol_type="genomic DNA"
+                     /db_xref="taxon:4932"
+     gene            800..1290
+                     /gene="RIM1"
+                     /note="replication in mitochondria"
+     CDS             join(800..1041,1125..1290)
+                     /gene="RIM1"
+                     /note="Method: conceptual translation with partial peptide
+                     sequencing; SSB"
+                     /codon_start=1
+                     /transl_table=2
+                     /product="single-stranded DNA binding protein"
+                     /protein_id="AAB22978.1"
+                     /translation="MFLRTQARFFHATTKKMDFSKMSIVGRIGSEFTEHTSANNNRYL
+                     KYSIASQPRRDGQTNWYNITVFNEPQINFLTEYVRKGALVYVEADAANYVFERDDGSK
+                     GTTLSLVQKDINLLKNGKKLEDAEGQENAASSE"
+ORIGIN      
+        1 aagcttaccc gatgaaatat cacaaatcgt aatagaagac ctcgttgtct ttgtgaatat
+       61 cgatggtgct aatgcaacaa gcgctttatc aaaacctcag ggctccttca gtaaagaaaa
+      121 gaagagaata acgtggagat ttaaagaacc agttgttttg acaagaaatg gtgaaggtca
+      181 aagattaatc gccagattta ttacagacgg cctggcacat gaatccgcta aaggcgtgat
+      241 taccaaattc actatcagtg agacggataa cgtggctcta ccccatagcg gagccggcag
+      301 tggaatcacc ttgacttgtc aggagctgga tgaaaacaat ccatttggtg gtgagtggct
+      361 cgatgtaaac acaaaaagaa ctttgaccac tggtaactac catggtctcg cttgatattt
+      421 ctgctatgct tctatttttc aatattaatt gttcttttgt ttgctaatcc ataatttatg
+      481 gaggtggcgc cgctaaatca tattttcctt ttgaaacctt tgtttaagac ttacgtagaa
+      541 ctacacttat gtactataat gttctgtaaa gattctgtat tttcgttctt ttctattcca
+      601 tttttcggac ttttaggact tttcatctaa tacttattat ttgtggagga gtgcttaaaa
+      661 gcgtttgcgc ccagacgaaa aaaaaaaagc taacacagta gttgagaaag acaaatacca
+      721 cgaatttgat aacaagtcat ttgctaattg tgtgtccttg acaaatacaa aacaaacaaa
+      781 aatccactaa tccattgtaa tgtttttacg tactcaagct cgtttcttcc atgctactac
+      841 caagaagatg gacttctcga aaatgtccat cgtcggccgc attggctctg aattcactga
+      901 acatacttct gctaataaca atcgttattt gaaatatagt atcgcttcgc aaccaagaag
+      961 agatggccaa accaattggt ataatatcac cgttttcaat gaacctcaaa tcaatttttt
+     1021 gacagaatat gttagaaaag ggtatgttat ttattcttca attttactta ctttacaatt
+     1081 acgcgttata atttactaac atttcctttc cataatttat tcagcgcttt ggtatatgtt
+     1141 gaagcagatg ctgctaacta tgtcttcgag agagacgacg gttctaaggg tactactttg
+     1201 agcttagttc aaaaggacat taatttattg aagaatggga agaaattaga agatgctgag
+     1261 ggccaagaaa atgctgcttc ttcagaataa ttgtaatatt tacgcttgct tatttcgact
+     1321 cttcctcgat attttttatc tagagcatgc tttcttttac ttaaaatatt tatggcaaat
+     1381 aggaaaaata catttggaat aacgaactag ttatgtaaaa ctatgcttat tctcaaatag
+     1441 aatgtatata tactataata tattggttaa cgtgtgttat gcaaaatgct ttttgatgat
+     1501 gaaatttagc aaaagaggag gaagctt
+//
