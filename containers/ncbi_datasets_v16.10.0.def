@@ -16,12 +16,17 @@ From: ubuntu:24.04
 %post
     apt-get update && apt-get -y upgrade
     apt-get -y install \
+
     wget \
+    
     unzip \
+    
     procps \
+    
     ca-certificates \
     
     rm -rf /var/lib/apt/lists/*
+    
     apt-get clean
     
     #Installing ncbi datasets & dataformat
