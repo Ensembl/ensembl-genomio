@@ -239,6 +239,7 @@ def test_clean_gene(
         param("gene_ignored.gff", None, id="gene ignored"),
         param("mobile_te.gff", "mobile_te.gff", id="TE"),
         param("ok_protein_coding_gene.gff", "ok_gene.gff", id="ok protein_coding_gene"),
+        param("ok_tr_ignored.gff", "ok_gene.gff", id="ok gene with ignored transcripts/subtranscripts"),
     ],
 )
 def test_simpler_gff3_feature(
@@ -361,7 +362,6 @@ def test_gffsimplifier_with_genome(
     simp.simpler_gff3(input_gff)
     simp.records.to_gff(output_gff)
     assert_files(output_gff, data_dir / expected_gff)
-
 
 
 @pytest.mark.parametrize(

@@ -387,7 +387,6 @@ class GFFSimplifier:
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
-        ignored_transcript_types = self._biotypes["transcript"]["ignored"]
         exons_to_delete = []
         exon_number = 1
         for tcount, feat in enumerate(transcript.sub_features):
@@ -405,7 +404,7 @@ class GFFSimplifier:
                 if feat.id in ("", gene.id, transcript.id):
                     feat.id = f"{transcript.id}_cds"
             else:
-                if feat.type in ignored_transcript_types:
+                if feat.type in self._biotypes["transcript"]["ignored"]:
                     exons_to_delete.append(tcount)
                     continue
 
@@ -448,7 +447,7 @@ class GFFSimplifier:
             return [old_gene]
         if len(transcripts) > 1:
             raise GFFParserError(f"Gene has too many sub_features for miRNA {gene.id}")
-        
+
         # Passed the checks
         primary = transcripts[0]
 
