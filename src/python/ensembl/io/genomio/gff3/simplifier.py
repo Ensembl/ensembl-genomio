@@ -481,13 +481,13 @@ class GFFSimplifier:
                 correctly or there are unknown sub-features.
         """
         base_id = gene.id
+
+        # Insert main gene first
         if gene.type == "primary_transcript":
             primary = gene
             gene = SeqFeature(primary.location, type="gene")
             gene.sub_features = [primary]
             gene.qualifiers = primary.qualifiers
-            gene.id = f"{base_id}_0"
-            gene.qualifiers["ID"] = gene.id
         else:
             transcripts = gene.sub_features
             if (len(transcripts) == 0) or (transcripts[0].type != "primary_transcript"):
@@ -495,6 +495,10 @@ class GFFSimplifier:
             if len(transcripts) > 1:
                 raise GFFParserError(f"Gene has too many sub_features for miRNA {gene.id}")
             primary = transcripts[0]
+
+        # Set ID of the top gene
+        gene.id = f"{base_id}_0"
+        gene.qualifiers["ID"] = gene.id
 
         logging.debug(f"Formatting miRNA gene {gene.id}")
 
@@ -516,9 +520,10 @@ class GFFSimplifier:
         primary.sub_features = new_primary_subfeatures
 
         if not new_genes:
-            raise GFFParserError(f"Could not parse a primary_transcript for {gene.id}")
-
-        all_genes = [gene] + new_genes
+            logging.debug(f"Primary_transcript without miRNA in {gene.id}")
+            all_genes = [gene]
+        else:
+            all_genes = [gene] + new_genes
 
         # Normalize like other genes
         all_genes_cleaned = []

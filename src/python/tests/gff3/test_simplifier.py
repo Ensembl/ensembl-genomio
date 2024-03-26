@@ -377,7 +377,19 @@ def test_gffsimplifier_with_genome(
             "mirna/mirna1.gff",
             "mirna/mirna1_simped.gff",
             does_not_raise(),
-            id="Gene with 1 miRNA",
+            id="Primary_transcript with 1 miRNA",
+        ),
+        param(
+            "mirna/mirna2_pseudo.gff",
+            "mirna/mirna2_pseudo_simped.gff",
+            does_not_raise(),
+            id="Pseudo primary_transcript",
+        ),
+        param(
+            "mirna/mirna3_gene.gff",
+            "mirna/mirna3_gene_simped.gff",
+            does_not_raise(),
+            id="Gene with Primary_transcript with 1 miRNA",
         ),
     ],
 )
