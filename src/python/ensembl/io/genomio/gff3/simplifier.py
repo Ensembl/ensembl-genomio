@@ -422,7 +422,6 @@ class GFFSimplifier:
                 transcript.sub_features.pop(elt)
         return transcript
 
-
     def normalize_mirna(self, gene: SeqFeature) -> List[SeqFeature]:
         """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
 
