@@ -118,8 +118,8 @@ def examine_parameterization(
 def resolve_query_type(
     query_list: list, host_server: str, host_port: str, input_cores: str, input_accessions: str
 ) -> Union[Tuple[Dict, str]]:
-    """Function to indentify the kind of querys being passed by user,
-    then extract the queries (core names or accesisons) and store each with appropriate identifier.
+    """Function to identify the kind of queries being passed by user,
+    then extract the queries (core names or accessions) and store each with appropriate identifier.
 
     Args:
         query_list: List of user defined queries either core names, or accessions
@@ -127,7 +127,7 @@ def resolve_query_type(
         input_accessions: arg parse param '--input_accns'
 
     Returns:
-        User queries stored as indentifier[(core db name | UniqueID#)] : accession
+        User queries stored as identifier[(core db name | UniqueID#)] : accession
     """
 
     query_accessions: Dict = {}
