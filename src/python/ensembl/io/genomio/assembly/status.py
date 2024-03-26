@@ -12,12 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Record the assembly status for a set of INSDC accessions using ncbi 'datasets' tool"""
+"""Obtain and record the assembly 'status' for a set of INSDC accession(s) using NCBI 'datasets' tool."""
 
 __all__ = [
-    "examine_parameterization",
+    "singularity_image_setter",
+    "check_parameterization",
     "resolve_query_type",
-    "fetch_asm_accn",
+    "fetch_accessions_from_cores",
     "datasets_asm_reports",
     "extract_assembly_metadata",
     "generate_report_tsv",
@@ -34,9 +35,10 @@ import sys
 from typing import Dict, Tuple, Union
 
 from spython.main import Client
+from sqlalchemy.engine import URL
 
 from ensembl.io.genomio.utils.json_utils import print_json
-from ensembl.database import DBConnection as dbc
+from ensembl.io.genomio.database.dbconnection_lite import DBConnectionLite as dbc
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -72,9 +74,53 @@ class ReportStructure(dict):
         )
 
 
-def examine_parameterization(
+def singularity_image_setter(sif_cache_dir: Path, datasets_version: str) -> Client:
+    """Parse ENV and User specified variables related to 'datasets' singularity SIF
+    container and define version and location of container.
+
+    Args:
+        sif_cache_dir: Path to attempt locating/download SIF container image.
+        datasets_version: URL of singularity container (custom 'datasets' version if desired)
+
+    Returns:
+        spython.main.client instance of singularity container image housing 'datasets'
+    """
+
+    # Set singularity cache dir from user defined path or use environment
+    if sif_cache_dir and sif_cache_dir.is_dir():
+        image_dl_path = Path(sif_cache_dir)
+        logging.info(f"Using user-defined cache_dir: '{image_dl_path}'")
+    elif os.environ.get("NXF_SINGULARITY_CACHEDIR"):
+        image_dl_path = Path(os.environ["NXF_SINGULARITY_CACHEDIR"])
+        logging.info(
+            f"Using preferred nextflow singularity cache dir 'NXF_SINGULARITY_CACHEDIR': {image_dl_path}"
+        )
+    elif os.environ.get("SINGULARITY_CACHEDIR"):
+        image_dl_path = Path(os.environ["SINGULARITY_CACHEDIR"])
+        logging.info(
+            f"Using the default singularity installation cache dir 'SINGULARITY_CACHEDIR': {image_dl_path}"
+        )
+    else:
+        image_dl_path = Path()
+        logging.warning(f"Unable to set singularity cache dir properly, using CWD {image_dl_path}")
+
+    # Set the datasets version URL
+    if datasets_version is None:
+        container_url = DATASETS_SINGULARITY["datasets_version_url"]
+        logging.info(f"Using default 'ncbi datasets' version '{container_url}'")
+    else:
+        container_url = datasets_version
+        logging.info(f"Using user defined 'ncbi datasets' version '{container_url}'")
+
+    # Pull or load pre-existing 'datasets' singularity container image.
+    datasets_image = Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
+
+    return datasets_image
+
+
+def check_parameterization(
     input_cores: PathLike, input_accessions: PathLike, db_host: str, db_port: int
-) -> Path:
+) -> PathLike:
     """Detect the kind of user input (cores/accessions) and determine any missing or
     incorrect parameterization.
 
@@ -87,26 +133,17 @@ def examine_parameterization(
     Returns:
         User input file used in assembly status querying
     """
-    user_query_file: Path
+    user_query_file: PathLike
 
-    # Check for required input in the form of cores/accessions
-    if input_cores is None and input_accessions is None:
-        logging.critical(
-            "Missing required input: '--input_cores' (core db names) OR '--input_accns' (INSDC accessions)."
-        )
-        sys.exit()
-    elif input_cores and input_accessions:
-        logging.critical("Detected '--input_cores' AND '--input_accns'. Please provide just one such option.")
-        sys.exit()
     # Input core names centered run
-    elif input_cores:
+    if input_cores:
         user_query_file = input_cores
         logging.info(f"Performing assembly status report using core db list file: {user_query_file}")
         if db_host is None or db_port is None:
             logging.critical(
                 "User must specify both arguments '--host' and '--port' when providing core database names."
             )
-            sys.exit()
+            sys.exit(1)
     # Accession centered run
     else:
         user_query_file = input_accessions
@@ -116,13 +153,14 @@ def examine_parameterization(
 
 
 def resolve_query_type(
-    query_list: list, host_server: str, host_port: str, input_cores: str, input_accessions: str
+    query_list: list, partial_url: URL, input_cores: str, input_accessions: str
 ) -> Union[Tuple[Dict, str]]:
     """Function to identify the kind of queries being passed by user,
     then extract the queries (core names or accessions) and store each with appropriate identifier.
 
     Args:
         query_list: List of user defined queries either core names, or accessions
+        partial_url: A partial MYSQL connection URL (host:port)
         input_cores: arg parse param '--input_cores'
         input_accessions: arg parse param '--input_accns'
 
@@ -134,8 +172,7 @@ def resolve_query_type(
     query_type: str = ""
 
     if input_cores and input_accessions is None:
-        server_details = f"mysql://ensro@{host_server}:{host_port}/"  ## Requires some more dev !!
-        query_accessions = fetch_asm_accn(query_list, server_details)
+        query_accessions = fetch_accessions_from_cores(query_list, partial_url)
         query_type = "CoreDB"
     elif input_cores is None and input_accessions:
         query_count = 1
@@ -151,14 +188,13 @@ def resolve_query_type(
     return query_accessions, query_type
 
 
-def fetch_asm_accn(database_names: list, server_details: str) -> Dict:
+def fetch_accessions_from_cores(database_names: list, connection_url: URL) -> Dict:
     """Obtain the associated INSDC accession [meta.assembly.accession] given a set of core(s) names
     and a MYSQL server host.
 
     Args:
-        cores: Set of names for one or more core databases
-        server_details: MYSQL host server name and port [mysql-ens-(NAME:Port)]
-
+        database_names: Set of names for one or more core databases
+        connection_url: Partial MYSQL host name : port
     Returns:
         Dict of core name(s) (key) and its INSDC assembly.accession (value)
     """
@@ -168,7 +204,7 @@ def fetch_asm_accn(database_names: list, server_details: str) -> Dict:
     count_accn_found = 0
 
     for core in database_names:
-        db_connection_url = f"{server_details}{core}"
+        db_connection_url = connection_url.set(database=core)
         db_connection = dbc(f"{db_connection_url}")
         qry_result = db_connection.execute(
             'SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";'
@@ -202,7 +238,7 @@ def datasets_asm_reports(
         batch_size: Number of assembly accessions to batch submit to 'datasets'.
 
     Returns:
-        Dictionary of core name and its assoicated assembly report
+        Dictionary of core name and its associated assembly report
     """
 
     master_accn_list = list(assembly_accessions.values())
@@ -224,12 +260,15 @@ def datasets_asm_reports(
 
         ## Test what result we have returned following execution of sif image and accession value
         # Returned a str, i.e. no datasets result obtained exited with fatal error
-        if isinstance(result, str) and re.search("^FATAL", result):
+        if not isinstance(result, str):
+            raise ValueError("Result obtained from datasets is not the expected format 'string'")
+        if re.search("^FATAL", result):
             logging.critical(f"Singularity image execution failed! -> '{result.strip()}'")
+            sys.exit(1)
         # Returned a list, i.e. datasets returned a result to client.execute
 
         tmp_asm_dict = json.loads(result)
-        if isinstance(result, str) and tmp_asm_dict["total_count"] >= 1:
+        if tmp_asm_dict["total_count"] >= 1:
             logging.info(f"Asm report obtained for accession(s) [{accessions}]")
 
             batch_reports_json = tmp_asm_dict["reports"]
@@ -241,8 +280,9 @@ def datasets_asm_reports(
                 for core, accession_core in assembly_accessions.items():
                     if accession == accession_core:
                         combined_asm_reports[core] = assembly_report
-        elif isinstance(result, str) and tmp_asm_dict["total_count"] == 0:
-            logging.warning(f"No assembly report found for accession(s) {accessions}")
+        else:
+            logging.warning(f"No assembly report found for accession(s) {accessions}. Exiting !")
+            sys.exit(0)
 
     return combined_asm_reports
 
@@ -271,7 +311,6 @@ def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, Re
         asm_meta_info["Taxon ID"] = asm_report["organism"]["tax_id"]
 
         ## Non-mandatory meta key parsing:
-        # asm_meta_info["Asm last updated"] = asm_report["assembly_info"]["biosample"]["last_updated"]
         assembly_meta_keys = asm_report["assembly_info"].keys()
         organism_keys = asm_report["organism"].keys()
 
@@ -300,19 +339,11 @@ def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, Re
             if "isolate" in organism_type_keys:
                 asm_meta_info["Isolate"] = asm_report["organism"]["infraspecific_names"]["isolate"]
                 asm_meta_info.pop("Strain")
-                asm_meta_info.pop("Isolate/Strain")
             elif "strain" in organism_type_keys:
                 asm_meta_info["Strain"] = asm_report["organism"]["infraspecific_names"]["strain"]
                 asm_meta_info.pop("Isolate")
-                asm_meta_info.pop("Isolate/Strain")
-            else:
-                asm_meta_info["Isolate/Strain"] = "NA"
-                asm_meta_info.pop("Strain")
-                asm_meta_info.pop("Isolate")
         else:
-            # elif ("strain" not in organism_type_keys) and ("isolate" not in organism_type_keys):
-            asm_meta_info["Isolate/Strain"] = "NA"
-            asm_meta_info.pop("Strain")
+            asm_meta_info["Strain"] = "NA"
             asm_meta_info.pop("Isolate")
 
         parsed_meta[core] = asm_meta_info
@@ -321,16 +352,19 @@ def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, Re
 
 
 def generate_report_tsv(
-    parsed_asm_reports: dict, outfile_prefix: str, query_type: str, output_directoy: PathLike = Path(getcwd())
+    parsed_asm_reports: dict,
+    outfile_prefix: str,
+    query_type: str,
+    output_directory: PathLike = Path(getcwd()),
 ) -> None:
     """Generate and write the assembly report to a TSV file
 
     Args:
         parsed_asm_reports: Parsed assembly report meta
-        output_directoy: Path to directory where output TSV is stored.
+        output_directory: Path to directory where output TSV is stored.
     """
 
-    tsv_outfile = f"{output_directoy}/{outfile_prefix}.tsv"
+    tsv_outfile = f"{output_directory}/{outfile_prefix}.tsv"
 
     header_list = list(ReportStructure().keys())
     header_list.remove("Strain")
@@ -356,14 +390,20 @@ def main() -> None:
     parser = ArgumentParser(
         description="Track the assembly status of a set of input core(s) using NCBI 'datasets'"
     )
-    parser.add_argument_src_path(
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument(
         "--input_cores",
+        type=Path,
         required=False,
         default=None,
-        help="List of ensembl core db names to retrieve accessions",
+        help="List of ensembl core database(s) names to retrieve query accessions",
     )
-    parser.add_argument_src_path(
-        "--input_accns", required=False, default=None, help="List of query assembly accessions"
+    input_group.add_argument(
+        "--input_accessions",
+        type=Path,
+        required=False,
+        default=None,
+        help="List of assembly INSDC query accessions",
     )
     parser.add_argument_dst_path(
         "--download_dir",
@@ -418,49 +458,25 @@ def main() -> None:
         args.download_dir.mkdir(parents=True)
 
     # Set input file and determine if proper parameterization options are defined.
-    user_query_file = examine_parameterization(args.input_cores, args.input_accns, args.host, args.port)
+    user_query_file = check_parameterization(args.input_cores, args.input_accessions, args.host, args.port)
 
     ## Parse and store cores/accessions from user input query file
-    try:
-        with user_query_file.open(mode="r") as f:
-            query_list = f.read().splitlines()
-    except IOError as err:
-        logging.error(f"Unable to read user queries from inputfile '{user_query_file}' due to {err}.")
-        sys.exit()
+    with user_query_file.open(mode="r") as f:
+        query_list = f.read().splitlines()
 
-    # Set singularity cache dir from user defined path or use environment
-    if args.cache_dir and args.cache_dir.is_dir():
-        image_dl_path = Path(args.cache_dir)
-        logging.info(f"Using user-defined cache_dir: '{image_dl_path}'")
-    elif os.environ.get("NXF_SINGULARITY_CACHEDIR"):
-        image_dl_path = Path(os.environ["NXF_SINGULARITY_CACHEDIR"])
-        logging.info(
-            f"Using preferred nextflow singularity cache dir 'NXF_SINGULARITY_CACHEDIR': {image_dl_path}"
-        )
-    elif os.environ.get("SINGULARITY_CACHEDIR"):
-        image_dl_path = Path(os.environ["SINGULARITY_CACHEDIR"])
-        logging.info(
-            f"Using the default singularity installation cache dir 'SINGULARITY_CACHEDIR': {image_dl_path}"
-        )
-    else:
-        image_dl_path = Path()
-        logging.warning(f"Unable to set singularity cache dir properly, using CWD {image_dl_path}")
-
-    # Set the datasets version URL
-    if args.datasets_version_url is None:
-        container_url = DATASETS_SINGULARITY["datasets_version_url"]
-        logging.info(f"Using default 'ncbi datasets' version '{container_url}'")
-    else:
-        container_url = args.datasets_version_url
-        logging.info(f"Using user defined 'ncbi datasets' version '{container_url}'")
+    ## Parse singularity setting and define the SIF image for 'datasets'
+    datasets_image = singularity_image_setter(args.cache_dir, args.datasets_version_url)
 
     ## Get accessions on cores list or use user accession list directly
-    query_accessions, query_type = resolve_query_type(
-        query_list, args.host, args.port, args.input_cores, args.input_accns
+    connection_url = URL.create(
+        "mysql",
+        host=args.host,
+        port=args.port,
+        username="ensro",
     )
-
-    # Pull or load pre-existing 'datasets' singularity container image.
-    datasets_image = Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
+    query_accessions, query_type = resolve_query_type(
+        query_list, connection_url, args.input_cores, args.input_accessions
+    )
 
     # Datasets query implementation for one or more batched accessions
     assembly_reports = datasets_asm_reports(
@@ -468,6 +484,7 @@ def main() -> None:
     )
 
     # Extract the key assembly report meta information for reporting status
-    key_asmreport_meta = extract_assembly_metadata(assembly_reports)
+    key_assembly_report_meta = extract_assembly_metadata(assembly_reports)
 
-    generate_report_tsv(key_asmreport_meta, args.assembly_report_prefix, query_type, args.download_dir)
+    # Produce the finalized assembly status report TSV from set of parsed 'datasets summary report'
+    generate_report_tsv(key_assembly_report_meta, args.assembly_report_prefix, query_type, args.download_dir)
