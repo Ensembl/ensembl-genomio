@@ -462,7 +462,7 @@ def main() -> None:
     # Pull or load pre-existing 'datasets' singularity container image.
     datasets_image = Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
 
-    # Datasets query implementation for one or more bacthed accessions
+    # Datasets query implementation for one or more batched accessions
     assembly_reports = datasets_asm_reports(
         datasets_image, query_accessions, args.download_dir, args.datasets_batch_size
     )
