@@ -18,6 +18,7 @@ Typical usage example::
     $ pytest test_extract_data.py
 
 """
+
 import json
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -25,8 +26,8 @@ from unittest.mock import Mock, patch
 from BCBio import GFF
 from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
+from Bio.SeqRecord import SeqRecord
 import pytest
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError
@@ -40,7 +41,7 @@ class TestWriteFormattedFiles:
     prefix = "TEST"
 
     @pytest.fixture
-    def formatted_files_generator(self, data_dir: Path):
+    def formatted_files_generator(self, data_dir: Path) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters.
         Fixture that returns the class of the module that we are testing
         """
@@ -73,9 +74,9 @@ class TestWriteFormattedFiles:
 
     @pytest.mark.dependency(depends=["parse_genbank"])
     def test_write_fasta_dna(
-        self, formatted_files_generator: FormattedFilesGenerator, tmp_path: Path
+        self, tmp_path: Path, formatted_files_generator: FormattedFilesGenerator
     ) -> None:
-        """Check fasta DNA sequences are written as expected."""
+        """Check FASTA DNA sequences are written as expected."""
         record1 = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature1 = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
         record1.features.append(gene_feature1)
@@ -92,9 +93,9 @@ class TestWriteFormattedFiles:
 
     @pytest.mark.dependency(depends=["parse_genbank"])
     def test_format_genome_json(
-        self, formatted_files_generator: FormattedFilesGenerator, tmp_path: Path
+        self, tmp_path: Path, formatted_files_generator: FormattedFilesGenerator
     ) -> None:
-        """Test write_genome_json formats and generates the correct json output."""
+        """Test write_genome_json formats and generates the correct JSON output."""
         record1 = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature1 = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
         record1.features.append(gene_feature1)
@@ -104,14 +105,14 @@ class TestWriteFormattedFiles:
         record1.features.append(gene_feature1)
 
         formatted_files_generator.seq_records = [record1, record2]
-        formatted_files_generator.files["genome"] = tmp_path / "genome.json"
+        genome_path = tmp_path / "genome.json"
+        formatted_files_generator.files["genome"] = genome_path
         # pylint: disable=protected-access
         formatted_files_generator._format_genome_data()
-        assert (tmp_path / "genome.json").exists()
-        with open(tmp_path / "genome.json", "r") as f:
-            genome_data = json.load(f)
-            assert genome_data["species"]["production_name"] == "TEST_prod"
-            assert genome_data["added_seq"]["region_name"] == ["record1", "record2"]
+        assert genome_path.exists()
+        genome_data = get_json(genome_path)
+        assert genome_data["species"]["production_name"] == "TEST_prod"
+        assert genome_data["added_seq"]["region_name"] == ["record1", "record2"]
 
     @pytest.mark.dependency(depends=["parse_genbank"])
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._get_codon_table")
@@ -151,9 +152,7 @@ class TestWriteFormattedFiles:
         mock_parse_record: Mock,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Check gene features in GFF3 format are generated as expected.
-        Raises an error when there are duplicate ids.
-        """
+        """Check gene features in GFF3 format are generated as expected."""
         record = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
         record.features.append(gene_feature)
@@ -190,9 +189,9 @@ class TestWriteFormattedFiles:
 
     @pytest.mark.dependency(depends=["parse_genbank", "format_gff"])
     def test_write_genes_gff(
-        self, formatted_files_generator: FormattedFilesGenerator, tmp_path: Path
+        self, tmp_path: Path, formatted_files_generator: FormattedFilesGenerator
     ) -> None:
-        """Test if gff file is generated when there are Seqfeatures present"""
+        """Test if GFF3 file is generated when there are SeqFeatures present"""
 
         record1 = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature1 = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
@@ -212,9 +211,9 @@ class TestWriteFormattedFiles:
 
     @pytest.mark.dependency(depends=["parse_genbank", "format_gff"])
     def test_write_pep_fasta(
-        self, formatted_files_generator: FormattedFilesGenerator, tmp_path: Path
+        self, tmp_path: Path, formatted_files_generator: FormattedFilesGenerator
     ) -> None:
-        """Test if peptides fasta file is generated when peptides are identifies"""
+        """Test if peptides FATA file is generated when peptides are identified"""
         record1 = SeqRecord(Seq("MFLRTQARFFHATTKKM"), id="cds-record1")
         CDS_feature1 = SeqFeature(
             FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}

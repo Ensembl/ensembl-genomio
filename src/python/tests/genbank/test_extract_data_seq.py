@@ -18,12 +18,13 @@ Typical usage example::
     $ pytest test_extract_data_seq.py
 
 """
+
 from typing import List
 from unittest.mock import Mock, patch
 
-from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
+from Bio.SeqRecord import SeqRecord
 import pytest
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError, UnsupportedData
@@ -58,23 +59,22 @@ class TestFormattedFilesGenerator:
         self,
         mock_parse_rna_feat: Mock,
         mock_parse_gene_feat: Mock,
+        formatted_files_generator: FormattedFilesGenerator,
+        type_feature: str,
+        gene_name: str,
         expected_name: str,
         expected_id: str,
-        formatted_files_generator: FormattedFilesGenerator,
-        gene_name: str,
-        type_feature: str,
     ):
         """Test to parse the features correctly"""
         record = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={gene_name: expected_name})
         rna_feature = SeqFeature(FeatureLocation(10, 15), type=type_feature)
-        CDS_feature = SeqFeature(
+        cds_feature = SeqFeature(
             FeatureLocation(10, 20), type="CDS", qualifiers={gene_name: "GlyrA", "transl_table": "2"}
         )
-        record.features = [gene_feature, rna_feature, CDS_feature]
+        record.features = [gene_feature, rna_feature, cds_feature]
         mock_peptides: List = []
 
-        assert gene_feature.qualifiers[gene_name] == expected_name
         gene_feature_feat = {expected_id: gene_feature}
         mock_parse_gene_feat.return_value = (
             gene_feature_feat,  # Mock the new record
@@ -95,7 +95,7 @@ class TestFormattedFilesGenerator:
             mock_parse_rna_feat.assert_called()
 
     def test_parse_record_with_unsupported_feature(self, formatted_files_generator: FormattedFilesGenerator):
-        """Raises error then there is unspported feature"""
+        """Tests parsing records with unsupported features."""
         record = SeqRecord(Seq("ATGC"))
         unsupported_feature = SeqFeature(FeatureLocation(5, 10), type="gene")
         record.features.append(unsupported_feature)
@@ -204,7 +204,7 @@ class TestFormattedFilesGenerator:
 
     @pytest.mark.parametrize("organelle, expected_location", [("mitochondrion", "mitochondrial_chromosome")])
     def test_prepare_location_with_supported_organelle(
-        self, expected_location: str, formatted_files_generator, organelle: str
+        self, formatted_files_generator: FormattedFilesGenerator, expected_location: str, organelle: str
     ) -> None:
         """Test that organelle location is present in the allowed types"""
         # pylint: disable=protected-access
@@ -217,10 +217,9 @@ class TestFormattedFilesGenerator:
     ) -> None:
         """Test that organelle location if not identifies throws an error"""
         # An organelle not in the dictionary
-        with pytest.raises(UnsupportedData) as exc_info:
+        with pytest.raises(UnsupportedData, match=f"Unknown organelle: {organelle}"):
             # pylint: disable=protected-access
             formatted_files_generator._prepare_location(organelle)
-        assert str(exc_info.value) == f"Unknown organelle: {organelle}"
 
     @pytest.mark.parametrize(
         "type_feature, expected_value", [("gene", None), ("mRNA", None), ("CDS", 2), ("CDS", 5)]
