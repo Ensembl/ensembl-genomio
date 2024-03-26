@@ -266,6 +266,7 @@ def test_simpler_gff3_feature(
         param("bad_gene_type.gff", "", raises(GFFParserError), id="Unsupported gene type"),
         param("bad_tr_type.gff", "", raises(GFFParserError), id="Unsupported transcript type"),
         param("bad_subtr_type.gff", "", raises(GFFParserError), id="Unsupported subtranscript type"),
+        param("mirna/mirna1.gff", "mirna/mirna1_simped.gff", does_not_raise(), id="miRNA split"),
     ],
 )
 def test_simpler_gff3(
@@ -278,7 +279,7 @@ def test_simpler_gff3(
 ) -> None:
     """Test simplifying genes from GFF3 files."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / in_gff
+    output_gff = tmp_dir / Path(in_gff).name
     with expectation:
         simp = GFFSimplifier()
         simp.simpler_gff3(input_gff)
