@@ -422,54 +422,6 @@ class GFFSimplifier:
                 transcript.sub_features.pop(elt)
         return transcript
 
-    # COMPLETION
-    def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
-        """Create a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA' for all others
-
-        Args:
-            ncrna: the transcript for which we want to create a gene.
-
-        Returns:
-            The gene that contains the transcript.
-
-        """
-        new_type = "ncRNA_gene"
-        if ncrna.type in ("tRNA", "rRNA"):
-            new_type = "gene"
-        logging.debug(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
-        gene = SeqFeature(ncrna.location, type=new_type)
-        gene.qualifiers["source"] = ncrna.qualifiers["source"]
-        gene.sub_features = [ncrna]
-        gene.id = ncrna.id
-
-        return gene
-
-    def cds_gene(self, cds: SeqFeature) -> SeqFeature:
-        """Returns a gene created for a lone CDS."""
-
-        logging.debug(f"Put the lone CDS in gene-mRNA parent features for {cds.id}")
-
-        # Create a transcript, add the CDS
-        transcript = SeqFeature(cds.location, type="mRNA")
-        transcript.qualifiers["source"] = cds.qualifiers["source"]
-        transcript.sub_features = [cds]
-
-        # Add an exon too
-        exon = SeqFeature(cds.location, type="exon")
-        exon.qualifiers["source"] = cds.qualifiers["source"]
-        transcript.sub_features.append(exon)
-
-        # Create a gene, add the transcript
-        gene_type = "gene"
-        if ("pseudo" in cds.qualifiers) and (cds.qualifiers["pseudo"][0] == "true"):
-            gene_type = "pseudogene"
-        gene = SeqFeature(cds.location, type=gene_type)
-        gene.qualifiers["source"] = cds.qualifiers["source"]
-        gene.sub_features = [transcript]
-        gene.id = self.stable_ids.generate_gene_id()
-
-        return gene
-
     def normalize_mirna(self, gene: SeqFeature) -> List[SeqFeature]:
         """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
 
