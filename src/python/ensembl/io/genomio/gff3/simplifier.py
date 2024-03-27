@@ -442,6 +442,8 @@ class GFFSimplifier:
             gene.sub_features = [primary]
             gene.qualifiers = primary.qualifiers
             transcripts = gene.sub_features
+            gene.id = f"{base_id}_0"
+            gene.qualifiers["ID"] = gene.id
 
         if (len(transcripts) == 0) or (transcripts[0].type != "primary_transcript"):
             return [old_gene]
@@ -450,10 +452,6 @@ class GFFSimplifier:
 
         # Passed the checks
         primary = transcripts[0]
-
-        # Set ID of the top gene
-        gene.id = f"{base_id}_0"
-        gene.qualifiers["ID"] = gene.id
 
         logging.debug(f"Formatting miRNA gene {gene.id}")
 
