@@ -187,6 +187,10 @@ class Manifest:
                     seq_circular[seq["name"]] = seq.get("circular", False)
                     if seq["coord_system_level"] == "contig":
                         seqr_seqlevel[seq["name"]] = int(seq["length"])
+                    # Also record synonyms (in case GFF file uses synonyms)
+                    if "synonyms" in seq:
+                        for synonym in seq["synonyms"]:
+                            seq_lengths[synonym["name"]] = int(seq["length"])
                 self.lengths["seq_regions"] = seq_lengths
                 self.circular["seq_regions"] = seq_circular
                 self.seq_regions = seq_regions
