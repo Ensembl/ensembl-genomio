@@ -65,10 +65,10 @@ cicd = [
     "genbadge[coverage]",
     "mypy >= 1.2.0",
     "pylint >= 3.0.2",
-    "pytest >= 7.4.3, < 8.1",
+    "pytest >= 7.4.3",
     "pytest-dependency",
     "pytest-mock",
-    "pytest-workflow",
+    "pytest-workflow >= 2.1.0",
     "types-requests",
 ]
 doc = [
