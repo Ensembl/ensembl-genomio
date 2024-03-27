@@ -288,6 +288,34 @@ def test_simpler_gff3(
 
 
 @pytest.mark.parametrize(
+    "in_gff, expected_gff, allow_cds",
+    [
+        param("ok_gene.gff", "ok_gene.gff", False, id="ok gene"),
+        param("ok_gene.gff", "ok_gene.gff", True, id="ok gene, allow pseudo CDS"),
+        param("pseudogene.gff", "pseudogene.gff", False, id="ok pseudogene"),
+        param("pseudogene_cds.gff", "pseudogene_cds_removed.gff", False, id="pseudogene cds removed"),
+        param("pseudogene_cds.gff", "pseudogene_cds.gff", True, id="pseudogene cds kept"),
+    ],
+)
+def test_simpler_gff3_pseudogene(
+    data_dir: Path,
+    tmp_dir: Path,
+    assert_files: Callable,
+    in_gff: PathLike,
+    expected_gff: PathLike,
+    allow_cds: bool,
+) -> None:
+    """Test simplifying pseudogenes from GFF3 files."""
+    input_gff = data_dir / in_gff
+    output_gff = tmp_dir / Path(in_gff).name
+    simp = GFFSimplifier()
+    simp.allow_pseudogene_with_cds = allow_cds
+    simp.simpler_gff3(input_gff)
+    simp.records.to_gff(output_gff)
+    assert_files(output_gff, data_dir / expected_gff)
+
+
+@pytest.mark.parametrize(
     "in_gff, expected_gff, skip_unrecognized, expectation",
     [
         param("bad_gene_type.gff", "", False, raises(GFFParserError), id="Unset skip unrecognized, fail"),
