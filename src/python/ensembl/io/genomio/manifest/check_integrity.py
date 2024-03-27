@@ -408,10 +408,9 @@ class IntegrityTool:
         self.set_ignore_final_stops(ignore_final_stops)
         self.errors: List[str] = []
 
-    def add_errors(self, *args: str) -> None:
+    def add_errors(self, *errors: str) -> None:
         """Store the given errors in the list."""
-        for error in args:
-            self.errors += error
+        self.errors += errors
 
     def check_integrity(self):
         """Load files listed in the manifest.json and check the integrity.
@@ -437,6 +436,10 @@ class IntegrityTool:
 
         # Then, run the checks
         self._check_genome(genome)
+
+        if self.manifest.errors:
+            errors_str = "\n".join(self.manifest.errors)
+            raise InvalidIntegrityError(f"Manifest files parsing failed:\n{errors_str}")
 
         # Check gff3
         if manifest.has_lengths("gff3_genes"):
@@ -505,8 +508,8 @@ class IntegrityTool:
         if agp_seqr and seq_lengths:
             self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
 
-        if manifest.errors:
-            errors_str = "\n".join(manifest.errors)
+        if self.errors:
+            errors_str = "\n".join(self.errors)
             raise InvalidIntegrityError(f"Integrity test failed:\n{errors_str}")
 
     def set_brc_mode(self, brc_mode: bool) -> None:
