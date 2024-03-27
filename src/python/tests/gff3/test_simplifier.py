@@ -266,7 +266,6 @@ def test_simpler_gff3_feature(
         param("bad_gene_type.gff", "", raises(GFFParserError), id="Unsupported gene type"),
         param("bad_tr_type.gff", "", raises(GFFParserError), id="Unsupported transcript type"),
         param("bad_subtr_type.gff", "", raises(GFFParserError), id="Unsupported subtranscript type"),
-        param("mirna/gene.gff", "mirna/gene_simped.gff", does_not_raise(), id="miRNA split"),
     ],
 )
 def test_simpler_gff3(
@@ -440,7 +439,7 @@ def test_gffsimplifier_with_genome(
         ),
     ],
 )
-def test_normalize_mirna(
+def test_simpler_gff3_mirna(
     data_dir: Path,
     tmp_dir: Path,
     assert_files: Callable,
@@ -452,5 +451,7 @@ def test_normalize_mirna(
     input_gff = data_dir / in_gff
     output_gff = tmp_dir / Path(in_gff).name
     with expectation:
-        check_one_feature(input_gff, output_gff, "normalize_mirna")
-        assert_files(output_gff, Path(data_dir / expected_gff))
+        simp = GFFSimplifier()
+        simp.simpler_gff3(input_gff)
+        simp.records.to_gff(output_gff)
+        assert_files(output_gff, data_dir / expected_gff)

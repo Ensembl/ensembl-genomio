@@ -123,7 +123,7 @@ class GFFSimplifier:
             cleaned_features = []
             for feature in record.features:
                 split_genes = self.normalize_mirna(feature)
-                if len(split_genes) > 1:
+                if split_genes:
                     cleaned_features += split_genes
                 else:
                     clean_feature = self.simpler_gff3_feature(feature)
@@ -446,7 +446,7 @@ class GFFSimplifier:
             gene.qualifiers["ID"] = gene.id
 
         if (len(transcripts) == 0) or (transcripts[0].type != "primary_transcript"):
-            return [old_gene]
+            return []
         if len(transcripts) > 1:
             raise GFFParserError(f"Gene has too many sub_features for miRNA {gene.id}")
 
