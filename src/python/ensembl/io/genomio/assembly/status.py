@@ -359,8 +359,6 @@ def generate_report_tsv(
     tsv_outfile = f"{output_directory}/{outfile_prefix}.tsv"
 
     header_list = list(ReportStructure().keys())
-    # header_list.remove("Strain")
-    # header_list.remove("Isolate")
     header_list = [query_type] + header_list
 
     with open(tsv_outfile, "w+") as tsv_out:
@@ -480,3 +478,5 @@ def main() -> None:
 
     # Produce the finalized assembly status report TSV from set of parsed 'datasets summary report'
     generate_report_tsv(key_assembly_report_meta, args.assembly_report_prefix, query_type, args.download_dir)
+
+    sys.exit(0)
