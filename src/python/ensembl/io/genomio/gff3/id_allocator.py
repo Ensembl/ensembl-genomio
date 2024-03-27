@@ -175,7 +175,7 @@ class StableIDAllocator:
 
         # In case the normalized gene ID is not valid, use the GeneID
         if not self.is_valid(new_gene_id):
-            logging.warning(f"Gene ID is not valid: {new_gene_id}")
+            logging.debug(f"Gene ID is not valid: {new_gene_id}")
             qual = gene.qualifiers
             if "Dbxref" in qual:
                 for xref in qual["Dbxref"]:

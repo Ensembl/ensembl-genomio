@@ -13,19 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process PREPARE_GENOME_METADATA {
+process DATASETS_METADATA {
     tag "$accession"
     label 'local'
+    label 'cached'
 
     input:
-        tuple val(accession), path(input_json), path(ncbi_json)
+        val(accession)
 
     output:
-        tuple val(accession), path("genome.json"), emit: genomic_dataset
+        tuple val(accession), path("ncbi_meta.json")
         
     shell:
-    output_json = "genome.json"
-    '''
-    genome_metadata_prepare --input_file !{input_json} --output_file !{output_json} --ncbi_meta !{ncbi_json}
-    '''
+        '''
+        datasets summary genome accession !{accession} > ncbi_meta.json
+        if [ "$?" -ne 0 ]; then
+            echo "Invalid or unsupported assembly accession: !{accession}"
+            exit 1
+        elif [[ $(jq -r '.total_count' ncbi_meta.json) -eq 0 ]]; then
+            echo "No metadata returned for !{accession}"
+            exit 1
+        fi
+        '''
+    
+    stub:
+        """
+        echo '{"reports":[{"organism":{"tax_id":1000}}]}' > ncbi_meta.json
+        """
 }

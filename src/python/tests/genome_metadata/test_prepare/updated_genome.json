@@ -1,0 +1,19 @@
+{
+    "annotation": {
+        "provider_name": "GenBank"
+    },
+    "assembly": {
+        "accession": "GCA_013436015.1",
+        "provider_name": "GenBank",
+        "version": 1
+    },
+    "genebuild": {
+        "start_date": "01-2021",
+        "version": "01-2021"
+    },
+    "species": {
+        "scientific_name": "Mus musculus",
+        "strain": "domesticus",
+        "taxonomy_id": 10092
+    }
+}

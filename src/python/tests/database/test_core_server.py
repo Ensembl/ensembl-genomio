@@ -22,7 +22,7 @@ Typical usage example::
 
 """
 
-from typing import List
+from typing import List, Optional
 
 import pytest
 from pytest_mock import MockerFixture
@@ -68,15 +68,15 @@ class TestCoreServer:
     @pytest.mark.parametrize(
         "dbs, prefix, build, version, dbname_re, db_list, output",
         [
-            ([], "", "", "", "", [], []),
-            (TEST_CORES, "", "", "", "", [], TEST_CORES),
+            ([], "", "", None, None, [], []),
+            (TEST_CORES, "", None, None, "", [], TEST_CORES),
             (TEST_CORES, "prefix", "61", "111", r"_sp_", [], ["prefix_speciesF_genus_sp_core_61_111_1"]),
-            (TEST_CORES, "speciesC", "", "", "", [], []),
-            (TEST_CORES, "", "59", "", "", [], []),
-            (TEST_CORES, "", "", "109", "", [], []),
-            (TEST_CORES, "", "", "", r"_compara_", [], []),
-            (TEST_CORES, "", "", "", r"", TEST_CORES[0:2], TEST_CORES[0:2]),
-            (TEST_CORES, "", "", "", r"", ["nonexistent_species"], []),
+            (TEST_CORES, "speciesC", None, None, "", [], []),
+            (TEST_CORES, "", 59, None, "", [], []),
+            (TEST_CORES, "", None, 109, "", [], []),
+            (TEST_CORES, "", None, None, r"_compara_", [], []),
+            (TEST_CORES, "", None, None, r"", TEST_CORES[0:2], TEST_CORES[0:2]),
+            (TEST_CORES, "", None, None, r"", ["nonexistent_species"], []),
         ],
     )
     def test_get_cores(
@@ -84,8 +84,8 @@ class TestCoreServer:
         mocker: MockerFixture,
         dbs: List[str],
         prefix: str,
-        build: str,
-        version: str,
+        build: Optional[int],
+        version: Optional[int],
         dbname_re: str,
         db_list: List[str],
         output: List[str],
@@ -96,7 +96,7 @@ class TestCoreServer:
             mocker: Fixture to mock the connection to the server.
             dbs: Mock list of databases found in the server.
             prefix: Filter by prefix.
-            build: Filter by build.
+            build: Filter by VEuPathDB build number.
             version: Filter by Ensembl version.
             dbname_re: Filter by dbname regular expression.
             db_list: Explicit list of database names.

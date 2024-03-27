@@ -52,7 +52,7 @@ def shared_data_dir(pytestconfig: Config) -> Path:
 
 
 @pytest.fixture(name="json_data")
-def fixture_json_data(data_dir: Path) -> Callable:
+def fixture_json_data(data_dir: Path) -> Callable[[str], Any]:
     """Returns a JSON test object factory.
 
     Args:
@@ -68,8 +68,8 @@ def fixture_json_data(data_dir: Path) -> Callable:
 
 
 @pytest.fixture(name="assert_files")
-def assert_files() -> Callable[[Path, Path], None]:
-    """Provide a function that asserts two files and show a diff if they differ."""
+def fixture_assert_files() -> Callable[[Path, Path], None]:
+    """Returns a function that asserts if two files are equal and shows a diff if they differ."""
 
     def _assert_files(result_path: Path, expected_path: Path) -> None:
         with open(result_path, "r") as result_fh:

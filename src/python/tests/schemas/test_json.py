@@ -45,22 +45,22 @@ from ensembl.io.genomio.schemas import json
     ],
 )
 def test_schema_factory(
-    tmp_dir: Path, data_dir: Path, metadata_types: List[str], output: List[PathLike]
+    tmp_path: Path, data_dir: Path, metadata_types: List[str], output: List[PathLike]
 ) -> None:
     """Tests the `schema_factory()` method.
 
     Args:
-        tmp_dir: Session-scoped temporary directory fixture.
+        tmp_path: Test's unique temporary directory fixture.
         data_dir: Module's test data directory fixture.
         manifest_dir: Path to the folder with the manifest JSON file to check.
         metadata_types: Metadata types to extract from `manifest` as JSON files.
         output: Expected created files.
 
     """
-    json.schema_factory(data_dir, metadata_types, tmp_dir)
+    json.schema_factory(data_dir, metadata_types, tmp_path)
     for file_name in output:
-        print(f"Check {file_name} in {tmp_dir}")
-        assert (tmp_dir / file_name).exists()
+        print(f"Check {file_name} in {tmp_path}")
+        assert (tmp_path / file_name).exists()
 
 
 @pytest.mark.parametrize(

@@ -1,0 +1,17 @@
+{
+    "assembly": {
+        "accession": "GCA_013436015.2",
+        "provider_name": "GenBank",
+        "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_013436015.2",
+        "version": 2
+    },
+    "genebuild": {
+        "start_date": "2024-03-19",
+        "version": "2024-03-19"
+    },
+    "species": {
+        "scientific_name": "Rhipicephalus annulatus",
+        "strain": "Klein Grass",
+        "taxonomy_id": 34611
+    }
+}
