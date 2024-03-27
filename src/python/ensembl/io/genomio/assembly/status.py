@@ -119,8 +119,8 @@ def singularity_image_setter(sif_cache_dir: Path, datasets_version: str) -> Clie
 
 
 def check_parameterization(
-    input_cores: PathLike, input_accessions: PathLike, db_host: str, db_port: int
-) -> PathLike:
+    input_cores: Path, input_accessions: Path, db_host: str, db_port: int
+) -> Path:
     """Detect the kind of user input (cores/accessions) and determine any missing or
     incorrect parameterization.
 
@@ -133,7 +133,7 @@ def check_parameterization(
     Returns:
         User input file used in assembly status querying
     """
-    user_query_file: PathLike
+    user_query_file: Path
 
     # Input core names centered run
     if input_cores:
@@ -175,15 +175,15 @@ def resolve_query_type(
         query_accessions = fetch_accessions_from_cores(query_list, partial_url)
         query_type = "CoreDB"
     elif input_cores is None and input_accessions:
-        query_count = 1
+        # query_count = 1
         query_type = "Accession"
         for accession in query_list:
             match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
             if not match:
                 raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
-            query_name = f"Query_#{query_count}"
-            query_count += 1
-            query_accessions[query_name] = accession
+            # query_name = f"Query_#{query_count}"
+            # query_count += 1
+            query_accessions[accession] = accession
 
     return query_accessions, query_type
 
@@ -339,11 +339,19 @@ def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, Re
             if "isolate" in organism_type_keys:
                 asm_meta_info["Isolate"] = asm_report["organism"]["infraspecific_names"]["isolate"]
                 asm_meta_info.pop("Strain")
+                asm_meta_info.pop("Isolate/Strain")
             elif "strain" in organism_type_keys:
                 asm_meta_info["Strain"] = asm_report["organism"]["infraspecific_names"]["strain"]
                 asm_meta_info.pop("Isolate")
+                asm_meta_info.pop("Isolate/Strain")
+            else:
+                asm_meta_info["Isolate/Strain"] = "NA"
+                asm_meta_info.pop("Strain")
+                asm_meta_info.pop("Isolate")
         else:
-            asm_meta_info["Strain"] = "NA"
+            # elif ("strain" not in organism_type_keys) and ("isolate" not in organism_type_keys):
+            asm_meta_info["Isolate/Strain"] = "NA"
+            asm_meta_info.pop("Strain")
             asm_meta_info.pop("Isolate")
 
         parsed_meta[core] = asm_meta_info
