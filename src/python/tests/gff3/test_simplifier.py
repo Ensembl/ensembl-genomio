@@ -432,6 +432,12 @@ def test_gffsimplifier_with_genome(
             raises(GFFParserError, match="too many sub_features"),
             id="Gene with Primary_transcript with 2 miRNAs, not supported",
         ),
+        param(
+            "mirna/mirna6_pseudogene.gff",
+            "mirna/mirna6_pseudogene_simped.gff",
+            does_not_raise(),
+            id="Gene with Primary_transcript and no miRNA (pseudogene)",
+        ),
     ],
 )
 def test_normalize_mirna(
