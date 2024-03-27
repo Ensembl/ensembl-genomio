@@ -735,6 +735,7 @@ class IntegrityTool:
                 seq_id not in comp["common"]
                 and seq_id not in comp["diff"]
                 and seq_id not in comp["diff_circular"]
+                and seq_id not in seqrs
             ):
                 comp["only_feat"].append(seq_id)
 
