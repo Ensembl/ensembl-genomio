@@ -60,8 +60,6 @@ class ReportStructure(dict):
             {
                 "Species Name": "",
                 "Taxon ID": "",
-                "Strain": "",
-                "Isolate": "",
                 "Isolate/Strain": "",
                 "Asm name": "",
                 "Assembly type": "",
@@ -118,9 +116,7 @@ def singularity_image_setter(sif_cache_dir: Path, datasets_version: str) -> Clie
     return datasets_image
 
 
-def check_parameterization(
-    input_cores: Path, input_accessions: Path, db_host: str, db_port: int
-) -> Path:
+def check_parameterization(input_cores: Path, input_accessions: Path, db_host: str, db_port: int) -> Path:
     """Detect the kind of user input (cores/accessions) and determine any missing or
     incorrect parameterization.
 
@@ -175,14 +171,11 @@ def resolve_query_type(
         query_accessions = fetch_accessions_from_cores(query_list, partial_url)
         query_type = "CoreDB"
     elif input_cores is None and input_accessions:
-        # query_count = 1
         query_type = "Accession"
         for accession in query_list:
             match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
             if not match:
                 raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
-            # query_name = f"Query_#{query_count}"
-            # query_count += 1
             query_accessions[accession] = accession
 
     return query_accessions, query_type
@@ -337,22 +330,13 @@ def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, Re
         if "infraspecific_names" in organism_keys:
             organism_type_keys = asm_report["organism"]["infraspecific_names"].keys()
             if "isolate" in organism_type_keys:
-                asm_meta_info["Isolate"] = asm_report["organism"]["infraspecific_names"]["isolate"]
-                asm_meta_info.pop("Strain")
-                asm_meta_info.pop("Isolate/Strain")
+                asm_meta_info["Isolate/Strain"] = asm_report["organism"]["infraspecific_names"]["isolate"]
             elif "strain" in organism_type_keys:
-                asm_meta_info["Strain"] = asm_report["organism"]["infraspecific_names"]["strain"]
-                asm_meta_info.pop("Isolate")
-                asm_meta_info.pop("Isolate/Strain")
+                asm_meta_info["Isolate/Strain"] = asm_report["organism"]["infraspecific_names"]["strain"]
             else:
                 asm_meta_info["Isolate/Strain"] = "NA"
-                asm_meta_info.pop("Strain")
-                asm_meta_info.pop("Isolate")
         else:
-            # elif ("strain" not in organism_type_keys) and ("isolate" not in organism_type_keys):
             asm_meta_info["Isolate/Strain"] = "NA"
-            asm_meta_info.pop("Strain")
-            asm_meta_info.pop("Isolate")
 
         parsed_meta[core] = asm_meta_info
 
@@ -375,8 +359,8 @@ def generate_report_tsv(
     tsv_outfile = f"{output_directory}/{outfile_prefix}.tsv"
 
     header_list = list(ReportStructure().keys())
-    header_list.remove("Strain")
-    header_list.remove("Isolate")
+    # header_list.remove("Strain")
+    # header_list.remove("Isolate")
     header_list = [query_type] + header_list
 
     with open(tsv_outfile, "w+") as tsv_out:
