@@ -1,0 +1,4 @@
+##gff-version 3
+##sequence-region scaffold1 1 1000
+scaffold1	Source	gene	1	1000	.	-	.	ID=LOREMIPSUM1
+scaffold1	Source	tRNA	1	1000	.	-	.	ID=LOREMIPSUM1_t1;Parent=LOREMIPSUM1
