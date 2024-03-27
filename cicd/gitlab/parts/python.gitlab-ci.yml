@@ -27,6 +27,7 @@
       - pyproject.toml
       - "*.py"
       - src/python/**/*.py
+      - scripts/**/*.py
 
 ## Prepare and load the Python virtual environment
 
