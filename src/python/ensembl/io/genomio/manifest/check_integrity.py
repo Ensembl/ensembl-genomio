@@ -154,7 +154,7 @@ class Manifest:
             if readable_hash != md5sum:
                 raise InvalidIntegrityError(f"Invalid md5 checksum for {file_path}")
 
-    def prepare_integrity_data(self) -> None:
+    def prepare_integrity_data(self) -> None:  # pylint: disable=too-many-branches
         """Read all the files and keep a record (IDs and their lengths)
         for each cases to be compared later.
         """
@@ -187,6 +187,10 @@ class Manifest:
                     seq_circular[seq["name"]] = seq.get("circular", False)
                     if seq["coord_system_level"] == "contig":
                         seqr_seqlevel[seq["name"]] = int(seq["length"])
+                    # Also record synonyms (in case GFF file uses synonyms)
+                    if "synonyms" in seq:
+                        for synonym in seq["synonyms"]:
+                            seq_lengths[synonym["name"]] = int(seq["length"])
                 self.lengths["seq_regions"] = seq_lengths
                 self.circular["seq_regions"] = seq_circular
                 self.seq_regions = seq_regions
@@ -731,6 +735,7 @@ class IntegrityTool:
                 seq_id not in comp["common"]
                 and seq_id not in comp["diff"]
                 and seq_id not in comp["diff_circular"]
+                and seq_id not in seqrs
             ):
                 comp["only_feat"].append(seq_id)
 
