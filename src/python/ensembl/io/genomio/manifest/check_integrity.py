@@ -154,7 +154,7 @@ class Manifest:
             if readable_hash != md5sum:
                 raise InvalidIntegrityError(f"Invalid md5 checksum for {file_path}")
 
-    def prepare_integrity_data(self) -> None:
+    def prepare_integrity_data(self) -> None:  # pylint: disable=too-many-branches
         """Read all the files and keep a record (IDs and their lengths)
         for each cases to be compared later.
         """
