@@ -27,12 +27,12 @@ __all__ = [
 import csv
 import json
 import os
-from os import PathLike, getcwd
-from pathlib import Path
 import re
 import logging
 import sys
 from typing import Dict, Tuple, Union
+from pathlib import Path
+from os import PathLike
 
 from spython.main import Client
 from sqlalchemy.engine import URL
@@ -41,6 +41,7 @@ from ensembl.io.genomio.utils.json_utils import print_json
 from ensembl.io.genomio.database.dbconnection_lite import DBConnectionLite as dbc
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+
 
 DATASETS_SINGULARITY = {
     "datasets_version_url": "library://lcampbell/ensembl-genomio/ncbi-datasets-v16.10.0:latest",
@@ -81,7 +82,7 @@ def singularity_image_setter(sif_cache_dir: Path, datasets_version: str) -> Clie
         datasets_version: URL of singularity container (custom 'datasets' version if desired)
 
     Returns:
-        spython.main.client instance of singularity container image housing 'datasets'
+        `spython.main.client` instance of singularity container image housing 'datasets'.
     """
 
     # Set singularity cache dir from user defined path or use environment
@@ -347,7 +348,7 @@ def generate_report_tsv(
     parsed_asm_reports: dict,
     outfile_prefix: str,
     query_type: str,
-    output_directory: PathLike = Path(getcwd()),
+    output_directory: PathLike = Path(),
 ) -> None:
     """Generate and write the assembly report to a TSV file
 
@@ -369,10 +370,6 @@ def generate_report_tsv(
             final_asm_report = [core] + list(report_meta.values())
             writer.writerow(final_asm_report)
         tsv_out.close()
-
-
-# def classify_assembly_status(core_accessions: dict) -> None:
-#     """Main function to pare set of core list and call ncbi datasets"""
 
 
 def main() -> None:
@@ -444,8 +441,7 @@ def main() -> None:
     init_logging_with_args(args)
 
     # Set and create dir for download files
-    if not args.download_dir.is_dir():
-        args.download_dir.mkdir(parents=True)
+    args.download_dir.mkdir(parents=True, exist_ok=True)
 
     # Set input file and determine if proper parameterization options are defined.
     user_query_file = check_parameterization(args.input_cores, args.input_accessions, args.host, args.port)
