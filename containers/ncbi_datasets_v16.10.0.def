@@ -22,7 +22,7 @@ From: ubuntu:24.04
     export LC_ALL=C
 
 %labels
-    Author lcampbell@ebi.ac.uk
+    Author ensembl-metazoa@ebi.ac.uk
     Software "NCBI's datasets and dataformat"
     Software.version v16.10.0
     Software.website "https://github.com/ncbi/datasets/releases/tag/v16.10.0"
