@@ -281,7 +281,7 @@ def datasets_asm_reports(
 
 
 def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, ReportStructure]:
-    """ "Function to parse assembly reports and extract specific key information on
+    """Function to parse assembly reports and extract specific key information on
     status and related fields.
 
     Args:
