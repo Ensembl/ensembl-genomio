@@ -31,8 +31,7 @@ import os
 from os import PathLike
 from pathlib import Path
 import re
-import sys
-from typing import Dict, Tuple, Union, List
+from typing import Dict, List, Tuple, Union
 
 from spython.main import Client
 from sqlalchemy.engine import URL
