@@ -256,7 +256,7 @@ def datasets_asm_reports(
 
         tmp_asm_dict = json.loads(result)
         if tmp_asm_dict["total_count"] >= 1:
-            logging.info(f"Asm report obtained for accession(s) [{accessions}]")
+            logging.info(f"Assembly report obtained for accession(s) {accessions}")
 
             batch_reports_json = tmp_asm_dict["reports"]
             for assembly_report in batch_reports_json:
