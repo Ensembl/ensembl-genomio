@@ -12,27 +12,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Obtain and record the assembly 'status' for a set of INSDC accession(s) using NCBI 'datasets' tool."""
+"""Obtain and record the assembly status for a set of INSDC accession(s) using NCBI's datasets CLI tool."""
 
 __all__ = [
-    "singularity_image_setter",
     "check_parameterization",
-    "resolve_query_type",
-    "fetch_accessions_from_cores",
     "datasets_asm_reports",
     "extract_assembly_metadata",
+    "fetch_accessions_from_cores",
     "generate_report_tsv",
+    "resolve_query_type",
+    "singularity_image_setter",
 ]
 
 import csv
 import json
-import os
-import re
 import logging
+import os
+from os import PathLike
+from pathlib import Path
+import re
 import sys
 from typing import Dict, Tuple, Union
-from pathlib import Path
-from os import PathLike
 
 from spython.main import Client
 from sqlalchemy.engine import URL
@@ -87,7 +87,7 @@ def singularity_image_setter(sif_cache_dir: Path, datasets_version: str) -> Clie
 
     # Set singularity cache dir from user defined path or use environment
     if sif_cache_dir and sif_cache_dir.is_dir():
-        image_dl_path = Path(sif_cache_dir)
+        image_dl_path = sif_cache_dir
         logging.info(f"Using user-defined cache_dir: '{image_dl_path}'")
     elif os.environ.get("NXF_SINGULARITY_CACHEDIR"):
         image_dl_path = Path(os.environ["NXF_SINGULARITY_CACHEDIR"])
@@ -125,7 +125,7 @@ def check_parameterization(input_cores: Path, input_accessions: Path, db_host: s
         input_cores: input core(s) list file name.
         input_accessions: input accession (s) list file name.
         db_host: host server name
-        db_port: host serer port
+        db_port: host server port
 
     Returns:
         User input file used in assembly status querying
@@ -355,9 +355,14 @@ def generate_report_tsv(
     Args:
         parsed_asm_reports: Parsed assembly report meta
         output_directory: Path to directory where output TSV is stored.
+        query_type: Type of query core_db or accession
+        output_directory: Directory to store report TSV
     """
 
-    tsv_outfile = f"{output_directory}/{outfile_prefix}.tsv"
+    if not parsed_asm_reports:
+        return
+
+    tsv_outfile = Path(output_directory, f"{outfile_prefix}.tsv")
 
     header_list = list(ReportStructure().keys())
     header_list = [query_type] + header_list
@@ -375,7 +380,7 @@ def generate_report_tsv(
 def main() -> None:
     """Module's entry-point."""
     parser = ArgumentParser(
-        description="Track the assembly status of a set of input core(s) using NCBI 'datasets'"
+        description=__doc__
     )
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument(
@@ -475,4 +480,3 @@ def main() -> None:
     # Produce the finalized assembly status report TSV from set of parsed 'datasets summary report'
     generate_report_tsv(key_assembly_report_meta, args.assembly_report_prefix, query_type, args.download_dir)
 
-    sys.exit(0)
