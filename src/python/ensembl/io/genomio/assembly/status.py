@@ -197,7 +197,7 @@ def fetch_accessions_from_cores(database_names: list, connection_url: URL) -> Di
             'SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";'
         ).fetchall()
 
-        if qry_result is None:
+        if query_result is None:
             logging.warning(f"We have no accession on core: {core}")
         elif len(qry_result) == 1:
             count_accn_found += 1
