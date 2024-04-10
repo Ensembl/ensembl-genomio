@@ -246,10 +246,18 @@ sub seq_edits_from_protein {
       next if $done_transcripts{ $transcript->dbID }++;
       my $translation = $transcript->translation;
 
-      if ($translation && exists $protein{$translation->stable_id}) {
-        my $db_seq   = $translation->seq;
-        my $file_seq = $protein{$translation->stable_id};
+      if ($translation) {
+        # Get sequence from fasta file if protein ID or transcript ID match
+        my $file_seq;
+        if ($protein{$translation->stable_id}) {
+          $file_seq = $protein{$translation->stable_id};
+        } elsif ($protein{$transcript->stable_id}) {
+          $file_seq = $protein{$transcript->stable_id};
+        } else {
+          next;
+        }
         $file_seq =~ s/\*$//;
+        my $db_seq = $translation->seq;
 
         # Do not want to consider an amino acid derived from a partial
         # codon; but RefSeq do that, so need to lop off last amino acid
