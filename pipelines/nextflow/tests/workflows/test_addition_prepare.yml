@@ -32,7 +32,7 @@
     - path: ./tmp/addition/NC_035159.1/dna.fasta
       md5sum: 445faf45bd7a1c5186eefe1474a780b9
     - path: ./tmp/addition/NC_035159.1/functional_annotation.json
-      md5sum: 6dd67397eb6d3f4555a5c432a19c9c62
+      md5sum: 83fc6ac37ed78201268fb2c0b878d7f7
     - path: ./tmp/addition/NC_035159.1/gene_models.gff3
       md5sum: 8ae7f6b32c0743c0171050ec1ede96cd
     - path: ./tmp/addition/NC_035159.1/genome.json
