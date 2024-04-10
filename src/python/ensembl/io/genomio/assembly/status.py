@@ -232,7 +232,7 @@ def datasets_asm_reports(
     combined_asm_reports = {}
 
     # Setting the number of combined accessions to query in a single call to datasets
-    list_split = list(range(0, len(master_accn_list), batch_size))  ## Note best to use >=10
+    list_split = list(range(0, len(master_accn_list), batch_size))
     accn_subsample = [master_accn_list[ind : ind + batch_size] for ind in list_split]
 
     for accessions in accn_subsample:
