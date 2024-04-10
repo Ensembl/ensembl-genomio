@@ -32,7 +32,7 @@ from os import PathLike
 from pathlib import Path
 import re
 import sys
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple, Union, List
 
 from spython.main import Client
 from sqlalchemy.engine import URL
@@ -174,7 +174,7 @@ def resolve_query_type(
     return query_accessions, query_type
 
 
-def fetch_accessions_from_cores(database_names: list, connection_url: URL) -> Dict:
+def fetch_accessions_from_cores(database_names: List, connection_url: URL) -> Dict:
     """Obtain the associated INSDC accession [meta.assembly.accession] given a set of core(s) names
     and a MYSQL server host.
 
@@ -215,8 +215,7 @@ def fetch_accessions_from_cores(database_names: list, connection_url: URL) -> Di
 def datasets_asm_reports(
     sif_image: str, assembly_accessions: dict, download_directory: PathLike, batch_size: int
 ) -> Dict:
-    """Obtain multiple assembly report JSONs in one or more querys to datasets,
-    i.e. make individual since accn query to datasets tool.
+    """Obtain assembly report(s) JSONs for one or more queries made to datasets CLI.
 
     Args:
         sif_image: Instance of Client.loaded singularity image.
