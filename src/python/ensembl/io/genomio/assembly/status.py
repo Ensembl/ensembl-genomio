@@ -260,8 +260,8 @@ def datasets_asm_reports(
             batch_reports_json = tmp_asm_dict["reports"]
             for assembly_report in batch_reports_json:
                 accession = assembly_report["accession"]
-                asm_json_outfile = f"{download_directory}/{accession}.asm_report.json"
-                print_json(Path(asm_json_outfile), assembly_report)
+                asm_json_outfile = Path(download_directory, f"/{accession}.asm_report.json")
+                print_json(asm_json_outfile, assembly_report)
                 # Save assembly report into master core<>report dict
                 for core, accession_core in assembly_accessions.items():
                     if accession == accession_core:
