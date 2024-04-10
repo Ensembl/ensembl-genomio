@@ -407,6 +407,8 @@ def test_store_gene(
     assert len(annot.features["gene"]) == expected_num_genes
     assert len(annot.features["transcript"]) == expected_num_tr
     assert len(annot.features["translation"]) == expected_num_cds
+
+
 @pytest.mark.parametrize(
     "gene, transcript, translation, expected_json",
     [

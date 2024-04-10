@@ -507,11 +507,13 @@ class IntegrityTool:
                     if found_tr_errors_all:
                         self.add_errors(found_tr_errors)
                         self.add_errors(found_tr_errors_all)
-                self.add_errors(self.check_ids(
-                    ann_transposable_elements,
-                    gff_transposable_elements,
-                    "TE ids metadata vs gff",
-                ))
+                self.add_errors(
+                    self.check_ids(
+                        ann_transposable_elements,
+                        gff_transposable_elements,
+                        "TE ids metadata vs gff",
+                    )
+                )
 
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
@@ -627,8 +629,8 @@ class IntegrityTool:
             common_len = len(set1 & set2)
         else:
             # check for the sequence length difference
-            diff_len_list = []
-            diff_len_special_list = []
+            diff_len_list: List[str] = []
+            diff_len_special_list: List[str] = []
             for e in set1 & set2:
                 dl12 = list1[e] - list2[e]
                 if abs(dl12) <= allowed_len_diff:
