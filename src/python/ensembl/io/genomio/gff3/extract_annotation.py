@@ -300,11 +300,8 @@ class FunctionalAnnotations:
 
         for transcript in gene.sub_features:
             self.add_feature(transcript, "transcript", gene.id)
-            cds_found = False
             for feat in transcript.sub_features:
-                if feat.type != "CDS":
-                    continue
-                # Store CDS functional annotation only once
-                if not cds_found:
-                    cds_found = True
+                if feat.type == "CDS":
                     self.add_feature(feat, "translation", transcript.id)
+                    # Store CDS functional annotation only once
+                    break
