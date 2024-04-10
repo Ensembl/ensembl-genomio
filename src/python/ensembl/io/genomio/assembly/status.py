@@ -205,7 +205,7 @@ def fetch_accessions_from_cores(database_names: list, connection_url: URL) -> Di
             logging.info(f"{core} -> assembly.accession[{asm_accession}]")
             core_accn_meta[core] = asm_accession
         else:
-            logging.warning(f"Core {core} Has {len(qry_result)} assembly.accessions")
+            logging.warning(f"Core {core} has {len(query_result)} assembly.accessions")
 
     logging.info(f"From initial input cores ({core_list_count}), obtained ({count_accn_found}) accessions")
 
