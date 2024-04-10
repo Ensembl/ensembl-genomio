@@ -336,14 +336,17 @@ class Manifest:
             gene_id = gene_id.replace("gene:", "")
         genes[gene_id] = abs(feat.location.end - feat.location.start)
         # Get CDS id and length
-        cds_transcripts = {
+        protein_transcripts = {
             "mRNA",
             "pseudogenic_transcript",
+        }
+        ig_transcripts = {
             "IG_V_gene",
             "IG_C_gene",
             "TR_C_gene",
             "TR_V_gene",
         }
+        cds_transcripts = protein_transcripts | ig_transcripts
         for feat2 in feat.sub_features:
             if feat2.type in cds_transcripts:
                 length = {}
@@ -358,7 +361,7 @@ class Manifest:
                 for pep_id, pep_length in length.items():
                     # Store length for translations, add pseudo translations separately
                     pep_length = floor(pep_length / 3) - 1
-                    if feat.type != "pseudogene":
+                    if feat.type != "pseudogene" and feat2.type in protein_transcripts:
                         peps[pep_id] = pep_length
                     all_peps[pep_id] = pep_length
 
@@ -416,7 +419,11 @@ class IntegrityTool:
         self.set_ignore_final_stops(ignore_final_stops)
         self.errors: List[str] = []
 
-    def add_errors(self, *errors: str) -> None:
+    def add_error(self, error: str) -> None:
+        """Store the given error in the list."""
+        self.errors.append(error)
+
+    def add_errors(self, errors: List[str]) -> None:
         """Store the given errors in the list."""
         self.errors += errors
 
@@ -473,33 +480,38 @@ class IntegrityTool:
                     # The pseudo CDSs are included in this check
                     # Pseudo CDSs are not translated, if the pseudo translation ids are not ignored
                     # in the gff it will give an error
-                    tr_errors = self.check_lengths(
+                    tr_errors_all = self.check_lengths(
                         pep,
                         gff_all_translations,
                         "Fasta translations vs gff (include pseudo CDS)",
                         special_diff=True,
                     )
-                    self.add_errors(*tr_errors)
+                    if tr_errors_all:
+                        self.add_errors(tr_errors)
+                        self.add_errors(tr_errors_all)
 
             # Check functional_annotation.json integrity
             # Gene ids, translated CDS ids and translated CDSs
             # including pseudogenes are compared to the gff
             if ann_genes:
-                self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff")
+                self.add_errors(self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff"))
                 found_tr_errors = self.check_ids(
                     ann_translations, gff_translations, "Translation ids metadata vs gff"
                 )
                 if found_tr_errors:
-                    self.check_ids(
+                    found_tr_errors_all = self.check_ids(
                         ann_translations,
                         gff_all_translations,
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
-                self.check_ids(
+                    if found_tr_errors_all:
+                        self.add_errors(found_tr_errors)
+                        self.add_errors(found_tr_errors_all)
+                self.add_errors(self.check_ids(
                     ann_transposable_elements,
                     gff_transposable_elements,
                     "TE ids metadata vs gff",
-                )
+                ))
 
             # Check the seq.json intregrity
             # Compare the length and id retrieved from seq.json to the gff
@@ -538,9 +550,9 @@ class IntegrityTool:
                 if "accession" in genome_ass:
                     genome_acc = genome_ass["accession"]
                     if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
-                        self.add_errors(f"Genome assembly accession is wrong: '{genome_acc}'")
+                        self.add_error(f"Genome assembly accession is wrong: '{genome_acc}'")
 
-    def check_ids(self, list1, list2, name) -> bool:
+    def check_ids(self, list1, list2, name) -> List[str]:
         """Compare the ids in list1 and list2.
 
         Args:
@@ -575,11 +587,9 @@ class IntegrityTool:
             errors.append(f"{len(only2)} only in second list in {name} (first: {only2[0]})")
             logging.debug(f"{len(only1)} only in second list in {name}")
 
-        self.add_errors(*errors)
+        return errors
 
-        return len(errors) > 0
-
-    def check_lengths(self, list1, list2, name, allowed_len_diff=None, special_diff=False):
+    def check_lengths(self, list1, list2, name, allowed_len_diff=None, special_diff=False) -> List[str]:
         """Check the difference in ids and length between list1 and list2.
             There are a few special cases here where we allow a certain asymmetry
             by changing the values of the arguments.
@@ -687,12 +697,12 @@ class IntegrityTool:
             example = diff_circular[0]
             logging.info(f"{len(diff_circular)} differences for circular elements in {name} (e.g. {example})")
         if diff:
-            self.add_errors(f"{len(diff)} common elements with higher length in {name} (e.g. {diff[0]})")
+            self.add_error(f"{len(diff)} common elements with higher length in {name} (e.g. {diff[0]})")
         if only_seqr:
             # Not an error!
             logging.info(f"{len(only_seqr)} only in seq_region list in {name} (first: {only_seqr[0]})")
         if only_feat:
-            self.add_errors(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
+            self.add_error(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
 
     def _compare_seqs(
         self, seqrs: Dict[str, Any], feats: Dict[str, Any], circular: Optional[Dict[str, Any]] = None
