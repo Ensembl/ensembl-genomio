@@ -128,18 +128,26 @@ class FunctionalAnnotations:
             raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
         return parent_id
 
-    def add_feature(self, feature: SeqFeature, feat_type: str, parent_id: Optional[str] = None) -> None:
+    def add_feature(
+        self,
+        feature: SeqFeature,
+        feat_type: str,
+        parent_id: Optional[str] = None,
+        all_parent_ids: Optional[List[str]] = None,
+    ) -> None:
         """Add annotation for a feature of a given type. If a parent_id is provided, record the relatioship.
 
         Args:
             feature: The feature to create an annotation.
             feat_type: Type of the feature to annotate.
         """
+        if all_parent_ids is None:
+            all_parent_ids = []
         features = self.get_features(feat_type)
         if feature.id in features:
             raise AnnotationError(f"Feature {feat_type} ID {feature.id} already added")
 
-        feature_object = self._generic_feature(feature, feat_type)
+        feature_object = self._generic_feature(feature, feat_type, all_parent_ids)
         self.features[feat_type][feature.id] = feature_object
 
         if parent_id:
@@ -149,7 +157,9 @@ class FunctionalAnnotations:
             else:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
 
-    def _generic_feature(self, feature: SeqFeature, feat_type: str) -> Dict[str, Any]:
+    def _generic_feature(
+        self, feature: SeqFeature, feat_type: str, parent_ids: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """Create a feature object following the specifications.
 
         Args:
@@ -157,22 +167,21 @@ class FunctionalAnnotations:
             feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
 
         """
+        if parent_ids is None:
+            parent_ids = []
+
         feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
 
         # Description?
-        if "product" in feature.qualifiers:
-            description = feature.qualifiers["product"][0]
-            if self.product_is_informative(description):
-                feature_object["description"] = description
-
-        if "Name" in feature.qualifiers and "description" not in feature_object:
-            feature_object["description"] = feature.qualifiers["Name"][0]
-
-        # Don't keep useless description
-        if ("description" in feature_object) and not self.product_is_informative(
-            feature_object["description"], feature.id
-        ):
-            del feature_object["description"]
+        for qname in ("description", "product"):
+            if qname in feature.qualifiers:
+                description = feature.qualifiers[qname][0]
+                all_ids = list(parent_ids)
+                all_ids.append(feature.id)
+                if self.product_is_informative(description, feat_ids=all_ids):
+                    feature_object["description"] = description
+                    break
+                logging.debug(f"Non informative description for {feature.id}: {description}")
 
         feature_object["xrefs"] = []
         if "Dbxref" in feature.qualifiers:
@@ -187,7 +196,7 @@ class FunctionalAnnotations:
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
             if feat_name.lower() != feature.id.lower() and feat_name.lower() not in xref_values:
-                feature_object["synonyms"] = [feat_name]
+                feature_object["synonyms"] = [{"synonym": feat_name, "default": True}]
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
@@ -197,6 +206,63 @@ class FunctionalAnnotations:
         if not feature_object["xrefs"]:
             del feature_object["xrefs"]
         return feature_object
+
+    @staticmethod
+    def product_is_informative(product: str, feat_ids: Optional[List[str]] = None) -> bool:
+        """Returns True if the product name contains informative words, False otherwise.
+
+        It is considered uninformative when the description contains words such as "hypothetical" or
+        or "putative". If a feature IDs are provided, consider it uninformative as well (we do not want
+        descriptions to be just the ID).
+
+        Args:
+            product: A product name.
+            feat_ids: List of feature ID.
+
+        """
+        if feat_ids is None:
+            feat_ids = []
+        non_informative_words = [
+            "hypothetical",
+            "putative",
+            "uncharacterized",
+            "unspecified",
+            "unknown",
+            r"(of )?unknown function",
+            "conserved",
+            "predicted",
+            "fragment",
+            "product",
+            "function",
+            "protein",
+            "transcript",
+            "gene",
+            "RNA",
+            r"(variant|isoform)( X?\d+)?",
+            r"low quality protein",
+        ]
+        non_informative_re = re.compile(r"|".join(non_informative_words), re.IGNORECASE)
+
+        # Remove all IDs they are in the description
+        if feat_ids:
+            logging.debug(f"Filter out {feat_ids} from {product}")
+            try:
+                for feat_id in feat_ids:
+                    feat_id_re = re.compile(feat_id, re.IGNORECASE)
+                    product = re.sub(feat_id_re, "", product)
+            except TypeError as err:
+                raise TypeError(f"Failed to search {feat_id_re} in '{product}'") from err
+
+        # Remove punctuations
+        punct_re = re.compile(r"[,;: _()-]+")
+        product = re.sub(punct_re, " ", product)
+
+        # Then remove non informative words
+        product = re.sub(non_informative_re, " ", product)
+
+        # Anything (informative) left?
+        empty_re = re.compile(r"^[ ]*$")
+        return not bool(empty_re.match(product))
 
     def transfer_descriptions(self) -> None:
         """Transfers the feature descriptions in 2 steps:
@@ -228,54 +294,6 @@ class FunctionalAnnotations:
                 parent_description = parent.get("description")
                 if parent_description is None:
                     parent["description"] = child_description
-
-    @staticmethod
-    def product_is_informative(product: str, feat_id: Optional[str] = None) -> bool:
-        """Returns True if the product name contains informative words, False otherwise.
-
-        It is considered uninformative when the description contains words such as "hypothetical" or
-        or "putative". If a feature ID is provided, consider it uninformative as well (we do not want
-        descriptions to be just the ID).
-
-        Args:
-            product: A product name.
-            feat_id: Feature ID (optional).
-
-        """
-        non_informative_words = [
-            "hypothetical",
-            "putative",
-            "uncharacterized",
-            "unspecified",
-            "unknown",
-            r"(of )?unknown function",
-            "conserved",
-            "predicted",
-            "fragment",
-            "product",
-            "function",
-            "protein",
-            "gene",
-            "RNA",
-            r"variant( \d+)?",
-        ]
-        non_informative_re = re.compile(r"|".join(non_informative_words), re.IGNORECASE)
-
-        # Remove the feature ID if it's in the description
-        if feat_id is not None:
-            feat_id_re = re.compile(feat_id, re.IGNORECASE)
-            product = re.sub(feat_id_re, "", product)
-
-        # Remove punctuations
-        punct_re = re.compile(r"[,;: _()-]+")
-        product = re.sub(punct_re, " ", product)
-
-        # Then remove non informative words
-        product = re.sub(non_informative_re, " ", product)
-
-        # Anything (informative) left?
-        empty_re = re.compile(r"^[ ]*$")
-        return not bool(empty_re.match(product))
 
     def _to_list(self):
         all_list = []

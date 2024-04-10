@@ -78,7 +78,6 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
         feat_data[stable_id] = feat_struct
         if xref_name:
             feat_data[xref_name] = feat_struct
-
     return feat_data
 
 

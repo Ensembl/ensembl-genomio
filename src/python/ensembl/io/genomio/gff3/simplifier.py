@@ -410,7 +410,7 @@ class GFFSimplifier:
 
                 self.fail_types.add(f"sub_transcript={feat.type}")
                 logging.warning(
-                    f"Unrecognized exon type for {feat.type}: {feat.id}"
+                    f"Unrecognized exon type {feat.type}: {feat.id}"
                     f" (for transcript {transcript.id} of type {transcript.type})"
                 )
                 exons_to_delete.append(tcount)

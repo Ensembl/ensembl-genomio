@@ -1,0 +1,21 @@
+[
+    {
+        "description": "Gene description",
+        "id": "gene_A",
+        "object_type": "gene",
+        "synonyms": [
+            {
+                "default": true,
+                "synonym": "GeneA"
+            }
+        ]
+    },
+    {
+        "id": "tran_A",
+        "object_type": "transcript"
+    },
+    {
+        "id": "cds_A",
+        "object_type": "translation"
+    }
+]

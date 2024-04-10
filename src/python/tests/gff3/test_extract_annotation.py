@@ -15,7 +15,8 @@
 """Unit testing of `ensembl.io.genomio.gff3.extract_annotation` module."""
 
 from contextlib import nullcontext as does_not_raise
-from typing import ContextManager, Dict, List, Optional
+from pathlib import Path
+from typing import Callable, ContextManager, Dict, List, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest
@@ -31,38 +32,40 @@ from ensembl.io.genomio.gff3.extract_annotation import (
 @pytest.mark.parametrize(
     "description, feature_id, output",
     [
-        ("", None, False),
+        ("", [], False),
         ("", "PROTID12345", False),
-        ("PROTID12345", "PROTID12345", False),
-        ("ProtId12345", "PROTID12345", False),
-        ("hypothetical PROTID12345 (ProtId12345)", "PROTID12345", False),
-        ("hypothetical protein", None, False),
-        ("hypothetical_protein", None, False),
-        ("Hypothetical protein", None, False),
-        ("hypothetical protein PROTID12345", "PROTID12345", False),
-        ("hypothetical protein ProtId12345", "PROTID12345", False),
-        ("hypothetical protein (ProtId12345)", "PROTID12345", False),
-        ("hypothetical protein (fragment)", None, False),
-        ("hypothetical protein, variant", None, False),
-        ("hypothetical protein, variant 2", None, False),
-        ("hypothetical protein - conserved", None, False),
-        ("hypothetical protein, conserved", None, False),
-        ("Hypothetical_protein_conserved", None, False),
-        ("Hypothetical conserved protein", None, False),
-        ("conserved hypothetical protein", None, False),
-        ("conserved hypothetical protein, putative", None, False),
-        ("conserved protein, unknown function", None, False),
-        ("putative protein", None, False),
-        ("putative_protein", None, False),
-        ("hypothetical RNA", None, False),
-        ("unspecified product", None, False),
-        ("Unspecified product", None, False),
-        ("conserved hypothetical transmembrane protein", None, True),
-        ("unknown gene", None, False),
-        ("unknown function", None, False),
+        ("PROTID12345", ["PROTID12345"], False),
+        ("ProtId12345", ["PROTID12345"], False),
+        ("hypothetical PROTID12345 (ProtId12345)", ["PROTID12345"], False),
+        ("hypothetical protein", [], False),
+        ("hypothetical_protein", [], False),
+        ("Hypothetical protein", [], False),
+        ("hypothetical protein PROTID12345", ["PROTID12345"], False),
+        ("hypothetical protein ProtId12345", ["PROTID12345"], False),
+        ("hypothetical protein (ProtId12345)", ["PROTID12345"], False),
+        ("hypothetical protein (fragment)", [], False),
+        ("hypothetical protein, variant", [], False),
+        ("hypothetical protein, variant 2", [], False),
+        ("hypothetical protein - conserved", [], False),
+        ("hypothetical protein, conserved", [], False),
+        ("Hypothetical_protein_conserved", [], False),
+        ("Hypothetical conserved protein", [], False),
+        ("conserved hypothetical protein", [], False),
+        ("conserved hypothetical protein, putative", [], False),
+        ("conserved protein, unknown function", [], False),
+        ("putative protein", [], False),
+        ("putative_protein", [], False),
+        ("hypothetical RNA", [], False),
+        ("unspecified product", [], False),
+        ("Unspecified product", [], False),
+        ("conserved hypothetical transmembrane protein", [], True),
+        ("unknown gene", [], False),
+        ("unknown function", [], False),
+        ("uncharacterized PROTID12345", ["PROTID12345"], False),
+        ("LOW QUALITY PROTEIN: uncharacterized protein PROTID12345", ["PROTID12345"], False),
     ],
 )
-def test_product_is_informative(description: str, feature_id: Optional[str], output: bool) -> None:
+def test_product_is_informative(description: str, feature_id: Optional[List[str]], output: bool) -> None:
     """Tests the `FunctionalAnnotations.product_is_informative()` method."""
     assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
 
@@ -71,6 +74,7 @@ def test_product_is_informative(description: str, feature_id: Optional[str], out
     "seq_feat_type, feat_type, expected",
     [
         ("gene", "gene", does_not_raise()),
+        ("pseudogene", "gene", does_not_raise()),
         ("mRNA", "transcript", does_not_raise()),
         ("CDS", "translation", does_not_raise()),
         ("transposable_element", "transposable_element", does_not_raise()),
@@ -92,6 +96,31 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
     with expected:
         annot.add_feature(feature, feat_type)
         assert annot.features[feat_type][feature.id]
+
+
+@pytest.mark.parametrize(
+    "feat_id, feat_name, expected_synonyms",
+    [
+        pytest.param("featA", "featA", [], id="Same name and ID"),
+        pytest.param("featA", "featA_name", ["featA_name"], id="Diff name and ID"),
+    ],
+)
+def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[str]) -> None:
+    """Tests the `FunctionaAnnotation.add_feature()` method with a feature name."""
+    annot = FunctionalAnnotations()
+
+    seq_feat_type = "gene"
+    feat_type = "gene"
+    feature = SeqFeature(type=seq_feat_type, id=feat_id, qualifiers={"Name": [feat_name]})
+    annot.add_feature(feature, feat_type)
+    loaded_feat = annot.features[feat_type][feature.id]
+    try:
+        loaded_synonyms = [
+            syn["synonym"] for syn in loaded_feat.get("synonyms", []) if syn["default"] is True
+        ]
+    except TypeError:
+        loaded_synonyms = []
+    assert loaded_synonyms == expected_synonyms
 
 
 @pytest.mark.parametrize(
@@ -308,10 +337,10 @@ def test_transfer_descriptions(
     transcript_name = "tran_A"
     one_gene = SeqFeature(type="gene", id=gene_name)
     if gene_desc:
-        one_gene.qualifiers["Name"] = [gene_desc]
+        one_gene.qualifiers["description"] = [gene_desc]
     one_transcript = SeqFeature(type="mRNA", id=transcript_name)
     if transc_desc:
-        one_transcript.qualifiers = {"Name": [transc_desc]}
+        one_transcript.qualifiers = {"product": [transc_desc]}
     one_translation = SeqFeature(type="CDS", id="cds_A")
     if transl_desc:
         one_translation.qualifiers = {"product": [transl_desc]}
@@ -378,3 +407,51 @@ def test_store_gene(
     assert len(annot.features["gene"]) == expected_num_genes
     assert len(annot.features["transcript"]) == expected_num_tr
     assert len(annot.features["translation"]) == expected_num_cds
+@pytest.mark.parametrize(
+    "gene, transcript, translation, expected_json",
+    [
+        pytest.param(
+            SeqFeature(type="gene", id="gene_A"),
+            SeqFeature(type="mRNA", id="tran_A"),
+            SeqFeature(type="CDS", id="cds_A"),
+            "dump_noinfo.json",
+            id="No annotation",
+        ),
+        pytest.param(
+            SeqFeature(
+                type="gene", id="gene_A", qualifiers={"description": ["Gene description"], "Name": ["GeneA"]}
+            ),
+            SeqFeature(type="mRNA", id="tran_A"),
+            SeqFeature(type="CDS", id="cds_A"),
+            "dump_syn.json",
+            id="Some annotation",
+        ),
+        pytest.param(
+            SeqFeature(type="gene", id="gene_A", qualifiers={"description": ["Gene NameA"]}),
+            SeqFeature(type="mRNA", id="tran_A", qualifiers={"description": ["Transcript NameA"]}),
+            SeqFeature(type="CDS", id="cds_A", qualifiers={"description": ["Protein NameA"]}),
+            "dump_description.json",
+            id="Some descriptions",
+        ),
+    ],
+)
+def test_to_json(
+    assert_files: Callable,
+    tmp_dir: Path,
+    data_dir: Path,
+    gene: SeqFeature,
+    transcript: SeqFeature,
+    translation: SeqFeature,
+    expected_json: Path,
+) -> None:
+    """Test the dumping of the functional annotation to json."""
+    annot = FunctionalAnnotations()
+    annot.add_feature(gene, "gene")
+    annot.add_feature(transcript, "transcript", parent_id=gene.id)
+    annot.add_feature(translation, "translation", parent_id=transcript.id)
+
+    output_path = tmp_dir / "to_json.json"
+    annot.to_json(output_path)
+
+    # Need to check output!
+    assert_files(output_path, data_dir / expected_json)
