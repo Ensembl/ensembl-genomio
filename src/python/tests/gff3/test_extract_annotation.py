@@ -114,12 +114,7 @@ def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[
     feature = SeqFeature(type=seq_feat_type, id=feat_id, qualifiers={"Name": [feat_name]})
     annot.add_feature(feature, feat_type)
     loaded_feat = annot.features[feat_type][feature.id]
-    try:
-        loaded_synonyms = [
-            syn["synonym"] for syn in loaded_feat.get("synonyms", []) if syn["default"] is True
-        ]
-    except TypeError:
-        loaded_synonyms = []
+    loaded_synonyms = loaded_feat.get("synonyms", [])
     assert loaded_synonyms == expected_synonyms
 
 

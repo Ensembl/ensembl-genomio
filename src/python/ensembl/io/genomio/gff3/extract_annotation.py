@@ -196,7 +196,7 @@ class FunctionalAnnotations:
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
             if feat_name.lower() != feature.id.lower() and feat_name.lower() not in xref_values:
-                feature_object["synonyms"] = [{"synonym": feat_name, "default": True}]
+                feature_object["synonyms"] = [feat_name]
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
