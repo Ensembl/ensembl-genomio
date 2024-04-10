@@ -250,8 +250,7 @@ def datasets_asm_reports(
         if not isinstance(result, str):
             raise ValueError("Result obtained from datasets is not the expected format 'string'")
         if re.search("^FATAL", result):
-            logging.critical(f"Singularity image execution failed! -> '{result.strip()}'")
-            sys.exit(1)
+            raise RuntimeError(f"Singularity image execution failed! -> '{result.strip()}'")
         # Returned a list, i.e. datasets returned a result to client.execute
 
         tmp_asm_dict = json.loads(result)
