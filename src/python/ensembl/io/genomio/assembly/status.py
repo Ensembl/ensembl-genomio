@@ -238,7 +238,7 @@ def datasets_asm_reports(
     for accessions in accn_subsample:
         datasets_command = ["datasets", "summary", "genome", "accession"] + accessions
 
-        # Make call to singularity datasets providing a multi accn query:
+        # Make call to singularity datasets providing a multi-accession query:
         client_return = Client.execute(
             image=sif_image, command=datasets_command, return_result=True, quiet=True
         )
