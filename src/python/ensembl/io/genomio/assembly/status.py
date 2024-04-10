@@ -199,7 +199,7 @@ def fetch_accessions_from_cores(database_names: list, connection_url: URL) -> Di
 
         if query_result is None:
             logging.warning(f"We have no accession on core: {core}")
-        elif len(qry_result) == 1:
+        elif len(query_result) == 1:
             count_accn_found += 1
             asm_accession = qry_result.pop()[0]
             logging.info(f"{core} -> assembly.accession[{asm_accession}]")
