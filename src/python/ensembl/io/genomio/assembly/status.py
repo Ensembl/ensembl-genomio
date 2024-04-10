@@ -130,23 +130,15 @@ def check_parameterization(input_cores: Path, input_accessions: Path, db_host: s
     Returns:
         User input file used in assembly status querying
     """
-    user_query_file: Path
-
     # Input core names centered run
     if input_cores:
-        user_query_file = input_cores
-        logging.info(f"Performing assembly status report using core db list file: {user_query_file}")
+        logging.info(f"Performing assembly status report using core db list file: {input_cores}")
         if db_host is None or db_port is None:
-            logging.critical(
-                "User must specify both arguments '--host' and '--port' when providing core database names."
-            )
-            sys.exit(1)
+            raise RuntimeError("Core database names require both arguments '--host' and '--port'")
+        return input_cores
     # Accession centered run
-    else:
-        user_query_file = input_accessions
-        logging.info(f"Performing assembly status report using INSDC accession list file: {user_query_file}")
-
-    return user_query_file
+    logging.info(f"Performing assembly status report using INSDC accession list file: {input_accessions}")
+    return input_accessions
 
 
 def resolve_query_type(
