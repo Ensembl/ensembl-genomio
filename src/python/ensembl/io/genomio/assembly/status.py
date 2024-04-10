@@ -268,7 +268,6 @@ def datasets_asm_reports(
                         combined_asm_reports[core] = assembly_report
         else:
             logging.warning(f"No assembly report found for accession(s) {accessions}. Exiting !")
-            sys.exit(0)
 
     return combined_asm_reports
 
