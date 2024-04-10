@@ -181,6 +181,7 @@ def fetch_accessions_from_cores(database_names: list, connection_url: URL) -> Di
     Args:
         database_names: Set of names for one or more core databases
         connection_url: Partial MYSQL host name : port
+
     Returns:
         Dict of core name(s) (key) and its INSDC assembly.accession (value)
     """
