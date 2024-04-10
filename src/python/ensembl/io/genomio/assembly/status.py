@@ -77,7 +77,7 @@ def singularity_image_setter(sif_cache_dir: Path, datasets_version: str) -> Clie
     container and define version and location of container.
 
     Args:
-        sif_cache_dir: Path to attempt locating/download SIF container image.
+        sif_cache_dir: Path to locate existing, or download new SIF container image.
         datasets_version: URL of singularity container (custom 'datasets' version if desired)
 
     Returns:
@@ -121,10 +121,10 @@ def check_parameterization(input_cores: Path, input_accessions: Path, db_host: s
     incorrect parameterization.
 
     Args:
-        input_cores: input core(s) list file name.
-        input_accessions: input accession (s) list file name.
-        db_host: host server name
-        db_port: host server port
+        input_cores: Input core(s) list file name.
+        input_accessions: Input accession (s) list file name.
+        db_host: Host server name
+        db_port: Host server port
 
     Returns:
         User input file used in assembly status querying
@@ -149,8 +149,8 @@ def resolve_query_type(
     Args:
         query_list: List of user defined queries either core names, or accessions
         partial_url: A partial MYSQL connection URL (host:port)
-        input_cores: arg parse param '--input_cores'
-        input_accessions: arg parse param '--input_accns'
+        input_cores: Arg parse param '--input_cores'
+        input_accessions: Arg parse param '--input_accessions'
 
     Returns:
         User queries stored as identifier[(core db name | UniqueID#)] : accession
@@ -258,7 +258,7 @@ def datasets_asm_reports(
             batch_reports_json = tmp_asm_dict["reports"]
             for assembly_report in batch_reports_json:
                 accession = assembly_report["accession"]
-                asm_json_outfile = Path(download_directory, f"/{accession}.asm_report.json")
+                asm_json_outfile = Path(download_directory, f"{accession}.asm_report.json")
                 print_json(asm_json_outfile, assembly_report)
                 # Save assembly report into master core<>report dict
                 for core, accession_core in assembly_accessions.items():
