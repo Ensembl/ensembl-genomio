@@ -341,7 +341,7 @@ def generate_report_tsv(
     query_type: str,
     output_directory: PathLike = Path(),
 ) -> None:
-    """Generate and write the assembly report to a TSV file
+    """Generate and write the assembly report to a TSV file.
 
     Args:
         parsed_asm_reports: Parsed assembly report meta
