@@ -193,7 +193,7 @@ def fetch_accessions_from_cores(database_names: list, connection_url: URL) -> Di
     for core in database_names:
         db_connection_url = connection_url.set(database=core)
         db_connection = dbc(f"{db_connection_url}")
-        qry_result = db_connection.execute(
+        query_result = db_connection.execute(
             'SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";'
         ).fetchall()
 
