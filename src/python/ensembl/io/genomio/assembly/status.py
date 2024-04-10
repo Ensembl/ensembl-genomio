@@ -379,9 +379,7 @@ def generate_report_tsv(
 
 def main() -> None:
     """Module's entry-point."""
-    parser = ArgumentParser(
-        description=__doc__
-    )
+    parser = ArgumentParser(description=__doc__)
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument(
         "--input_cores",
@@ -479,4 +477,3 @@ def main() -> None:
 
     # Produce the finalized assembly status report TSV from set of parsed 'datasets summary report'
     generate_report_tsv(key_assembly_report_meta, args.assembly_report_prefix, query_type, args.download_dir)
-
