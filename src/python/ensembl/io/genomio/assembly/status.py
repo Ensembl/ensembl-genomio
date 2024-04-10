@@ -336,7 +336,7 @@ def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, Re
 
 
 def generate_report_tsv(
-    parsed_asm_reports: dict,
+    parsed_asm_reports: Dict,
     outfile_prefix: str,
     query_type: str,
     output_directory: PathLike = Path(),
