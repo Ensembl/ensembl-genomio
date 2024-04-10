@@ -108,6 +108,10 @@ class GFFSimplifier:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
 
+        self.refseq = False
+        if self.genome and self.genome["assembly"]["accession"].startswith("GCF"):
+            self.refseq = True
+
         # Other preparations
         self.stable_ids = StableIDAllocator()
         self.stable_ids.set_prefix(self.genome)
@@ -255,7 +259,7 @@ class GFFSimplifier:
             feat.type = "transposable_element"
             feat = self._normalize_mobile_genetic_element(feat)
             # Generate ID if needed
-            feat.id = self.stable_ids.normalize_gene_id(feat)
+            feat.id = self.stable_ids.normalize_gene_id(feat, self.refseq)
             feat.qualifiers["ID"] = feat.id
 
             self.annotations.add_feature(feat, "transposable_element")
@@ -319,7 +323,7 @@ class GFFSimplifier:
 
         """
 
-        gene.id = self.stable_ids.normalize_gene_id(gene)
+        gene.id = self.stable_ids.normalize_gene_id(gene, refseq=self.refseq)
         restructure_gene(gene)
         self.normalize_transcripts(gene)
         self.normalize_pseudogene(gene)
