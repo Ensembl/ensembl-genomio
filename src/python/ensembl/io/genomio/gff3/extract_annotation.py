@@ -317,7 +317,7 @@ class FunctionalAnnotations:
         self.add_feature(gene, "gene")
 
         for transcript in gene.sub_features:
-            self.add_feature(transcript, "transcript", gene.id)
+            self.add_feature(transcript, "transcript", gene.id, [gene.id])
             cds_found = False
             for feat in transcript.sub_features:
                 if feat.type != "CDS":
@@ -325,4 +325,4 @@ class FunctionalAnnotations:
                 # Store CDS functional annotation only once
                 if not cds_found:
                     cds_found = True
-                    self.add_feature(feat, "translation", transcript.id)
+                    self.add_feature(feat, "translation", transcript.id, [gene.id, transcript.id])
