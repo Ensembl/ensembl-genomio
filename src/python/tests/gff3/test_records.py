@@ -59,10 +59,10 @@ def test_from_gff(
         param("record_n2.gff", id="2 records"),
     ],
 )
-def test_to_gff(tmp_dir: Path, data_dir: Path, assert_files: Callable, in_gff: PathLike) -> None:
+def test_to_gff(tmp_path: Path, data_dir: Path, assert_files: Callable, in_gff: PathLike) -> None:
     """Test writing GFF records to file."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / in_gff
+    output_gff = tmp_path / in_gff
     records = Records()
     records.from_gff(input_gff)
     records.to_gff(output_gff)

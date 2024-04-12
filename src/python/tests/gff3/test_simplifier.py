@@ -81,14 +81,14 @@ def test_create_gene_for_lone_transcript(
 )
 def test_create_gene_for_lone_cds(
     data_dir: Path,
-    tmp_dir: Path,
+    tmp_path: Path,
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
 ) -> None:
     """Test gene create gene for lone CDS."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / Path(in_gff).name
+    output_gff = tmp_path / Path(in_gff).name
     new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_cds")
     if new_feat:
         assert_files(output_gff, Path(data_dir / expected_gff))
@@ -219,14 +219,14 @@ def test_format_gene_segments(
 )
 def test_clean_gene(
     data_dir: Path,
-    tmp_dir: Path,
+    tmp_path: Path,
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
 ) -> None:
     """Test clean gene."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / Path(in_gff).name
+    output_gff = tmp_path / Path(in_gff).name
     new_feat = check_one_feature(input_gff, output_gff, "clean_gene")
     if new_feat:
         assert_files(output_gff, Path(data_dir / expected_gff))
@@ -244,14 +244,14 @@ def test_clean_gene(
 )
 def test_simpler_gff3_feature(
     data_dir: Path,
-    tmp_dir: Path,
+    tmp_path: Path,
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: Optional[PathLike],
 ) -> None:
     """Test simplifying one gene (from a GFF3 file)."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / in_gff
+    output_gff = tmp_path / in_gff
     new_feat = check_one_feature(input_gff, output_gff, "simpler_gff3_feature")
     if expected_gff is None:
         assert new_feat is None
@@ -270,7 +270,7 @@ def test_simpler_gff3_feature(
 )
 def test_simpler_gff3(
     data_dir: Path,
-    tmp_dir: Path,
+    tmp_path: Path,
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
@@ -278,7 +278,7 @@ def test_simpler_gff3(
 ) -> None:
     """Test simplifying genes from GFF3 files."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / Path(in_gff).name
+    output_gff = tmp_path / Path(in_gff).name
     simp = GFFSimplifier()
     with expectation:
         simp.simpler_gff3(input_gff)
@@ -299,7 +299,7 @@ def test_simpler_gff3(
 )
 def test_simpler_gff3_pseudogene(
     data_dir: Path,
-    tmp_dir: Path,
+    tmp_path: Path,
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
@@ -307,7 +307,7 @@ def test_simpler_gff3_pseudogene(
 ) -> None:
     """Test simplifying pseudogenes from GFF3 files."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / Path(in_gff).name
+    output_gff = tmp_path / Path(in_gff).name
     simp = GFFSimplifier()
     simp.allow_pseudogene_with_cds = allow_cds
     simp.simpler_gff3(input_gff)
@@ -332,7 +332,7 @@ def test_simpler_gff3_pseudogene(
 )
 def test_simpler_gff3_skip(
     data_dir: Path,
-    tmp_dir: Path,
+    tmp_path: Path,
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
@@ -341,7 +341,7 @@ def test_simpler_gff3_skip(
 ) -> None:
     """Test simplifying genes from GFF3 files."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / in_gff
+    output_gff = tmp_path / in_gff
     simp = GFFSimplifier(skip_unrecognized=skip_unrecognized)
     with expectation:
         simp.simpler_gff3(input_gff)
@@ -375,7 +375,7 @@ def test_simpler_gff3_skip(
 )
 def test_gffsimplifier_with_genome(
     data_dir: Path,
-    tmp_dir: Path,
+    tmp_path: Path,
     assert_files: Callable,
     genome_file: Optional[PathLike],
     in_gff: PathLike,
@@ -383,7 +383,7 @@ def test_gffsimplifier_with_genome(
 ) -> None:
     """Test simplifying genes from GFF3 files."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / in_gff
+    output_gff = tmp_path / in_gff
     if genome_file is None:
         simp = GFFSimplifier()
     else:
@@ -442,7 +442,7 @@ def test_gffsimplifier_with_genome(
 )
 def test_simpler_gff3_mirna(
     data_dir: Path,
-    tmp_dir: Path,
+    tmp_path: Path,
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: PathLike,
@@ -450,7 +450,7 @@ def test_simpler_gff3_mirna(
 ) -> None:
     """Test normalizing miRNA genes."""
     input_gff = data_dir / in_gff
-    output_gff = tmp_dir / Path(in_gff).name
+    output_gff = tmp_path / Path(in_gff).name
     simp = GFFSimplifier()
     with expectation:
         simp.simpler_gff3(input_gff)
