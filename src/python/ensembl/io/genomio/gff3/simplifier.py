@@ -38,7 +38,7 @@ from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
 from .restructure import restructure_gene, remove_cds_from_pseudogene
-from .exceptions import GFFParserError
+from .exceptions import GFFParserError, IgnoredFeatureError, UnsupportedFeatureError
 
 
 class Records(list):
@@ -130,9 +130,11 @@ class GFFSimplifier:
                 if split_genes:
                     cleaned_features += split_genes
                 else:
-                    clean_feature = self.simpler_gff3_feature(feature)
-                    if clean_feature is not None:
+                    try:
+                        clean_feature = self.simpler_gff3_feature(feature)
                         cleaned_features.append(clean_feature)
+                    except (UnsupportedFeatureError, IgnoredFeatureError) as err:
+                        logging.debug(err.message)
             record.features = cleaned_features
 
         if self.fail_types:
@@ -141,17 +143,17 @@ class GFFSimplifier:
             if not self.skip_unrecognized:
                 raise GFFParserError("Unrecognized types found, abort")
 
-    def simpler_gff3_feature(self, gene: SeqFeature) -> Optional[SeqFeature]:
+    def simpler_gff3_feature(self, gene: SeqFeature) -> SeqFeature:
         """Creates a simpler version of a GFF3 feature.
 
-        If the feature is invalid/skippable, returns None.
+        Raises InvalidGFFFeature if the feature is invalid/skippable.
         """
         # Special cases
         non_gene = self.normalize_non_gene(gene)
         if non_gene:
             return non_gene
         if gene.type in self._biotypes["gene"]["ignored"]:
-            return None
+            raise IgnoredFeatureError(f"Ignored type {gene.type} for {gene.id}")
 
         # Synonym
         if gene.type == "protein_coding_gene":
@@ -164,8 +166,7 @@ class GFFSimplifier:
         # What to do with unsupported gene types
         if gene.type not in self._biotypes["gene"]["supported"]:
             self.fail_types.add(f"gene={gene.type}")
-            logging.debug(f"Unsupported gene type: {gene.type} (for {gene.id})")
-            return None
+            raise UnsupportedFeatureError(f"Unsupported type {gene.type} for {gene.id}")
 
         # Normalize and store
         gene = self.normalize_gene(gene)

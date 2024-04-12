@@ -16,8 +16,22 @@
 
 __all__ = [
     "GFFParserError",
+    "IgnoredFeatureError",
+    "UnsupportedFeatureError",
 ]
 
 
 class GFFParserError(Exception):
     """Error when parsing a GFF3 file."""
+
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+
+class IgnoredFeatureError(GFFParserError):
+    """GFF3 feature can be ignored."""
+
+
+class UnsupportedFeatureError(GFFParserError):
+    """GFF3 feature is not supported."""

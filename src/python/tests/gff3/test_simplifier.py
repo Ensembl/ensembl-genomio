@@ -25,6 +25,7 @@ from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
+from ensembl.io.genomio.gff3.exceptions import IgnoredFeatureError, UnsupportedFeatureError
 
 
 def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function: str) -> SeqFeature:
@@ -36,14 +37,13 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
     # Apply the named function
     check_method = getattr(simp, check_function)
     new_feat = check_method(feat)
+    # Put it back
+    if isinstance(new_feat, list):
+        simp.records[0].features = new_feat
+    else:
+        simp.records[0].features = [new_feat]
+    simp.records.to_gff(output_gff)
 
-    if new_feat is not None:
-        # Put it back
-        if isinstance(new_feat, list):
-            simp.records[0].features = new_feat
-        else:
-            simp.records[0].features = [new_feat]
-        simp.records.to_gff(output_gff)
     return new_feat
 
 
@@ -233,13 +233,19 @@ def test_clean_gene(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff",
+    "in_gff, expected_gff, expectation",
     [
-        param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
-        param("gene_ignored.gff", None, id="gene ignored"),
-        param("mobile_te.gff", "mobile_te.gff", id="TE"),
-        param("ok_protein_coding_gene.gff", "ok_gene.gff", id="ok protein_coding_gene"),
-        param("ok_tr_ignored.gff", "ok_gene.gff", id="ok gene with ignored transcripts/subtranscripts"),
+        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
+        param("gene_ignored.gff", None, raises(IgnoredFeatureError), id="gene ignored"),
+        param("gene_unsupported.gff", None, raises(UnsupportedFeatureError), id="gene unsupported"),
+        param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
+        param("ok_protein_coding_gene.gff", "ok_gene.gff", does_not_raise(), id="ok protein_coding_gene"),
+        param(
+            "ok_tr_ignored.gff",
+            "ok_gene.gff",
+            does_not_raise(),
+            id="ok gene with ignored transcripts/subtranscripts",
+        ),
     ],
 )
 def test_simpler_gff3_feature(
@@ -248,14 +254,14 @@ def test_simpler_gff3_feature(
     assert_files: Callable,
     in_gff: PathLike,
     expected_gff: Optional[PathLike],
+    expectation: ContextManager,
 ) -> None:
     """Test simplifying one gene (from a GFF3 file)."""
     input_gff = data_dir / in_gff
     output_gff = tmp_path / in_gff
-    new_feat = check_one_feature(input_gff, output_gff, "simpler_gff3_feature")
-    if expected_gff is None:
-        assert new_feat is None
-    else:
+    with expectation:
+        check_one_feature(input_gff, output_gff, "simpler_gff3_feature")
+    if expected_gff is not None:
         assert_files(output_gff, Path(data_dir / expected_gff))
 
 
