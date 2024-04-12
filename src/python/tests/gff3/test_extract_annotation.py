@@ -343,11 +343,11 @@ def test_store_gene(
     """Test store_gene given a gene Feature with a transcript and optional translation.
 
     Args:
-        cds_parts: Number of parts of each CDS
         num_cds: Number of CDSs stored
-        num_genes: Number of genes stored as expected
-        num_tr: Number of transcripts stored as expected
-        num_cds: Number of CDSs stored as expected
+        cds_parts: Number of parts of each CDS
+        expected_num_genes: Number of genes stored as expected
+        expected_num_tr: Number of transcripts stored as expected
+        expected_num_cds: Number of CDSs stored as expected
     """
     annot = FunctionalAnnotations()
     gene_name = "gene_A"
