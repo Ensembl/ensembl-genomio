@@ -453,5 +453,6 @@ def test_simpler_gff3_mirna(
     with expectation:
         simp = GFFSimplifier()
         simp.simpler_gff3(input_gff)
+    if expected_gff:
         simp.records.to_gff(output_gff)
         assert_files(output_gff, data_dir / expected_gff)
