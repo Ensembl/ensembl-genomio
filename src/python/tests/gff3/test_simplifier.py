@@ -28,7 +28,7 @@ from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
 from ensembl.io.genomio.gff3.exceptions import IgnoredFeatureError, UnsupportedFeatureError
 
 
-def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function: str) -> SeqFeature:
+def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function: str) -> None:
     """Load 1 feature from a GFF, apply a function, then write it back to a GFF."""
     simp = GFFSimplifier()
     simp.records.from_gff(input_gff)
@@ -43,8 +43,6 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
     else:
         simp.records[0].features = [new_feat]
     simp.records.to_gff(output_gff)
-
-    return new_feat
 
 
 @pytest.mark.parametrize(
@@ -66,9 +64,8 @@ def test_create_gene_for_lone_transcript(
     """Test gene create gene for lone transcript."""
     input_gff = data_dir / in_gff
     output_gff = tmp_path / Path(in_gff).name
-    new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
-    if new_feat:
-        assert_files(output_gff, Path(data_dir / expected_gff))
+    check_one_feature(input_gff, output_gff, "create_gene_for_lone_transcript")
+    assert_files(output_gff, Path(data_dir / expected_gff))
 
 
 @pytest.mark.parametrize(
@@ -89,9 +86,8 @@ def test_create_gene_for_lone_cds(
     """Test gene create gene for lone CDS."""
     input_gff = data_dir / in_gff
     output_gff = tmp_path / Path(in_gff).name
-    new_feat = check_one_feature(input_gff, output_gff, "create_gene_for_lone_cds")
-    if new_feat:
-        assert_files(output_gff, Path(data_dir / expected_gff))
+    check_one_feature(input_gff, output_gff, "create_gene_for_lone_cds")
+    assert_files(output_gff, Path(data_dir / expected_gff))
 
 
 @pytest.mark.parametrize(
@@ -227,9 +223,8 @@ def test_clean_gene(
     """Test clean gene."""
     input_gff = data_dir / in_gff
     output_gff = tmp_path / Path(in_gff).name
-    new_feat = check_one_feature(input_gff, output_gff, "clean_gene")
-    if new_feat:
-        assert_files(output_gff, Path(data_dir / expected_gff))
+    check_one_feature(input_gff, output_gff, "clean_gene")
+    assert_files(output_gff, Path(data_dir / expected_gff))
 
 
 @pytest.mark.parametrize(
