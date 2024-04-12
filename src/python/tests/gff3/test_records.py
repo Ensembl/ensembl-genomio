@@ -14,9 +14,10 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.gff3.simplifier.Records` class."""
 
+from contextlib import nullcontext as no_raise
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, ContextManager, List, Optional
 
 import pytest
 from pytest import param, raises
@@ -25,31 +26,30 @@ from ensembl.io.genomio.gff3.simplifier import Records
 
 
 @pytest.mark.parametrize(
-    "in_gff, excluded, expected_loaded",
+    "in_gff, excluded, expected_loaded, expectation",
     [
-        param("record_n2.gff", None, ["scaffold1", "scaffold2"], id="2 records"),
-        param("record_n2.gff", ["scaffold1"], ["scaffold2"], id="2 records, exclude 1"),
-        param("record_n1.gff", ["Lorem"], ["scaffold1"], id="1 record, exclude not in record"),
+        param("record_n2.gff", None, ["scaffold1", "scaffold2"], no_raise(), id="2 records"),
+        param("record_n2.gff", ["scaffold1"], ["scaffold2"], no_raise(), id="2 records, exclude 1"),
+        param("record_n1.gff", ["Lorem"], ["scaffold1"], no_raise(), id="1 record, exclude not in record"),
+        param("invalid.gff", None, [], raises(AssertionError), id="Invalid GFF3"),
     ],
 )
 def test_from_gff(
-    data_dir: Path, in_gff: PathLike, excluded: Optional[List[str]], expected_loaded: List[str]
+    data_dir: Path,
+    in_gff: PathLike,
+    excluded: Optional[List[str]],
+    expected_loaded: List[str],
+    expectation: ContextManager,
 ) -> None:
     """Test loading GFF records from file."""
     input_gff = data_dir / in_gff
 
     records = Records()
-    records.from_gff(input_gff, excluded)
-    record_names = [record.id for record in records]
-    assert record_names == expected_loaded
-
-
-def test_from_gff_invalid(data_dir: Path) -> None:
-    """Test loading invalid GFF file."""
-    input_gff = data_dir / "invalid.gff3"
-    records = Records()
-    with raises(AssertionError):
-        records.from_gff(input_gff)
+    with expectation:
+        records.from_gff(input_gff, excluded)
+    if expected_loaded:
+        record_names = [record.id for record in records]
+        assert record_names == expected_loaded
 
 
 @pytest.mark.parametrize(
