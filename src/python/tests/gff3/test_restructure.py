@@ -353,10 +353,7 @@ def test_restructure_gene(
         param({"pseudogene": ["CDS", "CDS"]}, "pseudogene", id="pseudogene CDSs"),
     ],
 )
-def test_remove_cds_from_pseudogene(
-    children: List[Any],
-    expected_children: List[Any],
-) -> None:
+def test_remove_cds_from_pseudogene(children: List[Any], expected_children: List[Any]) -> None:
     """Test CDS removal from pseudogene."""
     gen = FeatGenerator()
     gene = gen.make_structure([children])[0]

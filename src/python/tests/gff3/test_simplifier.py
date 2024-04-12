@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.gff3.restructure` module."""
+"""Unit testing of `ensembl.io.genomio.gff3.simplifier` module."""
 
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
@@ -396,12 +396,7 @@ def test_gffsimplifier_with_genome(
 @pytest.mark.parametrize(
     "in_gff, expected_gff, expectation",
     [
-        param(
-            "ok_gene.gff",
-            "ok_gene.gff",
-            does_not_raise(),
-            id="normal gene",
-        ),
+        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="normal gene"),
         param(
             "mirna/gene.gff",
             "mirna/gene_simped.gff",

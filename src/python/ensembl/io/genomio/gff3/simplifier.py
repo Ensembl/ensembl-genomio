@@ -56,14 +56,18 @@ class Records(list):
         with Path(in_gff_path).open("r") as in_gff_fh:
             for record in GFF.parse(in_gff_fh):
                 if record.id in excluded:
-                    logging.debug(f"Skip seq_region {record.id}")
+                    logging.debug(f"Skip seq_region {record.id} - in exclusion list")
                     continue
                 clean_record = SeqRecord(record.seq, id=record.id)
                 clean_record.features = record.features
                 self.append(clean_record)
 
     def to_gff(self, out_gff_path: PathLike) -> None:
-        """Print out the current list of records in a GFF3 file."""
+        """Writes the current list of records in a GFF3 file.
+
+        Args:
+            out_gff_path: Path to GFF3 file where to write the records.
+        """
         with Path(out_gff_path).open("w") as out_gff_fh:
             GFF.write(self, out_gff_fh)
 
@@ -172,7 +176,7 @@ class GFFSimplifier:
         """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA_gene' for all others.
 
         Args:
-            ncrna: The transcript for which we want to create a gene.
+            feat: The transcript for which we want to create a gene.
         """
         transcript_types = self._biotypes["transcript"]["supported"]
         if feat.type not in transcript_types:
@@ -195,7 +199,11 @@ class GFFSimplifier:
         return new_gene
 
     def create_gene_for_lone_cds(self, feat: SeqFeature) -> SeqFeature:
-        """Returns a gene created for a lone CDS."""
+        """Returns a gene created for a lone CDS.
+
+        Args:
+            feat: The transcript for which we want to create a gene.
+"""
         if feat.type != "CDS":
             return feat
 
