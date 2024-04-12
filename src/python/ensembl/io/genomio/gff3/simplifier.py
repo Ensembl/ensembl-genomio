@@ -202,8 +202,8 @@ class GFFSimplifier:
         """Returns a gene created for a lone CDS.
 
         Args:
-            feat: The transcript for which we want to create a gene.
-"""
+            feat: The CDS for which we want to create a gene.
+        """
         if feat.type != "CDS":
             return feat
 
