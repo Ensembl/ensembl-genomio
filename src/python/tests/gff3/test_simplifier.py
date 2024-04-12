@@ -451,8 +451,8 @@ def test_simpler_gff3_mirna(
     """Test normalizing miRNA genes."""
     input_gff = data_dir / in_gff
     output_gff = tmp_dir / Path(in_gff).name
+    simp = GFFSimplifier()
     with expectation:
-        simp = GFFSimplifier()
         simp.simpler_gff3(input_gff)
     if expected_gff:
         simp.records.to_gff(output_gff)
