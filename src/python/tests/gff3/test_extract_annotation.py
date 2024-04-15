@@ -97,6 +97,26 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
 
 
 @pytest.mark.parametrize(
+    "feat_id, feat_name, expected_synonyms",
+    [
+        pytest.param("featA", "featA", [], id="Same name and ID"),
+        pytest.param("featA", "featA_name", ["featA_name"], id="Diff name and ID"),
+    ],
+)
+def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[str]) -> None:
+    """Tests the `FunctionaAnnotation.add_feature()` method with a feature name."""
+    annot = FunctionalAnnotations()
+
+    seq_feat_type = "gene"
+    feat_type = "gene"
+    feature = SeqFeature(type=seq_feat_type, id=feat_id, qualifiers={"Name": [feat_name]})
+    annot.add_feature(feature, feat_type)
+    loaded_feat = annot.features[feat_type][feature.id]
+    loaded_synonyms = loaded_feat.get("synonyms", [])
+    assert loaded_synonyms == expected_synonyms
+
+
+@pytest.mark.parametrize(
     "parent_type, parent_id, child_id, expected",
     [
         ("gene", "geneA", "mrnA", does_not_raise()),
