@@ -211,17 +211,23 @@ def test_add_feature_fail(
         param(["GenBank:XXX"], None, [{"dbname": "GenBank", "id": "XXX"}], id="Genbank"),
         param(
             ["GenBank:XXX"],
-            {"assembly": {"provider_name": "RefSeq"}},
+            {"assembly": {"provider_name": "RefSeq", "accession": "GCF0000000"}},
             [{"dbname": "RefSeq", "id": "XXX"}],
-            id="RefSeq",
+            id="RefSeq explicit provider",
         ),
-        param(["GenBank:XXX"], {}, [{"dbname": "GenBank", "id": "XXX"}], id="Empty genome"),
         param(
             ["GenBank:XXX"],
-            {"assembly": {}},
-            [{"dbname": "GenBank", "id": "XXX"}],
-            id="No provider in genome",
+            {"assembly": {"accession": "GCF000000"}},
+            [{"dbname": "RefSeq", "id": "XXX"}],
+            id="RefSeq from accession",
         ),
+        param(
+            ["GenBank:XXX"],
+            {"assembly": {"accession": "GCA000000"}},
+            [{"dbname": "GenBank", "id": "XXX"}],
+            id="GenBank from accession",
+        ),
+        param(["GenBank:XXX"], {}, [{"dbname": "GenBank", "id": "XXX"}], id="Empty genome"),
     ],
 )
 def test_get_xrefs(

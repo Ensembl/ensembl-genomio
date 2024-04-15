@@ -82,12 +82,14 @@ class FunctionalAnnotations:
             return all_xref
 
         # Using provider name to modify the xref
-        provider_name = None
+        provider_name = "GenBank"
         if self.genome:
             try:
                 provider_name = self.genome["assembly"]["provider_name"]
             except KeyError:
-                logging.warning("No provider name is provided in the genome file")
+                if self.genome["assembly"]["accession"].startswith("GCF"):
+                    provider_name = "RefSeq"
+                logging.warning(f"Provider name inferred from accession: {provider_name}")
 
         # Extract the Dbxrefs
         for xref in feature.qualifiers["Dbxref"]:
