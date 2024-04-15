@@ -36,13 +36,19 @@ from ensembl.io.genomio.utils import print_json
         param({"assembly": {"provider_name": "LOREM"}}, "LOREM", id="Explicit provider name"),
         param({"assembly": {"accession": "GCA00000"}}, "GenBank", id="Genbank from accession"),
         param({"assembly": {"accession": "GCF00000"}}, "RefSeq", id="RefSeq from accession"),
-        param({"assembly": {"provider_name": "LOREM", "accession": "GCA00000"}}, "LOREM", id="Explicit provider_name, GCA accession"),
-        param({"assembly": {"provider_name": "LOREM", "accession": "GCF00000"}}, "LOREM", id="Explicit provider_name, GCF accession"),
+        param(
+            {"assembly": {"provider_name": "LOREM", "accession": "GCA00000"}},
+            "LOREM",
+            id="Explicit provider_name, GCA accession",
+        ),
+        param(
+            {"assembly": {"provider_name": "LOREM", "accession": "GCF00000"}},
+            "LOREM",
+            id="Explicit provider_name, GCF accession",
+        ),
     ],
 )
-def test_get_provider_name(
-    tmp_path: Path, genome_meta: Dict, expected_provider_name: str
-) -> None:
+def test_get_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
     """Test get_provider_name()."""
     # Write metadata file
     meta_path = tmp_path / "meta.json"

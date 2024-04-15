@@ -117,7 +117,7 @@ class GFFSimplifier:
         # Init the actual data we will store
         self.records = Records()
         self.annotations = FunctionalAnnotations(self.get_provider_name())
-    
+
     def get_provider_name(self) -> str:
         provider_name = "GenBank"
         if self.genome:
