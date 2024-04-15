@@ -119,6 +119,11 @@ class GFFSimplifier:
         self.annotations = FunctionalAnnotations(self.get_provider_name())
 
     def get_provider_name(self) -> str:
+    """Returns the provider name for this genome.
+
+    If this information is not available, will try to infer it from the assembly accession. Will
+    return "GenBank" otherwise.
+    """
         provider_name = "GenBank"
         if self.genome:
             try:
@@ -127,7 +132,7 @@ class GFFSimplifier:
                 if self.genome["assembly"]["accession"].startswith("GCF"):
                     provider_name = "RefSeq"
         else:
-            logging.warning(f"No Provider name, using default {provider_name}")
+            logging.warning(f"No genome file, using the default provider_name: {provider_name}")
         return provider_name
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
