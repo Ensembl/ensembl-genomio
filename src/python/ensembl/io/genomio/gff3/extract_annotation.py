@@ -160,19 +160,13 @@ class FunctionalAnnotations:
         feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
 
         # Description?
-        if "product" in feature.qualifiers:
-            description = feature.qualifiers["product"][0]
-            if self.product_is_informative(description):
-                feature_object["description"] = description
-
-        if "Name" in feature.qualifiers and "description" not in feature_object:
-            feature_object["description"] = feature.qualifiers["Name"][0]
-
-        # Don't keep useless description
-        if ("description" in feature_object) and not self.product_is_informative(
-            feature_object["description"], feature.id
-        ):
-            del feature_object["description"]
+        for qname in ("description", "product"):
+            if qname in feature.qualifiers:
+                description = feature.qualifiers[qname][0]
+                if self.product_is_informative(description):
+                    feature_object["description"] = description
+                    break
+                logging.debug(f"Non informative description for {feature.id}: {description}")
 
         feature_object["xrefs"] = []
         if "Dbxref" in feature.qualifiers:
