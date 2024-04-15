@@ -116,7 +116,19 @@ class GFFSimplifier:
 
         # Init the actual data we will store
         self.records = Records()
-        self.annotations = FunctionalAnnotations()
+        self.annotations = FunctionalAnnotations(self.get_provider_name())
+    
+    def get_provider_name(self) -> str:
+        provider_name = "GenBank"
+        if self.genome:
+            try:
+                provider_name = self.genome["assembly"]["provider_name"]
+            except KeyError:
+                if self.genome["assembly"]["accession"].startswith("GCF"):
+                    provider_name = "RefSeq"
+        else:
+            logging.warning(f"No Provider name, using default {provider_name}")
+        return provider_name
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a
