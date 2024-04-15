@@ -310,10 +310,10 @@ def test_transfer_descriptions(
     transcript_name = "tran_A"
     one_gene = SeqFeature(type="gene", id=gene_name)
     if gene_desc:
-        one_gene.qualifiers["Name"] = [gene_desc]
+        one_gene.qualifiers["description"] = [gene_desc]
     one_transcript = SeqFeature(type="mRNA", id=transcript_name)
     if transc_desc:
-        one_transcript.qualifiers = {"Name": [transc_desc]}
+        one_transcript.qualifiers = {"product": [transc_desc]}
     one_translation = SeqFeature(type="CDS", id="cds_A")
     if transl_desc:
         one_translation.qualifiers = {"product": [transl_desc]}
