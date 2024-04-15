@@ -176,7 +176,7 @@ class FunctionalAnnotations:
         for qname in ("description", "product"):
             if qname in feature.qualifiers:
                 description = feature.qualifiers[qname][0]
-                if self.product_is_informative(description, feat_ids=parents_ids + [feature.id]):
+                if self.product_is_informative(description, feat_ids=parent_ids + [feature.id]):
                     feature_object["description"] = description
                     break
                 logging.debug(f"Non informative description for {feature.id}: {description}")
