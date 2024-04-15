@@ -340,8 +340,19 @@ class Manifest:
             gene_id = gene_id.replace("gene:", "")
         genes[gene_id] = abs(feat.location.end - feat.location.start)
         # Get CDS id and length
+        protein_transcripts = {
+            "mRNA",
+            "pseudogenic_transcript",
+        }
+        ig_transcripts = {
+            "IG_V_gene",
+            "IG_C_gene",
+            "TR_C_gene",
+            "TR_V_gene",
+        }
+        cds_transcripts = protein_transcripts | ig_transcripts
         for feat2 in feat.sub_features:
-            if feat2.type in ("mRNA", "pseudogenic_transcript"):
+            if feat2.type in cds_transcripts:
                 length = {}
                 for feat3 in feat2.sub_features:
                     if feat3.type == "CDS":
@@ -354,7 +365,7 @@ class Manifest:
                 for pep_id, pep_length in length.items():
                     # Store length for translations, add pseudo translations separately
                     pep_length = floor(pep_length / 3) - 1
-                    if feat.type != "pseudogene":
+                    if feat.type != "pseudogene" and feat2.type in protein_transcripts:
                         peps[pep_id] = pep_length
                     all_peps[pep_id] = pep_length
 
