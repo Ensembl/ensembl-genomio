@@ -74,6 +74,7 @@ def test_product_is_informative(description: str, feature_id: Optional[List[str]
     "seq_feat_type, feat_type, expected",
     [
         ("gene", "gene", does_not_raise()),
+        ("pseudogene", "gene", does_not_raise()),
         ("mRNA", "transcript", does_not_raise()),
         ("CDS", "translation", does_not_raise()),
         ("transposable_element", "transposable_element", does_not_raise()),
