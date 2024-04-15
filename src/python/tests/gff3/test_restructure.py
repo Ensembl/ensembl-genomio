@@ -334,3 +334,28 @@ def test_restructure_gene(
     with expectation:
         restructure.restructure_gene(gene)
         assert gen.get_sub_structure(gene) == {"gene": expected_children}
+
+
+@pytest.mark.parametrize(
+    "children, expected_children",
+    [
+        param("gene", "gene", id="gene"),
+        param("pseudogene", "pseudogene", id="pseudogene"),
+        param({"pseudogene": ["mRNA"]}, {"pseudogene": ["mRNA"]}, id="pseudogene mRNA"),
+        param(
+            {"pseudogene": [{"mRNA": ["CDS", "CDS"]}]}, {"pseudogene": ["mRNA"]}, id="pseudogene mRNA CDSs"
+        ),
+        param(
+            {"pseudogene": [{"mRNA": ["CDS", "exon"]}]},
+            {"pseudogene": [{"mRNA": ["exon"]}]},
+            id="pseudogene mRNA CDSs, exons",
+        ),
+        param({"pseudogene": ["CDS", "CDS"]}, "pseudogene", id="pseudogene CDSs"),
+    ],
+)
+def test_remove_cds_from_pseudogene(children: List[Any], expected_children: List[Any]) -> None:
+    """Test CDS removal from pseudogene."""
+    gen = FeatGenerator()
+    gene = gen.make_structure([children])[0]
+    restructure.remove_cds_from_pseudogene(gene)
+    assert gen.get_sub_structure(gene) == expected_children
