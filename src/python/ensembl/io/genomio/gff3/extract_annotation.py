@@ -255,9 +255,11 @@ class FunctionalAnnotations:
             "product",
             "function",
             "protein",
+            "transcript",
             "gene",
             "RNA",
-            r"variant( \d+)?",
+            r"(variant|isoform)( X?\d+)?",
+            r"low quality protein",
         ]
         non_informative_re = re.compile(r"|".join(non_informative_words), re.IGNORECASE)
 
