@@ -15,7 +15,8 @@
 """Unit testing of `ensembl.io.genomio.gff3.extract_annotation` module."""
 
 from contextlib import nullcontext as does_not_raise
-from typing import ContextManager, Dict, List, Optional
+from pathlib import Path
+from typing import Callable, ContextManager, Dict, List, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest
@@ -400,3 +401,53 @@ def test_store_gene(
     assert len(annot.features["gene"]) == expected_num_genes
     assert len(annot.features["transcript"]) == expected_num_tr
     assert len(annot.features["translation"]) == expected_num_cds
+
+
+@pytest.mark.parametrize(
+    "gene, transcript, translation, expected_json",
+    [
+        pytest.param(
+            SeqFeature(type="gene", id="gene_A"),
+            SeqFeature(type="mRNA", id="tran_A"),
+            SeqFeature(type="CDS", id="cds_A"),
+            "dump_noinfo.json",
+            id="No annotation",
+        ),
+        pytest.param(
+            SeqFeature(
+                type="gene", id="gene_A", qualifiers={"description": ["Gene description"], "Name": ["GeneA"]}
+            ),
+            SeqFeature(type="mRNA", id="tran_A"),
+            SeqFeature(type="CDS", id="cds_A"),
+            "dump_syn.json",
+            id="Some annotation",
+        ),
+        pytest.param(
+            SeqFeature(type="gene", id="gene_A", qualifiers={"description": ["Gene NameA"]}),
+            SeqFeature(type="mRNA", id="tran_A", qualifiers={"description": ["Transcript NameA"]}),
+            SeqFeature(type="CDS", id="cds_A", qualifiers={"description": ["Protein NameA"]}),
+            "dump_description.json",
+            id="Some descriptions",
+        ),
+    ],
+)
+def test_to_json(
+    assert_files: Callable,
+    tmp_dir: Path,
+    data_dir: Path,
+    gene: SeqFeature,
+    transcript: SeqFeature,
+    translation: SeqFeature,
+    expected_json: Path,
+) -> None:
+    """Test the dumping of the functional annotation to json."""
+    annot = FunctionalAnnotations()
+    annot.add_feature(gene, "gene")
+    annot.add_feature(transcript, "transcript", parent_id=gene.id)
+    annot.add_feature(translation, "translation", parent_id=transcript.id)
+
+    output_path = tmp_dir / "to_json.json"
+    annot.to_json(output_path)
+
+    # Need to check output!
+    assert_files(output_path, data_dir / expected_json)
