@@ -119,11 +119,11 @@ class GFFSimplifier:
         self.annotations = FunctionalAnnotations(self.get_provider_name())
 
     def get_provider_name(self) -> str:
-    """Returns the provider name for this genome.
+        """Returns the provider name for this genome.
 
-    If this information is not available, will try to infer it from the assembly accession. Will
-    return "GenBank" otherwise.
-    """
+        If this information is not available, will try to infer it from the assembly accession. Will
+        return "GenBank" otherwise.
+        """
         provider_name = "GenBank"
         if self.genome:
             try:
