@@ -140,6 +140,8 @@ class FunctionalAnnotations:
         Args:
             feature: The feature to create an annotation.
             feat_type: Type of the feature to annotate.
+            parent_id: Parent ID of this feature to keep it linked.
+            all_parent_ids: All parent IDs to remove from non-informative descriptions.
         """
         if all_parent_ids is None:
             all_parent_ids = []
@@ -165,6 +167,7 @@ class FunctionalAnnotations:
         Args:
             feature: The SeqFeature to add to the list.
             feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
+            all_parent_ids: All parent IDs to remove from non-informative descriptions.
 
         """
         if parent_ids is None:
