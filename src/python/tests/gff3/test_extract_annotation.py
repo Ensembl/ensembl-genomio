@@ -106,7 +106,7 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
     ],
 )
 def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[str]) -> None:
-    """Tests the `FunctionaAnnotation.add_feature()` method with a feature name."""
+    """Tests the `FunctionaAnnotations.add_feature()` method with a feature name."""
     annot = FunctionalAnnotations()
 
     seq_feat_type = "gene"
@@ -434,7 +434,7 @@ def test_store_gene(
 )
 def test_to_json(
     assert_files: Callable,
-    tmp_dir: Path,
+    tmp_path: Path,
     data_dir: Path,
     gene: SeqFeature,
     transcript: SeqFeature,
@@ -447,7 +447,7 @@ def test_to_json(
     annot.add_feature(transcript, "transcript", parent_id=gene.id)
     annot.add_feature(translation, "translation", parent_id=transcript.id)
 
-    output_path = tmp_dir / "to_json.json"
+    output_path = tmp_path / "to_json.json"
     annot.to_json(output_path)
 
     # Need to check output!

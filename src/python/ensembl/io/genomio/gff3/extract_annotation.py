@@ -176,9 +176,7 @@ class FunctionalAnnotations:
         for qname in ("description", "product"):
             if qname in feature.qualifiers:
                 description = feature.qualifiers[qname][0]
-                all_ids = list(parent_ids)
-                all_ids.append(feature.id)
-                if self.product_is_informative(description, feat_ids=all_ids):
+                if self.product_is_informative(description, feat_ids=parents_ids + [feature.id]):
                     feature_object["description"] = description
                     break
                 logging.debug(f"Non informative description for {feature.id}: {description}")
@@ -243,16 +241,14 @@ class FunctionalAnnotations:
         """Returns True if the product name contains informative words, False otherwise.
 
         It is considered uninformative when the description contains words such as "hypothetical" or
-        or "putative". If a feature IDs are provided, consider it uninformative as well (we do not want
+        or "putative". If feature IDs are provided, consider it uninformative as well (we do not want
         descriptions to be just the ID).
 
         Args:
             product: A product name.
-            feat_ids: List of feature ID.
+            feat_ids: List of feature IDs.
 
         """
-        if feat_ids is None:
-            feat_ids = []
         non_informative_words = [
             "hypothetical",
             "putative",
