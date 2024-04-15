@@ -52,7 +52,7 @@ def shared_data_dir(pytestconfig: Config) -> Path:
 
 
 @pytest.fixture(name="json_data")
-def fixture_json_data(data_dir: Path) -> Callable:
+def fixture_json_data(data_dir: Path) -> Callable[[str], Any]:
     """Returns a JSON test object factory.
 
     Args:
@@ -68,15 +68,22 @@ def fixture_json_data(data_dir: Path) -> Callable:
 
 
 @pytest.fixture(name="assert_files")
-def assert_files() -> Callable[[Path, Path], None]:
-    """Provide a function that asserts two files and show a diff if they differ."""
+def fixture_assert_files() -> Callable[[Path, Path], None]:
+    """Returns a function that asserts if two files are equal and shows a diff if they differ."""
 
     def _assert_files(result_path: Path, expected_path: Path) -> None:
         with open(result_path, "r") as result_fh:
             results = result_fh.readlines()
         with open(expected_path, "r") as expected_fh:
             expected = expected_fh.readlines()
-        files_diff = list(unified_diff(results, expected, fromfile="Test-made file", tofile="Expected file"))
+        files_diff = list(
+            unified_diff(
+                results,
+                expected,
+                fromfile=f"Test-made file {result_path.name}",
+                tofile=f"Expected file {expected_path.name}",
+            )
+        )
         assert_message = f"Test-made and expected files differ\n{' '.join(files_diff)}"
         assert len(files_diff) == 0, assert_message
 

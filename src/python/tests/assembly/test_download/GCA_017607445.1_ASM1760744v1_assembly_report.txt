@@ -1,0 +1,43 @@
+# Assembly name:  ASM1760744v1
+# Organism name:  Histoplasma ohiense (nom. inval.) (ascomycete fungi)
+# Infraspecific name:  strain=G217B
+# Taxid:          2902605
+# BioSample:      SAMN17004899
+# BioProject:     PRJNA682643
+# Submitter:      University of California, San Francisco
+# Date:           2021-03-30
+# Assembly type:  haploid
+# Release type:   major
+# Assembly level: Contig
+# Genome representation: full
+# WGS project:    JAEVHH01
+# Assembly method: miniasm v. 0.3-r179, racon v. 1.3.1, flye v. 2.3.4
+# Expected final version: no
+# Genome coverage: 28x
+# Sequencing technology: Oxford Nanopore MinION; Illumina MiSeq
+# RefSeq category: Representative Genome
+# GenBank assembly accession: GCA_017607445.1
+#
+## Assembly-Units:
+## GenBank Unit Accession	RefSeq Unit Accession	Assembly-Unit name
+## GCA_017607475.1		Primary Assembly
+## GCA_017607505.1		non-nuclear
+#
+# Ordered by chromosome/plasmid; the chromosomes/plasmids are followed by
+# unlocalized scaffolds.
+# Unplaced scaffolds are listed at the end.
+# RefSeq is equal or derived from GenBank object.
+#
+# Sequence-Name	Sequence-Role	Assigned-Molecule	Assigned-Molecule-Location/Type	GenBank-Accn	Relationship	RefSeq-Accn	Assembly-Unit	Sequence-Length	UCSC-style-name
+HcG217B00	unplaced-scaffold	na	na	JAEVHH010000001.1	<>	na	Primary Assembly	8060998	na
+HcG217B01	unplaced-scaffold	na	na	JAEVHH010000002.1	<>	na	Primary Assembly	8217122	na
+HcG217B02	unplaced-scaffold	na	na	JAEVHH010000003.1	<>	na	Primary Assembly	6680169	na
+HcG217B03	unplaced-scaffold	na	na	JAEVHH010000004.1	<>	na	Primary Assembly	6495200	na
+HcG217B04	unplaced-scaffold	na	na	JAEVHH010000005.1	<>	na	Primary Assembly	4710824	na
+HcG217B05	unplaced-scaffold	na	na	JAEVHH010000006.1	<>	na	Primary Assembly	3485302	na
+HcG217B06	unplaced-scaffold	na	na	JAEVHH010000007.1	<>	na	Primary Assembly	1601979	na
+HcG217B08	unplaced-scaffold	na	na	JAEVHH010000009.1	<>	na	Primary Assembly	25780	na
+HcG217B09	unplaced-scaffold	na	na	JAEVHH010000010.1	<>	na	Primary Assembly	26159	na
+HcG217B10	unplaced-scaffold	na	na	JAEVHH010000011.1	<>	na	Primary Assembly	60710	na
+HcG217B11	unplaced-scaffold	na	na	JAEVHH010000012.1	<>	na	Primary Assembly	41810	na
+HcG217B07	assembled-molecule	MT	Mitochondrion	CM029948.1	<>	na	non-nuclear	41220	na

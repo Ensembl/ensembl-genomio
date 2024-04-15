@@ -12,22 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.gff3.extract_annotation` module.
-
-The unit testing is divided into one test class per submodule/class found in this module, and one test method
-per public function/class method.
-
-Typical usage example::
-    $ pytest test_extract_annotation.py
-
-"""
+"""Unit testing of `ensembl.io.genomio.gff3.extract_annotation` module."""
 
 from contextlib import nullcontext as does_not_raise
-from typing import ContextManager, Optional
+from typing import ContextManager, Dict, List, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest
-from pytest import raises
+from pytest import raises, param
 
 from ensembl.io.genomio.gff3.extract_annotation import (
     FunctionalAnnotations,
@@ -204,6 +196,50 @@ def test_add_feature_fail(
 
 
 @pytest.mark.parametrize(
+    "in_xrefs, genome, expected_xrefs",
+    [
+        param(None, None, [], id="No xref"),
+        param([], None, [], id="Empty xref"),
+        param(["DBname:Value"], None, [{"dbname": "DBname", "id": "Value"}], id="One xref"),
+        param(
+            ["DBname:Value:parts"],
+            None,
+            [{"dbname": "DBname", "id": "Value:parts"}],
+            id="One xref with colon",
+        ),
+        param(["GO:XXX"], None, [], id="Ignore GO"),
+        param(["GenBank:XXX"], None, [{"dbname": "GenBank", "id": "XXX"}], id="Genbank"),
+        param(
+            ["GenBank:XXX"],
+            {"assembly": {"provider_name": "RefSeq"}},
+            [{"dbname": "RefSeq", "id": "XXX"}],
+            id="RefSeq",
+        ),
+        param(["GenBank:XXX"], {}, [{"dbname": "GenBank", "id": "XXX"}], id="Empty genome"),
+        param(
+            ["GenBank:XXX"],
+            {"assembly": {}},
+            [{"dbname": "GenBank", "id": "XXX"}],
+            id="No provider in genome",
+        ),
+    ],
+)
+def test_get_xrefs(
+    in_xrefs: Optional[List[str]], genome: Optional[Dict], expected_xrefs: List[Dict[str, str]]
+) -> None:
+    """Tests the `FunctionaAnnotation.get_xrefs()` method."""
+    annot = FunctionalAnnotations()
+    one_gene = SeqFeature(type="gene")
+    if in_xrefs is not None:
+        one_gene.qualifiers["Dbxref"] = in_xrefs
+    if genome is not None:
+        annot.genome = genome
+
+    out_xrefs = annot.get_xrefs(one_gene)
+    assert out_xrefs == expected_xrefs
+
+
+@pytest.mark.parametrize(
     "feat_type, expected_number, expected",
     [
         ("gene", 1, does_not_raise()),
@@ -292,43 +328,53 @@ def test_transfer_descriptions(
 
 @pytest.mark.dependency(depends=["add_feature"])
 @pytest.mark.parametrize(
-    "cds_parts, num_genes, num_tr, num_cds",
+    "num_cds, cds_parts, expected_num_genes, expected_num_tr, expected_num_cds",
     [
-        pytest.param(0, 1, 1, 0, id="Store gene without CDS"),
-        pytest.param(1, 1, 1, 1, id="Store gene with CDS in one part"),
-        pytest.param(2, 1, 1, 1, id="Store gene with CDS in 2 parts"),
+        pytest.param(0, 0, 1, 1, 0, id="Store gene without CDS"),
+        pytest.param(1, 1, 1, 1, 1, id="Store gene with 1 CDS in one part"),
+        pytest.param(1, 2, 1, 1, 1, id="Store gene with 1 CDS in 2 parts"),
+        pytest.param(2, 1, 1, 2, 2, id="Store gene with 2 CDS in 1 part each"),
+        pytest.param(2, 2, 1, 2, 2, id="Store gene with 2 CDS in 2 part each"),
     ],
 )
-def test_store_gene(cds_parts: int, num_genes: int, num_tr: int, num_cds: int) -> None:
+def test_store_gene(
+    cds_parts: int, num_cds: int, expected_num_genes: int, expected_num_tr: int, expected_num_cds: int
+) -> None:
     """Test store_gene given a gene Feature with a transcript and optional translation.
 
     Args:
-        cds_parts: Number of parts of the one CDS (0 means no CDS)
-        num_genes: Number of genes stored as expected
-        num_tr: Number of transcripts stored as expected
-        num_cds: Number of CDSs stored as expected
+        num_cds: Number of CDSs stored
+        cds_parts: Number of parts of each CDS
+        expected_num_genes: Number of genes stored as expected
+        expected_num_tr: Number of transcripts stored as expected
+        expected_num_cds: Number of CDSs stored as expected
     """
     annot = FunctionalAnnotations()
     gene_name = "gene_A"
     transcript_name = "tran_A"
     one_gene = SeqFeature(type="gene", id=gene_name)
     one_gene.sub_features = []
-    one_transcript = SeqFeature(type="mRNA", id=transcript_name)
-    one_transcript.sub_features = []
-
-    # Add one exon
-    one_exon = SeqFeature(type="exon", id="exon_A")
-    one_transcript.sub_features.append(one_exon)
 
     # Add a translation (possibly in parts)
-    if cds_parts > 0:
-        for _ in range(1, cds_parts + 1):
-            one_translation = SeqFeature(type="CDS", id="cds_A")
-            one_transcript.sub_features.append(one_translation)
-
-    one_gene.sub_features.append(one_transcript)
+    if num_cds:
+        for cds_number in range(1, num_cds + 1):
+            transcript = SeqFeature(type="mRNA", id=f"tran_{cds_number}")
+            transcript.sub_features = []
+            exon = SeqFeature(type="exon", id=f"exon_{cds_number}")
+            transcript.sub_features.append(exon)
+            if cds_parts > 0:
+                for _ in range(1, cds_parts + 1):
+                    translation = SeqFeature(type="CDS", id=f"cds_{cds_number}")
+                    transcript.sub_features.append(translation)
+            one_gene.sub_features.append(transcript)
+    else:
+        one_transcript = SeqFeature(type="mRNA", id=transcript_name)
+        one_transcript.sub_features = []
+        one_exon = SeqFeature(type="exon", id="exon_A")
+        one_transcript.sub_features.append(one_exon)
+        one_gene.sub_features.append(one_transcript)
 
     annot.store_gene(one_gene)
-    assert len(annot.features["gene"]) == num_genes
-    assert len(annot.features["transcript"]) == num_tr
-    assert len(annot.features["translation"]) == num_cds
+    assert len(annot.features["gene"]) == expected_num_genes
+    assert len(annot.features["transcript"]) == expected_num_tr
+    assert len(annot.features["translation"]) == expected_num_cds

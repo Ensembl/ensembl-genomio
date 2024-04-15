@@ -1,0 +1,28 @@
+{
+  "reports": [
+    {
+      "accession": "GCA_020800215.1",
+      "annotation_info": {
+        "name": "Annotation submitted by USDA ARS",
+        "provider": "USDA ARS",
+        "release_date": "2022-11-23"
+      },
+      "assembly_info": {
+        "biosample": {
+          "accession": "SAMN19730089",
+          "description": {
+            "organism": {
+              "organism_name": "Phytophthora ramorum",
+              "tax_id": 164328
+            },
+            "title": "Phytophthora ramorum isolate PR-102"
+          },
+          "last_updated": "2021-11-10T12:39:52.023"
+        },
+        "refseq_category": "representative genome",
+        "release_date": "2021-11-08",
+        "submitter": "USDA ARS"
+      }
+    }
+  ]
+}

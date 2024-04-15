@@ -77,7 +77,9 @@ class FunctionalAnnotations:
 
     def get_xrefs(self, feature: SeqFeature) -> List[Dict[str, Any]]:
         """Get the xrefs from the Dbxref field."""
-        all_xref = []
+        all_xref: List[Dict[str, str]] = []
+        if not "Dbxref" in feature.qualifiers:
+            return all_xref
 
         # Using provider name to modify the xref
         provider_name = None
@@ -89,7 +91,7 @@ class FunctionalAnnotations:
 
         # Extract the Dbxrefs
         for xref in feature.qualifiers["Dbxref"]:
-            dbname, name = xref.split(":")
+            dbname, name = xref.split(":", maxsplit=1)
             if dbname == "GenBank" and provider_name == "RefSeq":
                 dbname = "RefSeq"
 
@@ -296,13 +298,10 @@ class FunctionalAnnotations:
         """Record the functional_annotations of a gene and its children features."""
         self.add_feature(gene, "gene")
 
-        cds_found = False
         for transcript in gene.sub_features:
             self.add_feature(transcript, "transcript", gene.id)
             for feat in transcript.sub_features:
-                if feat.type != "CDS":
-                    continue
-                # Store CDS functional annotation only once
-                if not cds_found:
-                    cds_found = True
+                if feat.type == "CDS":
                     self.add_feature(feat, "translation", transcript.id)
+                    # Store CDS functional annotation only once
+                    break
