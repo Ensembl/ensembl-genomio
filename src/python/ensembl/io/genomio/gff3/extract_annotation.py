@@ -230,18 +230,20 @@ class FunctionalAnnotations:
                     parent["description"] = child_description
 
     @staticmethod
-    def product_is_informative(product: str, feat_id: Optional[str] = None) -> bool:
+    def product_is_informative(product: str, feat_ids: Optional[List[str]] = None) -> bool:
         """Returns True if the product name contains informative words, False otherwise.
 
         It is considered uninformative when the description contains words such as "hypothetical" or
-        or "putative". If a feature ID is provided, consider it uninformative as well (we do not want
+        or "putative". If a feature IDs are provided, consider it uninformative as well (we do not want
         descriptions to be just the ID).
 
         Args:
             product: A product name.
-            feat_id: Feature ID (optional).
+            feat_ids: List of feature ID.
 
         """
+        if feat_ids is None:
+            feat_ids = []
         non_informative_words = [
             "hypothetical",
             "putative",
@@ -263,10 +265,15 @@ class FunctionalAnnotations:
         ]
         non_informative_re = re.compile(r"|".join(non_informative_words), re.IGNORECASE)
 
-        # Remove the feature ID if it's in the description
-        if feat_id is not None:
-            feat_id_re = re.compile(feat_id, re.IGNORECASE)
-            product = re.sub(feat_id_re, "", product)
+        # Remove all IDs that are in the description
+        if feat_ids:
+            logging.debug(f"Filter out {feat_ids} from {product}")
+            try:
+                for feat_id in feat_ids:
+                    feat_id_re = re.compile(feat_id, re.IGNORECASE)
+                    product = re.sub(feat_id_re, "", product)
+            except TypeError as err:
+                raise TypeError(f"Failed to search {feat_id_re} in '{product}'") from err
 
         # Remove punctuations
         punct_re = re.compile(r"[,;: _()-]+")
