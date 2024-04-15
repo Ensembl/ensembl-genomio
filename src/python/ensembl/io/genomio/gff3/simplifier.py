@@ -146,7 +146,9 @@ class GFFSimplifier:
     def simpler_gff3_feature(self, gene: SeqFeature) -> SeqFeature:
         """Creates a simpler version of a GFF3 feature.
 
-        Raises InvalidGFFFeature if the feature is invalid/skippable.
+        Raises:
+            IgnoredFeatureError: If the feature type is ignored.
+            UnsupportedFeatureError: If the feature type is not supported.
         """
         # Special cases
         non_gene = self.normalize_non_gene(gene)
