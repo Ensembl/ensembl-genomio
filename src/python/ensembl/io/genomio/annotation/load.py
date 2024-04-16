@@ -135,7 +135,7 @@ def load_descriptions(
 
 def _get_features_to_update(
     table: str,
-    feat_func: List[Dict[str, str]],
+    feat_func: List[Dict[str, Any]],
     feat_data: Dict[str, Any],
     stats: Dict[str, int],
     report: bool,
@@ -157,12 +157,21 @@ def _get_features_to_update(
     to_update = []
     for new_feat in feat_func:
         # Check we can find that feature in the core db
+        cur_feat = None
         try:
             cur_feat = feat_data[new_feat["id"]]
         except KeyError:
-            logging.debug(f"Not found: {table} '{new_feat['id']}'")
-            stats["not_found"] += 1
-            continue
+            # Stable ID does not match, but does it match an xref?
+            if "xrefs" in new_feat:
+                for xref in new_feat["xrefs"]:
+                    try:
+                        cur_feat = feat_data[xref["id"]]
+                    except KeyError:
+                        pass
+            if cur_feat is None:
+                logging.debug(f"Not found: {table} '{new_feat['id']}'")
+                stats["not_found"] += 1
+                continue
 
         # Prepare some data to compare
         new_stable_id = new_feat["id"]
