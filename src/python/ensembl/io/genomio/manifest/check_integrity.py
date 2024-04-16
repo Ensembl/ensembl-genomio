@@ -424,7 +424,7 @@ class IntegrityTool:
         self.errors: List[str] = []
 
     def add_errors(self, errors: Union[List[str], str]) -> None:
-        """Store the given errors in the list."""
+        """Store the given errors (list or single string) in the list of all errors."""
         if isinstance(errors, str):
             self.errors.append(errors)
         else:
