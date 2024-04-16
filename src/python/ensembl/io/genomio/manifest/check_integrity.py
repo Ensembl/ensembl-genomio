@@ -350,7 +350,7 @@ class Manifest:
             "TR_C_gene",
             "TR_V_gene",
         }
-        cds_transcripts = protein_transcripts | ig_transcripts
+        cds_transcripts = protein_transcripts.union(ig_transcripts)
         for feat2 in feat.sub_features:
             if feat2.type in cds_transcripts:
                 length = {}
