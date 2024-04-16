@@ -108,6 +108,10 @@ class GFFSimplifier:
             with Path(genome_path).open("r") as genome_fh:
                 self.genome = json.load(genome_fh)
 
+        self.refseq = False
+        if self.genome and self.genome["assembly"]["accession"].startswith("GCF"):
+            self.refseq = True
+
         # Other preparations
         self.stable_ids = StableIDAllocator()
         self.stable_ids.set_prefix(self.genome)
@@ -116,7 +120,24 @@ class GFFSimplifier:
 
         # Init the actual data we will store
         self.records = Records()
-        self.annotations = FunctionalAnnotations()
+        self.annotations = FunctionalAnnotations(self.get_provider_name())
+
+    def get_provider_name(self) -> str:
+        """Returns the provider name for this genome.
+
+        If this information is not available, will try to infer it from the assembly accession. Will
+        return "GenBank" otherwise.
+        """
+        provider_name = "GenBank"
+        if self.genome:
+            try:
+                provider_name = self.genome["assembly"]["provider_name"]
+            except KeyError:
+                if self.genome["assembly"]["accession"].startswith("GCF"):
+                    provider_name = "RefSeq"
+        else:
+            logging.warning(f"No genome file, using the default provider_name: {provider_name}")
+        return provider_name
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
         """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a
@@ -255,7 +276,7 @@ class GFFSimplifier:
             feat.type = "transposable_element"
             feat = self._normalize_mobile_genetic_element(feat)
             # Generate ID if needed
-            feat.id = self.stable_ids.normalize_gene_id(feat)
+            feat.id = self.stable_ids.normalize_gene_id(feat, self.refseq)
             feat.qualifiers["ID"] = feat.id
 
             self.annotations.add_feature(feat, "transposable_element")
@@ -319,7 +340,7 @@ class GFFSimplifier:
 
         """
 
-        gene.id = self.stable_ids.normalize_gene_id(gene)
+        gene.id = self.stable_ids.normalize_gene_id(gene, refseq=self.refseq)
         restructure_gene(gene)
         self.normalize_transcripts(gene)
         self.normalize_pseudogene(gene)
