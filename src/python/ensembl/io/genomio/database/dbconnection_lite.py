@@ -36,7 +36,7 @@ class DatabaseExtension:
     """
 
     def __init__(self, url, **kwargs) -> None:
-        self._engine = create_engine(url, **kwargs)
+        self._engine = create_engine(url, echo=True, **kwargs)
         self._metadata: Dict[str, List] = {}
 
     @property

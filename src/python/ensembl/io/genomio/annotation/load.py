@@ -62,7 +62,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
             .outerjoin(
                 ObjectXref,
                 and_(
-                    Transcript.gene_id == ObjectXref.ensembl_id,
+                    Transcript.transcript_id == ObjectXref.ensembl_id,
                     ObjectXref.ensembl_object_type == "transcript",
                 ),
             )
