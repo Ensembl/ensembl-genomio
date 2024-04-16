@@ -17,7 +17,7 @@
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
 from pathlib import Path
-from typing import Callable, ContextManager, Optional
+from typing import Callable, ContextManager, Dict, Optional
 
 from Bio.SeqFeature import SeqFeature
 import pytest
@@ -26,6 +26,60 @@ from pytest import param, raises
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
 from ensembl.io.genomio.gff3.exceptions import IgnoredFeatureError, UnsupportedFeatureError
+from ensembl.io.genomio.utils import print_json
+
+
+@pytest.mark.parametrize(
+    "genome_meta, expected_provider_name",
+    [
+        param({}, "GenBank", id="No metadata"),
+        param(
+            {"assembly": {"provider_name": "LOREM", "accession": "GCA000"}},
+            "LOREM",
+            id="Explicit provider name",
+        ),
+        param({"assembly": {"accession": "GCA00000"}}, "GenBank", id="Genbank from accession"),
+        param({"assembly": {"accession": "GCF00000"}}, "RefSeq", id="RefSeq from accession"),
+        param(
+            {"assembly": {"provider_name": "LOREM", "accession": "GCA00000"}},
+            "LOREM",
+            id="Explicit provider_name, GCA accession",
+        ),
+        param(
+            {"assembly": {"provider_name": "LOREM", "accession": "GCF00000"}},
+            "LOREM",
+            id="Explicit provider_name, GCF accession",
+        ),
+    ],
+)
+def test_get_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
+    """Tests `GFFSimplifier.get_provider_name().`"""
+    # Write metadata file
+    meta_path = tmp_path / "meta.json"
+    print_json(meta_path, genome_meta)
+    simp = GFFSimplifier(meta_path)
+    assert simp.get_provider_name() == expected_provider_name
+
+
+@pytest.mark.parametrize(
+    "genome_meta, expected_provider_name",
+    [
+        param({}, "GenBank", id="No metadata"),
+        param(
+            {"assembly": {"provider_name": "LOREM", "accession": "GCA000"}},
+            "LOREM",
+            id="Explicit provider name",
+        ),
+    ],
+)
+def test_init_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
+    """Tests `GFFSimplifier.__init__` to set the `provider_name` to its `FunctionalAnnotations` attrib."""
+    # Write metadata file
+    meta_path = tmp_path / "meta.json"
+    print_json(meta_path, genome_meta)
+    simp = GFFSimplifier(meta_path)
+
+    assert simp.annotations.provider_name == expected_provider_name
 
 
 def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function: str) -> None:
