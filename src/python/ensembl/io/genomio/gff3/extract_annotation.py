@@ -92,6 +92,13 @@ class FunctionalAnnotations:
 
             xrefs = {"dbname": dbname, "id": name}
             all_xref.append(xrefs)
+
+        # Add RefSeq ID xref if it looks like one
+        if self.provider_name == "RefSeq":
+            if feature.type == "gene" and feature.id.startswith("LOC"):
+                xref_dbs = [x["dbname"] for x in all_xref]
+                if "RefSeq" not in xref_dbs:
+                    all_xref.append({"dbname": "RefSeq", "id": feature.id})
         return all_xref
 
     def get_features(self, feat_type: str) -> Dict[str, Annotation]:
