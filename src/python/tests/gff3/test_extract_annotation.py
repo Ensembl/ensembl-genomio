@@ -220,34 +220,50 @@ def test_add_feature_fail(
 
 
 @pytest.mark.parametrize(
-    "in_xrefs, provider_name, expected_xrefs",
+    "in_id, in_xrefs, provider_name, expected_xrefs",
     [
-        param(None, "", [], id="No xref"),
-        param([], "", [], id="Empty xref"),
-        param(["DBname:Value"], "", [{"dbname": "DBname", "id": "Value"}], id="One xref"),
+        param("LOREMID", None, "", [], id="No xref"),
+        param("LOREMID", [], "", [], id="Empty xref"),
+        param("LOREMID", ["DBname:Value"], "", [{"dbname": "DBname", "id": "Value"}], id="One xref"),
         param(
+            "LOREMID",
             ["DBname:Value:parts"],
             "",
             [{"dbname": "DBname", "id": "Value:parts"}],
             id="One xref with colon",
         ),
-        param(["GO:XXX"], "", [], id="Ignore GO"),
-        param(["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="Genbank"),
+        param("LOREMID", ["GO:XXX"], "", [], id="Ignore GO"),
+        param("LOREMID", ["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="Genbank"),
         param(
+            "LOREMID",
             ["GenBank:XXX"],
             "RefSeq",
             [{"dbname": "RefSeq", "id": "XXX"}],
             id="RefSeq explicit provider",
         ),
-        param(["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="No provider_name"),
+        param("LOREMID", ["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="No provider_name"),
+        param(
+            "LOC00000",
+            [],
+            "RefSeq",
+            [{"dbname": "RefSeq", "id": "LOC00000"}],
+            id="RefSeq ID stored as xref",
+        ),
+        param(
+            "LOC00000",
+            ["GenBank:LOC00001"],
+            "RefSeq",
+            [{"dbname": "RefSeq", "id": "LOC00001"}],
+            id="RefSeq ID stored as xref from dbxref, not ID",
+        ),
     ],
 )
 def test_get_xrefs(
-    in_xrefs: Optional[List[str]], provider_name: str, expected_xrefs: List[Dict[str, str]]
+    in_id: str, in_xrefs: Optional[List[str]], provider_name: str, expected_xrefs: List[Dict[str, str]]
 ) -> None:
     """Tests the `FunctionaAnnotation.get_xrefs()` method."""
     annot = FunctionalAnnotations(provider_name=provider_name)
-    one_gene = SeqFeature(type="gene")
+    one_gene = SeqFeature(type="gene", id=in_id)
     if in_xrefs is not None:
         one_gene.qualifiers["Dbxref"] = in_xrefs
 
