@@ -75,12 +75,9 @@ def test_get_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_
 def test_init_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
     """Tests `GFFSimplifier.__init__` to set the `provider_name` to its `FunctionalAnnotations` attrib."""
     # Write metadata file
-    if genome_meta:
-        meta_path = tmp_path / "meta.json"
-        print_json(meta_path, genome_meta)
-        simp = GFFSimplifier(meta_path)
-    else:
-        simp = GFFSimplifier()
+    meta_path = tmp_path / "meta.json"
+    print_json(meta_path, genome_meta)
+    simp = GFFSimplifier(meta_path)
 
     assert simp.annotations.provider_name == expected_provider_name
 
