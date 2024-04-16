@@ -498,18 +498,18 @@ class IntegrityTool:
             # including pseudogenes are compared to the gff
             if ann_genes:
                 self.add_errors(self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff"))
-                found_tr_errors = self.check_ids(
+                tr_id_errors = self.check_ids(
                     ann_translations, gff_translations, "Translation ids metadata vs gff"
                 )
-                if found_tr_errors:
-                    found_tr_errors_all = self.check_ids(
+                if tr_id_errors:
+                    tr_id_errors_all = self.check_ids(
                         ann_translations,
                         gff_all_translations,
                         "Translation ids metadata vs gff (include pseudo CDS)",
                     )
-                    if found_tr_errors_all:
-                        self.add_errors(found_tr_errors)
-                        self.add_errors(found_tr_errors_all)
+                    if tr_id_errors_all:
+                        self.add_errors(tr_id_errors)
+                        self.add_errors(tr_id_errors_all)
                 self.add_errors(
                     self.check_ids(
                         ann_transposable_elements,
