@@ -49,7 +49,7 @@ from ensembl.io.genomio.utils import print_json
     ],
 )
 def test_get_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
-    """Test get_provider_name()."""
+    """Tests `GFFSimplifier.get_provider_name().`"""
     # Write metadata file
     meta_path = tmp_path / "meta.json"
     print_json(meta_path, genome_meta)
