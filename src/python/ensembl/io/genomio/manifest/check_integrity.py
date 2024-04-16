@@ -25,7 +25,7 @@ from math import floor
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from BCBio import GFF
 from Bio import SeqIO, SeqFeature
@@ -423,13 +423,12 @@ class IntegrityTool:
         self.set_ignore_final_stops(ignore_final_stops)
         self.errors: List[str] = []
 
-    def add_error(self, error: str) -> None:
-        """Store the given error in the list."""
-        self.errors.append(error)
-
-    def add_errors(self, errors: List[str]) -> None:
+    def add_errors(self, errors: Union[List[str], str]) -> None:
         """Store the given errors in the list."""
-        self.errors += errors
+        if isinstance(errors, str):
+            self.errors.append(errors)
+        else:
+            self.errors += errors
 
     def check_integrity(self):
         """Load files listed in the manifest.json and check the integrity.
@@ -556,7 +555,7 @@ class IntegrityTool:
                 if "accession" in genome_ass:
                     genome_acc = genome_ass["accession"]
                     if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
-                        self.add_error(f"Genome assembly accession is wrong: '{genome_acc}'")
+                        self.add_errors(f"Genome assembly accession is wrong: '{genome_acc}'")
 
     def check_ids(self, list1, list2, name) -> List[str]:
         """Compare the ids in list1 and list2.
@@ -703,12 +702,12 @@ class IntegrityTool:
             example = diff_circular[0]
             logging.info(f"{len(diff_circular)} differences for circular elements in {name} (e.g. {example})")
         if diff:
-            self.add_error(f"{len(diff)} common elements with higher length in {name} (e.g. {diff[0]})")
+            self.add_errors(f"{len(diff)} common elements with higher length in {name} (e.g. {diff[0]})")
         if only_seqr:
             # Not an error!
             logging.info(f"{len(only_seqr)} only in seq_region list in {name} (first: {only_seqr[0]})")
         if only_feat:
-            self.add_error(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
+            self.add_errors(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
 
     def _compare_seqs(
         self, seqrs: Dict[str, Any], feats: Dict[str, Any], circular: Optional[Dict[str, Any]] = None
