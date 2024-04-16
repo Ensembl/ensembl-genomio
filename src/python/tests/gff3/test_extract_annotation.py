@@ -220,44 +220,36 @@ def test_add_feature_fail(
 
 
 @pytest.mark.parametrize(
-    "in_xrefs, genome, expected_xrefs",
+    "in_xrefs, provider_name, expected_xrefs",
     [
-        param(None, None, [], id="No xref"),
-        param([], None, [], id="Empty xref"),
-        param(["DBname:Value"], None, [{"dbname": "DBname", "id": "Value"}], id="One xref"),
+        param(None, "", [], id="No xref"),
+        param([], "", [], id="Empty xref"),
+        param(["DBname:Value"], "", [{"dbname": "DBname", "id": "Value"}], id="One xref"),
         param(
             ["DBname:Value:parts"],
-            None,
+            "",
             [{"dbname": "DBname", "id": "Value:parts"}],
             id="One xref with colon",
         ),
-        param(["GO:XXX"], None, [], id="Ignore GO"),
-        param(["GenBank:XXX"], None, [{"dbname": "GenBank", "id": "XXX"}], id="Genbank"),
+        param(["GO:XXX"], "", [], id="Ignore GO"),
+        param(["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="Genbank"),
         param(
             ["GenBank:XXX"],
-            {"assembly": {"provider_name": "RefSeq"}},
+            "RefSeq",
             [{"dbname": "RefSeq", "id": "XXX"}],
-            id="RefSeq",
+            id="RefSeq explicit provider",
         ),
-        param(["GenBank:XXX"], {}, [{"dbname": "GenBank", "id": "XXX"}], id="Empty genome"),
-        param(
-            ["GenBank:XXX"],
-            {"assembly": {}},
-            [{"dbname": "GenBank", "id": "XXX"}],
-            id="No provider in genome",
-        ),
+        param(["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="No provider_name"),
     ],
 )
 def test_get_xrefs(
-    in_xrefs: Optional[List[str]], genome: Optional[Dict], expected_xrefs: List[Dict[str, str]]
+    in_xrefs: Optional[List[str]], provider_name: str, expected_xrefs: List[Dict[str, str]]
 ) -> None:
     """Tests the `FunctionaAnnotation.get_xrefs()` method."""
-    annot = FunctionalAnnotations()
+    annot = FunctionalAnnotations(provider_name=provider_name)
     one_gene = SeqFeature(type="gene")
     if in_xrefs is not None:
         one_gene.qualifiers["Dbxref"] = in_xrefs
-    if genome is not None:
-        annot.genome = genome
 
     out_xrefs = annot.get_xrefs(one_gene)
     assert out_xrefs == expected_xrefs

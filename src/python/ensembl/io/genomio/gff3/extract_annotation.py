@@ -22,7 +22,6 @@ __all__ = [
     "FunctionalAnnotations",
 ]
 
-import logging
 from os import PathLike
 from pathlib import Path
 import re
@@ -58,9 +57,9 @@ class FunctionalAnnotations:
 
     ignored_xrefs = {"go", "interpro", "uniprot"}
 
-    def __init__(self, genome: Optional[Dict[str, Dict[str, Any]]] = None) -> None:
+    def __init__(self, provider_name: str = "") -> None:
         self.annotations: List[Annotation] = []
-        self.genome = genome
+        self.provider_name = provider_name
         # Annotated features
         # Under each feature, each dict's key is a feature ID
         self.features: Dict[str, Dict[str, Annotation]] = {
@@ -81,18 +80,10 @@ class FunctionalAnnotations:
         if not "Dbxref" in feature.qualifiers:
             return all_xref
 
-        # Using provider name to modify the xref
-        provider_name = None
-        if self.genome:
-            try:
-                provider_name = self.genome["assembly"]["provider_name"]
-            except KeyError:
-                logging.warning("No provider name is provided in the genome file")
-
         # Extract the Dbxrefs
         for xref in feature.qualifiers["Dbxref"]:
             dbname, name = xref.split(":", maxsplit=1)
-            if dbname == "GenBank" and provider_name == "RefSeq":
+            if dbname == "GenBank" and self.provider_name == "RefSeq":
                 dbname = "RefSeq"
 
             if dbname.lower() in self.ignored_xrefs:
