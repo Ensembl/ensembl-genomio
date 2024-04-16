@@ -33,7 +33,11 @@ from ensembl.io.genomio.utils import print_json
     "genome_meta, expected_provider_name",
     [
         param({}, "GenBank", id="No metadata"),
-        param({"assembly": {"provider_name": "LOREM"}}, "LOREM", id="Explicit provider name"),
+        param(
+            {"assembly": {"provider_name": "LOREM", "accession": "GCA000"}},
+            "LOREM",
+            id="Explicit provider name",
+        ),
         param({"assembly": {"accession": "GCA00000"}}, "GenBank", id="Genbank from accession"),
         param({"assembly": {"accession": "GCF00000"}}, "RefSeq", id="RefSeq from accession"),
         param(
@@ -61,15 +65,23 @@ def test_get_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_
     "genome_meta, expected_provider_name",
     [
         param({}, "GenBank", id="No metadata"),
-        param({"assembly": {"provider_name": "LOREM"}}, "LOREM", id="Explicit provider name"),
+        param(
+            {"assembly": {"provider_name": "LOREM", "accession": "GCA000"}},
+            "LOREM",
+            id="Explicit provider name",
+        ),
     ],
 )
 def test_init_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
     """Tests `GFFSimplifier.__init__` to set the `provider_name` to its `FunctionalAnnotations` attrib."""
     # Write metadata file
-    meta_path = tmp_path / "meta.json"
-    print_json(meta_path, genome_meta)
-    simp = GFFSimplifier(meta_path)
+    if genome_meta:
+        meta_path = tmp_path / "meta.json"
+        print_json(meta_path, genome_meta)
+        simp = GFFSimplifier(meta_path)
+    else:
+        simp = GFFSimplifier()
+
     assert simp.annotations.provider_name == expected_provider_name
 
 
