@@ -78,20 +78,18 @@ class FunctionalAnnotations:
     def get_xrefs(self, feature: SeqFeature) -> List[Dict[str, Any]]:
         """Get the xrefs from the Dbxref field."""
         all_xref: List[Dict[str, str]] = []
-        if not "Dbxref" in feature.qualifiers:
-            return all_xref
 
-        # Extract the Dbxrefs
-        for xref in feature.qualifiers["Dbxref"]:
-            dbname, name = xref.split(":", maxsplit=1)
-            if dbname == "GenBank" and self.provider_name == "RefSeq":
-                dbname = "RefSeq"
+        if "Dbxref" in feature.qualifiers:
+            for xref in feature.qualifiers["Dbxref"]:
+                dbname, name = xref.split(":", maxsplit=1)
+                if dbname == "GenBank" and self.provider_name == "RefSeq":
+                    dbname = "RefSeq"
 
-            if dbname.lower() in self.ignored_xrefs:
-                continue
+                if dbname.lower() in self.ignored_xrefs:
+                    continue
 
-            xrefs = {"dbname": dbname, "id": name}
-            all_xref.append(xrefs)
+                xrefs = {"dbname": dbname, "id": name}
+                all_xref.append(xrefs)
 
         # Add RefSeq ID xref if it looks like one
         if self.provider_name == "RefSeq":
@@ -99,6 +97,7 @@ class FunctionalAnnotations:
                 xref_dbs = {x["dbname"] for x in all_xref}
                 if "RefSeq" not in xref_dbs:
                     all_xref.append({"dbname": "RefSeq", "id": feature.id})
+
         return all_xref
 
     def get_features(self, feat_type: str) -> Dict[str, Annotation]:

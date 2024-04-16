@@ -256,6 +256,13 @@ def test_add_feature_fail(
             [{"dbname": "RefSeq", "id": "LOC00001"}],
             id="RefSeq ID stored as xref from dbxref, not ID",
         ),
+        param(
+            "LOC00000",
+            None,
+            "RefSeq",
+            [{"dbname": "RefSeq", "id": "LOC00000"}],
+            id="RefSeq ID stored as xref, without dbxref",
+        ),
     ],
 )
 def test_get_xrefs(
