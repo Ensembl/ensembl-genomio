@@ -22,7 +22,6 @@ __all__ = [
     "FunctionalAnnotations",
 ]
 
-import logging
 from os import PathLike
 from pathlib import Path
 import re
