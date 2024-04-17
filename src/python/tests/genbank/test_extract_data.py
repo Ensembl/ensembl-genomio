@@ -19,7 +19,6 @@ Typical usage example::
 
 """
 
-import json
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -31,6 +30,7 @@ from Bio.SeqRecord import SeqRecord
 import pytest
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError
+from ensembl.io.genomio.utils import get_json
 
 
 class TestWriteFormattedFiles:
