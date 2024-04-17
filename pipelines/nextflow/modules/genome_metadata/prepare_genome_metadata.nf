@@ -14,23 +14,18 @@
 // limitations under the License.
 
 process PREPARE_GENOME_METADATA {
+    tag "$accession"
     label 'local'
 
     input:
-        path(input_json, stageAs: "input_genome.json")
+        tuple val(accession), path(input_json), path(ncbi_json)
 
     output:
-        path ("genome.json"), emit: genomic_dataset
+        tuple val(accession), path("genome.json"), emit: genomic_dataset
         
     shell:
     output_json = "genome.json"
     '''
-    genome_metadata_prepare --input_file !{input_json} --output_file !{output_json}
+    genome_metadata_prepare --input_file !{input_json} --output_file !{output_json} --ncbi_meta !{ncbi_json}
     '''
-    
-    stub:
-        output_json = "genome.json"
-        """
-        genome_metadata_prepare --input_file $input_json --output_file $output_json --mock_run
-        """
 }

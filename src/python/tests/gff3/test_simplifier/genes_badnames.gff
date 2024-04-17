@@ -1,0 +1,6 @@
+##gff-version 3
+##sequence-region scaffold1 1 1000
+scaffold1	Source	gene	1	1000	.	-	.	ID=L1
+scaffold1	Source	mRNA	1	1000	.	-	.	ID=L1t;Parent=L1
+scaffold1	Source	exon	1	1000	.	-	.	ID=L1t1;Parent=L1t
+scaffold1	Source	CDS	100	900	.	-	0	ID=L1tc;Parent=L1t

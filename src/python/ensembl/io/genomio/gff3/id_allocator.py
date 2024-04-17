@@ -19,7 +19,7 @@ __all__ = ["StableIDAllocator", "InvalidStableID"]
 from dataclasses import dataclass, field
 import logging
 import re
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 from Bio.SeqFeature import SeqFeature
 
@@ -161,7 +161,7 @@ class StableIDAllocator:
                         feat.id = f"{transcript.id}_cds"
                         feat.qualifiers["ID"] = feat.id
 
-    def normalize_gene_id(self, gene: SeqFeature) -> str:
+    def normalize_gene_id(self, gene: SeqFeature, refseq: Optional[bool] = False) -> str:
         """Returns a normalized gene stable ID.
 
         Removes any unnecessary prefixes, but will generate a new stable ID if the normalized one is
@@ -173,32 +173,40 @@ class StableIDAllocator:
         prefixes = ["gene-", "gene:"]
         new_gene_id = StableIDAllocator.remove_prefix(gene.id, prefixes)
 
+        is_valid = False
+        # Special case for RefSeq: only valid Gene IDs are LOC*
+        if refseq:
+            if new_gene_id.startswith("LOC"):
+                is_valid = True
+        else:
+            is_valid = self.is_valid(new_gene_id)
+
+        if is_valid:
+            return new_gene_id
+
         # In case the normalized gene ID is not valid, use the GeneID
-        if not self.is_valid(new_gene_id):
-            logging.warning(f"Gene ID is not valid: {new_gene_id}")
-            qual = gene.qualifiers
-            if "Dbxref" in qual:
-                for xref in qual["Dbxref"]:
-                    (db, value) = xref.split(":")
-                    if db != "GeneID":
-                        continue
-                    new_gene_id_base = f"{db}_{value}"
-                    new_gene_id = new_gene_id_base
-                    number = 1
-                    while new_gene_id in self._loaded_ids:
-                        number += 1
-                        new_gene_id = f"{new_gene_id_base}_{number}"
-                        if number > 10:
-                            raise InvalidStableID(f"Duplicate ID {new_gene_id_base} (up to {new_gene_id})")
-                    self._loaded_ids.add(new_gene_id)
-                    logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
-                    return new_gene_id
-
-            # Make a new stable_id
-            if self.make_missing_stable_ids:
-                new_gene_id = self.generate_gene_id()
-                logging.debug(f"New ID: {new_gene_id} -> {new_gene_id}")
+        logging.debug(f"Gene ID is not valid: {new_gene_id}")
+        qual = gene.qualifiers
+        if "Dbxref" in qual:
+            for xref in qual["Dbxref"]:
+                (db, value) = xref.split(":")
+                if db != "GeneID":
+                    continue
+                new_gene_id_base = f"{db}_{value}"
+                new_gene_id = new_gene_id_base
+                number = 1
+                while new_gene_id in self._loaded_ids:
+                    number += 1
+                    new_gene_id = f"{new_gene_id_base}_{number}"
+                    if number > 10:
+                        raise InvalidStableID(f"Duplicate ID {new_gene_id_base} (up to {new_gene_id})")
+                self._loaded_ids.add(new_gene_id)
+                logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
                 return new_gene_id
-            raise InvalidStableID(f"Can't use invalid gene id for {gene}")
 
-        return new_gene_id
+        # Make a new stable_id
+        if self.make_missing_stable_ids:
+            new_gene_id = self.generate_gene_id()
+            logging.debug(f"New ID: {new_gene_id} -> {new_gene_id}")
+            return new_gene_id
+        raise InvalidStableID(f"Can't use invalid gene id for {gene}")

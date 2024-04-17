@@ -55,6 +55,7 @@ dependencies = [
     "mysql-connector-python >= 8.0.29",
     "python-redmine >= 2.3.0",
     "requests >= 2.28.0",
+    "spython >= 0.3.13",
 ]
 
 [project.optional-dependencies]
@@ -65,10 +66,10 @@ cicd = [
     "genbadge[coverage]",
     "mypy >= 1.2.0",
     "pylint >= 3.0.2",
-    "pytest >= 7.4.3, < 8.1",
+    "pytest >= 7.4.3",
     "pytest-dependency",
     "pytest-mock",
-    "pytest-workflow",
+    "pytest-workflow >= 2.1.0",
     "types-requests",
 ]
 doc = [
@@ -91,6 +92,7 @@ documentation = "https://ensembl.github.io/ensembl-genomio"
 [project.scripts]
 # Assembly
 assembly_download = "ensembl.io.genomio.assembly.download:main"
+assembly_tracker = "ensembl.io.genomio.assembly.status:main"
 # Database
 database_factory = "ensembl.io.genomio.database.factory:main"
 # Events

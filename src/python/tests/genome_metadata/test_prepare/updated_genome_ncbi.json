@@ -1,0 +1,19 @@
+{
+    "reports": [
+        {
+            "accession": "GCA_013436015.1",
+            "assembly_info": {
+                "release_date": "2020-07-21",
+                "submitter": "USDA-Agricultural Research Service, USA"
+            },
+            "organism": {
+                "infraspecific_names": {
+                    "strain": "Klein Grass"
+                },
+                "organism_name": "Rhipicephalus annulatus",
+                "tax_id": 34611
+            }
+        }
+    ],
+    "total_count": 1
+}

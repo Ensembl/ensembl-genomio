@@ -126,7 +126,7 @@ def test_check_genebuild_version(
     ],
 )
 def test_filter_genome_meta(genome_metadata: Dict[str, Any], output: Dict[str, Any]) -> None:
-    """Tests the `dump.check_genebuild_version()` method.
+    """Tests the `dump.filter_genome_meta()` method.
 
     Args:
         genome_metadata: Nested genome metadata key values.
