@@ -62,7 +62,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
             .outerjoin(
                 ObjectXref,
                 and_(
-                    Transcript.gene_id == ObjectXref.ensembl_id,
+                    Transcript.transcript_id == ObjectXref.ensembl_id,
                     ObjectXref.ensembl_object_type == "transcript",
                 ),
             )
@@ -83,7 +83,11 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
 
 
 def load_descriptions(
-    session: Session, func_file: Path, report: bool = False, do_update: bool = False
+    session: Session,
+    func_file: Path,
+    report: bool = False,
+    do_update: bool = False,
+    match_xrefs: bool = True,
 ) -> None:
     """Loads gene and transcript descriptions into a core database.
 
@@ -113,7 +117,9 @@ def load_descriptions(
             "to_update_remove": 0,
         }
         # Compare, only keep the descriptions that have changed
-        features_to_update = _get_features_to_update(table, feat_func, feat_data, stats, report, do_update)
+        features_to_update = _get_features_to_update(
+            table, feat_func, feat_data, stats, report, do_update, match_xrefs
+        )
 
         # Show stats for this feature type
         for stat, count in stats.items():
@@ -135,11 +141,12 @@ def load_descriptions(
 
 def _get_features_to_update(
     table: str,
-    feat_func: List[Dict[str, str]],
+    feat_func: List[Dict[str, Any]],
     feat_data: Dict[str, Any],
     stats: Dict[str, int],
     report: bool,
     do_update: bool,
+    match_xrefs: bool = True,
 ) -> List[Dict[str, Any]]:
     """Checks a list of features and returns those whose description we want to update.
 
@@ -150,6 +157,7 @@ def _get_features_to_update(
         stats: Record the number of features checked in different cases.
         report: Print a report line for each feature to standard output.
         do_update: Actually update the database.
+        match_xrefs: Use xref IDs if feature ID does not match a feature in the database.
 
     Returns:
         The list of features with their operation changed to update or insert.
@@ -157,12 +165,21 @@ def _get_features_to_update(
     to_update = []
     for new_feat in feat_func:
         # Check we can find that feature in the core db
+        cur_feat = None
         try:
             cur_feat = feat_data[new_feat["id"]]
         except KeyError:
-            logging.debug(f"Not found: {table} '{new_feat['id']}'")
-            stats["not_found"] += 1
-            continue
+            # Stable ID does not match, but does it match an xref?
+            if match_xrefs and "xrefs" in new_feat:
+                for xref in new_feat["xrefs"]:
+                    try:
+                        cur_feat = feat_data[xref["id"]]
+                    except KeyError:
+                        pass
+            if cur_feat is None:
+                logging.debug(f"Not found: {table} '{new_feat['id']}'")
+                stats["not_found"] += 1
+                continue
 
         # Prepare some data to compare
         new_stable_id = new_feat["id"]
@@ -211,10 +228,13 @@ def main() -> None:
     parser.add_argument_src_path("--func_file", required=True, help="Input functional annotation JSON")
     parser.add_argument("--report", action="store_true", help="Show what change would be made")
     parser.add_argument("--update", action="store_true", help="Make the changes to the database")
+    parser.add_argument(
+        "--match_xrefs", action="store_true", help="Use xref IDs to match features if IDs do not work"
+    )
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)
 
     dbc = DBConnection(args.url)
     with dbc.session_scope() as session:
-        load_descriptions(session, args.func_file, args.report, args.update)
+        load_descriptions(session, args.func_file, args.report, args.update, match_xrefs=args.match_xrefs)
