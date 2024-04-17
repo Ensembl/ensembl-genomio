@@ -93,7 +93,7 @@ class FormattedFilesGenerator:
     ]
 
     def __init__(
-        self, prod_name: str, gb_file: PathLike, prefix: str, out_dir: PathLike = Path.cwd()
+        self, prod_name: str, gb_file: PathLike, prefix: str, out_dir: PathLike
     ) -> None:
         self.prefix = prefix
         self.seq_records: List[SeqRecord] = []

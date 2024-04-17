@@ -19,6 +19,7 @@ Typical usage example::
 
 """
 
+from pathlib import Path
 from typing import List
 from unittest.mock import Mock, patch
 
@@ -38,11 +39,11 @@ class TestFormattedFilesGenerator:
     prefix = "TEST"
 
     @pytest.fixture
-    def formatted_files_generator(self, data_dir):
+    def formatted_files_generator(self, data_dir: Path, tmp_dir: Path):
         """Call the function `FormattedFilesGenerator` with set parameters"""
         gb_file = self.gb_file
         gb_file_path = data_dir / gb_file
-        return FormattedFilesGenerator(self.prod_name, gb_file_path, self.prefix)
+        return FormattedFilesGenerator(self.prod_name, gb_file_path, self.prefix, out_dir=tmp_dir)
 
     @pytest.mark.dependency(name="parse_record")
     @pytest.mark.parametrize(
