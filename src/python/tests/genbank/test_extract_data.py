@@ -41,13 +41,13 @@ class TestWriteFormattedFiles:
     prefix = "TEST"
 
     @pytest.fixture
-    def formatted_files_generator(self, data_dir: Path) -> FormattedFilesGenerator:
+    def formatted_files_generator(self, tmp_path: Path, data_dir: Path) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters.
         Fixture that returns the class of the module that we are testing
         """
         gb_file = self.gb_file
         gb_file_path = data_dir / gb_file
-        return FormattedFilesGenerator(self.prod_name, gb_file_path, self.prefix)
+        return FormattedFilesGenerator(self.prod_name, gb_file_path, self.prefix, out_dir=tmp_path)
 
     @pytest.mark.dependency(name="parse_genbank")
     def test_parse_genbank(self, data_dir: Path, formatted_files_generator: FormattedFilesGenerator) -> None:
