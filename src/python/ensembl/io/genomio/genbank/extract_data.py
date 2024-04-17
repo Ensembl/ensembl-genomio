@@ -92,9 +92,7 @@ class FormattedFilesGenerator:
         "CDS",
     ]
 
-    def __init__(
-        self, prod_name: str, gb_file: PathLike, prefix: str, out_dir: PathLike
-    ) -> None:
+    def __init__(self, prod_name: str, gb_file: PathLike, prefix: str, out_dir: PathLike) -> None:
         self.prefix = prefix
         self.seq_records: List[SeqRecord] = []
         self.prod_name = prod_name
@@ -531,5 +529,7 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    gb_extractor = FormattedFilesGenerator(prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file)
+    gb_extractor = FormattedFilesGenerator(
+        prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file, out_dir=args.out_dir
+    )
     gb_extractor.parse_genbank(args.gb_file)
