@@ -12,8 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Expand the genome_metadata with more details for:
-the provider, assembly and gene build version, and the taxonomy.
+"""Expand the genome metadata file adding information about the provider, taxonomy, and assembly and
+gene build versions.
 """
 
 __all__ = [
@@ -21,21 +21,15 @@ __all__ = [
     "add_assembly_version",
     "add_genebuild_metadata",
     "add_species_metadata",
-    "get_taxonomy_from_accession",
     "prepare_genome_metadata",
     "PROVIDER_DATA",
-    "DEFAULT_API_URL",
     "MissingNodeError",
     "MetadataError",
 ]
 
 import datetime
 from os import PathLike
-from typing import Dict, Optional
-from xml.etree import ElementTree
-from xml.etree.ElementTree import Element
-
-import requests
+from typing import Dict
 
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.utils.argparse import ArgumentParser
@@ -46,25 +40,24 @@ PROVIDER_DATA = {
     "GenBank": {
         "assembly": {
             "provider_name": "GenBank",
-            "provider_url": "https://www.ncbi.nlm.nih.gov/assembly",
+            "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome",
         },
         "annotation": {
             "provider_name": "GenBank",
-            "provider_url": "https://www.ncbi.nlm.nih.gov/assembly",
+            "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome",
         },
     },
     "RefSeq": {
         "assembly": {
             "provider_name": "RefSeq",
-            "provider_url": "https://www.ncbi.nlm.nih.gov/refseq",
+            "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome",
         },
         "annotation": {
             "provider_name": "RefSeq",
-            "provider_url": "https://www.ncbi.nlm.nih.gov/refseq",
+            "provider_url": "https://www.ncbi.nlm.nih.gov/datasets/genome",
         },
     },
 }
-DEFAULT_API_URL = "https://www.ebi.ac.uk/ena/browser/api/xml"
 
 
 class MissingNodeError(Exception):
@@ -75,68 +68,65 @@ class MetadataError(Exception):
     """When a metadata value is not expected."""
 
 
-def add_provider(genome_data: Dict, gff3_file: Optional[PathLike] = None) -> None:
-    """Adds provider metadata for assembly and gene models in `genome_data`.
+def add_provider(genome_metadata: Dict, ncbi_data: Dict) -> None:
+    """Updates the genome metadata adding provider information for assembly and gene models.
 
-    Assembly provider metadata will only be added if it is missing, i.e. neither ``provider_name`` or
-    ``provider_url`` are present. The gene model metadata will only be added if `gff3_file` is provided.
+    Assembly provider metadata will only be added if it is missing, i.e. neither `"provider_name"` or
+    `"provider_url"` are present. The gene model metadata will only be added if `gff3_file` is provided.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
-        gff3_file: Path to GFF3 file to use as annotation source for this genome.
+        ncbi_data: Report data from NCBI datasets.
 
+    Raises:
+        MetadataError: If accession's format in genome metadata does not match with a known provider.
     """
     # Get accession provider
-    accession = genome_data["assembly"]["accession"]
+    accession = genome_metadata["assembly"]["accession"]
     if accession.startswith("GCF"):
         provider = PROVIDER_DATA["RefSeq"]
     elif accession.startswith("GCA"):
         provider = PROVIDER_DATA["GenBank"]
     else:
-        raise MetadataError(f"Accession doesn't look like an INSDC or RefSeq accession: {accession}")
+        raise MetadataError(f"Accession does not look like an INSDC or RefSeq accession: {accession}")
 
     # Add assembly provider (if missing)
-    assembly = genome_data["assembly"]
+    assembly = genome_metadata["assembly"]
     if (not "provider_name" in assembly) and (not "provider_url" in assembly):
         assembly["provider_name"] = provider["assembly"]["provider_name"]
-        assembly["provider_url"] = provider["assembly"]["provider_url"]
+        assembly["provider_url"] = f'{provider["assembly"]["provider_url"]}/{accession}'
 
     # Add annotation provider if there are gene models
-    if gff3_file:
-        annotation = {}
-        if "annotation" in genome_data:
-            annotation = genome_data["annotation"]
+    if "annotation_info" in ncbi_data:
+        annotation = genome_metadata.setdefault("annotation", {})
         if ("provider_name" not in annotation) and ("provider_url" not in annotation):
             annotation["provider_name"] = provider["annotation"]["provider_name"]
-            annotation["provider_url"] = provider["annotation"]["provider_url"]
-        genome_data["annotation"] = annotation
+            annotation["provider_url"] = f'{provider["annotation"]["provider_url"]}/{accession}'
 
 
 def add_assembly_version(genome_data: Dict) -> None:
-    """Adds version number to the genome's assembly if one is not present already.
+    """Adds version number to the genome's assembly information if one is not present already.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
-
     """
     assembly = genome_data["assembly"]
     if not "version" in assembly:
         accession = assembly["accession"]
-        values = accession.split(".")
-        if (len(values) == 2) and values[1]:
-            assembly["version"] = int(values[1])
+        version = accession.partition(".")[2]
+        if version:
+            assembly["version"] = int(version)
 
 
 def add_genebuild_metadata(genome_data: Dict) -> None:
-    """Adds missing genebuild metadata.
+    """Adds genebuild metadata to genome information if not present already.
 
-    The default convention is to use the current date as ``version`` and ``start_date``.
+    The default convention is to use the current date as `"version"` and `"start_date"`.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
-
     """
-    genebuild = genome_data["genebuild"]
+    genebuild = genome_data.setdefault("genebuild", {})
     current_date = datetime.date.today().isoformat()
     if not "version" in genebuild:
         genebuild["version"] = current_date
@@ -144,96 +134,35 @@ def add_genebuild_metadata(genome_data: Dict) -> None:
         genebuild["start_date"] = current_date
 
 
-def add_species_metadata(genome_data: Dict, base_api_url: str = DEFAULT_API_URL) -> None:
-    """Adds missing species metadata based on the genome's accession.
-
-    The ``taxonomy_id``, ``strain`` and ``scientific_name`` will be fetched from the taxonomy information
-    linked to the given accession.
+def add_species_metadata(genome_metadata: Dict, ncbi_data: Dict) -> None:
+    """Adds taxonomy ID, scientific name and strain (if present) from the NCBI dataset report.
 
     Args:
-        genome_data: Genome information of assembly, accession and annotation.
-        base_api_url: Base API URL to fetch the taxonomy data from.
+        genome_metadata: Genome information of assembly, accession and annotation.
+        ncbi_data: Report data from NCBI datasets.
 
     """
-    species = genome_data["species"]
-    if not "taxonomy_id" in species:
-        accession = genome_data["assembly"]["accession"]
-        taxonomy = get_taxonomy_from_accession(accession, base_api_url)
-        species["taxonomy_id"] = taxonomy["taxon_id"]
-        if (not "strain" in species) and ("strain" in taxonomy):
-            species["strain"] = taxonomy["strain"]
-        if not "scientific_name" in species:
-            species["scientific_name"] = taxonomy["scientific_name"]
+    species = genome_metadata.setdefault("species", {})
+    try:
+        organism = ncbi_data["organism"]
+    except KeyError:
+        return
 
+    if "tax_id" in organism:
+        species.setdefault("taxonomy_id", organism["tax_id"])
+    if "organism_name" in organism:
+        species.setdefault("scientific_name", organism["organism_name"])
 
-def get_taxonomy_from_accession(accession: str, base_api_url: str = DEFAULT_API_URL) -> Dict:
-    """Returns the taxonomy metadata associated to the given accession.
-
-    Args:
-        accession: INSDC accession ID.
-        base_api_url: Base API URL to fetch the taxonomy data from.
-
-    Returns:
-        Dictionary with key-value pairs for ``taxon_id`` and ``scientific_name``. ``strain`` will be added
-        only if present in the fetched taxonomy data.
-
-    Raises:
-        MissinDataException: If ``TAXON_ID`` or ``SCIENTIFIC_NAME`` are missing in the taxonomy data fetched.
-
-    """
-    # Use the GenBank accession without version
-    gb_accession = accession.replace("GCF", "GCA").split(".")[0]
-    response = requests.get(f"{base_api_url}/{gb_accession}", timeout=60)
-    response.raise_for_status()
-    entry = ElementTree.fromstring(response.text)
-
-    taxon_node = entry.find(".//TAXON")
-    if taxon_node is None:
-        raise MissingNodeError("Can't find the TAXON node")
-
-    # Fetch taxon ID, scientific_name and strain
-    taxon_id = _get_node_text(taxon_node, "TAXON_ID")
-    scientific_name = _get_node_text(taxon_node, "SCIENTIFIC_NAME")
-    strain = _get_node_text(taxon_node, "STRAIN", optional=True)
-
-    if taxon_id and scientific_name:
-        taxonomy = {
-            "taxon_id": int(taxon_id),
-            "scientific_name": scientific_name,
-        }
-    if strain:
-        taxonomy["strain"] = strain
-    return taxonomy
-
-
-def _get_node_text(node: Element, tag: str, optional: bool = False) -> Optional[str]:
-    """Returns the value of the field matching the provided tag inside `node`.
-    By default raise a MissingNodeException if the tag is not found.
-    If optional is True and no tag is found, return None.
-
-    Args:
-        node: Node of an XML tree.
-        tag: Tag to fetch within the node.
-        optional: Don't raise an exception if the tag doesn't exist.
-
-    """
-    if node is None:
-        raise MissingNodeError(f"No node provided to look for {tag}")
-    tag_node = node.find(tag)
-
-    if tag_node is not None:
-        return tag_node.text
-    if optional:
-        return None
-    raise MissingNodeError(f"No node found for tag {tag}")
+    try:
+        species.setdefault("strain", organism["infraspecific_names"]["strain"])
+    except KeyError:
+        pass
 
 
 def prepare_genome_metadata(
     input_file: PathLike,
     output_file: PathLike,
-    gff3_file: Optional[PathLike] = None,
-    base_api_url: str = DEFAULT_API_URL,
-    mock_run: bool = False,
+    ncbi_meta: PathLike,
 ) -> None:
     """Updates the genome metadata JSON file with additional information.
 
@@ -243,49 +172,37 @@ def prepare_genome_metadata(
     Args:
         input_file: Path to JSON file with genome metadata.
         output_file: Output directory where to generate the final `genome.json` file.
-        gff3_file: Path to GFF3 file to use as annotation source for this genome.
-        base_api_url: Base API URL to fetch the taxonomy data from.
-        mock_run: Do not call external taxonomy service.
+        ncbi_meta: JSON file from NCBI datasets.
 
     """
     genome_data = get_json(input_file)
+    ncbi_data = {}
+    if ncbi_meta:
+        ncbi_data = get_json(ncbi_meta)["reports"][0]
+
     # Amend any missing metadata
-    add_provider(genome_data, gff3_file)
+    add_provider(genome_data, ncbi_data)
     add_assembly_version(genome_data)
     add_genebuild_metadata(genome_data)
-    if mock_run:
-        genome_data["species"].setdefault("taxonomy_id", 9999999)
-    else:
-        add_species_metadata(genome_data, base_api_url)
+    add_species_metadata(genome_data, ncbi_data)
     # Dump updated genome metadata
     print_json(output_file, genome_data)
 
 
 def main() -> None:
     """Module's entry-point."""
-    parser = ArgumentParser(
-        description=(
-            "Add information about provider, taxonomy and assembly and gene build version to the genome "
-            "metadata file."
-        )
-    )
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path("--input_file", required=True, help="Genome metadata JSON file")
     parser.add_argument_dst_path(
         "--output_file", required=True, help="Output path for the new genome metadata file"
     )
-    parser.add_argument_src_path("--gff3_file", help="GFF3 file to use as annotation source")
-    parser.add_argument(
-        "--base_api_url", default=DEFAULT_API_URL, help="API URL to fetch the taxonomy data from"
+    parser.add_argument_src_path(
+        "--ncbi_meta", required=True, help="JSON file from NCBI datasets for this genome."
     )
-    parser.add_argument("--mock_run", action="store_true", help="Do not call external APIs")
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
 
     prepare_genome_metadata(
-        input_file=args.input_file,
-        output_file=args.output_file,
-        gff3_file=args.gff3_file,
-        base_api_url=args.base_api_url,
-        mock_run=args.mock_run,
+        input_file=args.input_file, output_file=args.output_file, ncbi_meta=args.ncbi_meta
     )

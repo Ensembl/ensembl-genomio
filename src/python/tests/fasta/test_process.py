@@ -15,7 +15,7 @@
 """Unit testing of `ensembl.io.genomio.fasta.process` module.
 
 Typical usage example::
-    $ pytest test_prep_data.py
+    $ pytest test_process.py
 
 """
 

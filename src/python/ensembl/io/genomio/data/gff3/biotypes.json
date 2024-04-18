@@ -49,6 +49,7 @@
             "mRNA",
             "ncRNA",
             "piRNA",
+            "primary_transcript",
             "pseudogenic_rRNA",
             "pseudogenic_transcript",
             "pseudogenic_tRNA",
