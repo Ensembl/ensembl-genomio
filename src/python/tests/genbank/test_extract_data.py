@@ -20,6 +20,7 @@ Typical usage example::
 """
 
 from pathlib import Path
+from typing import List
 from unittest.mock import Mock, patch
 
 from BCBio import GFF
@@ -56,13 +57,13 @@ class TestWriteFormattedFiles:
         formatted_files_generator.parse_genbank(gb_file_path)
         assert len(formatted_files_generator.seq_records) >= 1
 
+    @pytest.mark.dependency(depends=["parse_genbank"])
     @pytest.mark.parametrize(
         "expected",
         [
             ({"S43128.1": "mitochondrion"}),
         ],
     )
-    @pytest.mark.dependency(depends=["parse_genbank"])
     def test_get_organella(
         self, data_dir: Path, expected: str, formatted_files_generator: FormattedFilesGenerator
     ) -> None:
@@ -77,10 +78,10 @@ class TestWriteFormattedFiles:
         self, tmp_path: Path, formatted_files_generator: FormattedFilesGenerator
     ) -> None:
         """Check FASTA DNA sequences are written as expected."""
-        record1 = SeqRecord(Seq("ATGC"), id="record1")
-        gene_feature1 = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
-        record1.features.append(gene_feature1)
-        formatted_files_generator.seq_records = [record1]
+        record = SeqRecord(Seq("ATGC"), id="record")
+        gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
+        record.features.append(gene_feature)
+        formatted_files_generator.seq_records = [record]
 
         formatted_files_generator.files["fasta_dna"] = tmp_path / "test.fasta"
         # pylint: disable=protected-access
@@ -88,8 +89,8 @@ class TestWriteFormattedFiles:
 
         assert (tmp_path / "test.fasta").exists()
         fasta_pep = SeqIO.read((tmp_path / "test.fasta"), "fasta")
-        assert fasta_pep.id == record1.id
-        assert fasta_pep.seq == record1.seq
+        assert fasta_pep.id == record.id
+        assert fasta_pep.seq == record.seq
 
     @pytest.mark.dependency(depends=["parse_genbank"])
     def test_format_genome_json(
@@ -126,13 +127,13 @@ class TestWriteFormattedFiles:
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Check seq_region.json file contains the correct metadata"""
-        record1 = SeqRecord(Seq("ATGC"), id="record1", annotations={"topology": "circular"})
-        CDS_feature1 = SeqFeature(
+        record = SeqRecord(Seq("ATGC"), id="record", annotations={"topology": "circular"})
+        CDS_feature = SeqFeature(
             FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
         )
-        record1.features.append(CDS_feature1)
-        record1.organelle = "mitochondrion"
-        formatted_files_generator.seq_records = [record1]
+        record.features.append(CDS_feature)
+        record.organelle = "mitochondrion"
+        formatted_files_generator.seq_records = [record]
         # pylint: disable=protected-access
         formatted_files_generator._format_write_seq_json()
 
@@ -142,6 +143,13 @@ class TestWriteFormattedFiles:
         mock_write_seq_json.assert_called_once()
 
     @pytest.mark.dependency(name="format_gff", depends=["parse_genbank"])
+    @pytest.mark.parametrize(
+        "all_ids", "peptides"
+        [
+            (["ID1", "ID2", "ID3"], ["pep1", "pep2"]),
+            (["ID1", "ID2", "ID1"], ["pep1", "pep2"])
+        ],
+    )
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._parse_record")
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._write_genes_gff")
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._write_pep_fasta")
@@ -150,22 +158,22 @@ class TestWriteFormattedFiles:
         mock_write_pep: Mock,
         mock_write_genes: Mock,
         mock_parse_record: Mock,
+        all_ids : List[str],
         formatted_files_generator: FormattedFilesGenerator,
+        peptides : List[str]
     ) -> None:
         """Check gene features in GFF3 format are generated as expected."""
-        record = SeqRecord(Seq("ATGC"), id="record1")
+        record = SeqRecord(Seq("ATGC"), id="record")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
         record.features.append(gene_feature)
 
         formatted_files_generator.seq_records = [record]
-        mock_all_ids = ["ID1", "ID2", "ID3"]
         mock_new_record = record
-        mock_peptides = ["pep1", "pep2"]
 
         mock_parse_record.return_value = (
             mock_new_record,  # Mock the new record
-            mock_all_ids,  # Mock the list of all IDs
-            mock_peptides,  # Mock the list of peptides
+            all_ids,  # Mock the list of all IDs
+            peptides,  # Mock the list of peptides
         )
 
         # Call the method to be tested
@@ -177,11 +185,10 @@ class TestWriteFormattedFiles:
         mock_write_genes.assert_called_once()
         mock_write_pep.assert_called_once()
 
-        mock_all_ids_with_duplicates = ["ID1", "ID2", "ID1"]
         mock_parse_record.return_value = (
             mock_new_record,  # Mock the new record
-            mock_all_ids_with_duplicates,  # Mock the list of all IDs
-            mock_peptides,  # Mock the list of peptides
+            all_ids,  # Mock the list of all IDs
+            peptides,  # Mock the list of peptides
         )
 
         with pytest.raises(GBParseError):
@@ -206,24 +213,24 @@ class TestWriteFormattedFiles:
         formatted_files_generator._write_genes_gff(formatted_files_generator.seq_records)
         assert (formatted_files_generator.files["gene_models"]).exists()
         for rec in GFF.parse(formatted_files_generator.files["gene_models"]):
-            assert rec.id == record1.id
-            assert len(rec.features) == len(record1.features)
+            assert rec.id == record.id
+            assert len(rec.features) == len(record.features)
 
     @pytest.mark.dependency(depends=["parse_genbank", "format_gff"])
     def test_write_pep_fasta(
         self, tmp_path: Path, formatted_files_generator: FormattedFilesGenerator
     ) -> None:
         """Test if peptides FATA file is generated when peptides are identified"""
-        record1 = SeqRecord(Seq("MFLRTQARFFHATTKKM"), id="cds-record1")
-        CDS_feature1 = SeqFeature(
+        record = SeqRecord(Seq("MFLRTQARFFHATTKKM"), id="cds-record")
+        CDS_feature = SeqFeature(
             FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
         )
-        record1.features.append(CDS_feature1)
+        record.features.append(CDS_feature)
         formatted_files_generator.files["fasta_pep"] = tmp_path / "pep.fasta"
         # pylint: disable=protected-access
-        formatted_files_generator._write_pep_fasta(record1)
+        formatted_files_generator._write_pep_fasta(record)
         assert (tmp_path / "pep.fasta").exists()
 
         fasta_pep = SeqIO.read((tmp_path / "pep.fasta"), "fasta")
-        assert fasta_pep.id == record1.id
-        assert fasta_pep.seq == record1.seq
+        assert fasta_pep.id == record.id
+        assert fasta_pep.seq == record.seq
