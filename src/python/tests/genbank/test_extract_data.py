@@ -193,13 +193,13 @@ class TestWriteFormattedFiles:
     ) -> None:
         """Test if GFF3 file is generated when there are SeqFeatures present"""
 
-        record1 = SeqRecord(Seq("ATGC"), id="record1")
-        gene_feature1 = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
-        CDS_feature1 = SeqFeature(
+        record = SeqRecord(Seq("ATGC"), id="record")
+        gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
+        CDS_feature = SeqFeature(
             FeatureLocation(10, 15), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
         )
-        record1.features = [gene_feature1, CDS_feature1]
-        formatted_files_generator.seq_records = [record1]
+        record.features = [gene_feature, CDS_feature]
+        formatted_files_generator.seq_records = [record]
 
         formatted_files_generator.files["gene_models"] = tmp_path / "genes.gff"
         # pylint: disable=protected-access
