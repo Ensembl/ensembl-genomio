@@ -32,7 +32,6 @@ from os import PathLike
 from pathlib import Path
 import re
 from typing import Dict, List, Tuple, Union
-import sys
 
 from spython.main import Client
 from sqlalchemy.engine import URL
@@ -247,7 +246,7 @@ def datasets_asm_reports(
         ## Test what result we have obtained following execution of sif image and accession value
         # Returned a str, i.e. no datasets result obtained exited with fatal error
         if isinstance(raw_result, list):
-           result = raw_result[0]
+            result = raw_result[0]
         else:
             result = raw_result
 
