@@ -144,10 +144,9 @@ class TestWriteFormattedFiles:
 
     @pytest.mark.dependency(name="format_gff", depends=["parse_genbank"])
     @pytest.mark.parametrize(
-        "all_ids", "peptides"
+        "all_ids, peptides",
         [
-            (["ID1", "ID2", "ID3"], ["pep1", "pep2"]),
-            (["ID1", "ID2", "ID1"], ["pep1", "pep2"])
+            (["ID1", "ID2", "ID3"], ["pep1", "pep2"])
         ],
     )
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._parse_record")
@@ -159,8 +158,8 @@ class TestWriteFormattedFiles:
         mock_write_genes: Mock,
         mock_parse_record: Mock,
         all_ids : List[str],
-        formatted_files_generator: FormattedFilesGenerator,
-        peptides : List[str]
+        peptides : List[str],
+        formatted_files_generator: FormattedFilesGenerator
     ) -> None:
         """Check gene features in GFF3 format are generated as expected."""
         record = SeqRecord(Seq("ATGC"), id="record")
@@ -184,6 +183,8 @@ class TestWriteFormattedFiles:
         mock_parse_record.assert_called_once()
         mock_write_genes.assert_called_once()
         mock_write_pep.assert_called_once()
+
+        all_ids.append("ID1")
 
         mock_parse_record.return_value = (
             mock_new_record,  # Mock the new record
