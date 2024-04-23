@@ -241,10 +241,15 @@ def datasets_asm_reports(
             image=sif_image, command=datasets_command, return_result=True, quiet=True
         )
 
-        result = client_return["message"]
+        raw_result = client_return["message"]
 
         ## Test what result we have obtained following execution of sif image and accession value
         # Returned a str, i.e. no datasets result obtained exited with fatal error
+        if isinstance(raw_result, list):
+            result = raw_result[0]
+        else:
+            result = raw_result
+
         if not isinstance(result, str):
             raise ValueError("Result obtained from datasets is not the expected format 'string'")
         if re.search("^FATAL", result):
