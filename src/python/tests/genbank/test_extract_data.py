@@ -159,7 +159,7 @@ class TestWriteFormattedFiles:
         mock_parse_record: Mock,
         all_ids : List[str],
         peptides : List[str],
-        formatted_files_generator: FormattedFilesGenerator
+        formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Check gene features in GFF3 format are generated as expected."""
         record = SeqRecord(Seq("ATGC"), id="record")
