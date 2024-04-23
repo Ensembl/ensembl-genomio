@@ -41,7 +41,7 @@ class TestWriteFormattedFiles:
     gb_file = "input_file.gb"
     prefix = "TEST"
 
-    @pytest.fixture
+    @pytest.fixture(scope="class", autouse=True)
     def formatted_files_generator(self, tmp_path: Path, data_dir: Path) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters.
         Fixture that returns the class of the module that we are testing
