@@ -184,7 +184,7 @@ class TestWriteFormattedFiles:
         mock_write_genes.assert_called_once()
         mock_write_pep.assert_called_once()
 
-        all_ids.append("ID1")
+        all_ids.append(all_ids[0])
 
         mock_parse_record.return_value = (
             mock_new_record,  # Mock the new record
