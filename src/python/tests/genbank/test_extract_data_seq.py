@@ -38,7 +38,7 @@ class TestFormattedFilesGenerator:
     gb_file = "input_file.gb"
     prefix = "TEST"
 
-    @pytest.fixture(scope='class', autouse=True)
+    @pytest.fixture(scope="class", autouse=True)
     def formatted_files_generator(self, data_dir: Path, tmp_dir: Path):
         """Call the function `FormattedFilesGenerator` with set parameters"""
         gb_file = self.gb_file
@@ -95,7 +95,10 @@ class TestFormattedFilesGenerator:
         if rna_feature.type in ("tRNA", "rRNA"):
             mock_parse_rna_feat.assert_called()
 
-    def test_parse_record_with_unsupported_feature(self, formatted_files_generator: FormattedFilesGenerator,):
+    def test_parse_record_with_unsupported_feature(
+        self,
+        formatted_files_generator: FormattedFilesGenerator,
+    ):
         """Tests parsing records with unsupported features."""
         record = SeqRecord(Seq("ATGC"))
         unsupported_feature = SeqFeature(FeatureLocation(5, 10), type="gene")
@@ -205,7 +208,10 @@ class TestFormattedFilesGenerator:
 
     @pytest.mark.parametrize("organelle, expected_location", [("mitochondrion", "mitochondrial_chromosome")])
     def test_prepare_location_with_supported_organelle(
-        self, expected_location: str, organelle: str, formatted_files_generator: FormattedFilesGenerator,
+        self,
+        expected_location: str,
+        organelle: str,
+        formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Test that organelle location is present in the allowed types"""
         # pylint: disable=protected-access
@@ -214,7 +220,9 @@ class TestFormattedFilesGenerator:
 
     @pytest.mark.parametrize("organelle", [("miton")])
     def test_prepare_location_with_unsupported_organelle(
-        self, organelle: str, formatted_files_generator: FormattedFilesGenerator,
+        self,
+        organelle: str,
+        formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Test that organelle location if not identifies throws an error"""
         # An organelle not in the dictionary
@@ -226,7 +234,10 @@ class TestFormattedFilesGenerator:
         "type_feature, expected_value", [("gene", None), ("mRNA", None), ("CDS", 2), ("CDS", 5)]
     )
     def test_get_codon_table(
-        self, expected_value: str, type_feature: str, formatted_files_generator: FormattedFilesGenerator,
+        self,
+        expected_value: str,
+        type_feature: str,
+        formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Test that `get_number_of_codons` returns correct value based on feature type and qualifier"""
         rec = SeqRecord(seq="", id="1JOY", name="EnvZ")
