@@ -29,6 +29,7 @@ from Bio.SeqRecord import SeqRecord
 import pytest
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError, UnsupportedData
+from pytest import TempPathFactory
 
 
 class TestFormattedFilesGenerator:
@@ -39,7 +40,9 @@ class TestFormattedFilesGenerator:
     prefix = "TEST"
 
     @pytest.fixture(scope="class", autouse=True)
-    def formatted_files_generator(self, data_dir: Path, tmp_path_factory: Path) -> FormattedFilesGenerator:
+    def formatted_files_generator(
+        self, data_dir: Path, tmp_path_factory: TempPathFactory
+    ) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters"""
         gb_file = self.gb_file
         gb_file_path = data_dir / gb_file

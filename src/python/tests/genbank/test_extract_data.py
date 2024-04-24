@@ -32,6 +32,7 @@ import pytest
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError
 from ensembl.io.genomio.utils import get_json
+from pytest import TempPathFactory
 
 
 class TestWriteFormattedFiles:
@@ -42,7 +43,9 @@ class TestWriteFormattedFiles:
     prefix = "TEST"
 
     @pytest.fixture(scope="class", autouse=True)
-    def formatted_files_generator(self, data_dir: Path, tmp_path_factory: Path) -> FormattedFilesGenerator:
+    def formatted_files_generator(
+        self, data_dir: Path, tmp_path_factory: TempPathFactory
+    ) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters.
         Fixture that returns the class of the module that we are testing
         """
