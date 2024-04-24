@@ -45,7 +45,7 @@ class TestFormattedFilesGenerator:
         gb_file_path = data_dir / gb_file
         temp = tmp_path_factory.mktemp("temp")
         return FormattedFilesGenerator(self.prod_name, gb_file_path, self.prefix, out_dir=temp)
-    
+
     @pytest.mark.dependency(name="parse_record")
     @pytest.mark.parametrize(
         "type_feature, gene_name, expected_name, expected_id",
