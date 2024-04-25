@@ -27,9 +27,9 @@ from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.SeqRecord import SeqRecord
 import pytest
+from pytest import TempPathFactory
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError, UnsupportedData
-from pytest import TempPathFactory
 
 
 class TestFormattedFilesGenerator:

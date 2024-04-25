@@ -29,10 +29,10 @@ from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.SeqRecord import SeqRecord
 import pytest
+from pytest import TempPathFactory
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError
 from ensembl.io.genomio.utils import get_json
-from pytest import TempPathFactory
 
 
 class TestWriteFormattedFiles:
