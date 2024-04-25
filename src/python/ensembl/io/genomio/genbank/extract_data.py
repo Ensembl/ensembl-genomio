@@ -92,9 +92,7 @@ class FormattedFilesGenerator:
         "CDS",
     ]
 
-    def __init__(
-        self, prod_name: str, gb_file: PathLike, prefix: str, out_dir: PathLike = Path.cwd()
-    ) -> None:
+    def __init__(self, prod_name: str, gb_file: PathLike, prefix: str, out_dir: PathLike) -> None:
         self.prefix = prefix
         self.seq_records: List[SeqRecord] = []
         self.prod_name = prod_name
@@ -237,7 +235,6 @@ class FormattedFilesGenerator:
             gff_feat = SeqFeature(
                 location=feat.location,
                 type=feat.type,
-                strand=feat.location.strand,
                 qualifiers=gff_qualifiers,
             )
             # Only Genes should have a name: use either attribute gene or locus_tag
@@ -328,7 +325,6 @@ class FormattedFilesGenerator:
             gff_tr = SeqFeature(
                 location=gene_feat.location,
                 type="mRNA",
-                strand=gene_feat.location.strand,
                 qualifiers=tr_qualifiers,
             )
             new_feats[str(tr_id)] = gff_tr
@@ -371,7 +367,6 @@ class FormattedFilesGenerator:
         gff_gene = SeqFeature(
             location=rna_feat.location,
             type="gene",
-            strand=rna_feat.location.strand,
             qualifiers=gene_qualifiers,
         )
         new_feats[str(gene_id)] = gff_gene
@@ -482,7 +477,7 @@ class FormattedFilesGenerator:
         """
         if organelle in self.locations:
             return self.locations[organelle]
-        raise UnsupportedData(f"Unkown organelle: {organelle}")
+        raise UnsupportedData(f"Unknown organelle: {organelle}")
 
     def _format_genome_data(self) -> None:
         """
@@ -534,5 +529,7 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    gb_extractor = FormattedFilesGenerator(prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file)
+    gb_extractor = FormattedFilesGenerator(
+        prefix=args.prefix, prod_name=args.prod_name, gb_file=args.gb_file, out_dir=args.out_dir
+    )
     gb_extractor.parse_genbank(args.gb_file)
