@@ -1,5 +1,6 @@
 # Ensembl GenomIO
 [![GitHub license](https://img.shields.io/github/license/Ensembl/ensembl-genomio)](https://github.com/Ensembl/ensembl-genomio/blob/main/LICENSE)
+[![Documentation_deploy_mkdocs](https://github.com/Ensembl/ensembl-genomio/actions/workflows/mkdocs_docs_generation.yml/badge.svg?branch=main)](https://github.com/Ensembl/ensembl-genomio/actions/workflows/mkdocs_docs_generation.yml)
 [![coverage report](https://vectorbase.gitdocs.ebi.ac.uk/ensembl-genomio/coverage-badge.svg)](https://vectorbase.gitdocs.ebi.ac.uk/ensembl-genomio/)
 
 Pipelines to turn basic genomic data into Ensembl cores and back.
