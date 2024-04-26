@@ -41,12 +41,12 @@ from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
 class TestDownloadGenbank:
     """Tests for the `download_genbank` class"""
 
-    def test_successful_download(self, mock_requests_get: Mock, tmp_dir: Path, accession: str) -> None:
+    def test_successful_download(self, mock_requests_get: Mock, tmp_path: Path, accession: str) -> None:
         """Tests the successful download of `download_genbank()` method.
 
         Args:
             mock_requests_get: A mock of `request.get()` method.
-            tmp_dir: Session-scoped temporary directory fixture.
+            tmp_path: Function-scoped temporary directory fixture.
             accession: Genbank accession to be downloaded.
         """
 
@@ -56,7 +56,7 @@ class TestDownloadGenbank:
         mock_requests_get.return_value.content = mock_content
 
         # Temporary location where we want to store the mock output file
-        output_file = tmp_dir / f"{accession}.gb"
+        output_file = tmp_path / f"{accession}.gb"
         download_genbank(accession, output_file)
 
         # Checking if the url has been called
@@ -71,16 +71,16 @@ class TestDownloadGenbank:
             file_content = f.read()
         assert file_content == mock_content
 
-    def test_failed_download(self, mock_requests_failed: Mock, tmp_dir: Path, accession: str) -> None:
+    def test_failed_download(self, mock_requests_failed: Mock, tmp_path: Path, accession: str) -> None:
         """Tests the downloading failure of `download_genbank()` method.
 
         Args:
             mock_requests_failed: A mock of `request.get()` method.
-            tmp_dir: Session-scoped temporary directory fixture.
+            tmp_path: Function-scoped temporary directory fixture.
             accession: Genbank accession to be downloaded.
         """
 
-        output_file = tmp_dir / f"{accession}.gb"
+        output_file = tmp_path / f"{accession}.gb"
         # Set the mock status code to 404 for request not found
         mock_requests_failed.return_value.status_code = 404
         # Raise an error
