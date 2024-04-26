@@ -97,5 +97,4 @@ Software as part of [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio
 	        │   ├── dump.py
 	        │   └── prepare.py
 	        └── utils
-	            ├── archive_utils.py
 	            └── json_utils.py

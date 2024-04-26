@@ -14,5 +14,4 @@
 # limitations under the License.
 """Utils module."""
 
-from .archive_utils import *
 from .json_utils import *

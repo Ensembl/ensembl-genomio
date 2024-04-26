@@ -27,7 +27,7 @@ from Bio import SeqIO
 from os import path
 
 from ensembl.brc4.runnable.seqregion_parser import SeqregionParser
-from ensembl.io.genomio.utils.archive_utils import open_gz_file
+from ensembl.utils.archive import open_gz_file
 
 
 class SeqGroup:

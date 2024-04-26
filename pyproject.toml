@@ -127,8 +127,6 @@ schemas_json_validate = "ensembl.io.genomio.schemas.json.validate:main"
 seq_region_dump = "ensembl.io.genomio.seq_region.dump:main"
 seq_region_prepare = "ensembl.io.genomio.seq_region.prepare:main"
 seq_region_rename = "ensembl.io.genomio.seq_region.rename:main"
-# Utils
-extract_file = "ensembl.io.genomio.utils.archive_utils:extract_file_cli"
 
 [tool.setuptools]
 package-dir = {"" = "src/python"}

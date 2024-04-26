@@ -26,7 +26,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from ensembl.io.genomio.utils.archive_utils import open_gz_file
+from ensembl.utils.archive import open_gz_file
 
 
 def get_args():
