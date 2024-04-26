@@ -186,7 +186,7 @@ def test_normalize_transcript_id(test_id: str, numbers: List[int], outcomes: Lis
     ],
 )
 def test_normalize_pseudogene_cds_id(
-    tmp_dir: Path, data_dir: Path, input_gff: str, expected_gff: str
+    tmp_path: Path, data_dir: Path, input_gff: str, expected_gff: str
 ) -> None:
     """Test pseudogene CDS ID normalization."""
     ids = StableIDAllocator()
@@ -200,7 +200,7 @@ def test_normalize_pseudogene_cds_id(
         record.features.append(feature)
 
     # Write it out and compare the GFF3 files
-    out_path = tmp_dir / "result.gff3"
+    out_path = tmp_path / "result.gff3"
     _write_record(record, out_path)
     expected_path = data_dir / expected_gff
     diff = _show_diff(out_path, expected_path)
