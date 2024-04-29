@@ -30,7 +30,8 @@ from typing import Any, Dict, List, Optional, Union
 from BCBio import GFF
 from Bio import SeqIO, SeqFeature
 
-from ensembl.io.genomio.utils import get_json, open_gz_file
+from ensembl.io.genomio.utils import get_json
+from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 

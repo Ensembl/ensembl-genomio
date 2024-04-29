@@ -23,7 +23,7 @@ from typing import List, Optional, Set
 
 from Bio import SeqIO
 
-from ensembl.io.genomio.utils.archive_utils import open_gz_file
+from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 

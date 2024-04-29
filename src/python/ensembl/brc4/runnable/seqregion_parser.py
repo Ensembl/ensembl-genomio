@@ -20,7 +20,7 @@ import gzip
 import csv
 from typing import Any, Dict, Tuple
 
-from ensembl.io.genomio.utils.archive_utils import open_gz_file
+from ensembl.utils.archive import open_gz_file
 
 
 class SeqregionParser:

@@ -48,7 +48,7 @@ dependencies = [
     "bcbio-gff == 0.7.1",
     "biopython == 1.81",
     "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
-    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v1.2.2
+    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v1.3.0
     "jsonschema >= 4.6.0",
     "importlib_resources",  # not needed from Python 3.9+
     "intervaltree >= 3.1.0",
@@ -127,8 +127,6 @@ schemas_json_validate = "ensembl.io.genomio.schemas.json.validate:main"
 seq_region_dump = "ensembl.io.genomio.seq_region.dump:main"
 seq_region_prepare = "ensembl.io.genomio.seq_region.prepare:main"
 seq_region_rename = "ensembl.io.genomio.seq_region.rename:main"
-# Utils
-extract_file = "ensembl.io.genomio.utils.archive_utils:extract_file_cli"
 
 [tool.setuptools]
 package-dir = {"" = "src/python"}
