@@ -484,7 +484,6 @@ class GFFSimplifier:
 
         # Passed the checks
         primary = transcripts[0]
-        print(primary)
         logging.debug(f"Formatting miRNA gene {gene.id}")
 
         new_genes = []
