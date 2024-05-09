@@ -15,7 +15,7 @@
 site_name: Ensembl-GenomIO
 site_url: "https://ensembl.github.io/ensembl-genomio"
 repo_url: "https://github.com/Ensembl/ensembl-genomio"
-repo_name: "ensembl-genomio"
+repo_name: "Ensembl/ensembl-genomio"
 copyright: "Copyright &copy; [2016-<script>document.write(new Date().getFullYear())</script>] EMBL-European Bioinformatics Institute"
 
 theme:
