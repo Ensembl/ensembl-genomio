@@ -484,7 +484,7 @@ class GFFSimplifier:
 
         # Passed the checks
         primary = transcripts[0]
-
+        print(primary)
         logging.debug(f"Formatting miRNA gene {gene.id}")
 
         new_genes = []
@@ -492,6 +492,7 @@ class GFFSimplifier:
         num = 1
         for sub in primary.sub_features:
             if sub.type == "exon":
+                gene.type = "ncRNA"
                 primary.type = "miRNA_primary_transcript"
                 new_primary_subfeatures.append(sub)
             elif sub.type == "miRNA":
