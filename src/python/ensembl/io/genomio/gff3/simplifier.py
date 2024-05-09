@@ -492,7 +492,7 @@ class GFFSimplifier:
         num = 1
         for sub in primary.sub_features:
             if sub.type == "exon":
-                gene.type = "ncRNA"
+                gene.type = "ncRNA_gene"
                 primary.type = "miRNA_primary_transcript"
                 new_primary_subfeatures.append(sub)
             elif sub.type == "miRNA":

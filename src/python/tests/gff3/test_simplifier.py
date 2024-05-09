@@ -456,13 +456,13 @@ def test_gffsimplifier_with_genome(
             "mirna/gene.gff",
             "mirna/gene_simped.gff",
             does_not_raise(),
-            id="ncRNA + miRNA_primary_transcript + miRNA",
+            id="ncRNA_gene + miRNA_primary_transcript + miRNA",
         ),
         param(
             "mirna/pseudogene.gff",
             "mirna/pseudogene_simped.gff",
             does_not_raise(),
-            id="ncRNA + miRNA_primary_transcript - miRNA",
+            id="ncRNA_gene + miRNA_primary_transcript - miRNA",
         ),
         param(
             "mirna/nogene.gff",
@@ -480,7 +480,7 @@ def test_gffsimplifier_with_genome(
             "mirna/unsupported_tr.gff",
             "",
             raises(GFFParserError, match="Unknown subtype"),
-            id="ncRNA + miRNA_primary_transcript + mRNA, not supported",
+            id="ncRNA_gene + miRNA_primary_transcript + mRNA, not supported",
         ),
         param(
             "mirna/two_primary.gff",
