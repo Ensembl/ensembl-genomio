@@ -1,9 +1,4 @@
 {
-    "veupathdb": {
-        "build_version": 65,
-        "component_db": "PlasmoDB",
-        "organism_abbrev": "pfal3D7"
-    },
     "assembly": {
         "accession": "GCA_000002765.1",
         "provider_name": "RefSeq",
@@ -17,5 +12,10 @@
     "species": {
         "scientific_name": "Plasmodium falciparum",
         "taxonomy_id": 36329
+    },
+    "veupathdb": {
+        "build_version": 65,
+        "component_db": "PlasmoDB",
+        "organism_abbrev": "pfal3D7"
     }
 }

@@ -20,7 +20,7 @@ Typical usage example::
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from unittest.mock import call, Mock, patch
 
 from deepdiff import DeepDiff
@@ -129,7 +129,7 @@ def test_format_db_data(
         output: Expected list of dictionaries with metadata per database.
     """
 
-    def _get_meta_value(meta_key: str) -> Optional[str]:
+    def _get_meta_value(meta_key: str) -> Optional[Union[int, str]]:
         """Return empty string if "species.division" is requested in BRC mode, "Metazoa" otherwise."""
         if (meta_key == "species.division") and brc_mode:
             return ""
