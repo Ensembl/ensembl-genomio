@@ -17,7 +17,7 @@
 __all__ = [
     "IdsSet",
     "DictToIdsSet",
-    "BRC4_START_DATE",
+    "VPDB_START_DATE",
     "Pair",
     "UnsupportedEvent",
     "Event",
@@ -38,7 +38,7 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-BRC4_START_DATE = datetime(2020, 5, 1)
+VPDB_START_DATE = datetime(2020, 5, 1)
 IdsSet = Set[str]
 DictToIdsSet = Dict[str, IdsSet]
 
@@ -89,7 +89,7 @@ class Event:
         name: Name of the event (will be updated automatically).
         pairs: All pair of ids for this event.
 
-    Any gene set before 2019-09 is dubbed pre-BRC4.
+    Any gene set before 2019-09 is dubbed pre-VPDB.
 
     """
 
@@ -234,14 +234,14 @@ class Event:
         self.pairs.append(pair)
 
     def get_full_release(self) -> str:
-        """Returns the expanded release name, pre-BRC4 or `BRC4 = build`."""
+        """Returns the expanded release name, pre-VPDB or `VPDB = build`."""
         release = self.release
         date = self.date
 
-        if date and date > BRC4_START_DATE:
+        if date and date > VPDB_START_DATE:
             release = f"build {release}"
         else:
-            release = f"pre-BRC4 {release}"
+            release = f"pre-VPDB {release}"
 
         return release
 

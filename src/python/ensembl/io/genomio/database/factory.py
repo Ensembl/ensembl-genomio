@@ -35,9 +35,9 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
     Args:
         server: Server URL where all the databases are hosted.
         dbs: List of database names.
-        brc_mode: If true, assign ``BRC4.organism_abbrev`` as the species, and ``BRC4.component`` as the
-            division. Otherwise, the species will be ``species.production_name`` and the division will be
-            ``species.division``.
+        brc_mode: If true, assign `veupathdb.organism_abbrev` as the species, `veupathdb.component_db` as the
+            division and `veupathdb.build_version` as the project release. Otherwise, the species will be
+            `species.production_name` and the division will be `species.division`.
 
     Returns:
         List of dictionaries with 3 keys: "database", "species" and "division".
@@ -55,12 +55,15 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
         project_release = core_db.get_project_release()
 
         if brc_mode:
-            brc_organism = core_db.get_meta_value("BRC4.organism_abbrev")
-            brc_component = core_db.get_meta_value("BRC4.component")
-            if brc_organism is not None:
-                species = brc_organism
-            if brc_component is not None:
-                division = brc_component
+            vpdb_organism = core_db.get_meta_value("veupathdb.organism_abbrev")
+            vpdb_component = core_db.get_meta_value("veupathdb.component_db")
+            vpdb_build = core_db.get_meta_value("veupathdb.build_version")
+            if vpdb_organism is not None:
+                species = vpdb_organism
+            if vpdb_component is not None:
+                division = vpdb_component
+            if vpdb_build is not None:
+                project_release = vpdb_build
 
         if not division:
             division = "all"
@@ -137,7 +140,10 @@ def main() -> None:
     parser.add_argument(
         "--brc_mode",
         action="store_true",
-        help="Enable BRC mode, i.e. use organism_abbrev for species, component for division",
+        help=(
+            "Enable BRC mode, i.e. use organism_abbrev for species, component_db for division, "
+            "build_version for project release"
+        ),
     )
     parser.add_log_arguments()
     args = parser.parse_args()

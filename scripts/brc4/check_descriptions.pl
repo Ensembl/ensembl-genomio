@@ -72,15 +72,15 @@ sub main {
   my @all_species = ($opt{species}) || @{$registry->get_all_species()};
   for my $species (sort @all_species) {
     my $ma = $registry->get_adaptor($species, "core", "MetaContainer");
-    my $component = get_meta_value($ma, 'BRC4.component');
+    my $component = get_meta_value($ma, 'veupathdb.component_db');
     if ($opt{component} and $opt{component} ne $component) {
       $ma->dbc->disconnect_if_idle();
       next;
     }
 
     my $count = check_genes($registry, $species);
-    my $build = get_build($ma, $species);
-    my $org = get_meta_value($ma, 'BRC4.organism_abbrev');
+    my $build = get_meta_value($ma, 'veupathdb.build_version');
+    my $org = get_meta_value($ma, 'veupathdb.organism_abbrev');
 
     $ma->dbc->disconnect_if_idle();
 
@@ -107,15 +107,6 @@ sub main {
       @line = (@line, @tl_line);
     }
     say join("\t", @line);    
-  }
-}
-
-sub get_build {
-  my ($ma, $key) = @_;
-
-  my $dbname = $ma->dbc->dbname;
-  if ($dbname =~ /_(\d+)_\d+_\d+$/) {
-    return $1;
   }
 }
 

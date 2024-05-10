@@ -7,9 +7,9 @@
         "taxonomy_id": 7159,
         "production_name": "aedes_aegypti"
     },
-    "BRC4": {
+    "veupathdb": {
         "organism_abbrev": "aaegL5",
-        "component": "VectorBase"
-
+        "component_db": "VectorBase",
+        "build_version": 65
     }
 }

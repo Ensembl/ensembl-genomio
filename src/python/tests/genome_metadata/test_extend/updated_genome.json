@@ -1,6 +1,7 @@
 {
-    "BRC4": {
-        "component": "PlasmoDB",
+    "veupathdb": {
+        "build_version": 65,
+        "component_db": "PlasmoDB",
         "organism_abbrev": "pfal3D7"
     },
     "added_seq": {

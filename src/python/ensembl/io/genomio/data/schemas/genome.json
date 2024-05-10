@@ -87,15 +87,17 @@
         "name"
       ]
     },
-    "BRC4_info": {
+    "vpdb_info": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "component" : { "type" : "string" },
+        "build_version" : { "type" : "integer" },
+        "component_db" : { "type" : "string" },
         "organism_abbrev" : { "type" : "string" }
       },
       "required": [
-        "component",
+        "build_version",
+        "component_db",
         "organism_abbrev"
       ]
     },
@@ -122,7 +124,7 @@
         "annotation" : { "$ref" : "#/definitions/annotation_info" },
         "genebuild" : { "$ref" : "#/definitions/genebuild_info" },
         "provider" : { "$ref" : "#/definitions/provider_info" },
-        "BRC4" : { "$ref" : "#/definitions/BRC4_info" },
+        "veupathdb" : { "$ref" : "#/definitions/vpdb_info" },
         "added_seq" : { "$ref" : "#/definitions/added_sequence_info" }
       },
       "required" : [

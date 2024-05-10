@@ -43,7 +43,7 @@ class StableIDAllocator:
     def set_prefix(self, genome: Dict) -> None:
         """Sets the ID prefix using the organism abbrev if it exists in the genome metadata."""
         try:
-            org = genome["BRC4"]["organism_abbrev"]
+            org = genome["veupathdb"]["organism_abbrev"]
         except KeyError:
             prefix = "TMP_PREFIX_"
         else:

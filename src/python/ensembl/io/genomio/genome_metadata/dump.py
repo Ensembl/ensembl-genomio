@@ -45,7 +45,7 @@ METADATA_FILTER: Dict[str, Dict[str, Type]] = {
         "provider_url": str,
         "version": int,
     },
-    "BRC4": {"organism_abbrev": str, "component": str},
+    "veupathdb": {"organism_abbrev": str, "component_db": str, "build_version": int},
     "genebuild": {"id": str, "method": str, "method_display": str, "start_date": str, "version": str},
     "species": {
         "alias": str,

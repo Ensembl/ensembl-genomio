@@ -59,7 +59,7 @@ def _show_diff(result_path: Path, expected_path: Path) -> str:
     "genome, expected_prefix",
     [
         pytest.param({}, "TMP_PREFIX_", id="Default prefix"),
-        pytest.param({"BRC4": {"organism_abbrev": "LOREM"}}, "TMP_LOREM_", id="Prefix from genome meta"),
+        pytest.param({"veupathdb": {"organism_abbrev": "LOREM"}}, "TMP_LOREM_", id="Prefix from genome meta"),
     ],
 )
 def test_set_prefix(genome: Dict, expected_prefix: str) -> None:

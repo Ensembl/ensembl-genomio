@@ -18,8 +18,7 @@
 from redminelib import Redmine
 import argparse
 import os, json, re, time
-import requests
-import xml.etree.ElementTree as ET
+
 
 url = "https://redmine.apidb.org"
 default_fields = dict(
@@ -63,7 +62,7 @@ def retrieve_genomes(redmine, output_dir, build=None):
             failed_issues.append({"issue": issue, "desc": failure})
             continue
 
-        abbrev = genome["BRC4"]["organism_abbrev"]
+        abbrev = genome["veupathdb"]["organism_abbrev"]
         group = "other"
         if "Reference change" in extra["operations"]:
             group = "reference_change"
@@ -110,7 +109,7 @@ def retrieve_genomes(redmine, output_dir, build=None):
                 pass
 
             for genome in genomes:
-                organism = genome["BRC4"]["organism_abbrev"]
+                organism = genome["veupathdb"]["organism_abbrev"]
                 organism_file = os.path.join(group_dir, organism + ".json")
                 with open(organism_file, "w") as f:
                     json.dump(genome, f, indent=True)
@@ -147,8 +146,9 @@ def parse_genome(issue):
 
     customs = get_custom_fields(issue)
     genome = {
-        "BRC4": {
-            "component": "",
+        "veupathdb": {
+            "build_version": 0,
+            "component_db": "",
             "organism_abbrev": "",
         },
         "species": {},
@@ -164,11 +164,14 @@ def parse_genome(issue):
         accession = check_accession(accession)
         genome["assembly"]["accession"] = accession
 
-    # Get BRC4 component
+    # Get VEuPathDB build version
+    genome["veupathdb"]["build_version"] = int(re.search(r"Build (\d+)", str(issue.fixed_version)).group(1))
+
+    # Get VEuPathDB component db
     if "Component DB" in customs:
         components = customs["Component DB"]["value"]
         if len(components) == 1:
-            genome["BRC4"]["component"] = components[0]
+            genome["veupathdb"]["component_db"] = components[0]
         elif len(components) > 1:
             raise Exception("More than 1 component for genome " + str(issue.id))
 
@@ -181,7 +184,7 @@ def parse_genome(issue):
             if not check_organism_abbrev(abbrev):
                 print(f"Invalid organism_abbrev in {issue.id}: {abbrev}")
             else:
-                genome["BRC4"]["organism_abbrev"] = abbrev
+                genome["veupathdb"]["organism_abbrev"] = abbrev
     except KeyError:
         print(f"Can't get organism abbrev for {issue.id} because: missing organism_abbrev")
         return
@@ -191,7 +194,6 @@ def parse_genome(issue):
         gff_path = customs["GFF 2 Load"]["value"]
         if gff_path:
             extra["GFF"] = True
-            # print("GFF2LOAD: separate gff file for %s: %s (issue %d)" % (genome["BRC4"]["organism_abbrev"], gff_path, issue.id))
     except:
         pass
 
@@ -199,7 +201,6 @@ def parse_genome(issue):
     try:
         if customs["Replacement genome?"]["value"].startswith("Yes"):
             extra["Replacement"] = True
-            # print("REPLACEMENT: the organism %s is a replacement (issue %d)" % (genome["BRC4"]["organism_abbrev"], issue.id))
     except:
         pass
 
@@ -217,7 +218,7 @@ def check_genome(genome, extra):
     if not genome:
         return "No genome parsed"
 
-    if not "organism_abbrev" in genome["BRC4"] or not genome["BRC4"]["organism_abbrev"]:
+    if not "organism_abbrev" in genome["veupathdb"] or not genome["veupathdb"]["organism_abbrev"]:
         return "No organism_abbrev defined"
 
     operations = extra["operations"]

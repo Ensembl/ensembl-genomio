@@ -1,6 +1,7 @@
 {
- "BRC4": {
-  "component": "OrganismDB",
+ "veupathdb": {
+  "build_version": 65,
+  "component_db": "OrganismDB",
   "organism_abbrev": "organAbrev123"
  },
  "species": {},

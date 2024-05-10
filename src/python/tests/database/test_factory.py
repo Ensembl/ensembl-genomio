@@ -35,8 +35,9 @@ _META = {
     "species.production_name": "dog",
     "species.division": "metazoa",
     "assembly.accession": "GCA_000111222.3",
-    "BRC4.organism_abbrev": "brc_dog",
-    "BRC4.component": "brc_db",
+    "veupathdb.organism_abbrev": "brc_dog",
+    "veupathdb.component_db": "brc_db",
+    "veupathdb.build_version": 12,
 }
 
 
@@ -124,7 +125,7 @@ def test_format_db_data(
         server_url: Server URL where all the databases are hosted.
         dbs: List of database names.
         brc_mode: BRC mode?
-        skip_keys: Return `None` instead of the assigned value for "BRC4.*" meta keys.
+        skip_keys: Return `None` instead of the assigned value for "veupathdb.*" meta keys.
         output: Expected list of dictionaries with metadata per database.
     """
 
@@ -132,7 +133,7 @@ def test_format_db_data(
         """Return empty string if "species.division" is requested in BRC mode, "Metazoa" otherwise."""
         if (meta_key == "species.division") and brc_mode:
             return ""
-        if meta_key.startswith("BRC4.") and skip_keys:
+        if meta_key.startswith("veupathdb.") and skip_keys:
             return None
         return _META[meta_key]
 
@@ -146,7 +147,11 @@ def test_format_db_data(
     if dbs:
         calls = [call("species.production_name"), call("species.division"), call("assembly.accession")]
         if brc_mode:
-            calls += [call("BRC4.organism_abbrev"), call("BRC4.component")]
+            calls += [
+                call("veupathdb.organism_abbrev"),
+                call("veupathdb.component_db"),
+                call("veupathdb.build_version"),
+            ]
         dbconnection.get_meta_value.assert_has_calls(calls)
         dbconnection.get_project_release.assert_called()
 

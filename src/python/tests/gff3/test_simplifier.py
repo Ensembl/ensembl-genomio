@@ -415,16 +415,16 @@ def test_simpler_gff3_skip(
             id="Genes with bad names, no genome",
         ),
         param(
-            "genome_no_brc4.json",
+            "genome_no_vpdb.json",
             "genes_badnames.gff",
             "genes_badnames_noname.gff",
-            id="Genes with bad names, genome not BRC4",
+            id="Genes with bad names, genome not VEuPathDB",
         ),
         param(
-            "genome_brc4.json",
+            "genome_vpdb.json",
             "genes_badnames.gff",
-            "genes_badnames_brc4name.gff",
-            id="Genes with bad names, genome BRC4",
+            "genes_badnames_vpdbname.gff",
+            id="Genes with bad names, genome VEuPathDB",
         ),
     ],
 )
