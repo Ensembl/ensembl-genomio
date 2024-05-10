@@ -457,7 +457,7 @@ class GFFSimplifier:
         """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
 
         Change the representation from the form `gene[ primary_transcript[ exon, miRNA[ exon ] ] ]`
-        to `gene[ miRNA_primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
+        to `ncRNA_gene[ miRNA_primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
 
         Raises:
             GFFParserError: If gene has more than 1 transcript, the transcript was not formatted
@@ -465,7 +465,7 @@ class GFFSimplifier:
         """
         base_id = gene.id
         transcripts = gene.sub_features
-
+        
         # Insert main gene first if needed
         old_gene = gene
         if gene.type == "primary_transcript":
@@ -476,7 +476,7 @@ class GFFSimplifier:
             transcripts = gene.sub_features
             gene.id = f"{base_id}_0"
             gene.qualifiers["ID"] = gene.id
-
+            
         if (len(transcripts) == 0) or (transcripts[0].type != "primary_transcript"):
             return []
         if len(transcripts) > 1:
@@ -484,6 +484,8 @@ class GFFSimplifier:
 
         # Passed the checks
         primary = transcripts[0]
+        primary.type = "miRNA_primary_transcript"
+        gene.type = "ncRNA_gene"
         logging.debug(f"Formatting miRNA gene {gene.id}")
 
         new_genes = []
@@ -491,8 +493,6 @@ class GFFSimplifier:
         num = 1
         for sub in primary.sub_features:
             if sub.type == "exon":
-                gene.type = "ncRNA_gene"
-                primary.type = "miRNA_primary_transcript"
                 new_primary_subfeatures.append(sub)
             elif sub.type == "miRNA":
                 new_gene_id = f"{base_id}_{num}"
