@@ -47,7 +47,7 @@ for py_path in sorted(root.rglob("*.py")):
     mkdocs_gen_files.set_edit_path(full_doc_path, Path("../") / py_path)
 
 root = Path("src/python/ensembl/io")
-num_parents = len(root.parents) - 1
+num_parents = len(root.parents) - 2
 for init_path in sorted(root.rglob("__init__.py")):
     # Get the relative module path
     module_path = init_path.relative_to(root).parent
