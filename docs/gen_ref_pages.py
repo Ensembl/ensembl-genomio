@@ -23,14 +23,14 @@ import mkdocs_gen_files
 nav = mkdocs_gen_files.Nav()
 
 root = Path("src/python/ensembl/brc4")
-for path in sorted(root.rglob("*.py")):
+for py_path in sorted(root.rglob("*.py")):
     # Drop "src/python" from the path components
-    parts = path.parts[2:]
+    parts = py_path.parts[2:]
 
     if parts[-1] == "__main__.py":
         continue
 
-    doc_path = path.relative_to(root).with_suffix(".md")
+    doc_path = py_path.relative_to(root).with_suffix(".md")
     full_doc_path = Path("reference", doc_path)
 
     if parts[-1] == "__init__.py":
@@ -44,16 +44,17 @@ for path in sorted(root.rglob("*.py")):
         identifier = ".".join(parts).replace(".py", "")
         fd.write(f"::: {identifier}\n")
 
-    mkdocs_gen_files.set_edit_path(full_doc_path, Path("../") / path)
+    mkdocs_gen_files.set_edit_path(full_doc_path, Path("../") / py_path)
 
 root = Path("src/python/ensembl/io")
-for path in sorted(root.rglob("__init__.py")):
+num_parents = len(root.parents) - 1
+for init_path in sorted(root.rglob("__init__.py")):
     # Get the relative module path
-    module_path = path.relative_to(root).parent
+    module_path = init_path.relative_to(root).parent
     doc_path = module_path.with_suffix(".md")
     full_doc_path = Path("reference", doc_path)
-    # Drop "src/python" and "__init__.py" from the path components
-    parts = path.parts[2:-1]
+    # Drop all the parents of the namespace and "__init__.py" file from the path components
+    parts = init_path.parts[num_parents:-1]
     # Add markdown file path with its index tree
     nav[parts] = doc_path.as_posix()
     # Populate the markdown file with the doc stub of this Python module
@@ -61,7 +62,7 @@ for path in sorted(root.rglob("__init__.py")):
         identifier = ".".join(parts)
         fd.write(f"::: {identifier}\n")
     # Correct the path
-    mkdocs_gen_files.set_edit_path(full_doc_path, Path("../") / path)
+    mkdocs_gen_files.set_edit_path(full_doc_path, Path("../") / init_path)
 
-with mkdocs_gen_files.open("reference/SUMMARY.md", "w") as nav_file:
+with mkdocs_gen_files.open("reference/summary.md", "w") as nav_file:
     nav_file.writelines(nav.build_literate_nav())

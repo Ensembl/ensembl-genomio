@@ -13,29 +13,23 @@
 # limitations under the License.
 
 site_name: Ensembl-GenomIO
-site_url: "https://ensembl.github.io/ensembl-genomio"
-repo_url: "https://github.com/Ensembl/ensembl-genomio"
-repo_name: "Ensembl-GenomIO"
-copyright: "Copyright &copy; [2016-<script>document.write(new Date().getFullYear())</script>] EMBL-European Bioinformatics Institute"
+site_url: https://ensembl.github.io/ensembl-genomio
+site_description: Pipelines to turn basic genomic data into Ensembl cores and back.
+
+repo_url: https://github.com/Ensembl/ensembl-genomio
+repo_name: Ensembl/ensembl-genomio
+
+copyright: Copyright &copy; [2016-<script>document.write(new Date().getFullYear())</script>] <a href="https://www.ebi.ac.uk">EMBL-European Bioinformatics Institute</a>
 
 theme:
   name: "material"
-  logo: img/ebang.png
+  logo: img/ensembl-logo.png
   icon:
     repo: fontawesome/brands/github
   palette:
-    # Palette toggle for light mode
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      toggle:
-        icon: fontawesome/solid/lightbulb
-        name: Switch to dark mode
-    # Palette toggle for dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      toggle:
-        icon: fontawesome/regular/lightbulb
-        name: Switch to light mode
+    scheme: ensembl
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - toc:
@@ -47,7 +41,7 @@ plugins:
      scripts:
      - docs/gen_ref_pages.py
 - literate-nav:
-    nav_file: SUMMARY.md
+    nav_file: summary.md
 - section-index
 - mkdocstrings:
     enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
