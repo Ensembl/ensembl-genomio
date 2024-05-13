@@ -20,7 +20,7 @@ copyright: "Copyright &copy; [2016-<script>document.write(new Date().getFullYear
 
 theme:
   name: "material"
-  logo: img/ebang.png
+  logo: img/ensembl-logo.png
   icon:
     repo: fontawesome/brands/github
   palette:
