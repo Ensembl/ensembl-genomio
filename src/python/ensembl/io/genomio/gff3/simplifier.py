@@ -465,7 +465,7 @@ class GFFSimplifier:
         """
         base_id = gene.id
         transcripts = gene.sub_features
-        
+
         # Insert main gene first if needed
         old_gene = gene
         if gene.type == "primary_transcript":
@@ -476,7 +476,7 @@ class GFFSimplifier:
             transcripts = gene.sub_features
             gene.id = f"{base_id}_0"
             gene.qualifiers["ID"] = gene.id
-            
+
         if (len(transcripts) == 0) or (transcripts[0].type != "primary_transcript"):
             return []
         if len(transcripts) > 1:
