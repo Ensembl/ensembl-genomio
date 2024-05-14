@@ -164,7 +164,7 @@ sub transfer_gene_ids {
   return \@missed_transcripts;
 }
 
-#Transcripts are transferred mapping the stable_id
+# Transcripts are transferred mapping the stable_id
 sub transfer_transcripts {
   my ($gene, $old_genes, $stats, $tra, $update) = @_;
 
@@ -173,39 +173,52 @@ sub transfer_transcripts {
 
   my @missed_trs;
   my $transcripts = $gene->get_all_Transcripts();
-  for my $transcript (@$transcripts) {
-    my $cur_fingerprint = tr_fingerprint($transcript);
 
-    my $old_tr = $old_gene->{$cur_fingerprint};
-    if (not $old_tr) {
-      $logger->debug("Missed id for " . $transcript->stable_id);
-      push @missed_trs, [$gene->stable_id, $transcript->stable_id];
-      $stats->{missed_transcripts}++;
-      next;
+  # Special case: 1-to-1 gene with 1 transcript = automatic transfer
+  if (@$transcripts == 1 and scalar(keys %$old_genes) == 1) {
+    $logger->debug("1-to-1 transcript transfer of ID");
+    my $transcript = $transcripts->[0];
+    my ($old_transcript) = (values %$old_genes);
+    transfer_transcript_id($old_transcript, $transcript, $stats, $tra, $update);
+  } else {
+    # Otherwise: 
+    for my $transcript (@$transcripts) {
+      my $cur_fingerprint = tr_fingerprint($transcript);
+
+      my $old_transcript = $old_gene->{$cur_fingerprint};
+      if (not $old_transcript) {
+        $logger->debug("Missed id for " . $transcript->stable_id);
+        push @missed_trs, [$gene->stable_id, $transcript->stable_id];
+        $stats->{missed_transcripts}++;
+        next;
+      }
+      transfer_transcript_id($old_transcript, $transcript, $stats, $tra, $update);
     }
-
-    # Same transcript fingerprint = same ID (both transcript and translation)
-    $logger->debug("Update id for " . $transcript->stable_id . " to " . $old_tr->stable_id);
-    $transcript->stable_id($old_tr->stable_id);
-    $tra->update($transcript) if $update;
-    $stats->{transcript}++;
-    
-    my $translation = $transcript->translation;
-    my $old_translation = $old_tr->translation;
-
-    if (not $old_translation and $translation) {
-        die("Old transcript had not translation, but new one has one " . $transcript->stable_id);
-    } elsif ($old_translation and not $translation) {
-        die("Old transcript had a translation, but new one doesn't " . $transcript->stable_id);
-    } else {
-      next;
-    }
-
-    $translation->stable_id($old_translation->stable_id);
-    update_translation_id($tra, $old_translation, $translation) if $update;
-    $stats->{translation}++;
   }
   return @missed_trs;
+}
+
+sub transfer_transcript_id {
+  my ($old_transcript, $transcript, $stats, $tra, $update) = @_;
+  $logger->debug("Update id for " . $transcript->stable_id . " to " . $old_transcript->stable_id);
+  $transcript->stable_id($old_transcript->stable_id);
+  $tra->update($transcript) if $update;
+  $stats->{transcript}++;
+  
+  my $translation = $transcript->translation;
+  my $old_translation = $old_transcript->translation;
+
+  if (not $old_translation and $translation) {
+      die("Old transcript had not translation, but new one has one " . $transcript->stable_id);
+  } elsif ($old_translation and not $translation) {
+      die("Old transcript had a translation, but new one doesn't " . $transcript->stable_id);
+  } else {
+    next;
+  }
+
+  $translation->stable_id($old_translation->stable_id);
+  update_translation_id($tra, $old_translation, $translation) if $update;
+  $stats->{translation}++;
 }
 
 sub update_translation_id {
