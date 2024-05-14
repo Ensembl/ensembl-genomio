@@ -457,7 +457,7 @@ class GFFSimplifier:
         """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
 
         Change the representation from the form `gene[ primary_transcript[ exon, miRNA[ exon ] ] ]`
-        to `gene[ primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
+        to `ncRNA_gene[ miRNA_primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
 
         Raises:
             GFFParserError: If gene has more than 1 transcript, the transcript was not formatted
@@ -484,7 +484,8 @@ class GFFSimplifier:
 
         # Passed the checks
         primary = transcripts[0]
-
+        primary.type = "miRNA_primary_transcript"
+        gene.type = "ncRNA_gene"
         logging.debug(f"Formatting miRNA gene {gene.id}")
 
         new_genes = []
