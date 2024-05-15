@@ -51,8 +51,8 @@ workflow PATCH_BUILD_PROCESS {
         // Transfer the genes from the old db to the new db
         // Requires 2 registries and the species name
         transfer_ids_output = TRANSFER_IDS(changed_genes, old_registry, new_registry, server.species)
-        new_transcripts = transfer_ids_output.out.new_transcripts
-        mapped_transcripts = transfer_ids_output.out.mapped_transcripts
+        new_transcripts = transfer_ids_output.new_transcripts
+        mapped_transcripts = transfer_ids_output.mapped_transcripts
 
         // Transfer metadata (can be done any time after the ids are transfered?)
         transfer_log = TRANSFER_METADATA(mapped_transcripts, old_registry, new_registry, server.species)
