@@ -214,9 +214,6 @@ sub protein_seq_report {
           $feat_id = $tn_id;
         }elsif (exists $protein{$tt_id}) {
           $feat_id = $tt_id;
-        # Don't need to check if we only load a subset of sequences
-        # } else {
-        #   push @results, [$tt_id, $tn_id, 'Not in file', $db_seq, ''];
         }
 
         if ($feat_id) {
