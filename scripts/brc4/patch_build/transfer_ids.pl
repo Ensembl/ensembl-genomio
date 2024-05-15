@@ -93,7 +93,11 @@ sub get_genes_data {
     my %tr_data;
     for my $tr (@{$gene->get_all_Transcripts()}) {
       my $tr_fingerprint = tr_fingerprint($tr);
-      $tr_data{$tr_fingerprint} = $tr;
+      my $translation = $tr->translation;
+      $tr_data{$tr_fingerprint} = {
+        "stable_id" => $tr->stable_id,
+        "translation_id" => $translation->stable_id,
+      };
     }
     $genes{$gene_id} = \%tr_data;
   }
@@ -177,14 +181,15 @@ sub transfer_transcripts {
   my @missed_trs;
   my @mapped_trs;
   my $transcripts = $gene->get_all_Transcripts();
+  my @old_transcripts = values(%$old_gene);
 
   # Special case: 1-to-1 gene with 1 transcript = automatic transfer
-  if (@$transcripts == 1 and scalar(keys %$old_genes) == 1) {
+  if (@$transcripts == 1 and @old_transcripts == 1) {
     $logger->debug("1-to-1 transcript transfer of ID");
     my $transcript = $transcripts->[0];
-    my ($old_transcript) = (values %$old_genes);
+    my $old_transcript = $old_transcripts[0];
     transfer_transcript_id($old_transcript, $transcript, $stats, $tra, $update);
-    push @mapped_trs, [$gene->stable_id, $old_transcript->stable_id];
+    push @mapped_trs, [$gene->stable_id, $old_transcript->{"stable_id"}];
   } else {
     # Otherwise: 
     for my $transcript (@$transcripts) {
@@ -198,7 +203,7 @@ sub transfer_transcripts {
         next;
       }
       transfer_transcript_id($old_transcript, $transcript, $stats, $tra, $update);
-      push @mapped_trs, [$gene->stable_id, $old_transcript->stable_id];
+      push @mapped_trs, [$gene->stable_id, $old_transcript->{"stable_id"}];
     }
   }
   return (\@missed_trs, \@mapped_trs);
@@ -206,34 +211,32 @@ sub transfer_transcripts {
 
 sub transfer_transcript_id {
   my ($old_transcript, $transcript, $stats, $tra, $update) = @_;
-  $logger->debug("Update id for " . $transcript->stable_id . " to " . $old_transcript->stable_id);
-  $transcript->stable_id($old_transcript->stable_id);
-  $tra->update($transcript) if $update;
-  $stats->{transcript}++;
+  $logger->debug("Update id for " . $transcript->stable_id . " to " . $old_transcript->{"stable_id"});
+  $transcript->stable_id($old_transcript->{"stable_id"});
   
   my $translation = $transcript->translation;
-  my $old_translation = $old_transcript->translation;
+  my $old_translation_id = $old_transcript->{"translation_id"};
 
-  if (not $old_translation and $translation) {
+  if (not $old_translation_id and $translation) {
       die("Old transcript had not translation, but new one has one " . $transcript->stable_id);
-  } elsif ($old_translation and not $translation) {
+  } elsif ($old_translation_id and not $translation) {
       die("Old transcript had a translation, but new one doesn't " . $transcript->stable_id);
-  } else {
-    next;
   }
 
-  $translation->stable_id($old_translation->stable_id);
-  update_translation_id($tra, $old_translation, $translation) if $update;
+  $tra->update($transcript) if $update;
+  $stats->{transcript}++;
+  $translation->stable_id($old_transcript->{"translation_id"});
+  update_translation_id($tra, $old_translation_id, $translation->stable_id) if $update;
   $stats->{translation}++;
 }
 
 sub update_translation_id {
-  my ($tra, $old_tr, $new_tr) = @_;
+  my ($tra, $old_id, $new_id) = @_;
 
-  # There is no translationAdaptor update, so mkae it manually
+  # There is no translationAdaptor update, so make it manually
   my $sth = $tra->prepare("UPDATE translation SET stable_id=? WHERE stable_id=?");
-  $sth->bind_param(1, $old_tr->stable_id);
-  $sth->bind_param(2, $new_tr->stable_id);
+  $sth->bind_param(1, $old_id);
+  $sth->bind_param(2, $new_id);
   $sth->execute();
 }
 
