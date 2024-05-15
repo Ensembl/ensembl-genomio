@@ -207,11 +207,20 @@ sub protein_seq_report {
       if ($translation) {
         my $tn_id  = $translation->stable_id;
         my $db_seq = $translation->seq;
+        my $feat_id = "";
 
         if (exists $protein{$tn_id}) {
+          $feat_id = $tn_id;
+        }elsif (exists $protein{$tt_id}) {
+          $feat_id = $tt_id;
+        } else {
+          push @results, [$tt_id, $tn_id, 'Not in file', $db_seq, ''];
+        }
+
+        if ($feat_id) {
           $translations{$tn_id} = 1;
 
-          my $file_seq = $protein{$tn_id};
+          my $file_seq = $protein{$feat_id};
           $file_seq =~ s/(\*|\-)$//;
 
           if ($db_seq ne $file_seq) {
@@ -234,9 +243,6 @@ sub protein_seq_report {
 "UPDATE gene INNER JOIN transcript USING (gene_id) SET gene.biotype = 'protein_coding', transcript.biotype = 'protein_coding' WHERE transcript.stable_id = '$tt_id';";
             }
           }
-
-        } else {
-          push @results, [$tt_id, $tn_id, 'Not in file', $db_seq, ''];
         }
       }
     }
