@@ -189,7 +189,7 @@ sub transfer_transcripts {
     my $transcript = $transcripts->[0];
     my $old_transcript = $old_transcripts[0];
     transfer_transcript_id($old_transcript, $transcript, $stats, $tra, $update);
-    push @mapped_trs, [$gene->stable_id, $old_transcript->{"stable_id"}];
+    push @mapped_trs, [$gene->stable_id, $old_transcript->{"stable_id"}, $old_transcript->{"translation_id"}];
   } else {
     # Otherwise: 
     for my $transcript (@$transcripts) {
@@ -203,7 +203,7 @@ sub transfer_transcripts {
         next;
       }
       transfer_transcript_id($old_transcript, $transcript, $stats, $tra, $update);
-      push @mapped_trs, [$gene->stable_id, $old_transcript->{"stable_id"}];
+      push @mapped_trs, [$gene->stable_id, $old_transcript->{"stable_id"}, $old_transcript->{"translation_id"}];
     }
   }
   return (\@missed_trs, \@mapped_trs);
@@ -225,8 +225,10 @@ sub transfer_transcript_id {
 
   $tra->update($transcript) if $update;
   $stats->{transcript}++;
-  $translation->stable_id($old_transcript->{"translation_id"});
+
+  $logger->debug("Update id for " . $translation->stable_id . " to " . $old_translation_id);
   update_translation_id($tra, $old_translation_id, $translation->stable_id) if $update;
+  $translation->stable_id($old_transcript->{"translation_id"});
   $stats->{translation}++;
 }
 
