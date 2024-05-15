@@ -58,10 +58,11 @@ $reg_path = $opt{new_registry};
 $registry->load_all($reg_path);
 
 # Transfer the IDs to the new genes using the mapping
-my $missed_transcripts = transfer_gene_ids($registry, $species, $mapping, $old_genes, $opt{update});
+my ($missed_trs, $mapped_trs) = transfer_gene_ids($registry, $species, $mapping, $old_genes, $opt{update});
 
 # Print out the missed transcripts
-print_missed($missed_transcripts, $opt{out_transcripts});
+print_list($missed_trs, $opt{missed_transcripts});
+print_list($mapped_trs, $opt{mapped_transcripts});
 
 ###############################################################################
 sub load_mapping {
@@ -136,6 +137,7 @@ sub transfer_gene_ids {
   my $tra = $registry->get_adaptor($species, "core", 'transcript');
 
   my @missed_transcripts;
+  my @mapped_transcripts;
   for my $new_id (sort keys %$mapping) {
     my $old_id = $mapping->{$new_id};
     my $gene = $ga->fetch_by_stable_id($new_id);
@@ -148,8 +150,9 @@ sub transfer_gene_ids {
     $stats{total}++;
 
     # Update transcripts as well?
-    my @missed_tr = transfer_transcripts($gene, $old_genes, \%stats, $tra, $update);
-    push @missed_transcripts, @missed_tr;
+    my ($missed_trs, $mapped_trs) = transfer_transcripts($gene, $old_genes, \%stats, $tra, $update);
+    push @missed_transcripts, @$missed_trs;
+    push @mapped_transcripts, @$mapped_trs;
     $ga->update($gene) if $update;
   }
 
@@ -161,7 +164,7 @@ sub transfer_gene_ids {
     print("(Add --update to actually make the transfers)\n") if not $update;
   }
 
-  return \@missed_transcripts;
+  return (\@missed_transcripts, \@mapped_transcripts);
 }
 
 # Transcripts are transferred mapping the stable_id
@@ -172,6 +175,7 @@ sub transfer_transcripts {
   die("No old gene to transfer transcript from") if not $old_gene;
 
   my @missed_trs;
+  my @mapped_trs;
   my $transcripts = $gene->get_all_Transcripts();
 
   # Special case: 1-to-1 gene with 1 transcript = automatic transfer
@@ -180,6 +184,7 @@ sub transfer_transcripts {
     my $transcript = $transcripts->[0];
     my ($old_transcript) = (values %$old_genes);
     transfer_transcript_id($old_transcript, $transcript, $stats, $tra, $update);
+    push @mapped_trs, [$gene->stable_id, $old_transcript->stable_id];
   } else {
     # Otherwise: 
     for my $transcript (@$transcripts) {
@@ -193,9 +198,10 @@ sub transfer_transcripts {
         next;
       }
       transfer_transcript_id($old_transcript, $transcript, $stats, $tra, $update);
+      push @mapped_trs, [$gene->stable_id, $old_transcript->stable_id];
     }
   }
-  return @missed_trs;
+  return (\@missed_trs, \@mapped_trs);
 }
 
 sub transfer_transcript_id {
@@ -231,7 +237,7 @@ sub update_translation_id {
   $sth->execute();
 }
 
-sub print_missed {
+sub print_list {
   my ($list, $out_file) = @_;
 
   open my $out_fh, ">", $out_file;
@@ -255,7 +261,8 @@ sub usage {
     --new_registry <path> : Ensembl registry
     --species <str>       : production_name of one species
     --mapping <path>      : Old gene ids to new gene ids mapping file
-    --out_transcripts <path: List of transcript IDs not replaced by an older ID
+    --missed_transcripts <path: List of transcript IDs not replaced by an older ID
+    --mapped_transcripts <path: List of transcript IDs replaced by an older ID
     
     --update          : Do the actual changes (default is no changes to the database)
     
@@ -274,7 +281,8 @@ sub opt_check {
     "new_registry=s",
     "species=s",
     "mapping=s",
-    "out_transcripts=s",
+    "missed_transcripts=s",
+    "mapped_transcripts=s",
     "update",
     "help",
     "verbose",
@@ -285,7 +293,8 @@ sub opt_check {
   usage("New registry needed") if not $opt{new_registry};
   usage("Species needed") if not $opt{species};
   usage("Mapping needed") if not $opt{mapping};
-  usage("Output transcript needed") if not $opt{out_transcripts};
+  usage("Missed transcripts output needed") if not $opt{missed_transcripts};
+  usage("Mapped transcripts output needed") if not $opt{mapped_transcripts};
 
   usage()                if $opt{help};
   Log::Log4perl->easy_init($INFO) if $opt{verbose};

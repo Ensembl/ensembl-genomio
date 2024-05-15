@@ -23,17 +23,20 @@ process TRANSFER_IDS {
         val(species)
 
     output:
-        path("new_transcripts.txt")
+        path("new_transcripts.txt"), emit: new_transcripts
+        path("mapped_transcripts.txt"), emit: mapped_transcripts
 
     script:
     def new_transcripts = "new_transcripts.txt"
+    def mapped_transcripts = "mapped_transcripts.txt"
     """
     perl $params.scripts_dir/transfer_ids.pl \\
         --mapping $changed_genes \\
         --old ./$old_registry \\
         --new ./$new_registry \\
         --species $species \\
-        --out_transcripts $new_transcripts \\
+        --mapped_transcripts $mapped_transcripts \\
+        --missed_transcripts $new_transcripts \\
         --update
     """
 }
