@@ -185,7 +185,8 @@ sub protein_seq_report {
   
   my @results;
   my @fixes;
-  my %translations;
+  my %translations_dict;
+  my %transcripts_dict;
   
   my $slices = $sa->fetch_all( 'toplevel', undef, 0, 1 );
 
@@ -213,12 +214,14 @@ sub protein_seq_report {
           $feat_id = $tn_id;
         }elsif (exists $protein{$tt_id}) {
           $feat_id = $tt_id;
-        } else {
-          push @results, [$tt_id, $tn_id, 'Not in file', $db_seq, ''];
+        # Don't need to check if we only load a subset of sequences
+        # } else {
+        #   push @results, [$tt_id, $tn_id, 'Not in file', $db_seq, ''];
         }
 
         if ($feat_id) {
-          $translations{$tn_id} = 1;
+          $translations_dict{$tn_id} = 1;
+          $transcripts_dict{$tt_id} = 1;
 
           my $file_seq = $protein{$feat_id};
           $file_seq =~ s/(\*|\-)$//;
@@ -248,9 +251,8 @@ sub protein_seq_report {
     }
   }
 
-  
   foreach my $id (keys %protein) {
-    if (! exists $translations{$id}) {
+    if (not exists $translations_dict{$id} and not exists $transcripts_dict{$id}) {
       push @results, ['', $id, 'Not in db', '', $protein{$id}];
     }
   }
