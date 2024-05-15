@@ -14,7 +14,8 @@
 // limitations under the License.
 
 process TRANSFER_METADATA {
-    label 'local'
+    memory "8 GB"
+    time "2h"
 
     input:
         path(waited_file)
