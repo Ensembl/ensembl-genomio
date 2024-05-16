@@ -212,7 +212,7 @@ sub protein_seq_report {
 
         if (exists $protein{$tn_id}) {
           $feat_id = $tn_id;
-        }elsif (exists $protein{$tt_id}) {
+        } elsif (exists $protein{$tt_id}) {
           $feat_id = $tt_id;
         }
 
