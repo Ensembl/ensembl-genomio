@@ -245,16 +245,6 @@ sub update_translation_id {
   $sth->execute();
 }
 
-sub update_exon_id {
-  my ($tra, $updated_id, $new_id) = @_;
-
-  # There is no exonAdaptor update, so make it manually
-  my $sth = $tra->prepare("UPDATE exon SET stable_id=? WHERE stable_id=?");
-  $sth->bind_param(1, $updated_id);
-  $sth->bind_param(2, $new_id);
-  $sth->execute();
-}
-
 sub print_list {
   my ($list, $out_file) = @_;
 
