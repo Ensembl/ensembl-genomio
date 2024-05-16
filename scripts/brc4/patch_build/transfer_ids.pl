@@ -228,26 +228,11 @@ sub transfer_transcript_id {
   $tra->update($transcript) if $update;
   $stats->{transcript}++;
 
-  # Also update the exons
-  regenerate_exon_ids($transcript, $stats, $tra, $update);
-
   # Also update translations
   $logger->debug("Update id for " . $translation->stable_id . " to " . $old_translation_id);
   update_translation_id($tra, $old_translation_id, $translation->stable_id) if $update;
   $translation->stable_id($old_transcript->{"translation_id"});
   $stats->{translation}++;
-}
-
-sub regenerate_exon_ids {
-  my ($transcript, $stats, $tra, $update) = @_;
-
-  my $num = 1;
-  for my $exon (@{$transcript->get_all_Exons()}) {
-    my $updated_exon_id = $transcript->stable_id . "-E" . $num++;
-    $logger->debug("Generate exon ID $updated_exon_id to replace " . $exon->stable_id);
-    update_exon_id($tra, $updated_exon_id, $exon->stable_id) if $update;
-    $stats->{exon}++;
-  }
 }
 
 sub update_translation_id {

@@ -63,10 +63,10 @@ workflow PATCH_BUILD_PROCESS {
 
         // Finalize the versions
         waited_files = new_genes_map.concat(new_transcripts_map).last()
-        FINALIZE_VERSIONS(server, waited_files)
+        finalized = FINALIZE_VERSIONS(server, waited_files)
 
         // Check stable ids
-        patch_errors=CHECK_PATCH(server, waited_files)
+        patch_errors=CHECK_PATCH(server, finalized)
 
         // Format the annotation events file into a compatible event file
         events_file = FORMAT_EVENTS(events, deleted, new_genes_map, release)

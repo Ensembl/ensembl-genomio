@@ -19,6 +19,9 @@ process FINALIZE_VERSIONS {
     input:
         val(server)
         path(waited_file)
+    
+    output:
+        val("done")
 
     script:
     """
