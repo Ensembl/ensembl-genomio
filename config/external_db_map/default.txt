@@ -47,6 +47,9 @@ GB	GenBank	gene
 
 GeneID	GeneID	gene
 
+JGIDB	JGI_GENE	gene
+JGIDB_GENE	JGI_GENE	gene
+
 miRBase	miRBase	gene	!^MIMAT
 MIR	miRBase	gene	!^MIMAT
 
@@ -87,6 +90,9 @@ FlyBaseName	FlyBaseName_transcript	transcript
 GenBank	GenBank_transcript	transcript
 GB	GenBank_transcript	transcript
 GenBank_transcript	GenBank_transcript	transcript
+
+JGIDB	JGI_TRANSCRIPT	transcript
+JGIDB_TRANSCRIPT	JGI_TRANSCRIPT	transcript
 
 miRBase	miRBase_trans_name	transcript	^MIMAT
 MIR	miRBase_trans_name	transcript	^MIMAT
