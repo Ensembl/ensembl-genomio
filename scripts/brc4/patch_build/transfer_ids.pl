@@ -216,7 +216,7 @@ sub transfer_transcript_id {
   my $translation = $transcript->translation;
   my $old_translation_id = $old_transcript->{"translation_id"};
 
-  # Stop if we don't have translation in both old and new transcript
+  # Stop if we don't have translation in both old and new transcripts
   if (not $old_translation_id and $translation) {
       die("Old transcript had not translation, but new one has one " . $transcript->stable_id);
   } elsif ($old_translation_id and not $translation) {
@@ -269,8 +269,8 @@ sub usage {
     --new_registry <path> : Ensembl registry
     --species <str>       : production_name of one species
     --mapping <path>      : Old gene ids to new gene ids mapping file
-    --missed_transcripts <path: List of transcript IDs not replaced by an older ID
-    --mapped_transcripts <path: List of transcript IDs replaced by an older ID
+    --missed_transcripts <path> : List of transcript IDs not replaced by an older ID
+    --mapped_transcripts <path> : List of transcript IDs replaced by an older ID
     
     --update          : Do the actual changes (default is no changes to the database)
     
