@@ -139,11 +139,16 @@ GenBank	GenBank_translation	translation
 GB	GenBank_translation	translation
 GenBank_translation	GenBank_translation	translation
 
+HAMAP	HAMAP	translation
+
 INTERPRO	Interpro	translation
 
 MEROPS	MEROPS	translation
 
 PDB	PDB	translation
+PFAM	PFAM	translation
+PIR	PIR	translation
+ProSite	ProSite	translation
 
 NCBI protein db	protein_id	translation
 protein_id	protein_id	translation
@@ -153,6 +158,8 @@ GenPept	protein_id	translation
 
 RefSeq	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
 RefSeq_peptide	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
+
+SMART	SMART	translation
 
 UniProt/GCRP	Uniprot/GCRP	translation
 Uniprot/GCRP	Uniprot/GCRP	translation
