@@ -18,7 +18,7 @@ process CHECK_PATCH {
 
     input:
         val(server)
-        path(waited_file)
+        val(finalized)
     
     output:
         path("patch_ids_error_report.log")
