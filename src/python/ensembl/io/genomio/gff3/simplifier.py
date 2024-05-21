@@ -218,6 +218,18 @@ class GFFSimplifier:
         new_gene.id = f"{feat.id}_gene"
         new_gene.qualifiers["ID"] = new_gene.id
 
+        # Check if it's a pseudogene
+        if feat.type == "mRNA":
+            is_pseudo = False
+            for subfeat in feat.sub_features:
+                pseudo_qual = subfeat.qualifiers.get("pseudo", [""])[0]
+                if subfeat.type == "CDS" and pseudo_qual == "true":
+                    is_pseudo = True
+                    del subfeat.qualifiers["pseudo"]
+                    break
+            if is_pseudo:
+                new_gene.type = "pseudogene"
+
         return new_gene
 
     def create_gene_for_lone_cds(self, feat: SeqFeature) -> SeqFeature:
