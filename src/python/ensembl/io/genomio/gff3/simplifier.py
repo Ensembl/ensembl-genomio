@@ -215,8 +215,14 @@ class GFFSimplifier:
         new_gene.sub_features = [feat]
 
         # Use the transcript ID for the gene, and generate a sub ID for the transcript
-        new_gene.id = f"{feat.id}_gene"
+        new_gene.id = feat.id
         new_gene.qualifiers["ID"] = new_gene.id
+        feat.id = self.stable_ids.generate_transcript_id(new_gene.id, 1)
+        feat.qualifiers["ID"] = feat.id
+
+        # Remove the exon/CDS parent so it is properly updated
+        for subfeat in feat.sub_features:
+            del subfeat.qualifiers["Parent"]
 
         # Check if it's a pseudogene
         if feat.type == "mRNA":
