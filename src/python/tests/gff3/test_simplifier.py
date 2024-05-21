@@ -234,28 +234,35 @@ def test_normalize_non_gene_not_implemented() -> None:
 
 
 @pytest.mark.parametrize(
-    "in_type, name, out_type, expectation",
+    "in_type, tr_name, cds_name, out_type, expectation",
     [
-        param("mRNA", "", "mRNA", does_not_raise(), id="mRNA no change"),
-        param("C_gene_segment", "", "C_gene_segment", raises(GFFParserError), id="no standard name"),
-        param("C_gene_segment", "immunoglobulin", "IG_C_gene", does_not_raise(), id="C immunoglobulin"),
-        param("C_gene_segment", "ig", "IG_C_gene", does_not_raise(), id="C ig"),
-        param("V_gene_segment", "t-cell", "TR_V_gene", does_not_raise(), id="V t-cell"),
-        param("V_gene_segment", "T_cell", "TR_V_gene", does_not_raise(), id="V T_cell"),
-        param("V_gene_segment", "Lorem Ipsum", "", raises(GFFParserError), id="V T_cell"),
+        param("mRNA", "", "", "mRNA", does_not_raise(), id="mRNA no change"),
+        param("C_gene_segment", "", "", "C_gene_segment", raises(GFFParserError), id="no standard name"),
+        param("C_gene_segment", "immunoglobulin", "", "IG_C_gene", does_not_raise(), id="C immunoglobulin"),
+        param("C_gene_segment", "ig", "", "IG_C_gene", does_not_raise(), id="C ig"),
+        param("V_gene_segment", "t-cell", "", "TR_V_gene", does_not_raise(), id="V t-cell"),
+        param("V_gene_segment", "T_cell", "", "TR_V_gene", does_not_raise(), id="V T_cell"),
+        param("V_gene_segment", "Lorem Ipsum", "", "", raises(GFFParserError), id="V T_cell"),
+        param("V_gene_segment", "", "T_cell", "TR_V_gene", does_not_raise(), id="CDS V t-cell"),
+        param("C_gene_segment", "", "ig", "IG_C_gene", does_not_raise(), id="CDS C ig"),
     ],
 )
 def test_format_gene_segments(
     in_type: str,
-    name: str,
+    tr_name: str,
+    cds_name: str,
     out_type: str,
     expectation: ContextManager,
 ) -> None:
     """Test gene create gene for lone CDS."""
     simp = GFFSimplifier()
     feat = SeqFeature(None, in_type)
-    if name:
-        feat.qualifiers["standard_name"] = [name]
+    if tr_name:
+        feat.qualifiers["standard_name"] = [tr_name]
+    if cds_name:
+        cds = SeqFeature(None, "CDS")
+        feat.qualifiers["product"] = [cds_name]
+        feat.sub_features = [cds]
     feat.sub_features = []
     with expectation:
         new_feat = simp.format_gene_segments(feat)

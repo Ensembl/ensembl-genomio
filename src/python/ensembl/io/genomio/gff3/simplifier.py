@@ -38,7 +38,7 @@ from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
 from .restructure import restructure_gene, remove_cds_from_pseudogene
-from .exceptions import GFFParserError, IgnoredFeatureError, UnsupportedFeatureError
+from .exceptions import GeneSegmentError, GFFParserError, IgnoredFeatureError, UnsupportedFeatureError
 
 
 class Records(list):
@@ -421,17 +421,29 @@ class GFFSimplifier:
 
         # Change V/C_gene_segment into a its corresponding transcript names
         try:
-            standard_name = transcript.qualifiers["standard_name"][0]
-        except KeyError as err:
-            raise GFFParserError(f"No standard_name for {transcript.type}") from err
-        biotype = transcript.type.replace("_segment", "")
-        if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
-            transcript.type = f"IG_{biotype}"
-        elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
-            transcript.type = f"TR_{biotype}"
-        else:
-            raise GFFParserError(f"Unexpected 'standard_name' for {transcript.id}: {standard_name}")
+            seg_type = self.get_segment_type(transcript)
+        except GeneSegmentError as err:
+            cdss = list(filter(lambda x: x.type == "CDS", transcript.sub_features))
+            if not cdss:
+                raise err
+            seg_type = self.get_segment_type(cdss[0])
+
+        transcript.type = f"{seg_type}_{transcript.type.replace('_segment', '')}"
         return transcript
+    
+    def get_segment_type(self, feature: SeqFeature) -> str:
+        product = feature.qualifiers.get("standard_name", [""])[0]
+        if not product:
+            product = feature.qualifiers.get("product", [""])[0]
+        if not product:
+            raise GeneSegmentError(f"No standard_name or product for {feature.type}")
+
+        if re.search(r"\b(immunoglobulin|ig)\b", product, flags=re.IGNORECASE):
+            return "IG"
+        if re.search(r"\bt[- _]cell\b", product, flags=re.IGNORECASE):
+            return "TR"
+        raise GeneSegmentError(f"Can't identify segment type for {feature.id}: {product}")
+
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
