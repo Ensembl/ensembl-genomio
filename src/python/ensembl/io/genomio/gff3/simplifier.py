@@ -420,14 +420,14 @@ class GFFSimplifier:
             return transcript
 
         # Guess the segment type from the transcript attribs
-        try:
-            seg_type = self._get_segment_type(transcript)
-        except GeneSegmentError as err:
+        seg_type = self._get_segment_type(transcript)
+        if not seg_type:
             # Get the information from a CDS instead
             cdss = list(filter(lambda x: x.type == "CDS", transcript.sub_features))
-            if not cdss:
-                raise err
-            seg_type = self._get_segment_type(cdss[0])
+            if cdss:
+                seg_type = self._get_segment_type(cdss[0])
+            if not seg_type:
+                raise GeneSegmentError(f"Unable to infer segment from {transcript.id}")
 
         # Change V/C_gene_segment into a its corresponding transcript names
         transcript.type = f"{seg_type}_{transcript.type.replace('_segment', '')}"
@@ -436,20 +436,20 @@ class GFFSimplifier:
     def _get_segment_type(self, feature: SeqFeature) -> str:
         """Infer if a segment is "IG" (immunoglobulin) of "TR" (t-cell) from the feature attribs.
 
-        Raises: GeneSegmentError if the attribs are missing that information.
+        Returns an empty string if no segment type info was found.
         """
 
         product = feature.qualifiers.get("standard_name", [""])[0]
         if not product:
             product = feature.qualifiers.get("product", [""])[0]
         if not product:
-            raise GeneSegmentError(f"No standard_name or product for {feature.type}")
+            return ""
 
         if re.search(r"\b(immunoglobulin|ig)\b", product, flags=re.IGNORECASE):
             return "IG"
         if re.search(r"\bt[- _]cell\b", product, flags=re.IGNORECASE):
             return "TR"
-        raise GeneSegmentError(f"Can't identify segment type for {feature.id}: {product}")
+        return ""
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
