@@ -207,7 +207,7 @@ class GFFSimplifier:
             return feat
 
         new_type = "ncRNA_gene"
-        if feat.type in ("tRNA", "rRNA"):
+        if feat.type in ("tRNA", "rRNA", "mRNA"):
             new_type = "gene"
         logging.debug(f"Put the transcript {feat.type} in a {new_type} parent feature")
         new_gene = SeqFeature(feat.location, type=new_type)
