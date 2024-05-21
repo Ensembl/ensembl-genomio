@@ -106,6 +106,8 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
         param("lone/transcript.gff", "lone/transcript_simped.gff", id="lone transcript"),
         param("lone/trna.gff", "lone/trna_simped.gff", id="lone tRNA"),
         param("lone/rrna.gff", "lone/rrna_simped.gff", id="lone rRNA"),
+        param("lone/mrna.gff", "lone/mrna_simped.gff", id="lone mRNA"),
+        param("lone/mrna_pseudo.gff", "lone/mrna_pseudo_simped.gff", id="lone pseudo mRNA"),
     ],
 )
 def test_create_gene_for_lone_transcript(

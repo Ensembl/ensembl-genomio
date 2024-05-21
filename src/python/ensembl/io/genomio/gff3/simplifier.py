@@ -197,7 +197,7 @@ class GFFSimplifier:
         return self.clean_gene(gene)
 
     def create_gene_for_lone_transcript(self, feat: SeqFeature) -> SeqFeature:
-        """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA_gene' for all others.
+        """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA/mRNA, and 'ncRNA_gene' for all others.
 
         Args:
             feat: The transcript for which we want to create a gene.
@@ -207,7 +207,7 @@ class GFFSimplifier:
             return feat
 
         new_type = "ncRNA_gene"
-        if feat.type in ("tRNA", "rRNA"):
+        if feat.type in ("tRNA", "rRNA", "mRNA"):
             new_type = "gene"
         logging.debug(f"Put the transcript {feat.type} in a {new_type} parent feature")
         new_gene = SeqFeature(feat.location, type=new_type)
@@ -219,6 +219,22 @@ class GFFSimplifier:
         new_gene.qualifiers["ID"] = new_gene.id
         feat.id = self.stable_ids.generate_transcript_id(new_gene.id, 1)
         feat.qualifiers["ID"] = feat.id
+
+        # Remove the exon/CDS parent so it is properly updated
+        for subfeat in feat.sub_features:
+            del subfeat.qualifiers["Parent"]
+
+        # Check if it's a pseudogene
+        if feat.type == "mRNA":
+            is_pseudo = False
+            for subfeat in feat.sub_features:
+                pseudo_qual = subfeat.qualifiers.get("pseudo", [""])[0]
+                if subfeat.type == "CDS" and pseudo_qual == "true":
+                    is_pseudo = True
+                    del subfeat.qualifiers["pseudo"]
+                    break
+            if is_pseudo:
+                new_gene.type = "pseudogene"
 
         return new_gene
 
