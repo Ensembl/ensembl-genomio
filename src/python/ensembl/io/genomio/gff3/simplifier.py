@@ -197,7 +197,7 @@ class GFFSimplifier:
         return self.clean_gene(gene)
 
     def create_gene_for_lone_transcript(self, feat: SeqFeature) -> SeqFeature:
-        """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA_gene' for all others.
+        """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA/mRNA, and 'ncRNA_gene' for all others.
 
         Args:
             feat: The transcript for which we want to create a gene.
@@ -215,10 +215,8 @@ class GFFSimplifier:
         new_gene.sub_features = [feat]
 
         # Use the transcript ID for the gene, and generate a sub ID for the transcript
-        new_gene.id = feat.id
+        new_gene.id = f"{feat.id}_gene"
         new_gene.qualifiers["ID"] = new_gene.id
-        feat.id = self.stable_ids.generate_transcript_id(new_gene.id, 1)
-        feat.qualifiers["ID"] = feat.id
 
         return new_gene
 
