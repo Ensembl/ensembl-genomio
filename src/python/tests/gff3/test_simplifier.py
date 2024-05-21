@@ -23,7 +23,7 @@ from Bio.SeqFeature import SeqFeature
 import pytest
 from pytest import param, raises
 
-from ensembl.io.genomio.gff3.exceptions import GFFParserError
+from ensembl.io.genomio.gff3.exceptions import GeneSegmentError, GFFParserError
 from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
 from ensembl.io.genomio.gff3.exceptions import IgnoredFeatureError, UnsupportedFeatureError
 from ensembl.io.genomio.utils import print_json
@@ -234,29 +234,57 @@ def test_normalize_non_gene_not_implemented() -> None:
 
 
 @pytest.mark.parametrize(
-    "in_type, name, out_type, expectation",
+    "in_type, tr_name, out_type, expectation",
     [
         param("mRNA", "", "mRNA", does_not_raise(), id="mRNA no change"),
-        param("C_gene_segment", "", "C_gene_segment", raises(GFFParserError), id="no standard name"),
+        param("C_gene_segment", "", "C_gene_segment", raises(GeneSegmentError), id="no standard name"),
         param("C_gene_segment", "immunoglobulin", "IG_C_gene", does_not_raise(), id="C immunoglobulin"),
         param("C_gene_segment", "ig", "IG_C_gene", does_not_raise(), id="C ig"),
         param("V_gene_segment", "t-cell", "TR_V_gene", does_not_raise(), id="V t-cell"),
         param("V_gene_segment", "T_cell", "TR_V_gene", does_not_raise(), id="V T_cell"),
-        param("V_gene_segment", "Lorem Ipsum", "", raises(GFFParserError), id="V T_cell"),
+        param("V_gene_segment", "Lorem Ipsum", "", raises(GeneSegmentError), id="V T_cell"),
     ],
 )
 def test_format_gene_segments(
     in_type: str,
-    name: str,
+    tr_name: str,
     out_type: str,
     expectation: ContextManager,
 ) -> None:
-    """Test gene create gene for lone CDS."""
+    """Test `format_gene_segments` without a CDS."""
     simp = GFFSimplifier()
     feat = SeqFeature(None, in_type)
-    if name:
-        feat.qualifiers["standard_name"] = [name]
+    if tr_name:
+        feat.qualifiers["standard_name"] = [tr_name]
     feat.sub_features = []
+    with expectation:
+        new_feat = simp.format_gene_segments(feat)
+        assert new_feat.type == out_type
+
+
+@pytest.mark.parametrize(
+    "has_cds, cds_name, out_type, expectation",
+    [
+        param(False, "", "", raises(GeneSegmentError), id="No CDS"),
+        param(True, "", "", raises(GeneSegmentError), id="CDS no info"),
+        param(True, "ig", "IG_C_gene", does_not_raise(), id="C ig"),
+        param(True, "t-cell", "TR_C_gene", does_not_raise(), id="C t-cell"),
+    ],
+)
+def test_format_gene_segments_cds(
+    has_cds: bool,
+    cds_name: str,
+    out_type: str,
+    expectation: ContextManager,
+) -> None:
+    """Test `format_gene_segments` with a CDS (and no info on the transcript)."""
+    simp = GFFSimplifier()
+    feat = SeqFeature(None, "C_gene_segment")
+    feat.sub_features = []
+    if has_cds:
+        cds = SeqFeature(None, "CDS")
+        cds.qualifiers["product"] = [cds_name]
+        feat.sub_features = [cds]
     with expectation:
         new_feat = simp.format_gene_segments(feat)
         assert new_feat.type == out_type

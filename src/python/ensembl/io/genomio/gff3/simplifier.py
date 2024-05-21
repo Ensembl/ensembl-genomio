@@ -38,7 +38,7 @@ from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
 from .restructure import restructure_gene, remove_cds_from_pseudogene
-from .exceptions import GFFParserError, IgnoredFeatureError, UnsupportedFeatureError
+from .exceptions import GeneSegmentError, GFFParserError, IgnoredFeatureError, UnsupportedFeatureError
 
 
 class Records(list):
@@ -414,24 +414,42 @@ class GFFSimplifier:
             transcript: Gene segment transcript feature.
 
         Raises:
-            GFFParserError: Missing or unexpected transcript's standard name.
+            GeneSegmentError: Unable to get the segment type information from the feature.
         """
         if transcript.type not in ("C_gene_segment", "V_gene_segment"):
             return transcript
 
+        # Guess the segment type from the transcript attribs
+        seg_type = self._get_segment_type(transcript)
+        if not seg_type:
+            # Get the information from a CDS instead
+            cdss = list(filter(lambda x: x.type == "CDS", transcript.sub_features))
+            if cdss:
+                seg_type = self._get_segment_type(cdss[0])
+            if not seg_type:
+                raise GeneSegmentError(f"Unable to infer segment from {transcript.id}")
+
         # Change V/C_gene_segment into a its corresponding transcript names
-        try:
-            standard_name = transcript.qualifiers["standard_name"][0]
-        except KeyError as err:
-            raise GFFParserError(f"No standard_name for {transcript.type}") from err
-        biotype = transcript.type.replace("_segment", "")
-        if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
-            transcript.type = f"IG_{biotype}"
-        elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
-            transcript.type = f"TR_{biotype}"
-        else:
-            raise GFFParserError(f"Unexpected 'standard_name' for {transcript.id}: {standard_name}")
+        transcript.type = f"{seg_type}_{transcript.type.replace('_segment', '')}"
         return transcript
+
+    def _get_segment_type(self, feature: SeqFeature) -> str:
+        """Infer if a segment is "IG" (immunoglobulin) of "TR" (t-cell) from the feature attribs.
+
+        Returns an empty string if no segment type info was found.
+        """
+
+        product = feature.qualifiers.get("standard_name", [""])[0]
+        if not product:
+            product = feature.qualifiers.get("product", [""])[0]
+        if not product:
+            return ""
+
+        if re.search(r"\b(immunoglobulin|ig)\b", product, flags=re.IGNORECASE):
+            return "IG"
+        if re.search(r"\bt[- _]cell\b", product, flags=re.IGNORECASE):
+            return "TR"
+        return ""
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
