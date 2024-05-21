@@ -414,24 +414,31 @@ class GFFSimplifier:
             transcript: Gene segment transcript feature.
 
         Raises:
-            GFFParserError: Missing or unexpected transcript's standard name.
+            GeneSegmentError: Unable to get the segment type information from the feature.
         """
         if transcript.type not in ("C_gene_segment", "V_gene_segment"):
             return transcript
 
-        # Change V/C_gene_segment into a its corresponding transcript names
+        # Guess the segment type from the transcript attribs
         try:
-            seg_type = self.get_segment_type(transcript)
+            seg_type = self._get_segment_type(transcript)
         except GeneSegmentError as err:
+            # Get the information from a CDS instead
             cdss = list(filter(lambda x: x.type == "CDS", transcript.sub_features))
             if not cdss:
                 raise err
-            seg_type = self.get_segment_type(cdss[0])
+            seg_type = self._get_segment_type(cdss[0])
 
+        # Change V/C_gene_segment into a its corresponding transcript names
         transcript.type = f"{seg_type}_{transcript.type.replace('_segment', '')}"
         return transcript
-    
-    def get_segment_type(self, feature: SeqFeature) -> str:
+
+    def _get_segment_type(self, feature: SeqFeature) -> str:
+        """Infer if a segment is "IG" (immunoglobulin) of "TR" (t-cell) from the feature attribs.
+
+        Raises: GeneSegmentError if the attribs are missing that information.
+        """
+
         product = feature.qualifiers.get("standard_name", [""])[0]
         if not product:
             product = feature.qualifiers.get("product", [""])[0]
@@ -443,7 +450,6 @@ class GFFSimplifier:
         if re.search(r"\bt[- _]cell\b", product, flags=re.IGNORECASE):
             return "TR"
         raise GeneSegmentError(f"Can't identify segment type for {feature.id}: {product}")
-
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
