@@ -77,9 +77,9 @@ def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
     for row in session.execute(stmt):
         (feat_id, stable_id, desc, xref_name) = row
         feat_struct: FeatStruct = (feat_id, stable_id, desc)
-        feat_data[stable_id] = feat_struct
+        feat_data[stable_id.lower()] = feat_struct
         if xref_name:
-            feat_data[xref_name] = feat_struct
+            feat_data[xref_name.lower()] = feat_struct
 
     return feat_data
 
@@ -149,19 +149,19 @@ def _get_cur_feat(
     Returns None if no match.
     """
     # Match with the ID
-    cur_feat = feat_data.get(new_feat["id"])
+    cur_feat = feat_data.get(new_feat["id"].lower())
 
     # Fall back to a synonym
     if not cur_feat and "synonyms" in new_feat:
         for syn in new_feat["synonyms"]:
-            cur_feat = feat_data.get(syn)
+            cur_feat = feat_data.get(syn.lower())
             if cur_feat:
                 break
 
     # Fall back to an xref
     if not cur_feat and match_xrefs and "xrefs" in new_feat:
         for xref in new_feat["xrefs"]:
-            cur_feat = feat_data.get(xref["id"])
+            cur_feat = feat_data.get(xref["id"].lower())
             if cur_feat:
                 break
 
