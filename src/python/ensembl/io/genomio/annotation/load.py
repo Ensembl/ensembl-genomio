@@ -143,7 +143,7 @@ def load_descriptions(
 
 def _get_cur_feat(
     feat_data: Dict[str, FeatStruct], new_feat: Dict[str, Any], match_xrefs: bool = False
-) -> Union[FeatStruct, None]:
+) -> Optional[FeatStruct]:
     """Match a feature ID, synonyms or xrefs to a core stable ID and return the matching core feature.
 
     Returns None if no match.
