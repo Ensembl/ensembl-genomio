@@ -61,10 +61,10 @@ SeqRegionDict = Dict[str, SeqRegion]
 
 SYNONYM_RESOURCES = ["GenBank", "RefSeq", "INSDC"]
 SYNONYM_MAP = {
-    "Assigned-Molecule": "INSDC",
-    "GenBank-Accn": "GenBank",
-    "RefSeq-Accn": "RefSeq",
-    "Sequence-Name": "INSDC_submitted_name",
+    "Molecule type": "INSDC",
+    "GenBank seq accession": "GenBank",
+    "RefSeq seq accession": "RefSeq",
+    "Sequence name": "INSDC_submitted_name",
 }
 MOLECULE_LOCATION = {
     "apicoplast": "apicoplast_chromosome",
@@ -143,7 +143,7 @@ def add_insdc_seq_region_name(
                 brc_name = names[source_name]
                 break
         else:
-            raise UnknownMetadata(f'Cannot set BRC4 sequence region name for {seqr["name"]}')
+            raise UnknownMetadata(f'Cannot set BRC4 sequence region name for {seqr["Sequence name"]}')
         brc_name = brc_name.partition(".")[0]
         seqr["BRC4_seq_region_name"] = brc_name
         seqr["EBI_seq_region_name"] = seqr["name"]
@@ -215,7 +215,6 @@ def merge_seq_regions(
         seq_regions.append(final_seqr)
     seq_regions.sort(key=lambda x: x["name"])
     return seq_regions
-
 
 def get_gbff_seq_regions(gbff_path: PathLike) -> SeqRegionDict:
     """Returns the sequence regions found in the GBFF file (if any).
