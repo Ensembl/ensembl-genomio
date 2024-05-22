@@ -312,14 +312,22 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
 @pytest.mark.parametrize(
     "gene_desc, transc_desc, transl_desc, out_gene_desc, out_transc_desc",
     [
-        (None, None, None, None, None),
-        ("Foobar", None, None, "Foobar", None),  # Only gene descriptions
-        ("gene A", "transc B", "prod C", "gene A", "transc B"),  # All descriptions set
-        (None, None, "Foobar", "Foobar", "Foobar"),  # Transfer from transl
-        (None, "Foobar", None, "Foobar", "Foobar"),  # Transfer from transc
-        (None, "Foobar", "Lorem", "Foobar", "Foobar"),  # Transfer from transc, transl also set
-        ("Hypothetical gene", "Predicted function", "Foobar", "Foobar", "Foobar"),  # Non informative
-        (None, None, "Unknown product", None, None),  # Non informative source
+        param(None, None, None, None, None),
+        param("Foobar", None, None, "Foobar", None, id="Only gene description"),
+        param("gene A", "transc B", "prod C", "gene A", "transc B", id="All descriptions set"),
+        param(None, None, "Foobar", "Foobar", "Foobar", id="Transfer from transl"),
+        param(None, "Foobar", None, "Foobar", "Foobar", id="Transfer from transc"),
+        param(
+            None,
+            "Foobar, transcript variant X1",
+            None,
+            "Foobar",
+            "Foobar, transcript variant X1",
+            id="transcr with variant",
+        ),
+        param(None, "Foobar", "Lorem", "Foobar", "Foobar", id="Transfer from transc, transl also set"),
+        param("Hypothetical gene", "Predicted function", "Foobar", "Foobar", "Foobar", id="Non informative"),
+        param(None, None, "Unknown product", None, None, id="Non informative source"),
     ],
 )
 @pytest.mark.dependency(depends=["get_features"])

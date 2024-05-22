@@ -230,12 +230,19 @@ class FunctionalAnnotations:
         for child_id, child in children_features.items():
             child_description = child.get("description")
             if child_description is not None:
+                child_description = self._clean_description(child_description)
                 # Check parent
                 parent_id = self.get_parent(parent_type, child_id)
                 parent = parent_features[parent_id]
                 parent_description = parent.get("description")
                 if parent_description is None:
                     parent["description"] = child_description
+
+    @staticmethod
+    def _clean_description(description: str) -> str:
+        variant_re = re.compile(r", transcript variant [A-Z][0-9]+$", re.IGNORECASE)
+        description = re.sub(variant_re, "", description)
+        return description
 
     @staticmethod
     def product_is_informative(product: str, feat_ids: Optional[List[str]] = None) -> bool:
