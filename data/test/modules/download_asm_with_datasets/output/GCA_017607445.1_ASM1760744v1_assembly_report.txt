@@ -1,0 +1,3 @@
+Assembly Accession	Assembly Unplaced Count	Assembly-unit accession	Chromosome name	GC Count	GC Percent	GenBank seq accession	Molecule type	Ordering	RefSeq seq accession	Role	Seq length	Sequence name	UCSC style name	Unlocalized Count
+GCA_017607445.1		Primary Assembly	Un			JAEVHH010000011.1	Chromosome			unplaced-scaffold	60710			
+GCA_017607445.1		non-nuclear	MT	9872		CM029948.1	Mitochondrion			assembled-molecule	41220			

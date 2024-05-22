@@ -27,12 +27,12 @@ process DOWNLOAD_ASM_NCBI_DATSETS {
         tuple val(meta),
             path("*_assembly_report.txt"),
             path("*_genomic.fna.gz"),
-            path("genomic.gbff.gz"),
+            path("*genomic.gbff.gz"),
             emit: min_set
         tuple val(meta),
-            path("genomic.gff.gz"),
-            path("protein.faa.gz"),
-            path("genomic.gbff.gz"),
+            path("*genomic.gff.gz"),
+            path("*protein.faa.gz"),
+            path("*genomic.gbff.gz"),
             emit: opt_set, optional: true
 
     shell:
@@ -58,6 +58,6 @@ process DOWNLOAD_ASM_NCBI_DATSETS {
     stub:
         """
         datasets --help
-        cp $workflow.projectDir/../../../../data/test/modules/download_asm_data/output/* .
+        cp $workflow.projectDir/../../../../data/test/modules/download_asm_with_datasets/output/* .
         """
 }
