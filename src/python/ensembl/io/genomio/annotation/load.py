@@ -16,7 +16,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
@@ -34,8 +34,10 @@ FEAT_TABLE = {
     "transcript": "transcript",
 }
 
+FeatStruct = Tuple[str, str, str]
 
-def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str]]:
+
+def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
     """Returns the table descriptions from a core database.
 
     Args:
@@ -74,7 +76,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, Tuple[str, str, str
     feat_data = {}
     for row in session.execute(stmt):
         (feat_id, stable_id, desc, xref_name) = row
-        feat_struct = (feat_id, stable_id, desc)
+        feat_struct: FeatStruct = (feat_id, stable_id, desc)
         feat_data[stable_id] = feat_struct
         if xref_name:
             feat_data[xref_name] = feat_struct
@@ -139,10 +141,37 @@ def load_descriptions(
                 session.commit()
 
 
+def _get_cur_feat(
+    feat_data: Dict[str, FeatStruct], new_feat: Dict[str, Any], match_xrefs: bool = False
+) -> Union[FeatStruct, None]:
+    """Match a feature ID, synonyms or xrefs to a core stable ID and return the matching core feature.
+
+    Returns None if no match.
+    """
+    # Match with the ID
+    cur_feat = feat_data.get(new_feat["id"])
+
+    # Fall back to a synonym
+    if not cur_feat and "synonyms" in new_feat:
+        for syn in new_feat["synonyms"]:
+            cur_feat = feat_data.get(syn)
+            if cur_feat:
+                break
+
+    # Fall back to an xref
+    if not cur_feat and match_xrefs and "xrefs" in new_feat:
+        for xref in new_feat["xrefs"]:
+            cur_feat = feat_data.get(xref["id"])
+            if cur_feat:
+                break
+
+    return cur_feat
+
+
 def _get_features_to_update(
     table: str,
     feat_func: List[Dict[str, Any]],
-    feat_data: Dict[str, Any],
+    feat_data: Dict[str, FeatStruct],
     stats: Dict[str, int],
     report: bool,
     do_update: bool,
@@ -164,22 +193,13 @@ def _get_features_to_update(
     """
     to_update = []
     for new_feat in feat_func:
-        # Check we can find that feature in the core db
-        cur_feat = None
-        try:
-            cur_feat = feat_data[new_feat["id"]]
-        except KeyError:
-            # Stable ID does not match, but does it match an xref?
-            if match_xrefs and "xrefs" in new_feat:
-                for xref in new_feat["xrefs"]:
-                    try:
-                        cur_feat = feat_data[xref["id"]]
-                    except KeyError:
-                        pass
-            if cur_feat is None:
-                logging.debug(f"Not found: {table} '{new_feat['id']}'")
-                stats["not_found"] += 1
-                continue
+        cur_feat = _get_cur_feat(feat_data, new_feat, match_xrefs)
+
+        # No match in the end
+        if not cur_feat:
+            logging.debug(f"Not found: {table} '{new_feat['id']}'")
+            stats["not_found"] += 1
+            continue
 
         # Prepare some data to compare
         new_stable_id = new_feat["id"]
