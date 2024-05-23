@@ -216,6 +216,7 @@ def merge_seq_regions(
     seq_regions.sort(key=lambda x: x["name"])
     return seq_regions
 
+
 def get_gbff_seq_regions(gbff_path: PathLike) -> SeqRegionDict:
     """Returns the sequence regions found in the GBFF file (if any).
 
