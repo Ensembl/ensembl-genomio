@@ -240,6 +240,7 @@ class FunctionalAnnotations:
 
     @staticmethod
     def _clean_description(description: str) -> str:
+        """Returns the description without "transcript variant" information."""
         variant_re = re.compile(r", transcript variant [A-Z][0-9]+$", re.IGNORECASE)
         description = re.sub(variant_re, "", description)
         return description

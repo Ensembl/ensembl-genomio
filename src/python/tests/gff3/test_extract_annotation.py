@@ -312,7 +312,7 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
 @pytest.mark.parametrize(
     "gene_desc, transc_desc, transl_desc, out_gene_desc, out_transc_desc",
     [
-        param(None, None, None, None, None),
+        param(None, None, None, None, None, id="Nothing provided"),
         param("Foobar", None, None, "Foobar", None, id="Only gene description"),
         param("gene A", "transc B", "prod C", "gene A", "transc B", id="All descriptions set"),
         param(None, None, "Foobar", "Foobar", "Foobar", id="Transfer from transl"),
