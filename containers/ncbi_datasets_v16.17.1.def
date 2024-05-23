@@ -24,8 +24,8 @@ From: ubuntu:24.04
 %labels
     Author lcampbell@ebi.ac.uk
     Software "NCBI's datasets and dataformat"
-    Software.version v16.17.1
-    Software.website "https://github.com/ncbi/datasets/releases/tag/v16.17.1"
+    Software.version v16.17.3
+    Software.website "https://github.com/ncbi/datasets/releases/tag/v16.17.3"
     Description "NCBI Datasets is a new resource that lets you easily gather data from across NCBI databases."
 
 %post
