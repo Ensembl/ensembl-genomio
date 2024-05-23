@@ -38,11 +38,11 @@ process DOWNLOAD_ASM_NCBI_DATSETS {
     shell:
         '''
         datasets download genome accession !{meta.accession} \
-        --include seq-report,genome,gbff,gff3,protein \
-        --assembly-source all \
-        --dehydrated \
-        --filename !{meta.accession}_ncbi.zip \
-        --no-progressbar
+            --include seq-report,genome,gbff,gff3,protein \
+            --assembly-source all \
+            --dehydrated \
+            --filename !{meta.accession}_ncbi.zip \
+            --no-progressbar
 
         unzip !{meta.accession}_ncbi.zip -d !{meta.accession}_ncbi
 
