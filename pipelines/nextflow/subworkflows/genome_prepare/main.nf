@@ -18,7 +18,7 @@
 
 // Import modules/subworkflows
 include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_GENOME } from '../../modules/schema/check_json_schema.nf'
-include { DOWNLOAD_ASM_NCBI_DATSETS } from '../../modules/download/download_asm_with_datasets.nf'
+include { DOWNLOAD_ASM_NCBI_DATASETS } from '../../modules/download/download_asm_with_datasets.nf'
 include { UNPACK_GFF3 } from '../../modules/gff3/unpack_gff3.nf'
 include { PROCESS_GFF3 } from '../../modules/gff3/process_gff3.nf'
 include { GFF3_VALIDATION } from '../../modules/gff3/gff3_validation.nf'
