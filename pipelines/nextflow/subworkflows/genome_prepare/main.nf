@@ -45,9 +45,9 @@ workflow GENOME_PREPARE {
         checked_genome = CHECK_JSON_SCHEMA_GENOME(genomic_dataset).verified_json
 
         // Download genome data files. Files may or may not include gene models (GFF3) and/or peptides.
-        DOWNLOAD_ASM_NCBI_DATSETS(checked_genome)
-        download_min = DOWNLOAD_ASM_NCBI_DATSETS.out.min_set
-        download_opt = DOWNLOAD_ASM_NCBI_DATSETS.out.opt_set
+        DOWNLOAD_ASM_NCBI_DATASETS(checked_genome)
+        download_min = DOWNLOAD_ASM_NCBI_DATASETS.out.min_set
+        download_opt = DOWNLOAD_ASM_NCBI_DATASETS.out.opt_set
 
         // Decompress GFF3 file, output with accession in tuple
         unpacked_gff = UNPACK_GFF3(download_opt, 'gff')
