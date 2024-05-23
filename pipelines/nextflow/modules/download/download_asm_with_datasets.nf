@@ -47,8 +47,8 @@ process DOWNLOAD_ASM_NCBI_DATSETS {
         unzip !{meta.accession}_ncbi.zip -d !{meta.accession}_ncbi
 
         datasets rehydrate --directory !{meta.accession}_ncbi \
-        --gzip \
-        --no-progressbar
+            --gzip \
+            --no-progressbar
 
         cp -f !{meta.accession}_ncbi/ncbi_dataset/data/!{meta.accession}/* ./
 
