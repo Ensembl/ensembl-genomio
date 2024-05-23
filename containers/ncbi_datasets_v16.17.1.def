@@ -41,7 +41,7 @@ From: ubuntu:24.04
     
     #Installing ncbi datasets & dataformat
     cd /usr/local/bin/ && \
-    wget https://github.com/ncbi/datasets/releases/download/v16.17.1/linux-amd64.cli.package.zip && \
+    wget https://github.com/ncbi/datasets/releases/download/v16.17.3/linux-amd64.cli.package.zip && \
     unzip linux-amd64.cli.package.zip && \
     rm linux-amd64.cli.package.zip && \
     chmod +x datasets dataformat && \
