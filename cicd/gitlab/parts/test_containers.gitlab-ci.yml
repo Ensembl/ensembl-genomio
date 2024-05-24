@@ -40,7 +40,7 @@ jobs:
       # Use the official docker image.
       image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:26.1.3
       services:
-        - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:26.1.3-dind
+        name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:26.1.3-dind
         alias: docker
       stage: build
       variables:
