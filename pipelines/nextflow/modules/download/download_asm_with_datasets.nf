@@ -14,7 +14,7 @@
 // limitations under the License.
 
 
-process DOWNLOAD_ASM_NCBI_DATSETS {
+process DOWNLOAD_ASM_NCBI_DATASETS {
     tag "${meta.accession}"
     label 'adaptive'
     label 'cached'
