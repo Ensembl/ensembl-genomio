@@ -29,6 +29,8 @@ variables:
   RUN_DIR: ./cicd/runtime
 
 default:
+  before_script:
+    - docker info
   tags:
     - docker
 
@@ -48,7 +50,8 @@ include:
   - local: cicd/gitlab/parts/license.gitlab-ci.yml
   # Flat file checks
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
-
+  # Container test build
+  - local: cicd/gitlab/parts/test_containers.gitlab-ci.yml
 
 # External pipelines
 # (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
