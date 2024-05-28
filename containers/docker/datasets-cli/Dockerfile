@@ -2,15 +2,15 @@ FROM ubuntu:24.04 AS basebuilder
 
 WORKDIR /usr/local/bin/
 
-RUN apt-get update && apt-get -y upgrade
-    apt-get -y install \
-    wget \
-    unzip \
-    procps \
-    ca-certificates \
-
-    rm -rf /var/lib/apt/lists/*
-    apt-get clean
+RUN apt-get update \
+    && apt-get -y upgrade \
+    && apt-get -y install \
+        wget \
+        unzip \
+        procps \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 
 FROM  ubuntu:24.04
@@ -38,7 +38,7 @@ LABEL mantainer.email="ensembl-metazoa@ebi.ac.uk"
 RUN wget -q ${DATASETS_DOWNLOAD_URL} \
     && linux-amd64.cli.package.zip \
     && rm linux-amd64.cli.package.zip \
-    && chmod +x datasets dataformat
+    && chmod +x datasets dataformat \
     && wget ${JQ_DOWNLOAD_URL} -O jq && \
     && chmod +x jq
 
