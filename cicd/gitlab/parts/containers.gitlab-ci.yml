@@ -30,7 +30,7 @@
 
 variables:
   # DOCKER_IMAGE_NAME: ensembl-genomio-datasets
-  DATASETS_DIR: ./containers/docker/datasets-cli
+  DATASETS_DIR: containers/docker/datasets-cli
   DATASETS_IMAGE: ensembl-genomio-datasets
 
 docker_fresh:
@@ -51,10 +51,10 @@ docker_fresh:
   # All branches are tagged with $DOCKER_IMAGE_NAME (defaults to commit ref slug)
   # Default branch is also tagged with `latest`
   script:
-    - echo "docker build -t $DOCKER_IMAGE_NAME -f ${DATASETS_DIR}/Dockerfile"
+    - echo "docker build -f ${DATASETS_DIR}/Dockerfile -t $DOCKER_IMAGE_NAME ."
     - ls -l "${DATASETS_DIR}/Dockerfile"
     - pwd
-    - docker build -t "$DOCKER_IMAGE_NAME" -f "${DATASETS_DIR}/Dockerfile"
+    - docker build -f ${DATASETS_DIR}/Dockerfile -t $DOCKER_IMAGE_NAME .
     - docker push "$DOCKER_IMAGE_NAME"
     # - |
     #   if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
