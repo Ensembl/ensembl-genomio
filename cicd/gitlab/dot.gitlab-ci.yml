@@ -68,10 +68,10 @@ external:code_quality:
 
 trigger_container:
   stage: build
+  trigger:
+      include:
+        - local: cicd/gitlab/parts/containers.gitlab-ci.yml
   rules:
     - if: $CI_COMMIT_BRANCH =~ /lcampbell\/cicd_containers/.+/
     - changes:
       - 'containers/docker/datasets-cli/Dockerfile'
-  trigger:
-      include:
-        - local: cicd/gitlab/parts/containers.gitlab-ci.yml
