@@ -57,8 +57,3 @@ docker_fresh:
         docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:latest"
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
-  # Run this job in a branch where a Dockerfile exists
-  rules:
-    - exists:
-        - ${DATASETS_DIR}/Dockerfile
-
