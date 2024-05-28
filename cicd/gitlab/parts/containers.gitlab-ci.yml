@@ -50,7 +50,7 @@ docker_fresh:
   # All branches are tagged with $DOCKER_IMAGE_NAME (defaults to commit ref slug)
   # Default branch is also tagged with `latest`
   script:
-    - docker build --pull -t "$DOCKER_IMAGE_NAME" .
+    - docker build --pull -t "$DOCKER_IMAGE_NAME" ${DATASETS_DIR}/Dockerfile
     - docker push "$DOCKER_IMAGE_NAME"
     - |
       if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
@@ -58,8 +58,7 @@ docker_fresh:
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
   # Run this job in a branch where a Dockerfile exists
-  # rules:
-  #   - if: $CI_COMMIT_BRANCH
-  #     exists:
-  #       - ${DATASETS_DIR}/Dockerfile
+  rules:
+    - exists:
+        - ${DATASETS_DIR}/Dockerfile
 
