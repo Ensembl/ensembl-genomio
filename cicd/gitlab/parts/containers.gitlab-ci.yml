@@ -38,6 +38,8 @@ docker_fresh:
   image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:26.1.3
   services:
     - ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:26.1.3-dind
+  tags:
+    - dind
   stage: build
   variables:
     # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -56,8 +58,8 @@ docker_fresh:
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
   # Run this job in a branch where a Dockerfile exists
-  rules:
-    - if: $CI_COMMIT_BRANCH
-      exists:
-        - ${DATASETS_DIR}/Dockerfile
+  # rules:
+  #   - if: $CI_COMMIT_BRANCH
+  #     exists:
+  #       - ${DATASETS_DIR}/Dockerfile
 
