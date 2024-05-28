@@ -23,6 +23,7 @@ workflow:
             $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME =~ /hackathon\/.+/ )
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_BRANCH =~ /hackathon\/.+/
+    - if: $CI_COMMIT_BRANCH == /lcampbell\/cicd_containers/
 
 variables:
   PYTHON_IMAGE: python:3.8
@@ -50,7 +51,8 @@ include:
   - local: cicd/gitlab/parts/license.gitlab-ci.yml
   # Flat file checks
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
-
+  # container
+  - local: cicd/gitlab/parts/containers.gitlab-ci.yml
 # External pipelines
 # (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
 
@@ -66,12 +68,12 @@ external:code_quality:
     include:
       - template: Code-Quality.gitlab-ci.yml
 
-trigger_container:
-  stage: build
-  trigger:
-      include:
-        - local: cicd/gitlab/parts/containers.gitlab-ci.yml
-  rules:
-    - if: $CI_COMMIT_BRANCH == /lcampbell\/cicd_containers/
-    - changes:
-      - 'containers/docker/datasets-cli/Dockerfile'
+# trigger_container:
+#   stage: build
+#   trigger:
+#       include:
+#         - local: cicd/gitlab/parts/containers.gitlab-ci.yml
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == /lcampbell\/cicd_containers/
+#     - changes:
+#       - 'containers/docker/datasets-cli/Dockerfile'
