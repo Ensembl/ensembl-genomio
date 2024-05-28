@@ -30,8 +30,7 @@ on:
         # DOCKER_IMAGE_NAME: ensembl-genomio-datasets
         DATASETS_DIR: ./containers/docker/datasets-cli
         DATASETS_IMAGE: ensembl-genomio-datasets
-      jobs:
-        - job: docker_fresh
+        docker_fresh:
           runs-on: ubuntu:24.04
           # Use the official docker image.
           image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:26.1.3
