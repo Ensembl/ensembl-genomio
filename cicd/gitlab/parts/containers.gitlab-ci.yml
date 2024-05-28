@@ -18,13 +18,13 @@
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
 
 
-name: Docker test
+name: Docker container build test
 on:
   push:
       branches:
         - 'lcampbell/cicd_containers'
       paths:
-        - 'cicd/gitlab/parts/test_containers.gitlab-ci.yml'
+        - 'cicd/gitlab/parts/containers.gitlab-ci.yml'
         - 'containers/docker/datasets-cli/Dockerfile'
       env:
         # DOCKER_IMAGE_NAME: ensembl-genomio-datasets
