@@ -72,6 +72,6 @@ trigger_container:
       include:
         - local: cicd/gitlab/parts/containers.gitlab-ci.yml
   rules:
-  - if: $CI_COMMIT_BRANCH == /lcampbell\/cicd_containers/
+    - if: $CI_COMMIT_BRANCH == /lcampbell\/cicd_containers/
     - changes:
       - 'containers/docker/datasets-cli/Dockerfile'
