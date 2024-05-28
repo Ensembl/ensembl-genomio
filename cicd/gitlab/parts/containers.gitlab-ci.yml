@@ -51,6 +51,7 @@ docker_fresh:
   # All branches are tagged with $DOCKER_IMAGE_NAME (defaults to commit ref slug)
   # Default branch is also tagged with `latest`
   script:
+    - echo "docker build -t $DOCKER_IMAGE_NAME -f ${DATASETS_DIR}/Dockerfile $RUN_DIR/container"
     - docker build -t "$DOCKER_IMAGE_NAME" -f "${DATASETS_DIR}/Dockerfile" "$RUN_DIR/container"
     - docker push "$DOCKER_IMAGE_NAME"
     # - |
