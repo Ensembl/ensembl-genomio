@@ -51,7 +51,7 @@ include:
   # Flat file checks
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
   # Container test build
-  - local: cicd/gitlab/parts/test_containers.gitlab-ci.yml
+  - local: cicd/gitlab/parts/containers.gitlab-ci.yml
 
 # External pipelines
 # (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)

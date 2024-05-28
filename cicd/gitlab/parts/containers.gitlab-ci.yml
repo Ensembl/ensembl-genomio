@@ -1,0 +1,63 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# License-related part of the Ensembl/ensembl-genomio CI/CD pipeline
+
+# A generic job to be used by all License jobs with the "extends" mechanism
+# (https://docs.gitlab.com/ee/ci/yaml/#extends)
+
+
+name: Docker test
+on:
+  push:
+      branches:
+        - 'lcampbell/cicd_containers'
+      paths:
+        - 'cicd/gitlab/parts/test_containers.gitlab-ci.yml'
+        - 'containers/docker/datasets-cli/Dockerfile'
+      env:
+        # DOCKER_IMAGE_NAME: ensembl-genomio-datasets
+        DATASETS_DIR: ./containers/docker/datasets-cli
+        DATASETS_IMAGE: ensembl-genomio-datasets
+      jobs:
+        docker_fresh:
+            runs-on: ubuntu:24.04
+            # Use the official docker image.
+            image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:26.1.3
+            services:
+              name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:26.1.3-dind
+              alias: docker
+            stage: build
+            variables:
+              # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+              DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+            # https://docs.gitlab.com/ee/user/packages/container_registry/authenticate_with_container_registry.html
+            before_script:
+              - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+            # All branches are tagged with $DOCKER_IMAGE_NAME (defaults to commit ref slug)
+            # Default branch is also tagged with `latest`
+            script:
+              - docker build --pull -t "$DOCKER_IMAGE_NAME" .
+              - docker push "$DOCKER_IMAGE_NAME"
+              - |
+                if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
+                  docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:latest"
+                  docker push "$CI_REGISTRY_IMAGE:latest"
+                fi
+            # Run this job in a branch where a Dockerfile exists
+            rules:
+              - if: $CI_COMMIT_BRANCH
+                exists:
+                  - ${DATASETS_DIR}/Dockerfile
+
