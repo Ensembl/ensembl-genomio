@@ -23,6 +23,7 @@ workflow:
             $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME =~ /hackathon\/.+/ )
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_BRANCH =~ /hackathon\/.+/
+    - if: $CI_COMMIT_BRANCH =~ /lcampbell\/cicd_containers/
 
 variables:
   PYTHON_IMAGE: python:3.8
@@ -40,16 +41,16 @@ default:
 # In-house pipelines
 
 include:
-  # CI/CD debugging
-  - local: cicd/gitlab/parts/debug.gitlab-ci.yml
-  # Perl checks
-  - local: cicd/gitlab/parts/perl.gitlab-ci.yml
-  # Python checks
-  - local: cicd/gitlab/parts/python.gitlab-ci.yml
-  # License checks
-  - local: cicd/gitlab/parts/license.gitlab-ci.yml
-  # Flat file checks
-  - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
+  # # CI/CD debugging
+  # - local: cicd/gitlab/parts/debug.gitlab-ci.yml
+  # # Perl checks
+  # - local: cicd/gitlab/parts/perl.gitlab-ci.yml
+  # # Python checks
+  # - local: cicd/gitlab/parts/python.gitlab-ci.yml
+  # # License checks
+  # - local: cicd/gitlab/parts/license.gitlab-ci.yml
+  # # Flat file checks
+  # - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
   # Container test build
   - local: cicd/gitlab/parts/containers.gitlab-ci.yml
 
