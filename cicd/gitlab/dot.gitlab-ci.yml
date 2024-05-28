@@ -66,3 +66,12 @@ external:code_quality:
     include:
       - template: Code-Quality.gitlab-ci.yml
 
+trigger_container:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /lcampbell\/cicd_containers/.+/
+    - changes:
+      - 'containers/docker/datasets-cli/Dockerfile'
+  trigger:
+      include:
+        - local: cicd/gitlab/parts/containers.gitlab-ci.yml
