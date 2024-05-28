@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# License-related part of the Ensembl/ensembl-genomio CI/CD pipeline
+# Flat files-related part of the Ensembl/ensembl-genomio CI/CD pipeline
 
-# A generic job to be used by all License jobs with the "extends" mechanism
+# A generic job to be used by all flat file jobs with the "extends" mechanism
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
 .flatfile:
   stage: test
