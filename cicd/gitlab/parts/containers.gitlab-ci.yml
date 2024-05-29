@@ -18,16 +18,6 @@
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
 
 
-# name: "Docker container build test"
-
-# on:
-#   push:
-#       branches:
-#         - 'lcampbell/cicd_containers'
-#       paths:
-#         - 'cicd/gitlab/parts/containers.gitlab-ci.yml'
-#         - 'containers/docker/datasets-cli/Dockerfile'
-
 variables:
   # DOCKER_IMAGE_NAME: ensembl-genomio-datasets
   DATASETS_DIR: containers/docker/datasets-cli
@@ -46,20 +36,16 @@ docker_fresh:
     # DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
     DOCKER_IMAGE_NAME: datasets-cli-test
     DATASETS_VERSION: 16.7.3
-    # DS_SOFTWARE_URL: "https://api.github.com/repos/ncbi/datasets/releases/latest"
-    # JQ_SOFTWARE_URL: "https://api.github.com/repos/jqlang/jq/releases/latest"
   # https://docs.gitlab.com/ee/user/packages/container_registry/authenticate_with_container_registry.html
-  before_script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  # before_script:
+  #   - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
   # All branches are tagged with $DOCKER_IMAGE_NAME (defaults to commit ref slug)
   # Default branch is also tagged with `latest`
   script:
     # Get the latest version of NCBI's datasets-cli software
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+    - echo "Building "$DOCKER_IMAGE_NAME"
     - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_download_url=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR"
     - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_download_url=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR
+    - docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:$DATASETS_VERSION"
     - docker push "$DOCKER_IMAGE_NAME"
-    # - |
-    #   if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
-    #     docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:latest"
-    #     docker push "$CI_REGISTRY_IMAGE:latest"
-    #   fi
