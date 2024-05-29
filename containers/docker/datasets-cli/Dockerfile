@@ -15,7 +15,7 @@ RUN apt-get update \
         ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    wget -q $datasets_download_url \
+    && wget -q $datasets_download_url \
     && unzip linux-amd64.cli.package.zip \
     && rm linux-amd64.cli.package.zip \
     && chmod +x datasets dataformat \
