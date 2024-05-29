@@ -63,4 +63,3 @@ docker_fresh:
     #     docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:latest"
     #     docker push "$CI_REGISTRY_IMAGE:latest"
     #   fi
---build-arg datasets_version=$DATASETS_RELEASE --build-arg datasets_download_url=$DATASETS_LATEST --build-arg jq_download_url=$JQ_LATEST 
