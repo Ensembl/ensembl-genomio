@@ -54,9 +54,10 @@ docker_fresh:
   # Default branch is also tagged with `latest`
   script:
     # Get the latest version of NCBI's datasets-cli software
-    - DATASETS_LATEST=`head -n 1 ${DATASETS_DIR}/get_datasets_latest.sh`
-    - DATASETS_RELEASE=`head -n 2 ${DATASETS_DIR}/get_datasets_latest.sh | tail -n 2`
-    - JQ_LATEST=`tail -n 1 ${DATASETS_DIR}/get_datasets_latest.sh`
+    - sh ${DATASETS_DIR}/get_datasets_latest.sh
+    - DATASETS_LATEST=`head -n 1 docker_env_vars.tmp`
+    - DATASETS_RELEASE=`head -n 2 docker_env_vars.tmp | tail -n 2`
+    - JQ_LATEST=`tail -n 1 docker_env_vars.tmp`
     - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_RELEASE --build-arg datasets_download_url=$DATASETS_LATEST --build-arg jq_download_url=$JQ_LATEST -t $DOCKER_IMAGE_NAME $DATASETS_DIR"
     - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_RELEASE --build-arg datasets_download_url=$DATASETS_LATEST --build-arg jq_download_url=$JQ_LATEST -t $DOCKER_IMAGE_NAME $DATASETS_DIR
     - docker push "$DOCKER_IMAGE_NAME"
