@@ -23,19 +23,23 @@ variables:
   DATASETS_DIR: containers/docker/datasets-cli
   DATASETS_IMAGE: ensembl-genomio-datasets
 
+  DOCKER_TLS_CERTDIR: ""
+  REGISTRY_USER: vectorbase
+  APPLICATION: ensembl-genomio
+
 docker_fresh:
   stage: build
   # Use the official docker image.
-  image: docker:latest
+  image: docker:datasets-cli-latest
   services:
     - docker:dind
   tags:
     - dind
   variables:
     # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-    # DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
-    DOCKER_IMAGE_NAME: datasets-cli-test
+    DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$DATASETS_IMAGE
     DATASETS_VERSION: "16.7.3"
+    RELEASE_IMAGE: $CI_REGISTRY/$REGISTRY_USER/$APPLICATION:$DOCKER_IMAGE_NAME
   # https://docs.gitlab.com/ee/user/packages/container_registry/authenticate_with_container_registry.html
   # before_script:
   #   - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
@@ -43,10 +47,9 @@ docker_fresh:
   # Default branch is also tagged with `latest`
   script:
     # Get the latest version of NCBI's datasets-cli software
-    - echo "ci_reg_pass:${CI_REGISTRY_PASSWORD} user:${CI_REGISTRY_USER} registry:${CI_REGISTRY}"
-    # - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
-    # - echo "Building $DOCKER_IMAGE_NAME"
-    # - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR"
-    # - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR
-    # - docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:$DATASETS_VERSION"
-    # - docker push "$DOCKER_IMAGE_NAME"
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+    - echo "Building $DOCKER_IMAGE_NAME"
+    - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $RELEASE_IMAGE $DATASETS_DIR"
+    - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $RELEASE_IMAGE $DATASETS_DIR
+    - docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:$DATASETS_VERSION"
+    - docker push "$DOCKER_IMAGE_NAME"
