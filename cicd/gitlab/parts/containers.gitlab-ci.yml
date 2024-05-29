@@ -35,7 +35,7 @@ docker_fresh:
     # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
     # DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
     DOCKER_IMAGE_NAME: datasets-cli-test
-    DATASETS_VERSION: 16.7.3
+    DATASETS_VERSION: "16.7.3"
   # https://docs.gitlab.com/ee/user/packages/container_registry/authenticate_with_container_registry.html
   # before_script:
   #   - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
@@ -44,9 +44,8 @@ docker_fresh:
   script:
     # Get the latest version of NCBI's datasets-cli software
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
-    - cat /root/.docker/config.json
-    # - echo "Building $DOCKER_IMAGE_NAME"
-    # - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_download_url=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR"
-    # - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_download_url=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR
-    # - docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:$DATASETS_VERSION"
-    # - docker push "$DOCKER_IMAGE_NAME"
+    - echo "Building $DOCKER_IMAGE_NAME"
+    - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_download_url=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR"
+    - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_download_url=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR
+    - docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:$DATASETS_VERSION"
+    - docker push "$DOCKER_IMAGE_NAME"
