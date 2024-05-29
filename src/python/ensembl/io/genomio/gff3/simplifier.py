@@ -21,6 +21,7 @@ __all__ = [
     "GFFSimplifier",
 ]
 
+from importlib.resources import files
 import json
 import logging
 from os import PathLike
@@ -31,7 +32,6 @@ from typing import List, Optional, Set
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
-from importlib_resources import files
 
 import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json

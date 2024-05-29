@@ -31,20 +31,20 @@ Example:
 
 __all__ = ["schema_validator"]
 
+from importlib.resources import files
 import json
 from os import PathLike
 from pathlib import Path
 from typing import Union
 
 import jsonschema
-import importlib_resources
 
 from ensembl.utils.argparse import ArgumentParser
 
 
 _JSON_SCHEMAS = {
     x.stem: x
-    for x in importlib_resources.files("ensembl.io.genomio.data.schemas").iterdir()
+    for x in files("ensembl.io.genomio.data.schemas").iterdir()
     if x.suffix == ".json"
 }
 

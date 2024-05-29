@@ -18,13 +18,12 @@ __all__ = [
     "GFFGeneMerger",
 ]
 
+from importlib.resources import files
 import logging
 from os import PathLike
 from pathlib import Path
 import re
 from typing import List
-
-from importlib_resources import files
 
 import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
