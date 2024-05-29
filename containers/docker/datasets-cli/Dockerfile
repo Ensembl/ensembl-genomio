@@ -20,6 +20,7 @@ WORKDIR /usr/local/bin/
 
 ARG datasets_version
 
+LABEL fake_label="test pipeline"
 LABEL base.image="ensembl-genomio-datasets:datasets_version"
 LABEL version="0.1"
 LABEL software="NCBI's datasets and dataformat"
