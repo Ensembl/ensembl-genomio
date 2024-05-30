@@ -26,9 +26,6 @@ variables:
   APPLICATION: ensembl-genomio
   RELEASE_IMAGE: $CI_REGISTRY/$REGISTRY_USER/$APPLICATION:$CI_BUILD_REF_NAME
 
-stages:
-  - docker_fresh
-
 docker_fresh:
   stage: build
   # Use the official docker image.
