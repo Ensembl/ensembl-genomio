@@ -26,10 +26,6 @@ variables:
   APPLICATION: ensembl-genomio
   RELEASE_IMAGE: $CI_REGISTRY/$REGISTRY_USER/$APPLICATION:$CI_BUILD_REF_NAME
 
-before_script:
-  - echo "Starting..."
-  - export DOCKER_IMAGE=$RELEASE_IMAGE
-
 stages:
   - docker_fresh
 
@@ -44,8 +40,12 @@ docker_fresh:
     - dind
 
   variables:
-    DOCKER_IMAGE_NAME: datasets-cli-test
+    # DOCKER_IMAGE_NAME: datasets-cli-test
     DATASETS_VERSION: "16.7.3"
+  
+  before_script:
+  - echo "Starting..."
+  - export DOCKER_IMAGE=$RELEASE_IMAGE
 
   script:
     # Get the latest version of NCBI's datasets-cli software
