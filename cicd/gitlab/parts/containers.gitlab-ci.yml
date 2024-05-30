@@ -44,8 +44,8 @@ docker_fresh:
     DATASETS_VERSION: "16.7.3"
   
   before_script:
-  - echo "Starting..."
-  - export DOCKER_IMAGE=$RELEASE_IMAGE
+    - echo "Starting..."
+    - export DOCKER_IMAGE=$RELEASE_IMAGE
 
   script:
     # Get the latest version of NCBI's datasets-cli software
