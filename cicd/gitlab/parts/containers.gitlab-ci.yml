@@ -23,8 +23,8 @@ variables:
   DATASETS_DIR: containers/docker/datasets-cli
   REGISTRY_USER: vectorbase
   APPLICATION: ensembl-genomio
-  # DOCKER_IMAGE: $CI_REGISTRY/$REGISTRY_USER/$APPLICATION:$DOCKER_IMAGE_NAME
-  DOCKER_IMAGE: $CI_REGISTRY/$CI_REGISTRY_USER/$APPLICATION/$DOCKER_IMAGE_NAME
+  # DOCKER_IMAGE: $CI_REGISTRY/$CI_REGISTRY_USER/$APPLICATION/$DOCKER_IMAGE_NAME
+  DOCKER_IMAGE: $CI_REGISTRY/$REGISTRY_USER/$APPLICATION/$DOCKER_IMAGE_NAME
 
 docker_fresh:
   stage: build
@@ -51,13 +51,3 @@ docker_fresh:
     - echo "Pushing image to registry:"
     - echo "docker push \"$DOCKER_IMAGE:$DATASETS_VERSION\""
     - docker push "$DOCKER_IMAGE:$DATASETS_VERSION"
-    # - echo "Tagging docker image $DOCKER_IMAGE $DOCKER_IMAGE:$DATASETS_VERSION"
-    # - docker tag "$DOCKER_IMAGE" "$DOCKER_IMAGE:$DATASETS_VERSION"
-    # - docker push "$DOCKER_IMAGE:$DATASETS_VERSION"
-    
-    # OLD:
-    # - echo "Building $DOCKER_IMAGE_NAME"
-    # - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR"
-    # - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR
-    # - docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:$DATASETS_VERSION"
-    # - docker push "$DOCKER_IMAGE_NAME"
