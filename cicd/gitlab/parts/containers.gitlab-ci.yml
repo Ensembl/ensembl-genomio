@@ -19,12 +19,11 @@
 
 
 variables:
-  # DOCKER_IMAGE_NAME: ensembl-genomio-datasets
-  # DATASETS_IMAGE: ensembl-genomio-datasets
+  DOCKER_IMAGE_NAME: ensembl-genomio-datasets
   DATASETS_DIR: containers/docker/datasets-cli
   REGISTRY_USER: vectorbase
   APPLICATION: ensembl-genomio
-  RELEASE_IMAGE: $CI_REGISTRY/$REGISTRY_USER/$APPLICATION:$CI_BUILD_REF_NAME
+  DOCKER_IMAGE: $CI_REGISTRY/$REGISTRY_USER/$APPLICATION:$DOCKER_IMAGE_NAME
 
 docker_fresh:
   stage: build
@@ -37,13 +36,8 @@ docker_fresh:
     - dind
 
   variables:
-    # DOCKER_IMAGE_NAME: datasets-cli-test
     DATASETS_VERSION: "16.7.3"
   
-  before_script:
-    - echo "Starting..."
-    - export DOCKER_IMAGE=$RELEASE_IMAGE
-
   script:
     # Get the latest version of NCBI's datasets-cli software
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
