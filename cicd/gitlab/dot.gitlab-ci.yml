@@ -26,7 +26,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH == /lcampbell/datasets_docker_cicd/
 
 variables:
-  PYTHON_IMAGE: python:3.9
+  PYTHON_IMAGE: python:3.8
   RUN_DIR: ./cicd/runtime
 
 default:
