@@ -23,12 +23,15 @@ workflow:
             $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME =~ /hackathon\/.+/ )
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_BRANCH =~ /hackathon\/.+/
+    - if: $CI_COMMIT_BRANCH == /lcampbell/datasets_docker_cicd/
 
 variables:
-  PYTHON_IMAGE: python:3.8
+  PYTHON_IMAGE: python:3.9
   RUN_DIR: ./cicd/runtime
 
 default:
+  before_script:
+    - docker info
   tags:
     - docker
 
@@ -48,8 +51,8 @@ include:
   - local: cicd/gitlab/parts/license.gitlab-ci.yml
   # Flat file checks
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
-
-
+  # Datasets container build
+  - local: cicd/gitlab/parts/build-datasets-docker.gitlab-ci.yml
 # External pipelines
 # (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
 
@@ -64,4 +67,3 @@ external:code_quality:
       yaml_variables: false
     include:
       - template: Code-Quality.gitlab-ci.yml
-
