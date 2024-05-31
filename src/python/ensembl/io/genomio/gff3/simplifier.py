@@ -21,7 +21,7 @@ __all__ = [
     "GFFSimplifier",
 ]
 
-from importlib.resources import files
+from importlib.resources import as_file, files
 import json
 import logging
 from os import PathLike
@@ -99,8 +99,9 @@ class GFFSimplifier:
         self.allow_pseudogene_with_cds = allow_pseudogene_with_cds
 
         # Load biotypes
-        biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
-        self._biotypes = get_json(biotypes_json)
+        source = files(ensembl.io.genomio.data.gff3).joinpath("biotypes.json")
+        with as_file(source) as biotypes_json:
+            self._biotypes = get_json(biotypes_json)
 
         # Load genome metadata
         self.genome = {}

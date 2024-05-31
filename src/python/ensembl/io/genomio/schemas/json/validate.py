@@ -32,7 +32,7 @@ Examples:
 
 __all__ = ["schema_validator"]
 
-from importlib.resources import files
+from importlib.resources import as_file, files
 import json
 from os import PathLike
 from pathlib import Path
@@ -43,11 +43,11 @@ import jsonschema
 from ensembl.utils.argparse import ArgumentParser
 
 
-_JSON_SCHEMAS = {
-    x.stem: x
-    for x in files("ensembl.io.genomio.data.schemas").iterdir()
-    if x.suffix == ".json"
-}
+_JSON_SCHEMAS = {}
+for schema_file in files("ensembl.io.genomio.data.schemas").iterdir():
+    with as_file(schema_file) as file_path:
+        if file_path.suffix == ".json":
+            _JSON_SCHEMAS[file_path.stem] = file_path
 
 
 def schema_validator(json_file: PathLike, json_schema: Union[str, PathLike]) -> None:
