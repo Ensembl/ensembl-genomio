@@ -14,7 +14,8 @@
 # limitations under the License.
 """Validates a JSON file with the provided JSON schema.
 
-Example:
+Examples:
+
     >>> from ensembl.io.genomio.schemas import json
     >>> json.schema_validator(json_file="functional_annotation.json", json_schema="functional_annotation")
     >>> json.schema_validator(json_file="functional_annotation.json", json_schema="genome")
