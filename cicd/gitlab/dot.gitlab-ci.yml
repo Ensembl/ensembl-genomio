@@ -25,7 +25,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH =~ /hackathon\/.+/
 
 variables:
-  PYTHON_IMAGE: python:3.8
+  PYTHON_IMAGE: python:3.9
   RUN_DIR: ./cicd/runtime
 
 default:
