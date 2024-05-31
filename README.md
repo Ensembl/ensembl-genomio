@@ -12,7 +12,13 @@ Bundles themselves consist of genomic data in various formats (e.g. fasta, gff3,
 
 
 ## Installation and configuration
-This repo 
+This repository can be easily installed by running the following:
+
+```bash
+git clone https://github.com/Ensembl/ensembl-genomio.git
+cd ensembl-genomio
+pip install -e .
+```
 
 ### Prerequisites
 Pipelines are intended to be run inside the Ensembl production environment.
@@ -56,7 +62,7 @@ For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](.
 ### Additional steps to use automated generation of the documentation
 - Install python part with the `[docs]` tag
 - Change into repo dir
-- Run dos build script
+- Run `mkdocs build` command
 
 ```
 git clone git@github.com:Ensembl/ensembl-genomio.git
