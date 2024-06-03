@@ -21,8 +21,11 @@ workflow:
           $CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY == $CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY &&
           ( $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH ||
             $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME =~ /hackathon\/.+/ )
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_BRANCH =~ /hackathon\/.+/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "push" &&
+          ( $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH !~ /hackathon\/.+/ )
+      when: never
+    - when: always
 
 variables:
   PYTHON_IMAGE: python:3.9
