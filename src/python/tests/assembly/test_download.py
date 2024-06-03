@@ -398,7 +398,6 @@ def test_get_files_selection(
     ],
 )
 @patch("ensembl.io.genomio.assembly.download.FTP", autospec=True)
-@patch("os.mkdir")
 @patch("ensembl.io.genomio.assembly.download.get_files_selection")
 @patch("ensembl.io.genomio.assembly.download.download_files")
 @patch("ensembl.io.genomio.assembly.download._download_file")
@@ -408,7 +407,6 @@ def test_retrieve_assembly_data(
     mock_download_singlefile: Mock,
     mock_download_files: Mock,
     mock_file_select: Mock,
-    mock_os: MagicMock,
     mock_ftp: Mock,
     data_dir: Path,
     accession: str,
@@ -427,32 +425,21 @@ def test_retrieve_assembly_data(
         expectation: Context manager expected raise exception
     """
 
-    if is_dir is False:
-        download_dir = Path(data_dir / str("test_ftp_file.txt"))
-    else:
+    if is_dir:
         download_dir = data_dir
+    else:
+        download_dir = data_dir / "test_ftp_file.txt"
 
     def side_eff_conn(url: str):
         if not url:
             raise FileDownloadError()
 
     mock_ftp.connect.side_effect = side_eff_conn
-
-    def mock_mkdir(command: str):
-        logging.info(f"Faking the creation of directory {command} on path {download_dir}")
-        try:
-            return download_dir
-        except OSError as err:
-            raise FileExistsError from err
-
-    mock_os.mkdir.side_effect = mock_mkdir
     mock_file_select.return_value = files_downloaded
     mock_retrieve.return_value = md5_return
 
     with exception:
         retrieve_assembly_data(accession, download_dir, 2)
-        assert mock_os.mkdir.called_with(download_dir)
-        assert mock_os.md5_files.called_once_with("md5checksums.txt")
         assert mock_download_files.download_files.called_once()
         assert mock_download_singlefile._download_file.called_once()  # pylint: disable=protected-access
         assert mock_file_select.get_files_selection.called_with(files_downloaded)

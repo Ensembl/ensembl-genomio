@@ -298,8 +298,7 @@ def retrieve_assembly_data(
     download_dir = Path(download_dir)
 
     # Set and create dedicated dir for download
-    if not download_dir.is_dir():
-        download_dir.mkdir(parents=True)
+    download_dir.mkdir(parents=True, exist_ok=True)
 
     # Download if files don't exist or fail checksum
     if not md5_files(download_dir, None):
