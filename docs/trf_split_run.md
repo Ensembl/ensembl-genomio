@@ -1,7 +1,7 @@
-# [trf_split_run.bash](scripts/trf_split_run.bash)
+# [trf_split_run.bash](https://github.com/Ensembl/ensembl-genomio/blob/main/scripts/trf_split_run.bash)
 
 A trf wrapper with chunking support to be used with
-[ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [docs](docs/trf_split_run.md))
+[ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm)
 Compatible compatible with input/output format of trf invocation from [Bio::EnsEMBL::Analysis::Runnable::TRF](https://github.com/Ensembl/ensembl-analysis/blob/main/modules/Bio/EnsEMBL/Analysis/Runnable/TRF.pm).
 And can be used as a hack to allow TRF stage to be accomplished at the cost of splitting
  long repeat into several adjacent ones  (with possible losses).
@@ -14,7 +14,7 @@ python -c 'from Bio import SeqIO' || echo "no biopython" >> /dev/stderr
 ```
 
 ## Options
-Use environment variable to control scipt run
+Use environment variable to control script run
 * `DNA_FEATURES_TRF_SPLIT_NO_SPLITTING` -- set to `YES` to skip splitting stage
 * `DNA_FEATURES_TRF_SPLIT_NO_TRF` -- set to `YES` to skip trf stage
 * `DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE` -- chunk size [`1_000_000`]
