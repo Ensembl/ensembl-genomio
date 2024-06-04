@@ -33,9 +33,6 @@ theme:
     code: IBM Plex Mono
   features:
       - content.tooltips
-      - navigation.expand
-      - navigation.tabs
-      - navigation.tabs.sticky
       - navigation.top
       - search.highlight
       - search.suggest
