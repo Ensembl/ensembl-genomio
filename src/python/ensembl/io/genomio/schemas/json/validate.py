@@ -24,7 +24,7 @@ Examples:
       File "ensembl-genomio/src/python/ensembl/io/genomio/schemas/json/validate.py", line 63,
       in schema_validator
         jsonschema.validate(instance=content, schema=schema)
-      File ".venv/dev/lib/python3.9/site-packages/jsonschema/validators.py", line 1306, in validate
+      File ".venv/dev/lib/python3.10/site-packages/jsonschema/validators.py", line 1306, in validate
         raise error
     <list of all the elements from functional_annotation.json that failed validation>
 

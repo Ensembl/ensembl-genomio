@@ -28,7 +28,7 @@ workflow:
     - when: always
 
 variables:
-  PYTHON_IMAGE: python:3.9
+  PYTHON_IMAGE: python:3.10
   RUN_DIR: ./cicd/runtime
 
 default:

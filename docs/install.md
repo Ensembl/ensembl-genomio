@@ -16,7 +16,7 @@ An Ensembl API checkout including:
 Software
 --------------
 
-- Python 3.9+
+- Python 3.10+
 - Perl 5.26
 - Bioperl 1.6.9+
 
