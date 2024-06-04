@@ -12,6 +12,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Genome Input/Output (GenomIO) handling library."""
-
-__version__ = "0.1.0"
+"""GFF3-related data files."""

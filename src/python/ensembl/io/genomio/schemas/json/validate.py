@@ -14,7 +14,8 @@
 # limitations under the License.
 """Validates a JSON file with the provided JSON schema.
 
-Example:
+Examples:
+
     >>> from ensembl.io.genomio.schemas import json
     >>> json.schema_validator(json_file="functional_annotation.json", json_schema="functional_annotation")
     >>> json.schema_validator(json_file="functional_annotation.json", json_schema="genome")
@@ -23,7 +24,7 @@ Example:
       File "ensembl-genomio/src/python/ensembl/io/genomio/schemas/json/validate.py", line 63,
       in schema_validator
         jsonschema.validate(instance=content, schema=schema)
-      File ".venv/dev/lib/python3.8/site-packages/jsonschema/validators.py", line 1306, in validate
+      File ".venv/dev/lib/python3.10/site-packages/jsonschema/validators.py", line 1306, in validate
         raise error
     <list of all the elements from functional_annotation.json that failed validation>
 
@@ -31,22 +32,22 @@ Example:
 
 __all__ = ["schema_validator"]
 
+from importlib.resources import as_file, files
 import json
 from os import PathLike
 from pathlib import Path
 from typing import Union
 
 import jsonschema
-import importlib_resources
 
 from ensembl.utils.argparse import ArgumentParser
 
 
-_JSON_SCHEMAS = {
-    x.stem: x
-    for x in importlib_resources.files("ensembl.io.genomio.data.schemas").iterdir()
-    if x.suffix == ".json"
-}
+_JSON_SCHEMAS = {}
+for schema_file in files("ensembl.io.genomio.data.schemas").iterdir():
+    with as_file(schema_file) as file_path:
+        if file_path.suffix == ".json":
+            _JSON_SCHEMAS[file_path.stem] = file_path
 
 
 def schema_validator(json_file: PathLike, json_schema: Union[str, PathLike]) -> None:

@@ -12,7 +12,13 @@ Bundles themselves consist of genomic data in various formats (e.g. fasta, gff3,
 
 
 ## Installation and configuration
-This repo 
+This repository can be easily installed by running the following:
+
+```bash
+git clone https://github.com/Ensembl/ensembl-genomio.git
+cd ensembl-genomio
+pip install -e .
+```
 
 ### Prerequisites
 Pipelines are intended to be run inside the Ensembl production environment.
@@ -45,30 +51,27 @@ If you need to install "editable" python package use '-e' option
 pip install -e ./ensembl-genomio
 ```
 
-To install additional dependencies (e.g. `[doc]` or `[cicd]`) provide `[<tag>]` string. I.e.
+To install additional dependencies (e.g. `[docs]` or `[cicd]`) provide `[<tag>]` string. I.e.
 ```
-pip install -e ./ensembl-genomio[doc]
+pip install -e ./ensembl-genomio[cicd]
 ```
 
 For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](./pyproject.toml). 
 
 
-### Additional steps to use automated generation of the documentation (part of it)
-Install python part with the `[doc]` tag.
-Change into repo dir
-Run doc build script.
+### Additional steps to use automated generation of the documentation
+- Install python part with the `[docs]` tag
+- Change into repo dir
+- Run `mkdocs build` command
 
 ```
-git clone git@github.com:Ensembl/ensembl-genomio.git 
-pip install -e ./ensembl-genomio[doc]
-
+git clone git@github.com:Ensembl/ensembl-genomio.git
 cd ./ensembl-genomio
-
-# build docs
-./scripts/setup/docs/build_sphinx_docs.sh
+pip install -e .[docs]
+mkdocs build
 ```
 
-###  Nexflow installation
+###  Nextflow installation
 Please, refer to the "Installation" section of the [Nextflow pipelines document](docs/nextflow.md#installation).
 
 ## Pipelines
@@ -131,11 +134,11 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 
 ### Scripts
 
-* [trf_split_run.bash](scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [doc](docs/trf_split_run.md))
+* [trf_split_run.bash](scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [docs](docs/trf_split_run.md))
 
 ## CI/CD bits
 As for now some [Gitlab CI](https://docs.gitlab.com/ee/ci/) pipelines introduced to keep things in shape.
-Though, this bit is in constant development. Some documentatin can be found in [docs for GitLab CI/CD](docs/cicd_gitlab.md)
+Though, this bit is in constant development. Some documentation can be found in [docs for GitLab CI/CD](docs/cicd_gitlab.md)
 
 ## Various docs
 See [docs](docs)
@@ -159,9 +162,3 @@ Some of this code and documentation is inherited from the [EnsemblGenomes](https
 We appreciate the effort and time spent by developers of the [EnsemblGenomes](https://github.com/EnsemblGenomes) and [Ensembl](https://github.com/Ensembl) projects. 
 
 Thank you!
-
-
-
-
-
-
