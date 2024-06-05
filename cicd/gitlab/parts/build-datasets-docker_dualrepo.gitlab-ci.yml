@@ -1,0 +1,89 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# License-related part of the Ensembl/ensembl-genomio CI/CD pipeline
+
+# A generic job to be used by all License jobs with the "extends" mechanism
+# (https://docs.gitlab.com/ee/ci/yaml/#extends)
+
+
+variables:
+  # https://docs.gitlab.com/ee/user/namespace/  
+  DOCKER_IMAGE_NAME: ensembl-genomio-datasets
+  DATASETS_DIR: containers/docker/datasets-cli
+  GITLAB_REG: ensembl-genomio
+  DOCKERHUB_REG: ensemblorg
+  GITLAB_DOCKER_IMAGE: $GITLAB_REG/$DOCKER_IMAGE_NAME
+  DHUB_DOCKER_IMAGE: $DOCKERHUB_REG/$DOCKER_IMAGE_NAME
+  DHUB_REG_URL: registry.hub.docker.com
+  
+
+.dind_datasets_build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  # only:
+  #   changes:
+  #     - containers/docker/datasets-cli/Dockerfile
+  #     - cicd/gitlab/parts/build-datasets-docker_dualrepo.gitlab-ci.yml
+
+  tags:
+    - dind
+
+  variables:
+    DATASETS_VERSION: "16.18.1"
+  
+  script:
+    # Get the latest version of NCBI's datasets-cli software
+    # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html    
+    - echo "Building $DOCKER_IMAGE_NAME"
+    - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR"
+    - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR
+    
+datasets_gitlab:
+  extends: .dind_datasets_build
+  artifacts:
+    paths:
+      - $DATASETS_DIR
+    
+  script:
+  - echo -e -n "Logging into Gitlab container registry:\n$CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY\n"
+  - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  
+  - echo "Tagging GitLab Docker image"
+  - echo "docker tag $DOCKER_IMAGE_NAME $GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker tag $DOCKER_IMAGE_NAME $GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
+  
+  - echo "Pushing image to gitlab registry:"
+  - echo "docker push \"$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION\""
+  - docker push "$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+
+datasets_dockerhub:
+  extends: .dind_datasets_build
+  artifacts:
+    paths:
+      - $DATASETS_DIR
+    
+  script:
+  - echo "Logging into Dockerhub registry:"
+  - echo $ENSEMBL_DOCKERHUB_AUTH | docker login -u jalvarezjarreta --password-stdin $DHUB_REG_URL
+  
+  - echo "Tagging dockerhub Docker image"
+  - echo "docker tag $DOCKER_IMAGE_NAME \"$DHUB_DOCKER_IMAGE:$DATASETS_VERSION\""
+  - docker tag $DOCKER_IMAGE_NAME "$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  
+  - echo "Pushing image to dockerhub registry:"
+  - echo "docker push \"$DHUB_DOCKER_IMAGE:$DATASETS_VERSION\""
+  - docker push "$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
