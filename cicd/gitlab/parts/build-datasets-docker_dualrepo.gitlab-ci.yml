@@ -21,13 +21,15 @@
 variables:
   # https://docs.gitlab.com/ee/user/namespace/  
   DOCKER_IMAGE_NAME: ensembl-genomio-datasets
+  DATASETS_VERSION: "16.18.1"
   DATASETS_DIR: containers/docker/datasets-cli
+  REGISTRY_USER: vectorbase
   GITLAB_REG: ensembl-genomio
+  GITLAB_DOCKER_IMAGE: $REGISTRY_USER/$GITLAB_REG/$DOCKER_IMAGE_NAME
+  
   DOCKERHUB_REG: ensemblorg
-  GITLAB_DOCKER_IMAGE: $GITLAB_REG/$DOCKER_IMAGE_NAME
   DHUB_DOCKER_IMAGE: $DOCKERHUB_REG/$DOCKER_IMAGE_NAME
   DHUB_REG_URL: registry.hub.docker.com
-  DATASETS_VERSION: "16.18.1"
 
 datasets_docker_build:
   stage: build
