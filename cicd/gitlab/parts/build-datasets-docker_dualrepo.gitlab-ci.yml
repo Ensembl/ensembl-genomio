@@ -27,8 +27,8 @@ variables:
   GITLAB_REG: ensembl-genomio
   GITLAB_DOCKER_IMAGE: $REGISTRY_USER/$GITLAB_REG/$DOCKER_IMAGE_NAME
   
-  DOCKERHUB_REG: ensemblorg
-  DHUB_DOCKER_IMAGE: $DOCKERHUB_REG/$DOCKER_IMAGE_NAME
+  
+  DHUB_DOCKER_IMAGE: ensemblorg/$DOCKER_IMAGE_NAME
   DHUB_REG_URL: registry.hub.docker.com
 
 datasets_docker_build:
@@ -80,9 +80,9 @@ datasets_dockerhub:
   - echo $ENSEMBL_DOCKERHUB_AUTH | docker login -u jalvarezjarreta --password-stdin $DHUB_REG_URL
   
   - echo "Tagging dockerhub Docker image"
-  - echo "CMD=docker tag $DOCKER_IMAGE_NAME $DHUB_REG_URL/r/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker tag $DOCKER_IMAGE_NAME $DHUB_REG_URL/r/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION
+  - echo "CMD=docker tag $DOCKER_IMAGE_NAME $DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker tag $DOCKER_IMAGE_NAME $DHUB_DOCKER_IMAGE:$DATASETS_VERSION
   
   - echo "Pushing image to dockerhub registry:"
-  - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker push "$DHUB_REG_URL/r/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - echo "CMD=docker push $DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker push "$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
