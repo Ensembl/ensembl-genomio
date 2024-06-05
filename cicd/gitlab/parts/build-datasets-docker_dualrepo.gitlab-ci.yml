@@ -60,8 +60,8 @@ datasets_gitlab:
   - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   
   - echo "Tagging GitLab Docker image"
-  - echo "docker tag $DOCKER_IMAGE_NAME $GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker tag $DOCKER_IMAGE_NAME $GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
+  - echo "docker tag $DOCKER_IMAGE_NAME $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker tag $DOCKER_IMAGE_NAME $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
   
   - echo "Pushing image to gitlab registry:"
   - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
@@ -78,8 +78,8 @@ datasets_dockerhub:
   - echo $ENSEMBL_DOCKERHUB_AUTH | docker login -u jalvarezjarreta --password-stdin $DHUB_REG_URL
   
   - echo "Tagging dockerhub Docker image"
-  - echo "CMD=docker tag $DOCKER_IMAGE_NAME \"$DHUB_DOCKER_IMAGE:$DATASETS_VERSION\""
-  - docker tag $DOCKER_IMAGE_NAME "$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - echo "CMD=docker tag $DOCKER_IMAGE_NAME $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker tag $DOCKER_IMAGE_NAME $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION
   
   - echo "Pushing image to dockerhub registry:"
   - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
