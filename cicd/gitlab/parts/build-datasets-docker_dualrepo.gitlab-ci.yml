@@ -28,7 +28,7 @@ variables:
   GITLAB_DOCKER_IMAGE: $REGISTRY_USER/$GITLAB_REG/$DOCKER_IMAGE_NAME
   
   DOCKERHUB_REG: ensemblorg/datasets-cli
-  DHUB_DOCKER_IMAGE: $DOCKERHUB_REG/$DOCKER_IMAGE_NAME
+  DHUB_DOCKER_IMAGE: $DOCKERHUB_REG
   DHUB_REG_URL: registry.hub.docker.com
 
 datasets_docker_build:
