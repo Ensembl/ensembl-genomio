@@ -51,23 +51,23 @@ datasets_docker_build:
     - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR"
     - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR
     
-datasets_gitlab:
-  extends: datasets_docker_build
-  artifacts:
-    paths:
-      - $DATASETS_DIR
+# datasets_gitlab:
+#   extends: datasets_docker_build
+#   artifacts:
+#     paths:
+#       - $DATASETS_DIR
     
-  script:
-  - echo -e -n "Logging into Gitlab container registry:\n$CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY\n"
-  - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+#   script:
+#   - echo -e -n "Logging into Gitlab container registry:\n$CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY\n"
+#   - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   
-  - echo "Tagging GitLab Docker image"
-  - echo "docker tag $DOCKER_IMAGE_NAME $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker tag $DOCKER_IMAGE_NAME $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
+#   - echo "Tagging GitLab Docker image"
+#   - echo "docker tag $DOCKER_IMAGE_NAME $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+#   - docker tag $DOCKER_IMAGE_NAME $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
   
-  - echo "Pushing image to gitlab registry:"
-  - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+#   - echo "Pushing image to gitlab registry:"
+#   - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+#   - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
 
 datasets_dockerhub:
   extends: datasets_docker_build
@@ -85,4 +85,4 @@ datasets_dockerhub:
   
   - echo "Pushing image to dockerhub registry:"
   - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker push "$DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker push "$DHUB_REG_URL/r/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
