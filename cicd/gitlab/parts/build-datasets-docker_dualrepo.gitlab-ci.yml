@@ -27,9 +27,9 @@ variables:
   GITLAB_DOCKER_IMAGE: $GITLAB_REG/$DOCKER_IMAGE_NAME
   DHUB_DOCKER_IMAGE: $DOCKERHUB_REG/$DOCKER_IMAGE_NAME
   DHUB_REG_URL: registry.hub.docker.com
-  
+  DATASETS_VERSION: "16.18.1"
 
-.dind_datasets_build:
+datasets_docker_build:
   stage: build
   image: docker:latest
   services:
@@ -41,9 +41,6 @@ variables:
 
   tags:
     - dind
-
-  variables:
-    DATASETS_VERSION: "16.18.1"
   
   script:
     # Get the latest version of NCBI's datasets-cli software
@@ -53,7 +50,7 @@ variables:
     - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $DOCKER_IMAGE_NAME $DATASETS_DIR
     
 datasets_gitlab:
-  extends: .dind_datasets_build
+  extends: datasets_docker_build
   artifacts:
     paths:
       - $DATASETS_DIR
@@ -71,7 +68,7 @@ datasets_gitlab:
   - docker push "$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
 
 datasets_dockerhub:
-  extends: .dind_datasets_build
+  extends: datasets_docker_build
   artifacts:
     paths:
       - $DATASETS_DIR
