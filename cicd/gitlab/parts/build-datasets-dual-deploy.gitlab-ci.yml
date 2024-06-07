@@ -21,20 +21,23 @@
 variables:
   # https://docs.gitlab.com/ee/user/namespace/  
   CONTAINER_IMAGE_NAME: datasets-cli
-  DATASETS_VERSION: "16.18.1"
+  DATASETS_VERSION: "16.20.0"
   DATASETS_DIR: containers/docker/datasets-cli
   
-  #GITLAB:
+  # GITLAB:
   GITLAB_PROJECT: vectorbase
   GITLAB_REPO: ensembl-genomio
   GITLAB_DOCKER_IMAGE: $GITLAB_PROJECT/$GITLAB_REPO/$CONTAINER_IMAGE_NAME
   
-  #DOCKERHUB:
+  # DOCKERHUB:
   DOCKERHUB_PROJECT: ensemblorg
   DHUB_DOCKER_IMAGE: $DOCKERHUB_PROJECT/$CONTAINER_IMAGE_NAME
   DHUB_REG_URL: registry.hub.docker.com
 
 datasets_docker_build:
+  only:
+    variables:
+      - $DATASETS_CLI_SCHEDULER
   stage: build
   image: docker:latest
   services:
@@ -42,10 +45,6 @@ datasets_docker_build:
 
   tags:
     - dind
-
-  # only:
-  #   variables:
-  #     - $AUTO_DOCKER_DATASETS == 'ACTIVE'
   
   script:
     # Get the latest version of NCBI's datasets-cli software
