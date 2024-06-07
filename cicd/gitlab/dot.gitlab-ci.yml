@@ -24,6 +24,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_BRANCH =~ /hackathon\/.+/
     - if: $CI_COMMIT_BRANCH == /lcampbell\/datasets_docker_cicd/
+    - if: $CI_PIPELINE_SOURCE == "schedule"
 
 variables:
   PYTHON_IMAGE: python:3.10
@@ -49,12 +50,13 @@ include:
   - local: cicd/gitlab/parts/python.gitlab-ci.yml
   # License checks
   - local: cicd/gitlab/parts/license.gitlab-ci.yml
+    rules:
+      - if: $CI_PIPELINE_SOURCE == "schedule"
+        when: never
   # Flat file checks
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
   # # Datasets container build
   - local: cicd/gitlab/parts/build-datasets-dual-deploy.gitlab-ci.yml
-    rules:
-      - if: $CI_PIPELINE_SOURCE == "schedule"
       # - changes:
       #   - containers/docker/datasets-cli/Dockerfile
       #   - cicd/gitlab/parts/build-datasets-dual-deploy.gitlab-ci.yml
