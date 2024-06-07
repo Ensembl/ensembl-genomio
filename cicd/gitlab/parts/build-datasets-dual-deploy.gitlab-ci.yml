@@ -39,12 +39,13 @@ datasets_docker_build:
   image: docker:latest
   services:
     - docker:dind
+
   tags:
     - dind
 
   only:
     variables:
-      - $AUTO_DOCKER_DATASETS
+      - $AUTO_DOCKER_DATASETS == 'ACTIVE'
   
   script:
     # Get the latest version of NCBI's datasets-cli software
