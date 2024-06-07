@@ -39,13 +39,12 @@ datasets_docker_build:
   image: docker:latest
   services:
     - docker:dind
-  # only:
-  #   changes:
-  #     - containers/docker/datasets-cli/Dockerfile
-  #     - cicd/gitlab/parts/build-datasets-docker_dualrepo.gitlab-ci.yml
-
   tags:
     - dind
+
+  only:
+    variables:
+      - $AUTO_DOCKER_DATASETS
   
   script:
     # Get the latest version of NCBI's datasets-cli software

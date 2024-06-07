@@ -43,16 +43,41 @@ default:
 include:
   # CI/CD debugging
   - local: cicd/gitlab/parts/debug.gitlab-ci.yml
+    rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
   # Perl checks
   - local: cicd/gitlab/parts/perl.gitlab-ci.yml
+    rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
   # Python checks
   - local: cicd/gitlab/parts/python.gitlab-ci.yml
+    rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
   # License checks
   - local: cicd/gitlab/parts/license.gitlab-ci.yml
+    rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
   # Flat file checks
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
+    rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
   # Datasets container build
   - local: cicd/gitlab/parts/build-datasets-dual-deploy.gitlab-ci.yml
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "schedule"'
+        when: always
+      - changes:
+        - containers/docker/datasets-cli/Dockerfile
+        - cicd/gitlab/parts/build-datasets-dual-deploy.gitlab-ci.yml
+      # - if: $CI_COMMIT_BRANCH == /lcampbell\/datasets_docker_cicd/
+      #   when: always
+
+      
 # External pipelines
 # (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
 
