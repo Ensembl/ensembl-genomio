@@ -71,9 +71,9 @@ include:
     rules:
       - if: $CI_PIPELINE_SOURCE == "schedule"
         when: always
-      - changes:
-        - containers/docker/datasets-cli/Dockerfile
-        - cicd/gitlab/parts/build-datasets-dual-deploy.gitlab-ci.yml
+      # - changes:
+      #   - containers/docker/datasets-cli/Dockerfile
+      #   - cicd/gitlab/parts/build-datasets-dual-deploy.gitlab-ci.yml
       # - if: $CI_COMMIT_BRANCH == /lcampbell\/datasets_docker_cicd/
       #   when: always
 
