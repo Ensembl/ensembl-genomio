@@ -69,7 +69,7 @@ include:
   # Datasets container build
   - local: cicd/gitlab/parts/build-datasets-dual-deploy.gitlab-ci.yml
     rules:
-      - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      - if: $CI_PIPELINE_SOURCE == "schedule"
         when: always
       - changes:
         - containers/docker/datasets-cli/Dockerfile
