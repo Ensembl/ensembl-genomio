@@ -43,9 +43,9 @@ datasets_docker_build:
   tags:
     - dind
 
-  only:
-    variables:
-      - $AUTO_DOCKER_DATASETS == 'ACTIVE'
+  # only:
+  #   variables:
+  #     - $AUTO_DOCKER_DATASETS == 'ACTIVE'
   
   script:
     # Get the latest version of NCBI's datasets-cli software
