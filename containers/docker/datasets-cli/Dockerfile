@@ -14,13 +14,15 @@ RUN apt-get update \
         grep=3.1* \
         curl \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && sh get_datasets_latest.sh
 
 FROM  ubuntu:24.04
 COPY --from=basebuilder /usr/local/bin/* /usr/local/bin/
+
 WORKDIR /usr/local/bin/
 
-RUN . /usr/local/bin/get_datasets_latest.sh
+RUN . /usr/local/bin/datasets_version.sh
 
 ENV datasets_version=$DATASETS_RELEASE
 
