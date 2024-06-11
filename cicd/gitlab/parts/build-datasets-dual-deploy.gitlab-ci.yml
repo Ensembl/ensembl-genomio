@@ -39,7 +39,8 @@ setup_datasets_env:
   only:
     variables:
       - $DATASETS_CLI_SCHEDULER
-  image: ubuntu:latest
+  image: 
+    name: docker/ubuntu:latest
   stage: build
 
   script:
