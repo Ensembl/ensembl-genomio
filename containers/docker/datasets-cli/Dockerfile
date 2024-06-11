@@ -14,17 +14,19 @@ RUN apt-get update \
         grep=3.1* \
         curl \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && sh get_datasets_latest.sh
+    && rm -rf /var/lib/apt/lists/*
 
 FROM  ubuntu:24.04
 COPY --from=basebuilder /usr/local/bin/* /usr/local/bin/
-ARG datasets_version=latest
 WORKDIR /usr/local/bin/
+
+RUN . /usr/local/bin/get_datasets_latest.sh
+
+ENV datasets_version=$DATASETS_RELEASE
 
 CMD ["datasets --version"]
 
-LABEL base.image="ensembl-genomio-datasets:datasets_version"
+LABEL base.image="ensembl-genomio-datasets:${datasets_version}"
 LABEL version="0.1"
 LABEL software="NCBI's datasets and dataformat"
 LABEL software.version="$datasets_version"
