@@ -5,6 +5,8 @@ DS_SOFTWARE_URL="https://api.github.com/repos/ncbi/datasets/releases/latest"
 DATASETS_LATEST=`curl -s $DS_SOFTWARE_URL | grep browser_download_url | cut -d \" -f4 | grep linux-amd64.cli.package.zip`
 DATASETS_RELEASE=`echo "$DATASETS_LATEST" | cut -d "/" -f 8`
 
+wget https://api.github.com/repos/ncbi/datasets/releases/latest -O - | grep browser_download_url | grep linux-amd64.cli.package.zip |  cut -f 4 -d '"' | tee container_url.txt | cut -f 8 -d / > /usr/local/bin/datasets_version.sh
+
 JQ_SOFTWARE_URL="https://api.github.com/repos/jqlang/jq/releases/latest"
 JQ_LATEST=`curl -s $JQ_SOFTWARE_URL | grep browser_download_url | cut -d \" -f4 | grep jq-linux-amd64`
 
@@ -16,4 +18,4 @@ wget $JQ_LATEST -O jq
 chmod +x jq
 
 # Export version info to bash file
-echo -e -n "#!/usr/bin/bash\nexport DATASETS_RELEASE=$DATASETS_RELEASE\n" > /usr/local/bin/datasets_version.sh
+echo "export DATASETS_RELEASE=$DATASETS_RELEASE" > /usr/local/bin/datasets_version.sh
