@@ -19,7 +19,6 @@
 
 
 variables:
-  image: ubuntu
   # https://docs.gitlab.com/ee/user/namespace/  
   CONTAINER_IMAGE_NAME: datasets-cli
   DATASETS_VERSION: "16.20.0"
