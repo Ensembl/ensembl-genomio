@@ -21,8 +21,8 @@
 variables:
   # https://docs.gitlab.com/ee/user/namespace/  
   CONTAINER_IMAGE_NAME: datasets-cli
-  DATASETS_VERSION: "16.20.0"
   DATASETS_DIR: containers/docker/datasets-cli
+  SCRIPTS_DIR: scripts
   
   # GITLAB:
   GITLAB_PROJECT: vectorbase
@@ -34,11 +34,28 @@ variables:
   DHUB_DOCKER_IMAGE: $DOCKERHUB_PROJECT/$CONTAINER_IMAGE_NAME
   DHUB_REG_URL: registry.hub.docker.com
 
-datasets_docker_build:
+
+setup_datasets_env:
   only:
     variables:
       - $DATASETS_CLI_SCHEDULER
+  image: ubuntu:latest
   stage: build
+
+  script:
+    - apt-get -y update; apt-get -y install curl
+    - sh $SCRIPTS_DIR/setup_datasets_latest.sh
+
+  artifacts:
+    reports:
+      dotenv: datasets_deploy.env
+
+
+datasets_docker_build:
+  # only:
+  #   variables:
+  #     - $DATASETS_CLI_SCHEDULER
+  extends: setup_datasets_env
   image: docker:latest
   services:
     - docker:dind
@@ -48,7 +65,7 @@ datasets_docker_build:
   
   script:
     # Get the latest version of NCBI's datasets-cli software
-    # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html    
+    # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
     - echo "Building $CONTAINER_IMAGE_NAME"
     - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME:latest $DATASETS_DIR"
     - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME:latest $DATASETS_DIR
@@ -70,6 +87,7 @@ datasets_gitlab:
   - echo "Pushing image to gitlab registry:"
   - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
   - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest"
 
 # datasets_dockerhub:
 #   extends: datasets_docker_build

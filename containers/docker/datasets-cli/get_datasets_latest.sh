@@ -16,6 +16,3 @@ rm linux-amd64.cli.package.zip
 chmod +x datasets dataformat
 wget $JQ_LATEST -O jq
 chmod +x jq
-
-# Export version info to bash file
-echo "export DATASETS_RELEASE=$DATASETS_RELEASE" > /usr/local/bin/datasets_version.sh

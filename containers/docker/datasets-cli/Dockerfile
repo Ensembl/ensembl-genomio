@@ -19,12 +19,8 @@ RUN apt-get update \
 
 FROM  ubuntu:24.04
 COPY --from=basebuilder /usr/local/bin/* /usr/local/bin/
-
+ARG datasets_version=latest
 WORKDIR /usr/local/bin/
-
-RUN . /usr/local/bin/datasets_version.sh
-
-ENV datasets_version=$DATASETS_RELEASE
 
 CMD ["datasets --version"]
 
