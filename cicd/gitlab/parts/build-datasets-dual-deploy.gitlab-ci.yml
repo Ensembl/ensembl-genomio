@@ -19,6 +19,7 @@
 
 
 variables:
+  image: ubuntu
   # https://docs.gitlab.com/ee/user/namespace/  
   CONTAINER_IMAGE_NAME: datasets-cli
   DATASETS_VERSION: "16.20.0"
@@ -50,8 +51,8 @@ datasets_docker_build:
     # Get the latest version of NCBI's datasets-cli software
     # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html    
     - echo "Building $CONTAINER_IMAGE_NAME"
-    - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME $DATASETS_DIR"
-    - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME $DATASETS_DIR
+    - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME:latest $DATASETS_DIR"
+    - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME:latest $DATASETS_DIR
     
 datasets_gitlab:
   extends: datasets_docker_build
@@ -64,8 +65,8 @@ datasets_gitlab:
   - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   
   - echo "Tagging GitLab Docker image"
-  - echo "docker tag $CONTAINER_IMAGE_NAME $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker tag $CONTAINER_IMAGE_NAME $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
+  - echo "docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
   
   - echo "Pushing image to gitlab registry:"
   - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
