@@ -6,4 +6,4 @@ DATASETS_LATEST=`curl -s $DS_SOFTWARE_URL | grep browser_download_url | cut -d \
 DATASETS_RELEASE=`echo "$DATASETS_LATEST" | cut -d "/" -f 8`
 
 # Export version info to bash file
-echo "DATASETS_VERSION=$DATASETS_RELEASE" > datasets_deploy.env
+echo "DATASETS_VERSION=$DATASETS_RELEASE"

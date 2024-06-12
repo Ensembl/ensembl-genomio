@@ -22,7 +22,7 @@ variables:
   # https://docs.gitlab.com/ee/user/namespace/  
   CONTAINER_IMAGE_NAME: datasets-cli
   DATASETS_DIR: containers/docker/datasets-cli
-  SCRIPTS_DIR: scripts
+  DS_SETUP_SCRIPT: cicd/scripts/setup_datasets_latest.sh
   
   # GITLAB:
   GITLAB_PROJECT: vectorbase
@@ -45,20 +45,24 @@ setup_datasets_env:
   tags:
     - docker
 
-  script:
+  before_script:
     - apt-get -y update; apt-get -y install curl
-    - sh $SCRIPTS_DIR/setup_datasets_latest.sh
+
+  script:
+    - sh $DS_SETUP_SCRIPT > datasets_deploy.env
 
   artifacts:
+    expose_as: 'Datasets latest version'
     reports:
       dotenv: datasets_deploy.env
 
 
 datasets_docker_build:
-  # only:
-  #   variables:
-  #     - $DATASETS_CLI_SCHEDULER
-  extends: setup_datasets_env
+  needs:
+    # Using `needs` as it allows to depend on jobs from the same stage
+    # (https://docs.gitlab.com/ee/ci/yaml/#needs)
+    - job: setup_datasets_env
+      artifacts: true
   image: docker:latest
   services:
     - docker:dind
@@ -75,6 +79,11 @@ datasets_docker_build:
     
 datasets_gitlab:
   extends: datasets_docker_build
+  needs:
+    # Using `needs` as it allows to depend on jobs from the same stage
+    # (https://docs.gitlab.com/ee/ci/yaml/#needs)
+    - job: datasets_docker_build
+      artifacts: true
   artifacts:
     paths:
       - $DATASETS_DIR
@@ -90,22 +99,32 @@ datasets_gitlab:
   - echo "Pushing image to gitlab registry:"
   - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
   - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+  
+  - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest"
   - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest"
 
-# datasets_dockerhub:
-#   extends: datasets_docker_build
-#   artifacts:
-#     paths:
-#       - $DATASETS_DIR
+datasets_dockerhub:
+  extends: datasets_docker_build
+  needs:
+    # Using `needs` as it allows to depend on jobs from the same stage
+    # (https://docs.gitlab.com/ee/ci/yaml/#needs)
+    - job: datasets_docker_build
+      artifacts: true
+  artifacts:
+    paths:
+      - $DATASETS_DIR
 
-#   script:
-#   - echo "Logging into Dockerhub registry:"
-#   - echo $ENSEMBL_DOCKERHUB_AUTH | docker login -u jalvarezjarreta --password-stdin $DHUB_REG_URL
+  script:
+  - echo "Logging into Dockerhub registry:"
+  - echo $ENSEMBL_DOCKERHUB_AUTH | docker login -u jalvarezjarreta --password-stdin $DHUB_REG_URL
 
-#   - echo "Tagging Dockerhub Docker image"
-#   - echo "CMD=docker tag $CONTAINER_IMAGE_NAME $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
-#   - docker tag $CONTAINER_IMAGE_NAME $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION
+  - echo "Tagging Dockerhub Docker image"
+  - echo "CMD=docker tag $CONTAINER_IMAGE_NAME:latest $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker tag $CONTAINER_IMAGE_NAME:latest $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION
 
-#   - echo "Pushing image to dockerhub registry:"
-#   - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
-#   - docker push "$DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - echo "Pushing image to dockerhub registry:"
+  - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - docker push "$DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
+  
+  - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:latest"
+  - docker push "$DHUB_REG_URL/$DHUB_DOCKER_IMAGE:latest"
