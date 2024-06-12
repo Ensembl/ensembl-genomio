@@ -15,7 +15,7 @@ RUN apt-get update \
         grep=3.1* \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && echo sh get_datasets_latest.sh ${datasets_url}
+    && echo sh get_datasets_latest.sh ${datasets_url} \
     && sh get_datasets_latest.sh ${datasets_url}
 
 FROM  ubuntu:24.04
