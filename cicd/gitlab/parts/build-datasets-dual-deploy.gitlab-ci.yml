@@ -105,6 +105,7 @@ datasets_gitlab:
   - echo "Tagging GitLab Docker image"
   - echo "docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
   - docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
+  - docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest
   
   - echo "Pushing image to gitlab registry:"
   - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
@@ -131,6 +132,7 @@ datasets_gitlab:
 #   - echo "Tagging Dockerhub Docker image"
 #   - echo "CMD=docker tag $CONTAINER_IMAGE_NAME:latest $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
 #   - docker tag $CONTAINER_IMAGE_NAME:latest $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION
+#   - docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest
 
 #   - echo "Pushing image to dockerhub registry:"
 #   - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$DATASETS_VERSION"
