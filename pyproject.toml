@@ -20,7 +20,7 @@ name = "ensembl-genomio"
 dynamic = [
     "version",
 ]
-requires-python = ">= 3.8"
+requires-python = ">= 3.10"
 description = "Ensembl GenomIO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
 readme = "README.md"
 authors = [
@@ -35,51 +35,68 @@ keywords = [
     "setup",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
-    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "bcbio-gff == 0.7.0",
+    "bcbio-gff == 0.7.1",
     "biopython == 1.81",
     "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
-    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v1.2.0
+    "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v2.0.0
+    "ensembl-utils >= 0.2.0",
     "jsonschema >= 4.6.0",
-    "importlib_resources",  # not needed from Python 3.9+
     "intervaltree >= 3.1.0",
     "mysql-connector-python >= 8.0.29",
     "python-redmine >= 2.3.0",
     "requests >= 2.28.0",
+    "spython >= 0.3.13",
 ]
 
 [project.optional-dependencies]
 cicd = [
-    "black",
-    "coverage",
+    "black >= 23.11.0",
+    "coverage >= 7.3.2",
+    "deepdiff >= 6.7.1",
     "genbadge[coverage]",
-    "mypy",
-    "pylint",
-    "pytest",
-    "pytest-workflow",
+    "mypy >= 1.2.0",
+    "pylint >= 3.0.2",
+    "pytest >= 7.4.3",
+    "pytest-dependency",
+    "pytest-mock",
+    "pytest-workflow >= 2.1.0",
     "types-requests",
 ]
-doc = [
-    "mock",
-    "Sphinx",
+docs = [
+    "mkdocs >= 1.5.3",
+    "mkdocs-autorefs",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-material",
+    "mkdocs-material-extensions",
+    "mkdocs-section-index",
+    "mkdocstrings",
+    "mkdocstrings-python",
 ]
 
 [project.urls]
 homepage = "https://www.ensembl.org"
 repository = "https://github.com/Ensembl/ensembl-genomio"
+documentation = "https://ensembl.github.io/ensembl-genomio"
 
 [project.scripts]
 # Assembly
 assembly_download = "ensembl.io.genomio.assembly.download:main"
+assembly_tracker = "ensembl.io.genomio.assembly.status:main"
 # Database
 database_factory = "ensembl.io.genomio.database.factory:main"
 # Events
@@ -101,6 +118,8 @@ genome_stats_dump = "ensembl.io.genomio.genome_stats.dump:main"
 # GFF3
 gff3_extract_annotation = "ensembl.io.genomio.gff3.extract_annotation:main"
 gff3_process = "ensembl.io.genomio.gff3.process:main"
+# annotation
+annotation_load = "ensembl.io.genomio.annotation.load:main"
 # Manifest
 manifest_check_integrity = "ensembl.io.genomio.manifest.check_integrity:main"
 manifest_compute_stats = "ensembl.io.genomio.manifest.compute_stats:main"
@@ -111,8 +130,7 @@ schemas_json_validate = "ensembl.io.genomio.schemas.json.validate:main"
 # Sequence region
 seq_region_dump = "ensembl.io.genomio.seq_region.dump:main"
 seq_region_prepare = "ensembl.io.genomio.seq_region.prepare:main"
-# Utils
-extract_file = "ensembl.io.genomio.utils.archive_utils:extract_file_cli"
+seq_region_rename = "ensembl.io.genomio.seq_region.rename:main"
 
 [tool.setuptools]
 package-dir = {"" = "src/python"}
@@ -153,6 +171,7 @@ disable = [
     "wildcard-import",
 ]
 max-attributes = 12
+max-branches = 15
 
 [tool.mypy]
 mypy_path = "src/python"
@@ -162,7 +181,11 @@ show_error_codes = true
 warn_unused_configs = true
 
 [tool.pytest.ini_options]
-addopts = "-v --tb=native --server=sqlite:///"
+addopts = [
+    "--import-mode=importlib",
+    "--tb=native",
+    "--server=sqlite:///",
+]
 testpaths = ["src/python/tests"]
 norecursedirs = ["data", "docs", "*.egg_info"]
 

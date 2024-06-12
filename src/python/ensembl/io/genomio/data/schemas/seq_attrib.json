@@ -1,0 +1,154 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/seq_attrib.json",
+  "description" : "JSON schema for exchanging meta information for sequence attributes",
+
+  "definitions" : {
+    "seq_attrib_info" : {
+      "type": "object",
+
+      "oneOf" : [
+        { "$ref" : "#/definitions/seqedit_info" },
+        { "$ref" : "#/definitions/frameshift_info" },
+        { "$ref" : "#/definitions/translation_pos_info" },
+        { "$ref" : "#/definitions/selenocysteine_info" }
+      ]
+    },
+
+    "seqedit_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "object_type" : { "type" : "string",
+          "enum" : [ "transcript", "translation" ]
+        },
+        "object_id" : { "type" : "string" },
+        "seq_attrib_type" : { "const" : "sequence_alteration" },
+        "start" : { "type" : "integer", "minimum" : 0 },
+        "end" : { "type" : "integer", "minimum" : 0 },
+        "sequence" : { "type" : "string" }
+      },
+      "required" : [ "object_type", "object_id", "seq_attrib_type", "start", "end", "sequence" ]
+    },
+
+    "frameshift_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "object_type" : { "type" : "string", "value" : "transcript" },
+        "object_id" : { "type" : "string" },
+        "seq_attrib_type" : { "const" : "frameshift" },
+        "intron_number" : { "type" : "integer", "minimum" : 1 }
+      },
+      "required" : [ "object_type", "object_id", "seq_attrib_type", "intron_number" ]
+    },
+
+    "translation_pos_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "object_type" : { "type" : "string", "value" : "translation" },
+        "object_id" : { "type" : "string" },
+        "seq_attrib_type" : { "type" : "string",
+          "enum" : [
+            "coding_start",
+            "coding_end"
+          ]
+        },
+        "position" : { "type" : "integer", "minimum" : 1 }
+      },
+      "required" : [ "object_type", "object_id", "seq_attrib_type", "position" ]
+    },
+
+    "selenocysteine_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "object_type" : { "type" : "string", "value" : "translation" },
+        "object_id" : { "type" : "string" },
+        "seq_attrib_type" : { "const" : "selenocysteine" },
+        "position" : { "type" : "integer", "minimum" : 1 }
+      },
+      "required" : [ "object_type", "object_id", "seq_attrib_type", "position" ]
+    }
+  },
+
+  "oneOf" : [
+    { "$ref" : "#/definitions/seq_attrib_info" },
+    { "type": "array", "items" : { "$ref" : "#/definitions/seq_attrib_info" } }
+  ],
+    "examples" : [
+    {
+      "object_type": "transcript",
+      "object_id": "AEL018662-RA",
+      "seq_attrib_type": "sequence_alteration",
+      "start": 1537,
+      "end": 1537,
+      "sequence": "TAA"
+    },
+    {
+      "object_type": "transcript",
+      "object_id": "AAEL000404-RA",
+      "seq_attrib_type": "sequence_alteration",
+      "start": 630,
+      "end": 630,
+      "sequence": ""
+    },
+    {
+      "object_type": "transcript",
+      "object_id": "AAEL000404-RA",
+      "seq_attrib_type": "sequence_alteration",
+      "start": 847,
+      "end": 846,
+      "sequence": "N"
+    },
+    {
+      "object_type": "transcript",
+      "object_id": "AEL018662-RA",
+      "seq_attrib_type": "coding_start",
+      "position": 9
+    },
+    {
+      "object_type": "transcript",
+      "object_id": "AAEL009181-RA",
+      "seq_attrib_type": "sequence_alteration",
+      "start": 1,
+      "end": 0,
+      "sequence": "TGCACAAAATGAGAAAACAAGCAATTTTGCTGATAGTCGCCTTTACAATCGCGGTCTCCGCGATCACCGGAGCCGAAGCGGACA"
+    },
+    {
+      "object_type": "transcript",
+      "object_id": "AAEL002158-RA",
+      "seq_attrib_type": "coding_end",
+      "position": 832
+    },
+    {
+      "object_type": "transcript",
+      "object_id": "AAEL002158-RA",
+      "seq_attrib_type": "sequence_alteration",
+      "start": 785,
+      "end": 784,
+      "sequence": "GAGCTGGGCGTGCAGCTCTTTGACGAGTATCTCGATAAGGCGGAGTAAGCCGCTTAGCTCGAGTGTGACTGTAAAATTTAAGAGTTGGGTTTTCCCCGTAGAA"
+    },
+    {
+      "object_type": "transcript",
+      "object_id": "AAEL000404-RA",
+      "seq_attrib_type": "frameshift",
+      "intron_number": 2
+    },
+    {
+      "object_type": "translation",
+      "object_id": "AAEL002897-PA",
+      "seq_attrib_type": "sequence_alteration",
+      "start": 63,
+      "end": 63,
+      "sequence": "X"
+    },
+    {
+      "object_type": "translation",
+      "object_id": "AAEL003681-PB",
+      "seq_attrib_type": "selenocysteine",
+      "position": 58
+    }
+  ]
+}

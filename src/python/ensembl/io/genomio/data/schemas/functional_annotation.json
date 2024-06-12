@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/functional_annotation.json",
+  "description" : "JSON schema for exchanging functional annotation information",
+
+  "definitions" : {
+    "alias_type" : {
+      "description" : "object for default synonym, aka display_name",
+      "oneOf" : [
+        { "type" : "string" },
+        { 
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "synonym" : { "type" : "string" },
+            "default" : { "type" : "boolean" }
+          },
+          "required": [ "synonym", "default" ]
+        }
+      ]
+    },
+    "xref_object" : {
+          "type" : "object",
+          "additionalProperties": false,
+          "properties" : {
+            "dbname" : { "type" : "string" },
+            "id" : { "type" : "string" },
+            "display_id" : { "type" : "string" },
+            "description" : { "type" : "string" },
+            "info_type" : { "type" : "string", "description" : "additional source information" },
+            "info_text" : { "type" : "string", "description" : "additional source information" }
+          },
+          "required": [ "dbname", "id" ]
+    },
+    "ontology_term_type" : {
+      "type" : "string",
+      "pattern" : "^(GO|SO):[^;,]+$"
+    },
+    "functional_annotation" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id" : { "type" : "string" },
+        "object_type" : {
+          "type" : "string",
+          "enum" : [
+            "gene",
+            "transcript",
+            "translation",
+            "transposable_element"
+          ]
+        },
+        "description" : { "type" : "string" },
+        "synonyms" : {
+          "description" : "List of synonyms, one synonym can have a 'default' property set.",
+          "oneOf" : [
+            { "$ref" : "#/definitions/alias_type" },
+            { "type": "array", "items" : { "$ref" : "#/definitions/alias_type" } }
+          ]
+        },
+        "xrefs" : {
+          "description" : "References to ids to external databases",
+          "oneOf" : [
+            { "$ref" : "#/definitions/xref_object" },
+            { "type": "array", "items" : { "$ref" : "#/definitions/xref_object" } }
+          ]
+        },
+        "ontology_terms" : {
+          "description" : "deprecated. use 'xrefs' instead",
+          "oneOf" : [
+            { "$ref" : "#/definitions/ontology_term_type" },
+            { "type": "array", "items" : { "$ref" : "#/definitions/ontology_term_type" } }
+          ]
+        },
+        "is_pseudogene" : { "type" : "boolean" },
+        "note" : { "type" : "string", "description" : "optional note" },
+        "version" : { "type" : "integer", "descriptio" : "used only for genes and transcripts" }
+      },
+      "required" : [
+        "id", "object_type"
+      ]
+    }
+  },
+
+  "oneOf" : [
+    { "$ref" : "#/definitions/functional_annotation" },
+    { "type": "array", "items" : { "$ref" : "#/definitions/functional_annotation" } }
+  ],
+
+  "examples": [
+    { "note": "bad_example" },
+    [ { "id" : "AGAP004707",
+        "object_type" : "gene",
+        "description": "voltage-gated sodium channel" ,
+        "synonyms" : [ { "synonym" : "para", "default" : true }, "kdr", "VSC" ],
+        "xrefs" : [ { "dbname" : "EntrezGene", "id" : "1278521" }, { "dbname" : "GO", "id" : "GO:0005216" } ],
+        "ontology_terms" : [ "GO:0005217", "SO:0000834" ]
+    } ]
+  ]
+}

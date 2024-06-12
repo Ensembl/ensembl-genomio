@@ -1,0 +1,16 @@
+{
+    "assembly": {
+        "accession": "GCA_000002765.1",
+        "provider_name": "RefSeq",
+        "provider_url": "https://www.ncbi.nlm.nih.gov/refseq",
+        "version": 1
+    },
+    "genebuild": {
+        "start_date": "2023-10-17",
+        "version": "2023-10-17"
+    },
+    "species": {
+        "scientific_name": "Plasmodium falciparum",
+        "taxonomy_id": 36329
+    }
+}

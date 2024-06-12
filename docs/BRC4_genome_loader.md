@@ -1,9 +1,9 @@
 ## BRC4_genome_loader
-### Module: [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](../src/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
+### Module: [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](https://github.com/Ensembl/ensembl-genomio/blob/main/src/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
 
 Creates an [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html)
 from a set of flat files
-or adds ad-hoc (ie organellas) sequences to the existing core.
+or adds ad-hoc (i.e. organellas) sequences to the existing core.
 
 ### Prerequisites
 A registry file with the locations of the core database server(s) and the production database (or `-production_db $PROD_DB_URL` specified).

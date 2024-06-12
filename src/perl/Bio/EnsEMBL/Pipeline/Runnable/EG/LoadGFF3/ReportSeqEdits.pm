@@ -185,7 +185,8 @@ sub protein_seq_report {
   
   my @results;
   my @fixes;
-  my %translations;
+  my %translations_dict;
+  my %transcripts_dict;
   
   my $slices = $sa->fetch_all( 'toplevel', undef, 0, 1 );
 
@@ -207,11 +208,19 @@ sub protein_seq_report {
       if ($translation) {
         my $tn_id  = $translation->stable_id;
         my $db_seq = $translation->seq;
+        my $feat_id = "";
 
         if (exists $protein{$tn_id}) {
-          $translations{$tn_id} = 1;
+          $feat_id = $tn_id;
+        } elsif (exists $protein{$tt_id}) {
+          $feat_id = $tt_id;
+        }
 
-          my $file_seq = $protein{$tn_id};
+        if ($feat_id) {
+          $translations_dict{$tn_id} = 1;
+          $transcripts_dict{$tt_id} = 1;
+
+          my $file_seq = $protein{$feat_id};
           $file_seq =~ s/(\*|\-)$//;
 
           if ($db_seq ne $file_seq) {
@@ -234,17 +243,13 @@ sub protein_seq_report {
 "UPDATE gene INNER JOIN transcript USING (gene_id) SET gene.biotype = 'protein_coding', transcript.biotype = 'protein_coding' WHERE transcript.stable_id = '$tt_id';";
             }
           }
-
-        } else {
-          push @results, [$tt_id, $tn_id, 'Not in file', $db_seq, ''];
         }
       }
     }
   }
 
-  
   foreach my $id (keys %protein) {
-    if (! exists $translations{$id}) {
+    if (not exists $translations_dict{$id} and not exists $transcripts_dict{$id}) {
       push @results, ['', $id, 'Not in db', '', $protein{$id}];
     }
   }

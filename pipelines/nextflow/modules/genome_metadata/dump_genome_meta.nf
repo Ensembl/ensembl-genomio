@@ -22,22 +22,29 @@ process DUMP_GENOME_META {
     input:
         val db
 
-    when:
-        "genome_metadata" in db.dump_selection
-
     output:
-        tuple val(db), val("genome"), path("*genome.json")
+        tuple val(db), val("genome"), path("*_genome.json")
 
     script:
         output = "${db.species}_genome.json"
-        schema = params.json_schemas["genome"]
+        schema = "genome"
         """
         genome_metadata_dump --host '$db.server.host' \
             --port '$db.server.port' \
             --user '$db.server.user' \
             --password '$db.server.password' \
             --database '$db.server.database' \
-            > $output
+            --verbose > $output
         schemas_json_validate --json_file $output --json_schema $schema
+        """
+    
+    stub:
+        output_file = "test_genome.json"
+        schema = "genome"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_genome.json"
+        """
+        cp $dump_dir/$dump_file $output_file
+        schemas_json_validate --json_file $output_file --json_schema $schema
         """
 }

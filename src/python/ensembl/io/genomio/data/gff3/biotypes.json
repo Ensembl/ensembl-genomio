@@ -1,0 +1,81 @@
+{
+    "gene": {
+        "supported": [
+            "gene",
+            "ncRNA_gene",
+            "pseudogene"
+        ],
+        "ignored": [
+            "cDNA_match",
+            "centromere",
+            "contig",
+            "D_loop",
+            "direct_repeat",
+            "dispersed_repeat",
+            "expressed_sequence_match",
+            "gap",
+            "intron",
+            "inverted_repeat",
+            "long_terminal_repeat",
+            "match",
+            "microsatellite",
+            "origin_of_replication",
+            "protein_match",
+            "region",
+            "repeat_region",
+            "satellite_DNA",
+            "sequence_feature",
+            "sequence_secondary_structure",
+            "sequence_uncertainty",
+            "STS",
+            "tandem_repeat",
+            "telomere",
+            "terminal%2Cinverted"
+        ]
+    },
+    "non_gene": {
+        "supported": [
+            "mobile_genetic_element",
+            "transposable_element"
+        ]
+    },
+    "transcript": {
+        "supported": [
+            "C_gene_segment",
+            "guide_RNA",
+            "lnc_RNA",
+            "miRNA",
+            "misc_RNA",
+            "mRNA",
+            "ncRNA",
+            "piRNA",
+            "primary_transcript",
+            "miRNA_primary_transcript",
+            "pseudogenic_rRNA",
+            "pseudogenic_transcript",
+            "pseudogenic_tRNA",
+            "ribozyme",
+            "RNase_MRP_RNA",
+            "RNase_P_RNA",
+            "rRNA",
+            "scRNA",
+            "snoRNA",
+            "snRNA",
+            "SRP_RNA",
+            "telomerase_RNA",
+            "transcript",
+            "tRNA",
+            "V_gene_segment"
+        ],
+        "ignored": [
+            "3'UTR",
+            "5'UTR",
+            "antisense_RNA",
+            "five_prime_UTR",
+            "intron",
+            "non_canonical_five_prime_splice_site",
+            "non_canonical_three_prime_splice_site",
+            "three_prime_UTR"
+        ]
+    }
+}

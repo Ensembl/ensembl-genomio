@@ -23,13 +23,11 @@ process DUMP_DB {
         val db
         val out_dir
 
-    when:
-        "sql" in db.dump_selection
-
     output:
         path "*.sql.gz"
 
     script:
+        output_file = "${db.species}.sql.gz"
         """
         db_pass=""
         if [ "${db.server.password}" != "" ]; then
@@ -41,6 +39,14 @@ process DUMP_DB {
             --port '${db.server.port}' \
             --user '${db.server.user}' \
             \$db_pass \
-            | gzip > ${db.species}.sql.gz
+            | gzip > $output_file
+        """
+    
+    stub:
+        output_file = "${db.species}.sql.gz"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_sql"
+        dump_file = "dumped_db.sql.test"
+        """
+        cat $dump_dir/$dump_file | gzip > $output_file
         """
 }

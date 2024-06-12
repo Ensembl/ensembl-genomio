@@ -27,6 +27,13 @@ process DOWNLOAD_GENBANK {
     shell:
     output_file = "output.gb"
     '''
-    genbank_download --accession !{meta.accession} --output_file !{output_file}
+    genbank_download --accession !{meta.accession} --output_file !{output_file} --debug
     '''
+    
+    stub:
+        output_file = "output.gb"
+        """
+        genbank_download --help
+        cp $workflow.projectDir/../../../../data/test/modules/download_genbank/output/*.gb $output_file
+        """
 }

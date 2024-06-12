@@ -21,15 +21,12 @@ process DUMP_SEQ_REGIONS {
     input:
         val db
     
-    when:
-        "seq_regions" in db.dump_selection
-
     output:
-        tuple val(db), val("seq_region"), path("*seq_region.json")
+        tuple val(db), val("seq_region"), path("*_seq_region.json")
 
     script:
         output = "${db.species}_seq_region.json"
-        schema = params.json_schemas["seq_region"]
+        schema = "seq_region"
         """
         seq_region_dump --host '$db.server.host' \
             --port '$db.server.port' \
@@ -38,5 +35,15 @@ process DUMP_SEQ_REGIONS {
             --database '$db.server.database' \
             > $output
         schemas_json_validate --json_file $output --json_schema $schema
+        """
+    
+    stub:
+        output_file = "test_seq_region.json"
+        schema = "seq_region"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_seq_region.json"
+        """
+        cp $dump_dir/$dump_file $output_file
+        schemas_json_validate --json_file $output_file --json_schema $schema
         """
 }

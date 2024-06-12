@@ -21,9 +21,6 @@ process DUMP_FASTA_PEPTIDES {
     input:
         val db
 
-    when:
-        "fasta_dna" in db.dump_selection
-
     output:
         tuple val(db), val("fasta_pep"), path("*.fasta")
 
@@ -40,5 +37,13 @@ process DUMP_FASTA_PEPTIDES {
             -dnadbuser ${db.server.user} \
             -dnadbname ${db.server.database} \
             -file $output
+        """
+    
+    stub:
+        output_file = "pep.fasta"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "dumped_pep.fasta"
+        """
+        cp $dump_dir/$dump_file $output_file
         """
 }

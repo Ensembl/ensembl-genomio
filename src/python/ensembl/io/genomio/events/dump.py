@@ -14,12 +14,28 @@
 # limitations under the License.
 """Module to dump stable id events from an Ensembl Core database"""
 
+__all__ = [
+    "IdsSet",
+    "DictToIdsSet",
+    "BRC4_START_DATE",
+    "Pair",
+    "UnsupportedEvent",
+    "Event",
+    "DumpStableIDs",
+]
+
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Set, Tuple
+import logging
 
-from ensembl.brc4.runnable.core_server import CoreServer
+from sqlalchemy import select, and_, or_
+from sqlalchemy.orm import Session
+
+from ensembl.core.models import MappingSession, StableIdEvent
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 BRC4_START_DATE = datetime(2020, 5, 1)
@@ -57,7 +73,7 @@ class UnsupportedEvent(ValueError):
     """If an event is not supported"""
 
 
-class StableIdEvent:
+class Event:
     """Represents a stable id event from one gene set version to another one. Various events:
     - new genes
     - deleted genes
@@ -291,9 +307,9 @@ class DumpStableIDs:
 
     """
 
-    def __init__(self, server: CoreServer) -> None:
+    def __init__(self, session: Session) -> None:
         """Create a processor for events"""
-        self.server = server
+        self.session = session
 
     def get_history(self) -> List:
         """Retrieve all events from a database.
@@ -307,18 +323,18 @@ class DumpStableIDs:
 
         events = []
         for session in sessions:
-            print(f"Mapping session {session['release']}")
-            pairs = self.get_pairs(session["id"])
+            logging.info(f"Mapping session {session.new_release}")
+            pairs = self.get_pairs(session.mapping_session_id)
             session_events = self.make_events(pairs)
             for event in session_events:
-                event.set_release(session["release"])
-                event.set_date(session["date"])
+                event.set_release(session.new_release)
+                event.set_date(session.created)
             events += session_events
 
         # Then analyse the pairs to make events
         return events
 
-    def print_events(self, events: List[StableIdEvent], output_file: Path) -> None:
+    def print_events(self, events: List[Event], output_file: Path) -> None:
         """Print events in a format for BRC.
 
         Args:
@@ -327,7 +343,7 @@ class DumpStableIDs:
 
         """
         if not events:
-            print("No events to print")
+            logging.info("No events to print")
             return
         with output_file.open("w") as out_fh:
             for event in events:
@@ -335,24 +351,16 @@ class DumpStableIDs:
                 for line in event_lines:
                     out_fh.write(line + "\n")
 
-    def get_mapping_sessions(self) -> List[Dict]:
+    def get_mapping_sessions(self) -> List[MappingSession]:
         """Retrieve the mapping sessions from the connected database.
 
         Returns:
-            A list of sessions, as dicts: {'id: str, 'release': str, 'date': str}.
+            A list of sessions.
 
         """
-        query = """SELECT mapping_session_id, new_release, created
-        FROM mapping_session
-        """
-        cursor = self.server.get_cursor()
-        cursor.execute(query)
-
-        sessions: List[Dict[str, str]] = []
-        for db in cursor:
-            session = {"id": db[0], "release": db[1], "date": db[2]}
-            sessions.append(session)
-        return sessions
+        map_sessions_stmt = select(MappingSession)
+        map_sessions = list(self.session.scalars(map_sessions_stmt).unique().all())
+        return map_sessions
 
     def get_pairs(self, session_id: int) -> List[Pair]:
         """Retrieve all pair of ids for a given session.
@@ -361,25 +369,33 @@ class DumpStableIDs:
             session_id: id of a session from the connected database.
 
         Returns:
-            A list of all pairs of ids, as dicts: {'old_id': str, 'new_id': str}.
+            All pairs of IDs.
 
         """
-        query = """SELECT old_stable_id, new_stable_id
-        FROM stable_id_event
-        WHERE (old_stable_id != new_stable_id OR old_stable_id IS NULL OR new_stable_id IS NULL)
-            AND type="gene"
-            AND mapping_session_id=%s
-        GROUP BY old_stable_id, new_stable_id, mapping_session_id
-        """
-        values = (session_id,)
-        cursor = self.server.get_cursor()
-        cursor.execute(query, values)
 
+        id_events_stmt = (
+            select(StableIdEvent)
+            .where(
+                and_(
+                    (StableIdEvent.mapping_session_id == session_id),
+                    (StableIdEvent.id_type == "gene"),
+                    (
+                        or_(
+                            (StableIdEvent.old_stable_id.is_(None)),
+                            (StableIdEvent.new_stable_id.is_(None)),
+                            (StableIdEvent.old_stable_id != StableIdEvent.new_stable_id),
+                        )
+                    ),
+                )
+            )
+            .group_by(
+                StableIdEvent.old_stable_id, StableIdEvent.new_stable_id, StableIdEvent.mapping_session_id
+            )
+        )
         pairs: List[Pair] = []
-        for db in cursor:
-            pair = Pair(old_id=db[0], new_id=db[1])
+        for row in self.session.scalars(id_events_stmt).unique().all():
+            pair = Pair(row.old_stable_id, row.new_stable_id)
             pairs.append(pair)
-        print(f"{len(pairs)} stable id events")
         return pairs
 
     def make_events(self, pairs: List[Pair]) -> List:
@@ -396,11 +412,11 @@ class DumpStableIDs:
         from_list, to_list = self.get_pairs_from_to(pairs)
 
         # Create events with those 2 dicts
-        events: List[StableIdEvent] = []
+        events: List[Event] = []
         for old_id, from_old_list in from_list.items():
             if not old_id or old_id not in from_list:
                 continue
-            event = StableIdEvent(set([old_id]), set(from_old_list))
+            event = Event(set([old_id]), set(from_old_list))
             (event, from_list, to_list) = self.extend_event(event, from_list, to_list)
             event.add_pairs(pairs)
             events.append(event)
@@ -409,7 +425,7 @@ class DumpStableIDs:
         for new_id, to_new_list in to_list.items():
             if not new_id:
                 continue
-            event = StableIdEvent(set(to_new_list), set([new_id]))
+            event = Event(set(to_new_list), set([new_id]))
             event.add_pairs(pairs)
             events.append(event)
 
@@ -423,7 +439,7 @@ class DumpStableIDs:
                 stats[name] += 1
 
         for stat, value in stats.items():
-            print(f"\t{stat} = {value}")
+            logging.info(f"\t{stat} = {value}")
 
         return events
 
@@ -464,15 +480,15 @@ class DumpStableIDs:
 
         # Remove empty elements
         for from_id in from_list:
-            from_list[from_id] = StableIdEvent.clean_set(from_list[from_id])
+            from_list[from_id] = Event.clean_set(from_list[from_id])
         for to_id in to_list:
-            to_list[to_id] = StableIdEvent.clean_set(to_list[to_id])
+            to_list[to_id] = Event.clean_set(to_list[to_id])
 
         return from_list, to_list
 
     def extend_event(
-        self, event: StableIdEvent, from_list: DictToIdsSet, to_list: DictToIdsSet
-    ) -> Tuple[StableIdEvent, DictToIdsSet, DictToIdsSet]:
+        self, event: Event, from_list: DictToIdsSet, to_list: DictToIdsSet
+    ) -> Tuple[Event, DictToIdsSet, DictToIdsSet]:
         """Given an event, aggregate ids in the 'from' and 'to' sets, to connect the whole group.
 
         Args:
@@ -525,12 +541,13 @@ def main() -> None:
     )
     parser.add_server_arguments(include_database=True)
     parser.add_argument_dst_path("--output_file", required=True, help="Output file")
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
+    init_logging_with_args(args)
 
-    # Start
-    factory = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
-    factory.set_database(args.database)
-    dumper = DumpStableIDs(factory)
+    dbc = DBConnectionLite(args.url)
+    with dbc.session_scope() as session:
+        dumper = DumpStableIDs(session)
     events = dumper.get_history()
     dumper.print_events(events, args.output_file)
 

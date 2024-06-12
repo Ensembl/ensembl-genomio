@@ -15,9 +15,9 @@
 
 
 process PUBLISH_DIR {
-    publishDir "$out_dir/build_$db.release/metadata/$db.division/$db.species", mode: 'copy'
     tag "${db.species}"
     label 'default'
+    publishDir "$out_dir/build_$db.release/metadata/$db.division/$db.species", mode: 'copy'
     time '5min'
 
     input:
@@ -26,7 +26,6 @@ process PUBLISH_DIR {
     
     output:
         tuple val(db), path(data_dir, includeInputs: true)
-    
     script:
         """
         echo "Just copy over the finished files"

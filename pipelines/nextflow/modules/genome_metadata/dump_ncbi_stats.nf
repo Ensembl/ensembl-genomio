@@ -22,9 +22,6 @@ process DUMP_NCBI_STATS {
     input:
         val db
 
-    when:
-        "stats" in db.dump_selection
-
     output:
         tuple val(db), path("ncbi_stats.json")
 
@@ -58,4 +55,12 @@ process DUMP_NCBI_STATS {
             datasets summary genome accession $accession | jq '.' > !{output}
         fi
         '''
+    
+    stub:
+        output_file = "ncbi_stats.json"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "downloaded_ncbi_stats.json"
+        """
+        cp $dump_dir/$dump_file $output_file
+        """
 }

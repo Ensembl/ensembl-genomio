@@ -23,6 +23,7 @@ from typing import Dict, List
 
 from ensembl.io.genomio.events.load import EventCollection
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 class IdsMapper:
@@ -78,7 +79,9 @@ def main() -> None:
     parser.add_argument("--release_name", required=True, metavar="NAME", help="Release name for all events")
     parser.add_argument("--release_date", required=True, metavar="DATE", help="Release date for all events")
     parser.add_argument_dst_path("--output_file", required=True, help="Output formatted event file")
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     events = EventCollection()
     deleted_genes = load_list(args.deletes_file)

@@ -24,8 +24,9 @@ from typing import Dict, List, Optional, Set, Union
 
 from BCBio import GFF
 
-from ensembl.io.genomio.utils import open_gz_file
+from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 class BiotypeCounter:
@@ -68,7 +69,8 @@ class manifest_stats:
     def __init__(self, manifest_dir: str, accession: Optional[str], datasets_bin: Optional[str]):
         self.manifest = f"{manifest_dir}/manifest.json"
         self.accession: Optional[str] = accession
-        self.error = False
+        self.errors: List[str] = []
+        self.errors_file = Path(manifest_dir) / "stats_diff.log"
         if datasets_bin is None:
             datasets_bin = "datasets"
         self.datasets_bin = datasets_bin
@@ -100,8 +102,10 @@ class manifest_stats:
             stats_out.write("\n".join(stats))
 
         # Die if there were errors in stats comparison
-        if self.error:
-            raise StatsError(f"Stats count errors, check the file {stats_path}")
+        if self.errors:
+            with self.errors_file.open("w") as errors_fh:
+                for error_line in self.errors:
+                    errors_fh.write(error_line)
 
     def get_manifest(self) -> Dict:
         """Get the files metadata from the manifest json file.
@@ -377,8 +381,7 @@ class manifest_stats:
 
             if prep_count != ncbi_count:
                 diff = prep_count - ncbi_count
-                stats.append(f"DIFF gene count for {count_map}: {prep_count} - {ncbi_count} = {diff}")
-                self.error = True
+                self.errors.append(f"DIFF gene count for {count_map}: {prep_count} - {ncbi_count} = {diff}")
             else:
                 stats.append(f"Same count for {count_map}: {prep_count}")
 
@@ -409,7 +412,9 @@ def main() -> None:
     parser.add_argument("--accession", help="Sequence accession ID to compare stats with NCBI")
     parser.add_argument("--datasets_bin", help="Datasets bin status")
     parser.add_argument_dst_path("--stats_file", help="Output file with the stats")
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     mstats = manifest_stats(args.manifest_dir, args.accession, args.datasets_bin)
     if args.accession is not None:

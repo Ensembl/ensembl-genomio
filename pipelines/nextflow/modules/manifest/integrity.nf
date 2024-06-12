@@ -17,18 +17,27 @@
 process CHECK_INTEGRITY {
     tag "${meta.accession}"
     label 'variable_2_8_32'
-    errorStrategy 'finish'
     time '1h'
 
     input:
         tuple val(meta), path(manifest_files)
     
     output:
-        tuple val(meta), path(manifest_files)
+        tuple val(meta), path("*.*", includeInputs: true)
 
     shell:
         brc_mode = params.brc_mode ? '--brc_mode' : ''
+        integrity_file = "integrity.out"
         '''
-        manifest_check_integrity --manifest_file ./manifest.json !{brc_mode}
+        manifest_check_integrity \
+            --manifest_file ./manifest.json \
+            --no_fail \
+            !{brc_mode} \
+            > !{integrity_file}
+        
+        # Only keep integrity file if there are errors to report
+        if [ ! -s !{integrity_file} ]
+            then rm !{integrity_file}
+        fi
         '''
 }

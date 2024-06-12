@@ -14,7 +14,19 @@
 # limitations under the License.
 """Fetch all the sequence regions from a core database and print them in JSON format."""
 
+__all__ = [
+    "MapFormatError",
+    "get_external_db_map",
+    "get_coord_systems",
+    "get_seq_regions",
+    "add_attribs",
+    "get_synonyms",
+    "get_attribs",
+    "get_karyotype",
+]
+
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -22,13 +34,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
-from ensembl.database import DBConnection
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
-ROOT_DIR = Path(__file__).parent / "../../../../../.."
-DEFAULT_MAP = ROOT_DIR / "config/external_db_map/default.txt"
-KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
+_ROOT_DIR = Path(__file__).parent / "../../../../../.."
+_DEFAULT_MAP = _ROOT_DIR / "config/external_db_map/default.txt"
+_KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
 
 class MapFormatError(Exception):
@@ -80,7 +93,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
     seq_regions = []
 
     for coord_system in coord_systems:
-        # print(f"Dump coord {coord_system.name}")
+        logging.debug(f"Dump coord {coord_system.name}")
         seqr_stmt = (
             select(SeqRegion)
             .where(SeqRegion.coord_system_id == coord_system.coord_system_id)
@@ -195,7 +208,7 @@ def get_attribs(seq_region: SeqRegion) -> List:
         seq_region (SeqRegion): The seq_region from which the attribs are extracted.
 
     Returns:
-        List: All attribs as a list of dicts with 'value' and 'source' keys.
+        All attributes as a list of dictionaries with 'value' and 'source' keys.
     """
     attribs = seq_region.seq_region_attrib
     atts = []
@@ -206,8 +219,15 @@ def get_attribs(seq_region: SeqRegion) -> List:
     return atts
 
 
-def get_attribs_dict(seq_region: SeqRegion) -> Dict:
-    """Given a seq_region, extracts the attribs as a dict with source as key."""
+def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
+    """Extracts all the attributes of the given sequence region.
+
+    Args:
+        seq_region: Sequence region.
+
+    Returns:
+        Pairs of source and value for each attribute.
+    """
 
     attribs = get_attribs(seq_region)
     attrib_dict = {attrib["source"]: attrib["value"] for attrib in attribs}
@@ -232,7 +252,7 @@ def get_karyotype(seq_region: SeqRegion) -> List:
                 kar["name"] = band.band
             if band.stain:
                 kar["stain"] = band.stain
-                structure = KARYOTYPE_STRUCTURE.get(band.stain, "")
+                structure = _KARYOTYPE_STRUCTURE.get(band.stain, "")
                 if structure:
                     kar["structure"] = structure
             kars.append(kar)
@@ -242,13 +262,13 @@ def get_karyotype(seq_region: SeqRegion) -> List:
 
 
 def get_added_sequence(seq_region: SeqRegion) -> Dict:
-    """Given a seq_region, extract added_sequence information.
+    """Extracts added sequence information of the given sequence region.
 
     Args:
-        seq_region (SeqRegion): The seq_region from which the attribs are extracted.
+        seq_region: Sequence region.
 
     Returns:
-        Dict: accession, .
+        Accession as well as assembly and annotation provider information of the added sequence.
     """
     attribs = get_attribs_dict(seq_region)
     accession = attribs.get("added_seq_accession")
@@ -285,11 +305,13 @@ def main() -> None:
     )
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path(
-        "--external_db_map", default=DEFAULT_MAP.resolve(), help="File with external_db mapping"
+        "--external_db_map", default=_DEFAULT_MAP.resolve(), help="File with external_db mapping"
     )
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
-    dbc = DBConnection(args.url)
+    dbc = DBConnectionLite(args.url)
 
     external_map_path = Path(args.external_db_map)
     external_map = get_external_db_map(external_map_path)
@@ -298,7 +320,3 @@ def main() -> None:
         seq_regions = get_seq_regions(session, external_map)
 
     print(json.dumps(seq_regions, indent=2, sort_keys=True))
-
-
-if __name__ == "__main__":
-    main()

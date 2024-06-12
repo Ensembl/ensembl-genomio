@@ -13,52 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//default params
-params.help = false
+include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 
-// mandatory params
-params.accession = null
-params.prefix = null
-params.PROD_NAME = null
-
-// Print usage
-def helpMessage() {
-  log.info """
-        Usage:
-        The typical command for running the pipeline is as follows:
-        nextflow run add_seq_prepare.nf --accession "GENBANK_ACCESSION" --prefix "PREFIX_" --production_name "species_name"
-
-        Mandatory arguments:
-        --accession                    A GenBank accession of the sequence you are adding
-        --prefix                       Required a string to add to the gene ids, to ensure that they are unique (include  PREFIX_)
-        --production_name              Production name of the species
-
-       Optional arguments:
-        --output_dir                   Output directory to place final output
-        --cache_dir                    Cache directory for downloaded files
-        --help                         This usage statement.
-        --brc_mode                     Set to 1 to use with BRC data (default: ${params.brc_mode})
-        """
-}
-
-// Show help message
 if (params.help) {
-    helpMessage()
+     log.info paramsHelp("nextflow run additional_seq_prepare/main.nf --accession 'GB_ACCESSION' --prefix 'PREFIX_' --production_name 'SPECIES_PROD_NAME'")
     exit 0
 }
+
+validateParameters()
+log.info paramsSummaryLog(workflow)
 
 if (params.brc_mode) {
     params.brc_mode = params.brc_mode as Integer
 }
 
-assert params.accession, "Parameter 'accession' is not specified"
-assert params.prefix, "Parameter 'prefix' is not specified"
-assert params.production_name, "Parameter 'production_name' is not specified"
-
-params.meta = [
+meta = [
     "accession": params.accession,
     "production_name": params.production_name,
-    "prefix": params.prefix
+    "prefix": params.prefix,
+    "publish_dir": params.accession,
 ]
 
 // Import modules/subworkflows
@@ -66,5 +39,5 @@ include { additional_seq_prepare } from '../../subworkflows/additional_seq_prepa
 
 // Run main workflow
 workflow {
-    additional_seq_prepare(params.meta)
+    additional_seq_prepare(meta)
 }

@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/genome.json",
+  "description" : "JSON schema for exchanging meta information for genomes",
+
+  "definitions" : {
+    "species_info": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "taxonomy_id" : { "type" : "integer" },
+        "production_name" : { "type" : "string" },
+        "scientific_name" : { "type" : "string" },
+        "strain" : { "type" : "string" },
+        "display_name" : { "type" : "string" },
+        "division" : { "type" : "string" },
+        "alias" : {
+          "oneOf" : [
+            { "type" : "string" },
+            { "type" : "array", "items" : { "type" : "string" } }
+          ]
+        },
+        "annotation_source" : { "type" : "string" },
+        "BRC4_organism_abbrev" : { "type" : "string" }
+      },
+      "required": [
+        "taxonomy_id"
+      ]
+    },
+    "assembly_info": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "accession" : {
+          "type" : "string",
+          "pattern" : "^GC[AF]_[0-9]+(\\.[0-9]+)?$",
+          "description" : "Unique INSDC accession for the genome"
+        },
+        "chromosome_display_order" : {
+          "type" : "array",
+          "items" : { "type" : "string" },
+          "description" : "if present, only the listed chromosomes will be be displayed"
+        },
+        "date" : { "type" : "string" },
+        "name" : { "type" : "string", "pattern" : "^[A-Za-z0-9_\\.-]+$" },
+        "version" : {"type" : "integer" },
+        "provider_name" : { "type" : "string" },
+        "provider_url" : { "type" : "string", "format" : "url" }
+      },
+      "required": [
+        "accession",
+        "version"
+      ]
+    },
+    "annotation_info": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider_name" : { "type" : "string" },
+        "provider_url" : { "type" : "string", "format" : "url" }
+      }
+    },
+    "genebuild_info": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "version" : { "type" : "string" },
+        "method" : { "type" : "string" },
+        "method_display" : { "type" : "string" },
+        "start_date" : { "type" : "string" },
+        "initial_release_date" : { "type" : "string" },
+        "last_geneset_update" : { "type" : "string" }
+      },
+      "required": [
+        "version"
+      ]
+    },
+    "provider_info": {
+      "description" : "legacy. use (annotation|assembly).provider_(name|url) instead",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name" : { "type" : "string" },
+        "url" : { "type" : "string" }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "BRC4_info": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "component" : { "type" : "string" },
+        "organism_abbrev" : { "type" : "string" }
+      },
+      "required": [
+        "component",
+        "organism_abbrev"
+      ]
+    },
+    "added_sequence_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "description" : "Names of seq_regions (with the corresponding 'added_seq_accession' attribs) coming from the additional assemblies (i.e. apicoplasts, mitochondria, etc)",
+      "properties" : {
+        "region_name" : {
+          "oneOf" : [
+            { "type" : "string" },
+            { "type" : "array", "items" : { "type" : "string" } }
+          ]
+        }
+      }
+    },
+
+    "genome_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "species" : { "$ref" : "#/definitions/species_info" },
+        "assembly" : { "$ref" : "#/definitions/assembly_info" },
+        "annotation" : { "$ref" : "#/definitions/annotation_info" },
+        "genebuild" : { "$ref" : "#/definitions/genebuild_info" },
+        "provider" : { "$ref" : "#/definitions/provider_info" },
+        "BRC4" : { "$ref" : "#/definitions/BRC4_info" },
+        "added_seq" : { "$ref" : "#/definitions/added_sequence_info" }
+      },
+      "required" : [
+        "species",
+        "assembly"
+      ]
+    }
+  },
+
+  "oneOf" : [
+    { "$ref" : "#/definitions/genome_info" }
+  ],
+
+  "examples": [
+    { "species": { "taxonomy_id": 180454 }, "assembly": { "accession" : "GCA_012.3", "version" : 1 } }
+  ]
+}
+

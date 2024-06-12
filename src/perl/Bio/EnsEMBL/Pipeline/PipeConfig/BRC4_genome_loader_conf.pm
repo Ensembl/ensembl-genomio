@@ -39,7 +39,6 @@ my $package_dir = dirname($package_path);
 my $root_dir = "$package_dir/../../../../../..";
 
 my $scripts_dir = "$root_dir/scripts";
-my $schema_dir = "$root_dir/schemas";
 my $config_dir = "$root_dir/config";
 
 sub default_options {
@@ -80,15 +79,6 @@ sub default_options {
     check_manifest => 1,
 
     debug => 0,
-
-    ## Metadata parameters
-    'schemas' => {
-      'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
-      'seq_attrib' => catfile($schema_dir, "seq_attrib_schema.json"),
-      'functional_annotation' => catfile($schema_dir, "functional_annotation_schema.json"),
-      'genome' => catfile($schema_dir, "genome_schema.json"),
-      'manifest' => catfile($schema_dir, "manifest_schema.json"),
-    },
     
     # External_db name map file
     external_db_map_name => 'default.txt',
@@ -148,7 +138,7 @@ sub default_options {
     # if loaded from RefSeq(GCF) change seq_region names to GenBank(GCA)
     swap_gcf_gca => 0,
 
-    # defautl xref display_db
+    # default xref display_db
     xref_display_db_default => 'BRC4_Community_Annotation',
     xref_load_logic_name => 'brc4_import',
 
@@ -158,17 +148,17 @@ sub default_options {
     # run ProdDBsync parts before adding ad-hoc sequences (add_sequence  mode on)
     prod_db_sync_before_adding => 1,
 
-    # default resoutce class name for Manifest_integrity
+    # default resource class name for Manifest_integrity
     manifest_integrity_rc_name => '8GB',
 
     # default resource class for 'LoadSequenceData' and 'AddSequence' steps
     load_sequence_data_rc_name => '8GB',
 
-    # defaul resource class for LoadFunctionalAnnotation step
+    # default resource class for LoadFunctionalAnnotation step
     load_func_ann_rc_name => '8GB',
 
     # size of chunks to split contigs into (0 -- no splitting)
-    sequence_data_chunck => 0,
+    sequence_data_chunk => 0,
     # coord system name for chunks
     chunk_cs_name => 'ensembl_internal',
   };
@@ -181,7 +171,6 @@ sub pipeline_wide_parameters {
     %{$self->SUPER::pipeline_wide_parameters},
     debug          => $self->o('debug'),
     check_manifest => $self->o('check_manifest'),
-    'schemas'      => $self->o('schemas'),
     pipeline_dir   => $self->o('pipeline_dir'),
     ensembl_root_dir => $self->o('ensembl_root_dir'),
 
@@ -234,7 +223,7 @@ sub pipeline_wide_parameters {
     load_sequence_data_rc_name => $self->o('load_sequence_data_rc_name'),
     load_func_ann_rc_name => $self->o('load_func_ann_rc_name'),
 
-    sequence_data_chunck => $self->o('sequence_data_chunck'),
+    sequence_data_chunk => $self->o('sequence_data_chunk'),
     chunk_cs_name        => $self->o('chunk_cs_name'),
   };
 }
@@ -349,13 +338,13 @@ sub pipeline_analyses {
       -logic_name     => 'check_json_schema',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
+        # schemas_json_validate will automatically fetch the JSON schema file corresponding to metadata_type
         cmd => 'mkdir -p #log_path#; '
-             . 'echo "checking #json# against #schema#" > #log_path#/#metadata_type#.log; '
-             . 'schemas_json_validate --json_file #json# --json_schema #schema# '
+             . 'echo "checking #json# against #metadata_type#" > #log_path#/#metadata_type#.log; '
+             . 'schemas_json_validate --json_file #json# --json_schema #metadata_type# '
              . '   >> #log_path#/#metadata_type#.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_schemas',
         json => '#metadata_json#',
-        schema => '#expr( #schemas#->{#metadata_type#} )expr#', # N.B. no quotes around #metadata_type#
       },
       -analysis_capacity => 2,
       -failed_job_tolerance => 10, # in %
@@ -369,9 +358,11 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
         cmd => 'mkdir -p #log_path#; '
-             . 'check_integrity --brc_mode #brc4_mode# --ignore_final_stops #ignore_final_stops# --manifest_file #manifest# '
+             . 'manifest_check_integrity --manifest_file #manifest# #brc4_mode_param# #ignore_final_stops_param#'
              . '   > #log_path#/check.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_integrity',
+        brc4_mode_param => '#expr( #brc4_mode# ? "--brc_mode" : "")expr#',
+        ignore_final_stops_param => '#expr( #ignore_final_stops# ? "--ignore_final_stops" : "")expr#',
       },
       -analysis_capacity   => 10,
       -rc_name         => $self->o('manifest_integrity_rc_name'),
@@ -462,7 +453,7 @@ sub pipeline_analyses {
         work_dir => $self->o('pipeline_dir') . '/#db_name#/add_sequence',
         load_additional_sequences => $self->o('add_sequence'),
         # N.B. chunking will work correctly only if it was used for initial loading
-        sequence_data_chunck => $self->o('sequence_data_chunck'),
+        sequence_data_chunk => $self->o('sequence_data_chunk'),
         chunk_cs_name        => $self->o('chunk_cs_name'),
       },
       -analysis_capacity   => 10,
@@ -542,7 +533,7 @@ sub pipeline_analyses {
         cs_tag_for_ordered => $self->o('cs_tag_for_ordered'),
         no_contig_ena_attrib => $self->o('no_contig_ena_attrib'),
         swap_gcf_gca => $self->o('swap_gcf_gca'),
-        sequence_data_chunck => $self->o('sequence_data_chunck'),
+        sequence_data_chunk => $self->o('sequence_data_chunk'),
         chunk_cs_name        => $self->o('chunk_cs_name'),
       },
       -analysis_capacity   => 10,

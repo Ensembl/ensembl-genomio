@@ -34,6 +34,7 @@ _ROOT_PATH = _SCRIPTS_DIR.parents[1]
 _SUFFIXES_WITH_HEADER = set(
     ["pl", "pm", "py", "nf", "config", "mysql", "pgsql", "sql", "sqlite", "bash", "sh", "toml", "yml"]
 )
+_EXCLUDE_DIRS = ["data/test", "src/python/tests/data"]
 
 
 def check_notice(notice_template: PathLike) -> None:
@@ -83,6 +84,9 @@ def check_header(header_template: PathLike) -> None:
     report_files = []
     for file_path in _ROOT_PATH.rglob("*.*"):
         if file_path.is_file() and (file_path.suffix[1:] in _SUFFIXES_WITH_HEADER):
+            if any([file_path.match(f"{_ROOT_PATH}/{x}/*") for x in _EXCLUDE_DIRS]):
+                # Do not check any files that belong to one of the directories to exclude
+                continue
             if not prog.search(file_path.read_text()):
                 report_files.append(str(file_path))
     if report_files:

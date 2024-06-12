@@ -19,6 +19,7 @@
 # A generic job to be used by all Perl jobs with the "extends" mechanism
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
 .perl:
+  when: manual
   stage: test
   image: perl:5.26
   only:

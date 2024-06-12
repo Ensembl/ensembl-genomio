@@ -19,11 +19,21 @@ workflow:
   rules:
     - if: $CI_EXTERNAL_PULL_REQUEST_IID &&
           $CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY == $CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY &&
-          $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+          ( $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH ||
+            $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME =~ /hackathon\/.+/ )
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "push" &&
+          ( $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH !~ /hackathon\/.+/ )
+      when: never
+    - when: always
 
 variables:
+  PYTHON_IMAGE: python:3.10
   RUN_DIR: ./cicd/runtime
+
+default:
+  tags:
+    - docker
 
 # Using default stages (https://docs.gitlab.com/ee/ci/yaml/#stages): .pre > build > test > deploy > .post
 

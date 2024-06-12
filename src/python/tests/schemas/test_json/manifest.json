@@ -1,0 +1,12 @@
+{
+    "functional_annotation": {
+        "category": {
+            "file": "functional_annotation.json"
+        },
+        "md5sum": "7be40a688138a6e0f72d9dbcd29868fb"
+    },
+    "seq_region": {
+        "file": "seq_region.json",
+        "md5sum": "55a626b38fa5612232d1f2465034ad13"
+    }
+}

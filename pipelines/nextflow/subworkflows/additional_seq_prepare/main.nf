@@ -18,7 +18,6 @@ include { DOWNLOAD_GENBANK } from '../../modules/download/download_genbank.nf'
 include { EXTRACT_FROM_GB } from '../../modules/genbank/extract_from_gb.nf'
 include { PROCESS_GFF3 } from '../../modules/gff3/process_gff3.nf'
 include { GFF3_VALIDATION } from '../../modules/gff3/gff3_validation.nf'
-include { CHECK_JSON_SCHEMA } from '../../modules/schema/check_json_schema.nf'
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
@@ -36,7 +35,12 @@ workflow additional_seq_prepare {
         gb_file = DOWNLOAD_GENBANK(meta)
 
         // Parse data from GB file into GFF3 and json files
-        (gff_genome, gb_genome, gb_seq_regions, gb_dna_fasta, gb_pep_fasta) = EXTRACT_FROM_GB(gb_file)
+        EXTRACT_FROM_GB(gb_file)
+        gb_genome = EXTRACT_FROM_GB.out.genome
+        gb_seq_regions = EXTRACT_FROM_GB.out.seq_regions
+        gb_dna_fasta = EXTRACT_FROM_GB.out.dna_fasta
+        gff_genome = EXTRACT_FROM_GB.out.gene_gff
+        gb_pep_fasta = EXTRACT_FROM_GB.out.pep_fasta
 
         // Process the GB and GFF3 files into a cleaned GFF3 and a functional_annotation files
         genome_gff_files = gb_genome.join(gff_genome)
@@ -52,12 +56,9 @@ workflow additional_seq_prepare {
             gb_seq_regions,
             new_functional_annotation
         )
-        
-        // Verify schemas 
-        checked_json_files = CHECK_JSON_SCHEMA(json_files)
 
         // Gather json and fasta files and reduce to unique input accession
-        all_files = checked_json_files.concat(
+        all_files = json_files.concat(
             gene_models,
             gb_dna_fasta,
             gb_pep_fasta

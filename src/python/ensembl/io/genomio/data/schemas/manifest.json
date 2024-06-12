@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/manifest.json",
+  "description" : "JSON schema for a manifest of files",
+
+  "definitions" : {
+    "manifest_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gff3" : { "$ref" : "#/definitions/file_info" },
+        "fasta_dna" : { "$ref" : "#/definitions/file_info" },
+        "fasta_pep" : { "$ref" : "#/definitions/file_info" },
+        "seq_region" : { "$ref" : "#/definitions/file_info" },
+        "seq_attrib" : { "$ref" : "#/definitions/file_info" },
+        "genome" : { "$ref" : "#/definitions/file_info" },
+        "functional_annotation" : { "$ref" : "#/definitions/file_info" },
+        "agp" : { "$ref" : "#/definitions/agp_info" },
+        "events" : { "$ref" : "#/definitions/file_info" }
+      }
+    },
+    "file_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "file" : {"type" : "string" },
+        "md5sum" : {"type" : "string" }
+      },
+      "required" : ["file", "md5sum" ]
+    },
+    "agp_info" : {
+      "type": "object",
+      "additionalProperties": { "$ref" : "#/definitions/file_info" }
+    }
+  },
+
+  "oneOf" : [
+    { "$ref" : "#/definitions/manifest_info" }
+  ],
+
+  "examples": [
+  {
+    "gff3" : { "file" : "filename.gff3", "md5sum" : "LOREMIPSUM1" },
+    "fasta_dna" : { "file" : "filename_dna.fa", "md5sum" : "LOREMIPSUM2" },
+    "fasta_pep" : { "file" : "filename_pep.fa", "md5sum" : "LOREMIPSUM2" },
+    "seq_region" : { "file" : "filename_pep.fa", "md5sum" : "LOREMIPSUM2" }
+  }
+  ]
+}
+

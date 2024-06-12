@@ -1,0 +1,8 @@
+# Assembly name:  GCA000002765
+# Organism name:  Plasmodium falciparum
+# Taxid:          36329
+#
+# Name	Molecule	Location	GenBank-Accn	RefSeq-Accn	Length
+1	1	Chromosome	CP089274.1	RefChr0001.1	5935961
+2	2	Chromosome	CP089275.1	na	5880203
+3	3	Chromosome	na	RefChr0002.1	5901247

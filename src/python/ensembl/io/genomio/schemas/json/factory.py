@@ -14,7 +14,7 @@
 # limitations under the License.
 """Generates one JSON file per metadata type inside `manifest`, including the manifest itself."""
 
-__all__ = ["json_schema_factory"]
+__all__ = ["schema_factory"]
 
 import json
 from os import PathLike
@@ -23,9 +23,10 @@ import shutil
 from typing import List
 
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
-def json_schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir: PathLike) -> None:
+def schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir: PathLike) -> None:
     """Generates one JSON file per metadata type inside `manifest`, including "manifest.json" itself.
 
     Each JSON file will have the file name of the metadata type, e.g. "seq_region.json".
@@ -75,6 +76,8 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--output_dir", default=Path.cwd(), help="Folder to store the produced files"
     )
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
-    json_schema_factory(**vars(args))
+    schema_factory(**vars(args))

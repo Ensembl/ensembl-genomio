@@ -17,6 +17,7 @@
 import argparse
 import re
 from typing import Dict, List, Any
+import logging
 
 import mysql.connector
 
@@ -55,7 +56,11 @@ class CoreServer:
         )
 
     def set_database(self, db_name: str) -> None:
-        self._connector.database = db_name
+        try:
+            self._connector.database = db_name
+        except mysql.connector.errors.ProgrammingError:
+            logging.exception(f"Unknown database ! DB:'{db_name}' not located on host {self.host}")
+            raise
 
     def get_cursor(self):
         return self._connector.cursor()
@@ -89,6 +94,10 @@ class CoreServer:
         dbs = []
 
         dbs = self.get_all_cores()
+
+        # Check if there are databases returned from query to host
+        if not dbs:
+            logging.warning("No databases returned from query")
 
         if prefix:
             dbs = [db for db in dbs if db.startswith(f"{prefix}")]

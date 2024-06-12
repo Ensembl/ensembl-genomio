@@ -44,6 +44,7 @@ class load_sequence_data(eHive.BaseRunnable):
         return {
             # relative order of the coord_systems types to infer their rank from
             "cs_order": "ensembl_internal,chunk,contig,supercontig,non_ref_scaffold,scaffold,primary_assembly,superscaffold,linkage_group,chromosome",
+            "artificial_cs": "ensembl_internal,chunk",  # coord_systems to ignore when adding synonyms for sequence_level cs
             "IUPAC": "RYKMSWBDHV",  # symbols to be replaced with N in the DNA sequences (ensembl core(107) doesn't support the whole IUPAC alphabet for DNA)
             # unversion scaffold, remove ".\d$" from seq_region.names if there's a need
             "unversion_scaffolds": 0,
@@ -77,7 +78,7 @@ class load_sequence_data(eHive.BaseRunnable):
             #       { "added_sequence" : { "assembly_provider" : { "name" : ... } } } -> "added_sequence/assembly_provider/name"
             #   only flattable properties can be used, no arrays
             #   arrays should be processed separately (see `add_sr_synonyms` or `add_karyotype_bands` definitions)
-            # see schemas/seq_region_schema.json
+            # see src/python/ensembl/io/genomio/data/schemas/seq_region.json
             "sr_attrib_types": {
                 "circular": "circular_seq",
                 "codon_table": "codon_table",
@@ -96,9 +97,9 @@ class load_sequence_data(eHive.BaseRunnable):
             # loading additional sequences to the already exsisting core db
             "load_additional_sequences": 0,
             # size of the sequence data chunk, if 0 (default), no chunking is performed
-            "sequence_data_chunck": 0,
-            #   min size of the sequence chunk, no chunking is done if 'sequence_data_chunck' < 'sequence_data_chunck_min'
-            "sequence_data_chunck_min_len": 50_000,
+            "sequence_data_chunk": 0,
+            #   min size of the sequence chunk, no chunking is done if 'sequence_data_chunk' < 'sequence_data_chunk_min'
+            "sequence_data_chunk_min_len": 50_000,
             # coord system name for chunks
             "chunk_cs_name": "ensembl_internal",
         }
@@ -199,13 +200,13 @@ class load_sequence_data(eHive.BaseRunnable):
 
         # chunk sequence data if needed
         #   no chunking if chunk_size < 50k
-        chunk_size = int(self.param("sequence_data_chunck"))
+        chunk_size = int(self.param("sequence_data_chunk"))
         chunk_cs_name = self.param("chunk_cs_name")
         fasta_clean, cs_rank, agps_pruned = self.chunk_contigs(
             fasta_clean,
             cs_rank,
             agps_pruned,
-            pj(work_dir, "chuncking"),
+            pj(work_dir, "chunking"),
             chunk_size=chunk_size,
             chunks_cs_name=chunk_cs_name,
         )
@@ -215,7 +216,7 @@ class load_sequence_data(eHive.BaseRunnable):
 
         # mark all the "contig"s or noagp_cs as being sourced from ENA
         if not self.param_bool("no_contig_ena_attrib"):
-            # NB using original "agps" parameter (with no chuncking data added)
+            # NB using original "agps" parameter (with no chunking data added)
             agps_raw = self.from_param("manifest_data", "agp", not_throw=True)
             if agps_raw is None:
                 self.add_contig_ena_attrib(self.pjc(work_dir, "load", "set_ena"), cs_name=noagps_cs)
@@ -249,8 +250,8 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Add seq_region_synonym from the seq_region_file meta data file.
 
-        Add seq_region_synonym from the schemas/seq_region_schema.json compatible meta data file.
-        Merge with the already exinsting ones in the db.
+        Add seq_region_synonym from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file.
+        Merge with the already existing ones in the db.
 
         If unversion is true:
           * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
@@ -355,11 +356,11 @@ class load_sequence_data(eHive.BaseRunnable):
 
         Explicit list is taken from "sr_attrib_types" module param.
 
-        Add seq_region_attrib(s) from the schemas/seq_region_schema.json compatible meta data file.
+        Add seq_region_attrib(s) from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file.
         Explicit list is taken from "sr_attrib_types" module param.
 
         "sr_attrib_types" defines { json_property -> attrib_type.name } map. If the value is dict,
-        its keys are treated as "/"-delimetered "json_path" (i.e. "added_sequence/assembly_provider/name").
+        its keys are treated as "/"-delimited "json_path" (i.e. "added_sequence/assembly_provider/name").
         No arrays can be processed. Only simple or "flattable" types.
 
         If unversion is true:
@@ -478,7 +479,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Add "(EBI|BRC4)_seq_region_name" seq_region_attrib(s) either from the seq_region_file meta data file, or from original seq_region names.
 
-        Add "(EBI|BRC4)_seq_region_name" seq_region_synonym from the schemas/seq_region_schema.json compatible meta data file or from the original seq_region_names.
+        Add "(EBI|BRC4)_seq_region_name" seq_region_synonym from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file or from the original seq_region_names.
         A special case of attributes adding with default values derived from seq_region names.
 
         If unversion is true:
@@ -536,7 +537,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Adds various karyotypic data from seq_region file and assembly metadata (if present).
 
-        Adds various karyotypic data from the schemas/seq_region_schema.json compatible meta data file and assembly metadata (if present).
+        Adds various karyotypic data from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file and assembly metadata (if present).
 
         If unversion is true:
           * the unversioned synonym would be used to get the seq_region_id from "seq_region_map" if possible
@@ -585,7 +586,7 @@ class load_sequence_data(eHive.BaseRunnable):
         """
         Add karyotypic data from the seq_region metafile.
 
-        Add karyotypic data from the schemas/seq_region_schema.json compatible meta data file.
+        Add karyotypic data from the src/python/ensembl/io/genomio/data/schemas/seq_region.json compatible meta data file.
         Returns list of [ (seq_region_name, seq_region_id, unversioned_name) ] trios for seq_regions having karyotype bands info.
 
         If unversion is true:
@@ -859,7 +860,11 @@ class load_sequence_data(eHive.BaseRunnable):
 
         Non-versioned syns for contigs (lower, sequence level), versioned for the rest.
         """
-        seq_cs, max_rank = max([(c, r) for c, r in cs_rank.items()], key=lambda k: k[1])
+        # coord_systems to ignore when adding synonyms for sequence_level cs
+        artificial_cs = frozenset(self.param("artificial_cs").split(","))
+        seq_cs, max_rank = max(
+            [(c, r) for c, r in cs_rank.items() if c not in artificial_cs], key=lambda k: k[1]
+        )
         for cs in cs_rank:
             if cs == seq_cs:
                 # for non-sequence level cs, store original name (with version) as "sr_syn_src" synonym
@@ -897,7 +902,7 @@ class load_sequence_data(eHive.BaseRunnable):
         chunk dna sequence fasta
           no chunking if chunk_size < 50k
         """
-        chunk_size_min_len = self.param_required("sequence_data_chunck_min_len")
+        chunk_size_min_len = self.param_required("sequence_data_chunk_min_len")
         if chunk_size < chunk_size_min_len:
             return fasta, cs_ranks, agps
 

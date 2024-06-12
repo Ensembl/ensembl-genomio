@@ -12,27 +12,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates one JSON file per metadata type inside `manifest`, including the manifest itself.
+"""Generates one JSON file per metadata type inside `manifest`, including the manifest itself."""
 
-Can be imported as a module and called as a script as well, with the same parameters and expected outcome.
-"""
+__all__ = ["format_db_data", "get_core_dbs_metadata"]
 
 import json
-import re
+from pathlib import Path
 from typing import Dict, List, Optional
+import logging
 
-from ensembl.brc4.runnable.core_server import CoreServer
+from sqlalchemy.engine import URL
+
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
+from .core_server import CoreServer
+from .dbconnection_lite import DBConnectionLite
 
 
-db_pattern = re.compile(r".+_core_(\d+)_(\d+)_\d+")
-
-
-def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
-    """Returns metadata from a list of databases on a server.
+def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
+    """Returns a metadata list from the given databases on a server.
 
     Args:
-        server: Server where all the databases are hosted.
+        server: Server URL where all the databases are hosted.
         dbs: List of database names.
         brc_mode: If true, assign ``BRC4.organism_abbrev`` as the species, and ``BRC4.component`` as the
             division. Otherwise, the species will be ``species.production_name`` and the division will be
@@ -40,23 +41,23 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
 
     Returns:
         List of dictionaries with 3 keys: "database", "species" and "division".
-
     """
     databases_data = []
-    for db in dbs:
-        server.set_database(db)
-        metadata = server.get_db_metadata()
+    for db_name in dbs:
+        logging.debug(f"Get metadata for {db_name}")
+        db_url = server_url.set(database=db_name)
+        core_db = DBConnectionLite(db_url)
 
-        prod_name = get_metadata_value(metadata, "species.production_name")
+        prod_name = core_db.get_meta_value("species.production_name")
         species = prod_name
-        division = get_metadata_value(metadata, "species.division")
-        accession = get_metadata_value(metadata, "assembly.accession")
-        project_release = _get_project_release(db)
-        ensembl_version = get_metadata_value(metadata, "schema_version")
+        division = core_db.get_meta_value("species.division")
+        accession = core_db.get_meta_value("assembly.accession")
+        project_release = core_db.get_project_release()
+        ensembl_version = core_db.get_meta_value("schema_version")
 
         if brc_mode:
-            brc_organism = get_metadata_value(metadata, "BRC4.organism_abbrev")
-            brc_component = get_metadata_value(metadata, "BRC4.component")
+            brc_organism = core_db.get_meta_value("BRC4.organism_abbrev")
+            brc_component = core_db.get_meta_value("BRC4.component")
             if brc_organism is not None:
                 species = brc_organism
             if brc_component is not None:
@@ -66,11 +67,11 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
             division = "all"
 
         server_data = {
-            "host": server.host,
-            "user": server.user,
-            "port": server.port,
-            "password": server.password,
-            "database": db,
+            "host": db_url.host,
+            "user": db_url.username,
+            "port": db_url.port,
+            "password": db_url.password,
+            "database": db_url.database,
         }
         db_data = {
             "server": server_data,
@@ -86,54 +87,71 @@ def format_db_data(server: CoreServer, dbs: List[str], brc_mode: bool = False) -
     return databases_data
 
 
-def get_metadata_value(metadata: Dict[str, List], key: str) -> Optional[str]:
-    """Returns the first element in the list assigned to `key` in `metadata`.
+def get_core_dbs_metadata(
+    server_url: URL,
+    prefix: str = "",
+    build: Optional[int] = None,
+    version: Optional[int] = None,
+    db_regex: str = "",
+    db_list: Optional[Path] = None,
+    brc_mode: bool = False,
+) -> List[Dict]:
+    """Returns all the metadata fetched for the selected core databases.
 
     Args:
-        metadata: Map of metadata information to lists of values.
-        key: Metadata key to search for.
+        server_url: Server URL where the core databases are stored.
+        prefix: Filter by prefix (no "_" is added automatically).
+        build: Filter by VEuPathDB build number.
+        version: Filter by Ensembl version.
+        db_regex: Filter by dbname regular expression.
+        db_list: Explicit list of database names.
+        brc_mode: Enable BRC mode.
 
+    Returns:
+        List of dictionaries with 3 keys: "database", "species" and "division".
     """
-    if (key in metadata) and metadata[key]:
-        return metadata[key][0]
-    return None
-
-
-def _get_project_release(db_name: str) -> str:
-    """Return the project release number from the database name."""
-
-    match = re.search(db_pattern, db_name)
-    if match:
-        return match.group(1)
-    return ""
+    db_list_file = None
+    if db_list:
+        with db_list.open("r") as infile_fh:
+            db_list_file = [line.strip() for line in infile_fh]
+    # Get all database names
+    server = CoreServer(server_url)
+    logging.debug("Fetching databases...")
+    databases = server.get_cores(
+        prefix=prefix, build=build, version=version, dbname_re=db_regex, db_list=db_list_file
+    )
+    logging.info(f"Got {len(databases)} databases")
+    logging.debug("\n".join(databases))
+    return format_db_data(server_url, databases, brc_mode)
 
 
 def main() -> None:
     """Main script entry-point."""
-    parser = ArgumentParser(
-        description="Get the metadata from a list of databases on a server (in JSON format)."
-    )
+    parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments()
     # Add filter arguments
     parser.add_argument("--prefix", default="", help="Prefix to filter the databases")
-    parser.add_argument("--build", default="", help="Build to filter the databases")
-    parser.add_argument("--version", default="", help="EnsEMBL version to filter the databases")
+    parser.add_argument("--build", type=int, default=None, help="Build to filter the databases")
+    parser.add_argument("--version", type=int, default=None, help="EnsEMBL version to filter the databases")
     parser.add_argument("--db_regex", default="", help="Regular expression to match database names against")
+    parser.add_argument_src_path("--db_list", help="File with one database per line to load")
     # Add flags
     parser.add_argument(
         "--brc_mode",
         action="store_true",
         help="Enable BRC mode, i.e. use organism_abbrev for species, component for division",
     )
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
-    server = CoreServer(host=args.host, port=args.port, user=args.user, password=args.password)
-    databases = server.get_cores(
-        prefix=args.prefix, build=args.build, version=args.version, dbname_re=args.db_regex
+    databases_data = get_core_dbs_metadata(
+        server_url=args.url,
+        prefix=args.prefix,
+        build=args.build,
+        version=args.version,
+        db_regex=args.db_regex,
+        db_list=args.db_list,
+        brc_mode=args.brc_mode,
     )
-    databases_data = format_db_data(server, databases, args.brc_mode)
     print(json.dumps(databases_data, sort_keys=True, indent=4))
-
-
-if __name__ == "__main__":
-    main()

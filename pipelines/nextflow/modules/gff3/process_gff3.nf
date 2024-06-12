@@ -30,6 +30,9 @@ process PROCESS_GFF3 {
         out_gff = "gene_models.gff3"
         '''
         gff3_process --genome_data !{genome} --in_gff_path !{gff3} --out_gff_path !{out_gff} \
-            --out_func_path !{out_func}
+            --out_func_path !{out_func} -v \
+            --log_file gff3_process.log
+        
+        schemas_json_validate --json_file !{out_func} --json_schema functional_annotation
         '''
 }

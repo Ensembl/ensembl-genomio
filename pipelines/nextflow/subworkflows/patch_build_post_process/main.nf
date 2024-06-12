@@ -50,10 +50,12 @@ workflow PATCH_BUILD_PROCESS {
 
         // Transfer the genes from the old db to the new db
         // Requires 2 registries and the species name
-        new_transcripts = TRANSFER_IDS(changed_genes, old_registry, new_registry, server.species)
+        transfer_ids_output = TRANSFER_IDS(changed_genes, old_registry, new_registry, server.species)
+        new_transcripts = transfer_ids_output.new_transcripts
+        mapped_transcripts = transfer_ids_output.mapped_transcripts
 
         // Transfer metadata (can be done any time after the ids are transfered?)
-        transfer_log = TRANSFER_METADATA(new_transcripts, old_registry, new_registry, server.species)
+        transfer_log = TRANSFER_METADATA(mapped_transcripts, old_registry, new_registry, server.species)
 
         // Allocate ids for both the new_genes and the changed_genes new transcripts
         new_genes_map = ALLOCATE_GENE_IDS(new_registry, server.species, osid, new_genes, "gene")
@@ -61,10 +63,10 @@ workflow PATCH_BUILD_PROCESS {
 
         // Finalize the versions
         waited_files = new_genes_map.concat(new_transcripts_map).last()
-        FINALIZE_VERSIONS(server, waited_files)
+        finalized = FINALIZE_VERSIONS(server, waited_files)
 
         // Check stable ids
-        patch_errors=CHECK_PATCH(server, waited_files)
+        patch_errors=CHECK_PATCH(server, finalized)
 
         // Format the annotation events file into a compatible event file
         events_file = FORMAT_EVENTS(events, deleted, new_genes_map, release)
@@ -76,6 +78,7 @@ workflow PATCH_BUILD_PROCESS {
             .concat(new_genes_map)
             .concat(new_transcripts_map)
             .concat(new_transcripts)
+            .concat(mapped_transcripts)
             .concat(events_file)
             .concat(transfer_log)
             .concat(patch_errors)

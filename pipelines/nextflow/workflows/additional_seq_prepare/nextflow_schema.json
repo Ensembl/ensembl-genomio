@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "title": "GenomIO addition prepare pipeline parameters",
+  "description": "Define the parameters to run the prepare pipeline",
+  "type": "object",
+  "definitions": {
+    "main_parameters": {
+      "title": "Main parameters",
+      "type": "object",
+      "fa_icon": "fas fa-terminal",
+      "description": "Define where the pipeline should find input data and save output data.",
+      "required": ["accession", "prefix", "production_name", "output_dir"],
+      "properties": {
+        "accession": {
+          "type": "string",
+          "pattern": "^[A-Z0-9_.]+$",
+          "description": "Genbank accession for the additional sequence to load."
+        },
+        "prefix": {
+          "type": "string",
+          "pattern": "^[A-z0-9_]+$",
+          "description": "Prefix to prepend to the feature IDs to ensure their uniqueness."
+        },
+        "production_name": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "description": "Production_name for the organism to which the additional sequence will be added."
+        },
+        "output_dir": {
+          "type": "string",
+          "format": "directory-path",
+          "default": "output_addition_prepare",
+          "description": "The output directory where the final formatted files will be saved.",
+          "fa_icon": "fas fa-folder-open"
+        }
+      }
+    },
+    "general_parameters": {
+      "title": "General parameters",
+      "type": "object",
+      "fa_icon": "fas fa-terminal",
+      "description": "General parameters.",
+      "properties": {
+        "brc_mode": {
+          "type": "integer",
+          "default": 0,
+          "enum": [0, 1],
+          "description": "Activate BRC specific processing."
+        },
+        "help": {
+          "type": "boolean",
+          "default": false,
+          "description": "Display this help message."
+        },
+        "cache_dir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "The path where downloaded files will be cached.",
+          "fa_icon": "fas fa-folder-open"
+        },
+        "ensembl_root_dir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "Location of the ensembl repositories root directory (defaults to env ENSEMBL_ROOT_DIR)."
+        },
+        "storeDir_latency": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Latency to introduce to allow Nextflow to find files that have been cached with storeDir."
+        },
+        "max_database_forks": {
+          "type": "integer",
+          "mininum": 1,
+          "maximum": 1000,
+          "description": "Limit the number of processes that can access a server in parallel (per process)"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/definitions/main_parameters"
+    },
+    {
+      "$ref": "#/definitions/general_parameters"
+    }
+  ]
+}

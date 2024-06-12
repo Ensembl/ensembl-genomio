@@ -14,59 +14,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// default params
-params.help = false
-params.prefix = ''
-params.dbname_re = ''
-params.output_dir = './dumper_output'
-params.password = ''
-params.select_dump = ''
-default_selection = [
-    'sql',
-    'seq_regions',
-    'events',
-    'genome_metadata',
-    'stats',
-    'fasta_pep',
-    'fasta_dna',
-//    'gff3'
+// Predefine the files that can be dumped and the number of files for each of them
+default_selection_map = [
+    'seq_regions': 1,
+    'events': 1,
+    'genome_metadata': 1,
+    'gff3': 1,
+    'stats': 3,
+    'fasta_pep': 1,
+    'fasta_dna': 1
 ]
+default_selection = default_selection_map.keySet() as ArrayList
+params.db_list = ''
 
-// Print usage
-def helpMessage() {
-  log.info """
-        Mandatory arguments:
-        --host, --port, --user         Connection parameters to the SQL servers we getting core db(s) from
-
-        Optional arguments:
-        --password                     Password part of the connection parameters
-        --prefix                       Core dabase(s) name prefixes
-        --dbname_re                    Regexp to match core db name(s) against
-        --brc_mode	               Override Ensembl 'species' and 'division' with the corresponding BRC ones ('organism_abbrev' and 'component')
-        --output_dir                   Name of Output directory to gather prepared outfiles. (default: ${params.output_dir})
-        --select_dump                  Comma-separated list of items to dump (all by default, or choose among ${default_selection})
-        --cache_dir                    Directory where some files are cached (e.g. NCBI stats files)
-        --help                         This usage statement.
-
-        Usage:
-        The typical command for running the 'Dumper' pipeline is as follows:
-
-        nextflow run \\
-            -w \${data_dir}/nextflow_work \\
-            ensembl-genomio/pipelines/nextflow/workflows/dumper_pipeline/main.nf \\
-            -profile lsf \\
-            --host <DB_HOST> --port <DB_PORT> --user <DB_USER>
-            --dbname_re '^drosophila_melanogaster_\\w+_57_.*\$' \\
-            --output_dir \${data_dir}/dumper_output
-
-        """
-}
-
-// Check mandatory parameters
+include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 if (params.help) {
-    helpMessage()
+     log.info paramsHelp("nextflow run dumper_pipeline/main.nf --dump_sql --dump_all_files --host 'HOST' --port 'PORT' --user 'USER' --dbname_re 'DB_REGEX' --output_dir 'OUTPUT_DIR'")
     exit 0
 }
+validateParameters()
+log.info paramsSummaryLog(workflow)
 
 if (params.brc_mode) {
     params.brc_mode = params.brc_mode as Integer
@@ -99,37 +66,41 @@ def create_filter_map(params) {
     return filter_map
 }
 
-if (params.host && params.port && params.user && params.output_dir) {
-    server = create_server(params)
-    filter_map = create_filter_map(params)
-} else {
-    exit 1, "Missing server parameters"
-}
+server = create_server(params)
+filter_map = create_filter_map(params)
 
 // Select the files to dump
-dump_meta = default_selection
-dump_sql = true
-dump_number = 8
-if (params.select_dump) {
-    dump_meta = []
-    dump_sql = false
-    dump_number = 0
-    dump_meta = params.select_dump.split(/,/).collect().unique()
-    for (item in dump_meta) {
+dump_sql = false
+dump_selection = []
+if (params.dump_sql) {
+    dump_sql = true
+}
+if (params.dump_all_files) {
+    dump_selection = default_selection
+} else if (params.dump_selection) {
+    dump_selection = params.dump_selection.split(/,/).collect().unique()
+    for (item in dump_selection) {
         if (!default_selection.contains(item)) {
             acceptable = default_selection.join(", ")
             exit 1, "Selection item unknown: " + item + " (accepted: " + acceptable + ")"
         }
-        if (item != "sql") {
-            if (item == "stats") {
-                dump_number += 3
-            } else {
-                dump_number += 1
-            }
-        }
     }
 }
-dump_select = ["dump_selection": dump_meta, "dump_number": dump_number]
+
+// Compute the number of files to dump
+dump_number = 0
+for (dump_key in dump_selection) {
+    dump_number += default_selection_map[dump_key]
+}
+if (!dump_sql and dump_number == 0) {
+    exit 1, "No dump option selected"
+}
+if (dump_sql) {
+    print("Will dump databases to SQL in $params.output_dir")
+}
+if (dump_number) {
+    print("Will dump $dump_number files per genome for $dump_selection in $params.output_dir")
+}
 
 include { DUMP_SQL } from '../../subworkflows/dump_sql/main.nf'
 include { DUMP_FILES } from '../../subworkflows/dump_files/main.nf'
@@ -138,11 +109,25 @@ include { read_json } from '../../modules/utils/utils.nf'
 
 // Run main workflow
 workflow {
-    dbs = DB_FACTORY(server, filter_map)
+    // Prepare db_factory filter
+    basic_filter = Channel.of(filter_map)
+    // Add db_list
+    filter_db = Channel.of()
+    if (params.db_list) {
+        // Get the list of databases from the file
+        db_list = Channel.fromPath(params.db_list).splitCsv().map{ row -> row[0] }.collect()
+        // Add that list to the filter_db map
+        filter_db = basic_filter.merge(db_list) { filters, db_list -> filters + ["db_list": db_list] }
+    } else {
+        filter_db = basic_filter
+    }
+
+    dbs = DB_FACTORY(server, filter_db)
         .map(it -> read_json(it))
         .flatten()
-        .map(it -> it + dump_select)
     
-    DUMP_SQL(dbs)
-    DUMP_FILES(dbs)
+    if (dump_sql) {
+        DUMP_SQL(dbs)
+    }
+    DUMP_FILES(dbs, dump_selection, dump_number)
 }

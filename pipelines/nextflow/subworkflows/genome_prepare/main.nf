@@ -18,8 +18,6 @@
 
 // Import modules/subworkflows
 include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_GENOME } from '../../modules/schema/check_json_schema.nf'
-include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_SEQREG } from '../../modules/schema/check_json_schema.nf'
-include { CHECK_JSON_SCHEMA as CHECK_JSON_SCHEMA_FUNCT } from '../../modules/schema/check_json_schema.nf'
 include { DOWNLOAD_ASM_DATA } from '../../modules/download/download_asm_data.nf'
 include { UNPACK_GFF3 } from '../../modules/gff3/unpack_gff3.nf'
 include { PROCESS_GFF3 } from '../../modules/gff3/process_gff3.nf'
@@ -57,11 +55,8 @@ workflow GENOME_PREPARE {
         // Process the GB and GFF3 files into a cleaned GFF3 and a functional_annotation files
         genome_gff_files = checked_genome.join(unpacked_gff, failOnDuplicate: true)
         PROCESS_GFF3(genome_gff_files)
-        new_functional_annotation = PROCESS_GFF3.out.functional_annotation
+        functional_annotation = PROCESS_GFF3.out.functional_annotation
         new_gene_models = PROCESS_GFF3.out.gene_models
-
-        // Verify functional_annotation.json schema
-        functional_annotation = CHECK_JSON_SCHEMA_FUNCT(new_functional_annotation).verified_json
 
         // Tidy and validate gff3 using gff3validator
         gene_models = GFF3_VALIDATION(new_gene_models).gene_models
@@ -73,10 +68,7 @@ workflow GENOME_PREPARE {
         genome_data_files = checked_genome.join(download_min, failOnDuplicate: true, failOnMismatch: true)
 
         // Generate seq_region.json
-        new_seq_region = PROCESS_SEQ_REGION(genome_data_files).seq_region
-
-        // Verify seq_region.json schema
-        seq_region = CHECK_JSON_SCHEMA_SEQREG(new_seq_region).verified_json
+        seq_region = PROCESS_SEQ_REGION(genome_data_files).seq_region
 
         // Process genomic fna
         fasta_dna = PROCESS_FASTA_DNA(download_min, 0).processed_fasta
@@ -85,13 +77,21 @@ workflow GENOME_PREPARE {
         amended_genome = AMEND_GENOME_DATA(genome_data_files).amended_json
 
         // Group files
-        prepared_files = amended_genome.concat(
+        prepared_files = amended_genome.mix(
+                seq_region,
+                fasta_dna,
                 gene_models,
                 functional_annotation,
                 fasta_pep,
-                seq_region,
-                fasta_dna
             )
+            .map{ meta, file ->
+                key = meta
+                if (meta["has_annotation"]) {
+                    key = groupKey(meta, 6)
+                } else {
+                    key = groupKey(meta, 3)
+                }
+                [key, file] }
             .groupTuple()
 
         // Checks and generate sequence stats for manifest

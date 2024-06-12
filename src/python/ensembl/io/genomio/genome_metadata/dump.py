@@ -14,155 +14,178 @@
 # limitations under the License.
 """Generates a JSON file representing the genome metadata from a core database."""
 
-__all__ = ["get_genome_metadata", "filter_genome_meta", "check_assembly_version"]
+__all__ = [
+    "get_genome_metadata",
+    "filter_genome_meta",
+    "check_assembly_version",
+    "check_genebuild_version",
+]
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Type
+import logging
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import Meta
-from ensembl.database import DBConnection
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
+
+
+METADATA_FILTER: Dict[str, Dict[str, Type]] = {
+    "added_seq": {"region_name": str},
+    "annotation": {"provider_name": str, "provider_url": str},
+    "assembly": {
+        "accession": str,
+        "date": str,
+        "name": str,
+        "provider_name": str,
+        "provider_url": str,
+        "version": int,
+    },
+    "BRC4": {"organism_abbrev": str, "component": str},
+    "genebuild": {"id": str, "method": str, "method_display": str, "start_date": str, "version": str},
+    "species": {
+        "alias": str,
+        "annotation_source": str,
+        "display_name": str,
+        "division": str,
+        "production_name": str,
+        "scientific_name": str,
+        "strain": str,
+        "taxonomy_id": int,
+    },
+}
 
 
 def get_genome_metadata(session: Session) -> Dict[str, Any]:
-    """Retrieve a select list of metadata from the core database.
+    """Returns the meta table content from the core database in a nested dictionary.
 
     Args:
         session: Session for the current core.
 
-    Returns:
-        A nested dict.
     """
-    gmeta: Dict[str, Any] = {}
-
-    gmeta_st = select(Meta)
-    for row in session.execute(gmeta_st).unique().all():
-        dat = row[0]
-        meta_key = dat.meta_key
-        meta_value = dat.meta_value
-
-        if "." in meta_key:
-            (high_key, low_key) = meta_key.split(".")
-            if high_key in gmeta:
-                if low_key in gmeta[high_key]:
-                    gmeta[high_key][low_key].append(meta_value)
-                else:
-                    gmeta[high_key][low_key] = [meta_value]
+    genome_metadata: Dict[str, Any] = {}
+    meta_statement = select(Meta)
+    for row in session.execute(meta_statement).unique().all():
+        meta_key = row[0].meta_key
+        meta_value = row[0].meta_value
+        (main_key, _, subkey) = meta_key.partition(".")
+        # Use empty string as subkey when no "." found to simplify dictionary creation
+        if main_key in genome_metadata:
+            if subkey in genome_metadata[main_key]:
+                genome_metadata[main_key][subkey].append(meta_value)
             else:
-                gmeta[high_key] = {}
-                gmeta[high_key][low_key] = [meta_value]
+                genome_metadata[main_key][subkey] = [meta_value]
         else:
-            if meta_key in gmeta:
-                gmeta[meta_key].append(meta_value)
-            else:
-                gmeta[meta_key] = [meta_value]
-
-    return gmeta
-
-
-def filter_genome_meta(gmeta: Dict[str, Any]) -> Dict[str, Any]:
-    """Returns a filtered metadata dict with only predefined keys.
-    Also converts expected numbers to integers (to follow the genome json schema).
-
-    Args:
-        gmeta (Dict[str, Any]): Nested metadata key values from the core metadata table.
-    """
-    meta_list = {
-        "species": {
-            "taxonomy_id",
-            "production_name",
-            "scientific_name",
-            "strain",
-            "display_name",
-            "division",
-            "alias",
-            "annotation_source",
-        },
-        "assembly": {"accession", "date", "name", "version", "provider_name", "provider_url"},
-        "genebuild": {"version", "method", "start_date", "method_display", "id"},
-        "annotation": {"provider_name", "provider_url"},
-        "BRC4": {"organism_abbrev", "component"},
-        "added_seq": {"region_name"},
-    }
-    is_integer = {"species": {"taxonomy_id"}, "assembly": {"version"}}
-
-    gmeta_out: Dict[str, Any] = {}
-    for key1, subkeys in meta_list.items():
-        if key1 not in gmeta:
-            continue
-        if subkeys:
-            gmeta_out[key1] = {}
-            for key2 in subkeys:
-                if key2 not in gmeta[key1]:
-                    continue
-                value = gmeta[key1][key2]
-                if len(value) == 1:
-                    value = value[0]
-                    if key2 in is_integer.get(key1, {}):
-                        value = int(value)
-                gmeta_out[key1][key2] = value
-        else:
-            value = gmeta[key1]
+            genome_metadata[main_key] = {subkey: [meta_value]}
+    # Parse genome metadata to simplify dictionary and check data consistency
+    for main_key, subkeys_dict in genome_metadata.items():
+        # Replace single-value lists by the value itself
+        for subkey, value in subkeys_dict.items():
             if len(value) == 1:
-                value = value[0]
-                if is_integer.get(key1):
-                    value = int(value)
-            gmeta_out[key1] = value
+                subkeys_dict[subkey] = value[0]
+        # Remove nested dictionary if it only has "" as key, passing its value to the main key
+        if "" in subkeys_dict:
+            if len(subkeys_dict) == 1:
+                genome_metadata[main_key] = subkeys_dict.pop("")
+            else:
+                raise ValueError(f"Unexpected meta keys for '{main_key}': {', '.join(subkeys_dict.keys())}")
+    return genome_metadata
 
-    check_assembly_version(gmeta_out)
-    check_genebuild_version(gmeta_out)
 
-    return gmeta_out
+def filter_genome_meta(genome_metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """Returns a filtered metadata dictionary with only the predefined keys in METADATA_FILTER.
 
-
-def check_assembly_version(gmeta_out: Dict[str, Any]) -> None:
-    """Update the assembly version of the genome metadata provided to use an integer.
-    Get the version from the assembly accession as alternative.
+    Also converts to expected data types (to follow the genome JSON schema).
 
     Args:
-        gmeta (Dict[str, Any]): Nested metadata key values from the core metadata table.
+        genome_metadata: Nested metadata key values from the core metadata table.
     """
-    assembly = gmeta_out["assembly"]
-    version = assembly.get("version")
+    filtered_metadata: Dict[str, Any] = {}
+    for key, subfilter in METADATA_FILTER.items():
+        if key in genome_metadata:
+            filtered_metadata[key] = {}
+            for subkey, value_type in subfilter.items():
+                if subkey in genome_metadata[key]:
+                    value = genome_metadata[key][subkey]
+                    if isinstance(value, list):
+                        value = [value_type(x) for x in value]
+                    else:
+                        value = value_type(value)
+                    filtered_metadata[key][subkey] = value
+    # Check assembly and genebuild versions
+    check_assembly_refseq(filtered_metadata)
+    check_assembly_version(filtered_metadata)
+    check_genebuild_version(filtered_metadata)
+    return filtered_metadata
 
+
+def check_assembly_refseq(gmeta_out: Dict[str, Any]) -> None:
+    """Update the GCA accession to use GCF if it is from RefSeq.
+
+    Args:
+        genome_metadata: Nested metadata key values from the core metadata table.
+    """
+    assembly = gmeta_out.get("assembly", {})
+    if assembly.get("provider_name", "") == "RefSeq":
+        assembly["accession"] = assembly["accession"].replace("GCA", "GCF")
+
+
+def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:
+    """Updates the assembly version of the genome metadata provided.
+
+    If `version` meta key is not and integer or it is not available, the assembly accession's version
+    will be used instead.
+
+    Args:
+        genome_metadata: Nested metadata key values from the core metadata table.
+
+    Raises:
+        ValueError: If both `version` and the assembly accession's version are not integers or are missing.
+    """
+    assembly = genome_metadata["assembly"]
+    version = assembly.get("version")
     # Check the version is an integer
-    if version is not None and (isinstance(version, int) or version.isdigit()):
+    try:
         assembly["version"] = int(version)
-    else:
+    except (ValueError, TypeError) as exc:
         # Get the version from the assembly accession
         accession = assembly["accession"]
-        parts = accession.split(".")
-        if len(parts) == 2 and parts[1].isdigit():
-            version = parts[1]
+        version = accession.partition(".")[2]
+        try:
             assembly["version"] = int(version)
-        else:
-            raise ValueError(f"Assembly version is not an integer in {assembly}")
+        except ValueError:
+            raise ValueError(f"Assembly version is not an integer in {assembly}") from exc
+        logging.info(f"Assembly version [v{version}] obtained from assembly accession ({accession}).")
+    else:
+        logging.info(f'Located version [v{assembly["version"]}] info from meta data.')
 
 
-def check_genebuild_version(gmeta_out: Dict[str, Any]) -> None:
-    """Update the genebuild version if not set.
-    Get the version from the genebuild id (and remove that value if any).
+def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
+    """Updates the genebuild version (if not present) from the genebuild ID, removing the latter.
 
     Args:
-        gmeta (Dict[str, Any]): Nested metadata key values from the core metadata table.
-    """
-    genebuild = gmeta_out.get("genebuild")
-    if genebuild is None:
-        return
-    version = genebuild.get("version")
+        genome_metadata: Nested metadata key values from the core metadata table.
 
-    # Check there is a version
-    if version is None:
-        gb_id = genebuild.get("id")
-        if gb_id is None:
-            raise ValueError("No genebuild version or id")
-        gmeta_out["genebuild"]["version"] = str(gb_id)
-    
-    if "id" in genebuild:
-        del gmeta_out["genebuild"]["id"]
+    Raises:
+        ValueError: If there is no genebuild version or ID available.
+    """
+    try:
+        genebuild = genome_metadata["genebuild"]
+    except KeyError:
+        return
+    if "version" not in genebuild:
+        try:
+            genebuild_id = genebuild["id"]
+        except KeyError:
+            # pylint: disable=raise-missing-from
+            raise ValueError("No genebuild version or ID found")
+        genome_metadata["genebuild"]["version"] = str(genebuild_id)
+    # Drop genebuild ID since there is a genebuild version
+    genome_metadata["genebuild"].pop("id", None)
 
 
 def main() -> None:
@@ -171,16 +194,13 @@ def main() -> None:
         description="Fetch the genome metadata from a core database and print it in JSON format."
     )
     parser.add_server_arguments(include_database=True)
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
+    init_logging_with_args(args)
 
-    dbc = DBConnection(args.url)
-
+    dbc = DBConnectionLite(args.url)
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session)
         genome_meta = filter_genome_meta(genome_meta)
 
     print(json.dumps(genome_meta, indent=2, sort_keys=True))
-
-
-if __name__ == "__main__":
-    main()

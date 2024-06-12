@@ -43,7 +43,6 @@ my $package_path = Class::Inspector->loaded_filename(__PACKAGE__);
 my $package_dir = dirname($package_path);
 my $root_dir = "$package_dir/../../../../../..";
 
-my $schema_dir = "$root_dir/schemas";
 my $config_dir = "$root_dir/config";
 my $runnables_dir = "$root_dir/src/python/ensembl/brc4/runnable";
 
@@ -125,15 +124,6 @@ sub default_options {
        'process_logic_names' => [],
        'skip_logic_names'    => [],
 
-
-      ## Metadata parameters
-      'schemas' => {
-        'seq_region' => catfile($schema_dir, "seq_region_schema.json"),
-        'seq_attrib' => catfile($schema_dir, "seq_attrib_schema.json"),
-        'functional_annotation' => catfile($schema_dir, "functional_annotation_schema.json"),
-        'genome' => catfile($schema_dir, "genome_schema.json"),
-        'manifest' => catfile($schema_dir, "manifest_schema.json"),
-      },
       # Map back the external db names
       external_db_map => catfile($config_dir, 'external_db_map', 'default.txt'),
 	};
@@ -186,7 +176,6 @@ sub pipeline_wide_parameters {
             'do_seq_reg'      => $self->o('do_seq_reg'),
             'do_seq_attr'      => $self->o('do_seq_attr'),
             'sql_dir'      => $self->o('sql_dir'),
-            'schemas'      => $self->o('schemas'),
             #'remove_features_prefix'      => $self->o('remove_features_prefix'),
     };
 }
@@ -236,10 +225,7 @@ sub pipeline_analyses {
      { -logic_name     => 'Manifest_check',
        -module         => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
        -parameters     => {
-         json_file => '#manifest#',
-         metadata_type => 'manifest',
-         json_schema => '#expr(${#schemas#}{#metadata_type#})expr#',
-         cmd => 'jsonschema -i #json_file# #json_schema#',
+         cmd => 'schemas_json_validate --json_file #manifest# --json_schema manifest',
        },
        -max_retry_count => 0,
        -analysis_capacity => 1,
@@ -497,13 +483,7 @@ sub pipeline_analyses {
       -logic_name     => 'Check_json_schema',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
-        log_path => $self->o('tmp_dir') . '/check_schemas',
-        json => '#metadata_json#',
-        schema => '#expr( #schemas#->{#metadata_type#} )expr#',
-        cmd => 'mkdir -p #log_path#; '
-             . 'echo "checking #json# against #schema#" > #log_path#/#metadata_type#.log; '
-             . 'schemas_json_validate --json_file #json# --json_schema #schema# '
-             . '   >> #log_path#/#metadata_type#.log 2>&1 ',
+        cmd => 'schemas_json_validate --json_file #metadata_json# --json_schema #metadata_type#',
         hash_key => "#metadata_type#",
       },
       -analysis_capacity => 2,

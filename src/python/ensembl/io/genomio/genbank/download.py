@@ -16,12 +16,14 @@
 
 __all__ = ["DownloadError", "download_genbank"]
 
+import logging
 from os import PathLike
 from pathlib import Path
 
 import requests
 
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 class DownloadError(Exception):
@@ -53,11 +55,12 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
         "retmode": "text",
     }
     entrez_params["id"] = accession
+    logging.debug(f"Getting file from {entrez_url} with params {entrez_params}")
     result = requests.get(entrez_url, params=entrez_params, timeout=60)
     if result and result.status_code == 200:
         with Path(output_file).open("wb") as gbff:
             gbff.write(result.content)
-        print(f"GBF file write to {output_file}")
+        logging.info(f"GenBank file written to {output_file}")
         return
     raise DownloadError(f"Could not download the genbank ({accession}) file: {result}")
 
@@ -67,9 +70,11 @@ def main() -> None:
     parser = ArgumentParser(description="Download a sequence from GenBank.")
     parser.add_argument("--accession", required=True, help="Sequence accession")
     parser.add_argument_dst_path("--output_file", required=True, help="Output GenBank file")
+    parser.add_log_arguments()
     args = parser.parse_args()
+    init_logging_with_args(args)
 
-    download_genbank(**vars(args))
+    download_genbank(accession=args.accession, output_file=args.output_file)
 
 
 if __name__ == "__main__":

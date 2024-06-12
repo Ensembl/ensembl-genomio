@@ -18,7 +18,7 @@ process GFF3_VALIDATION {
   //beforeScript 'module load libffi-3.3-gcc-9.3.0-cgokng6'
   tag "${gene_models}"
   label 'adaptive'
-  container "biocontainers/genometools:v1.5.10ds-3-deb_cv1"
+  container "quay.io/biocontainers/genometools-genometools:1.6.5--py310h3db02ab_0"
 
   input:
     tuple val(meta), path (gene_models, stageAs: "incoming.gff3")
@@ -30,7 +30,7 @@ process GFF3_VALIDATION {
   out_gff = "gene_models.gff3"
   '''
   cp !{gene_models} temp.gff3
-  gt gff3 -tidy -sort -retainids -force -o !{out_gff} temp.gff3 
+  gt gff3 -tidy -sort -retainids -force -o !{out_gff} temp.gff3
   gt gff3validator !{out_gff}
   '''
 }

@@ -17,17 +17,21 @@
 cf the load_events functions for the events tab file format.
 """
 
+__all__ = ["IdEvent", "MapSession", "EventCollection"]
+
 from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
 import re
+import logging
 from typing import Dict, Generator, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from ensembl.database import DBConnection
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.core.models import MappingSession, StableIdEvent
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
 @dataclass
@@ -64,7 +68,7 @@ class MapSession:
 
 
 class EventCollection:
-    """ "Collection of events with loader/writer in various formats."""
+    """Collection of events with loader/writer in various formats."""
 
     def __init__(self) -> None:
         self.events: List[IdEvent] = []
@@ -115,7 +119,7 @@ class EventCollection:
                         continue
                     fingerprint = f"{from_id} {to_id}"
                     if fingerprint in loaded_event:
-                        print(f"Duplicated event, skipped: {fingerprint}")
+                        logging.debug(f"Duplicated event, skipped: {fingerprint}")
                         continue
                     loaded_event.add(fingerprint)
                     event = IdEvent(
@@ -143,7 +147,7 @@ class EventCollection:
         splitter = f"({event_sep})"
         parts = re.split(splitter, event_string)
         if len(parts) != 3:
-            print(f"Wrong partition: from '{event_string}' to '{parts}'")
+            logging.warning(f"Wrong partition: from '{event_string}' to '{parts}'")
             return
         [from_ids, sep, to_ids] = parts
         event_name = event_symbol[sep]
@@ -165,7 +169,7 @@ class EventCollection:
             elif event.to_id in map_dict:
                 event.to_id = map_dict[event.to_id]
             else:
-                print(f"No map for to_id {event.to_id}")
+                logging.info(f"No map for to_id {event.to_id}")
                 no_map += 1
 
         if no_map:
@@ -174,7 +178,7 @@ class EventCollection:
     def write_events_to_file(self, output_file: PathLike) -> None:
         """Write the events to a file."""
         with Path(output_file).open("w") as out_fh:
-            print(f"Write {len(self.events)} events to {output_file}")
+            logging.info(f"Write {len(self.events)} events to {output_file}")
             for event in self.events:
                 out_fh.write(f"{event}\n")
 
@@ -194,7 +198,7 @@ class EventCollection:
         # Then, add the mapping, and the events for this mapping
         for release, mapping in mappings.items():
             if update:
-                print(f"Adding mapping for release {release} ({len(mapping.events)} events)")
+                logging.info(f"Adding mapping for release {release} ({len(mapping.events)} events)")
                 map_session = MappingSession(new_release=mapping.release, created=mapping.release_date)
                 session.add(map_session)
                 session.flush()
@@ -217,9 +221,9 @@ class EventCollection:
                     session.add(id_event)
                 session.commit()
             else:
-                print(f"Found mapping for release {release} ({len(mapping.events)} events)")
+                logging.info(f"Found mapping for release {release} ({len(mapping.events)} events)")
         if not update:
-            print("Run your command again with '--update' to add them")
+            logging.info("Run your command again with '--update' to add them")
 
 
 def main() -> None:
@@ -235,11 +239,12 @@ def main() -> None:
         ),
     )
     parser.add_argument("--update", action="store_true", help="Make changes to the database")
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     # Start
-    dbc = DBConnection(args.url)
-
+    dbc = DBConnectionLite(args.url)
     collection = EventCollection()
     collection.load_events(args.input_file)
 
