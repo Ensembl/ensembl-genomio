@@ -58,7 +58,7 @@ datasets_docker_build:
           cut -f 4 -d '"' | tee container_url.txt |
           cut -f 8 -d / > container_ver.txt
     - head container_url.txt container_ver.txt
-    - echo docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$(cat container_ver.txt) --build-arg datasets_url=($cat container_url.txt) -t $CONTAINER_IMAGE_NAME:$(cat container_ver.txt) $DATASETS_DIR
+    - echo docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$(cat container_ver.txt) --build-arg datasets_url=$(cat container_url.txt) -t $CONTAINER_IMAGE_NAME:$(cat container_ver.txt) $DATASETS_DIR
     - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$(cat container_ver.txt) --build-arg datasets_url=($cat container_url.txt) -t $CONTAINER_IMAGE_NAME:$(cat container_ver.txt) $DATASETS_DIR
     
 datasets_gitlab:
