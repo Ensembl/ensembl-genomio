@@ -23,7 +23,7 @@ workflow:
             $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME =~ /hackathon\/.+/ )
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_BRANCH =~ /hackathon\/.+/
-    - if: $CI_COMMIT_BRANCH == /vsitnik\/dtst/
+    - if: $CI_COMMIT_BRANCH =~ /vsitnik\/dtst/
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
 variables:
