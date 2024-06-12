@@ -21,9 +21,6 @@ process DUMP_GFF3 {
     input:
         val db
 
-    when:
-        "gff3" in db.dump_selection
-
     output:
         tuple val(db), val("gff3"), path("*.gff3")
 
@@ -60,5 +57,11 @@ process DUMP_GFF3 {
             base_path => '.'
         }"
         mv *.gff3 $output
+        """
+    
+    stub:
+        output = "gene_models.gff3"
+        """
+        echo "##gff-version 3\n" > $output
         """
 }
