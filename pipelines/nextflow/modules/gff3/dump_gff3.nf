@@ -56,7 +56,7 @@ process DUMP_GFF3 {
             include_scaffold =>  1,
             db_type =>           'core',
             xrefs =>             0,
-            release => $db.ensembl_version,
+            release => $db.project_release,
             base_path => '.'
         }"
         mv *.gff3 $output

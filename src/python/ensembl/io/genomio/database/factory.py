@@ -53,7 +53,6 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
         division = core_db.get_meta_value("species.division")
         accession = core_db.get_meta_value("assembly.accession")
         project_release = core_db.get_project_release()
-        ensembl_version = core_db.get_meta_value("schema_version")
 
         if brc_mode:
             brc_organism = core_db.get_meta_value("BRC4.organism_abbrev")
@@ -80,7 +79,6 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
             "division": division,
             "accession": accession,
             "release": project_release,
-            "ensembl_version": ensembl_version,
         }
 
         databases_data.append(db_data)
