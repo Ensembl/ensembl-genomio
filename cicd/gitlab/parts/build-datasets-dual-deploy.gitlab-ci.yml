@@ -39,7 +39,6 @@ datasets_docker_build:
   # only:
   #   variables:
   #     - $DATASETS_CLI_SCHEDULER
-  extends: setup_datasets_env
   image: docker:latest
   services:
     - docker:dind
