@@ -79,7 +79,14 @@ datasets_docker_build:
     - echo "Building $CONTAINER_IMAGE_NAME"
     - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME:latest $DATASETS_DIR"
     - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME:latest $DATASETS_DIR
-    
+  
+  artifacts:
+    expose_as: 'Datasets latest version'
+    paths:
+      - $DATASETS_DIR
+    reports:
+      dotenv: $DATASETS_DIR/datasets_deploy.env
+
 datasets_gitlab:
   extends: datasets_docker_build
   needs:
