@@ -39,9 +39,11 @@ setup_datasets_env:
   only:
     variables:
       - $DATASETS_CLI_SCHEDULER
-  image: 
-    name: docker/ubuntu:latest
+  image: ubuntu:latest
   stage: build
+
+  tags:
+    - docker
 
   script:
     - apt-get -y update; apt-get -y install curl
