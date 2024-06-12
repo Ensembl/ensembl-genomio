@@ -35,25 +35,6 @@ variables:
   DHUB_REG_URL: registry.hub.docker.com
 
 
-setup_datasets_env:
-  only:
-    variables:
-      - $DATASETS_CLI_SCHEDULER
-  image: ubuntu:latest
-  stage: build
-
-  tags:
-    - docker
-
-  script:
-    - apt-get -y update; apt-get -y install curl
-    - sh $SCRIPTS_DIR/setup_datasets_latest.sh
-
-  artifacts:
-    reports:
-      dotenv: datasets_deploy.env
-
-
 datasets_docker_build:
   # only:
   #   variables:
@@ -71,7 +52,15 @@ datasets_docker_build:
     # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
     - echo "Building $CONTAINER_IMAGE_NAME"
     - echo "docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME:latest $DATASETS_DIR"
-    - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$DATASETS_VERSION -t $CONTAINER_IMAGE_NAME:latest $DATASETS_DIR
+    - >
+      wget "https://api.github.com/repos/ncbi/datasets/releases/latest" -O - |
+          grep browser_download_url |
+          grep linux-amd64.cli.package.zip |
+          cut -f 4 -d '"' | tee container_url.txt |
+          cut -f 8 -d / > container_ver.txt
+    - head container_url.txt container_ver.txt
+    - echo docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$(cat container_ver.txt) --build-arg datasets_url=($cat container_url.txt) -t $CONTAINER_IMAGE_NAME:$(cat container_ver.txt) $DATASETS_DIR
+    - docker build -f ${DATASETS_DIR}/Dockerfile --build-arg datasets_version=$(cat container_ver.txt) --build-arg datasets_url=($cat container_url.txt) -t $CONTAINER_IMAGE_NAME:$(cat container_ver.txt) $DATASETS_DIR
     
 datasets_gitlab:
   extends: datasets_docker_build
@@ -85,12 +74,12 @@ datasets_gitlab:
   
   - echo "Tagging GitLab Docker image"
   - echo "docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
+  - echo docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION
   
   - echo "Pushing image to gitlab registry:"
   - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
-  - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest"
+  - echo docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$DATASETS_VERSION"
+  - echo docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest"
 
 # datasets_dockerhub:
 #   extends: datasets_docker_build

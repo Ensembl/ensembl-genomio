@@ -1,5 +1,6 @@
 FROM ubuntu:24.04 AS basebuilder
 
+ARG datasets_url
 WORKDIR /usr/local/bin/
 
 ADD get_datasets_latest.sh /usr/local/bin/
@@ -12,14 +13,14 @@ RUN apt-get update \
         procps \
         ca-certificates \
         grep=3.1* \
-        curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && sh get_datasets_latest.sh
+    && echo sh get_datasets_latest.sh ${datasets_url}
+    && sh get_datasets_latest.sh ${datasets_url}
 
 FROM  ubuntu:24.04
 COPY --from=basebuilder /usr/local/bin/* /usr/local/bin/
-ARG datasets_version=latest
+ARG datasets_version="latest"
 WORKDIR /usr/local/bin/
 
 CMD ["datasets --version"]

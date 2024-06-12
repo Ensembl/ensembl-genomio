@@ -1,18 +1,17 @@
 #!/usr/bin/sh
 
 # Get the latest version of NCBI's datasets-cli software
-DS_SOFTWARE_URL="https://api.github.com/repos/ncbi/datasets/releases/latest"
-DATASETS_LATEST=`curl -s $DS_SOFTWARE_URL | grep browser_download_url | cut -d \" -f4 | grep linux-amd64.cli.package.zip`
-DATASETS_RELEASE=`echo "$DATASETS_LATEST" | cut -d "/" -f 8`
-
-wget https://api.github.com/repos/ncbi/datasets/releases/latest -O - | grep browser_download_url | grep linux-amd64.cli.package.zip |  cut -f 4 -d '"' | tee container_url.txt | cut -f 8 -d / > /usr/local/bin/datasets_version.sh
+DATASETS_LATEST="$1"
 
 JQ_SOFTWARE_URL="https://api.github.com/repos/jqlang/jq/releases/latest"
-JQ_LATEST=`curl -s $JQ_SOFTWARE_URL | grep browser_download_url | cut -d \" -f4 | grep jq-linux-amd64`
+JQ_LATEST=$(wget "$JQ_SOFTWARE_URL" -O - | grep browser_download_url | grep jq-linux-amd64 |  cut -f 4 -d '"')
 
-wget -q $DATASETS_LATEST
+# getting proper datasets binary
+wget -q "$DATASETS_LATEST"
 unzip linux-amd64.cli.package.zip
 rm linux-amd64.cli.package.zip
 chmod +x datasets dataformat
-wget $JQ_LATEST -O jq
+
+# getting jq util binary
+wget "$JQ_LATEST" -O jq
 chmod +x jq
