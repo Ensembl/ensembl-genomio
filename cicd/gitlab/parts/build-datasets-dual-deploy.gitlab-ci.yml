@@ -49,12 +49,12 @@ setup_datasets_env:
     - apt-get -y update; apt-get -y install curl
 
   script:
-    - sh $DS_SETUP_SCRIPT > $RUN_DIR/datasets_deploy.env
+    - sh $DS_SETUP_SCRIPT > datasets_deploy.env
 
   artifacts:
     expose_as: 'Datasets latest version'
     paths:
-      - $RUN_DIR
+      - $CI_PROJECT_DIR
     reports:
       dotenv: datasets_deploy.env
 
