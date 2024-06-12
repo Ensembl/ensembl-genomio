@@ -69,7 +69,8 @@ include:
         when: never
   # # Datasets container build
   - local: cicd/gitlab/parts/build-datasets-dual-deploy.gitlab-ci.yml
-    when: manual
+    rules:
+      when: manual
     # rules:
     #   - if: $CI_PIPELINE_SOURCE == "schedule"
     #     when: always
