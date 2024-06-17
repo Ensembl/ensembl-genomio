@@ -18,7 +18,7 @@ def Param_multi_values(String multi_value = "", List<String> allowed_values, Boo
     """
     Support parsing of multi-value parameters.
     """
-    if (multi_value || run_all == 'all') {
+    if (run_all) {
         return allowed_values
     }
     if (multi_value.isEmpty()){
