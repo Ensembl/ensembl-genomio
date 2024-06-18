@@ -18,13 +18,12 @@ __all__ = [
     "GFFGeneMerger",
 ]
 
+from importlib.resources import as_file, files
 import logging
 from os import PathLike
 from pathlib import Path
 import re
 from typing import List
-
-from importlib_resources import files
 
 import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
@@ -34,8 +33,9 @@ class GFFGeneMerger:
     """Specialized class to merge split genes in a GFF3 file, prior to further parsing."""
 
     def __init__(self) -> None:
-        biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
-        self._biotypes = get_json(biotypes_json)
+        source = files(ensembl.io.genomio.data.gff3).joinpath("biotypes.json")
+        with as_file(source) as biotypes_json:
+            self._biotypes = get_json(biotypes_json)
 
     def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> List[str]:
         """

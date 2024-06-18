@@ -30,7 +30,8 @@ from typing import Any, Dict, List, Optional, Union
 from BCBio import GFF
 from Bio import SeqIO, SeqFeature
 
-from ensembl.io.genomio.utils import get_json, open_gz_file
+from ensembl.io.genomio.utils import get_json
+from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -415,13 +416,20 @@ class Manifest:
 class IntegrityTool:
     """Check the integrity of sequence and annotation files in the genome"""
 
-    def __init__(self, manifest_file: Path, brc_mode: bool = False, ignore_final_stops: bool = False) -> None:
+    def __init__(
+        self,
+        manifest_file: Path,
+        brc_mode: bool = False,
+        ignore_final_stops: bool = False,
+        no_fail: bool = False,
+    ) -> None:
         self.manifest = Manifest(manifest_file)
         self.brc_mode = False
         self.set_brc_mode(brc_mode)
         self.ignore_final_stops = False
         self.set_ignore_final_stops(ignore_final_stops)
         self.errors: List[str] = []
+        self.no_fail = no_fail
 
     def add_errors(self, errors: Union[List[str], str]) -> None:
         """Store the given errors (list or single string) in the list of all errors."""
@@ -535,7 +543,11 @@ class IntegrityTool:
 
         if self.errors:
             errors_str = "\n".join(self.errors)
-            raise InvalidIntegrityError(f"Integrity test failed:\n{errors_str}")
+            message = f"Integrity test failed:\n{errors_str}"
+            if self.no_fail:
+                print(message)
+            else:
+                raise InvalidIntegrityError(message)
 
     def set_brc_mode(self, brc_mode: bool) -> None:
         """Set brc mode for this tool and the manifest."""
@@ -769,11 +781,14 @@ def main() -> None:
     parser.add_argument(
         "--ignore_final_stops", action="store_true", help="Ignore final stop when calculating peptide length"
     )
+    parser.add_argument(
+        "--no_fail", action="store_true", help="In case of errors, don't fail but print errors to stdout."
+    )
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    inspector = IntegrityTool(args.manifest_file, args.brc_mode, args.ignore_final_stops)
+    inspector = IntegrityTool(args.manifest_file, args.brc_mode, args.ignore_final_stops, args.no_fail)
     inspector.check_integrity()
 
 

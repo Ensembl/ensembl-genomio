@@ -130,6 +130,7 @@ sub get_feat_data {
 
 sub update_versions {
   my ($registry, $species, $feature, $old_feats, $update) = @_;
+  return if $feature eq "translation";
   
   my $update_count = 0;
   my $new_count = 0;

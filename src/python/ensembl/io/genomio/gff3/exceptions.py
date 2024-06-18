@@ -15,6 +15,7 @@
 """GFF parsing exceptions."""
 
 __all__ = [
+    "GeneSegmentError",
     "GFFParserError",
     "IgnoredFeatureError",
     "UnsupportedFeatureError",
@@ -27,6 +28,10 @@ class GFFParserError(Exception):
     def __init__(self, message):
         super().__init__(message)
         self.message = message
+
+
+class GeneSegmentError(GFFParserError):
+    """GFF3 gene segment parsing error."""
 
 
 class IgnoredFeatureError(GFFParserError):

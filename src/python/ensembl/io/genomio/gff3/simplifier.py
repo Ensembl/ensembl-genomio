@@ -21,6 +21,7 @@ __all__ = [
     "GFFSimplifier",
 ]
 
+from importlib.resources import as_file, files
 import json
 import logging
 from os import PathLike
@@ -31,14 +32,13 @@ from typing import List, Optional, Set
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
-from importlib_resources import files
 
 import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
 from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
 from .restructure import restructure_gene, remove_cds_from_pseudogene
-from .exceptions import GFFParserError, IgnoredFeatureError, UnsupportedFeatureError
+from .exceptions import GeneSegmentError, GFFParserError, IgnoredFeatureError, UnsupportedFeatureError
 
 
 class Records(list):
@@ -99,8 +99,9 @@ class GFFSimplifier:
         self.allow_pseudogene_with_cds = allow_pseudogene_with_cds
 
         # Load biotypes
-        biotypes_json = files(ensembl.io.genomio.data.gff3) / "biotypes.json"
-        self._biotypes = get_json(biotypes_json)
+        source = files(ensembl.io.genomio.data.gff3).joinpath("biotypes.json")
+        with as_file(source) as biotypes_json:
+            self._biotypes = get_json(biotypes_json)
 
         # Load genome metadata
         self.genome = {}
@@ -197,7 +198,7 @@ class GFFSimplifier:
         return self.clean_gene(gene)
 
     def create_gene_for_lone_transcript(self, feat: SeqFeature) -> SeqFeature:
-        """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA, and 'ncRNA_gene' for all others.
+        """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA/mRNA, and 'ncRNA_gene' for all others.
 
         Args:
             feat: The transcript for which we want to create a gene.
@@ -207,7 +208,7 @@ class GFFSimplifier:
             return feat
 
         new_type = "ncRNA_gene"
-        if feat.type in ("tRNA", "rRNA"):
+        if feat.type in ("tRNA", "rRNA", "mRNA"):
             new_type = "gene"
         logging.debug(f"Put the transcript {feat.type} in a {new_type} parent feature")
         new_gene = SeqFeature(feat.location, type=new_type)
@@ -219,6 +220,22 @@ class GFFSimplifier:
         new_gene.qualifiers["ID"] = new_gene.id
         feat.id = self.stable_ids.generate_transcript_id(new_gene.id, 1)
         feat.qualifiers["ID"] = feat.id
+
+        # Remove the exon/CDS parent so it is properly updated
+        for subfeat in feat.sub_features:
+            del subfeat.qualifiers["Parent"]
+
+        # Check if it's a pseudogene
+        if feat.type == "mRNA":
+            is_pseudo = False
+            for subfeat in feat.sub_features:
+                pseudo_qual = subfeat.qualifiers.get("pseudo", [""])[0]
+                if subfeat.type == "CDS" and pseudo_qual == "true":
+                    is_pseudo = True
+                    del subfeat.qualifiers["pseudo"]
+                    break
+            if is_pseudo:
+                new_gene.type = "pseudogene"
 
         return new_gene
 
@@ -398,24 +415,42 @@ class GFFSimplifier:
             transcript: Gene segment transcript feature.
 
         Raises:
-            GFFParserError: Missing or unexpected transcript's standard name.
+            GeneSegmentError: Unable to get the segment type information from the feature.
         """
         if transcript.type not in ("C_gene_segment", "V_gene_segment"):
             return transcript
 
+        # Guess the segment type from the transcript attribs
+        seg_type = self._get_segment_type(transcript)
+        if not seg_type:
+            # Get the information from a CDS instead
+            cdss = list(filter(lambda x: x.type == "CDS", transcript.sub_features))
+            if cdss:
+                seg_type = self._get_segment_type(cdss[0])
+            if not seg_type:
+                raise GeneSegmentError(f"Unable to infer segment from {transcript.id}")
+
         # Change V/C_gene_segment into a its corresponding transcript names
-        try:
-            standard_name = transcript.qualifiers["standard_name"][0]
-        except KeyError as err:
-            raise GFFParserError(f"No standard_name for {transcript.type}") from err
-        biotype = transcript.type.replace("_segment", "")
-        if re.search(r"\b(immunoglobulin|ig)\b", standard_name, flags=re.IGNORECASE):
-            transcript.type = f"IG_{biotype}"
-        elif re.search(r"\bt[- _]cell\b", standard_name, flags=re.IGNORECASE):
-            transcript.type = f"TR_{biotype}"
-        else:
-            raise GFFParserError(f"Unexpected 'standard_name' for {transcript.id}: {standard_name}")
+        transcript.type = f"{seg_type}_{transcript.type.replace('_segment', '')}"
         return transcript
+
+    def _get_segment_type(self, feature: SeqFeature) -> str:
+        """Infer if a segment is "IG" (immunoglobulin) of "TR" (t-cell) from the feature attribs.
+
+        Returns an empty string if no segment type info was found.
+        """
+
+        product = feature.qualifiers.get("standard_name", [""])[0]
+        if not product:
+            product = feature.qualifiers.get("product", [""])[0]
+        if not product:
+            return ""
+
+        if re.search(r"\b(immunoglobulin|ig)\b", product, flags=re.IGNORECASE):
+            return "IG"
+        if re.search(r"\bt[- _]cell\b", product, flags=re.IGNORECASE):
+            return "TR"
+        return ""
 
     def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
         """Returns a transcript with normalized sub-features."""
@@ -457,7 +492,7 @@ class GFFSimplifier:
         """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
 
         Change the representation from the form `gene[ primary_transcript[ exon, miRNA[ exon ] ] ]`
-        to `gene[ primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
+        to `ncRNA_gene[ miRNA_primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
 
         Raises:
             GFFParserError: If gene has more than 1 transcript, the transcript was not formatted
@@ -484,7 +519,8 @@ class GFFSimplifier:
 
         # Passed the checks
         primary = transcripts[0]
-
+        primary.type = "miRNA_primary_transcript"
+        gene.type = "ncRNA_gene"
         logging.debug(f"Formatting miRNA gene {gene.id}")
 
         new_genes = []
