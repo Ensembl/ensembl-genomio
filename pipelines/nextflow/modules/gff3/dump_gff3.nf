@@ -16,6 +16,7 @@
 process DUMP_GFF3 {
     tag "${db.species}"
     label "variable_2_8_32"
+    label "ensembl_scripts_container"
     maxForks params.max_database_forks
 
     input:
@@ -26,37 +27,13 @@ process DUMP_GFF3 {
 
     script:
         output = "${db.species}.gff3"
-        registry = "registry.pm"
         """
-        # Create a registry
-        echo "use strict;
-        use warnings;
-        use Bio::EnsEMBL::Registry;
-
-        {
-        Bio::EnsEMBL::Registry->load_registry_from_db(
-            -host       => '$db.server.host',
-            -port       => $db.server.port,
-            -user       => '$db.server.user',
-            -pass       => '$db.server.password',
-            -db_name  => '$db.server.database',
-            -species  => '$db.production_name',
-        );
-        }
-
-        1;" > $registry
-
-        standaloneJob.pl Bio::EnsEMBL::Production::Pipeline::GFF3::DumpFile -reg_conf './$registry' -input_id "{
-            species =>           '$db.production_name',
-            feature_type => ['Gene', 'Transcript', 'Translation'],
-            per_chromosome =>    0,
-            include_scaffold =>  1,
-            db_type =>           'core',
-            xrefs =>             0,
-            release => $db.release,
-            base_path => '.'
-        }"
-        mv *.gff3 $output
+        dump_gff3.pl \
+            --host $db.server.host \
+            --port $db.server.port \
+            --user $db.server.user \
+            --pass $db.server.password \
+            --dbname $db.server.database > $output
         """
     
     stub:
