@@ -27,13 +27,20 @@ process DUMP_GFF3 {
 
     script:
         output = "${db.species}.gff3"
+        temp_gff = "temp.gff3"
+        password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
         dump_gff3.pl \
             --host $db.server.host \
             --port $db.server.port \
             --user $db.server.user \
-            --pass $db.server.password \
-            --dbname $db.server.database > $output
+            $password_arg \
+            --dbname $db.server.database > $temp_gff
+
+        # Tidy up
+        gt gff3 -tidy -sort -retainids $temp_gff > $output
+        gt gff3validator $output
+        rm $temp_gff
         """
     
     stub:
