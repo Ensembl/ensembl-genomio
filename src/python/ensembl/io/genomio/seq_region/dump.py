@@ -34,7 +34,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
-from ensembl.database import DBConnection
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -311,7 +311,7 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    dbc = DBConnection(args.url)
+    dbc = DBConnectionLite(args.url)
 
     external_map_path = Path(args.external_db_map)
     external_map = get_external_db_map(external_map_path)

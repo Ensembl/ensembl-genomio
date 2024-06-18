@@ -12,10 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates a JSON file representing various stats for the assembly and annotation from a core db."""
+"""Generates a JSON representation of the genome stats (assembly and annotation) from a core database."""
 
 __all__ = ["StatsGenerator"]
 
+from dataclasses import dataclass
 import json
 from typing import Any, Dict
 
@@ -23,16 +24,17 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
-from ensembl.database import DBConnection
+from ensembl.database import URL
+from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
+@dataclass
 class StatsGenerator:
-    """Interface to extract stats from a core database."""
+    """Interface to extract genome stats from a core database."""
 
-    def __init__(self, session: Session) -> None:
-        self.session = session
+    session: Session
 
     def get_assembly_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the assembly."""
@@ -41,78 +43,72 @@ class StatsGenerator:
             "locations": self.get_attrib_counts("sequence_location"),
             "codon_table": self.get_attrib_counts("codon_table"),
         }
-
         # Special: rename supercontigs to scaffolds for homogeneity
-        stats = self._fix_scaffolds(stats)
+        StatsGenerator._fix_scaffolds(stats)
         return stats
 
-    def _fix_scaffolds(self, stats: Dict[str, Any]) -> Dict[str, Any]:
-        """Rename supercontigs to scaffolds in a stats dict and return it."""
+    @staticmethod
+    def _fix_scaffolds(stats: Dict[str, Any]) -> None:
+        """Renames supercontigs to scaffolds in the provided stats.
+
+        If scaffolds are present already, nothing is done.
+
+        Args:
+            stats: Statistics dictionary.
+
+        """
         coords = stats.get("coord_system", {})
-        if "supercontig" in coords:
-            if "scaffold" not in coords:
-                coords["scaffold"] = coords["supercontig"]
-                del coords["supercontig"]
-        return stats
+        if "supercontig" in coords and "scaffold" not in coords:
+            coords["scaffold"] = coords["supercontig"]
+            del coords["supercontig"]
 
     def get_attrib_counts(self, code: str) -> Dict[str, Any]:
         """Returns a dict of count for each value counted with the attrib_type code provided.
 
         Args:
             code: Ensembl database attrib_type code.
-        """
-        session = self.session
 
+        """
         seqs_st = (
             select(SeqRegionAttrib.value, func.count(SeqRegionAttrib.value))
             .join(AttribType)
             .filter(AttribType.code == code)
             .group_by(SeqRegionAttrib.value)
         )
-
-        attribs = {}
-        for row in session.execute(seqs_st):
-            (attrib_name, count) = row
-            attribs[attrib_name] = count
-
-        return attribs
+        attributes = {}
+        for row in self.session.execute(seqs_st):
+            (attribute_name, count) = row
+            attributes[attribute_name] = count
+        return attributes
 
     def get_annotation_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
-
         stats = {
             "genes": self.get_feature_stats(Gene),
             "transcripts": self.get_feature_stats(Transcript),
         }
-
         return stats
 
-    def get_biotypes(self, table) -> Dict[str, int]:
+    def get_biotypes(self, table: Any) -> Dict[str, int]:
         """Returns a dict of stats about the feature biotypes."""
-        session = self.session
-
         seqs_st = select(table.biotype, func.count()).group_by(table.biotype)
-
         biotypes = {}
-        for row in session.execute(seqs_st):
+        for row in self.session.execute(seqs_st):
             (biotype, count) = row
             biotypes[biotype] = count
-
         return biotypes
 
-    def get_feature_stats(self, table) -> Dict[str, int]:
+    def get_feature_stats(self, table: Any) -> Dict[str, int]:
         """Returns a dict of stats about a given feature."""
         session = self.session
-
         totals_st = select(func.count(table.stable_id))
         (total,) = session.execute(totals_st).one()
-        no_desc_st = select(func.count(table.stable_id)).filter(table.description is None)
+        # pylint: disable-next=singleton-comparison
+        no_desc_st = select(func.count(table.stable_id)).filter(table.description == None)
         (no_desc,) = session.execute(no_desc_st).one()
         xref_desc_st = select(func.count(table.stable_id)).where(table.description.like("%[Source:%"))
         (xref_desc,) = session.execute(xref_desc_st).one()
-
         left_over = total - no_desc - xref_desc
-
         feat_stats = {
             "total": total,
             "biotypes": self.get_biotypes(table),
@@ -124,33 +120,36 @@ class StatsGenerator:
         }
         return feat_stats
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_genome_stats(self) -> Dict[str, Any]:
         """Returns a dict of stats about the assembly and annotation."""
-        all_stats = {
+        genome_stats = {
             "assembly_stats": self.get_assembly_stats(),
             "annotation_stats": self.get_annotation_stats(),
         }
-        return all_stats
+        return genome_stats
+
+
+def dump_genome_stats(url: URL) -> Dict[str, Any]:
+    """Returns JSON object containing the genome stats (assembly and annotation) of the given core database.
+
+    Args:
+        url: Core database URL.
+
+    """
+    dbc = DBConnectionLite(url)
+    with dbc.session_scope() as session:
+        generator = StatsGenerator(session)
+        genome_stats = generator.get_genome_stats()
+        return genome_stats
 
 
 def main() -> None:
     """Main script entry-point."""
-    parser = ArgumentParser(
-        description="Fetch all the sequence regions from a core database and print them in JSON format."
-    )
+    parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments(include_database=True)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    dbc = DBConnection(args.url)
-
-    with dbc.session_scope() as session:
-        generator = StatsGenerator(session)
-        all_stats = generator.get_stats()
-
-    print(json.dumps(all_stats, indent=2, sort_keys=True))
-
-
-if __name__ == "__main__":
-    main()
+    genome_stats = dump_genome_stats(args.url)
+    print(json.dumps(genome_stats, indent=2, sort_keys=True))

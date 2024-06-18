@@ -1,0 +1,8 @@
+##gff-version 3
+CAIX01000001.1	EMBL	gene	4264	4847	.	+	.	ID=gene-BN9_000020;Name=BN9_000020;gbkey=Gene;gene_biotype=protein_coding;locus_tag=BN9_000020;partial=true;start_range=.,4264
+CAIX01000001.1	EMBL	CDS	4264	4403	.	+	0	ID=cds-CCI39219.1;Parent=gene-BN9_000020;Dbxref=NCBI_GP:CCI39219.1;Name=CCI39219.1;gbkey=CDS;locus_tag=BN9_000020;partial=true;product=CCI39219.1;protein_id=CCI39219.1;start_range=.,4264
+CAIX01000001.1	EMBL	CDS	4455	4655	.	+	1	ID=cds-CCI39219.1;Parent=gene-BN9_000020;Dbxref=NCBI_GP:CCI39219.1;Name=CCI39219.1;gbkey=CDS;locus_tag=BN9_000020;partial=true;product=CCI39219.1;protein_id=CCI39219.1
+CAIX01000001.1	EMBL	CDS	4707	4847	.	+	1	ID=cds-CCI39219.1;Parent=gene-BN9_000020;Dbxref=NCBI_GP:CCI39219.1;Name=CCI39219.1;gbkey=CDS;locus_tag=BN9_000020;partial=true;product=CCI39219.1;protein_id=CCI39219.1
+##FASTA
+>CAIX01000001.1
+CGTA

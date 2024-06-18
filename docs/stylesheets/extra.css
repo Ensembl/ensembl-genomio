@@ -1,0 +1,11 @@
+[data-md-color-scheme="ensembl"] {
+  --md-primary-fg-color:        #1b2c39;
+  --md-primary-bg-color:        hsla(0, 0%, 100%, 1);
+  --md-primary-bg-color--light: hsla(0, 0%, 100%, 0.7);
+
+  --md-accent-fg-color:         #09f;
+  --md-accent-bg-color:         hsla(0, 0%, 100%, 1);
+  --md-accent-bg-color--light:  hsla(0, 0%, 100%, 0.7);
+
+  color-scheme: light;
+}

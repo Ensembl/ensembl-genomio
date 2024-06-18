@@ -1,0 +1,26 @@
+{
+  "reports": [
+    {
+      "assembly_info": {
+        "assembly_level": "Chromosome"
+      },
+      "assembly_stats": {
+        "total_number_of_chromosomes": 2,
+        "number_of_scaffolds": 2
+      },
+      "organelle_info": [
+        "mtDNA"
+      ],
+      "annotation_info": {
+        "stats": {
+          "gene_counts": {
+            "protein_coding": 1,
+            "pseudogene": 1,
+            "total": 2,
+            "other": 1
+          }
+        }
+      }
+    }
+  ]
+}

@@ -20,13 +20,14 @@
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
 .python:
   stage: test
-  image: python:3.8
+  image: $PYTHON_IMAGE
   only:
     changes:
       - cicd/gitlab/parts/python.gitlab-ci.yml
       - pyproject.toml
       - "*.py"
       - src/python/**/*.py
+      - scripts/**/*.py
 
 ## Prepare and load the Python virtual environment
 
@@ -90,7 +91,7 @@ python:black:
   extends: .python:test
   allow_failure: true
   script:
-    - black --config pyproject.toml --verbose --check .
+    - black --config pyproject.toml --check .
 
 ## Unit tests and coverage
 

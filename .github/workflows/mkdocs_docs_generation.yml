@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Documentation_deploy_mkdocs
+name: Documentation
 run-name: ${{ github.actor }} triggered mkdocs generation
 on:
   pull_request:
@@ -20,58 +20,39 @@ on:
       - closed
     branches:
       - main
-      - '!jalvarez/**'
-      - '!mbarba/**'
-      - '!disha/**'
-      - '!vsitnik/**'
-      - '!lcampbell/**'
+      - 'hackathon/**'
     paths:
       - 'src/python/ensembl/**'
       - 'docs/**'
-permissions:
-    contents: write
-    
+      - '.github/workflows/mkdocs_docs_generation.yml'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.10"
+
 jobs:
   Mkdocs_Doc_generation:
+    name: Deploy documentation to GitHub Pages
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
       with:
-        python-version: 3.8
-        allow-prereleases: false
-        cache: 'pip'
-        cache-dependency-path: '**/pip'
-        run: echo '${{ steps.cp38.outputs.cache-hit }}'
+        python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Set pip cache directory path
-      id: pip-cache-dir-path
+    - name: Install dependencies
       run: |
-        echo "PIPCACHE=(`pip cache dir`)" >> "$GITHUB_OUTPUT"
-    
-    - name: Get pip cache dir 
-      env:
-        PIPCACHE: ${{ steps.pip-cache-dir-path.outputs.PIPCACHE }}
-      run: echo "The pip cache dir located is $PIPCACHE"
+        python -m pip install --upgrade pip
+        pip install -e .[docs]
 
-    - name: Install Dependencies
+    - name: Run mkdocs
       run: |
-        pip install -e .[doc]
-
-    - name: mkdocs deploy
-      run: |
-        mkdocs build
-        
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      if: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' }}
-      with:
-        publish_branch: mkdocs
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./site
-        force_orphan: true
+        mkdocs gh-deploy --force
 

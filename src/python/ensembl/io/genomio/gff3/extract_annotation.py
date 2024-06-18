@@ -23,6 +23,7 @@ __all__ = [
 ]
 
 from os import PathLike
+import logging
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional
@@ -55,9 +56,11 @@ class AnnotationError(Exception):
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
-    def __init__(self) -> None:
-        self.annotations: List[Annotation] = []
+    ignored_xrefs = {"go", "interpro", "uniprot"}
 
+    def __init__(self, provider_name: str = "") -> None:
+        self.annotations: List[Annotation] = []
+        self.provider_name = provider_name
         # Annotated features
         # Under each feature, each dict's key is a feature ID
         self.features: Dict[str, Dict[str, Annotation]] = {
@@ -72,89 +75,138 @@ class FunctionalAnnotations:
             "transcript": {},
         }
 
-    def add_parent(self, parent_type: str, parent_id: str, child_id: str) -> None:
+    def get_xrefs(self, feature: SeqFeature) -> List[Dict[str, Any]]:
+        """Get the xrefs from the Dbxref field."""
+        all_xref: List[Dict[str, str]] = []
+
+        if "Dbxref" in feature.qualifiers:
+            for xref in feature.qualifiers["Dbxref"]:
+                dbname, name = xref.split(":", maxsplit=1)
+                if dbname == "GenBank" and self.provider_name == "RefSeq":
+                    dbname = "RefSeq"
+
+                if dbname.lower() in self.ignored_xrefs:
+                    continue
+
+                xrefs = {"dbname": dbname, "id": name}
+                all_xref.append(xrefs)
+
+        # Add RefSeq ID xref if it looks like one
+        if self.provider_name == "RefSeq":
+            if feature.type == "gene" and feature.id.startswith("LOC"):
+                xref_dbs = {x["dbname"] for x in all_xref}
+                if "RefSeq" not in xref_dbs:
+                    all_xref.append({"dbname": "RefSeq", "id": feature.id})
+
+        return all_xref
+
+    def get_features(self, feat_type: str) -> Dict[str, Annotation]:
+        """Get all feature annotations for the requested type."""
+        try:
+            return self.features[feat_type]
+        except KeyError as err:
+            raise KeyError(f"No such feature type {feat_type}") from err
+
+    def add_parent_link(self, parent_type: str, parent_id: str, child_id: str) -> None:
         """Record a parent-child IDs relationship for a given parent biotype."""
-        if parent_type in self.parents:
-            self.parents[parent_type][child_id] = parent_id
-        else:
-            raise MissingParentError(f"Unsupported parent type {parent_type}")
+        features = self.get_features(parent_type)
+        if parent_id not in features:
+            raise MissingParentError(f"Parent {parent_type}:{parent_id} not found for {child_id}")
+        self.parents[parent_type][child_id] = parent_id
 
     def get_parent(self, parent_type: str, child_id: str) -> str:
         """Returns the parent ID of a given child for a given parent biotype."""
-        if parent_type in self.parents:
-            parent_id = self.parents[parent_type].get(child_id)
-            if parent_id is None:
-                raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
-            return parent_id
-        raise MissingParentError(f"Unsupported parent type {parent_type}")
+        try:
+            parents = self.parents[parent_type]
+        except KeyError as err:
+            raise KeyError(f"Unsupported parent type {parent_type}") from err
 
-    def add_feature(self, feature: SeqFeature, feat_type: str, parent_id: Optional[str] = None) -> None:
+        parent_id = parents.get(child_id)
+        if parent_id is None:
+            raise MissingParentError(f"Can't find {parent_type} parent for {child_id}")
+        return parent_id
+
+    def add_feature(
+        self,
+        feature: SeqFeature,
+        feat_type: str,
+        parent_id: Optional[str] = None,
+        all_parent_ids: Optional[List[str]] = None,
+    ) -> None:
         """Add annotation for a feature of a given type. If a parent_id is provided, record the relatioship.
 
         Args:
             feature: The feature to create an annotation.
             feat_type: Type of the feature to annotate.
+            parent_id: Parent ID of this feature to keep it linked.
+            all_parent_ids: All parent IDs to remove from non-informative descriptions.
         """
-        if feat_type not in self.features:
-            raise AnnotationError(f"Unsupported feature type {feat_type}")
-
-        if feature.id in self.features[feat_type]:
+        if all_parent_ids is None:
+            all_parent_ids = []
+        features = self.get_features(feat_type)
+        if feature.id in features:
             raise AnnotationError(f"Feature {feat_type} ID {feature.id} already added")
-        feature_object = self._generic_feature(feature, feat_type)
+
+        feature_object = self._generic_feature(feature, feat_type, all_parent_ids)
         self.features[feat_type][feature.id] = feature_object
 
         if parent_id:
             if feat_type in _PARENTS:
                 parent_type = _PARENTS[feat_type]
-                self.add_parent(parent_type, parent_id, feature.id)
+                self.add_parent_link(parent_type, parent_id, feature.id)
             else:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
 
-    def get_features(self, feat_type: str) -> Dict[str, Annotation]:
-        """Get all feature annotations for the requested type."""
-        if feat_type in self.features:
-            return self.features[feat_type]
-        raise AnnotationError(f"No such feature type {feat_type}")
-
-    def _generic_feature(self, feature: SeqFeature, feat_type: str) -> Dict[str, Any]:
+    def _generic_feature(
+        self, feature: SeqFeature, feat_type: str, parent_ids: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """Create a feature object following the specifications.
 
         Args:
             feature: The SeqFeature to add to the list.
             feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
+            all_parent_ids: All parent IDs to remove from non-informative descriptions.
 
         """
+        if parent_ids is None:
+            parent_ids = []
 
         feature_object: Annotation = {"object_type": feat_type, "id": feature.id}
 
         # Description?
-        if "product" in feature.qualifiers:
-            description = feature.qualifiers["product"][0]
-            if self.product_is_informative(description):
-                feature_object["description"] = description
+        for qname in ("description", "product"):
+            if qname in feature.qualifiers:
+                description = feature.qualifiers[qname][0]
+                if self.product_is_informative(description, feat_ids=parent_ids + [feature.id]):
+                    feature_object["description"] = description
+                    break
+                logging.debug(f"Non informative description for {feature.id}: {description}")
 
-        if "Name" in feature.qualifiers and "description" not in feature_object:
-            feature_object["description"] = feature.qualifiers["Name"][0]
+        feature_object["xrefs"] = []
+        if "Dbxref" in feature.qualifiers:
+            all_xref = self.get_xrefs(feature)
+            feature_object["xrefs"] = all_xref
 
-        # Don't keep useless description
-        if ("description" in feature_object) and not self.product_is_informative(
-            feature_object["description"], feature.id
-        ):
-            del feature_object["description"]
+        xref_values = {xref["id"].lower() for xref in feature_object["xrefs"]}
 
         # Synonyms?
+        # We add synonyms to the external_synonym table
+        # which is associated with the first xref of that feature type
         if "Name" in feature.qualifiers:
             feat_name = feature.qualifiers["Name"][0]
-            if feat_name != feature.id:
-                feature_object["synonyms"] = {"synonym": feat_name, "default": True}
+            if feat_name.lower() != feature.id.lower() and feat_name.lower() not in xref_values:
+                feature_object["synonyms"] = [feat_name]
 
         # is_pseudogene?
         if feature.type.startswith("pseudogen"):
             feature_object["is_pseudogene"] = True
 
+        # Don't keep empty xref
+        if not feature_object["xrefs"]:
+            del feature_object["xrefs"]
         return feature_object
 
-    def _transfer_descriptions(self) -> None:
+    def transfer_descriptions(self) -> None:
         """Transfers the feature descriptions in 2 steps:
         - from translations to transcripts (if the transcript description is empty)
         - from transcripts to genes (same case)
@@ -178,6 +230,7 @@ class FunctionalAnnotations:
         for child_id, child in children_features.items():
             child_description = child.get("description")
             if child_description is not None:
+                child_description = self._clean_description(child_description)
                 # Check parent
                 parent_id = self.get_parent(parent_type, child_id)
                 parent = parent_features[parent_id]
@@ -186,16 +239,23 @@ class FunctionalAnnotations:
                     parent["description"] = child_description
 
     @staticmethod
-    def product_is_informative(product: str, feat_id: Optional[str] = None) -> bool:
+    def _clean_description(description: str) -> str:
+        """Returns the description without "transcript variant" information."""
+        variant_re = re.compile(r", transcript variant [A-Z][0-9]+$", re.IGNORECASE)
+        description = re.sub(variant_re, "", description)
+        return description
+
+    @staticmethod
+    def product_is_informative(product: str, feat_ids: Optional[List[str]] = None) -> bool:
         """Returns True if the product name contains informative words, False otherwise.
 
         It is considered uninformative when the description contains words such as "hypothetical" or
-        or "putative". If a feature ID is provided, consider it uninformative as well (we do not want
+        or "putative". If feature IDs are provided, consider it uninformative as well (we do not want
         descriptions to be just the ID).
 
         Args:
             product: A product name.
-            feat_id: Feature ID (optional).
+            feat_ids: List of feature IDs.
 
         """
         non_informative_words = [
@@ -203,21 +263,31 @@ class FunctionalAnnotations:
             "putative",
             "uncharacterized",
             "unspecified",
+            "unknown",
             r"(of )?unknown function",
             "conserved",
             "predicted",
             "fragment",
             "product",
+            "function",
             "protein",
+            "transcript",
+            "gene",
             "RNA",
-            r"variant( \d+)?",
+            r"(variant|isoform)( X?\d+)?",
+            r"low quality protein",
         ]
         non_informative_re = re.compile(r"|".join(non_informative_words), re.IGNORECASE)
 
-        # Remove the feature ID if it's in the description
-        if feat_id is not None:
-            feat_id_re = re.compile(feat_id, re.IGNORECASE)
-            product = re.sub(feat_id_re, "", product)
+        # Remove all IDs that are in the description
+        if feat_ids:
+            logging.debug(f"Filter out {feat_ids} from {product}")
+            try:
+                for feat_id in feat_ids:
+                    feat_id_re = re.compile(feat_id, re.IGNORECASE)
+                    product = re.sub(feat_id_re, "", product)
+            except TypeError as err:
+                raise TypeError(f"Failed to search {feat_id_re} in '{product}'") from err
 
         # Remove punctuations
         punct_re = re.compile(r"[,;: _()-]+")
@@ -243,6 +313,18 @@ class FunctionalAnnotations:
             out_path: JSON file path where to write the data.
 
         """
-        self._transfer_descriptions()
+        self.transfer_descriptions()
         feats_list = self._to_list()
         print_json(Path(out_path), feats_list)
+
+    def store_gene(self, gene: SeqFeature) -> None:
+        """Record the functional_annotations of a gene and its children features."""
+        self.add_feature(gene, "gene")
+
+        for transcript in gene.sub_features:
+            self.add_feature(transcript, "transcript", gene.id, [gene.id])
+            for feat in transcript.sub_features:
+                if feat.type == "CDS":
+                    self.add_feature(feat, "translation", transcript.id, [gene.id, transcript.id])
+                    # Store CDS functional annotation only once
+                    break

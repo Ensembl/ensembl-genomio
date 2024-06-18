@@ -47,6 +47,9 @@ GB	GenBank	gene
 
 GeneID	GeneID	gene
 
+JGIDB	JGI_GENE	gene
+JGIDB_GENE	JGI_GENE	gene
+
 miRBase	miRBase	gene	!^MIMAT
 MIR	miRBase	gene	!^MIMAT
 
@@ -87,6 +90,9 @@ FlyBaseName	FlyBaseName_transcript	transcript
 GenBank	GenBank_transcript	transcript
 GB	GenBank_transcript	transcript
 GenBank_transcript	GenBank_transcript	transcript
+
+JGIDB	JGI_TRANSCRIPT	transcript
+JGIDB_TRANSCRIPT	JGI_TRANSCRIPT	transcript
 
 miRBase	miRBase_trans_name	transcript	^MIMAT
 MIR	miRBase_trans_name	transcript	^MIMAT
@@ -133,11 +139,16 @@ GenBank	GenBank_translation	translation
 GB	GenBank_translation	translation
 GenBank_translation	GenBank_translation	translation
 
+HAMAP	HAMAP	translation
+
 INTERPRO	Interpro	translation
 
 MEROPS	MEROPS	translation
 
 PDB	PDB	translation
+PFAM	PFAM	translation
+PIR	PIR	translation
+ProSite	ProSite	translation
 
 NCBI protein db	protein_id	translation
 protein_id	protein_id	translation
@@ -147,6 +158,8 @@ GenPept	protein_id	translation
 
 RefSeq	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
 RefSeq_peptide	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
+
+SMART	SMART	translation
 
 UniProt/GCRP	Uniprot/GCRP	translation
 Uniprot/GCRP	Uniprot/GCRP	translation
@@ -196,19 +209,27 @@ GO	_IGNORE_
 !GO	_IGNORE_
 
 BDGP_clone	_IGNORE_
+Coils	_IGNORE_
 FlyAtlas	_IGNORE_
 FlyAtlas2	_IGNORE_
 Fly-FISH	_IGNORE_
+Gene3D	_IGNORE_
 GI	_IGNORE_
 GLEANR	_IGNORE_
 GNOMON	_IGNORE_
 iBeetle-Base	_IGNORE_
+JCVI_TIGRFAMS	_IGNORE_
 InParanoid	_IGNORE_
 KEGG_GENES	_IGNORE_
 MARRVEL_MODEL	_IGNORE_
 NRL_3D	_IGNORE_
+PANTHER	_IGNORE_
+PRINTS	_IGNORE_
 SignaLink	_IGNORE_
+Superfamily	_IGNORE_
 TF	_IGNORE_
+
+TIGRFAM	_IGNORE_
 # TransFac?
 
 # ignoring versioned OrthoDB, no robust search method

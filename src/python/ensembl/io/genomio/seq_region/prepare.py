@@ -48,7 +48,8 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 import requests
 
-from ensembl.io.genomio.utils import get_json, open_gz_file, print_json
+from ensembl.io.genomio.utils import get_json, print_json
+from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -160,9 +161,14 @@ def add_mitochondrial_codon_table(seq_regions: List[SeqRegion], taxon_id: int) -
         taxon_id: The species taxon ID.
 
     """
-    url = f"https://www.ebi.ac.uk/ena/data/taxonomy/v1/taxon/tax-id/{str(taxon_id)}"
+    url = f"https://www.ebi.ac.uk/ena/taxonomy/rest/tax-id/{str(taxon_id)}"
     response = requests.get(url, headers={"Content-Type": "application/json"}, timeout=60)
+    response.raise_for_status()
+    # In case we've been redirected, check for html opening tag
+    if response.text.startswith("<"):
+        raise ValueError(f"Response from {url} is not JSON")
     decoded = response.json()
+
     if "mitochondrialGeneticCode" not in decoded:
         logging.warning("No mitochondria genetic code found for taxon {taxon_id}")
     else:
@@ -441,6 +447,7 @@ def prepare_seq_region_metadata(
     gbff_file: Optional[PathLike] = None,
     brc_mode: bool = False,
     to_exclude: Optional[List[str]] = None,
+    mock_run: bool = False,
 ) -> None:
     """Prepares the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
 
@@ -455,6 +462,7 @@ def prepare_seq_region_metadata(
         dst_file: JSON file output for the processed sequence regions JSON.
         brc_mode: Include INSDC sequence region names.
         to_exclude: Sequence region names to exclude.
+        mock_run: Do not call external taxonomy service.
 
     """
     genome_data = get_json(genome_file)
@@ -479,7 +487,8 @@ def prepare_seq_region_metadata(
 
     # Add translation and mitochondrial codon tables
     add_translation_table(seq_regions)
-    add_mitochondrial_codon_table(seq_regions, genome_data["species"]["taxonomy_id"])
+    if not mock_run:
+        add_mitochondrial_codon_table(seq_regions, genome_data["species"]["taxonomy_id"])
 
     # Print out the file
     print_json(dst_file, seq_regions)
@@ -500,6 +509,7 @@ def main() -> None:
     parser.add_argument(
         "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
     )
+    parser.add_argument("--mock_run", action="store_true", help="Do not call external APIs")
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
@@ -511,4 +521,5 @@ def main() -> None:
         gbff_file=args.gbff_file,
         brc_mode=args.brc_mode,
         to_exclude=args.to_exclude,
+        mock_run=args.mock_run,
     )

@@ -42,6 +42,6 @@ process DOWNLOAD_ASM_DATA {
     stub:
         """
         assembly_download --help
-        ln -s $workflow.projectDir/../../../../data/test/modules/download_asm_data/output/* .
+        cp $workflow.projectDir/../../../../data/test/modules/download_asm_data/output/* .
         """
 }

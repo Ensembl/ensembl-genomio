@@ -15,4 +15,7 @@
 """GFF3 files processing module."""
 
 from .extract_annotation import *
+from .gene_merger import *
 from .process import *
+from .simplifier import *
+from .id_allocator import *

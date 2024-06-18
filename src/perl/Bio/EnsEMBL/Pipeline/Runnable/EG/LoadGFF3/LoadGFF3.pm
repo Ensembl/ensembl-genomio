@@ -90,7 +90,7 @@ sub param_defaults {
                         'TR_V_gene','TR_C_gene',
                         'IG_V_gene','IG_C_gene',
                         'ribozyme',
-			'antisense_RNA'],
+			'antisense_RNA', 'miRNA_primary_transcript'],
     exon_types      => ['exon', 'pseudogenic_exon'],
     cds_types       => ['CDS'],
     utr_types       => ['five_prime_UTR', 'three_prime_UTR'],

@@ -25,7 +25,7 @@
       },
       "required": [
         "taxonomy_id"
-        ]
+      ]
     },
     "assembly_info": {
       "type": "object",
@@ -73,7 +73,7 @@
       },
       "required": [
         "version"
-        ]
+      ]
     },
     "provider_info": {
       "description" : "legacy. use (annotation|assembly).provider_(name|url) instead",
@@ -85,7 +85,7 @@
       },
       "required": [
         "name"
-        ]
+      ]
     },
     "BRC4_info": {
       "type": "object",
@@ -97,7 +97,7 @@
       "required": [
         "component",
         "organism_abbrev"
-        ]
+      ]
     },
     "added_sequence_info" : {
       "type": "object",
@@ -128,7 +128,7 @@
       "required" : [
         "species",
         "assembly"
-        ]
+      ]
     }
   },
 

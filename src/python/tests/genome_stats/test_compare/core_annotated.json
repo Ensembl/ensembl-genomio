@@ -1,0 +1,21 @@
+{
+  "assembly_stats": {
+    "coord_system": {
+      "chromosome": 3
+    },
+    "locations": {
+      "nuclear_chromosome": 2,
+      "mtDNA": 1
+    }
+  },
+  "annotation_stats": {
+    "genes": {
+      "biotypes": {
+        "protein_coding": 1,
+        "pseudogene": 1,
+        "misc_RNA": 1
+      },
+      "total": 2
+    }
+  }
+}

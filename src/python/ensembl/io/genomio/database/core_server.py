@@ -17,11 +17,11 @@
 __all__ = ["CoreServer"]
 
 import re
-from typing import List
+from typing import List, Optional
 import logging
 
+import sqlalchemy
 from sqlalchemy.engine import URL
-from sqlalchemy import create_engine
 
 
 class CoreServer:
@@ -32,7 +32,7 @@ class CoreServer:
 
     def __init__(self, server_url: URL) -> None:
         logging.debug(f"Connect to {server_url}")
-        self.engine = create_engine(server_url)
+        self.engine = sqlalchemy.create_engine(server_url)
 
     def get_all_core_names(self) -> List[str]:
         """Query the server and retrieve all database names that look like Ensembl cores."""
@@ -43,17 +43,21 @@ class CoreServer:
         return dbs
 
     def get_cores(
-        self, prefix: str = "", build: str = "", version: str = "", dbname_re: str = ""
+        self,
+        prefix: str = "",
+        build: Optional[int] = None,
+        version: Optional[int] = None,
+        dbname_re: str = "",
+        db_list: Optional[List[str]] = None,
     ) -> List[str]:
-        """Provide a list of core databases, filtered if requested.
-        Args:
-            prefix: filter by prefix (no _ is added automatically)
-            build: filter by build
-            version: filter by Ensembl version
-            dbname_re: filter by dbname regular expression
+        """Returns a list of core databases, filtered if requested.
 
-        Returns:
-            A list of database names
+        Args:
+            prefix: Filter by prefix (no "_" is added automatically).
+            build: Filter by VEuPathDB build number.
+            version: Filter by Ensembl version.
+            dbname_re: Filter by dbname regular expression.
+            db_list: Explicit list of database names.
         """
         dbs = []
 
@@ -63,14 +67,17 @@ class CoreServer:
         if not dbs:
             logging.warning("No databases returned from query")
 
+        if db_list:
+            logging.debug(f"Filter with db list: {db_list}")
+            dbs = [db for db in dbs if db in db_list]
         if prefix:
             dbs = [db for db in dbs if db.startswith(f"{prefix}")]
         if dbname_re:
             dbname_m = re.compile(dbname_re)
             dbs = list(filter(dbname_m.search, dbs))
-        if build:
+        if build is not None:
             dbs = [db for db in dbs if re.search(rf"_core_{build}_\d+_\d+$", db)]
-        if version:
+        if version is not None:
             dbs = [db for db in dbs if re.search(rf"_core_\d+_{version}_\d+$", db)]
 
         logging.info(f"{len(dbs)} core databases remain after filtering")

@@ -1,0 +1,50 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This test runs the genome_prepare pipeline for the INSDC accession GCA_017607445.1 from Genbank
+# It uses a cache file to avoid downloading assembly related data files (--cache_dir)
+# The cached data has been reduced to two seq regions, 1 nuclear and 1 mitochondrial sequence
+- name: genome_prepare_pipeline_brc_on
+  command: nextflow run ./pipelines/nextflow/workflows/genome_prepare/main.nf \\
+    -c ./pipelines/nextflow/tests/workflows/nextflow_test.config \\
+    -stub \\
+    --input_dir ./data/test/pipelines/genome_prepare/input_dir_brc_on \\
+    --cache_dir ./tmp/cache/ \\
+    --output_dir ./tmp/genome_prepare \\
+    --brc_mode 1 \\
+    --ncbi_check 0
+
+  # Check that all the expected files are produced
+  # Make sure to update those if the processing of the files changes!
+  files:
+    - path: ./tmp/genome_prepare/OrganismDB/organAbrev123/fasta_dna.fa
+      md5sum: 68d26226b04950883edecd6095d1db1f
+    - path: ./tmp/genome_prepare/OrganismDB/organAbrev123/fasta_pep.fa
+      md5sum: d3be87e392cc53ded62987c28952cc3d
+    - path: ./tmp/genome_prepare/OrganismDB/organAbrev123/functional_annotation.json
+      md5sum: e2c71a55085897a005ff9ca6ebe03cb3
+    - path: ./tmp/genome_prepare/OrganismDB/organAbrev123/gene_models.gff3
+      md5sum: ade9ac036023c48dd490056457027468
+    # Genome contains fields that depend on the date, so can't check md5sum
+    - path: ./tmp/genome_prepare/OrganismDB/organAbrev123/genome.json
+      contains:
+        - GCA_017607445.1
+        - organAbrev123
+        - OrganismDB
+    # Manifest depends on the genome checksum, so also date dependent
+    - path: ./tmp/genome_prepare/OrganismDB/organAbrev123/manifest.json
+    - path: ./tmp/genome_prepare/OrganismDB/organAbrev123/seq_region.json
+      md5sum: 96038c0cdbebd57d07b0da4c8977af38
+    - path: ./tmp/genome_prepare/OrganismDB/organAbrev123/stats.txt

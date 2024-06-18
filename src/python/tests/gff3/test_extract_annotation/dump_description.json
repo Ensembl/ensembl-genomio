@@ -1,0 +1,17 @@
+[
+    {
+        "description": "Gene NameA",
+        "id": "gene_A",
+        "object_type": "gene"
+    },
+    {
+        "description": "Transcript NameA",
+        "id": "tran_A",
+        "object_type": "transcript"
+    },
+    {
+        "description": "Protein NameA",
+        "id": "cds_A",
+        "object_type": "translation"
+    }
+]

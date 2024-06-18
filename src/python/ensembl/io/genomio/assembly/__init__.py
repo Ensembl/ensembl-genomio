@@ -15,3 +15,4 @@
 """Assembly preparation module."""
 
 from .download import *
+from .status import *

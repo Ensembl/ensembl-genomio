@@ -77,13 +77,21 @@ workflow GENOME_PREPARE {
         amended_genome = AMEND_GENOME_DATA(genome_data_files).amended_json
 
         // Group files
-        prepared_files = amended_genome.concat(
+        prepared_files = amended_genome.mix(
+                seq_region,
+                fasta_dna,
                 gene_models,
                 functional_annotation,
                 fasta_pep,
-                seq_region,
-                fasta_dna
             )
+            .map{ meta, file ->
+                key = meta
+                if (meta["has_annotation"]) {
+                    key = groupKey(meta, 6)
+                } else {
+                    key = groupKey(meta, 3)
+                }
+                [key, file] }
             .groupTuple()
 
         // Checks and generate sequence stats for manifest

@@ -1,0 +1,1 @@
+1	1	Chromosome	CP089274.1	RefChr0001.1	5935961

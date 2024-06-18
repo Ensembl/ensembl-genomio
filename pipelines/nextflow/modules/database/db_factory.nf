@@ -25,9 +25,21 @@ process DB_FACTORY {
         path "dbs.json"
 
     script:
+        output_file = "dbs.json"
         brc_mode = params.brc_mode ? '--brc_mode' : ''
         dbname_re = filter_map.dbname_re ? "--db_regex $filter_map.dbname_re" : ''
+
+        // Prepare db_list to write in a file
+        db_list = ""
+        db_list_str = ""
+        db_list_file = "db_list.tsv"
+        if (filter_map.db_list) {
+            db_list_str = filter_map.db_list.join("\n")
+            db_list = "--db_list $db_list_file"
+        }
         """
+        echo "$db_list_str" > $db_list_file
+
         database_factory --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
@@ -35,6 +47,15 @@ process DB_FACTORY {
             --prefix '${filter_map.prefix}' \
             $brc_mode \
             $dbname_re \
-            > dbs.json
+            $db_list \
+            > $output_file
+        """
+    
+    stub:
+        output_file = "dbs.json"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/"
+        dump_file = "db_factory_dbs.json"
+        """
+        cp $dump_dir/$dump_file $output_file
         """
 }
