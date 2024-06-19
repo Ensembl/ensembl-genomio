@@ -31,7 +31,7 @@ def read_json(json_path) {
     return not_a_lazy_val
 }
 
-def Param_multi_values(String multi_value = '', List<String> allowed_values, Boolean run_all = false) {
+def parse_list_param(String multi_value = '', List<String> allowed_values, Boolean run_all = false) {
     //Support parsing of multi-value parameters.
     if (run_all) {
         return allowed_values
