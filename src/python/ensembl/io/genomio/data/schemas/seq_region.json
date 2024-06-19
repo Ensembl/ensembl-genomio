@@ -39,7 +39,8 @@
             "contig",
             "chunk",
             "primary_assembly",
-            "clone"
+            "clone",
+            "lrg"
           ]
         },
         "omit" : { "type" : "boolean", "description" : "prevent loading/processing of the scaffold" },
