@@ -19,6 +19,7 @@ default_selection_map = [
     'seq_regions': 1,
     'events': 1,
     'genome_metadata': 1,
+    'gff3': 1,
     'stats': 3,
     'fasta_pep': 1,
     'fasta_dna': 1

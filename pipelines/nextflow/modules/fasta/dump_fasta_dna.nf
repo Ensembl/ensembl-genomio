@@ -16,6 +16,7 @@
 process DUMP_FASTA_DNA {
     tag "${db.species}"
     label "variable_2_8_32"
+    label "ensembl_scripts_container"
     maxForks params.max_database_forks
 
     input:
@@ -26,17 +27,15 @@ process DUMP_FASTA_DNA {
 
     script:
         output = "${db.species}_fasta_dna.fasta"
+        password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        perl ${params.ensembl_root_dir}/ensembl-analysis/scripts/sequence_dump.pl \
-            -dbhost ${db.server.host} \
-            -dbport ${db.server.port} \
-            -dbuser ${db.server.user} \
-            -dbname ${db.server.database} \
-            -coord_system_name toplevel \
-            -toplevel \
-            -onefile \
-            -nonref \
-            -filename $output
+        dump_fasta.pl \
+            --type dna \
+            --host $db.server.host \
+            --port $db.server.port \
+            --user $db.server.user \
+            $password_arg \
+            --dbname $db.server.database > $output
         """
     
     stub:
