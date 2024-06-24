@@ -1,0 +1,70 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Upload Python package to PyPI when a release is created
+
+on:
+  release:
+    types: [created]
+
+defaults:
+  run:
+    working-directory: ./
+
+env:
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  mkdocs:
+    name: Deploy documentation to GitHub Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/python_build
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          tags: "[cicd,docs]"
+
+      - name: Run mkdocs
+        run: |
+          mkdocs gh-deploy --force
+
+  pypi-publish:
+    name: Publish release to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/ensembl-utils
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/python_build
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          tags: "[build]"
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
