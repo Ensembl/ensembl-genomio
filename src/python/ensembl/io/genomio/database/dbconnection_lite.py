@@ -23,8 +23,8 @@ from typing import Dict, List, Optional
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
-from ensembl.database import DBConnection
 from ensembl.core.models import Meta
+from ensembl.utils.database import DBConnection
 
 
 _DB_PATTERN_RELEASE = re.compile(r".+_(?:core|otherfeatures|variation)_(?P<release>\d+)_\d+_\d+")

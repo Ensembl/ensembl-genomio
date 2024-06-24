@@ -22,9 +22,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
 from ensembl.core.models import Gene, Transcript, ObjectXref, Xref
-from ensembl.database import DBConnection
 from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.database import DBConnection
 from ensembl.utils.logging import init_logging_with_args
 
 

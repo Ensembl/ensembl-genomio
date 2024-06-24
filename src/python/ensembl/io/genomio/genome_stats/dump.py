@@ -24,9 +24,9 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
-from ensembl.database import URL
 from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.database import StrURL
 from ensembl.utils.logging import init_logging_with_args
 
 
@@ -129,7 +129,7 @@ class StatsGenerator:
         return genome_stats
 
 
-def dump_genome_stats(url: URL) -> Dict[str, Any]:
+def dump_genome_stats(url: StrURL) -> Dict[str, Any]:
     """Returns JSON object containing the genome stats (assembly and annotation) of the given core database.
 
     Args:
