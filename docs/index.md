@@ -12,8 +12,10 @@ Contents
 Check out [installation](install.md) section for further information on how 
 to install the project.
 
-1. [Usage](usage.md)
-2. [Install](install.md)
+1. [Install](install.md)
+2. [Usage](usage.md)
+3. [Code of Conduct](code_of_conduct.md)
+4. [Code reference](reference/)
 
 Ehive pipelines
 -------------------------------------------
