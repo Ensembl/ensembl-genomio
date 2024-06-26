@@ -337,7 +337,7 @@ class Manifest:
             gene_id = gene_id.replace("gene:", "")
         genes[gene_id] = abs(feat.location.end - feat.location.start)
         # Get CDS id and length
-        for feat2 in feat.sub_features:
+        for feat2 in feat.sub_features:  # type: ignore[attr-defined]
             if feat2.type in ("mRNA", "pseudogenic_transcript"):
                 length = {}
                 for feat3 in feat2.sub_features:

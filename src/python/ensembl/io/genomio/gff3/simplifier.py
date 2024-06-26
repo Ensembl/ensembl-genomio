@@ -165,7 +165,7 @@ class GFFSimplifier:
         self.annotations.add_feature(gene, "gene")
 
         cds_found = False
-        for transcript in gene.sub_features:
+        for transcript in gene.sub_features:  # type: ignore[attr-defined]
             self.annotations.add_feature(transcript, "transcript", gene.id)
             for feat in transcript.sub_features:
                 if feat.type != "CDS":
@@ -183,7 +183,7 @@ class GFFSimplifier:
             gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
         except KeyError as err:
             raise KeyError(f"Missing source for {gene.id}") from err
-        for transcript in gene.sub_features:
+        for transcript in gene.sub_features:  # type: ignore[attr-defined]
             # Replace qualifiers
             old_transcript_qualifiers = transcript.qualifiers
             transcript.qualifiers = {
@@ -289,28 +289,28 @@ class GFFSimplifier:
         gene.id = self.normalize_gene_id(gene)
 
         # Gene with no subfeatures: need to create a transcript at least
-        if len(gene.sub_features) == 0:
+        if len(gene.sub_features) == 0:  # type: ignore[attr-defined]
             logging.debug(f"Insert transcript for lone gene {gene.id}")
             transcript = self.transcript_for_gene(gene)
-            gene.sub_features = [transcript]
+            gene.sub_features = [transcript]  # type: ignore[attr-defined]
 
         # Count features
-        fcounter = Counter([feat.type for feat in gene.sub_features])
+        fcounter = Counter([feat.type for feat in gene.sub_features])  # type: ignore[attr-defined]
 
         # Transform gene - CDS to gene-transcript-exon-CDS
         if len(fcounter) == 1:
             if fcounter.get("CDS"):
-                num_subs = len(gene.sub_features)
+                num_subs = len(gene.sub_features)  # type: ignore[attr-defined]
                 logging.debug(f"Insert transcript-exon feats for {gene.id} ({num_subs} CDSs)")
                 transcripts = self.gene_to_cds(gene)
-                gene.sub_features = transcripts
+                gene.sub_features = transcripts  # type: ignore[attr-defined]
 
             # Transform gene - exon to gene-transcript-exon
             elif fcounter.get("exon"):
-                num_subs = len(gene.sub_features)
+                num_subs = len(gene.sub_features)  # type: ignore[attr-defined]
                 logging.debug(f"Insert transcript for {gene.id} ({num_subs} exons)")
                 transcript = self.gene_to_exon(gene)
-                gene.sub_features = [transcript]
+                gene.sub_features = [transcript]  # type: ignore[attr-defined]
         else:
             # Check that we don't mix
             if fcounter.get("mRNA") and fcounter.get("CDS"):
@@ -341,7 +341,7 @@ class GFFSimplifier:
         skip_unrecognized = self.skip_unrecognized
 
         transcripts_to_delete = []
-        for count, transcript in enumerate(gene.sub_features):
+        for count, transcript in enumerate(gene.sub_features):  # type: ignore[attr-defined]
             if (
                 transcript.type not in allowed_transcript_types
                 and transcript.type not in ignored_transcript_types
@@ -365,7 +365,7 @@ class GFFSimplifier:
 
         if transcripts_to_delete:
             for elt in sorted(transcripts_to_delete, reverse=True):
-                gene.sub_features.pop(elt)
+                gene.sub_features.pop(elt)  # type: ignore[attr-defined]
 
         return gene
 
@@ -374,7 +374,7 @@ class GFFSimplifier:
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
         exons_to_delete = []
         exon_number = 1
-        for tcount, feat in enumerate(transcript.sub_features):
+        for tcount, feat in enumerate(transcript.sub_features):  # type: ignore[attr-defined]
             if feat.type == "exon":
                 # New exon ID
                 feat.id = f"{transcript.id}-E{exon_number}"
@@ -405,7 +405,7 @@ class GFFSimplifier:
 
         if exons_to_delete:
             for elt in sorted(exons_to_delete, reverse=True):
-                transcript.sub_features.pop(elt)
+                transcript.sub_features.pop(elt)  # type: ignore[attr-defined]
         return transcript
 
     def transcript_gene(self, ncrna: SeqFeature) -> SeqFeature:
@@ -424,7 +424,7 @@ class GFFSimplifier:
         logging.debug(f"Put the transcript {ncrna.type} in a {new_type} parent feature")
         gene = SeqFeature(ncrna.location, type=new_type)
         gene.qualifiers["source"] = ncrna.qualifiers["source"]
-        gene.sub_features = [ncrna]
+        gene.sub_features = [ncrna]  # type: ignore[attr-defined]
         gene.id = ncrna.id
 
         return gene
@@ -437,12 +437,12 @@ class GFFSimplifier:
         # Create a transcript, add the CDS
         transcript = SeqFeature(cds.location, type="mRNA")
         transcript.qualifiers["source"] = cds.qualifiers["source"]
-        transcript.sub_features = [cds]
+        transcript.sub_features = [cds]  # type: ignore[attr-defined]
 
         # Add an exon too
         exon = SeqFeature(cds.location, type="exon")
         exon.qualifiers["source"] = cds.qualifiers["source"]
-        transcript.sub_features.append(exon)
+        transcript.sub_features.append(exon)  # type: ignore[attr-defined]
 
         # Create a gene, add the transcript
         gene_type = "gene"
@@ -450,7 +450,7 @@ class GFFSimplifier:
             gene_type = "pseudogene"
         gene = SeqFeature(cds.location, type=gene_type)
         gene.qualifiers["source"] = cds.qualifiers["source"]
-        gene.sub_features = [transcript]
+        gene.sub_features = [transcript]  # type: ignore[attr-defined]
         gene.id = self.generate_stable_id()
 
         return gene
@@ -460,7 +460,7 @@ class GFFSimplifier:
 
         transcript = SeqFeature(gene.location, type="transcript")
         transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
+        transcript.sub_features = []  # type: ignore[attr-defined]
 
         return transcript
 
@@ -471,7 +471,7 @@ class GFFSimplifier:
         transcripts_dict = {}
         del_transcript = []
 
-        for count, cds in enumerate(gene.sub_features):
+        for count, cds in enumerate(gene.sub_features):  # type: ignore[attr-defined]
             if cds.type != "CDS":
                 if gene_cds_skip_others:
                     del_transcript.append(count)
@@ -490,11 +490,11 @@ class GFFSimplifier:
                 transcript = self.build_transcript(gene)
                 transcripts_dict[cds.id] = transcript
             exon.qualifiers["source"] = gene.qualifiers["source"]
-            transcripts_dict[cds.id].sub_features.append(exon)
-            transcripts_dict[cds.id].sub_features.append(cds)
+            transcripts_dict[cds.id].sub_features.append(exon)  # type: ignore[attr-defined]
+            transcripts_dict[cds.id].sub_features.append(cds)  # type: ignore[attr-defined]
 
         for elt in sorted(del_transcript, reverse=True):
-            gene.sub_features.pop(elt)
+            gene.sub_features.pop(elt)  # type: ignore[attr-defined]
 
         transcripts = list(transcripts_dict.values())
 
@@ -505,7 +505,7 @@ class GFFSimplifier:
 
         transcript = SeqFeature(gene.location, type="mRNA")
         transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
+        transcript.sub_features = []  # type: ignore[attr-defined]
         return transcript
 
     def move_cds_to_mrna(self, gene: SeqFeature) -> SeqFeature:
@@ -531,7 +531,7 @@ class GFFSimplifier:
         cdss = []
 
         gene_subf_clean = []
-        for subf in gene.sub_features:
+        for subf in gene.sub_features:  # type: ignore[attr-defined]
             if subf.type == "mRNA":
                 mrnas.append(subf)
             elif subf.type == "CDS":
@@ -565,8 +565,8 @@ class GFFSimplifier:
         # No more issues? move the CDSs
         mrna.sub_features += cdss
         # And remove them from the gene
-        gene.sub_features = gene_subf_clean
-        gene.sub_features.append(mrna)
+        gene.sub_features = gene_subf_clean  # type: ignore[attr-defined]
+        gene.sub_features.append(mrna)  # type: ignore[attr-defined]
 
         return gene
 
@@ -603,7 +603,7 @@ class GFFSimplifier:
         exons = []
         mrnas = []
         others = []
-        for subf in gene.sub_features:
+        for subf in gene.sub_features:  # type: ignore[attr-defined]
             if subf.type == "exon":
                 exons.append(subf)
             elif subf.type == "mRNA":
@@ -620,8 +620,8 @@ class GFFSimplifier:
             if exon_has_id:
                 if exon_has_id == len(exons):
                     logging.debug(f"Remove {exon_has_id} extra exons from {gene.id}")
-                    gene.sub_features = mrnas
-                    gene.sub_features += others
+                    gene.sub_features = mrnas  # type: ignore[attr-defined]
+                    gene.sub_features += others  # type: ignore[attr-defined]
                 else:
                     raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
 
@@ -632,10 +632,10 @@ class GFFSimplifier:
 
         transcript = SeqFeature(gene.location, type="mRNA")
         transcript.qualifiers["source"] = gene.qualifiers["source"]
-        transcript.sub_features = []
+        transcript.sub_features = []  # type: ignore[attr-defined]
 
-        for exon in gene.sub_features:
-            transcript.sub_features.append(exon)
+        for exon in gene.sub_features:  # type: ignore[attr-defined]
+            transcript.sub_features.append(exon)  # type: ignore[attr-defined]
 
         return transcript
 
@@ -764,7 +764,7 @@ class GFFSimplifier:
 
         """
 
-        for transcript in gene.sub_features:
+        for transcript in gene.sub_features:  # type: ignore[attr-defined]
             for feat in transcript.sub_features:
                 if feat.type == "CDS":
                     feat.id = self.normalize_cds_id(feat.id)
@@ -779,7 +779,7 @@ class GFFSimplifier:
 
         """
         gene_subfeats = []
-        for transcript in gene.sub_features:
+        for transcript in gene.sub_features:  # type: ignore[attr-defined]
             if transcript.type == "CDS":
                 logging.debug(f"Remove pseudo CDS {transcript.id}")
                 continue
@@ -791,7 +791,7 @@ class GFFSimplifier:
                 new_subfeats.append(feat)
             transcript.sub_features = new_subfeats
             gene_subfeats.append(transcript)
-        gene.sub_features = gene_subfeats
+        gene.sub_features = gene_subfeats  # type: ignore[attr-defined]
 
     def remove_prefixes(self, identifier: str, prefixes: List[str]) -> str:
         """Returns the identifier after removing all the prefixes found in it (if any)."""
