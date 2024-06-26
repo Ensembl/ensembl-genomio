@@ -125,7 +125,7 @@ class GFFSimplifier:
         allowed_gene_types = self._biotypes["gene"]["supported"]
         transcript_types = self._biotypes["transcript"]["supported"]
 
-        # Skip explictly ignored features
+        # Skip explicitly ignored features
         if feat.type in ignored_gene_types:
             return None
 
