@@ -113,8 +113,8 @@ def get_report_regions_names(report_path: PathLike) -> List[Tuple[str, str]]:
     # Create the seq_regions
     seq_regions = []
     for row in reader:
-        refseq_name = row["RefSeq-Accn"]
-        genbank_name = row["GenBank-Accn"]
+        refseq_name = row["RefSeq seq accession"]
+        genbank_name = row["GenBank seq accession"]
         if refseq_name == "na":
             refseq_name = ""
         if genbank_name == "na":

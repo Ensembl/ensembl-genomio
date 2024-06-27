@@ -65,7 +65,7 @@ def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> 
             "assembly_report.txt",
             (
                 (
-                    "Name\tMolecule\tLocation\tGenBank-Accn\tRefSeq-Accn\tLength\n"
+                    "Name\tMolecule\tLocation\tGenBank seq accession\tRefSeq seq accession\tLength\n"
                     "1\t1\tChromosome\tCP089274.1\tRefChr0001.1\t5935961\n"
                     "2\t2\tChromosome\tCP089275.1\tna\t5880203\n3\t3\tChromosome\tna\tRefChr0002.1\t5901247"
                 ),

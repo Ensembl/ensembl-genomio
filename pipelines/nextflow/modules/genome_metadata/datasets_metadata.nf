@@ -17,7 +17,8 @@ process DATASETS_METADATA {
     tag "$accession"
     label 'local'
     label 'cached'
-
+    label 'datasets_cli'
+        
     input:
         val(accession)
 

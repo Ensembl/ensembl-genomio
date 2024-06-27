@@ -61,10 +61,10 @@ SeqRegionDict = Dict[str, SeqRegion]
 
 SYNONYM_RESOURCES = ["GenBank", "RefSeq", "INSDC"]
 SYNONYM_MAP = {
-    "Assigned-Molecule": "INSDC",
-    "GenBank-Accn": "GenBank",
-    "RefSeq-Accn": "RefSeq",
-    "Sequence-Name": "INSDC_submitted_name",
+    "Molecule type": "INSDC",
+    "GenBank seq accession": "GenBank",
+    "RefSeq seq accession": "RefSeq",
+    "Sequence name": "INSDC_submitted_name",
 }
 MOLECULE_LOCATION = {
     "apicoplast": "apicoplast_chromosome",
@@ -143,7 +143,7 @@ def add_insdc_seq_region_name(
                 brc_name = names[source_name]
                 break
         else:
-            raise UnknownMetadata(f'Cannot set BRC4 sequence region name for {seqr["name"]}')
+            raise UnknownMetadata(f'Cannot set BRC4 sequence region name for {seqr["Sequence name"]}')
         brc_name = brc_name.partition(".")[0]
         seqr["BRC4_seq_region_name"] = brc_name
         seqr["EBI_seq_region_name"] = seqr["name"]
@@ -168,7 +168,6 @@ def add_mitochondrial_codon_table(seq_regions: List[SeqRegion], taxon_id: int) -
     if response.text.startswith("<"):
         raise ValueError(f"Response from {url} is not JSON")
     decoded = response.json()
-
     if "mitochondrialGeneticCode" not in decoded:
         logging.warning("No mitochondria genetic code found for taxon {taxon_id}")
     else:
@@ -372,11 +371,11 @@ def make_seq_region(
     seq_region = {}
     # Set accession as the sequence region name
     src = "RefSeq" if is_refseq else "GenBank"
-    accession_id = data.get(f"{src}-Accn", "")
+    accession_id = data.get(f"{src} seq accession", "")
     if accession_id and (accession_id != "na"):
         seq_region["name"] = accession_id
     else:
-        logging.warning(f'No {src} accession ID found for {data["Sequence-Name"]}')
+        logging.warning(f'No {src} accession ID found for {data["Assembly Accession"]}')
         return {}
     # Add synonyms
     synonyms = []
@@ -388,18 +387,18 @@ def make_seq_region(
         synonyms.sort(key=lambda x: x["source"])
         seq_region["synonyms"] = synonyms
     # Add sequence length
-    field = "Sequence-Length"
+    field = "Seq length"
     if (field in data) and (data[field].casefold() != "na"):
         seq_region["length"] = int(data[field])
     # Add coordinate system and location
-    seq_role = data["Sequence-Role"]
+    seq_role = data["Role"]
     # Scaffold?
     if seq_role in ("unplaced-scaffold", "unlocalized-scaffold"):
         seq_region["coord_system_level"] = "scaffold"
     # Chromosome? Check location
     elif seq_role == "assembled-molecule":
         seq_region["coord_system_level"] = "chromosome"
-        location = data["Assigned-Molecule-Location/Type"].lower()
+        location = data["Molecule type"].lower()
         # Get location metadata
         try:
             seq_region["location"] = molecule_location[location]

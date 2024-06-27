@@ -47,5 +47,5 @@
     # Manifest depends on the genome checksum, so also date dependent
     - path: ./tmp/genome_prepare/GCA_017607445.1/manifest.json
     - path: ./tmp/genome_prepare/GCA_017607445.1/seq_region.json
-      md5sum: 28518b0c7cbc19a2890a6b347367a82f
+      md5sum: 6a45dc461c53e33dde33807c6def7b63
     - path: ./tmp/genome_prepare/GCA_017607445.1/stats.txt
