@@ -198,7 +198,7 @@ def move_cds_to_existing_mrna(gene: SeqFeature) -> None:
     logging.debug(f"Gene {gene.id}: moved {len(cdss)} CDSs to the mRNA")
 
 
-def _check_sub_exons(mrna: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
+def _check_sub_exons(mrna: SeqFeature, cdss: List[SeqFeature], sub_exons: List[SeqFeature]) -> None:
     """Check that the exons of the mRNA and the CDSs match.
     If there are no exons, create them from the CDSs.
     """
