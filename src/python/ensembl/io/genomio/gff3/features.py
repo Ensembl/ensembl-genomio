@@ -20,8 +20,6 @@ __all__ = [
     "GFFSeqFeature",
 ]
 
-from typing import List
-
 from Bio.SeqFeature import SeqFeature, Location
 
 
@@ -34,7 +32,7 @@ class GFFSeqFeature(SeqFeature):
         type: str = "",  # pylint: disable=W0622
         id: str = "<unknown id>",  # pylint: disable=W0622
         qualifiers: dict | None = None,
-        sub_features: List[GFFSeqFeature] | None = None,
+        sub_features: list[GFFSeqFeature] | None = None,
     ):
         super().__init__(location, type=type, id=id, qualifiers=qualifiers)
         if sub_features is None:
