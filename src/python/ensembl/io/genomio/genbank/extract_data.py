@@ -414,7 +414,7 @@ class FormattedFilesGenerator:
             else:
                 codon_table = int(codon_table)
 
-            seq_obj: Dict = {
+            seq_obj: Dict[str, Any] = {
                 "name": seq.id,
                 "coord_system_level": "chromosome",
                 "circular": (seq.annotations["topology"] == "circular"),

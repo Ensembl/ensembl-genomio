@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""GFF features."""
+"""GFF3 features."""
 
 from __future__ import annotations
 
@@ -25,19 +25,17 @@ __all__ = [
 
 
 class GFFSeqFeature(SeqFeature):
-    """SeqFeature with sub_features as used by Bio.SeqFeature, to be used for typing."""
+    """Extends `Bio.SeqFeature.SeqFeature` with sub_features, to be used for typing."""
 
     def __init__(
         self,
-        location=None,
-        type="",  # pylint: disable=W0622
-        id="<unknown id>",  # pylint: disable=W0622
-        qualifiers=None,
-        sub_features=None,
+        location: Location | None = None,
+        type: str = "",  # pylint: disable=W0622
+        id: str ="<unknown id>",  # pylint: disable=W0622
+        qualifiers: dict | None = None,
+        sub_features: list = [],
     ):
         super().__init__(location, type=type, id=id, qualifiers=qualifiers)
-        if not sub_features:
-            sub_features = []
         self.sub_features = sub_features
 
     @classmethod
