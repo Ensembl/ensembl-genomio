@@ -117,7 +117,7 @@ class FormattedFilesGenerator:
                 record.description = ""
                 record.organelle = None
                 if record.id in organella:
-                    record.organelle = organella[record.id]
+                    record.annotations["organelle"] = organella[record.id]
                 self.seq_records.append(record)
 
         if len(self.seq_records) >= 1:
@@ -421,12 +421,13 @@ class FormattedFilesGenerator:
                 "codon_table": codon_table,
                 "length": len(seq.seq),
             }
-            if seq.organelle:
-                seq_obj["location"] = self._prepare_location(seq.organelle)
+            if "organelle" in seq.annotations:
+                seq_obj["location"] = self._prepare_location(str(seq.annotations["organelle"]))
                 if not codon_table:
                     logging.warning(
                         (
-                            f"'{seq.organelle}' is an organelle: make sure to change the codon table number "
+                            f"'{seq.annotations['organelle']}' is an organelle: "
+                            "make sure to change the codon table number "
                             f"in {self.files['seq_region']} manually if it is not the standard codon table"
                         )
                     )

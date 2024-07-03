@@ -147,7 +147,7 @@ class TestWriteFormattedFiles:
             FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
         )
         record.features.append(CDS_feature)
-        record.organelle = "mitochondrion"
+        record.annotations["organelle"] = "mitochondrion"
         formatted_files_generator.seq_records = [record]
         # pylint: disable=protected-access
         formatted_files_generator._format_write_seq_json()
