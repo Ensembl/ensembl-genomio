@@ -15,8 +15,6 @@
 """Restructure a gene model to a standard representation: `gene -> [ mRNAs -> [CDSs, exons] ]`
 """
 
-from __future__ import annotations
-
 __all__ = [
     "restructure_gene",
     "add_transcript_to_naked_gene",
