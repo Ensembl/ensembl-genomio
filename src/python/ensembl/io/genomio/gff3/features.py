@@ -15,6 +15,7 @@
 """GFF3 features."""
 
 from __future__ import annotations
+from typing import List
 
 from Bio.SeqFeature import SeqFeature, Location
 
@@ -31,9 +32,9 @@ class GFFSeqFeature(SeqFeature):
         self,
         location: Location | None = None,
         type: str = "",  # pylint: disable=W0622
-        id: str ="<unknown id>",  # pylint: disable=W0622
+        id: str = "<unknown id>",  # pylint: disable=W0622
         qualifiers: dict | None = None,
-        sub_features: list = None,
+        sub_features: List[GFFSeqFeature] | None = None,
     ):
         super().__init__(location, type=type, id=id, qualifiers=qualifiers)
         if sub_features is None:
