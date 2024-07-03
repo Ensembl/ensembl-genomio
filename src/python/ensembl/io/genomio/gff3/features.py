@@ -14,6 +14,8 @@
 # limitations under the License.
 """GFF features."""
 
+from __future__ import annotations
+
 from Bio.SeqFeature import SeqFeature
 
 
@@ -37,3 +39,11 @@ class GFFSeqFeature(SeqFeature):
         if not sub_features:
             sub_features = []
         self.sub_features = sub_features
+
+    @classmethod
+    def cast(cls, feat: SeqFeature) -> GFFSeqFeature:
+        """Cast a SeqFeature to a GFFSeqFeature."""
+        feat.__class__ = cls
+        if not hasattr(feat, "sub_features"):
+            feat.sub_features = []  # type: ignore[attr-defined]
+        return feat  # type: ignore[return-value]
