@@ -165,19 +165,19 @@ class FormattedFilesGenerator:
         Extract gene models from the record, and write a GFF and peptide fasta file.
         Raise GBParseError If the IDs in all the records are not unique.
         """
-        peptides = []
-        gff_features = []
-        all_ids = []
+        peptides: List[SeqRecord] = []
+        gff_records: List[SeqRecord] = []
+        all_ids: List[str] = []
 
         for record in self.seq_records:
             new_record, rec_ids, rec_peptides = self._parse_record(record)
             if new_record.features:
-                gff_features.append(new_record)
+                gff_records.append(new_record)
             all_ids += rec_ids
             peptides += rec_peptides
 
-        if gff_features:
-            self._write_genes_gff(gff_features)
+        if gff_records:
+            self._write_genes_gff(gff_records)
 
         if peptides:
             self._write_pep_fasta(peptides)
@@ -192,29 +192,29 @@ class FormattedFilesGenerator:
         if num_duplicates > 0:
             raise GBParseError(f"Some {num_duplicates} IDs are duplicated")
 
-    def _write_genes_gff(self, gff_features: List[SeqFeature]) -> None:
+    def _write_genes_gff(self, gff_records: List[SeqRecord]) -> None:
         """
         Generate gene_models.gff file with the parsed gff_features
 
         Args:
-            gff_features: List of features extracted from the record
+            gff_records: List of records with features extracted from the record
         """
-        logging.debug(f"Write {len(gff_features)} gene records to {self.files['gene_models']}")
+        logging.debug(f"Write {len(gff_records)} gene records to {self.files['gene_models']}")
         with self.files["gene_models"].open("w") as gff_fh:
-            GFF.write(gff_features, gff_fh)
+            GFF.write(gff_records, gff_fh)
 
-    def _write_pep_fasta(self, peptides: List[str]) -> None:
+    def _write_pep_fasta(self, peptides: List[SeqRecord]) -> None:
         """
         Generate a peptide fasta file with the protein ids and sequence
 
         Args:
-            peptides: List of extracted peptide ids from the record
+            peptides: List of extracted peptide features as records
         """
         logging.debug(f"Write {len(peptides)} peptide sequences to {self.files['fasta_pep']}")
         with self.files["fasta_pep"].open("w") as fasta_fh:
             SeqIO.write(peptides, fasta_fh, "fasta")
 
-    def _parse_record(self, record: SeqRecord) -> Tuple[SeqRecord, List[SeqRecord], List[str]]:
+    def _parse_record(self, record: SeqRecord) -> Tuple[SeqRecord, List[str], List[SeqRecord]]:
         """
         Parse a gene feature from the genbank file
         Args:
@@ -222,7 +222,7 @@ class FormattedFilesGenerator:
             gene_name: Gene name associated with the gene feature
         """
         all_ids: List[str] = []
-        peptides: List[SeqFeature] = []
+        peptides: List[SeqRecord] = []
         feats: Dict[str, SeqFeature] = {}
 
         for feat in record.features:
@@ -260,12 +260,12 @@ class FormattedFilesGenerator:
                 raise GBParseError(f"No ID for allowed feature: {feat}")
 
         new_record = SeqRecord(record.seq, record.id)
-        new_record.features = feats.values()
+        new_record.features = list(feats.values())
         return new_record, all_ids, peptides
 
     def _parse_gene_feat(
         self, gene_feat: SeqFeature, gene_name: str
-    ) -> Tuple[Dict[str, SeqFeature], List[str], List[SeqFeature]]:
+    ) -> Tuple[Dict[str, SeqFeature], List[str], List[SeqRecord]]:
         """
         Parse a gene feature from the genbank file
 
@@ -277,7 +277,7 @@ class FormattedFilesGenerator:
         gene_id = self.prefix + gene_name
         gene_qualifiers = gene_feat.qualifiers
         new_feats: Dict[str, Any] = {}
-        peptides: List[SeqFeature] = []
+        peptides: List[SeqRecord] = []
         all_ids: List[str] = []
 
         if gene_feat.type == "gene":
@@ -334,7 +334,7 @@ class FormattedFilesGenerator:
 
         return new_feats, all_ids, peptides
 
-    def _parse_rna_feat(self, rna_feat: SeqFeature) -> Tuple[Dict[str, SeqFeature], List[SeqFeature]]:
+    def _parse_rna_feat(self, rna_feat: SeqFeature) -> Tuple[Dict[str, SeqFeature], List[str]]:
         """
         Parse an RNA feature
 
@@ -414,7 +414,7 @@ class FormattedFilesGenerator:
             else:
                 codon_table = int(codon_table)
 
-            seq_obj = {
+            seq_obj: Dict = {
                 "name": seq.id,
                 "coord_system_level": "chromosome",
                 "circular": (seq.annotations["topology"] == "circular"),
