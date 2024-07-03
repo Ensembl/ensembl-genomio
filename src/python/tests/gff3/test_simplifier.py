@@ -19,13 +19,13 @@ from os import PathLike
 from pathlib import Path
 from typing import Callable, ContextManager, Dict, Optional
 
-from Bio.SeqFeature import SeqFeature
 import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GeneSegmentError, GFFParserError
 from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
 from ensembl.io.genomio.gff3.exceptions import IgnoredFeatureError, UnsupportedFeatureError
+from ensembl.io.genomio.gff3.features import GFFSeqFeature
 from ensembl.io.genomio.utils import print_json
 
 
@@ -209,13 +209,12 @@ def test_normalize_non_gene(
 ) -> None:
     """Test non-gene normalization."""
     simp = GFFSimplifier()
-    feat = SeqFeature(None, in_type)
+    feat = GFFSeqFeature(None, in_type)
     feat.qualifiers = {"source": "LOREM"}
     if in_mobile_type is not None:
         feat.qualifiers["mobile_element_type"] = [in_mobile_type]
     if in_product is not None:
         feat.qualifiers["product"] = [in_product]
-    feat.sub_features = []
     with expectation:
         new_feat = simp.normalize_non_gene(feat)
         if new_feat is not None:
@@ -228,7 +227,7 @@ def test_normalize_non_gene_not_implemented() -> None:
     """Test non-gene not in the biotype list."""
     simp = GFFSimplifier()
     simp._biotypes = {"non_gene": {"supported": ["non_gene_name"]}}  # pylint: disable=protected-access
-    feat = SeqFeature(None, "non_gene_name")
+    feat = GFFSeqFeature(None, "non_gene_name")
     with raises(NotImplementedError):
         simp.normalize_non_gene(feat)
 
@@ -253,10 +252,9 @@ def test_format_gene_segments(
 ) -> None:
     """Test `format_gene_segments` without a CDS."""
     simp = GFFSimplifier()
-    feat = SeqFeature(None, in_type)
+    feat = GFFSeqFeature(None, in_type)
     if tr_name:
         feat.qualifiers["standard_name"] = [tr_name]
-    feat.sub_features = []
     with expectation:
         new_feat = simp.format_gene_segments(feat)
         assert new_feat.type == out_type
@@ -279,10 +277,9 @@ def test_format_gene_segments_cds(
 ) -> None:
     """Test `format_gene_segments` with a CDS (and no info on the transcript)."""
     simp = GFFSimplifier()
-    feat = SeqFeature(None, "C_gene_segment")
-    feat.sub_features = []
+    feat = GFFSeqFeature(None, "C_gene_segment")
     if has_cds:
-        cds = SeqFeature(None, "CDS")
+        cds = GFFSeqFeature(None, "CDS")
         cds.qualifiers["product"] = [cds_name]
         feat.sub_features = [cds]
     with expectation:

@@ -29,16 +29,15 @@ from collections import Counter
 import logging
 from typing import List
 
-from Bio.SeqFeature import SeqFeature
-
 from .exceptions import GFFParserError
+from .features import GFFSeqFeature
 
 
-def _get_feat_counts(gene: SeqFeature):
+def _get_feat_counts(gene: GFFSeqFeature):
     return Counter([feat.type for feat in gene.sub_features])
 
 
-def restructure_gene(gene: SeqFeature) -> None:
+def restructure_gene(gene: GFFSeqFeature) -> None:
     """Standardize the structure of a gene model:
     - Add a transcript if there are no children
     - Move the CDS and exons to an mRNA if they are directly under the gene
@@ -69,20 +68,19 @@ def restructure_gene(gene: SeqFeature) -> None:
         raise GFFParserError(f"Gene {gene.id} contains direct CDSs and exons children")
 
 
-def add_transcript_to_naked_gene(gene: SeqFeature) -> None:
+def add_transcript_to_naked_gene(gene: GFFSeqFeature) -> None:
     """Add an unspecific transcript to a gene without any sub features."""
 
     if (len(gene.sub_features) > 0) or (gene.type != "gene"):
         return
 
-    transcript = SeqFeature(gene.location, type="transcript")
+    transcript = GFFSeqFeature(gene.location, type="transcript")
     transcript.qualifiers["source"] = gene.qualifiers["source"]
-    transcript.sub_features = []
     gene.sub_features = [transcript]
     logging.debug(f"Inserted 1 transcript for a lone gene {gene.id}")
 
 
-def move_only_cdss_to_new_mrna(gene: SeqFeature) -> None:
+def move_only_cdss_to_new_mrna(gene: GFFSeqFeature) -> None:
     """Add intermediate mRNAs to a gene with only CDS children.
     Do nothing if some sub-features are not CDS.
     """
@@ -97,18 +95,16 @@ def move_only_cdss_to_new_mrna(gene: SeqFeature) -> None:
         # We create as many transcripts as there are different CDS IDs
         if cds.id not in transcripts_dict:
             logging.debug(f"Create a new mRNA for {cds.id}")
-            transcript = SeqFeature(gene.location, type="mRNA")
+            transcript = GFFSeqFeature(gene.location, type="mRNA")
             transcript.qualifiers["source"] = gene.qualifiers["source"]
-            transcript.sub_features = []
             transcripts_dict[cds.id] = transcript
 
         # Add the CDS to the transcript
         transcripts_dict[cds.id].sub_features.append(cds)
 
         # Also add an exon in the same location
-        exon = SeqFeature(cds.location, type="exon")
+        exon = GFFSeqFeature(cds.location, type="exon")
         exon.qualifiers["source"] = gene.qualifiers["source"]
-        exon.sub_features = []
         transcripts_dict[cds.id].sub_features.append(exon)
 
     transcripts = list(transcripts_dict.values())
@@ -117,7 +113,7 @@ def move_only_cdss_to_new_mrna(gene: SeqFeature) -> None:
     logging.debug(f"Insert transcript-exon feats for {gene.id} ({len(transcripts)} CDSs)")
 
 
-def move_only_exons_to_new_mrna(gene: SeqFeature) -> None:
+def move_only_exons_to_new_mrna(gene: GFFSeqFeature) -> None:
     """Add an mRNA for a gene that only has exons and move the exons under the mRNA.
     No change if the gene has other sub_features than exon.
     """
@@ -126,7 +122,7 @@ def move_only_exons_to_new_mrna(gene: SeqFeature) -> None:
     if (len(counts) != 1) or not counts.get("exon"):
         return
 
-    transcript = SeqFeature(gene.location, type="mRNA")
+    transcript = GFFSeqFeature(gene.location, type="mRNA")
     transcript.qualifiers["source"] = gene.qualifiers["source"]
     transcript.sub_features = gene.sub_features
     gene.sub_features = [transcript]
@@ -134,7 +130,7 @@ def move_only_exons_to_new_mrna(gene: SeqFeature) -> None:
     logging.debug(f"Insert transcript for {gene.id} ({len(gene.sub_features)} exons)")
 
 
-def move_cds_to_existing_mrna(gene: SeqFeature) -> None:
+def move_cds_to_existing_mrna(gene: GFFSeqFeature) -> None:
     """Move CDS child features of a gene to the mRNA.
 
     This is to fix the case where we have the following structure::
@@ -198,7 +194,7 @@ def move_cds_to_existing_mrna(gene: SeqFeature) -> None:
     logging.debug(f"Gene {gene.id}: moved {len(cdss)} CDSs to the mRNA")
 
 
-def _check_sub_exons(mrna: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeature]) -> None:
+def _check_sub_exons(mrna: GFFSeqFeature, cdss: List[GFFSeqFeature], sub_exons: List[GFFSeqFeature]) -> None:
     """Check that the exons of the mRNA and the CDSs match.
     If there are no exons, create them from the CDSs.
     """
@@ -220,13 +216,12 @@ def _check_sub_exons(mrna: SeqFeature, cdss: SeqFeature, sub_exons: List[SeqFeat
     else:
         # No exons in the mRNA? Create them with the CDS coordinates
         for cur_cds in cdss:
-            sub_exon = SeqFeature(cur_cds.location, type="exon")
-            sub_exon.sub_features = []
+            sub_exon = GFFSeqFeature(cur_cds.location, type="exon")
             new_sub_exons.append(sub_exon)
     mrna.sub_features += new_sub_exons
 
 
-def remove_extra_exons(gene: SeqFeature) -> None:
+def remove_extra_exons(gene: GFFSeqFeature) -> None:
     """Remove duplicated exons existing in both the gene and the mRNAs.
 
     This is a special case where a gene contains proper mRNAs, etc. but also extra exons for the same
@@ -267,7 +262,7 @@ def remove_extra_exons(gene: SeqFeature) -> None:
             raise GFFParserError(f"Can't remove extra exons for {gene.id}, not all start with 'id-'")
 
 
-def remove_cds_from_pseudogene(gene: SeqFeature) -> None:
+def remove_cds_from_pseudogene(gene: GFFSeqFeature) -> None:
     """Removes the CDSs from a pseudogene.
 
     This assumes the CDSs are sub features of the transcript or the gene.

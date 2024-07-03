@@ -18,7 +18,6 @@ from contextlib import nullcontext as does_not_raise
 from pathlib import Path
 from typing import Callable, ContextManager, Dict, List, Optional
 
-from Bio.SeqFeature import SeqFeature
 import pytest
 from pytest import raises, param
 
@@ -27,6 +26,7 @@ from ensembl.io.genomio.gff3.extract_annotation import (
     MissingParentError,
     AnnotationError,
 )
+from ensembl.io.genomio.gff3.features import GFFSeqFeature
 
 
 @pytest.mark.parametrize(
@@ -92,7 +92,7 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
 
     """
     annot = FunctionalAnnotations()
-    feature = SeqFeature(type=seq_feat_type, id="featA")
+    feature = GFFSeqFeature(type=seq_feat_type, id="featA")
     with expected:
         annot.add_feature(feature, feat_type)
         assert annot.features[feat_type][feature.id]
@@ -111,7 +111,7 @@ def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[
 
     seq_feat_type = "gene"
     feat_type = "gene"
-    feature = SeqFeature(type=seq_feat_type, id=feat_id, qualifiers={"Name": [feat_name]})
+    feature = GFFSeqFeature(type=seq_feat_type, id=feat_id, qualifiers={"Name": [feat_name]})
     annot.add_feature(feature, feat_type)
     loaded_feat = annot.features[feat_type][feature.id]
     loaded_synonyms = loaded_feat.get("synonyms", [])
@@ -140,7 +140,7 @@ def test_add_parent_link(parent_type: str, parent_id: str, child_id: str, expect
 
     """
     annot = FunctionalAnnotations()
-    parent = SeqFeature(type="gene", id="geneA")
+    parent = GFFSeqFeature(type="gene", id="geneA")
     annot.add_feature(parent, "gene")
 
     with expected:
@@ -176,9 +176,11 @@ def test_get_parent(
 
     """
     annot = FunctionalAnnotations()
-    parent = SeqFeature(type=in_parent_type, id=in_parent_id)
+    parent = GFFSeqFeature(type=in_parent_type, id=in_parent_id)
     annot.add_feature(parent, "gene")
-    annot.add_feature(SeqFeature(type="mRNA", id=in_child_id), feat_type="transcript", parent_id=in_parent_id)
+    annot.add_feature(
+        GFFSeqFeature(type="mRNA", id=in_child_id), feat_type="transcript", parent_id=in_parent_id
+    )
 
     with expected:
         out_parent = annot.get_parent(out_parent_type, out_child_id)
@@ -212,8 +214,8 @@ def test_add_feature_fail(
 
     """
     annot = FunctionalAnnotations()
-    parent = SeqFeature(type="gene", id="gene_A")
-    child = SeqFeature(type="mRNA", id=child_id)
+    parent = GFFSeqFeature(type="gene", id="gene_A")
+    child = GFFSeqFeature(type="mRNA", id=child_id)
     annot.add_feature(parent, "gene")
     with expected:
         annot.add_feature(child, child_type, out_parent_id)
@@ -270,7 +272,7 @@ def test_get_xrefs(
 ) -> None:
     """Tests the `FunctionaAnnotation.get_xrefs()` method."""
     annot = FunctionalAnnotations(provider_name=provider_name)
-    one_gene = SeqFeature(type="gene", id=in_id)
+    one_gene = GFFSeqFeature(type="gene", id=in_id)
     if in_xrefs is not None:
         one_gene.qualifiers["Dbxref"] = in_xrefs
 
@@ -299,8 +301,8 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
 
     """
     annot = FunctionalAnnotations()
-    one_gene = SeqFeature(type="gene", id="gene_A")
-    one_transcript = SeqFeature(type="mRNA", id="mrna_A")
+    one_gene = GFFSeqFeature(type="gene", id="gene_A")
+    one_transcript = GFFSeqFeature(type="mRNA", id="mrna_A")
     annot.add_feature(one_gene, "gene")
     annot.add_feature(one_transcript, "transcript", parent_id=one_gene.id)
 
@@ -353,13 +355,13 @@ def test_transfer_descriptions(
     annot = FunctionalAnnotations()
     gene_name = "gene_A"
     transcript_name = "tran_A"
-    one_gene = SeqFeature(type="gene", id=gene_name)
+    one_gene = GFFSeqFeature(type="gene", id=gene_name)
     if gene_desc:
         one_gene.qualifiers["description"] = [gene_desc]
-    one_transcript = SeqFeature(type="mRNA", id=transcript_name)
+    one_transcript = GFFSeqFeature(type="mRNA", id=transcript_name)
     if transc_desc:
         one_transcript.qualifiers = {"product": [transc_desc]}
-    one_translation = SeqFeature(type="CDS", id="cds_A")
+    one_translation = GFFSeqFeature(type="CDS", id="cds_A")
     if transl_desc:
         one_translation.qualifiers = {"product": [transl_desc]}
     annot.add_feature(one_gene, "gene")
@@ -399,25 +401,22 @@ def test_store_gene(
     annot = FunctionalAnnotations()
     gene_name = "gene_A"
     transcript_name = "tran_A"
-    one_gene = SeqFeature(type="gene", id=gene_name)
-    one_gene.sub_features = []
+    one_gene = GFFSeqFeature(type="gene", id=gene_name)
 
     # Add a translation (possibly in parts)
     if num_cds:
         for cds_number in range(1, num_cds + 1):
-            transcript = SeqFeature(type="mRNA", id=f"tran_{cds_number}")
-            transcript.sub_features = []
-            exon = SeqFeature(type="exon", id=f"exon_{cds_number}")
+            transcript = GFFSeqFeature(type="mRNA", id=f"tran_{cds_number}")
+            exon = GFFSeqFeature(type="exon", id=f"exon_{cds_number}")
             transcript.sub_features.append(exon)
             if cds_parts > 0:
                 for _ in range(1, cds_parts + 1):
-                    translation = SeqFeature(type="CDS", id=f"cds_{cds_number}")
+                    translation = GFFSeqFeature(type="CDS", id=f"cds_{cds_number}")
                     transcript.sub_features.append(translation)
             one_gene.sub_features.append(transcript)
     else:
-        one_transcript = SeqFeature(type="mRNA", id=transcript_name)
-        one_transcript.sub_features = []
-        one_exon = SeqFeature(type="exon", id="exon_A")
+        one_transcript = GFFSeqFeature(type="mRNA", id=transcript_name)
+        one_exon = GFFSeqFeature(type="exon", id="exon_A")
         one_transcript.sub_features.append(one_exon)
         one_gene.sub_features.append(one_transcript)
 
@@ -431,25 +430,25 @@ def test_store_gene(
     "gene, transcript, translation, expected_json",
     [
         pytest.param(
-            SeqFeature(type="gene", id="gene_A"),
-            SeqFeature(type="mRNA", id="tran_A"),
-            SeqFeature(type="CDS", id="cds_A"),
+            GFFSeqFeature(type="gene", id="gene_A"),
+            GFFSeqFeature(type="mRNA", id="tran_A"),
+            GFFSeqFeature(type="CDS", id="cds_A"),
             "dump_noinfo.json",
             id="No annotation",
         ),
         pytest.param(
-            SeqFeature(
+            GFFSeqFeature(
                 type="gene", id="gene_A", qualifiers={"description": ["Gene description"], "Name": ["GeneA"]}
             ),
-            SeqFeature(type="mRNA", id="tran_A"),
-            SeqFeature(type="CDS", id="cds_A"),
+            GFFSeqFeature(type="mRNA", id="tran_A"),
+            GFFSeqFeature(type="CDS", id="cds_A"),
             "dump_syn.json",
             id="Some annotation",
         ),
         pytest.param(
-            SeqFeature(type="gene", id="gene_A", qualifiers={"description": ["Gene NameA"]}),
-            SeqFeature(type="mRNA", id="tran_A", qualifiers={"description": ["Transcript NameA"]}),
-            SeqFeature(type="CDS", id="cds_A", qualifiers={"description": ["Protein NameA"]}),
+            GFFSeqFeature(type="gene", id="gene_A", qualifiers={"description": ["Gene NameA"]}),
+            GFFSeqFeature(type="mRNA", id="tran_A", qualifiers={"description": ["Transcript NameA"]}),
+            GFFSeqFeature(type="CDS", id="cds_A", qualifiers={"description": ["Protein NameA"]}),
             "dump_description.json",
             id="Some descriptions",
         ),
@@ -459,9 +458,9 @@ def test_to_json(
     assert_files: Callable,
     tmp_path: Path,
     data_dir: Path,
-    gene: SeqFeature,
-    transcript: SeqFeature,
-    translation: SeqFeature,
+    gene: GFFSeqFeature,
+    transcript: GFFSeqFeature,
+    translation: GFFSeqFeature,
     expected_json: Path,
 ) -> None:
     """Test the dumping of the functional annotation to json."""

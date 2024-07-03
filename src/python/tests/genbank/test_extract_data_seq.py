@@ -244,7 +244,7 @@ class TestFormattedFilesGenerator:
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Test that `get_number_of_codons` returns correct value based on feature type and qualifier"""
-        rec = SeqRecord(seq="", id="1JOY", name="EnvZ")
+        rec = SeqRecord(seq=Seq(""), id="1JOY", name="EnvZ")
         seq_feature = SeqFeature(type=type_feature, qualifiers={"transl_table": [expected_value]})
         rec.features.append(seq_feature)
         # pylint: disable=protected-access
