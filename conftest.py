@@ -14,4 +14,4 @@
 # limitations under the License.
 """Global pytest configuration for Ensembl GenomIO tests."""
 
-pytest_plugins = ("ensembl.plugins.pytest_unittest",)
+pytest_plugins = ("ensembl.utils.plugin",)

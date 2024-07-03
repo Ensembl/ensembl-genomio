@@ -307,7 +307,7 @@ def main() -> None:
     parser.add_argument_src_path(
         "--external_db_map", default=_DEFAULT_MAP.resolve(), help="File with external_db mapping"
     )
-    parser.add_log_arguments()
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)
 

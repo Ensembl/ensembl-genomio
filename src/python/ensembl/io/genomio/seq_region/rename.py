@@ -24,8 +24,8 @@ from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import SeqRegion, SeqRegionSynonym, SeqRegionAttrib
-from ensembl.database import DBConnection
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.database import DBConnection
 from ensembl.utils.logging import init_logging_with_args
 
 
