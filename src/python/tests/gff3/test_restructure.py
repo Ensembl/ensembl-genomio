@@ -17,12 +17,13 @@
 from contextlib import nullcontext as does_not_raise
 from typing import Any, ContextManager, Dict, List, Union
 
-from Bio.SeqFeature import SeqFeature, SimpleLocation
+from Bio.SeqFeature import SimpleLocation
 import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GFFParserError
 from ensembl.io.genomio.gff3 import restructure
+from ensembl.io.genomio.gff3.features import GFFSeqFeature
 
 
 class FeatGenerator:
@@ -34,18 +35,17 @@ class FeatGenerator:
     region = "LOREM"
     source = "Foo"
 
-    def make(self, ftype: str, number: int = 1) -> List[SeqFeature]:
+    def make(self, ftype: str, number: int = 1) -> List[GFFSeqFeature]:
         """Returns a list with a defined number of features of a given type."""
         feats = []
         for _ in range(0, number):
             loc = SimpleLocation(self.start, self.end, self.strand)
-            feat = SeqFeature(loc, type=ftype)
+            feat = GFFSeqFeature(loc, type=ftype)
             feat.qualifiers["source"] = self.source
-            feat.sub_features = []
             feats.append(feat)
         return feats
 
-    def make_structure(self, children: List[Any]) -> List[SeqFeature]:
+    def make_structure(self, children: List[Any]) -> List[GFFSeqFeature]:
         """Returns a list of SeqFeature children structure from the form:
         struct = ["mRNA"]
         struct = [{"mRNA": ["CDS", "exon"]}, "exon", "exon"]
@@ -64,7 +64,7 @@ class FeatGenerator:
 
         return output
 
-    def get_sub_structure(self, feat: SeqFeature) -> Union[Dict, str]:
+    def get_sub_structure(self, feat: GFFSeqFeature) -> Union[Dict, str]:
         """Create a children structure from a SeqFeature."""
         if feat.sub_features:
             feat_subs = []

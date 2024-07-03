@@ -246,7 +246,7 @@ class TestWriteFormattedFiles:
         record.features.append(CDS_feature)
         formatted_files_generator.files["fasta_pep"] = tmp_path / "pep.fasta"
         # pylint: disable=protected-access
-        formatted_files_generator._write_pep_fasta(record)
+        formatted_files_generator._write_pep_fasta([record])
         assert (tmp_path / "pep.fasta").exists()
 
         fasta_pep = SeqIO.read((tmp_path / "pep.fasta"), "fasta")

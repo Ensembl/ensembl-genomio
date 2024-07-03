@@ -78,7 +78,6 @@ def add_transcript_to_naked_gene(gene: GFFSeqFeature) -> None:
 
     transcript = GFFSeqFeature(gene.location, type="transcript")
     transcript.qualifiers["source"] = gene.qualifiers["source"]
-    transcript.sub_features = []
     gene.sub_features = [transcript]
     logging.debug(f"Inserted 1 transcript for a lone gene {gene.id}")
 
@@ -100,7 +99,6 @@ def move_only_cdss_to_new_mrna(gene: GFFSeqFeature) -> None:
             logging.debug(f"Create a new mRNA for {cds.id}")
             transcript = GFFSeqFeature(gene.location, type="mRNA")
             transcript.qualifiers["source"] = gene.qualifiers["source"]
-            transcript.sub_features = []
             transcripts_dict[cds.id] = transcript
 
         # Add the CDS to the transcript
@@ -109,7 +107,6 @@ def move_only_cdss_to_new_mrna(gene: GFFSeqFeature) -> None:
         # Also add an exon in the same location
         exon = GFFSeqFeature(cds.location, type="exon")
         exon.qualifiers["source"] = gene.qualifiers["source"]
-        exon.sub_features = []
         transcripts_dict[cds.id].sub_features.append(exon)
 
     transcripts = list(transcripts_dict.values())
@@ -222,7 +219,6 @@ def _check_sub_exons(mrna: GFFSeqFeature, cdss: List[GFFSeqFeature], sub_exons: 
         # No exons in the mRNA? Create them with the CDS coordinates
         for cur_cds in cdss:
             sub_exon = GFFSeqFeature(cur_cds.location, type="exon")
-            sub_exon.sub_features = []
             new_sub_exons.append(sub_exon)
     mrna.sub_features += new_sub_exons
 
