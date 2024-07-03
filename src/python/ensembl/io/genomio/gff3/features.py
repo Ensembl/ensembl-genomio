@@ -15,14 +15,14 @@
 """GFF3 features."""
 
 from __future__ import annotations
-from typing import List
-
-from Bio.SeqFeature import SeqFeature, Location
-
 
 __all__ = [
     "GFFSeqFeature",
 ]
+
+from typing import List
+
+from Bio.SeqFeature import SeqFeature, Location
 
 
 class GFFSeqFeature(SeqFeature):
