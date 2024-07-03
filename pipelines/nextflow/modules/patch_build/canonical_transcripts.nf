@@ -21,27 +21,27 @@ process CHECK_PATCH {
         path(waited_file)
 
     shell:
-    '''
-    function mysql_command {
-        mysql !{server.database} \
-            --host !{server.host} \
-            --port !{server.port} \
-            --user !{server.user} \
-            --password !{server.password} \
-            -e "$1"
-    }
+        '''
+        function mysql_command {
+            mysql !{server.database} \
+                --host !{server.host} \
+                --port !{server.port} \
+                --user !{server.user} \
+                --password !{server.password} \
+                -e "$1"
+        }
 
-    # Purge all current canonical transcripts
-    mysql_command "UPDATE gene SET canonical_transcript_id = 0"
-    mysql_command "DELETE transcript_attrib FROM transcript_attrib LEFT JOIN attrib_type USING(attrib_type_id) WHERE code='is_canonical'"
+        # Purge all current canonical transcripts
+        mysql_command "UPDATE gene SET canonical_transcript_id = 0"
+        mysql_command "DELETE transcript_attrib FROM transcript_attrib LEFT JOIN attrib_type USING(attrib_type_id) WHERE code='is_canonical'"
 
-    perl $ENSEMBL_ROOT_DIR/ensembl/misc-scripts/canonical_transcripts/select_canonical_transcripts.pl \
-        --dbhost !{server.host} \\
-        --dbport !{server.port} \\
-        --dbuser !{server.user} \\
-        --dbpassword !{server.password} \\
-        --dbname !{server.database} \\
-        -coord_system toplevel \
-        -write
-    '''
+        perl $ENSEMBL_ROOT_DIR/ensembl/misc-scripts/canonical_transcripts/select_canonical_transcripts.pl \
+            --dbhost !{server.host} \\
+            --dbport !{server.port} \\
+            --dbuser !{server.user} \\
+            --dbpassword !{server.password} \\
+            --dbname !{server.database} \\
+            -coord_system toplevel \
+            -write
+        '''
 }
