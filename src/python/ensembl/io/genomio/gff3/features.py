@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from Bio.SeqFeature import SeqFeature
+from Bio.SeqFeature import SeqFeature, Location
 
 
 __all__ = [
@@ -33,9 +33,11 @@ class GFFSeqFeature(SeqFeature):
         type: str = "",  # pylint: disable=W0622
         id: str ="<unknown id>",  # pylint: disable=W0622
         qualifiers: dict | None = None,
-        sub_features: list = [],
+        sub_features: list = None,
     ):
         super().__init__(location, type=type, id=id, qualifiers=qualifiers)
+        if sub_features is None:
+            sub_features = []
         self.sub_features = sub_features
 
     @classmethod
