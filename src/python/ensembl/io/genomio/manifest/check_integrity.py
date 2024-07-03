@@ -29,9 +29,9 @@ from typing import Any, Dict, List, Optional, Union
 
 from BCBio import GFF
 from Bio import SeqIO
-from Bio.SeqFeature import SeqFeature
 
 from ensembl.io.genomio.utils import get_json
+from ensembl.io.genomio.gff3.features import GFFSeqFeature
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -326,7 +326,7 @@ class Manifest:
         self.lengths = {**self.lengths, **stats}
 
     def _retrieve_gff_gene_lengths(
-        self, feat: SeqFeature, genes: Lengths, peps: Lengths, all_peps: Lengths
+        self, feat: GFFSeqFeature, genes: Lengths, peps: Lengths, all_peps: Lengths
     ) -> None:
         """Record genes and peptides lengths from a feature.
 

@@ -321,9 +321,9 @@ class FunctionalAnnotations:
         """Record the functional_annotations of a gene and its children features."""
         self.add_feature(gene, "gene")
 
-        for transcript in gene.sub_features:
+        for transcript in gene.sub_features:  # type: ignore[attr-defined]
             self.add_feature(transcript, "transcript", gene.id, [gene.id])
-            for feat in transcript.sub_features:
+            for feat in transcript.sub_features:  # type: ignore[attr-defined]
                 if feat.type == "CDS":
                     self.add_feature(feat, "translation", transcript.id, [gene.id, transcript.id])
                     # Store CDS functional annotation only once

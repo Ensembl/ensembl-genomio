@@ -153,8 +153,8 @@ class StableIDAllocator:
         Args:
             pseudogene: Pseudogene feature.
         """
-        for transcript in pseudogene.sub_features:
-            for feat in transcript.sub_features:
+        for transcript in pseudogene.sub_features:  # type: ignore[attr-defined]
+            for feat in transcript.sub_features:  # type: ignore[attr-defined]
                 if feat.type == "CDS":
                     feat.id = self.normalize_cds_id(feat.id)
                     if feat.id in ("", pseudogene.id):

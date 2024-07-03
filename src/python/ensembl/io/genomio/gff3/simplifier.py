@@ -31,7 +31,6 @@ from typing import List, Optional, Set
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
-from Bio.SeqFeature import SeqFeature
 
 import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
@@ -39,6 +38,7 @@ from .extract_annotation import FunctionalAnnotations
 from .id_allocator import StableIDAllocator
 from .restructure import restructure_gene, remove_cds_from_pseudogene
 from .exceptions import GeneSegmentError, GFFParserError, IgnoredFeatureError, UnsupportedFeatureError
+from .features import GFFSeqFeature
 
 
 class Records(list):
@@ -165,7 +165,7 @@ class GFFSimplifier:
             if not self.skip_unrecognized:
                 raise GFFParserError("Unrecognized types found, abort")
 
-    def simpler_gff3_feature(self, gene: SeqFeature) -> SeqFeature:
+    def simpler_gff3_feature(self, gene: GFFSeqFeature) -> GFFSeqFeature:
         """Creates a simpler version of a GFF3 feature.
 
         Raises:
@@ -197,7 +197,7 @@ class GFFSimplifier:
         self.annotations.store_gene(gene)
         return self.clean_gene(gene)
 
-    def create_gene_for_lone_transcript(self, feat: SeqFeature) -> SeqFeature:
+    def create_gene_for_lone_transcript(self, feat: GFFSeqFeature) -> GFFSeqFeature:
         """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA/mRNA, and 'ncRNA_gene' for all others.
 
         Args:
@@ -211,7 +211,7 @@ class GFFSimplifier:
         if feat.type in ("tRNA", "rRNA", "mRNA"):
             new_type = "gene"
         logging.debug(f"Put the transcript {feat.type} in a {new_type} parent feature")
-        new_gene = SeqFeature(feat.location, type=new_type)
+        new_gene = GFFSeqFeature(feat.location, type=new_type)
         new_gene.qualifiers["source"] = feat.qualifiers["source"]
         new_gene.sub_features = [feat]
 
@@ -239,7 +239,7 @@ class GFFSimplifier:
 
         return new_gene
 
-    def create_gene_for_lone_cds(self, feat: SeqFeature) -> SeqFeature:
+    def create_gene_for_lone_cds(self, feat: GFFSeqFeature) -> GFFSeqFeature:
         """Returns a gene created for a lone CDS.
 
         Args:
@@ -251,12 +251,12 @@ class GFFSimplifier:
         logging.debug(f"Put the lone CDS in gene-mRNA parent features for {feat.id}")
 
         # Create a transcript, add the CDS
-        transcript = SeqFeature(feat.location, type="mRNA")
+        transcript = GFFSeqFeature(feat.location, type="mRNA")
         transcript.qualifiers["source"] = feat.qualifiers["source"]
         transcript.sub_features = [feat]
 
         # Add an exon too
-        exon = SeqFeature(feat.location, type="exon")
+        exon = GFFSeqFeature(feat.location, type="exon")
         exon.qualifiers["source"] = feat.qualifiers["source"]
         transcript.sub_features.append(exon)
 
@@ -265,7 +265,7 @@ class GFFSimplifier:
         if ("pseudo" in feat.qualifiers) and (feat.qualifiers["pseudo"][0] == "true"):
             gene_type = "pseudogene"
             del feat.qualifiers["pseudo"]
-        new_gene = SeqFeature(feat.location, type=gene_type)
+        new_gene = GFFSeqFeature(feat.location, type=gene_type)
         new_gene.qualifiers["source"] = feat.qualifiers["source"]
         new_gene.sub_features = [transcript]
         new_gene.id = self.stable_ids.generate_gene_id()
@@ -275,7 +275,7 @@ class GFFSimplifier:
 
         return new_gene
 
-    def normalize_non_gene(self, feat: SeqFeature) -> Optional[SeqFeature]:
+    def normalize_non_gene(self, feat: GFFSeqFeature) -> Optional[GFFSeqFeature]:
         """Returns a normalised "non-gene" or `None` if not applicable.
 
         Only transposable elements supported at the moment.
@@ -301,7 +301,7 @@ class GFFSimplifier:
         # This is a failsafe in case you add supported non-genes
         raise NotImplementedError(f"Unsupported non-gene: {feat.type} for {feat.id}")
 
-    def _normalize_mobile_genetic_element(self, feat: SeqFeature) -> SeqFeature:
+    def _normalize_mobile_genetic_element(self, feat: GFFSeqFeature) -> GFFSeqFeature:
         """Normalize a mobile element if it has a mobile_element_type field."""
         try:
             mobile_element_type = feat.qualifiers["mobile_element_type"]
@@ -322,7 +322,7 @@ class GFFSimplifier:
             return feat
         raise GFFParserError(f"'mobile_element_type' is not a transposon: {element_type}")
 
-    def clean_gene(self, gene: SeqFeature) -> SeqFeature:
+    def clean_gene(self, gene: GFFSeqFeature) -> GFFSeqFeature:
         """Return the same gene without qualifiers unrelated to the gene structure."""
 
         old_gene_qualifiers = gene.qualifiers
@@ -348,7 +348,7 @@ class GFFSimplifier:
 
         return gene
 
-    def normalize_gene(self, gene: SeqFeature) -> SeqFeature:
+    def normalize_gene(self, gene: GFFSeqFeature) -> GFFSeqFeature:
         """Returns a normalized gene structure, separate from the functional elements.
 
         Args:
@@ -364,7 +364,7 @@ class GFFSimplifier:
 
         return gene
 
-    def normalize_pseudogene(self, gene: SeqFeature) -> None:
+    def normalize_pseudogene(self, gene: GFFSeqFeature) -> None:
         """Normalize CDSs if allowed, otherwise remove them."""
         if gene.type != "pseudogene":
             return
@@ -374,7 +374,7 @@ class GFFSimplifier:
         else:
             remove_cds_from_pseudogene(gene)
 
-    def normalize_transcripts(self, gene: SeqFeature) -> None:
+    def normalize_transcripts(self, gene: GFFSeqFeature) -> None:
         """Normalizes a transcript."""
 
         allowed_transcript_types = self._biotypes["transcript"]["supported"]
@@ -406,7 +406,7 @@ class GFFSimplifier:
             for elt in sorted(transcripts_to_delete, reverse=True):
                 gene.sub_features.pop(elt)
 
-    def format_gene_segments(self, transcript: SeqFeature) -> SeqFeature:
+    def format_gene_segments(self, transcript: GFFSeqFeature) -> GFFSeqFeature:
         """Returns the equivalent Ensembl biotype feature for gene segment transcript features.
 
         Supported features: "C_gene_segment" and "V_gene_segment".
@@ -424,8 +424,8 @@ class GFFSimplifier:
         seg_type = self._get_segment_type(transcript)
         if not seg_type:
             # Get the information from a CDS instead
-            sub_feats: List[SeqFeature] = transcript.sub_features
-            cdss: List[SeqFeature] = list(filter(lambda x: x.type == "CDS", sub_feats))
+            sub_feats: List[GFFSeqFeature] = transcript.sub_features
+            cdss: List[GFFSeqFeature] = list(filter(lambda x: x.type == "CDS", sub_feats))
             if cdss:
                 seg_type = self._get_segment_type(cdss[0])
             if not seg_type:
@@ -435,7 +435,7 @@ class GFFSimplifier:
         transcript.type = f"{seg_type}_{transcript.type.replace('_segment', '')}"
         return transcript
 
-    def _get_segment_type(self, feature: SeqFeature) -> str:
+    def _get_segment_type(self, feature: GFFSeqFeature) -> str:
         """Infer if a segment is "IG" (immunoglobulin) of "TR" (t-cell) from the feature attribs.
 
         Returns an empty string if no segment type info was found.
@@ -453,7 +453,9 @@ class GFFSimplifier:
             return "TR"
         return ""
 
-    def _normalize_transcript_subfeatures(self, gene: SeqFeature, transcript: SeqFeature) -> SeqFeature:
+    def _normalize_transcript_subfeatures(
+        self, gene: GFFSeqFeature, transcript: GFFSeqFeature
+    ) -> GFFSeqFeature:
         """Returns a transcript with normalized sub-features."""
         exons_to_delete = []
         exon_number = 1
@@ -489,7 +491,7 @@ class GFFSimplifier:
                 transcript.sub_features.pop(elt)
         return transcript
 
-    def normalize_mirna(self, gene: SeqFeature) -> List[SeqFeature]:
+    def normalize_mirna(self, gene: GFFSeqFeature) -> List[GFFSeqFeature]:
         """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
 
         Change the representation from the form `gene[ primary_transcript[ exon, miRNA[ exon ] ] ]`
@@ -506,7 +508,7 @@ class GFFSimplifier:
         old_gene = gene
         if gene.type == "primary_transcript":
             primary = old_gene
-            gene = SeqFeature(primary.location, type="gene")
+            gene = GFFSeqFeature(primary.location, type="gene")
             gene.sub_features = [primary]
             gene.qualifiers = primary.qualifiers
             transcripts = gene.sub_features
@@ -533,7 +535,7 @@ class GFFSimplifier:
             elif sub.type == "miRNA":
                 new_gene_id = f"{base_id}_{num}"
                 num += 1
-                new_gene = SeqFeature(sub.location, "gene", id=new_gene_id)
+                new_gene = GFFSeqFeature(sub.location, "gene", id=new_gene_id)
                 new_gene.qualifiers = {"source": sub.qualifiers["source"], "ID": new_gene_id}
                 new_gene.sub_features = [sub]
                 new_genes.append(new_gene)
