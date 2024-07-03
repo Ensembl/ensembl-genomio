@@ -424,7 +424,8 @@ class GFFSimplifier:
         seg_type = self._get_segment_type(transcript)
         if not seg_type:
             # Get the information from a CDS instead
-            cdss = list(filter(lambda x: x.type == "CDS", transcript.sub_features))
+            sub_feats: List[SeqFeature] = transcript.sub_features
+            cdss: List[SeqFeature] = list(filter(lambda x: x.type == "CDS", sub_feats))
             if cdss:
                 seg_type = self._get_segment_type(cdss[0])
             if not seg_type:
