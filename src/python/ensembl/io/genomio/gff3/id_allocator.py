@@ -21,7 +21,7 @@ import logging
 import re
 from typing import Dict, List, Optional, Set
 
-from Bio.SeqFeature import SeqFeature
+from .features import GFFSeqFeature
 
 
 class InvalidStableID(ValueError):
@@ -143,7 +143,7 @@ class StableIDAllocator:
             return ""
         return normalized_cds_id
 
-    def normalize_pseudogene_cds_id(self, pseudogene: SeqFeature) -> None:
+    def normalize_pseudogene_cds_id(self, pseudogene: GFFSeqFeature) -> None:
         """Normalizes every CDS ID of the provided pseudogene.
 
         Ensure each CDS from a pseudogene has a proper ID:
@@ -153,15 +153,15 @@ class StableIDAllocator:
         Args:
             pseudogene: Pseudogene feature.
         """
-        for transcript in pseudogene.sub_features:  # type: ignore[attr-defined]
-            for feat in transcript.sub_features:  # type: ignore[attr-defined]
+        for transcript in pseudogene.sub_features:
+            for feat in transcript.sub_features:
                 if feat.type == "CDS":
                     feat.id = self.normalize_cds_id(feat.id)
                     if feat.id in ("", pseudogene.id):
                         feat.id = f"{transcript.id}_cds"
                         feat.qualifiers["ID"] = feat.id
 
-    def normalize_gene_id(self, gene: SeqFeature, refseq: Optional[bool] = False) -> str:
+    def normalize_gene_id(self, gene: GFFSeqFeature, refseq: Optional[bool] = False) -> str:
         """Returns a normalized gene stable ID.
 
         Removes any unnecessary prefixes, but will generate a new stable ID if the normalized one is
