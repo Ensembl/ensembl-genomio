@@ -92,7 +92,7 @@ def add_provider(genome_metadata: Dict, ncbi_data: Dict) -> None:
 
     # Add assembly provider (if missing)
     assembly = genome_metadata["assembly"]
-    if (not "provider_name" in assembly) and (not "provider_url" in assembly):
+    if ("provider_name" not in assembly) and ("provider_url" not in assembly):
         assembly["provider_name"] = provider["assembly"]["provider_name"]
         assembly["provider_url"] = f'{provider["assembly"]["provider_url"]}/{accession}'
 
@@ -111,7 +111,7 @@ def add_assembly_version(genome_data: Dict) -> None:
         genome_data: Genome information of assembly, accession and annotation.
     """
     assembly = genome_data["assembly"]
-    if not "version" in assembly:
+    if "version" not in assembly:
         accession = assembly["accession"]
         version = accession.partition(".")[2]
         if version:
@@ -128,9 +128,9 @@ def add_genebuild_metadata(genome_data: Dict) -> None:
     """
     genebuild = genome_data.setdefault("genebuild", {})
     current_date = datetime.date.today().isoformat()
-    if not "version" in genebuild:
+    if "version" not in genebuild:
         genebuild["version"] = current_date
-    if not "start_date" in genebuild:
+    if "start_date" not in genebuild:
         genebuild["start_date"] = current_date
 
 
