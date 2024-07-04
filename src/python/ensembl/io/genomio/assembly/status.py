@@ -43,7 +43,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 DATASETS_SINGULARITY = {
-    "datasets_version_url": "library://lcampbell/ensembl-genomio/ncbi-datasets-v16.12.1:latest",
+    "datasets_version_url": "docker://ensemblorg/datasets-cli:latest",
 }
 
 
@@ -413,7 +413,7 @@ def main() -> None:
         type=str,
         required=False,
         metavar="URL",
-        help="datasets version: E.g. library://lcampbell/ensembl-genomio/ncbi-datasets-v16.12.1:latest",
+        help="datasets version: E.g. docker://ensemblorg/datasets-cli:latest",
     )
     parser.add_argument(
         "--cache_dir",
