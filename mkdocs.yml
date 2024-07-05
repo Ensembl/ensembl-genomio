@@ -68,8 +68,9 @@ plugins:
 
 nav:
   - Home: index.md
-  - Usage: usage.md
   - Install: install.md
+  - Usage: usage.md
+  - Code of Conduct: code_of_conduct.md
   - Code Reference: reference/
   - Running Nextflow: nextflow.md
   - Ensembl-Genomio Pipelines: pipelines.md

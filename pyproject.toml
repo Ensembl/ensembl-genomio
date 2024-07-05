@@ -63,6 +63,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+build = [
+    "build",
+    "setuptools",
+    "setuptools-scm",
+    "wheel",
+]
 cicd = [
     "black >= 23.11.0",
     "coverage >= 7.3.2",
