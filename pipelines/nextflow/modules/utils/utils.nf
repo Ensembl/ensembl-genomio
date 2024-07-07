@@ -51,20 +51,22 @@ def parse_list_param(String multi_value = '', List<String> allowed_values, Boole
     return all_params
 }
 
-def generate_url(host, port, user, pass=null, dbname=null) {
+def generate_url(protocol, host, port, user, pass=null, database=null) {
+    // Generate a URL when all the credentials are provided
     base_url = "${protocol}://${user}@${host}:${port}"
 
     if (pass) {
-        base_url = "${protocol}://${user}:${password}@${host}:${port}"
+        base_url = "${protocol}://${user}:${pass}@${host}:${port}"
     }
-
-    if (dbname) {
-        base_url += "/${dbname}"
+    if (database) {
+        base_url += "/${database}"
     }
     return base_url
 }
 
+
 def extractMySQLArguments(urlString) {
+    //Extract the MySQL arguments from the url
     def remove_protocol = urlString.split("//")[1]
 
     def urlparts = remove_protocol.split("@")
@@ -78,7 +80,7 @@ def extractMySQLArguments(urlString) {
     def port = host_info[1]
 
     def database = host_database.length > 1 ? host_database[1] : null
-    
+
     def result = [user: user, pass: pass, host: host, port: port, database: database]
     
     return result
