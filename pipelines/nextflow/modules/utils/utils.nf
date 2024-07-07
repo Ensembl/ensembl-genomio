@@ -50,3 +50,17 @@ def parse_list_param(String multi_value = '', List<String> allowed_values, Boole
     }
     return all_params
 }
+
+def generate_url(host, port, user, pass=null, dbname=null) {
+    base_url = "${protocol}://${user}@${host}:${port}"
+
+    if (pass) {
+        base_url = "${protocol}://${user}:${password}@${host}:${port}"
+    }
+
+    if (dbname) {
+        base_url += "/${dbname}"
+    }
+    return base_url
+}
+
