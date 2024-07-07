@@ -81,8 +81,7 @@ def extractMySQLArguments(urlString) {
 
     def database = host_database.length > 1 ? host_database[1] : null
 
-    def result = [user: user, pass: pass, host: host, port: port, database: database]
+    return [user: user, pass: pass, host: host, port: port, database: database]
     
-    return result
 }
 
