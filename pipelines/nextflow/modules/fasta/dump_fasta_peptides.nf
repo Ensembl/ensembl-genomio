@@ -29,8 +29,7 @@ process DUMP_FASTA_PEPTIDES {
         output = "${db.species}_fasta_pep.fasta"
         password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        dump_fasta.pl \
-            --type protein \
+        dump_fasta_peptide.pl \
             --host $db.server.host \
             --port $db.server.port \
             --user $db.server.user \

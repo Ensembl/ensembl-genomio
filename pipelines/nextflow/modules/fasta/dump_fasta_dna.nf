@@ -29,8 +29,7 @@ process DUMP_FASTA_DNA {
         output = "${db.species}_fasta_dna.fasta"
         password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        dump_fasta.pl \
-            --type dna \
+        dump_fasta_dna.pl \
             --host $db.server.host \
             --port $db.server.port \
             --user $db.server.user \
