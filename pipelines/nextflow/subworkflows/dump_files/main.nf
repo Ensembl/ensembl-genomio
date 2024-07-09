@@ -14,6 +14,7 @@
 // limitations under the License.
 
 include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
+include { DUMP_AGP } from '../../modules/seq_region/dump_agp.nf'
 include { DUMP_FASTA_DNA } from '../../modules/fasta/dump_fasta_dna.nf'
 include { DUMP_FASTA_PEPTIDES } from '../../modules/fasta/dump_fasta_peptides.nf'
 include { DUMP_GFF3 } from '../../modules/gff3/dump_gff3.nf'
@@ -44,6 +45,12 @@ workflow DUMP_FILES {
         if ("seq_regions" in selection) {
             seq_regions = DUMP_SEQ_REGIONS(db)
             db_files = db_files.mix(seq_regions)
+        }
+
+        // AGP
+        if ("agp" in selection) {
+            agps = DUMP_AGP(db)
+            db_files = db_files.mix(agps)
         }
 
         // Dump DNA sequences
