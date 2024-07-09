@@ -16,6 +16,7 @@
 
 // Predefine the files that can be dumped and the number of files for each of them
 default_selection_map = [
+    'annotation': 1,
     'seq_regions': 1,
     'events': 1,
     'genome_metadata': 1,
