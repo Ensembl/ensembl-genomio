@@ -46,6 +46,7 @@ class ManifestMaker:
     }
     names = {name: name for name in same_names}
     names = {**names, **alias_names}
+    multi_files = {"agp"}
 
     def __init__(self, manifest_dir: Path) -> None:
         self.dir = manifest_dir
@@ -81,34 +82,38 @@ class ManifestMaker:
                     used_file = True
                     md5 = self._get_md5sum(subfile)
                     file_obj = {"file": subfile.name, "md5sum": md5}
-                    # Prepare object name
-                    obj_name = ""
-                    # If we recognize the suffix, then the name is the part after the last _
-                    if subfile.suffix == f".{name}":
-                        obj_name = subfile.stem.split(sep="_")[-1]
-                    # If we recognize the end of the name, then the name is the part before the last _
-                    else:
-                        obj_name = subfile.stem.split(sep="_")[-2]
 
-                    if standard_name in manifest_files:
-                        # Transform into a subdict, using the old_object_name for the first key
-                        if not isinstance(list(manifest_files[standard_name].values())[0], dict):
-                            manifest_files[standard_name] = {old_obj_name: manifest_files[standard_name]}
-                        
+                    # Multiple files stored, each with a name
+                    if standard_name in self.multi_files:
+                        if standard_name not in manifest_files:
+                            manifest_files[standard_name] = {}
+                        # Prepare object name
+                        obj_name = "file"
+                        try:
+                            # If we recognize the suffix, then the name is the part after the last _
+                            if subfile.suffix == f".{name}":
+                                obj_name = subfile.stem.split(sep="_")[-1]
+                            # If we recognize the end of the name, then the name is the part before the last _
+                            else:
+                                obj_name = subfile.stem.split(sep="_")[-2]
+                        except IndexError:
+                            pass
+                            
+                        # Add number if duplicate name
                         obj_name_base = obj_name
                         num = 1
                         while (obj_name in manifest_files[standard_name]):
                             obj_name = f"{obj_name_base}.{num}"
                             num += 1
-                            if num >= 5:
+                            if num >= 10:
                                 raise ValueError(f"Too many files with same name {obj_name_base}")
+                            
+                        # Store file
                         manifest_files[standard_name][obj_name] = file_obj
                     
+                    # Single file
                     else:
                         manifest_files[standard_name] = file_obj
-                        # Keep the name of this file in case we change it to a dict (if there are several files)
-                        old_obj_name = obj_name
-                    break
 
             if not used_file:
                 logging.warning(f"File {subfile} was not included in the manifest")
