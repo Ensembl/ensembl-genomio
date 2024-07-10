@@ -110,6 +110,8 @@ workflow DUMP_FILES {
         db_files = db_files
             .map{ db, name, file_name -> tuple(db, file_name) }
             .groupTuple(size: selection_number)
+            // Flatten in case we get lists of files (e.g. from AGP)
+            .map{ db, files -> tuple(db, files.flatten()) }
 
         // Collect, create manifest, and publish
         manifested_dir = MANIFEST(db_files)
