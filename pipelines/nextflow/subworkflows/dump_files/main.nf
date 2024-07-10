@@ -15,6 +15,7 @@
 
 include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
 include { DUMP_AGP } from '../../modules/seq_region/dump_agp.nf'
+include { DUMP_SEQ_ATTRIB } from '../../modules/seq_region/dump_seq_attrib.nf'
 include { DUMP_FASTA_DNA } from '../../modules/fasta/dump_fasta_dna.nf'
 include { DUMP_FASTA_PEPTIDES } from '../../modules/fasta/dump_fasta_peptides.nf'
 include { DUMP_GFF3 } from '../../modules/gff3/dump_gff3.nf'
@@ -51,6 +52,12 @@ workflow DUMP_FILES {
         if ("agp" in selection) {
             agps = DUMP_AGP(db)
             db_files = db_files.mix(agps)
+        }
+
+        // Seq region attribs
+        if ("seq_attrib" in selection) {
+            seq_attrib = DUMP_SEQ_ATTRIB(db)
+            db_files = db_files.mix(seq_attrib)
         }
 
         // Dump DNA sequences

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DUMP_ANNOTATION {
+process DUMP_SEQ_ATTRIB {
     tag "${db.species}"
     label "variable_2_8_32"
     label "ensembl_scripts_container"
@@ -23,24 +23,29 @@ process DUMP_ANNOTATION {
         val db
 
     output:
-        tuple val(db), val("functional_annotation"), path("*.json")
+        tuple val(db), val("seq_attrib"), path("*.json")
 
     script:
-        output = "${db.species}_functional_annotation.json"
-        schema = "functional_annotation"
+        output = "${db.species}_seq_attrib.json"
+        schema = "seq_attrib"
         password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        dump_functional_annotation.pl \
+        # Prepare, make sure we can output something, even if empty
+        touch $output
+
+        dump_seq_region_attrib.pl \
             --host $db.server.host \
             --port $db.server.port \
             --user $db.server.user \
             $password_arg \
-            --dbname $db.server.database > $output
+            --dbname $db.server.database \
+            -v > $output
         schemas_json_validate --json_file $output --json_schema $schema
+
         """
     
     stub:
-        output = "functional_annotation.json"
+        output = "${db.species}_seq_attrib.json"
         """
         echo "[]" > $output
         """
