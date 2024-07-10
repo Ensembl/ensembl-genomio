@@ -72,7 +72,7 @@ def extractMySQLArguments(urlString) {
     def urlparts = remove_protocol.split("@")
     def user_info = urlparts[0].split(":")
     def user = user_info[0]
-    def pass = user_info.length > 1 ? user_info[1]:null
+    def pass = user_info.length > 1 ? user_info[1] : null
 
     def host_database = urlparts[1].split("/")
     def host_info = host_database[0].split(":")
