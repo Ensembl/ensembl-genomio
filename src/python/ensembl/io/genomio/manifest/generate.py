@@ -62,7 +62,6 @@ class ManifestMaker:
     def get_files_checksums(self):
         """Compute the checksum of all the files in the directory."""
         manifest_files = {}
-        old_obj_name = ""
         for subfile in self.dir.iterdir():
             logging.debug(f"Check file {subfile} ({subfile.stem}, {subfile.suffix})")
             used_file = False
@@ -87,30 +86,9 @@ class ManifestMaker:
                     if standard_name in self.multi_files:
                         if standard_name not in manifest_files:
                             manifest_files[standard_name] = {}
-                        # Prepare object name
-                        obj_name = "file"
-                        try:
-                            # If we recognize the suffix, then the name is the part after the last _
-                            if subfile.suffix == f".{name}":
-                                obj_name = subfile.stem.split(sep="_")[-1]
-                            # If we recognize the end of the name, then the name is the part before the last _
-                            else:
-                                obj_name = subfile.stem.split(sep="_")[-2]
-                        except IndexError:
-                            pass
-                            
-                        # Add number if duplicate name
-                        obj_name_base = obj_name
-                        num = 1
-                        while (obj_name in manifest_files[standard_name]):
-                            obj_name = f"{obj_name_base}.{num}"
-                            num += 1
-                            if num >= 10:
-                                raise ValueError(f"Too many files with same name {obj_name_base}")
-                            
-                        # Store file
+                        obj_name = self._prepare_object_name(subfile, name, manifest_files[standard_name])
                         manifest_files[standard_name][obj_name] = file_obj
-                    
+
                     # Single file
                     else:
                         manifest_files[standard_name] = file_obj
@@ -119,6 +97,29 @@ class ManifestMaker:
                 logging.warning(f"File {subfile} was not included in the manifest")
 
         return manifest_files
+
+    def _prepare_object_name(self, subfile: Path, name: str, manifest_dict: dict) -> str:
+        # Prepare object name
+        obj_name = "file"
+        try:
+            # If we recognize the suffix, then the name is the part after the last _
+            if subfile.suffix == f".{name}":
+                obj_name = subfile.stem.split(sep="_")[-1]
+            # If we recognize the end of the name, then the name is the part before the last _
+            else:
+                obj_name = subfile.stem.split(sep="_")[-2]
+        except IndexError:
+            pass
+
+        # Add number if duplicate name
+        obj_name_base = obj_name
+        num = 1
+        while obj_name in manifest_dict:
+            obj_name = f"{obj_name_base}.{num}"
+            num += 1
+            if num >= 10:
+                raise ValueError(f"Too many files with same name {obj_name_base}")
+        return obj_name
 
     @staticmethod
     def _get_md5sum(file_path: Path) -> str:
