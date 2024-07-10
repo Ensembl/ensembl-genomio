@@ -25,6 +25,7 @@ import pytest
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from ensembl.io.genomio.gff3.id_allocator import StableIDAllocator, InvalidStableID
+from ensembl.io.genomio.gff3.features import GFFSeqFeature
 from pytest import raises
 
 
@@ -193,7 +194,7 @@ def test_normalize_pseudogene_cds_id(
 
     # Load record and update feature
     record = _read_record(data_dir / input_gff)
-    features = record.features
+    features = [GFFSeqFeature.cast(feat) for feat in record.features]
     record.features = []
     for feature in features:
         ids.normalize_pseudogene_cds_id(feature)
@@ -232,7 +233,7 @@ def test_normalize_gene_id(
 
     with expected:
         for feature in features:
-            feature.id = ids.normalize_gene_id(feature)
+            feature.id = ids.normalize_gene_id(GFFSeqFeature.cast(feature))
             assert feature.id == expected_id
 
 
@@ -258,7 +259,7 @@ def test_normalize_gene_id_duplicate(
     found_ids = []
     with expected:
         for feature in features:
-            new_feature_id = ids.normalize_gene_id(feature)
+            new_feature_id = ids.normalize_gene_id(GFFSeqFeature.cast(feature))
             if new_feature_id and feature.id != new_feature_id:
                 found_ids.append(new_feature_id)
         assert found_ids == expected_ids

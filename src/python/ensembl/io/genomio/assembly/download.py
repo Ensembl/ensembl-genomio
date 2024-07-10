@@ -194,7 +194,7 @@ def _download_file(
     """
     has_md5 = True
     expected_sum = ""
-    if not ftp_file in md5_sums:
+    if ftp_file not in md5_sums:
         logging.warning(f" File not in the md5 checksums: {ftp_file}")
         has_md5 = False
     else:

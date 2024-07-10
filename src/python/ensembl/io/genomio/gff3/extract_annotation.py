@@ -28,9 +28,8 @@ from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional
 
-from Bio.SeqFeature import SeqFeature
-
 from ensembl.io.genomio.utils.json_utils import print_json
+from .features import GFFSeqFeature
 
 
 Annotation = Dict[str, Any]
@@ -75,7 +74,7 @@ class FunctionalAnnotations:
             "transcript": {},
         }
 
-    def get_xrefs(self, feature: SeqFeature) -> List[Dict[str, Any]]:
+    def get_xrefs(self, feature: GFFSeqFeature) -> List[Dict[str, Any]]:
         """Get the xrefs from the Dbxref field."""
         all_xref: List[Dict[str, str]] = []
 
@@ -128,7 +127,7 @@ class FunctionalAnnotations:
 
     def add_feature(
         self,
-        feature: SeqFeature,
+        feature: GFFSeqFeature,
         feat_type: str,
         parent_id: Optional[str] = None,
         all_parent_ids: Optional[List[str]] = None,
@@ -158,12 +157,12 @@ class FunctionalAnnotations:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
 
     def _generic_feature(
-        self, feature: SeqFeature, feat_type: str, parent_ids: Optional[List[str]] = None
+        self, feature: GFFSeqFeature, feat_type: str, parent_ids: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Create a feature object following the specifications.
 
         Args:
-            feature: The SeqFeature to add to the list.
+            feature: The GFFSeqFeature to add to the list.
             feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
             all_parent_ids: All parent IDs to remove from non-informative descriptions.
 
@@ -317,7 +316,7 @@ class FunctionalAnnotations:
         feats_list = self._to_list()
         print_json(Path(out_path), feats_list)
 
-    def store_gene(self, gene: SeqFeature) -> None:
+    def store_gene(self, gene: GFFSeqFeature) -> None:
         """Record the functional_annotations of a gene and its children features."""
         self.add_feature(gene, "gene")
 

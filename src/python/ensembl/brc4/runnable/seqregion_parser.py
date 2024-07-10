@@ -16,7 +16,6 @@
 
 from pathlib import Path
 import re
-import gzip
 import csv
 from typing import Any, Dict, Tuple
 

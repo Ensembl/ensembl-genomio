@@ -50,7 +50,7 @@ classifiers = [
 ]
 dependencies = [
     "bcbio-gff == 0.7.1",
-    "biopython == 1.81",
+    "biopython >= 1.81",
     "ensembl-hive @ git+https://github.com/Ensembl/ensembl-hive.git",
     "ensembl-py @ git+https://github.com/Ensembl/ensembl-py.git",  # minimum v2.0.0
     "ensembl-utils >= 0.3.0",
@@ -63,6 +63,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+build = [
+    "build",
+    "setuptools",
+    "setuptools-scm",
+    "wheel",
+]
 cicd = [
     "black >= 23.11.0",
     "coverage >= 7.3.2",
@@ -172,6 +178,17 @@ disable = [
 ]
 max-attributes = 12
 max-branches = 15
+
+[tool.ruff]
+line-length = 110
+show-fixes = true
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore `F403` (unable to detect undefined names) in all `__init__.py` files
+"__init__.py" = ["F403"]
 
 [tool.mypy]
 mypy_path = "src/python"

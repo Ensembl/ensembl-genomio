@@ -26,6 +26,7 @@ include { ALLOCATE_IDS as ALLOCATE_GENE_IDS } from '../../modules/patch_build/al
 include { ALLOCATE_IDS as ALLOCATE_TRANSCRIPT_IDS } from '../../modules/patch_build/allocate_ids.nf'
 include { FINALIZE_VERSIONS } from '../../modules/patch_build/finalize_versions.nf'
 include { CHECK_PATCH } from '../../modules/patch_build/check_patch.nf'
+include { CANONICAL_TRANSCRIPTS } from '../../modules/patch_build/canonical_transcripts.nf'
 
 workflow PATCH_BUILD_PROCESS {
 
@@ -67,6 +68,9 @@ workflow PATCH_BUILD_PROCESS {
 
         // Check stable ids
         patch_errors=CHECK_PATCH(server, finalized)
+
+        // Regenerate the canonical transcripts
+        CANONICAL_TRANSCRIPTS(server, waited_files)
 
         // Format the annotation events file into a compatible event file
         events_file = FORMAT_EVENTS(events, deleted, new_genes_map, release)
