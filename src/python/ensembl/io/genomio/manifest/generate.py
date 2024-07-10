@@ -61,7 +61,9 @@ class ManifestMaker:
     def get_files_checksums(self):
         """Compute the checksum of all the files in the directory."""
         manifest_files = {}
+        old_obj_name = ""
         for subfile in self.dir.iterdir():
+            logging.debug(f"Check file {subfile} ({subfile.stem}, {subfile.suffix})")
             used_file = False
             if subfile.is_dir():
                 logging.warning("Can't create manifest for subdirectory")
@@ -73,19 +75,39 @@ class ManifestMaker:
                 continue
 
             for name, standard_name in self.names.items():
-                if subfile.stem.endswith(name):
+                # Either the last element of the stem or the suffix is a known name
+                if subfile.stem.endswith(name) or subfile.suffix == f".{name}":
+                    logging.debug(f"Matched to {name} ({standard_name}) = {subfile}")
                     used_file = True
                     md5 = self._get_md5sum(subfile)
                     file_obj = {"file": subfile.name, "md5sum": md5}
-                    if standard_name in manifest_files:
-                        if isinstance(manifest_files[standard_name], list):
-                            manifest_files[standard_name].append(file_obj)
-                        else:
-                            # Convert to a list
-                            manifest_files[standard_name] = [manifest_files[standard_name], file_obj]
+                    # Prepare object name
+                    obj_name = ""
+                    # If we recognize the suffix, then the name is the part after the last _
+                    if subfile.suffix == f".{name}":
+                        obj_name = subfile.stem.split(sep="_")[-1]
+                    # If we recognize the end of the name, then the name is the part before the last _
+                    else:
+                        obj_name = subfile.stem.split(sep="_")[-2]
 
+                    if standard_name in manifest_files:
+                        # Transform into a subdict, using the old_object_name for the first key
+                        if not isinstance(list(manifest_files[standard_name].values())[0], dict):
+                            manifest_files[standard_name] = {old_obj_name: manifest_files[standard_name]}
+                        
+                        obj_name_base = obj_name
+                        num = 1
+                        while (obj_name in manifest_files[standard_name]):
+                            obj_name = f"{obj_name_base}.{num}"
+                            num += 1
+                            if num >= 5:
+                                raise ValueError(f"Too many files with same name {obj_name_base}")
+                        manifest_files[standard_name][obj_name] = file_obj
+                    
                     else:
                         manifest_files[standard_name] = file_obj
+                        # Keep the name of this file in case we change it to a dict (if there are several files)
+                        old_obj_name = obj_name
                     break
 
             if not used_file:
