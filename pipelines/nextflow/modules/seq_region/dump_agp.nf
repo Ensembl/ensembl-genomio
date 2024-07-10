@@ -23,16 +23,11 @@ process DUMP_AGP {
         val db
 
     output:
-        tuple val(db), val("agp"), path("agp_files/*.agp")
+        tuple val(db), val("agp"), path("*.agp")
 
     script:
-        output_dir = "agp_files"
         password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        # Prepare, make sure we can output something, even if empty
-        mkdir $output_dir
-        touch $output_dir/empty.agp
-
         dump_agp.pl \
             --host $db.server.host \
             --port $db.server.port \
@@ -40,15 +35,18 @@ process DUMP_AGP {
             $password_arg \
             --dbname $db.server.database \
             -v \
-            --output_dir $output_dir
+            --output_dir ./
+        
+        nfiles=\$(ls *.agp | wc -l)
+        if [ "\$nfiles" -eq "0" ]
+        then touch empty.agp
+        fi
 
         """
     
     stub:
-        output_dir = "agp_files"
-        output = "$output_dir/seq.agp"
+        output = "seq.agp"
         """
-        mkdir $output_dir
-        echo "TEST" > $output
+        touch $output
         """
 }
