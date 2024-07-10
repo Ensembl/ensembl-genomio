@@ -64,24 +64,14 @@ def generate_url(protocol, host, port, user, pass=null, database=null) {
     return base_url
 }
 
-
-def extractMySQLArguments(urlString) {
-    //Extract the MySQL arguments from the url
-    def remove_protocol = urlString.split("//")[1]
-
-    def urlparts = remove_protocol.split("@")
-    def user_info = urlparts[0].split(":")
+def extract_url_args(url_string) {
+    // Extract the MySQL arguments from the URL
+    def url_parts = url_string.tokenize('/@')
+    def user_info = url_parts[1].split(":")
     def user = user_info[0]
     def pass = user_info.length > 1 ? user_info[1] : null
-
-    def host_database = urlparts[1].split("/")
-    def host_info = host_database[0].split(":")
-    def host = host_info[0]
-    def port = host_info[1]
-
-    def database = host_database.length > 1 ? host_database[1] : null
+    def (host, port) = url_parts[2].split(":")
+    def database = url_parts.size() > 3 ? url_parts[3] : null
 
     return [user: user, pass: pass, host: host, port: port, database: database]
-    
 }
-
