@@ -29,7 +29,7 @@ def get_json(src_path: PathLike, **kwargs) -> Any:
         src_path: Path to the JSON file to load.
 
     """
-    with Path(src_path).open("r") as json_file:
+    with Path(src_path).open("r", encoding="utf-8") as json_file:
         return json.load(json_file, **kwargs)
 
 
@@ -43,5 +43,5 @@ def print_json(dst_path: PathLike, data: Any, **kwargs) -> None:
     """
     kwargs.setdefault("sort_keys", True)
     kwargs.setdefault("indent", 4)
-    with Path(dst_path).open("w") as json_file:
+    with Path(dst_path).open("w", encoding="utf-8") as json_file:
         json_file.write(json.dumps(data, **kwargs))
