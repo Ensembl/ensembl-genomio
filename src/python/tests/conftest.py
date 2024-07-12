@@ -19,25 +19,15 @@ will have access to the plugins, hooks and fixtures defined here.
 
 """
 
-from difflib import unified_diff
 from pathlib import Path
 from typing import Any, Callable
 
 import pytest
-from pytest import Config, FixtureRequest
+from pytest import Config
 
 from ensembl.io.genomio.utils import get_json
 
-
-@pytest.fixture(name="data_dir", scope="module")
-def local_data_dir(request: FixtureRequest) -> Path:
-    """Returns the path to the test data folder matching the test's name.
-
-    Args:
-        request: Fixture providing information of the requesting test function.
-
-    """
-    return Path(request.module.__file__).with_suffix("")
+pytest_plugins = ("ensembl.utils.plugin",)
 
 
 @pytest.fixture(scope="package")
@@ -65,26 +55,3 @@ def fixture_json_data(data_dir: Path) -> Callable[[str], Any]:
         return get_json(data_dir / file_name)
 
     return _json_data
-
-
-@pytest.fixture(name="assert_files")
-def fixture_assert_files() -> Callable[[Path, Path], None]:
-    """Returns a function that asserts if two files are equal and shows a diff if they differ."""
-
-    def _assert_files(result_path: Path, expected_path: Path) -> None:
-        with open(result_path, "r") as result_fh:
-            results = result_fh.readlines()
-        with open(expected_path, "r") as expected_fh:
-            expected = expected_fh.readlines()
-        files_diff = list(
-            unified_diff(
-                results,
-                expected,
-                fromfile=f"Test-made file {result_path.name}",
-                tofile=f"Expected file {expected_path.name}",
-            )
-        )
-        assert_message = f"Test-made and expected files differ\n{' '.join(files_diff)}"
-        assert len(files_diff) == 0, assert_message
-
-    return _assert_files
