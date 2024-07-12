@@ -39,7 +39,7 @@ jobs:
       - uses: ./.github/actions/python_build
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          tags: "[cicd,docs]"
+          tags: "[docs]"
 
       - name: Run mkdocs
         run: |
