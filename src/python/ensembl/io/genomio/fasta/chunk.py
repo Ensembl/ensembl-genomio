@@ -65,10 +65,10 @@ def split_by_chunk_size(ends, chunk_size, tolerated_chunk_len=None):
 def main():
     """Modules entry-point."""
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "fasta_dna",
+    parser.add_argument_src_path(
+        "--fasta_dna",
+        required=True,
         metavar="input[.fa|.gz]",
-        type=str,
         help="Raw or compressed fasta file with DNA seqs to be split.",
     )
     parser.add_argument(
@@ -78,15 +78,13 @@ def main():
         "--individual_out_dir",
         required=False,
         default=None,
-        type=str,
         help="Output directory for writing files with individual chunks to. \
         If provided,`--out` value used as a filename prefix",
     )
-    parser.add_argument(
-        "--agp_out",
+    parser.add_argument_dst_path(
+        "--agp_output_file",
         metavar="chunks_contigs.agp",
         required=False,
-        type=parser.FileType("w", encoding="UTF-8"),
         help="AGP file with chunks to contigs mapping.",
     )
     # meta_defaults
@@ -212,7 +210,7 @@ def main():
 
         # dump AGP
         if args.agp_out:
-            print("\n".join(agp_lines), file=args.agp_out)
+            print("\n".join(agp_lines), file=args.agp_out, encoding="utf-8")
 
         if not args.individual_out_dir:
             out_file.close()
