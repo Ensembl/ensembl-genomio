@@ -208,7 +208,6 @@ def main():
 
         # dump AGP
         if args.agp_output_file:
-            # print("\n".join(agp_lines), file=args.agp_output_file)
             with open(args.agp_output_file, "w") as agp_out:
                 agp_out.write("\n".join(agp_lines))
 
