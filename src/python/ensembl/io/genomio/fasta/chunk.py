@@ -68,11 +68,11 @@ def main():
     parser.add_argument_src_path(
         "--fasta_dna",
         required=True,
-        metavar="input[.fa|.gz]",
+        metavar="input[.fa | .gz]",
         help="Raw or compressed fasta file with DNA seqs to be split.",
     )
     parser.add_argument(
-        "--out", metavar="chunks.fna", required=False, default=None, type=str, help="chunks output [STDOUT]"
+        "--out", metavar="chunks.fna", required=False, default="chunks.fna", type=str, help="chunks output [STDOUT]"
     )
     parser.add_argument(
         "--individual_out_dir",
@@ -83,7 +83,7 @@ def main():
     )
     parser.add_argument_dst_path(
         "--agp_output_file",
-        metavar="chunks_contigs.agp",
+        default=None,
         required=False,
         help="AGP file with chunks to contigs mapping.",
     )
@@ -98,7 +98,6 @@ def main():
     )
     parser.add_argument(
         "--chunk_sfx",
-        metavar="ens_chunk",
         required=False,
         type=str,
         default="ens_chunk",
@@ -106,7 +105,6 @@ def main():
     )
     parser.add_argument(
         "--chunk_tolerance",
-        metavar="ens_chunk",
         required=False,
         type=int,
         default=0,
@@ -209,8 +207,10 @@ def main():
                 offset = chunk_end
 
         # dump AGP
-        if args.agp_out:
-            print("\n".join(agp_lines), file=args.agp_out, encoding="utf-8")
+        if args.agp_output_file:
+            # print("\n".join(agp_lines), file=args.agp_output_file)
+            with open(args.agp_output_file, "w") as agp_out:
+                agp_out.write("\n".join(agp_lines))
 
         if not args.individual_out_dir:
             out_file.close()
