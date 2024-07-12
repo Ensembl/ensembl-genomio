@@ -51,12 +51,12 @@ def parse_list_param(String multi_value = '', List<String> allowed_values, Boole
     return all_params
 }
 
-def generate_url(protocol, host, port, user, pass=null, database=null) {
+def generate_url(protocol, host, port, user, password=null, database=null) {
     // Generate a URL when all the credentials are provided
     base_url = "${protocol}://${user}@${host}:${port}"
 
-    if (pass) {
-        base_url = "${protocol}://${user}:${pass}@${host}:${port}"
+    if (password) {
+        base_url = "${protocol}://${user}:${password}@${host}:${port}"
     }
     if (database) {
         base_url += "/${database}"
@@ -74,9 +74,9 @@ def extract_url_args(url_string) {
     def url_parts = url_string.tokenize('/@')
     def user_info = url_parts[1].split(":")
     def user = user_info[0]
-    def pass = user_info.length > 1 ? user_info[1] : null
+    def password = user_info.length > 1 ? user_info[1] : null
     def (host, port) = url_parts[2].split(":")
     def database = url_parts.size() > 3 ? url_parts[3] : null
 
-    return [user: user, pass: pass, host: host, port: port, database: database]
+    return [user: user, password: password, host: host, port: port, database: database]
 }
