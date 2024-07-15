@@ -52,7 +52,7 @@ dependencies = [
     "bcbio-gff == 0.7.1",
     "biopython >= 1.81",
     "ensembl-py >= v2.0.2",
-    "ensembl-utils >= 0.3.0",
+    "ensembl-utils >= 0.4.0",
     "jsonschema >= 4.6.0",
     "intervaltree >= 3.1.0",
     "mysql-connector-python >= 8.0.29",
@@ -200,7 +200,6 @@ warn_unused_configs = true
 addopts = [
     "--import-mode=importlib",
     "--tb=native",
-    "--server=sqlite:///",
 ]
 testpaths = ["src/python/tests"]
 norecursedirs = ["data", "docs", "*.egg_info"]
