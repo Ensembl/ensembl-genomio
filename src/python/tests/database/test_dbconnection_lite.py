@@ -15,18 +15,12 @@
 """Unit testing of `ensembl.io.genomio.database.dbconnection_lite` module.
 """
 
-from pathlib import Path
 from typing import Optional
-from unittest.mock import patch
 
 import pytest
-from pytest import TempPathFactory
-from sqlalchemy import create_engine
-from sqlalchemy.engine import URL
-from sqlalchemy.orm import Session
 
 from ensembl.io.genomio.database import DBConnectionLite
-from ensembl.core.models import Base, CoordSystem, Meta, metadata
+from ensembl.core.models import CoordSystem, Meta, metadata
 from ensembl.utils.database import UnitTestDB
 
 
@@ -36,19 +30,22 @@ _METADATA_CONTENT = {
     "species.classification": ["Insecta", "Lorem"],
 }
 
-@pytest.fixture(scope="module")
-def meta_test_db(db_factory) -> UnitTestDB:
+
+@pytest.fixture(name="meta_test_db", scope="module")
+def fixture_meta_test_db(db_factory) -> UnitTestDB:
     """Returns a test database with a meta table and basic data."""
     test_db: UnitTestDB = db_factory("", "get_metadata")
     test_db.dbc.create_table(metadata.tables["coord_system"])
     test_db.dbc.create_table(metadata.tables["meta"])
+    # Add data
     with test_db.dbc.session_scope() as session:
         session.add(CoordSystem(species_id=1, name="Foo", rank=1))
-        for (meta_key, meta_values) in _METADATA_CONTENT.items():
+        for meta_key, meta_values in _METADATA_CONTENT.items():
             for meta_value in meta_values:
                 session.add(Meta(species_id=1, meta_key=meta_key, meta_value=meta_value))
             session.commit()
     return test_db
+
 
 # Use ensembl-utils UnitTestDB
 def test_get_metadata(meta_test_db: UnitTestDB) -> None:

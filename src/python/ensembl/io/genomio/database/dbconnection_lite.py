@@ -74,7 +74,7 @@ class DBConnectionLite(DBConnection):
             return None
 
     def get_project_release(self) -> str:
-        """Returns the project release number from the database name."""
+        """Returns the project release number from the database name. Returns empty string if not found."""
 
         match = re.search(_DB_PATTERN_RELEASE, self.db_name)
         if match:
