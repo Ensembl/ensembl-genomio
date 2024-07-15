@@ -36,11 +36,9 @@ _METADATA_CONTENT = {
     "species.classification": ["Insecta", "Lorem"],
 }
 
-# Use ensembl-utils UnitTestDB
-def test_get_metadata(db_factory) -> None:
-    """Tests the method get_metadata()"""
-
-    # Create and populate and Test Core DB
+@pytest.fixture(scope="module")
+def meta_test_db(db_factory) -> UnitTestDB:
+    """Returns a test database with a meta table and basic data."""
     test_db: UnitTestDB = db_factory("", "get_metadata")
     test_db.dbc.create_table(metadata.tables["coord_system"])
     test_db.dbc.create_table(metadata.tables["meta"])
@@ -50,40 +48,48 @@ def test_get_metadata(db_factory) -> None:
             for meta_value in meta_values:
                 session.add(Meta(species_id=1, meta_key=meta_key, meta_value=meta_value))
             session.commit()
+    return test_db
+
+# Use ensembl-utils UnitTestDB
+def test_get_metadata(meta_test_db: UnitTestDB) -> None:
+    """Tests the method get_metadata()"""
+
+    # Create and populate and Test Core DB
 
     # Check the new connection lite
-    dblite = DBConnectionLite(test_db.dbc.url)
+    dblite = DBConnectionLite(meta_test_db.dbc.url)
     assert dblite.get_metadata() == _METADATA_CONTENT
 
 
-# @pytest.mark.parametrize(
-#     "meta_key, meta_value",
-#     [
-#         pytest.param(
-#             "species.scientific_name", _METADATA_CONTENT["species.scientific_name"][0], id="Unique key exists"
-#         ),
-#         pytest.param(
-#             "species.classification", _METADATA_CONTENT["species.classification"][0], id="First key exists"
-#         ),
-#         pytest.param("lorem.ipsum", None, id="Non-existing key, 2 parts"),
-#         pytest.param("lorem_ipsum", None, id="Non-existing key, 1 part"),
-#     ],
-# )
-# def test_get_meta_value(dbc: DBConnectionLite, meta_key: str, meta_value: Optional[str]) -> None:
-#     """Tests the method get_meta_value()"""
-#     assert dbc.get_meta_value(meta_key) == meta_value
+@pytest.mark.parametrize(
+    "meta_key, meta_value",
+    [
+        pytest.param(
+            "species.scientific_name", _METADATA_CONTENT["species.scientific_name"][0], id="Unique key exists"
+        ),
+        pytest.param(
+            "species.classification", _METADATA_CONTENT["species.classification"][0], id="First key exists"
+        ),
+        pytest.param("lorem.ipsum", None, id="Non-existing key, 2 parts"),
+        pytest.param("lorem_ipsum", None, id="Non-existing key, 1 part"),
+    ],
+)
+def test_get_meta_value(meta_test_db: UnitTestDB, meta_key: str, meta_value: Optional[str]) -> None:
+    """Tests the method get_meta_value()"""
+    dblite = DBConnectionLite(meta_test_db.dbc.url)
+    assert dblite.get_meta_value(meta_key) == meta_value
 
 
-# @pytest.mark.parametrize(
-#     "db_name, release_version",
-#     [
-#         pytest.param("coredb_core_66_111_1", "66", id="Release version in name"),
-#         pytest.param("coredb_core_111_1", "", id="No release version in name"),
-#         pytest.param("lorem_ipsum_66_111_1", "", id="Some release version but wrong format for the rest"),
-#     ],
-# )
-# def test_get_project_release(db_name: str, release_version: str) -> None:
-#     """Tests the method get_project_release()."""
-#     db_url = f"sqlite:///{db_name}"
-#     dbc = DBConnectionLite(db_url)
-#     assert dbc.get_project_release() == release_version
+@pytest.mark.parametrize(
+    "db_name, release_version",
+    [
+        pytest.param("coredb_core_66_111_1", "66", id="Release version in name"),
+        pytest.param("coredb_core_111_1", "", id="No release version in name"),
+        pytest.param("lorem_ipsum_66_111_1", "", id="Some release version but wrong format for the rest"),
+    ],
+)
+def test_get_project_release(db_name: str, release_version: str) -> None:
+    """Tests the method get_project_release()."""
+    db_url = f"sqlite:///{db_name}"
+    dbc = DBConnectionLite(db_url)
+    assert dbc.get_project_release() == release_version
