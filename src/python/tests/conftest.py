@@ -27,8 +27,6 @@ from pytest import Config
 
 from ensembl.io.genomio.utils import get_json
 
-pytest_plugins = ("ensembl.utils.plugin",)
-
 
 @pytest.fixture(scope="package")
 def shared_data_dir(pytestconfig: Config) -> Path:
