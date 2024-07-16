@@ -27,12 +27,13 @@ process DUMP_EVENTS {
 
     script:
         output = "ids_events.tab"
+        password_arg = db.server.password ? "--password $db.server.password" : ""
         """
         touch $output
         events_dump --host '${db.server.host}' \
             --port '${db.server.port}' \
             --user '${db.server.user}' \
-            --password '${db.server.password}' \
+            $password_arg \
             --database '${db.server.database}' \
             --output_file "$output" \
             --verbose
