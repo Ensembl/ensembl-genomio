@@ -1,0 +1,33 @@
+# for the file format see config/external_db_map/default.txt 
+# use `-skip_unknown_xref_source 1` with this map
+
+# Genes mqppings
+Ensembl_Metazoa	Ensembl_Metazoa	gene
+
+GeneID	GeneID	gene
+
+# Transcript mappings
+Ensembl_Metazoa	Ensembl_Metazoa_transcript	transcript
+Ensembl_Metazoa_transcript	Ensembl_Metazoa_transcript	transcript
+
+# Translation mappings
+Ensembl_Metazoa	Ensembl_Metazoa_translation	translation
+Ensembl_Metazoa_translation	Ensembl_Metazoa_translation	translation
+
+# Seq regions
+ensembl_internal_synonym	ensembl_internal_synonym	seq_region
+GenBank	GenBank	seq_region
+INSDC_submitted_name	INSDC_submitted_name	seq_region
+INSDC	INSDC	seq_region
+RefSeq	RefSeq	seq_region
+
+
+# Any feature
+Community_Symbol	BRC4_Community_Symbol
+Community_Annotation	BRC4_Community_Annotation
+
+
+# Ignore section
+GO	_IGNORE_
+!GO	_IGNORE_
+
