@@ -43,7 +43,7 @@ def fixture_meta_test_db(db_factory) -> UnitTestDB:
         for meta_key, meta_values in _METADATA_CONTENT.items():
             for meta_value in meta_values:
                 session.add(Meta(species_id=1, meta_key=meta_key, meta_value=meta_value))
-            session.commit()
+        session.commit()
     return test_db
 
 
@@ -51,7 +51,6 @@ def fixture_meta_test_db(db_factory) -> UnitTestDB:
 def test_get_metadata(meta_test_db: UnitTestDB) -> None:
     """Tests the method get_metadata()"""
 
-    # Create and populate and Test Core DB
 
     # Check the new connection lite
     dblite = DBConnectionLite(meta_test_db.dbc.url)
