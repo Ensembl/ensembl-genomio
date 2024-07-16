@@ -29,6 +29,8 @@ default_selection_map = [
 ]
 default_selection = default_selection_map.keySet() as ArrayList
 params.db_list = ''
+params.server_url = ''
+params.host = ''
 
 include { validateParameters; paramsHelp; paramsSummaryLog } from 'plugin/nf-validation'
 if (params.help) {
@@ -42,16 +44,29 @@ if (params.brc_mode) {
     params.brc_mode = params.brc_mode as Integer
 }
 
+// Prepare the server params
+include { extract_url_args; generate_url } from '../../modules/utils/utils.nf'
 def create_server(params) {
-    server = [
-        "host": params.host,
-        "port": params.port,
-        "user": params.user,
-        "password": ""
-    ]
+    if (params.server_url && !params.host) {
+        server = extract_url_args(params.server_url)
+        server.url = params.server_url
+    }
+    if (params.host && !params.server_url) {
+        server = [
+            "host": params.host,
+            "port": params.port,
+            "user": params.user,
+        ]
     if (params.password) {
         server["password"] = params.password
     }
+        server.url = generate_url("mysql", params.host, params.port, params.user, params.password)
+    }
+    if (!server.url or !server.host) {
+        log.info paramsHelp("Server URL (--server_url) or parameters needed (--host, --port, --user, --password)")
+        exit 0
+    }
+    print("Using server: " + server)
     return server
 }
 

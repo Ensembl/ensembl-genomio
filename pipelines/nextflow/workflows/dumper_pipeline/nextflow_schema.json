@@ -39,8 +39,11 @@
       "type": "object",
       "fa_icon": "fas fa-terminal",
       "description": "Server parameters.",
-      "required": ["host", "port", "user"],
       "properties": {
+        "serverl_url": {
+          "type": "string",
+          "description": "URL of the server"
+        },
         "host": {
           "type": "string",
           "description": "Host the server"
