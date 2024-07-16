@@ -15,18 +15,13 @@
 """Unit testing of `ensembl.io.genomio.database.dbconnection_lite` module.
 """
 
-from pathlib import Path
 from typing import Optional
-from unittest.mock import patch
 
 import pytest
-from pytest import TempPathFactory
-from sqlalchemy import create_engine
-from sqlalchemy.engine import URL
-from sqlalchemy.orm import Session
 
 from ensembl.io.genomio.database import DBConnectionLite
-from ensembl.core.models import Base, Meta
+from ensembl.core.models import CoordSystem, Meta, metadata
+from ensembl.utils.database import UnitTestDB
 
 
 _METADATA_CONTENT = {
@@ -36,53 +31,30 @@ _METADATA_CONTENT = {
 }
 
 
-# Create a SQLite database fixture with only a meta table and limited data
-@pytest.fixture(name="db_file", scope="session")
-def db_file_test(tmp_path_factory: TempPathFactory) -> Path:
-    """Get a path to a db file."""
-    test_db_file = tmp_path_factory.mktemp("database") / "tmp_sqlite_core.db"
-    return test_db_file
-
-
-@pytest.fixture(name="db_engine", scope="session")
-def db_engine_test(db_file: Path):
-    """Get a SQLalchemy engine to a populated database."""
-    db_url = f"sqlite:///{db_file}"
-    test_db_engine = create_engine(db_url)
-    Base.metadata.tables["meta"].create(test_db_engine)
-
-    # Add some basic data
-    with Session(test_db_engine) as session:
-        metas = []
+@pytest.fixture(name="meta_test_db", scope="module")
+def fixture_meta_test_db(db_factory) -> UnitTestDB:
+    """Returns a test database with a meta table and basic data."""
+    test_db: UnitTestDB = db_factory("", "get_metadata")
+    test_db.dbc.create_table(metadata.tables["coord_system"])
+    test_db.dbc.create_table(metadata.tables["meta"])
+    # Add data
+    with test_db.dbc.session_scope() as session:
+        session.add(CoordSystem(species_id=1, name="Foo", rank=1))
         for meta_key, meta_values in _METADATA_CONTENT.items():
             for meta_value in meta_values:
-                metas.append(Meta(meta_key=meta_key, meta_value=meta_value))
-        session.add_all(metas)
+                session.add(Meta(species_id=1, meta_key=meta_key, meta_value=meta_value))
         session.commit()
-    return test_db_engine
+    return test_db
 
 
-@pytest.fixture(name="dbc", scope="session")
-@patch("ensembl.io.genomio.database.dbconnection_lite.create_engine")
-def dbc_test(mock_create_engine, db_file: Path, db_engine) -> DBConnectionLite:
-    """Provide a DBConnectionLite to the test database."""
-    mock_create_engine.return_value = db_engine
-    test_url = URL.create(f"sqlite://{db_file}")
-    dbc = DBConnectionLite(test_url)
-    return dbc
-
-
-# Tests start here
-
-
-def test_db_name(dbc: DBConnectionLite, db_file: Path) -> None:
-    """Tests the propery db_name"""
-    assert Path(dbc.db_name) == Path(db_file)
-
-
-def test_get_metadata(dbc: DBConnectionLite) -> None:
+# Use ensembl-utils UnitTestDB
+def test_get_metadata(meta_test_db: UnitTestDB) -> None:
     """Tests the method get_metadata()"""
-    assert dbc.get_metadata() == _METADATA_CONTENT
+
+
+    # Check the new connection lite
+    dblite = DBConnectionLite(meta_test_db.dbc.url)
+    assert dblite.get_metadata() == _METADATA_CONTENT
 
 
 @pytest.mark.parametrize(
@@ -98,9 +70,10 @@ def test_get_metadata(dbc: DBConnectionLite) -> None:
         pytest.param("lorem_ipsum", None, id="Non-existing key, 1 part"),
     ],
 )
-def test_get_meta_value(dbc: DBConnectionLite, meta_key: str, meta_value: Optional[str]) -> None:
+def test_get_meta_value(meta_test_db: UnitTestDB, meta_key: str, meta_value: Optional[str]) -> None:
     """Tests the method get_meta_value()"""
-    assert dbc.get_meta_value(meta_key) == meta_value
+    dblite = DBConnectionLite(meta_test_db.dbc.url)
+    assert dblite.get_meta_value(meta_key) == meta_value
 
 
 @pytest.mark.parametrize(
