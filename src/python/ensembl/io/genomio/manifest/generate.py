@@ -84,8 +84,7 @@ class ManifestMaker:
 
                     # Multiple files stored, each with a name
                     if standard_name in self.multi_files:
-                        if standard_name not in manifest_files:
-                            manifest_files[standard_name] = {}
+                        manifest_files.setdefault(standard_name, {})
                         obj_name = self._prepare_object_name(subfile, name, manifest_files[standard_name])
                         manifest_files[standard_name][obj_name] = file_obj
 
@@ -102,10 +101,10 @@ class ManifestMaker:
         # Prepare object name
         obj_name = "file"
         try:
-            # If we recognize the suffix, then the name is the part after the last _
+            # If we recognize the suffix, then the name is the part after the last "_"
             if subfile.suffix == f".{name}":
                 obj_name = subfile.stem.split(sep="_")[-1]
-            # If we recognize the end of the name, then the name is the part before the last _
+            # If we recognize the end of the name, then the name is the part before the last "_"
             else:
                 obj_name = subfile.stem.split(sep="_")[-2]
         except IndexError:
@@ -113,11 +112,11 @@ class ManifestMaker:
 
         # Add number if duplicate name
         obj_name_base = obj_name
-        num = 1
+        count = 1
         while obj_name in manifest_dict:
-            obj_name = f"{obj_name_base}.{num}"
-            num += 1
-            if num >= 10:
+            obj_name = f"{obj_name_base}.{count}"
+            count += 1
+            if count >= 10:
                 raise ValueError(f"Too many files with same name {obj_name_base}")
         return obj_name
 

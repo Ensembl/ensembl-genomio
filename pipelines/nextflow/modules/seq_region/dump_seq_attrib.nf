@@ -41,7 +41,6 @@ process DUMP_SEQ_ATTRIB {
             --dbname $db.server.database \
             -v > $output
         schemas_json_validate --json_file $output --json_schema $schema
-
         """
     
     stub:

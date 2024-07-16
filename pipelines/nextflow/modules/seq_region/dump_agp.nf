@@ -37,7 +37,7 @@ process DUMP_AGP {
             -v \
             --output_dir ./
         
-        nfiles=\$(ls *.agp | wc -l)
+        nfiles=\$(ls -1 *.agp | wc -l)
         if [ "\$nfiles" -eq "0" ]
         then touch empty.agp
         fi

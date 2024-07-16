@@ -25,7 +25,7 @@ default_selection_map = [
     'stats': 3,
     'fasta_pep': 1,
     'fasta_dna': 1,
-    "seq_attrib": 1,
+    'seq_attrib': 1,
 ]
 default_selection = default_selection_map.keySet() as ArrayList
 params.db_list = ''
