@@ -38,8 +38,8 @@ process DUMP_AGP {
             --output_dir ./
         
         nfiles=\$(ls -1 *.agp | wc -l)
-        if [ "\$nfiles" -eq "0" ]
-        then touch empty.agp
+        if [ "\$nfiles" -eq "0" ]; then
+            touch empty.agp
         fi
 
         """
