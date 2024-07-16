@@ -50,3 +50,33 @@ def parse_list_param(String multi_value = '', List<String> allowed_values, Boole
     }
     return all_params
 }
+
+def generate_url(protocol, host, port, user, password=null, database=null) {
+    // Generate a URL when all the credentials are provided
+    base_url = "${protocol}://${user}@${host}:${port}"
+
+    if (password) {
+        base_url = "${protocol}://${user}:${password}@${host}:${port}"
+    }
+    if (database) {
+        base_url += "/${database}"
+    }
+    return base_url
+}
+
+def extract_url_args(url_string) {
+    // Extract the MySQL arguments from the URL
+    def pattern = ~/mysql:\/\/(.*?)(:(.*?)?)?@(.*?):(\d+)\/?(.*)?/
+
+    if (!(url_stringl =~ pattern)) {
+      return [error: "Invalid url ${url_string}. A simple Mysql URL is expected."]
+    }
+    def url_parts = url_string.tokenize('/@')
+    def user_info = url_parts[1].split(":")
+    def user = user_info[0]
+    def password = user_info.length > 1 ? user_info[1] : null
+    def (host, port) = url_parts[2].split(":")
+    def database = url_parts.size() > 3 ? url_parts[3] : null
+
+    return [user: user, password: password, host: host, port: port, database: database]
+}

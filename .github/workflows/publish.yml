@@ -39,7 +39,7 @@ jobs:
       - uses: ./.github/actions/python_build
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          tags: "[cicd,docs]"
+          tags: "[docs]"
 
       - name: Run mkdocs
         run: |
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/ensembl-utils
+      url: https://pypi.org/p/ensembl-genomio
     permissions:
       id-token: write
 
