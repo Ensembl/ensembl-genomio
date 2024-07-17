@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, select
 
 from ensembl.core.models import Gene, Transcript, ObjectXref, Xref
 from ensembl.io.genomio.utils import get_json
@@ -47,7 +47,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
 
     if table == "gene":
         stmt = (
-            session.query(Gene.gene_id, Gene.stable_id, Gene.description, Xref.dbprimary_acc)
+            select(Gene.gene_id, Gene.stable_id, Gene.description, Xref.dbprimary_acc)
             .select_from(Gene)
             .outerjoin(
                 ObjectXref,
@@ -57,7 +57,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
         )
     elif table == "transcript":
         stmt = (
-            session.query(
+            select(
                 Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc
             )
             .select_from(Transcript)
