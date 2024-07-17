@@ -97,10 +97,15 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
     return test_db
 
 
-def test_get_core_data(test_db: UnitTestDB) -> None:
+@pytest.mark.parametrize(
+    "table, expected_ids",
+    [
+        pytest.param("gene", ["gene1"]),
+        pytest.param("transcript", ["gene1_t1", "gene1_t2"]),
+    ],
+)
+def test_get_core_data(test_db: UnitTestDB, table: str, expected_ids: list[str]) -> None:
     """Tests the method get_core_data()"""
     with test_db.dbc.test_session_scope() as session:
-        genes = get_core_data(session, "gene")
-        assert list(genes.keys()) == ["gene1"]
-        transcripts = get_core_data(session, "transcript")
-        assert list(transcripts.keys()) == ["gene1_t1", "gene1_t2"]
+        feats = get_core_data(session, table)
+        assert list(feats.keys()) == expected_ids
