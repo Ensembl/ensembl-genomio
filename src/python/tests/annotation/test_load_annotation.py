@@ -15,9 +15,11 @@
 """Unit testing of `ensembl.io.genomio.annotation.load` module.
 """
 
-from typing import Optional
+from contextlib import nullcontext as no_raise
+from typing import ContextManager
 
 import pytest
+from pytest import param, raises
 
 from ensembl.io.genomio.annotation import get_core_data, load_descriptions
 from ensembl.core.models import Gene, Transcript, Translation, metadata
@@ -98,14 +100,18 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
 
 
 @pytest.mark.parametrize(
-    "table, expected_ids",
+    "table, expected_ids, expectation",
     [
-        pytest.param("gene", ["gene1"]),
-        pytest.param("transcript", ["gene1_t1", "gene1_t2"]),
+        param("gene", ["gene1"], no_raise()),
+        param("transcript", ["gene1_t1", "gene1_t2"], no_raise()),
+        param("foo", [], raises(ValueError, match="Table foo is not supported")),
     ],
 )
-def test_get_core_data(test_db: UnitTestDB, table: str, expected_ids: list[str]) -> None:
+def test_get_core_data(
+    test_db: UnitTestDB, table: str, expected_ids: list[str], expectation: ContextManager
+) -> None:
     """Tests the method get_core_data()"""
     with test_db.dbc.test_session_scope() as session:
-        feats = get_core_data(session, table)
-        assert list(feats.keys()) == expected_ids
+        with expectation:
+            feats = get_core_data(session, table)
+            assert list(feats.keys()) == expected_ids
