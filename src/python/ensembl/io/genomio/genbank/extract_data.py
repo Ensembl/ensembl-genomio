@@ -463,9 +463,9 @@ class FormattedFilesGenerator:
         """
         for feat in seq.features:
             if feat.type == "CDS":
-                quals = feat.qualifiers
-                if "transl_table" in quals:
-                    return quals["transl_table"][0]
+                qualifiers = feat.qualifiers
+                if "transl_table" in qualifiers:
+                    return qualifiers["transl_table"][0]
                 return None
         return None
 
