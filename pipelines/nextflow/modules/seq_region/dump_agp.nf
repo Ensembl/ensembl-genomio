@@ -41,7 +41,6 @@ process DUMP_AGP {
         if [ "\$nfiles" -eq "0" ]; then
             touch empty.agp
         fi
-
         """
     
     stub:

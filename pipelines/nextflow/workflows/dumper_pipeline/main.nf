@@ -47,23 +47,23 @@ if (params.brc_mode) {
 // Prepare the server params
 include { extract_url_args; generate_url } from '../../modules/utils/utils.nf'
 def create_server(params) {
-    if (params.server_url && !params.host) {
+    if (params.server_url) {
         server = extract_url_args(params.server_url)
         server.url = params.server_url
-    }
-    if (params.host && !params.server_url) {
+    } else if (params.host) {
         server = [
             "host": params.host,
             "port": params.port,
             "user": params.user,
         ]
-    if (params.password) {
-        server["password"] = params.password
-    }
+        if (params.password) {
+            server["password"] = params.password
+        }
         server.url = generate_url("mysql", params.host, params.port, params.user, params.password)
-    }
-    if (!server.url or !server.host) {
-        log.info paramsHelp("Server URL (--server_url) or parameters needed (--host, --port, --user, --password)")
+    } else {
+        log.info paramsHelp(
+            "Server URL (--server_url) or parameters needed (--host, --port, --user, --password)"
+        )
         exit 0
     }
     print("Using server: " + server)
