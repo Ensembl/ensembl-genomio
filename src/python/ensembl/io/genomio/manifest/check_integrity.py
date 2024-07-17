@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Compare the genomic data in a DNA fasta file, seq_region json, gene models GFF3 and peptide fasta
+"""Compare the genomic data in a DNA fasta file, seq_region JSON, gene models GFF3 and peptide fasta
 to ensure their contents are in sync.
 """
 
@@ -483,7 +483,7 @@ class IntegrityTool:
             # Check fasta_pep.fa integrity
             # The sequence length and id retrieved from the fasta_pep file
             # and compared to the translated CDS id and length in the gff
-            # We don't compare the peptide lengths because of seqedits
+            # We do not compare the peptide lengths because of sequence edits
             if pep:
                 tr_errors = self.check_lengths(
                     pep, gff_translations, "Fasta translations vs gff", special_diff=True
@@ -527,7 +527,7 @@ class IntegrityTool:
                     )
                 )
 
-            # Check the seq.json intregrity
+            # Check the seq.json integrity
             # Compare the length and id retrieved from seq.json to the gff
             if seq_regions:
                 self.check_seq_region_lengths(
@@ -627,7 +627,7 @@ class IntegrityTool:
             Error if there is a difference in length or ids between the lists.
         """
 
-        # check list diffferences, checks if abs(values diff) < allowed_len_diff
+        # check list differences, checks if abs(values diff) < allowed_len_diff
 
         set1 = frozenset(list1)
         set2 = frozenset(list2)

@@ -47,7 +47,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
 
     Args:
         session: Session open on a core database.
-        table: "gene" or "trancript" table from the core database.
+        table: "gene" or "transcript" table from the core database.
     """
 
     if table == "gene":
