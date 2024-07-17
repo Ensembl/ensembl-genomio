@@ -14,6 +14,12 @@
 # limitations under the License.
 """Compute stats from the current genome files associated with the manifest."""
 
+__all__ = [
+    "BiotypeCounter",
+    "manifest_stats",
+    "StatsError",
+]
+
 import json
 from os import PathLike
 from pathlib import Path

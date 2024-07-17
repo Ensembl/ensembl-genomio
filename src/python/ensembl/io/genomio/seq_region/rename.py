@@ -14,6 +14,16 @@
 # limitations under the License.
 """Rename seq_region BRC names in a given core database."""
 
+__all__ = [
+    "Operation",
+    "SeqRegionReplacement",
+    "get_attribs",
+    "get_rename_map",
+    "get_seq_regions_to_replace",
+    "rename_seq_regions",
+    "update_seq_region_name",
+]
+
 from dataclasses import dataclass
 import logging
 from enum import Enum, auto

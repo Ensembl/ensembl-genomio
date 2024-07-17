@@ -14,6 +14,11 @@
 # limitations under the License.
 """Loads functional annotation from a file into a core database."""
 
+__all__ = [
+    "get_core_data",
+    "load_descriptions",
+]
+
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
