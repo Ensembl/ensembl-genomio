@@ -1,9 +1,12 @@
 [
     {
-        "id": "gene2",
+        "id": "gene1",
         "object_type": "gene",
         "version": 2,
-        "description": "gene2 description",
+        "description": "gene1 description",
+        "synonyms" : [
+            "not_a_match"
+        ],
         "xrefs" : [
             {
                 "dbname": "EntrezGene",

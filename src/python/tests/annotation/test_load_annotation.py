@@ -32,7 +32,7 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
     """Returns a test database with all core tables and basic data."""
     test_db: UnitTestDB = db_factory(src="no_src", name="load_annotation")
     test_db.dbc.create_all_tables(metadata)
-    # Add data
+    # Add data: gene1 with 2 transcripts and translations, xref on gene1 only
     with test_db.dbc.session_scope() as session:
         session.add(
             Gene(
@@ -131,13 +131,18 @@ def test_get_core_data(
 
 
 @pytest.mark.parametrize(
-    "input_file, expectation",
+    "input_file, report, do_update, match_xrefs, expectation",
     [
-        param("test_import1.json", no_raise()),
+        param("group.json", False, False, False, no_raise()),
+        param("group.json", False, True, False, no_raise()),
+        param("group.json", False, False, True, no_raise()),
+        param("gene1_xref.json", False, True, False, no_raise()),
+        param("gene1_alt_synonym.json", False, True, False, no_raise()),
+        param("gene1_alt_xref.json", False, True, False, no_raise()),
     ],
 )
-def test_load_descriptions(test_db: UnitTestDB, data_dir: Path, input_file: str, expectation: ContextManager):
+def test_load_descriptions(test_db: UnitTestDB, data_dir: Path, input_file: str, report: bool, do_update: bool, match_xrefs: bool, expectation: ContextManager):
     """Tests the method get_core_data()"""
     with test_db.dbc.test_session_scope() as session:
         with expectation:
-            load_descriptions(session, data_dir / input_file)
+            load_descriptions(session, data_dir / input_file, report=report, do_update=do_update, match_xrefs=match_xrefs)

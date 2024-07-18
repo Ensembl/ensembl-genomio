@@ -1,0 +1,27 @@
+[
+    {
+        "id": "gene1",
+        "object_type": "gene",
+        "version": 2,
+        "description": "gene1 description",
+        "xrefs" : [
+            {
+                "dbname": "EntrezGene",
+                "id" : "9999"
+            }
+        ]
+    },
+
+    {
+        "id": "gene1_t1",
+        "object_type": "transcript",
+        "version": 2,
+        "description": "transcript1 description",
+        "xrefs" : [
+            {
+                "dbname": "EntrezGene",
+                "id" : "9999"
+            }
+        ]
+    }
+]

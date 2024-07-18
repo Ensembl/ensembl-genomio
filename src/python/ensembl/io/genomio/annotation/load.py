@@ -101,6 +101,7 @@ def load_descriptions(
     func = get_json(func_file)
     logging.info(f"{len(func)} annotations from {func_file}")
     tables_to_lookup = ("gene", "transcript")
+    table_to_update = {"gene": Gene, "transcript": Transcript}
     for table in tables_to_lookup:
         logging.info(f"Checking {table} descriptions")
         feat_func = [feat for feat in func if feat["object_type"] == table]
@@ -130,14 +131,9 @@ def load_descriptions(
 
         if do_update:
             logging.info(f"Now updating {len(features_to_update)} rows...")
-            if table == "gene":
-                # session.execute(update(Gene), to_update)
-                session.bulk_update_mappings(Gene, features_to_update)
-                session.commit()
-            elif table == "transcript":
-                # session.execute(update(Transcript), to_update)
-                session.bulk_update_mappings(Transcript, features_to_update)
-                session.commit()
+            # session.execute(update(Gene), to_update)
+            session.bulk_update_mappings(table_to_update[table], features_to_update)
+            session.commit()
 
 
 def _get_cur_feat(
