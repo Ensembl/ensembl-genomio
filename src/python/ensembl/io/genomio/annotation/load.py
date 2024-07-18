@@ -57,9 +57,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
         )
     elif table == "transcript":
         stmt = (
-            select(
-                Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc
-            )
+            select(Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc)
             .select_from(Transcript)
             .outerjoin(
                 ObjectXref,
