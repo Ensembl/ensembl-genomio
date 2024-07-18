@@ -1,13 +1,11 @@
-Usage
-========
+# Usage
 
 For full details on python modules and Ensembl API repositories required see *install* section.
 
-Environment setup
------------------
+## Environment setup
 
 ```
-python3.7 -m venv path/to/virtual_env
+python3.10 -m venv path/to/virtual_env
 . path/to/virtual_env/bin/activate
 pip install -e .
 ```

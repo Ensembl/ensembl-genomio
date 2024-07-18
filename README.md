@@ -5,24 +5,22 @@
 
 Pipelines to turn basic genomic data into Ensembl cores and back.
 
-This is a multilanguage (Perl, Python) repo providing eHive pipelines.
-and various scripts (see below) to prepare genomic data and load it as [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) or to dump such core databases as file bundles.
+This is a multilanguage (Perl, Python) repo providing eHive pipelines and various scripts (see below) to prepare genomic data and load it as [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) or to dump such core databases as file bundles.
 
 Bundles themselves consist of genomic data in various formats (e.g. fasta, gff3, json) and should follow the corresponding [specification](docs/BRC4_genome_loader.md#input-data).
 
 
 ## Installation and configuration
-This repository can be easily installed by running the following:
+
+This repository is publicly available in [PyPI](https://pypi.org), so it can be easily installed with your preferred Python package manager, e.g.:
 
 ```bash
-git clone https://github.com/Ensembl/ensembl-genomio.git
-cd ensembl-genomio
-pip install -e .
+pip install ensembl-genomio
 ```
 
 ### Prerequisites
-Pipelines are intended to be run inside the Ensembl production environment.
-Please, make sure you have all the proper credential, keys, etc. set up.
+
+Pipelines are intended to be run inside the Ensembl production environment. Please, make sure you have all the proper credential, keys, etc. set up.
 
 ### Get repo and install
 
@@ -34,9 +32,8 @@ git clone git@github.com:Ensembl/ensembl-genomio.git
 Install the python part (of the pipelines) and test it:
 ```
 pip install ./ensembl-genomio
-
-# test
-python -c 'import ensembl.brc4.runnable.read_json'
+# And test it has been installed correctly
+python -c 'import ensembl.io.genomio'
 ```
 
 Update your perl envs (if you need to)
@@ -46,20 +43,21 @@ export PATH=$(pwd)/ensembl-genomio/scripts:$PATH
 ```
 
 ### Optional installation
-If you need to install "editable" python package use '-e' option
+
+If you need to install "editable" Python package use '-e' option
 ```
 pip install -e ./ensembl-genomio
 ```
 
-To install additional dependencies (e.g. `[docs]` or `[cicd]`) provide `[<tag>]` string. I.e.
+To install additional dependencies (e.g. `[docs]` or `[cicd]`) provide `[<tag>]` string, e.g.:
 ```
 pip install -e ./ensembl-genomio[cicd]
 ```
 
 For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](./pyproject.toml). 
 
-
 ### Additional steps to use automated generation of the documentation
+
 - Install python part with the `[docs]` tag
 - Change into repo dir
 - Run `mkdocs build` command
@@ -72,6 +70,7 @@ mkdocs build
 ```
 
 ###  Nextflow installation
+
 Please, refer to the "Installation" section of the [Nextflow pipelines document](docs/nextflow.md#installation).
 
 ## Pipelines
@@ -137,13 +136,15 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 * [trf_split_run.bash](scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [docs](docs/trf_split_run.md))
 
 ## CI/CD bits
-As for now some [Gitlab CI](https://docs.gitlab.com/ee/ci/) pipelines introduced to keep things in shape.
-Though, this bit is in constant development. Some documentation can be found in [docs for GitLab CI/CD](docs/cicd_gitlab.md)
+
+As for now some [Gitlab CI](https://docs.gitlab.com/ee/ci/) pipelines introduced to keep things in shape. Though, this bit is in constant development. Some documentation can be found in [docs for GitLab CI/CD](docs/cicd_gitlab.md)
 
 ## Various docs
+
 See [docs](docs)
 
 ## Unit testing
+
 The Python part of the codebase has now unit tests available to test each module. Make sure you have installed this repository's `[cicd]` dependencies (via `pip install ensembl-genomio[cicd]`) before continuing.
 
 Running all the tests in one go is as easy as running `pytest` **from the root of the repository**. If you also want to measure, collect and report the code coverage, you can do:
@@ -158,7 +159,7 @@ pytest lib/python/tests/test_schema.py
 ```
 
 ## Acknowledgements
-Some of this code and documentation is inherited from the [EnsemblGenomes](https://github.com/EnsemblGenomes) and other [Ensembl](https://github.com/Ensembl) projects.
-We appreciate the effort and time spent by developers of the [EnsemblGenomes](https://github.com/EnsemblGenomes) and [Ensembl](https://github.com/Ensembl) projects. 
+
+Some of this code and documentation is inherited from the [EnsemblGenomes](https://github.com/EnsemblGenomes) and other [Ensembl](https://github.com/Ensembl) projects. We appreciate the effort and time spent by developers of the [EnsemblGenomes](https://github.com/EnsemblGenomes) and [Ensembl](https://github.com/Ensembl) projects. 
 
 Thank you!
