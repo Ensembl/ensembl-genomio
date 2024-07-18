@@ -3,7 +3,7 @@
 ## Installation
 If you don't have an installed environment or you don't have nextflow itself, here's one of the ways to install it.
 
-Define [`NXF_HOME` env variable](https://www.nextflow.io/docs/latest/config.html#environment-variables) to use a nextlow home location instead of the default one (`$HOME/.nextflow`).
+Define [`NXF_HOME` env variable](https://www.nextflow.io/docs/latest/config.html#environment-variables) to use a nextflow home location instead of the default one (`$HOME/.nextflow`).
 Everything else is unchanged from the default Nextflow installation instructions on [https://www.nextflow.io/index.html#GetStarted](https://www.nextflow.io/index.html#GetStarted).
 
 ```
@@ -76,7 +76,7 @@ Instead pipeline dies with
 Caused by: Cannot load from object array because "this.keys" is null
 ```
 and when printing this object (`dbs` in this case, with `println "db: ${db}"`),
-we see it dict surronded by the curly brackets like this
+we see it dict surrounded by the curly brackets like this
 ```
 {..., "db_name":"some_db_name", ...}
 ```

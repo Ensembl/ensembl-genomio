@@ -3,10 +3,10 @@
 
 ## **Overview**
 -----
-This pipeline is used for a sequence-level comparison of an assembly with INSDC and provides a detailed report on the discrepencies. The following steps are performed:
+This pipeline is used for a sequence-level comparison of an assembly with INSDC and provides a detailed report on the discrepancies. The following steps are performed:
 
   1. Download the files for the corresponding assembly from INSDC
-  2. Retreive metadata seq.json and fasta files from the database
+  2. Retrieve metadata seq.json and fasta files from the database
   3. Compare the fasta files
        - compare the sequence ids
        - compare the sequence 
@@ -35,8 +35,8 @@ init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_compare_conf \
 | `--pipeline_name` | str | brc4_genome_compare |   optional| name of the hive pipeline |
 | `--hive_force_init` | int |  | yes | drop and create the hive pipeline from scratch | 
 | `--output_dir`      | dir |   ./output                     | optional| directory to store the result | 
-| `--tmp_dir`         | dir |   ./tmp                     | optional| temp directory for dowloaded files |
-| `--species`         | str |                        | yes| species (one or muliple) to process (production name) |
+| `--tmp_dir`         | dir |   ./tmp                     | optional| temp directory for downloaded files |
+| `--species`         | str |                        | yes| species (one or multiple) to process (production name) |
 | `--run_all`         | int |     0                   | yes| process all the species in the registry | 
 | `--email`           | str |  $USER.ebi.ac.uk                     | optional| a summary is emailed when the pipeline is complete | 
 

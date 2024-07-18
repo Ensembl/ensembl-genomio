@@ -51,7 +51,6 @@ def fixture_meta_test_db(db_factory) -> UnitTestDB:
 def test_get_metadata(meta_test_db: UnitTestDB) -> None:
     """Tests the method get_metadata()"""
 
-
     # Check the new connection lite
     dblite = DBConnectionLite(meta_test_db.dbc.url)
     assert dblite.get_metadata() == _METADATA_CONTENT

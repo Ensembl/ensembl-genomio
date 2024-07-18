@@ -36,7 +36,7 @@ from ensembl.io.genomio.utils import get_json
 
 
 class TestWriteFormattedFiles:
-    """Test if all the expected output files are generated and formated correctly"""
+    """Test if all the expected output files are generated and formatted correctly"""
 
     prod_name = "TEST_prod"
     gb_file = "input_file.gb"
@@ -238,7 +238,7 @@ class TestWriteFormattedFiles:
         tmp_path: Path,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test if peptides FATA file is generated when peptides are identified"""
+        """Test if peptides FASTA file is generated when peptides are identified"""
         record = SeqRecord(Seq("MFLRTQARFFHATTKKM"), id="cds-record")
         CDS_feature = SeqFeature(
             FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
