@@ -22,7 +22,7 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.annotation import get_core_data, load_descriptions
-from ensembl.core.models import Gene, Transcript, Translation, metadata
+from ensembl.core.models import Gene, Transcript, Translation, Xref, ObjectXref, metadata
 from ensembl.utils.database import UnitTestDB
 
 
@@ -95,6 +95,17 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
                 end_exon_id=1,
             )
         )
+        session.add(
+            Xref(xref_id=1, dbprimary_acc="XREF_ACC1", display_label="xref1", external_db_id=1,)
+        )
+        session.add(
+            ObjectXref(
+                object_xref_id=1,
+                xref_id=1,
+                ensembl_object_type="gene",
+                ensembl_id=1,
+            )
+        )
         session.commit()
     return test_db
 
@@ -102,7 +113,7 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
 @pytest.mark.parametrize(
     "table, expected_ids, expectation",
     [
-        param("gene", ["gene1"], no_raise()),
+        param("gene", ["gene1", "xref_acc1"], no_raise()),
         param("transcript", ["gene1_t1", "gene1_t2"], no_raise()),
         param("foo", [], raises(ValueError, match="Table foo is not supported")),
     ],
