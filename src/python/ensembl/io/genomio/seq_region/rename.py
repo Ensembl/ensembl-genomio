@@ -17,7 +17,6 @@
 __all__ = [
     "Operation",
     "SeqRegionReplacement",
-    "get_attribs",
     "get_rename_map",
     "get_seq_regions_to_replace",
     "rename_seq_regions",
@@ -118,7 +117,7 @@ def get_seq_regions_to_replace(
                 continue
             seqr.seq_region_id = db_seqr.seq_region_id
 
-            attribs = get_attribs(db_seqr)
+            attribs = _get_attribs(db_seqr)
             db_brc_name = attribs.get("BRC4_seq_region_name", "")
             seqr.old_brc_name = db_brc_name
             if not db_brc_name:
@@ -138,7 +137,7 @@ def get_seq_regions_to_replace(
     return seq_regions
 
 
-def get_attribs(seq_region: SeqRegion) -> Dict[str, str]:
+def _get_attribs(seq_region: SeqRegion) -> Dict[str, str]:
     """Given a seq_region, extract the attribs as value-source items.
 
     Args:
