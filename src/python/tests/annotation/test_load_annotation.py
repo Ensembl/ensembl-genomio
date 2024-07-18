@@ -18,12 +18,13 @@
 from contextlib import nullcontext as no_raise
 from pathlib import Path
 from typing import ContextManager
+from sqlalchemy import text
 
 import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.annotation import get_core_data, load_descriptions
-from ensembl.core.models import Gene, Transcript, Translation, Xref, ObjectXref, metadata
+from ensembl.core.models import Gene, Transcript, Translation, Xref, ObjectXref, ExternalDb, Analysis, SeqRegion, metadata
 from ensembl.utils.database import UnitTestDB
 
 
@@ -34,6 +35,11 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
     test_db.dbc.create_all_tables(metadata)
     # Add data: gene1 with 2 transcripts and translations, xref on gene1 only, gene2 no translation
     with test_db.dbc.session_scope() as session:
+        if test_db.dbc.dialect == "mysql":
+            session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
+        # session.add(ExternalDb(external_db_id=1, db_name="db1", status="XREF", priority=1, db_type="ENSEMBL"))
+        # session.add(Analysis(analysis_id=1, logic_name="analysis_test"))
+        # session.add(SeqRegion(seq_region_id=1, name="seq1", length=10000, coord_system_id=1))
         session.add(
             Gene(
                 gene_id=1,
@@ -126,7 +132,7 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
                 seq_region_strand=-1,
                 source="test_source",
                 canonical_transcript_id=3,
-            )
+            ),
         )
         session.add(
             Transcript(
@@ -139,9 +145,11 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
                 seq_region_start=1000,
                 seq_region_end=1500,
                 seq_region_strand=-1,
-            )
+            ),
         )
         session.commit()
+        if test_db.dbc.dialect == "mysql":
+            session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
     return test_db
 
 
