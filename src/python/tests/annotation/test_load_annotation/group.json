@@ -3,7 +3,7 @@
         "id": "gene1",
         "object_type": "gene",
         "version": 2,
-        "description": "gene1 description",
+        "description": "gene1 new description",
         "xrefs" : [
             {
                 "dbname": "EntrezGene",

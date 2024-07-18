@@ -32,7 +32,7 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
     """Returns a test database with all core tables and basic data."""
     test_db: UnitTestDB = db_factory(src="no_src", name="load_annotation")
     test_db.dbc.create_all_tables(metadata)
-    # Add data: gene1 with 2 transcripts and translations, xref on gene1 only
+    # Add data: gene1 with 2 transcripts and translations, xref on gene1 only, gene2 no translation
     with test_db.dbc.session_scope() as session:
         session.add(
             Gene(
@@ -98,7 +98,12 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
             )
         )
         session.add(
-            Xref(xref_id=1, dbprimary_acc="XREF_ACC1", display_label="xref1", external_db_id=1,)
+            Xref(
+                xref_id=1,
+                dbprimary_acc="XREF_ACC1",
+                display_label="xref1",
+                external_db_id=1,
+            )
         )
         session.add(
             ObjectXref(
@@ -108,6 +113,34 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
                 ensembl_id=1,
             )
         )
+        session.add(
+            Gene(
+                gene_id=2,
+                stable_id="gene2",
+                biotype="ncRNA_gene",
+                description="gene2 description [Source: ExternalID]",
+                analysis_id=1,
+                seq_region_id=1,
+                seq_region_start=1000,
+                seq_region_end=1500,
+                seq_region_strand=-1,
+                source="test_source",
+                canonical_transcript_id=3,
+            )
+        )
+        session.add(
+            Transcript(
+                gene_id=2,
+                transcript_id=3,
+                stable_id="gene2_t1",
+                biotype="ncRNA_gene",
+                analysis_id=1,
+                seq_region_id=1,
+                seq_region_start=1000,
+                seq_region_end=1500,
+                seq_region_strand=-1,
+            )
+        )
         session.commit()
     return test_db
 
@@ -115,8 +148,8 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
 @pytest.mark.parametrize(
     "table, expected_ids, expectation",
     [
-        param("gene", ["gene1", "xref_acc1"], no_raise()),
-        param("transcript", ["gene1_t1", "gene1_t2"], no_raise()),
+        param("gene", ["gene1", "xref_acc1", "gene2"], no_raise()),
+        param("transcript", ["gene1_t1", "gene1_t2", "gene2_t1"], no_raise()),
         param("foo", [], raises(ValueError, match="Table foo is not supported")),
     ],
 )
@@ -134,6 +167,7 @@ def test_get_core_data(
     "input_file, report, do_update, match_xrefs, expectation",
     [
         param("group.json", False, False, False, no_raise()),
+        param("group.json", True, False, True, no_raise()),
         param("group.json", False, True, False, no_raise()),
         param("group.json", False, False, True, no_raise()),
         param("gene1_xref.json", False, True, False, no_raise(), id="Match gene id"),
@@ -141,10 +175,24 @@ def test_get_core_data(
         param("gene1_alt_xref.json", False, True, True, no_raise(), id="Match xref"),
         param("gene1_alt_xref.json", False, True, False, no_raise(), id="Don't match xref"),
         param("gene1_alt_xref_nomatch.json", False, True, True, no_raise(), id="Match xref, no match"),
+        param("gene2_nodesc.json", False, True, False, no_raise(), id="Gene with Source desc, no new"),
+        param("transcript1_nodesc.json", False, True, False, no_raise(), id="Transcript no desc, no new"),
+        param("gene1_nodesc.json", False, True, False, no_raise(), id="Gene remove description"),
+        param("gene1_nodesc.json", True, True, False, no_raise(), id="Gene remove description, report"),
     ],
 )
-def test_load_descriptions(test_db: UnitTestDB, data_dir: Path, input_file: str, report: bool, do_update: bool, match_xrefs: bool, expectation: ContextManager):
+def test_load_descriptions(
+    test_db: UnitTestDB,
+    data_dir: Path,
+    input_file: str,
+    report: bool,
+    do_update: bool,
+    match_xrefs: bool,
+    expectation: ContextManager,
+):
     """Tests the method get_core_data()"""
     with test_db.dbc.test_session_scope() as session:
         with expectation:
-            load_descriptions(session, data_dir / input_file, report=report, do_update=do_update, match_xrefs=match_xrefs)
+            load_descriptions(
+                session, data_dir / input_file, report=report, do_update=do_update, match_xrefs=match_xrefs
+            )
