@@ -24,7 +24,7 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.annotation import get_core_data, load_descriptions
-from ensembl.core.models import Gene, Transcript, Translation, Xref, ObjectXref, ExternalDb, Analysis, SeqRegion, metadata
+from ensembl.core.models import Gene, Transcript, Translation, Xref, ObjectXref, metadata
 from ensembl.utils.database import UnitTestDB
 
 
