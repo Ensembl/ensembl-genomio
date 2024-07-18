@@ -136,9 +136,11 @@ def test_get_core_data(
         param("group.json", False, False, False, no_raise()),
         param("group.json", False, True, False, no_raise()),
         param("group.json", False, False, True, no_raise()),
-        param("gene1_xref.json", False, True, False, no_raise()),
-        param("gene1_alt_synonym.json", False, True, False, no_raise()),
-        param("gene1_alt_xref.json", False, True, False, no_raise()),
+        param("gene1_xref.json", False, True, False, no_raise(), id="Match gene id"),
+        param("gene1_alt_synonym.json", False, True, False, no_raise(), id="Match synonym"),
+        param("gene1_alt_xref.json", False, True, True, no_raise(), id="Match xref"),
+        param("gene1_alt_xref.json", False, True, False, no_raise(), id="Don't match xref"),
+        param("gene1_alt_xref_nomatch.json", False, True, True, no_raise(), id="Match xref, no match"),
     ],
 )
 def test_load_descriptions(test_db: UnitTestDB, data_dir: Path, input_file: str, report: bool, do_update: bool, match_xrefs: bool, expectation: ContextManager):
