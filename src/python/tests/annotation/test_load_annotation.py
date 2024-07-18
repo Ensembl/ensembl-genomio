@@ -16,6 +16,7 @@
 """
 
 from contextlib import nullcontext as no_raise
+from pathlib import Path
 from typing import ContextManager
 
 import pytest
@@ -29,7 +30,7 @@ from ensembl.utils.database import UnitTestDB
 @pytest.fixture(name="test_db", scope="module")
 def fixture_annotation_test_db(db_factory) -> UnitTestDB:
     """Returns a test database with all core tables and basic data."""
-    test_db: UnitTestDB = db_factory("", "load_annotation")
+    test_db: UnitTestDB = db_factory(src="no_src", name="load_annotation")
     test_db.dbc.create_all_tables(metadata)
     # Add data
     with test_db.dbc.session_scope() as session:
@@ -38,6 +39,7 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
                 gene_id=1,
                 stable_id="gene1",
                 biotype="protein_coding",
+                description="gene1 description",
                 analysis_id=1,
                 seq_region_id=1,
                 seq_region_start=1,
@@ -126,3 +128,16 @@ def test_get_core_data(
         with expectation:
             feats = get_core_data(session, table)
             assert list(feats.keys()) == expected_ids
+
+
+@pytest.mark.parametrize(
+    "input_file, expectation",
+    [
+        param("test_import1.json", no_raise()),
+    ],
+)
+def test_load_descriptions(test_db: UnitTestDB, data_dir: Path, input_file: str, expectation: ContextManager):
+    """Tests the method get_core_data()"""
+    with test_db.dbc.test_session_scope() as session:
+        with expectation:
+            load_descriptions(session, data_dir / input_file)

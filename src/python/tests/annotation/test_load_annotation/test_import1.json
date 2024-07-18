@@ -1,0 +1,14 @@
+[
+    {
+        "id": "gene2",
+        "object_type": "gene",
+        "version": 2,
+        "description": "gene2 description",
+        "xrefs" : [
+            {
+                "dbname": "EntrezGene",
+                "id" : "9999"
+            }
+        ]
+    }
+]

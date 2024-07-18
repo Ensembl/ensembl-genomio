@@ -96,6 +96,7 @@ def load_descriptions(
         func_file: JSON file with the annotation information.
         report: Print the mapping of changes to perform in the standard output?
         do_update: Update core database?
+        match_xrefs: if the IDs do not match, try to match an Xref ID instead?
     """
     func = get_json(func_file)
     logging.info(f"{len(func)} annotations from {func_file}")
