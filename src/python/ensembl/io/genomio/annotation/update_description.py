@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Loads functional annotation from a file into a core database."""
+"""Update descriptions from a functional annotation file into a core database."""
 
 import logging
 from pathlib import Path
@@ -37,7 +37,7 @@ FEAT_TABLE = {
 FeatStruct = Tuple[str, str, str]
 
 
-def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
+def get_core_data(session: Session, table: str, match_xrefs: bool = False) -> Dict[str, FeatStruct]:
     """Returns the table descriptions from a core database.
 
     Args:
@@ -76,7 +76,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
         (feat_id, stable_id, desc, xref_name) = row
         feat_struct: FeatStruct = (feat_id, stable_id, desc)
         feat_data[stable_id.lower()] = feat_struct
-        if xref_name:
+        if match_xrefs and xref_name:
             feat_data[xref_name.lower()] = feat_struct
 
     return feat_data
@@ -106,7 +106,7 @@ def load_descriptions(
         logging.info(f"Checking {table} descriptions")
         feat_func = [feat for feat in func if feat["object_type"] == table]
         logging.info(f"{len(feat_func)} {table} annotations from {func_file}")
-        feat_data = get_core_data(session, table)
+        feat_data = get_core_data(session, table, match_xrefs)
         logging.info(f"Loaded {len(feat_data)} {table} data")
 
         stats = {
