@@ -24,11 +24,22 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.annotation import get_core_data, load_descriptions
-from ensembl.core.models import Gene, Transcript, Translation, Xref, ObjectXref, metadata
+from ensembl.core.models import Gene, Transcript, metadata
 from ensembl.utils.database import UnitTestDB
 
 
-def add_gene(dialect: str, session, gene_data = dict) -> None:
+def add_gene(dialect: str, session, gene_data=dict) -> None:
+    """Add a gene and a transcript from a gene_data dict.
+
+    Args:
+    dialect: if "mysql", allow to skip foreign key check.
+    session: SQLalchemy session.
+    gene_data:
+        "gene_name" -> gene.stable_id
+        "gene_desc" -> gene.description
+        "tr_name" -> transcript.stable_id
+        "tr_desc" -> transcript.description
+    """
     gene_name = gene_data.get("gene_name", "gene1")
     gene_description = gene_data.get("gene_description", "")
     tr_name = gene_data.get("tr_name", "tr1")
@@ -36,32 +47,32 @@ def add_gene(dialect: str, session, gene_data = dict) -> None:
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
     new_transcript = Transcript(
-            gene_id=1,
-            transcript_id=1,
-            stable_id=tr_name,
-            biotype="protein_coding",
-            description=tr_description,
-            analysis_id=1,
-            seq_region_id=1,
-            seq_region_start=1,
-            seq_region_end=100,
-            seq_region_strand=1,
-            source="test_source",
-        )
+        gene_id=1,
+        transcript_id=1,
+        stable_id=tr_name,
+        biotype="protein_coding",
+        description=tr_description,
+        analysis_id=1,
+        seq_region_id=1,
+        seq_region_start=1,
+        seq_region_end=100,
+        seq_region_strand=1,
+        source="test_source",
+    )
 
     new_gene = Gene(
-            gene_id=1,
-            stable_id=gene_name,
-            biotype="protein_coding",
-            description=gene_description,
-            analysis_id=1,
-            seq_region_id=1,
-            seq_region_start=1,
-            seq_region_end=100,
-            seq_region_strand=1,
-            source="test_source",
-            canonical_transcript_id=1,
-        )
+        gene_id=1,
+        stable_id=gene_name,
+        biotype="protein_coding",
+        description=gene_description,
+        analysis_id=1,
+        seq_region_id=1,
+        seq_region_start=1,
+        seq_region_end=100,
+        seq_region_strand=1,
+        source="test_source",
+        canonical_transcript_id=1,
+    )
     session.add(new_gene)
     session.add(new_transcript)
     session.commit()
@@ -101,21 +112,53 @@ def test_get_core_data(
     [
         param("gene1_nodesc.json", {"gene_name": "gene1"}, "gene", "", id="Gene: no desc -> no desc"),
         param("gene1_desc.json", {"gene_name": "gene1"}, "gene", "new_desc", id="Gene: no desc -> new desc"),
-        param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc"}, "gene", "new_desc", id="Gene: old desc -> new desc"),
-        param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc [Source: ext]"}, "gene", "new_desc", id="Gene: source desc -> new desc"),
+        param(
+            "gene1_desc.json",
+            {"gene_name": "gene1", "gene_desc": "old_desc"},
+            "gene",
+            "new_desc",
+            id="Gene: old desc -> new desc",
+        ),
+        param(
+            "gene1_desc.json",
+            {"gene_name": "gene1", "gene_desc": "old_desc [Source: ext]"},
+            "gene",
+            "new_desc",
+            id="Gene: source desc -> new desc",
+        ),
+        param(
+            "gene1_syn.json",
+            {"gene_name": "gene1"},
+            "gene",
+            "new_desc",
+            id="Gene: no desc -> new_desc from syn match",
+        ),
         param("tr1_nodesc.json", {"tr_name": "tr1"}, "transcript", "", id="Tr: no desc -> no desc"),
         param("tr1_desc.json", {"tr_name": "tr1"}, "transcript", "new_desc", id="Tr: no desc -> new desc"),
-        param("tr1_desc.json", {"tr_name": "tr1", "tr_desc": "old_desc"}, "transcript", "new_desc", id="Tr: old desc -> new desc"),
+        param(
+            "tr1_desc.json",
+            {"tr_name": "tr1", "tr_desc": "old_desc"},
+            "transcript",
+            "new_desc",
+            id="Tr: old desc -> new desc",
+        ),
     ],
 )
 def test_load_description(
-    test_db: UnitTestDB, data_dir: Path, input_file: str, gene_data: dict, table: str, expected_description: str) -> None:
+    test_db: UnitTestDB,
+    data_dir: Path,
+    input_file: str,
+    gene_data: dict,
+    table: str,
+    expected_description: str,
+) -> None:
     """Tests the method load_description()"""
     with test_db.dbc.test_session_scope() as session:
         add_gene(test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True)
         feats = get_core_data(session, table)
         assert len(feats) == 1
+        name = ""
         if table == "gene":
             name = gene_data["gene_name"]
         elif table == "transcript":
