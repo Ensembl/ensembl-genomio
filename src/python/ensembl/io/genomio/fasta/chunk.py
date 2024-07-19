@@ -14,15 +14,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+""""Split a set of nucleotide sequence(s) (.fasta, .gz) into smaller chunks."""
 
 __all__ = [
-    "split_by_chunk_size",
-    "split_by_n",
+    "split_seq_by_chunk_size",
+    "split_seq_by_n",
 ]
 
+import logging
 import os
 import re
-import sys
+from typing import Optional
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -33,20 +35,31 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def split_by_n(seq, split_re):
+def split_seq_by_n(seq: str, split_patten: str) -> list:
     """Split a string into chunks at the positions of N sequences.
-    (return [ len(seq) ] if no split_re)"""
+    (return [ len(seq) ] if no split_patten)
+    
+    Args:
+        seq: Sequence to be split into chunks.
+        split_patten: Split points of sequence chunks.
+    """
     seq_len = len(seq)
-    if not split_re:
+    if not split_patten:
         return [seq_len]
-    split_points = [m.end() for m in split_re.finditer(seq)]
+    split_points = [m.end() for m in split_patten.finditer(seq)]
     if not split_points or split_points[-1] != seq_len:
         split_points.append(seq_len)
     return split_points
 
 
-def split_by_chunk_size(ends, chunk_size, tolerated_chunk_len=None):
-    """Split array of end coordinates, to form chunks not longer then chunk_size (tolerated_chunk_len if specified)"""
+def split_seq_by_chunk_size(ends: str, chunk_size: int, tolerated_chunk_len:Optional[int] = None) -> list:
+    """Split list of end coordinates, to form chunks not longer then chunk_size (tolerated_chunk_len if specified).
+    
+    Args:
+        ends: List of one or more chunk(s) to split a sequence. 
+        chunk_size: Size of chunk to be split sequence.
+        tolerated_chunk_len: Constrained chunk size when splitting a sequence.
+    """
     if tolerated_chunk_len is None or tolerated_chunk_len < chunk_size:
         tolerated_chunk_len = chunk_size
     result = []
@@ -160,17 +173,16 @@ def main():
     fasta_file = args.fasta_dna
     with open_gz_file(fasta_file) as fasta:
         agp_lines = []
-        print(
-            f"splitting sequences from '{fasta_file}', chunk size {args.chunk_size:_}, splitting on {args.n_seq} Ns (0 -- disabled)",
-            file=sys.stderr,
+        logging.info(
+            f"splitting sequences from '{fasta_file}', chunk size {args.chunk_size:_}, splitting on {args.n_seq} Ns (0 -- disabled)"
         )
 
         fasta_parser = SeqIO.parse(fasta, "fasta")
         for rec_count, rec in enumerate(fasta_parser, start=1):
             rec_name = str(rec.name)
 
-            ends = split_by_n(str(rec.seq), n_split_regex)  # returns [ len(req.seq) ] if no regexp
-            ends = split_by_chunk_size(ends, args.chunk_size, tolerated_chunk_len)
+            ends = split_seq_by_n(str(rec.seq), n_split_regex)  # returns [ len(req.seq) ] if no regexp
+            ends = split_seq_by_chunk_size(ends, args.chunk_size, tolerated_chunk_len)
 
             offset = 0
             for chunk, chunk_end in enumerate(ends, start=1):
@@ -189,7 +201,7 @@ def main():
 
                 # use agp lines as fasta description
                 agp_line = agp_line.replace("\t", " ")
-                print(f"dumping {chunk_name} AGP {agp_line}", file=sys.stderr)
+                logging.info(f"Dumping {chunk_name} AGP {agp_line}")
 
                 # get slice and put it out
                 tmp_record = SeqRecord(
