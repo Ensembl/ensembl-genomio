@@ -24,7 +24,7 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.annotation import get_core_data, load_descriptions
-from ensembl.core.models import Gene, Transcript, metadata
+from ensembl.core.models import Gene, Transcript, ObjectXref, Xref, metadata
 from ensembl.utils.database import UnitTestDB
 
 
@@ -39,9 +39,11 @@ def add_gene(dialect: str, session, gene_data=dict) -> None:
         "gene_desc" -> gene.description
         "tr_name" -> transcript.stable_id
         "tr_desc" -> transcript.description
+        "gene_xref" -> xref display_name attached to the gene
     """
     gene_name = gene_data.get("gene_name", "gene1")
     gene_description = gene_data.get("gene_description", "")
+    gene_xref = gene_data.get("gene_xref", "")
     tr_name = gene_data.get("tr_name", "tr1")
     tr_description = gene_data.get("tr_description", "")
     if dialect == "mysql":
@@ -75,6 +77,13 @@ def add_gene(dialect: str, session, gene_data=dict) -> None:
     )
     session.add(new_gene)
     session.add(new_transcript)
+
+    if gene_xref:
+        new_xref = Xref(xref_id=1, dbprimary_acc=gene_xref, display_label=gene_xref, external_db_id=1)
+        new_object_xref = ObjectXref(xref_id=1, ensembl_object_type="gene", ensembl_id=1)
+        session.add(new_xref)
+        session.add(new_object_xref)
+
     session.commit()
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
@@ -170,6 +179,42 @@ def test_load_description(
             name = gene_data["gene_name"]
         elif table == "transcript":
             name = gene_data["tr_name"]
-        print(feats)
+        assert feats[name]
+        assert feats[name][2] == expected_description
+
+
+@pytest.mark.parametrize(
+    "input_file, gene_data, expected_description, match_xrefs",
+    [
+        param(
+            "gene1_desc.json",
+            {"gene_name": "foobar", "gene_xref": "gene1"},
+            "",
+            False,
+            id="Gene: no desc -> no changed no xref match",
+        ),
+        param(
+            "gene1_desc.json",
+            {"gene_name": "foobar", "gene_xref": "gene1"},
+            "new_desc",
+            True,
+            id="Gene: no desc -> new_desc from xref match from json",
+        ),
+    ],
+)
+def test_load_description_match_xref(
+    test_db: UnitTestDB,
+    data_dir: Path,
+    input_file: str,
+    gene_data: dict,
+    match_xrefs: bool,
+    expected_description: str,
+) -> None:
+    """Tests the method load_description() with match_xrefs"""
+    with test_db.dbc.test_session_scope() as session:
+        add_gene(test_db.dbc.dialect, session, gene_data)
+        load_descriptions(session, data_dir / input_file, do_update=True, match_xrefs=match_xrefs)
+        feats = get_core_data(session, "gene")
+        name = gene_data["gene_name"]
         assert feats[name]
         assert feats[name][2] == expected_description
