@@ -133,6 +133,13 @@ def test_get_core_data(
             "new_desc",
             id="Gene: no desc -> new_desc from syn match",
         ),
+        param(
+            "gene1_xref.json",
+            {"gene_name": "gene1"},
+            "gene",
+            "new_desc",
+            id="Gene: no desc -> new_desc from xref match",
+        ),
         param("tr1_nodesc.json", {"tr_name": "tr1"}, "transcript", "", id="Tr: no desc -> no desc"),
         param("tr1_desc.json", {"tr_name": "tr1"}, "transcript", "new_desc", id="Tr: no desc -> new desc"),
         param(
