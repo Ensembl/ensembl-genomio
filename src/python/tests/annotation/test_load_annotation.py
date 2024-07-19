@@ -37,9 +37,6 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
     with test_db.dbc.session_scope() as session:
         if test_db.dbc.dialect == "mysql":
             session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
-        # session.add(ExternalDb(external_db_id=1, db_name="db1", status="XREF", priority=1, db_type="ENSEMBL"))
-        # session.add(Analysis(analysis_id=1, logic_name="analysis_test"))
-        # session.add(SeqRegion(seq_region_id=1, name="seq1", length=10000, coord_system_id=1))
         session.add(
             Gene(
                 gene_id=1,
