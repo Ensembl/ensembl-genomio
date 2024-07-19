@@ -24,7 +24,7 @@ __all__ = [
 import logging
 import os
 import re
-from typing import Optional
+from typing import Optional, Pattern
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -35,10 +35,10 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def split_seq_by_n(seq: str, split_patten: str) -> list:
+def split_seq_by_n(seq: str, split_patten: Pattern) -> list:
     """Split a string into chunks at the positions of N sequences.
     (return [ len(seq) ] if no split_patten)
-    
+
     Args:
         seq: Sequence to be split into chunks.
         split_patten: Split points of sequence chunks.
@@ -52,11 +52,14 @@ def split_seq_by_n(seq: str, split_patten: str) -> list:
     return split_points
 
 
-def split_seq_by_chunk_size(ends: str, chunk_size: int, tolerated_chunk_len:Optional[int] = None) -> list:
-    """Split list of end coordinates, to form chunks not longer then chunk_size (tolerated_chunk_len if specified).
-    
+def split_seq_by_chunk_size(
+    ends: list[int], chunk_size: int, tolerated_chunk_len: Optional[int] = None
+) -> list:
+    """Split list of end coordinates, to form chunks not longer then
+    chunk_size (tolerated_chunk_len if specified).
+
     Args:
-        ends: List of one or more chunk(s) to split a sequence. 
+        ends: List of one or more chunk(s) to split a sequence.
         chunk_size: Size of chunk to be split sequence.
         tolerated_chunk_len: Constrained chunk size when splitting a sequence.
     """
@@ -85,7 +88,12 @@ def main():
         help="Raw or compressed fasta file with DNA seqs to be split.",
     )
     parser.add_argument(
-        "--out", metavar="chunks.fna", required=False, default="chunks.fna", type=str, help="chunks output [STDOUT]"
+        "--out",
+        metavar="chunks.fna",
+        required=False,
+        default="chunks.fna",
+        type=str,
+        help="chunks output [STDOUT]",
     )
     parser.add_argument(
         "--individual_out_dir",
@@ -166,15 +174,14 @@ def main():
             args.out = os.path.basename(args.fasta_dna)
         os.makedirs(args.individual_out_dir, exist_ok=True)
         file_prefix = os.path.join(args.individual_out_dir, args.out)
-    else:
-        out_file = open(args.out, "wt")
 
     # process input fasta
     fasta_file = args.fasta_dna
     with open_gz_file(fasta_file) as fasta:
         agp_lines = []
         logging.info(
-            f"splitting sequences from '{fasta_file}', chunk size {args.chunk_size:_}, splitting on {args.n_seq} Ns (0 -- disabled)"
+            f"splitting sequences from '{fasta_file}', chunk size {args.chunk_size:_}, \
+                splitting on {args.n_seq} Ns (0 -- disabled)"
         )
 
         fasta_parser = SeqIO.parse(fasta, "fasta")
@@ -210,17 +217,18 @@ def main():
 
                 # if user specified chunks stored in individual output files
                 if args.individual_out_dir:
-                    with open(chunk_file_name, "wt") as out_file:
+                    with open(chunk_file_name, "wt", encoding="utf-8") as out_file:
                         out_file.write(tmp_record.format("fasta"))
                 else:
-                    out_file.write(tmp_record.format("fasta"))
+                    with open(args.out, "wt", encoding="utf-8") as out_file:
+                        out_file.write(tmp_record.format("fasta"))
 
                 del tmp_record
                 offset = chunk_end
 
         # dump AGP
         if args.agp_output_file:
-            with open(args.agp_output_file, "w") as agp_out:
+            with open(args.agp_output_file, "w", encoding="utf-8") as agp_out:
                 agp_out.write("\n".join(agp_lines))
 
         if not args.individual_out_dir:
