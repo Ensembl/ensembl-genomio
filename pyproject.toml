@@ -124,7 +124,7 @@ genome_stats_dump = "ensembl.io.genomio.genome_stats.dump:main"
 gff3_extract_annotation = "ensembl.io.genomio.gff3.extract_annotation:main"
 gff3_process = "ensembl.io.genomio.gff3.process:main"
 # annotation
-annotation_load = "ensembl.io.genomio.annotation.load:main"
+annotation_update_description = "ensembl.io.genomio.annotation.update_description:main"
 # Manifest
 manifest_check_integrity = "ensembl.io.genomio.manifest.check_integrity:main"
 manifest_compute_stats = "ensembl.io.genomio.manifest.compute_stats:main"
