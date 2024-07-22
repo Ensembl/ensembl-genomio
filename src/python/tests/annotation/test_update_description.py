@@ -284,8 +284,8 @@ def test_load_description_match_xref(
 @pytest.mark.parametrize(
     "input_file, gene_data, do_report",
     [
-        param("gene1_desc.json", {"gene_name": "gene1"}, False, id="No report"),
-        param("gene1_desc.json", {"gene_name": "gene1"}, True, id="Do report"),
+        param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc"}, False, id="No report"),
+        param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc"}, True, id="Do report"),
     ],
 )
 def test_load_description_do_report(
@@ -302,6 +302,6 @@ def test_load_description_do_report(
         load_descriptions(session, data_dir / input_file, report=do_report)
         captured = capsys.readouterr()
         if do_report:
-            assert captured.out
+            assert str(captured.out).strip() == "gene\tgene1\tgene1\told_desc\tnew_desc"
         else:
             assert not captured.out
