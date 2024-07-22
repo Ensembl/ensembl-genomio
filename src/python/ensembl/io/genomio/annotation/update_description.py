@@ -223,8 +223,6 @@ def _get_features_to_update(
 
         # Directly print the mapping
         if report:
-            if new_desc is None:
-                new_desc = ""
             line = (table, new_stable_id, cur_stable_id, cur_desc, new_desc)
             print("\t".join(line))
 

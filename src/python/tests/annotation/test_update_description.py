@@ -21,7 +21,7 @@ from typing import ContextManager
 from sqlalchemy import text
 
 import pytest
-from pytest import param, raises
+from pytest import CaptureFixture, param, raises
 
 from ensembl.io.genomio.annotation import get_core_data, load_descriptions
 from ensembl.core.models import Gene, Transcript, ObjectXref, Xref, metadata
@@ -154,7 +154,13 @@ def test_load_description_do_update(
             id="Gene: old desc -> deleted desc",
         ),
         param("gene1_desc.json", {"gene_name": "gene1"}, "gene", "new_desc", id="Gene: no desc -> new desc"),
-        param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "new_desc"}, "gene", "new_desc", id="Gene: old desc -> same desc"),
+        param(
+            "gene1_desc.json",
+            {"gene_name": "gene1", "gene_desc": "new_desc"},
+            "gene",
+            "new_desc",
+            id="Gene: old desc -> same desc",
+        ),
         param(
             "gene1_desc.json",
             {"gene_name": "gene1", "gene_desc": "old_desc"},
@@ -273,3 +279,29 @@ def test_load_description_match_xref(
         name = gene_data["gene_name"]
         assert feats[name]
         assert feats[name][2] == expected_description
+
+
+@pytest.mark.parametrize(
+    "input_file, gene_data, do_report",
+    [
+        param("gene1_desc.json", {"gene_name": "gene1"}, False, id="No report"),
+        param("gene1_desc.json", {"gene_name": "gene1"}, True, id="Do report"),
+    ],
+)
+def test_load_description_do_report(
+    test_db: UnitTestDB,
+    data_dir: Path,
+    capsys: CaptureFixture,
+    input_file: str,
+    gene_data: dict,
+    do_report: bool,
+) -> None:
+    """Tests the method load_description()"""
+    with test_db.dbc.test_session_scope() as session:
+        add_gene(test_db.dbc.dialect, session, gene_data)
+        load_descriptions(session, data_dir / input_file, report=do_report)
+        captured = capsys.readouterr()
+        if do_report:
+            assert captured.out
+        else:
+            assert not captured.out
