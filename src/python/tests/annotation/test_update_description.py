@@ -42,10 +42,10 @@ def add_gene(dialect: str, session, gene_data=dict) -> None:
         "gene_xref" -> xref display_name attached to the gene
     """
     gene_name = gene_data.get("gene_name", "gene1")
-    gene_description = gene_data.get("gene_description", "")
+    gene_description = gene_data.get("gene_desc", "")
     gene_xref = gene_data.get("gene_xref", "")
     tr_name = gene_data.get("tr_name", "tr1")
-    tr_description = gene_data.get("tr_description", "")
+    tr_description = gene_data.get("tr_desc", "")
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
     new_transcript = Transcript(
@@ -146,7 +146,15 @@ def test_load_description_do_update(
     "input_file, gene_data, table, expected_description",
     [
         param("gene1_nodesc.json", {"gene_name": "gene1"}, "gene", "", id="Gene: no desc -> no desc"),
+        param(
+            "gene1_nodesc.json",
+            {"gene_name": "gene1", "gene_desc": "old_desc"},
+            "gene",
+            "",
+            id="Gene: old desc -> deleted desc",
+        ),
         param("gene1_desc.json", {"gene_name": "gene1"}, "gene", "new_desc", id="Gene: no desc -> new desc"),
+        param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "new_desc"}, "gene", "new_desc", id="Gene: old desc -> same desc"),
         param(
             "gene1_desc.json",
             {"gene_name": "gene1", "gene_desc": "old_desc"},

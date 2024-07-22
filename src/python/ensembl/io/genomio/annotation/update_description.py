@@ -198,7 +198,7 @@ def _get_features_to_update(
 
         # Prepare some data to compare
         new_stable_id = new_feat["id"]
-        new_desc = new_feat.get("description")
+        new_desc = new_feat.get("description", "")
         (row_id, cur_stable_id, cur_desc) = cur_feat
 
         # No description: replace unless the current description is from an Xref

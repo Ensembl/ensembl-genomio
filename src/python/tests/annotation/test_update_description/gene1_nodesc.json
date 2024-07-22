@@ -1,6 +1,6 @@
 [
     {
         "id": "gene1",
-        "object_type": "transcript"
+        "object_type": "gene"
     }
 ]
