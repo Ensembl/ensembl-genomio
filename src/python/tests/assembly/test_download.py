@@ -131,7 +131,7 @@ def test_checksums(
         pytest.param("wrong_md5_checksums.txt", None, False, id="Incorrect md5 checksum"),
         pytest.param(None, None, True, id="No md5file specified, resort to default"),
         pytest.param(None, Path("*"), False, id="Incompatible os path '*'"),
-        pytest.param("missingfile_md5.txt", None, False, id="md5 checksum with ref of missing file"),
+        pytest.param("missing_file_md5.txt", None, False, id="md5 checksum with ref of missing file"),
     ],
 )
 def test_md5_files(data_dir: Path, md5_file: str, md5_path: Optional[Path], checksum_bool: bool) -> None:
@@ -404,7 +404,7 @@ def test_get_files_selection(
 @patch("ensembl.io.genomio.assembly.download.md5_files")
 def test_retrieve_assembly_data(
     mock_retrieve: Mock,
-    mock_download_singlefile: Mock,
+    mock_download_single_file: Mock,
     mock_download_files: Mock,
     mock_file_select: Mock,
     mock_ftp: Mock,
@@ -441,5 +441,5 @@ def test_retrieve_assembly_data(
     with exception:
         retrieve_assembly_data(accession, download_dir, 2)
         assert mock_download_files.download_files.called_once()
-        assert mock_download_singlefile._download_file.called_once()  # pylint: disable=protected-access
+        assert mock_download_single_file._download_file.called_once()  # pylint: disable=protected-access
         assert mock_file_select.get_files_selection.called_with(files_downloaded)

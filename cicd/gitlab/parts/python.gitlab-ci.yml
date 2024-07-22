@@ -83,13 +83,11 @@ python:mypy:src:
 
 python:mypy:tests:
   extends: .python:mypy
-  allow_failure: true
   script:
     - $MYPY_CMD src/python/tests
 
 python:black:
   extends: .python:test
-  allow_failure: true
   script:
     - black --config pyproject.toml --check .
 

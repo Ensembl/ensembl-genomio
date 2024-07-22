@@ -14,6 +14,11 @@
 # limitations under the License.
 """Update descriptions from a functional annotation file into a core database."""
 
+__all__ = [
+    "get_core_data",
+    "load_descriptions",
+]
+
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -42,7 +47,7 @@ def get_core_data(session: Session, table: str, match_xrefs: bool = False) -> Di
 
     Args:
         session: Session open on a core database.
-        table: "gene" or "trancript" table from the core database.
+        table: "gene" or "transcript" table from the core database.
     """
 
     if table == "gene":
