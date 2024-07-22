@@ -117,6 +117,32 @@ def test_get_core_data(
 
 
 @pytest.mark.parametrize(
+    "input_file, gene_data, do_update, expected_description",
+    [
+        param("gene1_desc.json", {"gene_name": "gene1"}, False, "", id="No update"),
+        param("gene1_desc.json", {"gene_name": "gene1"}, True, "new_desc", id="Do update"),
+    ],
+)
+def test_load_description_do_update(
+    test_db: UnitTestDB,
+    data_dir: Path,
+    input_file: str,
+    gene_data: dict,
+    do_update: bool,
+    expected_description: str,
+) -> None:
+    """Tests the method load_description()"""
+    with test_db.dbc.test_session_scope() as session:
+        add_gene(test_db.dbc.dialect, session, gene_data)
+        load_descriptions(session, data_dir / input_file, do_update=do_update)
+        feats = get_core_data(session, "gene")
+        assert len(feats) == 1
+        name = gene_data["gene_name"]
+        assert feats[name]
+        assert feats[name][2] == expected_description
+
+
+@pytest.mark.parametrize(
     "input_file, gene_data, table, expected_description",
     [
         param("gene1_nodesc.json", {"gene_name": "gene1"}, "gene", "", id="Gene: no desc -> no desc"),
