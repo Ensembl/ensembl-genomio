@@ -292,9 +292,9 @@ def test_remove_extra_exons(
 
     if has_id:
         exon_num = 1
-        for subfeat in gene.sub_features:
-            if subfeat.type == "exon":
-                subfeat.id = f"id-{exon_num}"
+        for subfeature in gene.sub_features:
+            if subfeature.type == "exon":
+                subfeature.id = f"id-{exon_num}"
                 exon_num += 1
             if exon_num > has_id:
                 break

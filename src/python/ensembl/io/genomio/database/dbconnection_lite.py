@@ -20,29 +20,21 @@ import logging
 import re
 from typing import Dict, List, Optional
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import Meta
-from ensembl.utils.database import DBConnection
-
+from ensembl.utils.database import DBConnection, StrURL
 
 _DB_PATTERN_RELEASE = re.compile(r".+_(?:core|otherfeatures|variation)_(?P<release>\d+)_\d+_\d+")
 
 
-class DatabaseExtension:
-    """Extension to get metadata directly from a database, assuming it has a metadata table.
-    Not meant to be used directly: use DBConnectionLite to get all the DBConnection methods.
-    """
+class DBConnectionLite(DBConnection):
+    """Extension to get metadata directly from a database, assuming it has a metadata table."""
 
-    def __init__(self, url, **kwargs) -> None:
-        self._engine = create_engine(url, **kwargs)
+    def __init__(self, url: StrURL, reflect: bool = False, **kwargs) -> None:
+        super().__init__(url, reflect, **kwargs)
         self._metadata: Dict[str, List] = {}
-
-    @property
-    def db_name(self) -> str:
-        """Returns the database name."""
-        return self._engine.url.database
 
     def get_metadata(self) -> Dict[str, List]:
         """Retrieves all metadata from the `meta` table in the database.
@@ -82,18 +74,9 @@ class DatabaseExtension:
             return None
 
     def get_project_release(self) -> str:
-        """Returns the project release number from the database name."""
+        """Returns the project release number from the database name. Returns empty string if not found."""
 
         match = re.search(_DB_PATTERN_RELEASE, self.db_name)
         if match:
             return match.group(1)
         return ""
-
-
-class DBConnectionLite(DatabaseExtension, DBConnection):
-    """DBConnection without the schema loading from DB: faster but some methods will not work.
-
-    Things from DBConnection that will not work: tables, and anything that relies on metadata like
-    schema_type and schema_version. Instead for those, get them as ordinary values with
-    get_meta_value("schema_type") or get_meta_value("schema_version")
-    """

@@ -20,7 +20,7 @@
 - genome metadata json
 
 Raises:
-    GFFPArseError: If the structure of the gb file can't be parsed.
+    GBParseError: If the structure of the gb file cannot be parsed.
     UnsupportedData: If some data is not as expected.
 
 Returns:
@@ -255,7 +255,7 @@ class FormattedFilesGenerator:
                 feats = {**feats, **rna_feats}
                 all_ids += rna_ids
 
-            # Any other case? Fail here and check if we shoud support it, or add it to unsupported list
+            # Any other case? Fail here and check if we should support it, or add it to unsupported list
             else:
                 raise GBParseError(f"No ID for allowed feature: {feat}")
 
@@ -463,9 +463,9 @@ class FormattedFilesGenerator:
         """
         for feat in seq.features:
             if feat.type == "CDS":
-                quals = feat.qualifiers
-                if "transl_table" in quals:
-                    return quals["transl_table"][0]
+                qualifiers = feat.qualifiers
+                if "transl_table" in qualifiers:
+                    return qualifiers["transl_table"][0]
                 return None
         return None
 

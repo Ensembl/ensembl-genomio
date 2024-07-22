@@ -1,9 +1,9 @@
 # Nextflow related documentation
 
 ## Installation
-If you don't have an installed environment or you don't have nextflow itself, here's one of the ways to install it.
+If you do not have an installed environment or you don't have nextflow itself, here is one of the ways to install it.
 
-Define [`NXF_HOME` env variable](https://www.nextflow.io/docs/latest/config.html#environment-variables) to use a nextlow home location instead of the default one (`$HOME/.nextflow`).
+Define [`NXF_HOME` env variable](https://www.nextflow.io/docs/latest/config.html#environment-variables) to use a nextflow home location instead of the default one (`$HOME/.nextflow`).
 Everything else is unchanged from the default Nextflow installation instructions on [https://www.nextflow.io/index.html#GetStarted](https://www.nextflow.io/index.html#GetStarted).
 
 ```
@@ -20,7 +20,7 @@ cat nextflow.install.bash | bash -i 2>&1 | tee nextflow.install.log
 ./nextflow run hello
 ```
 
-Configure the environment you're using if you haven't done so yet.
+Configure the environment you are using if you have not done so yet.
 Don't forget to add `NXF_HOME`, patch `PATH` and export them.
 ```
 # fix env variables, i.e.:
@@ -60,8 +60,7 @@ Try to invoke pipelines with `--help` option to get insight on how to run them.
 
 ### Channel is not forked, only one operation on stream is allowed
 #### Symptoms:
-When running a stage or a subworkflow on a channel with a single element
-we expect stream to be forked, allowing us to seed several task at a time.
+When running a stage or a subworkflow on a channel with a single element we expect stream to be forked, allowing us to seed several task at a time.
 ```
 // create that channel with a single element
 //   calls read_json(...) in turn, see below
@@ -75,8 +74,7 @@ Instead pipeline dies with
 ```
 Caused by: Cannot load from object array because "this.keys" is null
 ```
-and when printing this object (`dbs` in this case, with `println "db: ${db}"`),
-we see it dict surronded by the curly brackets like this
+and when printing this object (`dbs` in this case, with `println "db: ${db}"`), we see it dict surrounded by the curly brackets like this
 ```
 {..., "db_name":"some_db_name", ...}
 ```
