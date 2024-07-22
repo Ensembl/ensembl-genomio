@@ -163,6 +163,13 @@ def test_load_description_do_update(
             id="Gene: old desc -> new desc",
         ),
         param(
+            "gene1_nodesc.json",
+            {"gene_name": "gene1", "gene_desc": "old_desc [Source: ext]"},
+            "gene",
+            "old_desc [Source: ext]",
+            id="Gene: source desc -> no change",
+        ),
+        param(
             "gene1_desc.json",
             {"gene_name": "gene1", "gene_desc": "old_desc [Source: ext]"},
             "gene",
