@@ -14,7 +14,9 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.manifest.generate` module."""
 
+import json
 from pathlib import Path
+from typing import Callable
 
 import pytest
 from pytest import LogCaptureFixture, param
@@ -107,3 +109,29 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
     assert "Skip and delete empty file" in caplog.text
     assert not test_files
     assert not empty_file.exists()
+
+
+@pytest.mark.parametrize(
+    "files, expected_content",
+    [
+        param([], {}, id="No files"),
+        param(["genes.gff3"], {"gff3": {"file": "genes.gff3", "md5sum": _CONTENT_MD5}}, id="1 gff3 file"),
+    ],
+)
+def test_create_manifest(
+    tmp_path: Path, assert_files: Callable, files: list[str], expected_content: dict
+) -> None:
+    """Tests the `ManifestMaker.create_manifest()`."""
+    for file_name in files:
+        with Path(tmp_path / file_name).open("w") as fh:
+            fh.write("CONTENT")
+
+    maker = ManifestMaker(tmp_path)
+    maker.create_manifest()
+    manifest_file = Path(tmp_path / "manifest.json")
+    assert manifest_file.exists()
+
+    expected_manifest_file = Path(tmp_path / "expected.json")
+    with expected_manifest_file.open("w") as expected_fh:
+        expected_fh.write(json.dumps(expected_content, sort_keys=True, indent=4))
+    assert_files(manifest_file, expected_manifest_file)
