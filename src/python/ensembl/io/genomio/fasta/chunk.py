@@ -24,7 +24,7 @@ __all__ = [
 import logging
 import os
 import re
-from typing import Optional, Pattern
+from typing import Optional
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -35,41 +35,42 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def split_seq_by_n(seq: str, split_patten: Pattern) -> list:
-    """Split a string into chunks at the positions of N sequences.
-    (return [ len(seq) ] if no split_patten)
+def split_seq_by_n(seq: str, split_pattern: re.Pattern) -> list:
+    """Split a string into chunks at the positions where the
+    pattern is found.
+
+    The end point of wach chunk will correspond to the end
+    of the matching part.
 
     Args:
         seq: Sequence to be split into chunks.
-        split_patten: Split points of sequence chunks.
+        split_pattern: Pattern to search in the sequence.
     """
     seq_len = len(seq)
-    if not split_patten:
+    if not split_pattern:
         return [seq_len]
-    split_points = [m.end() for m in split_patten.finditer(seq)]
+    split_points = [m.end() for m in split_pattern.finditer(seq)]
     if not split_points or split_points[-1] != seq_len:
         split_points.append(seq_len)
     return split_points
 
 
-def split_seq_by_chunk_size(
-    ends: list[int], chunk_size: int, tolerated_chunk_len: Optional[int] = None
-) -> list:
+def split_seq_by_chunk_size(ends: list[int], chunk_size: int, tolerated_size: Optional[int] = None) -> list:
     """Split list of end coordinates, to form chunks not longer then
-    chunk_size (tolerated_chunk_len if specified).
+    chunk_size.
 
     Args:
         ends: List of one or more chunk(s) to split a sequence.
-        chunk_size: Size of chunk to be split sequence.
-        tolerated_chunk_len: Constrained chunk size when splitting a sequence.
+        chunk_size: Size of chunks to split a sequence into.
+        tolerated_size: Threshold to use instead of `chunk_size` to determine when to split a sequence.
     """
-    if tolerated_chunk_len is None or tolerated_chunk_len < chunk_size:
-        tolerated_chunk_len = chunk_size
+    if tolerated_size is None or tolerated_size < chunk_size:
+        tolerated_size = chunk_size
     result = []
     offset = 0
     for chunk_end in ends:
         chunk_len = chunk_end - offset
-        if chunk_len > tolerated_chunk_len:
+        if chunk_len > tolerated_size:
             # exclude starts, as they are 0 or pushed as previous chunk_ends
             result += list(range(offset, chunk_end, chunk_size))[1:]
         result.append(chunk_end)
@@ -77,23 +78,20 @@ def split_seq_by_chunk_size(
     return result
 
 
-## MAIN ##
 def main():
-    """Modules entry-point."""
+    """Module entry-point."""
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
         "--fasta_dna",
         required=True,
         metavar="input[.fa | .gz]",
-        help="Raw or compressed fasta file with DNA seqs to be split.",
+        help="Raw or compressed (.gz) FASTA file with DNA sequences to be split",
     )
     parser.add_argument(
         "--out",
-        metavar="chunks.fna",
         required=False,
         default="chunks.fna",
-        type=str,
-        help="chunks output [STDOUT]",
+        help="Chunks output file",
     )
     parser.add_argument(
         "--individual_out_dir",
@@ -138,10 +136,9 @@ def main():
         required=False,
         default=0,
         type=int,
-        help="The fasta file will be split into chunks at positions of at \
-            least n N sequences. n number is specified here.",
+        help="Split into chunks at positions of at least this number of N characters.",
     )
-    parser.add_argument("--add_offset", required=False, action="store_true", help="0 based offset.")
+    parser.add_argument("--add_offset", required=False, action="store_true", help="Zero-based offset.")
 
     parser.add_log_arguments(add_log_file=True)
 
@@ -188,7 +185,7 @@ def main():
         for rec_count, rec in enumerate(fasta_parser, start=1):
             rec_name = str(rec.name)
 
-            ends = split_seq_by_n(str(rec.seq), n_split_regex)  # returns [ len(req.seq) ] if no regexp
+            ends = split_seq_by_n(str(rec.seq), n_split_regex)
             ends = split_seq_by_chunk_size(ends, args.chunk_size, tolerated_chunk_len)
 
             offset = 0
