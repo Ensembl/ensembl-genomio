@@ -14,4 +14,5 @@
 # limitations under the License.
 """Fasta files processing module."""
 
+from .chunk import *
 from .process import *
