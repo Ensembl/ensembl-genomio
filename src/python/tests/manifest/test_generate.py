@@ -14,9 +14,7 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.manifest.generate` module."""
 
-from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import ContextManager
 
 import pytest
 from pytest import param
@@ -27,8 +25,13 @@ from ensembl.io.genomio.manifest.generate import ManifestMaker
 @pytest.mark.parametrize(
     "files, expected_manifest_files",
     [
-        param({}, [], id="No files"),
-        param({"foobar.json", "manifest.json"}, [], id="No recognizable file"),
+        param({}, {}, id="No files"),
+        param({"foobar.json", "manifest.json"}, {}, id="No recognizable file"),
+        param(
+            {"gene_models.gff3"},
+            {"gff3": {"file": "gene_models.gff3", "md5sum": "45685e95985e20822fb2538a522a5ccf"}},
+            id="GFF3 file",
+        ),
     ],
 )
 def test_get_files_checksum(tmp_path: Path, files: list[str], expected_manifest_files: dict) -> None:
@@ -45,4 +48,4 @@ def test_get_files_checksum(tmp_path: Path, files: list[str], expected_manifest_
         with Path(tmp_path / file).open("w") as fh:
             fh.write("CONTENT")
     test_files = maker.get_files_checksums()
-    assert set(test_files) == set(expected_manifest_files)
+    assert test_files == expected_manifest_files
