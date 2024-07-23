@@ -83,7 +83,10 @@ class ManifestMaker:
                             manifest_files[standard_name].append(file_obj)
                         else:
                             # Convert to a list
-                            manifest_files[standard_name] = sorted([manifest_files[standard_name], file_obj], key=lambda x: x["file"])
+                            manifest_files[standard_name] = [manifest_files[standard_name], file_obj]
+                        manifest_files[standard_name] = sorted(
+                            manifest_files[standard_name], key=lambda x: x["file"]
+                        )
 
                     else:
                         manifest_files[standard_name] = file_obj
