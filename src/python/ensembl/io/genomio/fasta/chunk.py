@@ -99,7 +99,7 @@ def main():
         default=None,
         type=Path,
         help="Output directory for writing files with individual chunks to. \
-        If provided,`--out` value used as a filename prefix",
+            If provided,`--out` value used as a filename prefix",
     )
     parser.add_argument_dst_path(
         "--agp_output_file",
