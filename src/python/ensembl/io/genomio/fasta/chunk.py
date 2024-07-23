@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 import logging
-import os
+from pathlib import Path
 import re
 from typing import Optional
 
@@ -39,7 +39,7 @@ def split_seq_by_n(seq: str, split_pattern: re.Pattern) -> list:
     """Split a string into chunks at the positions where the
     pattern is found.
 
-    The end point of wach chunk will correspond to the end
+    The end point of each chunk will correspond to the end
     of the matching part.
 
     Args:
@@ -97,6 +97,7 @@ def main():
         "--individual_out_dir",
         required=False,
         default=None,
+        type=Path,
         help="Output directory for writing files with individual chunks to. \
         If provided,`--out` value used as a filename prefix",
     )
@@ -106,7 +107,6 @@ def main():
         required=False,
         help="AGP file with chunks to contigs mapping.",
     )
-    # meta_defaults
     parser.add_argument(
         "--chunk_size",
         metavar="100_000_000",
@@ -168,9 +168,9 @@ def main():
     file_prefix = ""
     if args.individual_out_dir:
         if not args.out:
-            args.out = os.path.basename(args.fasta_dna)
-        os.makedirs(args.individual_out_dir, exist_ok=True)
-        file_prefix = os.path.join(args.individual_out_dir, args.out)
+            args.out = args.fasta_dna
+        args.individual_out_dir.mkdir(parents=True, exist_ok=True)
+        file_prefix = Path(args.individual_out_dir, args.out)
 
     # process input fasta
     fasta_file = args.fasta_dna
