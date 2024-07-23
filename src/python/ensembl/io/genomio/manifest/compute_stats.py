@@ -14,6 +14,12 @@
 # limitations under the License.
 """Compute stats from the current genome files associated with the manifest."""
 
+__all__ = [
+    "BiotypeCounter",
+    "manifest_stats",
+    "StatsError",
+]
+
 import json
 from os import PathLike
 from pathlib import Path
@@ -374,10 +380,10 @@ class manifest_stats:
         for count_map in maps:
             ncbi_name, prep_name = count_map
             ncbi_count = ncbi.get(ncbi_name, 0)
-            preped: Optional[BiotypeCounter] = biotypes.get(prep_name)
+            prepped: Optional[BiotypeCounter] = biotypes.get(prep_name)
             prep_count = 0
-            if preped is not None:
-                prep_count = preped.count
+            if prepped is not None:
+                prep_count = prepped.count
 
             if prep_count != ncbi_count:
                 diff = prep_count - ncbi_count

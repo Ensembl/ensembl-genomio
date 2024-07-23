@@ -21,7 +21,6 @@ __all__ = [
     "get_seq_regions",
     "add_attribs",
     "get_synonyms",
-    "get_attribs",
     "get_karyotype",
 ]
 
@@ -203,7 +202,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
     return syns
 
 
-def get_attribs(seq_region: SeqRegion) -> List:
+def _get_attribs(seq_region: SeqRegion) -> List:
     """Given a seq_region, extract the attribs as value-source items.
 
     Args:
@@ -231,7 +230,7 @@ def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
         Pairs of source and value for each attribute.
     """
 
-    attribs = get_attribs(seq_region)
+    attribs = _get_attribs(seq_region)
     attrib_dict = {attrib["source"]: attrib["value"] for attrib in attribs}
     return attrib_dict
 

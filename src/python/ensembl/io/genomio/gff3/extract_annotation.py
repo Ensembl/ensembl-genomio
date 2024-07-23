@@ -132,7 +132,7 @@ class FunctionalAnnotations:
         parent_id: Optional[str] = None,
         all_parent_ids: Optional[List[str]] = None,
     ) -> None:
-        """Add annotation for a feature of a given type. If a parent_id is provided, record the relatioship.
+        """Add annotation for a feature of a given type. If a parent_id is provided, record the relationship.
 
         Args:
             feature: The feature to create an annotation.

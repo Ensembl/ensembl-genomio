@@ -83,7 +83,7 @@ def test_product_is_informative(description: str, feature_id: Optional[List[str]
 )
 @pytest.mark.dependency(name="add_feature")
 def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManager) -> None:
-    """Tests the `FunctionaAnnotation.add_feature()` method with only one feature.
+    """Tests the `FunctionalAnnotation.add_feature()` method with only one feature.
 
     Args:
         seq_feat_type: Type for the sequence feature to add.
@@ -106,7 +106,7 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
     ],
 )
 def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[str]) -> None:
-    """Tests the `FunctionaAnnotations.add_feature()` method with a feature name."""
+    """Tests the `FunctionalAnnotations.add_feature()` method with a feature name."""
     annot = FunctionalAnnotations()
 
     seq_feat_type = "gene"
@@ -128,7 +128,7 @@ def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[
 )
 @pytest.mark.dependency(name="add_parent_link", depends=["add_feature"])
 def test_add_parent_link(parent_type: str, parent_id: str, child_id: str, expected: ContextManager) -> None:
-    """Tests the `FunctionaAnnotation.add_parent_link()` method.
+    """Tests the `FunctionalAnnotation.add_parent_link()` method.
 
     Add a parent feature, and then add a parent link.
 
@@ -164,7 +164,7 @@ def test_get_parent(
     out_child_id: str,
     expected: ContextManager,
 ) -> None:
-    """Tests the `FunctionaAnnotation.get_parent()` method.
+    """Tests the `FunctionalAnnotation.get_parent()` method.
 
     Args:
         in_parent_type: Type for the parent sequence feature.
@@ -202,7 +202,7 @@ def test_get_parent(
 def test_add_feature_fail(
     child_type: str, child_id: str, out_parent_id: Optional[str], expected: ContextManager
 ) -> None:
-    """Tests the `FunctionaAnnotation.add_feature()` method failures.
+    """Tests the `FunctionalAnnotation.add_feature()` method failures.
 
     Test the addition of a child feature after a parent has already been added.
 
@@ -270,7 +270,7 @@ def test_add_feature_fail(
 def test_get_xrefs(
     in_id: str, in_xrefs: Optional[List[str]], provider_name: str, expected_xrefs: List[Dict[str, str]]
 ) -> None:
-    """Tests the `FunctionaAnnotation.get_xrefs()` method."""
+    """Tests the `FunctionalAnnotation.get_xrefs()` method."""
     annot = FunctionalAnnotations(provider_name=provider_name)
     one_gene = GFFSeqFeature(type="gene", id=in_id)
     if in_xrefs is not None:
@@ -291,7 +291,7 @@ def test_get_xrefs(
 )
 @pytest.mark.dependency(name="get_features", depends=["add_feature_fail"])
 def test_get_features(feat_type: str, expected_number: int, expected: ContextManager) -> None:
-    """Tests the `FunctionaAnnotation.get_features()` method.
+    """Tests the `FunctionalAnnotation.get_features()` method.
 
     Load 2 features, then test the fetching of those features.
 
@@ -325,7 +325,7 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
             None,
             "Foobar",
             "Foobar, transcript variant X1",
-            id="transcr with variant",
+            id="transcript with variant",
         ),
         param(None, "Foobar", "Lorem", "Foobar", "Foobar", id="Transfer from transc, transl also set"),
         param("Hypothetical gene", "Predicted function", "Foobar", "Foobar", "Foobar", id="Non informative"),
@@ -340,7 +340,7 @@ def test_transfer_descriptions(
     out_gene_desc: Optional[str],
     out_transc_desc: Optional[str],
 ) -> None:
-    """Tests the `FunctionaAnnotation.transfer_descriptions()` method.
+    """Tests the `FunctionalAnnotation.transfer_descriptions()` method.
 
     Load 3 features (gene, transcript, translation) with or without a description for each one.
 
@@ -348,8 +348,8 @@ def test_transfer_descriptions(
         gene_desc: Description for the gene.
         transc_desc: Description for the transcript.
         transl_desc: Description for the translation.
-        out_gene_desc: Excpected description for the gene after transfer.
-        out_transc_desc: Excpected description for the transcript after transfer.
+        out_gene_desc: Expected description for the gene after transfer.
+        out_transc_desc: Expected description for the transcript after transfer.
 
     """
     annot = FunctionalAnnotations()
@@ -370,9 +370,9 @@ def test_transfer_descriptions(
 
     annot.transfer_descriptions()
     genes = annot.get_features("gene")
-    transcs = annot.get_features("transcript")
+    transcripts = annot.get_features("transcript")
     assert genes[gene_name].get("description") == out_gene_desc
-    assert transcs[transcript_name].get("description") == out_transc_desc
+    assert transcripts[transcript_name].get("description") == out_transc_desc
 
 
 @pytest.mark.dependency(depends=["add_feature"])

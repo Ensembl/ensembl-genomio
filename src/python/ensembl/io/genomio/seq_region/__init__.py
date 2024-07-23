@@ -16,3 +16,4 @@
 
 from .dump import *
 from .prepare import *
+from .rename import *
