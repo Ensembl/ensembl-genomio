@@ -69,3 +69,20 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
     maker = ManifestMaker(tmp_path)
     test_files = maker.get_files_checksums()
     assert test_files == expected_content
+
+def test_get_files_checksum_multifiles(tmp_path: Path) -> None:
+    """Tests the `ManifestMaker.get_files_checksum()` method with several files for the same name.
+
+    Args:
+        tmp_path: Test tmp dir.
+
+    """
+    expected_content = {}
+    files = ["link1.agp", "link2.agp"]
+    for file_name in files:
+        with Path(tmp_path / file_name).open("w") as fh:
+            fh.write("CONTENT")
+    expected_content = {"agp": [{"file": "link1.agp", "md5sum": _CONTENT_MD5}, {"file": "link2.agp", "md5sum": _CONTENT_MD5}]}
+    maker = ManifestMaker(tmp_path)
+    test_files = maker.get_files_checksums()
+    assert test_files == expected_content
