@@ -14,13 +14,14 @@
 // limitations under the License.
 
 
-process DUMP_NCBI_STATS {
+process DOWNLOAD_ASM_SUMMARY {
     tag "${db.species}"
     label 'local'
     label 'cached'
+    label 'datasets_container'
 
     input:
-        val db
+        tuple val(db), path(asm_accession_meta, stageAs:"accession_meta.json")
 
     output:
         tuple val(db), path("ncbi_stats.json")
@@ -29,34 +30,16 @@ process DUMP_NCBI_STATS {
         output = "ncbi_stats.json"
         password_arg = db.server.password ? "--password $db.server.password" : ""
         '''
-        function get_meta_value {
-            meta_key=$1
+        accession=$(jq -r '.Accession' !{asm_accession_meta})
 
-            mysql \
-                --host="!{db.server.host}" \
-                --port="!{db.server.port}" \
-                --user="!{db.server.user}" \
-                !{password_arg} \
-                --database="!{db.server.database}" \
-                -N -e "SELECT meta_value FROM meta WHERE meta_key='$meta_key'"
-        }
-
-        touch !{output}
-        # Get the INSDC accession to use
-        accession=$(get_meta_value "assembly.accession")
-        provider=$(get_meta_value "assembly.provider_url" | sed -r 's%^.+/%%g')
-        if [ $provider == "refseq" ]; then
-            accession=$(echo $accession | sed 's/^GCA_/GCF_/')
-        fi
-        echo "Provider is $provider"
-        echo "Accession is $accession"
+        echo "Calling datasets-cli.... datasets 'summary' 'genome' 'accession' [${accession}]'"
 
         datasets summary genome accession $accession | jq '.' > !{output}
 
         # Check if it should maybe be using RefSeq?           
         if [ "$(jq '.total_count' !{output})" == "0" ]; then
             accession=$(echo $accession | sed 's/^GCA_/GCF_/')
-            echo "Trying again with accession $accession"
+            echo "Trying again with RefSeq accession: $accession"
             datasets summary genome accession $accession | jq '.' > !{output}
         fi
         '''
