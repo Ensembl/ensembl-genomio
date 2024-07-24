@@ -24,8 +24,8 @@ include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
 include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_meta.nf'
 include { DUMP_GENOME_STATS } from '../../modules/genome_stats/dump_genome_stats.nf'
 include { COMPARE_GENOME_STATS } from '../../modules/genome_stats/compare_genome_stats.nf'
-include { DUMP_NCBI_STATS } from '../../modules/genome_metadata/dump_ncbi_stats.nf'
-
+include { CORE_TO_ASM_META } from '../../modules/genome_metadata/core_to_asm_meta.nf'
+include { DOWNLOAD_ASM_SUMMARY } from '../../modules/download/download_asm_summary.nf'
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output_dump.nf'
@@ -99,7 +99,8 @@ workflow DUMP_FILES {
         // Genome stats
         if ("stats" in selection) {
             genome_stats = DUMP_GENOME_STATS(db)
-            ncbi_stats = DUMP_NCBI_STATS(db)
+            assembly_acc_meta = CORE_TO_ASM_META(db)
+            ncbi_stats = DOWNLOAD_ASM_SUMMARY(assembly_acc_meta)
             stats = ncbi_stats.join(genome_stats)
             stats_files = COMPARE_GENOME_STATS(stats).transpose()
             db_files = db_files.mix(stats_files)
