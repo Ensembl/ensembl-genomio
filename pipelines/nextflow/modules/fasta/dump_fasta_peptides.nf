@@ -16,6 +16,7 @@
 process DUMP_FASTA_PEPTIDES {
     tag "${db.species}"
     label "variable_2_8_32"
+    label "ensembl_scripts_container"
     maxForks params.max_database_forks
 
     input:
@@ -26,17 +27,14 @@ process DUMP_FASTA_PEPTIDES {
 
     script:
         output = "${db.species}_fasta_pep.fasta"
+        password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        perl ${params.ensembl_root_dir}/ensembl-analysis/scripts/protein/dump_translations.pl \
-            -host ${db.server.host} \
-            -port ${db.server.port} \
-            -user ${db.server.user} \
-            -dbname ${db.server.database} \
-            -dnadbhost ${db.server.host} \
-            -dnadbport ${db.server.port} \
-            -dnadbuser ${db.server.user} \
-            -dnadbname ${db.server.database} \
-            -file $output
+        dump_fasta_peptide.pl \
+            --host $db.server.host \
+            --port $db.server.port \
+            --user $db.server.user \
+            $password_arg \
+            --dbname $db.server.database > $output
         """
     
     stub:

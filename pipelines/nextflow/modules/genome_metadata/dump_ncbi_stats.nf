@@ -27,12 +27,17 @@ process DUMP_NCBI_STATS {
 
     shell:
         output = "ncbi_stats.json"
+        password_arg = db.server.password ? "--password $db.server.password" : ""
         '''
         function get_meta_value {
             meta_key=$1
 
-            mysql --host="!{db.server.host}" --port="!{db.server.port}" --user="!{db.server.user}" \
-                --password="!{db.server.password}" --database="!{db.server.database}" \
+            mysql \
+                --host="!{db.server.host}" \
+                --port="!{db.server.port}" \
+                --user="!{db.server.user}" \
+                !{password_arg} \
+                --database="!{db.server.database}" \
                 -N -e "SELECT meta_value FROM meta WHERE meta_key='$meta_key'"
         }
 

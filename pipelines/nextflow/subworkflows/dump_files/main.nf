@@ -14,9 +14,12 @@
 // limitations under the License.
 
 include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
+include { DUMP_AGP } from '../../modules/seq_region/dump_agp.nf'
+include { DUMP_SEQ_ATTRIB } from '../../modules/seq_region/dump_seq_attrib.nf'
 include { DUMP_FASTA_DNA } from '../../modules/fasta/dump_fasta_dna.nf'
 include { DUMP_FASTA_PEPTIDES } from '../../modules/fasta/dump_fasta_peptides.nf'
-// include { DUMP_GFF3 } from '../../modules/gff3/dump_gff3.nf'
+include { DUMP_GFF3 } from '../../modules/gff3/dump_gff3.nf'
+include { DUMP_ANNOTATION } from '../../modules/annotation/dump_annotation.nf'
 include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
 include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_meta.nf'
 include { DUMP_GENOME_STATS } from '../../modules/genome_stats/dump_genome_stats.nf'
@@ -42,37 +45,55 @@ workflow DUMP_FILES {
         // Seq regions
         if ("seq_regions" in selection) {
             seq_regions = DUMP_SEQ_REGIONS(db)
-            db_files = db_files.concat(seq_regions)
+            db_files = db_files.mix(seq_regions)
+        }
+
+        // AGP
+        if ("agp" in selection) {
+            agps = DUMP_AGP(db)
+            db_files = db_files.mix(agps)
+        }
+
+        // Seq region attribs
+        if ("seq_attrib" in selection) {
+            seq_attrib = DUMP_SEQ_ATTRIB(db)
+            db_files = db_files.mix(seq_attrib)
         }
 
         // Dump DNA sequences
         if ("fasta_dna" in selection) {
             fasta_dna = DUMP_FASTA_DNA(db)
-            db_files = db_files.concat(fasta_dna)
+            db_files = db_files.mix(fasta_dna)
         }
 
         // Dump protein sequences
         if ("fasta_pep" in selection) {
             fasta_pep = DUMP_FASTA_PEPTIDES(db)
-            db_files = db_files.concat(fasta_pep)
+            db_files = db_files.mix(fasta_pep)
         }
 
         // Dump gene models
-        // if ("gff3" in selection) {
-            // gff3 = DUMP_GFF3(db)
-            // db_files = db_files.concat(gff3)
-        // }
+        if ("gff3" in selection) {
+            gff3 = DUMP_GFF3(db)
+            db_files = db_files.mix(gff3)
+        }
+
+        // Dump functional annotations
+        if ("annotation" in selection) {
+            annotation = DUMP_ANNOTATION(db)
+            db_files = db_files.mix(annotation)
+        }
         
         // Events
         if ("events" in selection) {
             events = DUMP_EVENTS(db)
-            db_files = db_files.concat(events)
+            db_files = db_files.mix(events)
         }
 
         // Genome metadata
         if ("genome_metadata" in selection) {
             genome_meta = DUMP_GENOME_META(db)
-            db_files = db_files.concat(genome_meta)
+            db_files = db_files.mix(genome_meta)
         }
 
         // Genome stats
@@ -81,7 +102,7 @@ workflow DUMP_FILES {
             ncbi_stats = DUMP_NCBI_STATS(db)
             stats = ncbi_stats.join(genome_stats)
             stats_files = COMPARE_GENOME_STATS(stats).transpose()
-            db_files = db_files.concat(stats_files)
+            db_files = db_files.mix(stats_files)
         }
 
         // Group the files by db species (use the db object as key)
@@ -89,6 +110,8 @@ workflow DUMP_FILES {
         db_files = db_files
             .map{ db, name, file_name -> tuple(db, file_name) }
             .groupTuple(size: selection_number)
+            // Flatten in case we get lists of files (e.g. from AGP)
+            .map{ db, files -> tuple(db, files.flatten()) }
 
         // Collect, create manifest, and publish
         manifested_dir = MANIFEST(db_files)

@@ -28,6 +28,7 @@ process DB_FACTORY {
         output_file = "dbs.json"
         brc_mode = params.brc_mode ? '--brc_mode' : ''
         dbname_re = filter_map.dbname_re ? "--db_regex $filter_map.dbname_re" : ''
+        password_arg = server.password ? "--password $server.password" : ""
 
         // Prepare db_list to write in a file
         db_list = ""
@@ -43,7 +44,7 @@ process DB_FACTORY {
         database_factory --host '${server.host}' \
             --port '${server.port}' \
             --user '${server.user}' \
-            --password '${server.password}' \
+            $password_arg \
             --prefix '${filter_map.prefix}' \
             $brc_mode \
             $dbname_re \

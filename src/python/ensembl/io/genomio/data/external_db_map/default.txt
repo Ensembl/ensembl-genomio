@@ -1,0 +1,240 @@
+# rules of the form (FROM is case insensitive, tab-separated):
+#  FROM _IGNORE_ feature_type [pattern]   # ignore for the specific feature type; if pattern present,  checks that xref ID matches
+#  FROM TO feature_type [pattern]   # converts to "TO" for the specific feature type; if pattern present,  checks that xref ID matches
+#  FROM _IGNORE_ # ignore any type, unless valid for a specific  type
+#  FROM	TO  # for any feature type, if not ignored
+#
+#  if no FROM mentioned and -skip_unknown_xref_source 1 option is used, xref is ignored 
+#  feature type is one of: seq_region, gene, transcript, translation
+#    N.B. - seq_region and no-feature rules do not support patterns at the moment
+#         - if exists feature rule an there's no universal valid rule, other features are treated as ignored
+
+# check parser conf
+# fixing duplicating flybase_annot_id
+# find proper display_xref_id from flybase_{gene,transcript}_id for those with flybase_annot_id
+# drop duplicating flybase_annot_id if corresponding flybase_{gene,transcript,translation}_id exist
+# drop duplicating flybase_annot_id if corresponding FlyBaseName_{gene,transcript,translation} exist
+
+# Hint: get list of xrefs from metadata/functional_annotation.json
+#  cat metadata/functional_annotation.json | grep '"dbname":' | cut -f 4 -d '"' | sort | uniq -c
+
+
+# Genes mqppings
+Ensembl_Metazoa	Ensembl_Metazoa	gene
+
+Community_Annotation	BRC4_Community_Annotation	gene
+BRC4_Community_Annotation	BRC4_Community_Annotation	gene
+
+AlphaFold_DB	AlphaFold_DB_gene	gene
+AlphaFold_DB_gene	AlphaFold_DB_gene	gene
+
+DRscDB	DRscDB	gene	gene
+
+EntrezGene	EntrezGene	gene
+
+flybase_annot_id	flybase_annot_id	gene
+flybase_annotation_id	flybase_annot_id	gene
+FlyBase	flybase_annot_id	gene
+FlyBase_Annotation_IDs	flybase_annot_id	gene
+
+flybase_gene_id	flybase_gene_id	gene
+
+FlyBaseName_gene	FlyBaseName_gene	gene
+FlyBaseName	FlyBaseName_gene	gene
+
+GenBank	GenBank	gene
+GB	GenBank	gene
+
+GeneID	GeneID	gene
+
+JGIDB	JGI_GENE	gene
+JGIDB_GENE	JGI_GENE	gene
+
+miRBase	miRBase	gene	!^MIMAT
+MIR	miRBase	gene	!^MIMAT
+
+RefSeq	RefSeq	gene
+
+RFAM	RFAM	gene
+
+APHIDBASE	APHIDBASE	gene
+BEEBASE	BEEBASE	gene
+LJMU	LJMU	gene
+NasoniaBase	NasoniaBase	gene
+I5KNAL	I5KNAL	gene
+
+UniProt/GCRP	Uniprot/GCRP_gene	gene
+Uniprot/GCRP_gene	Uniprot/GCRP_gene	gene
+
+
+# Transcript mappings
+Ensembl_Metazoa	Ensembl_Metazoa_transcript	transcript
+Ensembl_Metazoa_transcript	Ensembl_Metazoa_transcript	transcript
+
+Community_Annotation	BRC4_Community_Annotation_transcript	transcript
+BRC4_Community_Annotation	BRC4_Community_Annotation_transcript	transcript
+Community_Annotation_transcript	BRC4_Community_Annotation_transcript	transcript
+BRC4_Community_Annotation_transcript	BRC4_Community_Annotation_transcript	transcript
+
+flybase_annot_id_transcr	flybase_annot_id_transcr	transcript
+flybase_annotation_id	flybase_annot_id_transcr	transcript
+FlyBase	flybase_annot_id_transcr	transcript
+FlyBase_Annotation_IDs	flybase_annot_id_transcr	transcript
+flybase_annotation_id_transcript	flybase_annot_id_transcr	transcript
+
+flybase_transcript_id	flybase_transcript_id	transcript
+
+FlyBaseName_transcript	FlyBaseName_transcript	transcript
+FlyBaseName	FlyBaseName_transcript	transcript
+
+GenBank	GenBank_transcript	transcript
+GB	GenBank_transcript	transcript
+GenBank_transcript	GenBank_transcript	transcript
+
+JGIDB	JGI_TRANSCRIPT	transcript
+JGIDB_TRANSCRIPT	JGI_TRANSCRIPT	transcript
+
+miRBase	miRBase_trans_name	transcript	^MIMAT
+MIR	miRBase_trans_name	transcript	^MIMAT
+miRBase_trans_name	miRBase_trans_name	transcript	^MIMAT
+
+RefSeq	RefSeq_mRNA	transcript	^NM|^XM
+RefSeq_mRNA	RefSeq_mRNA	transcript	^NM|^XM
+
+RefSeq	RefSeq_ncRNA	transcript	^XR
+RefSeq_ncRNA	RefSeq_ncRNA	transcript	^XR
+
+RFAM	RFAM_trans_name	transcript
+RFAM_trans_name	RFAM_trans_name	transcript
+
+RNACentral	RNACentral	transcript
+
+LJMU	LJMU_transcript	transcript
+LJMU_transcript	LJMU_transcript	transcript
+
+
+# Translation mappings
+Ensembl_Metazoa	Ensembl_Metazoa_translation	translation
+Ensembl_Metazoa_translation	Ensembl_Metazoa_translation	translation
+
+Community_Annotation	BRC4_Community_Annotation_translation	translation
+BRC4_Community_Annotation	BRC4_Community_Annotation_translation	translation
+Community_Annotation_translation	BRC4_Community_Annotation_translation	translation
+BRC4_Community_Annotation_translation	BRC4_Community_Annotation_translation	translation
+
+AlphaFold_DB	AlphaFold_DB	translation
+
+flybase_annot_id_transl	flybase_annot_id_transl	translation
+flybase_annotation_id	flybase_annot_id_transl	translation
+FlyBase	flybase_annot_id_transl	translation
+FlyBase_Annotation_IDs	flybase_annot_id_transl	translation
+flybase_annotation_id_translation	flybase_annot_id_transl	translation
+
+flybase_translation_id	flybase_translation_id	translation
+
+FlyBaseName_translation	FlyBaseName_translation	translation
+FlyBaseName	FlyBaseName_translation	translation
+
+GenBank	GenBank_translation	translation
+GB	GenBank_translation	translation
+GenBank_translation	GenBank_translation	translation
+
+HAMAP	HAMAP	translation
+
+INTERPRO	Interpro	translation
+
+MEROPS	MEROPS	translation
+
+PDB	PDB	translation
+PFAM	PFAM	translation
+PIR	PIR	translation
+ProSite	ProSite	translation
+
+NCBI protein db	protein_id	translation
+protein_id	protein_id	translation
+GB_protein	protein_id	translation
+NCBI_GP	protein_id	translation
+GenPept	protein_id	translation
+
+RefSeq	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
+RefSeq_peptide	RefSeq_peptide	translation	^NP|^YP|^AP|^XP
+
+SMART	SMART	translation
+
+UniProt/GCRP	Uniprot/GCRP	translation
+Uniprot/GCRP	Uniprot/GCRP	translation
+
+UniProt/TrEMBL	Uniprot/SPTREMBL	translation
+Uniprot/SPTREMBL	Uniprot/SPTREMBL	translation
+UniProtKB/TrEMBL	Uniprot/SPTREMBL	translation
+UniprotKB/SPTREMBL	Uniprot/SPTREMBL	translation
+
+UniProt/Swiss-Prot	Uniprot/SWISSPROT	translation
+Uniprot/SWISSPROT	Uniprot/SWISSPROT	translation
+UniProtKB/Swiss-Prot	Uniprot/SWISSPROT	translation
+UniprotKB/SWISSPROT	Uniprot/SWISSPROT	translation
+
+Uniprot	UniProtKB_all	translation
+UniProtKB_all	UniProtKB_all	translation
+
+LJMU	LJMU_translation	translation
+
+
+# Seq regions
+ensembl_internal_synonym	ensembl_internal_synonym	seq_region
+GenBank	GenBank	seq_region
+INSDC_submitted_name	INSDC_submitted_name	seq_region
+INSDC	INSDC	seq_region
+RefSeq	RefSeq	seq_region
+
+
+# Any feature
+Community_Symbol	BRC4_Community_Symbol
+
+EPD	EPD
+
+FlyReactome	FlyReactome
+
+GenomeRNAi	GenomeRNAi
+
+SO	SO
+
+PubMed	PUBMED
+
+
+# Ignore section
+
+# Ignoring GO!!!
+GO	_IGNORE_
+!GO	_IGNORE_
+
+BDGP_clone	_IGNORE_
+Coils	_IGNORE_
+FlyAtlas	_IGNORE_
+FlyAtlas2	_IGNORE_
+Fly-FISH	_IGNORE_
+Gene3D	_IGNORE_
+GI	_IGNORE_
+GLEANR	_IGNORE_
+GNOMON	_IGNORE_
+iBeetle-Base	_IGNORE_
+JCVI_TIGRFAMS	_IGNORE_
+InParanoid	_IGNORE_
+KEGG_GENES	_IGNORE_
+MARRVEL_MODEL	_IGNORE_
+NRL_3D	_IGNORE_
+PANTHER	_IGNORE_
+PRINTS	_IGNORE_
+SignaLink	_IGNORE_
+Superfamily	_IGNORE_
+TF	_IGNORE_
+
+TIGRFAM	_IGNORE_
+# TransFac?
+
+# ignoring versioned OrthoDB, no robust search method
+OrthoDB9_1_Arthropoda	_IGNORE_
+OrthoDB9_1_Diptera	_IGNORE_
+OrthoDB9_1_Drosophila	_IGNORE_
+OrthoDB9_1_Insecta	_IGNORE_
+OrthoDB9_1_Metazoa	_IGNORE_

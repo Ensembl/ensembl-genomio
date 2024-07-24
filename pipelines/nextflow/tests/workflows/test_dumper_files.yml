@@ -33,6 +33,7 @@
   files:
     - path: ./tmp/dumper/build_60/metadata/VectorBase/aaegL5/dna.fasta
     - path: ./tmp/dumper/build_60/metadata/VectorBase/aaegL5/pep.fasta
+    - path: ./tmp/dumper/build_60/metadata/VectorBase/aaegL5/gene_models.gff3
     - path: ./tmp/dumper/build_60/metadata/VectorBase/aaegL5/core_stats.json
     - path: ./tmp/dumper/build_60/metadata/VectorBase/aaegL5/ncbi_stats.json
     - path: ./tmp/dumper/build_60/metadata/VectorBase/aaegL5/diff_stats.json

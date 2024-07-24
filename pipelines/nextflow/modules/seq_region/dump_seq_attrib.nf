@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DUMP_FASTA_DNA {
+process DUMP_SEQ_ATTRIB {
     tag "${db.species}"
     label "variable_2_8_32"
     label "ensembl_scripts_container"
@@ -23,25 +23,29 @@ process DUMP_FASTA_DNA {
         val db
 
     output:
-        tuple val(db), val("fasta_dna"), path("*.fasta")
+        tuple val(db), val("seq_attrib"), path("*.json")
 
     script:
-        output = "${db.species}_fasta_dna.fasta"
+        output = "${db.species}_seq_attrib.json"
+        schema = "seq_attrib"
         password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        dump_fasta_dna.pl \
+        # Prepare, make sure we can output something, even if empty
+        touch $output
+
+        dump_seq_region_attrib.pl \
             --host $db.server.host \
             --port $db.server.port \
             --user $db.server.user \
             $password_arg \
-            --dbname $db.server.database > $output
+            --dbname $db.server.database \
+            -v > $output
+        schemas_json_validate --json_file $output --json_schema $schema
         """
     
     stub:
-        output_file = "dna.fasta"
-        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
-        dump_file = "dumped_dna.fasta"
+        output = "${db.species}_seq_attrib.json"
         """
-        cp $dump_dir/$dump_file $output_file
+        echo "[]" > $output
         """
 }

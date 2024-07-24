@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DUMP_FASTA_DNA {
+process DUMP_AGP {
     tag "${db.species}"
     label "variable_2_8_32"
     label "ensembl_scripts_container"
@@ -23,25 +23,29 @@ process DUMP_FASTA_DNA {
         val db
 
     output:
-        tuple val(db), val("fasta_dna"), path("*.fasta")
+        tuple val(db), val("agp"), path("*.agp")
 
     script:
-        output = "${db.species}_fasta_dna.fasta"
         password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        dump_fasta_dna.pl \
+        dump_agp.pl \
             --host $db.server.host \
             --port $db.server.port \
             --user $db.server.user \
             $password_arg \
-            --dbname $db.server.database > $output
+            --dbname $db.server.database \
+            -v \
+            --output_dir ./
+        
+        nfiles=\$(ls -1 *.agp | wc -l)
+        if [ "\$nfiles" -eq "0" ]; then
+            touch empty.agp
+        fi
         """
     
     stub:
-        output_file = "dna.fasta"
-        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
-        dump_file = "dumped_dna.fasta"
+        output = "seq.agp"
         """
-        cp $dump_dir/$dump_file $output_file
+        touch $output
         """
 }
