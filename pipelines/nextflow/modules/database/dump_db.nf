@@ -14,9 +14,9 @@
 // limitations under the License.
 
 process DUMP_DB {
-    publishDir "$out_dir/build_$db.release/coredb/$db.division", mode: 'copy'
     tag "$db.species"
     label "variable_2_8_32"
+    publishDir "$out_dir/$release_dir/coredb/$db.division", mode: 'copy'
     maxForks params.max_database_forks
 
     input:
@@ -26,21 +26,28 @@ process DUMP_DB {
     output:
         path "*.sql.gz"
 
-    script:
+    shell:
         output_file = "${db.species}.sql.gz"
-        """
-        db_pass=""
-        if [ "${db.server.password}" != "" ]; then
-            db_pass="--password '${db.server.password}'"
-        fi
 
-        mysqldump '${db.server.database}' \
-            --host '${db.server.host}' \
-            --port '${db.server.port}' \
-            --user '${db.server.user}' \
-            \$db_pass \
-            | gzip > $output_file
-        """
+        // check if the core DB had an expected release version or not (internal/unformatted db name)
+        if ( "${db.release}".isEmpty() ) {
+            release_dir = "unreleased"
+        }
+        else{
+            release_dir = "build_".${db.release}
+        }
+
+        // formatted_db_pass = validate_db_password(${db.server.password})
+        db_pass = db.server.password ? "--password $db.server.password" : ""
+
+        '''
+        mysqldump '!{db.server.database}' \
+            --host '!{db.server.host}' \
+            --port '!{db.server.port}' \
+            --user '!{db.server.user}' \
+            !{db_pass} \
+            | gzip > !{output_file}
+        '''
     
     stub:
         output_file = "${db.species}.sql.gz"
