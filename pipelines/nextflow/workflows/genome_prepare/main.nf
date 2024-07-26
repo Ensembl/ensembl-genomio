@@ -70,7 +70,7 @@ workflow {
     ch_genome_json = Channel.fromPath("${params.input_dir}/*.json", checkIfExists: true)
     accession_meta = ACCESSION_METADATA(ch_genome_json)
     accession_val = accession_meta.map{ accession, meta_file -> accession }
-    dataset_report = DATASETS_METADATA(accession_val)
+    dataset_report = DOWNLOAD_GENOME_META_FROM_ACC(accession_val)
     PREPARE_GENOME_METADATA(accession_meta.join(dataset_report))
 
     PREPARE_GENOME_METADATA.out.genomic_dataset
