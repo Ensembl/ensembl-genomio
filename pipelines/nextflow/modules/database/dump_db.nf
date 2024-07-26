@@ -34,7 +34,7 @@ process DUMP_DB {
             release_dir = "unreleased"
         }
         else{
-            release_dir = "build_".${db.release}
+            release_dir = "build_${db.release}"
         }
 
         // formatted_db_pass = validate_db_password(${db.server.password})
