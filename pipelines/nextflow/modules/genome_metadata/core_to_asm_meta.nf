@@ -17,16 +17,14 @@
 process CORE_TO_ASM_META {
     tag "${db.species}"
     label 'local'
-    label 'cached'
 
     input:
         val db
 
     output:
-        tuple val(db), path("accession_meta.json")
+        tuple val(db), env(accession)
 
     shell:
-        output = "accession_meta.json"
         password_arg = db.server.password ? "--password $db.server.password" : ""
         '''
         function get_meta_value {
@@ -41,7 +39,6 @@ process CORE_TO_ASM_META {
                 -N -e "SELECT meta_value FROM meta WHERE meta_key='$meta_key'"
         }
 
-        touch !{output}
         # Get the INSDC accession to use
         accession=$(get_meta_value "assembly.accession")
         provider=$(get_meta_value "assembly.provider_url" | sed -r 's%^.+/%%g')
@@ -49,15 +46,13 @@ process CORE_TO_ASM_META {
             accession=$(echo $accession | sed 's/^GCA_/GCF_/')
         fi
 
-        echo -e -n "Provider is $provider\nAccession is $accession"
-        echo "{@Prodvider@: @$provider@,@Accession@: @$accession@}" | sed 's/@/"/g' > !{output}        
+        echo -e -n "Provider is $provider\nAccession is $accession\n"
         '''
+
     
     stub:
-        output_file = "accession_meta.tsv"
-        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
-        dump_file = "dumped_core_accn_meta.json"
         """
-        cp $dump_dir/$dump_file $output_file
+        accession="GCA_015245375.1"
+        echo -e -n "Provider is The University of Georgia\nAccession is GCA_015245375.1\n"
         """
 }

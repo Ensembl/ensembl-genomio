@@ -25,7 +25,7 @@ include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_met
 include { DUMP_GENOME_STATS } from '../../modules/genome_stats/dump_genome_stats.nf'
 include { COMPARE_GENOME_STATS } from '../../modules/genome_stats/compare_genome_stats.nf'
 include { CORE_TO_ASM_META } from '../../modules/genome_metadata/core_to_asm_meta.nf'
-include { DOWNLOAD_ASM_SUMMARY } from '../../modules/download/download_asm_summary.nf'
+include { DOWNLOAD_GENOME_META_FROM_DB } from '../../modules/download/datasets_genome_meta_from_db.nf'
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output_dump.nf'
