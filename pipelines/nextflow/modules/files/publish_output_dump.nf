@@ -34,7 +34,7 @@ process PUBLISH_DIR {
             release_dir = "unreleased"
         }
         else{
-            release_dir = "build_".${db.release}
+            release_dir = "build_${db.release}"
         }
 
         """
