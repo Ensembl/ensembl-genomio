@@ -100,7 +100,7 @@ workflow DUMP_FILES {
         if ("stats" in selection) {
             genome_stats = DUMP_GENOME_STATS(db)
             assembly_acc_meta = CORE_TO_ASM_META(db)
-            ncbi_stats = DOWNLOAD_ASM_SUMMARY(assembly_acc_meta)
+            ncbi_stats = DOWNLOAD_GENOME_META_FROM_DB(assembly_acc_meta)
             stats = ncbi_stats.join(genome_stats)
             stats_files = COMPARE_GENOME_STATS(stats).transpose()
             db_files = db_files.mix(stats_files)
