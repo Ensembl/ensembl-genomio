@@ -32,7 +32,7 @@ if (params.brc_mode) {
 include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/main.nf'
 // Import module
 include { PREPARE_GENOME_METADATA } from '../../modules/genome_metadata/prepare_genome_metadata.nf'
-include { DATASETS_METADATA } from '../../modules/genome_metadata/datasets_metadata.nf'
+include { DOWNLOAD_GENOME_META_FROM_ACC } from '../../modules/download/datasets_genome_meta_from_acc.nf'
 include { ACCESSION_METADATA } from '../../modules/genome_metadata/accession_metadata.nf'
 // Utilities
 include { read_json } from '../../modules/utils/utils.nf'
