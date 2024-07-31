@@ -26,7 +26,6 @@ include { DUMP_SEQ_ATTRIB } from '../../modules/seq_region/dump_seq_attrib.nf'
 include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { COMPARE_GENOME_STATS } from '../../modules/genome_stats/compare_genome_stats.nf'
-include { CORE_TO_ASM_META } from '../../modules/genome_metadata/core_to_asm_meta.nf'
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output_dump.nf'
 
