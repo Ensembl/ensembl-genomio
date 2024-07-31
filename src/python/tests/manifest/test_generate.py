@@ -73,11 +73,11 @@ def test_get_files_checksum_multifiles(tmp_path: Path) -> None:
         with Path(tmp_path / file_name).open("w") as fh:
             fh.write("CONTENT")
     expected_content = {
-        "agp": [
-            {"file": "link1.agp", "md5sum": _CONTENT_MD5},
-            {"file": "link2.agp", "md5sum": _CONTENT_MD5},
-            {"file": "link3.agp", "md5sum": _CONTENT_MD5},
-        ]
+        "agp": {
+            "link1": {"file": "link1.agp", "md5sum": _CONTENT_MD5},
+            "link2": {"file": "link2.agp", "md5sum": _CONTENT_MD5},
+            "link3": {"file": "link3.agp", "md5sum": _CONTENT_MD5},
+        }
     }
     maker = ManifestMaker(tmp_path)
     test_files = maker.get_files_checksums()
