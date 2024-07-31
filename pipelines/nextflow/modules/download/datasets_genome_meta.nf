@@ -21,7 +21,7 @@ process DOWNLOAD_GENOME_META {
     label 'datasets_container'
 
     input:
-        val(meta)
+        val(meta)   // with keys [ id, accession ]
 
     output:
         tuple val(meta), path("ncbi_stats.json")
