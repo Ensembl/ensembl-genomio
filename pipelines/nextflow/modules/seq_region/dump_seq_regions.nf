@@ -27,11 +27,12 @@ process DUMP_SEQ_REGIONS {
     script:
         output = "${db.species}_seq_region.json"
         schema = "seq_region"
+        password_arg = db.server.password ? "--password $db.server.password" : ""
         """
         seq_region_dump --host '$db.server.host' \
             --port '$db.server.port' \
             --user '$db.server.user' \
-            --password '$db.server.password' \
+            $password_arg \
             --database '$db.server.database' \
             > $output
         schemas_json_validate --json_file $output --json_schema $schema

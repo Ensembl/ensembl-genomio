@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DUMP_FASTA_DNA {
+process DUMP_ANNOTATION {
     tag "${db.species}"
     label "variable_2_8_32"
     label "ensembl_scripts_container"
@@ -23,25 +23,25 @@ process DUMP_FASTA_DNA {
         val db
 
     output:
-        tuple val(db), val("fasta_dna"), path("*.fasta")
+        tuple val(db), val("functional_annotation"), path("*.json")
 
     script:
-        output = "${db.species}_fasta_dna.fasta"
+        output = "${db.species}_functional_annotation.json"
+        schema = "functional_annotation"
         password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        dump_fasta_dna.pl \
+        dump_functional_annotation.pl \
             --host $db.server.host \
             --port $db.server.port \
             --user $db.server.user \
             $password_arg \
             --dbname $db.server.database > $output
+        schemas_json_validate --json_file $output --json_schema $schema
         """
     
     stub:
-        output_file = "dna.fasta"
-        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
-        dump_file = "dumped_dna.fasta"
+        output = "functional_annotation.json"
         """
-        cp $dump_dir/$dump_file $output_file
+        echo "[]" > $output
         """
 }

@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DATASETS_METADATA {
+process DOWNLOAD_GENOME_META_FROM_ACC {
     tag "$accession"
     label 'local'
     label 'cached'
+    label 'datasets_container'
 
     input:
         val(accession)
@@ -25,14 +26,24 @@ process DATASETS_METADATA {
         tuple val(accession), path("ncbi_meta.json")
         
     shell:
+        output = "ncbi_meta.json"
         '''
-        datasets summary genome accession !{accession} > ncbi_meta.json
+        echo "Calling datasets-cli.... datasets 'summary' 'genome' 'accession' [!{accession}]'"
+
+        # Pipe datasets to jq instead of '--as-json-lines' to 
+        # obtain a total_count of reports returned.
+        datasets summary genome accession !{accession} | jq '.' > !{output}
+
         if [ "$?" -ne 0 ]; then
             echo "Invalid or unsupported assembly accession: !{accession}"
             exit 1
-        elif [[ $(jq -r '.total_count' ncbi_meta.json) -eq 0 ]]; then
-            echo "No metadata returned for !{accession}"
-            exit 1
+        fi
+
+        # Check if it should maybe be using RefSeq?           
+        if [[ $(jq '.total_count' !{output}) -eq 0 ]] && [[ !{accession} =~ "GCA_" ]]; then
+            accession=$(echo !{accession} | sed 's/^GCA_/GCF_/')
+            echo "Trying again with RefSeq accession: $accession"
+            datasets summary genome accession !{accession} | jq '.' > !{output}
         fi
         '''
     

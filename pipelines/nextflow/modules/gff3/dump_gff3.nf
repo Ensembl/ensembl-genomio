@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DUMP_FASTA_DNA {
+process DUMP_GFF3 {
     tag "${db.species}"
     label "variable_2_8_32"
     label "ensembl_scripts_container"
@@ -23,25 +23,29 @@ process DUMP_FASTA_DNA {
         val db
 
     output:
-        tuple val(db), val("fasta_dna"), path("*.fasta")
+        tuple val(db), val("gff3"), path("*.gff3")
 
     script:
-        output = "${db.species}_fasta_dna.fasta"
+        output = "${db.species}.gff3"
+        temp_gff = "temp.gff3"
         password_arg = db.server.password ? "--pass ${db.server.password}" : ""
         """
-        dump_fasta_dna.pl \
+        dump_gff3.pl \
             --host $db.server.host \
             --port $db.server.port \
             --user $db.server.user \
             $password_arg \
-            --dbname $db.server.database > $output
+            --dbname $db.server.database > $temp_gff
+
+        # Tidy up
+        gt gff3 -tidy -sort -retainids $temp_gff > $output
+        gt gff3validator $output
+        rm $temp_gff
         """
     
     stub:
-        output_file = "dna.fasta"
-        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
-        dump_file = "dumped_dna.fasta"
+        output = "gene_models.gff3"
         """
-        cp $dump_dir/$dump_file $output_file
+        echo "##gff-version 3\n" > $output
         """
 }

@@ -26,11 +26,12 @@ process DUMP_GENOME_STATS {
         tuple val(db), path("core_stats.json")
 
     script:
+        password_arg = db.server.password ? "--password $db.server.password" : ""
         """
         genome_stats_dump --host '${db.server.host}' \
             --port '${db.server.port}' \
             --user '${db.server.user}' \
-            --password '${db.server.password}' \
+            $password_arg \
             --database '${db.server.database}' \
             > core_stats.json
         """

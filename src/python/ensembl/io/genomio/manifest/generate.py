@@ -46,6 +46,7 @@ class ManifestMaker:
     }
     names = {name: name for name in same_names}
     names = {**names, **alias_names}
+    multi_files = {"agp"}
 
     def __init__(self, manifest_dir: Path) -> None:
         self.dir = manifest_dir
@@ -62,6 +63,7 @@ class ManifestMaker:
         """Compute the checksum of all the files in the directory."""
         manifest_files = {}
         for subfile in self.dir.iterdir():
+            logging.debug(f"Check file {subfile} ({subfile.stem}, {subfile.suffix})")
             used_file = False
             if subfile.is_dir():
                 logging.warning("Can't create manifest for subdirectory")
@@ -74,28 +76,50 @@ class ManifestMaker:
                 continue
 
             for name, standard_name in self.names.items():
+                # Either the last element of the stem or the suffix is a known name
                 if subfile.stem.endswith(name) or subfile.suffix == f".{name}":
+                    logging.debug(f"Matched to {name} ({standard_name}) = {subfile}")
                     used_file = True
                     md5 = self._get_md5sum(subfile)
                     file_obj = {"file": subfile.name, "md5sum": md5}
-                    if standard_name in manifest_files:
-                        if isinstance(manifest_files[standard_name], list):
-                            manifest_files[standard_name].append(file_obj)
-                        else:
-                            # Convert to a list
-                            manifest_files[standard_name] = [manifest_files[standard_name], file_obj]
-                        manifest_files[standard_name] = sorted(
-                            manifest_files[standard_name], key=lambda x: x["file"]
-                        )
 
+                    # Multiple files stored, each with a name
+                    if standard_name in self.multi_files:
+                        manifest_files.setdefault(standard_name, {})
+                        obj_name = self._prepare_object_name(subfile, name, manifest_files[standard_name])
+                        manifest_files[standard_name][obj_name] = file_obj
+
+                    # Single file/init
                     else:
                         manifest_files[standard_name] = file_obj
-                    break
 
             if not used_file:
                 logging.warning(f"File {subfile} was not included in the manifest")
 
         return manifest_files
+
+    def _prepare_object_name(self, subfile: Path, name: str, manifest_dict: dict) -> str:
+        # Prepare object name
+        obj_name = "file"
+        try:
+            # If we recognize the suffix, then the name is the part after the last "_"
+            if subfile.suffix == f".{name}":
+                obj_name = subfile.stem.split(sep="_")[-1]
+            # If we recognize the end of the name, then the name is the part before the last "_"
+            else:
+                obj_name = subfile.stem.split(sep="_")[-2]
+        except IndexError:
+            pass
+
+        # Add number if duplicate name
+        obj_name_base = obj_name
+        count = 1
+        while obj_name in manifest_dict:
+            obj_name = f"{obj_name_base}.{count}"
+            count += 1
+            if count >= 10:
+                raise ValueError(f"Too many files with same name {obj_name_base}")
+        return obj_name
 
     @staticmethod
     def _get_md5sum(file_path: Path) -> str:

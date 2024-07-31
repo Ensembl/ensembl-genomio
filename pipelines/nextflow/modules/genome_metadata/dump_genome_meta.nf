@@ -28,11 +28,12 @@ process DUMP_GENOME_META {
     script:
         output = "${db.species}_genome.json"
         schema = "genome"
+        password_arg = db.server.password ? "--password $db.server.password" : ""
         """
         genome_metadata_dump --host '$db.server.host' \
             --port '$db.server.port' \
             --user '$db.server.user' \
-            --password '$db.server.password' \
+            $password_arg \
             --database '$db.server.database' \
             --verbose > $output
         schemas_json_validate --json_file $output --json_schema $schema

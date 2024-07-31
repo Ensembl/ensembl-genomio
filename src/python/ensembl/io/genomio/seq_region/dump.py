@@ -24,6 +24,7 @@ __all__ = [
     "get_karyotype",
 ]
 
+from importlib.resources import as_file, files
 import json
 import logging
 from pathlib import Path
@@ -38,8 +39,9 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-_ROOT_DIR = Path(__file__).parent / "../../../../../.."
-_DEFAULT_MAP = _ROOT_DIR / "config/external_db_map/default.txt"
+default_map_res = files("ensembl.io.genomio.data.external_db_map").joinpath("default.txt")
+with as_file(default_map_res) as default_map_path:
+    _DEFAULT_MAP = default_map_path
 _KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
 
