@@ -12,23 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.annotation.load` module.
-"""
+"""Unit testing of `ensembl.io.genomio.annotation.update_description` module."""
 
 from contextlib import nullcontext as no_raise
 from pathlib import Path
 from typing import ContextManager
-from sqlalchemy import text
 
 import pytest
 from pytest import CaptureFixture, param, raises
+from sqlalchemy import text
 
 from ensembl.io.genomio.annotation import get_core_data, load_descriptions
 from ensembl.core.models import Gene, Transcript, ObjectXref, Xref, metadata
 from ensembl.utils.database import UnitTestDB
 
 
-def add_gene(dialect: str, session, gene_data=dict) -> None:
+def add_gene(dialect: str, session, gene_data: dict[str, str]) -> None:
     """Add a gene and a transcript from a gene_data dict.
 
     Args:
@@ -89,7 +88,7 @@ def add_gene(dialect: str, session, gene_data=dict) -> None:
         session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
 
 
-@pytest.fixture(name="test_db", scope="module")
+@pytest.fixture(name="annot_test_db", scope="module")
 def fixture_annotation_test_db(db_factory) -> UnitTestDB:
     """Returns a test database with all core tables and basic data."""
     test_db: UnitTestDB = db_factory(src="no_src", name="load_annotation")
@@ -106,9 +105,13 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
     ],
 )
 def test_get_core_data(
-    test_db: UnitTestDB, gene_data: dict, table: str, expected_ids: list[str], expectation: ContextManager
+    test_db: UnitTestDB,
+    gene_data: dict[str, str],
+    table: str,
+    expected_ids: list[str],
+    expectation: ContextManager,
 ) -> None:
-    """Tests the method get_core_data()"""
+    """Tests the method `get_core_data()`"""
     with test_db.dbc.test_session_scope() as session:
         add_gene(test_db.dbc.dialect, session, gene_data)
         with expectation:
@@ -127,11 +130,11 @@ def test_load_description_do_update(
     test_db: UnitTestDB,
     data_dir: Path,
     input_file: str,
-    gene_data: dict,
+    gene_data: dict[str, str],
     do_update: bool,
     expected_description: str,
 ) -> None:
-    """Tests the method load_description()"""
+    """Tests the method `load_description()`"""
     with test_db.dbc.test_session_scope() as session:
         add_gene(test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=do_update)
@@ -225,11 +228,11 @@ def test_load_description(
     test_db: UnitTestDB,
     data_dir: Path,
     input_file: str,
-    gene_data: dict,
+    gene_data: dict[str, str],
     table: str,
     expected_description: str,
 ) -> None:
-    """Tests the method load_description()"""
+    """Tests the method `load_description()`"""
     with test_db.dbc.test_session_scope() as session:
         add_gene(test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True)
@@ -263,15 +266,15 @@ def test_load_description(
         ),
     ],
 )
-def test_load_description_match_xref(
+def test_load_description_match_xrefs(
     test_db: UnitTestDB,
     data_dir: Path,
     input_file: str,
-    gene_data: dict,
+    gene_data: dict[str, str],
     match_xrefs: bool,
     expected_description: str,
 ) -> None:
-    """Tests the method load_description() with match_xrefs"""
+    """Tests the method `load_description()` with `match_xrefs`"""
     with test_db.dbc.test_session_scope() as session:
         add_gene(test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True, match_xrefs=match_xrefs)
@@ -293,10 +296,10 @@ def test_load_description_do_report(
     data_dir: Path,
     capsys: CaptureFixture,
     input_file: str,
-    gene_data: dict,
+    gene_data: dict[str, str],
     do_report: bool,
 ) -> None:
-    """Tests the method load_description()"""
+    """Tests the method `load_description()`"""
     with test_db.dbc.test_session_scope() as session:
         add_gene(test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, report=do_report)

@@ -101,7 +101,7 @@ def load_descriptions(
         func_file: JSON file with the annotation information.
         report: Print the mapping of changes to perform in the standard output?
         do_update: Update core database?
-        match_xrefs: if the IDs do not match, try to match an Xref ID instead?
+        match_xrefs: If the IDs do not match, try to match an Xref ID instead?
     """
     func = get_json(func_file)
     logging.info(f"{len(func)} annotations from {func_file}")
@@ -136,7 +136,6 @@ def load_descriptions(
 
         if do_update:
             logging.info(f"Now updating {len(features_to_update)} rows...")
-            # session.execute(update(Gene), to_update)
             session.bulk_update_mappings(table_to_update[table], features_to_update)
             session.commit()
 
