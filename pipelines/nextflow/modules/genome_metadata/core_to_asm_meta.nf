@@ -14,19 +14,17 @@
 // limitations under the License.
 
 
-process DUMP_NCBI_STATS {
+process CORE_TO_ASM_META {
     tag "${db.species}"
     label 'local'
-    label 'cached'
 
     input:
         val db
 
     output:
-        tuple val(db), path("ncbi_stats.json")
+        tuple val(db), env(accession)
 
     shell:
-        output = "ncbi_stats.json"
         password_arg = db.server.password ? "--password $db.server.password" : ""
         '''
         function get_meta_value {
@@ -41,31 +39,20 @@ process DUMP_NCBI_STATS {
                 -N -e "SELECT meta_value FROM meta WHERE meta_key='$meta_key'"
         }
 
-        touch !{output}
         # Get the INSDC accession to use
         accession=$(get_meta_value "assembly.accession")
         provider=$(get_meta_value "assembly.provider_url" | sed -r 's%^.+/%%g')
         if [ $provider == "refseq" ]; then
             accession=$(echo $accession | sed 's/^GCA_/GCF_/')
         fi
-        echo "Provider is $provider"
-        echo "Accession is $accession"
 
-        datasets summary genome accession $accession | jq '.' > !{output}
-
-        # Check if it should maybe be using RefSeq?           
-        if [ "$(jq '.total_count' !{output})" == "0" ]; then
-            accession=$(echo $accession | sed 's/^GCA_/GCF_/')
-            echo "Trying again with accession $accession"
-            datasets summary genome accession $accession | jq '.' > !{output}
-        fi
+        echo -e -n "Provider is $provider\nAccession is $accession\n"
         '''
+
     
     stub:
-        output_file = "ncbi_stats.json"
-        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
-        dump_file = "downloaded_ncbi_stats.json"
         """
-        cp $dump_dir/$dump_file $output_file
+        accession="GCA_015245375.1"
+        echo -e -n "Provider is The University of Georgia\nAccession is GCA_015245375.1\n"
         """
 }
