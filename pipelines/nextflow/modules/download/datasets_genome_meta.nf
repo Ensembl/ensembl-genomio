@@ -14,7 +14,7 @@
 // limitations under the License.
 
 
-process DOWNLOAD_GENOME_META {
+process DOWNLOAD_NCBI_STATS {
     tag "$meta.id"
     label 'local'
     label 'cached'

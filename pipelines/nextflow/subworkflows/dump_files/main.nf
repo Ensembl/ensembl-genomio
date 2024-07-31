@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-include { DOWNLOAD_GENOME_META } from '../../modules/download/datasets_genome_meta.nf'
+include { DOWNLOAD_NCBI_STATS } from '../../modules/download/datasets_genome_meta.nf'
 include { DUMP_AGP } from '../../modules/seq_region/dump_agp.nf'
 include { DUMP_ANNOTATION } from '../../modules/annotation/dump_annotation.nf'
 include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
@@ -98,7 +98,7 @@ workflow DUMP_FILES {
         // Genome stats
         if ("stats" in selection) {
             genome_stats = DUMP_GENOME_STATS(db)
-            ncbi_stats = DOWNLOAD_GENOME_META(db)
+            ncbi_stats = DOWNLOAD_NCBI_STATS(db)
             stats = ncbi_stats.join(genome_stats)
             stats_files = COMPARE_GENOME_STATS(stats).transpose()
             db_files = db_files.mix(stats_files)

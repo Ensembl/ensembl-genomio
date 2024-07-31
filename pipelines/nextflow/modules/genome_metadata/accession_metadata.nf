@@ -22,8 +22,8 @@ workflow ACCESSION_METADATA {
         accession_meta
     
     main:
-        accession_meta = _GET_ACCESSION_FROM_META_JSON(input_json).out.map {
-            it -> [id: it, accession: it]
+        accession_meta = _GET_ACCESSION_FROM_META_JSON(input_json).map {
+            it, json -> tuple([id: it, accession: it], json)
             }
 }
 
@@ -32,10 +32,10 @@ process _GET_ACCESSION_FROM_META_JSON {
     label 'local'
 
     input:
-        path(input_json)
+        path(input_json, stageAs: "input.json")
 
     output:
-        env(accession)
+        tuple env(accession), path("input.json")
         
     shell:
         '''
