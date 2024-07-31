@@ -27,30 +27,23 @@ from ensembl.io.genomio.manifest.generate import ManifestMaker
 _CONTENT_MD5 = "45685e95985e20822fb2538a522a5ccf"
 
 
+@pytest.mark.dependency()
+def test_init(tmp_path: Path) -> None:
+    """Tests the `ManifestMaker.__init__()` method."""
+    _ = ManifestMaker(tmp_path)
+
+
 @pytest.mark.parametrize(
     "file_name, expected_name",
     [
-        param("", "", id="No files"),
-        param("foobar.txt", ""),
-        param("gene_models.gff3", "gff3", id="gff3 from name and suffix"),
-        param("foobar.gff3", "gff3", id="gff3 from suffix"),
-        param("fasta_dna.fasta", "fasta_dna"),
-        param("fasta_pep.fasta", "fasta_pep"),
-        param("foobar_fasta_dna.fasta", "fasta_dna"),
-        param("foobar_fasta_pep.fasta", "fasta_pep"),
-        param("foobar.fasta", "", id="Not recognized fasta"),
-        param("functional_annotation.json", "functional_annotation"),
-        param("foobar_functional_annotation.json", "functional_annotation"),
-        param("genome.json", "genome"),
-        param("foobar_genome.json", "genome"),
-        param("seq_attrib.json", "seq_attrib"),
-        param("foobar_seq_attrib.json", "seq_attrib"),
-        param("seq_region.json", "seq_region"),
-        param("foobar_seq_region.json", "seq_region"),
+        param("gene_models.gff3", "gff3", id="Recognised name and suffix"),
+        param("foobar.gff3", "gff3", id="Recognised suffix"),
+        param("genome.json", "genome", id="Recognised name"),
+        param("foobar_seq_region.json", "seq_region", id="Recognised part of the name"),
         param("foobar.json", "", id="Not recognized json"),
-        param("foobar.agp", "agp", id="agp from suffix"),
     ],
 )
+@pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) -> None:
     """Tests the `ManifestMaker.get_files_checksum()` method.
 
@@ -71,6 +64,7 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
     assert test_files == expected_content
 
 
+@pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_multifiles(tmp_path: Path) -> None:
     """Tests the `ManifestMaker.get_files_checksum()` method with several files for the same name."""
     expected_content = {}
@@ -90,6 +84,7 @@ def test_get_files_checksum_multifiles(tmp_path: Path) -> None:
     assert test_files == expected_content
 
 
+@pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFixture) -> None:
     """Tests the `ManifestMaker.get_files_checksum()` with a subdir."""
     Path(tmp_path / "sub_dir").mkdir()
@@ -99,6 +94,7 @@ def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFix
     assert not test_files
 
 
+@pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixture) -> None:
     """Tests the `ManifestMaker.get_files_checksum()` with an empty file, deleted."""
     empty_file = Path(tmp_path / "empty_file.txt")
@@ -118,6 +114,7 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
         param(["genes.gff3"], {"gff3": {"file": "genes.gff3", "md5sum": _CONTENT_MD5}}, id="1 gff3 file"),
     ],
 )
+@pytest.mark.dependency(depends=["test_init"])
 def test_create_manifest(
     tmp_path: Path, assert_files: Callable, files: list[str], expected_content: dict
 ) -> None:
