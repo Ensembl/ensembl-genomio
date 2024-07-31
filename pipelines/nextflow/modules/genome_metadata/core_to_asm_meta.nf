@@ -14,28 +14,42 @@
 // limitations under the License.
 
 
-process CORE_TO_ASM_META {
+workflow CORE_TO_ASM_META {
+    // Generate a meta value with 2 keys: id and accession (same value)
+    take:
+        meta
+    emit:
+        meta
+    
+    main:
+        meta = _CORE_TO_ASM_META(db).out.map {
+            meta, accession -> meta + [id: accession, accession: it]
+            }
+}
+
+
+process _CORE_TO_ASM_META {
     tag "${db.species}"
     label 'local'
 
     input:
-        val db
+        val meta
 
     output:
-        tuple val(db), env(accession)
+        tuple val(meta), env(accession)
 
     shell:
-        password_arg = db.server.password ? "--password $db.server.password" : ""
+        password_arg = meta.server.password ? "--password $meta.server.password" : ""
         '''
         function get_meta_value {
             meta_key=$1
 
             mysql \
-                --host="!{db.server.host}" \
-                --port="!{db.server.port}" \
-                --user="!{db.server.user}" \
+                --host="!{meta.server.host}" \
+                --port="!{meta.server.port}" \
+                --user="!{meta.server.user}" \
                 !{password_arg} \
-                --database="!{db.server.database}" \
+                --database="!{meta.server.database}" \
                 -N -e "SELECT meta_value FROM meta WHERE meta_key='$meta_key'"
         }
 

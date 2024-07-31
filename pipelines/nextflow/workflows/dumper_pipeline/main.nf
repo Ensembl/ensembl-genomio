@@ -143,6 +143,7 @@ workflow {
     dbs = DB_FACTORY(server, filter_db)
         .map(it -> read_json(it))
         .flatten()
+        .map(it -> it + ["id": it["production_name"], "accession": it["assembly.accession"]])
     
     if (dump_sql) {
         DUMP_SQL(dbs)

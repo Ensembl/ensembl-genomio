@@ -32,7 +32,7 @@ if (params.brc_mode) {
 include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/main.nf'
 // Import module
 include { PREPARE_GENOME_METADATA } from '../../modules/genome_metadata/prepare_genome_metadata.nf'
-include { DOWNLOAD_GENOME_META_FROM_ACC } from '../../modules/download/datasets_genome_meta_from_acc.nf'
+include { DOWNLOAD_GENOME_META } from '../../modules/download/datasets_genome_meta.nf'
 include { ACCESSION_METADATA } from '../../modules/genome_metadata/accession_metadata.nf'
 // Utilities
 include { read_json } from '../../modules/utils/utils.nf'
@@ -69,8 +69,7 @@ def meta_from_genome_json(json_path) {
 workflow {
     ch_genome_json = Channel.fromPath("${params.input_dir}/*.json", checkIfExists: true)
     accession_meta = ACCESSION_METADATA(ch_genome_json)
-    accession_val = accession_meta.map{ accession, meta_file -> accession }
-    dataset_report = DOWNLOAD_GENOME_META_FROM_ACC(accession_val)
+    dataset_report = DOWNLOAD_GENOME_META(accession_meta)
     PREPARE_GENOME_METADATA(accession_meta.join(dataset_report))
 
     PREPARE_GENOME_METADATA.out.genomic_dataset
