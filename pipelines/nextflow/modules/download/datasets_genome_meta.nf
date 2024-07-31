@@ -21,7 +21,7 @@ process DOWNLOAD_GENOME_META {
     label 'datasets_container'
 
     input:
-        tuple val(meta)
+        val(meta)
 
     output:
         tuple val(meta), path("ncbi_stats.json")
@@ -44,7 +44,7 @@ process DOWNLOAD_GENOME_META {
         if [[ $(jq '.total_count' !{output}) -eq 0 ]] && [[ !{meta.accession} =~ "GCA_" ]]; then
             accession=$(echo !{meta.accession} | sed 's/^GCA_/GCF_/')
             echo "Trying again with RefSeq accession: $accession"
-            datasets summary genome accession !{meta.accession} | jq '.' > !{output}
+            datasets summary genome accession $accession | jq '.' > !{output}
         fi
         '''
     
