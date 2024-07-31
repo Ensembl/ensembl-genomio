@@ -74,7 +74,7 @@ class ManifestMaker:
                 continue
 
             for name, standard_name in self.names.items():
-                if subfile.stem.endswith(name) or subfile.suffix == f".{standard_name}":
+                if subfile.stem.endswith(name) or subfile.suffix == f".{name}":
                     used_file = True
                     md5 = self._get_md5sum(subfile)
                     file_obj = {"file": subfile.name, "md5sum": md5}
