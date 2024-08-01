@@ -48,6 +48,7 @@ def get_core_data(session: Session, table: str, match_xrefs: bool = False) -> Di
     Args:
         session: Session open on a core database.
         table: "gene" or "transcript" table from the core database.
+        match_xrefs: If the IDs do not match, try to match an Xref ID instead?
     """
 
     if table == "gene":
