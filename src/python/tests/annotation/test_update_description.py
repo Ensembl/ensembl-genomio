@@ -105,15 +105,15 @@ def fixture_annotation_test_db(db_factory) -> UnitTestDB:
     ],
 )
 def test_get_core_data(
-    test_db: UnitTestDB,
+    annot_test_db: UnitTestDB,
     gene_data: dict[str, str],
     table: str,
     expected_ids: list[str],
     expectation: ContextManager,
 ) -> None:
     """Tests the method `get_core_data()`"""
-    with test_db.dbc.test_session_scope() as session:
-        add_gene(test_db.dbc.dialect, session, gene_data)
+    with annot_test_db.dbc.test_session_scope() as session:
+        add_gene(annot_test_db.dbc.dialect, session, gene_data)
         with expectation:
             feats = get_core_data(session, table)
             assert list(feats.keys()) == expected_ids
@@ -127,7 +127,7 @@ def test_get_core_data(
     ],
 )
 def test_load_description_do_update(
-    test_db: UnitTestDB,
+    annot_test_db: UnitTestDB,
     data_dir: Path,
     input_file: str,
     gene_data: dict[str, str],
@@ -135,8 +135,8 @@ def test_load_description_do_update(
     expected_description: str,
 ) -> None:
     """Tests the method `load_description()`"""
-    with test_db.dbc.test_session_scope() as session:
-        add_gene(test_db.dbc.dialect, session, gene_data)
+    with annot_test_db.dbc.test_session_scope() as session:
+        add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=do_update)
         feats = get_core_data(session, "gene")
         assert len(feats) == 1
@@ -225,7 +225,7 @@ def test_load_description_do_update(
     ],
 )
 def test_load_description(
-    test_db: UnitTestDB,
+    annot_test_db: UnitTestDB,
     data_dir: Path,
     input_file: str,
     gene_data: dict[str, str],
@@ -233,8 +233,8 @@ def test_load_description(
     expected_description: str,
 ) -> None:
     """Tests the method `load_description()`"""
-    with test_db.dbc.test_session_scope() as session:
-        add_gene(test_db.dbc.dialect, session, gene_data)
+    with annot_test_db.dbc.test_session_scope() as session:
+        add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True)
         feats = get_core_data(session, table)
         assert len(feats) == 1
@@ -267,7 +267,7 @@ def test_load_description(
     ],
 )
 def test_load_description_match_xrefs(
-    test_db: UnitTestDB,
+    annot_test_db: UnitTestDB,
     data_dir: Path,
     input_file: str,
     gene_data: dict[str, str],
@@ -275,8 +275,8 @@ def test_load_description_match_xrefs(
     expected_description: str,
 ) -> None:
     """Tests the method `load_description()` with `match_xrefs`"""
-    with test_db.dbc.test_session_scope() as session:
-        add_gene(test_db.dbc.dialect, session, gene_data)
+    with annot_test_db.dbc.test_session_scope() as session:
+        add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True, match_xrefs=match_xrefs)
         feats = get_core_data(session, "gene")
         name = gene_data["gene_name"]
@@ -292,7 +292,7 @@ def test_load_description_match_xrefs(
     ],
 )
 def test_load_description_do_report(
-    test_db: UnitTestDB,
+    annot_test_db: UnitTestDB,
     data_dir: Path,
     capsys: CaptureFixture,
     input_file: str,
@@ -300,8 +300,8 @@ def test_load_description_do_report(
     do_report: bool,
 ) -> None:
     """Tests the method `load_description()`"""
-    with test_db.dbc.test_session_scope() as session:
-        add_gene(test_db.dbc.dialect, session, gene_data)
+    with annot_test_db.dbc.test_session_scope() as session:
+        add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, report=do_report)
         captured = capsys.readouterr()
         if do_report:
