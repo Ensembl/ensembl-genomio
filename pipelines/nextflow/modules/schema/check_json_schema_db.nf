@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// import java.io.File
-
 process CHECK_JSON_SCHEMA {
     tag "${json_file.name}"
     label 'default'
