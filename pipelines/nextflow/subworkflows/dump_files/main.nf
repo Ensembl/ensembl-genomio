@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-include { DOWNLOAD_GENOME_META_FROM_DB } from '../../modules/download/datasets_genome_meta_from_db.nf'
+include { DOWNLOAD_NCBI_STATS } from '../../modules/download/datasets_genome_meta.nf'
 include { DUMP_AGP } from '../../modules/seq_region/dump_agp.nf'
 include { DUMP_ANNOTATION } from '../../modules/annotation/dump_annotation.nf'
 include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
@@ -26,7 +26,6 @@ include { DUMP_SEQ_ATTRIB } from '../../modules/seq_region/dump_seq_attrib.nf'
 include { DUMP_SEQ_REGIONS } from '../../modules/seq_region/dump_seq_regions.nf'
 include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { COMPARE_GENOME_STATS } from '../../modules/genome_stats/compare_genome_stats.nf'
-include { CORE_TO_ASM_META } from '../../modules/genome_metadata/core_to_asm_meta.nf'
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output_dump.nf'
 
@@ -99,8 +98,7 @@ workflow DUMP_FILES {
         // Genome stats
         if ("stats" in selection) {
             genome_stats = DUMP_GENOME_STATS(db)
-            assembly_acc_meta = CORE_TO_ASM_META(db)
-            ncbi_stats = DOWNLOAD_GENOME_META_FROM_DB(assembly_acc_meta)
+            ncbi_stats = DOWNLOAD_NCBI_STATS(db)
             stats = ncbi_stats.join(genome_stats)
             stats_files = COMPARE_GENOME_STATS(stats).transpose()
             db_files = db_files.mix(stats_files)

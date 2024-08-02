@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process CHECK_JSON_SCHEMA {
-    tag "$json_file.name"
+    tag "$meta.id"
     label 'adaptive'
 
     input:

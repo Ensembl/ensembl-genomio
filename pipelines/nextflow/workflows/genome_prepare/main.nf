@@ -32,50 +32,15 @@ if (params.brc_mode) {
 include { GENOME_PREPARE } from '../../subworkflows/genome_prepare/main.nf'
 // Import module
 include { PREPARE_GENOME_METADATA } from '../../modules/genome_metadata/prepare_genome_metadata.nf'
-include { DOWNLOAD_GENOME_META_FROM_ACC } from '../../modules/download/datasets_genome_meta_from_acc.nf'
+include { DOWNLOAD_NCBI_STATS } from '../../modules/download/datasets_genome_meta.nf'
 include { ACCESSION_METADATA } from '../../modules/genome_metadata/accession_metadata.nf'
-// Utilities
-include { read_json } from '../../modules/utils/utils.nf'
-
-// function to create meta tuple from genome.json in the form:
-//   tuple("accession": accession, "production_name": production_name, "prefix": prefix)
-def meta_from_genome_json(json_path) {
-    data = read_json(json_path)
-
-    prod_name = data.assembly.accession
-    publish_dir = data.assembly.accession
-    if ( params.brc_mode ) {
-        prod_name = data.BRC4.organism_abbrev
-        publish_dir = "${data.BRC4.component}/${data.BRC4.organism_abbrev}"
-    } else if ( data.species && data.species.production_name ) {
-        prod_name = data.species.production_name
-        publish_dir = prod_name
-    }
-    has_annotation = false
-    if (data.annotation) {
-        has_annotation = true
-    }
-
-    return [
-        accession: data.assembly.accession,
-        production_name: prod_name,
-        publish_dir: publish_dir,
-        prefix: "",
-        has_annotation: has_annotation,
-    ]
-}
 
 // Run main workflow
 workflow {
     ch_genome_json = Channel.fromPath("${params.input_dir}/*.json", checkIfExists: true)
     accession_meta = ACCESSION_METADATA(ch_genome_json)
-    accession_val = accession_meta.map{ accession, meta_file -> accession }
-    dataset_report = DOWNLOAD_GENOME_META_FROM_ACC(accession_val)
-    PREPARE_GENOME_METADATA(accession_meta.join(dataset_report))
-
-    PREPARE_GENOME_METADATA.out.genomic_dataset
-        .map{ accession, json_file -> tuple(meta_from_genome_json(json_file), json_file) }
-        .set { genome_metadata }
+    dataset_report = DOWNLOAD_NCBI_STATS(accession_meta.map{ meta, json -> meta })
+    genome_metadata = PREPARE_GENOME_METADATA(accession_meta.join(dataset_report))
 
     GENOME_PREPARE(genome_metadata)
 }
