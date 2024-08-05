@@ -19,7 +19,7 @@ import sys
 from BCBio import GFF
 
 from Bio.Seq import Seq
-from Bio.SeqFeature import SeqFeature
+from Bio.SeqFeature import SeqFeature, SimpleLocation
 from Bio.SeqRecord import SeqRecord
 
 
@@ -100,8 +100,9 @@ class SeqFeatComposer:
                 quals["phase"] = phase
             # create feat object
             quals = self.sort_quals(quals)
+            location.strand = strand
             obj = SeqFeature(
-                location, strand=strand, type=_type, qualifiers=quals
+                location, type=_type, qualifiers=quals
             )  # NB referebce to quals / allows post assign modifications
             obj.source = source
             # fill processed
