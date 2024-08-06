@@ -218,6 +218,9 @@ class JsonRule(BaseRule):
 
         # scalar section
         v = context.get(data, data)
+        # changing from 0-based internal (start-1, end] to 1-based external for JSON [start, end]
+        if data == "_START" and data != v:
+            v += 1
 
         aprepend = self._actions["prepend"]
         aappend = self._actions["append"]
