@@ -12,31 +12,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Scan a GFF file to detect overlapping SeqFeature objects. Default object level => gene."""
+
+import logging
+from pathlib import Path
+import sys
 
 
 from intervaltree import Interval, IntervalTree
 from BCBio import GFF
 from BCBio.GFF import GFFExaminer
 import pprint
-import argparse
-import sys
-import logging
-import json
+
+import json  # ?? update
 from collections import defaultdict
 
+from ensembl.utils.argparse import ArgumentParser
 
-def stats(in_file):
-    """run analysis of GFF file and produce a summary of feature types"""
+
+def summary_feature_stats(in_file):
+    """Run analysis of GFF file and produce a summary of feature types"""
 
     examiner = GFFExaminer()
     in_handle = open(in_file)
-
-    print(f"\nrunning analysis of GFF file\n")
 
     pprint.pprint(examiner.available_limits(in_handle))
     print("\n\n")
     in_handle.close()
     sys.exit(0)
+
+## New function to do main overlap detection
+# def gff_digest()->None: #UPDATE RETURN TYPE
 
 
 def scan_tree(intervals):
@@ -108,8 +114,35 @@ def get_intervals(record, genesDict, seqDict, seqname):
             logging.critical(msg)
             print(msg)
 
+def gff_to_overlaps(input_GFF, parse_option, outfile, filter) -> None:
+    """Master function to process input GFF file.
+        
+        Args:
+            input_GFF:
+            parse_option:
+            outfile:
+            filter:
+        
+        Returns:
+            None
+    """
+    ## MAIN EDITS FOLLOW:
+    logging.info("start")
+    logging.info("gff file = " + input_GFF)
+    logging.info("output file = " + outfile)
+     
+    if parse_stats_only is not None:
+        logging.info("Alt processing: Not parsing the GFF, producing summary feature stats instead!")
+        # Now do stats instead:
+        summary_feature_stats(input_GFF)
+    else:
+        logging.info("Processing sequence feature overlaps!")
+        gff_digest(args.input_GFF)
 
-def main(in_file, out_file, filter):
+
+    
+    ## remaining call on main edits:
+
     in_handle = open(in_file)
     limit_info = dict(gff_type=[filter])
 
@@ -142,42 +175,56 @@ def main(in_file, out_file, filter):
     sys.exit(0)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Scan a GFF file to detect overlapping seqfeature objects (default = gene)."
-    )
-    parser.add_argument("--gff", help="path of gff file to scan for overlaps", required=True, nargs="?")
+
+
+def main(in_file, out_file, filter):
+    """Module entry-point."""
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--stats", help="run stats analysis of GFF file instead of parsing GFF file", action="store_true"
-    )
+        "--input_gff", 
+        type=Path,
+        required=True,
+        default=None,
+        help="Path of gff file to scan for overlaps")
+    # processing_group = parser.add_mutually_exclusive_group(required=True)
+    # processing_group.add_argument(
+    #     "--gff_overlaps", 
+    #     type=bool,
+    #     required=False,
+    #     action='store_true',
+    #     help="Fully parse GFF and locate seqFeature overlaps.")
+    # processing_group.add_argument(
     parser.add_argument(
-        "--logfile", help="path of file for logging (default=log.overlaps)", nargs="?", default="log.overlaps"
-    )
+        "--stats_only", 
+        type=bool,
+        required=False,
+        action="store_true",
+        help="Provide summary of GFF feature types but do not parse any GFF overlaps.")
     parser.add_argument(
         "--output",
+        type=Path,
+        required=False,
+        default="seq_feature_overlaps.txt",
         help="path of file for output (default=overlaps)",
-        required=True,
-        nargs="?",
-        default="overlaps",
     )
     parser.add_argument(
-        "--filter",
-        help="seqfeature type to use for overlap isolation (default=gene)",
-        nargs="?",
+        "--isolate_feature",
+        type=str,
+        required=False,
         default="gene",
+        help="The seqfeature type to use for overlap isolation (default=gene)",
     )
+
+    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 
-    if args.stats:
-        stats(args.gff)
-        sys.exit(0)
-
-    logging.basicConfig(filename=args.logfile, level=logging.DEBUG, format="%(asctime)s %(message)s")
-    logging.info("start")
-    logging.info("gff file = " + args.gff)
-    if args.output:
-        logging.info("output file = " + args.output)
+    # Check optional processing param
+    if args.stats_only is False:
+        processing_selection = "detect_overlaps"
     else:
-        logging.info("no output file supplied - assuming STDOUT")
+        logging.info("Summarizing file instead")
+        processing_selection = "summarize_features"
 
-    main(args.gff, args.output, args.filter)
+
+    # Master GFF parsing function
+    gff_to_overlaps(args.input_gff, processing_selection, args.output, args.isolate_feature)
