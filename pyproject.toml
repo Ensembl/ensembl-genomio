@@ -123,6 +123,7 @@ genome_stats_compare = "ensembl.io.genomio.genome_stats.compare:main"
 genome_stats_dump = "ensembl.io.genomio.genome_stats.dump:main"
 # GFF3
 gff3_process = "ensembl.io.genomio.gff3.process:main"
+gff3_overlaps = "ensembl.io.genomio.gff3.overlaps:main"
 # annotation
 annotation_load = "ensembl.io.genomio.annotation.load:main"
 # Manifest

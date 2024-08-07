@@ -19,3 +19,4 @@ from .gene_merger import *
 from .process import *
 from .simplifier import *
 from .id_allocator import *
+from .overlaps import *
