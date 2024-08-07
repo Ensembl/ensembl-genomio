@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process CHECK_PATCH {
+process CANONICAL_TRANSCRIPTS {
     label 'local'
 
     input:
@@ -24,10 +24,10 @@ process CHECK_PATCH {
         '''
         function mysql_command {
             mysql !{server.database} \
-                --host !{server.host} \
-                --port !{server.port} \
-                --user !{server.user} \
-                --password !{server.password} \
+                --host=!{server.host} \
+                --port=!{server.port} \
+                --user=!{server.user} \
+                --password=!{server.password} \
                 -e "$1"
         }
 
@@ -39,7 +39,7 @@ process CHECK_PATCH {
             --dbhost !{server.host} \\
             --dbport !{server.port} \\
             --dbuser !{server.user} \\
-            --dbpassword !{server.password} \\
+            --dbpass !{server.password} \\
             --dbname !{server.database} \\
             -coord_system toplevel \
             -write
