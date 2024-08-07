@@ -1,0 +1,11 @@
+[
+    {
+        "id": "FOOBAR",
+        "object_type": "gene",
+        "version": 2,
+        "description": "new_desc",
+        "synonyms" : [
+            "not_a_match", "gene1", "not_a_match_either"
+        ]
+    }
+]

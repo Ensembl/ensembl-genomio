@@ -1,0 +1,22 @@
+[
+    {
+        "id": "FOOBAR",
+        "object_type": "gene",
+        "version": 2,
+        "description": "new_desc",
+        "xrefs" : [
+            {
+                "id": "not_a_match",
+                "db_name": "FOOBAR1"
+            },
+            {
+                "id": "gene1",
+                "db_name": "FOOBAR2"
+            },
+            {
+                "id": "not_a_match_either",
+                "db_name": "FOOBAR1"
+            }
+        ]
+    }
+]
