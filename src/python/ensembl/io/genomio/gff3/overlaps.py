@@ -15,195 +15,202 @@
 """Scan a GFF file to detect overlapping SeqFeature objects. Default object level => gene."""
 
 __all__ = [
-    "summarise_feature_stats",
-    "gff_digest",
+    "summarize_feature_stats",
+    "identify_feature_overlaps",
     "scan_tree",
-    "write_report",
     "get_intervals",
     "gff_to_overlaps",
 ]
 
+from collections import defaultdict
+import json
 import logging
 from pathlib import Path
-import sys
+from pprint import pprint
 
-from intervaltree import Interval, IntervalTree
+from Bio import SeqRecord
 from BCBio import GFF
 from BCBio.GFF import GFFExaminer
-import pprint
+from intervaltree import Interval, IntervalTree
 
-import json  # ?? update
-from collections import defaultdict
-
+from ensembl.io.genomio.utils import print_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def summarise_feature_stats(gff_in:Path) -> None:
-    """Run analysis of GFF file and produce a summary of feature types
-    
+def summarize_feature_stats(gff_in: Path) -> None:
+    """Run analysis of GFF file and produce a summary of feature types.
+
     Args:
-        gff_in: 
-    """
-
-    examiner = GFFExaminer()
-    with open(gff_in, "r") as input_handle:
-        pprint.pprint(examiner.available_limits(input_handle))
-    input_handle.close()
-
-
-## New function to do main overlap detection
-def gff_digest(gff_in, output_file:Path, filter:str) -> None:
-    """
-    Args:
-        gff_in:
-        output_file:
+        gff_in: User supplied GFF input file.
 
     Return:
         None
     """
 
-    with open(gff_in, "r") as input_handle:
-        limit_info = dict(gff_type=[filter])
+    examiner = GFFExaminer()
+    with open(gff_in, "r", encoding="utf-8") as input_handle:
+        pprint(examiner.available_limits(input_handle))
+    input_handle.close()
 
-        seqDict = defaultdict(dict)
-        genesDict = {}
 
-        for rec in GFF.parse(input_handle, limit_info=limit_info):
-            seq_name = str(rec.id)
-            if seq_name not in seqDict:
-                seqDict[seq_name]["plus"] = []
-                seqDict[seq_name]["minus"] = []
+def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: str) -> None:
+    """
+    Args:
+        gff_in: User supplied GFF input file.
+        output_file: Output file to write feature overlaps.
+        isolate_feature: Sequence feature type to filter by.
 
-            get_intervals(rec, genesDict, seqDict, seq_name)
+    Return:
+        None
+    """
 
+    with open(gff_in, "r", encoding="utf-8") as input_handle:
+        gff_type_filter: dict = {"gff_type": [isolate_feature]}
+        seq_dict: dict = defaultdict(dict)
+        genes_dict: dict = {}
+
+        for record in GFF.parse(input_handle, limit_info=gff_type_filter):
+            seq_name = str(record.id)
+            if seq_name not in seq_dict:
+                seq_dict[seq_name]["plus"] = []
+                seq_dict[seq_name]["minus"] = []
+
+            get_intervals(record, genes_dict, seq_dict, seq_name)
         input_handle.close()
 
-        overlaps = write_report(output_file, seqDict, genesDict)
+        overlap_count = _write_report(output_file, seq_dict, genes_dict)
 
-        msg_total_genes = (f"total genes scanned = { len(genesDict) }")
-        print(msg_total_genes)
-        logging.info(msg_total_genes)
+        result_total_features = f"In total { len(genes_dict) } {isolate_feature} features were scanned."
+        print(result_total_features)
+        logging.info(result_total_features)
 
-        msg_total_overlaps = (f"total overlaps detected = { overlaps }")
-        print(msg_total_overlaps)
-        logging.info(msg_total_overlaps)
+        result_total_overlaps = f"In total {overlap_count} overlaps where detected."
+        print(result_total_overlaps)
+        logging.info(result_total_overlaps)
 
         logging.info("Finished all processing.")
 
 
-def scan_tree(intervals)-> set:
-    """Construct an interval tree using supplied genomic intervals, check all elements on the tree against 
+def scan_tree(feature_intervals: list) -> set:
+    """Construct an interval tree using supplied genomic intervals, check all elements on the tree against
     itself and return any that hit 2 or more intervals (i.e. itself + 1 other)
-    
-    Args:
-        intervals:
 
-    Returns:
+    Args:
+        feature_intervals: genome features to examine for coordinate (start/end) overlaps.
+
+    Return:
         Set of intervals identified in the input GFF that overlaps with 2 or more intervals.
-    
     """
 
     interval_sets = set()
-    t = IntervalTree(Interval(*iv) for iv in intervals)
+    traversed_tree = IntervalTree(Interval(*iv) for iv in feature_intervals)
 
-    for g in intervals:
-        if len(t.overlap(g[0], g[1])) > 1:
-            o = t.overlap(g[0], g[1])
-            for x in o:
-                interval_sets.add(x.data)
+    for interval in feature_intervals:
+        if len(traversed_tree.overlap(interval[0], interval[1])) > 1:
+            overlap_interval = traversed_tree.overlap(interval[0], interval[1])
+
+            for features in overlap_interval:
+                interval_sets.add(features.data)
 
     return interval_sets
 
 
-def write_report(out_file, seqDict, genesDict) -> None:
+def _write_report(out_file: Path, seq_dict: dict, genes_dict: dict) -> int:
     """Write the final overlap report to output file.
-    
+
     Args:
-        out_file:
-        seqDict:
-        genesDict:
+        out_file: output name of file to dump detected feature overlaps.
+        seq_dict: Sequence features.
+        genes_dict: Unique (+ | - stranded) overlap features.
 
     Returns:
-        None
+        Count of overlaps detected
     """
     overlap_count = 0
+    overlap_features = []
 
-    try:
-        with open(out_file, "w+") as fh:
-            for x in seqDict:
-                logging.info(f"{x} plus  { len( seqDict[x]['plus']) }")
-                logging.info(f"{x} minus { len( seqDict[x]['minus']) }")
+    for seq_name in seq_dict:
+        logging.info(f"{seq_name} plus  { len( seq_dict[seq_name]['plus']) }")
+        logging.info(f"{seq_name} minus { len( seq_dict[seq_name]['minus']) }")
 
-                pfound = scan_tree(seqDict[x]["plus"])
-                logging.info(f"{ len(pfound) } positive strand overlaps detected")
+        positive_hit = scan_tree(seq_dict[seq_name]["plus"])
+        logging.info(f"{ len(positive_hit) } positive strand overlaps detected")
 
-                nfound = scan_tree(seqDict[x]["minus"])
-                logging.info(f"{ len(nfound) } negative strand overlaps detected")
+        negative_hit = scan_tree(seq_dict[seq_name]["minus"])
+        logging.info(f"{ len(negative_hit) } negative strand overlaps detected")
 
-                uniq = pfound.union(nfound)
-                overlap_count = overlap_count + len(uniq)
+        uniq_features: set = positive_hit.union(negative_hit)
+        overlap_count = overlap_count + len(uniq_features)
 
-                for f in uniq:
-                    fh.write(json.dumps(genesDict[f]) + "\n")
-            fh.close()
-    except IOError:
-        logging.critical("failed to write to output file")
+        for feature in uniq_features:
+            format_feature = str(genes_dict[feature]).replace("'", '"')
+            overlap_features.append(json.loads(format_feature))
+        print_json(out_file, overlap_features)
 
     return overlap_count
 
 
-def get_intervals(record, genesDict, seqDict, seq_name) -> None:
-    """extract start/stop feature coordinates for use in creating intervaltree object"""
-
-    for r in record.features:
-        genesDict[str(r.id)] = {
-            "sequence": record.id,
-            "start": int(r.location.start) + 1,
-            "end": int(r.location.end),
-            "strand": r.location.strand,
-            "name": r.id,
-        }
-
-        if r.location.strand == 1:
-            seqDict[seq_name]["plus"].append((int(r.location.start), int(r.location.end), str(r.id)))
-
-        elif r.location.strand == -1:
-            seqDict[seq_name]["minus"].append((int(r.location.start), int(r.location.end), str(r.id)))
-
-        else:
-            msg = "something went horribly wrong with the strand processing"
-            logging.critical(msg)
-            print(msg)
-
-
-def gff_to_overlaps(input_GFF:Path, stats_flag:bool, output:Path, filter:str) -> None:
-    """Master function to process input GFF file for overlaps or feature summary.
+def get_intervals(record:SeqRecord, genes_dict:dict, seq_dict: dict, seq_name: str) -> None:
+    """Extract start/stop feature coordinates for use in creating intervaltree object.
 
     Args:
-        input_GFF:
-        stats_flag:
-        outfile:
-        filter:
+        record: Individual sequence record.
+        genes_dict: Genes
+        seq_dict: Sequences 
+        seq_name: Feature sequence name
+
+    Return:
+        None
+    """
+
+    for feature in record.features:
+        genes_dict[str(feature.id)] = {
+            "sequence": f"{record.id}",
+            "start": f"{int(feature.location.start) + 1}",
+            "end": f"{int(feature.location.end)}",
+            "strand": f"{feature.location.strand}",
+            "name": f"{feature.id}",
+        }
+
+        if feature.location.strand == 1:
+            seq_dict[seq_name]["plus"].append(
+                (int(feature.location.start), int(feature.location.end), str(feature.id))
+            )
+        elif feature.location.strand == -1:
+            seq_dict[seq_name]["minus"].append(
+                (int(feature.location.start), int(feature.location.end), str(feature.id))
+            )
+        else:
+            logging.critical("Something went horribly wrong with the strand processing")
+
+
+def gff_to_overlaps(input_gff: Path, stats_flag: bool, output: Path, isolate_feature: str) -> None:
+    """Main method to process input GFF file for overlaps or a summary of all feature types.
+
+    Args:
+        input_gff: User supplied GFF input file.
+        stats_flag: Flag to switch to stats only mode.
+        outfile: Output file to write feature overlaps.
+        filter: Optional user specified feature type.
 
     Returns:
         None
     """
-    
+
     ## MAIN EDITS FOLLOW:
     logging.info("Starting processing...")
-    logging.info(f"GFF input file = {str(input_GFF)}")
+    logging.info(f"GFF input file = {str(input_gff)}")
     logging.info(f"Output file = {str(output)}")
-    logging.info(f"Features filtered by type: {filter}")
+    logging.info(f"Features filtered by type: {isolate_feature}")
 
     # Check optional processing param
     if stats_flag is True:
         logging.info("Alt processing: Not parsing the GFF, producing summary feature stats instead!")
-        summarise_feature_stats(input_GFF)
+        summarize_feature_stats(input_gff)
     else:
         logging.info("Processing sequence feature overlaps!")
-        gff_digest(input_GFF, output, filter)
-
+        identify_feature_overlaps(input_gff, output, isolate_feature)
 
 
 def main() -> None:
@@ -226,20 +233,23 @@ def main() -> None:
         "--output_file",
         type=Path,
         required=False,
-        default="seqfeature_overlaps.txt",
+        default="feature_overlaps",
         help="Path of file for output (default=overlaps).",
     )
     parser.add_argument(
-        "--isolate_feature",
+        "--filter_type",
         type=str,
         required=False,
         default="gene",
-        help="The seqfeature type used for overlap isolation.",
+        help="The sequence feature type used for overlap isolation.",
     )
 
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    # Master GFF parsing function
-    gff_to_overlaps(args.input_gff, args.stats_only, args.output_file, args.isolate_feature)
+    gff_to_overlaps(args.input_gff, args.stats_only, args.output_file, args.filter_type)
+
+
+if __name__ == "__main__":
+    main()
