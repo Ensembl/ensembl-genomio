@@ -78,13 +78,12 @@ echo "storing chnuks and partial results to $PARTS_DIR " >> /dev/stderr
 
 # GETTING SCRIPT NAME
 SCRIPT="$(which $0)"
-SCRIPTS_DIR="$(dirname $SCRIPT)"
 echo "trf_split_run is called as $SCRIPT" >> /dev/stderr
 
 
 # SLITTING
 if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" -o x"$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" != x"YES" ]; then
-  SPLITTER_SCRIPT="$SCRIPTS_DIR/chunk_fasta.py"
+  SPLITTER_SCRIPT="fasta_chunk"
   echo "uing chunk_fasta sctipt: $SPLITTER_SCRIPT" >> /dev/stderr 
 
   SPLITTER_OPTIONS="--n_seq 1 --chunk_tolerance ${DEFAULT_CHUNK_TOLERANCE}"
