@@ -78,14 +78,13 @@ echo "storing chnuks and partial results to $PARTS_DIR " >> /dev/stderr
 
 # GETTING SCRIPT NAME
 SCRIPT="$(which $0)"
-SCRIPTS_DIR="$(dirname $SCRIPT)"
 echo "trf_split_run is called as $SCRIPT" >> /dev/stderr
 
 
 # SLITTING
 if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" -o x"$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" != x"YES" ]; then
-  SPLITTER_SCRIPT="$SCRIPTS_DIR/chunk_fasta.py"
-  echo "uing chunk_fasta sctipt: $SPLITTER_SCRIPT" >> /dev/stderr 
+  SPLITTER_SCRIPT="fasta_chunk"
+  echo "using chunk_fasta sctipt: $SPLITTER_SCRIPT" >> /dev/stderr 
 
   SPLITTER_OPTIONS="--n_seq 1 --chunk_tolerance ${DEFAULT_CHUNK_TOLERANCE}"
   if [ -n "$DNA_FEATURES_TRF_SPLIT_SPLITTER_OPTIONS" ]; then
@@ -101,9 +100,9 @@ if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" -o x"$DNA_FEATURES_TRF_SPLIT_NO_S
   fi
   echo "using spitter options: $SPLITTER_OPTIONS" >> /dev/stderr
 
-  SPLIT_CMD="'$SPLITTER_SCRIPT' $SPLITTER_OPTIONS --chunk_sfx '${DEFAULT_CHUNK_SFX}' --add_offset --individual_out_dir '$PARTS_DIRi' --out part '$FILE_NAME'"
+  SPLIT_CMD="'$SPLITTER_SCRIPT' $SPLITTER_OPTIONS --chunk_sfx '${DEFAULT_CHUNK_SFX}' --add_offset --individual_out_dir '$PARTS_DIRi' --out part --fasta_dna '$FILE_NAME'"
   echo "Running \"$SPLIT_CMD\"" >> /dev/stderr
-  python "$SPLITTER_SCRIPT" $SPLITTER_OPTIONS --chunk_sfx "${DEFAULT_CHUNK_SFX}" --add_offset --individual_out_dir "$PARTS_DIR" --out part "$FILE_NAME"
+  "$SPLITTER_SCRIPT" $SPLITTER_OPTIONS --chunk_sfx "${DEFAULT_CHUNK_SFX}" --add_offset --individual_out_dir "$PARTS_DIR" --out part --fasta_dna "$FILE_NAME"
 fi # DNA_FEATURES_TRF_SPLIT_NO_SPLITTING
 
 # APPENDING OPTIONS
