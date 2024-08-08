@@ -28,7 +28,7 @@ from contextlib import nullcontext
 import logging
 from pathlib import Path
 import re
-from typing import Optional
+from typing import Callable, Optional
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -39,7 +39,8 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def check_chunk_size_and_tolerance(chunk_size: int, chunk_tolerance: int):
+def check_chunk_size_and_tolerance(chunk_size: int, chunk_tolerance: int,
+        error_f : Callable[[str], None] = lambda x: sys.stderr.write(x) and exit(-1) or exit(-1)):
     """Check the chunk size and the tolerance are positive
        and chunk size is not too small
 
@@ -50,11 +51,11 @@ def check_chunk_size_and_tolerance(chunk_size: int, chunk_tolerance: int):
        Dies with` parser.error`
     """
     if chunk_size < 50_000:
-        parser.error(
+        error_f(
             f"wrong '--chunk_size' value: '{args.chunk_size}'. should be greater then 50_000. exiting..."
         )
     if chunk_tolerance < 0:
-        parser.error(
+        error_f(
             f"wrong '--chunk_tolerance' value: '{args.chunk_tolerance}'. can't be less then 0. exiting..."
         )
 
@@ -230,7 +231,7 @@ def main():
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 
-    check_chunk_size_and_tolerance(args.chunk_size, args.chunk_tolerance)
+    check_chunk_size_and_tolerance(args.chunk_size, args.chunk_tolerance, error_f = parser.error)
 
     init_logging_with_args(args)
 
