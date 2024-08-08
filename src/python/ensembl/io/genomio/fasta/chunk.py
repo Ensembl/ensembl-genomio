@@ -28,6 +28,7 @@ from contextlib import nullcontext
 import logging
 from pathlib import Path
 import re
+import sys
 from typing import Callable, Optional
 
 from Bio import SeqIO
@@ -52,11 +53,11 @@ def check_chunk_size_and_tolerance(chunk_size: int, chunk_tolerance: int,
     """
     if chunk_size < 50_000:
         error_f(
-            f"wrong '--chunk_size' value: '{args.chunk_size}'. should be greater then 50_000. exiting..."
+            f"wrong '--chunk_size' value: '{chunk_size}'. should be greater then 50_000. exiting..."
         )
     if chunk_tolerance < 0:
         error_f(
-            f"wrong '--chunk_tolerance' value: '{args.chunk_tolerance}'. can't be less then 0. exiting..."
+            f"wrong '--chunk_tolerance' value: '{chunk_tolerance}'. can't be less then 0. exiting..."
         )
 
 
