@@ -41,7 +41,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 def check_chunk_size_and_tolerance(chunk_size: int, chunk_tolerance: int,
-        error_f : Callable[[str], None] = lambda x: sys.stderr.write(x) and exit(-1) or exit(-1)):
+        error_f : Callable[[str], None] = lambda x: sys.stderr.write(x) and sys.exit(-1) or sys.exit(-1)):
     """Check the chunk size and the tolerance are positive
        and chunk size is not too small
 
