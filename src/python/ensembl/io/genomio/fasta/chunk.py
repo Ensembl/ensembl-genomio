@@ -18,7 +18,7 @@
 
 __all__ = [
     "check_chunk_size_and_tolerance",
-    "chunk_fasta,"
+    "chunk_fasta",
     "split_seq_by_chunk_size",
     "split_seq_by_n",
 ]
