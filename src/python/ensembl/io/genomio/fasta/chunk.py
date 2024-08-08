@@ -40,25 +40,24 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def check_chunk_size_and_tolerance(chunk_size: int, chunk_tolerance: int,
-        error_f : Callable[[str], None] = lambda x: sys.stderr.write(x) and sys.exit(-1) or sys.exit(-1)):
+def check_chunk_size_and_tolerance(
+    chunk_size: int,
+    chunk_tolerance: int,
+    error_f: Callable[[str], None] = lambda x: sys.stderr.write(x) and sys.exit(-1) or sys.exit(-1),
+):
     """Check the chunk size and the tolerance are positive
-       and chunk size is not too small
+    and chunk size is not too small
 
-       Args:
-         chunk_size: Chunk size to check
-         chunk_tolerance: Chunk tolerance to check
+    Args:
+      chunk_size: Chunk size to check
+      chunk_tolerance: Chunk tolerance to check
 
-       Dies with` parser.error`
+    Dies with` parser.error`
     """
     if chunk_size < 50_000:
-        error_f(
-            f"wrong '--chunk_size' value: '{chunk_size}'. should be greater then 50_000. exiting..."
-        )
+        error_f(f"wrong '--chunk_size' value: '{chunk_size}'. should be greater then 50_000. exiting...")
     if chunk_tolerance < 0:
-        error_f(
-            f"wrong '--chunk_tolerance' value: '{chunk_tolerance}'. can't be less then 0. exiting..."
-        )
+        error_f(f"wrong '--chunk_tolerance' value: '{chunk_tolerance}'. can't be less then 0. exiting...")
 
 
 def split_seq_by_n(seq: str, split_pattern: re.Pattern) -> list:
@@ -105,18 +104,17 @@ def split_seq_by_chunk_size(ends: list[int], chunk_size: int, tolerated_size: Op
 
 
 def chunk_fasta(
-        input_fasta_file: str,
-        chunk_size : int,
-        chunk_tolerance : int,
-        out_file_name : str,
-        chunk_sfx : str = "ens_chunk",
-        individual_file_prefix : str = "",
-        n_sequece_len : int = 0,
-        agp_output_file: Optional[str] = None,
-        add_offset : Optional[bool] = None,
-    ):
-    """
-    """
+    input_fasta_file: str,
+    chunk_size: int,
+    chunk_tolerance: int,
+    out_file_name: str,
+    chunk_sfx: str = "ens_chunk",
+    individual_file_prefix: str = "",
+    n_sequece_len: int = 0,
+    agp_output_file: Optional[str] = None,
+    add_offset: Optional[bool] = None,
+):
+    """ """
 
     # calculate max tolerated chunk length
     tolerated_chunk_len = chunk_size
@@ -135,8 +133,11 @@ def chunk_fasta(
                 splitting on {n_sequece_len} Ns (0 -- disabled)"
         )
         # do not open a joined file if you plan to open many indvidual ones
-        with individual_file_prefix and nullcontext() \
-                or open(out_file_name, "wt", encoding="utf-8") as out_file:
+        with (
+            individual_file_prefix
+            and nullcontext()
+            or open(out_file_name, "wt", encoding="utf-8") as out_file
+        ):
             agp_lines = []
             fasta_parser = SeqIO.parse(fasta, "fasta")
             for rec_count, rec in enumerate(fasta_parser, start=1):
@@ -157,7 +158,9 @@ def chunk_fasta(
                     chunk_len = chunk_end - offset
 
                     # form agp lines
-                    agp_line = f"{rec_name}\t{rec_from}\t{rec_to}\t{chunk}\tW\t{chunk_name}\t1\t{chunk_len}\t+"
+                    agp_line = (
+                        f"{rec_name}\t{rec_from}\t{rec_to}\t{chunk}\tW\t{chunk_name}\t1\t{chunk_len}\t+"
+                    )
                     agp_lines.append(agp_line)
 
                     # use agp lines as fasta description
@@ -189,42 +192,61 @@ def chunk_fasta(
 def main():
     """Module entry-point."""
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument_src_path("--fasta_dna", required=True,
+    parser.add_argument_src_path(
+        "--fasta_dna",
+        required=True,
         metavar="input[.fa | .gz]",
         help="Raw or compressed (.gz) FASTA file with DNA sequences to be split",
     )
-    parser.add_argument("--out", required=False,
+    parser.add_argument(
+        "--out",
+        required=False,
         default="chunks.fna",
         help="Chunks output file",
     )
-    parser.add_argument("--individual_out_dir", required=False,
-        default=None, type=Path,
+    parser.add_argument(
+        "--individual_out_dir",
+        required=False,
+        default=None,
+        type=Path,
         help="Output directory for writing files with individual chunks to. \
             If provided,`--out` value used as a filename prefix",
     )
-    parser.add_argument_dst_path("--agp_output_file", required=False,
+    parser.add_argument_dst_path(
+        "--agp_output_file",
+        required=False,
         default=None,
         help="AGP file with chunks to contigs mapping.",
     )
-    parser.add_argument("--chunk_size", required=False,
-        default=100_000_000, metavar="100_000_000", type=int,
+    parser.add_argument(
+        "--chunk_size",
+        required=False,
+        default=100_000_000,
+        metavar="100_000_000",
+        type=int,
         help="Maximum chunk size (should be greater then 50k).",
     )
     parser.add_argument(
-        "--chunk_sfx", required=False,
-        default="ens_chunk", type=str,
+        "--chunk_sfx",
+        required=False,
+        default="ens_chunk",
+        type=str,
         help="Added to contig ID before chunk number.",
     )
     parser.add_argument(
-        "--chunk_tolerance", required=False,
-        default=0, type=int,
+        "--chunk_tolerance",
+        required=False,
+        default=0,
+        type=int,
         help="Chunk size tolerance percentage. If the to-be-written chunk is longer \
             than the defined chunk size by less than the specified tolerance percentage,\
             it will not be split.",
     )
     parser.add_argument(
-        "--n_seq", required=False,
-        default=0, type=int,
+        "--n_seq",
+        required=False,
+        default=0,
+        type=int,
         help="Split into chunks at positions of at least this number of N characters.",
     )
     parser.add_argument("--add_offset", required=False, action="store_true", help="Zero-based offset.")
@@ -232,7 +254,7 @@ def main():
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 
-    check_chunk_size_and_tolerance(args.chunk_size, args.chunk_tolerance, error_f = parser.error)
+    check_chunk_size_and_tolerance(args.chunk_size, args.chunk_tolerance, error_f=parser.error)
 
     init_logging_with_args(args)
 
@@ -250,11 +272,11 @@ def main():
         args.chunk_size,
         args.chunk_tolerance,
         args.out,
-        chunk_sfx  = args.chunk_sfx,
-        individual_file_prefix = file_prefix,
-        n_sequece_len = args.n_seq,
-        agp_output_file = args.agp_output_file,
-        add_offset = args.add_offset,
+        chunk_sfx=args.chunk_sfx,
+        individual_file_prefix=file_prefix,
+        n_sequece_len=args.n_seq,
+        agp_output_file=args.agp_output_file,
+        add_offset=args.add_offset,
     )
 
 
