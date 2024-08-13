@@ -20,10 +20,48 @@ from typing import ContextManager
 
 import pytest
 from pytest import param, raises
+from sqlalchemy import text
 
 from ensembl.io.genomio.seq_region.dump import fetch_coord_systems
+from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionAttrib, metadata
+from ensembl.utils.database import UnitTestDB
+
+
+@pytest.fixture(name="seq_test_db", scope="module")
+def fixture_seq_test_db(db_factory) -> UnitTestDB:
+    """Returns a test database with all core tables and basic data."""
+    test_db: UnitTestDB = db_factory(src="no_src", name="dump_seq")
+    test_db.dbc.create_all_tables(metadata)
+
+    with test_db.dbc.session_scope() as session:
+        # Add base data to dump
+        if test_db.dbc.dialect == "mysql":
+            session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
+        coord = CoordSystem(
+            coord_system_id=1,
+            species_id=1,
+            name="primary_assembly",
+            rank=1,
+            attrib="default_version",
+        )
+        session.add(coord)
+        seqr = SeqRegion(
+            seq_region_id=1,
+            coord_system_id=1,
+            name="seqA",
+            length=1000,
+        )
+        session.add(seqr)
+    return test_db
+
 
 def test_fetch_coord_systems(
+    seq_test_db: UnitTestDB
 ) -> None:
     """Tests the `fetch_coord_system` method."""
-    assert True
+    with seq_test_db.dbc.test_session_scope() as session:
+        coords = list(fetch_coord_systems(session))
+        assert len(coords) == 1
+        coord: CoordSystem = coords[0]
+        assert len(list(coord.seq_region)) == 1
+        assert coord.name == "primary_assembly"
