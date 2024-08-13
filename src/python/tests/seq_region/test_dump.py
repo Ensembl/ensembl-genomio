@@ -27,6 +27,7 @@ from ensembl.io.genomio.seq_region.dump import (
     fetch_seq_regions,
     get_synonyms,
     get_seq_regions,
+    get_karyotype
 )
 from ensembl.io.genomio.seq_region.external_db_map import get_external_db_map, DEFAULT_EXTERNAL_DB_MAP
 from ensembl.core.models import (
@@ -37,6 +38,7 @@ from ensembl.core.models import (
     SeqRegionSynonym,
     ExternalDb,
     AttribType,
+    Karyotype,
 )
 from ensembl.utils.database import UnitTestDB
 
@@ -112,6 +114,16 @@ def _add_test_attrib(session, dialect, logic_name: str, value: str | int, attrib
         session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
 
 
+def _add_test_karyotype(session, dialect, start: int, end: int, band: str | None = None, stain: str | None = None) -> None:
+    if dialect == "mysql":
+        session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
+    karyo = Karyotype(seq_region_id=1, seq_region_start=start, seq_region_end=end, band=band, stain=stain)
+    session.add(karyo)
+    session.commit()
+    if dialect == "mysql":
+        session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
+
+
 @pytest.fixture(name="db_map", scope="module")
 def fixture_db_map(db_factory) -> dict[str, str]:
     """Returns the default db_map."""
@@ -148,6 +160,24 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
         assert len(syns) == 1
         syn = syns[0]
         assert syn == {"name": "synA", "source": "db1"}
+
+
+@pytest.mark.parametrize(
+    "bands, expected_kar",
+    [
+        param([], [], id="no karyotype"),
+        param([{"name" : "bandA"}], [{"start": 1, "end": 10, "name": "bandA"}], id="one band"),
+    ],
+)
+def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict) -> None:
+    """Tests the `get_synonyms` method."""
+    with seq_test_db.dbc.test_session_scope() as session:
+        for band in bands:
+            _add_test_karyotype(session, seq_test_db.dbc.dialect, 1, 10, band.get("name"), band.get("stain"))
+        coord_system = list(fetch_coord_systems(session))[0]
+        seqr = list(fetch_seq_regions(session, coord_system))[0]
+        kar = get_karyotype(seqr)
+        assert kar == expected_kar
 
 
 @pytest.mark.parametrize(
@@ -195,11 +225,13 @@ def test_get_seq_regions(
         "coord_system_level": "primary_assembly",
         "synonyms": [{"name": "synA", "source": "GenBank"}, {"name": "synB"}],
         "added_sequence": {"accession": "ADDED1"},
+        "karyotype_bands": [{"start": 1, "end": 10, "name": "bandA", "stain": "stainA"}],
     }
     with seq_test_db.dbc.test_session_scope() as session:
         _add_test_attrib(session, seq_test_db.dbc.dialect, "toplevel", 1, 1)
         _add_test_attrib(session, seq_test_db.dbc.dialect, "added_seq_accession", "ADDED1", 2)
         _add_test_synonym(session, seq_test_db.dbc.dialect, "synA", "GenBank", 1)
         _add_test_synonym(session, seq_test_db.dbc.dialect, "synB", None, 2)
+        _add_test_karyotype(session, seq_test_db.dbc.dialect, 1, 10, "bandA", "stainA")
         output_seqr = get_seq_regions(session, db_map)
         assert output_seqr[0] == expected_dict

@@ -247,7 +247,7 @@ def get_karyotype(seq_region: SeqRegion) -> List:
                     kar["structure"] = structure
             kars.append(kar)
 
-    kars = sorted(kars, key=lambda kar: kar["name"])
+    kars = sorted(kars, key=lambda kar: kar.get("name", ""))
     return kars
 
 
