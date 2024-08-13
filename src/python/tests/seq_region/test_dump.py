@@ -22,9 +22,22 @@ import pytest
 from pytest import param, raises
 from sqlalchemy import text
 
-from ensembl.io.genomio.seq_region.dump import fetch_coord_systems, fetch_seq_regions, get_synonyms, get_seq_regions
+from ensembl.io.genomio.seq_region.dump import (
+    fetch_coord_systems,
+    fetch_seq_regions,
+    get_synonyms,
+    get_seq_regions,
+)
 from ensembl.io.genomio.seq_region.external_db_map import get_external_db_map, DEFAULT_EXTERNAL_DB_MAP
-from ensembl.core.models import metadata, CoordSystem, SeqRegion, SeqRegionAttrib, SeqRegionSynonym, ExternalDb, AttribType
+from ensembl.core.models import (
+    metadata,
+    CoordSystem,
+    SeqRegion,
+    SeqRegionAttrib,
+    SeqRegionSynonym,
+    ExternalDb,
+    AttribType,
+)
 from ensembl.utils.database import UnitTestDB
 
 
@@ -59,10 +72,11 @@ def fixture_seq_test_db(db_factory) -> UnitTestDB:
             session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
     return test_db
 
+
 def _add_synonym(session, dialect: str, synonym: str, db_name: str) -> None:
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
-    
+
     dbxref_id = None
     if db_name:
         dbxref = ExternalDb(
@@ -85,6 +99,7 @@ def _add_synonym(session, dialect: str, synonym: str, db_name: str) -> None:
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
 
+
 def _add_test_attrib(session, dialect, attrib_id: int, logic_name: str, value: str | int) -> None:
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
@@ -96,15 +111,14 @@ def _add_test_attrib(session, dialect, attrib_id: int, logic_name: str, value: s
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
 
+
 @pytest.fixture(name="db_map", scope="module")
 def fixture_db_map(db_factory) -> dict[str, str]:
     """Returns the default db_map."""
     return get_external_db_map(DEFAULT_EXTERNAL_DB_MAP)
 
 
-def test_fetch_coord_systems(
-    seq_test_db: UnitTestDB
-) -> None:
+def test_fetch_coord_systems(seq_test_db: UnitTestDB) -> None:
     """Tests the `fetch_coord_system` method."""
     with seq_test_db.dbc.test_session_scope() as session:
         coords = list(fetch_coord_systems(session))
@@ -114,9 +128,7 @@ def test_fetch_coord_systems(
         assert coord.name == "primary_assembly"
 
 
-def test_fetch_seq_regions(
-    seq_test_db: UnitTestDB
-) -> None:
+def test_fetch_seq_regions(seq_test_db: UnitTestDB) -> None:
     """Tests the `fetch_seq_regions` method."""
     with seq_test_db.dbc.test_session_scope() as session:
         coord_system = list(fetch_coord_systems(session))[0]
@@ -126,10 +138,7 @@ def test_fetch_seq_regions(
         assert seqr.name == "seqA"
 
 
-def test_get_synonyms(
-    seq_test_db: UnitTestDB,
-    db_map: dict[str, str]
-) -> None:
+def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
     """Tests the `get_synonyms` method."""
     with seq_test_db.dbc.test_session_scope() as session:
         _add_synonym(session, seq_test_db.dbc.dialect, "synA", "db1")
@@ -141,7 +150,6 @@ def test_get_synonyms(
         assert syn == {"name": "synA", "source": "db1"}
 
 
-
 @pytest.mark.parametrize(
     "attribs, expected_output",
     [
@@ -151,13 +159,14 @@ def test_get_synonyms(
         param({"toplevel": 1, "sequence_location": "chr"}, {"location": "chr"}, id="Location"),
         param({"toplevel": 1, "circular_seq": 1}, {"circular": 1}, id="circular"),
         param({"toplevel": 1, "circular_seq": 0}, {}, id="not circular"),
+        param({"toplevel": 1, "": 0}, {}, id="not circular"),
     ],
 )
-def test_get_seq_regions(
+def test_get_seq_regions_attribs(
     seq_test_db: UnitTestDB,
     db_map: dict[str, str],
     attribs: dict[str, str],
-    expected_output: dict[str, Any] | None
+    expected_output: dict[str, Any] | None,
 ) -> None:
     """Tests the `get_seq_regions` method."""
     expected_dict = {"name": "seqA", "length": 1000, "coord_system_level": "primary_assembly"}
@@ -172,3 +181,23 @@ def test_get_seq_regions(
         else:
             expected_dict.update(expected_output)
             assert output_seqr[0] == expected_dict
+
+
+def test_get_seq_regions(
+    seq_test_db: UnitTestDB,
+    db_map: dict[str, str],
+) -> None:
+    """Tests the `get_seq_regions` method."""
+    expected_dict = {
+        "name": "seqA",
+        "length": 1000,
+        "coord_system_level": "primary_assembly",
+        "synonyms": [{"name": "synA", "source": "db1"}],
+        "added_sequence": {"accession": "ADDED1"},
+    }
+    with seq_test_db.dbc.test_session_scope() as session:
+        _add_test_attrib(session, seq_test_db.dbc.dialect, 1, "toplevel", 1)
+        _add_test_attrib(session, seq_test_db.dbc.dialect, 2, "added_seq_accession", "ADDED1")
+        _add_synonym(session, seq_test_db.dbc.dialect, "synA", "db1")
+        output_seqr = get_seq_regions(session, db_map)
+        assert output_seqr[0] == expected_dict
