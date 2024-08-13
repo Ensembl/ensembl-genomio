@@ -13,42 +13,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process DOWNLOAD_GENOME_META_FROM_ACC {
-    tag "$accession"
+
+process DOWNLOAD_NCBI_STATS {
+    tag "$meta.id"
     label 'local'
     label 'cached'
     label 'datasets_container'
 
     input:
-        val(accession)
+        val(meta)  // with keys [ id, accession ]
 
     output:
-        tuple val(accession), path("ncbi_meta.json")
-        
+        tuple val(meta), path("ncbi_stats.json")
+
     shell:
-        output = "ncbi_meta.json"
+        output = "ncbi_stats.json"
         '''
-        echo "Calling datasets-cli.... datasets 'summary' 'genome' 'accession' [!{accession}]'"
+        echo "Calling datasets-cli.... datasets 'summary' 'genome' 'accession' [!{meta.accession}]'"
 
         # Pipe datasets to jq instead of '--as-json-lines' to 
         # obtain a total_count of reports returned.
-        datasets summary genome accession !{accession} | jq '.' > !{output}
+        datasets summary genome accession !{meta.accession} | jq '.' > !{output}
 
         if [ "$?" -ne 0 ]; then
-            echo "Invalid or unsupported assembly accession: !{accession}"
+            echo "Invalid or unsupported assembly accession: !{meta.accession}"
             exit 1
         fi
 
         # Check if it should maybe be using RefSeq?           
-        if [[ $(jq '.total_count' !{output}) -eq 0 ]] && [[ !{accession} =~ "GCA_" ]]; then
-            accession=$(echo !{accession} | sed 's/^GCA_/GCF_/')
+        if [[ $(jq '.total_count' !{output}) -eq 0 ]] && [[ !{meta.accession} =~ "GCA_" ]]; then
+            accession=$(echo !{meta.accession} | sed 's/^GCA_/GCF_/')
             echo "Trying again with RefSeq accession: $accession"
-            datasets summary genome accession !{accession} | jq '.' > !{output}
+            datasets summary genome accession $accession | jq '.' > !{output}
         fi
         '''
     
     stub:
+        output_file = "ncbi_stats.json"
+        dump_dir = "$workflow.projectDir/../../../../data/test/pipelines/dumper/dump_files"
+        dump_file = "downloaded_ncbi_stats.json"
         """
-        echo '{"reports":[{"organism":{"tax_id":1000}}]}' > ncbi_meta.json
+        cp $dump_dir/$dump_file $output_file
         """
 }
