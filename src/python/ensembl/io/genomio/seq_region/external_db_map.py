@@ -15,6 +15,7 @@
 """Get a mapping for external db names."""
 
 __all__ = [
+    "DEFAULT_EXTERNAL_DB_MAP",
     "MapFormatError",
     "get_external_db_map",
 ]
@@ -26,7 +27,7 @@ from typing import Dict
 
 default_map_res = files("ensembl.io.genomio.data.external_db_map").joinpath("default.txt")
 with as_file(default_map_res) as default_map_path:
-    _DEFAULT_MAP = default_map_path
+    DEFAULT_EXTERNAL_DB_MAP = default_map_path
 
 
 class MapFormatError(ValueError):
@@ -47,7 +48,7 @@ def get_external_db_map(map_file: Path) -> Dict:
             if line.startswith("#") or line.startswith(" ") or line == "":
                 continue
             parts = line.split("\t")
-            if not parts[0] or not parts[1]:
+            if len(parts) < 2:
                 raise MapFormatError(f"External db file is not formatted correctly for: {line}")
             db_map[parts[1]] = parts[0]
     return db_map
