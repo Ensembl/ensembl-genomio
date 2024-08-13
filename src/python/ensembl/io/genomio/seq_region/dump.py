@@ -149,9 +149,7 @@ def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
 
     for name, key in bool_attribs.items():
         # Make sure "0" means False (=not added)
-        value = attrib_dict.get(name, "0")
-        if value.isdecimal():
-            value = int(value)
+        value = int(attrib_dict.get(name, "0"))
         if value:
             seq_region[key] = bool(value)
 

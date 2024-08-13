@@ -73,14 +73,14 @@ def fixture_seq_test_db(db_factory) -> UnitTestDB:
     return test_db
 
 
-def _add_synonym(session, dialect: str, synonym: str, db_name: str) -> None:
+def _add_test_synonym(session, dialect: str, synonym: str, db_name: str | None, db_id: int) -> None:
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
 
     dbxref_id = None
     if db_name:
         dbxref = ExternalDb(
-            external_db_id=1,
+            external_db_id=db_id,
             db_name=db_name,
             status="XREF",
             priority=1,
@@ -100,7 +100,7 @@ def _add_synonym(session, dialect: str, synonym: str, db_name: str) -> None:
         session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
 
 
-def _add_test_attrib(session, dialect, attrib_id: int, logic_name: str, value: str | int) -> None:
+def _add_test_attrib(session, dialect, logic_name: str, value: str | int, attrib_id: int) -> None:
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
     attrib = AttribType(attrib_type_id=attrib_id, code=logic_name)
@@ -141,7 +141,7 @@ def test_fetch_seq_regions(seq_test_db: UnitTestDB) -> None:
 def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
     """Tests the `get_synonyms` method."""
     with seq_test_db.dbc.test_session_scope() as session:
-        _add_synonym(session, seq_test_db.dbc.dialect, "synA", "db1")
+        _add_test_synonym(session, seq_test_db.dbc.dialect, "synA", "db1", 1)
         coord_system = list(fetch_coord_systems(session))[0]
         seqr = list(fetch_seq_regions(session, coord_system))[0]
         syns = get_synonyms(seqr, db_map)
@@ -154,12 +154,13 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
     "attribs, expected_output",
     [
         param({}, None, id="no toplevel"),
+        param({"codon_table": 1}, None, id="no toplevel, other attribs"),
         param({"toplevel": 1}, {}, id="1 toplevel"),
         param({"toplevel": 1, "codon_table": 2}, {"codon_table": 2}, id="With codon table"),
         param({"toplevel": 1, "sequence_location": "chr"}, {"location": "chr"}, id="Location"),
         param({"toplevel": 1, "circular_seq": 1}, {"circular": 1}, id="circular"),
         param({"toplevel": 1, "circular_seq": 0}, {}, id="not circular"),
-        param({"toplevel": 1, "": 0}, {}, id="not circular"),
+        param({"toplevel": 1, "coord_system_tag": "contig"}, {"coord_system_level": "contig"}, id="contig level"),
     ],
 )
 def test_get_seq_regions_attribs(
@@ -173,7 +174,7 @@ def test_get_seq_regions_attribs(
     with seq_test_db.dbc.test_session_scope() as session:
         attrib_num = 1
         for attrib_name, attrib_value in attribs.items():
-            _add_test_attrib(session, seq_test_db.dbc.dialect, attrib_num, attrib_name, attrib_value)
+            _add_test_attrib(session, seq_test_db.dbc.dialect, attrib_name, attrib_value, attrib_num)
             attrib_num += 1
         output_seqr = get_seq_regions(session, db_map)
         if expected_output is None:
@@ -192,12 +193,13 @@ def test_get_seq_regions(
         "name": "seqA",
         "length": 1000,
         "coord_system_level": "primary_assembly",
-        "synonyms": [{"name": "synA", "source": "db1"}],
+        "synonyms": [{"name": "synA", "source": "GenBank"}, {"name": "synB"}],
         "added_sequence": {"accession": "ADDED1"},
     }
     with seq_test_db.dbc.test_session_scope() as session:
-        _add_test_attrib(session, seq_test_db.dbc.dialect, 1, "toplevel", 1)
-        _add_test_attrib(session, seq_test_db.dbc.dialect, 2, "added_seq_accession", "ADDED1")
-        _add_synonym(session, seq_test_db.dbc.dialect, "synA", "db1")
+        _add_test_attrib(session, seq_test_db.dbc.dialect, "toplevel", 1, 1)
+        _add_test_attrib(session, seq_test_db.dbc.dialect, "added_seq_accession", "ADDED1", 2)
+        _add_test_synonym(session, seq_test_db.dbc.dialect, "synA", "GenBank", 1)
+        _add_test_synonym(session, seq_test_db.dbc.dialect, "synB", None, 2)
         output_seqr = get_seq_regions(session, db_map)
         assert output_seqr[0] == expected_dict
