@@ -14,4 +14,4 @@
 # limitations under the License.
 """Annotation files processing module."""
 
-from .load import *
+from .update_description import *

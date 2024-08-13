@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Loads functional annotation from a file into a core database."""
+"""Update descriptions from a functional annotation file into a core database."""
 
 __all__ = [
     "get_core_data",
@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, select
 
 from ensembl.core.models import Gene, Transcript, ObjectXref, Xref
 from ensembl.io.genomio.utils import get_json
@@ -42,17 +42,18 @@ FEAT_TABLE = {
 FeatStruct = Tuple[str, str, str]
 
 
-def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
+def get_core_data(session: Session, table: str, match_xrefs: bool = False) -> Dict[str, FeatStruct]:
     """Returns the table descriptions from a core database.
 
     Args:
         session: Session open on a core database.
         table: "gene" or "transcript" table from the core database.
+        match_xrefs: If the IDs do not match, try to match an Xref ID instead.
     """
 
     if table == "gene":
         stmt = (
-            session.query(Gene.gene_id, Gene.stable_id, Gene.description, Xref.dbprimary_acc)
+            select(Gene.gene_id, Gene.stable_id, Gene.description, Xref.dbprimary_acc)
             .select_from(Gene)
             .outerjoin(
                 ObjectXref,
@@ -62,9 +63,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
         )
     elif table == "transcript":
         stmt = (
-            session.query(
-                Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc
-            )
+            select(Transcript.transcript_id, Transcript.stable_id, Transcript.description, Xref.dbprimary_acc)
             .select_from(Transcript)
             .outerjoin(
                 ObjectXref,
@@ -83,7 +82,7 @@ def get_core_data(session: Session, table: str) -> Dict[str, FeatStruct]:
         (feat_id, stable_id, desc, xref_name) = row
         feat_struct: FeatStruct = (feat_id, stable_id, desc)
         feat_data[stable_id.lower()] = feat_struct
-        if xref_name:
+        if match_xrefs and xref_name:
             feat_data[xref_name.lower()] = feat_struct
 
     return feat_data
@@ -101,17 +100,18 @@ def load_descriptions(
     Args:
         session: Session open on a core database.
         func_file: JSON file with the annotation information.
-        report: Print the mapping of changes to perform in the standard output?
-        do_update: Update core database?
+        report: Print the mapping of changes to perform in the standard output.
+        do_update: Actually update the core database.
+        match_xrefs: If the IDs do not match, try to match an Xref ID instead.
     """
     func = get_json(func_file)
     logging.info(f"{len(func)} annotations from {func_file}")
-    tables_to_lookup = ("gene", "transcript")
-    for table in tables_to_lookup:
+    table_to_update = {"gene": Gene, "transcript": Transcript}
+    for table, mapped_table in table_to_update.items():
         logging.info(f"Checking {table} descriptions")
         feat_func = [feat for feat in func if feat["object_type"] == table]
         logging.info(f"{len(feat_func)} {table} annotations from {func_file}")
-        feat_data = get_core_data(session, table)
+        feat_data = get_core_data(session, table, match_xrefs)
         logging.info(f"Loaded {len(feat_data)} {table} data")
 
         stats = {
@@ -136,14 +136,8 @@ def load_descriptions(
 
         if do_update:
             logging.info(f"Now updating {len(features_to_update)} rows...")
-            if table == "gene":
-                # session.execute(update(Gene), to_update)
-                session.bulk_update_mappings(Gene, features_to_update)
-                session.commit()
-            elif table == "transcript":
-                # session.execute(update(Transcript), to_update)
-                session.bulk_update_mappings(Transcript, features_to_update)
-                session.commit()
+            session.bulk_update_mappings(mapped_table, features_to_update)
+            session.commit()
 
 
 def _get_cur_feat(
@@ -208,7 +202,7 @@ def _get_features_to_update(
 
         # Prepare some data to compare
         new_stable_id = new_feat["id"]
-        new_desc = new_feat.get("description")
+        new_desc = new_feat.get("description", "")
         (row_id, cur_stable_id, cur_desc) = cur_feat
 
         # No description: replace unless the current description is from an Xref
@@ -233,8 +227,6 @@ def _get_features_to_update(
 
         # Directly print the mapping
         if report:
-            if new_desc is None:
-                new_desc = ""
             line = (table, new_stable_id, cur_stable_id, cur_desc, new_desc)
             print("\t".join(line))
 
