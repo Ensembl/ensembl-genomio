@@ -15,7 +15,7 @@
 """Fetch all the sequence regions from a core database and print them in JSON format."""
 
 __all__ = [
-    "get_coord_systems",
+    "fetch_coord_systems",
     "get_seq_regions",
     "add_attribs",
     "get_synonyms",
@@ -25,7 +25,7 @@ __all__ = [
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, Generator, List
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -40,20 +40,43 @@ from ensembl.utils.logging import init_logging_with_args
 _KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
 
-def get_coord_systems(session: Session) -> List[CoordSystem]:
+def fetch_coord_systems(session: Session) -> Generator[CoordSystem, None, None]:
     """Retrieve the coord_system metadata from the current core.
 
     Args:
         session (Session): Session for the current core.
 
-    Returns:
-        List[CoordSystem]: All coord_systems in the core.
+    Yields:
+        All coord_systems in the core.
     """
-    coord_systems: List[CoordSystem] = []
     coord_stmt = select(CoordSystem).filter(CoordSystem.attrib.like("%default_version%"))
     for row in session.execute(coord_stmt).unique().all():
-        coord_systems.append(row[0])
-    return coord_systems
+        coord: CoordSystem = row[0]
+        yield coord
+
+
+def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Generator[SeqRegion, None, None]:
+    """Retrieve the seq_region metadata for a given coord_system, with accessory tables cached.
+
+    Args:
+        session: Session for the current core.
+        coord_system: Coord_system to get seq regions.
+
+    Yields:
+        All seq_regions for the coord_system.
+    """
+    seqr_stmt = (
+        select(SeqRegion)
+        .where(SeqRegion.coord_system_id == coord_system.coord_system_id)
+        .options(
+            joinedload(SeqRegion.seq_region_synonym).joinedload(SeqRegionSynonym.external_db),
+            joinedload(SeqRegion.seq_region_attrib).joinedload(SeqRegionAttrib.attrib_type),
+            joinedload(SeqRegion.karyotype),
+        )
+    )
+    for row in session.execute(seqr_stmt).unique().all():
+        seqr: SeqRegion = row[0]
+        yield seqr
 
 
 def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
@@ -66,22 +89,11 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
         external_db_map (dict): Mapping of external_db names for the synonyms.
 
     """
-    coord_systems = get_coord_systems(session)
     seq_regions = []
 
-    for coord_system in coord_systems:
+    for coord_system in fetch_coord_systems(session):
         logging.debug(f"Dump coord {coord_system.name}")
-        seqr_stmt = (
-            select(SeqRegion)
-            .where(SeqRegion.coord_system_id == coord_system.coord_system_id)
-            .options(
-                joinedload(SeqRegion.seq_region_synonym).joinedload(SeqRegionSynonym.external_db),
-                joinedload(SeqRegion.seq_region_attrib).joinedload(SeqRegionAttrib.attrib_type),
-                joinedload(SeqRegion.karyotype),
-            )
-        )
-        for row in session.execute(seqr_stmt).unique().all():
-            seqr: SeqRegion = row[0]
+        for seqr in fetch_seq_regions(session, coord_system):
             seq_region: Dict[str, Any] = {}
             seq_region = {"name": seqr.name, "length": seqr.length}
             synonyms = get_synonyms(seqr, external_db_map)
