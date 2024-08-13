@@ -21,7 +21,7 @@ process DOWNLOAD_NCBI_STATS {
     label 'datasets_container'
 
     input:
-        val(meta)   // with keys [ id, accession ]
+        val(meta)  // with keys [ id, accession ]
 
     output:
         tuple val(meta), path("ncbi_stats.json")

@@ -21,6 +21,7 @@ workflow PREPARE_GENOME_METADATA {
     // Generate a meta value from a db metadata file and an ncbi datasets file
     take:
         input_json  // [ val(meta), path(input_json), path(ncbi_json) ]
+
     emit:
         genome_metadata
     

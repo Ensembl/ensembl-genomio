@@ -18,13 +18,14 @@ workflow ACCESSION_METADATA {
     // Generate a meta value with 2 keys: id and accession (same value)
     take:
         input_json
+
     emit:
         accession_meta
     
     main:
         accession_meta = _GET_ACCESSION_FROM_META_JSON(input_json).map {
             it, json -> tuple([id: it, accession: it], json)
-            }
+        }
 }
 
 process _GET_ACCESSION_FROM_META_JSON {
