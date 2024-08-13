@@ -15,8 +15,6 @@
 """Fetch all the sequence regions from a core database and print them in JSON format."""
 
 __all__ = [
-    "MapFormatError",
-    "get_external_db_map",
     "get_coord_systems",
     "get_seq_regions",
     "add_attribs",
@@ -24,7 +22,6 @@ __all__ = [
     "get_karyotype",
 ]
 
-from importlib.resources import as_file, files
 import json
 import logging
 from pathlib import Path
@@ -35,33 +32,12 @@ from sqlalchemy.orm import Session, joinedload
 
 from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
 from ensembl.io.genomio.database import DBConnectionLite
+from ensembl.io.genomio.seq_region.external_db_map import get_external_db_map
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-default_map_res = files("ensembl.io.genomio.data.external_db_map").joinpath("default.txt")
-with as_file(default_map_res) as default_map_path:
-    _DEFAULT_MAP = default_map_path
 _KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
-
-
-class MapFormatError(Exception):
-    """Error when parsing the db map file."""
-
-
-def get_external_db_map(map_file: Path) -> Dict:
-    """Class method, set up the map for all SeqRegion objects"""
-    db_map: Dict[str, str] = {}
-    with map_file.open("r") as map_fh:
-        for line in map_fh:
-            line = line.rstrip()
-            if line.startswith("#") or line.startswith(" ") or line == "":
-                continue
-            parts = line.split("\t")
-            if not parts[0] or not parts[1]:
-                raise MapFormatError(f"External db file is not formatted correctly for: {line}")
-            db_map[parts[1]] = parts[0]
-    return db_map
 
 
 def get_coord_systems(session: Session) -> List[CoordSystem]:
