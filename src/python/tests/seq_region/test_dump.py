@@ -22,7 +22,7 @@ import pytest
 from pytest import param, raises
 from sqlalchemy import text
 
-from ensembl.io.genomio.seq_region.dump import fetch_coord_systems
+from ensembl.io.genomio.seq_region.dump import fetch_coord_systems, fetch_seq_regions
 from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionAttrib, metadata
 from ensembl.utils.database import UnitTestDB
 
@@ -65,3 +65,15 @@ def test_fetch_coord_systems(
         coord: CoordSystem = coords[0]
         assert len(list(coord.seq_region)) == 1
         assert coord.name == "primary_assembly"
+
+
+def test_fetch_seq_regions(
+    seq_test_db: UnitTestDB
+) -> None:
+    """Tests the `fetch_seq_regions` method."""
+    with seq_test_db.dbc.test_session_scope() as session:
+        coord_system = list(fetch_coord_systems(session))[0]
+        seqrs = list(fetch_seq_regions(session, coord_system))
+        assert len(seqrs) == 1
+        seqr = seqrs[0]
+        assert seqr.name == "seqA"
