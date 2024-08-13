@@ -71,6 +71,7 @@ class ManifestMaker:
 
             # Delete and skip empty files
             if subfile.stat().st_size == 0:
+                logging.warning(f"Skip and delete empty file: {subfile}")
                 subfile.unlink()
                 continue
 
@@ -88,7 +89,7 @@ class ManifestMaker:
                         obj_name = self._prepare_object_name(subfile, name, manifest_files[standard_name])
                         manifest_files[standard_name][obj_name] = file_obj
 
-                    # Single file
+                    # Single file/init
                     else:
                         manifest_files[standard_name] = file_obj
 
