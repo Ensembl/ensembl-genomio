@@ -24,7 +24,7 @@ from importlib.resources import as_file, files
 from pathlib import Path
 from typing import Dict
 
-
+# Provide the default map from a data file
 default_map_res = files("ensembl.io.genomio.data.external_db_map").joinpath("default.txt")
 with as_file(default_map_res) as default_map_path:
     DEFAULT_EXTERNAL_DB_MAP = default_map_path
@@ -36,10 +36,10 @@ class MapFormatError(ValueError):
 
 def get_external_db_map(map_file: Path) -> Dict:
     """Get an external_db map from a file.
-    
+
     Returns:
         Dict with keys as alternate names, and values as standard name.
-    
+
     """
     db_map: Dict[str, str] = {}
     with map_file.open("r") as map_fh:
@@ -50,5 +50,6 @@ def get_external_db_map(map_file: Path) -> Dict:
             parts = line.split("\t")
             if len(parts) < 2:
                 raise MapFormatError(f"External db file is not formatted correctly for: {line}")
-            db_map[parts[1]] = parts[0]
+            (main_name, alt_name) = parts[0:2]
+            db_map[alt_name] = main_name
     return db_map

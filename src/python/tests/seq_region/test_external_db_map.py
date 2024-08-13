@@ -21,7 +21,11 @@ from typing import ContextManager
 import pytest
 from pytest import param, raises
 
-from ensembl.io.genomio.seq_region.external_db_map import MapFormatError, get_external_db_map, DEFAULT_EXTERNAL_DB_MAP
+from ensembl.io.genomio.seq_region.external_db_map import (
+    MapFormatError,
+    get_external_db_map,
+    DEFAULT_EXTERNAL_DB_MAP,
+)
 
 
 @pytest.mark.parametrize(
@@ -49,6 +53,7 @@ def test_get_external_db_map(
             test_fh.write(file_content)
         output = get_external_db_map(test_file)
         assert output == expected_output
+
 
 def test_default_map() -> None:
     """Tests the default_map file."""
