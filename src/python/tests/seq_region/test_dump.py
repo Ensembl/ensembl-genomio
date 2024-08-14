@@ -23,28 +23,28 @@ from sqlalchemy import text
 from ensembl.io.genomio.seq_region.dump import (
     fetch_coord_systems,
     fetch_seq_regions,
-    get_synonyms,
-    get_seq_regions,
-    get_karyotype,
     get_added_sequence,
+    get_karyotype,
+    get_seq_regions,
+    get_synonyms,
 )
-from ensembl.io.genomio.external_db.db_map import get_external_db_map, DEFAULT_EXTERNAL_DB_MAP
+from ensembl.io.genomio.external_db.db_map import DEFAULT_EXTERNAL_DB_MAP, get_external_db_map
 from ensembl.core.models import (
     metadata,
+    AttribType,
     CoordSystem,
+    ExternalDb,
+    Karyotype,
     SeqRegion,
     SeqRegionAttrib,
     SeqRegionSynonym,
-    ExternalDb,
-    AttribType,
-    Karyotype,
 )
 from ensembl.utils.database import UnitTestDB
 
 
 @pytest.fixture(name="seq_test_db", scope="module")
 def fixture_seq_test_db(db_factory) -> UnitTestDB:
-    """Returns a test database with all core tables and basic data."""
+    """Returns a test database with all core tables and basic data (1 coord_system + 1 seq_region)."""
     test_db: UnitTestDB = db_factory(src="no_src", name="dump_seq")
     test_db.dbc.create_all_tables(metadata)
 
@@ -75,6 +75,16 @@ def fixture_seq_test_db(db_factory) -> UnitTestDB:
 
 
 def _add_test_synonym(session, dialect: str, synonym: str, db_name: str | None, db_id: int) -> None:
+    """Add a seq_region synonym to the test seq_region.
+
+    Args:
+        session: SQLalchemy session.
+        dialect: Dialect of the DB connection.
+        synonym: Synonym name.
+        db_name: DB xref name.
+        db_id: DB xref ID (must be unique).
+
+    """
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
 
@@ -102,6 +112,16 @@ def _add_test_synonym(session, dialect: str, synonym: str, db_name: str | None, 
 
 
 def _add_test_attrib(session, dialect, logic_name: str, value: str | int, attrib_id: int) -> None:
+    """Add a seq_region attrib to the test seq_region.
+
+    Args:
+        session: SQLalchemy session.
+        dialect: Dialect of the DB connection.
+        logic_name: Attrib type logic name.
+        value: Attrib value.
+        attrib_id: Attrib ID (must be unique).
+
+    """
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
     attrib = AttribType(attrib_type_id=attrib_id, code=logic_name)
@@ -116,6 +136,17 @@ def _add_test_attrib(session, dialect, logic_name: str, value: str | int, attrib
 def _add_test_karyotype(
     session, dialect, start: int, end: int, band: str | None = None, stain: str | None = None
 ) -> None:
+    """Add a seq_region karyotype band to the test seq_region.
+
+    Args:
+        session: SQLalchemy session.
+        dialect: Dialect of the DB connection.
+        start: Start of the band.
+        end: End of the band.
+        band: Name of the band.
+        stain: Name of the stain.
+
+    """
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
     karyo = Karyotype(seq_region_id=1, seq_region_start=start, seq_region_end=end, band=band, stain=stain)
@@ -178,7 +209,13 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
     ],
 )
 def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict) -> None:
-    """Tests the `get_synonyms` method."""
+    """Tests the `get_synonyms` method.
+
+    Args:
+        bands: List of dicts with keys `name`, `stain` for each test band to add.
+        expected_kar: List of expected karyotype dicts output.
+
+    """
     with seq_test_db.dbc.test_session_scope() as session:
         for band in bands:
             _add_test_karyotype(session, seq_test_db.dbc.dialect, 1, 10, band.get("name"), band.get("stain"))
@@ -209,7 +246,13 @@ def test_get_seq_regions_attribs(
     attribs: dict[str, str],
     expected_output: dict[str, Any] | None,
 ) -> None:
-    """Tests the `get_seq_regions` method."""
+    """Tests the `get_seq_regions_attribs` method.
+
+    Args:
+        attribs: Dicts with all attrib-value pairs for each attrib to add to the seq_region.
+        expected_kar: List of expected karyotype dicts output.
+
+    """
     expected_dict = {"name": "seqA", "length": 1000, "coord_system_level": "primary_assembly"}
     with seq_test_db.dbc.test_session_scope() as session:
         attrib_num = 1
@@ -261,7 +304,13 @@ def test_get_seq_regions_attribs(
 def test_get_added_sequence(
     seq_test_db: UnitTestDB, attribs: dict[str, str], expected_output: dict[str, str | dict]
 ) -> None:
-    """Tests the `get_seq_regions` method."""
+    """Tests the `get_added_sequences` method.
+
+    Args:
+        attribs: Dicts with all attrib-value pairs for each attrib to add to the seq_region.
+        expected_output: Expected output.
+
+    """
     with seq_test_db.dbc.test_session_scope() as session:
         attrib_num = 1
         for attrib_name, attrib_value in attribs.items():

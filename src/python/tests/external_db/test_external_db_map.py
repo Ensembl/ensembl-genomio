@@ -44,7 +44,9 @@ def test_get_external_db_map(
     """Tests the `get_external_db_map` method.
 
     Args:
-        expected: Context manager for the expected exception
+        file_content: Test db_map file content.
+        expected_output: Db map expected output.
+        expected: Context Manager for the expected exception.
 
     """
     with expected:
