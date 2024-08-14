@@ -14,12 +14,10 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.seq_region.dump` module."""
 
-from contextlib import nullcontext as no_raise
-from pathlib import Path
-from typing import Any, ContextManager
+from typing import Any
 
 import pytest
-from pytest import param, raises
+from pytest import param
 from sqlalchemy import text
 
 from ensembl.io.genomio.seq_region.dump import (
@@ -128,7 +126,7 @@ def _add_test_karyotype(
 
 
 @pytest.fixture(name="db_map", scope="module")
-def fixture_db_map(db_factory) -> dict[str, str]:
+def fixture_db_map() -> dict[str, str]:
     """Returns the default db_map."""
     return get_external_db_map(DEFAULT_EXTERNAL_DB_MAP)
 

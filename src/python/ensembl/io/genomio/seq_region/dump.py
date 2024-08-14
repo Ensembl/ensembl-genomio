@@ -154,12 +154,12 @@ def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
             seq_region[key] = bool(value)
 
     for name, key in int_attribs.items():
-        value = attrib_dict.get(name)
+        value = attrib_dict.get(name, "")
         if value:
             seq_region[key] = int(value)
 
     for name, key in string_attribs.items():
-        value = attrib_dict.get(name)
+        value = attrib_dict.get(name, "")
         if value:
             seq_region[key] = str(value)
 
