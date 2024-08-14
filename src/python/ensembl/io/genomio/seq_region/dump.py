@@ -25,7 +25,7 @@ __all__ = [
 import json
 import logging
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any, Iterator
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -40,7 +40,7 @@ from ensembl.utils.logging import init_logging_with_args
 _KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
 
-def fetch_coord_systems(session: Session) -> Generator[CoordSystem, None, None]:
+def fetch_coord_systems(session: Session) -> Iterator[CoordSystem]:
     """Retrieve the coord_system metadata from the current core.
 
     Args:
@@ -55,7 +55,7 @@ def fetch_coord_systems(session: Session) -> Generator[CoordSystem, None, None]:
         yield coord
 
 
-def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Generator[SeqRegion, None, None]:
+def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Iterator[SeqRegion]:
     """Retrieve the seq_region metadata for a given coord_system, with accessory tables cached.
 
     Args:
