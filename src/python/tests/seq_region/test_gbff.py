@@ -18,11 +18,28 @@ from contextlib import nullcontext as no_raise
 from pathlib import Path
 from typing import ContextManager
 
+from Bio import SeqIO
 import pytest
-from pytest import CaptureFixture, param, raises
+from pytest import param
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 
 def test_gbff(data_dir: Path):
     record = GBFFRecord(data_dir / "apicoplast.gb")
     assert record
+
+def get_record(gbff_path: Path):
+    with gbff_path.open("r") as gbff_file:
+        for record in SeqIO.parse(gbff_file, "genbank"):
+            return record
+
+@pytest.mark.parametrize(
+    "input_gb, expected_id",
+    [
+        param("apicoplast.gb", "U87145", id="Found genbank ID"),
+    ],
+)
+def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None):
+    seq_record = get_record(data_dir / input_gb)
+    record = GBFFRecord(seq_record)
+    assert record.get_genbank_id() == expected_id

@@ -51,14 +51,14 @@ class GBFFRecord:
             record: Sequence record.
 
         """
-        genbank_id = None
-        if "comment" in self.record.annotations:
-            comment = str(self.record.annotations["comment"])
-            comment = re.sub(r"[ \n\r]+", " ", comment)
-            match = re.search(r"The reference sequence was derived from ([^\.]+)\.", comment)
-            if match:
-                genbank_id = match.group(1)
-        return genbank_id
+        comment = str(self.record.annotations.get("comment", ""))
+        if not comment:
+            return
+        comment = re.sub(r"[ \n\r]+", " ", comment)
+        match = re.search(r"The reference sequence was derived from ([^\.]+)\.", comment)
+        if not match:
+            return
+        return match.group(1)
 
     def get_codon_table(self) -> int | None:
         """Returns the codon table number from a given a GenBank sequence record (if present)."""
