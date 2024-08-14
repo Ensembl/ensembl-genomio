@@ -25,7 +25,7 @@ __all__ = [
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, Generator, List
+from typing import Any, Generator
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -79,24 +79,17 @@ def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Generator[
         yield seqr
 
 
-def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
-    """Extracts all the attributes for the given sequence region.
-
-    Args:
-        seq_region: Sequence region.
-
-    Returns:
-        Pairs of source and value for each attribute.
-    """
+def get_attribs_dict(seq_region: SeqRegion) -> dict[str, Any]:
+    """Returns a dict of attrib code-value for all the attributes of the given sequence region."""
     return {attrib.attrib_type.code: attrib.value for attrib in seq_region.seq_region_attrib}
 
 
-def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
+def add_attribs(seq_region: dict, attrib_dict: dict) -> None:
     """Map seq_regions attribs to a specific name and type defined below.
 
     Args:
-        seq_region (Dict): A seq_region dict to modify.
-        attrib_dict (Dict): The attribs for this seq_region.
+        seq_region: A seq_region dict to modify.
+        attrib_dict: The attribs for this seq_region.
     """
     bool_attribs = {
         "circular_seq": "circular",
@@ -129,7 +122,7 @@ def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
             seq_region[key] = str(value)
 
 
-def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
+def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> list[dict[str, str]]:
     """Get all synonyms for a given seq_region. Use the mapping for synonym source names.
 
     Args:
@@ -137,7 +130,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
         external_db_map (dict): To map the synonym source names.
 
     Returns:
-        List: All synonyms as a dict with 'name' and 'source' keys.
+        List of all synonyms as a dict with 'name' and 'source' keys.
     """
     synonyms = seq_region.seq_region_synonym
     syns = []
@@ -156,14 +149,14 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
     return syns
 
 
-def get_karyotype(seq_region: SeqRegion) -> List:
+def get_karyotype(seq_region: SeqRegion) -> list:
     """Given a seq_region, extract the karyotype bands.
 
     Args:
-        seq_region (SeqRegion): The seq_region from which the karyotype bands are extracted.
+        seq_region: The seq_region from which the karyotype bands are extracted.
 
     Returns:
-        List: All karyotype bands as a dict with values 'start', 'end', 'name' 'stain', 'structure'.
+        List of all karyotype bands as a dict with values 'start', 'end', 'name' 'stain', 'structure'.
     """
     bands = seq_region.karyotype
     kars = []
@@ -183,7 +176,7 @@ def get_karyotype(seq_region: SeqRegion) -> List:
     return kars
 
 
-def get_added_sequence(seq_region: SeqRegion) -> Dict:
+def get_added_sequence(seq_region: SeqRegion) -> dict:
     """Extracts added sequence information of the given sequence region.
 
     Args:
@@ -220,7 +213,7 @@ def get_added_sequence(seq_region: SeqRegion) -> Dict:
     return added_sequence
 
 
-def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
+def get_seq_regions(session: Session, external_db_map: dict) -> list[SeqRegion]:
     """Returns all the sequence regions from the current core database.
 
     Include synonyms, attribs and karyotypes. Only the top level sequences are exported.
@@ -235,7 +228,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
     for coord_system in fetch_coord_systems(session):
         logging.debug(f"Dump coord {coord_system.name}")
         for seqr in fetch_seq_regions(session, coord_system):
-            seq_region: Dict[str, Any] = {}
+            seq_region: dict[str, Any] = {}
             seq_region = {"name": seqr.name, "length": seqr.length}
             synonyms = get_synonyms(seqr, external_db_map)
             if synonyms:
