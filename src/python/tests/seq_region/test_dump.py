@@ -28,7 +28,7 @@ from ensembl.io.genomio.seq_region.dump import (
     get_karyotype,
     get_added_sequence,
 )
-from ensembl.io.genomio.seq_region.external_db_map import get_external_db_map, DEFAULT_EXTERNAL_DB_MAP
+from ensembl.io.genomio.external_db.db_map import get_external_db_map, DEFAULT_EXTERNAL_DB_MAP
 from ensembl.core.models import (
     metadata,
     CoordSystem,

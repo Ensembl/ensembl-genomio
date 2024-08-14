@@ -21,7 +21,7 @@ from typing import ContextManager
 import pytest
 from pytest import param, raises
 
-from ensembl.io.genomio.seq_region.external_db_map import (
+from ensembl.io.genomio.external_db.db_map import (
     MapFormatError,
     get_external_db_map,
     DEFAULT_EXTERNAL_DB_MAP,

@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ensembl.core.models import CoordSystem, SeqRegion, SeqRegionSynonym, SeqRegionAttrib
 from ensembl.io.genomio.database import DBConnectionLite
-from ensembl.io.genomio.seq_region.external_db_map import get_external_db_map, DEFAULT_EXTERNAL_DB_MAP
+from ensembl.io.genomio.external_db.db_map import get_external_db_map, DEFAULT_EXTERNAL_DB_MAP
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
