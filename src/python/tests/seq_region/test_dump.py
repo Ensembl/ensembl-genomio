@@ -27,7 +27,8 @@ from ensembl.io.genomio.seq_region.dump import (
     fetch_seq_regions,
     get_synonyms,
     get_seq_regions,
-    get_karyotype
+    get_karyotype,
+    get_added_sequence,
 )
 from ensembl.io.genomio.seq_region.external_db_map import get_external_db_map, DEFAULT_EXTERNAL_DB_MAP
 from ensembl.core.models import (
@@ -114,7 +115,9 @@ def _add_test_attrib(session, dialect, logic_name: str, value: str | int, attrib
         session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
 
 
-def _add_test_karyotype(session, dialect, start: int, end: int, band: str | None = None, stain: str | None = None) -> None:
+def _add_test_karyotype(
+    session, dialect, start: int, end: int, band: str | None = None, stain: str | None = None
+) -> None:
     if dialect == "mysql":
         session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
     karyo = Karyotype(seq_region_id=1, seq_region_start=start, seq_region_end=end, band=band, stain=stain)
@@ -167,9 +170,13 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
     [
         param([], [], id="no karyotype"),
         param([{}], [{"start": 1, "end": 10}], id="no name/stain"),
-        param([{"name" : "bandA"}], [{"start": 1, "end": 10, "name": "bandA"}], id="one band"),
-        param([{"stain" : "stainA"}], [{"start": 1, "end": 10, "stain": "stainA"}], id="one stain"),
-        param([{"stain" : "TEL"}], [{"start": 1, "end": 10, "stain": "TEL", "structure": "telomere"}], id="telomere"),
+        param([{"name": "bandA"}], [{"start": 1, "end": 10, "name": "bandA"}], id="one band"),
+        param([{"stain": "stainA"}], [{"start": 1, "end": 10, "stain": "stainA"}], id="one stain"),
+        param(
+            [{"stain": "TEL"}],
+            [{"start": 1, "end": 10, "stain": "TEL", "structure": "telomere"}],
+            id="telomere",
+        ),
     ],
 )
 def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict) -> None:
@@ -193,7 +200,9 @@ def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict)
         param({"toplevel": 1, "sequence_location": "chr"}, {"location": "chr"}, id="Location"),
         param({"toplevel": 1, "circular_seq": 1}, {"circular": 1}, id="circular"),
         param({"toplevel": 1, "circular_seq": 0}, {}, id="not circular"),
-        param({"toplevel": 1, "coord_system_tag": "contig"}, {"coord_system_level": "contig"}, id="contig level"),
+        param(
+            {"toplevel": 1, "coord_system_tag": "contig"}, {"coord_system_level": "contig"}, id="contig level"
+        ),
     ],
 )
 def test_get_seq_regions_attribs(
@@ -215,6 +224,55 @@ def test_get_seq_regions_attribs(
         else:
             expected_dict.update(expected_output)
             assert output_seqr[0] == expected_dict
+
+
+@pytest.mark.parametrize(
+    "attribs, expected_output",
+    [
+        param({}, {}, id="no added seq"),
+        param({"added_seq_accession": "ACC1"}, {"accession": "ACC1"}, id="added accession"),
+        param(
+            {
+                "added_seq_accession": "ACC1",
+                "added_seq_asm_pr_nam": "asm_name",
+                "added_seq_asm_pr_url": "asm_url",
+            },
+            {"accession": "ACC1", "assembly_provider": {"name": "asm_name", "url": "asm_url"}},
+            id="added accession + assembly provider",
+        ),
+        param(
+            {
+                "added_seq_accession": "ACC1",
+                "added_seq_ann_pr_nam": "ann_name",
+                "added_seq_ann_pr_url": "ann_url",
+            },
+            {"accession": "ACC1", "annotation_provider": {"name": "ann_name", "url": "ann_url"}},
+            id="added accession + annotation provider",
+        ),
+        param(
+            {
+                "added_seq_accession": "ACC1",
+                "added_seq_asm_pr_nam": "asm_name",
+                "added_seq_ann_pr_url": "ann_url",
+            },
+            {"accession": "ACC1"},
+            id="added accession + incomplete annotation/assembly provider",
+        ),
+    ],
+)
+def test_get_added_sequence(
+    seq_test_db: UnitTestDB, attribs: dict[str, str], expected_output: dict[str, str | dict]
+) -> None:
+    """Tests the `get_seq_regions` method."""
+    with seq_test_db.dbc.test_session_scope() as session:
+        attrib_num = 1
+        for attrib_name, attrib_value in attribs.items():
+            _add_test_attrib(session, seq_test_db.dbc.dialect, attrib_name, attrib_value, attrib_num)
+            attrib_num += 1
+        coord_system = list(fetch_coord_systems(session))[0]
+        seqr = list(fetch_seq_regions(session, coord_system))[0]
+        added = get_added_sequence(seqr)
+        assert added == expected_output
 
 
 def test_get_seq_regions(
