@@ -22,7 +22,6 @@ __all__ = [
     "SYNONYM_MAP",
     "SYNONYM_RESOURCES",
     "UnknownMetadata",
-    "add_insdc_seq_region_name",
     "add_mitochondrial_codon_table",
     "add_translation_table",
     "exclude_seq_regions",
@@ -114,41 +113,6 @@ def add_translation_table(
         # Do not overwrite any existing codon table
         if ("codon_table" not in seqr) and ("location" in seqr) and (seqr["location"] in location_codon):
             seqr["codon_table"] = location_codon[seqr["location"]]
-
-
-def add_insdc_seq_region_name(
-    seq_regions: List[SeqRegion], synonym_sources: Optional[List[str]] = None
-) -> List[SeqRegion]:
-    """Returns the list of sequence regions with their corresponding INSDC sequence region names.
-
-    "BRC4_seq_region_name" and "EBI_seq_region_name" fields are added to each sequence region: the
-    former will contain the corresponding INSDC name whilst the latter will contain the current name.
-
-    Args:
-        seq_regions: Sequence regions.
-        synonym_sources: Synonym sources to use for the BRC4 name, in order of preference.
-
-    Raises:
-        UnknownMetadata: If no synonym name is found for a sequence region.
-
-    """
-    if synonym_sources is None:
-        synonym_sources = SYNONYM_RESOURCES
-    new_seq_regions = []
-    for seqr in seq_regions:
-        names = {synonym["source"]: synonym["name"] for synonym in seqr.get("synonyms", [])}
-        # Choose the synonym to use as the BRC name, using the first valid name from the source list
-        for source_name in synonym_sources:
-            if source_name in names:
-                brc_name = names[source_name]
-                break
-        else:
-            raise UnknownMetadata(f'Cannot set BRC4 sequence region name for {seqr["name"]}')
-        brc_name = brc_name.partition(".")[0]
-        seqr["BRC4_seq_region_name"] = brc_name
-        seqr["EBI_seq_region_name"] = seqr["name"]
-        new_seq_regions.append(seqr)
-    return new_seq_regions
 
 
 def add_mitochondrial_codon_table(seq_regions: List[SeqRegion], taxon_id: int) -> None:
@@ -445,7 +409,6 @@ def prepare_seq_region_metadata(
     report_file: PathLike,
     dst_file: PathLike,
     gbff_file: Optional[PathLike] = None,
-    brc_mode: bool = False,
     to_exclude: Optional[List[str]] = None,
     mock_run: bool = False,
 ) -> None:
@@ -460,7 +423,6 @@ def prepare_seq_region_metadata(
         report_file: INSDC/RefSeq sequences report file path to parse.
         gbff_file: INSDC/RefSeq GBFF file path to parse.
         dst_file: JSON file output for the processed sequence regions JSON.
-        brc_mode: Include INSDC sequence region names.
         to_exclude: Sequence region names to exclude.
         mock_run: Do not call external taxonomy service.
 
@@ -480,10 +442,6 @@ def prepare_seq_region_metadata(
     # Exclude seq_regions from a list
     if to_exclude is not None:
         seq_regions = exclude_seq_regions(seq_regions, to_exclude)
-
-    # Setup the BRC4_seq_region_name
-    if brc_mode:
-        seq_regions = add_insdc_seq_region_name(seq_regions)
 
     # Add translation and mitochondrial codon tables
     add_translation_table(seq_regions)
@@ -505,7 +463,6 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--dst_file", default="seq_region.json", help="Output JSON file for the processed sequence regions"
     )
-    parser.add_argument("--brc_mode", action="store_true", help="Enable BRC mode")
     parser.add_argument(
         "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
     )
@@ -519,7 +476,6 @@ def main() -> None:
         report_file=args.report_file,
         dst_file=args.dst_file,
         gbff_file=args.gbff_file,
-        brc_mode=args.brc_mode,
         to_exclude=args.to_exclude,
         mock_run=args.mock_run,
     )
