@@ -17,10 +17,6 @@
 __all__ = [
     "SeqRegion",
     "SeqRegionDict",
-    "LOCATION_CODON",
-    "MOLECULE_LOCATION",
-    "SYNONYM_MAP",
-    "SYNONYM_RESOURCES",
     "UnknownMetadata",
     "add_mitochondrial_codon_table",
     "add_translation_table",
@@ -58,14 +54,14 @@ SeqRegion = Dict[str, Any]
 SeqRegionDict = Dict[str, SeqRegion]
 
 
-SYNONYM_RESOURCES = ["GenBank", "RefSeq", "INSDC"]
-SYNONYM_MAP = {
+_SYNONYM_RESOURCES = ["GenBank", "RefSeq", "INSDC"]
+_SYNONYM_MAP = {
     "Assigned-Molecule": "INSDC",
     "GenBank-Accn": "GenBank",
     "RefSeq-Accn": "RefSeq",
     "Sequence-Name": "INSDC_submitted_name",
 }
-MOLECULE_LOCATION = {
+_MOLECULE_LOCATION = {
     "apicoplast": "apicoplast_chromosome",
     "chromosome": "nuclear_chromosome",
     "kinetoplast": "kinetoplast_chromosome",
@@ -73,7 +69,7 @@ MOLECULE_LOCATION = {
     "mitochondrion": "mitochondrial_chromosome",
     "plasmid": "plasmid",
 }
-LOCATION_CODON = {"apicoplast_chromosome": 4}
+_LOCATION_CODON = {"apicoplast_chromosome": 4}
 
 
 class UnknownMetadata(Exception):
@@ -108,7 +104,7 @@ def add_translation_table(
 
     """
     if location_codon is None:
-        location_codon = LOCATION_CODON
+        location_codon = _LOCATION_CODON
     for seqr in seq_regions:
         # Do not overwrite any existing codon table
         if ("codon_table" not in seqr) and ("location" in seqr) and (seqr["location"] in location_codon):
@@ -263,7 +259,7 @@ def get_organelle(record: SeqRecord, molecule_location: Optional[Dict] = None) -
 
     """
     if molecule_location is None:
-        molecule_location = MOLECULE_LOCATION
+        molecule_location = _MOLECULE_LOCATION
     location = None
     for feat in record.features:
         if "organelle" in feat.qualifiers:
@@ -330,9 +326,9 @@ def make_seq_region(
 
     """
     if synonym_map is None:
-        synonym_map = SYNONYM_MAP
+        synonym_map = _SYNONYM_MAP
     if molecule_location is None:
-        molecule_location = MOLECULE_LOCATION
+        molecule_location = _MOLECULE_LOCATION
     seq_region = {}
     # Set accession as the sequence region name
     src = "RefSeq" if is_refseq else "GenBank"
