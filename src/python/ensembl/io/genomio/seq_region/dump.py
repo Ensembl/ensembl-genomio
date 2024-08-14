@@ -122,12 +122,12 @@ def add_attribs(seq_region: dict, attrib_dict: dict) -> None:
             seq_region[key] = str(value)
 
 
-def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> list[dict[str, str]]:
+def get_synonyms(seq_region: SeqRegion, external_db_map: dict[str, str]) -> list[dict[str, str]]:
     """Get all synonyms for a given seq_region. Use the mapping for synonym source names.
 
     Args:
-        seq_region (SeqRegion): Seq_region from which the synonyms are extracted.
-        external_db_map (dict): To map the synonym source names.
+        seq_region: Seq_region from which the synonyms are extracted.
+        external_db_map: To map the synonym source names.
 
     Returns:
         List of all synonyms as a dict with 'name' and 'source' keys.
@@ -149,7 +149,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> list[dict[str,
     return syns
 
 
-def get_karyotype(seq_region: SeqRegion) -> list[dict[str, Any]]:
+def get_karyotype(seq_region: SeqRegion) -> list[dict[str, str]]:
     """Given a seq_region, extract the karyotype bands.
 
     Args:
@@ -176,7 +176,7 @@ def get_karyotype(seq_region: SeqRegion) -> list[dict[str, Any]]:
     return kars
 
 
-def get_added_sequence(seq_region: SeqRegion) -> dict[str, str]:
+def get_added_sequence(seq_region: SeqRegion) -> dict[str, str | dict[str, str]]:
     """Extracts added sequence information of the given sequence region.
 
     Args:
