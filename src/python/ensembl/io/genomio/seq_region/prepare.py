@@ -54,7 +54,6 @@ SeqRegion = Dict[str, Any]
 SeqRegionDict = Dict[str, SeqRegion]
 
 
-_SYNONYM_RESOURCES = ["GenBank", "RefSeq", "INSDC"]
 _SYNONYM_MAP = {
     "Assigned-Molecule": "INSDC",
     "GenBank-Accn": "GenBank",
