@@ -44,10 +44,10 @@ def fetch_coord_systems(session: Session) -> Generator[CoordSystem, None, None]:
     """Retrieve the coord_system metadata from the current core.
 
     Args:
-        session (Session): Session for the current core.
+        session: Session for the current core.
 
     Yields:
-        All coord_systems in the core.
+        All default coord_systems in the core.
     """
     coord_stmt = select(CoordSystem).filter(CoordSystem.attrib.like("%default_version%"))
     for row in session.execute(coord_stmt).unique().all():
@@ -79,51 +79,16 @@ def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Generator[
         yield seqr
 
 
-def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
-    """Returns all the sequence regions from the current core database.
-
-    Include synonyms, attribs and karyotypes. Only the top level sequences are exported.
+def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
+    """Extracts all the attributes for the given sequence region.
 
     Args:
-        session (Session): Session from the current core.
-        external_db_map (dict): Mapping of external_db names for the synonyms.
+        seq_region: Sequence region.
 
+    Returns:
+        Pairs of source and value for each attribute.
     """
-    seq_regions = []
-
-    for coord_system in fetch_coord_systems(session):
-        logging.debug(f"Dump coord {coord_system.name}")
-        for seqr in fetch_seq_regions(session, coord_system):
-            seq_region: Dict[str, Any] = {}
-            seq_region = {"name": seqr.name, "length": seqr.length}
-            synonyms = get_synonyms(seqr, external_db_map)
-            if synonyms:
-                seq_region["synonyms"] = synonyms
-
-            attribs = get_attribs_dict(seqr)
-            if attribs:
-                if "toplevel" not in attribs:
-                    continue
-                add_attribs(seq_region, attribs)
-            else:
-                # Skip seq_region without attribs, not toplevel
-                continue
-
-            karyotype = get_karyotype(seqr)
-            if karyotype:
-                seq_region["karyotype_bands"] = karyotype
-
-            added_seq = get_added_sequence(seqr)
-            if added_seq:
-                seq_region["added_sequence"] = added_seq
-
-            if "coord_system_level" not in seq_region:
-                seq_region["coord_system_level"] = coord_system.name
-
-            seq_regions.append(seq_region)
-
-    seq_regions = sorted(seq_regions, key=lambda seqr: (seqr["coord_system_level"], seqr["name"]))
-    return seq_regions
+    return {attrib.attrib_type.code: attrib.value for attrib in seq_region.seq_region_attrib}
 
 
 def add_attribs(seq_region: Dict, attrib_dict: Dict) -> None:
@@ -191,39 +156,6 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> List:
     return syns
 
 
-def _get_attribs(seq_region: SeqRegion) -> List:
-    """Given a seq_region, extract the attribs as value-source items.
-
-    Args:
-        seq_region (SeqRegion): The seq_region from which the attribs are extracted.
-
-    Returns:
-        All attributes as a list of dictionaries with 'value' and 'source' keys.
-    """
-    attribs = seq_region.seq_region_attrib
-    atts = []
-    if attribs:
-        for attrib in attribs:
-            att_obj = {"value": attrib.value, "source": attrib.attrib_type.code}
-            atts.append(att_obj)
-    return atts
-
-
-def get_attribs_dict(seq_region: SeqRegion) -> Dict[str, Any]:
-    """Extracts all the attributes of the given sequence region.
-
-    Args:
-        seq_region: Sequence region.
-
-    Returns:
-        Pairs of source and value for each attribute.
-    """
-
-    attribs = _get_attribs(seq_region)
-    attrib_dict = {attrib["source"]: attrib["value"] for attrib in attribs}
-    return attrib_dict
-
-
 def get_karyotype(seq_region: SeqRegion) -> List:
     """Given a seq_region, extract the karyotype bands.
 
@@ -286,6 +218,53 @@ def get_added_sequence(seq_region: SeqRegion) -> Dict:
         added_sequence["annotation_provider"] = annotation_provider
 
     return added_sequence
+
+
+def get_seq_regions(session: Session, external_db_map: dict) -> List[SeqRegion]:
+    """Returns all the sequence regions from the current core database.
+
+    Include synonyms, attribs and karyotypes. Only the top level sequences are exported.
+
+    Args:
+        session: Session from the current core.
+        external_db_map: Mapping of external_db names for the synonyms.
+
+    """
+    seq_regions = []
+
+    for coord_system in fetch_coord_systems(session):
+        logging.debug(f"Dump coord {coord_system.name}")
+        for seqr in fetch_seq_regions(session, coord_system):
+            seq_region: Dict[str, Any] = {}
+            seq_region = {"name": seqr.name, "length": seqr.length}
+            synonyms = get_synonyms(seqr, external_db_map)
+            if synonyms:
+                seq_region["synonyms"] = synonyms
+
+            attribs = get_attribs_dict(seqr)
+            if attribs:
+                if "toplevel" not in attribs:
+                    continue
+                add_attribs(seq_region, attribs)
+            else:
+                # Skip seq_region without attribs, not toplevel
+                continue
+
+            karyotype = get_karyotype(seqr)
+            if karyotype:
+                seq_region["karyotype_bands"] = karyotype
+
+            added_seq = get_added_sequence(seqr)
+            if added_seq:
+                seq_region["added_sequence"] = added_seq
+
+            if "coord_system_level" not in seq_region:
+                seq_region["coord_system_level"] = coord_system.name
+
+            seq_regions.append(seq_region)
+
+    seq_regions = sorted(seq_regions, key=lambda seqr: (seqr["coord_system_level"], seqr["name"]))
+    return seq_regions
 
 
 def main() -> None:
