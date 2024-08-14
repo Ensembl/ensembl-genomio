@@ -166,7 +166,10 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
     "bands, expected_kar",
     [
         param([], [], id="no karyotype"),
+        param([{}], [{"start": 1, "end": 10}], id="no name/stain"),
         param([{"name" : "bandA"}], [{"start": 1, "end": 10, "name": "bandA"}], id="one band"),
+        param([{"stain" : "stainA"}], [{"start": 1, "end": 10, "stain": "stainA"}], id="one stain"),
+        param([{"stain" : "TEL"}], [{"start": 1, "end": 10, "stain": "TEL", "structure": "telomere"}], id="telomere"),
     ],
 )
 def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict) -> None:
