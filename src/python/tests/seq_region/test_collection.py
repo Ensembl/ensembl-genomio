@@ -16,7 +16,7 @@
 
 from contextlib import nullcontext as no_raise
 from pathlib import Path
-from typing import ContextManager
+from typing import Any, ContextManager
 from unittest.mock import MagicMock
 
 from Bio import SeqIO
@@ -122,15 +122,17 @@ base_seq = {
         param({"RefSeq-Accn": "na"}, True, None, None, id="Missing RefSeq ID"),
         param({}, False, "name", "gb_id", id="use Genbank ID"),
         param({}, True, "name", "rs_id", id="use RefSeq ID"),
+        param({"Assigned-Molecule": "na", "GenBank-Accn": "na", "Sequence-Name": "na"}, False, "synonyms", None, id="No synonyms"),
+        param({"Assigned-Molecule": "na", "RefSeq-Accn": "na", "GenBank-Accn": "Foo", "Sequence-Name": "na"}, False, "synonyms", [{"source": "GenBank", "name": "Foo"}], id="1 synonym"),
     ],
 )
-def test_make_seqregion_from_report(seq_data: dict, is_refseq: bool, expected_key: str, expected_value: str):
+def test_make_seqregion_from_report(seq_data: dict, is_refseq: bool, expected_key: str, expected_value: Any | None):
     collection = SeqCollection()
     input_data = {}
     input_data.update(base_seq)
     input_data.update(seq_data)
     seq_dict = collection.make_seq_region_from_report(input_data, is_refseq=is_refseq)
     if expected_key:
-        assert seq_dict[expected_key] == expected_value
+        assert seq_dict.get(expected_key) == expected_value
     else:
         assert not seq_dict

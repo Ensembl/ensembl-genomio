@@ -140,6 +140,7 @@ class SeqCollection:
         if molecule_location is None:
             molecule_location = _MOLECULE_LOCATION
         seq_region = {}
+
         # Set accession as the sequence region name
         src = "RefSeq" if is_refseq else "GenBank"
         accession_id = seq_data.get(f"{src}-Accn", "")
@@ -148,19 +149,21 @@ class SeqCollection:
         else:
             logging.warning(f'No {src} accession ID found for {seq_data["Sequence-Name"]}')
             return {}
+
         # Add synonyms
         synonyms = []
         for field, source in synonym_map.items():
             if (field in seq_data) and (seq_data[field].casefold() != "na"):
                 synonym = {"source": source, "name": seq_data[field]}
                 synonyms.append(synonym)
-        if synonyms:
-            synonyms.sort(key=lambda x: x["source"])
-            seq_region["synonyms"] = synonyms
+        synonyms.sort(key=lambda x: x["source"])
+        seq_region["synonyms"] = synonyms
+
         # Add sequence length
         field = "Sequence-Length"
         if (field in seq_data) and (seq_data[field].casefold() != "na"):
             seq_region["length"] = int(seq_data[field])
+
         # Add coordinate system and location
         seq_role = seq_data["Sequence-Role"]
         # Scaffold?
@@ -177,6 +180,7 @@ class SeqCollection:
                 raise UnknownMetadata(f"Unrecognized sequence location: {location}") from exc
         else:
             raise UnknownMetadata(f"Unrecognized sequence role: {seq_role}")
+
         return seq_region
 
     def remove(self, to_exclude: list[str]):
