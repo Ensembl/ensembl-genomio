@@ -31,6 +31,7 @@ import requests
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
+from ensembl.io.genomio.seq_region.report import ReportRecord
 from ensembl.utils.archive import open_gz_file
 
 _SYNONYM_MAP = {
@@ -105,50 +106,16 @@ class SeqCollection:
             is_refseq: True if the source of the report is RefSeq, false if INSDC.
 
         """
-        # Get the report in a CSV format
-        report_csv = self.report_to_csv(report_path)[0]
-        # Feed the csv string to the CSV reader
-        reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
-        # Create the seq_regions
-        for row in reader:
-            seq_region = self.make_seq_region_from_report(row, is_refseq)
+        report = ReportRecord(report_path)
+        for seq_data in report.reader:
+            seq_region = self.make_seq_region_from_report(seq_data, is_refseq)
             if seq_region:
                 name = seq_region["name"]
                 self.seqs[name] = seq_region
 
     @staticmethod
-    def report_to_csv(report_path: PathLike) -> Tuple[str, dict]:
-        """Returns an assembly report as a CSV string.
-
-        Args:
-            report_path: path to a seq_region file from INSDC/RefSeq
-
-        Returns:
-            The data as a string in CSV format, and the head metadata as a dictionary.
-
-        """
-        with open_gz_file(report_path) as report:
-            data = ""
-            metadata = {}
-            last_head = ""
-            for line in report:
-                # Ignore header
-                if line.startswith("#"):
-                    # Get metadata values if possible
-                    match = re.search("# (.+?): (.+?)$", line)
-                    if match:
-                        metadata[match.group(1)] = match.group(2)
-                    last_head = line
-                else:
-                    if last_head:
-                        data += last_head[2:].strip() + "\n"
-                        last_head = ""
-                    data += line
-            return data, metadata
-
-    @staticmethod
     def make_seq_region_from_report(
-        data: dict,
+        seq_data: dict,
         is_refseq: bool,
         synonym_map: dict[str, str] | None = None,
         molecule_location: dict[str, str] | None = None,
@@ -175,34 +142,34 @@ class SeqCollection:
         seq_region = {}
         # Set accession as the sequence region name
         src = "RefSeq" if is_refseq else "GenBank"
-        accession_id = data.get(f"{src}-Accn", "")
+        accession_id = seq_data.get(f"{src}-Accn", "")
         if accession_id and (accession_id != "na"):
             seq_region["name"] = accession_id
         else:
-            logging.warning(f'No {src} accession ID found for {data["Sequence-Name"]}')
+            logging.warning(f'No {src} accession ID found for {seq_data["Sequence-Name"]}')
             return {}
         # Add synonyms
         synonyms = []
         for field, source in synonym_map.items():
-            if (field in data) and (data[field].casefold() != "na"):
-                synonym = {"source": source, "name": data[field]}
+            if (field in seq_data) and (seq_data[field].casefold() != "na"):
+                synonym = {"source": source, "name": seq_data[field]}
                 synonyms.append(synonym)
         if synonyms:
             synonyms.sort(key=lambda x: x["source"])
             seq_region["synonyms"] = synonyms
         # Add sequence length
         field = "Sequence-Length"
-        if (field in data) and (data[field].casefold() != "na"):
-            seq_region["length"] = int(data[field])
+        if (field in seq_data) and (seq_data[field].casefold() != "na"):
+            seq_region["length"] = int(seq_data[field])
         # Add coordinate system and location
-        seq_role = data["Sequence-Role"]
+        seq_role = seq_data["Sequence-Role"]
         # Scaffold?
         if seq_role in ("unplaced-scaffold", "unlocalized-scaffold"):
             seq_region["coord_system_level"] = "scaffold"
         # Chromosome? Check location
         elif seq_role == "assembled-molecule":
             seq_region["coord_system_level"] = "chromosome"
-            location = data["Assigned-Molecule-Location/Type"].lower()
+            location = seq_data["Assigned-Molecule-Location/Type"].lower()
             # Get location metadata
             try:
                 seq_region["location"] = molecule_location[location]

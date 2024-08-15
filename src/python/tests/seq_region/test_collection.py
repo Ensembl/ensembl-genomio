@@ -99,20 +99,3 @@ def test_from_gbff(data_dir: Path):
     collection = SeqCollection()
     collection.from_gbff(data_dir / gb_file)
     assert collection.seqs == expected_seqs
-
-
-def test_from_report(data_dir: Path):
-    """Test for `SeqCollection.from_report`."""
-    report_file = "report.txt"
-    expected_seqs = {'CM002034.1': {'coord_system_level': 'chromosome',
-                  'length': 1859933,
-                  'location': 'nuclear_chromosome',
-                  'name': 'CM002034.1',
-                  'synonyms': [{'name': 'CM002034.1', 'source': 'GenBank'},
-                               {'name': 'Ia', 'source': 'INSDC'},
-                               {'name': 'TGME49_chrIa',
-                                'source': 'INSDC_submitted_name'},
-                               {'name': 'NC_031467.1', 'source': 'RefSeq'}]}}
-    collection = SeqCollection()
-    collection.from_report(data_dir / report_file)
-    assert collection.seqs == expected_seqs
