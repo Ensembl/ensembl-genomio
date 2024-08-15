@@ -27,6 +27,7 @@ __all__ = [
 from contextlib import nullcontext
 from io import TextIOWrapper
 import logging
+from os import PathLike
 from pathlib import Path
 import re
 import sys
@@ -106,32 +107,91 @@ def split_seq_by_chunk_size(ends: list[int], chunk_size: int, tolerated_size: Op
 
 def chunk_fasta_stream(
     input_fasta: TextIOWrapper,
-  ):
-    pass
-
-
-def chunk_fasta(
-    input_fasta_file: str,
     chunk_size: int,
-    chunk_tolerance: int,
-    out_file_name: str,
-    chunk_sfx: str = "ens_chunk",
-    individual_file_prefix: str = "",
+    chunk_size_tolerated: int,
+    output_fasta: Optional[TextIOWrapper],
+    individual_file_prefix: str,
     n_sequece_len: int = 0,
-    agp_output_file: Optional[str] = None,
-    add_offset: Optional[bool] = None,
-):
-    """ """
-
-    # calculate max tolerated chunk length
-    tolerated_chunk_len = chunk_size
-    tolerated_chunk_len += chunk_size * chunk_tolerance // 100
+    chunk_sfx: str = "ens_chunk",
+    append_offset_to_chunk_name: Optional[bool] = None,
+    open_individual: Callable[[str], TextIOWrapper] = lambda name: open(name, "wt", encoding="utf-8"),
+) -> list[str]:
+    # output agp_lines list
+    agp_lines = []
 
     # make sure not used for n_seq <= 0
     n_split_regex = None
     if n_sequece_len > 0:
         pattern = f"(N{{{n_sequece_len},}})"
         n_split_regex = re.compile(pattern)
+
+    # process stream
+    fasta_parser = SeqIO.parse(input_fasta, "fasta")
+    for rec_count, rec in enumerate(fasta_parser, start=1):
+        rec_name = str(rec.name)
+
+        ends = split_seq_by_n(str(rec.seq), n_split_regex)
+        ends = split_seq_by_chunk_size(ends, chunk_size, chunk_size_tolerated)
+
+        offset = 0
+        for chunk, chunk_end in enumerate(ends, start=1):
+            chunk_name = f"{rec_name}_{chunk_sfx}_{chunk:03d}"
+            chunk_file_name = f"{individual_file_prefix}.{rec_count:03d}.{chunk:03d}.fa"
+            if append_offset_to_chunk_name:
+                chunk_name += f"_off_{offset}"
+
+            rec_from = offset + 1
+            rec_to = chunk_end
+            chunk_len = chunk_end - offset
+
+            # form agp lines
+            agp_line = f"{rec_name}\t{rec_from}\t{rec_to}\t{chunk}\tW\t{chunk_name}\t1\t{chunk_len}\t+"
+            agp_lines.append(agp_line)
+
+            # use agp lines as fasta description
+            agp_line = agp_line.replace("\t", " ")
+            logging.info(f"Dumping {chunk_name} AGP {agp_line}")
+
+            # get slice and put it out
+            tmp_record = SeqRecord(
+                Seq(rec.seq[offset:chunk_end]), id=chunk_name, description=f"AGP {agp_line}", name=""
+            )
+
+            # if user specified chunks -- store each chunk in an individual output file
+            with (
+                output_fasta
+                and nullcontext(output_fasta)  # no_type: ignore[arg-type]
+                or open_individual(chunk_file_name)
+            ) as out_file:
+                out_file.write(tmp_record.format("fasta"))  # no_type: ignore[union-attr]
+
+            del tmp_record
+            offset = chunk_end
+
+    return agp_lines
+
+
+def get_tolerated_size(size: int, tolerance: int) -> int:
+    if tolerance < 0:
+        tolerance = 0
+
+    tolerated_size = size
+    tolerated_size += size * tolerance // 100
+    return tolerated_size
+
+
+def chunk_fasta(
+    input_fasta_file: str,
+    chunk_size: int,
+    chunk_size_tolerated: int,
+    out_file_name: str,
+    individual_file_prefix: str,
+    agp_output_file: Optional[str] = None,
+    n_sequece_len: int = 0,
+    chunk_sfx: str = "ens_chunk",
+    append_offset_to_chunk_name: Optional[bool] = None,
+):
+    """ """
 
     # process input fasta
     with open_gz_file(input_fasta_file) as fasta:
@@ -143,55 +203,29 @@ def chunk_fasta(
         with (
             individual_file_prefix and nullcontext(None) or open(out_file_name, "wt", encoding="utf-8")
         ) as out_file_joined:
-            agp_lines = []
-            fasta_parser = SeqIO.parse(fasta, "fasta")
-            for rec_count, rec in enumerate(fasta_parser, start=1):
-                rec_name = str(rec.name)
+            agp_lines = chunk_fasta_stream(
+                fasta,
+                chunk_size,
+                chunk_size_tolerated,
+                out_file_joined,
+                individual_file_prefix,
+                n_sequece_len,
+                chunk_sfx,
+                append_offset_to_chunk_name,
+            )
 
-                ends = split_seq_by_n(str(rec.seq), n_split_regex)
-                ends = split_seq_by_chunk_size(ends, chunk_size, tolerated_chunk_len)
+        # dump AGP
+        if agp_output_file:
+            with open(agp_output_file, "w", encoding="utf-8") as agp_out:
+                agp_out.write("\n".join(agp_lines) + "\n")
 
-                offset = 0
-                for chunk, chunk_end in enumerate(ends, start=1):
-                    chunk_name = f"{rec_name}_{chunk_sfx}_{chunk:03d}"
-                    chunk_file_name = f"{individual_file_prefix}.{rec_count:03d}.{chunk:03d}.fa"
-                    if add_offset:
-                        chunk_name += f"_off_{offset}"
 
-                    rec_from = offset + 1
-                    rec_to = chunk_end
-                    chunk_len = chunk_end - offset
-
-                    # form agp lines
-                    agp_line = (
-                        f"{rec_name}\t{rec_from}\t{rec_to}\t{chunk}\tW\t{chunk_name}\t1\t{chunk_len}\t+"
-                    )
-                    agp_lines.append(agp_line)
-
-                    # use agp lines as fasta description
-                    agp_line = agp_line.replace("\t", " ")
-                    logging.info(f"Dumping {chunk_name} AGP {agp_line}")
-
-                    # get slice and put it out
-                    tmp_record = SeqRecord(
-                        Seq(rec.seq[offset:chunk_end]), id=chunk_name, description=f"AGP {agp_line}", name=""
-                    )
-
-                    # if user specified chunks stored in individual output files
-                    with (
-                        out_file_joined
-                        and nullcontext(out_file_joined)  # type: ignore[arg-type]
-                        or open(chunk_file_name, "wt", encoding="utf-8")
-                    ) as out_file:
-                        out_file.write(tmp_record.format("fasta"))  # type: ignore[union-attr]
-
-                    del tmp_record
-                    offset = chunk_end
-
-            # dump AGP
-            if agp_output_file:
-                with open(agp_output_file, "w", encoding="utf-8") as agp_out:
-                    agp_out.write("\n".join(agp_lines) + "\n")
+def prepare_out_dir_for_individuals(dir_name: PathLike | str, file_part: str) -> Optional[str]:
+    file_prefix = None
+    if dir_name:
+        dir_name.mkdir(parents=True, exist_ok=True)
+        file_prefix = Path(dir_name, file_part)
+    return file_prefix
 
 
 def main():
@@ -254,34 +288,33 @@ def main():
         type=int,
         help="Split into chunks at positions of at least this number of N characters.",
     )
-    parser.add_argument("--add_offset", required=False, action="store_true", help="Zero-based offset.")
+    parser.add_argument(
+        "--add_offset",
+        required=False,
+        action="store_true",
+        help="Append zero-based offset to chunk name ('_off_{offset}').",
+    )
 
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
+    init_logging_with_args(args)
 
     check_chunk_size_and_tolerance(args.chunk_size, args.chunk_tolerance, error_f=parser.error)
 
-    init_logging_with_args(args)
+    chunk_size_tolerated = get_tolerated_size(args.chunk_size, args.chunk_tolerance)
 
-    # file prefix if writing to individual files
-    # output_file to write sequences to
-    file_prefix = ""
-    if args.individual_out_dir:
-        if not args.out:
-            args.out = args.fasta_dna
-        args.individual_out_dir.mkdir(parents=True, exist_ok=True)
-        file_prefix = Path(args.individual_out_dir, args.out)
+    file_prefix = prepare_out_dir_for_individuals(args.individual_out_dir, args.out or args.fasta_dna)
 
     chunk_fasta(
         args.fasta_dna,
         args.chunk_size,
-        args.chunk_tolerance,
+        chunk_size_tolerated,
         args.out,
-        chunk_sfx=args.chunk_sfx,
         individual_file_prefix=file_prefix,
-        n_sequece_len=args.n_seq,
         agp_output_file=args.agp_output_file,
-        add_offset=args.add_offset,
+        n_sequece_len=args.n_seq,
+        chunk_sfx=args.chunk_sfx,
+        append_offset_to_chunk_name=args.add_offset,
     )
 
 
