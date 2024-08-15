@@ -99,3 +99,38 @@ def test_from_gbff(data_dir: Path):
     collection = SeqCollection()
     collection.from_gbff(data_dir / gb_file)
     assert collection.seqs == expected_seqs
+
+
+base_seq = {
+    "Assembly-Unit": "Primary Assembly",
+    "Assigned-Molecule": "I",
+    "Assigned-Molecule-Location/Type": "Chromosome",
+    "GenBank-Accn": "gb_id",
+    "RefSeq-Accn": "rs_id",
+    "Relationship": "=",
+    "Sequence-Length": "1000",
+    "Sequence-Name": "seq_name",
+    "Sequence-Role": "assembled-molecule",
+    "UCSC-style-name": "na",
+}
+
+
+@pytest.mark.parametrize(
+    "seq_data, is_refseq, expected_key, expected_value",
+    [
+        param({"GenBank-Accn": "na"}, False, None, None, id="Missing Genbank ID"),
+        param({"RefSeq-Accn": "na"}, True, None, None, id="Missing RefSeq ID"),
+        param({}, False, "name", "gb_id", id="use Genbank ID"),
+        param({}, True, "name", "rs_id", id="use RefSeq ID"),
+    ],
+)
+def test_make_seqregion_from_report(seq_data: dict, is_refseq: bool, expected_key: str, expected_value: str):
+    collection = SeqCollection()
+    input_data = {}
+    input_data.update(base_seq)
+    input_data.update(seq_data)
+    seq_dict = collection.make_seq_region_from_report(input_data, is_refseq=is_refseq)
+    if expected_key:
+        assert seq_dict[expected_key] == expected_value
+    else:
+        assert not seq_dict
