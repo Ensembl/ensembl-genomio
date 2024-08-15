@@ -188,3 +188,12 @@ def test_make_seqregion_from_report(
             assert seq_dict.get(expected_key) == expected_value
         else:
             assert not seq_dict
+
+def test_remove():
+    """Test `SeqCollection.remove()`."""
+    collection = SeqCollection()
+    collection.seqs = {"Foo": {}, "Bar": {}, "Lorem": {}}
+    collection.remove(["Foo", "Lorem"])
+    assert collection.seqs == {"Bar": {}}
+    collection.remove(["OTHER"])
+    assert collection.seqs == {"Bar": {}}
