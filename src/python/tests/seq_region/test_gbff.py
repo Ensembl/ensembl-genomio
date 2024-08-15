@@ -89,3 +89,16 @@ def test_get_organelle_custom(data_dir: Path):
     seq_record = get_record(data_dir / input_gb)
     record = GBFFRecord(seq_record)
     assert record.get_organelle(custom_map) == expected_location
+
+
+@pytest.mark.parametrize(
+    "input_gb, expected_circular",
+    [
+        param("apicoplast.gb", True, id="Circular"),
+        param("apicoplast_linear.gb", False, id="Not circular"),
+    ],
+)
+def test_is_circular(data_dir: Path, input_gb: str, expected_circular: bool):
+    seq_record = get_record(data_dir / input_gb)
+    record = GBFFRecord(seq_record)
+    assert record.is_circular() == expected_circular
