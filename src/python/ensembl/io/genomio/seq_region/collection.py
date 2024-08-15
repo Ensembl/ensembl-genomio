@@ -19,12 +19,9 @@ __all__ = [
     "SeqCollection",
 ]
 
-import csv
 import logging
-from os import PathLike
 from pathlib import Path
-import re
-from typing import Any, Tuple
+from typing import Any
 
 from Bio import SeqIO
 import requests
@@ -75,6 +72,7 @@ class SeqCollection:
 
     @staticmethod
     def make_seqregion_from_gbff(record_data: GBFFRecord) -> SeqRegionDict:
+        """Returns a seq_region dict extracted from a GBFF record."""
         seqr: SeqRegionDict = {"length": len(record_data.record.seq)}
 
         if record_data.is_circular():

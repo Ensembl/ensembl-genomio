@@ -178,6 +178,15 @@ base_seq = {
 def test_make_seqregion_from_report(
     seq_data: dict, is_refseq: bool, expected_key: str, expected_value: Any | None, expected: ContextManager
 ):
+    """Test `SeqCollection.make_seqregion_from_report`.
+
+    Args:
+        seq_data: Sequence dict with values to replace the default from `base_seq`.
+        is_refseq: Is the assembly from RefSeq.
+        expected_key: From the seq
+        expected_value: _description_
+        expected: _description_
+    """
     collection = SeqCollection()
     input_data = {}
     input_data.update(base_seq)
@@ -188,6 +197,7 @@ def test_make_seqregion_from_report(
             assert seq_dict.get(expected_key) == expected_value
         else:
             assert not seq_dict
+
 
 def test_remove():
     """Test `SeqCollection.remove()`."""
@@ -210,7 +220,16 @@ def test_remove():
         param({"location": "apicoplast_chromosome"}, None, 4, id="use default map"),
     ],
 )
-def test_add_translation_table(input_seq: dict[str, str], code_map: dict[str, int] | None, expected_codon_table: int | None):
+def test_add_translation_table(
+    input_seq: dict[str, str], code_map: dict[str, int] | None, expected_codon_table: int | None
+):
+    """Test `SeqCollection.add_translation_table()`
+
+    Args:
+        input_seq: Sequence dict with usable values (`codon_table`, `location`).
+        code_map: A custom map location -> codon table number.
+        expected_codon_table: Expected codon table number.
+    """
     collection = SeqCollection()
     seqname = "seq_name"
     collection.seqs = {seqname: input_seq}
