@@ -37,6 +37,8 @@ def get_record(gbff_path: Path):
     "input_gb, expected_id",
     [
         param("apicoplast.gb", "U87145", id="Found genbank ID"),
+        param("apicoplast_nocomment.gb", None, id="No comment"),
+        param("apicoplast_simple_comment.gb", None, id="Comment without ID"),
     ],
 )
 def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None):
