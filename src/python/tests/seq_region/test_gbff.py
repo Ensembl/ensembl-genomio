@@ -20,18 +20,22 @@ from typing import ContextManager
 
 from Bio import SeqIO
 import pytest
-from pytest import param
+from pytest import param, raises
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
+from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
+
 
 def test_gbff(data_dir: Path):
     record = GBFFRecord(data_dir / "apicoplast.gb")
     assert record
 
+
 def get_record(gbff_path: Path):
     with gbff_path.open("r") as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
             return record
+
 
 @pytest.mark.parametrize(
     "input_gb, expected_id",
@@ -46,6 +50,7 @@ def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None):
     record = GBFFRecord(seq_record)
     assert record.get_genbank_id() == expected_id
 
+
 @pytest.mark.parametrize(
     "input_gb, expected_table",
     [
@@ -57,3 +62,30 @@ def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | No
     seq_record = get_record(data_dir / input_gb)
     record = GBFFRecord(seq_record)
     assert record.get_codon_table() == expected_table
+
+
+@pytest.mark.parametrize(
+    "input_gb, expected_location, expectation",
+    [
+        param("apicoplast.gb", "apicoplast_chromosome", no_raise(), id="Found location"),
+        param("apicoplast_nofeatures.gb", None, no_raise(), id="No features"),
+        param("apicoplast_unknown_location.gb", None, raises(UnknownMetadata), id="Unknown location"),
+        param("apicoplast_noprefix_location.gb", "apicoplast_chromosome", no_raise(), id="No prefix"),
+    ],
+)
+def test_get_organelle(
+    data_dir: Path, input_gb: str, expected_location: str | None, expectation: ContextManager
+):
+    seq_record = get_record(data_dir / input_gb)
+    record = GBFFRecord(seq_record)
+    with expectation:
+        assert record.get_organelle() == expected_location
+
+
+def test_get_organelle_custom(data_dir: Path):
+    input_gb = "apicoplast.gb"
+    expected_location = "custom_location"
+    custom_map = {"apicoplast": expected_location}
+    seq_record = get_record(data_dir / input_gb)
+    record = GBFFRecord(seq_record)
+    assert record.get_organelle(custom_map) == expected_location

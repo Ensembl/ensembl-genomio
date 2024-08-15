@@ -53,11 +53,11 @@ class GBFFRecord:
         """
         comment = str(self.record.annotations.get("comment", ""))
         if not comment:
-            return
+            return None
         comment = re.sub(r"[ \n\r]+", " ", comment)
         match = re.search(r"The reference sequence was derived from ([^\.]+)\.", comment)
         if not match:
-            return
+            return None
         return match.group(1)
 
     def get_codon_table(self) -> int | None:
@@ -84,20 +84,19 @@ class GBFFRecord:
             molecule_location = _MOLECULE_LOCATION
         location = None
         for feat in self.record.features:
-            if "organelle" in feat.qualifiers:
-                organelle = str(feat.qualifiers["organelle"][0])
-                if not organelle:
-                    break
-                # Remove plastid prefix
-                with_prefix = re.match(r"^(plastid|mitochondrion):(.+)$", organelle)
-                if with_prefix:
-                    organelle = with_prefix[2]
-                # Get controlled name
-                try:
-                    location = molecule_location[organelle]
-                except KeyError as exc:
-                    raise UnknownMetadata(f"Unrecognized sequence location: {organelle}") from exc
-                break
+            if "organelle" not in feat.qualifiers:
+                continue
+            organelle = str(feat.qualifiers["organelle"][0])
+            # Remove plastid prefix
+            with_prefix = re.match(r"^(plastid|mitochondrion):(.+)$", organelle)
+            if with_prefix:
+                organelle = with_prefix[2]
+            # Get controlled name
+            try:
+                location = molecule_location[organelle]
+            except KeyError as exc:
+                raise UnknownMetadata(f"Unrecognized sequence location: {organelle}") from exc
+            break
         return location
 
     def is_circular(self) -> bool:
