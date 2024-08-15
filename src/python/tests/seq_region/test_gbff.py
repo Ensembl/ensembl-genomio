@@ -45,3 +45,15 @@ def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None):
     seq_record = get_record(data_dir / input_gb)
     record = GBFFRecord(seq_record)
     assert record.get_genbank_id() == expected_id
+
+@pytest.mark.parametrize(
+    "input_gb, expected_table",
+    [
+        param("apicoplast.gb", 4, id="Found codon table"),
+        param("apicoplast_nogene.gb", None, id="No codon table"),
+    ],
+)
+def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | None):
+    seq_record = get_record(data_dir / input_gb)
+    record = GBFFRecord(seq_record)
+    assert record.get_codon_table() == expected_table
