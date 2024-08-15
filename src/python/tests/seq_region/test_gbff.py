@@ -18,7 +18,7 @@ from contextlib import nullcontext as no_raise
 from pathlib import Path
 from typing import ContextManager
 
-from Bio import SeqIO
+from Bio import SeqIO, SeqRecord
 import pytest
 from pytest import param, raises
 
@@ -26,15 +26,17 @@ from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 
 
-def test_gbff(data_dir: Path):
-    record = GBFFRecord(data_dir / "apicoplast.gb")
-    assert record
-
-
-def get_record(gbff_path: Path):
+def get_record(gbff_path: Path) -> SeqRecord:
+    """Returns the first SeqRecord from a Genbank file."""
     with gbff_path.open("r") as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
             return record
+
+
+def test_gbff(data_dir: Path):
+    """Test for `GBFFRecord` init."""
+    record = GBFFRecord(get_record(data_dir / "apicoplast.gb"))
+    assert record
 
 
 @pytest.mark.parametrize(
@@ -46,6 +48,13 @@ def get_record(gbff_path: Path):
     ],
 )
 def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None):
+    """Test for `gbff.get_genbank_id()`.
+
+    Args:
+        input_gb: Genbank file to use.
+        expect_id: Expected Genbank ID.
+
+    """
     seq_record = get_record(data_dir / input_gb)
     record = GBFFRecord(seq_record)
     assert record.get_genbank_id() == expected_id
@@ -59,6 +68,13 @@ def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None):
     ],
 )
 def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | None):
+    """Test for `gbff.get_codon_table()`.
+
+    Args:
+        input_gb: Genbank file to use.
+        expect_table: Expected codon table number.
+
+    """
     seq_record = get_record(data_dir / input_gb)
     record = GBFFRecord(seq_record)
     assert record.get_codon_table() == expected_table
@@ -76,6 +92,13 @@ def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | No
 def test_get_organelle(
     data_dir: Path, input_gb: str, expected_location: str | None, expectation: ContextManager
 ):
+    """Test for `gbff.get_organelle()`.
+
+    Args:
+        input_gb: Genbank file to use.
+        expect_location: Expected location of an organelle.
+
+    """
     seq_record = get_record(data_dir / input_gb)
     record = GBFFRecord(seq_record)
     with expectation:
@@ -83,6 +106,7 @@ def test_get_organelle(
 
 
 def test_get_organelle_custom(data_dir: Path):
+    """Test for `gbff.get_organelle()` with a custom location map."""
     input_gb = "apicoplast.gb"
     expected_location = "custom_location"
     custom_map = {"apicoplast": expected_location}
@@ -99,6 +123,13 @@ def test_get_organelle_custom(data_dir: Path):
     ],
 )
 def test_is_circular(data_dir: Path, input_gb: str, expected_circular: bool):
+    """Test for `gbff.is_circular()`.
+
+    Args:
+        input_gb: Genbank file to use.
+        expect_circular: If the sequence is circular.
+
+    """
     seq_record = get_record(data_dir / input_gb)
     record = GBFFRecord(seq_record)
     assert record.is_circular() == expected_circular
