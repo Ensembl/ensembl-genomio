@@ -25,6 +25,7 @@ __all__ = [
 
 
 from contextlib import nullcontext
+from io import TextIOWrapper
 import logging
 from pathlib import Path
 import re
@@ -103,6 +104,12 @@ def split_seq_by_chunk_size(ends: list[int], chunk_size: int, tolerated_size: Op
     return result
 
 
+def chunk_fasta_stream(
+    input_fasta: TextIOWrapper,
+  ):
+    pass
+
+
 def chunk_fasta(
     input_fasta_file: str,
     chunk_size: int,
@@ -134,10 +141,8 @@ def chunk_fasta(
         )
         # do not open a joined file if you plan to open many indvidual ones
         with (
-            individual_file_prefix
-            and nullcontext()
-            or open(out_file_name, "wt", encoding="utf-8") as out_file
-        ):
+            individual_file_prefix and nullcontext(None) or open(out_file_name, "wt", encoding="utf-8")
+        ) as out_file_joined:
             agp_lines = []
             fasta_parser = SeqIO.parse(fasta, "fasta")
             for rec_count, rec in enumerate(fasta_parser, start=1):
@@ -173,12 +178,12 @@ def chunk_fasta(
                     )
 
                     # if user specified chunks stored in individual output files
-                    if individual_file_prefix:
-                        with open(chunk_file_name, "wt", encoding="utf-8") as individual_out_file:
-                            individual_out_file.write(tmp_record.format("fasta"))
-                    else:
-                        # keep on writing to the same file
-                        out_file.write(tmp_record.format("fasta"))
+                    with (
+                        out_file_joined
+                        and nullcontext(out_file_joined)  # type: ignore[arg-type]
+                        or open(chunk_file_name, "wt", encoding="utf-8")
+                    ) as out_file:
+                        out_file.write(tmp_record.format("fasta"))  # type: ignore[union-attr]
 
                     del tmp_record
                     offset = chunk_end
