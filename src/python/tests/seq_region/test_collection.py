@@ -25,6 +25,7 @@ from Bio.Seq import Seq
 import pytest
 from pytest import param, raises
 
+from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 from ensembl.io.genomio.seq_region.collection import SeqCollection
 
@@ -116,23 +117,74 @@ base_seq = {
 
 
 @pytest.mark.parametrize(
-    "seq_data, is_refseq, expected_key, expected_value",
+    "seq_data, is_refseq, expected_key, expected_value, expected",
     [
-        param({"GenBank-Accn": "na"}, False, None, None, id="Missing Genbank ID"),
-        param({"RefSeq-Accn": "na"}, True, None, None, id="Missing RefSeq ID"),
-        param({}, False, "name", "gb_id", id="use Genbank ID"),
-        param({}, True, "name", "rs_id", id="use RefSeq ID"),
-        param({"Assigned-Molecule": "na", "GenBank-Accn": "na", "Sequence-Name": "na"}, False, "synonyms", None, id="No synonyms"),
-        param({"Assigned-Molecule": "na", "RefSeq-Accn": "na", "GenBank-Accn": "Foo", "Sequence-Name": "na"}, False, "synonyms", [{"source": "GenBank", "name": "Foo"}], id="1 synonym"),
+        param({"GenBank-Accn": "na"}, False, None, None, no_raise(), id="Missing Genbank ID"),
+        param({"RefSeq-Accn": "na"}, True, None, None, no_raise(), id="Missing RefSeq ID"),
+        param({}, False, "name", "gb_id", no_raise(), id="use Genbank ID"),
+        param({}, True, "name", "rs_id", no_raise(), id="use RefSeq ID"),
+        param(
+            {"Assigned-Molecule": "na", "GenBank-Accn": "na", "Sequence-Name": "na"},
+            False,
+            "synonyms",
+            None,
+            no_raise(),
+            id="No synonyms",
+        ),
+        param(
+            {"Assigned-Molecule": "na", "RefSeq-Accn": "na", "GenBank-Accn": "Foo", "Sequence-Name": "na"},
+            False,
+            "synonyms",
+            [{"source": "GenBank", "name": "Foo"}],
+            no_raise(),
+            id="1 synonym",
+        ),
+        param({"Sequence-Length": "na"}, False, "length", None, no_raise(), id="No length"),
+        param(
+            {"Sequence-Role": "unplaced-scaffold"},
+            False,
+            "coord_system_level",
+            "scaffold",
+            no_raise(),
+            id="Unplaced_scaffold level",
+        ),
+        param(
+            {"Sequence-Role": "assembled-molecule"},
+            False,
+            "coord_system_level",
+            "chromosome",
+            no_raise(),
+            id="Chromosome level",
+        ),
+        param(
+            {"Sequence-Role": "assembled-molecule", "Assigned-Molecule-Location/Type": "plasmid"},
+            False,
+            "location",
+            "plasmid",
+            no_raise(),
+            id="Chromosome level, plasmid location",
+        ),
+        param({"Sequence-Role": "foo"}, False, None, None, raises(UnknownMetadata), id="Unsupported role"),
+        param(
+            {"Sequence-Role": "assembled-molecule", "Assigned-Molecule-Location/Type": "foo"},
+            False,
+            None,
+            None,
+            raises(UnknownMetadata),
+            id="Unsupported location",
+        ),
     ],
 )
-def test_make_seqregion_from_report(seq_data: dict, is_refseq: bool, expected_key: str, expected_value: Any | None):
+def test_make_seqregion_from_report(
+    seq_data: dict, is_refseq: bool, expected_key: str, expected_value: Any | None, expected: ContextManager
+):
     collection = SeqCollection()
     input_data = {}
     input_data.update(base_seq)
     input_data.update(seq_data)
-    seq_dict = collection.make_seq_region_from_report(input_data, is_refseq=is_refseq)
-    if expected_key:
-        assert seq_dict.get(expected_key) == expected_value
-    else:
-        assert not seq_dict
+    with expected:
+        seq_dict = collection.make_seq_region_from_report(input_data, is_refseq=is_refseq)
+        if expected_key:
+            assert seq_dict.get(expected_key) == expected_value
+        else:
+            assert not seq_dict
