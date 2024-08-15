@@ -56,11 +56,12 @@ SeqRegionDict = dict[str, Any]
 class SeqCollection:
     """Represent a collection of seq_regions metadata."""
 
-    mock: bool = False
+    mock: bool
     seqs: dict
 
-    def __init__(self) -> None:
+    def __init__(self, mock: bool = False) -> None:
         self.seqs = {}
+        self.mock = mock
 
     def from_gbff(self, gbff_path: Path) -> None:
         """Store seq_regions extracted from a GBFF file.
@@ -70,7 +71,7 @@ class SeqCollection:
             for record in SeqIO.parse(gbff_file, "genbank"):
                 record_data = GBFFRecord(record)
                 self.seqs[record.id] = self.make_seqregion_from_gbff(record_data)
-    
+
     @staticmethod
     def make_seqregion_from_gbff(record_data: GBFFRecord) -> SeqRegionDict:
         seqr: SeqRegionDict = {"length": len(record_data.record.seq)}
@@ -214,7 +215,7 @@ class SeqCollection:
     def remove(self, to_exclude: list[str]):
         """Remove seq_regions based on a provided list of accessions."""
         for seq_name in to_exclude:
-            if seq_name in self:
+            if seq_name in self.seqs:
                 del self.seqs[seq_name]
             else:
                 logging.info(f"Cannot exclude seq not found: {seq_name}")
@@ -228,7 +229,7 @@ class SeqCollection:
         """
         if location_codon is None:
             location_codon = _LOCATION_CODON
-        for seqr in self.values():
+        for seqr in self.seqs.values():
             if "codon_table" in seqr:
                 continue
             if seqr.get("location", "") in location_codon:
@@ -257,7 +258,7 @@ class SeqCollection:
             logging.warning(f"No mitochondria genetic code found for taxon {taxon_id}")
             return
 
-        for seqr in self.values():
+        for seqr in self.seqs.values():
             if "codon_table" in seqr:
                 continue
             if seqr.get("location", "") == "mitochondrial_chromosome":

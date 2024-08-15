@@ -17,17 +17,16 @@
 from contextlib import nullcontext as no_raise
 from pathlib import Path
 from typing import ContextManager
+from unittest.mock import MagicMock
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 import pytest
 from pytest import param, raises
-from unittest.mock import MagicMock
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 from ensembl.io.genomio.seq_region.collection import SeqCollection
-from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 
 
 def get_record(gbff_path: Path) -> SeqRecord:
@@ -40,20 +39,33 @@ def get_record(gbff_path: Path) -> SeqRecord:
 def test_collection():
     """Test for `SeqCollection` init."""
     seqs = SeqCollection()
-    assert seqs.seqs == {}
+    assert not seqs.seqs
 
 
 @pytest.mark.parametrize(
     "genbank_id, codon_table, location, is_circular, expected_seq",
     [
         param(None, None, None, False, {"length": 3}, id="No extra data"),
-        param("Foo", None, None, False, {"length": 3, "synonyms": [{"source": "INSDC", "name": "Foo"}]}, id="With genbank ID"),
+        param(
+            "Foo",
+            None,
+            None,
+            False,
+            {"length": 3, "synonyms": [{"source": "INSDC", "name": "Foo"}]},
+            id="With genbank ID",
+        ),
         param(None, None, None, True, {"length": 3, "circular": True}, id="With circular"),
         param(None, 4, None, False, {"length": 3, "codon_table": 4}, id="With codon table"),
         param(None, None, "apicoplast", False, {"length": 3, "location": "apicoplast"}, id="With location"),
     ],
 )
-def test_make_seqregion_from_gbff(genbank_id: str | None, codon_table: int | None, location: str | None, is_circular: bool, expected_seq: dict):
+def test_make_seqregion_from_gbff(
+    genbank_id: str | None,
+    codon_table: int | None,
+    location: str | None,
+    is_circular: bool,
+    expected_seq: dict,
+):
     """Test for `SeqCollection.make_seq_dict()`.
 
     Args:
@@ -70,3 +82,20 @@ def test_make_seqregion_from_gbff(genbank_id: str | None, codon_table: int | Non
     collection = SeqCollection()
     seq_dict = collection.make_seqregion_from_gbff(record_data)
     assert seq_dict == expected_seq
+
+
+def test_from_gbff(data_dir: Path):
+    """Test for `SeqCollection.from_gbff`."""
+    gb_file = "apicoplast.gb"
+    expected_seqs = {
+        "NC_001799.1": {
+            "circular": True,
+            "codon_table": 4,
+            "length": 60,
+            "location": "apicoplast_chromosome",
+            "synonyms": [{"name": "U87145", "source": "INSDC"}],
+        }
+    }
+    collection = SeqCollection()
+    collection.from_gbff(data_dir / gb_file)
+    assert collection.seqs == expected_seqs
