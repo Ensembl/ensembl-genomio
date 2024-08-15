@@ -197,3 +197,22 @@ def test_remove():
     assert collection.seqs == {"Bar": {}}
     collection.remove(["OTHER"])
     assert collection.seqs == {"Bar": {}}
+
+
+@pytest.mark.parametrize(
+    "input_seq, code_map, expected_codon_table",
+    [
+        param({}, None, None, id="No data, no codon table"),
+        param({"codon_table": 4}, None, 4, id="Existing codon_table"),
+        param({"location": "foo"}, {"foo": 4}, 4, id="Location, new codon table"),
+        param({"location": "foo"}, {"bar": 4}, None, id="Unsupported location, no table"),
+        param({"codon_table": 2, "location": "foo"}, {"foo": 4}, 2, id="Existing codon table, keep"),
+        param({"location": "apicoplast_chromosome"}, None, 4, id="use default map"),
+    ],
+)
+def test_add_translation_table(input_seq: dict[str, str], code_map: dict[str, int] | None, expected_codon_table: int | None):
+    collection = SeqCollection()
+    seqname = "seq_name"
+    collection.seqs = {seqname: input_seq}
+    collection.add_translation_table(code_map)
+    assert collection.seqs["seq_name"].get("codon_table") == expected_codon_table
