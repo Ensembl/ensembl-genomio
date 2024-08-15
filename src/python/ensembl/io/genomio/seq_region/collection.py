@@ -15,6 +15,7 @@
 """SeqCollection as a collection of seq_regions."""
 
 __all__ = [
+    "SeqRegionDict",
     "SeqCollection",
 ]
 
@@ -49,13 +50,17 @@ _MOLECULE_LOCATION = {
 _LOCATION_CODON = {"apicoplast_chromosome": 4}
 
 ##############################################
-SeqRegion = dict[str, Any]
+SeqRegionDict = dict[str, Any]
 
 
-class SeqCollection(dict):
+class SeqCollection:
     """Represent a collection of seq_regions metadata."""
 
     mock: bool = False
+    seqs: dict
+
+    def __init__(self) -> None:
+        self.seqs = {}
 
     def from_gbff(self, gbff_path: Path) -> None:
         """Store seq_regions extracted from a GBFF file.
@@ -64,28 +69,31 @@ class SeqCollection(dict):
         with open_gz_file(gbff_path) as gbff_file:
             for record in SeqIO.parse(gbff_file, "genbank"):
                 record_data = GBFFRecord(record)
-                seqr: SeqRegion = {"length": len(record.seq)}
+                self.seqs[record.id] = self.make_seqregion_from_gbff(record_data)
+    
+    @staticmethod
+    def make_seqregion_from_gbff(record_data: GBFFRecord) -> SeqRegionDict:
+        seqr: SeqRegionDict = {"length": len(record_data.record.seq)}
 
-                if record_data.is_circular():
-                    seqr["circular"] = True
+        if record_data.is_circular():
+            seqr["circular"] = True
 
-                # Is there a genetic code defined?
-                codon_table = record_data.get_codon_table()
-                if codon_table is not None:
-                    seqr["codon_table"] = codon_table
+        # Is there a genetic code defined?
+        codon_table = record_data.get_codon_table()
+        if codon_table is not None:
+            seqr["codon_table"] = codon_table
 
-                # Is it an organelle?
-                location = record_data.get_organelle()
-                if location is not None:
-                    seqr["location"] = location
+        # Is it an organelle?
+        location = record_data.get_organelle()
+        if location is not None:
+            seqr["location"] = location
 
-                # Is there a comment stating the Genbank record this is based on?
-                genbank_id = record_data.get_genbank_id()
-                if genbank_id is not None:
-                    seqr["synonyms"] = [{"source": "INSDC", "name": genbank_id}]
+        # Is there a comment stating the Genbank record this is based on?
+        genbank_id = record_data.get_genbank_id()
+        if genbank_id is not None:
+            seqr["synonyms"] = [{"source": "INSDC", "name": genbank_id}]
 
-                # Store the seq_region
-                self[record.id] = seqr
+        return seqr
 
     def from_report(self, report_path: Path, is_refseq: bool = False) -> None:
         """Store seq_regions extracted from an INSDC assembly report file.
@@ -105,7 +113,7 @@ class SeqCollection(dict):
             seq_region = self._make_seq_region(row, is_refseq)
             if seq_region:
                 name = seq_region["name"]
-                self[name] = seq_region
+                self.seqs[name] = seq_region
 
     @staticmethod
     def _report_to_csv(report_path: PathLike) -> Tuple[str, dict]:
@@ -143,7 +151,7 @@ class SeqCollection(dict):
         is_refseq: bool,
         synonym_map: dict[str, str] | None = None,
         molecule_location: dict[str, str] | None = None,
-    ) -> SeqRegion:
+    ) -> SeqRegionDict:
         """Returns a sequence region from the information provided.
 
         An empty sequence region will be returned if not accession information is found.
@@ -207,7 +215,7 @@ class SeqCollection(dict):
         """Remove seq_regions based on a provided list of accessions."""
         for seq_name in to_exclude:
             if seq_name in self:
-                del self[seq_name]
+                del self.seqs[seq_name]
             else:
                 logging.info(f"Cannot exclude seq not found: {seq_name}")
 
