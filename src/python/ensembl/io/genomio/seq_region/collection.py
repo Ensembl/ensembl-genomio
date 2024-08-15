@@ -106,18 +106,18 @@ class SeqCollection:
 
         """
         # Get the report in a CSV format
-        report_csv = self._report_to_csv(report_path)[0]
+        report_csv = self.report_to_csv(report_path)[0]
         # Feed the csv string to the CSV reader
         reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
         # Create the seq_regions
         for row in reader:
-            seq_region = self._make_seq_region(row, is_refseq)
+            seq_region = self.make_seq_region_from_report(row, is_refseq)
             if seq_region:
                 name = seq_region["name"]
                 self.seqs[name] = seq_region
 
     @staticmethod
-    def _report_to_csv(report_path: PathLike) -> Tuple[str, dict]:
+    def report_to_csv(report_path: PathLike) -> Tuple[str, dict]:
         """Returns an assembly report as a CSV string.
 
         Args:
@@ -147,7 +147,7 @@ class SeqCollection:
             return data, metadata
 
     @staticmethod
-    def _make_seq_region(
+    def make_seq_region_from_report(
         data: dict,
         is_refseq: bool,
         synonym_map: dict[str, str] | None = None,
