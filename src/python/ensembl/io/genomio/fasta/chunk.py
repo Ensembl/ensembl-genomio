@@ -31,7 +31,7 @@ from os import PathLike
 from pathlib import Path
 import re
 import sys
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -62,7 +62,7 @@ def check_chunk_size_and_tolerance(
         error_f(f"wrong '--chunk_tolerance' value: '{chunk_tolerance}'. can't be less then 0. exiting...")
 
 
-def split_seq_by_n(seq: str, split_pattern: re.Pattern) -> list:
+def split_seq_by_n(seq: str, split_pattern: Optional[re.Pattern]) -> list:
     """Split a string into chunks at the positions where the
     pattern is found.
 
@@ -109,7 +109,7 @@ def chunk_fasta_stream(
     input_fasta: TextIOWrapper,
     chunk_size: int,
     chunk_size_tolerated: int,
-    output_fasta: Optional[TextIOWrapper],
+    output_fasta: Optional[TextIOWrapper] | nullcontext[Any],
     individual_file_prefix: str,
     n_sequece_len: int = 0,
     chunk_sfx: str = "ens_chunk",
@@ -158,12 +158,8 @@ def chunk_fasta_stream(
             )
 
             # if user specified chunks -- store each chunk in an individual output file
-            with (
-                output_fasta
-                and nullcontext(output_fasta)  # no_type: ignore[arg-type]
-                or open_individual(chunk_file_name)
-            ) as out_file:
-                out_file.write(tmp_record.format("fasta"))  # no_type: ignore[union-attr]
+            with output_fasta and nullcontext(output_fasta) or open_individual(chunk_file_name) as out_file:
+                out_file.write(tmp_record.format("fasta"))  # type: ignore[union-attr]
 
             del tmp_record
             offset = chunk_end
@@ -172,8 +168,7 @@ def chunk_fasta_stream(
 
 
 def get_tolerated_size(size: int, tolerance: int) -> int:
-    if tolerance < 0:
-        tolerance = 0
+    tolerance = max(tolerance, 0)
 
     tolerated_size = size
     tolerated_size += size * tolerance // 100
@@ -220,7 +215,7 @@ def chunk_fasta(
                 agp_out.write("\n".join(agp_lines) + "\n")
 
 
-def prepare_out_dir_for_individuals(dir_name: PathLike | str, file_part: str) -> Optional[str]:
+def prepare_out_dir_for_individuals(dir_name: Path, file_part: str) -> Optional[Path]:
     file_prefix = None
     if dir_name:
         dir_name.mkdir(parents=True, exist_ok=True)
