@@ -54,7 +54,6 @@ class MockResponse:
     @staticmethod
     def raise_for_status():
         """Mock, never raise Exception here."""
-        pass
 
     def json(self) -> dict:
         """Returns the data as json."""
