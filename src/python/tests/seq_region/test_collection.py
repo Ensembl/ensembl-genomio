@@ -212,6 +212,23 @@ def test_make_seqregion_from_report(
             assert not seq_dict
 
 
+def test_make_seqregion_from_report_custom():
+    """Test `SeqCollection.make_seqregion_from_report` with custom maps."""
+    collection = SeqCollection()
+    seq_data = {}
+    input_data = {}
+    input_data.update(base_seq)
+    input_data.update(seq_data)
+
+    custom_locations = {"chromosome": "custom_chromosome"}
+    custom_synonyms = {"Sequence-Name": "custom_name"}
+    seq_dict = collection.make_seq_region_from_report(
+        input_data, is_refseq=True, molecule_location=custom_locations, synonym_map=custom_synonyms
+    )
+    assert seq_dict["location"] == "custom_chromosome"
+    assert seq_dict["synonyms"] == [{"source": "custom_name", "name": "seq_name"}]
+
+
 def test_from_report(data_dir: Path):
     """Test for `SeqCollection.from_gbff`."""
     report_file = "report.txt"
