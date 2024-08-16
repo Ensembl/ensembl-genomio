@@ -215,6 +215,9 @@ class SeqCollection:
         """
         if self.mock:
             return
+        if not taxon_id:
+            return
+
         url = f"https://www.ebi.ac.uk/ena/taxonomy/rest/tax-id/{str(taxon_id)}"
         response = requests.get(url, headers={"Content-Type": "application/json"}, timeout=60)
         response.raise_for_status()
@@ -226,6 +229,7 @@ class SeqCollection:
         if genetic_code == 0:
             logging.warning(f"No mitochondria genetic code found for taxon {taxon_id}")
             return
+        print(genetic_code)
 
         for seqr in self.seqs.values():
             if "codon_table" in seqr:

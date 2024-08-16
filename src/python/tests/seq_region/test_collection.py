@@ -14,10 +14,11 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.seq_region.collection` module."""
 
+import json
 from contextlib import nullcontext as no_raise
 from pathlib import Path
 from typing import Any, ContextManager
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -28,6 +29,18 @@ from pytest import param, raises
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 from ensembl.io.genomio.seq_region.collection import SeqCollection
+
+
+class MockResponse:
+    def __init__(self, json_str: str) -> None:
+        self.text = json_str
+
+    @staticmethod
+    def raise_for_status():
+        pass
+
+    def json(self) -> dict:
+        return json.loads(self.text)
 
 
 def get_record(gbff_path: Path) -> SeqRecord:
@@ -231,7 +244,76 @@ def test_add_translation_table(
         expected_codon_table: Expected codon table number.
     """
     collection = SeqCollection()
-    seqname = "seq_name"
-    collection.seqs = {seqname: input_seq}
+    seq_name = "foobar"
+    collection.seqs = {seq_name: input_seq}
     collection.add_translation_table(code_map)
-    assert collection.seqs["seq_name"].get("codon_table") == expected_codon_table
+    assert collection.seqs[seq_name].get("codon_table") == expected_codon_table
+
+
+@pytest.mark.parametrize(
+    "input_seq, taxon_id, response_data, expected_codon_table, expected",
+    [
+        param(
+            {"location": "mitochondrial_chromosome"},
+            99,
+            '{"mitochondrialGeneticCode": 4}',
+            4,
+            no_raise(),
+            id="Add codon table",
+        ),
+        param(
+            {"location": "mitochondrial_chromosome", "codon_table": 2},
+            99,
+            '{"mitochondrialGeneticCode": 4}',
+            2,
+            no_raise(),
+            id="Existing codon table",
+        ),
+        param({"location": "mitochondrial_chromosome"}, 99, "{}", None, no_raise(), id="No code found"),
+        param({}, 99, '{"mitochondrialGeneticCode": 4}', None, no_raise(), id="Missing location"),
+        param({"location": "mitochondrial_chromosome"}, 0, "{}", None, no_raise(), id="No taxon_id to use"),
+        param(
+            {"location": "mitochondrial_chromosome"},
+            99,
+            "<html></html>",
+            None,
+            raises(ValueError),
+            id="Not a json response, html",
+        ),
+    ],
+)
+@patch("ensembl.io.genomio.seq_region.collection.requests.get")
+def test_add_mitochondrial_codon_table(
+    mock_requests_get,
+    taxon_id: int,
+    input_seq: dict[str, str],
+    response_data: str,
+    expected_codon_table: int | None,
+    expected: ContextManager,
+):
+    """Test `SeqCollection.add_translation_table()`
+
+    Args:
+        input_seq: Sequence dict with usable values (`codon_table`, `location`).
+        code_map: A custom map location -> codon table number.
+        expected_codon_table: Expected codon table number.
+    """
+
+    mock_requests_get.return_value = MockResponse(response_data)
+    collection = SeqCollection()
+    seq_name = "foobar"
+    collection.seqs = {seq_name: input_seq}
+    with expected:
+        collection.add_mitochondrial_codon_table(taxon_id)
+        assert collection.seqs[seq_name].get("codon_table") == expected_codon_table
+
+
+@patch("ensembl.io.genomio.seq_region.collection.requests.get")
+def test_add_mitochondrial_codon_table_mock(mock_requests_get):
+    """Test `SeqCollection.add_translation_table()`."""
+    mock_requests_get.return_value = MockResponse("{}")  # Mock requests just in case
+    collection = SeqCollection(mock=True)
+    seq_name = "foobar"
+    collection.seqs = {seq_name: {}}
+    collection.add_mitochondrial_codon_table(99)
+    assert collection.seqs[seq_name].get("codon_table") is None
