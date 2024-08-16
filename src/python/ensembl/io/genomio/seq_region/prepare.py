@@ -64,7 +64,7 @@ def prepare_seq_region_metadata(
     seqs.add_mitochondrial_codon_table(genome_data["species"]["taxonomy_id"])
 
     # Print out the file
-    print_json(dst_file, seqs)
+    print_json(dst_file, seqs.to_list())
 
 
 def main() -> None:

@@ -68,7 +68,22 @@ class SeqCollection:
         with open_gz_file(gbff_path) as gbff_file:
             for record in SeqIO.parse(gbff_file, "genbank"):
                 record_data = GBFFRecord(record)
-                self.seqs[record.id] = self.make_seqregion_from_gbff(record_data)
+                new_seq = self.make_seqregion_from_gbff(record_data)
+                name = record.id
+                merged_seq = self._merge(new_seq, self.seqs.get(name, {}))
+                self.seqs[name] = merged_seq
+
+    def _merge(self, source, destination):
+        """Merge a source dict in a destination dict (only add values or append to lists)."""
+        if not destination:
+            return source
+        for key, value in source.items():
+            if isinstance(value, list):
+                destination[key] += value
+            else:
+                destination[key] = value
+
+        return destination
 
     @staticmethod
     def make_seqregion_from_gbff(record_data: GBFFRecord) -> SeqRegionDict:
@@ -106,9 +121,10 @@ class SeqCollection:
         """
         report = ReportRecord(report_path)
         for seq_data in report.reader:
-            seq_region = self.make_seq_region_from_report(seq_data, is_refseq)
-            name = seq_region["name"]
-            self.seqs[name] = seq_region
+            new_seq = self.make_seq_region_from_report(seq_data, is_refseq)
+            name = new_seq["name"]
+            merged_seq = self._merge(new_seq, self.seqs.get(name, {}))
+            self.seqs[name] = merged_seq
 
     @staticmethod
     def make_seq_region_from_report(
@@ -235,3 +251,10 @@ class SeqCollection:
                 continue
             if seqr.get("location", "") == "mitochondrial_chromosome":
                 seqr["codon_table"] = genetic_code
+
+    def to_list(self) -> list[SeqRegionDict]:
+        """Returns the sequences as a simple list of SeqRegionDict."""
+        seqs: list[SeqRegionDict] = []
+        for seq in self.seqs.values():
+            seqs.append(seq)
+        return seqs
