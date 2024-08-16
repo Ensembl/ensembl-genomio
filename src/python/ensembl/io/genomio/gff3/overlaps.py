@@ -28,7 +28,7 @@ import logging
 from pathlib import Path
 from pprint import pprint
 
-from Bio import SeqRecord
+from Bio.SeqRecord import SeqRecord
 from BCBio import GFF
 from BCBio.GFF import GFFExaminer
 from intervaltree import Interval, IntervalTree
@@ -151,13 +151,13 @@ def _write_report(out_file: Path, seq_dict: dict, genes_dict: dict) -> int:
     return overlap_count
 
 
-def get_intervals(record:SeqRecord, genes_dict:dict, seq_dict: dict, seq_name: str) -> None:
+def get_intervals(record: SeqRecord, genes_dict: dict, seq_dict: dict, seq_name: str) -> None:
     """Extract start/stop feature coordinates for use in creating intervaltree object.
 
     Args:
         record: Individual sequence record.
         genes_dict: Genes
-        seq_dict: Sequences 
+        seq_dict: Sequences
         seq_name: Feature sequence name
 
     Return:
