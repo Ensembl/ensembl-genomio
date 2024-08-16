@@ -107,9 +107,8 @@ class SeqCollection:
         report = ReportRecord(report_path)
         for seq_data in report.reader:
             seq_region = self.make_seq_region_from_report(seq_data, is_refseq)
-            if seq_region:
-                name = seq_region["name"]
-                self.seqs[name] = seq_region
+            name = seq_region["name"]
+            self.seqs[name] = seq_region
 
     @staticmethod
     def make_seq_region_from_report(
