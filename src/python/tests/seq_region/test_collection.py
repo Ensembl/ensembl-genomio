@@ -31,15 +31,33 @@ from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 from ensembl.io.genomio.seq_region.collection import SeqCollection
 
 
+_test_report_seq = {
+    "Assembly-Unit": "Primary Assembly",
+    "Assigned-Molecule": "I",
+    "Assigned-Molecule-Location/Type": "Chromosome",
+    "GenBank-Accn": "gb_id",
+    "RefSeq-Accn": "rs_id",
+    "Relationship": "=",
+    "Sequence-Length": "1000",
+    "Sequence-Name": "seq_name",
+    "Sequence-Role": "assembled-molecule",
+    "UCSC-style-name": "na",
+}
+
+
 class MockResponse:
+    """Mock `requests` response."""
+
     def __init__(self, json_str: str) -> None:
         self.text = json_str
 
     @staticmethod
     def raise_for_status():
+        """Mock, never raise Exception here."""
         pass
 
     def json(self) -> dict:
+        """Returns the data as json."""
         return json.loads(self.text)
 
 
@@ -56,6 +74,7 @@ def test_collection():
     assert not seqs.seqs
 
 
+# Start of tests
 @pytest.mark.parametrize(
     "genbank_id, codon_table, location, is_circular, expected_seq",
     [
@@ -113,20 +132,6 @@ def test_from_gbff(data_dir: Path):
     collection = SeqCollection()
     collection.from_gbff(data_dir / gb_file)
     assert collection.seqs == expected_seqs
-
-
-base_seq = {
-    "Assembly-Unit": "Primary Assembly",
-    "Assigned-Molecule": "I",
-    "Assigned-Molecule-Location/Type": "Chromosome",
-    "GenBank-Accn": "gb_id",
-    "RefSeq-Accn": "rs_id",
-    "Relationship": "=",
-    "Sequence-Length": "1000",
-    "Sequence-Name": "seq_name",
-    "Sequence-Role": "assembled-molecule",
-    "UCSC-style-name": "na",
-}
 
 
 @pytest.mark.parametrize(
@@ -196,13 +201,13 @@ def test_make_seqregion_from_report(
     Args:
         seq_data: Sequence dict with values to replace the default from `base_seq`.
         is_refseq: Is the assembly from RefSeq.
-        expected_key: From the seq
-        expected_value: _description_
-        expected: _description_
+        expected_key: Check this key.
+        expected_value: Check this value for the key.
+        expected: Context manager to catch expected exceptions.
     """
     collection = SeqCollection()
     input_data = {}
-    input_data.update(base_seq)
+    input_data.update(_test_report_seq)
     input_data.update(seq_data)
     with expected:
         seq_dict = collection.make_seq_region_from_report(input_data, is_refseq=is_refseq)
@@ -217,7 +222,7 @@ def test_make_seqregion_from_report_custom():
     collection = SeqCollection()
     seq_data = {}
     input_data = {}
-    input_data.update(base_seq)
+    input_data.update(_test_report_seq)
     input_data.update(seq_data)
 
     custom_locations = {"chromosome": "custom_chromosome"}
@@ -324,18 +329,20 @@ def test_add_translation_table(
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
 def test_add_mitochondrial_codon_table(
     mock_requests_get,
-    taxon_id: int,
     input_seq: dict[str, str],
+    taxon_id: int,
     response_data: str,
     expected_codon_table: int | None,
     expected: ContextManager,
 ):
-    """Test `SeqCollection.add_translation_table()`
+    """Test `SeqCollection.add_mitochondrial_codon_table()`.
 
     Args:
         input_seq: Sequence dict with usable values (`codon_table`, `location`).
-        code_map: A custom map location -> codon table number.
-        expected_codon_table: Expected codon table number.
+        taxon_id: Taxon ID passed to the request.
+        response_data: Return data from the request.
+        expected_codon_table: Expected codon table after update.
+        expected: Context manager to catch expected exceptions.
     """
 
     mock_requests_get.return_value = MockResponse(response_data)
@@ -349,7 +356,7 @@ def test_add_mitochondrial_codon_table(
 
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
 def test_add_mitochondrial_codon_table_mock(mock_requests_get):
-    """Test `SeqCollection.add_translation_table()`."""
+    """Test `SeqCollection.add_mitochondrial_codon_table()` with the mock parameter."""
     mock_requests_get.return_value = MockResponse("{}")  # Mock requests just in case
     collection = SeqCollection(mock=True)
     seq_name = "foobar"
