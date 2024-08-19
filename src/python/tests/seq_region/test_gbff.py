@@ -20,6 +20,7 @@ from typing import ContextManager
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
 import pytest
 from pytest import param, raises
 
@@ -29,7 +30,7 @@ from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 
 def get_record(gbff_path: Path) -> SeqRecord:
     """Returns the first SeqRecord from a Genbank file."""
-    seq_record = SeqRecord("")
+    seq_record = SeqRecord(Seq(""))
     with gbff_path.open("r") as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
             seq_record = record
