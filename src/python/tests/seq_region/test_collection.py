@@ -60,11 +60,13 @@ class MockResponse:
         return json.loads(self.text)
 
 
-def get_record(gbff_path: Path) -> SeqRecord:
+def get_record(gbff_path: Path) -> SeqRecord | None:
     """Returns the first SeqRecord from a Genbank file."""
+    seq_record = None
     with gbff_path.open("r") as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
-            return record
+            seq_record = record
+    return seq_record
 
 
 def test_collection():

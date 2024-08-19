@@ -18,7 +18,8 @@ from contextlib import nullcontext as no_raise
 from pathlib import Path
 from typing import ContextManager
 
-from Bio import SeqIO, SeqRecord
+from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 import pytest
 from pytest import param, raises
 
@@ -26,11 +27,13 @@ from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 
 
-def get_record(gbff_path: Path) -> SeqRecord:
+def get_record(gbff_path: Path) -> SeqRecord | None:
     """Returns the first SeqRecord from a Genbank file."""
+    seq_record = None
     with gbff_path.open("r") as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
-            return record
+            seq_record = record
+    return seq_record
 
 
 def test_gbff(data_dir: Path):
