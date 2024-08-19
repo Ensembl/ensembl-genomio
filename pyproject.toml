@@ -92,6 +92,10 @@ docs = [
     "mkdocstrings",
     "mkdocstrings-python",
 ]
+# Database dependencies
+mysql = [
+    "ensembl-utils[mysql]",
+]
 
 [project.urls]
 homepage = "https://www.ensembl.org"
