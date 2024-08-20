@@ -49,8 +49,8 @@ def fetch_coord_systems(session: Session) -> Iterator[CoordSystem]:
     Yields:
         All default coord_systems in the core database.
     """
-    coord_stmt = select(CoordSystem).filter(CoordSystem.attrib.like("%default_version%"))
-    for row in session.execute(coord_stmt).unique().all():
+    coord_system_select = select(CoordSystem).filter(CoordSystem.attrib.like(r"%default_version%"))
+    for row in session.execute(coord_system_select).unique().all():
         coord: CoordSystem = row[0]
         yield coord
 
@@ -65,7 +65,7 @@ def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Iterator[S
     Yields:
         All seq_regions for the coord_system.
     """
-    seqr_stmt = (
+    seq_region_select = (
         select(SeqRegion)
         .where(SeqRegion.coord_system_id == coord_system.coord_system_id)
         .options(
@@ -74,9 +74,9 @@ def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Iterator[S
             joinedload(SeqRegion.karyotype),
         )
     )
-    for row in session.execute(seqr_stmt).unique().all():
-        seqr: SeqRegion = row[0]
-        yield seqr
+    for row in session.execute(seq_region_select).unique().all():
+        seq_region: SeqRegion = row[0]
+        yield seq_region
 
 
 def get_attribs_dict(seq_region: SeqRegion) -> dict[str, Any]:
@@ -84,12 +84,12 @@ def get_attribs_dict(seq_region: SeqRegion) -> dict[str, Any]:
     return {attrib.attrib_type.code: attrib.value for attrib in seq_region.seq_region_attrib}
 
 
-def add_attribs(seq_region: dict, attrib_dict: dict) -> None:
+def add_attribs(seq_region: dict, seq_region_attrib: dict) -> None:
     """Map seq_regions attribs to a specific name and type defined below.
 
     Args:
         seq_region: A seq_region dict to modify.
-        attrib_dict: The attribs for this seq_region.
+        seq_region_attrib: The attribs for this seq_region.
     """
     bool_attribs = {
         "circular_seq": "circular",
@@ -107,17 +107,17 @@ def add_attribs(seq_region: dict, attrib_dict: dict) -> None:
 
     for name, key in bool_attribs.items():
         # Make sure "0" means False, i.e. not added
-        value = int(attrib_dict.get(name, "0"))
+        value = int(seq_region_attrib.get(name, "0"))
         if value:
             seq_region[key] = bool(value)
 
     for name, key in int_attribs.items():
-        value = attrib_dict.get(name, "")
+        value = seq_region_attrib.get(name, "")
         if value:
             seq_region[key] = int(value)
 
     for name, key in string_attribs.items():
-        value = attrib_dict.get(name, "")
+        value = seq_region_attrib.get(name, "")
         if value:
             seq_region[key] = str(value)
 
