@@ -194,8 +194,8 @@ def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict)
         param({}, None, id="no toplevel"),
         param({"codon_table": 1}, None, id="no toplevel, other attribs"),
         param({"toplevel": 1}, {}, id="1 toplevel"),
-        param({"toplevel": 1, "codon_table": 2}, {"codon_table": 2}, id="With codon table"),
-        param({"toplevel": 1, "sequence_location": "chr"}, {"location": "chr"}, id="Location"),
+        param({"toplevel": 1, "codon_table": 2}, {"codon_table": 2}, id="with codon table"),
+        param({"toplevel": 1, "sequence_location": "chr"}, {"location": "chr"}, id="location"),
         param({"toplevel": 1, "circular_seq": 1}, {"circular": 1}, id="circular"),
         param({"toplevel": 1, "circular_seq": 0}, {}, id="not circular"),
         param(

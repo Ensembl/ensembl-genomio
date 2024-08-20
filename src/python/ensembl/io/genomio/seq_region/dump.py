@@ -44,10 +44,10 @@ def fetch_coord_systems(session: Session) -> Iterator[CoordSystem]:
     """Retrieve the coord_system metadata from the current core.
 
     Args:
-        session: Session for the current core.
+        session: Session for the current core database.
 
     Yields:
-        All default coord_systems in the core.
+        All default coord_systems in the core database.
     """
     coord_stmt = select(CoordSystem).filter(CoordSystem.attrib.like("%default_version%"))
     for row in session.execute(coord_stmt).unique().all():
@@ -59,7 +59,7 @@ def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Iterator[S
     """Retrieve the seq_region metadata for a given coord_system, with accessory tables cached.
 
     Args:
-        session: Session for the current core.
+        session: Session for the current core database.
         coord_system: Coord_system to get seq regions.
 
     Yields:
@@ -106,7 +106,7 @@ def add_attribs(seq_region: dict, attrib_dict: dict) -> None:
     }
 
     for name, key in bool_attribs.items():
-        # Make sure "0" means False (=not added)
+        # Make sure "0" means False, i.e. not added
         value = int(attrib_dict.get(name, "0"))
         if value:
             seq_region[key] = bool(value)
@@ -149,7 +149,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict) -> list[dict[str,
     return syns
 
 
-def get_karyotype(seq_region: SeqRegion) -> list:
+def get_karyotype(seq_region: SeqRegion) -> list[dict[str, Any]]:
     """Given a seq_region, extract the karyotype bands.
 
     Args:
@@ -176,7 +176,7 @@ def get_karyotype(seq_region: SeqRegion) -> list:
     return kars
 
 
-def get_added_sequence(seq_region: SeqRegion) -> dict:
+def get_added_sequence(seq_region: SeqRegion) -> dict[str, str]:
     """Extracts added sequence information of the given sequence region.
 
     Args:
@@ -219,7 +219,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> list[SeqRegion]:
     Include synonyms, attribs and karyotypes. Only the top level sequences are exported.
 
     Args:
-        session: Session from the current core.
+        session: Session from the current core database.
         external_db_map: Mapping of external_db names for the synonyms.
 
     """
@@ -235,13 +235,10 @@ def get_seq_regions(session: Session, external_db_map: dict) -> list[SeqRegion]:
                 seq_region["synonyms"] = synonyms
 
             attribs = get_attribs_dict(seqr)
-            if attribs:
-                if "toplevel" not in attribs:
-                    continue
-                add_attribs(seq_region, attribs)
-            else:
-                # Skip seq_region without attribs, not toplevel
+            if not attribs or "toplevel" not in attribs:
+                # Skip seq_region without attribs or not toplevel
                 continue
+            add_attribs(seq_region, attribs)
 
             karyotype = get_karyotype(seqr)
             if karyotype:

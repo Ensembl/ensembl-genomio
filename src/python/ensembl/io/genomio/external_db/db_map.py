@@ -34,14 +34,14 @@ class MapFormatError(ValueError):
     """Error when parsing the db map file."""
 
 
-def get_external_db_map(map_file: Path) -> Dict:
+def get_external_db_map(map_file: Path) -> dict[str, str]:
     """Get an external_db map from a file.
 
     Returns:
         Dict with keys as alternate names, and values as standard name.
 
     """
-    db_map: Dict[str, str] = {}
+    db_map: dict[str, str] = {}
     with map_file.open("r") as map_fh:
         for line in map_fh:
             line = line.rstrip()
