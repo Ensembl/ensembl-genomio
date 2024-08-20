@@ -22,7 +22,6 @@ __all__ = [
 
 from importlib.resources import as_file, files
 from pathlib import Path
-from typing import Dict
 
 # Provide the default map from a data file
 default_map_res = files("ensembl.io.genomio.data.external_db_map").joinpath("default.txt")
@@ -35,7 +34,10 @@ class MapFormatError(ValueError):
 
 
 def get_external_db_map(map_file: Path) -> dict[str, str]:
-    """Get an external_db map from a file.
+    """Get an external_db map from a tab file without header.
+
+    Empty lines and comments (lines starting with #) are ignored.
+    The first 2 fields are expected to be the main name, and the alt name. Any other fields after are ignored.
 
     Returns:
         Dict with keys as alternate names, and values as standard name.
