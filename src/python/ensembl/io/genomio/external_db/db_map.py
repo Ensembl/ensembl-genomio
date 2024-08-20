@@ -39,6 +39,9 @@ def get_external_db_map(map_file: Path) -> dict[str, str]:
     Empty lines and comments (lines starting with #) are ignored.
     The first 2 fields are expected to be the main name, and the alt name. Any other fields after are ignored.
 
+    Args:
+        map_file: Path to a file with external DB mapping.
+
     Returns:
         Dict with keys as alternate names, and values as standard name.
 
