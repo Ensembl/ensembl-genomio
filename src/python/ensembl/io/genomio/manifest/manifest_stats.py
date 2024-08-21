@@ -88,7 +88,6 @@ class ManifestStats:
         """
         manifest = Manifest(Path(manifest_path).parent)
         manifest_files = manifest.load()
-        print(manifest_files)
 
         # Replace the {file, md5} dict with the file path
         for name in manifest_files:
