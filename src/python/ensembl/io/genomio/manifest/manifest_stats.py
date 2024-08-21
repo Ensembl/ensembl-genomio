@@ -80,6 +80,25 @@ class ManifestStats:
         self.ignore_final_stops = False
         self.brc_mode = False
 
+    def get_manifest(self, manifest_path: PathLike) -> dict[str, Any]:
+        """Load the content of a manifest file.
+
+        Returns:
+            Dict: Content of the manifest file.
+        """
+        manifest = Manifest(Path(manifest_path).parent)
+        manifest_files = manifest.load()
+        print(manifest_files)
+
+        # Replace the {file, md5} dict with the file path
+        for name in manifest_files:
+            if "file" in manifest_files[name]:
+                manifest_files[name] = Path(manifest_path).parent / manifest_files[name]["file"]
+            else:
+                for f in manifest_files[name]:
+                    manifest_files[name][f] = Path(manifest_path).parent / manifest_files[name][f]["file"]
+        return manifest_files
+
     def has_lengths(self, name: str) -> bool:
         """Check if a given name has lengths records.
 
@@ -107,24 +126,6 @@ class ManifestStats:
 
     def _add_error(self, error: str) -> None:
         self.errors.append(error)
-
-    def get_manifest(self, manifest_path: PathLike) -> dict[str, Any]:
-        """Load the content of a manifest file.
-
-        Returns:
-            Dict: Content of the manifest file.
-        """
-        manifest = Manifest(Path(manifest_path).parent)
-        manifest_files = manifest.get_files_checksums()
-
-        # Replace the {file, md5} dict with the file path
-        for name in manifest_files:
-            if "file" in manifest_files[name]:
-                manifest_files[name] = Path(manifest_path).parent / manifest_files[name]["file"]
-            else:
-                for f in manifest_files[name]:
-                    manifest_files[name][f] = Path(manifest_path).parent / manifest_files[name][f]["file"]
-        return manifest_files
 
     def _check_md5sum(self, file_path: Path, md5sum: str) -> None:
         """Verify the integrity of the files in manifest.json.
