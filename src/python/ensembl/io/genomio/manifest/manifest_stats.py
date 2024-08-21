@@ -29,6 +29,7 @@ from Bio import SeqIO
 
 from ensembl.io.genomio.utils import get_json
 from ensembl.io.genomio.gff3.features import GFFSeqFeature
+from ensembl.io.genomio.manifest.manifest import Manifest
 from ensembl.utils.archive import open_gz_file
 
 
@@ -113,29 +114,17 @@ class ManifestStats:
         Returns:
             Dict: Content of the manifest file.
         """
-        manifest_path = Path(manifest_path)
-        with manifest_path.open("r") as manifest_fh:
-            manifest = json.load(manifest_fh)
+        manifest = Manifest(Path(manifest_path).parent)
+        manifest_files = manifest.get_files_checksums()
 
-            # Use dir name from the manifest
-            for name in manifest:
-                if "file" in manifest[name]:
-                    file_path = manifest_path.parent / manifest[name]["file"]
-                    # check if the md5sum is correct
-                    md5sum = manifest[name]["md5sum"]
-                    self._check_md5sum(file_path, md5sum)
-
-                    manifest[name] = file_path
-                else:
-                    for f in manifest[name]:
-                        if "file" in manifest[name][f]:
-                            file_path = manifest_path.parent / manifest[name][f]["file"]
-                            # check if the md5sum is correct
-                            md5sum = manifest[name][f]["md5sum"]
-                            self._check_md5sum(file_path, md5sum)
-
-                            manifest[name][f] = file_path
-            return manifest
+        # Replace the {file, md5} dict with the file path
+        for name in manifest_files:
+            if "file" in manifest_files[name]:
+                manifest_files[name] = Path(manifest_path).parent / manifest_files[name]["file"]
+            else:
+                for f in manifest_files[name]:
+                    manifest_files[name][f] = Path(manifest_path).parent / manifest_files[name][f]["file"]
+        return manifest_files
 
     def _check_md5sum(self, file_path: Path, md5sum: str) -> None:
         """Verify the integrity of the files in manifest.json.
