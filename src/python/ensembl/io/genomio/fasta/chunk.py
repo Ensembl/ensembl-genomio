@@ -19,6 +19,9 @@
 __all__ = [
     "check_chunk_size_and_tolerance",
     "chunk_fasta",
+    "chunk_fasta_stream",
+    "get_tolerated_size",
+    "prepare_out_dir_for_individuals",
     "split_seq_by_chunk_size",
     "split_seq_by_n",
 ]
@@ -62,7 +65,7 @@ def check_chunk_size_and_tolerance(
         error_f(f"wrong '--chunk_tolerance' value: '{chunk_tolerance}'. can't be less then 0. exiting...")
 
 
-def split_seq_by_n(seq: str, split_pattern: Optional[re.Pattern]) -> list:
+def split_seq_by_n(seq: str, split_pattern: Optional[re.Pattern]) -> list[int]:
     """Split a string into chunks at the positions where the
     pattern is found.
 
@@ -82,7 +85,9 @@ def split_seq_by_n(seq: str, split_pattern: Optional[re.Pattern]) -> list:
     return split_points
 
 
-def split_seq_by_chunk_size(ends: list[int], chunk_size: int, tolerated_size: Optional[int] = None) -> list:
+def split_seq_by_chunk_size(
+    ends: list[int], chunk_size: int, tolerated_size: Optional[int] = None
+) -> list[int]:
     """Split list of end coordinates, to form chunks not longer then
     chunk_size.
 
@@ -116,6 +121,27 @@ def chunk_fasta_stream(
     append_offset_to_chunk_name: Optional[bool] = None,
     open_individual: Callable[[str], TextIOWrapper] = lambda name: open(name, "wt", encoding="utf-8"),
 ) -> list[str]:
+    """Split input TextIOWrapper stream with fasta into a smaller chunks based on
+    stratches of "N"s and then based on chunk_size_tolerated and store either to
+    the output_fasta stream (if valid) or to the files created by
+    invocation of the `open_individual` callable.
+
+    Args:
+        input_fasta: Input FASTA as the TextIOWrapper stream.
+        chunk_size: Size of the chunks to split into.
+        chunk_size_tolerated: If more flexibility allowed, use this as the maximum size of a chunk.
+        output_fasta: Output FASTA TextIOWrapper stream to store the chunks into,
+                if none or False, `open_individual` is used (see below).
+        individual_file_prefix: A file path prefix including dirs and filenames part to use as a
+                firts part of the chunk file name.
+        n_sequece_len: Length of the stretch of `N`s to split at; not slitting on `N`s if 0.
+        chunk_sfx: A string to put between the original sequence name and the chunk suffix.
+        append_offset_to_chunk_name: Append 0-based offset in the form of `_off_{offset}` to the chunk name.
+        open_individual: A callable taking filename as an input to generatethe output file for
+                individual contig if out_put FASTA is `false` of `None`, folders should be preexisting.
+    """
+
+    chunk_size_tolerated = max(chunk_size, chunk_size_tolerated)
     # output agp_lines list
     agp_lines = []
 
@@ -154,7 +180,10 @@ def chunk_fasta_stream(
 
             # get slice and put it out
             tmp_record = SeqRecord(
-                Seq(rec.seq[offset:chunk_end]), id=chunk_name, description=f"AGP {agp_line}", name=""
+                Seq(rec.seq[offset:chunk_end]),
+                id=chunk_name,
+                description=f"AGP {agp_line}",
+                name="",
             )
 
             # if user specified chunks -- store each chunk in an individual output file
@@ -196,8 +225,10 @@ def chunk_fasta(
         )
         # do not open a joined file if you plan to open many indvidual ones
         with (
-            individual_file_prefix and nullcontext(None) or open(out_file_name, "wt", encoding="utf-8")
-        ) as out_file_joined:
+            individual_file_prefix
+            and nullcontext(None)
+            or open(out_file_name, "wt", encoding="utf-8") as out_file_joined
+        ):
             agp_lines = chunk_fasta_stream(
                 fasta,
                 chunk_size,
