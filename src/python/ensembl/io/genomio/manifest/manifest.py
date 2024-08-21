@@ -65,7 +65,7 @@ class Manifest:
         with self.path.open("w") as json_out:
             json_out.write(json.dumps(self.files, sort_keys=True, indent=4))
 
-    def get_files_checksums(self) -> None:
+    def get_files_checksums(self) -> dict:
         """Records all the files in the directory with their checksum."""
         manifest_files: dict = {}
         for subfile in self.dir.iterdir():
@@ -103,6 +103,7 @@ class Manifest:
                 logging.warning(f"File {subfile} was not included in the manifest")
 
         self.files = manifest_files
+        return self.files
 
     def _prepare_object_name(self, subfile: Path, name: str, manifest_dict: dict) -> str:
         # Prepare object name

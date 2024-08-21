@@ -62,7 +62,7 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
         if expected_name:
             expected_content = {expected_name: {"file": file_name, "md5sum": _CONTENT_MD5}}
     manifest = Manifest(tmp_path)
-    manifest.get_files_checksums()
+    assert manifest.get_files_checksums() == expected_content
     assert manifest.files == expected_content
 
 
@@ -110,8 +110,7 @@ def test_get_files_checksum_multifiles(
             fh.write("CONTENT")
     manifest = Manifest(tmp_path)
     with expected:
-        manifest.get_files_checksums()
-        assert manifest.files == expected_content
+        assert manifest.get_files_checksums() == expected_content
 
 
 @pytest.mark.dependency(depends=["test_init"])
@@ -119,9 +118,8 @@ def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFix
     """Tests `Manifest.get_files_checksum()` with a subdir."""
     Path(tmp_path / "sub_dir").mkdir()
     manifest = Manifest(tmp_path)
-    manifest.get_files_checksums()
+    assert not manifest.get_files_checksums()
     assert caplog.text.strip().endswith("Can't create manifest for subdirectory")
-    assert not manifest.files
 
 
 @pytest.mark.dependency(depends=["test_init"])
@@ -131,9 +129,8 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
     empty_file.touch()
     assert empty_file.exists()
     manifest = Manifest(tmp_path)
-    manifest.get_files_checksums()
+    assert not manifest.get_files_checksums()
     assert "Skip and delete empty file" in caplog.text
-    assert not manifest.files
     assert not empty_file.exists()
 
 
