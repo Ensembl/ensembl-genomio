@@ -17,3 +17,4 @@
 from .check_integrity import *
 from .compute_stats import *
 from .generate import *
+from .manifest_stats import *
