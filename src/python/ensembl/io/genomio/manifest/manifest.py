@@ -128,7 +128,7 @@ class Manifest:
                 raise ValueError(f"Too many files with same name {obj_name_base}")
         return obj_name
 
-    def load(self) -> None:
+    def load(self) -> dict:
         """Load the content of an existing manifest file."""
         if not self.path.exists():
             raise ManifestError(f"Cannot load non-existing manifest file: {self.path}")
@@ -143,8 +143,6 @@ class Manifest:
                     # check if the md5sum is correct
                     md5sum = manifest[name]["md5sum"]
                     self._check_md5sum(file_path, md5sum)
-
-                    manifest[name] = file_path
                 else:
                     for f in manifest[name]:
                         file_path = self.dir / manifest[name][f]["file"]
@@ -152,9 +150,8 @@ class Manifest:
                         md5sum = manifest[name][f]["md5sum"]
                         self._check_md5sum(file_path, md5sum)
 
-                        manifest[name][f] = file_path
-
             self.files = manifest
+        return self.files
 
     @staticmethod
     def _get_md5sum(file_path: Path) -> str:
