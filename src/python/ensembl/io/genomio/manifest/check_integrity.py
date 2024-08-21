@@ -25,7 +25,7 @@ from math import floor
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from BCBio import GFF
 from Bio import SeqIO
@@ -38,7 +38,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 # Record the lengths of the sequence for features/regions
-Lengths = Dict[str, int]
+Lengths = dict[str, int]
 
 
 class InvalidIntegrityError(Exception):
@@ -50,10 +50,9 @@ class Manifest:
 
     def __init__(self, manifest_path: PathLike) -> None:
         self.manifest_files = self.get_manifest(manifest_path)
-        self.genome: Dict[str, Any] = {}
-        self.seq_regions: Dict[str, Any] = {}
+        self.genome: dict[str, Any] = {}
 
-        self.lengths: Dict[str, Lengths] = {
+        self.lengths: dict[str, Lengths] = {
             "dna_sequences": {},
             "peptide_sequences": {},
             "seq_region_levels": {},
@@ -70,11 +69,11 @@ class Manifest:
             "seq_regions": {},
         }
 
-        self.circular: Dict[str, Lengths] = {
+        self.circular: dict[str, Lengths] = {
             "seq_regions": {},
         }
 
-        self.errors: List[str] = []
+        self.errors: list[str] = []
 
         self.ignore_final_stops = False
         self.brc_mode = False
@@ -86,20 +85,18 @@ class Manifest:
 
         """
         try:
-            if self.lengths[name]:
-                return True
-            return False
+            return bool(self.lengths[name])
         except KeyError as err:
             raise KeyError(f"There is no length record for {name}") from err
 
-    def get_lengths(self, name: str) -> Dict[str, Any]:
+    def get_lengths(self, name: str) -> dict[str, Any]:
         """Returns a dict associating IDs with their length from a given file name."""
         try:
             return self.lengths[name]
         except KeyError as err:
             raise KeyError(f"There is no length record for {name}") from err
 
-    def get_circular(self, name: str) -> Dict[str, Any]:
+    def get_circular(self, name: str) -> dict[str, Any]:
         """Returns a dict associating IDs with their is_circular flag from a given file name."""
         try:
             return self.circular[name]
@@ -109,7 +106,7 @@ class Manifest:
     def _add_error(self, error: str) -> None:
         self.errors.append(error)
 
-    def get_manifest(self, manifest_path: PathLike) -> Dict[str, Any]:
+    def get_manifest(self, manifest_path: PathLike) -> dict[str, Any]:
         """Load the content of a manifest file.
 
         Returns:
@@ -195,7 +192,6 @@ class Manifest:
                             seq_lengths[synonym["name"]] = int(seq["length"])
                 self.lengths["seq_regions"] = seq_lengths
                 self.circular["seq_regions"] = seq_circular
-                self.seq_regions = seq_regions
         if "functional_annotation" in self.manifest_files:
             logging.info("Manifest contains functional annotation(s)")
             self.get_functional_annotation(self.manifest_files["functional_annotation"])
@@ -316,7 +312,7 @@ class Manifest:
                     if feat.type == "transposable_element":
                         tes[feat.id] = feat_length
 
-        stats: Dict[str, Lengths] = {
+        stats: dict[str, Lengths] = {
             "gff3_seq_regions": seqs,
             "gff3_genes": genes,
             "gff3_translations": peps,
@@ -429,10 +425,10 @@ class IntegrityTool:
         self.set_brc_mode(brc_mode)
         self.ignore_final_stops = False
         self.set_ignore_final_stops(ignore_final_stops)
-        self.errors: List[str] = []
+        self.errors: list[str] = []
         self.no_fail = no_fail
 
-    def add_errors(self, errors: Union[List[str], str]) -> None:
+    def add_errors(self, errors: list[str] | str) -> None:
         """Store the given errors (list or single string) in the list of all errors."""
         if isinstance(errors, str):
             self.errors.append(errors)
@@ -452,7 +448,6 @@ class IntegrityTool:
         manifest.prepare_integrity_data()
 
         genome = manifest.genome
-        seq_regions = manifest.seq_regions
 
         dna = manifest.get_lengths("dna_sequences")
         pep = manifest.get_lengths("peptide_sequences")
@@ -527,20 +522,12 @@ class IntegrityTool:
                     )
                 )
 
-            # Check the seq.json integrity
-            # Compare the length and id retrieved from seq.json to the gff
-            if seq_regions:
-                self.check_seq_region_lengths(
-                    seq_lengths, gff_seq_regions, "Seq_regions metadata vs gff", seq_circular
-                )
+            self.check_seq_region_lengths(
+                seq_lengths, gff_seq_regions, "seq_regions JSON vs GFF3 lengths", seq_circular
+            )
 
-        # Check fasta dna and seq_region integrity
-        if dna and seq_regions:
-            self.check_seq_region_lengths(seq_lengths, dna, "seq_regions json vs dna")
-
-        # Check agp and seq_region integrity
-        if agp_seqr and seq_lengths:
-            self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions json vs agps")
+        self.check_seq_region_lengths(seq_lengths, dna, "seq_regions JSON vs DNA lengths")
+        self.check_seq_region_lengths(seq_lengths, agp_seqr, "seq_regions JSON vs AGPs lengths")
 
         if self.errors:
             errors_str = "\n".join(self.errors)
@@ -560,17 +547,17 @@ class IntegrityTool:
         self.ignore_final_stops = ignore_final_stops
         self.manifest.ignore_final_stops = ignore_final_stops
 
-    def _check_genome(self, genome: Dict) -> None:
+    def _check_genome(self, genome: dict) -> None:
         """Check if the accession is correct in genome.json."""
-        if genome:
-            if "assembly" in genome:
-                genome_ass = genome["assembly"]
-                if "accession" in genome_ass:
-                    genome_acc = genome_ass["accession"]
-                    if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
-                        self.add_errors(f"Genome assembly accession is wrong: '{genome_acc}'")
+        if not genome:
+            return
+        genome_accession = genome.get("assembly", {}).get("accession", "")
+        if not genome_accession:
+            return
+        if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_accession):
+            self.add_errors(f"Genome assembly accession is wrong: '{genome_accession}'")
 
-    def check_ids(self, list1, list2, name) -> List[str]:
+    def check_ids(self, list1, list2, name) -> list[str]:
         """Compare the ids in list1 and list2.
 
         Args:
@@ -607,7 +594,7 @@ class IntegrityTool:
 
         return errors
 
-    def check_lengths(self, list1, list2, name, allowed_len_diff=None, special_diff=False) -> List[str]:
+    def check_lengths(self, list1, list2, name, allowed_len_diff=None, special_diff=False) -> list[str]:
         """Check the difference in ids and length between list1 and list2.
             There are a few special cases here where we allow a certain asymmetry
             by changing the values of the arguments.
@@ -645,8 +632,8 @@ class IntegrityTool:
             common_len = len(set1 & set2)
         else:
             # check for the sequence length difference
-            diff_len_list: List[str] = []
-            diff_len_special_list: List[str] = []
+            diff_len_list: list[str] = []
+            diff_len_special_list: list[str] = []
             for e in set1 & set2:
                 dl12 = list1[e] - list2[e]
                 if abs(dl12) <= allowed_len_diff:
@@ -679,10 +666,10 @@ class IntegrityTool:
 
     def check_seq_region_lengths(
         self,
-        seqrs: Dict[str, Any],
-        feats: Dict[str, Any],
+        seqrs: dict[str, Any] | None,
+        feats: dict[str, Any] | None,
         name: str,
-        circular: Optional[Dict[str, Any]] = None,
+        circular: dict[str, Any] | None = None,
     ) -> None:
         """Check the integrity of seq_region.json file by comparing the length of the sequence
             to fasta files and the gff.
@@ -701,6 +688,8 @@ class IntegrityTool:
             Error if there are common sequences with difference in ids
             and if the sequences are not consistent in the files.
         """
+        if not seqrs or not feats:
+            return
         comp = self._compare_seqs(seqrs, feats, circular)
 
         common = comp["common"]
@@ -723,8 +712,8 @@ class IntegrityTool:
             self.add_errors(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
 
     def _compare_seqs(
-        self, seqrs: Dict[str, Any], feats: Dict[str, Any], circular: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, List[str]]:
+        self, seqrs: dict[str, Any], feats: dict[str, Any], circular: dict[str, Any] | None = None
+    ) -> dict[str, list[str]]:
         """Give the intersection and other comparison between two groups of sequences.
 
         Args:
@@ -740,7 +729,7 @@ class IntegrityTool:
             diff_circular: Elements that differ in a circular sequence.
 
         """
-        comp: Dict[str, List[str]] = {
+        comp: dict[str, list[str]] = {
             "common": [],
             "only_seqr": [],
             "only_feat": [],
