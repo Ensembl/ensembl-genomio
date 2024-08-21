@@ -22,7 +22,7 @@ import json
 from pathlib import Path
 
 
-class MannifestError(Exception):
+class ManifestError(Exception):
     """Could not load a manifest file."""
 
 
@@ -130,7 +130,7 @@ class Manifest:
     def load(self) -> None:
         """Load the content of an existing manifest file."""
         if not self.path.exists():
-            raise MannifestError(f"Cannot load non-existing manifest file: {self.path}")
+            raise ManifestError(f"Cannot load non-existing manifest file: {self.path}")
 
         with self.path.open("r") as manifest_fh:
             manifest = json.load(manifest_fh)
@@ -169,4 +169,4 @@ class Manifest:
             md5sum: MD5 hash for the files.
         """
         if self._get_md5sum(file_path) != md5sum:
-            raise MannifestError(f"Invalid md5 checksum for {file_path}")
+            raise ManifestError(f"Invalid md5 checksum for {file_path}")

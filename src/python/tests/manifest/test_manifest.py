@@ -14,14 +14,16 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.manifest.manifest` module."""
 
+from contextlib import nullcontext as no_raise
 import json
 from pathlib import Path
-from typing import Callable
+from shutil import copytree
+from typing import Callable, ContextManager
 
 import pytest
-from pytest import LogCaptureFixture, param
+from pytest import LogCaptureFixture, param, raises
 
-from ensembl.io.genomio.manifest.generate import Manifest
+from ensembl.io.genomio.manifest.manifest import Manifest, ManifestError
 
 
 _CONTENT_MD5 = "45685e95985e20822fb2538a522a5ccf"
@@ -131,3 +133,21 @@ def test_create_manifest(
     with expected_manifest_file.open("w") as expected_fh:
         expected_fh.write(json.dumps(expected_content, sort_keys=True, indent=4))
     assert_files(manifest.path, expected_manifest_file)
+
+
+@pytest.mark.parametrize(
+    "files_dir, expected_manifest, expected",
+    [
+        param("", [], raises(ManifestError), id="No files"),
+        param("full_data", [], no_raise(), id="OK manifest"),
+    ],
+)
+@pytest.mark.dependency(depends=["test_init"])
+def test_load(tmp_path: Path, data_dir: Path, files_dir: str, expected_manifest: dict, expected: ContextManager):
+    # Copy the files to the tmp folder
+    if files_dir:
+        copytree(data_dir / files_dir, tmp_path, dirs_exist_ok=True)
+    with expected:
+        manifest = Manifest(tmp_path)
+        manifest.load()
+        manifest.files == expected_manifest
