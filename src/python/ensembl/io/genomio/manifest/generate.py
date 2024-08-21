@@ -25,8 +25,12 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
+class MannifestError(Exception):
+    """Could not load a manifest file."""
+
+
 class Manifest:
-    """Given a directory with genomic files, create a manifest json file for them."""
+    """Records of a manifest file and its files and md5 checksums."""
 
     same_names = {
         "gff3",
@@ -49,18 +53,23 @@ class Manifest:
     multi_files = {"agp"}
 
     def __init__(self, manifest_dir: Path) -> None:
+        """Initializes a manifest with the directory containing the files (and a manifest if it exists).
+        
+        Args:
+            manifest_dir: directory where the files are contained.
+        """
         self.dir = manifest_dir
         self.path = manifest_dir / "manifest.json"
         self.files = {}
 
     def create(self) -> Path:
-        """Create the manifest file."""
+        """Creates a manifest file from the files in a directory."""
         self.get_files_checksums()
         with self.path.open("w") as json_out:
             json_out.write(json.dumps(self.files, sort_keys=True, indent=4))
 
     def get_files_checksums(self) -> None:
-        """Compute the checksum of all the files in the directory."""
+        """Records all the files in the directory with their checksum."""
         manifest_files = {}
         for subfile in self.dir.iterdir():
             logging.debug(f"Check file {subfile} ({subfile.stem}, {subfile.suffix})")
@@ -121,11 +130,49 @@ class Manifest:
                 raise ValueError(f"Too many files with same name {obj_name_base}")
         return obj_name
 
+    def load(self) -> None:
+        """Load the content of an existing manifest file."""
+        if not self.path.exists():
+            raise MannifestError(f"Cannot load non-existing manifest file: {self.path}")
+
+        with self.path.open("r") as manifest_fh:
+            manifest = json.load(manifest_fh)
+
+            # Use dir name from the manifest
+            for name in manifest:
+                if "file" in manifest[name]:
+                    file_path = self.dir / manifest[name]["file"]
+                    # check if the md5sum is correct
+                    md5sum = manifest[name]["md5sum"]
+                    self._check_md5sum(file_path, md5sum)
+
+                    manifest[name] = file_path
+                else:
+                    for f in manifest[name]:
+                        if "file" in manifest[name][f]:
+                            file_path = self.dir / manifest[name][f]["file"]
+                            # check if the md5sum is correct
+                            md5sum = manifest[name][f]["md5sum"]
+                            self._check_md5sum(file_path, md5sum)
+
+                            manifest[name][f] = file_path
+
     @staticmethod
     def _get_md5sum(file_path: Path) -> str:
+        """Returns the md5 checksum for a given file."""
         with file_path.open("rb") as f:
             data_bytes = f.read()
             return hashlib.md5(data_bytes).hexdigest()
+
+    def _check_md5sum(self, file_path: Path, md5sum: str) -> None:
+        """Checks a file against an md5 checksum, raises a ManifestError if the checksum fails.
+
+        Args:
+            file_path: Path to a genome file.
+            md5sum: MD5 hash for the files.
+        """
+        if self._get_md5sum(file_path) != md5sum:
+            raise MannifestError(f"Invalid md5 checksum for {file_path}")
 
 
 def main() -> None:
