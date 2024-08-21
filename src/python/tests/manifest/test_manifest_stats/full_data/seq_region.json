@@ -1,5 +1,6 @@
 [
     {
+        "circular": true,
         "BRC4_seq_region_name": "JABDHM010000001",
         "EBI_seq_region_name": "JABDHM010000001",
         "coord_system_level": "scaffold",

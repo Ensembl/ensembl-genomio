@@ -37,3 +37,23 @@ def test_has_length(data_dir: Path):
     assert not stats.has_lengths("ann_genes")
     stats.get_functional_annotation(data_dir / "full_data" / "functional_annotation.json")
     assert stats.has_lengths("ann_genes")
+
+
+def test_get_length(data_dir: Path):
+    stats = ManifestStats(data_dir / "full_data/manifest.json")
+    with raises(KeyError):
+        stats.get_lengths("foobar")
+    assert not stats.has_lengths("ann_genes")
+    stats.get_functional_annotation(data_dir / "full_data" / "functional_annotation.json")
+    circular = stats.get_lengths("ann_genes")
+    assert circular == {"ECC02_000372": 1}
+
+
+def test_get_circular(data_dir: Path):
+    stats = ManifestStats(data_dir / "full_data/manifest.json")
+    with raises(KeyError):
+        stats.get_circular("foobar")
+    assert not stats.get_circular("seq_regions")
+    stats.get_seq_regions()
+    lengths = stats.get_circular("seq_regions")
+    assert lengths == {"JABDHM010000001.1": True, "JABDHM010000002.1": False}

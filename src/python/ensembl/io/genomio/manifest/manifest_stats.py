@@ -161,32 +161,36 @@ class ManifestStats:
             self.lengths["peptide_sequences"] = self.get_fasta_lengths(
                 self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
             )
-        if "seq_region" in self.manifest_files:
-            logging.info("Manifest contains seq_region JSON")
-            seq_regions = get_json(Path(self.manifest_files["seq_region"]))
-            if len(seq_regions) == 0:
-                self._add_error(f"No sequences found in {self.manifest_files['seq_region']}")
-            else:
-                seqr_seqlevel = {}
-                seq_lengths = {}
-                seq_circular = {}
-                # Store the length as int
-                for seq in seq_regions:
-                    seq_lengths[seq["name"]] = int(seq["length"])
-                    seq_circular[seq["name"]] = seq.get("circular", False)
-                    if seq["coord_system_level"] == "contig":
-                        seqr_seqlevel[seq["name"]] = int(seq["length"])
-                    # Also record synonyms (in case GFF file uses synonyms)
-                    if "synonyms" in seq:
-                        for synonym in seq["synonyms"]:
-                            seq_lengths[synonym["name"]] = int(seq["length"])
-                self.lengths["seq_regions"] = seq_lengths
-                self.circular["seq_regions"] = seq_circular
+            self.get_seq_regions()
         self.get_functional_annotation(self.manifest_files.get("functional_annotation"))
         self.get_agp_seq_regions(self.manifest_files.get("agp"))
         if "genome" in self.manifest_files:
             logging.info("Manifest contains genome JSON")
             self.lengths["genome"] = get_json(Path(self.manifest_files["genome"]))
+
+    def get_seq_regions(self):
+        if not "seq_region" in self.manifest_files:
+            return
+        logging.info("Manifest contains seq_region JSON")
+        seq_regions = get_json(Path(self.manifest_files["seq_region"]))
+        if len(seq_regions) == 0:
+            self._add_error(f"No sequences found in {self.manifest_files['seq_region']}")
+            return
+        seqr_seqlevel = {}
+        seq_lengths = {}
+        seq_circular = {}
+        # Store the length as int
+        for seq in seq_regions:
+            seq_lengths[seq["name"]] = int(seq["length"])
+            seq_circular[seq["name"]] = seq.get("circular", False)
+            if seq["coord_system_level"] == "contig":
+                seqr_seqlevel[seq["name"]] = int(seq["length"])
+            # Also record synonyms (in case GFF file uses synonyms)
+            if "synonyms" in seq:
+                for synonym in seq["synonyms"]:
+                    seq_lengths[synonym["name"]] = int(seq["length"])
+        self.lengths["seq_regions"] = seq_lengths
+        self.circular["seq_regions"] = seq_circular
 
     def get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
         """Check if the fasta files have the correct ids and no stop codon.
