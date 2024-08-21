@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.manifest.generate` module."""
+"""Unit testing of `ensembl.io.genomio.manifest.manifest` module."""
 
 import json
 from pathlib import Path
@@ -29,7 +29,7 @@ _CONTENT_MD5 = "45685e95985e20822fb2538a522a5ccf"
 
 @pytest.mark.dependency()
 def test_init(tmp_path: Path) -> None:
-    """Tests the `ManifestMaker.__init__()` method."""
+    """Tests `Manifest.__init__()`."""
     _ = Manifest(tmp_path)
 
 
@@ -45,7 +45,7 @@ def test_init(tmp_path: Path) -> None:
 )
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) -> None:
-    """Tests the `ManifestMaker.get_files_checksum()` method.
+    """Tests `Manifest.get_files_checksum()`.
 
     Args:
         tmp_path: Test tmp dir.
@@ -66,7 +66,7 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_multifiles(tmp_path: Path) -> None:
-    """Tests the `ManifestMaker.get_files_checksum()` method with several files for the same name."""
+    """Tests `Manifest.get_files_checksum()` with several files for the same name."""
     expected_content = {}
     files = ["link1.agp", "link2.agp", "link3.agp"]
     for file_name in files:
@@ -86,7 +86,7 @@ def test_get_files_checksum_multifiles(tmp_path: Path) -> None:
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFixture) -> None:
-    """Tests the `ManifestMaker.get_files_checksum()` with a subdir."""
+    """Tests `Manifest.get_files_checksum()` with a subdir."""
     Path(tmp_path / "sub_dir").mkdir()
     manifest = Manifest(tmp_path)
     manifest.get_files_checksums()
@@ -96,7 +96,7 @@ def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFix
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixture) -> None:
-    """Tests the `ManifestMaker.get_files_checksum()` with an empty file, deleted."""
+    """Tests `Manifest.get_files_checksum()` with an empty file, deleted."""
     empty_file = Path(tmp_path / "empty_file.txt")
     empty_file.touch()
     assert empty_file.exists()
@@ -118,7 +118,7 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
 def test_create_manifest(
     tmp_path: Path, assert_files: Callable, files: list[str], expected_content: dict
 ) -> None:
-    """Tests the `ManifestMaker.create_manifest()`."""
+    """Tests `Manifest.create()`."""
     for file_name in files:
         with Path(tmp_path / file_name).open("w") as fh:
             fh.write("CONTENT")
