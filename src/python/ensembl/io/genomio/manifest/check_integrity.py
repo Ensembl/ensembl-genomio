@@ -16,7 +16,7 @@
 to ensure their contents are in sync.
 """
 
-__all__ = ["InvalidIntegrityError", "Manifest", "IntegrityTool"]
+__all__ = ["InvalidIntegrityError", "ManifestStats", "IntegrityTool"]
 
 import hashlib
 import logging
@@ -45,8 +45,14 @@ class InvalidIntegrityError(Exception):
     """When a file integrity check fails"""
 
 
-class Manifest:
-    """Representation of the manifest and its files."""
+class ManifestStats:
+    """Representation of the main stats of the files in a manifest for comparison.
+    
+    The stats in question are:
+    - lengths of sequences (DNA, genes and peptides)
+    - sequences and features IDs
+    - sequences circularity
+    """
 
     def __init__(self, manifest_path: PathLike) -> None:
         self.manifest_files = self.get_manifest(manifest_path)
@@ -192,12 +198,8 @@ class Manifest:
                             seq_lengths[synonym["name"]] = int(seq["length"])
                 self.lengths["seq_regions"] = seq_lengths
                 self.circular["seq_regions"] = seq_circular
-        if "functional_annotation" in self.manifest_files:
-            logging.info("Manifest contains functional annotation(s)")
-            self.get_functional_annotation(self.manifest_files["functional_annotation"])
-        if "agp" in self.manifest_files:
-            logging.info("Manifest contains AGP files")
-            self.lengths["agp"] = self.get_agp_seq_regions(self.manifest_files["agp"])
+        self.get_functional_annotation(self.manifest_files.get("functional_annotation"))
+        self.get_agp_seq_regions(self.manifest_files.get("agp"))
         if "genome" in self.manifest_files:
             logging.info("Manifest contains genome JSON")
             self.lengths["genome"] = get_json(Path(self.manifest_files["genome"]))
@@ -248,7 +250,7 @@ class Manifest:
             self._add_error(f"No sequences found in {fasta_path}")
         return data
 
-    def get_functional_annotation(self, json_path: Path) -> None:
+    def get_functional_annotation(self, json_path: Path | None) -> None:
         """Load the functional annotation file to retrieve the gene_id and translation id.
             A functional annotation file contains information about a gene.
             The functional annotation file is stored in a json format containing
@@ -256,10 +258,10 @@ class Manifest:
 
         Args:
             json_path: Path to functional_annotation.json.
-
-        Returns:
-            dict with gene and translation ids.
         """
+        if not json_path:
+            return
+        logging.info("Manifest contains functional annotation(s)")
 
         # Load the json file
         with open(json_path) as json_file:
@@ -350,24 +352,26 @@ class Manifest:
         }
         cds_transcripts = protein_transcripts.union(ig_transcripts)
         for feat2 in feat.sub_features:
-            if feat2.type in cds_transcripts:
-                length = {}
-                for feat3 in feat2.sub_features:
-                    if feat3.type == "CDS":
-                        pep_id = feat3.id
-                        if not self.brc_mode:
-                            pep_id = pep_id.replace("CDS:", "")
-                        if pep_id not in length:
-                            length[pep_id] = 0
-                        length[pep_id] += abs(feat3.location.end - feat3.location.start)
-                for pep_id, pep_length in length.items():
-                    # Store length for translations, add pseudo translations separately
-                    pep_length = floor(pep_length / 3) - 1
-                    if feat.type != "pseudogene" and feat2.type in protein_transcripts:
-                        peps[pep_id] = pep_length
-                    all_peps[pep_id] = pep_length
+            if feat2.type not in cds_transcripts:
+                continue
+            length = {}
+            for feat3 in feat2.sub_features:
+                if feat3.type != "CDS":
+                    continue
+                pep_id = feat3.id
+                if not self.brc_mode:
+                    pep_id = pep_id.replace("CDS:", "")
+                if pep_id not in length:
+                    length[pep_id] = 0
+                length[pep_id] += abs(feat3.location.end - feat3.location.start)
+            for pep_id, pep_length in length.items():
+                # Store length for translations, add pseudo translations separately
+                pep_length = floor(pep_length / 3) - 1
+                if feat.type != "pseudogene" and feat2.type in protein_transcripts:
+                    peps[pep_id] = pep_length
+                all_peps[pep_id] = pep_length
 
-    def get_agp_seq_regions(self, agp_dict):
+    def get_agp_seq_regions(self, agp_dict: dict | None):
         """AGP files describe the assembly of larger sequence objects using smaller objects.
             Eg: describes the assembly of scaffolds from contigs.
 
@@ -377,11 +381,12 @@ class Manifest:
         Note:
             AGP file is only used in the older builds, not used for current processing.
         """
+        if not agp_dict:
+            return
+        logging.info("Manifest contains AGP files")
 
         seqr = {}
-        for agp in agp_dict:
-            agp_path = agp_dict[agp]
-
+        for agp_path in agp_dict.values():
             with open(agp_path, "r") as agph:
                 for line in agph:
                     (
@@ -407,7 +412,7 @@ class Manifest:
                     if cmp_id not in seqr or seqr[cmp_id] < int(cmp_end):
                         seqr[cmp_id] = int(cmp_end)
 
-        return seqr
+        self.lengths["agp"] = seqr
 
 
 class IntegrityTool:
@@ -420,7 +425,7 @@ class IntegrityTool:
         ignore_final_stops: bool = False,
         no_fail: bool = False,
     ) -> None:
-        self.manifest = Manifest(manifest_file)
+        self.manifest = ManifestStats(manifest_file)
         self.brc_mode = False
         self.set_brc_mode(brc_mode)
         self.ignore_final_stops = False

@@ -28,7 +28,7 @@ from typing import ContextManager
 
 import pytest
 
-from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, Manifest
+from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, ManifestStats
 
 
 @pytest.mark.parametrize(
@@ -75,4 +75,4 @@ def test_manifest(data_dir: Path, manifest_file: str, expected: ContextManager) 
     """
     with expected:
         integrity = IntegrityTool(data_dir / manifest_file)
-        assert isinstance(integrity.manifest, Manifest)
+        assert isinstance(integrity.manifest, ManifestStats)
