@@ -440,6 +440,9 @@ def test_retrieve_assembly_data(
 
     with exception:
         retrieve_assembly_data(accession, download_dir, 2)
-        assert mock_download_files.download_files.called_once()
-        assert mock_download_single_file._download_file.called_once()  # pylint: disable=protected-access
-        assert mock_file_select.get_files_selection.called_with(files_downloaded)
+        mock_file_select.assert_called_with(download_dir)
+        # Download is never called with the current examples
+        mock_download_files.assert_not_called()
+        mock_download_single_file.assert_not_called()
+        # mock_download_files.assert_called_once()
+        # mock_download_single_file.assert_called_once()
