@@ -136,18 +136,22 @@ def test_create_manifest(
 
 
 @pytest.mark.parametrize(
-    "files_dir, expected_manifest, expected",
+    "files_dir, expected_files, expected",
     [
-        param("", [], raises(ManifestError), id="No files"),
-        param("full_data", [], no_raise(), id="OK manifest"),
+        param("full_data", {"functional_annotation", "seq_region"}, no_raise(), id="OK manifest with OK files"),
+        param("duplicates", {"agp"}, no_raise(), id="Several files for key"),
+        param("", {}, raises(ManifestError), id="No manifest to load"),
+        param("missing_files", {}, raises(FileNotFoundError), id="Missing files"),
+        param("invalid_checksum", {}, raises(ManifestError), id="Invalid checksum"),
     ],
 )
 @pytest.mark.dependency(depends=["test_init"])
-def test_load(tmp_path: Path, data_dir: Path, files_dir: str, expected_manifest: dict, expected: ContextManager):
+def test_load(tmp_path: Path, data_dir: Path, files_dir: str, expected_files: set, expected: ContextManager):
     # Copy the files to the tmp folder
     if files_dir:
         copytree(data_dir / files_dir, tmp_path, dirs_exist_ok=True)
+    
     with expected:
         manifest = Manifest(tmp_path)
         manifest.load()
-        manifest.files == expected_manifest
+        assert manifest.files.keys() == expected_files

@@ -57,7 +57,7 @@ class Manifest:
         """
         self.dir = manifest_dir
         self.path = manifest_dir / "manifest.json"
-        self.files = {}
+        self.files: dict = {}
 
     def create(self) -> Path:
         """Creates a manifest file from the files in a directory."""
@@ -146,13 +146,14 @@ class Manifest:
                     manifest[name] = file_path
                 else:
                     for f in manifest[name]:
-                        if "file" in manifest[name][f]:
-                            file_path = self.dir / manifest[name][f]["file"]
-                            # check if the md5sum is correct
-                            md5sum = manifest[name][f]["md5sum"]
-                            self._check_md5sum(file_path, md5sum)
+                        file_path = self.dir / manifest[name][f]["file"]
+                        # check if the md5sum is correct
+                        md5sum = manifest[name][f]["md5sum"]
+                        self._check_md5sum(file_path, md5sum)
 
-                            manifest[name][f] = file_path
+                        manifest[name][f] = file_path
+            
+            self.files = manifest
 
     @staticmethod
     def _get_md5sum(file_path: Path) -> str:
@@ -168,5 +169,6 @@ class Manifest:
             file_path: Path to a genome file.
             md5sum: MD5 hash for the files.
         """
-        if self._get_md5sum(file_path) != md5sum:
-            raise ManifestError(f"Invalid md5 checksum for {file_path}")
+        file_md5sum = self._get_md5sum(file_path)
+        if file_md5sum != md5sum:
+            raise ManifestError(f"Invalid md5 checksum for {file_path}: got {file_md5sum}, expected {md5sum}")
