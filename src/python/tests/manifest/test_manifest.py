@@ -66,24 +66,52 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
     assert manifest.files == expected_content
 
 
+@pytest.mark.parametrize(
+    "file_names, expected_content, expected",
+    [
+        param(
+            ["link1.agp", "link2.agp", "link3.agp"],
+            {
+                "agp": {
+                    "link1": {"file": "link1.agp", "md5sum": _CONTENT_MD5},
+                    "link2": {"file": "link2.agp", "md5sum": _CONTENT_MD5},
+                    "link3": {"file": "link3.agp", "md5sum": _CONTENT_MD5},
+                }
+            },
+            no_raise(),
+            id="3 agp files, different names",
+        ),
+        param(
+            ["a_agp.agp", "b_agp.agp"],
+            {
+                "agp": {
+                    "agp": {"file": "a_agp.agp", "md5sum": _CONTENT_MD5},
+                    "agp.1": {"file": "b_agp.agp", "md5sum": _CONTENT_MD5},
+                }
+            },
+            no_raise(),
+            id="2 agp files with same name",
+        ),
+        param(
+            [f"{letter}_agp.agp" for letter in "abcdefghijkl"],
+            {},
+            raises(ValueError, match="Too many files with same name"),
+            id="Too many files with same name",
+        ),
+    ],
+)
 @pytest.mark.dependency(depends=["test_init"])
-def test_get_files_checksum_multifiles(tmp_path: Path) -> None:
+def test_get_files_checksum_multifiles(
+    tmp_path: Path, file_names: list[str], expected_content: dict, expected: ContextManager
+) -> None:
     """Tests `Manifest.get_files_checksum()` with several files for the same name."""
-    expected_content = {}
-    files = ["link1.agp", "link2.agp", "link3.agp"]
-    for file_name in files:
+    for file_name in file_names:
         with Path(tmp_path / file_name).open("w") as fh:
             fh.write("CONTENT")
-    expected_content = {
-        "agp": {
-            "link1": {"file": "link1.agp", "md5sum": _CONTENT_MD5},
-            "link2": {"file": "link2.agp", "md5sum": _CONTENT_MD5},
-            "link3": {"file": "link3.agp", "md5sum": _CONTENT_MD5},
-        }
-    }
     manifest = Manifest(tmp_path)
-    manifest.get_files_checksums()
-    assert manifest.files == expected_content
+    with expected:
+        manifest.get_files_checksums()
+        assert manifest.files == expected_content
 
 
 @pytest.mark.dependency(depends=["test_init"])
@@ -138,7 +166,9 @@ def test_create_manifest(
 @pytest.mark.parametrize(
     "files_dir, expected_files, expected",
     [
-        param("full_data", {"functional_annotation", "seq_region"}, no_raise(), id="OK manifest with OK files"),
+        param(
+            "full_data", {"functional_annotation", "seq_region"}, no_raise(), id="OK manifest with OK files"
+        ),
         param("duplicates", {"agp"}, no_raise(), id="Several files for key"),
         param("", {}, raises(ManifestError), id="No manifest to load"),
         param("missing_files", {}, raises(FileNotFoundError), id="Missing files"),
@@ -147,10 +177,17 @@ def test_create_manifest(
 )
 @pytest.mark.dependency(depends=["test_init"])
 def test_load(tmp_path: Path, data_dir: Path, files_dir: str, expected_files: set, expected: ContextManager):
+    """Tests `Manifest.load()`.
+
+    Args:
+        files_dir: Directory where test data files are copied from.
+        expected_files: Set of main files expected to be loaded.
+        expected: Catch an expected exception.
+    """
     # Copy the files to the tmp folder
     if files_dir:
         copytree(data_dir / files_dir, tmp_path, dirs_exist_ok=True)
-    
+
     with expected:
         manifest = Manifest(tmp_path)
         manifest.load()

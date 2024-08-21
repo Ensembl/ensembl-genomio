@@ -51,7 +51,7 @@ class Manifest:
 
     def __init__(self, manifest_dir: Path) -> None:
         """Initializes a manifest with the directory containing the files (and a manifest if it exists).
-        
+
         Args:
             manifest_dir: directory where the files are contained.
         """
@@ -59,7 +59,7 @@ class Manifest:
         self.path = manifest_dir / "manifest.json"
         self.files: dict = {}
 
-    def create(self) -> Path:
+    def create(self):
         """Creates a manifest file from the files in a directory."""
         self.get_files_checksums()
         with self.path.open("w") as json_out:
@@ -67,7 +67,7 @@ class Manifest:
 
     def get_files_checksums(self) -> None:
         """Records all the files in the directory with their checksum."""
-        manifest_files = {}
+        manifest_files: dict = {}
         for subfile in self.dir.iterdir():
             logging.debug(f"Check file {subfile} ({subfile.stem}, {subfile.suffix})")
             used_file = False
@@ -152,7 +152,7 @@ class Manifest:
                         self._check_md5sum(file_path, md5sum)
 
                         manifest[name][f] = file_path
-            
+
             self.files = manifest
 
     @staticmethod
