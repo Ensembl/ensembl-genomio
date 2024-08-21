@@ -14,7 +14,7 @@
 # limitations under the License.
 """Creates a manifest file in a folder depending on the file names ends."""
 
-__all__ = ["ManifestMaker"]
+__all__ = ["Manifest"]
 
 import hashlib
 import logging
@@ -25,7 +25,7 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-class ManifestMaker:
+class Manifest:
     """Given a directory with genomic files, create a manifest json file for them."""
 
     same_names = {
@@ -50,16 +50,16 @@ class ManifestMaker:
 
     def __init__(self, manifest_dir: Path) -> None:
         self.dir = manifest_dir
+        self.path = manifest_dir / "manifest.json"
+        self.files = {}
 
-    def create_manifest(self) -> Path:
+    def create(self) -> Path:
         """Create the manifest file."""
-        manifest_data = self.get_files_checksums()
-        manifest_path = self.dir / "manifest.json"
-        with manifest_path.open("w") as json_out:
-            json_out.write(json.dumps(manifest_data, sort_keys=True, indent=4))
-        return manifest_path
+        self.get_files_checksums()
+        with self.path.open("w") as json_out:
+            json_out.write(json.dumps(self.files, sort_keys=True, indent=4))
 
-    def get_files_checksums(self):
+    def get_files_checksums(self) -> None:
         """Compute the checksum of all the files in the directory."""
         manifest_files = {}
         for subfile in self.dir.iterdir():
@@ -96,7 +96,7 @@ class ManifestMaker:
             if not used_file:
                 logging.warning(f"File {subfile} was not included in the manifest")
 
-        return manifest_files
+        self.files = manifest_files
 
     def _prepare_object_name(self, subfile: Path, name: str, manifest_dict: dict) -> str:
         # Prepare object name
@@ -140,8 +140,8 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    maker = ManifestMaker(args.manifest_dir)
-    maker.create_manifest()
+    manifest = Manifest(args.manifest_dir)
+    manifest.create()
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ from typing import Callable
 import pytest
 from pytest import LogCaptureFixture, param
 
-from ensembl.io.genomio.manifest.generate import ManifestMaker
+from ensembl.io.genomio.manifest.generate import Manifest
 
 
 _CONTENT_MD5 = "45685e95985e20822fb2538a522a5ccf"
@@ -30,7 +30,7 @@ _CONTENT_MD5 = "45685e95985e20822fb2538a522a5ccf"
 @pytest.mark.dependency()
 def test_init(tmp_path: Path) -> None:
     """Tests the `ManifestMaker.__init__()` method."""
-    _ = ManifestMaker(tmp_path)
+    _ = Manifest(tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -59,9 +59,9 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
             fh.write("CONTENT")
         if expected_name:
             expected_content = {expected_name: {"file": file_name, "md5sum": _CONTENT_MD5}}
-    maker = ManifestMaker(tmp_path)
-    test_files = maker.get_files_checksums()
-    assert test_files == expected_content
+    manifest = Manifest(tmp_path)
+    manifest.get_files_checksums()
+    assert manifest.files == expected_content
 
 
 @pytest.mark.dependency(depends=["test_init"])
@@ -79,19 +79,19 @@ def test_get_files_checksum_multifiles(tmp_path: Path) -> None:
             "link3": {"file": "link3.agp", "md5sum": _CONTENT_MD5},
         }
     }
-    maker = ManifestMaker(tmp_path)
-    test_files = maker.get_files_checksums()
-    assert test_files == expected_content
+    manifest = Manifest(tmp_path)
+    manifest.get_files_checksums()
+    assert manifest.files == expected_content
 
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFixture) -> None:
     """Tests the `ManifestMaker.get_files_checksum()` with a subdir."""
     Path(tmp_path / "sub_dir").mkdir()
-    maker = ManifestMaker(tmp_path)
-    test_files = maker.get_files_checksums()
+    manifest = Manifest(tmp_path)
+    manifest.get_files_checksums()
     assert caplog.text.strip().endswith("Can't create manifest for subdirectory")
-    assert not test_files
+    assert not manifest.files
 
 
 @pytest.mark.dependency(depends=["test_init"])
@@ -100,10 +100,10 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
     empty_file = Path(tmp_path / "empty_file.txt")
     empty_file.touch()
     assert empty_file.exists()
-    maker = ManifestMaker(tmp_path)
-    test_files = maker.get_files_checksums()
+    manifest = Manifest(tmp_path)
+    manifest.get_files_checksums()
     assert "Skip and delete empty file" in caplog.text
-    assert not test_files
+    assert not manifest.files
     assert not empty_file.exists()
 
 
@@ -123,12 +123,11 @@ def test_create_manifest(
         with Path(tmp_path / file_name).open("w") as fh:
             fh.write("CONTENT")
 
-    maker = ManifestMaker(tmp_path)
-    maker.create_manifest()
-    manifest_file = Path(tmp_path / "manifest.json")
-    assert manifest_file.exists()
+    manifest = Manifest(tmp_path)
+    manifest.create()
+    assert manifest.path.exists()
 
     expected_manifest_file = Path(tmp_path / "expected.json")
     with expected_manifest_file.open("w") as expected_fh:
         expected_fh.write(json.dumps(expected_content, sort_keys=True, indent=4))
-    assert_files(manifest_file, expected_manifest_file)
+    assert_files(manifest.path, expected_manifest_file)
