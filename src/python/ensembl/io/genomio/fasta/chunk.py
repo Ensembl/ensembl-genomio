@@ -30,7 +30,6 @@ __all__ = [
 from contextlib import nullcontext
 from io import TextIOWrapper
 import logging
-from os import PathLike
 from pathlib import Path
 import re
 import sys
@@ -57,7 +56,8 @@ def check_chunk_size_and_tolerance(
       chunk_size: Chunk size to check
       chunk_tolerance: Chunk tolerance to check
 
-    Dies with` parser.error`
+    Dies:
+       If checks failed dies with` parser.error`
     """
     if chunk_size < 50_000:
         error_f(f"wrong '--chunk_size' value: '{chunk_size}'. should be greater then 50_000. exiting...")
@@ -75,6 +75,9 @@ def split_seq_by_n(seq: str, split_pattern: Optional[re.Pattern]) -> list[int]:
     Args:
         seq: Sequence to be split into chunks.
         split_pattern: Pattern to search in the sequence.
+
+    Returns:
+        List with open coordinates of the chunks ends (or with only a single sequence length).
     """
     seq_len = len(seq)
     if not split_pattern:
@@ -95,6 +98,9 @@ def split_seq_by_chunk_size(
         ends: List of one or more chunk(s) to split a sequence.
         chunk_size: Size of chunks to split a sequence into.
         tolerated_size: Threshold to use instead of `chunk_size` to determine when to split a sequence.
+
+    Returns:
+        List with open coordinates of the chunks ends (or with only a single sequence length).
     """
     if tolerated_size is None or tolerated_size < chunk_size:
         tolerated_size = chunk_size
@@ -197,6 +203,15 @@ def chunk_fasta_stream(
 
 
 def get_tolerated_size(size: int, tolerance: int) -> int:
+    """Calculate max tolerated size of the chunk based on initial size and percent of allowed deviation.
+
+    Args:
+        size: Base chunk size
+        tolerance: Percent of allowed deviance as integer.
+
+    Returns:
+        Maximum tolerated chunk size.
+    """
     tolerance = max(tolerance, 0)
 
     tolerated_size = size
@@ -215,7 +230,23 @@ def chunk_fasta(
     chunk_sfx: str = "ens_chunk",
     append_offset_to_chunk_name: Optional[bool] = None,
 ):
-    """ """
+    """Open `input_fasta_file` and split into a smaller chunks based on
+    stratches of "N"s and then based on chunk_size_tolerated and store either to
+    the `out_file_name` if no `individual_file_prefix` is provided or
+    store each individual chunk to a file starting with non-empty `individual_file_prefix`.
+
+    Args:
+        input_fasta_file: Input FASTA
+        chunk_size: Size of the chunks to split into.
+        chunk_size_tolerated: If more flexibility allowed, use this as the maximum size of a chunk.
+        out_file_name: Output FASTA to store the chunks into if no `individual_file_prefix` is provided.
+        individual_file_prefix: A file path prefix including dirs and filenames part to use as a
+                firts part of the chunk file name.
+        agp_output_file: Output AGP file to store the map for the chunking procedure if present and non-empty.
+        n_sequece_len: Length of the stretch of `N`s to split at; not slitting on `N`s if 0.
+        chunk_sfx: A string to put between the original sequence name and the chunk suffix.
+        append_offset_to_chunk_name: Append 0-based offset in the form of `_off_{offset}` to the chunk name.
+    """
 
     # process input fasta
     with open_gz_file(input_fasta_file) as fasta:
@@ -247,6 +278,18 @@ def chunk_fasta(
 
 
 def prepare_out_dir_for_individuals(dir_name: Path, file_part: str) -> Optional[Path]:
+    """Creates `dir_name` (including upstream dirs) and returns its paths with the `file_part` appended.
+
+    Args:
+        dir_name: Directory to create.
+        file_part: File part to append.
+
+    Returns:
+        `dir_name` with appended `file_part`.
+
+    Throws:
+        exception if not able to create directory.
+    """
     file_prefix = None
     if dir_name:
         dir_name.mkdir(parents=True, exist_ok=True)
