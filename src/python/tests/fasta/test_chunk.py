@@ -91,11 +91,42 @@ def test_check_chunk_size_and_tolerance(
     ],
 )
 def test_split_seq_by_n(seq: str, pattern: Optional[re.Pattern], expectation: list[int]) -> None:
-    """Tests the `chunk.test_split_seq_by_n` function.
+    """Tests the `chunk.split_seq_by_n` function.
 
     Args:
         seq: A sequence to split
         pattern: A pattern to split on
-        expectation: A list of open chunk ends (python slices coordinates)
+        expectation: A list of open chunk ends (like for python list slices)
     """
     assert FastaChunking.split_seq_by_n(seq, pattern) == expectation
+
+
+@pytest.mark.parametrize(
+    "chunk_ends, chunk_size, tolerated_size, expectation",
+    [
+        (None, 1, None, None),
+        ([], 1, None, []),
+        ([], 1, 1, []),
+        ([6], -1, None, [6]),
+        ([6], 6, None, [6]),
+        ([6], 5, None, [5, 6]),
+        ([4, 6], 0, None, [4, 6]),
+        ([4, 6], 1, None, [1, 2, 3, 4, 5, 6]),
+        ([4, 6], 2, None, [2, 4, 6]),
+        ([4, 6], 2, 4, [4, 6]),
+        ([1, 3, 4, 6], 2, 4, [1, 3, 4, 6]),  # do not join back
+        ([1, 3, 4, 6], 6, 0, [1, 3, 4, 6]),  # do not join back
+    ],
+)
+def test_split_seq_by_chunk_size(
+    chunk_ends: list[int], chunk_size: int, tolerated_size: Optional[int], expectation: list[int]
+):
+    """Tests the `chunk.split_seq_by_chunk_size` function.
+
+    Args:
+        chunk_ends: A list of chunk_ends (open ones, like for python list slices)
+        chunk_size: Chunk size
+        tolerated_size: A more relaxed value of the chunk size
+        expectation: A list of open chunk ends (python slices coordinates)
+    """
+    assert FastaChunking.split_seq_by_chunk_size(chunk_ends, chunk_size, tolerated_size) == expectation

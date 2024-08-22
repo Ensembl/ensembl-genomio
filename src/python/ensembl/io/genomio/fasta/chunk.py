@@ -110,6 +110,9 @@ def split_seq_by_chunk_size(
     Returns:
         List with open coordinates of the chunks ends (or with only a single sequence length).
     """
+    if not ends or chunk_size < 1:
+        return ends
+
     if tolerated_size is None or tolerated_size < chunk_size:
         tolerated_size = chunk_size
     result = []
