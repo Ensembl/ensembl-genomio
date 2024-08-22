@@ -130,3 +130,25 @@ def test_split_seq_by_chunk_size(
         expectation: A list of open chunk ends (python slices coordinates)
     """
     assert FastaChunking.split_seq_by_chunk_size(chunk_ends, chunk_size, tolerated_size) == expectation
+
+
+def test_individual_file_opener(tmp_path: Path) -> None:
+    """Tests the `chunk._individual_file_opener` function.
+
+    Args:
+        tmp_path: Where temporary files will be created.
+    """
+    test_dir = Path(tmp_path, "file_opener_test")
+    test_dir.mkdir()
+    test_path = Path(test_dir, "test.file")
+
+    with FastaChunking._individual_file_opener(str(test_path)) as out:
+        print("test", file=out)
+        print("test", file=out)
+    assert test_path.read_text(encoding="utf-8") == "test\ntest\n"
+
+    with FastaChunking._individual_file_opener(str(test_path)) as out:
+        print("test", file=out)
+    assert test_path.read_text(encoding="utf-8") == "test\n"
+
+    assert len(list(test_dir.iterdir())) == 1
