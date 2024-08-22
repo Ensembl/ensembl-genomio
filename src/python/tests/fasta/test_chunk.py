@@ -171,3 +171,26 @@ def test_prepare_out_dir_for_individuals(tmp_path: Path) -> None:
 
     assert FastaChunking.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
     assert len(list(test_dir.iterdir())) == 1
+
+
+@pytest.mark.parametrize(
+    "size, tolerance, expectation",
+    [
+        (-1, -1, -1),
+        (0, -1, 0),
+        (10, -1, 10),
+        (10, 20, 12),
+        (10, 29, 12),
+        (10, 30, 13),
+        (100, 29, 129),
+    ],
+)
+def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None:
+    """Tests the `chunk.get_tolerated_size` function.
+
+    Args:
+        size: Base size
+        tolerance: Percent of allowed deviance as integer.
+        expectation: An expexted tolerated size
+    """
+    assert FastaChunking.get_tolerated_size(size, tolerance) == expectation
