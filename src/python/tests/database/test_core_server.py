@@ -26,7 +26,7 @@ from typing import List, Optional
 
 import pytest
 from pytest_mock import MockerFixture
-from sqlalchemy import make_url
+from sqlalchemy.engine import make_url
 
 from ensembl.io.genomio.database import CoreServer
 
