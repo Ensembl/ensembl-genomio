@@ -48,7 +48,7 @@ _MOLECULE_LOCATION = {
 _LOCATION_CODON = {"apicoplast_chromosome": 4}
 
 ##############################################
-SeqRegionDict = TypeVar(dict[str, Any])
+SeqRegionDict = dict[str, Any]
 
 
 class SeqCollection:

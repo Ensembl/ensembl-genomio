@@ -27,7 +27,7 @@ from typing import Any, Tuple
 from ensembl.utils.archive import open_gz_file
 
 ##############################################
-SeqRegionDict = TypeVar(dict[str, Any])
+SeqRegionDict = dict[str, Any]
 
 
 class ReportRecord:
