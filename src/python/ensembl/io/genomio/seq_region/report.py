@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Report record."""
+"""Object for an INSDC assembly report to expose its data and metadata easily."""
 
 __all__ = [
     "ReportRecord",
@@ -31,10 +31,14 @@ SeqRegionDict = dict[str, Any]
 
 
 class ReportRecord:
-    """Represent an assembly report file."""
+    """Represent an assembly report file. Exposes 2 things:
+    - Metadata as a dict from the comments.
+    - A DictReader that yields all the seq_region lines of the report as dicts.
+    """
 
     def __init__(self, report_path: Path) -> None:
-        report_csv = self.report_to_csv(report_path)[0]
+        report_csv, metadata = self.report_to_csv(report_path)
+        self.metadata = metadata
         self.reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
 
     @staticmethod

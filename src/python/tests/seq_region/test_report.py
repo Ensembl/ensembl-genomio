@@ -40,6 +40,7 @@ def test_from_report(data_dir: Path):
         "UCSC-style-name": "na",
     }
     assert seq == expected_seq
+    assert record.metadata.get("Assembly level") == "Chromosome"
 
 
 def test_from_report_error(data_dir: Path):
