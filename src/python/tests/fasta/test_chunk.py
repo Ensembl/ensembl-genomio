@@ -20,6 +20,7 @@ Typical usage example::
 """
 
 from contextlib import nullcontext as does_not_raise
+from io import StringIO
 import filecmp
 from pathlib import Path
 import re
@@ -197,23 +198,64 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
 
 
 @pytest.mark.parametrize(
-    "input_seq, chunk_size, chunk_size_tolerated, n_sequece_len, "
+    "input_fasta_text, chunk_size, chunk_size_tolerated, n_sequece_len, "
     "individual_file_prefix, chunk_sfx, append_offset_to_chunk_name, "
-    "expected_chunked_fasta, expected_agp, expected_individual_files_count",
-    [],
+    "expected_chunked_fasta_text, expected_agp_list, expected_individual_files_count, "
+    "expected_raised",
+    [
+        ("", 2, 2, 2, None, "p", True, "", [], 0, does_not_raise()),
+        ("\n", 2, 2, 2, None, "p", True, "", [], 0, does_not_raise()),
+        ("AA\n", 2, 2, 2, None, "p", True, "", [], 0, does_not_raise()),
+        (
+            # title, no sequence
+            ">a\n",
+            2,
+            2,
+            2,
+            None,
+            "p",
+            True,
+            ">a_p_001_off_0 AGP a 1 0 1 W a_p_001_off_0 1 0 +\n",
+            ["a\t1\t0\t1\tW\ta_p_001_off_0\t1\t0\t+"],
+            0,
+            does_not_raise(),
+        ),
+        (
+            ">c\nAAANAA\n",
+            2,
+            2,
+            2,
+            None,
+            "p",
+            True,
+            ">c_p_001_off_0 AGP c 1 2 1 W c_p_001_off_0 1 2 +\n"
+            "AA\n"
+            ">c_p_002_off_2 AGP c 3 4 2 W c_p_002_off_2 1 2 +\n"
+            "AN\n"
+            ">c_p_003_off_4 AGP c 5 6 3 W c_p_003_off_4 1 2 +\n"
+            "AA\n",
+            [
+                "c\t1\t2\t1\tW\tc_p_001_off_0\t1\t2\t+",
+                "c\t3\t4\t2\tW\tc_p_002_off_2\t1\t2\t+",
+                "c\t5\t6\t3\tW\tc_p_003_off_4\t1\t2\t+",
+            ],
+            0,
+            does_not_raise(),
+        ),
+    ],
 )
 def test_chunk_fasta_stream(
-    tmp_path: Path,
-    input_seq: str,
+    input_fasta_text: str,
     chunk_size: int,
     chunk_size_tolerated: int,
-    individual_file_prefix: str,
     n_sequece_len: int,
+    individual_file_prefix: Optional[str],
     chunk_sfx: str,
     append_offset_to_chunk_name: Optional[bool],
-    expected_agp: list[str],
-    expected_chunked_fasta: str,
+    expected_chunked_fasta_text: str,
+    expected_agp_list: list[str],
     expected_individual_files_count: int,
+    expected_raised: ContextManager,
 ) -> None:
     """Tests the `chunk.chunk_fasta_stream` function.
 
@@ -222,10 +264,31 @@ def test_chunk_fasta_stream(
         ...
     """
 
-    pass
-    # run both for joined
-    # assert FastaChunking.chunk_fasta_stream(...) == expected_agp
+    def _individual_opener(x: Path) -> Path:
+        return x
 
-    # and for inividual files output
-    #    check joined files == joined_output
-    #    check for file count
+    # assert joined case
+    with StringIO(input_fasta_text) as input_fasta:
+        with StringIO() as output_fasta:
+            with expected_raised:
+                agp_list = FastaChunking.chunk_fasta_stream(
+                    input_fasta,
+                    chunk_size,
+                    chunk_size_tolerated,
+                    output_fasta,
+                    individual_file_prefix,
+                    n_sequece_len,
+                    chunk_sfx,
+                    append_offset_to_chunk_name,
+                )
+            assert output_fasta.getvalue() == expected_chunked_fasta_text
+            assert agp_list == expected_agp_list
+
+
+# assert individual files case
+
+# assert FastaChunking.chunk_fasta_stream(...) == expected_agp
+
+# and for inividual files output
+#    check joined files == joined_output
+#    check for file count

@@ -141,7 +141,7 @@ def chunk_fasta_stream(
     chunk_size: int,
     chunk_size_tolerated: int,
     output_fasta: Optional[TextIOWrapper] | nullcontext[Any],
-    individual_file_prefix: str,
+    individual_file_prefix: Optional[str],
     n_sequece_len: int = 0,
     chunk_sfx: str = "ens_chunk",
     append_offset_to_chunk_name: Optional[bool] = None,
@@ -188,7 +188,9 @@ def chunk_fasta_stream(
         offset = 0
         for chunk, chunk_end in enumerate(ends, start=1):
             chunk_name = f"{rec_name}_{chunk_sfx}_{chunk:03d}"
-            chunk_file_name = f"{individual_file_prefix}.{rec_count:03d}.{chunk:03d}.fa"
+            chunk_file_name = ""
+            if individual_file_prefix:
+                chunk_file_name = f"{individual_file_prefix}.{rec_count:03d}.{chunk:03d}.fa"
             if append_offset_to_chunk_name:
                 chunk_name += f"_off_{offset}"
 
@@ -244,7 +246,7 @@ def chunk_fasta(
     chunk_size: int,
     chunk_size_tolerated: int,
     out_file_name: str,
-    individual_file_prefix: str,
+    individual_file_prefix: Optional[str],
     agp_output_file: Optional[str] = None,
     n_sequece_len: int = 0,
     chunk_sfx: str = "ens_chunk",
