@@ -16,6 +16,7 @@
 
 import json
 from pathlib import Path
+from typing import Callable
 from unittest.mock import Mock, patch
 
 import pytest
@@ -52,7 +53,7 @@ def test_prepare_seq_region_metadata(
     mock_requests_get: Mock,
     data_dir: Path,
     tmp_path: Path,
-    assert_files,
+    assert_files: Callable,
     gbff_path: Path | None,
     expected_path: Path,
     to_exclude: list[str],

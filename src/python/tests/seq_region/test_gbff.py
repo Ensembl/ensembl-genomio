@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import ContextManager
 
 from Bio import SeqIO
-from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 import pytest
 from pytest import param, raises
 

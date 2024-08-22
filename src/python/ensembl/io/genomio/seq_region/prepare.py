@@ -14,20 +14,20 @@
 # limitations under the License.
 """Construct a seq_region metadata file from INSDC files."""
 
-from os import PathLike
 from pathlib import Path
 
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.io.genomio.seq_region.collection import SeqCollection
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+from ensembl.utils import StrPath
 
 
 def prepare_seq_region_metadata(
-    genome_file: PathLike,
-    report_file: PathLike,
-    dst_file: PathLike,
-    gbff_file: PathLike | None = None,
+    genome_file: StrPath,
+    report_file: StrPath,
+    dst_file: StrPath,
+    gbff_file: StrPath | None = None,
     to_exclude: list[str] | None = None,
     mock_run: bool = False,
 ) -> None:
