@@ -75,7 +75,7 @@ def check_chunk_size_and_tolerance(
 
 def split_seq_by_n(seq: str, split_pattern: Optional[re.Pattern]) -> list[int]:
     """Split a string into chunks at the positions where the
-    pattern is found.
+    pattern is found. `N`s (pattern) are appended to the chunk on the left.
 
     The end point of each chunk will correspond to the end
     of the matching part.

@@ -22,7 +22,8 @@ Typical usage example::
 from contextlib import nullcontext as does_not_raise
 import filecmp
 from pathlib import Path
-from typing import ContextManager, Set
+import re
+from typing import ContextManager, Optional, Set
 
 import pytest
 
@@ -73,3 +74,28 @@ def test_check_chunk_size_and_tolerance(
 
     with expectation:
         FastaChunking.check_chunk_size_and_tolerance(chunk_size, chunk_tolerance)
+
+
+@pytest.mark.parametrize(
+    "seq, pattern, expectation",
+    [
+        ("", None, [len("")]),
+        ("", re.compile("N"), [0]),
+        ("CANNAN", None, [len("NANNAN")]),
+        ("CANNAN", None, [6]),
+        ("CAAAAN", re.compile("N"), [6]),
+        ("NAAAAN", re.compile("N"), [1, 6]),
+        ("NANNAN", re.compile("N"), [1, 3, 4, 6]),
+        ("NANNAN", re.compile("NN"), [4, 6]),
+        ("NAAAAN", re.compile("NN"), [6]),
+    ],
+)
+def test_split_seq_by_n(seq: str, pattern: Optional[re.Pattern], expectation: list[int]) -> None:
+    """Tests the `chunk.test_split_seq_by_n` function.
+
+    Args:
+        seq: A sequence to split
+        pattern: A pattern to split on
+        expectation: A list of open chunk ends (python slices coordinates)
+    """
+    assert FastaChunking.split_seq_by_n(seq, pattern) == expectation
