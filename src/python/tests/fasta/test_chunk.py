@@ -30,6 +30,24 @@ import ensembl.io.genomio.fasta.chunk as FastaChunking
 
 
 @pytest.mark.parametrize(
+    "msg, expectation",
+    [
+        ("A value error test", pytest.raises(ValueError, match=r"^A value error test$")),
+    ],
+)
+def test__on_value_error(msg: str, expectation: ContextManager) -> None:
+    """Tests the `chunk._on_value_error` function.
+
+    Args:
+        msg: Msg to raise.
+        expectation: A context manager with expected exception (`pytest.raises` or nullcontext)
+    """
+
+    with expectation:
+        FastaChunking._on_value_error(msg)
+
+
+@pytest.mark.parametrize(
     "chunk_size, chunk_tolerance, expectation",
     [
         (50000, 0, does_not_raise()),
@@ -45,7 +63,7 @@ def test_check_chunk_size_and_tolerance(
     chunk_tolerance: int,
     expectation: ContextManager,
 ) -> None:
-    """Tests the `chunk.check_chunk_size_and_tolerance()` function.
+    """Tests the `chunk.check_chunk_size_and_tolerance` function.
 
     Args:
         chunk_size: Chunk size to check
@@ -53,8 +71,5 @@ def test_check_chunk_size_and_tolerance(
         expectation: A context manager with expected exception (`pytest.raises` or nullcontext)
     """
 
-    def _on_failure(e: str) -> None:
-        raise ValueError(e)
-
     with expectation:
-        FastaChunking.check_chunk_size_and_tolerance(chunk_size, chunk_tolerance, _on_failure)
+        FastaChunking.check_chunk_size_and_tolerance(chunk_size, chunk_tolerance)

@@ -32,7 +32,6 @@ from io import TextIOWrapper
 import logging
 from pathlib import Path
 import re
-import sys
 from typing import Any, Callable, Optional
 
 from Bio import SeqIO
@@ -44,10 +43,19 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
+def _on_value_error(msg: str) -> None:
+    """A default on_value_handler, raises ValueError with the provided `msg`.
+
+    Args:
+        msg: A message to raise ValueError with.
+    """
+    raise ValueError(msg)
+
+
 def check_chunk_size_and_tolerance(
     chunk_size: int,
     chunk_tolerance: int,
-    error_f: Callable[[str], None] = lambda x: sys.stderr.write(x) and sys.exit(-1) or sys.exit(-1),
+    error_f: Callable[[str], None] = _on_value_error,
 ):
     """Check the chunk size and the tolerance are positive
     and chunk size is not too small
@@ -116,6 +124,15 @@ def split_seq_by_chunk_size(
     return result
 
 
+def _individual_file_opener(name: str) -> TextIOWrapper:
+    """Is used to open file for an idividual chunk sequence.
+
+    Args:
+        name: Name of the file to open
+    """
+    return open(name, "wt", encoding="utf-8")
+
+
 def chunk_fasta_stream(
     input_fasta: TextIOWrapper,
     chunk_size: int,
@@ -125,7 +142,7 @@ def chunk_fasta_stream(
     n_sequece_len: int = 0,
     chunk_sfx: str = "ens_chunk",
     append_offset_to_chunk_name: Optional[bool] = None,
-    open_individual: Callable[[str], TextIOWrapper] = lambda name: open(name, "wt", encoding="utf-8"),
+    open_individual: Callable[[str], TextIOWrapper] = _individual_file_opener,
 ) -> list[str]:
     """Split input TextIOWrapper stream with fasta into a smaller chunks based on
     stratches of "N"s and then based on chunk_size_tolerated and store either to
