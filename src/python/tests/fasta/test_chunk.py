@@ -194,3 +194,38 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
         expectation: An expexted tolerated size
     """
     assert FastaChunking.get_tolerated_size(size, tolerance) == expectation
+
+
+@pytest.mark.parametrize(
+    "input_seq, chunk_size, chunk_size_tolerated, n_sequece_len, "
+    "individual_file_prefix, chunk_sfx, append_offset_to_chunk_name, "
+    "expected_chunked_fasta, expected_agp, expected_individual_files_count",
+    [],
+)
+def test_chunk_fasta_stream(
+    tmp_path: Path,
+    input_seq: str,
+    chunk_size: int,
+    chunk_size_tolerated: int,
+    individual_file_prefix: str,
+    n_sequece_len: int,
+    chunk_sfx: str,
+    append_offset_to_chunk_name: Optional[bool],
+    expected_agp: list[str],
+    expected_chunked_fasta: str,
+    expected_individual_files_count: int,
+) -> None:
+    """Tests the `chunk.chunk_fasta_stream` function.
+
+    Args:
+        tmp_path: Where temporary files will be created.
+        ...
+    """
+
+    pass
+    # run both for joined
+    # assert FastaChunking.chunk_fasta_stream(...) == expected_agp
+
+    # and for inividual files output
+    #    check joined files == joined_output
+    #    check for file count
