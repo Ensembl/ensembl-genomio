@@ -25,7 +25,6 @@ from Bio.SeqRecord import SeqRecord
 
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 
-##############################################
 _MOLECULE_LOCATION = {
     "apicoplast": "apicoplast_chromosome",
     "chromosome": "nuclear_chromosome",
