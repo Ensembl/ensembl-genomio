@@ -26,6 +26,7 @@ from typing import List, Optional
 
 import pytest
 from pytest_mock import MockerFixture
+from sqlalchemy import make_url
 
 from ensembl.io.genomio.database import CoreServer
 
@@ -108,7 +109,7 @@ class TestCoreServer:
         mocked_engine.return_value = MockEngine(dbs)
 
         # Fake server with mock get_all_core_names()
-        server_url = "sqlite:///:memory:"
+        server_url = make_url("sqlite:///:memory:")
         server = CoreServer(server_url)
 
         # Checks the filters from get_cores

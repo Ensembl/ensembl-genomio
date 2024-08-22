@@ -27,7 +27,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
-from sqlalchemy.sql.expression import Executable
 
 from ensembl.core.models import Gene, Transcript
 from ensembl.io.genomio.genome_stats import dump
@@ -67,11 +66,11 @@ FEATURE_STATS_SOURCE_QUERY = Template(
 )
 
 
-class MockSession(Session):
+class MockSession:
     """Mocker of `sqlalchemy.orm.Session` class that replaces its `execute()` method for testing."""
 
     # pylint: disable-next=too-many-return-statements
-    def execute(self, statement: Executable) -> MockResult:
+    def execute(self, statement) -> MockResult:
         """Returns a `MockResult` object representing results of the statement execution.
 
         Args:
