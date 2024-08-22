@@ -14,7 +14,6 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.seq_region.prepare` module."""
 
-import json
 from pathlib import Path
 from typing import Callable
 from unittest.mock import Mock, patch
@@ -23,21 +22,6 @@ import pytest
 from pytest import param
 
 from ensembl.io.genomio.seq_region.prepare import prepare_seq_region_metadata
-
-
-class MockResponse:
-    """Mock `requests` response."""
-
-    def __init__(self, json_str: str) -> None:
-        self.text = json_str
-
-    @staticmethod
-    def raise_for_status():
-        """Mock, never raise Exception here."""
-
-    def json(self) -> dict:
-        """Returns the data as json."""
-        return json.loads(self.text)
 
 
 @pytest.mark.parametrize(
@@ -51,6 +35,7 @@ class MockResponse:
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
 def test_prepare_seq_region_metadata(
     mock_requests_get: Mock,
+    mock_response: Callable,
     data_dir: Path,
     tmp_path: Path,
     assert_files: Callable,
@@ -69,7 +54,7 @@ def test_prepare_seq_region_metadata(
     if gbff_path:
         gbff_file = data_dir / gbff_path
     dst_file = tmp_path / "output.json"
-    mock_requests_get.return_value = MockResponse("{}")  # Mock requests just in case
+    mock_requests_get.return_value = mock_response("{}")  # Mock requests just in case
     prepare_seq_region_metadata(
         genome_file=data_dir / "genome.json",
         report_file=data_dir / "report.txt",

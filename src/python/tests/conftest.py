@@ -19,6 +19,7 @@ will have access to the plugins, hooks and fixtures defined here.
 
 """
 
+import json
 from pathlib import Path
 from typing import Any, Callable
 
@@ -53,3 +54,29 @@ def fixture_json_data(data_dir: Path) -> Callable[[str], Any]:
         return get_json(data_dir / file_name)
 
     return _json_data
+
+
+class MockResponse:
+    """Mock a `requests` response."""
+
+    def __init__(self, json_str: str) -> None:
+        """Store the JSON text response.
+
+        Args:
+            json_str: Expected JSON test response.
+        """
+        self.text = json_str
+
+    @staticmethod
+    def raise_for_status():
+        """Mock, never raise Exception here."""
+
+    def json(self) -> dict:
+        """Returns the data decoded from the JSON text."""
+        return json.loads(self.text)
+
+
+@pytest.fixture(name="mock_response")
+def mock_response():
+    """Fixture to mock a `requests` response."""
+    return MockResponse

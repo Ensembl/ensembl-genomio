@@ -17,7 +17,7 @@
 from contextlib import nullcontext as no_raise
 import json
 from pathlib import Path
-from typing import Any, ContextManager
+from typing import Any, Callable, ContextManager
 from unittest.mock import MagicMock, Mock, patch
 
 from Bio import SeqIO
@@ -329,6 +329,7 @@ def test_add_translation_table(
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
 def test_add_mitochondrial_codon_table(
     mock_requests_get: Mock,
+    mock_response: Callable,
     input_seq: dict[str, str],
     taxon_id: int,
     response_data: str,
@@ -345,7 +346,7 @@ def test_add_mitochondrial_codon_table(
         expected: Context manager to catch expected exceptions.
     """
 
-    mock_requests_get.return_value = MockResponse(response_data)
+    mock_requests_get.return_value = mock_response(response_data)
     collection = SeqCollection()
     seq_name = "foobar"
     collection.seqs = {seq_name: input_seq}
