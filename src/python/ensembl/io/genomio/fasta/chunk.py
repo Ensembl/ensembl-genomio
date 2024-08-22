@@ -53,11 +53,11 @@ def check_chunk_size_and_tolerance(
     and chunk size is not too small
 
     Args:
-      chunk_size: Chunk size to check
-      chunk_tolerance: Chunk tolerance to check
+        chunk_size: Chunk size to check
+        chunk_tolerance: Chunk tolerance to check
 
     Dies:
-       If checks failed dies with` parser.error`
+        If checks failed dies with` parser.error`
     """
     if chunk_size < 50_000:
         error_f(f"wrong '--chunk_size' value: '{chunk_size}'. should be greater then 50_000. exiting...")
