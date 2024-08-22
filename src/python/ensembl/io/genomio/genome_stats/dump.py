@@ -70,7 +70,7 @@ class StatsGenerator:
 
         """
         seqs_st = (
-            select(SeqRegionAttrib.value, func.count)
+            select(SeqRegionAttrib.value, func.count())
             .join(AttribType)
             .filter(AttribType.code == code)
             .group_by(SeqRegionAttrib.value)
@@ -91,7 +91,7 @@ class StatsGenerator:
 
     def get_biotypes(self, table: Any) -> Dict[str, int]:
         """Returns a dict of stats about the feature biotypes."""
-        seqs_st = select(table.biotype, func.count).group_by(table.biotype)
+        seqs_st = select(table.biotype, func.count()).group_by(table.biotype)
         biotypes = {}
         for row in self.session.execute(seqs_st):
             (biotype, count) = row
@@ -101,12 +101,12 @@ class StatsGenerator:
     def get_feature_stats(self, table: Any) -> Dict[str, int]:
         """Returns a dict of stats about a given feature."""
         session = self.session
-        totals_st = select(func.count)
+        totals_st = select(func.count()).select_from(table)
         (total,) = session.execute(totals_st).one()
         # pylint: disable-next=singleton-comparison
-        no_desc_st = select(func.count).filter(table.description.is_(None))
+        no_desc_st = select(func.count()).filter(table.description.is_(None))
         (no_desc,) = session.execute(no_desc_st).one()
-        xref_desc_st = select(func.count).where(table.description.like("%[Source:%"))
+        xref_desc_st = select(func.count()).where(table.description.like("%[Source:%"))
         (xref_desc,) = session.execute(xref_desc_st).one()
         left_over = total - no_desc - xref_desc
         feat_stats = {
