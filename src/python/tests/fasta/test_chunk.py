@@ -152,3 +152,22 @@ def test_individual_file_opener(tmp_path: Path) -> None:
     assert test_path.read_text(encoding="utf-8") == "test\n"
 
     assert len(list(test_dir.iterdir())) == 1
+
+
+def test_prepare_out_dir_for_individuals(tmp_path: Path) -> None:
+    """Tests the `chunk.prepare_out_dir_for_individuals` function.
+
+    Args:
+        tmp_path: Where temporary files will be created.
+    """
+    test_dir = Path(tmp_path, "prepare_out_dir_test")
+    test_file = Path(test_dir, "test.file")
+
+    assert FastaChunking.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
+    assert FastaChunking.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
+
+    test_file.write_text("test\n", encoding="utf-8")
+    assert test_file.read_text(encoding="utf-8") == "test\n"
+
+    assert FastaChunking.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
+    assert len(list(test_dir.iterdir())) == 1
