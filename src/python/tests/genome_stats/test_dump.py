@@ -70,7 +70,7 @@ class MockSession(Session):
     """Mocker of `sqlalchemy.orm.Session` class that replaces its `execute()` method for testing."""
 
     # pylint: disable-next=too-many-return-statements
-    def execute(self, statement) -> MockResult:
+    def execute(self, statement) -> MockResult:  # type: ignore[override]
         """Returns a `MockResult` object representing results of the statement execution.
 
         Args:
