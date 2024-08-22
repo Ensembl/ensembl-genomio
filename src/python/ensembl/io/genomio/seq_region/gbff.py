@@ -51,7 +51,7 @@ class GBFFRecord:
             record: Sequence record.
 
         """
-        comment = self.record.annotations.get("comment", "")
+        comment = str(self.record.annotations.get("comment", ""))
         if not comment:
             return None
         comment = re.sub(r"[ \n\r]+", " ", comment)

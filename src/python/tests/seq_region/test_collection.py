@@ -18,7 +18,7 @@ from contextlib import nullcontext as no_raise
 import json
 from pathlib import Path
 from typing import Any, ContextManager
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -220,8 +220,8 @@ def test_make_seqregion_from_report(
 def test_make_seqregion_from_report_custom() -> None:
     """Test `SeqCollection.make_seqregion_from_report()` with custom maps."""
     collection = SeqCollection()
-    seq_data = {}
-    input_data = {}
+    seq_data: dict = {}
+    input_data: dict = {}
     input_data.update(_test_report_seq)
     input_data.update(seq_data)
 
