@@ -22,7 +22,7 @@ from ensembl.io.genomio.seq_region.report import ReportRecord
 
 
 def test_from_report(data_dir: Path):
-    """Test for `SeqCollection.from_report`."""
+    """Test for `ReportRecord`."""
     report_file = "report.txt"
     record = ReportRecord(data_dir / report_file)
     seq = next(record.reader)
@@ -43,7 +43,7 @@ def test_from_report(data_dir: Path):
 
 
 def test_from_report_error(data_dir: Path):
-    """Test for `SeqCollection.from_report` with a file without header."""
+    """Test for `ReportRecord` with a file without header."""
     report_file = "report_noheader.txt"
     with raises(ValueError):
         _ = ReportRecord(data_dir / report_file)

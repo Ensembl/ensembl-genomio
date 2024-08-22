@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Exceptions for seq regions parsers."""
+"""Exceptions for sequence regions parsers."""
 
 __all__ = [
     "UnknownMetadata",
@@ -20,4 +20,4 @@ __all__ = [
 
 
 class UnknownMetadata(Exception):
-    """If a metadata if not supported or recognized."""
+    """If a metadata is not supported or recognized."""

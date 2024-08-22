@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""SeqCollection as a collection of seq_regions."""
+"""SeqCollection as a collection of seq_regions metadata."""
 
 __all__ = [
     "SeqRegionDict",
@@ -48,7 +48,7 @@ _MOLECULE_LOCATION = {
 _LOCATION_CODON = {"apicoplast_chromosome": 4}
 
 ##############################################
-SeqRegionDict = dict[str, Any]
+SeqRegionDict = TypeVar(dict[str, Any])
 
 
 class SeqCollection:
@@ -63,7 +63,8 @@ class SeqCollection:
 
     def from_gbff(self, gbff_path: Path) -> None:
         """Store seq_regions extracted from a GBFF file.
-        If a seq_region with the same id exists in the collection, it will be replaced.
+
+        If a seq_region with the same ID exists in the collection, it will be replaced.
         """
         with open_gz_file(gbff_path) as gbff_file:
             for record in SeqIO.parse(gbff_file, "genbank"):
@@ -73,7 +74,7 @@ class SeqCollection:
                 merged_seq = self._merge(new_seq, self.seqs.get(name, {}))
                 self.seqs[name] = merged_seq
 
-    def _merge(self, source, destination):
+    def _merge(self, source: dict[str, list], destination: dict[str, list]) -> dict[str, list]:
         """Merge a source dict in a destination dict (only add values or append to lists)."""
         if not destination:
             return source
@@ -112,6 +113,7 @@ class SeqCollection:
 
     def from_report(self, report_path: Path, is_refseq: bool = False) -> None:
         """Store seq_regions extracted from an INSDC assembly report file.
+
         If a seq_region with the same id exists in the collection, it will be replaced.
 
         Args:
@@ -138,14 +140,13 @@ class SeqCollection:
         An empty sequence region will be returned if not accession information is found.
 
         Args:
-            data: a dict from the report representing one line, where the key is the column name.
+            data: Dict from the report representing one line, where the key is the column name.
             is_refseq: True if the source is RefSeq, false if INSDC.
             synonym_map: Map of INSDC report column names to sequence region field names.
             molecule_location: Map of sequence type to SO location.
 
         Raises:
-            KeyError: If the sequence location is not recognised.
-            UnknownMetadata: if the sequence role is not recognised.
+            UnknownMetadata: If the sequence role is not recognised.
 
         """
         if synonym_map is None:
@@ -196,7 +197,7 @@ class SeqCollection:
 
         return seq_region
 
-    def remove(self, to_exclude: list[str]):
+    def remove(self, to_exclude: list[str]) -> None:
         """Remove seq_regions based on a provided list of accessions."""
         for seq_name in to_exclude:
             if seq_name in self.seqs:
@@ -228,15 +229,13 @@ class SeqCollection:
             taxon_id: The species taxon ID.
 
         """
-        if self.mock:
-            return
-        if not taxon_id:
+        if self.mock or not taxon_id:
             return
 
         url = f"https://www.ebi.ac.uk/ena/taxonomy/rest/tax-id/{str(taxon_id)}"
         response = requests.get(url, headers={"Content-Type": "application/json"}, timeout=60)
         response.raise_for_status()
-        # In case we've been redirected, check for html opening tag
+        # In case we have been redirected, check for HTML opening tag
         if response.text.startswith("<"):
             raise ValueError(f"Response from {url} is not JSON")
         decoded = response.json()
@@ -244,17 +243,11 @@ class SeqCollection:
         if genetic_code == 0:
             logging.warning(f"No mitochondria genetic code found for taxon {taxon_id}")
             return
-        print(genetic_code)
 
         for seqr in self.seqs.values():
-            if "codon_table" in seqr:
-                continue
-            if seqr.get("location", "") == "mitochondrial_chromosome":
+            if ("codon_table" not in seqr) and (seqr.get("location", "") == "mitochondrial_chromosome"):
                 seqr["codon_table"] = genetic_code
 
     def to_list(self) -> list[SeqRegionDict]:
-        """Returns the sequences as a simple list of SeqRegionDict."""
-        seqs: list[SeqRegionDict] = []
-        for seq in self.seqs.values():
-            seqs.append(seq)
-        return seqs
+        """Returns the sequences as a simple list of `SeqRegionDict` objects."""
+        return list(self.seqs.values())

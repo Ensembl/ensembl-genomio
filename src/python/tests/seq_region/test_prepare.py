@@ -17,6 +17,7 @@
 import json
 from pathlib import Path
 from unittest.mock import patch
+
 import pytest
 from pytest import param
 
@@ -48,7 +49,7 @@ class MockResponse:
 )
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
 def test_prepare_seq_region_metadata(
-    mock_requests_get,
+    mock_requests_get: Mock,
     data_dir: Path,
     tmp_path: Path,
     assert_files,
@@ -59,7 +60,7 @@ def test_prepare_seq_region_metadata(
     """Test `prepare_seq_region_metadata`.
 
     Args:
-        gbff_path: Input BGFF file in any.
+        gbff_path: Input GBFF file in any.
         expected_path: Expect JSON output.
         to_exclude: List of sequences to exclude.
     """

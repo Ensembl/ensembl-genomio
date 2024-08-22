@@ -37,7 +37,7 @@ def get_record(gbff_path: Path) -> SeqRecord:
     return seq_record
 
 
-def test_gbff(data_dir: Path):
+def test_gbff(data_dir: Path) -> None:
     """Test for `GBFFRecord` init."""
     record = GBFFRecord(get_record(data_dir / "apicoplast.gb"))
     assert record
@@ -51,7 +51,7 @@ def test_gbff(data_dir: Path):
         param("apicoplast_simple_comment.gb", None, id="Comment without ID"),
     ],
 )
-def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None):
+def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None) -> None:
     """Test for `gbff.get_genbank_id()`.
 
     Args:
@@ -71,7 +71,7 @@ def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None):
         param("apicoplast_nogene.gb", None, id="No codon table"),
     ],
 )
-def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | None):
+def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | None) -> None:
     """Test for `gbff.get_codon_table()`.
 
     Args:
@@ -95,7 +95,7 @@ def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | No
 )
 def test_get_organelle(
     data_dir: Path, input_gb: str, expected_location: str | None, expectation: ContextManager
-):
+) -> None:
     """Test for `gbff.get_organelle()`.
 
     Args:
@@ -109,7 +109,7 @@ def test_get_organelle(
         assert record.get_organelle() == expected_location
 
 
-def test_get_organelle_custom(data_dir: Path):
+def test_get_organelle_custom(data_dir: Path) -> None:
     """Test for `gbff.get_organelle()` with a custom location map."""
     input_gb = "apicoplast.gb"
     expected_location = "custom_location"
@@ -126,7 +126,7 @@ def test_get_organelle_custom(data_dir: Path):
         param("apicoplast_linear.gb", False, id="Not circular"),
     ],
 )
-def test_is_circular(data_dir: Path, input_gb: str, expected_circular: bool):
+def test_is_circular(data_dir: Path, input_gb: str, expected_circular: bool) -> None:
     """Test for `gbff.is_circular()`.
 
     Args:

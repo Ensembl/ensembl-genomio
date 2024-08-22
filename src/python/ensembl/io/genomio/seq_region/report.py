@@ -27,7 +27,7 @@ from typing import Any, Tuple
 from ensembl.utils.archive import open_gz_file
 
 ##############################################
-SeqRegionDict = dict[str, Any]
+SeqRegionDict = TypeVar(dict[str, Any])
 
 
 class ReportRecord:
@@ -42,7 +42,7 @@ class ReportRecord:
         """Returns an assembly report as a CSV string.
 
         Args:
-            report_path: path to a seq_region file from INSDC/RefSeq
+            report_path: Path to a seq_region file from INSDC/RefSeq.
 
         Returns:
             The data as a string in CSV format, and the head metadata as a dictionary.
@@ -53,7 +53,6 @@ class ReportRecord:
             metadata = {}
             header_line = ""
             for line in report:
-                # Ignore header
                 if line.startswith("#"):
                     # Get metadata values if possible
                     match = re.search("# (.+?): (.+?)$", line)

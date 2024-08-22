@@ -14,8 +14,8 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.seq_region.collection` module."""
 
-import json
 from contextlib import nullcontext as no_raise
+import json
 from pathlib import Path
 from typing import Any, ContextManager
 from unittest.mock import MagicMock, patch
@@ -61,7 +61,7 @@ class MockResponse:
 
 
 def get_record(gbff_path: Path) -> SeqRecord:
-    """Returns the first SeqRecord from a Genbank file."""
+    """Returns the first `SeqRecord` from a Genbank file."""
     seq_record = SeqRecord(Seq(""))
     with gbff_path.open("r") as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
@@ -69,13 +69,12 @@ def get_record(gbff_path: Path) -> SeqRecord:
     return seq_record
 
 
-def test_collection():
+def test_collection() -> None:
     """Test for `SeqCollection` init."""
     seqs = SeqCollection()
     assert not seqs.seqs
 
 
-# Start of tests
 @pytest.mark.parametrize(
     "genbank_id, codon_table, location, is_circular, expected_seq",
     [
@@ -99,7 +98,7 @@ def test_make_seqregion_from_gbff(
     location: str | None,
     is_circular: bool,
     expected_seq: dict,
-):
+) -> None:
     """Test for `SeqCollection.make_seq_dict()`.
 
     Args:
@@ -118,8 +117,8 @@ def test_make_seqregion_from_gbff(
     assert seq_dict == expected_seq
 
 
-def test_from_gbff(data_dir: Path):
-    """Test for `SeqCollection.from_gbff`."""
+def test_from_gbff(data_dir: Path) -> None:
+    """Test for `SeqCollection.from_gbff()`."""
     gb_file = "apicoplast.gb"
     expected_seqs = {
         "NC_001799.1": {
@@ -140,8 +139,8 @@ def test_from_gbff(data_dir: Path):
     [
         param({"GenBank-Accn": "na"}, False, None, None, no_raise(), id="Missing Genbank ID"),
         param({"RefSeq-Accn": "na"}, True, None, None, no_raise(), id="Missing RefSeq ID"),
-        param({}, False, "name", "gb_id", no_raise(), id="use Genbank ID"),
-        param({}, True, "name", "rs_id", no_raise(), id="use RefSeq ID"),
+        param({}, False, "name", "gb_id", no_raise(), id="Use Genbank ID"),
+        param({}, True, "name", "rs_id", no_raise(), id="Use RefSeq ID"),
         param(
             {"Assigned-Molecule": "na", "GenBank-Accn": "na", "Sequence-Name": "na"},
             False,
@@ -196,8 +195,8 @@ def test_from_gbff(data_dir: Path):
 )
 def test_make_seqregion_from_report(
     seq_data: dict, is_refseq: bool, expected_key: str, expected_value: Any | None, expected: ContextManager
-):
-    """Test `SeqCollection.make_seqregion_from_report`.
+) -> None:
+    """Test `SeqCollection.make_seqregion_from_report()`.
 
     Args:
         seq_data: Sequence dict with values to replace the default from `base_seq`.
@@ -218,8 +217,8 @@ def test_make_seqregion_from_report(
             assert not seq_dict
 
 
-def test_make_seqregion_from_report_custom():
-    """Test `SeqCollection.make_seqregion_from_report` with custom maps."""
+def test_make_seqregion_from_report_custom() -> None:
+    """Test `SeqCollection.make_seqregion_from_report()` with custom maps."""
     collection = SeqCollection()
     seq_data = {}
     input_data = {}
@@ -235,8 +234,8 @@ def test_make_seqregion_from_report_custom():
     assert seq_dict["synonyms"] == [{"source": "custom_name", "name": "seq_name"}]
 
 
-def test_from_report(data_dir: Path):
-    """Test for `SeqCollection.from_gbff`."""
+def test_from_report(data_dir: Path) -> None:
+    """Test for `SeqCollection.from_gbff()`."""
     report_file = "report.txt"
     expected_seqs = {
         "CM002034.1": {
@@ -257,7 +256,7 @@ def test_from_report(data_dir: Path):
     assert collection.seqs == expected_seqs
 
 
-def test_remove():
+def test_remove() -> None:
     """Test `SeqCollection.remove()`."""
     collection = SeqCollection()
     collection.seqs = {"Foo": {}, "Bar": {}, "Lorem": {}}
@@ -275,13 +274,13 @@ def test_remove():
         param({"location": "foo"}, {"foo": 4}, 4, id="Location, new codon table"),
         param({"location": "foo"}, {"bar": 4}, None, id="Unsupported location, no table"),
         param({"codon_table": 2, "location": "foo"}, {"foo": 4}, 2, id="Existing codon table, keep"),
-        param({"location": "apicoplast_chromosome"}, None, 4, id="use default map"),
+        param({"location": "apicoplast_chromosome"}, None, 4, id="Use default map"),
     ],
 )
 def test_add_translation_table(
     input_seq: dict[str, str], code_map: dict[str, int] | None, expected_codon_table: int | None
-):
-    """Test `SeqCollection.add_translation_table()`
+) -> None:
+    """Test `SeqCollection.add_translation_table()`.
 
     Args:
         input_seq: Sequence dict with usable values (`codon_table`, `location`).
@@ -323,19 +322,19 @@ def test_add_translation_table(
             "<html></html>",
             None,
             raises(ValueError),
-            id="Not a json response, html",
+            id="Not a JSON response, HTML",
         ),
     ],
 )
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
 def test_add_mitochondrial_codon_table(
-    mock_requests_get,
+    mock_requests_get: Mock,
     input_seq: dict[str, str],
     taxon_id: int,
     response_data: str,
     expected_codon_table: int | None,
     expected: ContextManager,
-):
+) -> None:
     """Test `SeqCollection.add_mitochondrial_codon_table()`.
 
     Args:
@@ -356,7 +355,7 @@ def test_add_mitochondrial_codon_table(
 
 
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
-def test_add_mitochondrial_codon_table_mock(mock_requests_get):
+def test_add_mitochondrial_codon_table_mock(mock_requests_get: Mock) -> None:
     """Test `SeqCollection.add_mitochondrial_codon_table()` with the mock parameter."""
     mock_requests_get.return_value = MockResponse("{}")  # Mock requests just in case
     collection = SeqCollection(mock=True)

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A SeqRecord wrapper."""
+"""A `SeqRecord` wrapper."""
 
 __all__ = [
     "GBFFRecord",
@@ -38,7 +38,7 @@ _MOLECULE_LOCATION = {
 
 @dataclass
 class GBFFRecord:
-    """Wrapper around a SeqRecord object to extract specific data."""
+    """Wrapper around a `SeqRecord` object to extract specific data."""
 
     record: SeqRecord
 
@@ -51,7 +51,7 @@ class GBFFRecord:
             record: Sequence record.
 
         """
-        comment = str(self.record.annotations.get("comment", ""))
+        comment = self.record.annotations.get("comment", "")
         if not comment:
             return None
         comment = re.sub(r"[ \n\r]+", " ", comment)
@@ -62,12 +62,10 @@ class GBFFRecord:
 
     def get_codon_table(self) -> int | None:
         """Returns the codon table number from a given a GenBank sequence record (if present)."""
-        table_number = None
         for feat in self.record.features:
             if "transl_table" in feat.qualifiers:
-                table_number = int(feat.qualifiers["transl_table"][0])
-                break
-        return table_number
+                return int(feat.qualifiers["transl_table"][0])
+        return None
 
     def get_organelle(self, molecule_location: dict | None = None) -> str | None:
         """Returns the organelle location from the given GenBank record (if present).
@@ -77,7 +75,7 @@ class GBFFRecord:
             molecule_location: Map of sequence type to SO location.
 
         Raises:
-            KeyError: If the location is not part of the controlled vocabulary.
+            UnknownMetadata: If the location is not part of the controlled vocabulary.
 
         """
         if molecule_location is None:
@@ -100,5 +98,5 @@ class GBFFRecord:
         return location
 
     def is_circular(self) -> bool:
-        """Check if the record says that the sequence is circular."""
+        """Returns True if the record says that the sequence is circular, False otherwise."""
         return self.record.annotations.get("topology", "") == "circular"
