@@ -124,11 +124,25 @@ class ManifestStats:
         self.lengths["seq_regions"] = seq_lengths
         self.circular["seq_regions"] = seq_circular
 
-    def get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
-        """Check if the fasta files have the correct ids and no stop codon.
+    def get_peptides_fasta_lengths(self):
+        """Retrieve peptides sequences lengths from their FASTA file."""
+        if "fasta_pep" not in self.manifest_files:
+            return
+        self.lengths["peptide_sequences"] = self._get_fasta_lengths(
+            self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
+        )
+
+    def get_dna_fasta_lengths(self):
+        """Retrieve DNA sequences lengths from their FASTA file."""
+        if "fasta_dna" not in self.manifest_files:
+            return
+        self.lengths["dna_sequences"] = self._get_fasta_lengths(self.manifest_files["fasta_dna"])
+
+    def _get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
+        """Retrieve sequence lengths from a fasta file (DNA or peptide) and check for anomalies.
 
         Args:
-            fasta_path: Path to fasta_dna and fasta_pep files.
+            fasta_path: Path to fasta file.
 
         Returns:
             Error if any empty ids, non-unique ids or stop codons are found in the fasta files.
@@ -146,19 +160,18 @@ class ManifestStats:
             # Flag empty ids
             if rec.id == "":
                 empty_id_count += 1
-            else:
-                # Flag redundant ids
-                if rec.id in data:
-                    non_unique[rec.id] = 1
-                    non_unique_count += 1
-                # Store sequence id and length
-                data[rec.id] = len(rec.seq)
-                stops = rec.seq.count("*")
-                if stops > 1:
-                    contains_stop_codon += 1
-                elif stops == 1:
-                    if not rec.seq.endswith("*") or not ignore_final_stops:
-                        contains_stop_codon += 1
+                continue
+            # Flag redundant ids
+            if rec.id in data:
+                non_unique[rec.id] = 1
+                non_unique_count += 1
+            # Store sequence id and length
+            data[rec.id] = len(rec.seq)
+            stops = rec.seq.count("*")
+            if stops >= 1 and not rec.seq.endswith("*"):
+                contains_stop_codon += 1
+            elif rec.seq.endswith("*") and not ignore_final_stops:
+                contains_stop_codon += 1
 
         if empty_id_count > 0:
             self.add_error(f"{empty_id_count} sequences with empty ids in {fasta_path}")
@@ -342,16 +355,8 @@ class ManifestStats:
         if "gff3" in self.manifest_files:
             logging.info("Manifest contains GFF3")
             self.get_gff3(self.manifest_files["gff3"])
-        if "fasta_dna" in self.manifest_files:
-            logging.info("Manifest contains DNA fasta")
-            # Verify if the length and id for the sequence is unique
-            self.lengths["dna_sequences"] = self.get_fasta_lengths(self.manifest_files["fasta_dna"])
-        if "fasta_pep" in self.manifest_files:
-            logging.info("Manifest contains Peptide fasta")
-            # Verify if the length and id for the sequence is unique
-            self.lengths["peptide_sequences"] = self.get_fasta_lengths(
-                self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
-            )
+        self.get_dna_fasta_lengths()
+        self.get_peptides_fasta_lengths()
         self.get_seq_regions()
         self.get_functional_annotation(self.manifest_files.get("functional_annotation"))
         self.get_agp_seq_regions(self.manifest_files.get("agp"))

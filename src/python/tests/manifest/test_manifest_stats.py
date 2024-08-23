@@ -14,14 +14,13 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.manifest.manifest_stats` module."""
 
-from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import ContextManager
 
 import pytest
 from pytest import raises, param, mark
 
-from ensembl.io.genomio.manifest.manifest_stats import ManifestStats, InvalidIntegrityError
+from ensembl.io.genomio.manifest import Manifest
+from ensembl.io.genomio.manifest.manifest_stats import ManifestStats
 
 
 @pytest.fixture(name="manifest_path")
@@ -74,6 +73,49 @@ def test_get_seq_regions(
     stats.get_seq_regions()
     assert stats.lengths["seq_regions"] == expected_lengths
     assert stats.circular["seq_regions"] == expected_circular
+
+
+@mark.parametrize(
+    "fasta_str, ignore_final_stops, expected_lengths, expected_error",
+    [
+        param(">prot1\nMAGIC\n", False, {"prot1": 5}, "", id="Normal prot"),
+        param("", False, {}, "", id="Empty fasta"),
+        param("AH", False, {}, "No sequences found", id="No sequences in fasta"),
+        param(">\nMAGIC\n", False, {}, "1 sequences with empty ids", id="empty ID"),
+        param(">prot1\nMAGIC*\n", False, {"prot1": 6}, "1 sequences with stop codons", id="End stop codon"),
+        param(">prot1\nMAGIC\n", True, {"prot1": 5}, "", id="End stop codon, ignore"),
+        param(">prot1\nMAG*IC\n", False, {"prot1": 6}, "1 sequences with stop codons", id="In stop codon"),
+        param(
+            ">prot1\nMAGIC\n>prot1\nGICMA\n",
+            False,
+            {"prot1": 5},
+            "1 non unique sequence ids",
+            id="duplicate ID",
+        ),
+    ],
+)
+def test_get_peptides_fasta_lengths(
+    tmp_path: Path,
+    fasta_str: str,
+    ignore_final_stops: bool,
+    expected_lengths: dict[str, int],
+    expected_error: str,
+):
+    """Tests `ManifestStats.get_seq_regions()`."""
+    fasta_path = tmp_path / "fasta_pep.fasta"
+    with fasta_path.open("w") as fasta_fh:
+        fasta_fh.write(fasta_str)
+    manifest = Manifest(tmp_path)
+    manifest.create()
+    stats = ManifestStats(manifest.dir / "manifest.json")
+    stats.ignore_final_stops = ignore_final_stops
+    stats.get_peptides_fasta_lengths()
+    assert stats.lengths["peptide_sequences"] == expected_lengths
+    if expected_error == "":
+        assert not stats.errors
+    else:
+        assert len(stats.errors) == 1
+        assert stats.errors[0].startswith(expected_error)
 
 
 def test_has_lengths(manifest_path: Path):
