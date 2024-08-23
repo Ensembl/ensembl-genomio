@@ -26,6 +26,7 @@ from typing import List, Optional
 
 import pytest
 from pytest_mock import MockerFixture
+from sqlalchemy.engine import make_url
 
 from ensembl.io.genomio.database import CoreServer
 
@@ -47,8 +48,25 @@ class MockResult:
         self.core_dbs = core_dbs
 
     def fetchall(self) -> List[List[str]]:
-        """Return a list of lists, ech one containing a single core db."""
+        """Return a list of lists, each one containing a single core db."""
         return [[x] for x in self.core_dbs]
+
+
+class MockConnection:
+    """Mock a SQLalchemy connection."""
+
+    def __init__(self, result: MockResult) -> None:
+        self.result = result
+
+    def execute(self, *args, **kwargs) -> MockResult:  # pylint: disable=unused-argument
+        """Returns a MockResult object."""
+        return self.result
+
+    def __enter__(self, *args, **kwargs):  # pylint: disable=unused-argument
+        return self
+
+    def __exit__(self, *args, **kwargs):  # pylint: disable=unused-argument
+        pass
 
 
 class MockEngine:
@@ -57,9 +75,9 @@ class MockEngine:
     def __init__(self, core_dbs: List[str]) -> None:
         self.result = MockResult(core_dbs)
 
-    def execute(self, *args, **kwargs) -> MockResult:  # pylint: disable=unused-argument
-        """Returns a MockResult object."""
-        return self.result
+    def connect(self) -> MockConnection:
+        """Return a mock connection."""
+        return MockConnection(self.result)
 
 
 class TestCoreServer:
@@ -108,7 +126,7 @@ class TestCoreServer:
         mocked_engine.return_value = MockEngine(dbs)
 
         # Fake server with mock get_all_core_names()
-        server_url = "sqlite:///:memory:"
+        server_url = make_url("sqlite:///:memory:")
         server = CoreServer(server_url)
 
         # Checks the filters from get_cores
