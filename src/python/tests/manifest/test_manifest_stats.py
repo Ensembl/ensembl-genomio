@@ -24,36 +24,50 @@ from pytest import raises
 from ensembl.io.genomio.manifest.manifest_stats import ManifestStats, InvalidIntegrityError
 
 
-def test_manifest_stats_init(data_dir: Path) -> None:
+@pytest.fixture(name="manifest_path")
+def fixture_manifest_path(data_dir: Path) -> Path:
+    """Manifest dir and files with all expected cases."""
+    return data_dir / "full_data/manifest.json"
+
+
+def test_manifest_stats_init(manifest_path: Path) -> None:
     """Tests `ManifestStats.__init__()`."""
-    manifest_stats = ManifestStats(data_dir / "full_data/manifest.json")
+    manifest_stats = ManifestStats(manifest_path)
     assert manifest_stats
 
 
-def test_has_lengths(data_dir: Path):
+def test_add_error(manifest_path: Path):
     """Tests `ManifestStats.has_lengths()`."""
-    stats = ManifestStats(data_dir / "full_data/manifest.json")
+    stats = ManifestStats(manifest_path)
+    assert not stats.errors
+    stats.add_error("lorem")
+    assert stats.errors[0] == "lorem"
+
+
+def test_has_lengths(manifest_path: Path):
+    """Tests `ManifestStats.has_lengths()`."""
+    stats = ManifestStats(manifest_path)
     with raises(KeyError):
         stats.has_lengths("foobar")
     assert not stats.has_lengths("ann_genes")
-    stats.get_functional_annotation(data_dir / "full_data" / "functional_annotation.json")
+    stats.get_functional_annotation(manifest_path.parent / "functional_annotation.json")
     assert stats.has_lengths("ann_genes")
 
 
-def test_get_lengths(data_dir: Path):
+def test_get_lengths(manifest_path: Path):
     """Tests `ManifestStats.get_lengths()`."""
-    stats = ManifestStats(data_dir / "full_data/manifest.json")
+    stats = ManifestStats(manifest_path)
     with raises(KeyError):
         stats.get_lengths("foobar")
     assert not stats.has_lengths("ann_genes")
-    stats.get_functional_annotation(data_dir / "full_data" / "functional_annotation.json")
+    stats.get_functional_annotation(manifest_path.parent / "functional_annotation.json")
     circular = stats.get_lengths("ann_genes")
     assert circular == {"ECC02_000372": 1}
 
 
-def test_get_circular(data_dir: Path):
+def test_get_circular(manifest_path: Path):
     """Tests `ManifestStats.get_circular()`."""
-    stats = ManifestStats(data_dir / "full_data/manifest.json")
+    stats = ManifestStats(manifest_path)
     with raises(KeyError):
         stats.get_circular("foobar")
     assert not stats.get_circular("seq_regions")

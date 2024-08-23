@@ -16,7 +16,6 @@
 
 __all__ = ["InvalidIntegrityError", "ManifestStats", "StatsLengths"]
 
-import hashlib
 import logging
 import json
 from math import floor
@@ -98,7 +97,7 @@ class ManifestStats:
                     manifest_files[name][f] = Path(manifest_path).parent / manifest_files[name][f]["file"]
         return manifest_files
 
-    def _add_error(self, error: str) -> None:
+    def add_error(self, error: str) -> None:
         """Record an error."""
         self.errors.append(error)
 
@@ -109,7 +108,7 @@ class ManifestStats:
         logging.info("Manifest contains seq_region JSON")
         seq_regions = get_json(Path(self.manifest_files["seq_region"]))
         if len(seq_regions) == 0:
-            self._add_error(f"No sequences found in {self.manifest_files['seq_region']}")
+            self.add_error(f"No sequences found in {self.manifest_files['seq_region']}")
             return
         seqr_seqlevel = {}
         seq_lengths = {}
@@ -164,13 +163,13 @@ class ManifestStats:
                         contains_stop_codon += 1
 
         if empty_id_count > 0:
-            self._add_error(f"{empty_id_count} sequences with empty ids in {fasta_path}")
+            self.add_error(f"{empty_id_count} sequences with empty ids in {fasta_path}")
         if non_unique_count > 0:
-            self._add_error(f"{non_unique_count} non unique sequence ids in {fasta_path}")
+            self.add_error(f"{non_unique_count} non unique sequence ids in {fasta_path}")
         if contains_stop_codon > 0:
-            self._add_error(f"{contains_stop_codon} sequences with stop codons in {fasta_path}")
+            self.add_error(f"{contains_stop_codon} sequences with stop codons in {fasta_path}")
         if rec_count == 0:
-            self._add_error(f"No sequences found in {fasta_path}")
+            self.add_error(f"No sequences found in {fasta_path}")
         return data
 
     def get_functional_annotation(self, json_path: Path | None) -> None:
