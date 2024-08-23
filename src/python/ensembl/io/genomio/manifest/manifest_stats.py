@@ -183,7 +183,7 @@ class ManifestStats:
             self.add_error(f"No sequences found in {fasta_path}")
         return data
 
-    def get_functional_annotation(self, json_path: Path | None) -> None:
+    def get_functional_annotation(self) -> None:
         """Load the functional annotation file to retrieve the gene_id and translation id.
             A functional annotation file contains information about a gene.
             The functional annotation file is stored in a json format containing
@@ -192,12 +192,12 @@ class ManifestStats:
         Args:
             json_path: Path to functional_annotation.json.
         """
-        if not json_path:
+        if not "functional_annotation" in self.manifest_files:
             return
         logging.info("Manifest contains functional annotation(s)")
 
         # Load the json file
-        with open(json_path) as json_file:
+        with open(self.manifest_files["functional_annotation"]) as json_file:
             data = json.load(json_file)
 
         # Get gene ids and translation ids
@@ -358,7 +358,7 @@ class ManifestStats:
         self.get_dna_fasta_lengths()
         self.get_peptides_fasta_lengths()
         self.get_seq_regions()
-        self.get_functional_annotation(self.manifest_files.get("functional_annotation"))
+        self.get_functional_annotation()
         self.get_agp_seq_regions(self.manifest_files.get("agp"))
         if "genome" in self.manifest_files:
             logging.info("Manifest contains genome JSON")

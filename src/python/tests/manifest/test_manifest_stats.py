@@ -21,6 +21,7 @@ from pytest import raises, param, mark
 
 from ensembl.io.genomio.manifest import Manifest
 from ensembl.io.genomio.manifest.manifest_stats import ManifestStats
+from ensembl.io.genomio.utils import print_json
 
 
 @pytest.fixture(name="manifest_path")
@@ -149,13 +150,51 @@ def test_get_peptides_fasta_lengths(
         assert stats.errors[0].startswith(expected_error)
 
 
+@mark.parametrize(
+    "json_data, expected_key, expected_data",
+    [
+        param(None, "", {}, id="No JSON"),
+        param({}, "", {}, id="Empty JSON"),
+        param({"id": "gene1", "object_type": "gene"}, "ann_genes", {"gene1": 1}, id="1 gene"),
+        param(
+            {"id": "pep1", "object_type": "translation"}, "ann_translations", {"pep1": 1}, id="1 translation"
+        ),
+        param(
+            {"id": "te1", "object_type": "transposable_element"},
+            "ann_transposable_elements",
+            {"te1": 1},
+            id="1 te",
+        ),
+    ],
+)
+def test_get_functional_annotations(
+    tmp_path: Path,
+    json_data: dict | None,
+    expected_key: str,
+    expected_data: dict[str, int],
+):
+    """Tests `ManifestStats.get_functional_annotation()`."""
+    func_path = tmp_path / "functional_annotation.json"
+    if json_data is not None:
+        if json_data:
+            print_json(func_path, [json_data])
+        else:
+            print_json(func_path, [])
+    manifest = Manifest(tmp_path)
+    manifest.create()
+    stats = ManifestStats(manifest.dir / "manifest.json")
+    stats.get_functional_annotation()
+    if expected_key:
+        assert stats.lengths[expected_key] == expected_data
+
+
 def test_has_lengths(manifest_path: Path):
     """Tests `ManifestStats.has_lengths()`."""
     stats = ManifestStats(manifest_path)
     with raises(KeyError):
         stats.has_lengths("foobar")
     assert not stats.has_lengths("ann_genes")
-    stats.get_functional_annotation(manifest_path.parent / "functional_annotation.json")
+    stats.get_functional_annotation()
     assert stats.has_lengths("ann_genes")
 
 
@@ -165,7 +204,7 @@ def test_get_lengths(manifest_path: Path):
     with raises(KeyError):
         stats.get_lengths("foobar")
     assert not stats.has_lengths("ann_genes")
-    stats.get_functional_annotation(manifest_path.parent / "functional_annotation.json")
+    stats.get_functional_annotation()
     circular = stats.get_lengths("ann_genes")
     assert circular == {"ECC02_000372": 1}
 
