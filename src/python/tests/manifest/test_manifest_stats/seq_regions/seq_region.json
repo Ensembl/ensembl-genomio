@@ -1,0 +1,23 @@
+[
+    {
+        "circular": true,
+        "coord_system_level": "chromosome",
+        "length": 100,
+        "name": "seq1",
+        "synonyms": [
+            {
+                "name": "seq1_gb",
+                "source": "GenBank"
+            },
+            {
+                "name": "seq1_insdc",
+                "source": "INSDC_submitted_name"
+            }
+        ]
+    },
+    {
+        "coord_system_level": "contig",
+        "length": 10,
+        "name": "seq2"
+    }
+]

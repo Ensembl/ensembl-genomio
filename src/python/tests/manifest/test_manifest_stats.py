@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import ContextManager
 
 import pytest
-from pytest import raises
+from pytest import raises, param, mark
 
 from ensembl.io.genomio.manifest.manifest_stats import ManifestStats, InvalidIntegrityError
 
@@ -42,6 +42,38 @@ def test_add_error(manifest_path: Path):
     assert not stats.errors
     stats.add_error("lorem")
     assert stats.errors[0] == "lorem"
+
+
+@mark.parametrize(
+    "manifest_dir, expected_lengths, expected_circular",
+    [
+        param("", {}, {}),
+        param(
+            "seq_regions",
+            {"seq1": 100, "seq1_gb": 100, "seq1_insdc": 100, "seq2": 10},
+            {"seq1": True, "seq2": False},
+        ),
+    ],
+)
+def test_get_seq_regions(
+    data_dir: Path,
+    tmp_path: Path,
+    manifest_dir: str,
+    expected_lengths: dict[str, int],
+    expected_circular: dict[str, bool],
+):
+    """Tests `ManifestStats.get_seq_regions()`."""
+    if manifest_dir:
+        seq_manifest = data_dir / manifest_dir / "manifest.json"
+    else:
+        seq_manifest = tmp_path / "manifest.json"
+        with seq_manifest.open("w") as manifest_fh:
+            manifest_fh.write("{}")
+
+    stats = ManifestStats(data_dir / seq_manifest)
+    stats.get_seq_regions()
+    assert stats.lengths["seq_regions"] == expected_lengths
+    assert stats.circular["seq_regions"] == expected_circular
 
 
 def test_has_lengths(manifest_path: Path):

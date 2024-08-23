@@ -103,13 +103,11 @@ class ManifestStats:
 
     def get_seq_regions(self):
         """Retrieve seq_regions lengths and circular information from the seq_region JSON file."""
+
         if not "seq_region" in self.manifest_files:
             return
         logging.info("Manifest contains seq_region JSON")
         seq_regions = get_json(Path(self.manifest_files["seq_region"]))
-        if len(seq_regions) == 0:
-            self.add_error(f"No sequences found in {self.manifest_files['seq_region']}")
-            return
         seqr_seqlevel = {}
         seq_lengths = {}
         seq_circular = {}
@@ -354,7 +352,7 @@ class ManifestStats:
             self.lengths["peptide_sequences"] = self.get_fasta_lengths(
                 self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
             )
-            self.get_seq_regions()
+        self.get_seq_regions()
         self.get_functional_annotation(self.manifest_files.get("functional_annotation"))
         self.get_agp_seq_regions(self.manifest_files.get("agp"))
         if "genome" in self.manifest_files:
