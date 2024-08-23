@@ -98,76 +98,9 @@ class ManifestStats:
                     manifest_files[name][f] = Path(manifest_path).parent / manifest_files[name][f]["file"]
         return manifest_files
 
-    def has_lengths(self, name: str) -> bool:
-        """Check if a given name has lengths records.
-
-        Raise KeyError if the name is not supported.
-
-        """
-        try:
-            return bool(self.lengths[name])
-        except KeyError as err:
-            raise KeyError(f"There is no length record for {name}") from err
-
-    def get_lengths(self, name: str) -> dict[str, Any]:
-        """Returns a dict associating IDs with their length from a given file name."""
-        try:
-            return self.lengths[name]
-        except KeyError as err:
-            raise KeyError(f"There is no length record for {name}") from err
-
-    def get_circular(self, name: str) -> dict[str, Any]:
-        """Returns a dict associating IDs with their is_circular flag from a given file name."""
-        try:
-            return self.circular[name]
-        except KeyError as err:
-            raise KeyError(f"No length available for key {name}") from err
-
     def _add_error(self, error: str) -> None:
         """Record an error."""
         self.errors.append(error)
-
-    def _check_md5sum(self, file_path: Path, md5sum: str) -> None:
-        """Verify the integrity of the files in manifest.json.
-
-        An MD5 hash is generated using the path provided which is then compared to the hash in manifest.json.
-        Errors are stored in ``self.errors``.
-
-        Args:
-            file_path: Path to a genome file.
-            md5sum: MD5 hash for the files.
-        """
-
-        with file_path.open("rb") as f:
-            bytes_obj = f.read()
-            readable_hash = hashlib.md5(bytes_obj).hexdigest()
-            if readable_hash != md5sum:
-                raise InvalidIntegrityError(f"Invalid md5 checksum for {file_path}")
-
-    def prepare_integrity_data(self) -> None:  # pylint: disable=too-many-branches
-        """Read all the files and keep a record (IDs and their lengths)
-        for each cases to be compared later.
-        """
-        # First, get the Data
-        if "gff3" in self.manifest_files:
-            logging.info("Manifest contains GFF3")
-            self.get_gff3(self.manifest_files["gff3"])
-        if "fasta_dna" in self.manifest_files:
-            logging.info("Manifest contains DNA fasta")
-            # Verify if the length and id for the sequence is unique
-            self.lengths["dna_sequences"] = self.get_fasta_lengths(self.manifest_files["fasta_dna"])
-        if "fasta_pep" in self.manifest_files:
-            logging.info("Manifest contains Peptide fasta")
-            # Verify if the length and id for the sequence is unique
-            self.lengths["peptide_sequences"] = self.get_fasta_lengths(
-                self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
-            )
-            self.get_seq_regions()
-        self.get_functional_annotation(self.manifest_files.get("functional_annotation"))
-        self.get_agp_seq_regions(self.manifest_files.get("agp"))
-        if "genome" in self.manifest_files:
-            logging.info("Manifest contains genome JSON")
-            self.lengths["genome"] = get_json(Path(self.manifest_files["genome"]))
 
     def get_seq_regions(self):
         """Retrieve seq_regions lengths and circular information from the seq_region JSON file."""
@@ -403,3 +336,53 @@ class ManifestStats:
                         seqr[cmp_id] = int(cmp_end)
 
         self.lengths["agp"] = seqr
+
+    def prepare_integrity_data(self) -> None:  # pylint: disable=too-many-branches
+        """Read all the files and keep a record (IDs and their lengths)
+        for each cases to be compared later.
+        """
+        # First, get the Data
+        if "gff3" in self.manifest_files:
+            logging.info("Manifest contains GFF3")
+            self.get_gff3(self.manifest_files["gff3"])
+        if "fasta_dna" in self.manifest_files:
+            logging.info("Manifest contains DNA fasta")
+            # Verify if the length and id for the sequence is unique
+            self.lengths["dna_sequences"] = self.get_fasta_lengths(self.manifest_files["fasta_dna"])
+        if "fasta_pep" in self.manifest_files:
+            logging.info("Manifest contains Peptide fasta")
+            # Verify if the length and id for the sequence is unique
+            self.lengths["peptide_sequences"] = self.get_fasta_lengths(
+                self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
+            )
+            self.get_seq_regions()
+        self.get_functional_annotation(self.manifest_files.get("functional_annotation"))
+        self.get_agp_seq_regions(self.manifest_files.get("agp"))
+        if "genome" in self.manifest_files:
+            logging.info("Manifest contains genome JSON")
+            self.lengths["genome"] = get_json(Path(self.manifest_files["genome"]))
+
+    def has_lengths(self, name: str) -> bool:
+        """Check if a given name has lengths records.
+
+        Raise KeyError if the name is not supported.
+
+        """
+        try:
+            return bool(self.lengths[name])
+        except KeyError as err:
+            raise KeyError(f"There is no length record for {name}") from err
+
+    def get_lengths(self, name: str) -> dict[str, Any]:
+        """Returns a dict associating IDs with their length from a given file name."""
+        try:
+            return self.lengths[name]
+        except KeyError as err:
+            raise KeyError(f"There is no length record for {name}") from err
+
+    def get_circular(self, name: str) -> dict[str, Any]:
+        """Returns a dict associating IDs with their is_circular flag from a given file name."""
+        try:
+            return self.circular[name]
+        except KeyError as err:
+            raise KeyError(f"No length available for key {name}") from err
