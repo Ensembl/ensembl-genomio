@@ -25,12 +25,13 @@ from ensembl.io.genomio.manifest.manifest_stats import ManifestStats, InvalidInt
 
 
 def test_manifest_stats_init(data_dir: Path) -> None:
-    """Tests `Manifest_stats.__init__()`."""
+    """Tests `ManifestStats.__init__()`."""
     manifest_stats = ManifestStats(data_dir / "full_data/manifest.json")
     assert manifest_stats
 
 
-def test_has_length(data_dir: Path):
+def test_has_lengths(data_dir: Path):
+    """Tests `ManifestStats.has_lengths()`."""
     stats = ManifestStats(data_dir / "full_data/manifest.json")
     with raises(KeyError):
         stats.has_lengths("foobar")
@@ -39,7 +40,8 @@ def test_has_length(data_dir: Path):
     assert stats.has_lengths("ann_genes")
 
 
-def test_get_length(data_dir: Path):
+def test_get_lengths(data_dir: Path):
+    """Tests `ManifestStats.get_lengths()`."""
     stats = ManifestStats(data_dir / "full_data/manifest.json")
     with raises(KeyError):
         stats.get_lengths("foobar")
@@ -50,6 +52,7 @@ def test_get_length(data_dir: Path):
 
 
 def test_get_circular(data_dir: Path):
+    """Tests `ManifestStats.get_circular()`."""
     stats = ManifestStats(data_dir / "full_data/manifest.json")
     with raises(KeyError):
         stats.get_circular("foobar")

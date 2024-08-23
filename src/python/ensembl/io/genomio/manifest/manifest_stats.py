@@ -51,7 +51,7 @@ class ManifestStats:
     """
 
     def __init__(self, manifest_path: PathLike) -> None:
-        self.manifest_files = self.get_manifest(manifest_path)
+        self.manifest_files = self._get_manifest(manifest_path)
         self.genome: dict[str, Any] = {}
 
         self.lengths: dict[str, StatsLengths] = {
@@ -80,7 +80,7 @@ class ManifestStats:
         self.ignore_final_stops = False
         self.brc_mode = False
 
-    def get_manifest(self, manifest_path: PathLike) -> dict[str, Any]:
+    def _get_manifest(self, manifest_path: PathLike) -> dict[str, Any]:
         """Load the content of a manifest file.
 
         Returns:
@@ -124,6 +124,7 @@ class ManifestStats:
             raise KeyError(f"No length available for key {name}") from err
 
     def _add_error(self, error: str) -> None:
+        """Record an error."""
         self.errors.append(error)
 
     def _check_md5sum(self, file_path: Path, md5sum: str) -> None:
@@ -169,6 +170,7 @@ class ManifestStats:
             self.lengths["genome"] = get_json(Path(self.manifest_files["genome"]))
 
     def get_seq_regions(self):
+        """Retrieve seq_regions lengths and circular information from the seq_region JSON file."""
         if not "seq_region" in self.manifest_files:
             return
         logging.info("Manifest contains seq_region JSON")
