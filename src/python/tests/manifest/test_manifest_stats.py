@@ -76,6 +76,37 @@ def test_get_seq_regions(
 
 
 @mark.parametrize(
+    "fasta_str, expected_lengths, expected_error",
+    [
+        param(">prot1\nCGTA\n", {"prot1": 4}, "", id="Normal DNA seq"),
+        param("", {}, "", id="Empty fasta"),
+        param("CGTA", {}, "No sequences found", id="No sequences in fasta"),
+        param(">\nCGTA\n", {}, "1 sequences with empty ids", id="empty ID"),
+    ],
+)
+def test_get_dna_fasta_lengths(
+    tmp_path: Path,
+    fasta_str: str,
+    expected_lengths: dict[str, int],
+    expected_error: str,
+):
+    """Tests `ManifestStats.get_dna_fasta_lengths()`."""
+    fasta_path = tmp_path / "fasta_dna.fasta"
+    with fasta_path.open("w") as fasta_fh:
+        fasta_fh.write(fasta_str)
+    manifest = Manifest(tmp_path)
+    manifest.create()
+    stats = ManifestStats(manifest.dir / "manifest.json")
+    stats.get_dna_fasta_lengths()
+    assert stats.lengths["dna_sequences"] == expected_lengths
+    if expected_error == "":
+        assert not stats.errors
+    else:
+        assert len(stats.errors) == 1
+        assert stats.errors[0].startswith(expected_error)
+
+
+@mark.parametrize(
     "fasta_str, ignore_final_stops, expected_lengths, expected_error",
     [
         param(">prot1\nMAGIC\n", False, {"prot1": 5}, "", id="Normal prot"),
@@ -101,7 +132,7 @@ def test_get_peptides_fasta_lengths(
     expected_lengths: dict[str, int],
     expected_error: str,
 ):
-    """Tests `ManifestStats.get_seq_regions()`."""
+    """Tests `ManifestStats.get_peptides_fasta_lengths()`."""
     fasta_path = tmp_path / "fasta_pep.fasta"
     with fasta_path.open("w") as fasta_fh:
         fasta_fh.write(fasta_str)
