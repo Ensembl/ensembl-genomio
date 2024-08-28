@@ -19,12 +19,13 @@ Typical usage example::
 
 """
 
+from contextlib import contextmanager, nullcontext
 from contextlib import nullcontext as does_not_raise
 from io import StringIO
 import filecmp
 from pathlib import Path
 import re
-from typing import ContextManager, Optional, Set
+from typing import ContextManager, Generator, Optional
 
 import pytest
 
@@ -199,20 +200,19 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
 
 @pytest.mark.parametrize(
     "input_fasta_text, chunk_size, chunk_size_tolerated, n_sequece_len, "
-    "individual_file_prefix, chunk_sfx, append_offset_to_chunk_name, "
+    "chunk_sfx, append_offset_to_chunk_name, "
     "expected_chunked_fasta_text, expected_agp_list, expected_individual_files_count, "
     "expected_raised",
     [
-        ("", 2, 2, 2, None, "p", True, "", [], 0, does_not_raise()),
-        ("\n", 2, 2, 2, None, "p", True, "", [], 0, does_not_raise()),
-        ("AA\n", 2, 2, 2, None, "p", True, "", [], 0, does_not_raise()),
+        ("", 2, 2, 2, "p", True, "", [], 0, does_not_raise()),
+        ("\n", 2, 2, 2, "p", True, "", [], 0, does_not_raise()),
+        ("AA\n", 2, 2, 2, "p", True, "", [], 0, does_not_raise()),
         (
             # title, no sequence
             ">a\n",
             2,
             2,
-            2, # Ns
-            None,
+            2,  # Ns
             "p",
             True,
             ">a_p_001_off_0 AGP a 1 0 1 W a_p_001_off_0 1 0 +\n",
@@ -224,8 +224,7 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
             ">c\nAAANNAAA\n",
             3,
             3,
-            3, # Ns
-            None,
+            3,  # Ns
             "p",
             True,
             ">c_p_001_off_0 AGP c 1 3 1 W c_p_001_off_0 1 3 +\n"
@@ -235,9 +234,9 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
             ">c_p_003_off_6 AGP c 7 8 3 W c_p_003_off_6 1 2 +\n"
             "AA\n",
             [
-                'c\t1\t3\t1\tW\tc_p_001_off_0\t1\t3\t+',
-                'c\t4\t6\t2\tW\tc_p_002_off_3\t1\t3\t+',
-                'c\t7\t8\t3\tW\tc_p_003_off_6\t1\t2\t+',
+                "c\t1\t3\t1\tW\tc_p_001_off_0\t1\t3\t+",
+                "c\t4\t6\t2\tW\tc_p_002_off_3\t1\t3\t+",
+                "c\t7\t8\t3\tW\tc_p_003_off_6\t1\t2\t+",
             ],
             3,
             does_not_raise(),
@@ -246,8 +245,7 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
             ">c\nAAANNAAA\n",
             3,
             5,
-            2, # Ns
-            None,
+            2,  # Ns
             "p",
             True,
             ">c_p_001_off_0 AGP c 1 5 1 W c_p_001_off_0 1 5 +\n"
@@ -255,9 +253,8 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
             ">c_p_002_off_5 AGP c 6 8 2 W c_p_002_off_5 1 3 +\n"
             "AAA\n",
             [
-                'c\t1\t5\t1\tW\tc_p_001_off_0\t1\t5\t+',
-                'c\t6\t8\t2\tW\tc_p_002_off_5\t1\t3\t+',
-
+                "c\t1\t5\t1\tW\tc_p_001_off_0\t1\t5\t+",
+                "c\t6\t8\t2\tW\tc_p_002_off_5\t1\t3\t+",
             ],
             2,
             does_not_raise(),
@@ -269,7 +266,6 @@ def test_chunk_fasta_stream(
     chunk_size: int,
     chunk_size_tolerated: int,
     n_sequece_len: int,
-    individual_file_prefix: Optional[str],
     chunk_sfx: str,
     append_offset_to_chunk_name: Optional[bool],
     expected_chunked_fasta_text: str,
@@ -284,25 +280,60 @@ def test_chunk_fasta_stream(
         ...
     """
 
-    def _individual_opener(x: Path) -> Path:
-        return x
+    # a workaround for storing individual chunks
+    @contextmanager
+    def gen_individual_opener(name: str, parts: list[tuple[str, str]]) -> Generator[StringIO]:
+        stream = StringIO()
+        try:
+            yield stream
+        finally:
+            # Code to release resource, e.g.:
+            parts.append((name, stream.getvalue()))
+            stream.close()
+
+    parts: list[tuple[str, str]] = []
+
+    def _individual_opener(name: str):
+        return gen_individual_opener(name, parts)
 
     # assert joined case
     with StringIO(input_fasta_text) as input_fasta:
         with StringIO() as output_fasta:
+            parts.clear()
             with expected_raised:
                 agp_list = FastaChunking.chunk_fasta_stream(
                     input_fasta,
                     chunk_size,
                     chunk_size_tolerated,
                     output_fasta,
-                    individual_file_prefix,
+                    None,
                     n_sequece_len,
                     chunk_sfx,
                     append_offset_to_chunk_name,
+                    open_individual=_individual_opener,
                 )
             assert output_fasta.getvalue() == expected_chunked_fasta_text
             assert agp_list == expected_agp_list
+            assert len(parts) == 0
+
+    with StringIO(input_fasta_text) as input_fasta:
+        with nullcontext() as no_output_fasta:
+            parts.clear()
+            with expected_raised:
+                agp_list = FastaChunking.chunk_fasta_stream(
+                    input_fasta,
+                    chunk_size,
+                    chunk_size_tolerated,
+                    no_output_fasta,
+                    "/path/prefix",
+                    n_sequece_len,
+                    chunk_sfx,
+                    append_offset_to_chunk_name,
+                    open_individual=_individual_opener,
+                )
+            assert "".join(map(lambda p: p[1], parts)) == expected_chunked_fasta_text
+            assert agp_list == expected_agp_list
+            assert len(parts) == expected_individual_files_count
 
 
 # assert individual files case
