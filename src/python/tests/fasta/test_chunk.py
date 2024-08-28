@@ -276,13 +276,22 @@ def test_chunk_fasta_stream(
     """Tests the `chunk.chunk_fasta_stream` function.
 
     Args:
-        tmp_path: Where temporary files will be created.
         ...
+        input_fasta_text: A string with the input fasta,
+        chunk_size: Size of the chunks to split into.
+        chunk_size_tolerated: If more flexibility allowed, use this as the maximum size of a chunk.
+        n_sequece_len: Length of the stretch of `N`s to split at; not slitting on `N`s if 0.
+        chunk_sfx: A string to put between the original sequence name and the chunk suffix.
+        append_offset_to_chunk_name: A flag to append 0-based offset (`_off_{offset}`) to the chunk name.
+        expected_chunked_fasta_text: Expected chuncked ouput.
+        expected_agp_list: A list with expected AGP entries.
+        expected_individual_files_count: A number of idividually creted entitities/chunks with files.
+        expected_raised: A context manager with expected exception (`pytest.raises` or nullcontext)
     """
 
     # a workaround for storing individual chunks
     @contextmanager
-    def gen_individual_opener(name: str, parts: list[tuple[str, str]]) -> Generator[StringIO]:
+    def gen_individual_opener(name: str, parts: list[tuple[str, str]]) -> Generator:
         stream = StringIO()
         try:
             yield stream
@@ -336,10 +345,4 @@ def test_chunk_fasta_stream(
             assert len(parts) == expected_individual_files_count
 
 
-# assert individual files case
-
-# assert FastaChunking.chunk_fasta_stream(...) == expected_agp
-
-# and for inividual files output
-#    check joined files == joined_output
-#    check for file count
+# def test_chunk_fasta

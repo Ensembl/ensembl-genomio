@@ -162,7 +162,7 @@ def chunk_fasta_stream(
                 firts part of the chunk file name.
         n_sequece_len: Length of the stretch of `N`s to split at; not slitting on `N`s if 0.
         chunk_sfx: A string to put between the original sequence name and the chunk suffix.
-        append_offset_to_chunk_name: Append 0-based offset in the form of `_off_{offset}` to the chunk name.
+        append_offset_to_chunk_name: A flag to append 0-based offset (`_off_{offset}`) to the chunk name.
         open_individual: A callable taking filename as an input to generatethe output file for
                 individual contig if out_put FASTA is `false` of `None`, folders should be preexisting.
     """
