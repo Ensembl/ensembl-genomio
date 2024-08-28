@@ -211,35 +211,55 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
             ">a\n",
             2,
             2,
-            2,
+            2, # Ns
             None,
             "p",
             True,
             ">a_p_001_off_0 AGP a 1 0 1 W a_p_001_off_0 1 0 +\n",
             ["a\t1\t0\t1\tW\ta_p_001_off_0\t1\t0\t+"],
-            0,
+            1,
             does_not_raise(),
         ),
         (
-            ">c\nAAANAA\n",
-            2,
-            2,
-            2,
+            ">c\nAAANNAAA\n",
+            3,
+            3,
+            3, # Ns
             None,
             "p",
             True,
-            ">c_p_001_off_0 AGP c 1 2 1 W c_p_001_off_0 1 2 +\n"
-            "AA\n"
-            ">c_p_002_off_2 AGP c 3 4 2 W c_p_002_off_2 1 2 +\n"
-            "AN\n"
-            ">c_p_003_off_4 AGP c 5 6 3 W c_p_003_off_4 1 2 +\n"
+            ">c_p_001_off_0 AGP c 1 3 1 W c_p_001_off_0 1 3 +\n"
+            "AAA\n"
+            ">c_p_002_off_3 AGP c 4 6 2 W c_p_002_off_3 1 3 +\n"
+            "NNA\n"
+            ">c_p_003_off_6 AGP c 7 8 3 W c_p_003_off_6 1 2 +\n"
             "AA\n",
             [
-                "c\t1\t2\t1\tW\tc_p_001_off_0\t1\t2\t+",
-                "c\t3\t4\t2\tW\tc_p_002_off_2\t1\t2\t+",
-                "c\t5\t6\t3\tW\tc_p_003_off_4\t1\t2\t+",
+                'c\t1\t3\t1\tW\tc_p_001_off_0\t1\t3\t+',
+                'c\t4\t6\t2\tW\tc_p_002_off_3\t1\t3\t+',
+                'c\t7\t8\t3\tW\tc_p_003_off_6\t1\t2\t+',
             ],
-            0,
+            3,
+            does_not_raise(),
+        ),
+        (
+            ">c\nAAANNAAA\n",
+            3,
+            5,
+            2, # Ns
+            None,
+            "p",
+            True,
+            ">c_p_001_off_0 AGP c 1 5 1 W c_p_001_off_0 1 5 +\n"
+            "AAANN\n"
+            ">c_p_002_off_5 AGP c 6 8 2 W c_p_002_off_5 1 3 +\n"
+            "AAA\n",
+            [
+                'c\t1\t5\t1\tW\tc_p_001_off_0\t1\t5\t+',
+                'c\t6\t8\t2\tW\tc_p_002_off_5\t1\t3\t+',
+
+            ],
+            2,
             does_not_raise(),
         ),
     ],
