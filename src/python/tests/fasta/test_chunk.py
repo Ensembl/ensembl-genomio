@@ -21,11 +21,10 @@ Typical usage example::
 
 from contextlib import contextmanager, nullcontext
 from contextlib import nullcontext as does_not_raise
-from io import StringIO
-import filecmp
+from io import StringIO, TextIOWrapper
 from pathlib import Path
 import re
-from typing import ContextManager, Generator, Optional
+from typing import Any, Callable, ContextManager, Generator, Optional
 
 import pytest
 
@@ -276,7 +275,6 @@ def test_chunk_fasta_stream(
     """Tests the `chunk.chunk_fasta_stream` function.
 
     Args:
-        ...
         input_fasta_text: A string with the input fasta,
         chunk_size: Size of the chunks to split into.
         chunk_size_tolerated: If more flexibility allowed, use this as the maximum size of a chunk.
@@ -345,4 +343,99 @@ def test_chunk_fasta_stream(
             assert len(parts) == expected_individual_files_count
 
 
-# def test_chunk_fasta
+@pytest.mark.parametrize(
+    "individual_file_prefix, agp_output_file_name, expected_missing_joined",
+    [
+        ("chunk", "test.agp", pytest.raises(FileNotFoundError, match=r"output.fa")),
+        ("chunk", None, pytest.raises(FileNotFoundError, match=r"output.fa")),
+        ("", "test.agp", does_not_raise()),
+        (None, "test.agp", does_not_raise()),
+        ("", "", does_not_raise()),
+        (None, None, does_not_raise()),
+    ],
+)
+def test_chunk_fasta(
+    monkeypatch: Any,
+    tmp_path: Path,
+    individual_file_prefix: Optional[str],
+    agp_output_file_name: Optional[str],
+    expected_missing_joined: ContextManager,
+) -> None:
+    """Tests the `chunk.chunk_fasta` function.
+
+    Args:
+        tmp_path: Where temporary files will be created.
+        individual_file_prefix: A file path prefix including dirs and filenames part to use as a
+                firts part of the chunk file name or None.
+        agp_output_file_name: Output AGP file name or None.
+        expected_missing_joined: A context manager with expected exception (`pytest.raises` or nullcontext).
+    """
+
+    # a helper mock function
+    def _chunk_fasta_stream_mock(
+        input_fasta: TextIOWrapper,
+        chunk_size: int,
+        chunk_size_tolerated: int,
+        output_fasta: Optional[TextIOWrapper] | nullcontext[Any],
+        individual_file_prefix: Optional[str],
+        n_sequece_len: int,
+        chunk_sfx: str,
+        append_offset_to_chunk_name: Optional[bool],
+        open_individual: Callable[[str], TextIOWrapper] = FastaChunking._individual_file_opener,
+    ) -> list[str]:
+        """Mock the `chunk.chunk_fasta_stream` function.
+
+        Args:
+            *args: Positional argumnets.
+            **kwargs: Keyword arguments.
+        """
+        chunk_file_name = ""
+        if individual_file_prefix:
+            chunk_file_name = f"{individual_file_prefix}"
+        with output_fasta and nullcontext(output_fasta) or open_individual(chunk_file_name) as out_file:
+            for line in input_fasta:
+                out_file.write(line)  # type: ignore[union-attr]
+        return ["AGP", "TEST"]
+
+    # temp dirs and files
+    test_dir = Path(tmp_path, "chunk_fasta_test")
+    test_dir.mkdir()
+
+    input_fa = Path(test_dir, "input.fa")
+    input_fa.write_text("test\n", encoding="utf-8")
+
+    output_fa = Path(test_dir, "output.fa")
+
+    individual_fa = None
+    if individual_file_prefix:
+        individual_fa = Path(test_dir, f"{individual_file_prefix}_individual.fa")
+
+    output_agp = None
+    if agp_output_file_name:
+        output_agp = Path(test_dir, f"{agp_output_file_name}")
+
+    # patch and test
+    monkeypatch.setattr(FastaChunking, "chunk_fasta_stream", _chunk_fasta_stream_mock)
+    FastaChunking.chunk_fasta(
+        str(input_fa),
+        1,  # chunk_size
+        1,  # chunk_size_tolerated
+        str(output_fa),
+        individual_file_prefix and str(individual_fa) or None,
+        agp_output_file_name and str(output_agp) or None,
+        0,  # Ns
+        "sfx",
+        True,
+    )
+
+    with expected_missing_joined:
+        assert output_fa.read_text(encoding="utf-8") == "test\n"
+
+    if individual_fa:
+        with does_not_raise():
+            assert individual_fa.read_text(encoding="utf-8") == "test\n"
+
+    # agp test
+    if output_agp:
+        with does_not_raise():
+            assert output_agp.read_text(encoding="utf-8") == "AGP\nTEST\n"

@@ -251,7 +251,7 @@ def chunk_fasta(
     n_sequece_len: int = 0,
     chunk_sfx: str = "ens_chunk",
     append_offset_to_chunk_name: Optional[bool] = None,
-):
+) -> None:
     """Open `input_fasta_file` and split into a smaller chunks based on
     stratches of "N"s and then based on chunk_size_tolerated and store either to
     the `out_file_name` if no `individual_file_prefix` is provided or
