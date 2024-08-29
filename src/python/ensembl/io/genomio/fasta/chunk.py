@@ -407,7 +407,3 @@ def main():
         chunk_sfx=args.chunk_sfx,
         append_offset_to_chunk_name=args.add_offset,
     )
-
-
-if __name__ == "__main__":
-    main()
