@@ -53,13 +53,13 @@ class MockResult:
 
 
 class MockConnection:
-    """Mock a SQLalchemy connection."""
+    """Mock a SQLAlchemy connection."""
 
     def __init__(self, result: MockResult) -> None:
         self.result = result
 
     def execute(self, *args, **kwargs) -> MockResult:  # pylint: disable=unused-argument
-        """Returns a MockResult object."""
+        """Returns a `MockResult` object."""
         return self.result
 
     def __enter__(self, *args, **kwargs):  # pylint: disable=unused-argument

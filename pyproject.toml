@@ -51,7 +51,7 @@ classifiers = [
 dependencies = [
     "bcbio-gff == 0.7.1",
     "biopython >= 1.81",
-    "ensembl-py >= 2.1",
+    "ensembl-py >= 2.1.0",
     "ensembl-utils >= 0.4.1",
     "jsonschema >= 4.6.0",
     "intervaltree >= 3.1.0",
