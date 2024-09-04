@@ -58,8 +58,10 @@ def schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir
                 if isinstance(json_files[metadata_key], dict):
                     for key, filepath in json_files[metadata_key].items():
                         shutil.copyfile(filepath, Path(output_dir, f"{metadata_key}_{key}.json"))
+                        return filepath, metadata_key
                 else:
                     shutil.copyfile(json_files[metadata_key], Path(output_dir, f"{metadata_key}.json"))
+                    return json_files[metadata_key], metadata_key
 
 
 def main() -> None:
@@ -76,7 +78,6 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--output_dir", default=Path.cwd(), help="Folder to store the produced files"
     )
-    parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
 

@@ -324,7 +324,13 @@ sub pipeline_analyses {
 
     {
       -logic_name => 'json_schema_factory',
-      -module     => 'ensembl.brc4.runnable.json_schema_factory',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+      -parameters  => {
+        # schemas_json_validate will automatically fetch the JSON schema file corresponding to metadata_type
+        cmd =>
+             . 'json_schema_factory --manifest_dir #manifest_dir# --metadata_types #metadata_type#',
+        metadata_type => ["seq_region", "genome", "functional_annotation"],
+      },
       -language => 'python3',
       -rc_name    => 'default',
       -analysis_capacity => 1,
@@ -340,9 +346,9 @@ sub pipeline_analyses {
       -parameters  => {
         # schemas_json_validate will automatically fetch the JSON schema file corresponding to metadata_type
         cmd => 'mkdir -p #log_path#; '
-             . 'echo "checking #json# against #metadata_type#" > #log_path#/#metadata_type#.log; '
-             . 'schemas_json_validate --json_file #json# --json_schema #metadata_type# '
-             . '   >> #log_path#/#metadata_type#.log 2>&1 ',
+             . 'echo "checking #json# against #metadata_key#" > #log_path#/#metadata_key#.log; '
+             . 'schemas_json_validate --json_file #json# --json_schema #metadata_key# '
+             . '   >> #log_path#/#metadata_key#.log 2>&1 ',
         log_path => $self->o('pipeline_dir') . '/check_schemas',
         json => '#metadata_json#',
       },
