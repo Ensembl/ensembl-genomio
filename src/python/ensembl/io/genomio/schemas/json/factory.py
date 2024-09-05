@@ -20,27 +20,23 @@ import json
 from os import PathLike
 from pathlib import Path
 import shutil
-from typing import List
 
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir: PathLike) -> None:
+def schema_factory(manifest_dir: PathLike) -> None:
     """Generates one JSON file per metadata type inside `manifest`, including "manifest.json" itself.
 
     Each JSON file will have the file name of the metadata type, e.g. "seq_region.json".
 
     Args:
         manifest_dir: Path to the folder with the manifest JSON file to check.
-        metadata_types: Metadata types to extract from `manifest` as JSON files.
-        output_dir: Path to the folder where to generate the JSON files.
-
     """
-    manifest_path = Path(manifest_dir, "manifest.json")
+    metadata_types = ["seq_region", "genome", "functional_annotation"]
+    manifest_path = Path(manifest_dir)
     with manifest_path.open() as manifest_file:
         content = json.load(manifest_file)
-        shutil.copyfile(manifest_path, Path(output_dir, "manifest.json"))
         json_files = {}
         # Use dir name from the manifest
         for name in content:
@@ -57,12 +53,10 @@ def schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir
             if metadata_key in json_files:
                 if isinstance(json_files[metadata_key], dict):
                     for key, filepath in json_files[metadata_key].items():
-                        shutil.copyfile(filepath, Path(output_dir, f"{metadata_key}_{key}.json"))
-                        return filepath, metadata_key
+                        validate_files= [filepath, metadata_key]
                 else:
-                    shutil.copyfile(json_files[metadata_key], Path(output_dir, f"{metadata_key}.json"))
-                    return json_files[metadata_key], metadata_key
-
+                    validate_files = [json_files[metadata_key], metadata_key]
+        return validate_files
 
 def main() -> None:
     """Main script entry-point."""
@@ -71,12 +65,6 @@ def main() -> None:
     )
     parser.add_argument_src_path(
         "--manifest_dir", required=True, help="Folder containing the 'manifest.json' file to check"
-    )
-    parser.add_argument(
-        "--metadata_types", required=True, nargs="+", metavar="TYPE", help="Metadata types to extract"
-    )
-    parser.add_argument_dst_path(
-        "--output_dir", default=Path.cwd(), help="Folder to store the produced files"
     )
     args = parser.parse_args()
     init_logging_with_args(args)
