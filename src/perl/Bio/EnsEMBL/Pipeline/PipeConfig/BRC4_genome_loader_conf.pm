@@ -327,11 +327,9 @@ sub pipeline_analyses {
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
         # schemas_json_validate will automatically fetch the JSON schema file corresponding to metadata_type
-        cmd =>
-             . 'json_schema_factory --manifest_dir #manifest_dir# --metadata_types #metadata_type#',
-        metadata_type => ["seq_region", "genome", "functional_annotation"],
+        'cmd' =>
+             'schemas_json_factory --manifest_dir #manifest#',
       },
-      -language => 'python3',
       -rc_name    => 'default',
       -analysis_capacity => 1,
       -batch_size     => 50,
