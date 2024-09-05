@@ -299,8 +299,8 @@ class FunctionalAnnotations:
         empty_re = re.compile(r"^[ ]*$")
         return not bool(empty_re.match(product))
 
-    def _to_list(self):
-        all_list = []
+    def _to_list(self) -> list[Annotation]:
+        all_list: list[Annotation] = []
         for feat_dict in self.features.values():
             all_list += feat_dict.values()
         return all_list

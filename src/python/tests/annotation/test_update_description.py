@@ -16,10 +16,11 @@
 
 from contextlib import nullcontext as no_raise
 from pathlib import Path
-from typing import ContextManager
+from typing import Callable, ContextManager
 
 import pytest
 from pytest import CaptureFixture, param, raises
+import sqlalchemy
 from sqlalchemy import text
 
 from ensembl.io.genomio.annotation import get_core_data, load_descriptions
@@ -27,7 +28,7 @@ from ensembl.core.models import Gene, Transcript, ObjectXref, Xref, metadata
 from ensembl.utils.database import UnitTestDB
 
 
-def add_gene(dialect: str, session, gene_data: dict[str, str]) -> None:
+def add_gene(dialect: str, session: sqlalchemy.orm.Session, gene_data: dict[str, str]) -> None:
     """Add a gene and a transcript from a gene_data dict.
 
     Args:
@@ -89,7 +90,7 @@ def add_gene(dialect: str, session, gene_data: dict[str, str]) -> None:
 
 
 @pytest.fixture(name="annot_test_db", scope="module")
-def fixture_annotation_test_db(db_factory) -> UnitTestDB:
+def fixture_annotation_test_db(db_factory: Callable) -> UnitTestDB:
     """Returns a test database with all core tables and basic data."""
     test_db: UnitTestDB = db_factory(src="no_src", name="load_annotation")
     test_db.dbc.create_all_tables(metadata)

@@ -69,7 +69,7 @@ class TestFormattedFilesGenerator:
         type_feature: str,
         gene_name: str,
         formatted_files_generator: FormattedFilesGenerator,
-    ):
+    ) -> None:
         """Test to parse the features correctly"""
         record = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={gene_name: expected_name})
@@ -102,7 +102,7 @@ class TestFormattedFilesGenerator:
     def test_parse_record_with_unsupported_feature(
         self,
         formatted_files_generator: FormattedFilesGenerator,
-    ):
+    ) -> None:
         """Tests parsing records with unsupported features."""
         record = SeqRecord(Seq("ATGC"))
         unsupported_feature = SeqFeature(FeatureLocation(5, 10), type="gene")
