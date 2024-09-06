@@ -19,7 +19,6 @@ __all__ = ["schema_factory"]
 import json
 from os import PathLike
 from pathlib import Path
-import shutil
 
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -31,7 +30,8 @@ def schema_factory(manifest_dir: PathLike) -> None:
     Each JSON file will have the file name of the metadata type, e.g. "seq_region.json".
 
     Args:
-        manifest_dir: Path to the folder with the manifest JSON file to check.
+        manifest_dir: Path to manifest JSON file to check.
+
     """
     metadata_types = ["seq_region", "genome", "functional_annotation"]
     manifest_path = Path(manifest_dir)
@@ -64,7 +64,7 @@ def main() -> None:
         description="Generates one JSON file per metadata type in the provided manifest, including itself."
     )
     parser.add_argument_src_path(
-        "--manifest_dir", required=True, help="Folder containing the 'manifest.json' file to check"
+        "--manifest_dir", required=True, help="Path for 'manifest.json' file to check"
     )
     args = parser.parse_args()
     init_logging_with_args(args)
