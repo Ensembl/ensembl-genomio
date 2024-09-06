@@ -21,7 +21,6 @@ __all__ = [
 ]
 
 import json
-from os import PathLike
 from pathlib import Path
 from shutil import which
 from statistics import mean
@@ -30,6 +29,7 @@ from typing import Dict, List, Optional, Set, Union
 
 from BCBio import GFF
 
+from ensembl.utils import StrPath
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -83,7 +83,7 @@ class manifest_stats:
         self.manifest_parent = manifest_dir
         self.check_ncbi = False
 
-    def run(self, stats_path: PathLike):
+    def run(self, stats_path: StrPath) -> None:
         """Compute stats in the files and output a stats.txt file in the same folder.
 
         Raises:

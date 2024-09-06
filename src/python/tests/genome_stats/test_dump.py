@@ -27,6 +27,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import ClauseElement
 
 from ensembl.core.models import Gene, Transcript
 from ensembl.io.genomio.genome_stats import dump
@@ -70,7 +71,7 @@ class MockSession(Session):
     """Mocker of `sqlalchemy.orm.Session` class that replaces its `execute()` method for testing."""
 
     # pylint: disable-next=too-many-return-statements
-    def execute(self, statement) -> MockResult:  # type: ignore[override]
+    def execute(self, statement: ClauseElement) -> MockResult:  # type: ignore[override]
         """Returns a `MockResult` object representing results of the statement execution.
 
         Args:

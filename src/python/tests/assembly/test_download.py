@@ -65,7 +65,7 @@ def test_ftp_connection(
     ftp_url: str,
     accession: str,
     expectation: ContextManager,
-):
+) -> None:
     """Tests the FTPConnection method `establish_ftp()`.
 
     Args:
@@ -75,7 +75,7 @@ def test_ftp_connection(
         expectation: Context manager expected raise exception.
     """
 
-    def side_eff_conn(url: str):
+    def side_eff_conn(url: str) -> None:
         if not url:
             raise FTPConnectionError()
 
@@ -209,7 +209,7 @@ def test_download_single_file(
     data_file = data_dir / ftp_file
     retr_file = tmp_path / ftp_file
 
-    def mock_retr_binary(command: str, callback: Callable):
+    def mock_retr_binary(command: str, callback: Callable) -> None:
         logging.info(f"Faking the download of {command}")
         try:
             with data_file.open("rb") as data_fh:
@@ -274,7 +274,7 @@ def test_download_all_files(
 
     data_file = data_dir / md5
 
-    def side_eff_ftp_mlsd():
+    def side_eff_ftp_mlsd() -> list[tuple[str, list[str]]]:
         mlsd_ret = []
         files = data_dir.glob("*GCA_017607445.1*.gz")
         for file_path in files:
@@ -285,7 +285,7 @@ def test_download_all_files(
 
     mock_ftp.mlsd.side_effect = side_eff_ftp_mlsd
 
-    def mock_retr_binary(command: str, callback: Callable):
+    def mock_retr_binary(command: str, callback: Callable) -> None:
         logging.info(f"Faking the download of {command}")
         try:
             with data_file.open("rb") as data_fh:
@@ -430,7 +430,7 @@ def test_retrieve_assembly_data(
     else:
         download_dir = data_dir / "test_ftp_file.txt"
 
-    def side_eff_conn(url: str):
+    def side_eff_conn(url: str) -> None:
         if not url:
             raise FileDownloadError()
 

@@ -175,7 +175,7 @@ def test_add_species_metadata(
     genome_file: str,
     ncbi_data_organism: Dict,
     output: Dict[str, Any],
-):
+) -> None:
     """Tests the `prepare.add_species_metadata()` method.
 
     Args:
@@ -216,7 +216,7 @@ def test_prepare_genome_metadata(
     input_filename: str,
     ncbi_filename: str,
     expected_filename: str,
-):
+) -> None:
     """Tests the `prepare.prepare_genome_metadata()` method.
 
     Args:

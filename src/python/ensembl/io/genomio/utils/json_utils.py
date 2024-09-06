@@ -17,12 +17,13 @@
 __all__ = ["get_json", "print_json"]
 
 import json
-from os import PathLike
 from pathlib import Path
 from typing import Any
 
+from ensembl.utils import StrPath
 
-def get_json(src_path: PathLike, **kwargs) -> Any:
+
+def get_json(src_path: StrPath, **kwargs: Any) -> Any:
     """Generic data JSON loader.
 
     Args:
@@ -33,7 +34,7 @@ def get_json(src_path: PathLike, **kwargs) -> Any:
         return json.load(json_file, **kwargs)
 
 
-def print_json(dst_path: PathLike, data: Any, **kwargs) -> None:
+def print_json(dst_path: StrPath, data: Any, **kwargs: Any) -> None:
     """Generic data JSON dumper to a file, with keys sorted and pretty-printed with indent 4 by default.
 
     Args:
