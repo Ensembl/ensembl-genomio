@@ -326,7 +326,7 @@ sub pipeline_analyses {
       -logic_name => 'json_schema_factory',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
       -parameters  => {
-        # schemas_json_validate will automatically fetch the JSON schema file corresponding to metadata_type
+        # schemas_json_factory will feltch the JSON files in the metadata_type
         'cmd' =>
              'schemas_json_factory --manifest_dir #manifest#',
       },
