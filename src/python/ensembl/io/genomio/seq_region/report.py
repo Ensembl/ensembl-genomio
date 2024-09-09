@@ -22,12 +22,12 @@ import csv
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Tuple
+from typing import Any, Tuple, TypeVar
 
 from ensembl.utils.archive import open_gz_file
 
 ##############################################
-SeqRegionDict = TypeVar("SeqRegionDict", dict[str, Any])
+SeqRegionDict = TypeVar("SeqRegionDict", bound=dict[str, Any])
 
 
 class ReportRecord:
