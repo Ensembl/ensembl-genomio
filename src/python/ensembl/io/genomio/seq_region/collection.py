@@ -130,7 +130,7 @@ class SeqCollection:
 
     @staticmethod
     def make_seq_region_from_report(
-        seq_data: dict,
+        seq_data: dict[str, Any],
         is_refseq: bool,
         synonym_map: dict[str, str] | None = None,
         molecule_location: dict[str, str] | None = None,
