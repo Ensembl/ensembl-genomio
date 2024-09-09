@@ -37,7 +37,8 @@ def get_external_db_map(map_file: Path) -> dict[str, str]:
     """Get an external_db map from a tab file without header.
 
     Empty lines and comments (lines starting with #) are ignored.
-    The first 2 fields are expected to be the main name, and the alt name. Any other fields after are ignored.
+    The first 2 columns are expected to be the main name, and the alternative name. Any other columns
+    after that are ignored.
 
     Args:
         map_file: Path to a file with external DB mapping.

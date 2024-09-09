@@ -20,15 +20,6 @@ import pytest
 from pytest import param
 from sqlalchemy import text
 
-from ensembl.io.genomio.seq_region.dump import (
-    fetch_coord_systems,
-    fetch_seq_regions,
-    get_added_sequence,
-    get_karyotype,
-    get_seq_regions,
-    get_synonyms,
-)
-from ensembl.io.genomio.external_db.db_map import DEFAULT_EXTERNAL_DB_MAP, get_external_db_map
 from ensembl.core.models import (
     metadata,
     AttribType,
@@ -39,6 +30,15 @@ from ensembl.core.models import (
     SeqRegionAttrib,
     SeqRegionSynonym,
 )
+from ensembl.io.genomio.seq_region.dump import (
+    fetch_coord_systems,
+    fetch_seq_regions,
+    get_added_sequence,
+    get_karyotype,
+    get_seq_regions,
+    get_synonyms,
+)
+from ensembl.io.genomio.external_db.db_map import DEFAULT_EXTERNAL_DB_MAP, get_external_db_map
 from ensembl.utils.database import UnitTestDB
 
 
