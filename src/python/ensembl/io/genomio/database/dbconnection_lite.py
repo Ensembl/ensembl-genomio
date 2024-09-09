@@ -18,7 +18,7 @@ __all__ = ["DBConnectionLite"]
 
 import logging
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -32,7 +32,7 @@ _DB_PATTERN_RELEASE = re.compile(r".+_(?:core|otherfeatures|variation)_(?P<relea
 class DBConnectionLite(DBConnection):
     """Extension to get metadata directly from a database, assuming it has a metadata table."""
 
-    def __init__(self, url: StrURL, reflect: bool = False, **kwargs) -> None:
+    def __init__(self, url: StrURL, reflect: bool = False, **kwargs: Any) -> None:
         super().__init__(url, reflect, **kwargs)
         self._metadata: Dict[str, List] = {}
 

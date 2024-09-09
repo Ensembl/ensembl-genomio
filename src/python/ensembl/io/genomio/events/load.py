@@ -73,7 +73,7 @@ class EventCollection:
     def __init__(self) -> None:
         self.events: List[IdEvent] = []
 
-    def load_events(self, input_file: PathLike):
+    def load_events(self, input_file: PathLike) -> None:
         """Load events from input file.
         Expected tab file columns: old_id, new_id, event_name, release, release_date
 
@@ -104,7 +104,7 @@ class EventCollection:
 
     def load_events_from_gene_diff(
         self, input_file: PathLike, release_name: str = "release_name", release_date: str = "release_date"
-    ):
+    ) -> None:
         """Load events from input file from gene_diff."""
         loaded_event = set()
 
@@ -157,8 +157,12 @@ class EventCollection:
             for to_id in to_ids.split(":"):
                 yield (from_id, to_id, event_name)
 
-    def remap_to_ids(self, map_dict: Dict[str, str]):
-        """Using a mapping dict, remap the to_id of all events."""
+    def remap_to_ids(self, map_dict: Dict[str, str]) -> None:
+        """Using a mapping dict, remap the to_id of all events.
+
+        Raises:
+            ValueError: If there are events without map information.
+        """
 
         no_map = 0
         for event in self.events:

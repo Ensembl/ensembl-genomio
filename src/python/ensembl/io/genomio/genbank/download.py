@@ -29,7 +29,7 @@ from ensembl.utils.logging import init_logging_with_args
 class DownloadError(Exception):
     """In case a download failed."""
 
-    def __init__(self, msg):
+    def __init__(self, msg: str) -> None:
         self.msg = msg
 
 

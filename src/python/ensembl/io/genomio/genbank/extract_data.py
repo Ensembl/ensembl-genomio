@@ -505,7 +505,7 @@ class FormattedFilesGenerator:
         genome_data["added_seq"]["region_name"] = ids
         self._write_genome_json(genome_data)
 
-    def _write_genome_json(self, genome_data: Dict[str, Any]):
+    def _write_genome_json(self, genome_data: Dict[str, Any]) -> None:
         """
         Generate genome.json file with metadata for the assembly
 

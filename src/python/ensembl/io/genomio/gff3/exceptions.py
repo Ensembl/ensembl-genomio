@@ -25,7 +25,7 @@ __all__ = [
 class GFFParserError(Exception):
     """Error when parsing a GFF3 file."""
 
-    def __init__(self, message):
+    def __init__(self, message: str) -> None:
         super().__init__(message)
         self.message = message
 
