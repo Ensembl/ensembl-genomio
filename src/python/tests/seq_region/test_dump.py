@@ -14,11 +14,12 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.seq_region.dump` module."""
 
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 from pytest import param
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from ensembl.core.models import (
     metadata,
@@ -43,7 +44,7 @@ from ensembl.utils.database import UnitTestDB
 
 
 @pytest.fixture(name="seq_test_db", scope="module")
-def fixture_seq_test_db(db_factory) -> UnitTestDB:
+def fixture_seq_test_db(db_factory: Callable) -> UnitTestDB:
     """Returns a test database with all core tables and basic data (1 coord_system + 1 seq_region)."""
     test_db: UnitTestDB = db_factory(src="no_src", name="dump_seq")
     test_db.dbc.create_all_tables(metadata)
@@ -74,7 +75,7 @@ def fixture_seq_test_db(db_factory) -> UnitTestDB:
     return test_db
 
 
-def _add_test_synonym(session, dialect: str, synonym: str, db_name: str | None, db_id: int) -> None:
+def _add_test_synonym(session: Session, dialect: str, synonym: str, db_name: str | None, db_id: int) -> None:
     """Add a seq_region synonym to the test seq_region.
 
     Args:
@@ -111,7 +112,9 @@ def _add_test_synonym(session, dialect: str, synonym: str, db_name: str | None, 
         session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
 
 
-def _add_test_attrib(session, dialect, logic_name: str, value: str | int, attrib_id: int) -> None:
+def _add_test_attrib(
+    session: Session, dialect: str, logic_name: str, value: str | int, attrib_id: int
+) -> None:
     """Add a seq_region attrib to the test seq_region.
 
     Args:
@@ -134,7 +137,7 @@ def _add_test_attrib(session, dialect, logic_name: str, value: str | int, attrib
 
 
 def _add_test_karyotype(
-    session, dialect, start: int, end: int, band: str | None = None, stain: str | None = None
+    session: Session, dialect: str, start: int, end: int, band: str | None = None, stain: str | None = None
 ) -> None:
     """Add a seq_region karyotype band to the test seq_region.
 
