@@ -68,7 +68,7 @@ class MockResponse:
         self.text = json_str
 
     @staticmethod
-    def raise_for_status():
+    def raise_for_status() -> None:
         """Mock, never raise Exception here."""
 
     def json(self) -> dict:
@@ -77,6 +77,6 @@ class MockResponse:
 
 
 @pytest.fixture(name="mock_response")
-def mock_response():
+def mock_response() -> type[MockResponse]:
     """Fixture to mock a `requests` response."""
     return MockResponse

@@ -21,7 +21,7 @@ from pytest import raises
 from ensembl.io.genomio.seq_region.report import ReportRecord
 
 
-def test_from_report(data_dir: Path):
+def test_from_report(data_dir: Path) -> None:
     """Test for `ReportRecord`."""
     report_file = "report.txt"
     record = ReportRecord(data_dir / report_file)
@@ -43,7 +43,7 @@ def test_from_report(data_dir: Path):
     assert record.metadata.get("Assembly level") == "Chromosome"
 
 
-def test_from_report_error(data_dir: Path):
+def test_from_report_error(data_dir: Path) -> None:
     """Test for `ReportRecord` with a file without header."""
     report_file = "report_noheader.txt"
     with raises(ValueError):

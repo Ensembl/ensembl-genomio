@@ -42,7 +42,7 @@ def test_prepare_seq_region_metadata(
     gbff_path: Path | None,
     expected_path: Path,
     to_exclude: list[str],
-):
+) -> None:
     """Test `prepare_seq_region_metadata`.
 
     Args:
