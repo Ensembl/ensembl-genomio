@@ -356,9 +356,9 @@ def test_add_mitochondrial_codon_table(
 
 
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
-def test_add_mitochondrial_codon_table_mock(mock_requests_get: Mock) -> None:
+def test_add_mitochondrial_codon_table_mock(mock_requests_get: Mock, mock_response: MockResponse) -> None:
     """Test `SeqCollection.add_mitochondrial_codon_table()` with the mock parameter."""
-    mock_requests_get.return_value = MockResponse("{}")  # Mock requests just in case
+    mock_requests_get.return_value = mock_response("{}")  # Mock requests just in case
     collection = SeqCollection(mock=True)
     seq_name = "foobar"
     collection.seqs = {seq_name: {}}
