@@ -77,6 +77,10 @@ class MockResponse:
 
 
 @pytest.fixture(name="mock_response")
-def mock_response() -> type[MockResponse]:
+def mock_response() -> Callable:
     """Fixture to mock a `requests` response."""
-    return MockResponse
+
+    def _mock_response(json_str: str) -> MockResponse:
+        return MockResponse(json_str)
+
+    return _mock_response

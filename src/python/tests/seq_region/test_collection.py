@@ -15,7 +15,6 @@
 """Unit testing of `ensembl.io.genomio.seq_region.collection` module."""
 
 from contextlib import nullcontext as no_raise
-import json
 from pathlib import Path
 from typing import Any, Callable, ContextManager
 from unittest.mock import MagicMock, Mock, patch
@@ -43,21 +42,6 @@ _test_report_seq = {
     "Sequence-Role": "assembled-molecule",
     "UCSC-style-name": "na",
 }
-
-
-class MockResponse:
-    """Mock `requests` response."""
-
-    def __init__(self, json_str: str) -> None:
-        self.text = json_str
-
-    @staticmethod
-    def raise_for_status() -> None:
-        """Mock, never raise Exception here."""
-
-    def json(self) -> dict:
-        """Returns the data as json."""
-        return json.loads(self.text)
 
 
 def get_record(gbff_path: Path) -> SeqRecord:
@@ -356,7 +340,7 @@ def test_add_mitochondrial_codon_table(
 
 
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
-def test_add_mitochondrial_codon_table_mock(mock_requests_get: Mock, mock_response: MockResponse) -> None:
+def test_add_mitochondrial_codon_table_mock(mock_requests_get: Mock, mock_response: Callable) -> None:
     """Test `SeqCollection.add_mitochondrial_codon_table()` with the mock parameter."""
     mock_requests_get.return_value = mock_response("{}")  # Mock requests just in case
     collection = SeqCollection(mock=True)
