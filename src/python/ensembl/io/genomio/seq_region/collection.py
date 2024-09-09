@@ -137,7 +137,7 @@ class SeqCollection:
     ) -> SeqRegionDict:
         """Returns a sequence region from the information provided.
 
-        An empty sequence region will be returned if not accession information is found.
+        An empty sequence region will be returned if no accession information is found.
 
         Args:
             data: Dict from the report representing one line, where the key is the column name.
@@ -158,11 +158,10 @@ class SeqCollection:
         # Set accession as the sequence region name
         src = "RefSeq" if is_refseq else "GenBank"
         accession_id = seq_data.get(f"{src}-Accn", "")
-        if accession_id and (accession_id != "na"):
-            seq_region["name"] = accession_id
-        else:
+        if not accession_id or (accession_id == "na"):
             logging.warning(f'No {src} accession ID found for {seq_data["Sequence-Name"]}')
             return {}
+        seq_region["name"] = accession_id
 
         # Add synonyms
         synonyms = []

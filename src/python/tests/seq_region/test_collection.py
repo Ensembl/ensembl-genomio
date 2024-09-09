@@ -25,9 +25,9 @@ from Bio.Seq import Seq
 import pytest
 from pytest import param, raises
 
+from ensembl.io.genomio.seq_region.collection import SeqCollection
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
-from ensembl.io.genomio.seq_region.collection import SeqCollection
 
 
 _test_report_seq = {
@@ -69,7 +69,7 @@ def test_collection() -> None:
             None,
             False,
             {"length": 3, "synonyms": [{"source": "INSDC", "name": "Foo"}]},
-            id="With genbank ID",
+            id="With Genbank ID",
         ),
         param(None, None, None, True, {"length": 3, "circular": True}, id="With circular"),
         param(None, 4, None, False, {"length": 3, "codon_table": 4}, id="With codon table"),
