@@ -59,9 +59,9 @@ class ManifestMaker:
             json_out.write(json.dumps(manifest_data, sort_keys=True, indent=4))
         return manifest_path
 
-    def get_files_checksums(self):
+    def get_files_checksums(self) -> dict[str, dict]:
         """Compute the checksum of all the files in the directory."""
-        manifest_files = {}
+        manifest_files: dict[str, dict] = {}
         for subfile in self.dir.iterdir():
             logging.debug(f"Check file {subfile} ({subfile.stem}, {subfile.suffix})")
             used_file = False

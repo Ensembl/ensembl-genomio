@@ -51,7 +51,7 @@ classifiers = [
 dependencies = [
     "bcbio-gff == 0.7.1",
     "biopython >= 1.81",
-    "ensembl-py >= v2.1.0",
+    "ensembl-py >= 2.1.0",
     "ensembl-utils >= 0.4.1",
     "jsonschema >= 4.6.0",
     "intervaltree >= 3.1.0",
@@ -195,6 +195,7 @@ docstring-code-format = true
 
 [tool.mypy]
 mypy_path = "src/python"
+disallow_untyped_defs = true
 explicit_package_bases = true
 ignore_missing_imports = true
 show_error_codes = true

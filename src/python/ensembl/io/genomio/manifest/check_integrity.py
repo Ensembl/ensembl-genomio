@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Compare the genomic data in a DNA fasta file, seq_region JSON, gene models GFF3 and peptide fasta
+"""Compare the genomic data in a DNA FASTA file, seq_region JSON, gene models GFF3 and peptide FASTA
 to ensure their contents are in sync.
 """
 
@@ -22,7 +22,6 @@ import hashlib
 import logging
 import json
 from math import floor
-from os import PathLike
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional, Union
@@ -32,6 +31,7 @@ from Bio import SeqIO
 
 from ensembl.io.genomio.utils import get_json
 from ensembl.io.genomio.gff3.features import GFFSeqFeature
+from ensembl.utils import StrPath
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -48,7 +48,7 @@ class InvalidIntegrityError(Exception):
 class Manifest:
     """Representation of the manifest and its files."""
 
-    def __init__(self, manifest_path: PathLike) -> None:
+    def __init__(self, manifest_path: StrPath) -> None:
         self.manifest_files = self.get_manifest(manifest_path)
         self.genome: Dict[str, Any] = {}
         self.seq_regions: Dict[str, Any] = {}
@@ -109,7 +109,7 @@ class Manifest:
     def _add_error(self, error: str) -> None:
         self.errors.append(error)
 
-    def get_manifest(self, manifest_path: PathLike) -> Dict[str, Any]:
+    def get_manifest(self, manifest_path: StrPath) -> Dict[str, Any]:
         """Load the content of a manifest file.
 
         Returns:
@@ -206,14 +206,17 @@ class Manifest:
             logging.info("Manifest contains genome JSON")
             self.lengths["genome"] = get_json(Path(self.manifest_files["genome"]))
 
-    def get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
-        """Check if the fasta files have the correct ids and no stop codon.
+    def get_fasta_lengths(self, fasta_path: StrPath, ignore_final_stops: bool = False) -> dict:
+        """Check if the FASTA files have the correct IDs and no stop codon.
+
+        It will store as errors any empty IDs, non-unique IDs or stop codons that are found in the
+        FASTA files.
 
         Args:
             fasta_path: Path to fasta_dna and fasta_pep files.
 
         Returns:
-            Error if any empty ids, non-unique ids or stop codons are found in the fasta files.
+            Dictionary with the record IDs and their sequence length.
         """
 
         data = {}
@@ -371,7 +374,7 @@ class Manifest:
                         peps[pep_id] = pep_length
                     all_peps[pep_id] = pep_length
 
-    def get_agp_seq_regions(self, agp_dict):
+    def get_agp_seq_regions(self, agp_dict: dict) -> dict[str, int]:
         """AGP files describe the assembly of larger sequence objects using smaller objects.
             Eg: describes the assembly of scaffolds from contigs.
 
@@ -382,7 +385,7 @@ class Manifest:
             AGP file is only used in the older builds, not used for current processing.
         """
 
-        seqr = {}
+        seqr: dict[str, int] = {}
         for agp in agp_dict:
             agp_path = agp_dict[agp]
 
@@ -439,7 +442,7 @@ class IntegrityTool:
         else:
             self.errors += errors
 
-    def check_integrity(self):
+    def check_integrity(self) -> None:
         """Load files listed in the manifest.json and check the integrity.
         Check if the files are correct by verifying the MD5 hash.
         Check if translation, functional annotation and sequence region ids
@@ -570,16 +573,16 @@ class IntegrityTool:
                     if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_acc):
                         self.add_errors(f"Genome assembly accession is wrong: '{genome_acc}'")
 
-    def check_ids(self, list1, list2, name) -> List[str]:
+    def check_ids(self, list1: dict[str, Any], list2: dict[str, Any], name: str) -> list[str]:
         """Compare the ids in list1 and list2.
 
         Args:
-            list1: dict containing sequence ids retrieved from functional.json.
-            list2: dict containing length and id in the retrieved from the gff.
-            name:  string
+            list1: Sequence IDs retrieved from `functional.json`.
+            list2: Sequence IDs retrieved from the GFF3 file.
+            name: Source name.
 
         Return:
-            Whether the checks found errors.
+            List of message errors of sequence IDs found only in one of the lists provided.
         """
 
         only1 = []
@@ -607,7 +610,14 @@ class IntegrityTool:
 
         return errors
 
-    def check_lengths(self, list1, list2, name, allowed_len_diff=None, special_diff=False) -> List[str]:
+    def check_lengths(
+        self,
+        list1: dict[str, int],
+        list2: dict[str, int],
+        name: str,
+        allowed_len_diff: int | None = None,
+        special_diff: bool = False,
+    ) -> list[str]:
         """Check the difference in ids and length between list1 and list2.
             There are a few special cases here where we allow a certain asymmetry
             by changing the values of the arguments.
