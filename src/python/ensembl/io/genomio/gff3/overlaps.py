@@ -55,7 +55,7 @@ def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: 
     """Detect overlapping GFF3 SeqFeature objects and dump to a report.
 
     Args:
-        gff_in: User supplied GFF input file.
+        gff_in: User supplied GFF3 input file.
         output_file: Output file to write feature overlaps.
         isolate_feature: Sequence feature type to filter by.
     """
@@ -153,9 +153,6 @@ def get_intervals(record: SeqRecord, genes_dict: dict, seq_dict: dict, seq_name:
         genes_dict: Genes.
         seq_dict: Sequences.
         seq_name: Feature sequence name.
-
-    Return:
-        None
     """
 
     for feature in record.features:
