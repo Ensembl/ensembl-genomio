@@ -19,7 +19,6 @@ __all__ = [
     "identify_feature_overlaps",
     "scan_tree",
     "get_intervals",
-    "gff_to_overlaps",
 ]
 
 from collections import defaultdict
@@ -45,6 +44,8 @@ def summarize_feature_stats(gff_in: Path) -> None:
         gff_in: User supplied GFF3 input file.
     """
 
+    logging.info("Alt processing: Not parsing the GFF, producing summary feature stats instead!")
+
     examiner = GFFExaminer()
     with open(gff_in, "r", encoding="utf-8") as input_handle:
         pprint(examiner.available_limits(input_handle))
@@ -59,6 +60,9 @@ def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: 
         output_file: Output file to write feature overlaps.
         isolate_feature: Sequence feature type to filter by.
     """
+    logging.info("Processing sequence feature overlaps!")
+    logging.info(f"Output file = {str(output_file)}")
+    logging.info(f"Features filtered by type: {isolate_feature}")
 
     gff_type_filter: dict = {"gff_type": [isolate_feature]}
     seq_dict: dict = defaultdict(dict)
@@ -176,57 +180,37 @@ def get_intervals(record: SeqRecord, genes_dict: dict, seq_dict: dict, seq_name:
             logging.critical("Something went wrong with the strand processing!")
 
 
-def gff_to_overlaps(input_gff: Path, stats_flag: bool, output: Path, isolate_feature: str) -> None:
-    """Main method to process input GFF file for overlaps or a summary of all feature types.
-
-    Args:
-        input_gff: User supplied GFF input file.
-        stats_flag: Flag to switch to stats only mode.
-        outfile: Output file to write feature overlaps.
-        filter: Optional user specified feature type.
-    """
-
-    ## MAIN EDITS FOLLOW:
-    logging.info("Starting processing...")
-    logging.info(f"GFF input file = {str(input_gff)}")
-    logging.info(f"Output file = {str(output)}")
-    logging.info(f"Features filtered by type: {isolate_feature}")
-
-    # Check optional processing param
-    if stats_flag is True:
-        logging.info("Alt processing: Not parsing the GFF, producing summary feature stats instead!")
-        summarize_feature_stats(input_gff)
-    else:
-        logging.info("Processing sequence feature overlaps!")
-        identify_feature_overlaps(input_gff, output, isolate_feature)
-
-
 def main() -> None:
     """Module entry-point."""
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument_src_path(
-        "--input_gff", required=True, help="Path of GFF3 file to scan for overlaps."
-    )
-
-    subparsers = parser.add_subparsers(dest="subcommand")
-    stats_subparser = subparsers.add_parser("stats", help="Provide summary of feature types.")
-    stats_subparser.set_defaults(func=summarize_feature_stats)
-    overlaps_subparser = subparsers.add_parser("overlaps", help="Find feature overlaps.")
-    overlaps_subparser.add_argument_dst_path(
+    subparsers = parser.add_subparsers(title="Parse GFF3 and ", required=True, dest="subcommand")
+    gff3_stats_parser = subparsers.add_parser("stats", help="Provide summary of feature types.")
+    overlaps_parser = subparsers.add_parser("overlaps", help="Find feature overlaps.")
+    overlaps_parser.add_argument_dst_path(
         "--output_file", default="feature_overlaps.txt", help="Path of output file."
     )
-    overlaps_subparser.add_argument(
+    overlaps_parser.add_argument(
         "--filter_type", default="gene", help="The sequence feature type used for overlap isolation."
     )
-    overlaps_subparser.set_defaults(func=identify_feature_overlaps)
+
+    for subparser in [gff3_stats_parser, overlaps_parser]:
+        subparser.add_argument_src_path(
+            "--input_gff", required=True, help="Path of GFF3 file to scan feature stats or overlaps."
+        )
+        subparser.add_log_arguments(add_log_file=True)
 
     args = parser.parse_args()
-    parser.add_log_arguments(add_log_file=True)
     init_logging_with_args(args)
 
-    args.func(**vars(args))
+    logging.info("Starting processing...")
+    logging.info(f"GFF input file = {str(args.input_gff)}")
 
-    gff_to_overlaps(args.input_gff, args.stats, args.output_file, args.filter_type)
+    # Check optional processing param
+    if args.subcommand == "stats":
+        summarize_feature_stats(args.input_gff)
+    else:
+        identify_feature_overlaps(args.input_gff, args.output_file, args.filter_type)
+
 
 if __name__ == "__main__":
     main()
