@@ -173,7 +173,9 @@ def test_create_manifest(
     ],
 )
 @pytest.mark.dependency(depends=["test_init"])
-def test_load(tmp_path: Path, data_dir: Path, files_dir: str, expected_files: set, expected: ContextManager):
+def test_load(
+    tmp_path: Path, data_dir: Path, files_dir: str, expected_files: set, expected: ContextManager
+) -> None:
     """Tests `Manifest.load()`.
 
     Args:

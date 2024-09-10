@@ -59,7 +59,7 @@ class Manifest:
         self.path = manifest_dir / "manifest.json"
         self.files: dict = {}
 
-    def create(self):
+    def create(self) -> None:
         """Creates a manifest file from the files in a directory."""
         self.get_files_checksums()
         with self.path.open("w") as json_out:

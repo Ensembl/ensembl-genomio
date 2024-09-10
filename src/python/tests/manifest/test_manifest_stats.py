@@ -36,7 +36,7 @@ def test_manifest_stats_init(manifest_path: Path) -> None:
     assert manifest_stats
 
 
-def test_add_error(manifest_path: Path):
+def test_add_error(manifest_path: Path) -> None:
     """Tests `ManifestStats.has_lengths()`."""
     stats = ManifestStats(manifest_path)
     assert not stats.errors
@@ -61,7 +61,7 @@ def test_get_seq_regions(
     manifest_dir: str,
     expected_lengths: dict[str, int],
     expected_circular: dict[str, bool],
-):
+) -> None:
     """Tests `ManifestStats.get_seq_regions()`."""
     if manifest_dir:
         seq_manifest = data_dir / manifest_dir / "manifest.json"
@@ -90,7 +90,7 @@ def test_get_dna_fasta_lengths(
     fasta_str: str,
     expected_lengths: dict[str, int],
     expected_error: str,
-):
+) -> None:
     """Tests `ManifestStats.get_dna_fasta_lengths()`."""
     fasta_path = tmp_path / "fasta_dna.fasta"
     with fasta_path.open("w") as fasta_fh:
@@ -132,7 +132,7 @@ def test_get_peptides_fasta_lengths(
     ignore_final_stops: bool,
     expected_lengths: dict[str, int],
     expected_error: str,
-):
+) -> None:
     """Tests `ManifestStats.get_peptides_fasta_lengths()`."""
     fasta_path = tmp_path / "fasta_pep.fasta"
     with fasta_path.open("w") as fasta_fh:
@@ -172,7 +172,7 @@ def test_get_functional_annotations(
     json_data: dict | None,
     expected_key: str,
     expected_data: dict[str, int],
-):
+) -> None:
     """Tests `ManifestStats.get_functional_annotation()`."""
     func_path = tmp_path / "functional_annotation.json"
     if json_data is not None:
@@ -188,7 +188,7 @@ def test_get_functional_annotations(
         assert stats.lengths[expected_key] == expected_data
 
 
-def test_has_lengths(manifest_path: Path):
+def test_has_lengths(manifest_path: Path) -> None:
     """Tests `ManifestStats.has_lengths()`."""
     stats = ManifestStats(manifest_path)
     with raises(KeyError):
@@ -198,7 +198,7 @@ def test_has_lengths(manifest_path: Path):
     assert stats.has_lengths("ann_genes")
 
 
-def test_get_lengths(manifest_path: Path):
+def test_get_lengths(manifest_path: Path) -> None:
     """Tests `ManifestStats.get_lengths()`."""
     stats = ManifestStats(manifest_path)
     with raises(KeyError):
@@ -209,7 +209,7 @@ def test_get_lengths(manifest_path: Path):
     assert circular == {"ECC02_000372": 1}
 
 
-def test_get_circular(manifest_path: Path):
+def test_get_circular(manifest_path: Path) -> None:
     """Tests `ManifestStats.get_circular()`."""
     stats = ManifestStats(manifest_path)
     with raises(KeyError):

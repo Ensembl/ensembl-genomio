@@ -30,6 +30,7 @@ from ensembl.io.genomio.utils import get_json
 from ensembl.io.genomio.gff3.features import GFFSeqFeature
 from ensembl.io.genomio.manifest.manifest import Manifest
 from ensembl.utils.archive import open_gz_file
+from ensembl.utils import StrPath
 
 
 # Record the lengths of the sequence for features/regions
@@ -101,7 +102,7 @@ class ManifestStats:
         """Record an error."""
         self.errors.append(error)
 
-    def get_seq_regions(self):
+    def get_seq_regions(self) -> None:
         """Retrieve seq_regions lengths and circular information from the seq_region JSON file."""
 
         if not "seq_region" in self.manifest_files:
@@ -124,7 +125,7 @@ class ManifestStats:
         self.lengths["seq_regions"] = seq_lengths
         self.circular["seq_regions"] = seq_circular
 
-    def get_peptides_fasta_lengths(self):
+    def get_peptides_fasta_lengths(self) -> None:
         """Retrieve peptides sequences lengths from their FASTA file."""
         if "fasta_pep" not in self.manifest_files:
             return
@@ -132,13 +133,13 @@ class ManifestStats:
             self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
         )
 
-    def get_dna_fasta_lengths(self):
+    def get_dna_fasta_lengths(self) -> None:
         """Retrieve DNA sequences lengths from their FASTA file."""
         if "fasta_dna" not in self.manifest_files:
             return
         self.lengths["dna_sequences"] = self._get_fasta_lengths(self.manifest_files["fasta_dna"])
 
-    def _get_fasta_lengths(self, fasta_path, ignore_final_stops=False):
+    def _get_fasta_lengths(self, fasta_path: StrPath, ignore_final_stops: bool = False) -> dict[str, int]:
         """Retrieve sequence lengths from a fasta file (DNA or peptide) and check for anomalies.
 
         Args:
@@ -304,7 +305,7 @@ class ManifestStats:
                     peps[pep_id] = pep_length
                 all_peps[pep_id] = pep_length
 
-    def get_agp_seq_regions(self, agp_dict: dict | None):
+    def get_agp_seq_regions(self, agp_dict: dict | None) -> None:
         """AGP files describe the assembly of larger sequence objects using smaller objects.
             Eg: describes the assembly of scaffolds from contigs.
 
