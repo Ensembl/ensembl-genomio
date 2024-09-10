@@ -70,7 +70,7 @@ class StatsGenerator:
 
         """
         seqs_st = (
-            select(SeqRegionAttrib.value, func.count(SeqRegionAttrib.value))
+            select(SeqRegionAttrib.value, func.count())  # pylint: disable=not-callable
             .join(AttribType)
             .filter(AttribType.code == code)
             .group_by(SeqRegionAttrib.value)
@@ -91,6 +91,7 @@ class StatsGenerator:
 
     def get_biotypes(self, table: Any) -> Dict[str, int]:
         """Returns a dict of stats about the feature biotypes."""
+        # pylint: disable-next=not-callable
         seqs_st = select(table.biotype, func.count()).group_by(table.biotype)
         biotypes = {}
         for row in self.session.execute(seqs_st):
@@ -101,12 +102,13 @@ class StatsGenerator:
     def get_feature_stats(self, table: Any) -> Dict[str, int]:
         """Returns a dict of stats about a given feature."""
         session = self.session
-        totals_st = select(func.count(table.stable_id))
+        totals_st = select(func.count()).select_from(table)  # pylint: disable=not-callable
         (total,) = session.execute(totals_st).one()
-        # pylint: disable-next=singleton-comparison
-        no_desc_st = select(func.count(table.stable_id)).filter(table.description.is_(None))
+        # pylint: disable-next=singleton-comparison,not-callable
+        no_desc_st = select(func.count()).filter(table.description.is_(None))
         (no_desc,) = session.execute(no_desc_st).one()
-        xref_desc_st = select(func.count(table.stable_id)).where(table.description.like("%[Source:%"))
+        # pylint: disable-next=not-callable
+        xref_desc_st = select(func.count()).where(table.description.like("%[Source:%"))
         (xref_desc,) = session.execute(xref_desc_st).one()
         left_over = total - no_desc - xref_desc
         feat_stats = {
