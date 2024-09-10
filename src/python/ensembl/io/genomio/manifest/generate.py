@@ -59,9 +59,9 @@ class ManifestMaker:
             json_out.write(json.dumps(manifest_data, sort_keys=True, indent=4))
         return manifest_path
 
-    def get_files_checksums(self):
+    def get_files_checksums(self) -> dict[str, dict]:
         """Compute the checksum of all the files in the directory."""
-        manifest_files = {}
+        manifest_files: dict[str, dict] = {}
         for subfile in self.dir.iterdir():
             logging.debug(f"Check file {subfile} ({subfile.stem}, {subfile.suffix})")
             used_file = False
@@ -71,6 +71,7 @@ class ManifestMaker:
 
             # Delete and skip empty files
             if subfile.stat().st_size == 0:
+                logging.warning(f"Skip and delete empty file: {subfile}")
                 subfile.unlink()
                 continue
 
@@ -88,7 +89,7 @@ class ManifestMaker:
                         obj_name = self._prepare_object_name(subfile, name, manifest_files[standard_name])
                         manifest_files[standard_name][obj_name] = file_obj
 
-                    # Single file
+                    # Single file/init
                     else:
                         manifest_files[standard_name] = file_obj
 

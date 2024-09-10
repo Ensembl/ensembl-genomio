@@ -51,7 +51,7 @@ classifiers = [
 dependencies = [
     "bcbio-gff == 0.7.1",
     "biopython >= 1.81",
-    "ensembl-py >= v2.0.2",
+    "ensembl-py >= 2.1.0",
     "ensembl-utils >= 0.4.1",
     "jsonschema >= 4.6.0",
     "intervaltree >= 3.1.0",
@@ -92,6 +92,10 @@ docs = [
     "mkdocstrings",
     "mkdocstrings-python",
 ]
+# Database dependencies
+mysql = [
+    "ensembl-utils[mysql]",
+]
 
 [project.urls]
 homepage = "https://www.ensembl.org"
@@ -125,7 +129,7 @@ genome_stats_dump = "ensembl.io.genomio.genome_stats.dump:main"
 gff3_process = "ensembl.io.genomio.gff3.process:main"
 gff3_overlaps = "ensembl.io.genomio.gff3.overlaps:main"
 # annotation
-annotation_load = "ensembl.io.genomio.annotation.load:main"
+annotation_update_description = "ensembl.io.genomio.annotation.update_description:main"
 # Manifest
 manifest_check_integrity = "ensembl.io.genomio.manifest.check_integrity:main"
 manifest_compute_stats = "ensembl.io.genomio.manifest.compute_stats:main"
@@ -192,6 +196,7 @@ docstring-code-format = true
 
 [tool.mypy]
 mypy_path = "src/python"
+disallow_untyped_defs = true
 explicit_package_bases = true
 ignore_missing_imports = true
 show_error_codes = true

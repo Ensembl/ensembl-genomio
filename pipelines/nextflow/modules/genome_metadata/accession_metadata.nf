@@ -13,15 +13,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-process ACCESSION_METADATA {
+
+workflow ACCESSION_METADATA {
+    // Generate a meta value with 2 keys: id and accession (same value)
+    take:
+        input_json
+
+    emit:
+        accession_meta
+    
+    main:
+        accession_meta = _GET_ACCESSION_FROM_META_JSON(input_json).map {
+            it, json -> tuple([id: it, accession: it], json)
+        }
+}
+
+process _GET_ACCESSION_FROM_META_JSON {
     tag "$input_json"
     label 'local'
 
     input:
-        path(input_json)
+        path(input_json, stageAs: "input.json")
 
     output:
-        tuple env(accession), path(input_json)
+        tuple env(accession), path("input.json")
         
     shell:
         '''

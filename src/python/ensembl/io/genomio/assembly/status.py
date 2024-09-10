@@ -55,7 +55,7 @@ class UnsupportedFormatError(Exception):
 class ReportStructure(dict):
     """Dict setter class of key report meta information"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         dict.__init__(self)
         self.update(
             {

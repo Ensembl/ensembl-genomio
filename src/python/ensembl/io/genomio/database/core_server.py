@@ -22,6 +22,7 @@ import logging
 
 import sqlalchemy
 from sqlalchemy.engine import URL
+from sqlalchemy import text
 
 
 class CoreServer:
@@ -37,8 +38,9 @@ class CoreServer:
     def get_all_core_names(self) -> List[str]:
         """Query the server and retrieve all database names that look like Ensembl cores."""
 
-        all_query = self.engine.execute(r"SHOW DATABASES LIKE '%%_core_%%'")
-        dbs = [row[0] for row in all_query.fetchall()]
+        with self.engine.connect() as connection:
+            all_query = connection.execute(text(r"SHOW DATABASES LIKE '%%_core_%%'"))
+            dbs = [row[0] for row in all_query.fetchall()]
         logging.info(f"{len(dbs)} core databases on the server")
         return dbs
 

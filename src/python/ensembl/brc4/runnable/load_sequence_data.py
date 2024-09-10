@@ -907,15 +907,13 @@ class load_sequence_data(eHive.BaseRunnable):
             return fasta, cs_ranks, agps
 
         # split using script
-        en_root = self.param_required("ensembl_root_dir")
-        _splitter = pj(en_root, r"ensembl-genomio/scripts/chunk_fasta.py")
-
         os.makedirs(work_dir, exist_ok=True)
-
         _stderr = f"{work_dir}/chunking.stderr"
         _out_agp = f"{work_dir}/chunks.agp"
         _out_fasta = f"{work_dir}/chunks.fasta"
-        split_cmd = f"python {_splitter} --chunk_size {chunk_size} --agp_out {_out_agp} --out {_out_fasta} {fasta} 2> {_stderr}"
+
+        _splitter = r"fasta_chunk"
+        split_cmd = f"{_splitter} --chunk_size {chunk_size} --agp_out {_out_agp} --out {_out_fasta} --fasta_dna {fasta} 2> {_stderr}"
 
         print(f"running {split_cmd}", file=sys.stderr)
         # NB throws CalledProcessError if failed

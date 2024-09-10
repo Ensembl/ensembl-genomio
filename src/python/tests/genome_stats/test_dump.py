@@ -27,7 +27,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
-from sqlalchemy.sql.expression import Executable
+from sqlalchemy.sql.expression import ClauseElement
 
 from ensembl.core.models import Gene, Transcript
 from ensembl.io.genomio.genome_stats import dump
@@ -51,19 +51,19 @@ class MockResult:
 
 # Define templates for all expected queries
 ATTRIB_COUNTS_QUERY = Template(
-    "SELECT seq_region_attrib.value, count(seq_region_attrib.value) AS count_1 "
+    "SELECT seq_region_attrib.value, count(*) AS count_1 "
     "FROM seq_region_attrib JOIN attrib_type ON attrib_type.attrib_type_id = seq_region_attrib.attrib_type_id"
     " WHERE attrib_type.code = '${code}' GROUP BY seq_region_attrib.value"
 )
 BIOTYPES_QUERY = Template(
     "SELECT ${table}.biotype, count(*) AS count_1 FROM ${table} GROUP BY ${table}.biotype"
 )
-FEATURE_STATS_TOTAL_QUERY = Template("SELECT count(${table}.stable_id) AS count_1 FROM ${table}")
+FEATURE_STATS_TOTAL_QUERY = Template("SELECT count(*) AS count_1 FROM ${table}")
 FEATURE_STATS_NULL_QUERY = Template(
-    "SELECT count(${table}.stable_id) AS count_1 FROM ${table} WHERE ${table}.description IS NULL"
+    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description IS NULL"
 )
 FEATURE_STATS_SOURCE_QUERY = Template(
-    "SELECT count(${table}.stable_id) AS count_1 FROM ${table} WHERE ${table}.description LIKE '%[Source:%'"
+    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description LIKE '%[Source:%'"
 )
 
 
@@ -71,7 +71,7 @@ class MockSession(Session):
     """Mocker of `sqlalchemy.orm.Session` class that replaces its `execute()` method for testing."""
 
     # pylint: disable-next=too-many-return-statements
-    def execute(self, statement: Executable) -> MockResult:
+    def execute(self, statement: ClauseElement) -> MockResult:  # type: ignore[override]
         """Returns a `MockResult` object representing results of the statement execution.
 
         Args:
@@ -107,7 +107,7 @@ class MockSession(Session):
         ):
             return MockResult([[0]])
         # Fail test if the provided statement is not expected
-        raise RuntimeError()
+        raise RuntimeError(f"Could not mock results from statement: {statement}")
 
 
 class TestStatsGenerator:

@@ -378,7 +378,7 @@ class FixAction:
             # use locus tag
             _src_id = "%s:%s_%s%s" % (
                 it["_SEQID"],
-                it["_START"],
+                it["_START"] + 1,
                 it["_END"],
                 it["_STRAND"] != "1" and it["_STRAND"] or "",
             )
