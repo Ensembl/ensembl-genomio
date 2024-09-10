@@ -23,7 +23,7 @@ workflow:
             $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME =~ /hackathon\/.+/ )
       when: always
     - if: $CI_PIPELINE_SOURCE == "push" &&
-          ( $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH !~ /hackathon\/.+/ )
+          ( $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH && $CI_COMMIT_BRANCH !~ /hackathon\/.+/ )
       when: never
     - when: always
 

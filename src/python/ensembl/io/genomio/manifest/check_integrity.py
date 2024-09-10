@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Compare the genomic data in a DNA fasta file, seq_region JSON, gene models GFF3 and peptide fasta
+"""Compare the genomic data in a DNA FASTA file, seq_region JSON, gene models GFF3 and peptide FASTA
 to ensure their contents are in sync.
 """
 
@@ -53,7 +53,7 @@ class IntegrityTool:
         else:
             self.errors += errors
 
-    def check_integrity(self):
+    def check_integrity(self) -> None:
         """Load files listed in the manifest.json and check the integrity.
         Check if the files are correct by verifying the MD5 hash.
         Check if translation, functional annotation and sequence region ids
@@ -175,16 +175,16 @@ class IntegrityTool:
         if not re.match(r"GC[AF]_\d{9}(\.\d+)?", genome_accession):
             self.add_errors(f"Genome assembly accession is wrong: '{genome_accession}'")
 
-    def check_ids(self, list1, list2, name) -> list[str]:
+    def check_ids(self, list1: dict[str, Any], list2: dict[str, Any], name: str) -> list[str]:
         """Compare the ids in list1 and list2.
 
         Args:
-            list1: dict containing sequence ids retrieved from functional.json.
-            list2: dict containing length and id in the retrieved from the gff.
-            name:  string
+            list1: Sequence IDs retrieved from `functional.json`.
+            list2: Sequence IDs retrieved from the GFF3 file.
+            name: Source name.
 
         Return:
-            Whether the checks found errors.
+            List of message errors of sequence IDs found only in one of the lists provided.
         """
 
         only1 = []
@@ -212,7 +212,14 @@ class IntegrityTool:
 
         return errors
 
-    def check_lengths(self, list1, list2, name, allowed_len_diff=None, special_diff=False) -> list[str]:
+    def check_lengths(
+        self,
+        list1: dict[str, int],
+        list2: dict[str, int],
+        name: str,
+        allowed_len_diff: int | None = None,
+        special_diff: bool = False,
+    ) -> list[str]:
         """Check the difference in ids and length between list1 and list2.
             There are a few special cases here where we allow a certain asymmetry
             by changing the values of the arguments.

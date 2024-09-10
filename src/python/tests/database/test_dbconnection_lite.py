@@ -15,7 +15,7 @@
 """Unit testing of `ensembl.io.genomio.database.dbconnection_lite` module.
 """
 
-from typing import Optional
+from typing import Callable, Optional
 
 import pytest
 
@@ -32,7 +32,7 @@ _METADATA_CONTENT = {
 
 
 @pytest.fixture(name="meta_test_db", scope="module")
-def fixture_meta_test_db(db_factory) -> UnitTestDB:
+def fixture_meta_test_db(db_factory: Callable) -> UnitTestDB:
     """Returns a test database with a meta table and basic data."""
     test_db: UnitTestDB = db_factory("", "get_metadata")
     test_db.dbc.create_table(metadata.tables["coord_system"])

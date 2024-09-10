@@ -33,7 +33,7 @@ from .exceptions import GFFParserError
 from .features import GFFSeqFeature
 
 
-def _get_feat_counts(gene: GFFSeqFeature):
+def _get_feat_counts(gene: GFFSeqFeature) -> Counter:
     return Counter([feat.type for feat in gene.sub_features])
 
 
@@ -150,7 +150,7 @@ def move_cds_to_existing_mrna(gene: GFFSeqFeature) -> None:
     counts = _get_feat_counts(gene)
     if not counts.get("mRNA") or not counts.get("CDS"):
         return
-    if counts.get("mRNA") > 1:
+    if counts["mRNA"] > 1:
         raise GFFParserError(
             f"Can't fix gene {gene.id}: contains several mRNAs and CDSs, all children of the gene"
         )

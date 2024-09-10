@@ -22,7 +22,9 @@ Typical usage example::
 
 """
 
-from typing import List, Optional
+from __future__ import annotations
+
+from typing import Any, List, Optional
 
 import pytest
 from pytest_mock import MockerFixture
@@ -53,19 +55,19 @@ class MockResult:
 
 
 class MockConnection:
-    """Mock a SQLalchemy connection."""
+    """Mock a SQLAlchemy connection."""
 
     def __init__(self, result: MockResult) -> None:
         self.result = result
 
-    def execute(self, *args, **kwargs) -> MockResult:  # pylint: disable=unused-argument
-        """Returns a MockResult object."""
+    def execute(self, *args: Any, **kwargs: Any) -> MockResult:  # pylint: disable=unused-argument
+        """Returns a `MockResult` object."""
         return self.result
 
-    def __enter__(self, *args, **kwargs):  # pylint: disable=unused-argument
+    def __enter__(self, *args: Any, **kwargs: Any) -> MockConnection:  # pylint: disable=unused-argument
         return self
 
-    def __exit__(self, *args, **kwargs):  # pylint: disable=unused-argument
+    def __exit__(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=unused-argument
         pass
 
 
