@@ -238,6 +238,42 @@ def test_get_gff3(
     assert stats.lengths == expected_lengths
 
 
+def test_get_genome(tmp_path: Path) -> None:
+    """Tests `ManifestStats.get_genome()`."""
+    genome_data = {"LOREM": "1"}
+    genome_path = tmp_path / "genome.json"
+    print_json(genome_path, genome_data)
+    manifest = Manifest(tmp_path)
+    manifest.create()
+    stats = ManifestStats(manifest.path)
+    stats.get_genome()
+    assert stats.genome == genome_data
+
+
+def test_prepare_integrity_data(tmp_path: Path) -> None:
+    """Tests `ManifestStats.prepare_integrity_data()`."""
+    manifest_path = tmp_path / "manifest.json"
+    print_json(manifest_path, {})
+    stats = ManifestStats(manifest_path)
+    stats.prepare_integrity_data()
+    assert stats.lengths == {
+        "agp": {},
+        "ann_genes": {},
+        "ann_translations": {},
+        "ann_transposable_elements": {},
+        "annotations": {},
+        "dna_sequences": {},
+        "gff3_all_translations": {},
+        "gff3_genes": {},
+        "gff3_seq_regions": {},
+        "gff3_translations": {},
+        "gff3_transposable_elements": {},
+        "peptide_sequences": {},
+        "seq_region_levels": {},
+        "seq_regions": {},
+    }
+
+
 def test_has_lengths(manifest_path: Path) -> None:
     """Tests `ManifestStats.has_lengths()`."""
     stats = ManifestStats(manifest_path)

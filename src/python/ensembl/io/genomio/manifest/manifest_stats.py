@@ -346,6 +346,13 @@ class ManifestStats:
 
         self.lengths["agp"] = seqr
 
+    def get_genome(self) -> None:
+        """Load the genome data."""
+        if "genome" not in self.manifest_files:
+            return
+        logging.info("Manifest contains genome JSON")
+        self.genome = get_json(Path(self.manifest_files["genome"]))
+
     def prepare_integrity_data(self) -> None:  # pylint: disable=too-many-branches
         """Read all the files and keep a record (IDs and their lengths)
         for each cases to be compared later.
@@ -356,9 +363,7 @@ class ManifestStats:
         self.get_seq_regions()
         self.get_functional_annotation()
         self.get_agp_seq_regions(self.manifest_files.get("agp"))
-        if "genome" in self.manifest_files:
-            logging.info("Manifest contains genome JSON")
-            self.lengths["genome"] = get_json(Path(self.manifest_files["genome"]))
+        self.get_genome()
 
     def has_lengths(self, name: str) -> bool:
         """Check if a given name has lengths records.
