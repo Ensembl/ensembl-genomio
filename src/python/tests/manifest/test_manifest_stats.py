@@ -15,6 +15,7 @@
 """Unit testing of `ensembl.io.genomio.manifest.manifest_stats` module."""
 
 from pathlib import Path
+from shutil import copy
 
 import pytest
 from pytest import raises, param, mark
@@ -186,6 +187,55 @@ def test_get_functional_annotations(
     stats.get_functional_annotation()
     if expected_key:
         assert stats.lengths[expected_key] == expected_data
+
+
+@mark.parametrize(
+    "gff3_path, expected_data",
+    [
+        param(None, {}, id="No GFF3"),
+        param(
+            "get_gff3/ok_gene.gff",
+            {
+                "gff3_seq_regions": {"scaffold1": 1000},
+                "gff3_genes": {"LOREMIPSUM1": 1000},
+                "gff3_all_translations": {"LOREMIPSUM1_t1_cds": 266},
+                "gff3_translations": {"LOREMIPSUM1_t1_cds": 266},
+            },
+            id="1 gene, 1 translation",
+        ),
+        param(
+            "get_gff3/te_gene.gff",
+            {
+                "gff3_transposable_elements": {"LOREMIPSUM1": 1000},
+            },
+            id="1 TE",
+        ),
+        param(
+            "get_gff3/pseudogene_cds.gff",
+            {
+                "gff3_genes": {"LOREMIPSUM1": 1000},
+                "gff3_translations": {},
+                "gff3_all_translations": {"LOREMIPSUM1_t1_cds": 266},
+            },
+            id="1 pseudogene with CDS",
+        ),
+    ],
+)
+def test_get_gff3(
+    tmp_path: Path,
+    data_dir: Path,
+    gff3_path: str | None,
+    expected_data: dict[str, int],
+) -> None:
+    """Tests `ManifestStats.get_gff3()`."""
+    if gff3_path:
+        copy(data_dir / gff3_path, tmp_path / "test.gff3")
+    manifest = Manifest(tmp_path)
+    manifest.create()
+    stats = ManifestStats(manifest.dir / "manifest.json")
+    stats.get_gff3()
+    expected_lengths = {**stats.lengths, **expected_data}
+    assert stats.lengths == expected_lengths
 
 
 def test_has_lengths(manifest_path: Path) -> None:

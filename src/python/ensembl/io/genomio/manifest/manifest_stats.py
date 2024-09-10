@@ -221,13 +221,14 @@ class ManifestStats:
         }
         self.lengths = {**self.lengths, **stats}
 
-    def get_gff3(self, gff3_path: Path) -> None:
+    def get_gff3(self) -> None:
         """A GFF parser is used to retrieve information in the GFF file such as
-           gene and CDS ids and their corresponding lengths.
-
-        Args:
-            gff3_path: Path to gff3 file.
+        gene and CDS ids and their corresponding lengths.
         """
+        if not "gff3" in self.manifest_files:
+            return
+        logging.info("Manifest contains GFF3 gene annotations")
+        gff3_path = self.manifest_files["gff3"]
 
         seqs: StatsLengths = {}
         genes: StatsLengths = {}
@@ -270,8 +271,7 @@ class ManifestStats:
 
         """
         gene_id = feat.id
-        if not self.brc_mode:
-            gene_id = gene_id.replace("gene:", "")
+        gene_id = gene_id.replace("gene:", "")
         genes[gene_id] = abs(feat.location.end - feat.location.start)
         # Get CDS id and length
         protein_transcripts = {
@@ -288,15 +288,13 @@ class ManifestStats:
         for feat2 in feat.sub_features:
             if feat2.type not in cds_transcripts:
                 continue
-            length = {}
+            length: dict[str, int] = {}
             for feat3 in feat2.sub_features:
                 if feat3.type != "CDS":
                     continue
                 pep_id = feat3.id
-                if not self.brc_mode:
-                    pep_id = pep_id.replace("CDS:", "")
-                if pep_id not in length:
-                    length[pep_id] = 0
+                pep_id = pep_id.replace("CDS:", "")
+                length.setdefault(pep_id, 0)
                 length[pep_id] += abs(feat3.location.end - feat3.location.start)
             for pep_id, pep_length in length.items():
                 # Store length for translations, add pseudo translations separately
@@ -352,10 +350,7 @@ class ManifestStats:
         """Read all the files and keep a record (IDs and their lengths)
         for each cases to be compared later.
         """
-        # First, get the Data
-        if "gff3" in self.manifest_files:
-            logging.info("Manifest contains GFF3")
-            self.get_gff3(self.manifest_files["gff3"])
+        self.get_gff3()
         self.get_dna_fasta_lengths()
         self.get_peptides_fasta_lengths()
         self.get_seq_regions()
