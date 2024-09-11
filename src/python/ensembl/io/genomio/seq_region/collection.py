@@ -145,7 +145,7 @@ class SeqCollection:
             molecule_location: Map of sequence type to SO location.
 
         Raises:
-            UnknownMetadata: If the sequence role is not recognised.
+            UnknownMetadata: If the sequence role or location is not recognised.
 
         """
         if synonym_map is None:
