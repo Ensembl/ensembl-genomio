@@ -15,13 +15,13 @@
 """SeqCollection as a collection of seq_regions metadata."""
 
 __all__ = [
-    "SeqRegionDict",
     "SeqCollection",
+    "SeqRegionDict",
 ]
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from Bio import SeqIO
 import requests
@@ -47,9 +47,7 @@ _MOLECULE_LOCATION = {
 }
 _LOCATION_CODON = {"apicoplast_chromosome": 4}
 
-##############################################
-SeqRegionDict = dict[str, Any]
-
+SeqRegionDict = TypeVar("SeqRegionDict", bound=dict[str, Any])
 
 class SeqCollection:
     """Represent a collection of seq_regions metadata."""
