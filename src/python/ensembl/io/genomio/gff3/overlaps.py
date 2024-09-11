@@ -83,7 +83,7 @@ def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: 
     print(result_total_features)
     logging.info(result_total_features)
 
-    result_total_overlaps = f"In total {overlap_count} overlaps where detected."
+    result_total_overlaps = f"In total {overlap_count} overlaps were detected."
     print(result_total_overlaps)
     logging.info(result_total_overlaps)
 
