@@ -44,7 +44,7 @@ def summarize_feature_stats(gff_in: Path) -> None:
         gff_in: User supplied GFF3 input file.
     """
 
-    logging.info("Alt processing: Not parsing the GFF, producing summary feature stats instead!")
+    logging.info("Alt processing: Not parsing the GFF3, producing summary feature stats instead!")
 
     examiner = GFFExaminer()
     with open(gff_in, "r", encoding="utf-8") as input_handle:
