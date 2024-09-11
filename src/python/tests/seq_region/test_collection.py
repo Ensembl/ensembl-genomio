@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Any, Callable, ContextManager
 from unittest.mock import MagicMock, Mock, patch
 
-from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 import pytest
@@ -42,15 +41,6 @@ _test_report_seq = {
     "Sequence-Role": "assembled-molecule",
     "UCSC-style-name": "na",
 }
-
-
-def get_record(gbff_path: Path) -> SeqRecord:
-    """Returns the first `SeqRecord` from a Genbank file."""
-    seq_record = SeqRecord(Seq(""))
-    with gbff_path.open("r") as gbff_file:
-        for record in SeqIO.parse(gbff_file, "genbank"):
-            seq_record = record
-    return seq_record
 
 
 def test_collection() -> None:
