@@ -227,7 +227,11 @@ class SeqCollection:
             taxon_id: The species taxon ID.
 
         """
-        if self.mock or not taxon_id:
+        if self.mock:
+            logging.info(f"Skip mitochondrial codon table: mock")
+            return
+        if not taxon_id:
+            logging.info(f"Skip mitochondrial codon table: no taxon_id to use")
             return
 
         url = f"https://www.ebi.ac.uk/ena/taxonomy/rest/tax-id/{str(taxon_id)}"
