@@ -26,6 +26,7 @@ from typing import Tuple
 
 from ensembl.utils.archive import open_gz_file
 
+
 class ReportRecord:
     """Represent an assembly report file. Exposes 2 things:
     - Metadata as a dict from the comments.

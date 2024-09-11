@@ -21,7 +21,7 @@ __all__ = [
 
 import logging
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, TypeAlias
 
 from Bio import SeqIO
 import requests
@@ -47,7 +47,8 @@ _MOLECULE_LOCATION = {
 }
 _LOCATION_CODON = {"apicoplast_chromosome": 4}
 
-SeqRegionDict = TypeVar("SeqRegionDict", bound=dict[str, Any])
+SeqRegionDict: TypeAlias = dict[str, Any]
+
 
 class SeqCollection:
     """Represent a collection of seq_regions metadata."""
@@ -67,12 +68,12 @@ class SeqCollection:
         with open_gz_file(gbff_path) as gbff_file:
             for record in SeqIO.parse(gbff_file, "genbank"):
                 record_data = GBFFRecord(record)
-                new_seq = self.make_seqregion_from_gbff(record_data)
+                new_seq: SeqRegionDict = self.make_seqregion_from_gbff(record_data)
                 name = record.id
                 merged_seq = self._merge(new_seq, self.seqs.get(name, {}))
                 self.seqs[name] = merged_seq
 
-    def _merge(self, source: dict[str, list], destination: dict[str, list]) -> dict[str, list]:
+    def _merge(self, source: SeqRegionDict, destination: SeqRegionDict) -> SeqRegionDict:
         """Merge a source dict in a destination dict (only add values or append to lists)."""
         if not destination:
             return source
