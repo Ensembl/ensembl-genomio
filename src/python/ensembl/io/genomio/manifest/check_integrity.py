@@ -165,10 +165,8 @@ class IntegrityTool:
         self.ignore_final_stops = ignore_final_stops
         self.manifest.ignore_final_stops = ignore_final_stops
 
-    def _check_genome(self, genome: dict) -> None:
+    def _check_genome(self, genome: dict[str, Any]) -> None:
         """Check if the accession is correct in genome.json."""
-        if not genome:
-            return
         genome_accession = genome.get("assembly", {}).get("accession", "")
         if not genome_accession:
             return
