@@ -75,7 +75,6 @@ def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: 
                 seq_dict[seq_name]["minus"] = []
 
             get_intervals(record, genes_dict, seq_dict, seq_name)
-        input_handle.close()
 
     overlap_count = _write_report(output_file, seq_dict, genes_dict)
 
