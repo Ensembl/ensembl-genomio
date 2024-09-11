@@ -67,7 +67,7 @@ def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: 
     gff_type_filter: dict = {"gff_type": [isolate_feature]}
     seq_dict: dict = defaultdict(dict)
     genes_dict: dict = {}
-    with open(gff_in, "r", encoding="utf-8") as input_handle:
+    with gff_in.open("r", encoding="utf-8") as input_handle:
         for record in GFF.parse(input_handle, limit_info=gff_type_filter):
             seq_name = str(record.id)
             if seq_name not in seq_dict:
