@@ -264,7 +264,10 @@ def test_add_translation_table(
     collection = SeqCollection()
     seq_name = "foobar"
     collection.seqs = {seq_name: input_seq}
-    collection.add_translation_table(code_map)
+    if code_map:
+        collection.add_translation_table(code_map)
+    else:
+        collection.add_translation_table()
     assert collection.seqs[seq_name].get("codon_table") == expected_codon_table
 
 

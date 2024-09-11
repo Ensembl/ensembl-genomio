@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, TypeAlias
 
 from Bio import SeqIO
+from frozendict import frozendict
 import requests
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
@@ -31,21 +32,25 @@ from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 from ensembl.io.genomio.seq_region.report import ReportRecord
 from ensembl.utils.archive import open_gz_file
 
-_SYNONYM_MAP = {
-    "Assigned-Molecule": "INSDC",
-    "GenBank-Accn": "GenBank",
-    "RefSeq-Accn": "RefSeq",
-    "Sequence-Name": "INSDC_submitted_name",
-}
-_MOLECULE_LOCATION = {
-    "apicoplast": "apicoplast_chromosome",
-    "chromosome": "nuclear_chromosome",
-    "kinetoplast": "kinetoplast_chromosome",
-    "linkage group": "linkage_group",
-    "mitochondrion": "mitochondrial_chromosome",
-    "plasmid": "plasmid",
-}
-_LOCATION_CODON = {"apicoplast_chromosome": 4}
+_SYNONYM_MAP = frozendict(
+    {
+        "Assigned-Molecule": "INSDC",
+        "GenBank-Accn": "GenBank",
+        "RefSeq-Accn": "RefSeq",
+        "Sequence-Name": "INSDC_submitted_name",
+    }
+)
+_MOLECULE_LOCATION = frozendict(
+    {
+        "apicoplast": "apicoplast_chromosome",
+        "chromosome": "nuclear_chromosome",
+        "kinetoplast": "kinetoplast_chromosome",
+        "linkage group": "linkage_group",
+        "mitochondrion": "mitochondrial_chromosome",
+        "plasmid": "plasmid",
+    }
+)
+_LOCATION_CODON = frozendict({"apicoplast_chromosome": 4})
 
 SeqRegionDict: TypeAlias = dict[str, Any]
 
@@ -131,8 +136,8 @@ class SeqCollection:
     def make_seq_region_from_report(
         seq_data: dict[str, Any],
         is_refseq: bool,
-        synonym_map: dict[str, str] | None = None,
-        molecule_location: dict[str, str] | None = None,
+        synonym_map: dict[str, str] | frozendict[str, str] = _SYNONYM_MAP,
+        molecule_location: dict[str, str] | frozendict[str, str] = _MOLECULE_LOCATION,
     ) -> SeqRegionDict:
         """Returns a sequence region from the information provided.
 
@@ -148,10 +153,6 @@ class SeqCollection:
             UnknownMetadata: If the sequence role or location is not recognised.
 
         """
-        if synonym_map is None:
-            synonym_map = _SYNONYM_MAP
-        if molecule_location is None:
-            molecule_location = _MOLECULE_LOCATION
         seq_region = {}
 
         # Set accession as the sequence region name
@@ -203,15 +204,15 @@ class SeqCollection:
             else:
                 logging.info(f"Cannot exclude seq not found: {seq_name}")
 
-    def add_translation_table(self, location_codon: dict[str, int] | None = None) -> None:
+    def add_translation_table(
+        self, location_codon: dict[str, int] | frozendict[str, int] = _LOCATION_CODON
+    ) -> None:
         """Adds the translation codon table to each sequence region (when missing) based on its location.
 
         Args:
             location_codon: Map of known codon tables for known locations.
 
         """
-        if location_codon is None:
-            location_codon = _LOCATION_CODON
         for seqr in self.seqs.values():
             if "codon_table" in seqr:
                 continue
