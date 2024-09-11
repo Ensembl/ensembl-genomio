@@ -195,7 +195,7 @@ def main() -> None:
 
     for subparser in [gff3_stats_parser, overlaps_parser]:
         subparser.add_argument_src_path(
-            "--input_gff", required=True, help="Path of GFF3 file to scan feature stats or overlaps."
+            "--input_gff", required=True, help="Path of GFF3 file to process."
         )
         subparser.add_log_arguments(add_log_file=True)
 
