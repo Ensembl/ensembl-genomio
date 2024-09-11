@@ -228,10 +228,10 @@ class SeqCollection:
 
         """
         if self.mock:
-            logging.info(f"Skip mitochondrial codon table: mock")
+            logging.info("Skip mitochondrial codon table: mock")
             return
         if not taxon_id:
-            logging.info(f"Skip mitochondrial codon table: no taxon_id to use")
+            logging.info("Skip mitochondrial codon table: no taxon_id to use")
             return
 
         url = f"https://www.ebi.ac.uk/ena/taxonomy/rest/tax-id/{str(taxon_id)}"
