@@ -17,8 +17,8 @@
 __all__ = ["Manifest", "ManifestError"]
 
 import hashlib
-import logging
 import json
+import logging
 from pathlib import Path
 
 
@@ -65,7 +65,7 @@ class Manifest:
         with self.path.open("w") as json_out:
             json_out.write(json.dumps(self.files, sort_keys=True, indent=4))
 
-    def get_files_checksums(self) -> dict:
+    def get_files_checksums(self) -> dict[str, dict]:
         """Records all the files in the directory with their checksum."""
         manifest_files: dict = {}
         for subfile in self.dir.iterdir():

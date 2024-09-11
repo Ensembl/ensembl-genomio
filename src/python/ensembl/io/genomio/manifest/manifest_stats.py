@@ -50,7 +50,7 @@ class ManifestStats:
     - sequences circularity
     """
 
-    def __init__(self, manifest_path: PathLike) -> None:
+    def __init__(self, manifest_path: StrPath) -> None:
         self.manifest_files = self._get_manifest(manifest_path)
         self.genome: dict[str, Any] = {}
 
@@ -140,13 +140,14 @@ class ManifestStats:
         self.lengths["dna_sequences"] = self._get_fasta_lengths(self.manifest_files["fasta_dna"])
 
     def _get_fasta_lengths(self, fasta_path: StrPath, ignore_final_stops: bool = False) -> dict[str, int]:
-        """Retrieve sequence lengths from a fasta file (DNA or peptide) and check for anomalies.
+        """Returns every sequence ID and its length from a FASTA file (DNA or peptide).
+
+        An error will be added for every empty id, non-unique id or stop codon found in the FASTA file.
 
         Args:
-            fasta_path: Path to fasta file.
+            fasta_path: Path to FASTA file.
+            ignore_final_stops: Do not include final stop in the total length.
 
-        Returns:
-            Error if any empty ids, non-unique ids or stop codons are found in the fasta files.
         """
 
         data = {}
@@ -186,14 +187,12 @@ class ManifestStats:
 
     def get_functional_annotation(self) -> None:
         """Load the functional annotation file to retrieve the gene_id and translation id.
-            A functional annotation file contains information about a gene.
-            The functional annotation file is stored in a json format containing
-            the description, id and object type (eg: "gene", "transcript", "translation").
 
-        Args:
-            json_path: Path to functional_annotation.json.
+        The functional annotation file is stored in a JSON format containing the description, id
+        and object type, eg: "gene", "transcript", "translation".
+
         """
-        if not "functional_annotation" in self.manifest_files:
+        if "functional_annotation" not in self.manifest_files:
             return
         logging.info("Manifest contains functional annotation(s)")
 
@@ -222,10 +221,10 @@ class ManifestStats:
         self.lengths = {**self.lengths, **stats}
 
     def get_gff3(self) -> None:
-        """A GFF parser is used to retrieve information in the GFF file such as
+        """A GFF3 parser is used to retrieve information in the GFF3 file such as
         gene and CDS ids and their corresponding lengths.
         """
-        if not "gff3" in self.manifest_files:
+        if "gff3" not in self.manifest_files:
             return
         logging.info("Manifest contains GFF3 gene annotations")
         gff3_path = self.manifest_files["gff3"]
@@ -305,10 +304,11 @@ class ManifestStats:
 
     def get_agp_seq_regions(self, agp_dict: dict | None) -> None:
         """AGP files describe the assembly of larger sequence objects using smaller objects.
-            Eg: describes the assembly of scaffolds from contigs.
+
+        E.g. describes the assembly of scaffolds from contigs.
 
         Args:
-            agp_dict: dict containing the information about the sequence.
+            agp_dict: Dict containing the information about the sequence.
 
         Note:
             AGP file is only used in the older builds, not used for current processing.
@@ -354,9 +354,7 @@ class ManifestStats:
         self.genome = get_json(Path(self.manifest_files["genome"]))
 
     def prepare_integrity_data(self) -> None:  # pylint: disable=too-many-branches
-        """Read all the files and keep a record (IDs and their lengths)
-        for each cases to be compared later.
-        """
+        """Read all the files and keep a record (IDs and their lengths) for each case to be compared later."""
         self.get_gff3()
         self.get_dna_fasta_lengths()
         self.get_peptides_fasta_lengths()
@@ -368,7 +366,9 @@ class ManifestStats:
     def has_lengths(self, name: str) -> bool:
         """Check if a given name has lengths records.
 
-        Raise KeyError if the name is not supported.
+
+        Raises:
+            KeyError: If the name is not supported.
 
         """
         try:

@@ -114,7 +114,7 @@ def test_get_dna_fasta_lengths(
         param(">prot1\nMAGIC\n", False, {"prot1": 5}, "", id="Normal prot"),
         param("", False, {}, "", id="Empty fasta"),
         param("AH", False, {}, "No sequences found", id="No sequences in fasta"),
-        param(">\nMAGIC\n", False, {}, "1 sequences with empty ids", id="empty ID"),
+        param(">\nMAGIC\n", False, {}, "1 sequences with empty ids", id="Empty ID"),
         param(">prot1\nMAGIC*\n", False, {"prot1": 6}, "1 sequences with stop codons", id="End stop codon"),
         param(">prot1\nMAGIC\n", True, {"prot1": 5}, "", id="End stop codon, ignore"),
         param(">prot1\nMAG*IC\n", False, {"prot1": 6}, "1 sequences with stop codons", id="In stop codon"),
@@ -123,7 +123,7 @@ def test_get_dna_fasta_lengths(
             False,
             {"prot1": 5},
             "1 non unique sequence ids",
-            id="duplicate ID",
+            id="Duplicate ID",
         ),
     ],
 )
