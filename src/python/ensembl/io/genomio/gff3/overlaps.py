@@ -47,7 +47,7 @@ def summarize_feature_stats(gff_in: Path) -> None:
     logging.info("Alt processing: Not parsing the GFF3, producing summary feature stats instead!")
 
     examiner = GFFExaminer()
-    with open(gff_in, "r", encoding="utf-8") as input_handle:
+    with gff_in.open("r", encoding="utf-8") as input_handle:
         pprint(examiner.available_limits(input_handle))
     input_handle.close()
 
