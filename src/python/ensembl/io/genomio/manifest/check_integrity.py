@@ -34,13 +34,10 @@ class IntegrityTool:
     def __init__(
         self,
         manifest_file: Path,
-        brc_mode: bool = False,
         ignore_final_stops: bool = False,
         no_fail: bool = False,
     ) -> None:
         self.manifest = ManifestStats(manifest_file)
-        self.brc_mode = False
-        self.set_brc_mode(brc_mode)
         self.ignore_final_stops = False
         self.set_ignore_final_stops(ignore_final_stops)
         self.errors: list[str] = []
@@ -154,11 +151,6 @@ class IntegrityTool:
                 print(message)
             else:
                 raise InvalidIntegrityError(message)
-
-    def set_brc_mode(self, brc_mode: bool) -> None:
-        """Set brc mode for this tool and the manifest."""
-        self.brc_mode = brc_mode
-        self.manifest.brc_mode = brc_mode
 
     def set_ignore_final_stops(self, ignore_final_stops: bool) -> None:
         """Set ignore_final_stops (when calculating peptide length) for this tool and the manifest."""
@@ -390,7 +382,6 @@ def main() -> None:
     """Main entrypoint."""
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path("--manifest_file", required=True, help="Manifest file for the data to check")
-    parser.add_argument("--brc_mode", action="store_true", help="Enable BRC mode")
     parser.add_argument(
         "--ignore_final_stops", action="store_true", help="Ignore final stop when calculating peptide length"
     )
@@ -401,7 +392,7 @@ def main() -> None:
     args = parser.parse_args()
     init_logging_with_args(args)
 
-    inspector = IntegrityTool(args.manifest_file, args.brc_mode, args.ignore_final_stops, args.no_fail)
+    inspector = IntegrityTool(args.manifest_file, args.ignore_final_stops, args.no_fail)
     inspector.check_integrity()
 
 
