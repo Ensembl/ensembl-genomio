@@ -55,7 +55,7 @@ class MockResult:
 
 
 class MockConnection:
-    """Mock a SQLalchemy connection."""
+    """Mock a SQLAlchemy connection."""
 
     def __init__(self, result: MockResult) -> None:
         self.result = result

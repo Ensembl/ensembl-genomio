@@ -32,7 +32,7 @@ from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 from ensembl.io.genomio.seq_region.report import ReportRecord
 from ensembl.utils.archive import open_gz_file
 
-_SYNONYM_MAP = frozendict(
+SYNONYM_MAP: Mapping[str, str] = MappingProxyType(
     {
         "Assigned-Molecule": "INSDC",
         "GenBank-Accn": "GenBank",
@@ -40,7 +40,7 @@ _SYNONYM_MAP = frozendict(
         "Sequence-Name": "INSDC_submitted_name",
     }
 )
-_MOLECULE_LOCATION = frozendict(
+MOLECULE_LOCATION: Mapping[str, str] = MappingProxyType(
     {
         "apicoplast": "apicoplast_chromosome",
         "chromosome": "nuclear_chromosome",
@@ -50,7 +50,7 @@ _MOLECULE_LOCATION = frozendict(
         "plasmid": "plasmid",
     }
 )
-_LOCATION_CODON = frozendict({"apicoplast_chromosome": 4})
+LOCATION_CODON: Mapping[str, int] = MappingProxyType({"apicoplast_chromosome": 4})
 
 SeqRegionDict: TypeAlias = dict[str, Any]
 
@@ -136,8 +136,8 @@ class SeqCollection:
     def make_seq_region_from_report(
         seq_data: dict[str, Any],
         is_refseq: bool,
-        synonym_map: dict[str, str] | frozendict[str, str] = _SYNONYM_MAP,
-        molecule_location: dict[str, str] | frozendict[str, str] = _MOLECULE_LOCATION,
+        synonym_map: Mapping[str, str] = SYNONYM_MAP,
+        molecule_location: Mapping[str, str] = MOLECULE_LOCATION,
     ) -> SeqRegionDict:
         """Returns a sequence region from the information provided.
 
@@ -204,9 +204,7 @@ class SeqCollection:
             else:
                 logging.info(f"Cannot exclude seq not found: {seq_name}")
 
-    def add_translation_table(
-        self, location_codon: dict[str, int] | frozendict[str, int] = _LOCATION_CODON
-    ) -> None:
+    def add_translation_table(self, location_codon: Mapping[str, int] = LOCATION_CODON) -> None:
         """Adds the translation codon table to each sequence region (when missing) based on its location.
 
         Args:
