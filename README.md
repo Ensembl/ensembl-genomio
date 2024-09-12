@@ -9,7 +9,7 @@ Pipelines to turn basic genomic data into Ensembl cores and back.
 
 This is a multilanguage (Perl, Python) repo providing eHive pipelines and various scripts (see below) to prepare genomic data and load it as [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) or to dump such core databases as file bundles.
 
-Bundles themselves consist of genomic data in various formats (e.g. fasta, gff3, json) and should follow the corresponding [specification](docs/BRC4_genome_loader.md#input-data).
+Bundles themselves consist of genomic data in various formats (e.g. fasta, gff3, json) and should follow the corresponding [specification](https://github.com/Ensembl/ensembl-genomio/blob/main/docs/BRC4_genome_loader.md#input-data).
 
 
 ## Installation and configuration
@@ -56,7 +56,7 @@ To install additional dependencies (e.g. `[docs]` or `[cicd]`) provide `[<tag>]`
 pip install -e ./ensembl-genomio[cicd]
 ```
 
-For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](./pyproject.toml). 
+For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](https://github.com/Ensembl/ensembl-genomio/blob/main/pyproject.toml).
 
 ### Additional steps to use automated generation of the documentation
 
@@ -73,7 +73,7 @@ mkdocs build
 
 ###  Nextflow installation
 
-Please, refer to the "Installation" section of the [Nextflow pipelines document](docs/nextflow.md#installation).
+Please, refer to the "Installation" section of the [Nextflow pipelines document](https://github.com/Ensembl/ensembl-genomio/blob/main/docs/nextflow.md#installation).
 
 ## Pipelines
 
@@ -122,7 +122,7 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 
 | Pipeline name | Description | Document | Comment | Module |
 | - | - | - | - | - |
-| BRC4_genome_loader | creates an [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) from a set of flat files or adds ad-hoc (ie organellas) sequences to the existing core  | [BRC4_genome_loader](docs/BRC4_genome_loader.md) | | [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](src/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
+| BRC4_genome_loader | creates an [Ensembl core database](http://www.ensembl.org/info/docs/api/core/index.html) from a set of flat files or adds ad-hoc (i.e. organellas) sequences to the existing core  | [BRC4_genome_loader](https://github.com/Ensembl/ensembl-genomio/blob/main/docs/BRC4_genome_loader.md) | | [Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf](https://github.com/Ensembl/ensembl-genomio/blob/main/src/perl/Bio/EnsEMBL/Pipeline/PipeConfig/BRC4_genome_loader_conf.pm)
 | BRC4_genome_dumper | | | | |
 | | | | | |
 | BRC4_genome_prepare | | | | |
@@ -135,15 +135,15 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 
 ### Scripts
 
-* [trf_split_run.bash](scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [docs](docs/trf_split_run.md))
+* [trf_split_run.bash](https://github.com/Ensembl/ensembl-genomio/blob/main/scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [docs](https://github.com/Ensembl/ensembl-genomio/blob/main/docs/trf_split_run.md))
 
 ## CI/CD bits
 
-As for now some [Gitlab CI](https://docs.gitlab.com/ee/ci/) pipelines introduced to keep things in shape. Though, this bit is in constant development. Some documentation can be found in [docs for GitLab CI/CD](docs/cicd_gitlab.md)
+As for now some [Gitlab CI](https://docs.gitlab.com/ee/ci/) pipelines introduced to keep things in shape. Though, this bit is in constant development. Some documentation can be found in [docs for GitLab CI/CD](https://github.com/Ensembl/ensembl-genomio/blob/main/docs/cicd_gitlab.md)
 
 ## Various docs
 
-See [docs](docs)
+See [docs](https://github.com/Ensembl/ensembl-genomio/blob/main/docs)
 
 ## Unit testing
 
