@@ -50,7 +50,7 @@ class ManifestStats:
     - sequences circularity
     """
 
-    def __init__(self, manifest_path: StrPath, ignore_final_stops: False) -> None:
+    def __init__(self, manifest_path: StrPath, ignore_final_stops: bool = False) -> None:
         self.manifest_files = self._get_manifest(manifest_path)
         self.genome: dict[str, Any] = {}
 
