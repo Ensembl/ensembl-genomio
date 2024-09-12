@@ -66,7 +66,7 @@ def test_load_seq_regions(
     expected_circular: dict[str, bool],
 ) -> None:
     """Tests `ManifestStats.load_seq_regions()`.
-    
+
     Fixtures: data_dir, tmp_path, manifest_dir
 
     Args:
@@ -102,7 +102,7 @@ def test_load_dna_fasta_lengths(
     expected_error: str,
 ) -> None:
     """Tests `ManifestStats.load_dna_fasta_lengths()`.
-    
+
     Fixtures: tmp_path
 
     Args:
@@ -152,7 +152,7 @@ def test_load_peptides_fasta_lengths(
     expected_error: str,
 ) -> None:
     """Tests `ManifestStats.load_peptides_fasta_lengths()`.
-    
+
     Fixtures: tmp_path
 
     Args:
@@ -201,7 +201,7 @@ def test_load_functional_annotations(
     expected_data: dict[str, int],
 ) -> None:
     """Tests `ManifestStats.load_functional_annotation()`.
-    
+
     Fixtures: tmp_path
 
     Args:
