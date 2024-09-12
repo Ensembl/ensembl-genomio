@@ -23,16 +23,8 @@ import re
 
 from Bio.SeqRecord import SeqRecord
 
+from ensembl.io.genomio.seq_region.collection import MOLECULE_LOCATION
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
-
-_MOLECULE_LOCATION = {
-    "apicoplast": "apicoplast_chromosome",
-    "chromosome": "nuclear_chromosome",
-    "kinetoplast": "kinetoplast_chromosome",
-    "linkage group": "linkage_group",
-    "mitochondrion": "mitochondrial_chromosome",
-    "plasmid": "plasmid",
-}
 
 
 @dataclass
@@ -66,7 +58,7 @@ class GBFFRecord:
                 return int(feat.qualifiers["transl_table"][0])
         return None
 
-    def get_organelle(self, molecule_location: dict | None = None) -> str | None:
+    def get_organelle(self, molecule_location: Mapping[str, str] = MOLECULE_LOCATION) -> str | None:
         """Returns the organelle location from the given GenBank record (if present).
 
         Args:
@@ -77,8 +69,6 @@ class GBFFRecord:
             UnknownMetadata: If the location is not part of the controlled vocabulary.
 
         """
-        if molecule_location is None:
-            molecule_location = _MOLECULE_LOCATION
         location = None
         for feat in self.record.features:
             if "organelle" not in feat.qualifiers:
