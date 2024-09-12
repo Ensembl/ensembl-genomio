@@ -14,8 +14,10 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.manifest.manifest_stats` module."""
 
+from contextlib import nullcontext as no_raise
 from pathlib import Path
 from shutil import copy
+from typing import ContextManager
 
 import pytest
 from pytest import raises, param, mark
@@ -295,12 +297,25 @@ def test_get_lengths(manifest_path: Path) -> None:
     assert circular == {"ECC02_000372": 1}
 
 
-def test_get_circular(manifest_path: Path) -> None:
-    """Tests `ManifestStats.get_circular()`."""
+@mark.parametrize(
+    "key, expected_data, expectation",
+    [
+        param("seq_regions", {"JABDHM010000001.1": True, "JABDHM010000002.1": False}, no_raise(), id="OK"),
+        param("foobar", {}, raises(KeyError), id="Unknown key"),
+    ],
+)
+def test_get_circular(
+    manifest_path: Path, key: str, expected_data: dict[str, bool], expectation: ContextManager
+) -> None:
+    """Tests `ManifestStats.get_circular()`.
+
+    Args:
+        key: Key for the circular dict.
+        expected_data: Expected circular information for that key.
+        expectation: Expected exception.
+    """
     stats = ManifestStats(manifest_path)
-    with raises(KeyError):
-        stats.get_circular("foobar")
-    assert not stats.get_circular("seq_regions")
     stats.get_seq_regions()
-    lengths = stats.get_circular("seq_regions")
-    assert lengths == {"JABDHM010000001.1": True, "JABDHM010000002.1": False}
+
+    with expectation:
+        assert stats.get_circular(key) == expected_data
