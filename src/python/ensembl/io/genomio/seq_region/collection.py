@@ -21,36 +21,16 @@ __all__ = [
 
 import logging
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, Mapping, TypeAlias
 
 from Bio import SeqIO
-from frozendict import frozendict
 import requests
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
+from ensembl.io.genomio.seq_region.mappings import SYNONYM_MAP, MOLECULE_LOCATION, LOCATION_CODON
 from ensembl.io.genomio.seq_region.report import ReportRecord
 from ensembl.utils.archive import open_gz_file
-
-SYNONYM_MAP: Mapping[str, str] = MappingProxyType(
-    {
-        "Assigned-Molecule": "INSDC",
-        "GenBank-Accn": "GenBank",
-        "RefSeq-Accn": "RefSeq",
-        "Sequence-Name": "INSDC_submitted_name",
-    }
-)
-MOLECULE_LOCATION: Mapping[str, str] = MappingProxyType(
-    {
-        "apicoplast": "apicoplast_chromosome",
-        "chromosome": "nuclear_chromosome",
-        "kinetoplast": "kinetoplast_chromosome",
-        "linkage group": "linkage_group",
-        "mitochondrion": "mitochondrial_chromosome",
-        "plasmid": "plasmid",
-    }
-)
-LOCATION_CODON: Mapping[str, int] = MappingProxyType({"apicoplast_chromosome": 4})
 
 SeqRegionDict: TypeAlias = dict[str, Any]
 

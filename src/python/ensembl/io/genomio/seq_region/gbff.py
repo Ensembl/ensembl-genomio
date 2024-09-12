@@ -20,10 +20,11 @@ __all__ = [
 
 from dataclasses import dataclass
 import re
+from typing import Mapping
 
 from Bio.SeqRecord import SeqRecord
 
-from ensembl.io.genomio.seq_region.collection import MOLECULE_LOCATION
+from ensembl.io.genomio.seq_region.mappings import MOLECULE_LOCATION
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 
 
