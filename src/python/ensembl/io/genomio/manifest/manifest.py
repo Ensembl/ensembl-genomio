@@ -132,7 +132,7 @@ class Manifest:
                 raise ValueError(f"Too many files with same name {obj_name_base}")
         return obj_name
 
-    def load(self) -> dict:
+    def load(self) -> ManifestDict:
         """Load the content of an existing manifest file."""
         if not self.file_path.exists():
             raise ManifestError(f"Cannot load non-existing manifest file: {self.file_path}")
