@@ -276,14 +276,28 @@ def test_prepare_integrity_data(tmp_path: Path) -> None:
     }
 
 
-def test_has_lengths(manifest_path: Path) -> None:
-    """Tests `ManifestStats.has_lengths()`."""
+@mark.parametrize(
+    "key, expected_data, expectation",
+    [
+        param("ann_genes", True, no_raise(), id="Loaded func annotation"),
+        param("gff3_genes", False, no_raise(), id="Not loaded gff genes"),
+        param("foobar", False, raises(KeyError), id="Unknown key"),
+    ],
+)
+def test_has_lengths(
+    manifest_path: Path, key: str, expected_data: dict[str, bool], expectation: ContextManager
+) -> None:
+    """Tests `ManifestStats.has_lengths()`.
+
+    Args:
+        key: Key for the length dict.
+        expected_data: If lengths exist for that key.
+        expectation: Expected exception.
+    """
     stats = ManifestStats(manifest_path)
-    with raises(KeyError):
-        stats.has_lengths("foobar")
-    assert not stats.has_lengths("ann_genes")
     stats.get_functional_annotation()
-    assert stats.has_lengths("ann_genes")
+    with expectation:
+        assert stats.has_lengths(key) == expected_data
 
 
 @mark.parametrize(
