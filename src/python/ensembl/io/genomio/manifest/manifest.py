@@ -20,6 +20,10 @@ import hashlib
 import json
 import logging
 from pathlib import Path
+from typing import Any, TypeAlias
+
+
+ManifestDict: TypeAlias = dict[str, dict[str, Any]]
 
 
 class ManifestError(Exception):
@@ -65,9 +69,9 @@ class Manifest:
         with self.file_path.open("w") as json_out:
             json_out.write(json.dumps(self.files, sort_keys=True, indent=4))
 
-    def get_files_checksums(self) -> dict[str, dict]:
+    def get_files_checksums(self) -> ManifestDict:
         """Records all the files in the directory with their checksum."""
-        manifest_files: dict = {}
+        manifest_files: ManifestDict = {}
         for subfile in self.root_dir.iterdir():
             logging.debug(f"Check file {subfile} ({subfile.stem}, {subfile.suffix})")
             used_file = False
@@ -105,7 +109,7 @@ class Manifest:
         self.files = manifest_files
         return self.files
 
-    def _prepare_object_name(self, subfile: Path, name: str, manifest_dict: dict) -> str:
+    def _prepare_object_name(self, subfile: Path, name: str, manifest_dict: dict[str, dict[str, str]]) -> str:
         # Prepare object name
         obj_name = "file"
         try:
@@ -121,7 +125,7 @@ class Manifest:
         # Add number if duplicate name
         obj_name_base = obj_name
         count = 1
-        while obj_name in manifest_dict:
+        while obj_name in manifest_dict.keys():
             obj_name = f"{obj_name_base}.{count}"
             count += 1
             if count >= 10:
