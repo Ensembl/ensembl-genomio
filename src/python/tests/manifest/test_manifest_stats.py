@@ -58,14 +58,14 @@ def test_add_error(manifest_path: Path) -> None:
         ),
     ],
 )
-def test_get_seq_regions(
+def test_load_seq_regions(
     data_dir: Path,
     tmp_path: Path,
     manifest_dir: str,
     expected_lengths: dict[str, int],
     expected_circular: dict[str, bool],
 ) -> None:
-    """Tests `ManifestStats.get_seq_regions()`."""
+    """Tests `ManifestStats.load_seq_regions()`."""
     if manifest_dir:
         seq_manifest = data_dir / manifest_dir / "manifest.json"
     else:
@@ -74,7 +74,7 @@ def test_get_seq_regions(
             manifest_fh.write("{}")
 
     stats = ManifestStats(data_dir / seq_manifest)
-    stats.get_seq_regions()
+    stats.load_seq_regions()
     assert stats.lengths["seq_regions"] == expected_lengths
     assert stats.circular["seq_regions"] == expected_circular
 
@@ -88,20 +88,20 @@ def test_get_seq_regions(
         param(">\nCGTA\n", {}, "1 sequences with empty ids", id="empty ID"),
     ],
 )
-def test_get_dna_fasta_lengths(
+def test_load_dna_fasta_lengths(
     tmp_path: Path,
     fasta_str: str,
     expected_lengths: dict[str, int],
     expected_error: str,
 ) -> None:
-    """Tests `ManifestStats.get_dna_fasta_lengths()`."""
+    """Tests `ManifestStats.load_dna_fasta_lengths()`."""
     fasta_path = tmp_path / "fasta_dna.fasta"
     with fasta_path.open("w") as fasta_fh:
         fasta_fh.write(fasta_str)
     manifest = Manifest(tmp_path)
     manifest.create()
     stats = ManifestStats(manifest.root_dir / "manifest.json")
-    stats.get_dna_fasta_lengths()
+    stats.load_dna_fasta_lengths()
     assert stats.lengths["dna_sequences"] == expected_lengths
     if expected_error == "":
         assert not stats.errors
@@ -129,14 +129,14 @@ def test_get_dna_fasta_lengths(
         ),
     ],
 )
-def test_get_peptides_fasta_lengths(
+def test_load_peptides_fasta_lengths(
     tmp_path: Path,
     fasta_str: str,
     ignore_final_stops: bool,
     expected_lengths: dict[str, int],
     expected_error: str,
 ) -> None:
-    """Tests `ManifestStats.get_peptides_fasta_lengths()`."""
+    """Tests `ManifestStats.load_peptides_fasta_lengths()`."""
     fasta_path = tmp_path / "fasta_pep.fasta"
     with fasta_path.open("w") as fasta_fh:
         fasta_fh.write(fasta_str)
@@ -144,7 +144,7 @@ def test_get_peptides_fasta_lengths(
     manifest.create()
     stats = ManifestStats(manifest.root_dir / "manifest.json")
     stats.ignore_final_stops = ignore_final_stops
-    stats.get_peptides_fasta_lengths()
+    stats.load_peptides_fasta_lengths()
     assert stats.lengths["peptide_sequences"] == expected_lengths
     if expected_error == "":
         assert not stats.errors
@@ -170,13 +170,13 @@ def test_get_peptides_fasta_lengths(
         ),
     ],
 )
-def test_get_functional_annotations(
+def test_load_functional_annotations(
     tmp_path: Path,
     json_data: dict | None,
     expected_key: str,
     expected_data: dict[str, int],
 ) -> None:
-    """Tests `ManifestStats.get_functional_annotation()`."""
+    """Tests `ManifestStats.load_functional_annotation()`."""
     func_path = tmp_path / "functional_annotation.json"
     if json_data is not None:
         if json_data:
@@ -186,7 +186,7 @@ def test_get_functional_annotations(
     manifest = Manifest(tmp_path)
     manifest.create()
     stats = ManifestStats(manifest.root_dir / "manifest.json")
-    stats.get_functional_annotation()
+    stats.load_functional_annotation()
     if expected_key:
         assert stats.lengths[expected_key] == expected_data
 
@@ -223,32 +223,32 @@ def test_get_functional_annotations(
         ),
     ],
 )
-def test_get_gff3(
+def test_load_gff3(
     tmp_path: Path,
     data_dir: Path,
     gff3_path: str | None,
     expected_data: dict[str, int],
 ) -> None:
-    """Tests `ManifestStats.get_gff3()`."""
+    """Tests `ManifestStats.load_gff3()`."""
     if gff3_path:
         copy(data_dir / gff3_path, tmp_path / "test.gff3")
     manifest = Manifest(tmp_path)
     manifest.create()
     stats = ManifestStats(manifest.root_dir / "manifest.json")
-    stats.get_gff3()
+    stats.load_gff3()
     expected_lengths = {**stats.lengths, **expected_data}
     assert stats.lengths == expected_lengths
 
 
-def test_get_genome(tmp_path: Path) -> None:
-    """Tests `ManifestStats.get_genome()`."""
+def test_load_genome(tmp_path: Path) -> None:
+    """Tests `ManifestStats.load_genome()`."""
     genome_data = {"LOREM": "1"}
     genome_path = tmp_path / "genome.json"
     print_json(genome_path, genome_data)
     manifest = Manifest(tmp_path)
     manifest.create()
     stats = ManifestStats(manifest.file_path)
-    stats.get_genome()
+    stats.load_genome()
     assert stats.genome == genome_data
 
 
@@ -295,7 +295,7 @@ def test_has_lengths(
         expectation: Expected exception.
     """
     stats = ManifestStats(manifest_path)
-    stats.get_functional_annotation()
+    stats.load_functional_annotation()
     with expectation:
         assert stats.has_lengths(key) == expected_data
 
@@ -318,7 +318,7 @@ def test_get_lengths(
         expectation: Expected exception.
     """
     stats = ManifestStats(manifest_path)
-    stats.get_functional_annotation()
+    stats.load_functional_annotation()
     with expectation:
         assert stats.get_lengths(key) == expected_data
 
@@ -341,7 +341,7 @@ def test_get_circular(
         expectation: Expected exception.
     """
     stats = ManifestStats(manifest_path)
-    stats.get_seq_regions()
+    stats.load_seq_regions()
 
     with expectation:
         assert stats.get_circular(key) == expected_data

@@ -101,7 +101,7 @@ class ManifestStats:
         """Record an error."""
         self.errors.append(error)
 
-    def get_seq_regions(self) -> None:
+    def load_seq_regions(self) -> None:
         """Retrieve seq_regions lengths and circular information from the seq_region JSON file."""
 
         if not "seq_region" in self.manifest_files:
@@ -124,7 +124,7 @@ class ManifestStats:
         self.lengths["seq_regions"] = seq_lengths
         self.circular["seq_regions"] = seq_circular
 
-    def get_peptides_fasta_lengths(self) -> None:
+    def load_peptides_fasta_lengths(self) -> None:
         """Retrieve peptides sequences lengths from their FASTA file."""
         if "fasta_pep" not in self.manifest_files:
             return
@@ -132,7 +132,7 @@ class ManifestStats:
             self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
         )
 
-    def get_dna_fasta_lengths(self) -> None:
+    def load_dna_fasta_lengths(self) -> None:
         """Retrieve DNA sequences lengths from their FASTA file."""
         if "fasta_dna" not in self.manifest_files:
             return
@@ -184,7 +184,7 @@ class ManifestStats:
             self.add_error(f"No sequences found in {fasta_path}")
         return data
 
-    def get_functional_annotation(self) -> None:
+    def load_functional_annotation(self) -> None:
         """Load the functional annotation file to retrieve the gene_id and translation id.
 
         The functional annotation file is stored in a JSON format containing the description, id
@@ -219,7 +219,7 @@ class ManifestStats:
         }
         self.lengths = {**self.lengths, **stats}
 
-    def get_gff3(self) -> None:
+    def load_gff3(self) -> None:
         """A GFF3 parser is used to retrieve information in the GFF3 file such as
         gene and CDS ids and their corresponding lengths.
         """
@@ -301,7 +301,7 @@ class ManifestStats:
                     peps[pep_id] = pep_length
                 all_peps[pep_id] = pep_length
 
-    def get_agp_seq_regions(self, agp_dict: dict | None) -> None:
+    def load_agp_seq_regions(self, agp_dict: dict | None) -> None:
         """AGP files describe the assembly of larger sequence objects using smaller objects.
 
         E.g. describes the assembly of scaffolds from contigs.
@@ -345,7 +345,7 @@ class ManifestStats:
 
         self.lengths["agp"] = seqr
 
-    def get_genome(self) -> None:
+    def load_genome(self) -> None:
         """Load the genome data."""
         if "genome" not in self.manifest_files:
             return
@@ -354,13 +354,13 @@ class ManifestStats:
 
     def prepare_integrity_data(self) -> None:  # pylint: disable=too-many-branches
         """Read all the files and keep a record (IDs and their lengths) for each case to be compared later."""
-        self.get_gff3()
-        self.get_dna_fasta_lengths()
-        self.get_peptides_fasta_lengths()
-        self.get_seq_regions()
-        self.get_functional_annotation()
-        self.get_agp_seq_regions(self.manifest_files.get("agp"))
-        self.get_genome()
+        self.load_gff3()
+        self.load_dna_fasta_lengths()
+        self.load_peptides_fasta_lengths()
+        self.load_seq_regions()
+        self.load_functional_annotation()
+        self.load_agp_seq_regions(self.manifest_files.get("agp"))
+        self.load_genome()
 
     def has_lengths(self, name: str) -> bool:
         """Check if a given name has lengths records.
