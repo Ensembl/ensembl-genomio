@@ -365,10 +365,11 @@ class ManifestStats:
     def has_lengths(self, name: str) -> bool:
         """Check if a given name has lengths records.
 
+        Args:
+            name: Name for the lengths to check.
 
         Raises:
             KeyError: If the name is not supported.
-
         """
         try:
             return bool(self.lengths[name])
@@ -376,14 +377,28 @@ class ManifestStats:
             raise KeyError(f"There is no length record for {name}") from err
 
     def get_lengths(self, name: str) -> dict[str, Any]:
-        """Returns a dict associating IDs with their length from a given file name."""
+        """Returns a dict associating IDs with their length from a given file name.
+
+        Args:
+            name: Name for the lengths to get.
+
+        Raises:
+            KeyError: If the name is not supported.
+        """
         try:
             return self.lengths[name]
         except KeyError as err:
             raise KeyError(f"There is no length record for {name}") from err
 
     def get_circular(self, name: str) -> dict[str, Any]:
-        """Returns a dict associating IDs with their is_circular flag from a given file name."""
+        """Returns a dict associating IDs with their is_circular flag from a given file name.
+
+        Args:
+            name: Name for the circular data to get.
+
+        Raises:
+            KeyError: If the name is not supported.
+        """
         try:
             return self.circular[name]
         except KeyError as err:

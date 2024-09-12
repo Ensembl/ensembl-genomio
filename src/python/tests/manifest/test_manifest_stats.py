@@ -65,7 +65,14 @@ def test_load_seq_regions(
     expected_lengths: dict[str, int],
     expected_circular: dict[str, bool],
 ) -> None:
-    """Tests `ManifestStats.load_seq_regions()`."""
+    """Tests `ManifestStats.load_seq_regions()`.
+    
+    Fixtures: data_dir, tmp_path, manifest_dir
+
+    Args:
+        expected_lengths: Expected length data from the files.
+        expected_circular: Expected circular data from the files.
+    """
     if manifest_dir:
         seq_manifest = data_dir / manifest_dir / "manifest.json"
     else:
@@ -94,7 +101,15 @@ def test_load_dna_fasta_lengths(
     expected_lengths: dict[str, int],
     expected_error: str,
 ) -> None:
-    """Tests `ManifestStats.load_dna_fasta_lengths()`."""
+    """Tests `ManifestStats.load_dna_fasta_lengths()`.
+    
+    Fixtures: tmp_path
+
+    Args:
+        fasta_str: Content of a test input FASTA DNA file.
+        expected_lengths: Expected length data from the files.
+        expected_error: Expected errors while loading.
+    """
     fasta_path = tmp_path / "fasta_dna.fasta"
     with fasta_path.open("w") as fasta_fh:
         fasta_fh.write(fasta_str)
@@ -136,7 +151,16 @@ def test_load_peptides_fasta_lengths(
     expected_lengths: dict[str, int],
     expected_error: str,
 ) -> None:
-    """Tests `ManifestStats.load_peptides_fasta_lengths()`."""
+    """Tests `ManifestStats.load_peptides_fasta_lengths()`.
+    
+    Fixtures: tmp_path
+
+    Args:
+        fasta_str: Content of a test input FASTA DNA file.
+        ignore_final_stops: Ignore final stops for the protein sequences.
+        expected_lengths: Expected length data from the files.
+        expected_error: Expected errors while loading.
+    """
     fasta_path = tmp_path / "fasta_pep.fasta"
     with fasta_path.open("w") as fasta_fh:
         fasta_fh.write(fasta_str)
@@ -176,7 +200,16 @@ def test_load_functional_annotations(
     expected_key: str,
     expected_data: dict[str, int],
 ) -> None:
-    """Tests `ManifestStats.load_functional_annotation()`."""
+    """Tests `ManifestStats.load_functional_annotation()`.
+    
+    Fixtures: tmp_path
+
+    Args:
+        fasta_str: Content of a test input FASTA DNA file.
+        ignore_final_stops: Ignore final stops for the protein sequences.
+        expected_lengths: Expected length data from the files.
+        expected_error: Expected errors while loading.
+    """
     func_path = tmp_path / "functional_annotation.json"
     if json_data is not None:
         if json_data:
