@@ -55,20 +55,20 @@ class Manifest:
         Args:
             manifest_dir: directory where the files are contained.
         """
-        self.dir = manifest_dir
-        self.path = manifest_dir / "manifest.json"
+        self.root_dir = manifest_dir
+        self.file_path = manifest_dir / "manifest.json"
         self.files: dict = {}
 
     def create(self) -> None:
         """Creates a manifest file from the files in a directory."""
         self.get_files_checksums()
-        with self.path.open("w") as json_out:
+        with self.file_path.open("w") as json_out:
             json_out.write(json.dumps(self.files, sort_keys=True, indent=4))
 
     def get_files_checksums(self) -> dict[str, dict]:
         """Records all the files in the directory with their checksum."""
         manifest_files: dict = {}
-        for subfile in self.dir.iterdir():
+        for subfile in self.root_dir.iterdir():
             logging.debug(f"Check file {subfile} ({subfile.stem}, {subfile.suffix})")
             used_file = False
             if subfile.is_dir():
@@ -130,22 +130,22 @@ class Manifest:
 
     def load(self) -> dict:
         """Load the content of an existing manifest file."""
-        if not self.path.exists():
-            raise ManifestError(f"Cannot load non-existing manifest file: {self.path}")
+        if not self.file_path.exists():
+            raise ManifestError(f"Cannot load non-existing manifest file: {self.file_path}")
 
-        with self.path.open("r") as manifest_fh:
+        with self.file_path.open("r") as manifest_fh:
             manifest = json.load(manifest_fh)
 
             # Use dir name from the manifest
             for name in manifest:
                 if "file" in manifest[name]:
-                    file_path = self.dir / manifest[name]["file"]
+                    file_path = self.root_dir / manifest[name]["file"]
                     # check if the md5sum is correct
                     md5sum = manifest[name]["md5sum"]
                     self._check_md5sum(file_path, md5sum)
                 else:
                     for f in manifest[name]:
-                        file_path = self.dir / manifest[name][f]["file"]
+                        file_path = self.root_dir / manifest[name][f]["file"]
                         # check if the md5sum is correct
                         md5sum = manifest[name][f]["md5sum"]
                         self._check_md5sum(file_path, md5sum)

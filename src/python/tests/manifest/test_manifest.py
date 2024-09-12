@@ -152,12 +152,12 @@ def test_create_manifest(
 
     manifest = Manifest(tmp_path)
     manifest.create()
-    assert manifest.path.exists()
+    assert manifest.file_path.exists()
 
     expected_manifest_file = Path(tmp_path / "expected.json")
     with expected_manifest_file.open("w") as expected_fh:
         expected_fh.write(json.dumps(expected_content, sort_keys=True, indent=4))
-    assert_files(manifest.path, expected_manifest_file)
+    assert_files(manifest.file_path, expected_manifest_file)
 
 
 @pytest.mark.parametrize(
