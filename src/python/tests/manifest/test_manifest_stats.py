@@ -286,15 +286,27 @@ def test_has_lengths(manifest_path: Path) -> None:
     assert stats.has_lengths("ann_genes")
 
 
-def test_get_lengths(manifest_path: Path) -> None:
-    """Tests `ManifestStats.get_lengths()`."""
+@mark.parametrize(
+    "key, expected_data, expectation",
+    [
+        param("ann_genes", {"ECC02_000372": 1}, no_raise(), id="OK"),
+        param("foobar", {}, raises(KeyError), id="Unknown key"),
+    ],
+)
+def test_get_lengths(
+    manifest_path: Path, key: str, expected_data: dict[str, bool], expectation: ContextManager
+) -> None:
+    """Tests `ManifestStats.get_lengths()`.
+
+    Args:
+        key: Key for the length dict.
+        expected_data: Expected length information for that key.
+        expectation: Expected exception.
+    """
     stats = ManifestStats(manifest_path)
-    with raises(KeyError):
-        stats.get_lengths("foobar")
-    assert not stats.has_lengths("ann_genes")
     stats.get_functional_annotation()
-    circular = stats.get_lengths("ann_genes")
-    assert circular == {"ECC02_000372": 1}
+    with expectation:
+        assert stats.get_lengths(key) == expected_data
 
 
 @mark.parametrize(
