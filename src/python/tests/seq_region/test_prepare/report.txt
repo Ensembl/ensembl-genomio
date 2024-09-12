@@ -1,0 +1,5 @@
+# Assembly name:  TGA4
+# Organism name:  Toxoplasma gondii ME49 (apicomplexans)
+# Assembly level: Chromosome
+# Sequence-Name	Sequence-Role	Assigned-Molecule	Assigned-Molecule-Location/Type	GenBank-Accn	Relationship	RefSeq-Accn	Assembly-Unit	Sequence-Length	UCSC-style-name
+Pltd	assembled-molecule	Pltd	Apicoplast	na	<>	NC_001799.1	non-nuclear	60	na

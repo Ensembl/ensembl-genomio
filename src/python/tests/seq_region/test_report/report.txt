@@ -1,0 +1,5 @@
+# Assembly name:  TGA4
+# Organism name:  Toxoplasma gondii ME49 (apicomplexans)
+# Assembly level: Chromosome
+# Sequence-Name	Sequence-Role	Assigned-Molecule	Assigned-Molecule-Location/Type	GenBank-Accn	Relationship	RefSeq-Accn	Assembly-Unit	Sequence-Length	UCSC-style-name
+TGME49_chrIa	assembled-molecule	Ia	Chromosome	CM002034.1	=	NC_031467.1	Primary Assembly	1859933	na

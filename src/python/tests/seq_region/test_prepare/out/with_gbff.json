@@ -1,0 +1,28 @@
+[
+    {
+        "circular": true,
+        "codon_table": 4,
+        "coord_system_level": "chromosome",
+        "length": 60,
+        "location": "apicoplast_chromosome",
+        "name": "NC_001799.1",
+        "synonyms": [
+            {
+                "name": "Pltd",
+                "source": "INSDC"
+            },
+            {
+                "name": "Pltd",
+                "source": "INSDC_submitted_name"
+            },
+            {
+                "name": "NC_001799.1",
+                "source": "RefSeq"
+            },
+            {
+                "name": "U87145",
+                "source": "INSDC"
+            }
+        ]
+    }
+]

@@ -1,0 +1,1 @@
+TGME49_chrIa	assembled-molecule	Ia	Chromosome	CM002034.1	=	NC_031467.1	Primary Assembly	1859933	na

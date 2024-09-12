@@ -1,0 +1,22 @@
+LOCUS       NC_001799                 60 bp    DNA     circular INV 03-APR-2023
+DEFINITION  Toxoplasma gondii RH apicoplast, complete genome.
+ACCESSION   NC_001799
+VERSION     NC_001799.1
+COMMENT     PROVISIONAL REFSEQ: This record has not yet been subject to final
+            NCBI review. The reference sequence was derived from U87145.
+FEATURES             Location/Qualifiers
+     source          1..60
+                     /organism="Toxoplasma gondii RH"
+                     /organelle="plastid:apicoplast"
+                     /mol_type="genomic DNA"
+                     /strain="RH"
+                     /db_xref="taxon:383379"
+     gene            1..60
+                     /locus_tag="TogoCp01"
+     CDS             1..60
+                     /locus_tag="TogoCp01"
+                     /transl_table=4
+                     /translation="M"
+ORIGIN
+        1 gaattcatag gccaccctgg aatcgaacca gaaaccacgc ccttatcaaa agcgtgctct
+//
