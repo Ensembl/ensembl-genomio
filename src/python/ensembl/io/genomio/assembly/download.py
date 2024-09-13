@@ -66,7 +66,7 @@ def establish_ftp(ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
     Args:
         ftp_conn: FTP class object.
         ftp_url: Specific FTP URL in connection request.
-        sub_dir_path: Path of sub directory housing required data for download.
+        accession: Genome accession required data for download.
 
     Raises:
         UnsupportedFormatError: If `accession` does not follow INSDC's accession format.
