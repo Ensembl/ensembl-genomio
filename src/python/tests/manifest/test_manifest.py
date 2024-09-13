@@ -49,6 +49,8 @@ def test_init(tmp_path: Path) -> None:
 def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) -> None:
     """Tests `Manifest.get_files_checksum()`.
 
+    Fixtures: tmp_path
+
     Args:
         tmp_path: Test tmp dir.
         expected_name: Manifest key expected.
@@ -104,7 +106,15 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
 def test_get_files_checksum_multifiles(
     tmp_path: Path, file_names: list[str], expected_content: dict, expected: ContextManager
 ) -> None:
-    """Tests `Manifest.get_files_checksum()` with several files for the same name."""
+    """Tests `Manifest.get_files_checksum()` with several files for the same name.
+
+    Fixtures: tmp_path
+
+    Args:
+        file_names: List of files to create.
+        expected_content: Expected checksum dict.
+        expected: Expected exception.
+    """
     for file_name in file_names:
         with Path(tmp_path / file_name).open("w") as fh:
             fh.write("CONTENT")
@@ -115,7 +125,10 @@ def test_get_files_checksum_multifiles(
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFixture) -> None:
-    """Tests `Manifest.get_files_checksum()` with a subdir."""
+    """Tests `Manifest.get_files_checksum()` with a subdir.
+
+    Fixtures: tmp_path, caplog
+    """
     Path(tmp_path / "sub_dir").mkdir()
     manifest = Manifest(tmp_path)
     assert not manifest.get_files_checksums()
@@ -124,7 +137,10 @@ def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFix
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixture) -> None:
-    """Tests `Manifest.get_files_checksum()` with an empty file, deleted."""
+    """Tests `Manifest.get_files_checksum()` with an empty file, deleted.
+
+    Fixtures: tmp_path, caplog
+    """
     empty_file = Path(tmp_path / "empty_file.txt")
     empty_file.touch()
     assert empty_file.exists()
@@ -145,7 +161,15 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
 def test_create_manifest(
     tmp_path: Path, assert_files: Callable, files: list[str], expected_content: dict
 ) -> None:
-    """Tests `Manifest.create()`."""
+    """Tests `Manifest.create()`.
+
+    Fixtures: tmp_path, assert_files
+
+    Args:
+        files: List of dummy files to create for the manifest to use.
+        expected_content: Expected content of the manifest files after creation.
+
+    """
     for file_name in files:
         with Path(tmp_path / file_name).open("w") as fh:
             fh.write("CONTENT")
@@ -177,6 +201,8 @@ def test_load(
     tmp_path: Path, data_dir: Path, files_dir: str, expected_files: set, expected: ContextManager
 ) -> None:
     """Tests `Manifest.load()`.
+
+    Fixtures: tmp_path, data_dir
 
     Args:
         files_dir: Directory where test data files are copied from.
