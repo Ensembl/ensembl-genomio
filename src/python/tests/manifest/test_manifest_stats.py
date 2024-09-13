@@ -166,8 +166,7 @@ def test_load_peptides_fasta_lengths(
         fasta_fh.write(fasta_str)
     manifest = Manifest(tmp_path)
     manifest.create()
-    stats = ManifestStats(manifest.root_dir / "manifest.json")
-    stats.ignore_final_stops = ignore_final_stops
+    stats = ManifestStats(manifest.root_dir / "manifest.json", ignore_final_stops=ignore_final_stops)
     stats.load_peptides_fasta_lengths()
     assert stats.lengths["peptide_sequences"] == expected_lengths
     if expected_error == "":
