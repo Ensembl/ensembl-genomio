@@ -262,7 +262,14 @@ def test_load_gff3(
     gff3_path: str | None,
     expected_data: dict[str, int],
 ) -> None:
-    """Tests `ManifestStats.load_gff3()`."""
+    """Tests `ManifestStats.load_gff3()`.
+
+    Fixtures: tmp_path, data_dir
+
+    Args:
+        gff3_path: Path to a test GFF3 file.
+        expected_data: Expected length data extracted from the GFF3 file.
+    """
     if gff3_path:
         copy(data_dir / gff3_path, tmp_path / "test.gff3")
     manifest = Manifest(tmp_path)
@@ -322,6 +329,8 @@ def test_has_lengths(
 ) -> None:
     """Tests `ManifestStats.has_lengths()`.
 
+    Fixtures: manifest_path
+
     Args:
         key: Key for the length dict.
         expected_data: If lengths exist for that key.
@@ -345,6 +354,8 @@ def test_get_lengths(
 ) -> None:
     """Tests `ManifestStats.get_lengths()`.
 
+    Fixtures: manifest_path
+
     Args:
         key: Key for the length dict.
         expected_data: Expected length information for that key.
@@ -367,6 +378,8 @@ def test_get_circular(
     manifest_path: Path, key: str, expected_data: dict[str, bool], expectation: ContextManager
 ) -> None:
     """Tests `ManifestStats.get_circular()`.
+
+    Fixtures: manifest_path
 
     Args:
         key: Key for the circular dict.
