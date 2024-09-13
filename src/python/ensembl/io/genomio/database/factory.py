@@ -33,7 +33,7 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
     """Returns a metadata list from the given databases on a server.
 
     Args:
-        server: Server URL where all the databases are hosted.
+        server_url: Server URL where all the databases are hosted.
         dbs: List of database names.
         brc_mode: If true, assign ``BRC4.organism_abbrev`` as the species, and ``BRC4.component`` as the
             division. Otherwise, the species will be ``species.production_name`` and the division will be
