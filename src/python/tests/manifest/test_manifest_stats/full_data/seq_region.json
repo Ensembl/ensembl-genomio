@@ -1,0 +1,37 @@
+[
+    {
+        "circular": true,
+        "BRC4_seq_region_name": "JABDHM010000001",
+        "EBI_seq_region_name": "JABDHM010000001",
+        "coord_system_level": "scaffold",
+        "length": 926516,
+        "name": "JABDHM010000001.1",
+        "synonyms": [
+            {
+                "name": "JABDHM010000001.1",
+                "source": "GenBank"
+            },
+            {
+                "name": "berenice_1",
+                "source": "INSDC_submitted_name"
+            }
+        ]
+    },
+    {
+        "BRC4_seq_region_name": "JABDHM010000002",
+        "EBI_seq_region_name": "JABDHM010000002",
+        "coord_system_level": "scaffold",
+        "length": 726303,
+        "name": "JABDHM010000002.1",
+        "synonyms": [
+            {
+                "name": "JABDHM010000002.1",
+                "source": "GenBank"
+            },
+            {
+                "name": "berenice_2",
+                "source": "INSDC_submitted_name"
+            }
+        ]
+    }
+]

@@ -1,0 +1,20 @@
+{
+    "functional_annotation": {
+        "file": "functional_annotation.json",
+        "md5sum": "7be40a688138a6e0f72d9dbcd29868fb"
+    },
+    "seq_region": {
+        "file": "seq_region.json",
+        "md5sum": "e80a85d9d3f978ec87fc6c797115e096"
+    },
+    "agp": {
+        "agp1": {
+            "file": "agp1.agp",
+            "md5sum": "a516ff74e222c3bbd3ab924e96fefe0c"
+        },
+        "agp2": {
+            "file": "agp2.agp",
+            "md5sum": "a516ff74e222c3bbd3ab924e96fefe0c"
+        }
+    }
+}

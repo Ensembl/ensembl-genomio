@@ -26,13 +26,11 @@ process CHECK_INTEGRITY {
         tuple val(meta), path("*.*", includeInputs: true)
 
     shell:
-        brc_mode = params.brc_mode ? '--brc_mode' : ''
         integrity_file = "integrity.out"
         '''
         manifest_check_integrity \
             --manifest_file ./manifest.json \
             --no_fail \
-            !{brc_mode} \
             > !{integrity_file}
         
         # Only keep integrity file if there are errors to report
