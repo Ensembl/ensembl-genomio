@@ -50,7 +50,7 @@ class Manifest:
         "pep": "fasta_pep",
     }
     _same_names_dict = {name: name for name in _same_names}
-    names = {**_same_names_dict, **alias_names}
+    names = {**_same_names_dict, **_alias_names}
     multi_files = {"agp"}
 
     def __init__(self, manifest_dir: Path) -> None:
