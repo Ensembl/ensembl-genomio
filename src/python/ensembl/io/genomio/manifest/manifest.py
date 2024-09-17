@@ -33,7 +33,7 @@ class ManifestError(Exception):
 class Manifest:
     """Records of a manifest file and its files and md5 checksums."""
 
-    same_names = {
+    _same_names = {
         "gff3",
         "fasta_dna",
         "fasta_pep",
@@ -44,13 +44,13 @@ class Manifest:
         "agp",
         "events",
     }
-    alias_names = {
+    _alias_names = {
         "gene_models": "gff3",
         "dna": "fasta_dna",
         "pep": "fasta_pep",
     }
-    names = {name: name for name in same_names}
-    names = {**names, **alias_names}
+    _same_names_dict = {name: name for name in _same_names}
+    names = {**_same_names_dict, **alias_names}
     multi_files = {"agp"}
 
     def __init__(self, manifest_dir: Path) -> None:
@@ -111,7 +111,6 @@ class Manifest:
 
     def _prepare_object_name(self, subfile: Path, name: str, manifest_dict: dict[str, dict[str, str]]) -> str:
         # Prepare object name
-        obj_name = "file"
         try:
             # If we recognize the suffix, then the name is the part after the last "_"
             if subfile.suffix == f".{name}":
@@ -120,7 +119,7 @@ class Manifest:
             else:
                 obj_name = subfile.stem.split(sep="_")[-2]
         except IndexError:
-            pass
+            obj_name = "file"
 
         # Add number if duplicate name
         obj_name_base = obj_name

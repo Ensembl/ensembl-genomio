@@ -52,9 +52,8 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
     Fixtures: tmp_path
 
     Args:
-        tmp_path: Test tmp dir.
-        expected_name: Manifest key expected.
         file_name: File to create for the test.
+        expected_name: Manifest key expected.
 
     """
     expected_content = {}

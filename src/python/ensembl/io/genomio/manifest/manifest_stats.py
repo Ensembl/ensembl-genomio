@@ -26,9 +26,9 @@ from typing import Any
 from BCBio import GFF
 from Bio import SeqIO
 
-from ensembl.io.genomio.utils import get_json
 from ensembl.io.genomio.gff3.features import GFFSeqFeature
 from ensembl.io.genomio.manifest.manifest import Manifest
+from ensembl.io.genomio.utils import get_json
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils import StrPath
 

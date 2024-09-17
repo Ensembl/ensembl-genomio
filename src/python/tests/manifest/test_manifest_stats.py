@@ -30,7 +30,7 @@ from ensembl.io.genomio.utils import print_json
 @pytest.fixture(name="manifest_path")
 def fixture_manifest_path(data_dir: Path) -> Path:
     """Manifest dir and files with all expected cases."""
-    return data_dir / "full_data/manifest.json"
+    return data_dir / "full_data" / "manifest.json"
 
 
 def test_manifest_stats_init(manifest_path: Path) -> None:
@@ -67,9 +67,10 @@ def test_load_seq_regions(
 ) -> None:
     """Tests `ManifestStats.load_seq_regions()`.
 
-    Fixtures: data_dir, tmp_path, manifest_dir
+    Fixtures: data_dir, tmp_path
 
     Args:
+        manifest_dir: Directory name with the manifest file in it.
         expected_lengths: Expected length data from the files.
         expected_circular: Expected circular data from the files.
     """
