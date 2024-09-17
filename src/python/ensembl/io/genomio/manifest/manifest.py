@@ -109,7 +109,9 @@ class Manifest:
         self.files = manifest_files
         return self.files
 
-    def _prepare_object_name(self, subfile: Path, name: str, manifest_dict: dict[str, dict[str, str]]) -> str:
+    def _prepare_object_name(
+        self, subfile: Path, name: str, manifest_file_dict: dict[str, dict[str, str]]
+    ) -> str:
         # Prepare object name
         try:
             # If we recognize the suffix, then the name is the part after the last "_"
@@ -124,7 +126,7 @@ class Manifest:
         # Add number if duplicate name
         obj_name_base = obj_name
         count = 1
-        while obj_name in manifest_dict.keys():
+        while obj_name in manifest_file_dict.keys():
             obj_name = f"{obj_name_base}.{count}"
             count += 1
             if count >= 10:
