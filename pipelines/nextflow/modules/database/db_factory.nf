@@ -15,6 +15,7 @@
 
 process DB_FACTORY {
     label 'local'
+    containerOptions '--bind ./:/output'
     time '5min'
 
     input:

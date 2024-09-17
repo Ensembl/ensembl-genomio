@@ -18,7 +18,6 @@ process DOWNLOAD_NCBI_STATS {
     tag "$meta.id"
     label 'local'
     label 'cached'
-    label 'datasets_container'
 
     input:
         val(meta)  // with keys [ id, accession ]
@@ -40,7 +39,7 @@ process DOWNLOAD_NCBI_STATS {
             exit 1
         fi
 
-        # Check if it should maybe be using RefSeq?           
+        # Check if it should maybe be using RefSeq?
         if [[ $(jq '.total_count' !{output}) -eq 0 ]] && [[ !{meta.accession} =~ "GCA_" ]]; then
             accession=$(echo !{meta.accession} | sed 's/^GCA_/GCF_/')
             echo "Trying again with RefSeq accession: $accession"

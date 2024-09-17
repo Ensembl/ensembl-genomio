@@ -15,7 +15,7 @@
 
 process DUMP_DB {
     tag "$db.species"
-    label "variable_2_8_32"
+    label 'variable_2_8_32'
     publishDir "$out_dir/$release_dir/coredb/$db.division", mode: 'copy'
     maxForks params.max_database_forks
 

@@ -17,7 +17,6 @@ process GFF3_VALIDATION {
 
   tag "${gene_models}"
   label 'adaptive'
-  label 'container_genometools'
 
   input:
     tuple val(meta), path (gene_models, stageAs: "incoming.gff3")

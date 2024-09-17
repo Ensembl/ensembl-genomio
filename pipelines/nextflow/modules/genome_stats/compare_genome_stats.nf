@@ -16,7 +16,7 @@
 
 process COMPARE_GENOME_STATS {
     tag "${db.species}"
-    label "local"
+    label 'local'
 
     input:
         tuple val(db), path(ncbi_stats, stageAs: "ncbi_stats.json"),
