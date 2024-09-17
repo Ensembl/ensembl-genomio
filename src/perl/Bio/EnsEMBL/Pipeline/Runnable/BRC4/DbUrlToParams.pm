@@ -27,7 +27,7 @@ use URI;
 use base ('Bio::EnsEMBL::Hive::Process');
 
 
-sub param_deafults {
+sub param_defaults {
   my ($self) = @_;
 
   return {
