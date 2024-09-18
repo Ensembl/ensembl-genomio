@@ -66,7 +66,7 @@ class ReportStructure:
     assembly_status: str = "NA"
     assembly_notes: str = "NA"
 
-    def to_dict(self) -> dict[str]:
+    def to_dict(self) -> dict[str, str]:
         """Returns a dictionary representation of this object."""
         return {
             "Species Name": self.species_name,

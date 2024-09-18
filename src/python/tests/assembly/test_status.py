@@ -78,7 +78,7 @@ COMPLETE_METADATA = {
         paired_assembly="GCA_001194135.2",
         last_updated="2015-06-29T09:51:41.073",
         assembly_status="current",
-        assembly_notes="RefSeq"
+        assembly_notes="RefSeq",
     )
 }
 
@@ -105,7 +105,7 @@ def test_report_structure_to_dict() -> None:
             "Asm last updated": "2015-06-29T09:51:41.073",
             "Asm status": "current",
             "Asm notes": "RefSeq",
-        }
+        },
     )
 
 
@@ -266,7 +266,9 @@ def test_fetch_datasets_reports(
         tmp_path, data_dir, assert_files
     """
 
-    def execute_return(command: list[str], **kwargs: Any) -> None:
+    def execute_return(
+        command: list[str], **kwargs: Any  # pylint: disable=unused-argument
+    ) -> dict[str, str]:
         report_path = data_dir / f"{command[-1]}.asm_report.json"
         if report_path.exists():
             report = get_json(report_path)
