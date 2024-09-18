@@ -156,7 +156,6 @@ sub pipeline_analyses {
     { -logic_name  => 'Fasta_DNA',
       -module      => 'Bio::EnsEMBL::Pipeline::Runnable::BRC4::DumpFastaDNA',
       -parameters => {
-        hash_key => "insdc_fasta_dna",
         dump_level => "toplevel",
       },
       -max_retry_count => 0,
