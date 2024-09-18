@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-ARG GENOMIO_VERSION=v1.3.1
+ARG genomio_release_version=latest
 
 RUN apt-get update \
     && apt-get -y upgrade \
@@ -20,10 +20,10 @@ RUN <<EOF
 assembly_download --help
 EOF
 
-LABEL base.image="ensembl-genomio:${GENOMIO_VERSION}"
-LABEL version="$GENOMIO_VERSION"
+LABEL base.image="ensembl-genomio:${genomio_release_version}"
+LABEL version="$genomio_release_version"
 LABEL software="Ensembl-genomio pipelines"
-LABEL software.version="$GENOMIO_VERSION"
+LABEL software.version="$genomio_release_version"
 LABEL about.summary="A lighweight container to run ensembl-genomio module scripts."
 LABEL about.home="https://github.com/Ensembl/ensembl-genomio"
 LABEL about.documentation="https://ensembl.github.io/ensembl-genomio"

@@ -37,9 +37,7 @@ default:
 
 # Using default stages (https://docs.gitlab.com/ee/ci/yaml/#stages): .pre > build > test > deploy > .post
 
-
 # In-house pipelines
-
 include:
   # CI/CD debugging
   - local: cicd/gitlab/parts/debug.gitlab-ci.yml
@@ -51,7 +49,8 @@ include:
   - local: cicd/gitlab/parts/license.gitlab-ci.yml
   # Flat file checks
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
-
+  # Genomio container deployment
+  - local: cicd/gitlab/parts/dockerbuild.genomio.gitlab-ci.yml
 
 # External pipelines
 # (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
