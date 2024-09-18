@@ -1,0 +1,1 @@
+1	1	assembly.accession	GCF_001194135.2

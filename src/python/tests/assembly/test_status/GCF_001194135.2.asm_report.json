@@ -1,0 +1,187 @@
+{
+    "accession": "GCF_001194135.2",
+    "annotation_info": {
+        "busco": {
+            "busco_lineage": "mollusca_odb10",
+            "busco_ver": "4.1.4",
+            "complete": 0.90764874,
+            "duplicated": 0.006421152,
+            "fragmented": 0.026440037,
+            "missing": 0.06591123,
+            "single_copy": 0.9012276,
+            "total_count": "5295"
+        },
+        "method": "Best-placed RefSeq; Gnomon; cmsearch; tRNAscan-SE",
+        "name": "GCF_001194135.2-RS_2023_01",
+        "pipeline": "NCBI eukaryotic genome annotation pipeline",
+        "provider": "NCBI RefSeq",
+        "release_date": "2023-01-05",
+        "report_url": "https://www.ncbi.nlm.nih.gov/genome/annotation_euk/Octopus_bimaculoides/GCF_001194135.2-RS_2023_01",
+        "software_version": "10.1",
+        "stats": {
+            "gene_counts": {
+                "non_coding": 3956,
+                "protein_coding": 15684,
+                "pseudogene": 504,
+                "total": 20144
+            }
+        },
+        "status": "Full annotation"
+    },
+    "assembly_info": {
+        "assembly_level": "Chromosome",
+        "assembly_method": "HiRise v. 2019",
+        "assembly_name": "ASM119413v2",
+        "assembly_status": "current",
+        "assembly_type": "haploid",
+        "bioproject_accession": "PRJNA270931",
+        "bioproject_lineage": [
+            {
+                "bioprojects": [
+                    {
+                        "accession": "PRJNA270931",
+                        "title": "Octopus bimaculoides isolate:UCB-OBI-ISO-001 Genome sequencing and assembly"
+                    }
+                ]
+            }
+        ],
+        "biosample": {
+            "accession": "SAMN03271701",
+            "attributes": [
+                {
+                    "name": "isolate",
+                    "value": "UCB-OBI-ISO-001"
+                },
+                {
+                    "name": "isolation_source",
+                    "value": "wild caught off the coast of California"
+                },
+                {
+                    "name": "collection_date",
+                    "value": "not applicable"
+                },
+                {
+                    "name": "geo_loc_name",
+                    "value": "Pacific Ocean"
+                },
+                {
+                    "name": "tissue",
+                    "value": "gonad"
+                },
+                {
+                    "name": "biomaterial_provider",
+                    "value": "Daniel S. Rokhsar, 454 LSA #3200, UC Berkeley,Berkeley CA 94720-3200"
+                },
+                {
+                    "name": "collected_by",
+                    "value": "Crissy Huffard, Roy Caldwell"
+                },
+                {
+                    "name": "sex",
+                    "value": "male"
+                }
+            ],
+            "biomaterial_provider": "Daniel S. Rokhsar, 454 LSA #3200, UC Berkeley,Berkeley CA 94720-3200",
+            "bioprojects": [
+                {
+                    "accession": "PRJNA270931"
+                }
+            ],
+            "collected_by": "Crissy Huffard, Roy Caldwell",
+            "collection_date": "not applicable",
+            "description": {
+                "comment": "Gonad tissue from an adult male Octopus bimaculoides for whole genome shotgun sequencing",
+                "organism": {
+                    "organism_name": "Octopus bimaculoides",
+                    "tax_id": 37653
+                },
+                "title": "Whole Genome Shotgun sample from Octopus bimaculoides"
+            },
+            "geo_loc_name": "Pacific Ocean",
+            "isolate": "UCB-OBI-ISO-001",
+            "isolation_source": "wild caught off the coast of California",
+            "last_updated": "2015-06-29T09:51:41.073",
+            "models": [
+                "Invertebrate"
+            ],
+            "owner": {
+                "contacts": [
+                    {}
+                ],
+                "name": "UC Berkeley"
+            },
+            "package": "Invertebrate.1.0",
+            "publication_date": "2015-03-27T14:38:12.907",
+            "sample_ids": [
+                {
+                    "label": "Sample name",
+                    "value": "ObimacWGS"
+                },
+                {
+                    "db": "SRA",
+                    "value": "SRS920820"
+                }
+            ],
+            "sex": "male",
+            "status": {
+                "status": "live",
+                "when": "2015-03-27T14:38:12.907"
+            },
+            "submission_date": "2014-12-20T13:31:33.810",
+            "tissue": "gonad"
+        },
+        "blast_url": "https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastSearch&PROG_DEF=blastn&BLAST_SPEC=GDH_GCF_001194135.2",
+        "genome_notes": [
+            "RefSeq"
+        ],
+        "paired_assembly": {
+            "accession": "GCA_001194135.2",
+            "only_refseq": "chromosome MT",
+            "status": "current"
+        },
+        "refseq_category": "representative genome",
+        "release_date": "2022-10-06",
+        "sequencing_tech": "HiC",
+        "submitter": "UC Berkeley"
+    },
+    "assembly_stats": {
+        "contig_l50": 98071,
+        "contig_n50": 5523,
+        "gc_count": "715821249",
+        "gc_percent": 36,
+        "genome_coverage": "10.0x",
+        "number_of_component_sequences": 145326,
+        "number_of_contigs": 713915,
+        "number_of_organelles": 1,
+        "number_of_scaffolds": 145326,
+        "scaffold_l50": 9,
+        "scaffold_n50": 96881196,
+        "total_number_of_chromosomes": 30,
+        "total_sequence_length": "2342518435",
+        "total_ungapped_length": "1986264087"
+    },
+    "current_accession": "GCF_001194135.2",
+    "organelle_info": [
+        {
+            "description": "Mitochondrion",
+            "submitter": "UC Berkeley",
+            "total_seq_length": "15733"
+        }
+    ],
+    "organism": {
+        "common_name": "California two-spot octopus",
+        "infraspecific_names": {
+            "isolate": "UCB-OBI-ISO-001",
+            "sex": "male"
+        },
+        "organism_name": "Octopus bimaculoides",
+        "tax_id": 37653
+    },
+    "paired_accession": "GCA_001194135.2",
+    "source_database": "SOURCE_DATABASE_REFSEQ",
+    "wgs_info": {
+        "master_wgs_url": "https://www.ncbi.nlm.nih.gov/nuccore/LGKD00000000.2",
+        "wgs_contigs_url": "https://www.ncbi.nlm.nih.gov/Traces/wgs/LGKD02",
+        "wgs_project_accession": "LGKD02"
+    }
+}
