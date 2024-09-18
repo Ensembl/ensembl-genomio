@@ -172,24 +172,25 @@ def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[s
     count_accn_found = 0
 
     with Path(src_file).open("r") as fin:
-        core_db = fin.readline().strip()
-        num_lines += 1
-        db_connection_url = server_url.set(database=core_db)
-        db_connection = dbc(f"{db_connection_url}")
-        with db_connection.connect() as conn:
-            query_result = conn.execute(
-                text('SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";')
-            ).fetchall()
+        for line in fin.readlines():
+            core_db = line.strip()
+            num_lines += 1
+            db_connection_url = server_url.set(database=core_db)
+            db_connection = dbc(f"{db_connection_url}")
+            with db_connection.connect() as conn:
+                query_result = conn.execute(
+                    text('SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";')
+                ).fetchall()
 
-        if query_result is None:
-            logging.warning(f"No accessions found in core: {core_db}")
-        elif len(query_result) == 1:
-            count_accn_found += 1
-            asm_accession = query_result.pop()[0]
-            logging.info(f"{core_db} -> assembly.accession[{asm_accession}]")
-            core_accn_meta[core_db] = asm_accession
-        else:
-            logging.warning(f"Core {core_db} has {len(query_result)} assembly.accessions")
+            if not query_result:
+                logging.warning(f"No accessions found in core: {core_db}")
+            elif len(query_result) == 1:
+                count_accn_found += 1
+                asm_accession = query_result.pop()[0]
+                logging.info(f"{core_db} -> assembly.accession[{asm_accession}]")
+                core_accn_meta[core_db] = asm_accession
+            else:
+                logging.warning(f"Core {core_db} has {len(query_result)} assembly.accessions")
 
     logging.info(f"From initial input core databases ({num_lines}), obtained ({count_accn_found}) accessions")
 
