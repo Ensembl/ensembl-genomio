@@ -24,7 +24,7 @@ variables:
   # https://docs.gitlab.com/ee/user/namespace/  
   CONTAINER_IMAGE_NAME: ensembl-genomio
   GENOMIO_DIR: containers/docker/genomio
-  GENOMIO_RELEASE_VERSION: 1.3.1
+  GENOMIO_RELEASE_VERSION: "v1.3.1"
   
   # GITLAB:
   GITLAB_PROJECT: vectorbase
@@ -50,7 +50,7 @@ genomio_docker_build:
   
   script:
     # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-    - echo "Building  $CONTAINER_IMAGE_NAME with docker..."
+    - echo "Building  $CONTAINER_IMAGE_NAME with Docker:"
     - echo "docker build -f ${GENOMIO_DIR}/Dockerfile --build-arg genomio_release_version=$GENOMIO_RELEASE_VERSION -t $CONTAINER_IMAGE_NAME:latest $GENOMIO_DIR"
     - docker build -f ${GENOMIO_DIR}/Dockerfile --build-arg genomio_release_version=$GENOMIO_RELEASE_VERSION -t $CONTAINER_IMAGE_NAME:latest $GENOMIO_DIR
   
@@ -58,7 +58,7 @@ genomio_docker_build:
     paths:
       - $GENOMIO_DIR
 
-### Phase 2: Docker push Esembl Genomio image to gitlab
+### Phase 2: Tag and push Ensembl Genomio image to GitLab
 genomio_gitlab_register:
   extends: genomio_docker_build
   stage: test
@@ -75,12 +75,12 @@ genomio_gitlab_register:
   - echo -e -n "Logging into Gitlab container registry:\n$CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY\n"
   - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   
-  - echo "Tagging GitLab genomio Docker image"
+  - echo "Tagging GitLab genomio image"
   - echo "docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$GENOMIO_RELEASE_VERSION"
   - docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$GENOMIO_RELEASE_VERSION
   - docker tag $CONTAINER_IMAGE_NAME:latest $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest
   
-  - echo "Pushing versioned image to gitlab registry:"
+  - echo "Pushing versioned genomio image to Gitlab registry:"
   - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$GENOMIO_RELEASE_VERSION"
   - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:$GENOMIO_RELEASE_VERSION"
 
@@ -88,7 +88,7 @@ genomio_gitlab_register:
   - echo "CMD=docker push $CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest"
   - docker push "$CI_REGISTRY/$GITLAB_DOCKER_IMAGE:latest"
 
-### Phase 3: push genomio image to dockerhub
+### Phase 3: Tag and push Ensembl Genomio image to Dockerhub
 genomio_dockerhub_register:
   stage: deploy
   # Using `needs` as it allows to depend on jobs from the same stage
@@ -105,16 +105,16 @@ genomio_dockerhub_register:
   - echo "Logging into Dockerhub registry:"
   - echo $ENSEMBL_DOCKERHUB_AUTH | docker login -u $ENS_DOCKERHUB_PALADIN --password-stdin $DHUB_REG_URL
 
-  - echo "Tagging Dockerhub genomio Docker image"
+  - echo "Tagging Docker genomio image"
   - echo "CMD=docker tag $CONTAINER_IMAGE_NAME:latest $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$GENOMIO_RELEASE_VERSION"
   - docker tag $CONTAINER_IMAGE_NAME:latest $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$GENOMIO_RELEASE_VERSION
   - docker tag $CONTAINER_IMAGE_NAME:latest $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:latest
 
-  - echo "Pushing versioned image to genomio dockerhub registry:"
+  - echo "Pushing versioned genomio image to registry:"
   - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$GENOMIO_RELEASE_VERSION"
   - docker push "$DHUB_REG_URL/$DHUB_DOCKER_IMAGE:$GENOMIO_RELEASE_VERSION"
   
-  - echo "Pushing default 'latest' image to genomio dockerhub registry:"
+  - echo "Pushing default 'latest' image to genomio registry:"
   - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:latest"
   - docker push "$DHUB_REG_URL/$DHUB_DOCKER_IMAGE:latest"
 

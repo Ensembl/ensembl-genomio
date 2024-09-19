@@ -17,6 +17,7 @@
 # branch or for commits pushed directly to "main" branch
 workflow:
   rules:
+    - if: $CI_COMMIT_BRANCH == /lcampbell\/docker_redo/ && $CI_PIPELINE_SOURCE == "push"
     - if: $CI_EXTERNAL_PULL_REQUEST_IID &&
           $CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY == $CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY &&
           ( $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH ||
@@ -43,14 +44,29 @@ include:
   - local: cicd/gitlab/parts/debug.gitlab-ci.yml
   # Perl checks
   - local: cicd/gitlab/parts/perl.gitlab-ci.yml
+    rules:
+      - if: $CI_PIPELINE_SOURCE == "push"
+        when: never
   # Python checks
   - local: cicd/gitlab/parts/python.gitlab-ci.yml
+    rules:
+      - if: $CI_PIPELINE_SOURCE == "push"
+        when: never
   # License checks
   - local: cicd/gitlab/parts/license.gitlab-ci.yml
+    rules:
+      - if: $CI_PIPELINE_SOURCE == "push"
+        when: never
   # Flat file checks
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
+    rules:
+      - if: $CI_PIPELINE_SOURCE == "push"
+        when: never
   # Genomio container deployment
   - local: cicd/gitlab/parts/dockerbuild.genomio.gitlab-ci.yml
+    rules:
+      - when: always
+
 
 # External pipelines
 # (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
