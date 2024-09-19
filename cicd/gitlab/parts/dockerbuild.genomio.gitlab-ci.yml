@@ -90,12 +90,13 @@ genomio_gitlab_register:
 
 ### Phase 3: Tag and push Ensembl Genomio image to Dockerhub
 genomio_dockerhub_register:
+  extends: genomio_docker_build
   stage: deploy
   # Using `needs` as it allows to depend on jobs from the same stage
   needs:
     # (https://docs.gitlab.com/ee/ci/yaml/#needs)
     - job: genomio_gitlab_register
-    # - job: genomio_docker_build
+    - job: genomio_docker_build
       artifacts: true
   artifacts:
     paths:
