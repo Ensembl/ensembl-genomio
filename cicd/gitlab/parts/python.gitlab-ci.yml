@@ -96,6 +96,8 @@ python:black:
 python:pytest:
   extends: .python:test
   script:
+    - apt-get update -y
+    - apt-get install -y sqlite3
     - coverage run -m pytest --junitxml=$RUN_DIR/junit_reports.xml
   artifacts:
     when: always
