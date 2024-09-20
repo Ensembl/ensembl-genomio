@@ -36,9 +36,9 @@ from sqlalchemy.engine import URL
 from sqlalchemy import text
 
 from ensembl.io.genomio.utils.json_utils import print_json
-from ensembl.io.genomio.database.dbconnection_lite import DBConnectionLite as dbc
 from ensembl.utils import StrPath
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.database import DBConnection
 from ensembl.utils.logging import init_logging_with_args
 
 
@@ -176,8 +176,8 @@ def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[s
             core_db = line.strip()
             num_lines += 1
             db_connection_url = server_url.set(database=core_db)
-            db_connection = dbc(f"{db_connection_url}")
-            with db_connection.connect() as conn:
+            db_connection = DBConnection(db_connection_url)
+            with db_connection.begin() as conn:
                 query_result = conn.execute(
                     text('SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";')
                 ).fetchall()
