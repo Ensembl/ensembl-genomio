@@ -16,6 +16,9 @@
 process DUMP_SEQ_ATTRIB {
     tag "${db.species}"
     label 'variable_2_8_32'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
+        'ensemblorg/ensembl-legacy-scripts:e112_APIv0.4':
+        'null' }"
     maxForks params.max_database_forks
 
     input:

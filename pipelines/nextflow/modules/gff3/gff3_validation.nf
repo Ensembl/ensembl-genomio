@@ -14,7 +14,6 @@
 // limitations under the License.
 
 process GFF3_VALIDATION {
-
   tag "${gene_models}"
   label 'adaptive'
 

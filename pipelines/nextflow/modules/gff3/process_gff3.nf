@@ -17,6 +17,9 @@
 process PROCESS_GFF3 {
     tag "${meta.accession}"
     label 'adaptive'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
+        'ensemblorg/ensembl-genomio:v1.3.1':
+        'null' }"
 
     input:
         tuple val(meta), path(genome), path(gff3)

@@ -76,11 +76,6 @@
           "mininum": 1,
           "maximum": 1000,
           "description": "Limit the number of processes that can access a server in parallel (per process)"
-        },
-        "genomio_container": {
-          "type": "boolean",
-          "default": false,
-          "description": "Run workflow via ensembl-genomio container"
         }
       }
     }

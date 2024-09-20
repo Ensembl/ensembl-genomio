@@ -17,6 +17,9 @@
 process DUMP_EVENTS {
     tag "${db.species}"
     label 'variable_2_8_32'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
+        'ensemblorg/ensembl-genomio:v1.3.1':
+        'null' }"
     maxForks params.max_database_forks
 
     input:

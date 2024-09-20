@@ -16,6 +16,9 @@
 process PUBLISH_DIR {
     tag "publish_${meta.accession}"
     label 'default'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
+        'ensemblorg/ensembl-genomio:v1.3.1':
+        'null' }"
     publishDir "$out_dir/${meta.publish_dir}", mode: 'copy', overwrite: false
     time '5min'
 

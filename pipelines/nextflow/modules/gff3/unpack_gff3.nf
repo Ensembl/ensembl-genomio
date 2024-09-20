@@ -15,6 +15,9 @@
 
 process UNPACK_GFF3 {
     label 'default_retry'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
+        'ensemblorg/ensembl-genomio:v1.3.1':
+        'null' }"
 
     input:
         tuple val(meta), path(compressed_gff), path(protein_faa), path(gbff)

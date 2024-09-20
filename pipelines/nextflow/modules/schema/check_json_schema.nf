@@ -16,6 +16,9 @@
 process CHECK_JSON_SCHEMA {
     tag "$meta.id"
     label 'adaptive'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
+        'ensemblorg/ensembl-genomio:v1.3.1':
+        'null' }"
 
     input:
         tuple val(meta), path(json_file)

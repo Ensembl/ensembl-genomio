@@ -16,6 +16,9 @@
 process PROCESS_SEQ_REGION {
     tag "${meta.accession}"
     label 'adaptive'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
+        'ensemblorg/ensembl-genomio:v1.3.1':
+        'null' }"
 
     input:
         tuple val(meta),

@@ -18,6 +18,7 @@ process DOWNLOAD_NCBI_STATS {
     tag "$meta.id"
     label 'local'
     label 'cached'
+    
 
     input:
         val(meta)  // with keys [ id, accession ]
