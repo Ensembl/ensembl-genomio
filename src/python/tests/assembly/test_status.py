@@ -26,7 +26,10 @@ from unittest.mock import Mock, patch
 from deepdiff import DeepDiff
 import pytest
 from pytest import FixtureRequest, param, raises
+from sqlalchemy import Column, Index, String, text
+from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.engine import make_url
+from sqlalchemy.orm import declarative_base
 
 from ensembl.io.genomio.assembly.status import (
     DATASETS_SINGULARITY,
@@ -81,6 +84,19 @@ COMPLETE_METADATA = {
         assembly_notes="RefSeq",
     )
 }
+
+Base = declarative_base()
+class Meta(Base):
+    __tablename__ = "meta"
+    __table_args__ = (
+        Index("species_value_idx", "species_id", "meta_value"),
+        Index("species_key_value_idx", "species_id", "meta_key", "meta_value", unique=True),
+    )
+
+    meta_id: Column = Column(INTEGER(11), primary_key=True)
+    species_id: Column = Column(INTEGER(10), nullable=False, index=True, server_default=text("'1'"))
+    meta_key: Column = Column(String(40), nullable=False)
+    meta_value: Column = Column(String(255), nullable=False)
 
 
 @pytest.mark.dependency()
@@ -231,29 +247,32 @@ def test_get_assembly_accessions(
         assert result == expected_output
 
 
+@pytest.mark.parametrize(
+    "test_dbs",
+    [
+        [
+            {"src": "one_core_db", "metadata": Base.metadata},
+            {"src": "another_core_db", "metadata": Base.metadata},
+            {"src": "yet_another_core_db", "metadata": Base.metadata},
+        ],
+    ],
+    indirect=True,
+)
 def test_fetch_accessions_from_core_dbs(
-    request: FixtureRequest,
-    tmp_path: Path,
-    data_dir: Path,
-    db_factory: Callable[[Path | None, str | None], UnitTestDB],
+    request: FixtureRequest, tmp_path: Path, test_dbs: dict[str, UnitTestDB]
 ) -> None:
     """Tests the `fetch_accessions_from_core_dbs()` function.
 
-    Fixtures: request, tmp_path, data_dir, db_factory
+    Fixtures: request, tmp_path, test_dbs
     """
-    # Create all test databases and add their names into a flat file
-    test_dbs = [
-        db_factory(data_dir / "my_core_db", "my_core_db"),
-        db_factory(data_dir / "another_core_db", "another_core_db"),
-        db_factory(data_dir / "yet_another_core_db", "yet_another_core_db"),
-    ]
+    # Create a file with each test database name
     tmp_file = tmp_path / "core_dbs_list.txt"
     with tmp_file.open("w") as fin:
-        for db in test_dbs:
+        for db in test_dbs.values():
             fin.write(f"{db.dbc.db_name}\n")
     test_server = make_url(request.config.getoption("server"))
     accessions = fetch_accessions_from_core_dbs(tmp_file, test_server)
-    assert not DeepDiff(accessions, {f"{os.environ['USER']}_my_core_db.db": "GCF_001194135.2"})
+    assert not DeepDiff(accessions, {test_dbs["one_core_db"].dbc.db_name: "GCF_001194135.2"})
 
 
 @patch("ensembl.io.genomio.assembly.status.Client")
