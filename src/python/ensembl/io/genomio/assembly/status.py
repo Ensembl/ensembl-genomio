@@ -168,13 +168,13 @@ def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[s
     """
 
     core_accn_meta = {}
-    num_lines = 0
+    database_count = 0
     count_accn_found = 0
 
     with Path(src_file).open("r") as fin:
         for line in fin.readlines():
             core_db = line.strip()
-            num_lines += 1
+            database_count += 1
             db_connection_url = server_url.set(database=core_db)
             db_connection = DBConnection(db_connection_url)
             with db_connection.begin() as conn:
@@ -192,7 +192,9 @@ def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[s
             else:
                 logging.warning(f"Core {core_db} has {len(query_result)} assembly.accessions")
 
-    logging.info(f"From initial input core databases ({num_lines}), obtained ({count_accn_found}) accessions")
+    logging.info(
+        f"From initial input core databases ({database_count}), obtained ({count_accn_found}) accessions"
+    )
 
     return core_accn_meta
 
