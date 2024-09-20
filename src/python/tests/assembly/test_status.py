@@ -85,8 +85,13 @@ COMPLETE_METADATA = {
     )
 }
 
-Base = declarative_base()
+
+Base: Any = declarative_base()  # only possible type hint compatible with SQLAlchemy 1.4 and 2.0+
+
+
 class Meta(Base):
+    """Meta class mirroring the Ensembl core database meta table without any foreign keys"""
+
     __tablename__ = "meta"
     __table_args__ = (
         Index("species_value_idx", "species_id", "meta_value"),
