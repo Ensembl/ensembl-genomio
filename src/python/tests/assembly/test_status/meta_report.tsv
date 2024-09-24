@@ -1,0 +1,2 @@
+Core db	Species Name	Taxon ID	Isolate/Strain	Asm name	Assembly type	Asm accession	Paired assembly	Asm last updated	Asm status	Asm notes
+my_core	Octopus bimaculoides	37653	UCB-OBI-ISO-001	ASM119413v2	haploid	GCF_001194135.2	GCA_001194135.2	2015-06-29T09:51:41.073	current	RefSeq

@@ -15,31 +15,30 @@
 """Obtain and record the assembly status for a set of INSDC accession(s) using NCBI's datasets CLI tool."""
 
 __all__ = [
-    "check_parameterization",
-    "datasets_asm_reports",
     "extract_assembly_metadata",
-    "fetch_accessions_from_cores",
+    "fetch_datasets_reports",
+    "fetch_accessions_from_core_dbs",
     "generate_report_tsv",
-    "resolve_query_type",
+    "get_assembly_accessions",
     "singularity_image_setter",
 ]
 
 import csv
+from dataclasses import dataclass
 import json
 import logging
 import os
-from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List, Tuple, Union
 
 from spython.main import Client
 from sqlalchemy.engine import URL
 from sqlalchemy import text
 
 from ensembl.io.genomio.utils.json_utils import print_json
-from ensembl.io.genomio.database.dbconnection_lite import DBConnectionLite as dbc
+from ensembl.utils import StrPath
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.database import DBConnection
 from ensembl.utils.logging import init_logging_with_args
 
 
@@ -52,37 +51,55 @@ class UnsupportedFormatError(Exception):
     """When a string does not have the expected format."""
 
 
-class ReportStructure(dict):
-    """Dict setter class of key report meta information"""
+@dataclass
+class ReportStructure:
+    """Stores key report meta information."""
 
-    def __init__(self) -> None:
-        dict.__init__(self)
-        self.update(
-            {
-                "Species Name": "",
-                "Taxon ID": "",
-                "Isolate/Strain": "",
-                "Asm name": "",
-                "Assembly type": "",
-                "Asm accession": "",
-                "Paired assembly": "",
-                "Asm last updated": "",
-                "Asm status": "",
-                "Asm notes": "",
-            }
-        )
+    species_name: str = ""
+    taxon_id: int = 0
+    strain: str = "NA"
+    assembly_name: str = ""
+    assembly_type: str = ""
+    accession: str = ""
+    paired_assembly: str = "NA"
+    last_updated: str = ""
+    assembly_status: str = "NA"
+    assembly_notes: str = "NA"
+
+    def to_dict(self) -> dict[str, str]:
+        """Returns a dictionary representation of this object."""
+        return {
+            "Species Name": self.species_name,
+            "Taxon ID": str(self.taxon_id),
+            "Isolate/Strain": self.strain,
+            "Asm name": self.assembly_name,
+            "Assembly type": self.assembly_type,
+            "Asm accession": self.accession,
+            "Paired assembly": self.paired_assembly,
+            "Asm last updated": self.last_updated,
+            "Asm status": self.assembly_status,
+            "Asm notes": self.assembly_notes,
+        }
+
+    def header(self) -> list[str]:
+        """Returns the dictionary keys matching each of the properties of the report."""
+        return list(self.to_dict().keys())
+
+    def values(self) -> list[str]:
+        """Returns the values of each of the properties of the report."""
+        return list(self.to_dict().values())
 
 
-def singularity_image_setter(sif_cache_dir: Path, datasets_version: str) -> Client:
-    """Parse ENV and User specified variables related to 'datasets' singularity SIF
+def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str | None) -> Client:
+    """Parse ENV and User specified variables related to `datasets` singularity SIF
     container and define version and location of container.
 
     Args:
         sif_cache_dir: Path to locate existing, or download new SIF container image.
-        datasets_version: URL of singularity container (custom 'datasets' version if desired)
+        datasets_version: URL of singularity container (custom `datasets` version if desired).
 
     Returns:
-        `spython.main.client` instance of singularity container image housing 'datasets'.
+        `spython.main.client` instance of singularity container image housing `datasets`.
     """
 
     # Set singularity cache dir from user defined path or use environment
@@ -117,117 +134,90 @@ def singularity_image_setter(sif_cache_dir: Path, datasets_version: str) -> Clie
     return datasets_image
 
 
-def check_parameterization(input_cores: Path, input_accessions: Path, db_host: str, db_port: int) -> Path:
-    """Detect the kind of user input (cores/accessions) and determine any missing or
-    incorrect parameterization.
+def get_assembly_accessions(src_file: StrPath) -> list[str]:
+    """Returns the list of assembly accessions found in the provided file.
 
     Args:
-        input_cores: Input core(s) list file name.
-        input_accessions: Input accession (s) list file name.
-        db_host: Host server name
-        db_port: Host server port
+        src_file: Path to file with one line per INSDC assembly accession.
 
-    Returns:
-        User input file used in assembly status querying
+    Raises:
+        UnsupportedFormatError: If an accession does not match the INSDC assembly accession format.
     """
-    # Input core names centered run
-    if input_cores:
-        logging.info(f"Performing assembly status report using core db list file: {input_cores}")
-        if db_host is None or db_port is None:
-            raise RuntimeError("Core database names require both arguments '--host' and '--port'")
-        return input_cores
-    # Accession centered run
-    logging.info(f"Performing assembly status report using INSDC accession list file: {input_accessions}")
-    return input_accessions
-
-
-def resolve_query_type(
-    query_list: list, partial_url: URL, input_cores: str, input_accessions: str
-) -> Union[Tuple[Dict, str]]:
-    """Function to identify the kind of queries being passed by user,
-    then extract the queries (core names or accessions) and store each with appropriate identifier.
-
-    Args:
-        query_list: List of user defined queries either core names, or accessions
-        partial_url: A partial MYSQL connection URL (host:port)
-        input_cores: Arg parse param '--input_cores'
-        input_accessions: Arg parse param '--input_accessions'
-
-    Returns:
-        User queries stored as identifier[(core db name | UniqueID#)] : accession
-    """
-
-    query_accessions: Dict = {}
-    query_type: str = ""
-
-    if input_cores and input_accessions is None:
-        query_accessions = fetch_accessions_from_cores(query_list, partial_url)
-        query_type = "CoreDB"
-    elif input_cores is None and input_accessions:
-        query_type = "Accession"
-        for accession in query_list:
-            match = re.match(r"(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})\.?([0-9]+)", accession)
+    query_accessions: list[str] = []
+    with Path(src_file).open(mode="r") as fin:
+        for line in fin.readlines():
+            line = line.strip()
+            match = re.match(r"^GC[AF]_[0-9]{9}\.[1-9][0-9]*$", line)
             if not match:
-                raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
-            query_accessions[accession] = accession
+                raise UnsupportedFormatError(f"Could not recognize GCA/GCF accession format: {line}")
+            query_accessions.append(line)
+    return query_accessions
 
-    return query_accessions, query_type
 
+def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[str, str]:
+    """Obtain the associated INSDC accession given a set of core database names and a database server URL.
 
-def fetch_accessions_from_cores(database_names: List, connection_url: URL) -> Dict:
-    """Obtain the associated INSDC accession [meta.assembly.accession] given a set of core(s) names
-    and a MYSQL server host.
+    The accession information is obtained from the `meta` table's meta key `assembly.accession`.
 
     Args:
-        database_names: Set of names for one or more core databases
-        connection_url: Partial MYSQL host name : port
+        src_file: File path with list of core database names.
+        server_url: Database server URL.
 
     Returns:
-        Dict of core name(s) (key) and its INSDC assembly.accession (value)
+        Dict of core database names (key) and their corresponding INSDC assembly accession (value).
     """
 
     core_accn_meta = {}
-    core_list_count = len(database_names)
+    database_count = 0
     count_accn_found = 0
 
-    for core in database_names:
-        db_connection_url = connection_url.set(database=core)
-        db_connection = dbc(f"{db_connection_url}")
-        with db_connection.connect() as conn:
-            query_result = conn.execute(
-                text('SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";')
-            ).fetchall()
+    with Path(src_file).open("r") as fin:
+        for line in fin.readlines():
+            core_db = line.strip()
+            database_count += 1
+            db_connection_url = server_url.set(database=core_db)
+            db_connection = DBConnection(db_connection_url)
+            with db_connection.begin() as conn:
+                query_result = conn.execute(
+                    text('SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";')
+                ).fetchall()
 
-        if query_result is None:
-            logging.warning(f"No accessions found in core: {core}")
-        elif len(query_result) == 1:
-            count_accn_found += 1
-            asm_accession = query_result.pop()[0]
-            logging.info(f"{core} -> assembly.accession[{asm_accession}]")
-            core_accn_meta[core] = asm_accession
-        else:
-            logging.warning(f"Core {core} has {len(query_result)} assembly.accessions")
+            if not query_result:
+                logging.warning(f"No accessions found in core: {core_db}")
+            elif len(query_result) == 1:
+                count_accn_found += 1
+                asm_accession = query_result.pop()[0]
+                logging.info(f"{core_db} -> assembly.accession[{asm_accession}]")
+                core_accn_meta[core_db] = asm_accession
+            else:
+                logging.warning(f"Core {core_db} has {len(query_result)} assembly.accessions")
 
-    logging.info(f"From initial input cores ({core_list_count}), obtained ({count_accn_found}) accessions")
+    logging.info(
+        f"From initial input core databases ({database_count}), obtained ({count_accn_found}) accessions"
+    )
 
     return core_accn_meta
 
 
-def datasets_asm_reports(
-    sif_image: str, assembly_accessions: dict, download_directory: PathLike, batch_size: int
-) -> Dict:
-    """Obtain assembly report(s) JSONs for one or more queries made to datasets CLI.
+def fetch_datasets_reports(
+    sif_image: Client, assembly_accessions: dict[str, str], download_directory: StrPath, batch_size: int
+) -> dict[str, dict]:
+    """Obtain assembly reports in JSON format for each assembly accession via `datasets` CLI.
 
     Args:
-        sif_image: Instance of Client.loaded singularity image.
-        assembly_accessions: Dict of core accessions.
-        download_directory: Dir path to store assembly report JSON files.
-        batch_size: Number of assembly accessions to batch submit to 'datasets'.
+        sif_image: Instance of `Client.loaded()` singularity image.
+        assembly_accessions: Dictionary of accession source <> assembly accessions pairs.
+        download_directory: Directory path to store assembly report JSON files.
+        batch_size: Number of assembly accessions to batch submit to `datasets`.
 
     Returns:
-        Dictionary of core name and its associated assembly report
-    """
+        Dictionary of accession source and its associated assembly report.
 
+    Raises:
+        ValueError: If result returned by `datasets` is not a string.
+        RuntimeError: If there was an error raised by `datasets`.
+
+    """
     master_accn_list = list(assembly_accessions.values())
     combined_asm_reports = {}
 
@@ -235,70 +225,66 @@ def datasets_asm_reports(
     list_split = list(range(0, len(master_accn_list), batch_size))
     accn_subsample = [master_accn_list[ind : ind + batch_size] for ind in list_split]
 
+    datasets_command = ["datasets", "summary", "genome", "accession"]
     for accessions in accn_subsample:
-        datasets_command = ["datasets", "summary", "genome", "accession"] + accessions
-
-        # Make call to singularity datasets providing a multi-accession query:
+        # Make call to singularity datasets providing a multi-accession query
         client_return = Client.execute(
-            image=sif_image, command=datasets_command, return_result=True, quiet=True
+            image=sif_image, command=datasets_command + accessions, return_result=True, quiet=True
         )
-
         raw_result = client_return["message"]
 
         ## Test what result we have obtained following execution of sif image and accession value
+        # Returned a list, i.e. datasets returned a result to client.execute
         # Returned a str, i.e. no datasets result obtained exited with fatal error
         if isinstance(raw_result, list):
             result = raw_result[0]
         else:
             result = raw_result
-
         if not isinstance(result, str):
-            raise ValueError("Result obtained from datasets is not the expected format 'string'")
+            raise ValueError("Result obtained from datasets is not a string")
         if re.search("^FATAL", result):
             raise RuntimeError(f"Singularity image execution failed! -> '{result.strip()}'")
-        # Returned a list, i.e. datasets returned a result to client.execute
 
         tmp_asm_dict = json.loads(result)
-        if tmp_asm_dict["total_count"] >= 1:
-            logging.info(f"Assembly report obtained for accession(s) {accessions}")
+        if not tmp_asm_dict["total_count"]:
+            logging.warning(f"No assembly report found for accession(s) {accessions}")
+            continue
 
-            batch_reports_json = tmp_asm_dict["reports"]
-            for assembly_report in batch_reports_json:
-                accession = assembly_report["accession"]
-                asm_json_outfile = Path(download_directory, f"{accession}.asm_report.json")
-                print_json(asm_json_outfile, assembly_report)
-                # Save assembly report into master core<>report dict
-                for core, accession_core in assembly_accessions.items():
-                    if accession == accession_core:
-                        combined_asm_reports[core] = assembly_report
-        else:
-            logging.warning(f"No assembly report found for accession(s) {accessions}. Exiting !")
+        logging.info(f"Assembly report obtained for accession(s) {accessions}")
+        batch_reports_json = tmp_asm_dict["reports"]
+        for assembly_report in batch_reports_json:
+            accession = assembly_report["accession"]
+            asm_json_outfile = Path(download_directory, f"{accession}.asm_report.json")
+            print_json(asm_json_outfile, assembly_report)
+            # Save assembly report into source key<>report dict
+            for src_key, accession_core in assembly_accessions.items():
+                if accession == accession_core:
+                    combined_asm_reports[src_key] = assembly_report
 
     return combined_asm_reports
 
 
-def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, ReportStructure]:
-    """Function to parse assembly reports and extract specific key information on
-    status and related fields.
+def extract_assembly_metadata(assembly_reports: dict[str, dict]) -> dict[str, ReportStructure]:
+    """Parse assembly reports and extract specific key information on status and related fields.
 
     Args:
-        assembly_reports: Key value pair of core_name : assembly report.
+        assembly_reports: Key value pair of source name <> assembly report.
 
     Returns:
-        Parsed assembly report meta (core, meta).
+        Parsed assembly report meta (source, meta).
     """
     parsed_meta = {}
 
-    for core, asm_report in assembly_reports.items():
+    for source, asm_report in assembly_reports.items():
         asm_meta_info = ReportStructure()
 
         # Mandatory meta key parsing:
-        asm_meta_info["Asm accession"] = asm_report["accession"]
-        asm_meta_info["Asm name"] = asm_report["assembly_info"]["assembly_name"]
-        asm_meta_info["Assembly type"] = asm_report["assembly_info"]["assembly_type"]
-        asm_meta_info["Asm status"] = asm_report["assembly_info"]["assembly_status"]
-        asm_meta_info["Species Name"] = asm_report["organism"]["organism_name"]
-        asm_meta_info["Taxon ID"] = asm_report["organism"]["tax_id"]
+        asm_meta_info.accession = asm_report["accession"]
+        asm_meta_info.assembly_name = asm_report["assembly_info"]["assembly_name"]
+        asm_meta_info.assembly_type = asm_report["assembly_info"]["assembly_type"]
+        asm_meta_info.assembly_status = asm_report["assembly_info"]["assembly_status"]
+        asm_meta_info.species_name = asm_report["organism"]["organism_name"]
+        asm_meta_info.taxon_id = int(asm_report["organism"]["tax_id"])
 
         ## Non-mandatory meta key parsing:
         assembly_meta_keys = asm_report["assembly_info"].keys()
@@ -307,164 +293,123 @@ def extract_assembly_metadata(assembly_reports: Dict[str, dict]) -> Dict[str, Re
         # check for genome_notes:
         if "genome_notes" in assembly_meta_keys:
             complete_notes = ", ".join(asm_report["assembly_info"]["genome_notes"])
-            asm_meta_info["Asm notes"] = complete_notes
-        else:
-            asm_meta_info["Asm notes"] = "NA"
+            asm_meta_info.assembly_notes = complete_notes
 
         # check for biosample:
         if "biosample" in assembly_meta_keys:
-            asm_meta_info["Asm last updated"] = asm_report["assembly_info"]["biosample"]["last_updated"]
-        else:
-            asm_meta_info["Asm last updated"] = "NA"
+            asm_meta_info.last_updated = asm_report["assembly_info"]["biosample"]["last_updated"]
 
         # check for paired assembly:
         if "paired_assembly" in assembly_meta_keys:
-            asm_meta_info["Paired assembly"] = asm_report["assembly_info"]["paired_assembly"]["accession"]
-        else:
-            asm_meta_info["Paired assembly"] = "NA"
+            asm_meta_info.paired_assembly = asm_report["assembly_info"]["paired_assembly"]["accession"]
 
         # check for isolate/strain type:
         if "infraspecific_names" in organism_keys:
             organism_type_keys = asm_report["organism"]["infraspecific_names"].keys()
             if "isolate" in organism_type_keys:
-                asm_meta_info["Isolate/Strain"] = asm_report["organism"]["infraspecific_names"]["isolate"]
+                asm_meta_info.strain = asm_report["organism"]["infraspecific_names"]["isolate"]
             elif "strain" in organism_type_keys:
-                asm_meta_info["Isolate/Strain"] = asm_report["organism"]["infraspecific_names"]["strain"]
-            else:
-                asm_meta_info["Isolate/Strain"] = "NA"
-        else:
-            asm_meta_info["Isolate/Strain"] = "NA"
+                asm_meta_info.strain = asm_report["organism"]["infraspecific_names"]["strain"]
 
-        parsed_meta[core] = asm_meta_info
+        parsed_meta[source] = asm_meta_info
 
     return parsed_meta
 
 
 def generate_report_tsv(
-    parsed_asm_reports: Dict,
-    outfile_prefix: str,
+    parsed_asm_reports: dict[str, ReportStructure],
     query_type: str,
-    output_directory: PathLike = Path(),
+    output_directory: StrPath = Path(),
+    outfile_name: str = "AssemblyStatusReport",
 ) -> None:
     """Generate and write the assembly report to a TSV file.
 
     Args:
-        parsed_asm_reports: Parsed assembly report meta
-        output_directory: Path to directory where output TSV is stored.
-        query_type: Type of query core_db or accession
-        output_directory: Directory to store report TSV
+        parsed_asm_reports: Parsed assembly report meta.
+        query_type: Type of query (either core databases or accessions).
+        output_directory: Directory to store report TSV file.
+        outfile_name: Name to give to the output TSV file.
     """
+    tsv_outfile = Path(output_directory, f"{outfile_name}.tsv")
 
-    if not parsed_asm_reports:
-        return
-
-    tsv_outfile = Path(output_directory, f"{outfile_prefix}.tsv")
-
-    header_list = list(ReportStructure().keys())
-    header_list = [query_type] + header_list
+    header_list = next(iter(parsed_asm_reports.values())).header()
+    header_list = [query_type.capitalize().replace("_", " ")] + header_list
 
     with open(tsv_outfile, "w+") as tsv_out:
         writer = csv.writer(tsv_out, delimiter="\t", lineterminator="\n")
         writer.writerow(header_list)
-
         for core, report_meta in parsed_asm_reports.items():
-            final_asm_report = [core] + list(report_meta.values())
+            final_asm_report = [core] + report_meta.values()
             writer.writerow(final_asm_report)
-        tsv_out.close()
 
 
 def main() -> None:
     """Module's entry-point."""
     parser = ArgumentParser(description=__doc__)
-    input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument(
-        "--input_cores",
-        type=Path,
-        required=False,
-        default=None,
-        help="List of ensembl core database(s) names to retrieve query accessions",
+    subparsers = parser.add_subparsers(title="report assembly status from", required=True, dest="src")
+    # Specific arguments required when using Ensembl core database names as source
+    core_db_parser = subparsers.add_parser("core_db", help="list of Ensembl core databases")
+    core_db_parser.add_argument_src_path(
+        "--input",
+        required=True,
+        help="file path with list of Ensembl core database(s) to retrieve query accessions from",
     )
-    input_group.add_argument(
-        "--input_accessions",
-        type=Path,
-        required=False,
-        default=None,
-        help="List of assembly INSDC query accessions",
+    core_db_parser.add_server_arguments()
+    # Specific arguments required when using assembly accessions as source
+    accessions_parser = subparsers.add_parser("accession", help="list of INSDC accessions")
+    accessions_parser.add_argument_src_path(
+        "--input", required=True, help="file path with list of assembly INSDC query accessions"
     )
-    parser.add_argument_dst_path(
-        "--download_dir",
-        default="Assembly_report_jsons",
-        help="Folder where the assembly report JSON file(s) are stored",
-    )
-    parser.add_argument_dst_path(
-        "--assembly_report_prefix",
-        default="AssemblyStatusReport",
-        help="Prefix used in assembly report TSV output file.",
-    )
-    parser.add_argument(
-        "--host",
-        type=str,
-        required=False,
-        help="Server hostname (fmt: mysql-ens-XXXXX-YY); required with '--input_cores'",
-    )
-    parser.add_argument(
-        "--port", type=str, required=False, help="Server port (fmt: 1234); required with '--input_cores'"
-    )
-    parser.add_argument(
-        "--datasets_version_url",
-        type=str,
-        required=False,
-        metavar="URL",
-        help="datasets version: E.g. docker://ensemblorg/datasets-cli:latest",
-    )
-    parser.add_argument(
-        "--cache_dir",
-        type=Path,
-        required=False,
-        default="$NXF_SINGULARITY_CACHEDIR",
-        metavar="SINGULARITY_CACHE",
-        help="Custom path to user generated singularity container housing ncbi tool 'datasets'",
-    )
-    parser.add_argument(
-        "--datasets_batch_size",
-        type=int,
-        required=False,
-        default=100,
-        metavar="BATCH_SIZE",
-        help="Number of accessions requested in one query to datasets",
-    )
+    # Add common arguments to both subparsers to avoid forcing users to add common arguments before
+    # the sub-command, e.g. `status.py --cache_dir <path> accession --input <file>`
+    for subparser in [core_db_parser, accessions_parser]:
+        subparser.add_argument_dst_path(
+            "--output_file",
+            default=Path("assembly_report_jsons"),
+            help="path to folder where the assembly report JSON files is stored",
+        )
+        subparser.add_argument(
+            "--assembly_report_name",
+            metavar="NAME",
+            default="AssemblyStatusReport",
+            help="file name used for the assembly report TSV output file",
+        )
+        subparser.add_argument(
+            "--datasets_version_url",
+            type=str,
+            metavar="URL",
+            help="datasets version, e.g. docker://ensemblorg/datasets-cli:latest",
+        )
+        subparser.add_argument_src_path(
+            "--cache_dir",
+            default=Path(os.environ.get("NXF_SINGULARITY_CACHEDIR", "")),
+            metavar="SINGULARITY_CACHE",
+            help="folder path to user generated singularity container housing NCBI tool 'datasets'",
+        )
+        subparser.add_numeric_argument(
+            "--datasets_batch_size",
+            type=int,
+            min_value=1,
+            default=100,
+            metavar="BATCH_SIZE",
+            help="number of accessions requested in one query to datasets",
+        )
+        subparser.add_log_arguments(add_log_file=True)
 
-    parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
-
     init_logging_with_args(args)
 
-    # Set and create dir for download files
-    args.download_dir.mkdir(parents=True, exist_ok=True)
+    # Get accessions on cores list or use user accession list directly
+    if args.src == "core_db":
+        query_accessions = fetch_accessions_from_core_dbs(args.input, args.url)
+    else:
+        query_accessions = {x: x for x in get_assembly_accessions(args.input)}
 
-    # Set input file and determine if proper parameterization options are defined.
-    user_query_file = check_parameterization(args.input_cores, args.input_accessions, args.host, args.port)
-
-    ## Parse and store cores/accessions from user input query file
-    with user_query_file.open(mode="r") as f:
-        query_list = f.read().splitlines()
-
-    ## Parse singularity setting and define the SIF image for 'datasets'
+    # Parse singularity setting and define the SIF image for 'datasets'
     datasets_image = singularity_image_setter(args.cache_dir, args.datasets_version_url)
 
-    ## Get accessions on cores list or use user accession list directly
-    connection_url = URL.create(
-        "mysql",
-        host=args.host,
-        port=args.port,
-        username="ensro",
-    )
-    query_accessions, query_type = resolve_query_type(
-        query_list, connection_url, args.input_cores, args.input_accessions
-    )
-
     # Datasets query implementation for one or more batched accessions
-    assembly_reports = datasets_asm_reports(
+    assembly_reports = fetch_datasets_reports(
         datasets_image, query_accessions, args.download_dir, args.datasets_batch_size
     )
 
@@ -472,4 +417,4 @@ def main() -> None:
     key_assembly_report_meta = extract_assembly_metadata(assembly_reports)
 
     # Produce the finalized assembly status report TSV from set of parsed 'datasets summary report'
-    generate_report_tsv(key_assembly_report_meta, args.assembly_report_prefix, query_type, args.download_dir)
+    generate_report_tsv(key_assembly_report_meta, args.src, args.download_dir, args.assembly_report_name)

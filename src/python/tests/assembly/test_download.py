@@ -12,15 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.assembly.download` module.
-
-The unit testing is divided into one test class per submodule/class found in this module, and one test method
-per public function/class method.
-
-Typical usage example::
-    $ pytest ./assembly/test_download.py
-
-"""
+"""Unit testing of `ensembl.io.genomio.assembly.download` module."""
 
 from contextlib import nullcontext as does_not_raise
 import filecmp

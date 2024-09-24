@@ -1,0 +1,13 @@
+{
+    "accession": "GCF_001194135.2",
+    "assembly_info": {
+        "assembly_level": "Chromosome",
+        "assembly_name": "ASM119413v2",
+        "assembly_status": "current",
+        "assembly_type": "haploid"
+    },
+    "organism": {
+        "organism_name": "Octopus bimaculoides",
+        "tax_id": 37653
+    }
+}
