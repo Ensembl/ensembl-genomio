@@ -19,8 +19,9 @@ process DOWNLOAD_ASM_DATA {
     label 'adaptive'
     label 'cached'
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
-        'ensemblorg/ensembl-genomio:v1.3.1':
+        'ensemblorg/datasets-cli:latest':
         'null' }"
+    
 
     input:
         tuple val(meta), path(json_file)

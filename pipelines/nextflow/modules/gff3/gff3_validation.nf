@@ -16,6 +16,9 @@
 process GFF3_VALIDATION {
   tag "${gene_models}"
   label 'adaptive'
+  container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
+        'quay.io/biocontainers/genometools-genometools:1.6.5--py310h3db02ab_0':
+        'null' }"
 
   input:
     tuple val(meta), path (gene_models, stageAs: "incoming.gff3")

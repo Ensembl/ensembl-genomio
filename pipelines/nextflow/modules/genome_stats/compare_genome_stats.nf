@@ -17,9 +17,6 @@
 process COMPARE_GENOME_STATS {
     tag "${db.species}"
     label 'local'
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
-        'ensemblorg/ensembl-genomio:v1.3.1':
-        'null' }"
 
     input:
         tuple val(db), path(ncbi_stats, stageAs: "ncbi_stats.json"),

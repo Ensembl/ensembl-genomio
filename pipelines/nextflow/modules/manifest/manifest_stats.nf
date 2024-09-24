@@ -16,9 +16,6 @@
 process MANIFEST_STATS {
     tag "manifest_stats"
     label 'adaptive'
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
-        'ensemblorg/ensembl-genomio:v1.3.1':
-        'null' }"
 
     input:
         tuple val(meta), path(manifest_files)

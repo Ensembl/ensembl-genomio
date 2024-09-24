@@ -35,9 +35,6 @@ workflow PREPARE_GENOME_METADATA {
 process _PREPARE_GENOME_METADATA {
     tag "$meta.id"
     label 'local'
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
-        'ensemblorg/ensembl-genomio:v1.3.1':
-        'null' }"
 
     input:
         tuple val(meta), path(input_json), path(ncbi_json)
