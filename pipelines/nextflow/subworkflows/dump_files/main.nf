@@ -82,12 +82,6 @@ workflow DUMP_FILES {
             annotation = DUMP_ANNOTATION(db)
             db_files = db_files.mix(annotation)
         }
-        
-        // Events
-        if ("events" in selection) {
-            events = DUMP_EVENTS(db)
-            db_files = db_files.mix(events)
-        }
 
         // Genome metadata
         if ("genome_metadata" in selection) {
