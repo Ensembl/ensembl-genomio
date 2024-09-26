@@ -18,10 +18,6 @@ process DOWNLOAD_ASM_DATA {
     tag "${meta.accession}"
     label 'adaptive'
     label 'cached'
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container? 
-        'ensemblorg/datasets-cli:latest':
-        'null' }"
-    
 
     input:
         tuple val(meta), path(json_file)
