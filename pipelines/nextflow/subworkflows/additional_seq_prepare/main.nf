@@ -14,13 +14,13 @@
 // limitations under the License.
 
 // Import modules/subworkflows
+include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { DOWNLOAD_GENBANK } from '../../modules/download/download_genbank.nf'
 include { EXTRACT_FROM_GB } from '../../modules/genbank/extract_from_gb.nf'
-include { PROCESS_GFF3 } from '../../modules/gff3/process_gff3.nf'
 include { GFF3_VALIDATION } from '../../modules/gff3/gff3_validation.nf'
 include { MANIFEST } from '../../modules/manifest/manifest_maker.nf'
-include { CHECK_INTEGRITY } from '../../modules/manifest/integrity.nf'
 include { MANIFEST_STATS } from '../../modules/manifest/manifest_stats.nf'
+include { PROCESS_GFF3 } from '../../modules/gff3/process_gff3.nf'
 include { PUBLISH_DIR } from '../../modules/files/publish_output.nf'
 
 workflow additional_seq_prepare {
