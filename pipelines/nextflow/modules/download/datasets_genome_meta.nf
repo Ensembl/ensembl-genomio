@@ -18,8 +18,8 @@ process DOWNLOAD_NCBI_STATS {
     tag "$meta.id"
     label 'local'
     label 'cached'
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container?
-        'ensemblorg/datasets-cli:latest':
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'ensemblorg/datasets-cli:latest' :
         'null' }"
     
 
