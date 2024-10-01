@@ -29,5 +29,5 @@ LABEL about.summary="A lighweight container to run ensembl-genomio module script
 LABEL about.home="https://github.com/Ensembl/ensembl-genomio"
 LABEL about.documentation="https://ensembl.github.io/ensembl-genomio"
 LABEL license="https://www.apache.org/licenses/LICENSE-2.0.txt"
-LABEL mantainer="Ensembl-Metazoa"
-LABEL mantainer.email="ensembl-metazoa@ebi.ac.uk"
+LABEL mantainer="Ensembl"
+LABEL mantainer.email="dev@ensembl.org"
