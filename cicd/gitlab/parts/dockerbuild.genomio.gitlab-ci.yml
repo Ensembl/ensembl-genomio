@@ -21,10 +21,13 @@
 
 ### variable setup
 variables:
+  
   # https://docs.gitlab.com/ee/user/namespace/  
   CONTAINER_IMAGE_NAME: ensembl-genomio
   GENOMIO_DIR: containers/docker/genomio
-  GENOMIO_RELEASE_VERSION: "v1.3.1"
+  
+  # Last commit before merge to main should follow versioning tag: vX.X.X
+  GENOMIO_RELEASE_VERSION: $CI_COMMIT_TAG
   
   # GITLAB:
   GITLAB_PROJECT: vectorbase

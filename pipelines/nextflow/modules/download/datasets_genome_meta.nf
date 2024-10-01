@@ -18,10 +18,7 @@ process DOWNLOAD_NCBI_STATS {
     tag "$meta.id"
     label 'local'
     label 'cached'
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'ensemblorg/datasets-cli:latest' :
-        'null' }"
-    
+    container 'ensemblorg/datasets-cli:latest'
 
     input:
         val(meta)  // with keys [ id, accession ]
