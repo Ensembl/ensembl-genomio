@@ -9,7 +9,8 @@ RUN apt-get update \
         pkg-config \
         gcc \
         pip \
-        && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir ensembl-genomio mysqlclient
 
