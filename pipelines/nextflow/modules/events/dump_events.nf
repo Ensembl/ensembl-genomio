@@ -16,7 +16,11 @@
 
 process DUMP_EVENTS {
     tag "${db.species}"
+<<<<<<< HEAD
     label 'variable_2_8_32'
+=======
+    label "variable_2_8_32"
+>>>>>>> 543bcd3b (restore the stable_id allocation files)
     maxForks params.max_database_forks
 
     input:
