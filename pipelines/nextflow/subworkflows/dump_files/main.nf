@@ -16,6 +16,7 @@
 include { DOWNLOAD_NCBI_STATS } from '../../modules/download/datasets_genome_meta.nf'
 include { DUMP_AGP } from '../../modules/seq_region/dump_agp.nf'
 include { DUMP_ANNOTATION } from '../../modules/annotation/dump_annotation.nf'
+include { DUMP_EVENTS } from '../../modules/events/dump_events.nf'
 include { DUMP_FASTA_DNA } from '../../modules/fasta/dump_fasta_dna.nf'
 include { DUMP_FASTA_PEPTIDES } from '../../modules/fasta/dump_fasta_peptides.nf'
 include { DUMP_GENOME_META } from '../../modules/genome_metadata/dump_genome_meta.nf'
@@ -80,6 +81,12 @@ workflow DUMP_FILES {
         if ("annotation" in selection) {
             annotation = DUMP_ANNOTATION(db)
             db_files = db_files.mix(annotation)
+        }
+        
+        // Events
+        if ("events" in selection) {
+            events = DUMP_EVENTS(db)
+            db_files = db_files.mix(events)
         }
 
         // Genome metadata

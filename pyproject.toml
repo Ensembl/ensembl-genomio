@@ -108,6 +108,10 @@ assembly_download = "ensembl.io.genomio.assembly.download:main"
 assembly_tracker = "ensembl.io.genomio.assembly.status:main"
 # Database
 database_factory = "ensembl.io.genomio.database.factory:main"
+# Events
+events_dump = "ensembl.io.genomio.events.dump:main"
+events_load = "ensembl.io.genomio.events.load:main"
+events_format = "ensembl.io.genomio.events.format:main"
 # Fasta
 fasta_chunk = "ensembl.io.genomio.fasta.chunk:main"
 fasta_process = "ensembl.io.genomio.fasta.process:main"
