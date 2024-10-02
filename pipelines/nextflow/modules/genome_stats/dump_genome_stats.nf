@@ -16,7 +16,7 @@
 
 process DUMP_GENOME_STATS {
     tag "${db.species}"
-    label "normal"
+    label 'normal'
     maxForks params.max_database_forks
 
     input:

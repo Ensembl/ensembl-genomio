@@ -15,8 +15,7 @@
 
 process DUMP_FASTA_PEPTIDES {
     tag "${db.species}"
-    label "variable_2_8_32"
-    label "ensembl_scripts_container"
+    label 'variable_2_8_32'
     maxForks params.max_database_forks
 
     input:

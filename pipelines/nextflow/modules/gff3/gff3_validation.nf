@@ -14,10 +14,11 @@
 // limitations under the License.
 
 process GFF3_VALIDATION {
-
   tag "${gene_models}"
   label 'adaptive'
-  label 'container_genometools'
+  container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'quay.io/biocontainers/genometools-genometools:1.6.5--py310h3db02ab_0' :
+        'biocontainers/genometools-genometools:1.6.5--py310h3db02ab_0' }"
 
   input:
     tuple val(meta), path (gene_models, stageAs: "incoming.gff3")

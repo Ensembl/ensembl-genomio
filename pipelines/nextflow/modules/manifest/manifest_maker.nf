@@ -16,7 +16,7 @@
 process MANIFEST {
     tag "$meta.accession"
     label 'adaptive'
-    
+
     input:
         tuple val(meta), path(file_name)
 

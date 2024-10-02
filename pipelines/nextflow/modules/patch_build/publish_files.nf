@@ -14,7 +14,7 @@
 // limitations under the License.
 
 process PUBLISH_FILES {
-    label "local"
+    label 'local'
     publishDir "$output_dir", mode: "copy"
 
     input:
