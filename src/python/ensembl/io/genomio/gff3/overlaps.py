@@ -182,19 +182,22 @@ def get_intervals(record: SeqRecord, genes_dict: dict, seq_dict: dict, seq_name:
 def main() -> None:
     """Module entry-point."""
     parser = ArgumentParser(description=__doc__)
+    # Create parser with common arguments to be used by both subparsers
+    base_parser = ArgumentParser(add_help=False)
+    base_parser.add_argument_src_path("--input_gff", required=True, help="path of GFF3 file to process")
+    base_parser.add_log_arguments(add_log_file=True)
+    # Add subparsers with their parent being the base parser with the common arguments
     subparsers = parser.add_subparsers(title="Parse GFF3 and ", required=True, dest="subcommand")
-    gff3_stats_parser = subparsers.add_parser("stats", help="Provide summary of feature types.")
-    overlaps_parser = subparsers.add_parser("overlaps", help="Find feature overlaps.")
+    gff3_stats_parser = subparsers.add_parser(  # pylint: disable=unused-variable
+        "stats", parents=[base_parser], help="Provide summary of feature types"
+    )
+    overlaps_parser = subparsers.add_parser("overlaps", parents=[base_parser], help="Find feature overlaps")
     overlaps_parser.add_argument_dst_path(
-        "--output_file", default="feature_overlaps.txt", help="Path of output file."
+        "--output_file", default="feature_overlaps.txt", help="path of output file"
     )
     overlaps_parser.add_argument(
-        "--filter_type", default="gene", help="The sequence feature type used for overlap isolation."
+        "--filter_type", default="gene", help="sequence feature type used for overlap isolation"
     )
-
-    for subparser in [gff3_stats_parser, overlaps_parser]:
-        subparser.add_argument_src_path("--input_gff", required=True, help="Path of GFF3 file to process.")
-        subparser.add_log_arguments(add_log_file=True)
 
     args = parser.parse_args()
     init_logging_with_args(args)

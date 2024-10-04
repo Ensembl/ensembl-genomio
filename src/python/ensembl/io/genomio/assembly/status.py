@@ -346,9 +346,46 @@ def generate_report_tsv(
 def main() -> None:
     """Module's entry-point."""
     parser = ArgumentParser(description=__doc__)
+    # Create parser with common arguments to be used by both subparsers
+    base_parser = ArgumentParser(add_help=False)
+    base_parser.add_argument_dst_path(
+        "--output_file",
+        default=Path("assembly_report_jsons"),
+        help="path to folder where the assembly report JSON files is stored",
+    )
+    base_parser.add_argument(
+        "--assembly_report_name",
+        metavar="NAME",
+        default="AssemblyStatusReport",
+        help="file name used for the assembly report TSV output file",
+    )
+    base_parser.add_argument(
+        "--datasets_version_url",
+        type=str,
+        metavar="URL",
+        help="datasets version, e.g. docker://ensemblorg/datasets-cli:latest",
+    )
+    base_parser.add_argument_src_path(
+        "--cache_dir",
+        default=Path(os.environ.get("NXF_SINGULARITY_CACHEDIR", "")),
+        metavar="SINGULARITY_CACHE",
+        help="folder path to user generated singularity container housing NCBI tool 'datasets'",
+    )
+    base_parser.add_numeric_argument(
+        "--datasets_batch_size",
+        type=int,
+        min_value=1,
+        default=100,
+        metavar="BATCH_SIZE",
+        help="number of accessions requested in one query to datasets",
+    )
+    base_parser.add_log_arguments(add_log_file=True)
+    # Add subparsers with their parent being the base parser with the common arguments
     subparsers = parser.add_subparsers(title="report assembly status from", required=True, dest="src")
     # Specific arguments required when using Ensembl core database names as source
-    core_db_parser = subparsers.add_parser("core_db", help="list of Ensembl core databases")
+    core_db_parser = subparsers.add_parser(
+        "core_db", parents=[base_parser], help="list of Ensembl core databases"
+    )
     core_db_parser.add_argument_src_path(
         "--input",
         required=True,
@@ -356,45 +393,12 @@ def main() -> None:
     )
     core_db_parser.add_server_arguments()
     # Specific arguments required when using assembly accessions as source
-    accessions_parser = subparsers.add_parser("accession", help="list of INSDC accessions")
+    accessions_parser = subparsers.add_parser(
+        "accession", parents=[base_parser], help="list of INSDC accessions"
+    )
     accessions_parser.add_argument_src_path(
         "--input", required=True, help="file path with list of assembly INSDC query accessions"
     )
-    # Add common arguments to both subparsers to avoid forcing users to add common arguments before
-    # the sub-command, e.g. `status.py --cache_dir <path> accession --input <file>`
-    for subparser in [core_db_parser, accessions_parser]:
-        subparser.add_argument_dst_path(
-            "--output_file",
-            default=Path("assembly_report_jsons"),
-            help="path to folder where the assembly report JSON files is stored",
-        )
-        subparser.add_argument(
-            "--assembly_report_name",
-            metavar="NAME",
-            default="AssemblyStatusReport",
-            help="file name used for the assembly report TSV output file",
-        )
-        subparser.add_argument(
-            "--datasets_version_url",
-            type=str,
-            metavar="URL",
-            help="datasets version, e.g. docker://ensemblorg/datasets-cli:latest",
-        )
-        subparser.add_argument_src_path(
-            "--cache_dir",
-            default=Path(os.environ.get("NXF_SINGULARITY_CACHEDIR", "")),
-            metavar="SINGULARITY_CACHE",
-            help="folder path to user generated singularity container housing NCBI tool 'datasets'",
-        )
-        subparser.add_numeric_argument(
-            "--datasets_batch_size",
-            type=int,
-            min_value=1,
-            default=100,
-            metavar="BATCH_SIZE",
-            help="number of accessions requested in one query to datasets",
-        )
-        subparser.add_log_arguments(add_log_file=True)
 
     args = parser.parse_args()
     init_logging_with_args(args)
