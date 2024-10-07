@@ -349,7 +349,7 @@ def main() -> None:
     # Create parser with common arguments to be used by both subparsers
     base_parser = ArgumentParser(add_help=False)
     base_parser.add_argument_dst_path(
-        "--output_file",
+        "--reports_dir",
         default=Path("assembly_report_jsons"),
         help="path to folder where the assembly report JSON files is stored",
     )
@@ -414,11 +414,11 @@ def main() -> None:
 
     # Datasets query implementation for one or more batched accessions
     assembly_reports = fetch_datasets_reports(
-        datasets_image, query_accessions, args.download_dir, args.datasets_batch_size
+        datasets_image, query_accessions, args.reports_dir, args.datasets_batch_size
     )
 
     # Extract the key assembly report meta information for reporting status
     key_assembly_report_meta = extract_assembly_metadata(assembly_reports)
 
     # Produce the finalized assembly status report TSV from set of parsed 'datasets summary report'
-    generate_report_tsv(key_assembly_report_meta, args.src, args.download_dir, args.assembly_report_name)
+    generate_report_tsv(key_assembly_report_meta, args.src, args.reports_dir, args.assembly_report_name)
