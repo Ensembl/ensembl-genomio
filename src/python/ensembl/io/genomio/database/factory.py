@@ -16,10 +16,10 @@
 
 __all__ = ["format_db_data", "get_core_dbs_metadata"]
 
+import argparse
 import json
-from pathlib import Path
-from typing import Dict, List, Optional
 import logging
+from pathlib import Path
 
 from sqlalchemy.engine import URL
 
@@ -29,7 +29,7 @@ from .core_server import CoreServer
 from .dbconnection_lite import DBConnectionLite
 
 
-def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
+def format_db_data(server_url: URL, dbs: list[str], brc_mode: bool = False) -> list[dict]:
     """Returns a metadata list from the given databases on a server.
 
     Args:
@@ -87,13 +87,14 @@ def format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> L
 
 def get_core_dbs_metadata(
     server_url: URL,
+    *,
     prefix: str = "",
-    build: Optional[int] = None,
-    version: Optional[int] = None,
+    build: int | None = None,
+    version: int | None = None,
     db_regex: str = "",
-    db_list: Optional[Path] = None,
+    db_list: Path | None = None,
     brc_mode: bool = False,
-) -> List[Dict]:
+) -> list[dict]:
     """Returns all the metadata fetched for the selected core databases.
 
     Args:
@@ -123,8 +124,12 @@ def get_core_dbs_metadata(
     return format_db_data(server_url, databases, brc_mode)
 
 
-def main() -> None:
-    """Main script entry-point."""
+def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
+    """TODO
+
+    Args:
+        arg_list: TODO
+    """
     parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments()
     # Add filter arguments
@@ -140,7 +145,17 @@ def main() -> None:
         help="Enable BRC mode, i.e. use organism_abbrev for species, component for division",
     )
     parser.add_log_arguments()
-    args = parser.parse_args()
+    return parser.parse_args(arg_list)
+
+
+def main(arg_list: list[str] | None = None) -> None:
+    """Main script entry-point.
+
+    Args:
+        arg_list: TODO
+
+    """
+    args = parse_args(arg_list)
     init_logging_with_args(args)
 
     databases_data = get_core_dbs_metadata(
