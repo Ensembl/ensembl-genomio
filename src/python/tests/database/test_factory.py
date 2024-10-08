@@ -20,12 +20,12 @@ Typical usage example::
 """
 
 from pathlib import Path
-from typing import Generator
 from unittest.mock import call, Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
 from pytest import param
+from _pytest.capture import CaptureFixture
 from sqlalchemy.engine import make_url, URL
 
 from ensembl.io.genomio.database import factory
@@ -221,9 +221,25 @@ def test_get_core_dbs_metadata(
         ),
         param(
             [
-                "--host", "localhost", "--port", "42", "--user", "me", "--password", "secret",
-                "--prefix", "pre", "--build", "70", "--version", "114", "--db_regex", "%_core_%",
-                "--db_list", __file__, "--brc_mode",
+                "--host",
+                "localhost",
+                "--port",
+                "42",
+                "--user",
+                "me",
+                "--password",
+                "secret",
+                "--prefix",
+                "pre",
+                "--build",
+                "70",
+                "--version",
+                "114",
+                "--db_regex",
+                "%_core_%",
+                "--db_list",
+                __file__,
+                "--brc_mode",
             ],
             {
                 "host": "localhost",
@@ -264,7 +280,11 @@ def test_parse_args(arg_list: list[str], expected: dict) -> None:
 )
 @patch("ensembl.io.genomio.database.factory.get_core_dbs_metadata")
 def test_main(
-    mock_get_core_dbs_metadata: Mock, capsys: Generator, arg_list: list[str], server_url: URL, stdout: str
+    mock_get_core_dbs_metadata: Mock,
+    capsys: CaptureFixture[str],
+    arg_list: list[str],
+    server_url: URL,
+    stdout: str,
 ) -> None:
     """Tests the `factory.main()` function (entry point).
 
