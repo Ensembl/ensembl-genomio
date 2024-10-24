@@ -132,5 +132,7 @@ class TestCoreServer:
         server = CoreServer(server_url)
 
         # Checks the filters from get_cores
-        all_cores = server.get_cores(prefix, build, version, dbname_re, db_list)
+        all_cores = server.get_cores(
+            prefix=prefix, build=build, version=version, dbname_re=dbname_re, db_list=db_list
+        )
         assert set(all_cores) == set(output)

@@ -29,6 +29,7 @@ class GFFSeqFeature(SeqFeature):
     def __init__(
         self,
         location: Location | None = None,
+        *,
         type: str = "",  # pylint: disable=W0622
         id: str = "<unknown id>",  # pylint: disable=W0622
         qualifiers: dict | None = None,

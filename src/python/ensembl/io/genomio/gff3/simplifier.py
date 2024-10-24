@@ -535,7 +535,7 @@ class GFFSimplifier:
             elif sub.type == "miRNA":
                 new_gene_id = f"{base_id}_{num}"
                 num += 1
-                new_gene = GFFSeqFeature(sub.location, "gene", id=new_gene_id)
+                new_gene = GFFSeqFeature(sub.location, type="gene", id=new_gene_id)
                 new_gene.qualifiers = {"source": sub.qualifiers["source"], "ID": new_gene_id}
                 new_gene.sub_features = [sub]
                 new_genes.append(new_gene)

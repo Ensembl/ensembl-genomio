@@ -46,6 +46,7 @@ class CoreServer:
 
     def get_cores(
         self,
+        *,
         prefix: str = "",
         build: Optional[int] = None,
         version: Optional[int] = None,

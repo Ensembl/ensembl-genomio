@@ -316,9 +316,9 @@ def test_chunk_fasta_stream(
                     chunk_size_tolerated,
                     output_fasta,
                     None,
-                    n_sequence_len,
-                    chunk_sfx,
-                    append_offset_to_chunk_name,
+                    n_sequence_len=n_sequence_len,
+                    chunk_sfx=chunk_sfx,
+                    append_offset_to_chunk_name=append_offset_to_chunk_name,
                     open_individual=_individual_opener,
                 )
             assert output_fasta.getvalue() == expected_chunked_fasta_text
@@ -335,9 +335,9 @@ def test_chunk_fasta_stream(
                     chunk_size_tolerated,
                     no_output_fasta,
                     Path("/path/prefix"),
-                    n_sequence_len,
-                    chunk_sfx,
-                    append_offset_to_chunk_name,
+                    n_sequence_len=n_sequence_len,
+                    chunk_sfx=chunk_sfx,
+                    append_offset_to_chunk_name=append_offset_to_chunk_name,
                     open_individual=_individual_opener,
                 )
             assert "".join(map(lambda p: p[1], parts)) == expected_chunked_fasta_text
@@ -426,10 +426,10 @@ def test_chunk_fasta(
         1,  # chunk_size_tolerated
         str(output_fa),
         individual_file_prefix and individual_fa or None,
-        agp_output_file_name and str(output_agp) or None,
-        0,  # Ns
-        "sfx",
-        True,
+        agp_output_file=agp_output_file_name and str(output_agp) or None,
+        n_sequence_len=0,  # Ns
+        chunk_sfx="sfx",
+        append_offset_to_chunk_name=True,
     )
 
     with expected_missing_joined:

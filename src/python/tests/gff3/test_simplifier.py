@@ -209,7 +209,7 @@ def test_normalize_non_gene(
 ) -> None:
     """Test non-gene normalization."""
     simp = GFFSimplifier()
-    feat = GFFSeqFeature(None, in_type)
+    feat = GFFSeqFeature(None, type=in_type)
     feat.qualifiers = {"source": "LOREM"}
     if in_mobile_type is not None:
         feat.qualifiers["mobile_element_type"] = [in_mobile_type]
@@ -227,7 +227,7 @@ def test_normalize_non_gene_not_implemented() -> None:
     """Test non-gene not in the biotype list."""
     simp = GFFSimplifier()
     simp._biotypes = {"non_gene": {"supported": ["non_gene_name"]}}  # pylint: disable=protected-access
-    feat = GFFSeqFeature(None, "non_gene_name")
+    feat = GFFSeqFeature(None, type="non_gene_name")
     with raises(NotImplementedError):
         simp.normalize_non_gene(feat)
 
@@ -252,7 +252,7 @@ def test_format_gene_segments(
 ) -> None:
     """Test `format_gene_segments` without a CDS."""
     simp = GFFSimplifier()
-    feat = GFFSeqFeature(None, in_type)
+    feat = GFFSeqFeature(None, type=in_type)
     if tr_name:
         feat.qualifiers["standard_name"] = [tr_name]
     with expectation:
@@ -277,9 +277,9 @@ def test_format_gene_segments_cds(
 ) -> None:
     """Test `format_gene_segments` with a CDS (and no info on the transcript)."""
     simp = GFFSimplifier()
-    feat = GFFSeqFeature(None, "C_gene_segment")
+    feat = GFFSeqFeature(None, type="C_gene_segment")
     if has_cds:
-        cds = GFFSeqFeature(None, "CDS")
+        cds = GFFSeqFeature(None, type="CDS")
         cds.qualifiers["product"] = [cds_name]
         feat.sub_features = [cds]
     with expectation:
