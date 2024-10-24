@@ -12,12 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.fasta.chunk` module.
-
-Typical usage example::
-    $ pytest test_chunk.py
-
-"""
+"""Unit testing of `ensembl.io.genomio.fasta.chunk` module."""
+# pylint: disable=too-many-positional-arguments
 
 from contextlib import contextmanager, nullcontext
 from io import StringIO, TextIOWrapper

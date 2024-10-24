@@ -12,15 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit testing of `ensembl.io.genomio.database.core_server` module.
-
-The unit testing is divided into one test class per submodule/class found in this module, and one test method
-per public function/class method.
-
-Typical usage example::
-    $ pytest test_core_server.py
-
-"""
+"""Unit testing of `ensembl.io.genomio.database.core_server` module."""
+# pylint: disable=too-many-positional-arguments
 
 from __future__ import annotations
 

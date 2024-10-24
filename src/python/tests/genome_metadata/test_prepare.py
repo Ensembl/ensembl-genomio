@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.genome_metadata.prepare` module."""
+# pylint: disable=too-many-positional-arguments
 
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
