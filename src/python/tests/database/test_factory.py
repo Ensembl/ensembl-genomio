@@ -20,13 +20,13 @@ Typical usage example::
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
 from unittest.mock import call, Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
 from pytest import param
-from sqlalchemy.engine import URL
+from _pytest.capture import CaptureFixture
+from sqlalchemy.engine import make_url, URL
 
 from ensembl.io.genomio.database import factory
 
@@ -115,7 +115,7 @@ _META = {
     ],
 )
 def test_format_db_data(
-    mock_dbconn: Mock, server_url: URL, dbs: List[str], brc_mode: bool, skip_keys: bool, output: List[Dict]
+    mock_dbconn: Mock, server_url: URL, dbs: list[str], brc_mode: bool, skip_keys: bool, output: list[dict]
 ) -> None:
     """Tests the `factory.format_db_data()` function.
 
@@ -128,7 +128,7 @@ def test_format_db_data(
         output: Expected list of dictionaries with metadata per database.
     """
 
-    def _get_meta_value(meta_key: str) -> Optional[str]:
+    def _get_meta_value(meta_key: str) -> str | None:
         """Return empty string if "species.division" is requested in BRC mode, "Metazoa" otherwise."""
         if (meta_key == "species.division") and brc_mode:
             return ""
@@ -169,7 +169,7 @@ def test_get_core_dbs_metadata(
     mock_format_db_data: Mock,
     data_dir: Path,
     use_db_file: bool,
-    output: List[Dict],
+    output: list[dict],
 ) -> None:
     """Tests the `factory.get_core_dbs_metadata()` function.
 
@@ -181,7 +181,7 @@ def test_get_core_dbs_metadata(
         output: Expected list of dictionaries with some metadata for each selected database.
     """
 
-    def _format_db_data(server_url: URL, dbs: List[str], brc_mode: bool = False) -> List[Dict]:
+    def _format_db_data(server_url: URL, dbs: list[str], brc_mode: bool = False) -> list[dict]:
         """Returns metadata from a list of databases."""
         _ = (server_url, brc_mode)  # Unused by mock
         return [{"database": db, "species": "dog"} for db in dbs]
@@ -196,3 +196,106 @@ def test_get_core_dbs_metadata(
     db_list = data_dir / "databases.txt" if use_db_file else None
     result = factory.get_core_dbs_metadata(URL.create("mysql"), db_list=db_list)
     assert not DeepDiff(result, output)
+
+
+@pytest.mark.parametrize(
+    "arg_list, expected",
+    [
+        param(
+            ["--host", "localhost", "--port", "42", "--user", "me"],
+            {
+                "host": "localhost",
+                "port": 42,
+                "user": "me",
+                "password": None,
+                "url": make_url("mysql://me@localhost:42"),
+                "prefix": "",
+                "build": None,
+                "version": None,
+                "db_regex": "",
+                "db_list": None,
+                "brc_mode": False,
+                "log_level": "WARNING",
+            },
+            id="Default args",
+        ),
+        param(
+            [
+                "--host",
+                "localhost",
+                "--port",
+                "42",
+                "--user",
+                "me",
+                "--password",
+                "secret",
+                "--prefix",
+                "pre",
+                "--build",
+                "70",
+                "--version",
+                "114",
+                "--db_regex",
+                "%_core_%",
+                "--db_list",
+                __file__,
+                "--brc_mode",
+            ],
+            {
+                "host": "localhost",
+                "port": 42,
+                "user": "me",
+                "password": "secret",
+                "url": make_url("mysql://me:secret@localhost:42"),
+                "prefix": "pre",
+                "build": 70,
+                "version": 114,
+                "db_regex": "%_core_%",
+                "db_list": __file__,
+                "brc_mode": True,
+                "log_level": "WARNING",
+            },
+            id="New arg values",
+        ),
+    ],
+)
+def test_parse_args(arg_list: list[str], expected: dict) -> None:
+    """Tests the `factory.parse_args()` function."""
+    args = factory.parse_args(arg_list)
+    if args.db_list:
+        # DeepDiff is not able to compare two objects of Path type, so convert it to string
+        setattr(args, "db_list", str(args.db_list))
+    assert not DeepDiff(vars(args), expected)
+
+
+@pytest.mark.parametrize(
+    "arg_list, server_url, stdout",
+    [
+        (
+            ["--host", "localhost", "--port", "42", "--user", "me"],
+            make_url("mysql://me@localhost:42"),
+            '{\n    "test": "output"\n}\n',
+        ),
+    ],
+)
+@patch("ensembl.io.genomio.database.factory.get_core_dbs_metadata")
+def test_main(
+    mock_get_core_dbs_metadata: Mock,
+    capsys: CaptureFixture[str],
+    arg_list: list[str],
+    server_url: URL,
+    stdout: str,
+) -> None:
+    """Tests the `factory.main()` function (entry point).
+
+    Fixtures: capsys
+    """
+    mock_get_core_dbs_metadata.return_value = {"test": "output"}
+    factory.main(arg_list)
+    # Check that we have called the mocked function once with the expected parameters
+    mock_get_core_dbs_metadata.assert_called_once_with(
+        server_url=server_url, prefix="", build=None, version=None, db_regex="", db_list=None, brc_mode=False
+    )
+    # Check that the stdout is as expected
+    captured = capsys.readouterr()
+    assert captured.out == stdout
