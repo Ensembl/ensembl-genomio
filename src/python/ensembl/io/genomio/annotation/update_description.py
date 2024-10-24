@@ -125,7 +125,7 @@ def load_descriptions(
         }
         # Compare, only keep the descriptions that have changed
         features_to_update = _get_features_to_update(
-            table, feat_func, feat_data, stats, report, do_update, match_xrefs
+            table, feat_func, feat_data, stats, report=report, do_update=do_update, match_xrefs=match_xrefs
         )
 
         # Show stats for this feature type
@@ -172,8 +172,9 @@ def _get_features_to_update(
     feat_func: List[Dict[str, Any]],
     feat_data: Dict[str, FeatStruct],
     stats: Dict[str, int],
-    report: bool,
-    do_update: bool,
+    *,
+    report: bool = False,
+    do_update: bool = False,
     match_xrefs: bool = True,
 ) -> List[Dict[str, Any]]:
     """Checks a list of features and returns those whose description we want to update.

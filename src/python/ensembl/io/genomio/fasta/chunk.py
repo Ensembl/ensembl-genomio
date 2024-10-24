@@ -141,6 +141,7 @@ def chunk_fasta_stream(
     chunk_size_tolerated: int,
     output_fasta: Optional[TextIOWrapper] | nullcontext[Any],
     individual_file_prefix: Optional[Path],
+    *,
     n_sequence_len: int = 0,
     chunk_sfx: str = "ens_chunk",
     append_offset_to_chunk_name: Optional[bool] = None,
@@ -246,6 +247,7 @@ def chunk_fasta(
     chunk_size_tolerated: int,
     out_file_name: str,
     individual_file_prefix: Optional[Path],
+    *,
     agp_output_file: Optional[str] = None,
     n_sequence_len: int = 0,
     chunk_sfx: str = "ens_chunk",
@@ -287,9 +289,9 @@ def chunk_fasta(
                 chunk_size_tolerated,
                 out_file_joined,
                 individual_file_prefix,
-                n_sequence_len,
-                chunk_sfx,
-                append_offset_to_chunk_name,
+                n_sequence_len=n_sequence_len,
+                chunk_sfx=chunk_sfx,
+                append_offset_to_chunk_name=append_offset_to_chunk_name,
             )
 
         # dump AGP

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.seq_region.prepare` module."""
+# pylint: disable=too-many-positional-arguments
 
 from pathlib import Path
 from typing import Callable

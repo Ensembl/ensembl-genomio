@@ -207,6 +207,7 @@ class IntegrityTool:
         list1: dict[str, int],
         list2: dict[str, int],
         name: str,
+        *,
         allowed_len_diff: int | None = None,
         special_diff: bool = False,
     ) -> list[str]:
