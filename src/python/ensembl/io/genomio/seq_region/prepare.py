@@ -27,6 +27,7 @@ def prepare_seq_region_metadata(
     genome_file: StrPath,
     report_file: StrPath,
     dst_file: StrPath,
+    *,
     gbff_file: StrPath | None = None,
     to_exclude: list[str] | None = None,
     mock_run: bool = False,
