@@ -31,7 +31,8 @@ from ensembl.utils import StrPath
 from ensembl.utils.logging import init_logging_with_args
 from .dbconnection_lite import DBConnectionLite
 
-def get_meta_values(server_url: URL, db_name: str, input_queries: StrPath) -> dict[str, str]:
+
+def get_meta_values(server_url: URL, db_name: str, input_queries: StrPath) -> dict[str, str] | None:
     """Returns a set of meta values based on set of 1 or more input DB meta_keys.
 
     Args:
@@ -49,15 +50,14 @@ def get_meta_values(server_url: URL, db_name: str, input_queries: StrPath) -> di
     meta_populated = False
 
     # Check input type and populated query list
-    if isinstance(input_queries, PosixPath): 
+    if isinstance(input_queries, PosixPath):
         with Path(input_queries).open(mode="r", encoding="UTF-8") as fh:
             for line in fh.readlines():
-            # for file_inline in fh:
                 meta_key = line.strip()
                 query_meta_keys.append(meta_key)
     elif isinstance(input_queries, list):
         query_meta_keys = input_queries
-    
+
     # Loop over input meta_key(s) and query DB
     if len(query_meta_keys) >= 1:
         for meta_key in query_meta_keys:
@@ -71,7 +71,7 @@ def get_meta_values(server_url: URL, db_name: str, input_queries: StrPath) -> di
                 logging.info(f"Meta query returned no entry on meta_key: '{meta_key}'")
     else:
         logging.warning(f"No meta_keys found in input file {query_meta_keys}")
-        return
+        return None
 
     # Now assess what meta info was recovered and dump to JSON
     total_queries_located = len(meta_values_located.items())
@@ -88,11 +88,12 @@ def get_meta_values(server_url: URL, db_name: str, input_queries: StrPath) -> di
 
     if meta_populated is True:
         meta_values_located["database_name"] = f"{db_name}"
-        print(json.dumps(meta_values_located, sort_keys = True, indent = "  "))
+        print(json.dumps(meta_values_located, sort_keys=True, indent="  "))
         return meta_values_located
     else:
         return {}
-    
+
+
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """TODO
 
@@ -103,20 +104,14 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     parser.add_server_arguments()
     parser.add_argument("--database_name", default=None, help="Target database name.")
     parser.add_argument_src_path(
-        "--meta_keys_list",
-        help="Input File | List with >=2 meta_keys to query target database."
+        "--meta_keys_list", help="Input File | List with >=2 meta_keys to query target database."
     )
     parser.add_log_arguments(add_log_file=False)
     return parser.parse_args(arg_list)
-
 
 
 def main(arg_list: list[str] | None = None) -> None:
     args = parse_args(arg_list)
     init_logging_with_args(args)
 
-    _ = get_meta_values(
-        server_url = args.url, 
-        db_name = args.database_name, 
-        input_queries = args.meta_keys_list
-        )
+    _ = get_meta_values(server_url=args.url, db_name=args.database_name, input_queries=args.meta_keys_list)
