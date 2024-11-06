@@ -86,7 +86,7 @@ def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str
     else:
         logging.warning("Zero input query meta_keys present/populated.")
 
-    if meta_populated is True:
+    if meta_populated:
         meta_values_located["database_name"] = f"{db_name}"
         print(json.dumps(meta_values_located, sort_keys=True, indent="  "))
         return meta_values_located
