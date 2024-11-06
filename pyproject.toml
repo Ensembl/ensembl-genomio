@@ -190,9 +190,29 @@ show-fixes = true
 [tool.ruff.format]
 docstring-code-format = true
 
+[tool.ruff.lint]
+select = [
+    "ALL",
+]
+ignore = [
+    "COM812",  # https://docs.astral.sh/ruff/rules/trailing-comma-on-bare-tuple/
+    "D107",  # https://docs.astral.sh/ruff/rules/undocumented-public-init/
+    "D203",  # https://docs.astral.sh/ruff/rules/one-blank-line-before-class/
+    "D211",  # https://docs.astral.sh/ruff/rules/blank-line-before-class/
+    "D213",  # https://docs.astral.sh/ruff/rules/multi-line-summary-second-line/
+    "G004",  # https://docs.astral.sh/ruff/rules/logging-f-string/
+    "I001",  # https://docs.astral.sh/ruff/rules/unsorted-imports/
+    "ICN001",  # https://docs.astral.sh/ruff/rules/unconventional-import-alias/
+    "ISC001",  # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
+    "UP035",  # https://docs.astral.sh/ruff/rules/deprecated-import/
+]
+
 [tool.ruff.lint.per-file-ignores]
 # Ignore `F403` (unable to detect undefined names) in all `__init__.py` files
 "__init__.py" = ["F403"]
+# Ignore `INP001` (packages missing an __init__.py file) and `S101` (raise error instead of using assert)
+# in all pytest files
+"src/python/tests/**.py" = ["INP001", "S101"]
 
 [tool.mypy]
 mypy_path = "src/python"
