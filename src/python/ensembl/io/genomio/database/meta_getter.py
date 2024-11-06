@@ -102,7 +102,12 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 
 def main(arg_list: list[str] | None = None) -> None:
+    """Main script entry-point.
+
+    Args:
+        arg_list: Arguments to parse passing list to parse_args().
+    """
     args = parse_args(arg_list)
     init_logging_with_args(args)
 
-    _ = get_meta_values(server_url=args.url, db_name=args.database_name, input_queries=args.meta_keys_list)
+    _ = get_meta_values(server_url=args.url, db_name=args.database_name, meta_keys=args.meta_keys_list)
