@@ -108,4 +108,4 @@ def main(arg_list: list[str] | None = None) -> None:
     args = parse_args(arg_list)
     init_logging_with_args(args)
 
-    _ = get_meta_values(server_url=args.url, db_name=args.database_name, meta_keys=args.meta_keys_list)
+    _ = get_meta_values(db_url=args.url, meta_keys=args.meta_keys_list)
