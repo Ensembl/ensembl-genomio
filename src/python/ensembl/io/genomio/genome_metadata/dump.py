@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 import json
-from typing import Any, Dict, Type
+from typing import Any
 import logging
 
 from sqlalchemy import select
@@ -34,7 +34,7 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-METADATA_FILTER: Dict[str, Dict[str, Type]] = {
+METADATA_FILTER: dict[str, dict[str, type]] = {
     "added_seq": {"region_name": str},
     "annotation": {"provider_name": str, "provider_url": str},
     "assembly": {
@@ -60,14 +60,14 @@ METADATA_FILTER: Dict[str, Dict[str, Type]] = {
 }
 
 
-def get_genome_metadata(session: Session) -> Dict[str, Any]:
+def get_genome_metadata(session: Session) -> dict[str, Any]:
     """Returns the meta table content from the core database in a nested dictionary.
 
     Args:
         session: Session for the current core.
 
     """
-    genome_metadata: Dict[str, Any] = {}
+    genome_metadata: dict[str, Any] = {}
     meta_statement = select(Meta)
     for row in session.execute(meta_statement).unique().all():
         meta_key = row[0].meta_key
@@ -96,15 +96,16 @@ def get_genome_metadata(session: Session) -> Dict[str, Any]:
     return genome_metadata
 
 
-def filter_genome_meta(genome_metadata: Dict[str, Any]) -> Dict[str, Any]:
+def filter_genome_meta(genome_metadata: dict[str, Any]) -> dict[str, Any]:
     """Returns a filtered metadata dictionary with only the predefined keys in METADATA_FILTER.
 
     Also converts to expected data types (to follow the genome JSON schema).
 
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
+
     """
-    filtered_metadata: Dict[str, Any] = {}
+    filtered_metadata: dict[str, Any] = {}
     for key, subfilter in METADATA_FILTER.items():
         if key in genome_metadata:
             filtered_metadata[key] = {}
@@ -123,18 +124,19 @@ def filter_genome_meta(genome_metadata: Dict[str, Any]) -> Dict[str, Any]:
     return filtered_metadata
 
 
-def check_assembly_refseq(gmeta_out: Dict[str, Any]) -> None:
+def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
     """Update the GCA accession to use GCF if it is from RefSeq.
 
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
+
     """
     assembly = gmeta_out.get("assembly", {})
     if assembly.get("provider_name", "") == "RefSeq":
         assembly["accession"] = assembly["accession"].replace("GCA", "GCF")
 
 
-def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:
+def check_assembly_version(genome_metadata: dict[str, Any]) -> None:
     """Updates the assembly version of the genome metadata provided.
 
     If `version` meta key is not and integer or it is not available, the assembly accession's version
@@ -145,6 +147,7 @@ def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:
 
     Raises:
         ValueError: If both `version` and the assembly accession's version are not integers or are missing.
+
     """
     assembly = genome_metadata["assembly"]
     version = assembly.get("version")
@@ -164,7 +167,7 @@ def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:
         logging.info(f'Located version [v{assembly["version"]}] info from meta data.')
 
 
-def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
+def check_genebuild_version(genome_metadata: dict[str, Any]) -> None:
     """Updates the genebuild version (if not present) from the genebuild ID, removing the latter.
 
     Args:
@@ -172,6 +175,7 @@ def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
 
     Raises:
         ValueError: If there is no genebuild version or ID available.
+
     """
     try:
         genebuild = genome_metadata["genebuild"]
@@ -191,7 +195,7 @@ def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(
-        description="Fetch the genome metadata from a core database and print it in JSON format."
+        description="Fetch the genome metadata from a core database and print it in JSON format.",
     )
     parser.add_server_arguments(include_database=True)
     parser.add_log_arguments(add_log_file=True)

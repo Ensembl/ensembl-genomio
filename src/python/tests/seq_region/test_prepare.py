@@ -50,6 +50,7 @@ def test_prepare_seq_region_metadata(
         gbff_path: Input GBFF file in any.
         expected_path: Expect JSON output.
         to_exclude: List of sequences to exclude.
+
     """
     gbff_file = None
     if gbff_path:

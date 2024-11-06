@@ -54,7 +54,7 @@ _META = {
                     "division": "metazoa",
                     "accession": "GCA_000111222.3",
                     "release": "110",
-                }
+                },
             ],
             id="Ensembl core database",
         ),
@@ -111,7 +111,12 @@ _META = {
     ],
 )
 def test_format_db_data(
-    mock_dbconn: Mock, server_url: URL, dbs: list[str], brc_mode: bool, skip_keys: bool, output: list[dict]
+    mock_dbconn: Mock,
+    server_url: URL,
+    dbs: list[str],
+    brc_mode: bool,
+    skip_keys: bool,
+    output: list[dict],
 ) -> None:
     """Tests the `factory.format_db_data()` function.
 
@@ -122,6 +127,7 @@ def test_format_db_data(
         brc_mode: BRC mode?
         skip_keys: Return `None` instead of the assigned value for "BRC4.*" meta keys.
         output: Expected list of dictionaries with metadata per database.
+
     """
 
     def _get_meta_value(meta_key: str) -> str | None:
@@ -175,6 +181,7 @@ def test_get_core_dbs_metadata(
         data_dir: Module's test data directory fixture.
         use_db_file: Use database file to filter databases.
         output: Expected list of dictionaries with some metadata for each selected database.
+
     """
 
     def _format_db_data(server_url: URL, dbs: list[str], brc_mode: bool = False) -> list[dict]:
@@ -260,7 +267,7 @@ def test_parse_args(arg_list: list[str], expected: dict) -> None:
     args = factory.parse_args(arg_list)
     if args.db_list:
         # DeepDiff is not able to compare two objects of Path type, so convert it to string
-        setattr(args, "db_list", str(args.db_list))
+        args.db_list = str(args.db_list)
     assert not DeepDiff(vars(args), expected)
 
 
@@ -290,7 +297,13 @@ def test_main(
     factory.main(arg_list)
     # Check that we have called the mocked function once with the expected parameters
     mock_get_core_dbs_metadata.assert_called_once_with(
-        server_url=server_url, prefix="", build=None, version=None, db_regex="", db_list=None, brc_mode=False
+        server_url=server_url,
+        prefix="",
+        build=None,
+        version=None,
+        db_regex="",
+        db_list=None,
+        brc_mode=False,
     )
     # Check that the stdout is as expected
     captured = capsys.readouterr()

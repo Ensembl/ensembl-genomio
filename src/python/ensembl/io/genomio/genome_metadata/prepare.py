@@ -29,7 +29,6 @@ __all__ = [
 
 import datetime
 from os import PathLike
-from typing import Dict
 
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.utils.argparse import ArgumentParser
@@ -68,7 +67,7 @@ class MetadataError(Exception):
     """When a metadata value is not expected."""
 
 
-def add_provider(genome_metadata: Dict, ncbi_data: Dict) -> None:
+def add_provider(genome_metadata: dict, ncbi_data: dict) -> None:
     """Updates the genome metadata adding provider information for assembly and gene models.
 
     Assembly provider metadata will only be added if it is missing, i.e. neither `"provider_name"` or
@@ -80,6 +79,7 @@ def add_provider(genome_metadata: Dict, ncbi_data: Dict) -> None:
 
     Raises:
         MetadataError: If accession's format in genome metadata does not match with a known provider.
+
     """
     # Get accession provider
     accession = genome_metadata["assembly"]["accession"]
@@ -104,11 +104,12 @@ def add_provider(genome_metadata: Dict, ncbi_data: Dict) -> None:
             annotation["provider_url"] = f'{provider["annotation"]["provider_url"]}/{accession}'
 
 
-def add_assembly_version(genome_data: Dict) -> None:
+def add_assembly_version(genome_data: dict) -> None:
     """Adds version number to the genome's assembly information if one is not present already.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
+
     """
     assembly = genome_data["assembly"]
     if "version" not in assembly:
@@ -118,13 +119,14 @@ def add_assembly_version(genome_data: Dict) -> None:
             assembly["version"] = int(version)
 
 
-def add_genebuild_metadata(genome_data: Dict) -> None:
+def add_genebuild_metadata(genome_data: dict) -> None:
     """Adds genebuild metadata to genome information if not present already.
 
     The default convention is to use the current date as `"version"` and `"start_date"`.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
+
     """
     genebuild = genome_data.setdefault("genebuild", {})
     current_date = datetime.date.today().isoformat()
@@ -134,7 +136,7 @@ def add_genebuild_metadata(genome_data: Dict) -> None:
         genebuild["start_date"] = current_date
 
 
-def add_species_metadata(genome_metadata: Dict, ncbi_data: Dict) -> None:
+def add_species_metadata(genome_metadata: dict, ncbi_data: dict) -> None:
     """Adds taxonomy ID, scientific name and strain (if present) from the NCBI dataset report.
 
     Args:
@@ -194,15 +196,21 @@ def main() -> None:
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path("--input_file", required=True, help="Genome metadata JSON file")
     parser.add_argument_dst_path(
-        "--output_file", required=True, help="Output path for the new genome metadata file"
+        "--output_file",
+        required=True,
+        help="Output path for the new genome metadata file",
     )
     parser.add_argument_src_path(
-        "--ncbi_meta", required=True, help="JSON file from NCBI datasets for this genome."
+        "--ncbi_meta",
+        required=True,
+        help="JSON file from NCBI datasets for this genome.",
     )
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
 
     prepare_genome_metadata(
-        input_file=args.input_file, output_file=args.output_file, ncbi_meta=args.ncbi_meta
+        input_file=args.input_file,
+        output_file=args.output_file,
+        ncbi_meta=args.ncbi_meta,
     )

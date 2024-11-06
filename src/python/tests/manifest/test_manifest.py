@@ -29,7 +29,7 @@ from ensembl.io.genomio.manifest.manifest import Manifest, ManifestError
 _CONTENT_MD5 = "45685e95985e20822fb2538a522a5ccf"
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_init(tmp_path: Path) -> None:
     """Tests `Manifest.__init__()`."""
     _ = Manifest(tmp_path)
@@ -77,7 +77,7 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
                     "link1": {"file": "link1.agp", "md5sum": _CONTENT_MD5},
                     "link2": {"file": "link2.agp", "md5sum": _CONTENT_MD5},
                     "link3": {"file": "link3.agp", "md5sum": _CONTENT_MD5},
-                }
+                },
             },
             no_raise(),
             id="3 agp files, different names",
@@ -88,7 +88,7 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
                 "agp": {
                     "agp": {"file": "a_agp.agp", "md5sum": _CONTENT_MD5},
                     "agp.1": {"file": "b_agp.agp", "md5sum": _CONTENT_MD5},
-                }
+                },
             },
             no_raise(),
             id="2 agp files with same name",
@@ -103,7 +103,10 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
 )
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_multifiles(
-    tmp_path: Path, file_names: list[str], expected_content: dict, expected: ContextManager
+    tmp_path: Path,
+    file_names: list[str],
+    expected_content: dict,
+    expected: ContextManager,
 ) -> None:
     """Tests `Manifest.get_files_checksum()` with several files for the same name.
 
@@ -113,6 +116,7 @@ def test_get_files_checksum_multifiles(
         file_names: List of files to create.
         expected_content: Expected checksum dict.
         expected: Expected exception.
+
     """
     for file_name in file_names:
         with Path(tmp_path / file_name).open("w") as fh:
@@ -158,7 +162,10 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
 )
 @pytest.mark.dependency(depends=["test_init"])
 def test_create_manifest(
-    tmp_path: Path, assert_files: Callable, files: list[str], expected_content: dict
+    tmp_path: Path,
+    assert_files: Callable,
+    files: list[str],
+    expected_content: dict,
 ) -> None:
     """Tests `Manifest.create()`.
 
@@ -187,7 +194,10 @@ def test_create_manifest(
     "files_dir, expected_files, expected",
     [
         param(
-            "full_data", {"functional_annotation", "seq_region"}, no_raise(), id="OK manifest with OK files"
+            "full_data",
+            {"functional_annotation", "seq_region"},
+            no_raise(),
+            id="OK manifest with OK files",
         ),
         param("duplicates", {"agp"}, no_raise(), id="Several files for key"),
         param("", {}, raises(ManifestError), id="No manifest to load"),
@@ -197,7 +207,11 @@ def test_create_manifest(
 )
 @pytest.mark.dependency(depends=["test_init"])
 def test_load(
-    tmp_path: Path, data_dir: Path, files_dir: str, expected_files: set, expected: ContextManager
+    tmp_path: Path,
+    data_dir: Path,
+    files_dir: str,
+    expected_files: set,
+    expected: ContextManager,
 ) -> None:
     """Tests `Manifest.load()`.
 
@@ -207,6 +221,7 @@ def test_load(
         files_dir: Directory where test data files are copied from.
         expected_files: Set of main files expected to be loaded.
         expected: Catch an expected exception.
+
     """
     # Copy the files to the tmp folder
     if files_dir:

@@ -21,7 +21,7 @@ Typical usage example::
 
 from collections import namedtuple
 from contextlib import nullcontext as does_not_raise
-from typing import Any, ContextManager, Dict, List
+from typing import Any, ContextManager
 from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
@@ -58,7 +58,9 @@ MetaRow = namedtuple("MetaRow", "meta_key meta_value")
     ],
 )
 def test_check_assembly_version(
-    genome_metadata: Dict[str, Any], output: int, expectation: ContextManager
+    genome_metadata: dict[str, Any],
+    output: int,
+    expectation: ContextManager,
 ) -> None:
     """Tests the `dump.check_assembly_version()` method.
 
@@ -66,6 +68,7 @@ def test_check_assembly_version(
         genome_metadata: Nested genome metadata key values.
         output: Expected assembly version.
         expectation: Context manager for the expected exception (if any).
+
     """
     with expectation:
         dump.check_assembly_version(genome_metadata)
@@ -98,7 +101,9 @@ def test_check_assembly_version(
     ],
 )
 def test_check_genebuild_version(
-    genome_metadata: Dict[str, Any], output: Dict[str, Any], expectation: ContextManager
+    genome_metadata: dict[str, Any],
+    output: dict[str, Any],
+    expectation: ContextManager,
 ) -> None:
     """Tests the `dump.check_genebuild_version()` method.
 
@@ -106,6 +111,7 @@ def test_check_genebuild_version(
         genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
+
     """
     with expectation:
         dump.check_genebuild_version(genome_metadata)
@@ -125,12 +131,13 @@ def test_check_genebuild_version(
         ({"added_seq": {"region_name": [1, 2]}}, {"added_seq": {"region_name": ["1", "2"]}}),
     ],
 )
-def test_filter_genome_meta(genome_metadata: Dict[str, Any], output: Dict[str, Any]) -> None:
+def test_filter_genome_meta(genome_metadata: dict[str, Any], output: dict[str, Any]) -> None:
     """Tests the `dump.filter_genome_meta()` method.
 
     Args:
         genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
+
     """
     result = dump.filter_genome_meta(genome_metadata)
     assert not DeepDiff(result, output)
@@ -174,8 +181,8 @@ def test_filter_genome_meta(genome_metadata: Dict[str, Any], output: Dict[str, A
 def test_get_genome_metadata(
     mock_session: Mock,
     mock_result: Mock,
-    meta_data: List[MetaRow],
-    output: Dict[str, Any],
+    meta_data: list[MetaRow],
+    output: dict[str, Any],
     expectation: ContextManager,
 ) -> None:
     """Tests the `dump.get_genome_metadata()` method.
@@ -185,6 +192,7 @@ def test_get_genome_metadata(
         meta_data: `meta` table content in a list of named tuples.
         output: Expected genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
+
     """
     mock_result.unique.return_value = mock_result
     mock_result.all.return_value = meta_data

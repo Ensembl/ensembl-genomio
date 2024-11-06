@@ -16,7 +16,6 @@
 # pylint: disable=too-many-positional-arguments
 
 from pathlib import Path
-from typing import List
 from unittest.mock import Mock, patch
 
 from BCBio import GFF
@@ -40,7 +39,9 @@ class TestWriteFormattedFiles:
 
     @pytest.fixture(scope="class", autouse=True)
     def formatted_files_generator(
-        self, data_dir: Path, tmp_path_factory: TempPathFactory
+        self,
+        data_dir: Path,
+        tmp_path_factory: TempPathFactory,
     ) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters.
         Fixture that returns the class of the module that we are testing
@@ -140,7 +141,9 @@ class TestWriteFormattedFiles:
         """Check seq_region.json file contains the correct metadata"""
         record = SeqRecord(Seq("ATGC"), id="record", annotations={"topology": "circular"})
         CDS_feature = SeqFeature(
-            FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
+            FeatureLocation(10, 20),
+            type="CDS",
+            qualifiers={"gene": ["GlyrA"], "transl_table": "2"},
         )
         record.features.append(CDS_feature)
         record.annotations["organelle"] = "mitochondrion"
@@ -166,8 +169,8 @@ class TestWriteFormattedFiles:
         mock_write_pep: Mock,
         mock_write_genes: Mock,
         mock_parse_record: Mock,
-        all_ids: List[str],
-        peptides: List[str],
+        all_ids: list[str],
+        peptides: list[str],
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Check gene features in GFF3 format are generated as expected."""
@@ -211,11 +214,12 @@ class TestWriteFormattedFiles:
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Test if GFF3 file is generated when there are SeqFeatures present"""
-
         record = SeqRecord(Seq("ATGC"), id="record")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
         CDS_feature = SeqFeature(
-            FeatureLocation(10, 15), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
+            FeatureLocation(10, 15),
+            type="CDS",
+            qualifiers={"gene": ["GlyrA"], "transl_table": "2"},
         )
         record.features = [gene_feature, CDS_feature]
         formatted_files_generator.seq_records = [record]
@@ -237,7 +241,9 @@ class TestWriteFormattedFiles:
         """Test if peptides FASTA file is generated when peptides are identified"""
         record = SeqRecord(Seq("MFLRTQARFFHATTKKM"), id="cds-record")
         CDS_feature = SeqFeature(
-            FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
+            FeatureLocation(10, 20),
+            type="CDS",
+            qualifiers={"gene": ["GlyrA"], "transl_table": "2"},
         )
         record.features.append(CDS_feature)
         formatted_files_generator.files["fasta_pep"] = tmp_path / "pep.fasta"

@@ -58,6 +58,7 @@ class Manifest:
 
         Args:
             manifest_dir: directory where the files are contained.
+
         """
         self.root_dir = manifest_dir
         self.file_path = manifest_dir / "manifest.json"
@@ -110,7 +111,10 @@ class Manifest:
         return self.files
 
     def _prepare_object_name(
-        self, subfile: Path, name: str, manifest_file_dict: dict[str, dict[str, str]]
+        self,
+        subfile: Path,
+        name: str,
+        manifest_file_dict: dict[str, dict[str, str]],
     ) -> str:
         # Prepare object name
         try:
@@ -126,7 +130,7 @@ class Manifest:
         # Add number if duplicate name
         obj_name_base = obj_name
         count = 1
-        while obj_name in manifest_file_dict.keys():
+        while obj_name in manifest_file_dict:
             obj_name = f"{obj_name_base}.{count}"
             count += 1
             if count >= 10:
@@ -171,6 +175,7 @@ class Manifest:
         Args:
             file_path: Path to a genome file.
             md5sum: MD5 hash for the files.
+
         """
         file_md5sum = self._get_md5sum(file_path)
         if file_md5sum != md5sum:

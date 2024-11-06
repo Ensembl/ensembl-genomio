@@ -56,7 +56,7 @@ MINIMUM_METADATA = {
         assembly_type="haploid",
         accession="GCF_001194135.2",
         assembly_status="current",
-    )
+    ),
 }
 
 STRAIN_METADATA = {
@@ -68,7 +68,7 @@ STRAIN_METADATA = {
         assembly_type="haploid",
         accession="GCF_001194135.2",
         assembly_status="current",
-    )
+    ),
 }
 
 COMPLETE_METADATA = {
@@ -83,7 +83,7 @@ COMPLETE_METADATA = {
         last_updated="2015-06-29T09:51:41.073",
         assembly_status="current",
         assembly_notes="RefSeq",
-    )
+    ),
 }
 
 
@@ -91,7 +91,7 @@ Base: Any = declarative_base()  # only possible type hint compatible with SQLAlc
 
 
 class Meta(Base):
-    """Meta class mirroring the Ensembl core database meta table without any foreign keys"""
+    """Meta class mirroring the Ensembl core database meta table without any foreign key."""
 
     __tablename__ = "meta"
     __table_args__ = (
@@ -105,7 +105,7 @@ class Meta(Base):
     meta_value: Column = Column(String(255), nullable=False)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_report_structure() -> None:
     """Tests the `ReportStructure` class."""
     assert ReportStructure()
@@ -194,6 +194,7 @@ def test_singularity_image_setter(
         datasets_version: URL of singularity container (custom `datasets` version if desired).
         nextflow_cachedir: Value to assign to environment variable NXF_SINGULARITY_CACHEDIR.
         singularity_cachedir: Value to assign to environment variable SINGULARITY_CACHEDIR.
+
     """
     mock_client.pull.return_value = True
     # Define SIF cache path and expected path used to pull the container
@@ -223,7 +224,10 @@ def test_singularity_image_setter(
         assert singularity_image_setter(sif_cache_path, datasets_version)
     # Check that the spython pull method was called with the right arguments
     mock_client.pull.assert_called_with(
-        expected_container_url, stream=False, pull_folder=expected_cache_path, quiet=True
+        expected_container_url,
+        stream=False,
+        pull_folder=expected_cache_path,
+        quiet=True,
     )
 
 
@@ -235,7 +239,10 @@ def test_singularity_image_setter(
     ],
 )
 def test_get_assembly_accessions(
-    data_dir: Path, file_name: str, expected_output: list[str], expectation: ContextManager
+    data_dir: Path,
+    file_name: str,
+    expected_output: list[str],
+    expectation: ContextManager,
 ) -> None:
     """Tests the `get_assembly_accessions()` function.
 
@@ -246,6 +253,7 @@ def test_get_assembly_accessions(
         file_name: File with one line per INSDC assembly accession.
         expected_output: Expected assembly accessions returned.
         expectation: Context manager of expected raise exception.
+
     """
     file_path = data_dir / file_name
     with expectation:
@@ -265,7 +273,9 @@ def test_get_assembly_accessions(
     indirect=True,
 )
 def test_fetch_accessions_from_core_dbs(
-    request: FixtureRequest, tmp_path: Path, test_dbs: dict[str, UnitTestDB]
+    request: FixtureRequest,
+    tmp_path: Path,
+    test_dbs: dict[str, UnitTestDB],
 ) -> None:
     """Tests the `fetch_accessions_from_core_dbs()` function.
 
@@ -283,7 +293,10 @@ def test_fetch_accessions_from_core_dbs(
 
 @patch("ensembl.io.genomio.assembly.status.Client")
 def test_fetch_datasets_reports(
-    mock_client: Mock, tmp_path: Path, data_dir: Path, assert_files: Callable[[StrPath, StrPath], None]
+    mock_client: Mock,
+    tmp_path: Path,
+    data_dir: Path,
+    assert_files: Callable[[StrPath, StrPath], None],
 ) -> None:
     """Tests the `fetch_datasets_reports()` function.
 
@@ -292,7 +305,8 @@ def test_fetch_datasets_reports(
     """
 
     def execute_return(
-        command: list[str], **kwargs: Any  # pylint: disable=unused-argument
+        command: list[str],
+        **kwargs: Any,  # pylint: disable=unused-argument
     ) -> dict[str, str]:
         report_path = data_dir / f"{command[-1]}.asm_report.json"
         if report_path.exists():
@@ -340,7 +354,9 @@ def test_fetch_datasets_reports_runtime_error(mock_client: Mock) -> None:
     ],
 )
 def test_extract_assembly_metadata(
-    data_dir: Path, file_name: str, expected_metadata: dict[str, ReportStructure]
+    data_dir: Path,
+    file_name: str,
+    expected_metadata: dict[str, ReportStructure],
 ) -> None:
     """Tests the `extract_assembly_metadata()` function.
 
@@ -349,6 +365,7 @@ def test_extract_assembly_metadata(
     Args:
         file_name: Test data file to extract the assembly metadata from.
         expected_metadata: Expected key value pairs of source name <> assembly report.
+
     """
     report_path = data_dir / file_name
     report = {"my_core": get_json(report_path)}
@@ -358,7 +375,9 @@ def test_extract_assembly_metadata(
 
 @pytest.mark.dependency(depends=["test_report_structure"])
 def test_generate_report_tsv(
-    tmp_path: Path, data_dir: Path, assert_files: Callable[[StrPath, StrPath], None]
+    tmp_path: Path,
+    data_dir: Path,
+    assert_files: Callable[[StrPath, StrPath], None],
 ) -> None:
     """Tests the `generate_report_tsv()` function.
 

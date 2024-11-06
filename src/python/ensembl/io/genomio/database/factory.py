@@ -41,6 +41,7 @@ def format_db_data(server_url: URL, dbs: list[str], brc_mode: bool = False) -> l
 
     Returns:
         List of dictionaries with 3 keys: "database", "species" and "division".
+
     """
     databases_data = []
     for db_name in dbs:
@@ -108,6 +109,7 @@ def get_core_dbs_metadata(
 
     Returns:
         List of dictionaries with 3 keys: "database", "species" and "division".
+
     """
     db_list_file = None
     if db_list:
@@ -117,7 +119,11 @@ def get_core_dbs_metadata(
     server = CoreServer(server_url)
     logging.debug("Fetching databases...")
     databases = server.get_cores(
-        prefix=prefix, build=build, version=version, dbname_re=db_regex, db_list=db_list_file
+        prefix=prefix,
+        build=build,
+        version=version,
+        dbname_re=db_regex,
+        db_list=db_list_file,
     )
     logging.info(f"Got {len(databases)} databases")
     logging.debug("\n".join(databases))
@@ -129,6 +135,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
     Args:
         arg_list: TODO
+
     """
     parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments()

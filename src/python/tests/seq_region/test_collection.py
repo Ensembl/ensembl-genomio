@@ -102,7 +102,7 @@ def test_from_gbff(data_dir: Path) -> None:
             "length": 60,
             "location": "apicoplast_chromosome",
             "synonyms": [{"name": "U87145", "source": "INSDC"}],
-        }
+        },
     }
     collection = SeqCollection()
     collection.from_gbff(data_dir / gb_file)
@@ -169,7 +169,11 @@ def test_from_gbff(data_dir: Path) -> None:
     ],
 )
 def test_make_seqregion_from_report(
-    seq_data: dict, is_refseq: bool, expected_key: str, expected_value: Any | None, expected: ContextManager
+    seq_data: dict,
+    is_refseq: bool,
+    expected_key: str,
+    expected_value: Any | None,
+    expected: ContextManager,
 ) -> None:
     """Test `SeqCollection.make_seqregion_from_report()`.
 
@@ -179,6 +183,7 @@ def test_make_seqregion_from_report(
         expected_key: Check this key.
         expected_value: Check this value for the key.
         expected: Context manager to catch expected exceptions.
+
     """
     collection = SeqCollection()
     input_data = {}
@@ -203,7 +208,10 @@ def test_make_seqregion_from_report_custom() -> None:
     custom_locations = {"chromosome": "custom_chromosome"}
     custom_synonyms = {"Sequence-Name": "custom_name"}
     seq_dict = collection.make_seq_region_from_report(
-        input_data, is_refseq=True, molecule_location=custom_locations, synonym_map=custom_synonyms
+        input_data,
+        is_refseq=True,
+        molecule_location=custom_locations,
+        synonym_map=custom_synonyms,
     )
     assert seq_dict["location"] == "custom_chromosome"
     assert seq_dict["synonyms"] == [{"source": "custom_name", "name": "seq_name"}]
@@ -224,7 +232,7 @@ def test_from_report(data_dir: Path) -> None:
                 {"name": "TGME49_chrIa", "source": "INSDC_submitted_name"},
                 {"name": "NC_031467.1", "source": "RefSeq"},
             ],
-        }
+        },
     }
     collection = SeqCollection()
     collection.from_report(data_dir / report_file)
@@ -253,7 +261,9 @@ def test_remove() -> None:
     ],
 )
 def test_add_translation_table(
-    input_seq: dict[str, str], code_map: dict[str, int] | None, expected_codon_table: int | None
+    input_seq: dict[str, str],
+    code_map: dict[str, int] | None,
+    expected_codon_table: int | None,
 ) -> None:
     """Test `SeqCollection.add_translation_table()`.
 
@@ -261,6 +271,7 @@ def test_add_translation_table(
         input_seq: Sequence dict with usable values (`codon_table`, `location`).
         code_map: A custom map location -> codon table number.
         expected_codon_table: Expected codon table number.
+
     """
     collection = SeqCollection()
     seq_name = "foobar"
@@ -322,8 +333,8 @@ def test_add_mitochondrial_codon_table(
         response_data: Return data from the request.
         expected_codon_table: Expected codon table after update.
         expected: Context manager to catch expected exceptions.
-    """
 
+    """
     mock_requests_get.return_value = mock_response(response_data)
     collection = SeqCollection()
     seq_name = "foobar"
