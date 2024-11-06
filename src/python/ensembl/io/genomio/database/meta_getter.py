@@ -59,19 +59,15 @@ def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str
         query_meta_keys = input_queries
 
     # Loop over input meta_key(s) and query DB
-    if len(query_meta_keys) >= 1:
-        for meta_key in query_meta_keys:
-            input_keys_count += 1
-            meta_value = core_db.get_meta_value(f"{meta_key}")
+    for meta_key in query_meta_keys:
+        input_keys_count += 1
+        meta_value = core_db.get_meta_value(f"{meta_key}")
 
-            if meta_value is not None:
-                meta_values_located[f"{meta_key}"] = meta_value
-            else:
-                unpopulated_meta_keys.append(f"{meta_key}")
-                logging.info(f"Meta query returned no entry on meta_key: '{meta_key}'")
-    else:
-        logging.warning(f"No meta_keys found in input file {query_meta_keys}")
-        return None
+        if meta_value is not None:
+            meta_values_located[f"{meta_key}"] = meta_value
+        else:
+            unpopulated_meta_keys.append(f"{meta_key}")
+            logging.info(f"Meta query returned no entry on meta_key: '{meta_key}'")
 
     # Now assess what meta info was recovered and dump to JSON
     total_queries_located = len(meta_values_located)
