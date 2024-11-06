@@ -39,7 +39,10 @@ from ensembl.io.genomio.external_db.db_map import (
     ],
 )
 def test_get_external_db_map(
-    tmp_path: Path, file_content: str, expected_output: dict, expected: ContextManager
+    tmp_path: Path,
+    file_content: str,
+    expected_output: dict,
+    expected: ContextManager,
 ) -> None:
     """Tests the `get_external_db_map` method.
 

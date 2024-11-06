@@ -19,7 +19,6 @@ __all__ = ["StableIDAllocator", "InvalidStableID"]
 from dataclasses import dataclass, field
 import logging
 import re
-from typing import Dict, List, Optional, Set
 
 from .features import GFFSeqFeature
 
@@ -38,9 +37,9 @@ class StableIDAllocator:
     current_id_number: int = 0
     make_missing_stable_ids: bool = True
     prefix: str = "TMP_"
-    _loaded_ids: Set = field(default_factory=set)
+    _loaded_ids: set = field(default_factory=set)
 
-    def set_prefix(self, genome: Dict) -> None:
+    def set_prefix(self, genome: dict) -> None:
         """Sets the ID prefix using the organism abbrev if it exists in the genome metadata."""
         try:
             org = genome["BRC4"]["organism_abbrev"]
@@ -62,10 +61,11 @@ class StableIDAllocator:
 
     def is_valid(self, stable_id: str) -> bool:
         """Checks that the format of a stable ID is valid.
+
         Args:
             stable_id: Stable ID to validate.
-        """
 
+        """
         if self.skip_gene_id_validation:
             logging.debug(f"Validation deactivated by user: '{stable_id}' not checked")
             return True
@@ -93,7 +93,7 @@ class StableIDAllocator:
         return True
 
     @staticmethod
-    def remove_prefix(stable_id: str, prefixes: List[str]) -> str:
+    def remove_prefix(stable_id: str, prefixes: list[str]) -> str:
         """Returns the stable ID after removing its prefix (if any).
 
         If more than one prefix may be found, only the first one is removed.
@@ -101,8 +101,8 @@ class StableIDAllocator:
         Args:
             stable_id: Stable ID to process.
             prefixes: List of prefixes to search for.
-        """
 
+        """
         for prefix in prefixes:
             if stable_id.startswith(prefix):
                 return stable_id[len(prefix) :]
@@ -111,9 +111,11 @@ class StableIDAllocator:
     @staticmethod
     def generate_transcript_id(gene_id: str, number: int) -> str:
         """Returns a formatted transcript ID generated from a gene ID and number.
+
         Args:
             gene_id: Gene stable ID.
             number: Positive number.
+
         Raises:
             ValueError: If the number provided is not greater than zero.
 
@@ -134,7 +136,6 @@ class StableIDAllocator:
             cds_id: CDS ID to normalize.
 
         """
-
         prefixes = ["cds-", "cds:"]
         normalized_cds_id = StableIDAllocator.remove_prefix(cds_id, prefixes)
 
@@ -152,6 +153,7 @@ class StableIDAllocator:
 
         Args:
             pseudogene: Pseudogene feature.
+
         """
         for transcript in pseudogene.sub_features:
             for feat in transcript.sub_features:
@@ -161,7 +163,7 @@ class StableIDAllocator:
                         feat.id = f"{transcript.id}_cds"
                         feat.qualifiers["ID"] = feat.id
 
-    def normalize_gene_id(self, gene: GFFSeqFeature, refseq: Optional[bool] = False) -> str:
+    def normalize_gene_id(self, gene: GFFSeqFeature, refseq: bool | None = False) -> str:
         """Returns a normalized gene stable ID.
 
         Removes any unnecessary prefixes, but will generate a new stable ID if the normalized one is
@@ -169,6 +171,7 @@ class StableIDAllocator:
 
         Args:
             gene: Gene feature to normalize.
+
         """
         prefixes = ["gene-", "gene:"]
         new_gene_id = StableIDAllocator.remove_prefix(gene.id, prefixes)

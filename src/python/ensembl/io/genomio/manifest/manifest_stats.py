@@ -84,6 +84,7 @@ class ManifestStats:
 
         Returns:
             Dict: Content of the manifest file.
+
         """
         manifest = Manifest(Path(manifest_path).parent)
         manifest_files = manifest.load()
@@ -103,7 +104,6 @@ class ManifestStats:
 
     def load_seq_regions(self) -> None:
         """Retrieve seq_regions lengths and circular information from the seq_region JSON file."""
-
         if "seq_region" not in self.manifest_files:
             return
         logging.info("Manifest contains seq_region JSON")
@@ -129,7 +129,8 @@ class ManifestStats:
         if "fasta_pep" not in self.manifest_files:
             return
         self.lengths["peptide_sequences"] = self._get_fasta_lengths(
-            self.manifest_files["fasta_pep"], ignore_final_stops=self.ignore_final_stops
+            self.manifest_files["fasta_pep"],
+            ignore_final_stops=self.ignore_final_stops,
         )
 
     def load_dna_fasta_lengths(self) -> None:
@@ -148,7 +149,6 @@ class ManifestStats:
             ignore_final_stops: Do not include final stop in the total length.
 
         """
-
         data = {}
         non_unique = {}
         non_unique_count = 0
@@ -169,9 +169,7 @@ class ManifestStats:
             # Store sequence id and length
             data[rec.id] = len(rec.seq)
             stops = rec.seq.count("*")
-            if stops >= 1 and not rec.seq.endswith("*"):
-                contains_stop_codon += 1
-            elif rec.seq.endswith("*") and not ignore_final_stops:
+            if stops >= 1 and not rec.seq.endswith("*") or rec.seq.endswith("*") and not ignore_final_stops:
                 contains_stop_codon += 1
 
         if empty_id_count > 0:
@@ -257,7 +255,11 @@ class ManifestStats:
         self.lengths = {**self.lengths, **stats}
 
     def _retrieve_gff_gene_lengths(
-        self, feat: GFFSeqFeature, genes: StatsLengths, peps: StatsLengths, all_peps: StatsLengths
+        self,
+        feat: GFFSeqFeature,
+        genes: StatsLengths,
+        peps: StatsLengths,
+        all_peps: StatsLengths,
     ) -> None:
         """Record genes and peptides lengths from a feature.
 
@@ -311,6 +313,7 @@ class ManifestStats:
 
         Note:
             AGP file is only used in the older builds, not used for current processing.
+
         """
         if not agp_dict:
             return
@@ -318,7 +321,7 @@ class ManifestStats:
 
         seqr: StatsLengths = {}
         for agp_path in agp_dict.values():
-            with open(agp_path, "r") as agph:
+            with open(agp_path) as agph:
                 for line in agph:
                     (
                         asm_id,
@@ -370,6 +373,7 @@ class ManifestStats:
 
         Raises:
             KeyError: If the name is not supported.
+
         """
         try:
             return bool(self.lengths[name])
@@ -384,6 +388,7 @@ class ManifestStats:
 
         Raises:
             KeyError: If the name is not supported.
+
         """
         try:
             return self.lengths[name]
@@ -398,6 +403,7 @@ class ManifestStats:
 
         Raises:
             KeyError: If the name is not supported.
+
         """
         try:
             return self.circular[name]

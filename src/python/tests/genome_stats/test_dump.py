@@ -22,7 +22,7 @@ Typical usage example::
 from dataclasses import dataclass
 from pathlib import Path
 from string import Template
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -38,13 +38,13 @@ from ensembl.io.genomio.utils import get_json
 class MockResult:
     """Mocker of `sqlalchemy.engine.Result` class."""
 
-    rows: List
+    rows: list
 
     def __iter__(self) -> Any:
         """Iterates over the elements in `rows` attribute."""
         yield from self.rows
 
-    def one(self) -> Tuple:
+    def one(self) -> tuple:
         """Returns the first element in `rows` attribute."""
         return self.rows[0]
 
@@ -53,17 +53,17 @@ class MockResult:
 ATTRIB_COUNTS_QUERY = Template(
     "SELECT seq_region_attrib.value, count(*) AS count_1 "
     "FROM seq_region_attrib JOIN attrib_type ON attrib_type.attrib_type_id = seq_region_attrib.attrib_type_id"
-    " WHERE attrib_type.code = '${code}' GROUP BY seq_region_attrib.value"
+    " WHERE attrib_type.code = '${code}' GROUP BY seq_region_attrib.value",
 )
 BIOTYPES_QUERY = Template(
-    "SELECT ${table}.biotype, count(*) AS count_1 FROM ${table} GROUP BY ${table}.biotype"
+    "SELECT ${table}.biotype, count(*) AS count_1 FROM ${table} GROUP BY ${table}.biotype",
 )
 FEATURE_STATS_TOTAL_QUERY = Template("SELECT count(*) AS count_1 FROM ${table}")
 FEATURE_STATS_NULL_QUERY = Template(
-    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description IS NULL"
+    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description IS NULL",
 )
 FEATURE_STATS_SOURCE_QUERY = Template(
-    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description LIKE '%[Source:%'"
+    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description LIKE '%[Source:%'",
 )
 
 
@@ -114,7 +114,7 @@ class TestStatsGenerator:
     """Tests for the `StatsGenerator` class."""
 
     stats_gen: dump.StatsGenerator
-    genome_stats: Dict[str, Any]
+    genome_stats: dict[str, Any]
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, data_dir: Path) -> None:
@@ -139,7 +139,7 @@ class TestStatsGenerator:
         ],
     )
     @pytest.mark.dependency(name="fix_scaffolds")
-    def test_fix_scaffolds(self, stats: Dict, output: Dict) -> None:
+    def test_fix_scaffolds(self, stats: dict, output: dict) -> None:
         """Tests the `StatsGenerator._fix_scaffolds()` static method.
 
         Args:

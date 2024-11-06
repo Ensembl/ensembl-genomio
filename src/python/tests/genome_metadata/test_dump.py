@@ -71,6 +71,7 @@ def test_check_assembly_version(
         genome_metadata: Nested genome metadata key values.
         output: Expected assembly version.
         expectation: Context manager for the expected exception (if any).
+
     """
     with expectation:
         dump.check_assembly_version(genome_metadata)
@@ -111,6 +112,7 @@ def test_check_genebuild_version(
         genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
+
     """
     with expectation:
         dump.check_genebuild_version(genome_metadata)
@@ -323,6 +325,7 @@ def test_get_genome_metadata(
         meta_data: `meta` table content in a list of named tuples.
         output: Expected genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
+
     """
     mock_result.unique.return_value = mock_result
     mock_result.all.return_value = meta_data

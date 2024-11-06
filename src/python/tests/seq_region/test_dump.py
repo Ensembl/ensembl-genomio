@@ -114,7 +114,11 @@ def _add_test_synonym(session: Session, dialect: str, synonym: str, db_name: str
 
 
 def _add_test_attrib(
-    session: Session, dialect: str, logic_name: str, value: str | int, attrib_id: int
+    session: Session,
+    dialect: str,
+    logic_name: str,
+    value: str | int,
+    attrib_id: int,
 ) -> None:
     """Add a seq_region attrib to the test seq_region.
 
@@ -138,7 +142,12 @@ def _add_test_attrib(
 
 
 def _add_test_karyotype(
-    session: Session, dialect: str, start: int, end: int, band: str | None = None, stain: str | None = None
+    session: Session,
+    dialect: str,
+    start: int,
+    end: int,
+    band: str | None = None,
+    stain: str | None = None,
 ) -> None:
     """Add a seq_region karyotype band to the test seq_region.
 
@@ -240,7 +249,9 @@ def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict)
         param({"toplevel": 1, "circular_seq": 1}, {"circular": 1}, id="circular"),
         param({"toplevel": 1, "circular_seq": 0}, {}, id="not circular"),
         param(
-            {"toplevel": 1, "coord_system_tag": "contig"}, {"coord_system_level": "contig"}, id="contig level"
+            {"toplevel": 1, "coord_system_tag": "contig"},
+            {"coord_system_level": "contig"},
+            id="contig level",
         ),
     ],
 )
@@ -306,7 +317,9 @@ def test_get_seq_regions_attribs(
     ],
 )
 def test_get_added_sequence(
-    seq_test_db: UnitTestDB, attribs: dict[str, str], expected_output: dict[str, str | dict]
+    seq_test_db: UnitTestDB,
+    attribs: dict[str, str],
+    expected_output: dict[str, str | dict],
 ) -> None:
     """Tests the `get_added_sequences` method.
 

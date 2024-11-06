@@ -31,7 +31,10 @@ from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, ManifestS
     ],
 )
 def test_check_integrity(
-    data_dir: Path, manifest_file: str, ignore_false_stops: bool, expected: ContextManager
+    data_dir: Path,
+    manifest_file: str,
+    ignore_false_stops: bool,
+    expected: ContextManager,
 ) -> None:
     """Tests the `IntegrityTool.check_integrity()` method.
 

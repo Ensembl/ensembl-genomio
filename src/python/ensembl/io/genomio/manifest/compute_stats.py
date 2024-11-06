@@ -25,7 +25,6 @@ from pathlib import Path
 from shutil import which
 from statistics import mean
 import subprocess
-from typing import Dict, List, Optional, Set, Union
 
 from BCBio import GFF
 
@@ -39,11 +38,11 @@ from ensembl.utils.logging import init_logging_with_args
 class BiotypeCounter:
     """A counter for a given biotype, given a list of features."""
 
-    def __init__(self, count: int = 0, ids: Optional[Set[str]] = None, example: Optional[str] = None) -> None:
+    def __init__(self, count: int = 0, ids: set[str] | None = None, example: str | None = None) -> None:
         self.count: int = count
         if ids is None:
             ids = set()
-        self.ids: Set[str] = ids
+        self.ids: set[str] = ids
         if example is None:
             example = ""
         self.example: str = example
@@ -53,6 +52,7 @@ class BiotypeCounter:
 
         Args:
             feature_id (str): Feature id to add.
+
         """
         self.count += 1
         self.ids.add(feature_id)
@@ -62,6 +62,7 @@ class BiotypeCounter:
 
         Returns:
             int: number of features in the counter.
+
         """
         return len(self.ids)
 
@@ -73,10 +74,10 @@ class StatsError(Exception):
 class manifest_stats:
     """Representation of the statistics of the set of files listed in the manifest file provided."""
 
-    def __init__(self, manifest_dir: str, accession: Optional[str], datasets_bin: Optional[str]):
+    def __init__(self, manifest_dir: str, accession: str | None, datasets_bin: str | None):
         self.manifest = f"{manifest_dir}/manifest.json"
-        self.accession: Optional[str] = accession
-        self.errors: List[str] = []
+        self.accession: str | None = accession
+        self.errors: list[str] = []
         self.errors_file = Path(manifest_dir) / "stats_diff.log"
         if datasets_bin is None:
             datasets_bin = "datasets"
@@ -89,6 +90,7 @@ class manifest_stats:
 
         Raises:
             StatsError: Could not compute some stats.
+
         """
         manifest = self.get_manifest()
 
@@ -114,11 +116,12 @@ class manifest_stats:
                 for error_line in self.errors:
                     errors_fh.write(error_line)
 
-    def get_manifest(self) -> Dict:
+    def get_manifest(self) -> dict:
         """Get the files metadata from the manifest json file.
 
         Returns:
             Dict: A representation of the manifest json data.
+
         """
         with open(self.manifest) as f_json:
             manifest = json.load(f_json)
@@ -139,7 +142,7 @@ class manifest_stats:
 
         return manifest
 
-    def get_seq_region_stats(self, seq_region_path: Path) -> List[str]:
+    def get_seq_region_stats(self, seq_region_path: Path) -> list[str]:
         """Compute stats from the seq_region json file.
 
         Args:
@@ -147,12 +150,13 @@ class manifest_stats:
 
         Returns:
             List[str]: Stats from the seq_regions.
+
         """
         with seq_region_path.open("r") as json_file:
             seq_regions = json.load(json_file)
 
         # Get basic data
-        coord_systems: Dict[str, List[int]] = {}
+        coord_systems: dict[str, list[int]] = {}
         circular = 0
         locations = []
         codon_tables = []
@@ -177,14 +181,14 @@ class manifest_stats:
                 locations.append(f"{seqr_name} = {seqr['location']}")
 
         # Stats
-        stats: List[str] = []
+        stats: list[str] = []
         stats.append(seq_region_path.name)
         stats += self.coord_systems_stats(coord_systems)
         stats += self.seq_region_special_stats(circular, locations, codon_tables)
         stats.append("\n")
         return stats
 
-    def coord_systems_stats(self, coord_systems: Dict[str, List[int]]) -> List[str]:
+    def coord_systems_stats(self, coord_systems: dict[str, list[int]]) -> list[str]:
         """For each coord_system compute various stats:
             - number of sequences
             - sequence length sum, minimum, maximum, mean
@@ -194,13 +198,14 @@ class manifest_stats:
 
         Returns:
             A list with the computed statistics in a printable format.
+
         """
-        stats: List[str] = []
+        stats: list[str] = []
         stats.append(f"Total coord_systems {len(coord_systems)}")
         for coord_name, lengths in coord_systems.items():
             stats.append(f"\nCoord_system: {coord_name}")
 
-            stat_counts: Dict[str, Union[int, float]] = {
+            stat_counts: dict[str, int | float] = {
                 "Number of sequences": len(lengths),
                 "Sequence length sum": sum(lengths),
                 "Sequence length minimum": min(lengths),
@@ -218,9 +223,9 @@ class manifest_stats:
     def seq_region_special_stats(
         self,
         circular: int = 0,
-        locations: Optional[List[str]] = None,
-        codon_tables: Optional[List[str]] = None,
-    ) -> List[str]:
+        locations: list[str] | None = None,
+        codon_tables: list[str] | None = None,
+    ) -> list[str]:
         """Prepare stats in case there are circular regions, specific locations and codon_tables.
                 stats.append(f"{count: 9f}\t{name}")
 
@@ -231,8 +236,9 @@ class manifest_stats:
 
         Returns:
             A list with the computed statistics in a printable format.
+
         """
-        stats: List[str] = []
+        stats: list[str] = []
         if circular or locations or codon_tables:
             stats.append("\nSpecial")
             if circular:
@@ -247,7 +253,7 @@ class manifest_stats:
                     stats.append(f"\t\t\t{table}")
         return stats
 
-    def get_gff3_stats(self, gff3_path: Path) -> List[str]:
+    def get_gff3_stats(self, gff3_path: Path) -> list[str]:
         """Extract the gene models from the GFF3 file and compute stats.
 
         Args:
@@ -255,15 +261,15 @@ class manifest_stats:
 
         Returns:
             List: Stats from the gene model.
-        """
 
+        """
         biotypes = self.count_biotypes(gff3_path)
         # Compile final stats
         stats = self.biotypes_stats(biotypes)
         stats += self.check_ncbi_stats(biotypes)
         return stats
 
-    def count_biotypes(self, gff3_path: Path) -> Dict[str, BiotypeCounter]:
+    def count_biotypes(self, gff3_path: Path) -> dict[str, BiotypeCounter]:
         """Count the biotypes in a GFF3 file.
 
         Args:
@@ -271,9 +277,9 @@ class manifest_stats:
 
         Returns:
             Dictionary of biotype counters.
-        """
 
-        biotypes: Dict[str, BiotypeCounter] = {}
+        """
+        biotypes: dict[str, BiotypeCounter] = {}
 
         with open_gz_file(gff3_path) as gff3_handle:
             for rec in GFF.parse(gff3_handle):
@@ -291,7 +297,9 @@ class manifest_stats:
                             if feat3.type == "exon":
                                 continue
                             manifest_stats.increment_biotype(
-                                biotypes, feat3.id, f"{feat1.type}-{feat2.type}-{feat3.type}"
+                                biotypes,
+                                feat3.id,
+                                f"{feat1.type}-{feat2.type}-{feat3.type}",
                             )
 
                     # Main categories counts
@@ -299,23 +307,22 @@ class manifest_stats:
                         manifest_stats.increment_biotype(biotypes, feat1.id, "pseudogene")
                     elif is_protein:
                         manifest_stats.increment_biotype(biotypes, feat1.id, f"PROT_{feat1.type}")
+                    # Special case, undefined gene-transcript
+                    elif (
+                        feat1.type == "gene"
+                        and feat1.sub_features
+                        and feat1.sub_features[0].type == "transcript"
+                    ):
+                        manifest_stats.increment_biotype(biotypes, feat1.id, "OTHER")
                     else:
-                        # Special case, undefined gene-transcript
-                        if (
-                            feat1.type == "gene"
-                            and feat1.sub_features
-                            and feat1.sub_features[0].type == "transcript"
-                        ):
-                            manifest_stats.increment_biotype(biotypes, feat1.id, "OTHER")
-                        else:
-                            manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
+                        manifest_stats.increment_biotype(biotypes, feat1.id, f"NONPROT_{feat1.type}")
 
                     # Total
                     if feat1.type in ("gene", "pseudogene"):
                         manifest_stats.increment_biotype(biotypes, feat1.id, "ALL_GENES")
         return biotypes
 
-    def biotypes_stats(self, biotypes: Dict[str, BiotypeCounter]) -> List[str]:
+    def biotypes_stats(self, biotypes: dict[str, BiotypeCounter]) -> list[str]:
         """Prepare biotype stats in order of their name.
 
         Args:
@@ -323,6 +330,7 @@ class manifest_stats:
 
         Returns:
             A list with the computed statistics in a printable format.
+
         """
         sorted_biotypes = {}
         for name in sorted(biotypes.keys()):
@@ -335,9 +343,9 @@ class manifest_stats:
         ]
         return stats
 
-    def check_ncbi_stats(self, biotypes: Dict[str, BiotypeCounter]) -> List[str]:
+    def check_ncbi_stats(self, biotypes: dict[str, BiotypeCounter]) -> list[str]:
         """Use the dataset tool from NCBI to get stats and compare with what we have"""
-        stats: List[str] = []
+        stats: list[str] = []
         if not self.check_ncbi:
             return stats
 
@@ -366,9 +374,9 @@ class manifest_stats:
                     stats = self.compare_ncbi_counts(biotypes, counts)
         return stats
 
-    def compare_ncbi_counts(self, biotypes: Dict[str, BiotypeCounter], ncbi: Dict) -> List[str]:
+    def compare_ncbi_counts(self, biotypes: dict[str, BiotypeCounter], ncbi: dict) -> list[str]:
         """Compare specific gene stats from NCBI"""
-        stats: List[str] = []
+        stats: list[str] = []
 
         maps = [
             ["total", "ALL_GENES"],
@@ -381,7 +389,7 @@ class manifest_stats:
         for count_map in maps:
             ncbi_name, prep_name = count_map
             ncbi_count = ncbi.get(ncbi_name, 0)
-            prepped: Optional[BiotypeCounter] = biotypes.get(prep_name)
+            prepped: BiotypeCounter | None = biotypes.get(prep_name)
             prep_count = 0
             if prepped is not None:
                 prep_count = prepped.count
@@ -395,13 +403,14 @@ class manifest_stats:
         return stats
 
     @staticmethod
-    def increment_biotype(biotypes: Dict[str, BiotypeCounter], feature_id: str, feature_biotype: str) -> None:
+    def increment_biotype(biotypes: dict[str, BiotypeCounter], feature_id: str, feature_biotype: str) -> None:
         """Add the feature to their respective biotype counter.
 
         Args:
             biotypes (Dict[str, BiotypeCounter]): All current biotypes, with their counter.
             feature_id (str): Feature id to be counted.
             feature_biotype (str): The biotype of the feature.
+
         """
         if feature_biotype not in biotypes:
             biotypes[feature_biotype] = BiotypeCounter(example=feature_id)
@@ -411,10 +420,12 @@ class manifest_stats:
 def main() -> None:
     """Main entrypoint."""
     parser = ArgumentParser(
-        description="Compute stats from the current genome files associated with the manifest."
+        description="Compute stats from the current genome files associated with the manifest.",
     )
     parser.add_argument_src_path(
-        "--manifest_dir", required=True, help="Manifest directory where 'manifest.json' file is located"
+        "--manifest_dir",
+        required=True,
+        help="Manifest directory where 'manifest.json' file is located",
     )
     parser.add_argument("--accession", help="Sequence accession ID to compare stats with NCBI")
     parser.add_argument("--datasets_bin", help="Datasets bin status")

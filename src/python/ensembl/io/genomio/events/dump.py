@@ -26,7 +26,6 @@ __all__ = [
 
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional, Set, Tuple
 import logging
 
 from sqlalchemy import select, and_, or_
@@ -40,16 +39,15 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 BRC4_START_DATE = datetime(2020, 5, 1)
-IdsSet = Set[str]
-DictToIdsSet = Dict[str, IdsSet]
+IdsSet = set[str]
+DictToIdsSet = dict[str, IdsSet]
 
 
 class Pair:
     """Simple old_id - new_id pair representation"""
 
-    def __init__(self, old_id: Optional[str], new_id: Optional[str]) -> None:
+    def __init__(self, old_id: str | None, new_id: str | None) -> None:
         """Create a pair with an old_id and a new_id if provided"""
-
         self.old_id = old_id if old_id is not None else ""
         if new_id is not None:
             self.new_id = new_id
@@ -66,7 +64,6 @@ class Pair:
 
     def is_empty(self) -> bool:
         """Test if the current pair has no id."""
-
         return not (self.has_old_id() or self.has_new_id())
 
 
@@ -96,13 +93,12 @@ class Event:
 
     def __init__(
         self,
-        from_list: Optional[Set[str]] = None,
-        to_list: Optional[Set[str]] = None,
-        release: Optional[str] = None,
-        date: Optional[datetime] = None,
+        from_list: set[str] | None = None,
+        to_list: set[str] | None = None,
+        release: str | None = None,
+        date: datetime | None = None,
     ) -> None:
         """Create a stable id event from a set of old_ids to a set of new_ids"""
-
         if from_list is None:
             from_list = set()
         if to_list is None:
@@ -112,16 +108,15 @@ class Event:
         self.release = release
         self.date = date
         self.name = ""
-        self.pairs: List[Pair] = []
+        self.pairs: list[Pair] = []
 
     def __str__(self) -> str:
         """String representation of the stable id event"""
-
         from_str = ",".join(self.from_set)
         to_str = ",".join(self.to_set)
         return f"From {from_str} to {to_str} = {self.get_name()} in release {self.release}"
 
-    def brc_format_1(self) -> List[str]:
+    def brc_format_1(self) -> list[str]:
         """Returns a list events, one line per initial ID, in the following TSV format:
         - old gene id
         - event name
@@ -160,7 +155,7 @@ class Event:
             line_list.append("\t".join(line))
         return line_list
 
-    def brc_format_2(self) -> List[str]:
+    def brc_format_2(self) -> list[str]:
         """Returns a list of combination of genes, one line per combination of old_id - new_ids, in the
         following TSV format:
         - old gene id
@@ -190,7 +185,7 @@ class Event:
         return line_list
 
     @staticmethod
-    def clean_set(this_list: Set) -> Set:
+    def clean_set(this_list: set) -> set:
         """Removes any empty elements from a list.
 
         Args:
@@ -281,7 +276,7 @@ class Event:
         self._name_event()
         return self.name
 
-    def add_pairs(self, pairs: List[Pair]) -> None:
+    def add_pairs(self, pairs: list[Pair]) -> None:
         """Provided all the pairs, keep those that are used by this event.
 
         Args:
@@ -312,14 +307,13 @@ class DumpStableIDs:
         """Create a processor for events"""
         self.session = session
 
-    def get_history(self) -> List:
+    def get_history(self) -> list:
         """Retrieve all events from a database.
 
         Returns:
             A list of all events.
 
         """
-
         sessions = self.get_mapping_sessions()
 
         events = []
@@ -335,7 +329,7 @@ class DumpStableIDs:
         # Then analyse the pairs to make events
         return events
 
-    def print_events(self, events: List[Event], output_file: Path) -> None:
+    def print_events(self, events: list[Event], output_file: Path) -> None:
         """Print events in a format for BRC.
 
         Args:
@@ -352,7 +346,7 @@ class DumpStableIDs:
                 for line in event_lines:
                     out_fh.write(line + "\n")
 
-    def get_mapping_sessions(self) -> List[MappingSession]:
+    def get_mapping_sessions(self) -> list[MappingSession]:
         """Retrieve the mapping sessions from the connected database.
 
         Returns:
@@ -363,7 +357,7 @@ class DumpStableIDs:
         map_sessions = list(self.session.scalars(map_sessions_stmt).unique().all())
         return map_sessions
 
-    def get_pairs(self, session_id: int) -> List[Pair]:
+    def get_pairs(self, session_id: int) -> list[Pair]:
         """Retrieve all pair of ids for a given session.
 
         Args:
@@ -373,7 +367,6 @@ class DumpStableIDs:
             All pairs of IDs.
 
         """
-
         id_events_stmt = (
             select(StableIdEvent)
             .where(
@@ -387,19 +380,21 @@ class DumpStableIDs:
                             (StableIdEvent.old_stable_id != StableIdEvent.new_stable_id),
                         )
                     ),
-                )
+                ),
             )
             .group_by(
-                StableIdEvent.old_stable_id, StableIdEvent.new_stable_id, StableIdEvent.mapping_session_id
+                StableIdEvent.old_stable_id,
+                StableIdEvent.new_stable_id,
+                StableIdEvent.mapping_session_id,
             )
         )
-        pairs: List[Pair] = []
+        pairs: list[Pair] = []
         for row in self.session.scalars(id_events_stmt).unique().all():
             pair = Pair(row.old_stable_id, row.new_stable_id)
             pairs.append(pair)
         return pairs
 
-    def make_events(self, pairs: List[Pair]) -> List:
+    def make_events(self, pairs: list[Pair]) -> list:
         """Given a list of pairs, create events.
 
         Args:
@@ -409,11 +404,10 @@ class DumpStableIDs:
             A list of events.
 
         """
-
         from_list, to_list = self.get_pairs_from_to(pairs)
 
         # Create events with those 2 dicts
-        events: List[Event] = []
+        events: list[Event] = []
         for old_id, from_old_list in from_list.items():
             if not old_id or old_id not in from_list:
                 continue
@@ -445,9 +439,8 @@ class DumpStableIDs:
         return events
 
     @staticmethod
-    def get_pairs_from_to(pairs: List[Pair]) -> Tuple[DictToIdsSet, DictToIdsSet]:
-        """
-        From a list of Pairs, extract a mapping of all ids from a given old id (from_list),
+    def get_pairs_from_to(pairs: list[Pair]) -> tuple[DictToIdsSet, DictToIdsSet]:
+        """From a list of Pairs, extract a mapping of all ids from a given old id (from_list),
         and a mapping of all ids to a given new id (to_list).
 
         Args:
@@ -488,8 +481,11 @@ class DumpStableIDs:
         return from_list, to_list
 
     def extend_event(
-        self, event: Event, from_list: DictToIdsSet, to_list: DictToIdsSet
-    ) -> Tuple[Event, DictToIdsSet, DictToIdsSet]:
+        self,
+        event: Event,
+        from_list: DictToIdsSet,
+        to_list: DictToIdsSet,
+    ) -> tuple[Event, DictToIdsSet, DictToIdsSet]:
         """Given an event, aggregate ids in the 'from' and 'to' sets, to connect the whole group.
 
         Args:
@@ -502,7 +498,6 @@ class DumpStableIDs:
             have been added to the event have been removed.
 
         """
-
         extended = True
 
         while extended:
@@ -538,7 +533,7 @@ class DumpStableIDs:
 def main() -> None:
     """Main entrypoint"""
     parser = ArgumentParser(
-        description="Dump the stable ID events from the information available in a core database."
+        description="Dump the stable ID events from the information available in a core database.",
     )
     parser.add_server_arguments(include_database=True)
     parser.add_argument_dst_path("--output_file", required=True, help="Output file")

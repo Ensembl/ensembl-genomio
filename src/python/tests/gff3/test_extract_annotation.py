@@ -17,7 +17,7 @@
 
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Callable, ContextManager, Dict, List, Optional
+from typing import Callable, ContextManager
 
 import pytest
 from pytest import raises, param
@@ -66,7 +66,7 @@ from ensembl.io.genomio.gff3.features import GFFSeqFeature
         ("LOW QUALITY PROTEIN: uncharacterized protein PROTID12345", ["PROTID12345"], False),
     ],
 )
-def test_product_is_informative(description: str, feature_id: Optional[List[str]], output: bool) -> None:
+def test_product_is_informative(description: str, feature_id: list[str] | None, output: bool) -> None:
     """Tests the `FunctionalAnnotations.product_is_informative()` method."""
     assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
 
@@ -106,7 +106,7 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
         pytest.param("featA", "featA_name", ["featA_name"], id="Diff name and ID"),
     ],
 )
-def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[str]) -> None:
+def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: list[str]) -> None:
     """Tests the `FunctionalAnnotations.add_feature()` method with a feature name."""
     annot = FunctionalAnnotations()
 
@@ -180,7 +180,9 @@ def test_get_parent(
     parent = GFFSeqFeature(type=in_parent_type, id=in_parent_id)
     annot.add_feature(parent, "gene")
     annot.add_feature(
-        GFFSeqFeature(type="mRNA", id=in_child_id), feat_type="transcript", parent_id=in_parent_id
+        GFFSeqFeature(type="mRNA", id=in_child_id),
+        feat_type="transcript",
+        parent_id=in_parent_id,
     )
 
     with expected:
@@ -195,13 +197,20 @@ def test_get_parent(
         pytest.param("bad_type", "mrna_A", "gene_A", raises(KeyError), id="Child type does not exist"),
         pytest.param("gene", "gene_A", None, raises(AnnotationError), id="Feature ID already loaded"),
         pytest.param(
-            "gene", "gene_B", "gene_A", raises(AnnotationError), id="Cannot add a gene child of a gene"
+            "gene",
+            "gene_B",
+            "gene_A",
+            raises(AnnotationError),
+            id="Cannot add a gene child of a gene",
         ),
     ],
 )
 @pytest.mark.dependency(name="add_feature_fail", depends=["add_feature", "get_parent"])
 def test_add_feature_fail(
-    child_type: str, child_id: str, out_parent_id: Optional[str], expected: ContextManager
+    child_type: str,
+    child_id: str,
+    out_parent_id: str | None,
+    expected: ContextManager,
 ) -> None:
     """Tests the `FunctionalAnnotation.add_feature()` method failures.
 
@@ -269,7 +278,10 @@ def test_add_feature_fail(
     ],
 )
 def test_get_xrefs(
-    in_id: str, in_xrefs: Optional[List[str]], provider_name: str, expected_xrefs: List[Dict[str, str]]
+    in_id: str,
+    in_xrefs: list[str] | None,
+    provider_name: str,
+    expected_xrefs: list[dict[str, str]],
 ) -> None:
     """Tests the `FunctionalAnnotation.get_xrefs()` method."""
     annot = FunctionalAnnotations(provider_name=provider_name)
@@ -335,11 +347,11 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
 )
 @pytest.mark.dependency(depends=["get_features"])
 def test_transfer_descriptions(
-    gene_desc: Optional[str],
-    transc_desc: Optional[str],
-    transl_desc: Optional[str],
-    out_gene_desc: Optional[str],
-    out_transc_desc: Optional[str],
+    gene_desc: str | None,
+    transc_desc: str | None,
+    transl_desc: str | None,
+    out_gene_desc: str | None,
+    out_transc_desc: str | None,
 ) -> None:
     """Tests the `FunctionalAnnotation.transfer_descriptions()` method.
 
@@ -388,7 +400,11 @@ def test_transfer_descriptions(
     ],
 )
 def test_store_gene(
-    cds_parts: int, num_cds: int, expected_num_genes: int, expected_num_tr: int, expected_num_cds: int
+    cds_parts: int,
+    num_cds: int,
+    expected_num_genes: int,
+    expected_num_tr: int,
+    expected_num_cds: int,
 ) -> None:
     """Test store_gene given a gene Feature with a transcript and optional translation.
 
@@ -398,6 +414,7 @@ def test_store_gene(
         expected_num_genes: Number of genes stored as expected
         expected_num_tr: Number of transcripts stored as expected
         expected_num_cds: Number of CDSs stored as expected
+
     """
     annot = FunctionalAnnotations()
     gene_name = "gene_A"
@@ -439,7 +456,9 @@ def test_store_gene(
         ),
         pytest.param(
             GFFSeqFeature(
-                type="gene", id="gene_A", qualifiers={"description": ["Gene description"], "Name": ["GeneA"]}
+                type="gene",
+                id="gene_A",
+                qualifiers={"description": ["Gene description"], "Name": ["GeneA"]},
             ),
             GFFSeqFeature(type="mRNA", id="tran_A"),
             GFFSeqFeature(type="CDS", id="cds_A"),

@@ -34,7 +34,6 @@ from os import PathLike
 from pathlib import Path
 import re
 import time
-from typing import Dict, Optional
 
 import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
@@ -71,8 +70,8 @@ def establish_ftp(ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
 
     Raises:
         UnsupportedFormatError: If `accession` does not follow INSDC's accession format.
-    """
 
+    """
     match = re.match(r"^(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})(\.[0-9]+)?$", accession)
     if not match:
         raise UnsupportedFormatError(f"Could not recognize GCA accession format: {accession}")
@@ -90,15 +89,15 @@ def establish_ftp(ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
     return ftp_conn
 
 
-def md5_files(dl_dir: Path, md5_path: Optional[Path] = None, md5_filename: str = "md5checksums.txt") -> bool:
-    """
-    Check all files checksums with the sums listed in a checksum file, if available.
+def md5_files(dl_dir: Path, md5_path: Path | None = None, md5_filename: str = "md5checksums.txt") -> bool:
+    """Check all files checksums with the sums listed in a checksum file, if available.
     Return False if there is no checksum file, or a file is missing, or has a wrong checksum.
 
     Args:
         dl_dir: Path location to containing downloaded FTP files.
         md5_path: Full path to an MD5 checksum file.
         md5_filename: Name of a checksum file in the `dl_dir` (used if no `md5_path` is given).
+
     """
     # Get or set md5 file to user or default setting
     if md5_path is None:
@@ -128,14 +127,14 @@ def md5_files(dl_dir: Path, md5_path: Optional[Path] = None, md5_filename: str =
     return True
 
 
-def get_checksums(checksum_path: Path) -> Dict[str, str]:
-    """
-    Get a dict of checksums from a file, with file names as keys and sums as values
+def get_checksums(checksum_path: Path) -> dict[str, str]:
+    """Get a dict of checksums from a file, with file names as keys and sums as values
 
     Args:
         checksum_path: Path location to MD5 checksum file.
+
     """
-    sums: Dict[str, str] = {}
+    sums: dict[str, str] = {}
     if not checksum_path.is_file():
         return sums
     with checksum_path.open(mode="r") as fh:
@@ -148,16 +147,15 @@ def get_checksums(checksum_path: Path) -> Dict[str, str]:
 
 
 def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: int) -> None:
-    """
-    Given an INSDC accession, download all available files from the ftp to the download dir
+    """Given an INSDC accession, download all available files from the ftp to the download dir
 
     Args:
         ftp_connection: An open FTP connection object
         accession: Genome assembly accession.
         dl_dir: Path to downloaded FTP files.
         max_redo: Maximum FTP connection retry attempts.
-    """
 
+    """
     # Get the list of assemblies for this accession
     for ftp_dir, _ in ftp_connection.mlsd():
         if re.search(accession, ftp_dir):
@@ -177,12 +175,16 @@ def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: 
                         _download_file(ftp_connection, ftp_file, md5_sums, dl_dir, max_redo)
         else:
             logging.warning(
-                f"Could not find accession '{accession}' from ftp {ftp_dir} in open FTP connection"
+                f"Could not find accession '{accession}' from ftp {ftp_dir} in open FTP connection",
             )
 
 
 def _download_file(
-    ftp_connection: FTP, ftp_file: str, md5_sums: Dict[str, str], dl_dir: Path, max_redo: int = 0
+    ftp_connection: FTP,
+    ftp_file: str,
+    md5_sums: dict[str, str],
+    dl_dir: Path,
+    max_redo: int = 0,
 ) -> None:
     """Downloads individual files from FTP server.
 
@@ -192,6 +194,7 @@ def _download_file(
         md5_sums: Dictionary of key value pairs filename - md5_checksums.
         dl_dir: Path to downloaded FTP files.
         max_redo: Maximum number of connection retry attempts.
+
     """
     has_md5 = True
     expected_sum = ""
@@ -239,7 +242,7 @@ def _download_file(
         raise FileDownloadError(f"Could not download file {ftp_file} after {redo} tries")
 
 
-def get_files_selection(dl_dir: Path) -> Dict[str, str]:
+def get_files_selection(dl_dir: Path) -> dict[str, str]:
     """Returns a dictionary with the relevant downloaded files classified.
 
     Args:
@@ -250,6 +253,7 @@ def get_files_selection(dl_dir: Path) -> Dict[str, str]:
 
     Raises:
         FileDownloadError: If `dl_dir` tree does not include a file named `*_assembly_report.txt`.
+
     """
     files = {}
     root_name = get_root_name(dl_dir)
@@ -268,6 +272,7 @@ def get_root_name(dl_dir: Path) -> str:
 
     Args:
         dl_dir: Path location of downloaded FTP files.
+
     """
     root_name = ""
     for dl_file in dl_dir.iterdir():
@@ -295,6 +300,7 @@ def retrieve_assembly_data(
 
     Raises:
         FileDownloadError: If no files are downloaded or if any does not match its MD5 checksum.
+
     """
     download_dir = Path(download_dir)
 
@@ -305,7 +311,7 @@ def retrieve_assembly_data(
     if not md5_files(download_dir, None):
         logging.info(" Download the files")
 
-        for increment in range(0, max_increment + 1):
+        for increment in range(max_increment + 1):
             if increment > 0:
                 logging.info(f" Increment accession version once from {accession}")
                 version = int(accession[-1])
@@ -332,7 +338,9 @@ def main() -> None:
     parser = ArgumentParser(description="Download an assembly data files from INSDC or RefSeq.")
     parser.add_argument("--accession", required=True, help="Genome assembly accession")
     parser.add_argument_dst_path(
-        "--download_dir", default=Path.cwd(), help="Folder where the data will be downloaded"
+        "--download_dir",
+        default=Path.cwd(),
+        help="Folder where the data will be downloaded",
     )
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()

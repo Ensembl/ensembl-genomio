@@ -18,7 +18,7 @@ __all__ = ["DBConnectionLite"]
 
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,9 +34,9 @@ class DBConnectionLite(DBConnection):
 
     def __init__(self, url: StrURL, reflect: bool = False, **kwargs: Any) -> None:
         super().__init__(url, reflect, **kwargs)
-        self._metadata: Dict[str, List] = {}
+        self._metadata: dict[str, list] = {}
 
-    def get_metadata(self) -> Dict[str, List]:
+    def get_metadata(self) -> dict[str, list]:
         """Retrieves all metadata from the `meta` table in the database.
 
         Returns:
@@ -48,7 +48,6 @@ class DBConnectionLite(DBConnection):
 
     def _load_metadata(self) -> None:
         """Caches the metadata values."""
-
         if self._metadata:
             return
 
@@ -63,9 +62,8 @@ class DBConnectionLite(DBConnection):
                 else:
                     self._metadata[meta_key] = [meta_value]
 
-    def get_meta_value(self, meta_key: str) -> Optional[str]:
+    def get_meta_value(self, meta_key: str) -> str | None:
         """Returns the first meta_value for a given meta_key."""
-
         self._load_metadata()
         try:
             return self._metadata[meta_key][0]
@@ -75,7 +73,6 @@ class DBConnectionLite(DBConnection):
 
     def get_project_release(self) -> str:
         """Returns the project release number from the database name. Returns empty string if not found."""
-
         match = re.search(_DB_PATTERN_RELEASE, self.db_name)
         if match:
             return match.group(1)

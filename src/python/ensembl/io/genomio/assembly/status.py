@@ -101,8 +101,8 @@ def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str |
 
     Returns:
         `spython.main.client` instance of singularity container image housing `datasets`.
-    """
 
+    """
     # Set singularity cache dir from user defined path or use environment
     if sif_cache_dir and sif_cache_dir.is_dir():
         image_dl_path = sif_cache_dir
@@ -110,12 +110,12 @@ def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str |
     elif os.environ.get("NXF_SINGULARITY_CACHEDIR"):
         image_dl_path = Path(os.environ["NXF_SINGULARITY_CACHEDIR"])
         logging.info(
-            f"Using preferred nextflow singularity cache dir 'NXF_SINGULARITY_CACHEDIR': {image_dl_path}"
+            f"Using preferred nextflow singularity cache dir 'NXF_SINGULARITY_CACHEDIR': {image_dl_path}",
         )
     elif os.environ.get("SINGULARITY_CACHEDIR"):
         image_dl_path = Path(os.environ["SINGULARITY_CACHEDIR"])
         logging.info(
-            f"Using the default singularity installation cache dir 'SINGULARITY_CACHEDIR': {image_dl_path}"
+            f"Using the default singularity installation cache dir 'SINGULARITY_CACHEDIR': {image_dl_path}",
         )
     else:
         image_dl_path = Path()
@@ -143,6 +143,7 @@ def get_assembly_accessions(src_file: StrPath) -> list[str]:
 
     Raises:
         UnsupportedFormatError: If an accession does not match the INSDC assembly accession format.
+
     """
     query_accessions: list[str] = []
     with Path(src_file).open(mode="r") as fin:
@@ -166,8 +167,8 @@ def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[s
 
     Returns:
         Dict of core database names (key) and their corresponding INSDC assembly accession (value).
-    """
 
+    """
     core_accn_meta = {}
     database_count = 0
     count_accn_found = 0
@@ -180,7 +181,7 @@ def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[s
             db_connection = DBConnection(db_connection_url)
             with db_connection.begin() as conn:
                 query_result = conn.execute(
-                    text('SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";')
+                    text('SELECT meta_value FROM meta WHERE meta_key = "assembly.accession";'),
                 ).fetchall()
 
             if not query_result:
@@ -194,14 +195,17 @@ def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[s
                 logging.warning(f"Core {core_db} has {len(query_result)} assembly.accessions")
 
     logging.info(
-        f"From initial input core databases ({database_count}), obtained ({count_accn_found}) accessions"
+        f"From initial input core databases ({database_count}), obtained ({count_accn_found}) accessions",
     )
 
     return core_accn_meta
 
 
 def fetch_datasets_reports(
-    sif_image: Client, assembly_accessions: dict[str, str], download_directory: StrPath, batch_size: int
+    sif_image: Client,
+    assembly_accessions: dict[str, str],
+    download_directory: StrPath,
+    batch_size: int,
 ) -> dict[str, dict]:
     """Obtain assembly reports in JSON format for each assembly accession via `datasets` CLI.
 
@@ -230,7 +234,10 @@ def fetch_datasets_reports(
     for accessions in accn_subsample:
         # Make call to singularity datasets providing a multi-accession query
         client_return = Client.execute(
-            image=sif_image, command=datasets_command + accessions, return_result=True, quiet=True
+            image=sif_image,
+            command=datasets_command + accessions,
+            return_result=True,
+            quiet=True,
         )
         raw_result = client_return["message"]
 
@@ -273,6 +280,7 @@ def extract_assembly_metadata(assembly_reports: dict[str, dict]) -> dict[str, Re
 
     Returns:
         Parsed assembly report meta (source, meta).
+
     """
     parsed_meta = {}
 
@@ -330,6 +338,7 @@ def generate_report_tsv(
         query_type: Type of query (either core databases or accessions).
         output_directory: Directory to store report TSV file.
         outfile_name: Name to give to the output TSV file.
+
     """
     tsv_outfile = Path(output_directory, f"{outfile_name}.tsv")
 
@@ -386,7 +395,9 @@ def main() -> None:
     subparsers = parser.add_subparsers(title="report assembly status from", required=True, dest="src")
     # Specific arguments required when using Ensembl core database names as source
     core_db_parser = subparsers.add_parser(
-        "core_db", parents=[base_parser], help="list of Ensembl core databases"
+        "core_db",
+        parents=[base_parser],
+        help="list of Ensembl core databases",
     )
     core_db_parser.add_argument_src_path(
         "--input",
@@ -396,10 +407,14 @@ def main() -> None:
     core_db_parser.add_server_arguments()
     # Specific arguments required when using assembly accessions as source
     accessions_parser = subparsers.add_parser(
-        "accession", parents=[base_parser], help="list of INSDC accessions"
+        "accession",
+        parents=[base_parser],
+        help="list of INSDC accessions",
     )
     accessions_parser.add_argument_src_path(
-        "--input", required=True, help="file path with list of assembly INSDC query accessions"
+        "--input",
+        required=True,
+        help="file path with list of assembly INSDC query accessions",
     )
 
     args = parser.parse_args()
@@ -416,7 +431,10 @@ def main() -> None:
 
     # Datasets query implementation for one or more batched accessions
     assembly_reports = fetch_datasets_reports(
-        datasets_image, query_accessions, args.reports_dir, args.datasets_batch_size
+        datasets_image,
+        query_accessions,
+        args.reports_dir,
+        args.datasets_batch_size,
     )
 
     # Extract the key assembly report meta information for reporting status

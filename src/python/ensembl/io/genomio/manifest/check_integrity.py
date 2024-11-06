@@ -58,7 +58,6 @@ class IntegrityTool:
         and lengths are consistent with the information in gff.
         Compare sequence length from fasta_dna file to seq_region.json metadata.
         """
-
         # Load the manifest integrity counts
         manifest = self.manifest
         manifest.prepare_integrity_data()
@@ -97,7 +96,10 @@ class IntegrityTool:
             # We do not compare the peptide lengths because of sequence edits
             if pep:
                 tr_errors = self.check_lengths(
-                    pep, gff_translations, "Fasta translations vs gff", special_diff=True
+                    pep,
+                    gff_translations,
+                    "Fasta translations vs gff",
+                    special_diff=True,
                 )
                 if len(tr_errors) > 0:
                     # The pseudo CDSs are included in this check
@@ -119,7 +121,9 @@ class IntegrityTool:
             if ann_genes:
                 self.add_errors(self.check_ids(ann_genes, gff_genes, "Gene ids metadata vs gff"))
                 tr_id_errors = self.check_ids(
-                    ann_translations, gff_translations, "Translation ids metadata vs gff"
+                    ann_translations,
+                    gff_translations,
+                    "Translation ids metadata vs gff",
                 )
                 if tr_id_errors:
                     tr_id_errors_all = self.check_ids(
@@ -135,11 +139,14 @@ class IntegrityTool:
                         ann_transposable_elements,
                         gff_transposable_elements,
                         "TE ids metadata vs gff",
-                    )
+                    ),
                 )
 
             self.check_seq_region_lengths(
-                seq_lengths, gff_seq_regions, "seq_regions JSON vs GFF3 lengths", seq_circular
+                seq_lengths,
+                gff_seq_regions,
+                "seq_regions JSON vs GFF3 lengths",
+                seq_circular,
             )
 
         self.check_seq_region_lengths(seq_lengths, dna, "seq_regions JSON vs DNA lengths")
@@ -176,8 +183,8 @@ class IntegrityTool:
 
         Return:
             List of message errors of sequence IDs found only in one of the lists provided.
-        """
 
+        """
         only1 = []
         only2 = []
         common = []
@@ -229,8 +236,8 @@ class IntegrityTool:
 
         Returns:
             Error if there is a difference in length or ids between the lists.
-        """
 
+        """
         # check list differences, checks if abs(values diff) < allowed_len_diff
 
         set1 = frozenset(list1)
@@ -264,17 +271,13 @@ class IntegrityTool:
                     _dlist.append(f"{e}: {list1[e]}, {list2[e]}")
             if diff_len_special_list:
                 errors.append(
-                    (
-                        f"{len(diff_len_special_list)} common elements with one BP/AA length diff for {name}"
-                        f"(e.g. {diff_len_special_list[0]})"
-                    )
+                    f"{len(diff_len_special_list)} common elements with one BP/AA length diff for {name}"
+                    f"(e.g. {diff_len_special_list[0]})",
                 )
             if diff_len_list:
                 errors.append(
-                    (
-                        f"{len(diff_len_list)} common elements with length diff for {name}"
-                        f"(e.g. {diff_len_list[0]})"
-                    )
+                    f"{len(diff_len_list)} common elements with length diff for {name}"
+                    f"(e.g. {diff_len_list[0]})",
                 )
         if common_len > 0:
             logging.warning(f"{common_len} common elements between lists for {name}")
@@ -304,6 +307,7 @@ class IntegrityTool:
         Returns:
             Error if there are common sequences with difference in ids
             and if the sequences are not consistent in the files.
+
         """
         if not seqrs or not feats:
             return
@@ -329,7 +333,10 @@ class IntegrityTool:
             self.add_errors(f"{len(only_feat)} only in second list in {name} (first: {only_feat[0]})")
 
     def _compare_seqs(
-        self, seqrs: dict[str, Any], feats: dict[str, Any], circular: dict[str, Any] | None = None
+        self,
+        seqrs: dict[str, Any],
+        feats: dict[str, Any],
+        circular: dict[str, Any] | None = None,
     ) -> dict[str, list[str]]:
         """Give the intersection and other comparison between two groups of sequences.
 
@@ -385,10 +392,14 @@ def main() -> None:
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path("--manifest_file", required=True, help="Manifest file for the data to check")
     parser.add_argument(
-        "--ignore_final_stops", action="store_true", help="Ignore final stop when calculating peptide length"
+        "--ignore_final_stops",
+        action="store_true",
+        help="Ignore final stop when calculating peptide length",
     )
     parser.add_argument(
-        "--no_fail", action="store_true", help="In case of errors, don't fail but print errors to stdout."
+        "--no_fail",
+        action="store_true",
+        help="In case of errors, don't fail but print errors to stdout.",
     )
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)

@@ -32,7 +32,7 @@ from io import TextIOWrapper
 import logging
 from pathlib import Path
 import re
-from typing import Any, Callable, ContextManager, Optional
+from typing import Any, Callable, ContextManager
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -49,6 +49,7 @@ def _on_value_error(msg: str) -> None:
 
     Args:
         msg: A message to raise ValueError with.
+
     """
     raise ValueError(msg)
 
@@ -66,6 +67,7 @@ def check_chunk_size_and_tolerance(
 
     Dies:
         If checks failed dies with `parser.error`
+
     """
     if chunk_size < 50_000:
         error_f(f"wrong '--chunk_size' value: '{chunk_size}'. should be greater then 50_000. exiting...")
@@ -73,7 +75,7 @@ def check_chunk_size_and_tolerance(
         error_f(f"wrong '--chunk_tolerance' value: '{chunk_tolerance}'. can't be less then 0. exiting...")
 
 
-def split_seq_by_n(seq: str, split_pattern: Optional[re.Pattern]) -> list[int]:
+def split_seq_by_n(seq: str, split_pattern: re.Pattern | None) -> list[int]:
     """Split a string into chunks at the positions where the
     pattern is found. `N`s (pattern) are appended to the chunk on the left.
 
@@ -86,6 +88,7 @@ def split_seq_by_n(seq: str, split_pattern: Optional[re.Pattern]) -> list[int]:
 
     Returns:
         List with open coordinates of the chunks ends (or with only a single sequence length).
+
     """
     seq_len = len(seq)
     if not split_pattern:
@@ -97,7 +100,9 @@ def split_seq_by_n(seq: str, split_pattern: Optional[re.Pattern]) -> list[int]:
 
 
 def split_seq_by_chunk_size(
-    ends: list[int], chunk_size: int, tolerated_size: Optional[int] = None
+    ends: list[int],
+    chunk_size: int,
+    tolerated_size: int | None = None,
 ) -> list[int]:
     """Split list of end coordinates, to form chunks not longer then
     chunk_size.
@@ -109,6 +114,7 @@ def split_seq_by_chunk_size(
 
     Returns:
         List with open coordinates of the chunks ends (or with only a single sequence length).
+
     """
     if not ends or chunk_size < 1:
         return ends
@@ -132,20 +138,21 @@ def _individual_file_opener(name: str) -> TextIOWrapper:
 
     Args:
         name: Name of the file to open
+
     """
-    return open(name, "wt", encoding="utf-8")
+    return open(name, "w", encoding="utf-8")
 
 
 def chunk_fasta_stream(
     input_fasta: TextIOWrapper,
     chunk_size: int,
     chunk_size_tolerated: int,
-    output_fasta: Optional[TextIOWrapper] | nullcontext[Any],
-    individual_file_prefix: Optional[Path],
+    output_fasta: TextIOWrapper | None | nullcontext[Any],
+    individual_file_prefix: Path | None,
     *,
     n_sequence_len: int = 0,
     chunk_sfx: str = "ens_chunk",
-    append_offset_to_chunk_name: Optional[bool] = None,
+    append_offset_to_chunk_name: bool | None = None,
     open_individual: Callable[[str], ContextManager[Any]] = _individual_file_opener,
 ) -> list[str]:
     """Split input TextIOWrapper stream with fasta into a smaller chunks based on
@@ -166,8 +173,8 @@ def chunk_fasta_stream(
         append_offset_to_chunk_name: A flag to append 0-based offset (`_off_{offset}`) to the chunk name.
         open_individual: A callable taking filename as an input to generate the output file for
                 individual contig if out_put FASTA is `false` of `None`, folders should be preexisting.
-    """
 
+    """
     chunk_size_tolerated = max(chunk_size, chunk_size_tolerated)
     # output agp_lines list
     agp_lines = []
@@ -234,6 +241,7 @@ def get_tolerated_size(size: int, tolerance: int) -> int:
 
     Returns:
         Maximum tolerated chunk size.
+
     """
     tolerance = max(tolerance, 0)
 
@@ -247,12 +255,12 @@ def chunk_fasta(
     chunk_size: int,
     chunk_size_tolerated: int,
     out_file_name: str,
-    individual_file_prefix: Optional[Path],
+    individual_file_prefix: Path | None,
     *,
-    agp_output_file: Optional[str] = None,
+    agp_output_file: str | None = None,
     n_sequence_len: int = 0,
     chunk_sfx: str = "ens_chunk",
-    append_offset_to_chunk_name: Optional[bool] = None,
+    append_offset_to_chunk_name: bool | None = None,
 ) -> None:
     """Open `input_fasta_file` and split into a smaller chunks based on
     stretches of "N"s and then based on chunk_size_tolerated and store either to
@@ -270,19 +278,19 @@ def chunk_fasta(
         n_sequence_len: Length of the stretch of `N`s to split at; not slitting on `N`s if 0.
         chunk_sfx: A string to put between the original sequence name and the chunk suffix.
         append_offset_to_chunk_name: Append 0-based offset in the form of `_off_{offset}` to the chunk name.
-    """
 
+    """
     # process input fasta
     with open_gz_file(input_fasta_file) as fasta:
         logging.info(
             f"splitting sequences from '{input_fasta_file}', chunk size {chunk_size:_}, \
-                splitting on {n_sequence_len} Ns (0 -- disabled)"
+                splitting on {n_sequence_len} Ns (0 -- disabled)",
         )
         # do not open a joined file if you plan to open many individual ones
         with (
             individual_file_prefix
             and nullcontext(None)
-            or open(out_file_name, "wt", encoding="utf-8") as out_file_joined
+            or open(out_file_name, "w", encoding="utf-8") as out_file_joined
         ):
             agp_lines = chunk_fasta_stream(
                 fasta,
@@ -301,7 +309,7 @@ def chunk_fasta(
                 agp_out.write("\n".join(agp_lines) + "\n")
 
 
-def prepare_out_dir_for_individuals(dir_name: Path, file_part: str) -> Optional[Path]:
+def prepare_out_dir_for_individuals(dir_name: Path, file_part: str) -> Path | None:
     """Creates `dir_name` (including upstream dirs) and returns its paths with the `file_part` appended.
 
     Args:
@@ -313,6 +321,7 @@ def prepare_out_dir_for_individuals(dir_name: Path, file_part: str) -> Optional[
 
     Throws:
         exception if not able to create directory.
+
     """
     file_prefix = None
     if dir_name:

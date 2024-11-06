@@ -14,7 +14,7 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.database.dbconnection_lite` module."""
 
-from typing import Callable, Optional
+from typing import Callable
 
 import pytest
 
@@ -49,7 +49,6 @@ def fixture_meta_test_db(db_factory: Callable) -> UnitTestDB:
 # Use ensembl-utils UnitTestDB
 def test_get_metadata(meta_test_db: UnitTestDB) -> None:
     """Tests the method get_metadata()"""
-
     # Check the new connection lite
     dblite = DBConnectionLite(meta_test_db.dbc.url)
     assert dblite.get_metadata() == _METADATA_CONTENT
@@ -59,16 +58,20 @@ def test_get_metadata(meta_test_db: UnitTestDB) -> None:
     "meta_key, meta_value",
     [
         pytest.param(
-            "species.scientific_name", _METADATA_CONTENT["species.scientific_name"][0], id="Unique key exists"
+            "species.scientific_name",
+            _METADATA_CONTENT["species.scientific_name"][0],
+            id="Unique key exists",
         ),
         pytest.param(
-            "species.classification", _METADATA_CONTENT["species.classification"][0], id="First key exists"
+            "species.classification",
+            _METADATA_CONTENT["species.classification"][0],
+            id="First key exists",
         ),
         pytest.param("lorem.ipsum", None, id="Non-existing key, 2 parts"),
         pytest.param("lorem_ipsum", None, id="Non-existing key, 1 part"),
     ],
 )
-def test_get_meta_value(meta_test_db: UnitTestDB, meta_key: str, meta_value: Optional[str]) -> None:
+def test_get_meta_value(meta_test_db: UnitTestDB, meta_key: str, meta_value: str | None) -> None:
     """Tests the method get_meta_value()"""
     dblite = DBConnectionLite(meta_test_db.dbc.url)
     assert dblite.get_meta_value(meta_key) == meta_value

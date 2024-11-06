@@ -24,7 +24,7 @@ __all__ = [
 
 import argparse
 import json
-from typing import Any, Type
+from typing import Any
 import logging
 from pydoc import locate
 
@@ -41,7 +41,7 @@ from ensembl.utils import StrPath
 from ensembl.utils.logging import init_logging_with_args
 
 
-DEFAULT_FILTER: dict[str, dict[str, Type]] = {
+DEFAULT_FILTER: dict[str, dict[str, type]] = {
     "database": {"name": str},
     "added_seq": {"region_name": str},
     "annotation": {"provider_name": str, "provider_url": str},
@@ -76,7 +76,6 @@ def get_genome_metadata(session: Session, db_name: str | None) -> dict[str, Any]
         db_name: Target database name
     """
     genome_metadata: dict[str, Any] = {}
-
     meta_statement = select(Meta)
     for row in session.execute(meta_statement).unique().all():
         meta_key = row[0].meta_key
@@ -160,6 +159,7 @@ def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
 
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
+
     """
     assembly = gmeta_out.get("assembly", {})
     if assembly.get("provider_name"):
@@ -186,6 +186,7 @@ def check_assembly_version(genome_metadata: dict[str, Any]) -> None:
 
     Raises:
         ValueError: If both `version` and the assembly accession's version are not integers or are missing.
+
     """
     assembly = genome_metadata["assembly"]
     version = assembly.get("version")
@@ -213,6 +214,7 @@ def check_genebuild_version(genome_metadata: dict[str, Any]) -> None:
 
     Raises:
         ValueError: If there is no genebuild version or ID available.
+
     """
     try:
         genebuild = genome_metadata["genebuild"]

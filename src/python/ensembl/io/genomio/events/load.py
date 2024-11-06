@@ -24,7 +24,7 @@ from os import PathLike
 from pathlib import Path
 import re
 import logging
-from typing import Dict, Generator, List, Optional, Tuple
+from typing import Generator
 
 from sqlalchemy.orm import Session
 
@@ -61,7 +61,7 @@ class MapSession:
     def __init__(self, release: str, release_date: str) -> None:
         self.release = release
         self.release_date = release_date
-        self.events: List[IdEvent] = []
+        self.events: list[IdEvent] = []
 
     def add_event(self, event: IdEvent) -> None:
         """Add an event to this mapping_session"""
@@ -72,14 +72,14 @@ class EventCollection:
     """Collection of events with loader/writer in various formats."""
 
     def __init__(self) -> None:
-        self.events: List[IdEvent] = []
+        self.events: list[IdEvent] = []
 
     def load_events(self, input_file: PathLike) -> None:
         """Load events from input file.
         Expected tab file columns: old_id, new_id, event_name, release, release_date
 
         """
-        events: List[IdEvent] = []
+        events: list[IdEvent] = []
 
         with Path(input_file).open("r") as events_fh:
             for line in events_fh:
@@ -88,23 +88,37 @@ class EventCollection:
                     continue
                 (from_id, to_id, event_name, release, release_date) = line.split("\t")
                 event = IdEvent(
-                    from_id=from_id, to_id=to_id, event=event_name, release=release, release_date=release_date
+                    from_id=from_id,
+                    to_id=to_id,
+                    event=event_name,
+                    release=release,
+                    release_date=release_date,
                 )
                 events.append(event)
         self.events = events
 
     def add_deletes(
-        self, genes: List[str], release_name: str = "release_name", release_date: str = "release_date"
+        self,
+        genes: list[str],
+        release_name: str = "release_name",
+        release_date: str = "release_date",
     ) -> None:
         """Add deletion events from a list of deleted genes."""
         for gene_id in genes:
             event = IdEvent(
-                from_id=gene_id, to_id="", event="deletion", release=release_name, release_date=release_date
+                from_id=gene_id,
+                to_id="",
+                event="deletion",
+                release=release_name,
+                release_date=release_date,
             )
             self.events.append(event)
 
     def load_events_from_gene_diff(
-        self, input_file: PathLike, release_name: str = "release_name", release_date: str = "release_date"
+        self,
+        input_file: PathLike,
+        release_name: str = "release_name",
+        release_date: str = "release_date",
     ) -> None:
         """Load events from input file from gene_diff."""
         loaded_event = set()
@@ -132,7 +146,7 @@ class EventCollection:
                     )
                     self.events.append(event)
 
-    def _parse_gene_diff_event(self, event_string: str) -> Generator[Tuple[str, str, str], None, None]:
+    def _parse_gene_diff_event(self, event_string: str) -> Generator[tuple[str, str, str], None, None]:
         """Gets all the pairs of IDs from an event string from gene diff."""
         event_symbol = {
             "~": "identical",
@@ -158,13 +172,13 @@ class EventCollection:
             for to_id in to_ids.split(":"):
                 yield (from_id, to_id, event_name)
 
-    def remap_to_ids(self, map_dict: Dict[str, str]) -> None:
+    def remap_to_ids(self, map_dict: dict[str, str]) -> None:
         """Using a mapping dict, remap the to_id of all events.
 
         Raises:
             ValueError: If there are events without map information.
-        """
 
+        """
         no_map = 0
         for event in self.events:
             if not event.to_id:
@@ -193,7 +207,7 @@ class EventCollection:
 
         """
         # First, create mapping_sessions based on the release
-        mappings: Dict[str, MapSession] = {}
+        mappings: dict[str, MapSession] = {}
         for event in self.events:
             release = event.release
             if release not in mappings:
@@ -209,10 +223,10 @@ class EventCollection:
                 session.flush()
                 session.refresh(map_session)
                 for event in mapping.events:
-                    from_id: Optional[str] = event.from_id
+                    from_id: str | None = event.from_id
                     if from_id == "":
                         from_id = None
-                    to_id: Optional[str] = event.to_id
+                    to_id: str | None = event.to_id
                     if to_id == "":
                         to_id = None
                     id_event = StableIdEvent(

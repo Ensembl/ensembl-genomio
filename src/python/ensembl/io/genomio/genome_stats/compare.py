@@ -19,7 +19,7 @@ __all__ = ["stats_dict_cmp", "compare_assembly", "compare_annotation", "compare_
 import json
 from os import PathLike
 import re
-from typing import Any, Dict
+from typing import Any
 
 import ensembl.io.genomio
 from ensembl.io.genomio.utils import get_json
@@ -27,7 +27,7 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def stats_dict_cmp(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Dict]:
+def stats_dict_cmp(ncbi: dict[str, int], core: dict[str, int]) -> dict[str, dict]:
     """Compares both dictionaries and returns the similar and different elements between both.
 
     The method assumes both dictionaries have the same set of keys. A key would be considered the
@@ -54,7 +54,7 @@ def stats_dict_cmp(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Dict
                 same[key] = ncbi_count
         else:
             diff[key] = {"ncbi": ncbi_count, "core": core_count, "diff": core_count - ncbi_count}
-    comparison: Dict[str, Dict] = {}
+    comparison: dict[str, dict] = {}
     if same:
         comparison["same"] = same
     if diff:
@@ -62,7 +62,7 @@ def stats_dict_cmp(ncbi: Dict[str, int], core: Dict[str, int]) -> Dict[str, Dict
     return comparison
 
 
-def compare_assembly(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Dict]:
+def compare_assembly(ncbi: dict[str, Any], core: dict[str, Any]) -> dict[str, dict]:
     """Extracts the assembly statistics and returns the comparison between both sources.
 
     The assembly statistics compared are the number of: organella, chromosomes, scaffolds and contigs.
@@ -122,7 +122,7 @@ def compare_assembly(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Di
     return stats_dict_cmp(ncbi_counts, core_counts)
 
 
-def compare_annotation(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Dict]:
+def compare_annotation(ncbi: dict[str, Any], core: dict[str, Any]) -> dict[str, dict]:
     """Extracts the annotation statistics and returns the comparison between both sources.
 
     Annotation statistics compared:
@@ -169,7 +169,7 @@ def compare_annotation(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, 
     return stats_dict_cmp(ncbi_counts, core_counts)
 
 
-def compare_stats(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Dict]:
+def compare_stats(ncbi: dict[str, Any], core: dict[str, Any]) -> dict[str, dict]:
     """Compares the genome statistics between an NCBI dataset and a core database.
 
     Args:
@@ -187,7 +187,7 @@ def compare_stats(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Dict]
     core_assembly_stats = core.get("assembly_stats", {})
     core_annotation_stats = core.get("annotation_stats", {})
 
-    comp: Dict[str, Dict] = {
+    comp: dict[str, dict] = {
         "assembly_diff": compare_assembly(ncbi, core_assembly_stats),
     }
     if core_annotation_stats or ncbi_annotation_stats:
@@ -195,7 +195,7 @@ def compare_stats(ncbi: Dict[str, Any], core: Dict[str, Any]) -> Dict[str, Dict]
     return comp
 
 
-def compare_stats_files(ncbi_file: PathLike, core_file: PathLike) -> Dict[str, Dict]:
+def compare_stats_files(ncbi_file: PathLike, core_file: PathLike) -> dict[str, dict]:
     """Compares the genome statistics between an NCBI dataset and a core database.
 
     Args:
@@ -219,7 +219,7 @@ def compare_stats_files(ncbi_file: PathLike, core_file: PathLike) -> Dict[str, D
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(
-        description="Compares the genome statistics between an NCBI dataset and a core database."
+        description="Compares the genome statistics between an NCBI dataset and a core database.",
     )
     parser.add_argument_src_path("--ncbi_stats", required=True, help="NCBI dataset stats JSON file")
     parser.add_argument_src_path("--core_stats", required=True, help="core database stats JSON file")

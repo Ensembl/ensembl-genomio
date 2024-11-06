@@ -15,7 +15,7 @@
 """Unit testing of `ensembl.io.genomio.gff3.restructure` module."""
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any, ContextManager, Dict, List, Union
+from typing import Any, ContextManager
 
 from Bio.SeqFeature import SimpleLocation
 import pytest
@@ -35,17 +35,17 @@ class FeatGenerator:
     region = "LOREM"
     source = "Foo"
 
-    def make(self, ftype: str, number: int = 1) -> List[GFFSeqFeature]:
+    def make(self, ftype: str, number: int = 1) -> list[GFFSeqFeature]:
         """Returns a list with a defined number of features of a given type."""
         feats = []
-        for _ in range(0, number):
+        for _ in range(number):
             loc = SimpleLocation(self.start, self.end, self.strand)
             feat = GFFSeqFeature(loc, type=ftype)
             feat.qualifiers["source"] = self.source
             feats.append(feat)
         return feats
 
-    def make_structure(self, children: List[Any]) -> List[GFFSeqFeature]:
+    def make_structure(self, children: list[Any]) -> list[GFFSeqFeature]:
         """Returns a list of SeqFeature children structure from the form:
         struct = ["mRNA"]
         struct = [{"mRNA": ["CDS", "exon"]}, "exon", "exon"]
@@ -64,7 +64,7 @@ class FeatGenerator:
 
         return output
 
-    def get_sub_structure(self, feat: GFFSeqFeature) -> Union[Dict, str]:
+    def get_sub_structure(self, feat: GFFSeqFeature) -> dict | str:
         """Create a children structure from a SeqFeature."""
         if feat.sub_features:
             feat_subs = []
@@ -82,11 +82,13 @@ class FeatGenerator:
         param([{"gene": ["mRNA", "mRNA"]}], [{"gene": ["mRNA", "mRNA"]}], id="gene + 2 mRNA"),
         param(["ncRNA_gene"], ["ncRNA_gene"], id="1 ncRNA_gene, no transcript"),
         param(
-            [{"ncRNA_gene": ["transcript"]}], [{"ncRNA_gene": ["transcript"]}], id="1 ncRNA_gene + transcript"
+            [{"ncRNA_gene": ["transcript"]}],
+            [{"ncRNA_gene": ["transcript"]}],
+            id="1 ncRNA_gene + transcript",
         ),
     ],
 )
-def test_add_transcript_to_naked_gene(children: List[Any], expected_children: List[Any]) -> None:
+def test_add_transcript_to_naked_gene(children: list[Any], expected_children: list[Any]) -> None:
     """Test the creation of a transcript for a gene without one."""
     gen = FeatGenerator()
     genes = gen.make_structure(children)
@@ -109,8 +111,8 @@ def test_add_transcript_to_naked_gene(children: List[Any], expected_children: Li
     ],
 )
 def test_move_only_cdss_to_new_mrna(
-    children: List[str],
-    expected_children: Dict[str, int],
+    children: list[str],
+    expected_children: dict[str, int],
 ) -> None:
     """Test the creation of a new mRNA for CDSs under a gene."""
     gen = FeatGenerator()
@@ -131,8 +133,8 @@ def test_move_only_cdss_to_new_mrna(
     ],
 )
 def test_move_only_exons_to_new_mrna(
-    children: List[str],
-    expected_children: Dict[str, int],
+    children: list[str],
+    expected_children: dict[str, int],
 ) -> None:
     """Test the creation of a new mRNA for exons under a gene."""
     gen = FeatGenerator()
@@ -216,15 +218,16 @@ def test_move_only_exons_to_new_mrna(
     ],
 )
 def test_move_cds_to_existing_mrna(
-    children: List[str],
+    children: list[str],
     diff_exon: bool,
-    expected_children: Dict[str, int],
+    expected_children: dict[str, int],
     expectation: ContextManager,
 ) -> None:
     """Test moving CDSs under a gene to under the mRNA.
 
     Args:
         diff_exons: use exons with different coordinates than the CDSs.
+
     """
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
@@ -279,12 +282,16 @@ def test_move_cds_to_existing_mrna(
     ],
 )
 def test_remove_extra_exons(
-    children: List[Any], has_id: int, expected_children: List[Any], expectation: ContextManager
+    children: list[Any],
+    has_id: int,
+    expected_children: list[Any],
+    expectation: ContextManager,
 ) -> None:
     """Test removing extra unneeded exons.
 
     Args:
         has_id: add an ID starting with 'id-' for this number of exons (if any).
+
     """
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
@@ -324,10 +331,11 @@ def test_remove_extra_exons(
     ],
 )
 def test_restructure_gene(
-    children: List[Any], expected_children: List[Any], expectation: ContextManager
+    children: list[Any],
+    expected_children: list[Any],
+    expectation: ContextManager,
 ) -> None:
     """Test the `restructure_gene()` main function."""
-
     gen = FeatGenerator()
     gene = gen.make("gene", 1)[0]
     gene.sub_features += gen.make_structure(children)
@@ -343,7 +351,9 @@ def test_restructure_gene(
         param("pseudogene", "pseudogene", id="pseudogene"),
         param({"pseudogene": ["mRNA"]}, {"pseudogene": ["mRNA"]}, id="pseudogene mRNA"),
         param(
-            {"pseudogene": [{"mRNA": ["CDS", "CDS"]}]}, {"pseudogene": ["mRNA"]}, id="pseudogene mRNA CDSs"
+            {"pseudogene": [{"mRNA": ["CDS", "CDS"]}]},
+            {"pseudogene": ["mRNA"]},
+            id="pseudogene mRNA CDSs",
         ),
         param(
             {"pseudogene": [{"mRNA": ["CDS", "exon"]}]},
@@ -353,7 +363,7 @@ def test_restructure_gene(
         param({"pseudogene": ["CDS", "CDS"]}, "pseudogene", id="pseudogene CDSs"),
     ],
 )
-def test_remove_cds_from_pseudogene(children: List[Any], expected_children: List[Any]) -> None:
+def test_remove_cds_from_pseudogene(children: list[Any], expected_children: list[Any]) -> None:
     """Test CDS removal from pseudogene."""
     gen = FeatGenerator()
     gene = gen.make_structure([children])[0]

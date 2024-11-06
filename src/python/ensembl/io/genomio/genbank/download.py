@@ -47,7 +47,6 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
         DownloadError: If the download fails.
 
     """
-
     # Get the list of assemblies for this accession
     entrez_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     entrez_params = {

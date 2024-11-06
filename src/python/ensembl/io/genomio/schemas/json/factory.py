@@ -20,14 +20,13 @@ import json
 from os import PathLike
 from pathlib import Path
 import shutil
-from typing import List
 
 import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir: PathLike) -> None:
+def schema_factory(manifest_dir: PathLike, metadata_types: list[str], output_dir: PathLike) -> None:
     """Generates one JSON file per metadata type inside `manifest`, including "manifest.json" itself.
 
     Each JSON file will have the file name of the metadata type, e.g. "seq_region.json".
@@ -66,16 +65,24 @@ def schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(
-        description="Generates one JSON file per metadata type in the provided manifest, including itself."
+        description="Generates one JSON file per metadata type in the provided manifest, including itself.",
     )
     parser.add_argument_src_path(
-        "--manifest_dir", required=True, help="Folder containing the 'manifest.json' file to check"
+        "--manifest_dir",
+        required=True,
+        help="Folder containing the 'manifest.json' file to check",
     )
     parser.add_argument(
-        "--metadata_types", required=True, nargs="+", metavar="TYPE", help="Metadata types to extract"
+        "--metadata_types",
+        required=True,
+        nargs="+",
+        metavar="TYPE",
+        help="Metadata types to extract",
     )
     parser.add_argument_dst_path(
-        "--output_dir", default=Path.cwd(), help="Folder to store the produced files"
+        "--output_dir",
+        default=Path.cwd(),
+        help="Folder to store the produced files",
     )
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()

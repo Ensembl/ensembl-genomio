@@ -17,7 +17,7 @@
 from contextlib import nullcontext as no_raise
 from os import PathLike
 from pathlib import Path
-from typing import Callable, ContextManager, List, Optional
+from typing import Callable, ContextManager
 
 import pytest
 from pytest import param, raises
@@ -37,8 +37,8 @@ from ensembl.io.genomio.gff3.simplifier import Records
 def test_from_gff(
     data_dir: Path,
     in_gff: PathLike,
-    excluded: Optional[List[str]],
-    expected_loaded: List[str],
+    excluded: list[str] | None,
+    expected_loaded: list[str],
     expectation: ContextManager,
 ) -> None:
     """Test loading GFF records from file."""

@@ -22,7 +22,6 @@ import csv
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Tuple
 
 from ensembl.utils.archive import open_gz_file
 
@@ -39,7 +38,7 @@ class ReportRecord:
         self.reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
 
     @staticmethod
-    def report_to_csv(report_path: PathLike) -> Tuple[str, dict]:
+    def report_to_csv(report_path: PathLike) -> tuple[str, dict]:
         """Returns an assembly report as a CSV string.
 
         Args:

@@ -74,14 +74,21 @@ def main() -> None:
     parser = ArgumentParser(description="Construct a sequence region metadata file from INSDC files.")
     parser.add_argument_src_path("--genome_file", required=True, help="Genome metadata JSON file")
     parser.add_argument_src_path(
-        "--report_file", required=True, help="INSDC/RefSeq sequences report file to parse"
+        "--report_file",
+        required=True,
+        help="INSDC/RefSeq sequences report file to parse",
     )
     parser.add_argument_src_path("--gbff_file", help="INSDC/RefSeq GBFF file to parse")
     parser.add_argument_dst_path(
-        "--dst_file", default="seq_region.json", help="Output JSON file for the processed sequence regions"
+        "--dst_file",
+        default="seq_region.json",
+        help="Output JSON file for the processed sequence regions",
     )
     parser.add_argument(
-        "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
+        "--to_exclude",
+        nargs="*",
+        metavar="SEQ_REGION_NAME",
+        help="Sequence region names to exclude",
     )
     parser.add_argument("--mock_run", action="store_true", help="Do not call external APIs")
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
