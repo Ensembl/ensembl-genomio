@@ -40,6 +40,7 @@ def get_meta_values(db_url: URL, meta_keys: StrPath | list[str]) -> dict[str, st
         meta_keys: File path with one meta key per line or list of meta keys.
 
     """
+    db_name = str(db_url).split("/")[3]
     core_db = DBConnectionLite(db_url)
     query_meta_keys = []
     unpopulated_meta_keys = []
