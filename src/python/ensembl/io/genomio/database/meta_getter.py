@@ -50,13 +50,13 @@ def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str
     meta_populated = False
 
     # Check input type and populated query list
-    if isinstance(input_queries, PosixPath):
-        with Path(input_queries).open(mode="r", encoding="UTF-8") as fh:
+    if isinstance(meta_keys, PosixPath):
+        with Path(meta_keys).open(mode="r", encoding="UTF-8") as fh:
             for line in fh.readlines():
                 meta_key = line.strip()
                 query_meta_keys.append(meta_key)
-    elif isinstance(input_queries, list):
-        query_meta_keys = input_queries
+    elif isinstance(meta_keys, list):
+        query_meta_keys = meta_keys
 
     # Loop over input meta_key(s) and query DB
     for meta_key in query_meta_keys:
