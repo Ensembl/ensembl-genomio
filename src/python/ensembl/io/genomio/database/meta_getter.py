@@ -38,7 +38,7 @@ def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str
     Args:
         server_url: Server URL where the core databases are stored.
         db_name: Name of the target DB to query.
-        query_meta_keys: The meta table 'meta_key' list to query.
+        meta_keys: File path with one meta key per line or list of meta keys.
 
     """
     db_url = server_url.set(database=db_name)
