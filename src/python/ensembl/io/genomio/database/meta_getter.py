@@ -71,14 +71,10 @@ def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str
 
     # Now assess what meta info was recovered and dump to JSON
     total_queries_located = len(meta_values_located)
-    if total_queries_located == input_keys_count:
+    if total_queries_located >= 1:
         meta_populated = True
-    elif (total_queries_located >= 1) and (total_queries_located < input_keys_count):
-        meta_populated = True
-        logging.info(
-            f"Some query meta_keys missing [Queries (input: {input_keys_count}) vs (Located: {total_queries_located})"
-        )
-        logging.info(f"Missing meta_key(s)-> {unpopulated_meta_keys}")
+        if total_queries_located < input_keys_count:
+            logging.info(f"Missing meta_key(s)-> {unpopulated_meta_keys}")
     else:
         logging.warning("Zero input query meta_keys present/populated.")
 
