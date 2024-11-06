@@ -90,8 +90,7 @@ def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str
         meta_values_located["database_name"] = f"{db_name}"
         print(json.dumps(meta_values_located, sort_keys=True, indent="  "))
         return meta_values_located
-    else:
-        return {}
+    return {}
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
