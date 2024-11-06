@@ -32,16 +32,14 @@ from ensembl.utils.logging import init_logging_with_args
 from .dbconnection_lite import DBConnectionLite
 
 
-def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str]) -> dict[str, str]:
+def get_meta_values(db_url: URL, meta_keys: StrPath | list[str]) -> dict[str, str]:
     """Returns a set of meta values based on set of 1 or more input DB meta_keys.
 
     Args:
-        server_url: Server URL where the core databases are stored.
-        db_name: Name of the target DB to query.
+        db_url: Target core database URL.
         meta_keys: File path with one meta key per line or list of meta keys.
 
     """
-    db_url = server_url.set(database=db_name)
     core_db = DBConnectionLite(db_url)
     query_meta_keys = []
     unpopulated_meta_keys = []
