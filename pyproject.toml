@@ -210,9 +210,12 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Ignore `F403` (unable to detect undefined names) in all `__init__.py` files
 "__init__.py" = ["F403"]
-# Ignore `INP001` (packages missing an __init__.py file) and `S101` (raise error instead of using assert)
-# in all pytest files
-"src/python/tests/**.py" = ["INP001", "S101"]
+# Ignore the following checks in all pytest files
+"src/python/tests/**.py" = [
+    "INP001",  # https://docs.astral.sh/ruff/rules/implicit-namespace-package/
+    "PLR0913",  # https://docs.astral.sh/ruff/rules/too-many-arguments/
+    "S101",  # https://docs.astral.sh/ruff/rules/assert/
+]
 
 [tool.mypy]
 mypy_path = "src/python"
