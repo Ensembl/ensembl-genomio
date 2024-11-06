@@ -32,7 +32,7 @@ from ensembl.utils.logging import init_logging_with_args
 from .dbconnection_lite import DBConnectionLite
 
 
-def get_meta_values(server_url: URL, db_name: str, input_queries: StrPath) -> dict[str, str] | None:
+def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str]) -> dict[str, str]:
     """Returns a set of meta values based on set of 1 or more input DB meta_keys.
 
     Args:
