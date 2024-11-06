@@ -74,7 +74,7 @@ def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str
         return None
 
     # Now assess what meta info was recovered and dump to JSON
-    total_queries_located = len(meta_values_located.items())
+    total_queries_located = len(meta_values_located)
     if total_queries_located == input_keys_count:
         meta_populated = True
     elif (total_queries_located >= 1) and (total_queries_located < input_keys_count):
