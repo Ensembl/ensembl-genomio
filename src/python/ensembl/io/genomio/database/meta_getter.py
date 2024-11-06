@@ -96,8 +96,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         arg_list: TODO
     """
     parser = ArgumentParser(description=__doc__)
-    parser.add_server_arguments()
-    parser.add_argument("--database_name", default=None, help="Target database name.")
+    parser.add_server_arguments(include_database=True, help="core database")
     parser.add_argument_src_path(
         "--meta_keys_list", help="Input File | List with >=2 meta_keys to query target database."
     )
