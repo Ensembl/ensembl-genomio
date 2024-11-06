@@ -80,7 +80,7 @@ def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str
 
     if meta_populated:
         meta_values_located["database_name"] = f"{db_name}"
-        print(json.dumps(meta_values_located, sort_keys=True, indent="  "))
+        print(json.dumps(meta_values_located, sort_keys=True, indent=2))
         return meta_values_located
     return {}
 
