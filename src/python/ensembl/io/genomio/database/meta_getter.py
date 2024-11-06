@@ -86,10 +86,11 @@ def get_meta_values(server_url: URL, db_name: str, meta_keys: StrPath | list[str
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
-    """TODO
+    """Return a populated namespace with the arguments parsed from a list or from the command line.
 
     Args:
-        arg_list: TODO
+        arg_list: List of arguments to parse. If `None`, grab them from the command line.
+
     """
     parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments(include_database=True, help="core database")
