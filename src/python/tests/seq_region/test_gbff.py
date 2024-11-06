@@ -93,7 +93,10 @@ def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | No
     ],
 )
 def test_get_organelle(
-    data_dir: Path, input_gb: str, expected_location: str | None, expectation: ContextManager
+    data_dir: Path,
+    input_gb: str,
+    expected_location: str | None,
+    expectation: ContextManager,
 ) -> None:
     """Test for `gbff.get_organelle()`.
 

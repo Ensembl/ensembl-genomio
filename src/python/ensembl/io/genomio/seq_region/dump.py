@@ -48,6 +48,7 @@ def fetch_coord_systems(session: Session) -> Iterator[CoordSystem]:
 
     Yields:
         All default coord_systems in the core database.
+
     """
     coord_system_select = select(CoordSystem).filter(CoordSystem.attrib.like(r"%default_version%"))
     for row in session.execute(coord_system_select).unique().all():
@@ -64,6 +65,7 @@ def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Iterator[S
 
     Yields:
         All seq_regions for the coord_system.
+
     """
     seq_region_select = (
         select(SeqRegion)
@@ -90,6 +92,7 @@ def add_attribs(seq_region: dict, seq_region_attrib: dict) -> None:
     Args:
         seq_region: A seq_region dict to modify.
         seq_region_attrib: The attribs for this seq_region.
+
     """
     bool_attribs = {
         "circular_seq": "circular",
@@ -131,6 +134,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict[str, str]) -> list
 
     Returns:
         List of all synonyms as a dict with 'name' and 'source' keys.
+
     """
     synonyms = seq_region.seq_region_synonym
     syns = []
@@ -157,6 +161,7 @@ def get_karyotype(seq_region: SeqRegion) -> list[dict[str, str]]:
 
     Returns:
         List of all karyotype bands as a dict with values 'start', 'end', 'name' 'stain', 'structure'.
+
     """
     bands = seq_region.karyotype
     kars = []
@@ -184,6 +189,7 @@ def get_added_sequence(seq_region: SeqRegion) -> dict[str, str | dict[str, str]]
 
     Returns:
         Accession as well as assembly and annotation provider information of the added sequence.
+
     """
     attribs = get_attribs_dict(seq_region)
     accession = attribs.get("added_seq_accession")
@@ -260,11 +266,13 @@ def get_seq_regions(session: Session, external_db_map: dict) -> list[SeqRegion]:
 def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(
-        description="Fetch all the sequence regions from a core database and print them in JSON format."
+        description="Fetch all the sequence regions from a core database and print them in JSON format.",
     )
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path(
-        "--external_db_map", default=DEFAULT_EXTERNAL_DB_MAP.resolve(), help="File with external_db mapping"
+        "--external_db_map",
+        default=DEFAULT_EXTERNAL_DB_MAP.resolve(),
+        help="File with external_db mapping",
     )
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()

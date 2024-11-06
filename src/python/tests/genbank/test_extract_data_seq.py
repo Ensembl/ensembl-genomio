@@ -16,7 +16,6 @@
 # pylint: disable=too-many-positional-arguments
 
 from pathlib import Path
-from typing import List
 from unittest.mock import Mock, patch
 
 from Bio.Seq import Seq
@@ -37,7 +36,9 @@ class TestFormattedFilesGenerator:
 
     @pytest.fixture(scope="class", autouse=True)
     def formatted_files_generator(
-        self, data_dir: Path, tmp_path_factory: TempPathFactory
+        self,
+        data_dir: Path,
+        tmp_path_factory: TempPathFactory,
     ) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters"""
         gb_file = self.gb_file
@@ -71,10 +72,12 @@ class TestFormattedFilesGenerator:
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={gene_name: expected_name})
         rna_feature = SeqFeature(FeatureLocation(10, 15), type=type_feature)
         cds_feature = SeqFeature(
-            FeatureLocation(10, 20), type="CDS", qualifiers={gene_name: "GlyrA", "transl_table": "2"}
+            FeatureLocation(10, 20),
+            type="CDS",
+            qualifiers={gene_name: "GlyrA", "transl_table": "2"},
         )
         record.features = [gene_feature, rna_feature, cds_feature]
-        mock_peptides: List = []
+        mock_peptides: list = []
 
         gene_feature_feat = {expected_id: gene_feature}
         mock_parse_gene_feat.return_value = (
@@ -132,7 +135,8 @@ class TestFormattedFilesGenerator:
         # Check the returned feature is as expected
         # pylint: disable=protected-access
         result_seq_feature, result_seq_id, result_peptide = formatted_files_generator._parse_gene_feat(
-            seq_feature, gene_name
+            seq_feature,
+            gene_name,
         )
 
         gene_id = self.prefix + gene_name
@@ -196,7 +200,7 @@ class TestFormattedFilesGenerator:
     )
     def test_uniquify_id(
         self,
-        all_ids: List[str],
+        all_ids: list[str],
         expected_id: str,
         gene_id: str,
         formatted_files_generator: FormattedFilesGenerator,
@@ -231,7 +235,8 @@ class TestFormattedFilesGenerator:
             formatted_files_generator._prepare_location(organelle)
 
     @pytest.mark.parametrize(
-        "type_feature, expected_value", [("gene", None), ("mRNA", None), ("CDS", 2), ("CDS", 5)]
+        "type_feature, expected_value",
+        [("gene", None), ("mRNA", None), ("CDS", 2), ("CDS", 5)],
     )
     def test_get_codon_table(
         self,

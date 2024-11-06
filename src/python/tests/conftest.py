@@ -64,6 +64,7 @@ class MockResponse:
 
         Args:
             json_str: Expected JSON test response.
+
         """
         self.text = json_str
 

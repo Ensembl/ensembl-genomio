@@ -22,10 +22,12 @@ from ensembl.utils.logging import init_logging_with_args
 def main() -> None:
     """Main entrypoint."""
     parser = ArgumentParser(
-        description="Compare the genomic data between the files present in a manifest file."
+        description="Compare the genomic data between the files present in a manifest file.",
     )
     parser.add_argument_dst_path(
-        "--manifest_dir", required=True, help="Folder where to create a manifest file"
+        "--manifest_dir",
+        required=True,
+        help="Folder where to create a manifest file",
     )
     parser.add_log_arguments()
     args = parser.parse_args()

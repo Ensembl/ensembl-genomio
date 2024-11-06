@@ -18,7 +18,7 @@
 from contextlib import nullcontext as does_not_raise
 import filecmp
 from pathlib import Path
-from typing import ContextManager, Set
+from typing import ContextManager
 
 import pytest
 
@@ -66,8 +66,8 @@ def test_fasta_prep(
         input_gbff: Name of the input GBFF example input, in the test folder.
         pep_mode: Boolean flag to set processing in peptide mode.
         expected_output_fasta: Name of the output fasta file with expected output, in the test folder.
-    """
 
+    """
     fasta_input_path = data_dir / input_fasta
     if input_gbff is not None:
         gbff_input_path = data_dir / input_gbff
@@ -107,8 +107,8 @@ def test_fasta_prep(
 def test_exclude_seq_regions(
     data_dir: Path,
     input_gbff: str,
-    excluded_seq_regions: Set[str],
-    output: Set[str],
+    excluded_seq_regions: set[str],
+    output: set[str],
     expectation: ContextManager,
 ) -> None:
     """Tests the `process.get_peptides_to_exclude()` function.

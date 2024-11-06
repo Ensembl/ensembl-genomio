@@ -48,8 +48,8 @@ class TestDownloadGenbank:
             mock_requests_get: A mock of `request.get()` method.
             tmp_path: Function-scoped temporary directory fixture.
             accession: Genbank accession to be downloaded.
-        """
 
+        """
         # Set success_code and content as an attribute to the mock object
         mock_requests_get.return_value.status_code = 200
         mock_content = b"The genbank download for the following accession"
@@ -78,8 +78,8 @@ class TestDownloadGenbank:
             mock_requests_failed: A mock of `request.get()` method.
             tmp_path: Function-scoped temporary directory fixture.
             accession: Genbank accession to be downloaded.
-        """
 
+        """
         output_file = tmp_path / f"{accession}.gb"
         # Set the mock status code to 404 for request not found
         mock_requests_failed.return_value.status_code = 404

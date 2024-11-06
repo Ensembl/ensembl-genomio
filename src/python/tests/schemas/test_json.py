@@ -25,7 +25,7 @@ Typical usage example::
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
 from pathlib import Path
-from typing import ContextManager, List
+from typing import ContextManager
 
 from jsonschema.exceptions import ValidationError
 import pytest
@@ -45,7 +45,10 @@ from ensembl.io.genomio.schemas import json
     ],
 )
 def test_schema_factory(
-    tmp_path: Path, data_dir: Path, metadata_types: List[str], output: List[PathLike]
+    tmp_path: Path,
+    data_dir: Path,
+    metadata_types: list[str],
+    output: list[PathLike],
 ) -> None:
     """Tests the `schema_factory()` method.
 

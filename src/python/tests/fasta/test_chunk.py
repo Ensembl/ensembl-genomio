@@ -19,7 +19,7 @@ from contextlib import contextmanager, nullcontext
 from io import StringIO, TextIOWrapper
 from pathlib import Path
 import re
-from typing import Any, Callable, ContextManager, Generator, Optional
+from typing import Any, Callable, ContextManager, Generator
 
 import pytest
 
@@ -41,8 +41,8 @@ def test__on_value_error(msg: str, expectation: ContextManager) -> None:
     Args:
         msg: Msg to raise.
         expectation: A context manager with expected exception (`pytest.raises` or nullcontext)
-    """
 
+    """
     with expectation:
         FastaChunking._on_value_error(msg)  # pylint: disable=protected-access
 
@@ -69,8 +69,8 @@ def test_check_chunk_size_and_tolerance(
         chunk_size: Chunk size to check
         chunk_tolerance: Chunk tolerance to check
         expectation: A context manager with expected exception (`pytest.raises` or nullcontext)
-    """
 
+    """
     with expectation:
         FastaChunking.check_chunk_size_and_tolerance(chunk_size, chunk_tolerance)
 
@@ -89,13 +89,14 @@ def test_check_chunk_size_and_tolerance(
         ("NAAAAN", re.compile("NN"), [6]),
     ],
 )
-def test_split_seq_by_n(seq: str, pattern: Optional[re.Pattern], expectation: list[int]) -> None:
+def test_split_seq_by_n(seq: str, pattern: re.Pattern | None, expectation: list[int]) -> None:
     """Tests the `chunk.split_seq_by_n` function.
 
     Args:
         seq: A sequence to split
         pattern: A pattern to split on
         expectation: A list of open chunk ends (like for python list slices)
+
     """
     assert FastaChunking.split_seq_by_n(seq, pattern) == expectation
 
@@ -118,7 +119,10 @@ def test_split_seq_by_n(seq: str, pattern: Optional[re.Pattern], expectation: li
     ],
 )
 def test_split_seq_by_chunk_size(
-    chunk_ends: list[int], chunk_size: int, tolerated_size: Optional[int], expectation: list[int]
+    chunk_ends: list[int],
+    chunk_size: int,
+    tolerated_size: int | None,
+    expectation: list[int],
 ) -> None:
     """Tests the `chunk.split_seq_by_chunk_size` function.
 
@@ -127,6 +131,7 @@ def test_split_seq_by_chunk_size(
         chunk_size: Chunk size
         tolerated_size: A more relaxed value of the chunk size
         expectation: A list of open chunk ends (python slices coordinates)
+
     """
     assert FastaChunking.split_seq_by_chunk_size(chunk_ends, chunk_size, tolerated_size) == expectation
 
@@ -136,6 +141,7 @@ def test_individual_file_opener(tmp_path: Path) -> None:
 
     Args:
         tmp_path: Where temporary files will be created.
+
     """
     test_dir = Path(tmp_path, "file_opener_test")
     test_dir.mkdir()
@@ -158,6 +164,7 @@ def test_prepare_out_dir_for_individuals(tmp_path: Path) -> None:
 
     Args:
         tmp_path: Where temporary files will be created.
+
     """
     test_dir = Path(tmp_path, "prepare_out_dir_test")
     test_file = Path(test_dir, "test.file")
@@ -191,6 +198,7 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
         size: Base size
         tolerance: Percent of allowed deviance as integer.
         expectation: An expected tolerated size
+
     """
     assert FastaChunking.get_tolerated_size(size, tolerance) == expectation
 
@@ -264,7 +272,7 @@ def test_chunk_fasta_stream(
     chunk_size_tolerated: int,
     n_sequence_len: int,
     chunk_sfx: str,
-    append_offset_to_chunk_name: Optional[bool],
+    append_offset_to_chunk_name: bool | None,
     expected_chunked_fasta_text: str,
     expected_agp_list: list[str],
     expected_individual_files_count: int,
@@ -283,6 +291,7 @@ def test_chunk_fasta_stream(
         expected_agp_list: A list with expected AGP entries.
         expected_individual_files_count: A number of individually created entities/chunks with files.
         expected_raised: A context manager with expected exception (`pytest.raises` or nullcontext)
+
     """
 
     # a workaround for storing individual chunks
@@ -355,8 +364,8 @@ def test_chunk_fasta_stream(
 def test_chunk_fasta(
     monkeypatch: Any,
     tmp_path: Path,
-    individual_file_prefix: Optional[str],
-    agp_output_file_name: Optional[str],
+    individual_file_prefix: str | None,
+    agp_output_file_name: str | None,
     expected_missing_joined: ContextManager,
 ) -> None:
     """Tests the `chunk.chunk_fasta` function.
@@ -367,6 +376,7 @@ def test_chunk_fasta(
                 first part of the chunk file name or None.
         agp_output_file_name: Output AGP file name or None.
         expected_missing_joined: A context manager with expected exception (`pytest.raises` or nullcontext).
+
     """
 
     # a helper mock function
@@ -374,13 +384,14 @@ def test_chunk_fasta(
         input_fasta: TextIOWrapper,
         chunk_size: int,  # pylint: disable=unused-argument
         chunk_size_tolerated: int,  # pylint: disable=unused-argument
-        output_fasta: Optional[TextIOWrapper] | nullcontext[Any],
-        individual_file_prefix: Optional[str],
+        output_fasta: TextIOWrapper | None | nullcontext[Any],
+        individual_file_prefix: str | None,
         n_sequence_len: int,  # pylint: disable=unused-argument
         chunk_sfx: str,  # pylint: disable=unused-argument
-        append_offset_to_chunk_name: Optional[bool],  # pylint: disable=unused-argument
+        append_offset_to_chunk_name: bool | None,  # pylint: disable=unused-argument
         open_individual: Callable[
-            [str], TextIOWrapper
+            [str],
+            TextIOWrapper,
         ] = FastaChunking._individual_file_opener,  # pylint: disable=protected-access
     ) -> list[str]:
         """Mock the `chunk.chunk_fasta_stream` function.
@@ -388,6 +399,7 @@ def test_chunk_fasta(
         Args:
             *args: Positional arguments.
             **kwargs: Keyword arguments.
+
         """
         chunk_file_name = ""
         if individual_file_prefix:

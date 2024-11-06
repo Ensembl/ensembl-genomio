@@ -17,7 +17,6 @@
 __all__ = ["CoreServer"]
 
 import re
-from typing import List, Optional
 import logging
 
 import sqlalchemy
@@ -35,9 +34,8 @@ class CoreServer:
         logging.debug(f"Connect to {server_url}")
         self.engine = sqlalchemy.create_engine(server_url)
 
-    def get_all_core_names(self) -> List[str]:
+    def get_all_core_names(self) -> list[str]:
         """Query the server and retrieve all database names that look like Ensembl cores."""
-
         with self.engine.connect() as connection:
             all_query = connection.execute(text(r"SHOW DATABASES LIKE '%%_core_%%'"))
             dbs = [row[0] for row in all_query.fetchall()]
@@ -48,11 +46,11 @@ class CoreServer:
         self,
         *,
         prefix: str = "",
-        build: Optional[int] = None,
-        version: Optional[int] = None,
+        build: int | None = None,
+        version: int | None = None,
         dbname_re: str = "",
-        db_list: Optional[List[str]] = None,
-    ) -> List[str]:
+        db_list: list[str] | None = None,
+    ) -> list[str]:
         """Returns a list of core databases, filtered if requested.
 
         Args:
@@ -61,6 +59,7 @@ class CoreServer:
             version: Filter by Ensembl version.
             dbname_re: Filter by dbname regular expression.
             db_list: Explicit list of database names.
+
         """
         dbs = []
 

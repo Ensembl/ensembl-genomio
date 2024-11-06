@@ -41,6 +41,7 @@ def add_gene(dialect: str, session: sqlalchemy.orm.Session, gene_data: dict[str,
         "tr_name" -> transcript.stable_id
         "tr_desc" -> transcript.description
         "gene_xref" -> xref display_name attached to the gene
+
     """
     gene_name = gene_data.get("gene_name", "gene1")
     gene_description = gene_data.get("gene_desc", "")

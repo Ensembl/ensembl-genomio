@@ -19,7 +19,7 @@ from contextlib import nullcontext as does_not_raise
 import filecmp
 import logging
 from pathlib import Path
-from typing import Callable, ContextManager, Optional
+from typing import Callable, ContextManager
 from unittest.mock import Mock, patch, MagicMock
 
 from ftplib import error_reply as ftp_error_reply
@@ -39,10 +39,16 @@ from ensembl.io.genomio.assembly.download import download_files, get_files_selec
     "ftp_url, accession, expectation",
     [
         pytest.param(
-            "ftp.ncbi.nlm.nih.gov", "GCA_017607445.1", does_not_raise(), id="Successful ftp connection"
+            "ftp.ncbi.nlm.nih.gov",
+            "GCA_017607445.1",
+            does_not_raise(),
+            id="Successful ftp connection",
         ),
         pytest.param(
-            "", "GCA_017607445.1", pytest.raises(FTPConnectionError), id="Failed connection case bad url"
+            "",
+            "GCA_017607445.1",
+            pytest.raises(FTPConnectionError),
+            id="Failed connection case bad url",
         ),
         pytest.param(
             "ftp.ncbi.nlm.nih.gov",
@@ -66,6 +72,7 @@ def test_ftp_connection(
         ftp_url: FTP URL.
         sub_dir: Subdirectory path.
         expectation: Context manager expected raise exception.
+
     """
 
     def side_eff_conn(url: str) -> None:
@@ -87,7 +94,10 @@ def test_ftp_connection(
     "checksum_file, checksum, expectation",
     [
         pytest.param(
-            Path("md5checksums.txt"), "40df91d5c40cb55621c4c92201da6834", does_not_raise(), id="Normal case"
+            Path("md5checksums.txt"),
+            "40df91d5c40cb55621c4c92201da6834",
+            does_not_raise(),
+            id="Normal case",
         ),
         pytest.param(
             Path("malformed_md5_checksums.txt"),
@@ -99,7 +109,10 @@ def test_ftp_connection(
     ],
 )
 def test_checksums(
-    data_dir: Path, checksum_file: Path, checksum: Optional[str], expectation: ContextManager
+    data_dir: Path,
+    checksum_file: Path,
+    checksum: str | None,
+    expectation: ContextManager,
 ) -> None:
     """Tests the `download.get_checksums()` function.
 
@@ -108,6 +121,7 @@ def test_checksums(
         checksum_file: File name containing checksums
         checksum: Test MD5 checksum
         expectation: Context manager expected raise exception
+
     """
     with expectation:
         md5_input_path = data_dir / checksum_file
@@ -127,7 +141,7 @@ def test_checksums(
         pytest.param("missing_file_md5.txt", None, False, id="md5 checksum with ref of missing file"),
     ],
 )
-def test_md5_files(data_dir: Path, md5_file: str, md5_path: Optional[Path], checksum_bool: bool) -> None:
+def test_md5_files(data_dir: Path, md5_file: str, md5_path: Path | None, checksum_bool: bool) -> None:
     """Tests the md5_files() function
     Args:
         data_dir: Path to test data root dir
@@ -197,8 +211,8 @@ def test_download_single_file(
         ftp_file: FTP file which to mock download
         md5_sums: FTP file and md5_sum value pair
         expectation: Context manager expected raise exception
-    """
 
+    """
     data_file = data_dir / ftp_file
     retr_file = tmp_path / ftp_file
 
@@ -263,8 +277,8 @@ def test_download_all_files(
         compare_accession: Defines test of expected accession
         md5: Source file for md5 checksums to inspect
         expectation: Context manager expected raise exception
-    """
 
+    """
     data_file = data_dir / md5
 
     def side_eff_ftp_mlsd() -> list[tuple[str, list[str]]]:
@@ -330,7 +344,10 @@ def test_download_all_files(
     ],
 )
 def test_get_files_selection(
-    data_dir: Path, has_download_dir: bool, files_expected: dict, expectation: ContextManager
+    data_dir: Path,
+    has_download_dir: bool,
+    files_expected: dict,
+    expectation: ContextManager,
 ) -> None:
     """Tests the `download.get_files_selection()` function.
 
@@ -338,8 +355,8 @@ def test_get_files_selection(
         download_dir: Path to specific location of downloaded files.
         files_expected: Defines contents of test files downloaded
         expectation: Context manager expected raise exception
-    """
 
+    """
     if has_download_dir:
         download_dir = data_dir
     else:
@@ -416,8 +433,8 @@ def test_retrieve_assembly_data(
         is_dir: Param to define state of result output dir
         files_downloaded: Defines contents of test files marked as downloaded
         expectation: Context manager expected raise exception
-    """
 
+    """
     if is_dir:
         download_dir = data_dir
     else:
