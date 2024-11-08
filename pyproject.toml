@@ -108,6 +108,7 @@ assembly_download = "ensembl.io.genomio.assembly.download:main"
 assembly_tracker = "ensembl.io.genomio.assembly.status:main"
 # Database
 database_factory = "ensembl.io.genomio.database.factory:main"
+query_db_meta = "ensembl.io.genomio.database.meta_getter:main"
 # Events
 events_dump = "ensembl.io.genomio.events.dump:main"
 events_load = "ensembl.io.genomio.events.load:main"
