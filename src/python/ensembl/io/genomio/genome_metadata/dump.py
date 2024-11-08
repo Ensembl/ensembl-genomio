@@ -217,7 +217,6 @@ def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
     genome_metadata["genebuild"].pop("id", None)
 
 
-# def metadata_dump_setup(db_url: URL, metafilter: StrPath | None, no_update: bool, append_db: bool) -> Dict[str, Any]:
 def metadata_dump_setup(db_url: URL, metafilter: StrPath | None, no_update: bool, append_db: bool) -> None:
     """
     Args:
