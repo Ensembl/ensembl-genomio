@@ -66,7 +66,7 @@ DEFAULT_FILTER: Dict[str, Dict[str, Type]] = {
 }
 
 
-def get_genome_metadata(session: Session, db_name: Dict[str, str] | None) -> Dict[str, Any]:
+def get_genome_metadata(session: Session, db_name: str | None) -> Dict[str, Any]:
     """Returns the meta table content from the core database in a nested dictionary.
 
     Args:
