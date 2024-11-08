@@ -19,22 +19,27 @@ __all__ = [
     "filter_genome_meta",
     "check_assembly_version",
     "check_genebuild_version",
+    "metadata_dump_setup",
 ]
 
+import argparse
 import json
 from typing import Any, Dict, Type
 import logging
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.engine import URL
 
 from ensembl.core.models import Meta
+from ensembl.io.genomio.utils.json_utils import get_json
 from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils import StrPath
 from ensembl.utils.logging import init_logging_with_args
 
 
-METADATA_FILTER: Dict[str, Dict[str, Type]] = {
+DEFAULT_FILTER: Dict[str, Dict[str, Type]] = {
     "added_seq": {"region_name": str},
     "annotation": {"provider_name": str, "provider_url": str},
     "assembly": {
@@ -60,7 +65,7 @@ METADATA_FILTER: Dict[str, Dict[str, Type]] = {
 }
 
 
-def get_genome_metadata(session: Session) -> Dict[str, Any]:
+def get_genome_metadata(session: Session, db_name: Dict[str, str] | None) -> Dict[str, Any]:
     """Returns the meta table content from the core database in a nested dictionary.
 
     Args:
@@ -68,6 +73,7 @@ def get_genome_metadata(session: Session) -> Dict[str, Any]:
 
     """
     genome_metadata: Dict[str, Any] = {}
+
     meta_statement = select(Meta)
     for row in session.execute(meta_statement).unique().all():
         meta_key = row[0].meta_key
@@ -81,6 +87,10 @@ def get_genome_metadata(session: Session) -> Dict[str, Any]:
                 genome_metadata[main_key][subkey] = [meta_value]
         else:
             genome_metadata[main_key] = {subkey: [meta_value]}
+
+    if db_name:
+        genome_metadata["database"] = {"name": f"{db_name}"}
+
     # Parse genome metadata to simplify dictionary and check data consistency
     for main_key, subkeys_dict in genome_metadata.items():
         # Replace single-value lists by the value itself
@@ -96,19 +106,33 @@ def get_genome_metadata(session: Session) -> Dict[str, Any]:
     return genome_metadata
 
 
-def filter_genome_meta(genome_metadata: Dict[str, Any]) -> Dict[str, Any]:
+def filter_genome_meta(
+    genome_metadata: Dict[str, Any], metafilter: StrPath | None, restrict_filter: bool
+) -> Dict[str, Any]:
     """Returns a filtered metadata dictionary with only the predefined keys in METADATA_FILTER.
 
     Also converts to expected data types (to follow the genome JSON schema).
 
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
+        metafilter: Input JSON containing subset of meta table values to filter on.
+        restrict_filter: Deactivates additional meta updating.
+
     """
     filtered_metadata: Dict[str, Any] = {}
-    for key, subfilter in METADATA_FILTER.items():
+
+    if metafilter:
+        DYNAMIC_METADATA_FILTER: Dict[str, Dict[str, type]] = get_json(metafilter)
+    else:
+        DYNAMIC_METADATA_FILTER = DEFAULT_FILTER
+
+    for key, subfilter in DYNAMIC_METADATA_FILTER.items():
         if key in genome_metadata:
             filtered_metadata[key] = {}
             for subkey, value_type in subfilter.items():
+                if isinstance(value_type, str):
+                    value_type = type(value_type)
+
                 if subkey in genome_metadata[key]:
                     value = genome_metadata[key][subkey]
                     if isinstance(value, list):
@@ -116,10 +140,14 @@ def filter_genome_meta(genome_metadata: Dict[str, Any]) -> Dict[str, Any]:
                     else:
                         value = value_type(value)
                     filtered_metadata[key][subkey] = value
-    # Check assembly and genebuild versions
-    check_assembly_refseq(filtered_metadata)
-    check_assembly_version(filtered_metadata)
-    check_genebuild_version(filtered_metadata)
+
+    # Optional assembly and genebuild based filtering:
+    if not restrict_filter:
+        # Check assembly and genebuild versions
+        check_assembly_refseq(filtered_metadata)
+        check_assembly_version(filtered_metadata)
+        check_genebuild_version(filtered_metadata)
+
     return filtered_metadata
 
 
@@ -188,19 +216,62 @@ def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
     genome_metadata["genebuild"].pop("id", None)
 
 
-def main() -> None:
-    """Main script entry-point."""
-    parser = ArgumentParser(
-        description="Fetch the genome metadata from a core database and print it in JSON format."
-    )
-    parser.add_server_arguments(include_database=True)
-    parser.add_log_arguments(add_log_file=True)
-    args = parser.parse_args()
-    init_logging_with_args(args)
+# def metadata_dump_setup(db_url: URL, metafilter: StrPath | None, no_update: bool, append_db: bool) -> Dict[str, Any]:
+def metadata_dump_setup(db_url: URL, metafilter: StrPath | None, no_update: bool, append_db: bool) -> None:
+    """
+    Args:
+        db_url: Target core database URL.
+        metafilter: Input JSON containing subset of meta table values to filter on.
+        no_update: Deactivate additional meta updating.
+        append_db: Append target core database name to output JSON.
 
-    dbc = DBConnectionLite(args.url)
+    """
+    dbc = DBConnectionLite(db_url)
+    db_name = None
+    if append_db:
+        db_name = db_url.database
+
     with dbc.session_scope() as session:
-        genome_meta = get_genome_metadata(session)
-        genome_meta = filter_genome_meta(genome_meta)
+        genome_meta = get_genome_metadata(session, db_name)
+        genome_meta = filter_genome_meta(genome_meta, metafilter, no_update)
 
     print(json.dumps(genome_meta, indent=2, sort_keys=True))
+
+
+def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
+    """Return a populated namespace with the arguments parsed from a list or from the command line.
+
+    Args:
+        arg_list: List of arguments to parse. If `None`, grab them from the command line.
+
+    """
+    parser = ArgumentParser(description=__doc__)
+    parser.add_server_arguments(include_database=True, help="server url and core database")
+    parser.add_argument_src_path(
+        "--metafilter", default=None, help="Input File | List with >=2 meta_keys to query target database."
+    )
+    parser.add_argument(
+        "--no_update",
+        default=False,
+        type=bool,
+        help="Deactivate additional assembly and genebuild metadata update.",
+    )
+    parser.add_argument(
+        "--append_db", default=False, type=bool, help="Append core database name to output JSON."
+    )
+    parser.add_log_arguments(add_log_file=True)
+    return parser.parse_args(arg_list)
+
+
+def main(arg_list: list[str] | None = None) -> None:
+    """Main script entry-point.
+
+    Args:
+        arg_list: Arguments to parse passing list to parse_args().
+    """
+    args = parse_args(arg_list)
+    init_logging_with_args(args)
+
+    metadata_dump_setup(
+        db_url=args.url, metafilter=args.metafilter, no_update=args.no_update, append_db=args.append_db
+    )
