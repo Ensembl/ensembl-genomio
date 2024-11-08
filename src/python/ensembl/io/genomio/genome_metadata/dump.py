@@ -40,6 +40,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 DEFAULT_FILTER: Dict[str, Dict[str, Type]] = {
+    "database": {"name": str},
     "added_seq": {"region_name": str},
     "annotation": {"provider_name": str, "provider_url": str},
     "assembly": {
