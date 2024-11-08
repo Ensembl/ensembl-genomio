@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -105,6 +104,7 @@ def main(arg_list: list[str] | None = None) -> None:
 
     Args:
         arg_list: Arguments to parse passing list to parse_args().
+
     """
     args = parse_args(arg_list)
     init_logging_with_args(args)
