@@ -216,7 +216,8 @@ def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
     genome_metadata["genebuild"].pop("id", None)
 
 
-def metadata_dump_setup(db_url: URL, metafilter: StrPath | None, meta_update: bool, append_db: bool) -> Dict[str, Any]:
+def metadata_dump_setup(db_url: URL, metafilter: StrPath | None, 
+        meta_update: bool, append_db: bool) -> Dict[str, Any]:
     """Setup main stages of genome meta dump from user input arguments provided.
     Args:
         db_url: Target core database URL.
