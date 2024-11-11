@@ -252,7 +252,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--meta_update",
         action="store_true",
-        help="Deactivate additional assembly and genebuild metadata update.",
+        help="Perform additional assembly and genebuild 'version' metadata updates.",
     )
     parser.add_argument("--append_db", action="store_true", help="Append core database name to output JSON.")
     parser.add_log_arguments(add_log_file=True)
