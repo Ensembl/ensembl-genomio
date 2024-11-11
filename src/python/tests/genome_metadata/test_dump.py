@@ -119,7 +119,7 @@ def test_check_genebuild_version(
 @patch("ensembl.io.genomio.genome_metadata.dump.check_genebuild_version", Mock())
 @patch("ensembl.io.genomio.genome_metadata.dump.check_assembly_version", Mock())
 @pytest.mark.parametrize(
-    "genome_metadata, output, meta_filter, restrict_filter",
+    "genome_metadata, output, meta_filter, meta_update",
     [
         pytest.param({"species": {"taxonomy_id": "5485"}}, {"species": {"taxonomy_id": 5485}},
             None, False, id="Meta matches, no filter, allow meta update"),
@@ -181,7 +181,7 @@ def test_check_genebuild_version(
     ],
 )
 def test_filter_genome_meta(data_dir: Path, genome_metadata: Dict[str, Any], output: Dict[str, Any],
-                            meta_filter: StrPath, restrict_filter: bool) -> None:
+                            meta_filter: StrPath, meta_update: bool) -> None:
     """Tests the `dump.filter_genome_meta()` method.
 
     Args:
@@ -192,9 +192,9 @@ def test_filter_genome_meta(data_dir: Path, genome_metadata: Dict[str, Any], out
     """
     if meta_filter is not None:
         meta_filter_file = data_dir / meta_filter
-        result = dump.filter_genome_meta(genome_metadata, meta_filter_file, restrict_filter)
+        result = dump.filter_genome_meta(genome_metadata, meta_filter_file, meta_update)
     else:
-        result = dump.filter_genome_meta(genome_metadata, meta_filter, restrict_filter)
+        result = dump.filter_genome_meta(genome_metadata, meta_filter, meta_update)
     assert not DeepDiff(result, output)
     # assert not DeepDiff(expected_meta, meta_filter)
 
