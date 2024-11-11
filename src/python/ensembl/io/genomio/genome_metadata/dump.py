@@ -108,7 +108,7 @@ def get_genome_metadata(session: Session, db_name: str | None) -> Dict[str, Any]
 
 
 def filter_genome_meta(
-    genome_metadata: Dict[str, Any], metafilter: StrPath | None, restrict_filter: bool
+    genome_metadata: Dict[str, Any], metafilter: StrPath | None, meta_update: bool
 ) -> Dict[str, Any]:
     """Returns a filtered metadata dictionary with only the predefined keys in METADATA_FILTER.
 
@@ -117,7 +117,7 @@ def filter_genome_meta(
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
         metafilter: Input JSON containing subset of meta table values to filter on.
-        restrict_filter: Deactivates additional meta updating.
+        meta_update: Deactivates additional meta updating.
 
     """
     filtered_metadata: Dict[str, Any] = {}
@@ -133,7 +133,6 @@ def filter_genome_meta(
             for subkey, value_type in subfilter.items():
                 if isinstance(value_type, str):
                     value_type = type(value_type)
-
                 if subkey in genome_metadata[key]:
                     value = genome_metadata[key][subkey]
                     if isinstance(value, list):
@@ -143,7 +142,7 @@ def filter_genome_meta(
                     filtered_metadata[key][subkey] = value
 
     # Optional assembly and genebuild based filtering:
-    if not restrict_filter:
+    if meta_update:
         # Check assembly and genebuild versions
         check_assembly_refseq(filtered_metadata)
         check_assembly_version(filtered_metadata)
@@ -217,8 +216,8 @@ def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
     genome_metadata["genebuild"].pop("id", None)
 
 
-def metadata_dump_setup(db_url: URL, metafilter: StrPath | None, no_update: bool, append_db: bool) -> None:
-    """
+def metadata_dump_setup(db_url: URL, metafilter: StrPath | None, meta_update: bool, append_db: bool) -> Dict[str, Any]:
+    """Setup main stages of genome meta dump from user input arguments provided.
     Args:
         db_url: Target core database URL.
         metafilter: Input JSON containing subset of meta table values to filter on.
@@ -233,9 +232,9 @@ def metadata_dump_setup(db_url: URL, metafilter: StrPath | None, no_update: bool
 
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session, db_name)
-        genome_meta = filter_genome_meta(genome_meta, metafilter, no_update)
+        genome_meta = filter_genome_meta(genome_meta, metafilter, meta_update)
 
-    print(json.dumps(genome_meta, indent=2, sort_keys=True))
+    return genome_meta
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
@@ -251,14 +250,11 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "--metafilter", default=None, help="Input File | List with >=2 meta_keys to query target database."
     )
     parser.add_argument(
-        "--no_update",
-        default=False,
-        type=bool,
+        "--meta_update",
+        action="store_true",
         help="Deactivate additional assembly and genebuild metadata update.",
     )
-    parser.add_argument(
-        "--append_db", default=False, type=bool, help="Append core database name to output JSON."
-    )
+    parser.add_argument("--append_db", action="store_true", help="Append core database name to output JSON.")
     parser.add_log_arguments(add_log_file=True)
     return parser.parse_args(arg_list)
 
@@ -272,6 +268,8 @@ def main(arg_list: list[str] | None = None) -> None:
     args = parse_args(arg_list)
     init_logging_with_args(args)
 
-    metadata_dump_setup(
-        db_url=args.url, metafilter=args.metafilter, no_update=args.no_update, append_db=args.append_db
+    genome_meta = metadata_dump_setup(
+        db_url=args.url, metafilter=args.metafilter, meta_update=args.meta_update, append_db=args.append_db
     )
+
+    print(json.dumps(genome_meta, indent=2, sort_keys=True))

@@ -1,0 +1,7 @@
+{
+    "species": {
+      "display_name": "str",
+      "production_name": "str",
+      "taxonomy_id": "int"
+    }
+}
