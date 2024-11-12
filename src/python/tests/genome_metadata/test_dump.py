@@ -121,67 +121,95 @@ def test_check_genebuild_version(
 @pytest.mark.parametrize(
     "genome_metadata, output, meta_filter, meta_update",
     [
-        pytest.param({"species": {"taxonomy_id": "5485"}}, {"species": {"taxonomy_id": 5485}},
-            None, False, id="Meta matches, no filter, allow meta update"),
-        pytest.param({"species": {"taxonomy_id": "5485"}}, {"species": {"taxonomy_id": 5485}},
-            None,
-            True,
-            id="Meta matches, no meta filter, prevent meta update"),
-        pytest.param({"genebuild": {"new_key": "_"}}, {"genebuild": {}},
+        pytest.param(
+            {"species": {"taxonomy_id": "5485"}},
+            {"species": {"taxonomy_id": 5485}},
             None,
             False,
-            id="Filters on '_' value"),
+            id="Meta matches, no filter, allow meta update",
+        ),
+        pytest.param(
+            {"species": {"taxonomy_id": "5485"}},
+            {"species": {"taxonomy_id": 5485}},
+            None,
+            True,
+            id="Meta matches, no meta filter, prevent meta update",
+        ),
+        pytest.param(
+            {"genebuild": {"new_key": "_"}}, {"genebuild": {}}, None, False, id="Filters on '_' value"
+        ),
         pytest.param({"BRC5": "new_value"}, {}, None, False, id="BRC5 new value"),
         pytest.param(
             {"meta": "key", "species": {"alias": "woof"}},
             {"species": {"alias": "woof"}},
             None,
             False,
-            id="Test alias"),
+            id="Test alias",
+        ),
         pytest.param(
             {"added_seq": {"region_name": [1, 2]}},
             {"added_seq": {"region_name": ["1", "2"]}},
             None,
             False,
-            id="Added seq region_name"),
+            id="Added seq region_name",
+        ),
         pytest.param({}, {}, None, False, id="BRC5 new value"),
         pytest.param(
-            {"species":
-                {"display_name": "Honeybee","annotation_source": "Ensembl",
+            {
+                "species": {
+                    "display_name": "Honeybee",
+                    "annotation_source": "Ensembl",
                     "production_name": "apis_melifera_gca123v1",
                     "scientific_name": "apis_melifera",
-                    "taxonomy_id": "70921"
+                    "taxonomy_id": "70921",
                 }
             },
-            {"species": {
-                "display_name": "Honeybee",
-                "production_name": "apis_melifera_gca123v1",
-                "taxonomy_id": "70921"}
+            {
+                "species": {
+                    "display_name": "Honeybee",
+                    "production_name": "apis_melifera_gca123v1",
+                    "taxonomy_id": "70921",
+                }
             },
-            "species_filter.json", 
+            "species_filter.json",
             False,
-            id="Filter via input meta JSON"),
+            id="Filter via input meta JSON",
+        ),
         pytest.param(
-            { "annotation": { "provider_name": "ENA",},
-                "assembly": { "accession": "GCA_000111222.3", "version": "1"}, 
-                "genebuild": { "method": "import", "version": "1"}
+            {
+                "annotation": {
+                    "provider_name": "ENA",
+                },
+                "assembly": {"accession": "GCA_000111222.3", "version": "1"},
+                "genebuild": {"method": "import", "version": "1"},
             },
-            {"assembly": { "version": "1"},
-                "genebuild": { "method": "import", "version": "1"}},
-        "version_filter.json", False, id="Asm + Genebuild version filter"),
+            {"assembly": {"version": "1"}, "genebuild": {"method": "import", "version": "1"}},
+            "version_filter.json",
+            False,
+            id="Asm + Genebuild version filter",
+        ),
         pytest.param(
-            { "annotation": { "provider_name": "ENA",},
-                "assembly": { "accession": "GCA_000111222.3", "version": "1"}, 
-                "genebuild": { "method": "import", "version": "1"}
+            {
+                "annotation": {
+                    "provider_name": "ENA",
+                },
+                "assembly": {"accession": "GCA_000111222.3", "version": "1"},
+                "genebuild": {"method": "import", "version": "1"},
             },
-            {"genebuild": { "method": "import"}},
-            "filter_noupdate.json", 
+            {"genebuild": {"method": "import"}},
+            "filter_noupdate.json",
             True,
-            id="Only geneBuild method, restrict update"),
+            id="Only geneBuild method, restrict update",
+        ),
     ],
 )
-def test_filter_genome_meta(data_dir: Path, genome_metadata: Dict[str, Any], output: Dict[str, Any],
-                            meta_filter: StrPath, meta_update: bool) -> None:
+def test_filter_genome_meta(
+    data_dir: Path,
+    genome_metadata: Dict[str, Any],
+    output: Dict[str, Any],
+    meta_filter: StrPath,
+    meta_update: bool,
+) -> None:
     """Tests the `dump.filter_genome_meta()` method.
 
     Args:
@@ -205,8 +233,13 @@ def test_filter_genome_meta(data_dir: Path, genome_metadata: Dict[str, Any], out
     "db_name, meta_data, output, expectation",
     [
         pytest.param(None, [], {}, does_not_raise(), id="Empty meta table"),
-        pytest.param("test_dbname_core_110_1", [], {"database": {"name": "test_dbname_core_110_1"}},
-                    does_not_raise(), id="db_name append, Empty meta table"),
+        pytest.param(
+            "test_dbname_core_110_1",
+            [],
+            {"database": {"name": "test_dbname_core_110_1"}},
+            does_not_raise(),
+            id="db_name append, Empty meta table",
+        ),
         pytest.param(
             None,
             [
@@ -214,12 +247,7 @@ def test_filter_genome_meta(data_dir: Path, genome_metadata: Dict[str, Any], out
                 [MetaRow("species.name", "dog")],
                 [MetaRow("species.synonym", "puppy")],
             ],
-            {
-            "sample": "gene1", 
-            "species": {
-                "name": "dog", 
-                "synonym": "puppy"}
-            },
+            {"sample": "gene1", "species": {"name": "dog", "synonym": "puppy"}},
             does_not_raise(),
             id="Meta table with simple values",
         ),
@@ -237,10 +265,7 @@ def test_filter_genome_meta(data_dir: Path, genome_metadata: Dict[str, Any], out
         ),
         pytest.param(
             None,
-            [
-                [MetaRow("species", "dog")],
-                [MetaRow("species.synonym", "puppy")]
-            ],
+            [[MetaRow("species", "dog")], [MetaRow("species.synonym", "puppy")]],
             {},
             pytest.raises(ValueError),
             id="'species' and 'species.synonym' meta keys",
@@ -250,16 +275,15 @@ def test_filter_genome_meta(data_dir: Path, genome_metadata: Dict[str, Any], out
             [
                 [MetaRow("assembly.accession", "GCA_000111222.3")],
                 [MetaRow("species.annotation_source", "Community")],
-                [MetaRow("species.production_name", "genus_species_gca000111222v3cm")]],
+                [MetaRow("species.production_name", "genus_species_gca000111222v3cm")],
+            ],
             {
-                "assembly":{"accession":"GCA_000111222.3"},
-                "database":{
-                    "name":"test_dbname_core_110_1"
+                "assembly": {"accession": "GCA_000111222.3"},
+                "database": {"name": "test_dbname_core_110_1"},
+                "species": {
+                    "annotation_source": "Community",
+                    "production_name": "genus_species_gca000111222v3cm",
                 },
-                "species":{
-                    "annotation_source":"Community",
-                    "production_name":"genus_species_gca000111222v3cm"
-                }
             },
             does_not_raise(),
             id="dbname append to meta",
@@ -291,6 +315,7 @@ def test_get_genome_metadata(
         result = dump.get_genome_metadata(mock_session, db_name)
         assert not DeepDiff(result, output)
 
+
 @pytest.mark.parametrize(
     "arg_list, expected",
     [
@@ -312,9 +337,20 @@ def test_get_genome_metadata(
             },
             id="Default args",
         ),
-        param([
-            "--host", "localhost", "--port", "42", "--user", "me", "--database", "test_db", 
-            "--metafilter", f"{__file__}", "--append_db"],
+        param(
+            [
+                "--host",
+                "localhost",
+                "--port",
+                "42",
+                "--user",
+                "me",
+                "--database",
+                "test_db",
+                "--metafilter",
+                f"{__file__}",
+                "--append_db",
+            ],
             {
                 "host": "localhost",
                 "port": 42,
@@ -329,7 +365,7 @@ def test_get_genome_metadata(
                 "log_level": "WARNING",
                 "log_file_level": "DEBUG",
             },
-            id="Filter, non-default args"
+            id="Filter, non-default args",
         ),
     ],
 )
@@ -338,7 +374,7 @@ def test_parse_args(arg_list: list[str], expected: dict) -> None:
     # pylint: disable=too-many-positional-arguments
     args = dump.parse_args(arg_list)
     if args.metafilter:
-    # DeepDiff is not able to compare two objects of Path type, so convert it to string
+        # DeepDiff is not able to compare two objects of Path type, so convert it to string
         setattr(args, "metafilter", str(args.metafilter))
     assert not DeepDiff(vars(args), expected)
 
@@ -348,8 +384,15 @@ def test_parse_args(arg_list: list[str], expected: dict) -> None:
     [
         param(
             [
-                "--host", "localhost", "--port", "42", "--user", "me",
-                "--database", "test_dbname_core_110_1", "--append_db"
+                "--host",
+                "localhost",
+                "--port",
+                "42",
+                "--user",
+                "me",
+                "--database",
+                "test_dbname_core_110_1",
+                "--append_db",
             ],
             make_url("mysql://me@localhost:42/test_dbname_core_110_1"),
             None,
