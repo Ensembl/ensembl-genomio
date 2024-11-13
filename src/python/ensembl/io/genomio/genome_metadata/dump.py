@@ -249,12 +249,12 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments(include_database=True, help="server url and core database")
     parser.add_argument_src_path(
-        "--metafilter", default=None, help="Input File | List with >=2 meta_keys to query target database."
+        "--metafilter", default=None, help="JSON file of nested meta_key:meta_value to filter dump output."
     )
     parser.add_argument(
         "--meta_update",
         action="store_true",
-        help="Perform additional assembly and genebuild 'version' metadata updates.",
+        help="Perform assembly and genebuild 'version' metadata checks & update if needed.",
     )
     parser.add_argument("--append_db", action="store_true", help="Append core database name to output JSON.")
     parser.add_log_arguments(add_log_file=True)
