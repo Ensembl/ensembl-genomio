@@ -71,7 +71,7 @@ def get_genome_metadata(session: Session, db_name: str | None) -> Dict[str, Any]
 
     Args:
         session: Session for the current core.
-
+        db_name: Target database name
     """
     genome_metadata: Dict[str, Any] = {}
 
