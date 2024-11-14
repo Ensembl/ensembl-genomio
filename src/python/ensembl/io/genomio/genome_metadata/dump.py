@@ -108,7 +108,7 @@ def get_genome_metadata(session: Session, db_name: str | None) -> Dict[str, Any]
 
 
 def filter_genome_meta(
-    genome_metadata: Dict[str, Any], metafilter: StrPath | None, meta_update: bool
+    genome_metadata: Dict[str, Any], metafilter: dict | None, meta_update: bool
 ) -> Dict[str, Any]:
     """Returns a filtered metadata dictionary with only the predefined keys in METADATA_FILTER.
 
@@ -123,7 +123,7 @@ def filter_genome_meta(
     filtered_metadata: Dict[str, Any] = {}
 
     if metafilter:
-        DYNAMIC_METADATA_FILTER: Dict[str, Dict[str, type]] = get_json(metafilter)
+        DYNAMIC_METADATA_FILTER: Dict[str, Dict[str, type]] = metafilter
     else:
         DYNAMIC_METADATA_FILTER = DEFAULT_FILTER
 
@@ -132,6 +132,8 @@ def filter_genome_meta(
             filtered_metadata[key] = {}
             for subkey, value_type in subfilter.items():
                 if isinstance(value_type, str):
+                    value_type = type(value_type)
+                if isinstance(value_type, int):
                     value_type = type(value_type)
                 if subkey in genome_metadata[key]:
                     value = genome_metadata[key][subkey]
@@ -158,8 +160,17 @@ def check_assembly_refseq(gmeta_out: Dict[str, Any]) -> None:
         genome_metadata: Nested metadata key values from the core metadata table.
     """
     assembly = gmeta_out.get("assembly", {})
-    if assembly.get("provider_name", "") == "RefSeq":
-        assembly["accession"] = assembly["accession"].replace("GCA", "GCF")
+    if bool(assembly.get("provider_name")):
+        if assembly.get("provider_name", "") == "RefSeq":
+            assembly["accession"] = assembly["accession"].replace("GCA", "GCF")
+            logging.info("GCA accession updated to RefSeq GFC accession.")
+        else:
+            logging.info(f"Meta check 'assembly is RefSeq': Asm provider = {assembly.get('provider_name')}")
+    else:
+        logging.debug(
+            "Meta filter update to RefSeq accession not done: user meta filter \
+            missing: 'assembly.provider_name'"
+        )
 
 
 def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:
@@ -216,25 +227,45 @@ def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
     genome_metadata["genebuild"].pop("id", None)
 
 
+def convert_dict(meta_dict: dict) -> dict:
+    """Converts text json to add type properties from string
+
+    Args:
+        meta_dict: User meta dictionary with literal string typing to be converted
+    """
+    new_dict = meta_dict.copy()
+    for key, value in meta_dict.items():
+        if isinstance(value, dict):
+            new_dict[key] = convert_dict(value)
+        else:
+            new_dict[key] = eval(value)
+    return new_dict
+
+
 def metadata_dump_setup(
-    db_url: URL, metafilter: StrPath | None, meta_update: bool, append_db: bool
+    db_url: URL, input_filter: StrPath | None, meta_update: bool, append_db: bool
 ) -> Dict[str, Any]:
     """Setup main stages of genome meta dump from user input arguments provided.
     Args:
         db_url: Target core database URL.
-        metafilter: Input JSON containing subset of meta table values to filter on.
+        input_filter: Input JSON containing subset of meta table values to filter on.
         no_update: Deactivate additional meta updating.
         append_db: Append target core database name to output JSON.
 
     """
     dbc = DBConnectionLite(db_url)
     db_name = None
+    meta_filter = {}
     if append_db:
         db_name = db_url.database
 
+    if input_filter:
+        unconverted_json = get_json(input_filter)
+        meta_filter = convert_dict(unconverted_json)
+
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session, db_name)
-        genome_meta = filter_genome_meta(genome_meta, metafilter, meta_update)
+        genome_meta = filter_genome_meta(genome_meta, meta_filter, meta_update)
 
     return genome_meta
 
@@ -271,7 +302,7 @@ def main(arg_list: list[str] | None = None) -> None:
     init_logging_with_args(args)
 
     genome_meta = metadata_dump_setup(
-        db_url=args.url, metafilter=args.metafilter, meta_update=args.meta_update, append_db=args.append_db
+        db_url=args.url, input_filter=args.metafilter, meta_update=args.meta_update, append_db=args.append_db
     )
 
     print(json.dumps(genome_meta, indent=2, sort_keys=True))
