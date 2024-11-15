@@ -20,7 +20,6 @@ Typical usage example::
 """
 # pylint: disable=too-many-positional-arguments
 
-from pathlib import Path
 from typing import Any, ContextManager
 from unittest.mock import Mock, patch
 from collections import namedtuple
@@ -227,8 +226,8 @@ def test_filter_genome_meta(
     ("meta_dict", "expected_dict"),
     [
         pytest.param(
-            {"key1": {"sub1": "str"}, "key2": {"sub2": "float"}, "key3": {"sub3": "int"}},
-            "{'key1': {'sub1': <class 'str'>}, 'key2': {'sub2': <class 'float'>}, 'key3': {'sub3': <class 'int'>}}",
+            {"k1": {"sk1": "str"}, "k2": {"sk2": "float"}, "k3": {"sk3": "int"}},
+            "{'k1': {'sk1': <class 'str'>}, 'k2': {'sk2': <class 'float'>}, 'k3': {'sk3': <class 'int'>}}",
             id="Filter conversion",
         ),
     ],
