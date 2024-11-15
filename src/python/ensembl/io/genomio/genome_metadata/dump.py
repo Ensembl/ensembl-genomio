@@ -162,7 +162,7 @@ def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
     """
     assembly = gmeta_out.get("assembly", {})
     if assembly.get("provider_name"):
-        if assembly.get("provider_name", "") == "RefSeq":
+        if assembly["provider_name"] == "RefSeq":
             assembly["accession"] = assembly["accession"].replace("GCA", "GCF")
             logging.info("GCA accession updated to RefSeq GFC accession.")
         else:
