@@ -221,7 +221,6 @@ def test_filter_genome_meta(
     """
     result = dump.filter_genome_meta(genome_metadata, metafilter, meta_update)
     assert not DeepDiff(result, output)
-    # assert not DeepDiff(expected_meta, meta_filter)
 
 
 @pytest.mark.parametrize(
