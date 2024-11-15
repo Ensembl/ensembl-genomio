@@ -24,8 +24,9 @@ __all__ = [
 
 import argparse
 import json
-from typing import Any, Dict, Type
+from typing import Any, Type
 import logging
+from pydoc import locate
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -73,7 +74,7 @@ def get_genome_metadata(session: Session, db_name: str | None) -> dict[str, Any]
         session: Session for the current core.
         db_name: Target database name
     """
-    genome_metadata: Dict[str, Any] = {}
+    genome_metadata: dict[str, Any] = {}
 
     meta_statement = select(Meta)
     for row in session.execute(meta_statement).unique().all():
@@ -108,8 +109,8 @@ def get_genome_metadata(session: Session, db_name: str | None) -> dict[str, Any]
 
 
 def filter_genome_meta(
-    genome_metadata: Dict[str, Any], metafilter: dict | None, meta_update: bool
-) -> Dict[str, Any]:
+    genome_metadata: dict[str, Any], metafilter: dict | None, meta_update: bool
+) -> dict[str, Any]:
     """Returns a filtered metadata dictionary with only the predefined keys in METADATA_FILTER.
 
     Also converts to expected data types (to follow the genome JSON schema).
@@ -120,14 +121,14 @@ def filter_genome_meta(
         meta_update: Deactivates additional meta updating.
 
     """
-    filtered_metadata: Dict[str, Any] = {}
+    filtered_metadata: dict[str, Any] = {}
 
     if metafilter:
-        DYNAMIC_METADATA_FILTER: Dict[str, Dict[str, type]] = metafilter
+        metadata_filter: dict[str, dict[str, type]] = metafilter
     else:
-        DYNAMIC_METADATA_FILTER = DEFAULT_FILTER
+        metadata_filter = DEFAULT_FILTER
 
-    for key, subfilter in DYNAMIC_METADATA_FILTER.items():
+    for key, subfilter in metadata_filter.items():
         if key in genome_metadata:
             filtered_metadata[key] = {}
             for subkey, value_type in subfilter.items():
@@ -153,7 +154,7 @@ def filter_genome_meta(
     return filtered_metadata
 
 
-def check_assembly_refseq(gmeta_out: Dict[str, Any]) -> None:
+def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
     """Update the GCA accession to use GCF if it is from RefSeq.
 
     Args:
@@ -168,12 +169,12 @@ def check_assembly_refseq(gmeta_out: Dict[str, Any]) -> None:
             logging.info(f"Meta check 'assembly is RefSeq': Asm provider = {assembly.get('provider_name')}")
     else:
         logging.debug(
-            "Meta filter update to RefSeq accession not done: user meta filter \
-            missing: 'assembly.provider_name'"
+            "Meta filter update to RefSeq accession not done: user meta filter missing: \
+            'assembly.provider_name'"
         )
 
 
-def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:
+def check_assembly_version(genome_metadata: dict[str, Any]) -> None:
     """Updates the assembly version of the genome metadata provided.
 
     If `version` meta key is not and integer or it is not available, the assembly accession's version
@@ -203,7 +204,7 @@ def check_assembly_version(genome_metadata: Dict[str, Any]) -> None:
         logging.info(f'Located version [v{assembly["version"]}] info from meta data.')
 
 
-def check_genebuild_version(genome_metadata: Dict[str, Any]) -> None:
+def check_genebuild_version(genome_metadata: dict[str, Any]) -> None:
     """Updates the genebuild version (if not present) from the genebuild ID, removing the latter.
 
     Args:
@@ -238,13 +239,13 @@ def convert_dict(meta_dict: dict) -> dict:
         if isinstance(value, dict):
             new_dict[key] = convert_dict(value)
         else:
-            new_dict[key] = eval(value)
+            new_dict[key] = locate(value)
     return new_dict
 
 
 def metadata_dump_setup(
     db_url: URL, input_filter: StrPath | None, meta_update: bool, append_db: bool
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Setup main stages of genome meta dump from user input arguments provided.
     Args:
         db_url: Target core database URL.

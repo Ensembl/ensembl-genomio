@@ -18,9 +18,10 @@ Typical usage example::
     $ pytest test_dump.py
 
 """
+# pylint: disable=too-many-positional-arguments
 
 from pathlib import Path
-from typing import Any, ContextManager, Dict, List
+from typing import Any, ContextManager
 from unittest.mock import Mock, patch
 from collections import namedtuple
 from contextlib import nullcontext as does_not_raise
@@ -31,15 +32,15 @@ from _pytest.capture import CaptureFixture
 from sqlalchemy.engine import make_url, URL
 
 
-from ensembl.utils import StrPath
 from ensembl.io.genomio.genome_metadata import dump
+from ensembl.utils import StrPath
 
 
 MetaRow = namedtuple("MetaRow", "meta_key meta_value")
 
 
 @pytest.mark.parametrize(
-    "genome_metadata, output, expectation",
+    ("genome_metadata", "output", "expectation"),
     [
         pytest.param({"assembly": {"version": "1"}}, 1, does_not_raise(), id="Version is '1'"),
         pytest.param(
@@ -63,7 +64,7 @@ MetaRow = namedtuple("MetaRow", "meta_key meta_value")
     ],
 )
 def test_check_assembly_version(
-    genome_metadata: Dict[str, Any], output: int, expectation: ContextManager
+    genome_metadata: dict[str, Any], output: int, expectation: ContextManager
 ) -> None:
     """Tests the `dump.check_assembly_version()` method.
 
@@ -78,7 +79,7 @@ def test_check_assembly_version(
 
 
 @pytest.mark.parametrize(
-    "genome_metadata, output, expectation",
+    ("genome_metadata", "output", "expectation"),
     [
         pytest.param({}, {}, does_not_raise(), id="No 'genebuild' entry"),
         pytest.param(
@@ -103,7 +104,7 @@ def test_check_assembly_version(
     ],
 )
 def test_check_genebuild_version(
-    genome_metadata: Dict[str, Any], output: Dict[str, Any], expectation: ContextManager
+    genome_metadata: dict[str, Any], output: dict[str, Any], expectation: ContextManager
 ) -> None:
     """Tests the `dump.check_genebuild_version()` method.
 
@@ -120,7 +121,7 @@ def test_check_genebuild_version(
 @patch("ensembl.io.genomio.genome_metadata.dump.check_genebuild_version", Mock())
 @patch("ensembl.io.genomio.genome_metadata.dump.check_assembly_version", Mock())
 @pytest.mark.parametrize(
-    "genome_metadata, output, meta_filter, meta_update",
+    ("genome_metadata", "output", "metafilter", "meta_update"),
     [
         pytest.param(
             {"species": {"taxonomy_id": "5485"}},
@@ -134,7 +135,7 @@ def test_check_genebuild_version(
             {"species": {"taxonomy_id": 5485}},
             None,
             True,
-            id="Meta matches, no meta filter, prevent meta update",
+            id="Meta matches, no filter, perform meta update",
         ),
         pytest.param(
             {"genebuild": {"new_key": "_"}}, {"genebuild": {}}, None, False, id="Filters on '_' value"
@@ -172,7 +173,7 @@ def test_check_genebuild_version(
                     "taxonomy_id": "70921",
                 }
             },
-            "species_filter.json",
+            {"species": {"display_name": "str", "production_name": "str", "taxonomy_id": "int"}},
             False,
             id="Filter via input meta JSON",
         ),
@@ -185,7 +186,7 @@ def test_check_genebuild_version(
                 "genebuild": {"method": "import", "version": "1"},
             },
             {"assembly": {"version": "1"}, "genebuild": {"method": "import", "version": "1"}},
-            "version_filter.json",
+            {"assembly": {"version": "str"}, "genebuild": {"version": "str", "method": "str"}},
             False,
             id="Asm + Genebuild version filter",
         ),
@@ -198,17 +199,16 @@ def test_check_genebuild_version(
                 "genebuild": {"method": "import", "version": "1"},
             },
             {"genebuild": {"method": "import"}},
-            "filter_noupdate.json",
+            {"genebuild": {"method": "str"}},
             True,
-            id="Only geneBuild method, restrict update",
+            id="Only genebuild method, perform meta update",
         ),
     ],
 )
 def test_filter_genome_meta(
-    data_dir: Path,
-    genome_metadata: Dict[str, Any],
-    output: Dict[str, Any],
-    meta_filter: StrPath,
+    genome_metadata: dict[str, Any],
+    output: dict[str, Any],
+    metafilter: StrPath,
     meta_update: bool,
 ) -> None:
     """Tests the `dump.filter_genome_meta()` method.
@@ -216,22 +216,40 @@ def test_filter_genome_meta(
     Args:
         genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
-        meta_filter:
-        restrict_filter:
+        metafilter: Type evaluated meta filter.
+        meta_update: Permit meta updating.
     """
-    if meta_filter is not None:
-        meta_filter_file = data_dir / meta_filter
-        result = dump.filter_genome_meta(genome_metadata, meta_filter_file, meta_update)
-    else:
-        result = dump.filter_genome_meta(genome_metadata, meta_filter, meta_update)
+    result = dump.filter_genome_meta(genome_metadata, metafilter, meta_update)
     assert not DeepDiff(result, output)
     # assert not DeepDiff(expected_meta, meta_filter)
+
+
+@pytest.mark.parametrize(
+    ("meta_dict", "expected_dict"),
+    [
+        pytest.param(
+            {"key1": {"sub1": "str"}, "key2": {"sub2": "float"}, "key3": {"sub3": "int"}},
+            "{'key1': {'sub1': <class 'str'>}, 'key2': {'sub2': <class 'float'>}, 'key3': {'sub3': <class 'int'>}}",
+            id="Filter conversion",
+        ),
+    ],
+)
+def test_convert_dict(meta_dict: dict, expected_dict: dict) -> None:
+    """Tests the `dump.convert_dict()` method.
+
+    Args:
+        meta_dict: Dict containing string based meta 'subkey' value pairs.
+        expected_dict: Dict with converted 'subkey' class types.
+    """
+    convert_dict = dump.convert_dict(meta_dict)
+    string_convert = str(convert_dict)
+    assert not DeepDiff(string_convert, expected_dict)
 
 
 @patch("sqlalchemy.engine.Result")
 @patch("sqlalchemy.orm.Session")
 @pytest.mark.parametrize(
-    "db_name, meta_data, output, expectation",
+    ("db_name", "meta_data", "output", "expectation"),
     [
         pytest.param(None, [], {}, does_not_raise(), id="Empty meta table"),
         pytest.param(
@@ -239,7 +257,7 @@ def test_filter_genome_meta(
             [],
             {"database": {"name": "test_dbname_core_110_1"}},
             does_not_raise(),
-            id="db_name append, Empty meta table",
+            id="db_name append, empty meta table",
         ),
         pytest.param(
             None,
@@ -287,7 +305,7 @@ def test_filter_genome_meta(
                 },
             },
             does_not_raise(),
-            id="dbname append to meta",
+            id="db_name append to meta",
         ),
     ],
 )
@@ -295,8 +313,8 @@ def test_get_genome_metadata(
     mock_session: Mock,
     mock_result: Mock,
     db_name: str | None,
-    meta_data: List[MetaRow],
-    output: Dict[str, Any],
+    meta_data: list[MetaRow],
+    output: dict[str, Any],
     expectation: ContextManager,
 ) -> None:
     """Tests the `dump.get_genome_metadata()` method.
@@ -308,7 +326,6 @@ def test_get_genome_metadata(
         output: Expected genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
     """
-    # pylint: disable=too-many-positional-arguments
     mock_result.unique.return_value = mock_result
     mock_result.all.return_value = meta_data
     mock_session.execute.return_value = mock_result
@@ -381,7 +398,7 @@ def test_parse_args(arg_list: list[str], expected: dict) -> None:
 
 
 @pytest.mark.parametrize(
-    "arg_list, db_url, metafilter, meta_update, append_db, stdout",
+    ("arg_list", "db_url", "metafilter", "meta_update", "append_db", "stdout"),
     [
         param(
             [
@@ -424,7 +441,7 @@ def test_main(
     dump.main(arg_list)
     # Check that we have called the mocked function once with the expected parameters
     mock_metadata_dump_setup.assert_called_once_with(
-        db_url=db_url, metafilter=metafilter, meta_update=meta_update, append_db=append_db
+        db_url=db_url, input_filter=metafilter, meta_update=meta_update, append_db=append_db
     )
     # Check that the stdout is as expected
     captured = capsys.readouterr()

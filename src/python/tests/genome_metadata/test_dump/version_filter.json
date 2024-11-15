@@ -1,9 +1,0 @@
-{
-    "assembly": {
-        "version": "str"
-    },
-    "genebuild": {
-        "version": "str",
-	"method": "str"
-    }
-}
