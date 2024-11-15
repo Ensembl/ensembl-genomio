@@ -232,7 +232,7 @@ def convert_dict(meta_dict: dict) -> dict:
     """Converts text JSON to add type properties from string
 
     Args:
-        meta_dict: User meta dictionary with literal string typing to be converted
+        meta_dict: User meta dictionary with literal string typing to be converted.
     """
     new_dict = meta_dict.copy()
     for key, value in meta_dict.items():
