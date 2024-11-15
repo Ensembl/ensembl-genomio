@@ -229,7 +229,7 @@ def check_genebuild_version(genome_metadata: dict[str, Any]) -> None:
 
 
 def convert_dict(meta_dict: dict) -> dict:
-    """Converts text json to add type properties from string
+    """Converts text JSON to add type properties from string
 
     Args:
         meta_dict: User meta dictionary with literal string typing to be converted
