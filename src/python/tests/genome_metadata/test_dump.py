@@ -20,16 +20,16 @@ Typical usage example::
 """
 # pylint: disable=too-many-positional-arguments
 
-from typing import Any, ContextManager
-from unittest.mock import Mock, patch
 from collections import namedtuple
 from contextlib import nullcontext as does_not_raise
+from typing import Any, ContextManager
+from unittest.mock import Mock, patch
+
 from deepdiff import DeepDiff
 import pytest
 from pytest import param
 from _pytest.capture import CaptureFixture
 from sqlalchemy.engine import make_url, URL
-
 
 from ensembl.io.genomio.genome_metadata import dump
 from ensembl.utils import StrPath
