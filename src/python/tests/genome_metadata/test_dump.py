@@ -303,7 +303,7 @@ def test_get_genome_metadata(
 
     Args:
         mock_session: A mock of `sqlalchemy.orm.Session()` class.
-        db_name:
+        db_name: Target core database name.
         meta_data: `meta` table content in a list of named tuples.
         output: Expected genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
