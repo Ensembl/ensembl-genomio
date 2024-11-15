@@ -18,9 +18,10 @@ Typical usage example::
     $ pytest test_dump.py
 
 """
+
 from pathlib import Path
-from unittest.mock import Mock, patch
 from typing import Any, ContextManager, Dict, List
+from unittest.mock import Mock, patch
 from collections import namedtuple
 from contextlib import nullcontext as does_not_raise
 from deepdiff import DeepDiff
