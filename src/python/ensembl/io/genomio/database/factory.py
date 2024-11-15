@@ -153,7 +153,7 @@ def main(arg_list: list[str] | None = None) -> None:
     """Main script entry-point.
 
     Args:
-        arg_list: TODO
+        arg_list: Arguments to parse passing list to parse_args().
 
     """
     args = parse_args(arg_list)

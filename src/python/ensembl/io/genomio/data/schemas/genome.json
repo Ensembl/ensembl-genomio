@@ -110,6 +110,14 @@
             { "type" : "array", "items" : { "type" : "string" } }
           ]
         }
+      },
+    "database_info" : {
+      "type": "object",
+      "additionalProperties": false,
+      "description" : "Optional name of target database where meta data was retrieved.",
+      "properties" : {
+          "name": { "type" : "string" }
+        }
       }
     },
 
@@ -123,7 +131,8 @@
         "genebuild" : { "$ref" : "#/definitions/genebuild_info" },
         "provider" : { "$ref" : "#/definitions/provider_info" },
         "BRC4" : { "$ref" : "#/definitions/BRC4_info" },
-        "added_seq" : { "$ref" : "#/definitions/added_sequence_info" }
+        "added_seq" : { "$ref" : "#/definitions/added_sequence_info" },
+        "database" : { "$ref" : "#/definitions/database_info" }
       },
       "required" : [
         "species",

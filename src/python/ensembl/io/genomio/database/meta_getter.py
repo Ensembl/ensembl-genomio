@@ -12,8 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A simple helper script to connect to a core database and retrieve a single meta_value 
-or multiple meta_value and dump meta_key/value pairs to stdout / JSON."""
+"""Connect to a core database and retrieve a meta_key:meta_value pair(s)  
+and dump meta_key/value pairs to stdout / JSON."""
 
 __all__ = ["get_meta_values"]
 
@@ -91,7 +91,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
     """
     parser = ArgumentParser(description=__doc__)
-    parser.add_server_arguments(include_database=True, help="core database")
+    parser.add_server_arguments(include_database=True, help="server url and core database")
     parser.add_argument_src_path(
         "--meta_keys_list", help="Input File | List with >=2 meta_keys to query target database."
     )
@@ -104,7 +104,6 @@ def main(arg_list: list[str] | None = None) -> None:
 
     Args:
         arg_list: Arguments to parse passing list to parse_args().
-
     """
     args = parse_args(arg_list)
     init_logging_with_args(args)
