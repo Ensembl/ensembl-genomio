@@ -166,7 +166,7 @@ def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
             assembly["accession"] = assembly["accession"].replace("GCA", "GCF")
             logging.info("GCA accession updated to RefSeq GFC accession.")
         else:
-            logging.info(f"Meta check 'assembly is RefSeq': Asm provider = {assembly.get('provider_name')}")
+            logging.info(f"Meta check 'assembly is RefSeq': Asm provider = {assembly['provider_name']}")
     else:
         logging.debug(
             "Meta filter update to RefSeq accession not done: user meta filter missing: \
