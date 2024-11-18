@@ -6,6 +6,7 @@ RUN apt-get update \
     && apt-get -y upgrade \
     && apt-get -y install \
         default-libmysqlclient-dev \
+	procps \
         pkg-config \
         gcc \
         pip \
