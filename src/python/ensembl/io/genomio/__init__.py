@@ -14,4 +14,4 @@
 # limitations under the License.
 """Genome Input/Output (GenomIO) handling library."""
 
-__version__ = "1.5.0"
+__version__ = "1.5.1"
