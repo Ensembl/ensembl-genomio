@@ -54,6 +54,8 @@ include:
     rules:
       - if: '$CI_COMMIT_TAG =~ /v[0-9]+\.[0-9]+\.[0-9]+$/'
         when: always
+      - if: '$CI_COMMIT_TAG =~ /container_rebuild_[0-9]+$/'
+        when: always
 
 
 # External pipelines
