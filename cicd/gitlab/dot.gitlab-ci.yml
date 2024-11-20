@@ -54,6 +54,8 @@ include:
     rules:
       - if: '$CI_COMMIT_TAG =~ /v[0-9]+\.[0-9]+\.[0-9]+$/'
         when: always
+      - if: '$CI_COMMIT_TAG =~ /GenomioDockerRebuild_v[0-9]+\.[0-9]+\.[0-9]+[a-z]$/'
+        when: always
 
 
 # External pipelines
