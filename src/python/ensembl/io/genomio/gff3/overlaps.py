@@ -190,9 +190,7 @@ def main() -> None:
     base_parser.add_log_arguments(add_log_file=True)
     # Add subparsers with their parent being the base parser with the common arguments
     subparsers = parser.add_subparsers(title="Parse GFF3 and ", required=True, dest="subcommand")
-    _ = subparsers.add_parser(
-        "stats", parents=[base_parser], help="Provide summary of feature types"
-    )
+    _ = subparsers.add_parser("stats", parents=[base_parser], help="Provide summary of feature types")
     overlaps_parser = subparsers.add_parser("overlaps", parents=[base_parser], help="Find feature overlaps")
     overlaps_parser.add_argument_dst_path(
         "--output_file", default="feature_overlaps.txt", help="path of output file"
