@@ -18,6 +18,7 @@
 import logging
 from pathlib import Path
 
+import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -44,6 +45,7 @@ def main() -> None:
         default=Path("functional_annotation.json"),
         help="Output functional annotation JSON file",
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)

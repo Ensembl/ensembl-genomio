@@ -32,6 +32,7 @@ import logging
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import Session
 
+import ensembl.io.genomio
 from ensembl.core.models import MappingSession, StableIdEvent
 from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
@@ -541,6 +542,7 @@ def main() -> None:
     )
     parser.add_server_arguments(include_database=True)
     parser.add_argument_dst_path("--output_file", required=True, help="Output file")
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)

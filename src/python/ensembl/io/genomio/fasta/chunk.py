@@ -38,6 +38,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+import ensembl.io.genomio
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -386,7 +387,7 @@ def main() -> None:
         action="store_true",
         help="Append zero-based offset to chunk name ('_off_{offset}').",
     )
-
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)

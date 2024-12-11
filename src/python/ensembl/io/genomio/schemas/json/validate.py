@@ -40,6 +40,7 @@ from typing import Union
 
 import jsonschema
 
+import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 
 
@@ -77,6 +78,7 @@ def main() -> None:
     parser.add_argument(
         "--json_schema", required=True, choices=_JSON_SCHEMAS.keys(), help="JSON schema to validate against"
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     args = parser.parse_args()
 
     schema_validator(args.json_file, args.json_schema)

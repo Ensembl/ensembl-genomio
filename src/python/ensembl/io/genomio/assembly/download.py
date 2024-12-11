@@ -36,6 +36,7 @@ import re
 import time
 from typing import Dict, Optional
 
+import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -333,6 +334,7 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--download_dir", default=Path.cwd(), help="Folder where the data will be downloaded"
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)

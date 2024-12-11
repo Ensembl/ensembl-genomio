@@ -23,6 +23,7 @@ from pathlib import Path
 
 from sqlalchemy.engine import URL
 
+import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 from .core_server import CoreServer
@@ -145,6 +146,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="Enable BRC mode, i.e. use organism_abbrev for species, component for division",
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     return parser.parse_args(arg_list)
 

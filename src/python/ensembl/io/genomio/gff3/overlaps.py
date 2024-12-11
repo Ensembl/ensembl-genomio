@@ -32,6 +32,7 @@ from BCBio.GFF import GFFExaminer
 from Bio.SeqRecord import SeqRecord
 from intervaltree import Interval, IntervalTree
 
+import ensembl.io.genomio
 from ensembl.io.genomio.utils import print_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -182,6 +183,7 @@ def get_intervals(record: SeqRecord, genes_dict: dict, seq_dict: dict, seq_name:
 def main() -> None:
     """Module entry-point."""
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     # Create parser with common arguments to be used by both subparsers
     base_parser = ArgumentParser(add_help=False)
     base_parser.add_argument_src_path("--input_gff", required=True, help="path of GFF3 file to process")

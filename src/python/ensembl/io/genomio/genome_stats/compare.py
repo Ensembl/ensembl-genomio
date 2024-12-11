@@ -21,6 +21,7 @@ from os import PathLike
 import re
 from typing import Any, Dict
 
+import ensembl.io.genomio
 from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -222,6 +223,7 @@ def main() -> None:
     )
     parser.add_argument_src_path("--ncbi_stats", required=True, help="NCBI dataset stats JSON file")
     parser.add_argument_src_path("--core_stats", required=True, help="core database stats JSON file")
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
 

@@ -22,6 +22,7 @@ from pathlib import Path
 
 import requests
 
+import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -70,6 +71,7 @@ def main() -> None:
     parser = ArgumentParser(description="Download a sequence from GenBank.")
     parser.add_argument("--accession", required=True, help="Sequence accession")
     parser.add_argument_dst_path("--output_file", required=True, help="Output GenBank file")
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
