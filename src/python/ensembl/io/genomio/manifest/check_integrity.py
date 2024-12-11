@@ -23,6 +23,7 @@ from pathlib import Path
 import re
 from typing import Any
 
+import ensembl.io.genomio
 from ensembl.io.genomio.manifest.manifest_stats import InvalidIntegrityError, ManifestStats
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -389,6 +390,7 @@ def main() -> None:
     parser.add_argument(
         "--no_fail", action="store_true", help="In case of errors, don't fail but print errors to stdout."
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)

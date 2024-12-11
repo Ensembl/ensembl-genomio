@@ -24,6 +24,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from ensembl.core.models import SeqRegionAttrib, AttribType, Gene, Transcript
+import ensembl.io.genomio
 from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.database import StrURL
@@ -149,6 +150,7 @@ def main() -> None:
     """Main script entry-point."""
     parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments(include_database=True)
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)

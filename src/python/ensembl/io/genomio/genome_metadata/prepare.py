@@ -31,6 +31,7 @@ import datetime
 from os import PathLike
 from typing import Dict
 
+import ensembl.io.genomio
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -199,6 +200,7 @@ def main() -> None:
     parser.add_argument_src_path(
         "--ncbi_meta", required=True, help="JSON file from NCBI datasets for this genome."
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)

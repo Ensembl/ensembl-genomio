@@ -16,6 +16,7 @@
 
 from pathlib import Path
 
+import ensembl.io.genomio
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.io.genomio.seq_region.collection import SeqCollection
 from ensembl.utils.argparse import ArgumentParser
@@ -83,6 +84,7 @@ def main() -> None:
         "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
     )
     parser.add_argument("--mock_run", action="store_true", help="Do not call external APIs")
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)

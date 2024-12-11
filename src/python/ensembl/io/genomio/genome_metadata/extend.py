@@ -29,6 +29,7 @@ from typing import Dict, List, Tuple, Optional
 
 from Bio import SeqIO
 
+import ensembl.io.genomio
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
@@ -163,6 +164,7 @@ def main() -> None:
     )
     parser.add_argument_src_path("--report_file", help="INSDC/RefSeq sequences report file")
     parser.add_argument_src_path("--genbank_file", help="INSDC/RefSeq GBFF file")
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)

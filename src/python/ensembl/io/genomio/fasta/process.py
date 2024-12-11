@@ -23,6 +23,7 @@ from typing import List, Optional, Set
 
 from Bio import SeqIO
 
+import ensembl.io.genomio
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -99,6 +100,7 @@ def main() -> None:
     parser.add_argument_src_path("--genbank_infile", help="Input GenBank GBFF file")
     parser.add_argument_dst_path("--fasta_outfile", required=True, help="Output FASTA file")
     parser.add_argument("--peptide_mode", action="store_true", help="Process proteins instead of DNA")
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)

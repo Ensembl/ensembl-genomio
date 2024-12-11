@@ -35,6 +35,7 @@ from spython.main import Client
 from sqlalchemy.engine import URL
 from sqlalchemy import text
 
+import ensembl.io.genomio
 from ensembl.io.genomio.utils.json_utils import print_json
 from ensembl.utils import StrPath
 from ensembl.utils.argparse import ArgumentParser
@@ -346,6 +347,7 @@ def generate_report_tsv(
 def main() -> None:
     """Module's entry-point."""
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     # Create parser with common arguments to be used by both subparsers
     base_parser = ArgumentParser(add_help=False)
     base_parser.add_argument_dst_path(

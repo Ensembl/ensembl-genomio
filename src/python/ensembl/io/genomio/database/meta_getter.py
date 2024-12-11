@@ -25,6 +25,7 @@ from pathlib import Path
 
 from sqlalchemy.engine import URL
 
+import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils import StrPath
 from ensembl.utils.logging import init_logging_with_args
@@ -95,6 +96,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     parser.add_argument_src_path(
         "--meta_keys_list", help="Input File | List with >=2 meta_keys to query target database."
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=False)
     return parser.parse_args(arg_list)
 

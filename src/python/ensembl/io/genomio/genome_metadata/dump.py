@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.engine import URL
 
 from ensembl.core.models import Meta
+import ensembl.io.genomio
 from ensembl.io.genomio.utils.json_utils import get_json
 from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
@@ -289,6 +290,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         help="Perform assembly and genebuild 'version' metadata checks & update if needed.",
     )
     parser.add_argument("--append_db", action="store_true", help="Append core database name to output JSON.")
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)
     return parser.parse_args(arg_list)
 
