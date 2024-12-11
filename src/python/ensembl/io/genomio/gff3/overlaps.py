@@ -190,7 +190,7 @@ def main() -> None:
     base_parser.add_log_arguments(add_log_file=True)
     # Add subparsers with their parent being the base parser with the common arguments
     subparsers = parser.add_subparsers(title="Parse GFF3 and ", required=True, dest="subcommand")
-    gff3_stats_parser = subparsers.add_parser(  # pylint: disable=unused-variable
+    _ = subparsers.add_parser(
         "stats", parents=[base_parser], help="Provide summary of feature types"
     )
     overlaps_parser = subparsers.add_parser("overlaps", parents=[base_parser], help="Find feature overlaps")
