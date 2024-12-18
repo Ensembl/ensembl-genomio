@@ -1,9 +1,7 @@
 import argparse
 import logging
-import hashlib
 from pathlib import Path
 import re
-from os import PathLike
 from typing import List, Any, Tuple
 
 from Bio import SeqIO
@@ -44,8 +42,6 @@ class CompareFasta:
         with open_gz_file(fasta_path) as fasta_fh:
             for rec in SeqIO.parse(fasta_fh, "fasta"):
                 name = rec.id
-                #if name in map_dna:      ---> confirm if ensembl ever uses different name for loading?
-                #    name = map_dna[name]
                 sequences[name] = re.sub(r"[^CGTA]", "N", str(rec.seq.upper()))
         return sequences
     
@@ -82,7 +78,17 @@ class CompareFasta:
         return common,self.comp
     
     def compare_seqs(self, fasta1, fasta2):
-        """Todo"""
+        """
+        Compare two FASTA files for common, unique, and differing sequences.
+
+        Args:
+            fasta1 (str): Path to the first FASTA file.
+            fasta2 (str): Path to the second FASTA file.
+
+        Writes:
+            A comparison log file to the output directory specified in `self.output_dir`.
+        """
+
         seq1 = self.read_fasta(fasta1)
         seq2 = self.read_fasta(fasta2)
 
@@ -104,24 +110,35 @@ class CompareFasta:
         only2 = {seq: group for seq, group in seq2_dict.items() if not seq in seq1_dict}
         
         if only1:
-            for ids in only1.values():
-                self.comp.append(f"Only in fasta1: {ids}\n")
+            self.comp.append(f"Sequences only in fasta1: {', '.join([str(ids) for ids in only1.values()])}")
         if only2:
-            for ids in only2.values():
-                self.comp.append(f"Only in fasta2: {ids}\n")
+            self.comp.append(f"Sequences only in fasta2: {', '.join([str(ids) for ids in only2.values()])}")
+
         if common:
-            for common_ids in common.items():
-                self.comp.append(f"Common ids: {common_ids}")
+            self.comp.append(f"Common ids: {', '.join([str(common_ids) for common_ids in common.items()])}")
         
-        self.check_for_N(only1, only2)
-        # Print full list of results in a file
+        # Check for sequences with extra Ns
+        self.compare_sequences_for_Ns(only1, only2)
+
+        # Write results to file
+        self.write_results()
+
+    def write_results(self) -> None:
         output_file = Path.joinpath(self.output_dir, "compare.log")
-        print(f"Write results in {output_file}")
+        print(f"Writing results to {output_file}")
         with open(output_file, "w") as out_fh:
             for line in self.comp:
                 out_fh.write(line + "\n")
     
-    def check_for_N(self, only1, only2):
+    def compare_sequences_for_Ns(self, only1, only2):
+        """
+        Compare sequences in `only1` and `only2` for differences in `N` content and length.
+
+        Args:
+            only1 (dict): Sequences unique to the first dataset, mapping sequence to group/identifier.
+            only2 (dict): Sequences unique to the second dataset, mapping sequence to group/identifier.
+        """
+
         names_length = {}
         # sequences which have extra N at the end
         if only1 and only2:
@@ -135,9 +152,9 @@ class CompareFasta:
 
                     if seq_2[:len1] == seq_1:
                         ignored_seq = seq_2[len1:]
-                        N = ignored_seq.count("N")
+                        N_count = ignored_seq.count("N")
 
-                        if len(ignored_seq) == N:
+                        if len(ignored_seq) == N_count:
                            self.comp.append(f"Please check extra Ns added in core in {name1} and {name2}")
                         else:
                            self.comp.append(
@@ -152,6 +169,7 @@ class CompareFasta:
                         else:
                             names_length[name1] = name2
 
+        # Handle sequences with the same length
         if names_length:
             length = len(names_length)
             self.comp.append(f"{length} sequences have the same length")
