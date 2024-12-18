@@ -58,11 +58,9 @@ class CompareFasta:
                 seqs_dict[seq].add_id(name)
             else:
                 seqs_dict[seq] = SeqGroup(seq, name)
-
         return seqs_dict
     
     def find_common_groups(self, seqs1: dict, seqs2: dict) -> Tuple[dict, List[Any]]:
-        comp = []
         common = {}
         for seq1, group1 in seqs1.items():
             if seq1 in seqs2:
@@ -70,28 +68,23 @@ class CompareFasta:
                 # Check that the 2 groups have the same number of sequences
                 if group1.count == group2.count:
                     if group1.count == 1:
-                        print(f"contains only 1 seq")
                         common[group1.ids[0]] = group2.ids[0]
                     else:
-                        comp.append(f"Matched 2 identical groups of sequences: {group1} and {group2}")
+                        self.comp.append(f"Matched 2 identical groups of sequences: {group1} and {group2}")
                         possible_id2 = " OR ".join(group2.ids)
                         for id1 in group1.ids:
                             common[id1] = possible_id2
-
                 else:
-                    comp.append(
+                   self.comp.append(
                         f"Matched 2 different groups of sequences ({group1.count} vs {group2.count}): {group1} and {group2}"
                     )
 
-        return common, comp
+        return common,self.comp
     
     def compare_seqs(self, fasta1, fasta2):
         """Todo"""
         seq1 = self.read_fasta(fasta1)
         seq2 = self.read_fasta(fasta2)
-
-        diff = abs(len(seq1) - len(seq2))
-        comp = []
 
         # Compare sequences
         seq1_dict = self.build_seq_dict(seq1)
@@ -99,29 +92,36 @@ class CompareFasta:
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
-            comp.append(f"WARNING: Different number of sequences: {len(seq1)} vs {len(seq2)}")
+           self.comp.append(f"WARNING: Different number of sequences: {len(seq1)} vs {len(seq2)}")
 
         
         common, group_comp = self.find_common_groups(seq1_dict, seq2_dict)
-        comp += group_comp
-
-        print("common: Contains mappings of IDs from seqs1 to either exact matches or possible matches in seqs2.", common)
-
+        self.comp += group_comp
+        
         # Sequences that are not common
         only1 = {seq: group for seq, group in seq1_dict.items() if not seq in seq2_dict}
 
         only2 = {seq: group for seq, group in seq2_dict.items() if not seq in seq1_dict}
-
-        self.check_for_N(only1, only2, comp)
         
+        if only1:
+            for ids in only1.values():
+                self.comp.append(f"Only in fasta1: {ids}\n")
+        if only2:
+            for ids in only2.values():
+                self.comp.append(f"Only in fasta2: {ids}\n")
+        if common:
+            for common_ids in common.items():
+                self.comp.append(f"Common ids: {common_ids}")
+        
+        self.check_for_N(only1, only2)
         # Print full list of results in a file
         output_file = Path.joinpath(self.output_dir, "compare.log")
         print(f"Write results in {output_file}")
         with open(output_file, "w") as out_fh:
-            for line in comp:
+            for line in self.comp:
                 out_fh.write(line + "\n")
     
-    def check_for_N(self, only1, only2, comp):
+    def check_for_N(self, only1, only2):
         names_length = {}
         # sequences which have extra N at the end
         if only1 and only2:
@@ -138,25 +138,25 @@ class CompareFasta:
                         N = ignored_seq.count("N")
 
                         if len(ignored_seq) == N:
-                            comp.append(f"Please check extra Ns added in core in {name1} and {name2}")
+                           self.comp.append(f"Please check extra Ns added in core in {name1} and {name2}")
                         else:
-                            comp.append(
+                           self.comp.append(
                                 f"ALERT INSERTIONS at the end or diff assembly level {name1} and {name2}"
                             )
 
                     elif len1 == len2:
                         if seq2_N > seq1_N:
-                            comp.append(f"Core has more Ns, check {name1} and {name2}")
+                           self.comp.append(f"Core has more Ns, check {name1} and {name2}")
                         elif seq1_N > seq2_N:
-                            comp.append(f"INSDC has more Ns, check {name1} and {name2}")
+                           self.comp.append(f"INSDC has more Ns, check {name1} and {name2}")
                         else:
                             names_length[name1] = name2
 
         if names_length:
             length = len(names_length)
-            comp.append(f"{length} sequences have the same length")
+            self.comp.append(f"{length} sequences have the same length")
             for insdc, core in names_length.items():
-                comp.append(f"INSDC: {insdc} and coredb : {core}")
+               self.comp.append(f"INSDC: {insdc} and coredb : {core}")
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """TODO
