@@ -29,9 +29,15 @@ class SeqGroup:
         self.ids.append(identifier)
         self.count = len(self.ids)
 
-class compare_fasta():
+class CompareFasta:
+    def __init__(self, fasta1_path: str, fasta2_path: str) -> None:
+        self.fasta1 = fasta1_path
+        self.fasta2 = fasta2_path
+        self.common = {}
+        self.comp = []
+        self.compare_seqs(fasta1_path, fasta2_path)
 
-    def get_fasta(self, fasta_path: str) -> dict:
+    def read_fasta(self, fasta_path) -> dict:
         print(f"Read file {fasta_path}")
         sequences = {}
         with open_gz_file(fasta_path) as fasta_fh:
@@ -78,10 +84,10 @@ class compare_fasta():
 
         return common, comp
     
-    def compare_seqs (self, fasta1: str, fasta2: str) -> bool:
+    def compare_seqs(self, fasta1, fasta2):
         """Todo"""
-        seq1 = self.get_fasta(fasta1)
-        seq2 = self.get_fasta(fasta2)
+        seq1 = self.read_fasta(fasta1)
+        seq2 = self.read_fasta(fasta2)
 
         diff = abs(len(seq1) - len(seq2))
         comp = []
@@ -105,10 +111,10 @@ class compare_fasta():
 
         only2 = {seq: group for seq, group in seq2_dict.items() if not seq in seq1_dict}
 
-        self.check_for_Ns(only1, only2)
+        self.check_for_N(only1, only2, comp)
         return only1, only2, common
     
-    def check_for_Ns(only1, only2, comp):
+    def check_for_N(self, only1, only2, comp):
         names_length = {}
         # sequences which have extra N at the end
         if only1 and only2:
@@ -152,15 +158,16 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """
     parser = ArgumentParser(description="Compare sequences between two genomes")
     # Add filter arguments
-    parser.add_argument("--fasta1", default="", help="Prefix to filter the databases")
-    parser.add_argument("--fasta2", type=int, default=None, help="Build to filter the databases")
+    parser.add_argument("--fasta1_path", required=True, help="Path to INSDC fasta file")
+    parser.add_argument("--fasta2_path", required=True, help="Path to user fasta file")
+    parser.add_argument("--output_dir", default=Path.cwd(), help="Folder to store the report files")
+                        
     # Add flags
     parser.add_argument(
         "--compare_seq_region",
             action="store_true",
-        help="Enable BRC mode, i.e. use organism_abbrev for species, component for division",
+        help="Enable compare seq_region mode, i.e. use seq_region for seqence comparison",
     )
-    parser.add_log_arguments()
     return parser.parse_args(arg_list)
 
 def main(arg_list: list[str] | None = None) -> None:
@@ -170,6 +177,7 @@ def main(arg_list: list[str] | None = None) -> None:
      """
     args = parse_args(arg_list)
 
-    compare_fasta.compare_seqs(args.fasta1, args.fasta2, args.compare_seq_region)
-       
+    CompareFasta(args.fasta1_path, args.fasta2_path)
 
+if __name__ == "__main__":
+    main()
