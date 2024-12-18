@@ -30,9 +30,10 @@ class SeqGroup:
         self.count = len(self.ids)
 
 class CompareFasta:
-    def __init__(self, fasta1_path: str, fasta2_path: str) -> None:
+    def __init__(self, fasta1_path: str, fasta2_path: str, output_dir) -> None:
         self.fasta1 = fasta1_path
         self.fasta2 = fasta2_path
+        self.output_dir = output_dir
         self.common = {}
         self.comp = []
         self.compare_seqs(fasta1_path, fasta2_path)
@@ -112,7 +113,13 @@ class CompareFasta:
         only2 = {seq: group for seq, group in seq2_dict.items() if not seq in seq1_dict}
 
         self.check_for_N(only1, only2, comp)
-        return only1, only2, common
+        
+        # Print full list of results in a file
+        output_file = Path.joinpath(self.output_dir, "compare.log")
+        print(f"Write results in {output_file}")
+        with open(output_file, "w") as out_fh:
+            for line in comp:
+                out_fh.write(line + "\n")
     
     def check_for_N(self, only1, only2, comp):
         names_length = {}
@@ -177,7 +184,7 @@ def main(arg_list: list[str] | None = None) -> None:
      """
     args = parse_args(arg_list)
 
-    CompareFasta(args.fasta1_path, args.fasta2_path)
+    CompareFasta(args.fasta1_path, args.fasta2_path, args.output_dir)
 
 if __name__ == "__main__":
     main()
