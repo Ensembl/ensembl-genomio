@@ -233,7 +233,3 @@ def main(arg_list: list[str] | None = None) -> None:
     args = parse_args(arg_list)
 
     CompareFasta(args.fasta1_path, args.fasta2_path, args.output_dir)
-
-
-if __name__ == "__main__":
-    main()

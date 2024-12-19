@@ -16,3 +16,4 @@
 
 from .chunk import *
 from .process import *
+from .compare import *
