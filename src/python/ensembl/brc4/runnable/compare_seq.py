@@ -32,7 +32,6 @@ class CompareFasta:
         self.fasta1 = fasta1_path
         self.fasta2 = fasta2_path
         self.output_dir = output_dir
-        self.common = {}
         self.comp = []
         self.compare_seqs(fasta1_path, fasta2_path)
 
@@ -56,26 +55,38 @@ class CompareFasta:
                 seqs_dict[seq] = SeqGroup(seq, name)
         return seqs_dict
     
-    def find_common_groups(self, seqs1: dict, seqs2: dict) -> Tuple[dict, List[Any]]:
+    def find_common_groups(self, seq1_dict: dict, seq2_dict: dict) -> Tuple[dict, List[Any]]:
+        """
+        Find common sequences between two dictionaries and group them.
+
+        Args:
+            seq1_dict (dict): Dictionary of sequences from the first dataset.
+            seq2_dict (dict): Dictionary of sequences from the second dataset.
+
+        Returns:
+            Tuple[dict, List[str]]: A dictionary of common sequence mappings and
+                                a list of comparison results.
+        """
         common = {}
-        for seq1, group1 in seqs1.items():
-            if seq1 in seqs2:
-                group2 = seqs2[seq1]
+
+        for seq1, group1 in seq1_dict.items():
+            if seq1 in seq2_dict:
+                group2 = seq2_dict[seq1]
                 # Check that the 2 groups have the same number of sequences
                 if group1.count == group2.count:
                     if group1.count == 1:
                         common[group1.ids[0]] = group2.ids[0]
                     else:
                         self.comp.append(f"Matched 2 identical groups of sequences: {group1} and {group2}")
+                        
+                        # Map each ID in group1 to a possible group2 ID
                         possible_id2 = " OR ".join(group2.ids)
-                        for id1 in group1.ids:
-                            common[id1] = possible_id2
+                        common.update({id1: possible_id2 for id1 in group1.ids})
                 else:
-                   self.comp.append(
+                    self.comp.append(
                         f"Matched 2 different groups of sequences ({group1.count} vs {group2.count}): {group1} and {group2}"
                     )
-
-        return common,self.comp
+        return common, self.comp
     
     def compare_seqs(self, fasta1, fasta2):
         """
@@ -85,7 +96,7 @@ class CompareFasta:
             fasta1 (str): Path to the first FASTA file.
             fasta2 (str): Path to the second FASTA file.
 
-        Writes:
+        Result:
             A comparison log file to the output directory specified in `self.output_dir`.
         """
 
@@ -138,8 +149,6 @@ class CompareFasta:
             only1 (dict): Sequences unique to the first dataset, mapping sequence to group/identifier.
             only2 (dict): Sequences unique to the second dataset, mapping sequence to group/identifier.
         """
-
-        names_length = {}
         # sequences which have extra N at the end
         if only1 and only2:
             for seq_1, name1 in only1.items():
@@ -150,42 +159,37 @@ class CompareFasta:
                     len2 = len(seq_2)
                     seq2_N = seq_2.count("N")
 
-                    if seq_2[:len1] == seq_1:
-                        ignored_seq = seq_2[len1:]
-                        N_count = ignored_seq.count("N")
+                    if abs(seq1_N - seq2_N) == abs(len1 - len2):
+                        self.comp.append(f"Please check extra Ns added in your fasta2 in {name1} and {name2}")
+                    else:
+                        self.comp.append(
+                            f"ALERT INSERTIONS at the end or diff assembly level {name1} and {name2}"
+                        )
 
-                        if len(ignored_seq) == N_count:
-                           self.comp.append(f"Please check extra Ns added in core in {name1} and {name2}")
-                        else:
-                           self.comp.append(
-                                f"ALERT INSERTIONS at the end or diff assembly level {name1} and {name2}"
-                            )
-
-                    elif len1 == len2:
+                    if len1 == len2:
                         if seq2_N > seq1_N:
-                           self.comp.append(f"Core has more Ns, check {name1} and {name2}")
+                           self.comp.append(f"your fasta2 has more Ns, check {name1} and {name2}")
                         elif seq1_N > seq2_N:
                            self.comp.append(f"INSDC has more Ns, check {name1} and {name2}")
                         else:
-                            names_length[name1] = name2
-
-        # Handle sequences with the same length
-        if names_length:
-            length = len(names_length)
-            self.comp.append(f"{length} sequences have the same length")
-            for insdc, core in names_length.items():
-               self.comp.append(f"INSDC: {insdc} and coredb : {core}")
+                            self.comp.append(f"sequences have the same length, check {name1} and {name2}")
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
-    """TODO
+    """
+    Parse command-line arguments for the genome sequence comparison tool.
+
     Args:
-    arg_list: TODO
+        arg_list (list[str] | None): A list of arguments to parse. If None, arguments
+                                     are taken from sys.argv by default.
+
+    Returns:
+        argparse.Namespace: Parsed arguments as an argparse Namespace object.
     """
     parser = ArgumentParser(description="Compare sequences between two genomes")
     # Add filter arguments
     parser.add_argument("--fasta1_path", required=True, help="Path to INSDC fasta file")
-    parser.add_argument("--fasta2_path", required=True, help="Path to user fasta file")
-    parser.add_argument("--output_dir", default=Path.cwd(), help="Folder to store the report files")
+    parser.add_argument("--fasta2_path", required=True, help="Path to user supplied fasta file")
+    parser.add_argument("--output_dir", default=Path.cwd(), help="Directory to store the comparison report. Defaults to the current working directory.")
                         
     # Add flags
     parser.add_argument(
@@ -197,9 +201,10 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 def main(arg_list: list[str] | None = None) -> None:
     """Main script entry-point.
+
     Args:
-    arg_list: TODO
-     """
+    arg_list: Parsed arguments as an argparse Namespace object
+    """
     args = parse_args(arg_list)
 
     CompareFasta(args.fasta1_path, args.fasta2_path, args.output_dir)
