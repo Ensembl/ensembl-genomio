@@ -14,6 +14,7 @@
 # limitations under the License.
 """Creates a manifest file in a folder depending on the file names ends."""
 
+import ensembl.io.genomio
 from ensembl.io.genomio.manifest.manifest import Manifest
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -27,6 +28,7 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--manifest_dir", required=True, help="Folder where to create a manifest file"
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)

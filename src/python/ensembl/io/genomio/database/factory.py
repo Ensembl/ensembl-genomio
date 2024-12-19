@@ -23,6 +23,7 @@ from pathlib import Path
 
 from sqlalchemy.engine import URL
 
+import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 from .core_server import CoreServer
@@ -136,7 +137,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     # Add filter arguments
     parser.add_argument("--prefix", default="", help="Prefix to filter the databases")
     parser.add_argument("--build", type=int, default=None, help="Build to filter the databases")
-    parser.add_argument("--version", type=int, default=None, help="EnsEMBL version to filter the databases")
+    parser.add_argument("--release", type=int, default=None, help="EnsEMBL release to filter the databases")
     parser.add_argument("--db_regex", default="", help="Regular expression to match database names against")
     parser.add_argument_src_path("--db_list", help="File with one database per line to load")
     # Add flags
@@ -145,6 +146,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="Enable BRC mode, i.e. use organism_abbrev for species, component for division",
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     return parser.parse_args(arg_list)
 
@@ -163,7 +165,7 @@ def main(arg_list: list[str] | None = None) -> None:
         server_url=args.url,
         prefix=args.prefix,
         build=args.build,
-        version=args.version,
+        version=args.release,
         db_regex=args.db_regex,
         db_list=args.db_list,
         brc_mode=args.brc_mode,

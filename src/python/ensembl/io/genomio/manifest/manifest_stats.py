@@ -104,7 +104,7 @@ class ManifestStats:
     def load_seq_regions(self) -> None:
         """Retrieve seq_regions lengths and circular information from the seq_region JSON file."""
 
-        if not "seq_region" in self.manifest_files:
+        if "seq_region" not in self.manifest_files:
             return
         logging.info("Manifest contains seq_region JSON")
         seq_regions = get_json(Path(self.manifest_files["seq_region"]))

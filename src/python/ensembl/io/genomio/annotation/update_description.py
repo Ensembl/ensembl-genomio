@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, select
 
+import ensembl.io.genomio
 from ensembl.core.models import Gene, Transcript, ObjectXref, Xref
 from ensembl.io.genomio.utils import get_json
 from ensembl.utils.argparse import ArgumentParser
@@ -249,6 +250,7 @@ def main() -> None:
     parser.add_argument(
         "--match_xrefs", action="store_true", help="Use xref IDs to match features if IDs do not work"
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)
     args = parser.parse_args()
     init_logging_with_args(args)

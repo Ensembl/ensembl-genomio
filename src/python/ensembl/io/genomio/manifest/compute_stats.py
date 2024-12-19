@@ -29,6 +29,7 @@ from typing import Dict, List, Optional, Set, Union
 
 from BCBio import GFF
 
+import ensembl.io.genomio
 from ensembl.utils import StrPath
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
@@ -418,6 +419,7 @@ def main() -> None:
     parser.add_argument("--accession", help="Sequence accession ID to compare stats with NCBI")
     parser.add_argument("--datasets_bin", help="Datasets bin status")
     parser.add_argument_dst_path("--stats_file", help="Output file with the stats")
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)

@@ -22,6 +22,7 @@ from pathlib import Path
 import shutil
 from typing import List
 
+import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
@@ -76,6 +77,7 @@ def main() -> None:
     parser.add_argument_dst_path(
         "--output_dir", default=Path.cwd(), help="Folder to store the produced files"
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
     args = parser.parse_args()
     init_logging_with_args(args)
