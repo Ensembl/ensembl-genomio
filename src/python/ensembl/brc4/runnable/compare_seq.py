@@ -1,14 +1,12 @@
 import argparse
-import logging
 from pathlib import Path
 import re
-from typing import List, Any, Tuple
+from typing import Any, List, Tuple
 
 from Bio import SeqIO
 
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.logging import init_logging_with_args
 
 
 class SeqGroup:
@@ -28,14 +26,24 @@ class SeqGroup:
         self.count = len(self.ids)
 
 class CompareFasta:
-    def __init__(self, fasta1_path: str, fasta2_path: str, output_dir) -> None:
-        self.fasta1 = fasta1_path
-        self.fasta2 = fasta2_path
+    def __init__(self, fasta1_path: Path, fasta2_path: Path, output_dir: str) -> None:
+        self.fasta1 = Path(fasta1_path)
+        self.fasta2 = Path(fasta2_path)
         self.output_dir = output_dir
         self.comp = []
         self.compare_seqs(fasta1_path, fasta2_path)
 
-    def read_fasta(self, fasta_path) -> dict:
+    def read_fasta(self, fasta_path: Path) -> dict:
+        """
+        Reads a FASTA file and returns a dictionary mapping sequence IDs to sequences.
+
+        Args:
+            fasta_path (Path): Path to the FASTA file. Supports gzipped files.
+
+        Returns:
+            dict: A dictionary where keys are sequence IDs and values are sequences
+              with all non-CGTA characters replaced by 'N'.
+        """
         print(f"Read file {fasta_path}")
         sequences = {}
         with open_gz_file(fasta_path) as fasta_fh:
@@ -45,8 +53,16 @@ class CompareFasta:
         return sequences
     
     def build_seq_dict(self, seqs: dict) -> dict:
-        """Build a seq dict taking duplicates into account"""
+        """
+        Builds a dictionary of unique sequences and their associated IDs, accounting for duplicates.
 
+        Args:
+            seqs (dict): A dictionary where keys are sequence IDs and values are sequences.
+
+        Returns:
+            dict: A dictionary where keys are unique sequences and values are `SeqGroup` objects
+                that group sequence IDs sharing the same sequence.
+        """
         seqs_dict = dict()
         for name, seq in seqs.items():
             if seq in seqs_dict:
@@ -88,13 +104,13 @@ class CompareFasta:
                     )
         return common, self.comp
     
-    def compare_seqs(self, fasta1, fasta2):
+    def compare_seqs(self, fasta1 : Path, fasta2: Path) -> None:
         """
         Compare two FASTA files for common, unique, and differing sequences.
 
         Args:
-            fasta1 (str): Path to the first FASTA file.
-            fasta2 (str): Path to the second FASTA file.
+            fasta1 : Path to the first FASTA file.
+            fasta2 : Path to the second FASTA file.
 
         Result:
             A comparison log file to the output directory specified in `self.output_dir`.
@@ -135,13 +151,17 @@ class CompareFasta:
         self.write_results()
 
     def write_results(self) -> None:
+        """
+        Write the comparison results to a file in the output directory.
+
+        """
         output_file = Path.joinpath(self.output_dir, "compare.log")
         print(f"Writing results to {output_file}")
         with open(output_file, "w") as out_fh:
             for line in self.comp:
                 out_fh.write(line + "\n")
     
-    def compare_sequences_for_Ns(self, only1, only2):
+    def compare_sequences_for_Ns(self, only1 : dict, only2: dict) -> None:
         """
         Compare sequences in `only1` and `only2` for differences in `N` content and length.
 
