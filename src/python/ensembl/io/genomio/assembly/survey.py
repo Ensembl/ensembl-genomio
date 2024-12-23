@@ -21,12 +21,14 @@ import os
 import pandas as pd
 from pathlib import Path
 import re
+import sys
 
 from spython.main import Client
 
 
 import ensembl.io.genomio
 from ensembl.io.genomio.assembly.status import singularity_image_setter
+
 # from ensembl.io.genomio.assembly.status import DATASETS_SINGULARITY
 from ensembl.io.genomio.assembly.status import fetch_datasets_reports
 from ensembl.io.genomio.utils.json_utils import print_json
@@ -38,44 +40,62 @@ from ensembl.utils import StrPath
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-# class DatasetsPackage(Enum):
-#         GENE = "gene"
-#         GENOME = "genome"
-#         TAXONOMY = "taxonomy"
-#         VIRUS = "virus"
 
-def fetch_datasets_data_package(sif_image: Client, data_package: str, queries: str, download_dir: StrPath) -> dict[str, TaxonomyReports]:
+class DatasetsPackage(Enum):
+    GENE = "gene"
+    GENOME = "genome"
+    TAXONOMY = "taxonomy"
+    VIRUS = "virus"
+
+
+def fetch_datasets_data_package(
+    sif_image: Client,
+    data_package: DatasetsPackage,
+    queries: list,
+    download_dir: StrPath,
+    extra_params: str | None,
+) -> dict[str, TaxonomyReports]:
     """A generic datasets-cli caller, to fetch data packages from NCBI and return the raw combined result.
 
     Args:
         sif_image: Instance of `Client.loaded()` singularity image.
-        data_package: 
-        queries:
+        data_package: Instance of DatasetsPackage(Enum): [taxonomy, genome, gene, virus]
+        queries: User specific queries (accessions, taxon_ids, gene_ids etc.)
         download_dir: Directory path to store parsed datasets-cli reports
+        extra_params: Additional params to append to dataset-cli command call (flags, positional arguments etc).
     """
 
     # # Type checking
-    # print(type(data_package))
-    # if not isinstance(data_package, DatasetsPackage):
-    #     raise TypeError(f"data package '{data_package}' must be an instance of 'DatasetsPackage' Enum")
-    
-    # base_datasets_cmd = ["datasets", "summary", f"{data_package}"]
-    datasets_command = ["datasets", "summary", "taxonomy", "taxon", f"{queries}"]
+    if not isinstance(data_package, Enum):
+        raise TypeError(f"data package '{data_package}' must be an instance of 'DatasetsPackage' Enum")
+
+    if data_package.value == "taxonomy" or data_package.value == "genome":
+        base_command = ["datasets", "summary", f"{data_package.value}", "taxon"]
+        ReportClass = TaxonomyReports
+    # elif data_package.value == "genome":
+    #     base_command = ["datasets", "summary", f"{data_package.value}", "taxon"]
+        # extra_params = "--report genome --assembly-level chromosome,complete,scaffold --exclude-atypical".split(" ")
+        ReportClass = GenomeAssemblyReports
+    # elif data_package.value == "gene": TODO
+    # elif data_package.value == "virus": TODO
 
     # Setting the number of combined accessions to query in a single call to datasets (50 max queries)
-    sample_limit = 100
-    list_split = list(range(0, len(queries), sample_limit))
-    query_subsamples = [list_split[ind : ind + sample_limit] for ind in list_split]
-    
-    print(f"command: {datasets_command}")
+    batch_size_limit = 2  # CHANGE VALUE AFTER DEV!!
+    list_split = list(range(0, len(queries), batch_size_limit))
+    query_subsamples = [queries[ind : ind + batch_size_limit] for ind in list_split]
+
     for sub_sample in query_subsamples:
         # Make call to singularity datasets providing a multi-accession query
+        datasets_command = base_command + sub_sample
+        if extra_params:
+            datasets_command += extra_params.split(" ")
+        print(f"Submitting datasets-cli command: '{datasets_command}'")
         client_return = Client.execute(
             image=sif_image, command=datasets_command, return_result=True, quiet=True
         )
         raw_result = client_return["message"]
 
-        ## Test what result we have obtained following execution of sif image and accession value
+        # Test what result we have obtained following execution of sif image and accession value
         # Returned a list, i.e. datasets returned a result to client.execute
         # Returned a str, i.e. no datasets result obtained exited with fatal error
         if isinstance(raw_result, list):
@@ -86,71 +106,95 @@ def fetch_datasets_data_package(sif_image: Client, data_package: str, queries: s
             raise ValueError("Result obtained from datasets is not a string")
         if re.search("^FATAL", result):
             raise RuntimeError(f"Singularity image execution failed! -> '{result.strip()}'")
-        tmp_asm_dict = json.loads(result)
-        if not tmp_asm_dict["total_count"]:
-            logging.warning(f"No datasets report found for query: {sub_sample}")
+        
+        # ingest report(s) into JSON dict 
+        json_slurped_reports = json.loads(result)
+        if not json_slurped_reports["total_count"]:
+            logging.warning(f"No datasets report(s) found for query: {sub_sample}")
             continue
 
-        logging.info(f"Taxonomy report obtained for queries(s) {queries}")
+        logging.info(f"Datasets report (type: {type(ReportClass)} obtained for queries(s) {sub_sample}")
 
-        taxonomy_reports: dict = {}
-        batch_reports_json = tmp_asm_dict["reports"]
+        # Parse reports to dump to file and store parsed_report_object
+        parsed_ncbi_reports: dict = {}
+        batch_reports_json = json_slurped_reports["reports"]
         for report in batch_reports_json:
-            taxonReport = TaxonomyReports(json.dumps(report))
-            species_name = taxonReport.species_name.replace(" ", "_")
-            taxon_id = taxonReport.ncbi_taxon_id
-            sci_taxon_name = f"{species_name}-{taxon_id}"
-            taxonomy_reports[f"{sci_taxon_name}"] = taxonReport
-            asm_json_outfile = Path(download_dir, f"{sci_taxon_name}.taxon-report.json")
+            json_report = ReportClass(json.dumps(report))
+            #Formatted data package specific report|file name
+            report_name, file_suffix = prepare_file_output(data_package.name, json_report)
+            parsed_ncbi_reports[f"{report_name}"] = report
+            asm_json_outfile = Path(download_dir, f"{report_name}-{file_suffix}")
             print_json(asm_json_outfile, report)
+    return parsed_ncbi_reports
 
-    return taxonomy_reports
 
+def prepare_file_output(datapackage_type: str, report: dict) -> str:
+    """
+    Args:
+        datapackage: 
 
-            # asm_json_outfile = Path(download_directory, f"{accession}.json")
-            # print_json(asm_json_outfile, assembly_report)
-            # # Save assembly report into source key<>report dict
-            # for src_key, accession_core in assembly_accessions.items():
-            #     if accession == accession_core:
-            #         combined_asm_reports[src_key] = assembly_report
+    """
+    # print(f"report has type: {type(report)}")
+
+    if datapackage_type == "TAXONOMY":
+        species_name = report.species_name.replace(" ", "_")
+        taxon_id = report.ncbi_taxon_id
+        file_prefix = f"{species_name}"
+        file_suffix = "taxonReport.json"
+    if datapackage_type == "GENOME":
+        accession = report.accession
+        taxon_id = report.organism["taxId"]
+        file_prefix = f"{accession}"
+        file_suffix = "genomeReport.json"
+    else:
+        print("REPORT FILE NAME FORMATER EXITED")
+        sys.exit()
+
+    fmt_outfile_name = f"{file_prefix}-{taxon_id}"
+    print(f"PREFIX = {file_prefix}, SUFFIX = {file_suffix}, FILENAME = {fmt_outfile_name}")
+
+    return fmt_outfile_name, file_suffix
+
 
 # def fetch_taxonomy_reports(download_directory: StrPath):
 #     """
 #     TODO:
-    
+
 #     Args:
 #         download_directory: Directory path to store assembly report JSON files.
 #     """
 
 
-def survey_genome_setup_from_tsv (src_file: StrPath) -> str:
+def survey_setup_from_tsv(src_file: StrPath) -> str:
     """Function to parse input TSV and partition appropriate survey information required for generating reports.
-    
+
     Args:
-        src_file: Path to file with one line per query taxonomic species/groups
-    
+        src_file: Path to file with one line per query taxonomic|genome species/groups
+
     Returns:
         queries: list of taxon_ids for which to search
     """
-    queries:list = []
-    taxonomy_df = pd.read_csv(f"{src_file}", sep='\t')
+    queries: list = []
+    taxonomy_df = pd.read_csv(f"{src_file}", sep="\t")
+    taxonomy_df.fillna("NA", inplace=True)
     # Iterate over pandas dataframe
     for data_row in taxonomy_df.itertuples(index=False):
         taxon_id = data_row[0]
         queries.append(str(taxon_id))
-    print(queries)
-    taxon_list = ",".join(queries)
-    
-    return taxon_list
-        # name = data_row[1]
-        # accession = data_row[2]
-        # contact = data_row[3]
-        # print(f"working on :taxon ID {taxon_id}")
-        # print(f"working on :name {name}")
-        # print(f"working on :accession {accession}")
-        # print(f"working on :contact {contact}")
+        # sp_name = data_row[1] # SPECIES NAME
+        # accession = data_row[2] # ACCESSION
+        # opt_params = data_row[3] # EXTRA PARAMS
+        # contact = data_row[4] # CONTACT
+    return queries
 
-    
+        # if accession and taxon id present:
+            # skip taxon report download, go straight to genome report
+        # elif accession present but taxon_id missing:
+            # download genome report on specific accession only
+        # elif taxon id present, but accession missing:
+            # download all genomes for that taxon_id
+        # USE extra params in all cases
+
 
 def main() -> None:
     """Module's entry-point."""
@@ -183,10 +227,11 @@ def main() -> None:
     init_logging_with_args(args)
 
     # Parse input TSV for taxon queries
-    taxon_queries = survey_genome_setup_from_tsv(args.input)
-    
-    # Parse singularity setting and define the SIF image for 'datasets'
+    # taxon_queries = survey_genome_setup_from_tsv(args.input)
+    genome_queries = survey_setup_from_tsv(args.input)
+
+    # # Parse singularity setting and define the SIF image for 'datasets'
     datasets_image = singularity_image_setter(args.cache_dir, args.datasets_version_url)
 
-    # fetch_datasets_data_package(datasets_image, "taxonomy", taxon_queries, args.download_dir)
-    fetch_datasets_data_package(datasets_image, "taxonomy", taxon_queries, args.download_dir)
+    # # fetch_datasets_data_package(datasets_image, DatasetsPackage.TAXONOMY, taxon_queries, args.download_dir)
+    # fetch_datasets_data_package(datasets_image, DatasetsPackage.GENOME, genome_queries, args.download_dir)
