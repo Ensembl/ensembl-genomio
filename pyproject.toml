@@ -106,6 +106,7 @@ documentation = "https://ensembl.github.io/ensembl-genomio"
 # Assembly
 assembly_download = "ensembl.io.genomio.assembly.download:main"
 assembly_tracker = "ensembl.io.genomio.assembly.status:main"
+assembly_survey = "ensembl.io.genomio.assembly.survey:main"
 # Database
 database_factory = "ensembl.io.genomio.database.factory:main"
 query_db_meta = "ensembl.io.genomio.database.meta_getter:main"
