@@ -75,7 +75,7 @@ def fetch_datasets_data_package(
     # elif data_package.value == "genome":
     #     base_command = ["datasets", "summary", f"{data_package.value}", "taxon"]
         # extra_params = "--report genome --assembly-level chromosome,complete,scaffold --exclude-atypical".split(" ")
-        ReportClass = GenomeAssemblyReports
+        # ReportClass = GenomeAssemblyReports
     # elif data_package.value == "gene": TODO
     # elif data_package.value == "virus": TODO
 
@@ -151,21 +151,12 @@ def prepare_file_output(datapackage_type: str, report: dict) -> str:
         sys.exit()
 
     fmt_outfile_name = f"{file_prefix}-{taxon_id}"
-    print(f"PREFIX = {file_prefix}, SUFFIX = {file_suffix}, FILENAME = {fmt_outfile_name}")
+    # print(f"PREFIX = {file_prefix}, SUFFIX = {file_suffix}, FILENAME = {fmt_outfile_name}")
 
     return fmt_outfile_name, file_suffix
 
-
-# def fetch_taxonomy_reports(download_directory: StrPath):
-#     """
-#     TODO:
-
-#     Args:
-#         download_directory: Directory path to store assembly report JSON files.
-#     """
-
-
-def survey_setup_from_tsv(src_file: StrPath) -> str:
+# def survey_setup_from_tsv(src_file: StrPath) -> dict:
+def setup_genome_survey(src_file: StrPath) -> dict:
     """Function to parse input TSV and partition appropriate survey information required for generating reports.
 
     Args:
@@ -174,27 +165,53 @@ def survey_setup_from_tsv(src_file: StrPath) -> str:
     Returns:
         queries: list of taxon_ids for which to search
     """
-    queries: list = []
+    parsed_queries: dict[list] = {
+            "Accessions": [],
+            "Taxon_ids": [],
+            "Species": []}
+    query_count = 0
+    parsed_accession, parsed_taxonid, parsed_species = [], [], []
+    
+    # Iterate over pandas dataframe
     taxonomy_df = pd.read_csv(f"{src_file}", sep="\t")
     taxonomy_df.fillna("NA", inplace=True)
-    # Iterate over pandas dataframe
     for data_row in taxonomy_df.itertuples(index=False):
-        taxon_id = data_row[0]
-        queries.append(str(taxon_id))
-        # sp_name = data_row[1] # SPECIES NAME
-        # accession = data_row[2] # ACCESSION
-        # opt_params = data_row[3] # EXTRA PARAMS
-        # contact = data_row[4] # CONTACT
-    return queries
+        if data_row[0] != "NA":
+            taxon_id = str(int(data_row[0]))
+        else:
+            taxon_id = data_row[0]
 
-        # if accession and taxon id present:
-            # skip taxon report download, go straight to genome report
-        # elif accession present but taxon_id missing:
-            # download genome report on specific accession only
-        # elif taxon id present, but accession missing:
-            # download all genomes for that taxon_id
-        # USE extra params in all cases
+        # Check taxonID and accessions present and not NA:
+        taxon_match = re.match(r"^[0-9]+", taxon_id)
+        accession_match = re.match(r"^(GC[AF])_([0-9]{3})([0-9]{3})([0-9]{3})(\.[0-9]+)?$", data_row[2])
+        sp_name = data_row[1] # SPECIES NAME
+        opt_params = data_row[3] # EXTRA PARAMS
+        contact = data_row[4] # CONTACT
+        
+        # Best case, use accession if present
+        if accession_match:
+            parsed_accession.append({"insdc_accession": accession_match.group(0), "opt_params": opt_params, "contact": contact})
+        # TaxonID present, accession missing:
+        elif taxon_match and not accession_match:
+            parsed_taxonid.append({"taxon_id": taxon_match.group(0), "opt_params": opt_params, "contact": contact})
+        # Both taxonID and accession is missing:
+        elif sp_name != "NA":
+            parsed_species.append({"organism": sp_name, "opt_params": opt_params, "contact": contact})
+        else:
+            logging.warning(f"Unable to fully parse row {str(data_row)} in TSV, no useful species, genome or taxon ID info present")# get species name
+        
+        query_count+=1
+    
+    total_accn_based = len(parsed_accession)
+    total_taxon_based = len(parsed_taxonid)
+    total_sp_based = len(parsed_species)
+    parsed_queries["Accessions"]=parsed_accession
+    parsed_queries["Taxon_ids"]=parsed_taxonid
+    parsed_queries["Species"]=parsed_species
+    logging.info(f"Input TSV parsed, parsed n={query_count} queries for further processing")
+    logging.info(f"Breakdown of queries: Accession based n=({total_accn_based}), TaxonID based n=({total_taxon_based}) and Species based n=({total_sp_based})")
 
+    return parsed_queries
 
 def main() -> None:
     """Module's entry-point."""
@@ -227,11 +244,13 @@ def main() -> None:
     init_logging_with_args(args)
 
     # Parse input TSV for taxon queries
-    # taxon_queries = survey_genome_setup_from_tsv(args.input)
-    genome_queries = survey_setup_from_tsv(args.input)
+    parsed_queries: dict = {}
+    # taxon_queries = setup_genome_survey(args.input)
+    parsed_queries = setup_genome_survey(args.input)
+    # print(parsed_queries)
 
     # # Parse singularity setting and define the SIF image for 'datasets'
-    datasets_image = singularity_image_setter(args.cache_dir, args.datasets_version_url)
+    # datasets_image = singularity_image_setter(args.cache_dir, args.datasets_version_url)
 
     # # fetch_datasets_data_package(datasets_image, DatasetsPackage.TAXONOMY, taxon_queries, args.download_dir)
     # fetch_datasets_data_package(datasets_image, DatasetsPackage.GENOME, genome_queries, args.download_dir)
