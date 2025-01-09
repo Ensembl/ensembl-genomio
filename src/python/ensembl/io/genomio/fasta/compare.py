@@ -23,22 +23,22 @@ from Bio import SeqIO
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 
-__all__ = ["CompareFasta"]
+__all__ = ["CompareFasta", "SeqGroup"]
 
 class SeqGroup:
-    def __init__(self, sequence : str, identifier: str | None = None) -> None:
-        self.sequence : str = sequence
-        self.length : int = len(self.sequence)
+    def __init__(self, identifier: str | None = None) -> None:
         self.ids : List[str] = []
         if identifier:
             self.add_id(identifier)
+        else:
+            self.add_id("None")
         self.count = len(self.ids)
-
+        
     def __str__(self) -> str:
         return ", ".join(self.ids)
 
-    def add_id(self, identifier: str) -> None:
-        self.ids.append(identifier)
+    def add_id(self, identifier: str | None = None) -> None:
+        self.ids.append(identifier if identifier else "None")
         self.count = len(self.ids)
 
 
@@ -48,7 +48,45 @@ class CompareFasta:
         self.fasta2 = Path(fasta2_path)
         self.output_dir = Path(output_dir)
         self.comp : List[str] = []
-        self.compare_seqs(fasta1_path, fasta2_path)
+
+    def compare_seqs(self) -> None:
+        """
+        Compare two FASTA files for common, unique, and differing sequences.
+        """
+
+        seq1 = self.read_fasta(self.fasta1)
+        seq2 = self.read_fasta(self.fasta2)
+
+        # Compare sequences
+        seq1_dict = self.build_seq_dict(seq1)
+        seq2_dict = self.build_seq_dict(seq2)
+
+        # Compare number of sequences
+        if len(seq1) != len(seq2):
+            self.comp.append(f"WARNING: Different number of sequences: {len(seq1)} vs {len(seq2)}")
+
+        common, group_comp = self.find_common_groups(seq1_dict, seq2_dict)
+        self.comp += group_comp
+
+        # Sequences that are not common
+        only1 = {seq: group for seq, group in seq1_dict.items() if not seq in seq2_dict}
+
+        only2 = {seq: group for seq, group in seq2_dict.items() if not seq in seq1_dict}
+
+        if only1:
+            self.comp.append(f"Sequences only in fasta1: {', '.join([str(ids) for ids in only1.values()])}")
+        if only2:
+            self.comp.append(f"Sequences only in fasta2: {', '.join([str(ids) for ids in only2.values()])}")
+
+        if common:
+            self.comp.append(f"Common ids: {', '.join([str(common_ids) for common_ids in common.items()])}")
+
+        # Check for sequences with extra Ns
+        if only1 and only2:
+            self.compare_seq_for_Ns(only1, only2)
+
+        # Write results to file
+        self.write_results()
 
     def read_fasta(self, fasta_path: Path) -> dict:
         """
@@ -85,7 +123,8 @@ class CompareFasta:
             if seq in seqs_dict:
                 seqs_dict[seq].add_id(name)
             else:
-                seqs_dict[seq] = SeqGroup(seq, name)
+                seqs_dict[seq] = SeqGroup(name)
+
         return seqs_dict
 
     def find_common_groups(self, seq1_dict: dict, seq2_dict: dict) -> Tuple[dict, List[Any]]:
@@ -111,7 +150,6 @@ class CompareFasta:
                         common[group1.ids[0]] = group2.ids[0]
                     else:
                         self.comp.append(f"Matched 2 identical groups of sequences: {group1} and {group2}")
-
                         # Map each ID in group1 to a possible group2 ID
                         possible_id2 = " OR ".join(group2.ids)
                         common.update({id1: possible_id2 for id1 in group1.ids})
@@ -119,49 +157,8 @@ class CompareFasta:
                     self.comp.append(
                         f"Matched 2 different groups of sequences ({group1.count} vs {group2.count}): {group1} and {group2}"
                     )
+                    
         return common, self.comp
-
-    def compare_seqs(self, fasta1: Path, fasta2: Path) -> None:
-        """
-        Compare two FASTA files for common, unique, and differing sequences.
-
-        Args:
-            fasta1 : Path to the first FASTA file.
-            fasta2 : Path to the second FASTA file.
-        """
-
-        seq1 = self.read_fasta(fasta1)
-        seq2 = self.read_fasta(fasta2)
-
-        # Compare sequences
-        seq1_dict = self.build_seq_dict(seq1)
-        seq2_dict = self.build_seq_dict(seq2)
-
-        # Compare number of sequences
-        if len(seq1) != len(seq2):
-            self.comp.append(f"WARNING: Different number of sequences: {len(seq1)} vs {len(seq2)}")
-
-        common, group_comp = self.find_common_groups(seq1_dict, seq2_dict)
-        self.comp += group_comp
-
-        # Sequences that are not common
-        only1 = {seq: group for seq, group in seq1_dict.items() if not seq in seq2_dict}
-
-        only2 = {seq: group for seq, group in seq2_dict.items() if not seq in seq1_dict}
-
-        if only1:
-            self.comp.append(f"Sequences only in fasta1: {', '.join([str(ids) for ids in only1.values()])}")
-        if only2:
-            self.comp.append(f"Sequences only in fasta2: {', '.join([str(ids) for ids in only2.values()])}")
-
-        if common:
-            self.comp.append(f"Common ids: {', '.join([str(common_ids) for common_ids in common.items()])}")
-
-        # Check for sequences with extra Ns
-        self.compare_sequences_for_Ns(only1, only2)
-
-        # Write results to file
-        self.write_results()
 
     def write_results(self) -> None:
         """
@@ -175,7 +172,7 @@ class CompareFasta:
             for line in self.comp:
                 out_fh.write(line + "\n")
 
-    def compare_sequences_for_Ns(self, only1: dict, only2: dict) -> None:
+    def compare_seq_for_Ns(self, only1: dict, only2: dict) -> None:
         """
         Compare sequences in `only1` and `only2` for differences in `N` content and length.
 
@@ -184,30 +181,26 @@ class CompareFasta:
             only2 (dict): Sequences unique to the second dataset, mapping sequence to group/identifier.
         """
         # sequences which have extra N at the end
-        if only1 and only2:
-            for seq_1, name1 in only1.items():
-                len1 = len(seq_1)
-                seq1_N = seq_1.count("N")
+        for seq_1, name1 in only1.items():
+            len1 = len(seq_1)
+            seq1_N = seq_1.count("N")
 
-                for seq_2, name2 in only2.items():
-                    len2 = len(seq_2)
-                    seq2_N = seq_2.count("N")
+            for seq_2, name2 in only2.items():
+                len2 = len(seq_2)
+                seq2_N = seq_2.count("N")
 
-                    if abs(seq1_N - seq2_N) == abs(len1 - len2):
-                        self.comp.append(f"Please check extra Ns added in your fasta2 in {name1} and {name2}")
+                if abs(seq1_N - seq2_N) == abs(len1 - len2):
+                    self.comp.append(f"Please check extra Ns added in your fasta2 in {name1} and {name2}")
+                else:
+                    self.comp.append(
+                        f"ALERT INSERTIONS at the end or diff assembly level {name1} and {name2}"
+                    )
+
+                if len1 == len2:
+                    if seq2_N > seq1_N:
+                        self.comp.append(f"your fasta2 has more Ns, check {name1} and {name2}")
                     else:
-                        self.comp.append(
-                            f"ALERT INSERTIONS at the end or diff assembly level {name1} and {name2}"
-                        )
-
-                    if len1 == len2:
-                        if seq2_N > seq1_N:
-                            self.comp.append(f"your fasta2 has more Ns, check {name1} and {name2}")
-                        elif seq1_N > seq2_N:
-                            self.comp.append(f"INSDC has more Ns, check {name1} and {name2}")
-                        else:
-                            self.comp.append(f"sequences have the same length, check {name1} and {name2}")
-
+                        self.comp.append(f"sequences have the same length, check {name1} and {name2}")
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """
@@ -247,4 +240,7 @@ def main(arg_list: list[str] | None = None) -> None:
     """
     args = parse_args(arg_list)
 
-    CompareFasta(args.fasta1_path, args.fasta2_path, args.output_dir)
+    compare_initialise = CompareFasta(args.fasta1_path, args.fasta2_path, args.output_dir)
+
+    # Perform the comparison explicitly
+    compare_initialise.compare_seqs()
