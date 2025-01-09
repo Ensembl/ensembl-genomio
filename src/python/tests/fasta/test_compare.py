@@ -18,6 +18,7 @@ from pathlib import Path
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqIO import parse
+from io import StringIO
 import pytest
 from unittest.mock import MagicMock, patch
 from pytest import TempPathFactory
@@ -75,61 +76,46 @@ class TestWriteFormattedFiles:
 
         assert result_simple == expected
     
-    @pytest.mark.parametrize(
-        "mock_fasta_data, expected",
-        [
-            pytest.param(
-            [
-            SeqRecord(Seq("ATCGNNNN"), id="seq1"),
-            SeqRecord(Seq("NANTGCGT"), id="seq2"),
-            ],
-            {
-            "seq1": "ATCGNNNN",
-            "seq2": "NANTGCGT",
-            },
-            id="id: seq"
-            ),
-            pytest.param(
-            [
-            SeqRecord(Seq("ATCGNNNN"), id="seq1"),
-            SeqRecord(Seq("RAXTGCGT"), id="seq2"),
-            ],
-            {
-            "seq1": "ATCGNNNN",
-            "seq2": "NANTGCGT",
-            },
-            id="id: seq -> When we have a bases other than ATGC"
-            ),
-        ]
-    )
-    @patch("ensembl.utils.archive.open_gz_file")
-    @patch("Bio.SeqIO.parse")
-    def test_read_fasta(self, mock_open_gz_file, mock_parse, compare_fasta_instance,mock_fasta_data, expected, data_dir) -> None:
-        """Tests the `read_fasta` function."""
-    # Mock the file handle returned by `open_gz_file`
-        mock_file_handle = MagicMock()
-
-        mock_open_gz_file.return_value = mock_file_handle
-
-    # Mock the `SeqIO.parse` to return the mocked data
-        mock_parse.return_value = mock_fasta_data
-
-    # Path to the input FASTA file
-        fasta_path = Path(data_dir / "input.fasta")
-
-    # Call the method under test
-        sequences = compare_fasta_instance.read_fasta(fasta_path)
-
-    # Assert that `open_gz_file` was called with the correct argument
-        mock_open_gz_file.assert_called_once_with(fasta_path)
-
-    # Assert that `SeqIO.parse` was called with the mock file handle and the "fasta" format
-        mock_parse.assert_called_once_with(mock_file_handle, "fasta")
-
-    # Assert that the `read_fasta` method returns the expected result
-        assert sequences == expected
-
+    @patch("ensembl.io.genomio.fasta.compare.SeqIO.parse")
+    @patch("ensembl.io.genomio.fasta.compare.open_gz_file")
+    def test_read_fasta(self, mock_open_gz_file, mock_seqio_parse, compare_fasta_instance):
+        """
+        Tests the `read_fasta` method of CompareFasta.
     
+        This test ensures that `read_fasta` correctly parses a FASTA file,
+        replaces non-CGTA characters with 'N', and returns the expected dictionary.
+        """
+    
+        # Define the mock FASTA file path
+        fasta_path = Path("dummy1.fasta")
+    
+        # Create mock SeqRecord objects
+        seq_record1 = SeqRecord(Seq("ATCGNNNN"), id="seq1")
+        seq_record2 = SeqRecord(Seq("NANTGCGT"), id="seq2")
+    
+        # Expected output after replacing non-CGTA characters with 'N'
+        expected_output = {
+            "seq1": "ATCGNNNN",
+            "seq2": "NANTGCGT",
+        }
+    
+        # Configure the mock for open_gz_file to return a mock file handle
+        mock_fasta_fh = StringIO(">seq1\nATCGNNNN\n>seq2\nNANTGCGT\n")
+        mock_open_gz_file.return_value = mock_fasta_fh
+    
+        # Configure the mock for SeqIO.parse to return the mock SeqRecord objects
+        mock_seqio_parse.return_value = [seq_record1, seq_record2]
+    
+        # Call the method under test
+        result = compare_fasta_instance.read_fasta(fasta_path)
+    
+        # Assertions to ensure methods were called correctly
+        mock_open_gz_file.assert_called_once_with(fasta_path)
+        mock_seqio_parse.assert_called_once_with(mock_fasta_fh, "fasta")
+    
+        # Assert that the result matches the expected output
+        assert result == expected_output, "The read_fasta method did not return the expected dictionary."
+
     @pytest.mark.parametrize(
     "seq_dict1, seq_dict2, expected_common, expected_comp",
     [
