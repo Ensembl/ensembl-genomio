@@ -223,3 +223,14 @@ class TestWriteFormattedFiles:
 
         # Check the comparison logs
         assert len(compare_fasta_instance.comp) > 0
+
+    def test_write_results(self, compare_fasta_instance, tmp_path_factory: TempPathFactory):
+        """Tests the `write_results` method."""
+        
+        temp = tmp_path_factory.mktemp("temp")
+        compare_fasta_instance.output_dir = temp
+        compare_fasta_instance.write_results()
+        expected_file = Path(temp) / "compare.log"  # Update filename as per your implementation
+        assert expected_file.exists(), f"Expected file {expected_file} does not exist."
+    
+        
