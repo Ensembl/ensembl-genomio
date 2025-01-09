@@ -307,10 +307,10 @@ def test_chunk_fasta_stream(
             parts.clear()
             with expected_raised:
                 agp_list = FastaChunking.chunk_fasta_stream(
-                    input_fasta, # type: ignore[arg-type]
+                    input_fasta,  # type: ignore[arg-type]
                     chunk_size,
                     chunk_size_tolerated,
-                    output_fasta, # type: ignore[arg-type]
+                    output_fasta,  # type: ignore[arg-type]
                     None,
                     n_sequence_len=n_sequence_len,
                     chunk_sfx=chunk_sfx,
@@ -326,7 +326,7 @@ def test_chunk_fasta_stream(
             parts.clear()
             with expected_raised:
                 agp_list = FastaChunking.chunk_fasta_stream(
-                    input_fasta, # type: ignore[arg-type]
+                    input_fasta,  # type: ignore[arg-type]
                     chunk_size,
                     chunk_size_tolerated,
                     no_output_fasta,
