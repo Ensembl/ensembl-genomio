@@ -15,6 +15,7 @@
 """Unit testing of `ensembl.io.genomio.fasta.compare` module."""
 # pylint: disable=too-many-positional-arguments
 from pathlib import Path
+from deepdiff import DeepDiff
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqIO import parse
@@ -27,6 +28,7 @@ from ensembl.utils.archive import open_gz_file
 
 from ensembl.io.genomio.fasta.compare import CompareFasta
 from ensembl.io.genomio.fasta.compare import SeqGroup
+from ensembl.io.genomio.fasta import compare
 
 class TestWriteFormattedFiles:
     """Test if all the expected output files are generated and formatted correctly"""
@@ -232,5 +234,42 @@ class TestWriteFormattedFiles:
         compare_fasta_instance.write_results()
         expected_file = Path(temp) / "compare.log"  # Update filename as per your implementation
         assert expected_file.exists(), f"Expected file {expected_file} does not exist."
+
+    @pytest.mark.parametrize(
+    "arg_list, expected",
+    [
+        pytest.param(
+            ["--fasta1_path", "genome1.fasta", "--fasta2_path", "genome2.fasta"],
+            {
+                "fasta1_path": "genome1.fasta",
+                "fasta2_path": "genome2.fasta",
+                "output_dir": Path.cwd(),
+                "compare_seq_region": False,
+            },
+            id="Default args",
+        ),
+        pytest.param(
+            [
+                "--fasta1_path", "genome1.fasta",
+                "--fasta2_path", "genome2.fasta",
+                "--output_dir", "/output/dir",
+                "--compare_seq_region",
+            ],
+            {
+                "fasta1_path": "genome1.fasta",
+                "fasta2_path": "genome2.fasta",
+                "output_dir": Path("/output/dir"),
+                "compare_seq_region": True,
+            },
+            id="Custom args",
+        ),
+    ],
+    )
+    def test_parse_args(self,arg_list: list[str], expected: dict) -> None:
+        """Tests the `parse_args` function."""
+        args = compare.parse_args(arg_list)
+        if args.output_dir:
+            args.output_dir = Path(args.output_dir)
+        assert not DeepDiff(vars(args), expected), "Parsed arguments differ from expected."
     
         
