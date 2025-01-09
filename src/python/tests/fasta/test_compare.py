@@ -35,9 +35,8 @@ class TestWriteFormattedFiles:
     output_path = "output"
 
     @pytest.fixture(scope="class", autouse=True)
-    def compare_fasta_instance(self):
+    def compare_fasta_instance(self) -> CompareFasta:
         """Fixture to provide a CompareFasta instance for testing."""
-        
         return CompareFasta(self.fasta1_path, self.fasta2_path, self.output_path)
 
     @pytest.mark.parametrize(
@@ -192,9 +191,49 @@ class TestWriteFormattedFiles:
     def test_compare_seq_for_Ns(self, only1, only2, expected_comp, compare_fasta_instance):
         """Tests the `compare_seq_for_Ns` function."""
 
+         # Clear the comp list to isolate this test
+        compare_fasta_instance.comp = []
         compare_fasta_instance.compare_seq_for_Ns(only1, only2)
         assert compare_fasta_instance.comp == expected_comp
-        compare_fasta_instance.comp = []
 
+    @pytest.mark.parametrize(
+        "mock_seq1, mock_seq2, mock_seq1_dict, mock_seq2_dict",
+        [
+        pytest.param(
+            ["ACTG", "CGTA"],
+            ["ACTG", "CGTANN"],
+            {"ACTG": "id1", "CGTA": "id2"},
+            {"ACTG": "id3", "CGTANN": "id4"},
+            id="Case with differing sequence lengths"
+        ),
+    ],
+    )
+    @patch("ensembl.io.genomio.fasta.compare.CompareFasta.write_results")
+    @patch("ensembl.io.genomio.fasta.compare.CompareFasta.build_seq_dict")
+    @patch("ensembl.io.genomio.fasta.compare.CompareFasta.read_fasta")
+    def test_compare_seqs(self,
+        mock_read_fasta,
+        mock_build_seq_dict,
+        mock_write_results,
+        compare_fasta_instance,
+        mock_seq1,
+        mock_seq2,
+        mock_seq1_dict,
+        mock_seq2_dict,
+    ):
+        """Tests the `compare_seqs` function."""
 
-    
+        # Configure the mocks
+        mock_read_fasta.side_effect = [mock_seq1, mock_seq2]
+        mock_build_seq_dict.side_effect = [mock_seq1_dict, mock_seq2_dict]
+
+        # Call the method
+        compare_fasta_instance.compare_seqs()
+
+        # Assertions
+        mock_read_fasta.assert_called()
+        mock_build_seq_dict.assert_called()
+        mock_write_results.assert_called()
+
+        # Check the comparison logs
+        assert len(compare_fasta_instance.comp) > 0
