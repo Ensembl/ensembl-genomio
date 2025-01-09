@@ -109,7 +109,7 @@ class MetaConf:
         if not gbff_file:
             return
 
-        print("adding data from  %s" % gbff_file, file=sys.stderr)
+        print(f"adding data from {gbff_file}", file=sys.stderr)
         _open = gbff_file.endswith(".gz") and gzip.open or open
         with _open(gbff_file, "rt") as gbff:
             gb_parser = SeqIO.parse(gbff, "genbank")
@@ -238,8 +238,9 @@ class MetaConf:
         self.update("organism.common_name", _comm_name)
         _display_name = _sci_name
         if _strain or _comm_name:
-            _strain_comm_part = ", ".join(map(lambda s: str(s), filter(None, [_comm_name, _strain])))
-            _display_name += " (%s)" % _strain_comm_part
+            _strain_comm_part = ", ".join(map(str, filter(None, [_comm_name, _strain])))
+            _display_name += f" ({_strain_comm_part})"
+        _display_name_main = _display_name
         _display_name += " - " + asm_acc
         # possibly add annotation source tag
         _ann_source = self.get("species.annotation_source", default="").strip()
@@ -249,6 +250,7 @@ class MetaConf:
             self.update("genebuild.annotation_source", _ann_source)
             _display_name = f"{_display_name} [{_ann_source} annotation]"
         self.update("species.display_name", _display_name)
+        self.update("species.display_name_main", _display_name_main)
         # back to using "Binomial_name_GCA_000001.1rs" names, only for GenBank ('GCA') accessions
         _species_url = _prod_name.capitalize()
         _species_url = re.sub(r"_gca(\d+)v(\d+)", r"_GCA_\1.\2", _species_url, flags=re.I)
