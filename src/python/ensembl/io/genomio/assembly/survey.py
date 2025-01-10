@@ -166,7 +166,7 @@ def prepare_file_output(datapackage_type: str, report: dict) -> str:
         taxon_id = report.ncbi_taxon_id
         file_prefix = f"{species_name}"
         file_suffix = "taxonReport.json"
-    if datapackage_type == "GENOME":
+    elif datapackage_type == "GENOME":
         accession = report.accession
         taxon_id = report.organism["taxId"]
         file_prefix = f"{accession}"
