@@ -50,7 +50,7 @@ def check_notice(notice_template: PathLike) -> None:
     notice_file = _ROOT_PATH / "NOTICE"
     year = datetime.date.today().year
     report = ""
-    with notice_template.open() as tpl, notice_file.open() as fh:
+    with Path(notice_template).open() as tpl, notice_file.open() as fh:
         # Add dummy values if one of the files turns out to be shorter than the other
         for tpl_line, fh_line in zip_longest(tpl, fh, fillvalue=""):
             tpl_line = tpl_line.replace("<current_year>", f"{year}")
@@ -74,7 +74,7 @@ def check_header(header_template: PathLike) -> None:
         RuntimeError: If at least one file has missing or incorrect license header.
 
     """
-    template = header_template.read_text()
+    template = Path(header_template).read_text()
     # Escape symbols that may be interpreted as part of a regex otherwise
     template = template.replace(".", "\.").replace("(", "\(").replace(")", "\)")
     # Allow comment symbols and additional spaces before each header line, and single newline instead of two
