@@ -36,6 +36,7 @@ sub resource_classes {
   my $queue = $self->o('queue_name');
   my $short = "1:00:00";
   my $long = "24:00:00";
+  my $week = "7-00:00:00";
 
   my %resources = (
     %{$self->SUPER::resource_classes},
@@ -49,6 +50,13 @@ sub resource_classes {
 
   for my $mem (@mems) {
     my $name = "${mem}GB";
+    $resources{$name} = $self->make_resource({"queue" => $queue, "memory" => $mem * 1000, "time" => $time});
+  }
+
+  # same for weekly classes
+  $time = $week;
+  for my $mem (@mems) {
+    my $name = "${mem}GB_week";
     $resources{$name} = $self->make_resource({"queue" => $queue, "memory" => $mem * 1000, "time" => $time});
   }
 
