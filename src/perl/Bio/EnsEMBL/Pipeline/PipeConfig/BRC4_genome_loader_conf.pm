@@ -157,6 +157,12 @@ sub default_options {
     # default resource class for LoadFunctionalAnnotation step
     load_func_ann_rc_name => '8GB',
 
+    # default resource class for LoadGFF3 step
+    load_gff3_rc_name => '16GB',
+
+    # default resource class for CanonicalTranscriptsAttribs step
+    canonical_transript_attribs_rc_name => 'default',
+
     # size of chunks to split contigs into (0 -- no splitting)
     sequence_data_chunk => 0,
     # coord system name for chunks
@@ -222,6 +228,8 @@ sub pipeline_wide_parameters {
     manifest_integrity_rc_name => $self->o('manifest_integrity_rc_name'),
     load_sequence_data_rc_name => $self->o('load_sequence_data_rc_name'),
     load_func_ann_rc_name => $self->o('load_func_ann_rc_name'),
+    load_gff3_rc_name => $self->o('load_gff3_rc_name'),
+    canonical_transript_attribs_rc_name => $self->o('canonical_transript_attribs_rc_name'),
 
     sequence_data_chunk => $self->o('sequence_data_chunk'),
     chunk_cs_name        => $self->o('chunk_cs_name'),
@@ -691,7 +699,7 @@ sub pipeline_analyses {
       },
       -failed_job_tolerance => 10,
       -max_retry_count   => 0,
-      -rc_name    => '16GB',
+      -rc_name    => $self->o('load_gff3_rc_name'),
       -analysis_capacity   => 10,
       -flow_into => WHEN('#has_fasta_peptide#' => [ 'FixModels' ]),
     },
@@ -855,7 +863,7 @@ sub pipeline_analyses {
         'base_dir'       => $self->o('ensembl_root_dir'),
         'dump_path' => $self->o('pipeline_dir') . '/#db_name#/canonical_transcripts',
       },
-      -rc_name    => 'default',
+      -rc_name    => $self->o('canonical_transript_attribs_rc_name'),
       -analysis_capacity   => 2,
       -flow_into => 'CanonicalTranscriptsAttribs',
     },
