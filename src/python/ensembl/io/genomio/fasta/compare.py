@@ -25,6 +25,7 @@ import ensembl.io.genomio
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+
 __all__ = ["CompareFasta", "SeqGroup"]
 
 class SeqGroup:
@@ -46,8 +47,8 @@ class SeqGroup:
 
 class CompareFasta:
     def __init__(self, fasta1: Path, fasta2: Path, output_dir: str) -> None:
-        self.fasta1 = Path(fasta1_path)
-        self.fasta2 = Path(fasta2_path)
+        self.fasta1 = Path(fasta1)
+        self.fasta2 = Path(fasta2)
         self.output_dir = Path(output_dir)
         self.comp : List[str] = []
 
@@ -65,8 +66,9 @@ class CompareFasta:
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
-            self.comp.append(f"WARNING: Different number of sequences: {fasta1} [ n = {len(seq1)} ] -Vs- {fasta2} [ n = {len(seq2)} ]")
-logging.warning(f"Different number of sequences: {fasta1} compared to {fasta2}")
+            self.comp.append(f"WARNING: Different number of sequences: fasta1 [ n = {len(seq1)} ] -Vs- fasta2 [ n = {len(seq2)} ]")
+            logging.warning(f"Different number of sequences: fasta1 compared to fasta2")
+
         common, group_comp = self.find_common_groups(seq1_dict, seq2_dict)
         self.comp += group_comp
 
@@ -216,10 +218,9 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         argparse.Namespace: Parsed arguments as an argparse Namespace object.
     """
     parser = ArgumentParser(description="Compare sequences between two genomes")
-        parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
-        # Add filter arguments
-    parser.add_argument("--fasta1_path", required=True, help="Path to INSDC fasta file")
-    parser.add_argument("--fasta2_path", required=True, help="Query  fasta to check against INSDC fasta.")
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
+    parser.add_argument("--fasta1", required=True, help="Path to INSDC fasta file")
+    parser.add_argument("--fasta2", required=True, help="Query  fasta to check against INSDC fasta.")
     parser.add_argument(
         "--output_dir",
         default=Path.cwd(),
@@ -242,8 +243,7 @@ def main(arg_list: list[str] | None = None) -> None:
     arg_list: Parsed arguments as an argparse Namespace object
     """
     args = parse_args(arg_list)
-
-    compare_initialise = CompareFasta(args.fasta1_path, args.fasta2_path, args.output_dir)
-
+    init_logging_with_args(args)
+    compare_initialise = CompareFasta(args.fasta1, args.fasta2, args.output_dir)
     # Perform the comparison explicitly
     compare_initialise.compare_seqs()
