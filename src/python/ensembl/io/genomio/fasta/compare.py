@@ -14,15 +14,17 @@
 # limitations under the License.
 
 import argparse
+import logging
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Tuple
 
 from Bio import SeqIO
 
+import ensembl.io.genomio
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
-
+from ensembl.utils.logging import init_logging_with_args
 __all__ = ["CompareFasta", "SeqGroup"]
 
 class SeqGroup:
@@ -43,7 +45,7 @@ class SeqGroup:
 
 
 class CompareFasta:
-    def __init__(self, fasta1_path: Path, fasta2_path: Path, output_dir: str) -> None:
+    def __init__(self, fasta1: Path, fasta2: Path, output_dir: str) -> None:
         self.fasta1 = Path(fasta1_path)
         self.fasta2 = Path(fasta2_path)
         self.output_dir = Path(output_dir)
@@ -63,8 +65,8 @@ class CompareFasta:
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
-            self.comp.append(f"WARNING: Different number of sequences: {len(seq1)} vs {len(seq2)}")
-
+            self.comp.append(f"WARNING: Different number of sequences: {fasta1} [ n = {len(seq1)} ] -Vs- {fasta2} [ n = {len(seq2)} ]")
+logging.warning(f"Different number of sequences: {fasta1} compared to {fasta2}")
         common, group_comp = self.find_common_groups(seq1_dict, seq2_dict)
         self.comp += group_comp
 
@@ -74,9 +76,9 @@ class CompareFasta:
         only2 = {seq: group for seq, group in seq2_dict.items() if not seq in seq1_dict}
 
         if only1:
-            self.comp.append(f"Sequences only in fasta1: {', '.join([str(ids) for ids in only1.values()])}")
+            self.comp.append(f"Sequences only in Fasta_1: {', '.join([str(ids) for ids in only1.values()])}")
         if only2:
-            self.comp.append(f"Sequences only in fasta2: {', '.join([str(ids) for ids in only2.values()])}")
+            self.comp.append(f"Sequences only in Fasta_2: {', '.join([str(ids) for ids in only2.values()])}")
 
         if common:
             self.comp.append(f"Common ids: {', '.join([str(common_ids) for common_ids in common.items()])}")
@@ -99,7 +101,7 @@ class CompareFasta:
             dict: A dictionary where keys are sequence IDs and values are sequences
               with all non-CGTA characters replaced by 'N'.
         """
-        print(f"Read file {fasta_path}")
+        logging.info(f"Read fasta file {fasta_path}")
         sequences = {}
         with open_gz_file(fasta_path) as fasta_fh:
             for rec in SeqIO.parse(fasta_fh, "fasta"):
@@ -167,7 +169,7 @@ class CompareFasta:
         """
         output_file = Path.joinpath(self.output_dir, "compare.log")
 
-        print(f"Writing results to {output_file}")
+        logging.info(f"Writing results to {output_file}")
         with open(output_file, "w") as out_fh:
             for line in self.comp:
                 out_fh.write(line + "\n")
@@ -214,9 +216,10 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         argparse.Namespace: Parsed arguments as an argparse Namespace object.
     """
     parser = ArgumentParser(description="Compare sequences between two genomes")
-    # Add filter arguments
+        parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
+        # Add filter arguments
     parser.add_argument("--fasta1_path", required=True, help="Path to INSDC fasta file")
-    parser.add_argument("--fasta2_path", required=True, help="Path to user supplied fasta file")
+    parser.add_argument("--fasta2_path", required=True, help="Query  fasta to check against INSDC fasta.")
     parser.add_argument(
         "--output_dir",
         default=Path.cwd(),
@@ -227,7 +230,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--compare_seq_region",
         action="store_true",
-        help="Enable compare seq_region mode, i.e. use seq_region for seqence comparison",
+        help="Enable compare seq_region mode, i.e. use seq_region for sequence comparison",
     )
     return parser.parse_args(arg_list)
 
