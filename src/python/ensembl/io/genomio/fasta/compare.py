@@ -170,11 +170,14 @@ class CompareFasta:
 
         """
         output_file = Path.joinpath(self.output_dir, "compare.log")
+        observed_compare = set()
 
         logging.info(f"Writing results to {output_file}")
         with open(output_file, "w") as out_fh:
             for line in self.comp:
-                out_fh.write(line + "\n")
+                if line not in observed_compare:
+                    observed_compare.add(line)
+                    out_fh.write(str(line) + "\n")
 
     def compare_seq_for_Ns(self, only1: dict, only2: dict) -> None:
         """
