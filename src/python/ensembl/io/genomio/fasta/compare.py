@@ -26,37 +26,62 @@ from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
+"""Compare sequences between two genomes"""
+
 __all__ = ["CompareFasta", "SeqGroup"]
 
+
 class SeqGroup:
+    """Represents a group of sequence identifiers and maintains a count of them."""
+
     def __init__(self, identifier: str | None = None) -> None:
-        self.ids : List[str] = []
+        """
+        Initializes a SeqGroup instance.
+
+        Args:
+            identifier (str | None, optional): The first identifier to add to the group.
+                                               Defaults to None, which adds "None" as the identifier.
+        """
+        self.ids: List[str] = []
         if identifier:
             self.add_id(identifier)
         else:
             self.add_id("None")
         self.count = len(self.ids)
-        
+
     def __str__(self) -> str:
+        """
+        Returns a comma-separated string of sequence identifiers.
+
+        Returns:
+            str: A string representation of the sequence group.
+        """
         return ", ".join(self.ids)
 
     def add_id(self, identifier: str | None = None) -> None:
+        """
+        Adds a new identifier to the group and updates the count.
+
+        Args:
+            identifier (str | None, optional): The identifier to add. If None, "None" is added instead.
+        """
         self.ids.append(identifier if identifier else "None")
         self.count = len(self.ids)
 
 
 class CompareFasta:
+    """Read and compare the fasta sequences"""
+
     def __init__(self, fasta1: Path, fasta2: Path, output_dir: str) -> None:
         self.fasta1 = Path(fasta1)
         self.fasta2 = Path(fasta2)
         self.output_dir = Path(output_dir)
-        self.comp : List[str] = []
+        self.comp: List[str] = []
 
     def compare_seqs(self) -> None:
         """
         Compare two FASTA files for common, unique, and differing sequences.
         """
-
         seq1 = self.read_fasta(self.fasta1)
         seq2 = self.read_fasta(self.fasta2)
 
@@ -66,8 +91,11 @@ class CompareFasta:
 
         # Compare number of sequences
         if len(seq1) != len(seq2):
-            self.comp.append(f"WARNING: Different number of sequences: fasta1 [ n = {len(seq1)} ] -Vs- fasta2 [ n = {len(seq2)} ]")
-            logging.warning(f"Different number of sequences: fasta1 compared to fasta2")
+            self.comp.append(
+                "WARNING: Different number of sequences: "
+                f"fasta1 [ n = {len(seq1)} ] -Vs- fasta2 [ n = {len(seq2)} ]"
+            )
+            logging.warning("Different number of sequences: fasta1 compared to fasta2")
 
         common, group_comp = self.find_common_groups(seq1_dict, seq2_dict)
         self.comp += group_comp
@@ -122,7 +150,7 @@ class CompareFasta:
             dict: A dictionary where keys are unique sequences and values are `SeqGroup` objects
                 that group sequence IDs sharing the same sequence.
         """
-        seqs_dict: Dict[str, SeqGroup] = dict()
+        seqs_dict: Dict[str, SeqGroup] = {}
         for name, seq in seqs.items():
             if seq in seqs_dict:
                 seqs_dict[seq].add_id(name)
@@ -159,9 +187,10 @@ class CompareFasta:
                         common.update({id1: possible_id2 for id1 in group1.ids})
                 else:
                     self.comp.append(
-                        f"Matched 2 different groups of sequences ({group1.count} vs {group2.count}): {group1} and {group2}"
+                        "Matched 2 different groups of sequences"
+                        f" ({group1.count} vs {group2.count}): {group1} and {group2}"
                     )
-                    
+
         return common, self.comp
 
     def write_results(self) -> None:
@@ -208,6 +237,7 @@ class CompareFasta:
                         self.comp.append(f"your fasta2 has more Ns, check {name1} and {name2}")
                     else:
                         self.comp.append(f"sequences have the same length, check {name1} and {name2}")
+
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """
