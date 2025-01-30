@@ -233,7 +233,7 @@ class MetaConf:
             self.update("ANNOTATION_SOURCE_SFX", _ann_source_sfx, tech=True)
             _prod_name += _ann_source_sfx
         self.update("species.production_name", _prod_name)
-        self.update("organism.ensembl_name", _prod_name)
+        self.update("organism.production_name", _prod_name)
         _comm_name = self.get("species.common_name")
         self.update("organism.common_name", _comm_name)
         _display_name = _sci_name
