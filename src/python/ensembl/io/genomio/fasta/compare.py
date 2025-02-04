@@ -40,7 +40,7 @@ class SeqGroup:
 
         Args:
             identifier (str | None, optional): The first identifier to add to the group.
-                                               Defaults to None, which adds "None" as the identifier.
+                                Defaults to None, which adds "None" as the identifier.
         """
         self.ids: List[str] = []
         if identifier:
@@ -67,7 +67,6 @@ class SeqGroup:
         """
         self.ids.append(identifier if identifier else "None")
         self.count = len(self.ids)
-
 
 class CompareFasta:
     """Read and compare the fasta sequences"""

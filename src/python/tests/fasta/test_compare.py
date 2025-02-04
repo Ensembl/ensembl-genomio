@@ -13,21 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.fasta.compare` module."""
-# pylint: disable=too-many-positional-arguments
 
-import pytest
 from pathlib import Path
 from io import StringIO
 
+from unittest.mock import Mock, patch
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from deepdiff import DeepDiff
 
+import pytest
 from pytest import TempPathFactory
-from unittest.mock import Mock, patch
+
 
 from ensembl.io.genomio.fasta.compare import CompareFasta, SeqGroup
 from ensembl.io.genomio.fasta import compare
+
 
 class TestCompareFastaFiles:
     """Test if all the expected output files are generated and formatted correctly"""
@@ -61,7 +62,9 @@ class TestCompareFastaFiles:
             ),
         ],
     )
-    def test_build_seq_dict(self, compare_fasta_instance : CompareFasta, expected: dict, seq_dict: dict) -> None:
+    def test_build_seq_dict(
+        self, compare_fasta_instance: CompareFasta, expected: dict, seq_dict: dict
+    ) -> None:
         """Tests the `build_seq_dict` function.
 
         Args:
@@ -79,7 +82,9 @@ class TestCompareFastaFiles:
 
     @patch("ensembl.io.genomio.fasta.compare.SeqIO.parse")
     @patch("ensembl.io.genomio.fasta.compare.open_gz_file")
-    def test_read_fasta(self, mock_open_gz_file : Mock , mock_seqio_parse : Mock, compare_fasta_instance : CompareFasta) -> None:
+    def test_read_fasta(
+        self, mock_open_gz_file: Mock, mock_seqio_parse: Mock, compare_fasta_instance: CompareFasta
+    ) -> None:
         """
         Tests the `read_fasta` method of CompareFasta.
 
@@ -132,24 +137,29 @@ class TestCompareFastaFiles:
             ),
             pytest.param(
                 # Multi-ID groups with identical counts
-                {"ATTCG": SeqGroup("id1"), "ATCG": SeqGroup("id4"), "ATCG": SeqGroup("id5")},
+                {"ATTCG": SeqGroup("id1"), "ATCG": SeqGroup("id4")},
                 {"ATCG": SeqGroup("id2"), "ATTCG": SeqGroup("id3")},
-                {"id1": "id3", "id5": "id2 OR id3", "id4": "id2 OR id3"},
-                ["Matched 2 identical groups of sequences: id5, id4 and id2, id3"],
+                {"id1": "id3", "id5": "id2 OR id6", "id4": "id2 OR id6"},
+                ["Matched 2 identical groups of sequences: id4, id2 and id1, id3"],
                 id="Matching multi-ID groups with same count",
             ),
         ],
     )
     def test_find_common_groups(
-        self, compare_fasta_instance : CompareFasta, expected_common : dict, expected_comp : list[str], seq_dict1 : dict, seq_dict2 : dict
+        self,
+        compare_fasta_instance: CompareFasta,
+        expected_common: dict,
+        expected_comp: list[str],
+        seq_dict1: dict,
+        seq_dict2: dict,
     ) -> None:
         """Tests the `find_common_groups` function."""
 
         # Add extra IDs for multi-ID cases to mimic realistic scenarios
         if "ATCG" in seq_dict1:
-            seq_dict1["ATCG"].add_id("id4")
+            seq_dict1["ATCG"].add_id("id5")
         if "ATCG" in seq_dict2:
-            seq_dict2["ATCG"].add_id("id3")
+            seq_dict2["ATCG"].add_id("id6")
 
         common, comp = compare_fasta_instance.find_common_groups(seq_dict1, seq_dict2)
         assert common == expected_common
@@ -179,7 +189,9 @@ class TestCompareFastaFiles:
             ),
         ],
     )
-    def test_compare_seq_for_Ns(self, compare_fasta_instance : CompareFasta, expected_comp : list[str], only1 : dict, only2: dict) -> None:
+    def test_compare_seq_for_Ns(
+        self, compare_fasta_instance: CompareFasta, expected_comp: list[str], only1: dict, only2: dict
+    ) -> None:
         """Tests the `compare_seq_for_Ns` function."""
 
         # Clear the comp list to isolate this test
@@ -204,14 +216,14 @@ class TestCompareFastaFiles:
     @patch("ensembl.io.genomio.fasta.compare.CompareFasta.read_fasta")
     def test_compare_seqs(
         self,
-        mock_read_fasta : Mock,
-        mock_build_seq_dict : Mock,
-        mock_write_results : Mock,
+        mock_read_fasta: Mock,
+        mock_build_seq_dict: Mock,
+        mock_write_results: Mock,
         compare_fasta_instance: CompareFasta,
-        mock_seq1 : list[str],
-        mock_seq2 : list[str],
-        mock_seq1_dict : dict[str, str],
-        mock_seq2_dict : dict[str, str],
+        mock_seq1: list[str],
+        mock_seq2: list[str],
+        mock_seq1_dict: dict[str, str],
+        mock_seq2_dict: dict[str, str],
     ) -> None:
         """Tests the `compare_seqs` function."""
 
@@ -230,7 +242,9 @@ class TestCompareFastaFiles:
         # Check the comparison logs
         assert len(compare_fasta_instance.comp) > 0
 
-    def test_write_results(self, compare_fasta_instance : CompareFasta, tmp_path_factory: TempPathFactory) -> None:
+    def test_write_results(
+        self, compare_fasta_instance: CompareFasta, tmp_path_factory: TempPathFactory
+    ) -> None:
         """Tests the `write_results` method."""
 
         temp = tmp_path_factory.mktemp("temp")
