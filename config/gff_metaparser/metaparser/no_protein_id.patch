@@ -1,0 +1,4 @@
+# patch for the gff_metaparser.conf to disable cds/ID substitution with the protein_id
+
+cds/protein_id	GFF_SUB	DISCARD
+cds/protein_id	JSON_SUB	DISCARD
