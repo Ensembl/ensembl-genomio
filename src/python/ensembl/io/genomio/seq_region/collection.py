@@ -73,7 +73,7 @@ class SeqCollection:
     @staticmethod
     def make_seqregion_from_gbff(record_data: GBFFRecord) -> SeqRegionDict:
         """Returns a seq_region dict extracted from a GBFF record."""
-        seqr: SeqRegionDict = {"length": len(record_data.record.seq)}
+        seqr: SeqRegionDict = {"length": len(record_data.record.seq)}  # type: ignore[arg-type]
 
         if record_data.is_circular():
             seqr["circular"] = True

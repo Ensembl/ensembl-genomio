@@ -420,7 +420,7 @@ class FormattedFilesGenerator:
                 "coord_system_level": "chromosome",
                 "circular": (seq.annotations["topology"] == "circular"),
                 "codon_table": codon_table,
-                "length": len(seq.seq),
+                "length": len(seq.seq),  # type: ignore[arg-type]
             }
             if "organelle" in seq.annotations:
                 seq_obj["location"] = self._prepare_location(str(seq.annotations["organelle"]))
