@@ -12,8 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Connect to a core database and retrieve a meta_key:meta_value pair(s)  
-and dump meta_key/value pairs to stdout / JSON."""
+"""Connect to a core database and retrieve a meta_key:meta_value pair(s) and dump meta_key/value
+pairs to stdout / JSON.
+"""
 
 __all__ = ["get_meta_values"]
 

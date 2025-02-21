@@ -218,7 +218,7 @@ class TestFormattedFilesGenerator:
         result = formatted_files_generator._prepare_location(organelle)
         assert result == expected_location
 
-    @pytest.mark.parametrize("organelle", [("miton")])
+    @pytest.mark.parametrize("organelle", ["miton"])
     def test_prepare_location_with_unsupported_organelle(
         self,
         organelle: str,
