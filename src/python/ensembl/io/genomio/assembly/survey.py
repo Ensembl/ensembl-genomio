@@ -133,25 +133,57 @@ def fetch_datasets_data_package(
 
         # ingest report(s) into JSON dict
         json_slurped_reports = json.loads(result)
+        try:
+            batch_reports_json = json_slurped_reports["reports"]
+        except:
+            batch_reports_json = None
+
+        sub_sample_downloaded = json_slurped_reports["total_count"]
+
         if not json_slurped_reports["total_count"]:
-            logging.warning(f"No datasets report(s) found for query: {sub_sample}")
+            logging.warning(
+                f"No datasets report(s) located for query type {query_type}, queries: {sub_sample}"
+            )
             continue
 
-        logging.info(f"Datasets report obtained for queries(s) {sub_sample}")
+        # Check if all datasets reports were located and downloaded:
+        if sub_sample_downloaded == len(sub_sample):
+            logging.info(f"All datasets n={len(sub_sample)} report(s) obtained for queries(s) {sub_sample}")
+        else:
+            sub_sampled_reports: list = []
+            failed_queries: list = []
+            failed_download_warning = f"Unable to download datasets report (report level: {data_package.value}, query type: {query_type}) on -> "
+
+            for report in json_slurped_reports["reports"]:
+                sub_sampled_reports.append(f"{report[query_type]}")
+
+            for accession in sub_sample:
+                if accession not in sub_sampled_reports:
+                    failed_queries.append(accession)
+            if failed_queries:
+                failed_download_warning = failed_download_warning + f"{failed_queries}"
+            if extra_params:
+                failed_download_warning = failed_download_warning + f", additional params: {extra_params}"
+            logging.warning(failed_download_warning)
 
         # Parse reports to dump to file and store parsed_report_object
         parsed_ncbi_reports: dict = {}
-        batch_reports_json = json_slurped_reports["reports"]
+        if batch_reports_json:
+            for report in batch_reports_json:
+                # print(f"Parsed report type = {type(report)}") # Dict of ncbi_datasets Report(s)
+                ncbi_report_object = NCBIReportClass(json.dumps(report))  # ensembl/ncbi_datasets Report Class
+                # print(f"Parsed json report type = {type(ncbi_report_object)}")
 
-        for report in batch_reports_json:
-            json_report = NCBIReportClass(json.dumps(report))
-            # Format data package with data packakge specific file name
-            report_name, file_suffix = prepare_file_output(data_package.name, json_report)
-            parsed_ncbi_reports[f"{report_name}"] = report
-            download_dir.mkdir(parents=True, exist_ok=True)
-            asm_json_outfile = Path(download_dir, f"{report_name}-{file_suffix}")
-            print_json(asm_json_outfile, report)
-    return parsed_ncbi_reports
+                # Format data package with data packakge specific file name
+                report_name, file_suffix = prepare_file_output(data_package.name, ncbi_report_object)
+                download_dir.mkdir(parents=True, exist_ok=True)
+                asm_json_outfile = Path(download_dir, f"{report_name}-{file_suffix}")
+                print_json(asm_json_outfile, report)
+
+                # Build up parsed report object(s):
+                parsed_ncbi_reports[f"{report_name}"] = ncbi_report_object
+
+        return parsed_ncbi_reports
 
 
 def prepare_file_output(datapackage_type: str, report: dict) -> str:
@@ -296,7 +328,8 @@ def setup_genome_survey(
                             f"Calling datasets on accessions: {accessions} "
                             f"with datasets-cli parameters: '{datasets_params}'."
                         )
-                        fetch_datasets_data_package(
+                        captured_reports: dict = {}
+                        captured_reports = fetch_datasets_data_package(
                             datasets_image,
                             DatasetsPackage.GENOME,
                             "accession",
@@ -304,6 +337,8 @@ def setup_genome_survey(
                             reports_dir,
                             datasets_params,
                         )
+                        # print(f"RETURNED REPORTS Type: {type(captured_reports)}")
+                        # print(f"RETURNED REPORTS: {captured_reports}")
                     # No optional params, call function with None
                     else:
                         logging.info(
