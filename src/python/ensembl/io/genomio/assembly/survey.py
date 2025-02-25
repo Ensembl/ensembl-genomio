@@ -310,48 +310,37 @@ def setup_genome_survey(
 
     # Iterate over parsed queries and generate raw report JSONs
     for query_type, queries in parsed_queries.items():
-        if queries is not None:
+        if queries:
+            grouped_queries: list = _group_query_on_optional_params(queries)
+            captured_reports: dict = {}
             # Download exact genome report from specific accession
             if query_type == "Accessions":
                 logging.debug(f"Iterating over accession based queries -> {queries}")
-                # Group accession query in order to batch submit to datasets-cli
-                # using correct optional parameters
-                unique_optional_params: list = _group_query_on_optional_params(queries)
-                # Parse optional group dicts and submit each set of accession
+                
+                # Group accession queries in order to batch submit to datasets-cli
                 # with the same input optional params
-                for grouped_by_params in unique_optional_params:
+                for grouped_by_params in grouped_queries:
                     accessions = grouped_by_params["insdc_accession"]
                     datasets_params = grouped_by_params["opt_params"]
                     # Call datasets cli with optional params
                     if datasets_params != "NA":
                         logging.info(
-                            f"Calling datasets on accessions: {accessions} "
+                            f"Calling datasets on accessions: {accessions}, "
                             f"with datasets-cli parameters: '{datasets_params}'."
                         )
-                        captured_reports: dict = {}
-                        captured_reports = fetch_datasets_data_package(
-                            datasets_image,
-                            DatasetsPackage.GENOME,
-                            "accession",
-                            accessions,
-                            reports_dir,
-                            datasets_params,
-                        )
-                        # print(f"RETURNED REPORTS Type: {type(captured_reports)}")
-                        # print(f"RETURNED REPORTS: {captured_reports}")
                     # No optional params, call function with None
                     else:
+                        datasets_params = None
                         logging.info(
                             f"Calling datasets on accessions: {accessions}. "
                             f"No additional datasets-cli parameters specified."
                         )
-                        fetch_datasets_data_package(
-                            datasets_image, DatasetsPackage.GENOME, "accession", accessions, reports_dir, None
-                        )
+                    captured_reports = fetch_datasets_data_package(
+                        datasets_image, DatasetsPackage.GENOME, "accession", accessions, reports_dir, datasets_params
+                    )
             # # Download set of genome reports from taxon ID
             elif query_type == "Taxon_ids":
                 logging.debug(f"Iterating over taxon ID based queries -> {queries}")
-                grouped_queries: list = _group_query_on_optional_params(queries)
 
                 for grouped_by_params in grouped_queries:
                     taxon_ids = grouped_by_params["taxon_id"]
@@ -359,26 +348,19 @@ def setup_genome_survey(
                     # Call datasets cli with optional params
                     if datasets_params != "NA":
                         logging.info(
-                            f"Calling datasets on taxonIDs: {taxon_ids} "
+                            f"Calling datasets on taxonIDs: {taxon_ids}, "
                             f"with datasets-cli parameters: '{datasets_params}'."
-                        )
-                        fetch_datasets_data_package(
-                            datasets_image,
-                            DatasetsPackage.GENOME,
-                            "taxon",
-                            taxon_ids,
-                            reports_dir,
-                            datasets_params,
                         )
                     # call datasets cli with None for optional params
                     else:
+                        datasets_params = None
                         logging.info(
                             f"Calling datasets on taxonIDs: {taxon_ids}. "
                             f"No additional datasets-cli parameters specified."
                         )
-                        fetch_datasets_data_package(
-                            datasets_image, DatasetsPackage.GENOME, "taxon", taxon_ids, reports_dir, None
-                        )
+                    captured_reports = fetch_datasets_data_package(
+                        datasets_image, DatasetsPackage.TAXONOMY, "taxon", taxon_ids, reports_dir, datasets_params
+                    )
         # # Download set of genome reports from species name
         # elif query_type == "Species":
         #     print(f"Iterating over species based queries -> {queries}")
@@ -425,7 +407,6 @@ def main(arg_list: list[str] | None = None) -> None:
     Args:
         arg_list: Arguments to parse passing list to parse_args().
     """
-    # args = parser.parse_args()
     args = parse_args(arg_list)
     init_logging_with_args(args)
 
