@@ -24,7 +24,7 @@ import pytest
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
-from ensembl.io.genomio.gff3.id_allocator import StableIDAllocator, InvalidStableID
+from ensembl.io.genomio.gff3.id_allocator import StableIDAllocator, InvalidStableIDError
 from ensembl.io.genomio.gff3.features import GFFSeqFeature
 from pytest import raises
 
@@ -216,7 +216,7 @@ def test_normalize_pseudogene_cds_id(
     [
         pytest.param("geneid_ok.gff3", "LOREMIPSUM1", None, does_not_raise(), id="Good ID, no change"),
         pytest.param("geneid_makeid.gff3", "TMP_1", True, does_not_raise(), id="Make ID"),
-        pytest.param("geneid_bad.gff3", "", False, raises(InvalidStableID), id="Bad ID, fail"),
+        pytest.param("geneid_bad.gff3", "", False, raises(InvalidStableIDError), id="Bad ID, fail"),
         pytest.param("geneid_GeneID.gff3", "GeneID_000001", None, does_not_raise(), id="Replace with GeneID"),
         pytest.param("geneid_noGeneID.gff3", "TMP_1", True, does_not_raise(), id="Dbxref without Gene ID"),
     ],

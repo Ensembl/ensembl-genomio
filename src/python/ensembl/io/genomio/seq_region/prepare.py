@@ -33,7 +33,7 @@ def prepare_seq_region_metadata(
     to_exclude: list[str] | None = None,
     mock_run: bool = False,
 ) -> None:
-    """Prepares the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
+    """Prepare the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
 
     The sequence region information is loaded from both sources and combined. Elements are added/excluded
     as requested, and the final sequence region metadata is dumped in a JSON file that follows the schema
@@ -70,7 +70,7 @@ def prepare_seq_region_metadata(
 
 
 def main() -> None:
-    """Module's entry-point."""
+    """Run module's entry-point."""
     parser = ArgumentParser(description="Construct a sequence region metadata file from INSDC files.")
     parser.add_argument_src_path("--genome_file", required=True, help="Genome metadata JSON file")
     parser.add_argument_src_path(

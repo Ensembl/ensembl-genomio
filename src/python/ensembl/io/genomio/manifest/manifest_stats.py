@@ -38,7 +38,7 @@ StatsLengths: TypeAlias = dict[str, int]
 
 
 class InvalidIntegrityError(Exception):
-    """When a file integrity check fails"""
+    """When a file integrity check fails."""
 
 
 class ManifestStats:
@@ -53,7 +53,6 @@ class ManifestStats:
     def __init__(self, manifest_path: StrPath, ignore_final_stops: bool = False) -> None:
         self.manifest_files = self._get_manifest(manifest_path)
         self.genome: dict[str, Any] = {}
-
         self.lengths: dict[str, StatsLengths] = {
             "dna_sequences": {},
             "peptide_sequences": {},
@@ -70,13 +69,10 @@ class ManifestStats:
             "ann_transposable_elements": {},
             "seq_regions": {},
         }
-
         self.circular: dict[str, StatsLengths] = {
             "seq_regions": {},
         }
-
         self.errors: list[str] = []
-
         self.ignore_final_stops = ignore_final_stops
 
     def _get_manifest(self, manifest_path: PathLike) -> dict[str, Any]:
@@ -88,7 +84,6 @@ class ManifestStats:
         """
         manifest = Manifest(Path(manifest_path).parent)
         manifest_files = manifest.load()
-
         # Replace the {file, md5} dict with the file path
         for name in manifest_files:
             if "file" in manifest_files[name]:
@@ -140,7 +135,7 @@ class ManifestStats:
         self.lengths["dna_sequences"] = self._get_fasta_lengths(self.manifest_files["fasta_dna"])
 
     def _get_fasta_lengths(self, fasta_path: StrPath, ignore_final_stops: bool = False) -> dict[str, int]:
-        """Returns every sequence ID and its length from a FASTA file (DNA or peptide).
+        """Return every sequence ID and its length from a FASTA file (DNA or peptide).
 
         An error will be added for every empty id, non-unique id or stop codon found in the FASTA file.
 
@@ -169,7 +164,9 @@ class ManifestStats:
             # Store sequence id and length
             data[rec.id] = len(rec.seq)
             stops = rec.seq.count("*")
-            if stops >= 1 and not rec.seq.endswith("*") or rec.seq.endswith("*") and not ignore_final_stops:
+            if (stops >= 1 and not rec.seq.endswith("*")) or (
+                rec.seq.endswith("*") and not ignore_final_stops
+            ):
                 contains_stop_codon += 1
 
         if empty_id_count > 0:
@@ -194,7 +191,7 @@ class ManifestStats:
         logging.info("Manifest contains functional annotation(s)")
 
         # Load the json file
-        with open(self.manifest_files["functional_annotation"]) as json_file:
+        with self.manifest_files["functional_annotation"].open() as json_file:
             data = json.load(json_file)
 
         # Get gene ids and translation ids
@@ -218,9 +215,7 @@ class ManifestStats:
         self.lengths = {**self.lengths, **stats}
 
     def load_gff3(self) -> None:
-        """A GFF3 parser is used to retrieve information in the GFF3 file such as
-        gene and CDS ids and their corresponding lengths.
-        """
+        """Parse the GFF3 file to retrieve information such as gene and CDS IDs and their lengths."""
         if "gff3" not in self.manifest_files:
             return
         logging.info("Manifest contains GFF3 gene annotations")
@@ -296,15 +291,15 @@ class ManifestStats:
                 pep_id = pep_id.replace("CDS:", "")
                 length.setdefault(pep_id, 0)
                 length[pep_id] += abs(feat3.location.end - feat3.location.start)
-            for pep_id, pep_length in length.items():
+            for pep_id, dna_length in length.items():
                 # Store length for translations, add pseudo translations separately
-                pep_length = floor(pep_length / 3) - 1
+                pep_length = floor(dna_length / 3) - 1
                 if feat.type != "pseudogene" and feat2.type in protein_transcripts:
                     peps[pep_id] = pep_length
                 all_peps[pep_id] = pep_length
 
     def load_agp_seq_regions(self, agp_dict: dict | None) -> None:
-        """AGP files describe the assembly of larger sequence objects using smaller objects.
+        """Load AGP file information describing the assembly of larger sequence objects using smaller objects.
 
         E.g. describes the assembly of scaffolds from contigs.
 
@@ -321,7 +316,7 @@ class ManifestStats:
 
         seqr: StatsLengths = {}
         for agp_path in agp_dict.values():
-            with open(agp_path) as agph:
+            with agp_path.open() as agph:
                 for line in agph:
                     (
                         asm_id,
@@ -381,7 +376,7 @@ class ManifestStats:
             raise KeyError(f"There is no length record for {name}") from err
 
     def get_lengths(self, name: str) -> dict[str, Any]:
-        """Returns a dict associating IDs with their length from a given file name.
+        """Return a dict associating IDs with their length from a given file name.
 
         Args:
             name: Name for the lengths to get.
@@ -396,7 +391,7 @@ class ManifestStats:
             raise KeyError(f"There is no length record for {name}") from err
 
     def get_circular(self, name: str) -> dict[str, Any]:
-        """Returns a dict associating IDs with their is_circular flag from a given file name.
+        """Return a dict associating IDs with their is_circular flag from a given file name.
 
         Args:
             name: Name for the circular data to get.

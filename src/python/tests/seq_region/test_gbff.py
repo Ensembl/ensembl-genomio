@@ -25,7 +25,7 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
-from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
+from ensembl.io.genomio.seq_region.exceptions import UnknownMetadataError
 
 
 def get_record(gbff_path: Path) -> SeqRecord:
@@ -88,7 +88,7 @@ def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | No
     [
         param("apicoplast.gb", "apicoplast_chromosome", no_raise(), id="Found location"),
         param("apicoplast_nofeatures.gb", None, no_raise(), id="No features"),
-        param("apicoplast_unknown_location.gb", None, raises(UnknownMetadata), id="Unknown location"),
+        param("apicoplast_unknown_location.gb", None, raises(UnknownMetadataError), id="Unknown location"),
         param("apicoplast_noprefix_location.gb", "apicoplast_chromosome", no_raise(), id="No prefix"),
     ],
 )

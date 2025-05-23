@@ -14,9 +14,7 @@
 # limitations under the License.
 """Merge split genes in a GFF file."""
 
-__all__ = [
-    "GFFGeneMerger",
-]
+__all__ = ["GFFGeneMerger"]
 
 from importlib.resources import as_file, files
 import logging
@@ -60,8 +58,7 @@ class GFFGeneMerger:
                     out_gff_fh.write(line)
                 else:
                     # Parse one line
-                    line = line.rstrip()
-                    fields = line.split("\t")
+                    fields = line.rstrip().split("\t")
                     attr_fields = fields[8].split(";")
                     attrs = {}
                     for a in attr_fields:
@@ -77,23 +74,17 @@ class GFFGeneMerger:
                     # If not, merge previous gene if needed, and print the line
                     else:
                         if to_merge:
-                            merged_str = []
-                            for line_to_merge in to_merge:
-                                merged_str.append("\t".join(line_to_merge))
+                            merged_str = ["\t".join(line_to_merge) for line_to_merge in to_merge]
                             merged.append("\n".join(merged_str) + "\n")
-
                             new_line = self._merge_genes(to_merge)
                             out_gff_fh.write(new_line)
                             to_merge = []
-                        out_gff_fh.write(line + "\n")
+                        out_gff_fh.write(line.rstrip() + "\n")
 
             # Print last merged gene if there is one
             if to_merge:
-                merged_str = []
-                for line_to_merge in to_merge:
-                    merged_str.append("\t".join(line_to_merge))
+                merged_str = ["\t".join(line_to_merge) for line_to_merge in to_merge]
                 merged.append("\n".join(merged_str) + "\n")
-
                 new_line = self._merge_genes(to_merge)
                 out_gff_fh.write(new_line)
 
@@ -101,7 +92,7 @@ class GFFGeneMerger:
         return merged
 
     def _merge_genes(self, to_merge: list) -> str:
-        """Returns a single gene gff3 line merged from separate parts.
+        """Return a single gene gff3 line merged from separate parts.
 
         Args:
             to_merge: List of gff3 lines with gene parts.

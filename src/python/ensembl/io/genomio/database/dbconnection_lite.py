@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from ensembl.core.models import Meta
 from ensembl.utils.database import DBConnection, StrURL
 
+
 _DB_PATTERN_RELEASE = re.compile(r".+_(?:core|otherfeatures|variation)_(?P<release>\d+)_\d+_\d+")
 
 
@@ -37,7 +38,7 @@ class DBConnectionLite(DBConnection):
         self._metadata: dict[str, list] = {}
 
     def get_metadata(self) -> dict[str, list]:
-        """Retrieves all metadata from the `meta` table in the database.
+        """Retrieve all metadata from the `meta` table in the database.
 
         Returns:
             A dict of with key meta_key, and value=List of meta_value.
@@ -47,7 +48,7 @@ class DBConnectionLite(DBConnection):
         return self._metadata
 
     def _load_metadata(self) -> None:
-        """Caches the metadata values."""
+        """Cache the metadata values."""
         if self._metadata:
             return
 
@@ -63,7 +64,7 @@ class DBConnectionLite(DBConnection):
                     self._metadata[meta_key] = [meta_value]
 
     def get_meta_value(self, meta_key: str) -> str | None:
-        """Returns the first meta_value for a given meta_key."""
+        """Return the first meta_value for a given meta_key."""
         self._load_metadata()
         try:
             return self._metadata[meta_key][0]
@@ -72,7 +73,7 @@ class DBConnectionLite(DBConnection):
             return None
 
     def get_project_release(self) -> str:
-        """Returns the project release number from the database name. Returns empty string if not found."""
+        """Return the project release number from the database name. Returns empty string if not found."""
         match = re.search(_DB_PATTERN_RELEASE, self.db_name)
         if match:
             return match.group(1)

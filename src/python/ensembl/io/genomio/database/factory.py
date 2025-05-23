@@ -31,7 +31,7 @@ from .dbconnection_lite import DBConnectionLite
 
 
 def format_db_data(server_url: URL, dbs: list[str], brc_mode: bool = False) -> list[dict]:
-    """Returns a metadata list from the given databases on a server.
+    """Return a metadata list from the given databases on a server.
 
     Args:
         server_url: Server URL where all the databases are hosted.
@@ -97,7 +97,7 @@ def get_core_dbs_metadata(
     db_list: Path | None = None,
     brc_mode: bool = False,
 ) -> list[dict]:
-    """Returns all the metadata fetched for the selected core databases.
+    """Return all the metadata fetched for the selected core databases.
 
     Args:
         server_url: Server URL where the core databases are stored.
@@ -158,7 +158,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 
 def main(arg_list: list[str] | None = None) -> None:
-    """Main script entry-point.
+    """Run module's entry-point.
 
     Args:
         arg_list: Arguments to parse passing list to parse_args().

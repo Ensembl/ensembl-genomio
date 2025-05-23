@@ -51,7 +51,7 @@ class CoreServer:
         dbname_re: str = "",
         db_list: list[str] | None = None,
     ) -> list[str]:
-        """Returns a list of core databases, filtered if requested.
+        """Return a list of core databases, filtered if requested.
 
         Args:
             prefix: Filter by prefix (no "_" is added automatically).

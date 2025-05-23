@@ -44,7 +44,7 @@ FeatStruct = tuple[str, str, str]
 
 
 def get_core_data(session: Session, table: str, match_xrefs: bool = False) -> dict[str, FeatStruct]:
-    """Returns the table descriptions from a core database.
+    """Return the table descriptions from a core database.
 
     Args:
         session: Session open on a core database.
@@ -96,7 +96,7 @@ def load_descriptions(
     do_update: bool = False,
     match_xrefs: bool = True,
 ) -> None:
-    """Loads gene and transcript descriptions into a core database.
+    """Load gene and transcript descriptions into a core database.
 
     Args:
         session: Session open on a core database.
@@ -187,7 +187,7 @@ def _get_features_to_update(
     do_update: bool = False,
     match_xrefs: bool = True,
 ) -> list[dict[str, Any]]:
-    """Checks a list of features and returns those whose description we want to update.
+    """Check a list of features and returns those whose description we want to update.
 
     Args:
         table: "gene" or "transcript" table for the features.
@@ -251,7 +251,7 @@ def _get_features_to_update(
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Run module's entry-point."""
     parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path("--func_file", required=True, help="Input functional annotation JSON")

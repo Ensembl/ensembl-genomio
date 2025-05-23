@@ -38,7 +38,7 @@ class StatsGenerator:
     session: Session
 
     def get_assembly_stats(self) -> dict[str, Any]:
-        """Returns a dict of stats about the assembly."""
+        """Return a dict of stats about the assembly."""
         stats = {
             "coord_system": self.get_attrib_counts("coord_system_tag"),
             "locations": self.get_attrib_counts("sequence_location"),
@@ -50,7 +50,7 @@ class StatsGenerator:
 
     @staticmethod
     def _fix_scaffolds(stats: dict[str, Any]) -> None:
-        """Renames supercontigs to scaffolds in the provided stats.
+        """Rename supercontigs to scaffolds in the provided stats.
 
         If scaffolds are present already, nothing is done.
 
@@ -64,7 +64,7 @@ class StatsGenerator:
             del coords["supercontig"]
 
     def get_attrib_counts(self, code: str) -> dict[str, Any]:
-        """Returns a dict of count for each value counted with the attrib_type code provided.
+        """Return a dict of count for each value counted with the attrib_type code provided.
 
         Args:
             code: Ensembl database attrib_type code.
@@ -83,15 +83,14 @@ class StatsGenerator:
         return attributes
 
     def get_annotation_stats(self) -> dict[str, Any]:
-        """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
-        stats = {
+        """Return a dict of stats about the coordinate systems (number of biotypes, etc.)."""
+        return {
             "genes": self.get_feature_stats(Gene),
             "transcripts": self.get_feature_stats(Transcript),
         }
-        return stats
 
     def get_biotypes(self, table: Any) -> dict[str, int]:
-        """Returns a dict of stats about the feature biotypes."""
+        """Return a dict of stats about the feature biotypes."""
         # pylint: disable-next=not-callable
         seqs_st = select(table.biotype, func.count()).group_by(table.biotype)
         biotypes = {}
@@ -100,8 +99,8 @@ class StatsGenerator:
             biotypes[biotype] = count
         return biotypes
 
-    def get_feature_stats(self, table: Any) -> dict[str, int]:
-        """Returns a dict of stats about a given feature."""
+    def get_feature_stats(self, table: Any) -> dict[str, Any]:
+        """Return a dict of stats about a given feature."""
         session = self.session
         totals_st = select(func.count()).select_from(table)  # pylint: disable=not-callable
         (total,) = session.execute(totals_st).one()
@@ -112,7 +111,7 @@ class StatsGenerator:
         xref_desc_st = select(func.count()).where(table.description.like("%[Source:%"))
         (xref_desc,) = session.execute(xref_desc_st).one()
         left_over = total - no_desc - xref_desc
-        feat_stats = {
+        return {
             "total": total,
             "biotypes": self.get_biotypes(table),
             "description": {
@@ -121,19 +120,17 @@ class StatsGenerator:
                 "normal": left_over,
             },
         }
-        return feat_stats
 
     def get_genome_stats(self) -> dict[str, Any]:
-        """Returns a dict of stats about the assembly and annotation."""
-        genome_stats = {
+        """Return a dict of stats about the assembly and annotation."""
+        return {
             "assembly_stats": self.get_assembly_stats(),
             "annotation_stats": self.get_annotation_stats(),
         }
-        return genome_stats
 
 
 def dump_genome_stats(url: StrURL) -> dict[str, Any]:
-    """Returns JSON object containing the genome stats (assembly and annotation) of the given core database.
+    """Return JSON object containing the genome stats (assembly and annotation) of the given core database.
 
     Args:
         url: Core database URL.
@@ -142,12 +139,11 @@ def dump_genome_stats(url: StrURL) -> dict[str, Any]:
     dbc = DBConnectionLite(url)
     with dbc.session_scope() as session:
         generator = StatsGenerator(session)
-        genome_stats = generator.get_genome_stats()
-        return genome_stats
+        return generator.get_genome_stats()
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Run module's entry-point."""
     parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments(include_database=True)
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)

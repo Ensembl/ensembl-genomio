@@ -27,7 +27,7 @@ from ensembl.io.genomio.genome_metadata import prepare
 
 
 @pytest.mark.parametrize(
-    "genome_file, ncbi_data, output, expectation",
+    ("genome_file", "ncbi_data", "output", "expectation"),
     [
         pytest.param(
             "genbank_genome.json",
@@ -83,7 +83,7 @@ def test_add_provider(
     output: dict[str, dict[str, str | None]],
     expectation: ContextManager,
 ) -> None:
-    """Tests the `prepare.add_provider()` method.
+    """Test the `prepare.add_provider()` method.
 
     Args:
         json_data: JSON test file parsing fixture.
@@ -102,7 +102,7 @@ def test_add_provider(
 
 
 @pytest.mark.parametrize(
-    "genome_file, output",
+    ("genome_file", "output"),
     [
         pytest.param("genbank_genome.json", 2, id="Added assembly version"),
         pytest.param("updated_genome.json", 1, id="Version found, nothing to add"),
@@ -110,7 +110,7 @@ def test_add_provider(
     ],
 )
 def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str, output: int) -> None:
-    """Tests the `prepare.add_assembly_version()` method.
+    """Test the `prepare.add_assembly_version()` method.
 
     Args:
         json_data: JSON test file parsing fixture.
@@ -125,7 +125,7 @@ def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str,
 
 @patch("datetime.date")
 @pytest.mark.parametrize(
-    "genome_file, output",
+    ("genome_file", "output"),
     [
         pytest.param("genbank_genome.json", "03-2024", id="Added '03-2024' as genebuild metadata"),
         pytest.param("updated_genome.json", "01-2021", id="Found '01-2021', nothing to add"),
@@ -137,7 +137,7 @@ def test_add_genebuild_metadata(
     genome_file: str,
     output: str,
 ) -> None:
-    """Tests the `prepare.add_genebuild_metadata()` method.
+    """Test the `prepare.add_genebuild_metadata()` method.
 
     Args:
         mock_date: A mock of `datetime.date` class.
@@ -155,7 +155,7 @@ def test_add_genebuild_metadata(
 
 
 @pytest.mark.parametrize(
-    "genome_file, ncbi_data_organism, output",
+    ("genome_file", "ncbi_data_organism", "output"),
     [
         pytest.param(
             "genbank_genome.json",
@@ -187,7 +187,7 @@ def test_add_species_metadata(
     ncbi_data_organism: dict,
     output: dict[str, Any],
 ) -> None:
-    """Tests the `prepare.add_species_metadata()` method.
+    """Test the `prepare.add_species_metadata()` method.
 
     Args:
         json_data: JSON test file parsing fixture.
@@ -204,7 +204,7 @@ def test_add_species_metadata(
 
 @patch("datetime.date")
 @pytest.mark.parametrize(
-    "input_filename, ncbi_filename, expected_filename",
+    ("input_filename", "ncbi_filename", "expected_filename"),
     [
         pytest.param(
             "genome_accession.json",
@@ -229,9 +229,13 @@ def test_prepare_genome_metadata(
     ncbi_filename: str,
     expected_filename: str,
 ) -> None:
-    """Tests the `prepare.prepare_genome_metadata()` method.
+    """Test the `prepare.prepare_genome_metadata()` method.
 
     Args:
+        mock_date: A mock of `datetime.date` class.
+        tmp_path: Test's unique temporary directory fixture.
+        data_dir: Module's test data directory fixture.
+        assert_files: Function to assert that two files are equal.
         input_filename: Input genome JSON file.
         ncbi_filename: NCBI dataset report JSON file.
         expected_filename: Expected output genome JSON file.

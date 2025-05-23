@@ -17,7 +17,7 @@
 cf the load_events functions for the events tab file format.
 """
 
-__all__ = ["IdEvent", "MapSession", "EventCollection"]
+__all__ = ["EventCollection", "IdEvent", "MapSession"]
 
 from dataclasses import dataclass
 from os import PathLike
@@ -35,9 +35,12 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
+_NUM_PARTS = 3
+
+
 @dataclass
 class IdEvent:
-    """Simple representation for the events from the input file"""
+    """Simple representation for the events from the input file."""
 
     from_id: str
     to_id: str
@@ -46,6 +49,7 @@ class IdEvent:
     release_date: str
 
     def __str__(self) -> str:
+        """Return string representation of an object of this class."""
         fields = [self.from_id, self.to_id, self.event, self.release, self.release_date]
         return "\t".join(fields)
 
@@ -56,7 +60,7 @@ class IdEvent:
 
 
 class MapSession:
-    """Simple mapping_sessions representation from the input file"""
+    """Simple mapping_sessions representation from the input file."""
 
     def __init__(self, release: str, release_date: str) -> None:
         self.release = release
@@ -64,7 +68,7 @@ class MapSession:
         self.events: list[IdEvent] = []
 
     def add_event(self, event: IdEvent) -> None:
-        """Add an event to this mapping_session"""
+        """Add an event to this mapping_session."""
         self.events.append(event)
 
 
@@ -76,8 +80,8 @@ class EventCollection:
 
     def load_events(self, input_file: PathLike) -> None:
         """Load events from input file.
-        Expected tab file columns: old_id, new_id, event_name, release, release_date
 
+        Expected tab file columns: old_id, new_id, event_name, release, release_date.
         """
         events: list[IdEvent] = []
 
@@ -147,7 +151,7 @@ class EventCollection:
                     self.events.append(event)
 
     def _parse_gene_diff_event(self, event_string: str) -> Generator[tuple[str, str, str], None, None]:
-        """Gets all the pairs of IDs from an event string from gene diff."""
+        """Get all the pairs of IDs from an event string from gene diff."""
         event_symbol = {
             "~": "identical",
             "=+": "iso_gain",
@@ -161,7 +165,7 @@ class EventCollection:
         event_sep = r"|".join([symbol.replace(r"+", r"\+") for symbol in event_symbol])
         splitter = f"({event_sep})"
         parts = re.split(splitter, event_string)
-        if len(parts) != 3:
+        if len(parts) != _NUM_PARTS:
             logging.warning(f"Wrong partition: from '{event_string}' to '{parts}'")
             return
         [from_ids, sep, to_ids] = parts
@@ -173,7 +177,7 @@ class EventCollection:
                 yield (from_id, to_id, event_name)
 
     def remap_to_ids(self, map_dict: dict[str, str]) -> None:
-        """Using a mapping dict, remap the to_id of all events.
+        """Remap the to_id of all events using a mapping dictionary.
 
         Raises:
             ValueError: If there are events without map information.
@@ -203,8 +207,8 @@ class EventCollection:
 
     def write_events_to_db(self, session: Session, update: bool = False) -> None:
         """Insert the events in the core database.
-        A mapping session is created for each different 'release'.
 
+        A mapping session is created for each different 'release'.
         """
         # First, create mapping_sessions based on the release
         mappings: dict[str, MapSession] = {}
@@ -246,7 +250,7 @@ class EventCollection:
 
 
 def main() -> None:
-    """Main entrypoint"""
+    """Run module's entry-point."""
     parser = ArgumentParser(description="Load the events in the input file into a core database.")
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path(

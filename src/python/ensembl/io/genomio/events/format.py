@@ -26,6 +26,9 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
+_NUM_COLS = 2
+
+
 class IdsMapper:
     """Simple mapper object, to cleanly get a mapping dict."""
 
@@ -45,7 +48,7 @@ class IdsMapper:
                 if line == "":
                     continue
                 items = line.split("\t")
-                if len(items) < 2:
+                if len(items) < _NUM_COLS:
                     msg = f"Not 2 elements in {line}"
                     raise ValueError(msg)
                 (from_id, to_id) = items[0:2]
@@ -60,16 +63,16 @@ def load_list(list_file: Path) -> list[str]:
     empty_spaces = re.compile(r"\s+")
     with Path(list_file).open("r") as map_fh:
         for line in map_fh:
-            line = re.sub(empty_spaces, "", line)
-            if line == "":
+            trimmed_line = re.sub(empty_spaces, "", line)
+            if trimmed_line == "":
                 continue
-            items.add(line)
+            items.add(trimmed_line)
 
     return list(items)
 
 
 def main() -> None:
-    """Main entrypoint."""
+    """Run module's entry-point."""
     parser = ArgumentParser(description="Map stable IDs in a file and produce an events file.")
     parser.add_argument_src_path("--input_file", required=True, help="Input file from gene_diff")
     parser.add_argument_src_path(

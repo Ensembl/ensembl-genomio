@@ -29,6 +29,9 @@ with as_file(default_map_res) as default_map_path:
     DEFAULT_EXTERNAL_DB_MAP = default_map_path
 
 
+_EXPECTED_NUM_COLS = 2
+
+
 class MapFormatError(ValueError):
     """Error when parsing the db map file."""
 
@@ -50,11 +53,11 @@ def get_external_db_map(map_file: Path) -> dict[str, str]:
     db_map: dict[str, str] = {}
     with map_file.open("r") as map_fh:
         for line in map_fh:
-            line = line.rstrip()
-            if line.startswith("#") or line.startswith(" ") or line == "":
+            row = line.rstrip()
+            if row.startswith(("#", " ")) or row == "":
                 continue
-            parts = line.split("\t")
-            if len(parts) < 2:
+            parts = row.split("\t")
+            if len(parts) < _EXPECTED_NUM_COLS:
                 raise MapFormatError(f"External db file is not formatted correctly for: {line}")
             (main_name, alt_name) = parts[0:2]
             db_map[alt_name] = main_name

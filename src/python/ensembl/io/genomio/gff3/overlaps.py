@@ -15,10 +15,10 @@
 """Scan a GFF3 file to detect overlapping SeqFeature objects. Default object level => gene."""
 
 __all__ = [
-    "summarize_feature_stats",
+    "get_intervals",
     "identify_feature_overlaps",
     "scan_tree",
-    "get_intervals",
+    "summarize_feature_stats",
 ]
 
 from collections import defaultdict
@@ -92,8 +92,10 @@ def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: 
 
 
 def scan_tree(feature_intervals: list) -> set:
-    """Construct an interval tree using supplied genomic intervals, check all elements on the tree against
-    itself and return any that hit 2 or more intervals (i.e. itself + 1 other)
+    """Return any tree that hits two ore more intervals, i.e. itself and another.
+
+    To do so, the function will construct an interval tree using supplied genomic intervals and check
+    all elements on the tree against itself.
 
     Args:
         feature_intervals: Genome features to examine for coordinate (start/end) overlaps.
@@ -183,7 +185,7 @@ def get_intervals(record: SeqRecord, genes_dict: dict, seq_dict: dict, seq_name:
 
 
 def main() -> None:
-    """Module entry-point."""
+    """Run module's entry-point."""
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     # Create parser with common arguments to be used by both subparsers
@@ -192,7 +194,7 @@ def main() -> None:
     base_parser.add_log_arguments(add_log_file=True)
     # Add subparsers with their parent being the base parser with the common arguments
     subparsers = parser.add_subparsers(title="Parse GFF3 and ", required=True, dest="subcommand")
-    gff3_stats_parser = subparsers.add_parser(  # pylint: disable=unused-variable
+    subparsers.add_parser(  # pylint: disable=unused-variable
         "stats",
         parents=[base_parser],
         help="Provide summary of feature types",

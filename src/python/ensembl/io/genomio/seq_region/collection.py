@@ -27,7 +27,7 @@ from Bio import SeqIO
 import requests
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
-from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
+from ensembl.io.genomio.seq_region.exceptions import UnknownMetadataError
 from ensembl.io.genomio.seq_region.mappings import SYNONYM_MAP, MOLECULE_LOCATION, LOCATION_CODON
 from ensembl.io.genomio.seq_region.report import ReportRecord
 from ensembl.utils.archive import open_gz_file
@@ -72,7 +72,7 @@ class SeqCollection:
 
     @staticmethod
     def make_seqregion_from_gbff(record_data: GBFFRecord) -> SeqRegionDict:
-        """Returns a seq_region dict extracted from a GBFF record."""
+        """Return a seq_region dict extracted from a GBFF record."""
         seqr: SeqRegionDict = {"length": len(record_data.record.seq)}  # type: ignore[arg-type]
 
         if record_data.is_circular():
@@ -119,18 +119,18 @@ class SeqCollection:
         synonym_map: Mapping[str, str] = SYNONYM_MAP,
         molecule_location: Mapping[str, str] = MOLECULE_LOCATION,
     ) -> SeqRegionDict:
-        """Returns a sequence region from the information provided.
+        """Return a sequence region from the information provided.
 
         An empty sequence region will be returned if no accession information is found.
 
         Args:
-            data: Dict from the report representing one line, where the key is the column name.
+            seq_data: Dict from the report representing one line, where the key is the column name.
             is_refseq: True if the source is RefSeq, false if INSDC.
             synonym_map: Map of INSDC report column names to sequence region field names.
             molecule_location: Map of sequence type to SO location.
 
         Raises:
-            UnknownMetadata: If the sequence role or location is not recognised.
+            UnknownMetadataError: If the sequence role or location is not recognised.
 
         """
         seq_region = {}
@@ -170,9 +170,9 @@ class SeqCollection:
             try:
                 seq_region["location"] = molecule_location[location]
             except KeyError as exc:
-                raise UnknownMetadata(f"Unrecognized sequence location: {location}") from exc
+                raise UnknownMetadataError(f"Unrecognized sequence location: {location}") from exc
         else:
-            raise UnknownMetadata(f"Unrecognized sequence role: {seq_role}")
+            raise UnknownMetadataError(f"Unrecognized sequence role: {seq_role}")
 
         return seq_region
 
@@ -185,7 +185,7 @@ class SeqCollection:
                 logging.info(f"Cannot exclude seq not found: {seq_name}")
 
     def add_translation_table(self, location_codon: Mapping[str, int] = LOCATION_CODON) -> None:
-        """Adds the translation codon table to each sequence region (when missing) based on its location.
+        """Add the translation codon table to each sequence region (when missing) based on its location.
 
         Args:
             location_codon: Map of known codon tables for known locations.
@@ -198,7 +198,7 @@ class SeqCollection:
                 seqr["codon_table"] = location_codon[seqr["location"]]
 
     def add_mitochondrial_codon_table(self, taxon_id: int) -> None:
-        """Adds the mitochondrial codon table to each sequence region (when missing) based on the taxon ID.
+        """Add the mitochondrial codon table to each sequence region (when missing) based on the taxon ID.
 
         If no mitochondrial genetic code can be found for the given taxon ID nothing will be changed.
 
@@ -230,5 +230,5 @@ class SeqCollection:
                 seqr["codon_table"] = genetic_code
 
     def to_list(self) -> list[SeqRegionDict]:
-        """Returns the sequences as a simple list of `SeqRegionDict` objects."""
+        """Return the sequences as a simple list of `SeqRegionDict` objects."""
         return list(self.seqs.values())

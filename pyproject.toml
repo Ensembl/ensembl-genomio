@@ -195,27 +195,54 @@ select = [
     "ALL",
 ]
 ignore = [
+    "ANN401",  # https://docs.astral.sh/ruff/rules/any-type/
     "COM812",  # https://docs.astral.sh/ruff/rules/trailing-comma-on-bare-tuple/
     "D107",  # https://docs.astral.sh/ruff/rules/undocumented-public-init/
     "D203",  # https://docs.astral.sh/ruff/rules/one-blank-line-before-class/
     "D211",  # https://docs.astral.sh/ruff/rules/blank-line-before-class/
     "D213",  # https://docs.astral.sh/ruff/rules/multi-line-summary-second-line/
+    "DTZ001",  # https://docs.astral.sh/ruff/rules/call-datetime-without-tzinfo/
+    "DTZ011",  # https://docs.astral.sh/ruff/rules/call-date-today/
+    "EM101",  # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
+    "EM102",  # https://docs.astral.sh/ruff/rules/f-string-in-exception/
+    "FBT001",  # https://docs.astral.sh/ruff/rules/boolean-type-hint-positional-argument/
+    "FBT002",  # https://docs.astral.sh/ruff/rules/boolean-default-value-positional-argument/
     "G004",  # https://docs.astral.sh/ruff/rules/logging-f-string/
     "I001",  # https://docs.astral.sh/ruff/rules/unsorted-imports/
     "ICN001",  # https://docs.astral.sh/ruff/rules/unconventional-import-alias/
     "ISC001",  # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
+    "LOG015",  # https://docs.astral.sh/ruff/rules/root-logger-call/
+    "S324",  # https://docs.astral.sh/ruff/rules/hashlib-insecure-hash-function/
+    "S603",  # https://docs.astral.sh/ruff/rules/subprocess-without-shell-equals-true/
+    "T201",  # https://docs.astral.sh/ruff/rules/print/
+    "T203",  # https://docs.astral.sh/ruff/rules/p-print/
+    "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
     "UP035",  # https://docs.astral.sh/ruff/rules/deprecated-import/
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
 
 [tool.ruff.lint.per-file-ignores]
 # Ignore `F403` (unable to detect undefined names) in all `__init__.py` files
 "__init__.py" = ["F403"]
+# Ignore insecure FTP usage
+"src/python/ensembl/io/genomio/assembly/download.py" = ["S321"]
+# Ignore builtin argument shadowing for wrapper class
+"src/python/ensembl/io/genomio/gff3/features.py" = ["A002"]
 # Ignore the following checks in all pytest files
 "src/python/tests/**.py" = [
     "INP001",  # https://docs.astral.sh/ruff/rules/implicit-namespace-package/
     "PLR0913",  # https://docs.astral.sh/ruff/rules/too-many-arguments/
     "S101",  # https://docs.astral.sh/ruff/rules/assert/
+    "SLF001",  # https://docs.astral.sh/ruff/rules/private-member-access/
 ]
+
+[tool.ruff.lint.pydocstyle]
+ignore-var-parameters = true
+
+[tool.ruff.lint.pylint]
+max-args = 10
 
 [tool.mypy]
 mypy_path = "src/python"

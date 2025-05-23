@@ -50,7 +50,7 @@ for schema_file in files("ensembl.io.genomio.data.schemas").iterdir():
 
 
 def schema_validator(json_file: PathLike, json_schema: str | PathLike) -> None:
-    """Validates a JSON file with the provided JSON schema.
+    """Validate a JSON file with the provided JSON schema.
 
     Args:
         json_file: Path to the JSON file to check.
@@ -70,7 +70,7 @@ def schema_validator(json_file: PathLike, json_schema: str | PathLike) -> None:
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Run module's entry-point."""
     parser = ArgumentParser(description="Validates a JSON file against a JSON schema.")
     parser.add_argument_src_path("--json_file", required=True, help="JSON file to check")
     parser.add_argument(

@@ -27,9 +27,11 @@ from ensembl.utils.archive import open_gz_file
 
 
 class ReportRecord:
-    """Represent an assembly report file. Exposes 2 things:
-    - Metadata as a dict from the comments.
-    - A DictReader that yields all the seq_region lines of the report as dicts.
+    """Represent an assembly report file.
+
+    Exposes 2 things:
+      - Metadata as a dict from the comments.
+      - A DictReader that yields all the seq_region lines of the report as dicts.
     """
 
     def __init__(self, report_path: Path) -> None:
@@ -39,7 +41,7 @@ class ReportRecord:
 
     @staticmethod
     def report_to_csv(report_path: PathLike) -> tuple[str, dict]:
-        """Returns an assembly report as a CSV string.
+        """Return an assembly report as a CSV string.
 
         Args:
             report_path: Path to a seq_region file from INSDC/RefSeq.

@@ -21,7 +21,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 def main() -> None:
-    """Main entrypoint."""
+    """Run module's entrypoint."""
     parser = ArgumentParser(
         description="Compare the genomic data between the files present in a manifest file.",
     )
@@ -37,7 +37,3 @@ def main() -> None:
 
     manifest = Manifest(args.manifest_dir)
     manifest.create()
-
-
-if __name__ == "__main__":
-    main()

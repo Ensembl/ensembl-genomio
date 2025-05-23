@@ -15,10 +15,10 @@
 """Update a genome metadata file to include additional sequence regions (e.g. MT chromosome)."""
 
 __all__ = [
+    "amend_genome_metadata",
     "get_additions",
     "get_gbff_regions",
     "get_report_regions_names",
-    "amend_genome_metadata",
 ]
 
 import csv
@@ -39,7 +39,7 @@ _VERSION_END = re.compile(r"\.\d+$")
 
 
 def get_additions(report_path: PathLike, gbff_path: PathLike | None) -> list[str]:
-    """Returns all `seq_regions` that are mentioned in the report but that are not in the data.
+    """Return all `seq_regions` that are mentioned in the report but that are not in the data.
 
     Args:
         report_path: Path to the report file.
@@ -56,12 +56,11 @@ def get_additions(report_path: PathLike, gbff_path: PathLike | None) -> list[str
                 additions.append(refseq_seq_name)
             else:
                 additions.append(genbank_seq_name)
-    additions = sorted(additions)
-    return additions
+    return sorted(additions)
 
 
 def get_gbff_regions(gbff_path: PathLike | None) -> list[str]:
-    """Returns the `seq_region` data from a GBFF file.
+    """Return the `seq_region` data from a GBFF file.
 
     Args:
         gbff_path: GBFF file path to use.
@@ -77,7 +76,7 @@ def get_gbff_regions(gbff_path: PathLike | None) -> list[str]:
 
 
 def _report_to_csv(report_path: PathLike) -> tuple[str, dict]:
-    """Returns the assembly report as a CSV string, and its metadata as a dictionary.
+    """Return the assembly report as a CSV string, and its metadata as a dictionary.
 
     Args:
         report_path: Path to the assembly report file from INSDC/RefSeq.
@@ -104,7 +103,7 @@ def _report_to_csv(report_path: PathLike) -> tuple[str, dict]:
 
 
 def get_report_regions_names(report_path: PathLike) -> list[tuple[str, str]]:
-    """Returns a list of GenBank-RefSeq `seq_region` names from the assembly report file.
+    """Return a list of GenBank-RefSeq `seq_region` names from the assembly report file.
 
     Args:
         report_path: Path to the assembly report file from INSDC/RefSeq.
@@ -135,11 +134,13 @@ def amend_genome_metadata(
     report_file: PathLike | None = None,
     genbank_file: PathLike | None = None,
 ) -> None:
-    """Args:
-    genome_infile: Genome metadata following the `src/python/ensembl/io/genomio/data/schemas/genome.json`.
-    genome_outfile: Amended genome metadata file.
-    report_file: INSDC/RefSeq sequences report file.
-    genbank_file: INSDC/RefSeq GBFF file.
+    """Amend genome metadata from report and GBFF file.
+
+    Args:
+        genome_infile: Genome metadata following the `src/python/ensembl/io/genomio/data/schemas/genome.json`.
+        genome_outfile: Amended genome metadata file.
+        report_file: INSDC/RefSeq sequences report file.
+        genbank_file: INSDC/RefSeq GBFF file.
 
     """
     genome_metadata = get_json(genome_infile)

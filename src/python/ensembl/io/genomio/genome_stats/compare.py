@@ -14,7 +14,7 @@
 # limitations under the License.
 """Tool set to compare genome statistic between NCBI datasets and Ensembl's core databases."""
 
-__all__ = ["stats_dict_cmp", "compare_assembly", "compare_annotation", "compare_stats", "compare_stats_files"]
+__all__ = ["compare_annotation", "compare_assembly", "compare_stats", "compare_stats_files", "stats_dict_cmp"]
 
 import json
 from os import PathLike
@@ -28,7 +28,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 def stats_dict_cmp(ncbi: dict[str, int], core: dict[str, int]) -> dict[str, dict]:
-    """Compares both dictionaries and returns the similar and different elements between both.
+    """Compare both dictionaries and returns the similar and different elements between both.
 
     The method assumes both dictionaries have the same set of keys. A key would be considered the
     same if its value in both dictionaries is the same, but will only be included in the returned
@@ -63,7 +63,7 @@ def stats_dict_cmp(ncbi: dict[str, int], core: dict[str, int]) -> dict[str, dict
 
 
 def compare_assembly(ncbi: dict[str, Any], core: dict[str, Any]) -> dict[str, dict]:
-    """Extracts the assembly statistics and returns the comparison between both sources.
+    """Extract the assembly statistics and returns the comparison between both sources.
 
     The assembly statistics compared are the number of: organella, chromosomes, scaffolds and contigs.
     The last one is only included if NCBI's assembly is contig level.
@@ -123,7 +123,7 @@ def compare_assembly(ncbi: dict[str, Any], core: dict[str, Any]) -> dict[str, di
 
 
 def compare_annotation(ncbi: dict[str, Any], core: dict[str, Any]) -> dict[str, dict]:
-    """Extracts the annotation statistics and returns the comparison between both sources.
+    """Extract the annotation statistics and returns the comparison between both sources.
 
     Annotation statistics compared:
         - protein_coding
@@ -170,7 +170,7 @@ def compare_annotation(ncbi: dict[str, Any], core: dict[str, Any]) -> dict[str, 
 
 
 def compare_stats(ncbi: dict[str, Any], core: dict[str, Any]) -> dict[str, dict]:
-    """Compares the genome statistics between an NCBI dataset and a core database.
+    """Compare the genome statistics between an NCBI dataset and a core database.
 
     Args:
         ncbi: NCBI dataset genome statistics.
@@ -196,7 +196,7 @@ def compare_stats(ncbi: dict[str, Any], core: dict[str, Any]) -> dict[str, dict]
 
 
 def compare_stats_files(ncbi_file: PathLike, core_file: PathLike) -> dict[str, dict]:
-    """Compares the genome statistics between an NCBI dataset and a core database.
+    """Compare the genome statistics between an NCBI dataset and a core database.
 
     Args:
         ncbi_file: NCBI dataset genome statistics JSON file.
@@ -212,12 +212,11 @@ def compare_stats_files(ncbi_file: PathLike, core_file: PathLike) -> dict[str, d
     ncbi_stats = {}
     ncbi_stats = get_json(ncbi_file)["reports"][0]
     core_stats = get_json(core_file)
-    all_stats = compare_stats(ncbi_stats, core_stats)
-    return all_stats
+    return compare_stats(ncbi_stats, core_stats)
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Run module's entry-point."""
     parser = ArgumentParser(
         description="Compares the genome statistics between an NCBI dataset and a core database.",
     )
