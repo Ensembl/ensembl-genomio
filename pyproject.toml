@@ -79,6 +79,7 @@ cicd = [
     "pytest-dependency",
     "pytest-mock",
     "pytest-workflow >= 2.1.0",
+    "ruff >= 0.11.11",
     "types-requests",
 ]
 docs = [

@@ -91,6 +91,12 @@ python:black:
   script:
     - black --config pyproject.toml --check .
 
+python:ruff:
+  extends: .python:test
+  when: manual
+  script:
+    - ruff --config pyproject.toml check src/python/ensembl/io/genomio
+
 ## Unit tests and coverage
 
 python:pytest:
