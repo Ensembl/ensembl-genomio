@@ -91,11 +91,21 @@ python:black:
   script:
     - black --config pyproject.toml --check .
 
-python:ruff:
+.python:ruff:
   extends: .python:test
   when: manual
+  variables:
+    RUFF_CMD: ruff --config pyproject.toml check --no-fix
+
+python:ruff:src:
+  extends: .python:ruff
   script:
-    - ruff --config pyproject.toml check src/python/ensembl/io/genomio
+    - $RUFF_CMD src/python/ensembl/io/genomio
+
+python:ruff:tests:
+  extends: .python:ruff
+  script:
+    - $RUFF_CMD src/python/tests
 
 ## Unit tests and coverage
 
