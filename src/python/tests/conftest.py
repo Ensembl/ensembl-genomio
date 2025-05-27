@@ -24,14 +24,13 @@ from pathlib import Path
 from typing import Any, Callable
 
 import pytest
-from pytest import Config
 
 from ensembl.io.genomio.utils import get_json
 
 
 @pytest.fixture(scope="package")
-def shared_data_dir(pytestconfig: Config) -> Path:
-    """Returns the path to the shared test data folder.
+def shared_data_dir(pytestconfig: pytest.Config) -> Path:
+    """Return the path to the shared test data folder.
 
     Args:
         pytestconfig: Session-scoped fixture that returns the session's `pytest.Config` object.
@@ -42,7 +41,7 @@ def shared_data_dir(pytestconfig: Config) -> Path:
 
 @pytest.fixture(name="json_data")
 def fixture_json_data(data_dir: Path) -> Callable[[str], Any]:
-    """Returns a JSON test object factory.
+    """Return a JSON test object factory.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -50,7 +49,7 @@ def fixture_json_data(data_dir: Path) -> Callable[[str], Any]:
     """
 
     def _json_data(file_name: str) -> Any:
-        """Returns the parsed JSON object from the given JSON test file."""
+        """Return the parsed JSON object from the given JSON test file."""
         return get_json(data_dir / file_name)
 
     return _json_data
@@ -73,7 +72,7 @@ class MockResponse:
         """Mock, never raise Exception here."""
 
     def json(self) -> dict:
-        """Returns the data decoded from the JSON text."""
+        """Return the data decoded from the JSON text."""
         return json.loads(self.text)
 
 

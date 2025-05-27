@@ -29,13 +29,12 @@ from typing import ContextManager
 
 from jsonschema.exceptions import ValidationError
 import pytest
-from pytest import raises
 
 from ensembl.io.genomio.schemas import json
 
 
 @pytest.mark.parametrize(
-    "metadata_types, output",
+    ("metadata_types", "output"),
     [
         (["new_metadata"], ["manifest.json"]),
         (
@@ -50,7 +49,7 @@ def test_schema_factory(
     metadata_types: list[str],
     output: list[PathLike],
 ) -> None:
-    """Tests the `schema_factory()` method.
+    """Test the `schema_factory()` method.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
@@ -67,15 +66,15 @@ def test_schema_factory(
 
 
 @pytest.mark.parametrize(
-    "json_file, json_schema, expected",
+    ("json_file", "json_schema", "expected"),
     [
         ("seq_region.json", "seq_region", does_not_raise()),
         ("functional_annotation.json", "functional_annotation_schema.json", does_not_raise()),
-        ("seq_region.json", "functional_annotation", raises(ValidationError)),
+        ("seq_region.json", "functional_annotation", pytest.raises(ValidationError)),
     ],
 )
 def test_schema_validator(data_dir: Path, json_file: str, json_schema: str, expected: ContextManager) -> None:
-    """Tests the `schema_validator()` method.
+    """Test the `schema_validator()` method.
 
     Args:
         data_dir: Module's test data directory fixture.

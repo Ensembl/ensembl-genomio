@@ -23,7 +23,6 @@ from unittest.mock import MagicMock, Mock, patch
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 import pytest
-from pytest import param, raises
 
 from ensembl.io.genomio.seq_region.collection import SeqCollection
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadataError
@@ -51,10 +50,10 @@ def test_collection() -> None:
 
 
 @pytest.mark.parametrize(
-    "genbank_id, codon_table, location, is_circular, expected_seq",
+    ("genbank_id", "codon_table", "location", "is_circular", "expected_seq"),
     [
-        param(None, None, None, False, {"length": 3}, id="No extra data"),
-        param(
+        pytest.param(None, None, None, False, {"length": 3}, id="No extra data"),
+        pytest.param(
             "Foo",
             None,
             None,
@@ -62,9 +61,11 @@ def test_collection() -> None:
             {"length": 3, "synonyms": [{"source": "INSDC", "name": "Foo"}]},
             id="With Genbank ID",
         ),
-        param(None, None, None, True, {"length": 3, "circular": True}, id="With circular"),
-        param(None, 4, None, False, {"length": 3, "codon_table": 4}, id="With codon table"),
-        param(None, None, "apicoplast", False, {"length": 3, "location": "apicoplast"}, id="With location"),
+        pytest.param(None, None, None, True, {"length": 3, "circular": True}, id="With circular"),
+        pytest.param(None, 4, None, False, {"length": 3, "codon_table": 4}, id="With codon table"),
+        pytest.param(
+            None, None, "apicoplast", False, {"length": 3, "location": "apicoplast"}, id="With location"
+        ),
     ],
 )
 def test_make_seqregion_from_gbff(
@@ -77,8 +78,11 @@ def test_make_seqregion_from_gbff(
     """Test for `SeqCollection.make_seq_dict()`.
 
     Args:
-        input_gb: Genbank file to use.
-        expect_id: Expected Genbank ID.
+        genbank_id: Genbank ID to use.
+        codon_table: Codon table number to use.
+        location: Location to use.
+        is_circular: Is the sequence circular.
+        expected_seq: Expected sequence dict.
 
     """
     record = SeqRecord(id="test_seq", seq=Seq("AAA"))
@@ -110,13 +114,13 @@ def test_from_gbff(data_dir: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "seq_data, is_refseq, expected_key, expected_value, expected",
+    ("seq_data", "is_refseq", "expected_key", "expected_value", "expected"),
     [
-        param({"GenBank-Accn": "na"}, False, None, None, no_raise(), id="Missing Genbank ID"),
-        param({"RefSeq-Accn": "na"}, True, None, None, no_raise(), id="Missing RefSeq ID"),
-        param({}, False, "name", "gb_id", no_raise(), id="Use Genbank ID"),
-        param({}, True, "name", "rs_id", no_raise(), id="Use RefSeq ID"),
-        param(
+        pytest.param({"GenBank-Accn": "na"}, False, None, None, no_raise(), id="Missing Genbank ID"),
+        pytest.param({"RefSeq-Accn": "na"}, True, None, None, no_raise(), id="Missing RefSeq ID"),
+        pytest.param({}, False, "name", "gb_id", no_raise(), id="Use Genbank ID"),
+        pytest.param({}, True, "name", "rs_id", no_raise(), id="Use RefSeq ID"),
+        pytest.param(
             {"Assigned-Molecule": "na", "GenBank-Accn": "na", "Sequence-Name": "na"},
             False,
             "synonyms",
@@ -124,7 +128,7 @@ def test_from_gbff(data_dir: Path) -> None:
             no_raise(),
             id="No synonyms",
         ),
-        param(
+        pytest.param(
             {"Assigned-Molecule": "na", "RefSeq-Accn": "na", "GenBank-Accn": "Foo", "Sequence-Name": "na"},
             False,
             "synonyms",
@@ -132,8 +136,8 @@ def test_from_gbff(data_dir: Path) -> None:
             no_raise(),
             id="1 synonym",
         ),
-        param({"Sequence-Length": "na"}, False, "length", None, no_raise(), id="No length"),
-        param(
+        pytest.param({"Sequence-Length": "na"}, False, "length", None, no_raise(), id="No length"),
+        pytest.param(
             {"Sequence-Role": "unplaced-scaffold"},
             False,
             "coord_system_level",
@@ -141,7 +145,7 @@ def test_from_gbff(data_dir: Path) -> None:
             no_raise(),
             id="Unplaced_scaffold level",
         ),
-        param(
+        pytest.param(
             {"Sequence-Role": "assembled-molecule"},
             False,
             "coord_system_level",
@@ -149,7 +153,7 @@ def test_from_gbff(data_dir: Path) -> None:
             no_raise(),
             id="Chromosome level",
         ),
-        param(
+        pytest.param(
             {"Sequence-Role": "assembled-molecule", "Assigned-Molecule-Location/Type": "plasmid"},
             False,
             "location",
@@ -157,15 +161,20 @@ def test_from_gbff(data_dir: Path) -> None:
             no_raise(),
             id="Chromosome level, plasmid location",
         ),
-        param(
-            {"Sequence-Role": "foo"}, False, None, None, raises(UnknownMetadataError), id="Unsupported role"
+        pytest.param(
+            {"Sequence-Role": "foo"},
+            False,
+            None,
+            None,
+            pytest.raises(UnknownMetadataError),
+            id="Unsupported role",
         ),
-        param(
+        pytest.param(
             {"Sequence-Role": "assembled-molecule", "Assigned-Molecule-Location/Type": "foo"},
             False,
             None,
             None,
-            raises(UnknownMetadataError),
+            pytest.raises(UnknownMetadataError),
             id="Unsupported location",
         ),
     ],
@@ -252,14 +261,14 @@ def test_remove() -> None:
 
 
 @pytest.mark.parametrize(
-    "input_seq, code_map, expected_codon_table",
+    ("input_seq", "code_map", "expected_codon_table"),
     [
-        param({}, None, None, id="No data, no codon table"),
-        param({"codon_table": 4}, None, 4, id="Existing codon_table"),
-        param({"location": "foo"}, {"foo": 4}, 4, id="Location, new codon table"),
-        param({"location": "foo"}, {"bar": 4}, None, id="Unsupported location, no table"),
-        param({"codon_table": 2, "location": "foo"}, {"foo": 4}, 2, id="Existing codon table, keep"),
-        param({"location": "apicoplast_chromosome"}, None, 4, id="Use default map"),
+        pytest.param({}, None, None, id="No data, no codon table"),
+        pytest.param({"codon_table": 4}, None, 4, id="Existing codon_table"),
+        pytest.param({"location": "foo"}, {"foo": 4}, 4, id="Location, new codon table"),
+        pytest.param({"location": "foo"}, {"bar": 4}, None, id="Unsupported location, no table"),
+        pytest.param({"codon_table": 2, "location": "foo"}, {"foo": 4}, 2, id="Existing codon table, keep"),
+        pytest.param({"location": "apicoplast_chromosome"}, None, 4, id="Use default map"),
     ],
 )
 def test_add_translation_table(
@@ -286,9 +295,9 @@ def test_add_translation_table(
 
 
 @pytest.mark.parametrize(
-    "input_seq, taxon_id, response_data, expected_codon_table, expected",
+    ("input_seq", "taxon_id", "response_data", "expected_codon_table", "expected"),
     [
-        param(
+        pytest.param(
             {"location": "mitochondrial_chromosome"},
             99,
             '{"mitochondrialGeneticCode": 4}',
@@ -296,7 +305,7 @@ def test_add_translation_table(
             no_raise(),
             id="Add codon table",
         ),
-        param(
+        pytest.param(
             {"location": "mitochondrial_chromosome", "codon_table": 2},
             99,
             '{"mitochondrialGeneticCode": 4}',
@@ -304,15 +313,19 @@ def test_add_translation_table(
             no_raise(),
             id="Existing codon table",
         ),
-        param({"location": "mitochondrial_chromosome"}, 99, "{}", None, no_raise(), id="No code found"),
-        param({}, 99, '{"mitochondrialGeneticCode": 4}', None, no_raise(), id="Missing location"),
-        param({"location": "mitochondrial_chromosome"}, 0, "{}", None, no_raise(), id="No taxon_id to use"),
-        param(
+        pytest.param(
+            {"location": "mitochondrial_chromosome"}, 99, "{}", None, no_raise(), id="No code found"
+        ),
+        pytest.param({}, 99, '{"mitochondrialGeneticCode": 4}', None, no_raise(), id="Missing location"),
+        pytest.param(
+            {"location": "mitochondrial_chromosome"}, 0, "{}", None, no_raise(), id="No taxon_id to use"
+        ),
+        pytest.param(
             {"location": "mitochondrial_chromosome"},
             99,
             "<html></html>",
             None,
-            raises(ValueError),
+            pytest.raises(ValueError, match="Response from .* is not JSON"),
             id="Not a JSON response, HTML",
         ),
     ],
@@ -330,6 +343,8 @@ def test_add_mitochondrial_codon_table(
     """Test `SeqCollection.add_mitochondrial_codon_table()`.
 
     Args:
+        mock_requests_get: Mock for requests.get.
+        mock_response: Mock response for requests.
         input_seq: Sequence dict with usable values (`codon_table`, `location`).
         taxon_id: Taxon ID passed to the request.
         response_data: Return data from the request.

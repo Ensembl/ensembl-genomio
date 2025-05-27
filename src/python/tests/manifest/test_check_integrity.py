@@ -14,9 +14,7 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.manifest.check_integrity` module."""
 
-from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import ContextManager
 
 import pytest
 
@@ -24,49 +22,40 @@ from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, ManifestS
 
 
 @pytest.mark.parametrize(
-    "manifest_file, ignore_false_stops, expected",
+    ("manifest_file", "ignore_false_stops"),
     [
-        ("manifest.json", False, does_not_raise()),
-        ("manifest.json", True, does_not_raise()),
+        ("manifest.json", False),
+        ("manifest.json", True),
     ],
 )
 def test_check_integrity(
     data_dir: Path,
     manifest_file: str,
     ignore_false_stops: bool,
-    expected: ContextManager,
 ) -> None:
-    """Tests the `IntegrityTool.check_integrity()` method.
+    """Test the `IntegrityTool.check_integrity()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
         manifest_file: Manifest file to load.
         ignore_false_stops: Ignore false stops.
-        expected: Context manager for the expected exception, i.e. the test will only pass if that
-            exception is raised. Use `contextlib.nullcontext` if no exception is expected.
 
     """
-    with expected:
-        integrity = IntegrityTool(data_dir / manifest_file, ignore_false_stops)
-        assert integrity.ignore_final_stops == ignore_false_stops
+    integrity = IntegrityTool(data_dir / manifest_file, ignore_false_stops)
+    assert integrity.ignore_final_stops == ignore_false_stops
 
 
 @pytest.mark.parametrize(
-    "manifest_file, expected",
-    [
-        ("manifest.json", does_not_raise()),
-    ],
+    "manifest_file",
+    ["manifest.json"],
 )
-def test_manifest(data_dir: Path, manifest_file: str, expected: ContextManager) -> None:
-    """Tests the `IntegrityTool.manifest` attribute.
+def test_manifest(data_dir: Path, manifest_file: str) -> None:
+    """Test the `IntegrityTool.manifest` attribute.
 
     Args:
         data_dir: Module's test data directory fixture.
         manifest_file: Manifest file to load.
-        expected: Context manager for the expected exception, i.e. the test will only pass if that
-            exception is raised. Use `contextlib.nullcontext` if no exception is expected.
 
     """
-    with expected:
-        integrity = IntegrityTool(data_dir / manifest_file)
-        assert isinstance(integrity.manifest, ManifestStats)
+    integrity = IntegrityTool(data_dir / manifest_file)
+    assert isinstance(integrity.manifest, ManifestStats)

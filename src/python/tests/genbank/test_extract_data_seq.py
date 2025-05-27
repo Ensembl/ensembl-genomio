@@ -165,7 +165,7 @@ class TestFormattedFilesGenerator:
             assert result_seq_id == [tr_id, expected_id]
             if "pseudo" in seq_feature.qualifiers:
                 assert result_seq_feature[expected_id].type == "exon"
-            # Peptides aren't always present in the genbank file so we can't guarantee they will exist
+            # Peptides aren't always present in the GenBank file so we can't guarantee they will exist
             if "translation" in seq_feature.qualifiers:
                 assert len(result_peptide) > 0
 

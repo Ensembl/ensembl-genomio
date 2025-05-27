@@ -20,17 +20,16 @@ from typing import Callable
 from unittest.mock import Mock, patch
 
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.seq_region.prepare import prepare_seq_region_metadata
 
 
 @pytest.mark.parametrize(
-    "gbff_path, expected_path, to_exclude",
+    ("gbff_path", "expected_path", "to_exclude"),
     [
-        param(None, "out/no_gbff.json", [], id="Prepare without gbff"),
-        param("apicoplast.gb", "out/with_gbff.json", [], id="Prepare with gbff"),
-        param(None, "out/removed.json", ["NC_001799.1"], id="Prepare and exclude"),
+        pytest.param(None, "out/no_gbff.json", [], id="Prepare without gbff"),
+        pytest.param("apicoplast.gb", "out/with_gbff.json", [], id="Prepare with gbff"),
+        pytest.param(None, "out/removed.json", ["NC_001799.1"], id="Prepare and exclude"),
     ],
 )
 @patch("ensembl.io.genomio.seq_region.collection.requests.get")
@@ -47,6 +46,11 @@ def test_prepare_seq_region_metadata(
     """Test `prepare_seq_region_metadata`.
 
     Args:
+        mock_requests_get: Mock for requests.get.
+        mock_response: Mock response for requests.
+        data_dir: Module's test data directory fixture.
+        tmp_path: Fixture which will provide a temporary directory unique to the test invocation.
+        assert_files: Function to compare if two files are equal or not.
         gbff_path: Input GBFF file in any.
         expected_path: Expect JSON output.
         to_exclude: List of sequences to exclude.

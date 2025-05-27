@@ -195,7 +195,7 @@ def check_assembly_version(genome_metadata: dict[str, Any]) -> None:
         try:
             assembly["version"] = int(version)
         except ValueError:
-            raise ValueError(f"Assembly version is not an integer in {assembly}") from exc
+            raise ValueError(f"Assembly version is not an integer in {accession}") from exc
         logging.info(f"Assembly version [v{version}] obtained from assembly accession ({accession}).")
     else:
         logging.info(f'Located version [v{assembly["version"]}] info from meta data.')

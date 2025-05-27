@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import ContextManager
 
 import pytest
-from pytest import param, raises
 
 from ensembl.io.genomio.external_db.db_map import (
     MapFormatError,
@@ -29,13 +28,13 @@ from ensembl.io.genomio.external_db.db_map import (
 
 
 @pytest.mark.parametrize(
-    "file_content, expected_output, expected",
+    ("file_content", "expected_output", "expected"),
     [
-        param("", {}, no_raise()),
-        param("#Comment", {}, no_raise()),
-        param("FOO\tBAR", {"BAR": "FOO"}, no_raise()),
-        param("FOO\tBAR\tLOREM", {"BAR": "FOO"}, no_raise()),
-        param("FOO", {}, raises(MapFormatError)),
+        pytest.param("", {}, no_raise()),
+        pytest.param("#Comment", {}, no_raise()),
+        pytest.param("FOO\tBAR", {"BAR": "FOO"}, no_raise()),
+        pytest.param("FOO\tBAR\tLOREM", {"BAR": "FOO"}, no_raise()),
+        pytest.param("FOO", {}, pytest.raises(MapFormatError)),
     ],
 )
 def test_get_external_db_map(
@@ -44,9 +43,10 @@ def test_get_external_db_map(
     expected_output: dict,
     expected: ContextManager,
 ) -> None:
-    """Tests the `get_external_db_map` method.
+    """Test the `get_external_db_map` method.
 
     Args:
+        tmp_path: Test's unique temporary directory fixture.
         file_content: Test db_map file content.
         expected_output: Db map expected output.
         expected: Context Manager for the expected exception.
@@ -61,7 +61,5 @@ def test_get_external_db_map(
 
 
 def test_default_map() -> None:
-    """Tests the default_map file."""
-    with no_raise():
-        output = get_external_db_map(DEFAULT_EXTERNAL_DB_MAP)
-        assert output
+    """Test the default_map file."""
+    assert get_external_db_map(DEFAULT_EXTERNAL_DB_MAP)

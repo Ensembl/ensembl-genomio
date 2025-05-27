@@ -235,9 +235,20 @@ max-complexity = 15
 "src/python/tests/**.py" = [
     "INP001",  # https://docs.astral.sh/ruff/rules/implicit-namespace-package/
     "PLR0913",  # https://docs.astral.sh/ruff/rules/too-many-arguments/
+    "PLR2004",  # https://docs.astral.sh/ruff/rules/magic-value-comparison/
     "S101",  # https://docs.astral.sh/ruff/rules/assert/
     "SLF001",  # https://docs.astral.sh/ruff/rules/private-member-access/
 ]
+# Ignore `ARG001` (unused function argument) in `test_status.py` file
+"src/python/tests/assembly/test_status.py" = ["ARG001"]
+# Ignore `PT011` (pytest raises too broad) in `test_download.py` file
+"src/python/tests/assembly/test_download.py" = ["PT011"]
+# Ignore `ARG002` (unused method argument) in `test_core_server.py` file
+"src/python/tests/database/test_core_server.py" = ["ARG002"]
+# Ignore `ARG001` (unused function argument) in `test_chunk.py` file
+"src/python/tests/fasta/test_chunk.py" = ["ARG001"]
+# Ignore `PLR0911` (too many return statements) in `test_dump.py` file
+"src/python/tests/genome_stats/test_dump.py" = ["PLR0911"]
 
 [tool.ruff.lint.pydocstyle]
 ignore-var-parameters = true

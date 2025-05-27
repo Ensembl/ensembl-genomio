@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Callable, ContextManager
 
 import pytest
-from pytest import raises, param
 
 from ensembl.io.genomio.gff3.extract_annotation import (
     FunctionalAnnotations,
@@ -31,7 +30,7 @@ from ensembl.io.genomio.gff3.features import GFFSeqFeature
 
 
 @pytest.mark.parametrize(
-    "description, feature_id, output",
+    ("description", "feature_id", "output"),
     [
         ("", [], False),
         ("", "PROTID12345", False),
@@ -67,24 +66,24 @@ from ensembl.io.genomio.gff3.features import GFFSeqFeature
     ],
 )
 def test_product_is_informative(description: str, feature_id: list[str] | None, output: bool) -> None:
-    """Tests the `FunctionalAnnotations.product_is_informative()` method."""
+    """Test the `FunctionalAnnotations.product_is_informative()` method."""
     assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
 
 
 @pytest.mark.parametrize(
-    "seq_feat_type, feat_type, expected",
+    ("seq_feat_type", "feat_type", "expected"),
     [
         ("gene", "gene", does_not_raise()),
         ("pseudogene", "gene", does_not_raise()),
         ("mRNA", "transcript", does_not_raise()),
         ("CDS", "translation", does_not_raise()),
         ("transposable_element", "transposable_element", does_not_raise()),
-        ("gene", "bad_type", raises(KeyError)),
+        ("gene", "bad_type", pytest.raises(KeyError)),
     ],
 )
 @pytest.mark.dependency(name="add_feature")
 def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManager) -> None:
-    """Tests the `FunctionalAnnotation.add_feature()` method with only one feature.
+    """Test the `FunctionalAnnotation.add_feature()` method with only one feature.
 
     Args:
         seq_feat_type: Type for the sequence feature to add.
@@ -100,14 +99,14 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
 
 
 @pytest.mark.parametrize(
-    "feat_id, feat_name, expected_synonyms",
+    ("feat_id", "feat_name", "expected_synonyms"),
     [
         pytest.param("featA", "featA", [], id="Same name and ID"),
         pytest.param("featA", "featA_name", ["featA_name"], id="Diff name and ID"),
     ],
 )
 def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: list[str]) -> None:
-    """Tests the `FunctionalAnnotations.add_feature()` method with a feature name."""
+    """Test the `FunctionalAnnotations.add_feature()` method with a feature name."""
     annot = FunctionalAnnotations()
 
     seq_feat_type = "gene"
@@ -120,16 +119,16 @@ def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: list[
 
 
 @pytest.mark.parametrize(
-    "parent_type, parent_id, child_id, expected",
+    ("parent_type", "parent_id", "child_id", "expected"),
     [
         ("gene", "geneA", "mrnA", does_not_raise()),
-        ("bad_type", "geneA", "mrnA", raises(KeyError)),
-        ("gene", "geneB", "mrnA", raises(MissingParentError)),
+        ("bad_type", "geneA", "mrnA", pytest.raises(KeyError)),
+        ("gene", "geneB", "mrnA", pytest.raises(MissingParentError)),
     ],
 )
 @pytest.mark.dependency(name="add_parent_link", depends=["add_feature"])
 def test_add_parent_link(parent_type: str, parent_id: str, child_id: str, expected: ContextManager) -> None:
-    """Tests the `FunctionalAnnotation.add_parent_link()` method.
+    """Test the `FunctionalAnnotation.add_parent_link()` method.
 
     Add a parent feature, and then add a parent link.
 
@@ -149,11 +148,11 @@ def test_add_parent_link(parent_type: str, parent_id: str, child_id: str, expect
 
 
 @pytest.mark.parametrize(
-    "in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected",
+    ("in_parent_type", "in_parent_id", "in_child_id", "out_parent_type", "out_child_id", "expected"),
     [
         ("gene", "geneA", "mrnA", "gene", "mrnA", does_not_raise()),
-        ("gene", "geneA", "mrnA", "bad_type", "mrnA", raises(KeyError)),
-        ("gene", "geneA", "mrnA", "gene", "mrnB", raises(MissingParentError)),
+        ("gene", "geneA", "mrnA", "bad_type", "mrnA", pytest.raises(KeyError)),
+        ("gene", "geneA", "mrnA", "gene", "mrnB", pytest.raises(MissingParentError)),
     ],
 )
 @pytest.mark.dependency(name="get_parent", depends=["add_parent_link"])
@@ -165,7 +164,7 @@ def test_get_parent(
     out_child_id: str,
     expected: ContextManager,
 ) -> None:
-    """Tests the `FunctionalAnnotation.get_parent()` method.
+    """Test the `FunctionalAnnotation.get_parent()` method.
 
     Args:
         in_parent_type: Type for the parent sequence feature.
@@ -191,16 +190,16 @@ def test_get_parent(
 
 
 @pytest.mark.parametrize(
-    "child_type, child_id, out_parent_id, expected",
+    ("child_type", "child_id", "out_parent_id", "expected"),
     [
         ("transcript", "mrna_A", "gene_A", does_not_raise()),
-        pytest.param("bad_type", "mrna_A", "gene_A", raises(KeyError), id="Child type does not exist"),
-        pytest.param("gene", "gene_A", None, raises(AnnotationError), id="Feature ID already loaded"),
+        pytest.param("bad_type", "mrna_A", "gene_A", pytest.raises(KeyError), id="Child type does not exist"),
+        pytest.param("gene", "gene_A", None, pytest.raises(AnnotationError), id="Feature ID already loaded"),
         pytest.param(
             "gene",
             "gene_B",
             "gene_A",
-            raises(AnnotationError),
+            pytest.raises(AnnotationError),
             id="Cannot add a gene child of a gene",
         ),
     ],
@@ -212,7 +211,7 @@ def test_add_feature_fail(
     out_parent_id: str | None,
     expected: ContextManager,
 ) -> None:
-    """Tests the `FunctionalAnnotation.add_feature()` method failures.
+    """Test the `FunctionalAnnotation.add_feature()` method failures.
 
     Test the addition of a child feature after a parent has already been added.
 
@@ -232,43 +231,45 @@ def test_add_feature_fail(
 
 
 @pytest.mark.parametrize(
-    "in_id, in_xrefs, provider_name, expected_xrefs",
+    ("in_id", "in_xrefs", "provider_name", "expected_xrefs"),
     [
-        param("LOREMID", None, "", [], id="No xref"),
-        param("LOREMID", [], "", [], id="Empty xref"),
-        param("LOREMID", ["DBname:Value"], "", [{"dbname": "DBname", "id": "Value"}], id="One xref"),
-        param(
+        pytest.param("LOREMID", None, "", [], id="No xref"),
+        pytest.param("LOREMID", [], "", [], id="Empty xref"),
+        pytest.param("LOREMID", ["DBname:Value"], "", [{"dbname": "DBname", "id": "Value"}], id="One xref"),
+        pytest.param(
             "LOREMID",
             ["DBname:Value:parts"],
             "",
             [{"dbname": "DBname", "id": "Value:parts"}],
             id="One xref with colon",
         ),
-        param("LOREMID", ["GO:XXX"], "", [], id="Ignore GO"),
-        param("LOREMID", ["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="Genbank"),
-        param(
+        pytest.param("LOREMID", ["GO:XXX"], "", [], id="Ignore GO"),
+        pytest.param("LOREMID", ["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="Genbank"),
+        pytest.param(
             "LOREMID",
             ["GenBank:XXX"],
             "RefSeq",
             [{"dbname": "RefSeq", "id": "XXX"}],
             id="RefSeq explicit provider",
         ),
-        param("LOREMID", ["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="No provider_name"),
-        param(
+        pytest.param(
+            "LOREMID", ["GenBank:XXX"], "", [{"dbname": "GenBank", "id": "XXX"}], id="No provider_name"
+        ),
+        pytest.param(
             "LOC00000",
             [],
             "RefSeq",
             [{"dbname": "RefSeq", "id": "LOC00000"}],
             id="RefSeq ID stored as xref",
         ),
-        param(
+        pytest.param(
             "LOC00000",
             ["GenBank:LOC00001"],
             "RefSeq",
             [{"dbname": "RefSeq", "id": "LOC00001"}],
             id="RefSeq ID stored as xref from dbxref, not ID",
         ),
-        param(
+        pytest.param(
             "LOC00000",
             None,
             "RefSeq",
@@ -283,7 +284,7 @@ def test_get_xrefs(
     provider_name: str,
     expected_xrefs: list[dict[str, str]],
 ) -> None:
-    """Tests the `FunctionalAnnotation.get_xrefs()` method."""
+    """Test the `FunctionalAnnotation.get_xrefs()` method."""
     annot = FunctionalAnnotations(provider_name=provider_name)
     one_gene = GFFSeqFeature(type="gene", id=in_id)
     if in_xrefs is not None:
@@ -294,22 +295,21 @@ def test_get_xrefs(
 
 
 @pytest.mark.parametrize(
-    "feat_type, expected_number, expected",
+    ("feat_type", "expected_number", "expected"),
     [
         ("gene", 1, does_not_raise()),
         ("transcript", 1, does_not_raise()),
         ("translation", 0, does_not_raise()),
-        ("bad_type", 0, raises(KeyError)),
+        ("bad_type", 0, pytest.raises(KeyError)),
     ],
 )
 @pytest.mark.dependency(name="get_features", depends=["add_feature_fail"])
 def test_get_features(feat_type: str, expected_number: int, expected: ContextManager) -> None:
-    """Tests the `FunctionalAnnotation.get_features()` method.
-
-    Load 2 features, then test the fetching of those features.
+    """Test the `FunctionalAnnotation.get_features()` method.
 
     Args:
         feat_type: Type for the features to fetch.
+        expected_number: Number of features expected to be returned.
         expected: What exception is expected to be raised, if any.
 
     """
@@ -325,14 +325,14 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
 
 
 @pytest.mark.parametrize(
-    "gene_desc, transc_desc, transl_desc, out_gene_desc, out_transc_desc",
+    ("gene_desc", "transc_desc", "transl_desc", "out_gene_desc", "out_transc_desc"),
     [
-        param(None, None, None, None, None, id="Nothing provided"),
-        param("Foobar", None, None, "Foobar", None, id="Only gene description"),
-        param("gene A", "transc B", "prod C", "gene A", "transc B", id="All descriptions set"),
-        param(None, None, "Foobar", "Foobar", "Foobar", id="Transfer from transl"),
-        param(None, "Foobar", None, "Foobar", "Foobar", id="Transfer from transc"),
-        param(
+        pytest.param(None, None, None, None, None, id="Nothing provided"),
+        pytest.param("Foobar", None, None, "Foobar", None, id="Only gene description"),
+        pytest.param("gene A", "transc B", "prod C", "gene A", "transc B", id="All descriptions set"),
+        pytest.param(None, None, "Foobar", "Foobar", "Foobar", id="Transfer from transl"),
+        pytest.param(None, "Foobar", None, "Foobar", "Foobar", id="Transfer from transc"),
+        pytest.param(
             None,
             "Foobar, transcript variant X1",
             None,
@@ -340,9 +340,11 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
             "Foobar, transcript variant X1",
             id="transcript with variant",
         ),
-        param(None, "Foobar", "Lorem", "Foobar", "Foobar", id="Transfer from transc, transl also set"),
-        param("Hypothetical gene", "Predicted function", "Foobar", "Foobar", "Foobar", id="Non informative"),
-        param(None, None, "Unknown product", None, None, id="Non informative source"),
+        pytest.param(None, "Foobar", "Lorem", "Foobar", "Foobar", id="Transfer from transc, transl also set"),
+        pytest.param(
+            "Hypothetical gene", "Predicted function", "Foobar", "Foobar", "Foobar", id="Non informative"
+        ),
+        pytest.param(None, None, "Unknown product", None, None, id="Non informative source"),
     ],
 )
 @pytest.mark.dependency(depends=["get_features"])
@@ -353,9 +355,7 @@ def test_transfer_descriptions(
     out_gene_desc: str | None,
     out_transc_desc: str | None,
 ) -> None:
-    """Tests the `FunctionalAnnotation.transfer_descriptions()` method.
-
-    Load 3 features (gene, transcript, translation) with or without a description for each one.
+    """Test the `FunctionalAnnotation.transfer_descriptions()` method.
 
     Args:
         gene_desc: Description for the gene.
@@ -390,7 +390,7 @@ def test_transfer_descriptions(
 
 @pytest.mark.dependency(depends=["add_feature"])
 @pytest.mark.parametrize(
-    "num_cds, cds_parts, expected_num_genes, expected_num_tr, expected_num_cds",
+    ("num_cds", "cds_parts", "expected_num_genes", "expected_num_tr", "expected_num_cds"),
     [
         pytest.param(0, 0, 1, 1, 0, id="Store gene without CDS"),
         pytest.param(1, 1, 1, 1, 1, id="Store gene with 1 CDS in one part"),
@@ -445,7 +445,7 @@ def test_store_gene(
 
 
 @pytest.mark.parametrize(
-    "gene, transcript, translation, expected_json",
+    ("gene", "transcript", "translation", "expected_json"),
     [
         pytest.param(
             GFFSeqFeature(type="gene", id="gene_A"),
