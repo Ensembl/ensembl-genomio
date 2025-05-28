@@ -139,7 +139,7 @@ class SeqCollection:
         src = "RefSeq" if is_refseq else "GenBank"
         accession_id = seq_data.get(f"{src}-Accn", "")
         if not accession_id or (accession_id == "na"):
-            logging.warning(f'No {src} accession ID found for {seq_data["Sequence-Name"]}')
+            logging.warning(f"No {src} accession ID found for {seq_data['Sequence-Name']}")
             return {}
         seq_region["name"] = accession_id
 

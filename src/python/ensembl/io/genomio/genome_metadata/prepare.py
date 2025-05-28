@@ -94,14 +94,14 @@ def add_provider(genome_metadata: dict, ncbi_data: dict) -> None:
     assembly = genome_metadata["assembly"]
     if ("provider_name" not in assembly) and ("provider_url" not in assembly):
         assembly["provider_name"] = provider["assembly"]["provider_name"]
-        assembly["provider_url"] = f'{provider["assembly"]["provider_url"]}/{accession}'
+        assembly["provider_url"] = f"{provider['assembly']['provider_url']}/{accession}"
 
     # Add annotation provider if there are gene models
     if "annotation_info" in ncbi_data:
         annotation = genome_metadata.setdefault("annotation", {})
         if ("provider_name" not in annotation) and ("provider_url" not in annotation):
             annotation["provider_name"] = provider["annotation"]["provider_name"]
-            annotation["provider_url"] = f'{provider["annotation"]["provider_url"]}/{accession}'
+            annotation["provider_url"] = f"{provider['annotation']['provider_url']}/{accession}"
 
 
 def add_assembly_version(genome_data: dict) -> None:
