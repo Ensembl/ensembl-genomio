@@ -278,6 +278,9 @@ branch = true
 source = [
     "ensembl.io.genomio",
 ]
+omit = [
+    "src/python/ensembl/io/genomio/events/*",
+]
 
 [tool.coverage.report]
 exclude_lines = [
