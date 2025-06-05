@@ -247,7 +247,7 @@ def fetch_datasets_reports(
         result = raw_result[0] if isinstance(raw_result, list) else raw_result
         if not isinstance(result, str):
             raise TypeError("Result obtained from datasets is not a string")
-        if re.search("^FATAL", result):
+        if re.search("^(FATAL|Error: )", result):
             raise RuntimeError(f"Singularity image execution failed! -> '{result.strip()}'")
 
         tmp_asm_dict = json.loads(result)
