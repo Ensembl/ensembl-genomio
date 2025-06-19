@@ -303,7 +303,6 @@ class MetaConf:
             self.update("genebuild.provider_name", self.get("annotation.provider_name"))
             self.update("genebuild.provider_url", self.get("annotation.provider_url"))
 
-
     def dump_genome_conf(self, json_out):
         out = {}
         fields = [

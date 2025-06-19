@@ -203,7 +203,7 @@ class SeqRegionConf:
             "GenBank-Accn": "INSDC",
             "RefSeq-Accn": "RefSeq",
             "UCSC-style-name": "GenBank",
-            "Assigned-Molecule" : "_CHR_NAME",
+            "Assigned-Molecule": "_CHR_NAME",
             "Assigned-Molecule-Location/Type": "_COORD_SYSTEM_TAG",
             "Sequence-Role": "_SEQUENCE_ROLE",
         }
@@ -237,7 +237,9 @@ class SeqRegionConf:
                 sources_syns = {
                     src: nm
                     for src, nm in sources_syns_raw.items()
-                    if nm and nm.lower() != "na" and src not in ["_COORD_SYSTEM_TAG", "_SEQUENCE_ROLE", "_CHR_NAME"]
+                    if nm
+                    and nm.lower() != "na"
+                    and src not in ["_COORD_SYSTEM_TAG", "_SEQUENCE_ROLE", "_CHR_NAME"]
                 }
 
                 # fill cs_tag from "Assigned-Molecule-Location/Type" only if "Sequence-Role" is ""assembled-molecule"
@@ -248,7 +250,7 @@ class SeqRegionConf:
                     cs_tag, cs_location = self.map_cs_tag(sources_syns_raw.get("_COORD_SYSTEM_TAG", None))
                     chr_name = sources_syns_raw.get("_CHR_NAME", None)
                     if cs_tag and chr_name and chr_name.lower() != "na":
-                        sources_syns.update({"submitter_sequence_name" : chr_name})
+                        sources_syns.update({"submitter_sequence_name": chr_name})
 
                 # remove INSDC_submitted_name if it's equal to INSDC or RefSeq one
                 major_syns = {src: nm for src, nm in sources_syns.items() if src in ["INSDC", "RefSeq"]}
