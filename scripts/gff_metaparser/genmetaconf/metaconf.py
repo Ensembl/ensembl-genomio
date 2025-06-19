@@ -127,6 +127,10 @@ class MetaConf:
                 strain = qualifiers["isolate"][0]
                 self.update("species.strain", strain)
                 self.update("strain.type", "isolate")
+            elif "cultivar" in qualifiers:
+                strain = qualifiers["culrivar"][0]
+                self.update("species.strain", strain)
+                self.update("strain.type", "cultivar")
             if "db_xref" in qualifiers:
                 taxon_id_pre = list(filter(lambda x: x.startswith("taxon:"), qualifiers["db_xref"]))[0]
                 if taxon_id_pre:
