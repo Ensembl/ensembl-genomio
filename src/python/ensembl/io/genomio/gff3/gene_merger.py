@@ -14,16 +14,13 @@
 # limitations under the License.
 """Merge split genes in a GFF file."""
 
-__all__ = [
-    "GFFGeneMerger",
-]
+__all__ = ["GFFGeneMerger"]
 
 from importlib.resources import as_file, files
 import logging
 from os import PathLike
 from pathlib import Path
 import re
-from typing import List
 
 import ensembl.io.genomio.data.gff3
 from ensembl.io.genomio.utils.json_utils import get_json
@@ -37,9 +34,8 @@ class GFFGeneMerger:
         with as_file(source) as biotypes_json:
             self._biotypes = get_json(biotypes_json)
 
-    def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> List[str]:
-        """
-        Merge genes in a gff that are split in multiple lines.
+    def merge(self, in_gff_path: PathLike, out_gff_path: PathLike) -> list[str]:
+        """Merge genes in a gff that are split in multiple lines.
 
         Args:
             in_gff_path: Input GFF3 that may have split merge.
@@ -47,9 +43,10 @@ class GFFGeneMerger:
 
         Returns:
             List of all merged genes, each represented as a string of the GFF3 lines of all their parts.
+
         """
         to_merge = []
-        merged: List[str] = []
+        merged: list[str] = []
 
         with Path(in_gff_path).open("r") as in_gff_fh, Path(out_gff_path).open("w") as out_gff_fh:
             for line in in_gff_fh:
@@ -61,8 +58,7 @@ class GFFGeneMerger:
                     out_gff_fh.write(line)
                 else:
                     # Parse one line
-                    line = line.rstrip()
-                    fields = line.split("\t")
+                    fields = line.rstrip().split("\t")
                     attr_fields = fields[8].split(";")
                     attrs = {}
                     for a in attr_fields:
@@ -78,31 +74,25 @@ class GFFGeneMerger:
                     # If not, merge previous gene if needed, and print the line
                     else:
                         if to_merge:
-                            merged_str = []
-                            for line_to_merge in to_merge:
-                                merged_str.append("\t".join(line_to_merge))
+                            merged_str = ["\t".join(line_to_merge) for line_to_merge in to_merge]
                             merged.append("\n".join(merged_str) + "\n")
-
                             new_line = self._merge_genes(to_merge)
                             out_gff_fh.write(new_line)
                             to_merge = []
-                        out_gff_fh.write(line + "\n")
+                        out_gff_fh.write(line.rstrip() + "\n")
 
             # Print last merged gene if there is one
             if to_merge:
-                merged_str = []
-                for line_to_merge in to_merge:
-                    merged_str.append("\t".join(line_to_merge))
+                merged_str = ["\t".join(line_to_merge) for line_to_merge in to_merge]
                 merged.append("\n".join(merged_str) + "\n")
-
                 new_line = self._merge_genes(to_merge)
                 out_gff_fh.write(new_line)
 
         logging.debug(f"Merged lines: {len(merged)}")
         return merged
 
-    def _merge_genes(self, to_merge: List) -> str:
-        """Returns a single gene gff3 line merged from separate parts.
+    def _merge_genes(self, to_merge: list) -> str:
+        """Return a single gene gff3 line merged from separate parts.
 
         Args:
             to_merge: List of gff3 lines with gene parts.

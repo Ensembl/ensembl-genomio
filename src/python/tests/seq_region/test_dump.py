@@ -18,7 +18,6 @@
 from typing import Any, Callable
 
 import pytest
-from pytest import param
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -46,7 +45,7 @@ from ensembl.utils.database import UnitTestDB
 
 @pytest.fixture(name="seq_test_db", scope="module")
 def fixture_seq_test_db(db_factory: Callable) -> UnitTestDB:
-    """Returns a test database with all core tables and basic data (1 coord_system + 1 seq_region)."""
+    """Return a test database with all core tables and basic data (1 coord_system + 1 seq_region)."""
     test_db: UnitTestDB = db_factory(src="no_src", name="dump_seq")
     test_db.dbc.create_all_tables(metadata)
 
@@ -114,7 +113,11 @@ def _add_test_synonym(session: Session, dialect: str, synonym: str, db_name: str
 
 
 def _add_test_attrib(
-    session: Session, dialect: str, logic_name: str, value: str | int, attrib_id: int
+    session: Session,
+    dialect: str,
+    logic_name: str,
+    value: str | int,
+    attrib_id: int,
 ) -> None:
     """Add a seq_region attrib to the test seq_region.
 
@@ -138,7 +141,12 @@ def _add_test_attrib(
 
 
 def _add_test_karyotype(
-    session: Session, dialect: str, start: int, end: int, band: str | None = None, stain: str | None = None
+    session: Session,
+    dialect: str,
+    start: int,
+    end: int,
+    band: str | None = None,
+    stain: str | None = None,
 ) -> None:
     """Add a seq_region karyotype band to the test seq_region.
 
@@ -162,12 +170,12 @@ def _add_test_karyotype(
 
 @pytest.fixture(name="db_map", scope="module")
 def fixture_db_map() -> dict[str, str]:
-    """Returns the default db_map."""
+    """Return the default db_map."""
     return get_external_db_map(DEFAULT_EXTERNAL_DB_MAP)
 
 
 def test_fetch_coord_systems(seq_test_db: UnitTestDB) -> None:
-    """Tests the `fetch_coord_system` method."""
+    """Test the `fetch_coord_system` method."""
     with seq_test_db.dbc.test_session_scope() as session:
         coords = list(fetch_coord_systems(session))
         assert len(coords) == 1
@@ -177,9 +185,9 @@ def test_fetch_coord_systems(seq_test_db: UnitTestDB) -> None:
 
 
 def test_fetch_seq_regions(seq_test_db: UnitTestDB) -> None:
-    """Tests the `fetch_seq_regions` method."""
+    """Test the `fetch_seq_regions` method."""
     with seq_test_db.dbc.test_session_scope() as session:
-        coord_system = list(fetch_coord_systems(session))[0]
+        coord_system = next(iter(fetch_coord_systems(session)))
         seqrs = list(fetch_seq_regions(session, coord_system))
         assert len(seqrs) == 1
         seqr = seqrs[0]
@@ -187,11 +195,11 @@ def test_fetch_seq_regions(seq_test_db: UnitTestDB) -> None:
 
 
 def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
-    """Tests the `get_synonyms` method."""
+    """Test the `get_synonyms` method."""
     with seq_test_db.dbc.test_session_scope() as session:
         _add_test_synonym(session, seq_test_db.dbc.dialect, "synA", "db1", 1)
-        coord_system = list(fetch_coord_systems(session))[0]
-        seqr = list(fetch_seq_regions(session, coord_system))[0]
+        coord_system = next(iter(fetch_coord_systems(session)))
+        seqr = next(iter(fetch_seq_regions(session, coord_system)))
         syns = get_synonyms(seqr, db_map)
         assert len(syns) == 1
         syn = syns[0]
@@ -199,13 +207,13 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
 
 
 @pytest.mark.parametrize(
-    "bands, expected_kar",
+    ("bands", "expected_kar"),
     [
-        param([], [], id="no karyotype"),
-        param([{}], [{"start": 1, "end": 10}], id="no name/stain"),
-        param([{"name": "bandA"}], [{"start": 1, "end": 10, "name": "bandA"}], id="one band"),
-        param([{"stain": "stainA"}], [{"start": 1, "end": 10, "stain": "stainA"}], id="one stain"),
-        param(
+        pytest.param([], [], id="no karyotype"),
+        pytest.param([{}], [{"start": 1, "end": 10}], id="no name/stain"),
+        pytest.param([{"name": "bandA"}], [{"start": 1, "end": 10, "name": "bandA"}], id="one band"),
+        pytest.param([{"stain": "stainA"}], [{"start": 1, "end": 10, "stain": "stainA"}], id="one stain"),
+        pytest.param(
             [{"stain": "TEL"}],
             [{"start": 1, "end": 10, "stain": "TEL", "structure": "telomere"}],
             id="telomere",
@@ -213,9 +221,10 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
     ],
 )
 def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict) -> None:
-    """Tests the `get_synonyms` method.
+    """Test the `get_synonyms` method.
 
     Args:
+        seq_test_db: Test database fixture.
         bands: List of dicts with keys `name`, `stain` for each test band to add.
         expected_kar: List of expected karyotype dicts output.
 
@@ -223,24 +232,26 @@ def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict)
     with seq_test_db.dbc.test_session_scope() as session:
         for band in bands:
             _add_test_karyotype(session, seq_test_db.dbc.dialect, 1, 10, band.get("name"), band.get("stain"))
-        coord_system = list(fetch_coord_systems(session))[0]
-        seqr = list(fetch_seq_regions(session, coord_system))[0]
+        coord_system = next(iter(fetch_coord_systems(session)))
+        seqr = next(iter(fetch_seq_regions(session, coord_system)))
         kar = get_karyotype(seqr)
         assert kar == expected_kar
 
 
 @pytest.mark.parametrize(
-    "attribs, expected_output",
+    ("attribs", "expected_output"),
     [
-        param({}, None, id="no toplevel"),
-        param({"codon_table": 1}, None, id="no toplevel, other attribs"),
-        param({"toplevel": 1}, {}, id="1 toplevel"),
-        param({"toplevel": 1, "codon_table": 2}, {"codon_table": 2}, id="with codon table"),
-        param({"toplevel": 1, "sequence_location": "chr"}, {"location": "chr"}, id="location"),
-        param({"toplevel": 1, "circular_seq": 1}, {"circular": 1}, id="circular"),
-        param({"toplevel": 1, "circular_seq": 0}, {}, id="not circular"),
-        param(
-            {"toplevel": 1, "coord_system_tag": "contig"}, {"coord_system_level": "contig"}, id="contig level"
+        pytest.param({}, None, id="no toplevel"),
+        pytest.param({"codon_table": 1}, None, id="no toplevel, other attribs"),
+        pytest.param({"toplevel": 1}, {}, id="1 toplevel"),
+        pytest.param({"toplevel": 1, "codon_table": 2}, {"codon_table": 2}, id="with codon table"),
+        pytest.param({"toplevel": 1, "sequence_location": "chr"}, {"location": "chr"}, id="location"),
+        pytest.param({"toplevel": 1, "circular_seq": 1}, {"circular": 1}, id="circular"),
+        pytest.param({"toplevel": 1, "circular_seq": 0}, {}, id="not circular"),
+        pytest.param(
+            {"toplevel": 1, "coord_system_tag": "contig"},
+            {"coord_system_level": "contig"},
+            id="contig level",
         ),
     ],
 )
@@ -250,11 +261,13 @@ def test_get_seq_regions_attribs(
     attribs: dict[str, str],
     expected_output: dict[str, Any] | None,
 ) -> None:
-    """Tests the `get_seq_regions_attribs` method.
+    """Test the `get_seq_regions_attribs` method.
 
     Args:
+        seq_test_db: Test database fixture.
+        db_map: Database map for external DBs.
         attribs: Dicts with all attrib-value pairs for each attrib to add to the seq_region.
-        expected_kar: List of expected karyotype dicts output.
+        expected_output: List of expected karyotype dicts output.
 
     """
     expected_dict = {"name": "seqA", "length": 1000, "coord_system_level": "primary_assembly"}
@@ -272,11 +285,11 @@ def test_get_seq_regions_attribs(
 
 
 @pytest.mark.parametrize(
-    "attribs, expected_output",
+    ("attribs", "expected_output"),
     [
-        param({}, {}, id="no added seq"),
-        param({"added_seq_accession": "ACC1"}, {"accession": "ACC1"}, id="added accession"),
-        param(
+        pytest.param({}, {}, id="no added seq"),
+        pytest.param({"added_seq_accession": "ACC1"}, {"accession": "ACC1"}, id="added accession"),
+        pytest.param(
             {
                 "added_seq_accession": "ACC1",
                 "added_seq_asm_pr_nam": "asm_name",
@@ -285,7 +298,7 @@ def test_get_seq_regions_attribs(
             {"accession": "ACC1", "assembly_provider": {"name": "asm_name", "url": "asm_url"}},
             id="added accession + assembly provider",
         ),
-        param(
+        pytest.param(
             {
                 "added_seq_accession": "ACC1",
                 "added_seq_ann_pr_nam": "ann_name",
@@ -294,7 +307,7 @@ def test_get_seq_regions_attribs(
             {"accession": "ACC1", "annotation_provider": {"name": "ann_name", "url": "ann_url"}},
             id="added accession + annotation provider",
         ),
-        param(
+        pytest.param(
             {
                 "added_seq_accession": "ACC1",
                 "added_seq_asm_pr_nam": "asm_name",
@@ -306,11 +319,14 @@ def test_get_seq_regions_attribs(
     ],
 )
 def test_get_added_sequence(
-    seq_test_db: UnitTestDB, attribs: dict[str, str], expected_output: dict[str, str | dict]
+    seq_test_db: UnitTestDB,
+    attribs: dict[str, str],
+    expected_output: dict[str, str | dict],
 ) -> None:
-    """Tests the `get_added_sequences` method.
+    """Test the `get_added_sequences` method.
 
     Args:
+        seq_test_db: Test database fixture.
         attribs: Dicts with all attrib-value pairs for each attrib to add to the seq_region.
         expected_output: Expected output.
 
@@ -320,8 +336,8 @@ def test_get_added_sequence(
         for attrib_name, attrib_value in attribs.items():
             _add_test_attrib(session, seq_test_db.dbc.dialect, attrib_name, attrib_value, attrib_num)
             attrib_num += 1
-        coord_system = list(fetch_coord_systems(session))[0]
-        seqr = list(fetch_seq_regions(session, coord_system))[0]
+        coord_system = next(iter(fetch_coord_systems(session)))
+        seqr = next(iter(fetch_seq_regions(session, coord_system)))
         added = get_added_sequence(seqr)
         assert added == expected_output
 
@@ -330,7 +346,7 @@ def test_get_seq_regions(
     seq_test_db: UnitTestDB,
     db_map: dict[str, str],
 ) -> None:
-    """Tests the `get_seq_regions` method."""
+    """Test the `get_seq_regions` method."""
     expected_dict = {
         "name": "seqA",
         "length": 1000,
