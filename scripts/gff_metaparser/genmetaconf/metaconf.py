@@ -214,13 +214,16 @@ class MetaConf:
         aname = self.get("assembly.name")
         self.update("assembly.default", aname)
         self.update_from_dict(defaults, "assembly.version", tech=True)
+        # get annotation source
+        ann_source = self.get("species.annotation_source", default="").strip()
+        ann_source = self.normalise_asm_name(ann_source)
         # picking assembly.alt_accession
         asm_acc_insdc = self.get("assembly.accession_insdc")
         asm_acc_refseq = self.get("assembly.accession_refseq")
         if not self.get("assembly.alt_accession"):
             if asm_acc_refseq and asm_acc_insdc:
                 # only if species.annotaion_source is ~ "RefSeq"
-                if "refseq" in _ann_source.lower():
+                if "refseq" in ann_source.lower():
                     if asm_acc.startswith("GCF_"):
                         self.update("assembly.alt_accession", asm_acc_insdc)
                     else:
