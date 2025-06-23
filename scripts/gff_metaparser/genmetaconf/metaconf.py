@@ -231,6 +231,7 @@ class MetaConf:
         asm_acc_main = asm_acc_insdc or asm_acc
         # species metadata
         _acc = str(asm_acc).replace("_", "").replace(".", "v")
+        _sci_name = self.get("species.scientific_name", default="")
         _prod_name_pfx = _sci_name.strip().lower()
         _prod_name_pfx = "_".join(re.sub(r"[^a-z0-9A-Z]+", "_", _prod_name_pfx).split("_")[:2])
         _prod_name = ("%s_%s" % (_prod_name_pfx, _acc)).lower().replace(" ", "_")
@@ -238,7 +239,6 @@ class MetaConf:
         _prod_name_main = ("%s_%s" % (_prod_name_pfx, _acc_main)).lower().replace(" ", "_")
         #
         _strain = self.get("species.strain")
-        _sci_name = self.get("species.scientific_name", default="")
         self.update_from_dict(defaults, "species.division")
         # possibly add annotation source suffix
         _ann_source_sfx = self.get("ANNOTATION_SOURCE_SFX", tech=True, default="").strip()
