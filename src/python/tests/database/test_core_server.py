@@ -17,13 +17,16 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, TYPE_CHECKING
+from typing_extensions import Self
 
 import pytest
-from pytest_mock import MockerFixture
 from sqlalchemy.engine import make_url
 
 from ensembl.io.genomio.database import CoreServer
+
+if TYPE_CHECKING:
+    import pytest_mock
 
 
 TEST_CORES = [
@@ -39,10 +42,10 @@ TEST_CORES = [
 class MockResult:
     """Mocker of `sqlalchemy.engine.Result` class."""
 
-    def __init__(self, core_dbs: List[str]):
+    def __init__(self, core_dbs: list[str]) -> None:
         self.core_dbs = core_dbs
 
-    def fetchall(self) -> List[List[str]]:
+    def fetchall(self) -> list[list[str]]:
         """Return a list of lists, each one containing a single core db."""
         return [[x] for x in self.core_dbs]
 
@@ -54,20 +57,21 @@ class MockConnection:
         self.result = result
 
     def execute(self, *args: Any, **kwargs: Any) -> MockResult:  # pylint: disable=unused-argument
-        """Returns a `MockResult` object."""
+        """Return a `MockResult` object."""
         return self.result
 
-    def __enter__(self, *args: Any, **kwargs: Any) -> MockConnection:  # pylint: disable=unused-argument
+    def __enter__(self, *args: Any, **kwargs: Any) -> Self:  # pylint: disable=unused-argument
+        """Return self to allow using the connection in a `with` statement."""
         return self
 
-    def __exit__(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=unused-argument
-        pass
+    def __exit__(self, *args: object, **kwargs: Any) -> None:  # pylint: disable=unused-argument
+        """Exit the context manager."""
 
 
 class MockEngine:
     """Mocker of `sqlalchemy.engine.Engine` class."""
 
-    def __init__(self, core_dbs: List[str]) -> None:
+    def __init__(self, core_dbs: list[str]) -> None:
         self.result = MockResult(core_dbs)
 
     def connect(self) -> MockConnection:
@@ -79,7 +83,7 @@ class TestCoreServer:
     """Tests for the `CoreServer` class."""
 
     @pytest.mark.parametrize(
-        "dbs, prefix, build, version, dbname_re, db_list, output",
+        ("dbs", "prefix", "build", "version", "dbname_re", "db_list", "output"),
         [
             ([], "", "", None, None, [], []),
             (TEST_CORES, "", None, None, "", [], TEST_CORES),
@@ -94,14 +98,14 @@ class TestCoreServer:
     )
     def test_get_cores(
         self,
-        mocker: MockerFixture,
-        dbs: List[str],
+        mocker: pytest_mock.MockerFixture,
+        dbs: list[str],
         prefix: str,
-        build: Optional[int],
-        version: Optional[int],
+        build: int | None,
+        version: int | None,
         dbname_re: str,
-        db_list: List[str],
-        output: List[str],
+        db_list: list[str],
+        output: list[str],
     ) -> None:
         """Tests the `CoreServer.get_cores()` method.
 
@@ -126,6 +130,10 @@ class TestCoreServer:
 
         # Checks the filters from get_cores
         all_cores = server.get_cores(
-            prefix=prefix, build=build, version=version, dbname_re=dbname_re, db_list=db_list
+            prefix=prefix,
+            build=build,
+            version=version,
+            dbname_re=dbname_re,
+            db_list=db_list,
         )
         assert set(all_cores) == set(output)
