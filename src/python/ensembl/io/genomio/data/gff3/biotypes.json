@@ -59,10 +59,12 @@
             "RNase_P_RNA",
             "rRNA",
             "scRNA",
+            "scaRNA",
             "snoRNA",
             "snRNA",
             "SRP_RNA",
             "telomerase_RNA",
+            "tmRNA",
             "transcript",
             "tRNA",
             "V_gene_segment"
