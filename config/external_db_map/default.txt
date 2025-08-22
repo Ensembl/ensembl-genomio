@@ -66,6 +66,8 @@ I5KNAL	I5KNAL	gene
 UniProt/GCRP	Uniprot/GCRP_gene	gene
 Uniprot/GCRP_gene	Uniprot/GCRP_gene	gene
 
+VectorBase	VectorBase	gene	^\w+\d+$
+VEuPathDB	VEuPathDB	gene	^\w+\d+$
 
 # Transcript mappings
 Ensembl_Metazoa	Ensembl_Metazoa_transcript	transcript
@@ -111,6 +113,12 @@ RNACentral	RNACentral	transcript
 
 LJMU	LJMU_transcript	transcript
 LJMU_transcript	LJMU_transcript	transcript
+
+VectorBase	VectorBase_transcript	transcript	^\w+\.R\d+$
+VectorBase_transcript	VectorBase_transcript	transcript
+
+VEuPathDB	VEuPathDB_transcript	transcript	^\w+\.R\d+$
+VEuPathDB_transcript	VEuPathDB_transcript	transcript
 
 
 # Translation mappings
@@ -178,6 +186,12 @@ Uniprot	UniProtKB_all	translation
 UniProtKB_all	UniProtKB_all	translation
 
 LJMU	LJMU_translation	translation
+
+VectorBase	VectorBase_translation	translation	^\w+\.P\d+$
+VectorBase_translation	VectorBase_translation	translation
+
+VEuPathDB	VEuPathDB_translation	translation	^\w+\.P\d+$
+VEuPathDB_translation	VEuPathDB_translation	translation
 
 
 # Seq regions
