@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Compares the INSDC and core fasta files based on MD5sum and IDs."""
 
 import argparse
 import logging
@@ -28,7 +29,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 """Compare sequences between two genomes"""
 
-__all__ = ["CompareFasta", "SeqGroup"]
+__all__ = ["SeqGroup", "compare_seqs", "read_fasta", "build_seq_dict", "find_common_groups", "write_results", "compare_seq_for_Ns"]
 
 
 class SeqGroup:
@@ -238,7 +239,6 @@ class CompareFasta:
                     else:
                         self.comp.append(f"sequences have the same length, check {name1} and {name2}")
 
-
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """
     Parse command-line arguments for the genome sequence comparison tool.
@@ -250,7 +250,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     Returns:
         argparse.Namespace: Parsed arguments as an argparse Namespace object.
     """
-    parser = ArgumentParser(description="Compare sequences between two genomes")
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_argument("--fasta1", required=True, help="Path to INSDC fasta file")
     parser.add_argument("--fasta2", required=True, help="Query  fasta to check against INSDC fasta.")
@@ -259,15 +259,14 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         default=Path.cwd(),
         help="Directory to store the comparison report. Defaults to the current working directory.",
     )
-
     # Add flags
     parser.add_argument(
         "--compare_seq_region",
         action="store_true",
         help="Enable compare seq_region mode, i.e. use seq_region for sequence comparison",
     )
+    parser.add_log_arguments()
     return parser.parse_args(arg_list)
-
 
 def main(arg_list: list[str] | None = None) -> None:
     """Main script entry-point.
