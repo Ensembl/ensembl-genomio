@@ -29,7 +29,15 @@ from ensembl.utils.logging import init_logging_with_args
 
 """Compare sequences between two genomes"""
 
-__all__ = ["SeqGroup", "compare_seqs", "read_fasta", "build_seq_dict", "find_common_groups", "write_results", "compare_seq_for_Ns"]
+__all__ = [
+    "SeqGroup",
+    "compare_seqs",
+    "read_fasta",
+    "build_seq_dict",
+    "find_common_groups",
+    "write_results",
+    "compare_seq_for_Ns",
+]
 
 
 class SeqGroup:
@@ -239,6 +247,7 @@ class CompareFasta:
                     else:
                         self.comp.append(f"sequences have the same length, check {name1} and {name2}")
 
+
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """
     Parse command-line arguments for the genome sequence comparison tool.
@@ -267,6 +276,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     )
     parser.add_log_arguments()
     return parser.parse_args(arg_list)
+
 
 def main(arg_list: list[str] | None = None) -> None:
     """Main script entry-point.
