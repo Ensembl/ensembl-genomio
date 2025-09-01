@@ -31,12 +31,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 __all__ = [
     "SeqGroup",
-    "compare_seqs",
-    "read_fasta",
-    "build_seq_dict",
-    "find_common_groups",
-    "write_results",
-    "compare_seq_for_Ns",
+    "CompareFasta",
 ]
 
 
