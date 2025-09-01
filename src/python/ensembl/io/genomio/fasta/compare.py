@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Compares the INSDC and core fasta files based on MD5sum and IDs."""
+"""Compares the INSDC and core fasta files based on md5sum and ids."""
 
 import argparse
 import logging
@@ -27,13 +27,10 @@ from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-"""Compare sequences between two genomes"""
-
 __all__ = [
     "SeqGroup",
     "CompareFasta",
 ]
-
 
 class SeqGroup:
     """Represents a group of sequence identifiers and maintains a count of them."""
