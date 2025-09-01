@@ -32,6 +32,7 @@ __all__ = [
     "CompareFasta",
 ]
 
+
 class SeqGroup:
     """Represents a group of sequence identifiers and maintains a count of them."""
 
