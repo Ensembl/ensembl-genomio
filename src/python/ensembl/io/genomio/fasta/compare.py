@@ -18,7 +18,7 @@ import argparse
 import logging
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from Bio import SeqIO
 
@@ -37,12 +37,11 @@ class SeqGroup:
     """Represents a group of sequence identifiers and maintains a count of them."""
 
     def __init__(self, identifier: str | None = None) -> None:
-        """
-        Initializes a SeqGroup instance.
+        """Initializes a `SeqGroup` instance.
 
         Args:
-            identifier (str | None, optional): The first identifier to add to the group.
-                                               Defaults to None, which adds "None" as the identifier.
+            identifier: The first identifier to add to the group. If `None`, adds "None" as the identifier.
+
         """
         self.ids: List[str] = []
         if identifier:
@@ -52,29 +51,24 @@ class SeqGroup:
         self.count = len(self.ids)
 
     def __str__(self) -> str:
-        """
-        Returns a comma-separated string of sequence identifiers.
-
-        Returns:
-            str: A string representation of the sequence group.
-        """
+        """Return a comma-separated string of sequence identifiers."""
         return ", ".join(self.ids)
 
     def add_id(self, identifier: str | None = None) -> None:
-        """
-        Adds a new identifier to the group and updates the count.
+        """Add a new identifier to the group and updates the count.
 
         Args:
-            identifier (str | None, optional): The identifier to add. If None, "None" is added instead.
+            identifier: The identifier to add. If `None`, "None" is added instead.
+
         """
         self.ids.append(identifier if identifier else "None")
         self.count = len(self.ids)
 
 
 class CompareFasta:
-    """Read and compare the fasta sequences"""
+    """Read and compare the FASTA sequences."""
 
-    def __init__(self, fasta1: Path, fasta2: Path, output_dir: str) -> None:
+    def __init__(self, fasta1: Path, fasta2: Path, output_dir: Path) -> None:
         self.fasta1 = Path(fasta1)
         self.fasta2 = Path(fasta2)
         self.output_dir = Path(output_dir)
@@ -141,7 +135,7 @@ class CompareFasta:
                 sequences[name] = re.sub(r"[^CGTA]", "N", str(rec.seq.upper()))
         return sequences
 
-    def build_seq_dict(self, seqs: dict) -> dict:
+    def build_seq_dict(self, seqs: dict[str, str]) -> dict[str, SeqGroup]:
         """
         Builds a dictionary of unique sequences and their associated IDs, accounting for duplicates.
 
@@ -170,8 +164,8 @@ class CompareFasta:
             seq2_dict (dict): Dictionary of sequences from the second dataset.
 
         Returns:
-            Tuple[dict, List[str]]: A dictionary of common sequence mappings and
-                                a list of comparison results.
+            A dictionary of common sequence mappings and a list of comparison results.
+
         """
         common = {}
 
@@ -196,11 +190,8 @@ class CompareFasta:
         return common, self.comp
 
     def write_results(self) -> None:
-        """
-        Write the comparison results to a file in the output directory.
-
-        """
-        output_file = Path.joinpath(self.output_dir, "compare.log")
+        """Write the comparison results to a file in the output directory."""
+        output_file = self.output_dir / "compare.log"
         observed_compare = set()
 
         logging.info(f"Writing results to {output_file}")
@@ -242,24 +233,20 @@ class CompareFasta:
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
-    """
-    Parse command-line arguments for the genome sequence comparison tool.
+    """Return a populated namespace with the arguments parsed from a list or from the command line.
 
     Args:
-        arg_list (list[str] | None): A list of arguments to parse. If None, arguments
-                                     are taken from sys.argv by default.
+        arg_list: List of arguments to parse. If `None`, grab them from the command line.
 
-    Returns:
-        argparse.Namespace: Parsed arguments as an argparse Namespace object.
     """
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
-    parser.add_argument("--fasta1", required=True, help="Path to INSDC fasta file")
-    parser.add_argument("--fasta2", required=True, help="Query  fasta to check against INSDC fasta.")
-    parser.add_argument(
-        "--output_dir",
-        default=Path.cwd(),
-        help="Directory to store the comparison report. Defaults to the current working directory.",
+    parser.add_argument_src_path("--fasta1", required=True, help="Path to INSDC FASTA file")
+    parser.add_argument_src_path(
+        "--fasta2", required=True, help="Query FASTA file to check against INSDC's file."
+    )
+    parser.add_argument_dst_path(
+        "--output_dir", default=Path.cwd(), help="Directory to store the comparison report.",
     )
     # Add flags
     parser.add_argument(
@@ -275,7 +262,8 @@ def main(arg_list: list[str] | None = None) -> None:
     """Main script entry-point.
 
     Args:
-    arg_list: Parsed arguments as an argparse Namespace object
+        arg_list: Parsed arguments as an `argparse.Namespace` object.
+
     """
     args = parse_args(arg_list)
     init_logging_with_args(args)
