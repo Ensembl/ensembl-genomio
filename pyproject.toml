@@ -115,8 +115,8 @@ events_load = "ensembl.io.genomio.events.load:main"
 events_format = "ensembl.io.genomio.events.format:main"
 # Fasta
 fasta_chunk = "ensembl.io.genomio.fasta.chunk:main"
-fasta_process = "ensembl.io.genomio.fasta.process:main"
 fasta_compare = "ensembl.io.genomio.fasta.compare:main"
+fasta_process = "ensembl.io.genomio.fasta.process:main"
 # GenBank
 genbank_download = "ensembl.io.genomio.genbank.download:main"
 genbank_extract_data = "ensembl.io.genomio.genbank.extract_data:main"

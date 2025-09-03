@@ -43,12 +43,8 @@ class SeqGroup:
             identifier: The first identifier to add to the group. If `None`, adds "None" as the identifier.
 
         """
-        self.ids: List[str] = []
-        if identifier:
-            self.add_id(identifier)
-        else:
-            self.add_id("None")
-        self.count = len(self.ids)
+        self.ids: list[str] = [str(identifier)]
+        self.count += 1
 
     def __str__(self) -> str:
         """Return a comma-separated string of sequence identifiers."""
@@ -68,7 +64,19 @@ class SeqGroup:
 class CompareFasta:
     """Read and compare the FASTA sequences."""
 
+<<<<<<< HEAD
     def __init__(self, fasta1: Path, fasta2: Path, output_dir: Path) -> None:
+=======
+    def __init__(self, fasta1: Path, fasta2: Path, output_dir: str) -> None:
+        """
+        Initialising with fasta files and output dir.
+
+        Args:
+            fasta1: Path to INSDC fasta file.
+            fasta2: Path to core db fasta file.
+            output_dir: Directory where comparison logs will be stored.
+        """
+>>>>>>> 702a8399 (add suggestions from the code review)
         self.fasta1 = Path(fasta1)
         self.fasta2 = Path(fasta2)
         self.output_dir = Path(output_dir)
@@ -76,7 +84,7 @@ class CompareFasta:
 
     def compare_seqs(self) -> None:
         """
-        Compare two FASTA files for common, unique, and differing sequences.
+        Compare two FASTA files for common, unique, and differing sequences. Use `write_results()` to generate a report.
         """
         seq1 = self.read_fasta(self.fasta1)
         seq2 = self.read_fasta(self.fasta2)
@@ -93,8 +101,7 @@ class CompareFasta:
             )
             logging.warning("Different number of sequences: fasta1 compared to fasta2")
 
-        common, group_comp = self.find_common_groups(seq1_dict, seq2_dict)
-        self.comp += group_comp
+        common = self.find_common_groups(seq1_dict, seq2_dict)
 
         # Sequences that are not common
         only1 = {seq: group for seq, group in seq1_dict.items() if not seq in seq2_dict}
@@ -116,7 +123,7 @@ class CompareFasta:
         # Write results to file
         self.write_results()
 
-    def read_fasta(self, fasta_path: Path) -> dict:
+    def read_fasta(self, fasta_path: Path) -> dict[str:str]:
         """
         Reads a FASTA file and returns a dictionary mapping sequence IDs to sequences.
 
@@ -135,7 +142,11 @@ class CompareFasta:
                 sequences[name] = re.sub(r"[^CGTA]", "N", str(rec.seq.upper()))
         return sequences
 
+<<<<<<< HEAD
     def build_seq_dict(self, seqs: dict[str, str]) -> dict[str, SeqGroup]:
+=======
+    def build_seq_dict(self, seqs: dict[str:str]) -> dict[str, SeqGroup]:
+>>>>>>> 702a8399 (add suggestions from the code review)
         """
         Builds a dictionary of unique sequences and their associated IDs, accounting for duplicates.
 
@@ -155,7 +166,7 @@ class CompareFasta:
 
         return seqs_dict
 
-    def find_common_groups(self, seq1_dict: dict, seq2_dict: dict) -> Tuple[dict, List[Any]]:
+    def find_common_groups(self, seq1_dict: dict[str:str], seq2_dict: dict[str:str]) -> dict[str:str]:
         """
         Find common sequences between two dictionaries and group them.
 
@@ -187,11 +198,18 @@ class CompareFasta:
                         f" ({group1.count} vs {group2.count}): {group1} and {group2}"
                     )
 
-        return common, self.comp
+        return common
 
     def write_results(self) -> None:
+<<<<<<< HEAD
         """Write the comparison results to a file in the output directory."""
         output_file = self.output_dir / "compare.log"
+=======
+        """
+        Write the comparison results to a file in the output directory.
+        """
+        output_file = Path.joinpath(self.output_dir, "compare.log")
+>>>>>>> 702a8399 (add suggestions from the code review)
         observed_compare = set()
 
         logging.info(f"Writing results to {output_file}")

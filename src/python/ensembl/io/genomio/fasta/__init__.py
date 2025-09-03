@@ -15,5 +15,5 @@
 """Fasta files processing module."""
 
 from .chunk import *
-from .process import *
 from .compare import *
+from .process import *
