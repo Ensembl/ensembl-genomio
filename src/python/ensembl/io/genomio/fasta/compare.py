@@ -44,7 +44,7 @@ class SeqGroup:
 
         """
         self.ids: list[str] = [str(identifier)]
-        self.count += 1
+        self.count = 1
 
     def __str__(self) -> str:
         """Return a comma-separated string of sequence identifiers."""
@@ -57,26 +57,16 @@ class SeqGroup:
             identifier: The identifier to add. If `None`, "None" is added instead.
 
         """
-        self.ids.append(identifier if identifier else "None")
-        self.count = len(self.ids)
+        self.ids.append(str(identifier))
+        self.count += 1
 
 
 class CompareFasta:
-    """Read and compare the FASTA sequences."""
+    """
+    Read and compare the FASTA sequences.
+    """
 
-<<<<<<< HEAD
     def __init__(self, fasta1: Path, fasta2: Path, output_dir: Path) -> None:
-=======
-    def __init__(self, fasta1: Path, fasta2: Path, output_dir: str) -> None:
-        """
-        Initialising with fasta files and output dir.
-
-        Args:
-            fasta1: Path to INSDC fasta file.
-            fasta2: Path to core db fasta file.
-            output_dir: Directory where comparison logs will be stored.
-        """
->>>>>>> 702a8399 (add suggestions from the code review)
         self.fasta1 = Path(fasta1)
         self.fasta2 = Path(fasta2)
         self.output_dir = Path(output_dir)
@@ -142,11 +132,7 @@ class CompareFasta:
                 sequences[name] = re.sub(r"[^CGTA]", "N", str(rec.seq.upper()))
         return sequences
 
-<<<<<<< HEAD
     def build_seq_dict(self, seqs: dict[str, str]) -> dict[str, SeqGroup]:
-=======
-    def build_seq_dict(self, seqs: dict[str:str]) -> dict[str, SeqGroup]:
->>>>>>> 702a8399 (add suggestions from the code review)
         """
         Builds a dictionary of unique sequences and their associated IDs, accounting for duplicates.
 
@@ -157,7 +143,7 @@ class CompareFasta:
             dict: A dictionary where keys are unique sequences and values are `SeqGroup` objects
                 that group sequence IDs sharing the same sequence.
         """
-        seqs_dict: Dict[str, SeqGroup] = {}
+        seqs_dict: dict[str, SeqGroup] = {}
         for name, seq in seqs.items():
             if seq in seqs_dict:
                 seqs_dict[seq].add_id(name)
@@ -201,15 +187,8 @@ class CompareFasta:
         return common
 
     def write_results(self) -> None:
-<<<<<<< HEAD
         """Write the comparison results to a file in the output directory."""
         output_file = self.output_dir / "compare.log"
-=======
-        """
-        Write the comparison results to a file in the output directory.
-        """
-        output_file = Path.joinpath(self.output_dir, "compare.log")
->>>>>>> 702a8399 (add suggestions from the code review)
         observed_compare = set()
 
         logging.info(f"Writing results to {output_file}")
@@ -264,7 +243,9 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "--fasta2", required=True, help="Query FASTA file to check against INSDC's file."
     )
     parser.add_argument_dst_path(
-        "--output_dir", default=Path.cwd(), help="Directory to store the comparison report.",
+        "--output_dir",
+        default=Path.cwd(),
+        help="Directory to store the comparison report.",
     )
     # Add flags
     parser.add_argument(
