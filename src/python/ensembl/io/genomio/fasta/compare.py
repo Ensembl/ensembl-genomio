@@ -67,10 +67,19 @@ class CompareFasta:
     """
 
     def __init__(self, fasta1: Path, fasta2: Path, output_dir: Path) -> None:
+        """
+        Initialize the `CompareFasta` with input fasta files and output directory.
+
+        Args:
+            fasta1 (Path): Path to INSDC fasta file.
+            fasta2 (Path): Path to core db fasta file.
+            output_dir (Path): Directory where comparison logs will be stored.
+
+        """
         self.fasta1 = Path(fasta1)
         self.fasta2 = Path(fasta2)
         self.output_dir = Path(output_dir)
-        self.comp: List[str] = []
+        self.comp: list[str] = []
 
     def compare_seqs(self) -> None:
         """
@@ -121,7 +130,7 @@ class CompareFasta:
             fasta_path (Path): Path to the FASTA file. Supports gzipped files.
 
         Returns:
-            dict: A dictionary where keys are sequence IDs and values are sequences
+            sequences: A dictionary where keys are sequence IDs and values are sequences
               with all non-CGTA characters replaced by 'N'.
         """
         logging.info(f"Read fasta file {fasta_path}")
@@ -140,7 +149,7 @@ class CompareFasta:
             seqs (dict): A dictionary where keys are sequence IDs and values are sequences.
 
         Returns:
-            dict: A dictionary where keys are unique sequences and values are `SeqGroup` objects
+            seqs_dict: A dictionary where keys are unique sequences and values are `SeqGroup` objects
                 that group sequence IDs sharing the same sequence.
         """
         seqs_dict: dict[str, SeqGroup] = {}
@@ -161,7 +170,7 @@ class CompareFasta:
             seq2_dict (dict): Dictionary of sequences from the second dataset.
 
         Returns:
-            A dictionary of common sequence mappings and a list of comparison results.
+            common: A dictionary of common sequence mappings and a list of comparison results.
 
         """
         common = {}
@@ -187,7 +196,9 @@ class CompareFasta:
         return common
 
     def write_results(self) -> None:
-        """Write the comparison results to a file in the output directory."""
+        """
+        Write the comparison results to a file in the output directory.
+        """
         output_file = self.output_dir / "compare.log"
         observed_compare = set()
 
@@ -198,7 +209,7 @@ class CompareFasta:
                     observed_compare.add(line)
                     out_fh.write(str(line) + "\n")
 
-    def compare_seq_for_Ns(self, only1: dict, only2: dict) -> None:
+    def compare_seq_for_Ns(self, only1: dict[str:str], only2: dict[str:str]) -> None:
         """
         Compare sequences in `only1` and `only2` for differences in `N` content and length.
 
