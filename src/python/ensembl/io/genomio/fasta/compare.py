@@ -122,7 +122,7 @@ class CompareFasta:
         # Write results to file
         self.write_results()
 
-    def read_fasta(self, fasta_path: Path) -> dict[str:str]:
+    def read_fasta(self, fasta_path: Path) -> dict[str, str]:
         """
         Reads a FASTA file and returns a dictionary mapping sequence IDs to sequences.
 
@@ -161,7 +161,7 @@ class CompareFasta:
 
         return seqs_dict
 
-    def find_common_groups(self, seq1_dict: dict[str:str], seq2_dict: dict[str:str]) -> dict[str:str]:
+    def find_common_groups(self, seq1_dict: dict[str, str], seq2_dict: dict[str, str]) -> dict[str, str]:
         """
         Find common sequences between two dictionaries and group them.
 
@@ -209,7 +209,7 @@ class CompareFasta:
                     observed_compare.add(line)
                     out_fh.write(str(line) + "\n")
 
-    def compare_seq_for_Ns(self, only1: dict[str:str], only2: dict[str:str]) -> None:
+    def compare_seq_for_Ns(self, only1: dict[str, str], only2: dict[str, str]) -> None:
         """
         Compare sequences in `only1` and `only2` for differences in `N` content and length.
 
