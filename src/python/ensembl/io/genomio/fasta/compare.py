@@ -83,7 +83,7 @@ class CompareFasta:
     def compare_seqs(self) -> None:
         """
         Compare two FASTA files for common, unique, and differing sequences.
-	Use `write_results()` to generate a report.
+        Use `write_results()` to generate a report.
         """
         seq1 = self.read_fasta(self.fasta1)
         seq2 = self.read_fasta(self.fasta2)
@@ -161,7 +161,9 @@ class CompareFasta:
 
         return seqs_dict
 
-    def find_common_groups(self, seq1_dict: dict[str, str], seq2_dict: dict[str, str]) -> dict[str, str]:
+    def find_common_groups(
+        self, seq1_dict: dict[str, SeqGroup], seq2_dict: dict[str, SeqGroup]
+    ) -> dict[str, str]:
         """
         Find common sequences between two dictionaries and group them.
 
@@ -209,7 +211,7 @@ class CompareFasta:
                     observed_compare.add(line)
                     out_fh.write(str(line) + "\n")
 
-    def compare_seq_for_Ns(self, only1: dict[str, str], only2: dict[str, str]) -> None:
+    def compare_seq_for_Ns(self, only1: dict[str, SeqGroup], only2: dict[str, SeqGroup]) -> None:
         """
         Compare sequences in `only1` and `only2` for differences in `N` content and length.
 
