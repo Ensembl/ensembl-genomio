@@ -18,7 +18,6 @@ import argparse
 import logging
 from pathlib import Path
 import re
-from typing import Any
 
 from Bio import SeqIO
 
@@ -83,7 +82,8 @@ class CompareFasta:
 
     def compare_seqs(self) -> None:
         """
-        Compare two FASTA files for common, unique, and differing sequences. Use `write_results()` to generate a report.
+        Compare two FASTA files for common, unique, and differing sequences.
+	Use `write_results()` to generate a report.
         """
         seq1 = self.read_fasta(self.fasta1)
         seq2 = self.read_fasta(self.fasta2)
