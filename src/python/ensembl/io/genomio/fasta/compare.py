@@ -61,28 +61,24 @@ class SeqGroup:
 
 
 class CompareFasta:
-    """
-    Read and compare the FASTA sequences.
-    """
+    """Read and compare the FASTA sequences."""
 
     def __init__(self, fasta1: Path, fasta2: Path, output_dir: Path) -> None:
-        """
-        Initialize the `CompareFasta` with input fasta files and output directory.
+        """Initialize the `CompareFasta` with input fasta files and output directory.
 
         Args:
-            fasta1 (Path): Path to INSDC fasta file.
-            fasta2 (Path): Path to core db fasta file.
-            output_dir (Path): Directory where comparison logs will be stored.
+            fasta1: Path to INSDC fasta file.
+            fasta2: Path to core db fasta file.
+            output_dir: Directory where comparison logs will be stored.
 
         """
-        self.fasta1 = Path(fasta1)
-        self.fasta2 = Path(fasta2)
-        self.output_dir = Path(output_dir)
+        self.fasta1 = fasta1
+        self.fasta2 = fasta2
+        self.output_dir = output_dir
         self.comp: list[str] = []
 
     def compare_seqs(self) -> None:
-        """
-        Compare two FASTA files for common, unique, and differing sequences.
+        """Compare two FASTA files for common, unique, and differing sequences.
         Use `write_results()` to generate a report.
         """
         seq1 = self.read_fasta(self.fasta1)
@@ -123,15 +119,14 @@ class CompareFasta:
         self.write_results()
 
     def read_fasta(self, fasta_path: Path) -> dict[str, str]:
-        """
-        Reads a FASTA file and returns a dictionary mapping sequence IDs to sequences.
+        """Reads a FASTA file and returns a dictionary mapping sequence IDs to sequences.
 
         Args:
-            fasta_path (Path): Path to the FASTA file. Supports gzipped files.
+            fasta_path: Path to the FASTA file. Supports gzipped files.
 
         Returns:
-            sequences: A dictionary where keys are sequence IDs and values are sequences
-              with all non-CGTA characters replaced by 'N'.
+            A dictionary where keys are sequence IDs and values are sequences with all non-CGTA
+                characters replaced by "N".
         """
         logging.info(f"Read fasta file {fasta_path}")
         sequences = {}
@@ -142,15 +137,14 @@ class CompareFasta:
         return sequences
 
     def build_seq_dict(self, seqs: dict[str, str]) -> dict[str, SeqGroup]:
-        """
-        Builds a dictionary of unique sequences and their associated IDs, accounting for duplicates.
+        """Builds a dictionary of unique sequences and their associated IDs, accounting for duplicates.
 
         Args:
-            seqs (dict): A dictionary where keys are sequence IDs and values are sequences.
+            seqs: A dictionary where keys are sequence IDs and values are sequences.
 
         Returns:
-            seqs_dict: A dictionary where keys are unique sequences and values are `SeqGroup` objects
-                that group sequence IDs sharing the same sequence.
+            A dictionary where keys are unique sequences and values are `SeqGroup` objects that
+                group sequence IDs sharing the same sequence.
         """
         seqs_dict: dict[str, SeqGroup] = {}
         for name, seq in seqs.items():
@@ -164,15 +158,14 @@ class CompareFasta:
     def find_common_groups(
         self, seq1_dict: dict[str, SeqGroup], seq2_dict: dict[str, SeqGroup]
     ) -> dict[str, str]:
-        """
-        Find common sequences between two dictionaries and group them.
+        """Find common sequences between two dictionaries and group them.
 
         Args:
-            seq1_dict (dict): Dictionary of sequences from the first dataset.
-            seq2_dict (dict): Dictionary of sequences from the second dataset.
+            seq1_dict: Dictionary of sequences from the first dataset.
+            seq2_dict: Dictionary of sequences from the second dataset.
 
         Returns:
-            common: A dictionary of common sequence mappings and a list of comparison results.
+            A dictionary of common sequence mappings and a list of comparison results.
 
         """
         common = {}
@@ -198,9 +191,7 @@ class CompareFasta:
         return common
 
     def write_results(self) -> None:
-        """
-        Write the comparison results to a file in the output directory.
-        """
+        """Write the comparison results to a file in the output directory."""
         output_file = self.output_dir / "compare.log"
         observed_compare = set()
 
@@ -212,12 +203,12 @@ class CompareFasta:
                     out_fh.write(str(line) + "\n")
 
     def compare_seq_for_Ns(self, only1: dict[str, SeqGroup], only2: dict[str, SeqGroup]) -> None:
-        """
-        Compare sequences in `only1` and `only2` for differences in `N` content and length.
+        """Compare sequences in `only1` and `only2` for differences in `N` content and length.
 
         Args:
-            only1 (dict): Sequences unique to the first dataset, mapping sequence to group/identifier.
-            only2 (dict): Sequences unique to the second dataset, mapping sequence to group/identifier.
+            only1: Sequences unique to the first dataset, mapping sequence to group/identifier.
+            only2: Sequences unique to the second dataset, mapping sequence to group/identifier.
+
         """
         # sequences which have extra N at the end
         for seq_1, name1 in only1.items():
