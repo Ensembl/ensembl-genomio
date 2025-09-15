@@ -63,19 +63,6 @@ class SeqGroup:
 class CompareFasta:
     """Read and compare the FASTA sequences."""
 
-    def __init__(self, fasta1: Path, fasta2: Path, output_dir: Path) -> None:
-        """Initialize the `CompareFasta` with input fasta files and output directory.
-
-        Args:
-            fasta1: Path to INSDC fasta file.
-            fasta2: Path to core db fasta file.
-            output_dir: Directory where comparison logs will be stored.
-
-        """
-        self.fasta1 = fasta1
-        self.fasta2 = fasta2
-        self.output_dir = output_dir
-
     def __init__(self, fasta_ext: Path, fasta_core: Path, output_dir: Path) -> None:
         """
         Initialize the `CompareFasta` with input fasta files and output directory.
