@@ -63,7 +63,6 @@ class SeqGroup:
 class CompareFasta:
     """Read and compare the FASTA sequences."""
 
-<<<<<<< Updated upstream
     def __init__(self, fasta1: Path, fasta2: Path, output_dir: Path) -> None:
         """Initialize the `CompareFasta` with input fasta files and output directory.
 
@@ -76,7 +75,7 @@ class CompareFasta:
         self.fasta1 = fasta1
         self.fasta2 = fasta2
         self.output_dir = output_dir
-=======
+
     def __init__(self, fasta_ext: Path, fasta_core: Path, output_dir: Path) -> None:
         """
         Initialize the `CompareFasta` with input fasta files and output directory.
@@ -90,7 +89,6 @@ class CompareFasta:
         self.fasta_ext = Path(fasta_ext)
         self.fasta_core = Path(fasta_core)
         self.output_dir = Path(output_dir)
->>>>>>> Stashed changes
         self.comp: list[str] = []
 
     def compare_seqs(self) -> None:
@@ -177,13 +175,8 @@ class CompareFasta:
         """Find common sequences between two dictionaries and group them.
 
         Args:
-<<<<<<< Updated upstream
-            seq1_dict: Dictionary of sequences from the first dataset.
-            seq2_dict: Dictionary of sequences from the second dataset.
-=======
             seq_ext_dict (dict): Dictionary of sequences from the first dataset.
             seq_core_dict (dict): Dictionary of sequences from the second dataset.
->>>>>>> Stashed changes
 
         Returns:
             A dictionary of common sequence mappings and a list of comparison results.
