@@ -68,9 +68,9 @@ class CompareFasta:
         Initialize the `CompareFasta` with input fasta files and output directory.
 
         Args:
-            fasta_ext (Path): Path to INSDC fasta file.
-            fasta_core (Path): Path to core db fasta file.
-            output_dir (Path): Directory where comparison logs will be stored.
+            fasta_ext: Path to INSDC fasta file.
+            fasta_core: Path to core db fasta file.
+            output_dir: Directory where comparison logs will be stored.
 
         """
         self.fasta_ext = Path(fasta_ext)
