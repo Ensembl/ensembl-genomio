@@ -162,8 +162,8 @@ class CompareFasta:
         """Find common sequences between two dictionaries and group them.
 
         Args:
-            seq_ext_dict (dict): Dictionary of sequences from the first dataset.
-            seq_core_dict (dict): Dictionary of sequences from the second dataset.
+            seq_ext_dict: Dictionary of sequences from the first dataset.
+            seq_core_dict: Dictionary of sequences from the second dataset.
 
         Returns:
             A dictionary of common sequence mappings and a list of comparison results.
