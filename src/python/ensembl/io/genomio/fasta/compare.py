@@ -63,6 +63,7 @@ class SeqGroup:
 class CompareFasta:
     """Read and compare the FASTA sequences."""
 
+<<<<<<< Updated upstream
     def __init__(self, fasta1: Path, fasta2: Path, output_dir: Path) -> None:
         """Initialize the `CompareFasta` with input fasta files and output directory.
 
@@ -75,33 +76,48 @@ class CompareFasta:
         self.fasta1 = fasta1
         self.fasta2 = fasta2
         self.output_dir = output_dir
+=======
+    def __init__(self, fasta_ext: Path, fasta_core: Path, output_dir: Path) -> None:
+        """
+        Initialize the `CompareFasta` with input fasta files and output directory.
+
+        Args:
+            fasta_ext (Path): Path to INSDC fasta file.
+            fasta_core (Path): Path to core db fasta file.
+            output_dir (Path): Directory where comparison logs will be stored.
+
+        """
+        self.fasta_ext = Path(fasta_ext)
+        self.fasta_core = Path(fasta_core)
+        self.output_dir = Path(output_dir)
+>>>>>>> Stashed changes
         self.comp: list[str] = []
 
     def compare_seqs(self) -> None:
         """Compare two FASTA files for common, unique, and differing sequences.
         Use `write_results()` to generate a report.
         """
-        seq1 = self.read_fasta(self.fasta1)
-        seq2 = self.read_fasta(self.fasta2)
+        seq_ext = self.read_fasta(self.fasta_ext)
+        seq_core = self.read_fasta(self.fasta_core)
 
         # Compare sequences
-        seq1_dict = self.build_seq_dict(seq1)
-        seq2_dict = self.build_seq_dict(seq2)
+        seq_ext_dict = self.build_seq_dict(seq_ext)
+        seq_core_dict = self.build_seq_dict(seq_core)
 
         # Compare number of sequences
-        if len(seq1) != len(seq2):
+        if len(seq_ext) != len(seq_core):
             self.comp.append(
                 "WARNING: Different number of sequences: "
-                f"fasta1 [ n = {len(seq1)} ] -Vs- fasta2 [ n = {len(seq2)} ]"
+                f"fasta_ext [ n = {len(seq_ext)} ] -Vs- fasta_core [ n = {len(seq_core)} ]"
             )
-            logging.warning("Different number of sequences: fasta1 compared to fasta2")
+            logging.warning("Different number of sequences: fasta_ext compared to fasta_core")
 
-        common = self.find_common_groups(seq1_dict, seq2_dict)
+        common = self.find_common_groups(seq_ext_dict, seq_core_dict)
 
         # Sequences that are not common
-        only1 = {seq: group for seq, group in seq1_dict.items() if not seq in seq2_dict}
+        only1 = {seq: group for seq, group in seq_ext_dict.items() if not seq in seq_core_dict}
 
-        only2 = {seq: group for seq, group in seq2_dict.items() if not seq in seq1_dict}
+        only2 = {seq: group for seq, group in seq_core_dict.items() if not seq in seq_ext_dict}
 
         if only1:
             self.comp.append(f"Sequences only in Fasta_1: {', '.join([str(ids) for ids in only1.values()])}")
@@ -156,13 +172,18 @@ class CompareFasta:
         return seqs_dict
 
     def find_common_groups(
-        self, seq1_dict: dict[str, SeqGroup], seq2_dict: dict[str, SeqGroup]
+        self, seq_ext_dict: dict[str, SeqGroup], seq_core_dict: dict[str, SeqGroup]
     ) -> dict[str, str]:
         """Find common sequences between two dictionaries and group them.
 
         Args:
+<<<<<<< Updated upstream
             seq1_dict: Dictionary of sequences from the first dataset.
             seq2_dict: Dictionary of sequences from the second dataset.
+=======
+            seq_ext_dict (dict): Dictionary of sequences from the first dataset.
+            seq_core_dict (dict): Dictionary of sequences from the second dataset.
+>>>>>>> Stashed changes
 
         Returns:
             A dictionary of common sequence mappings and a list of comparison results.
@@ -170,9 +191,9 @@ class CompareFasta:
         """
         common = {}
 
-        for seq1, group1 in seq1_dict.items():
-            if seq1 in seq2_dict:
-                group2 = seq2_dict[seq1]
+        for seq1, group1 in seq_ext_dict.items():
+            if seq1 in seq_core_dict:
+                group2 = seq_core_dict[seq1]
                 # Check that the 2 groups have the same number of sequences
                 if group1.count == group2.count:
                     if group1.count == 1:
@@ -220,7 +241,7 @@ class CompareFasta:
                 seq2_N = seq_2.count("N")
 
                 if abs(seq1_N - seq2_N) == abs(len1 - len2):
-                    self.comp.append(f"Please check extra Ns added in your fasta2 in {name1} and {name2}")
+                    self.comp.append(f"Please check extra Ns added in your fasta_core in {name1} and {name2}")
                 else:
                     self.comp.append(
                         f"ALERT INSERTIONS at the end or diff assembly level {name1} and {name2}"
@@ -228,7 +249,7 @@ class CompareFasta:
 
                 if len1 == len2:
                     if seq2_N > seq1_N:
-                        self.comp.append(f"your fasta2 has more Ns, check {name1} and {name2}")
+                        self.comp.append(f"your fasta_core has more Ns, check {name1} and {name2}")
                     else:
                         self.comp.append(f"sequences have the same length, check {name1} and {name2}")
 
@@ -242,9 +263,9 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
-    parser.add_argument_src_path("--fasta1", required=True, help="Path to INSDC FASTA file")
+    parser.add_argument_src_path("--fasta_ext", required=True, help="Path to external fasta file")
     parser.add_argument_src_path(
-        "--fasta2", required=True, help="Query FASTA file to check against INSDC's file."
+        "--fasta_core", required=True, help="Query FASTA file to compare against external file."
     )
     parser.add_argument_dst_path(
         "--output_dir",
@@ -270,6 +291,6 @@ def main(arg_list: list[str] | None = None) -> None:
     """
     args = parse_args(arg_list)
     init_logging_with_args(args)
-    compare_initialise = CompareFasta(args.fasta1, args.fasta2, args.output_dir)
+    compare_initialise = CompareFasta(args.fasta_ext, args.fasta_core, args.output_dir)
     # Perform the comparison explicitly
     compare_initialise.compare_seqs()
