@@ -221,7 +221,7 @@ class CompareFasta:
                 seq2_N = seq_2.count("N")
 
                 if abs(seq1_N - seq2_N) == abs(len1 - len2):
-                    self.comp.append(f"Please check extra Ns added in your fasta_core in {name1} and {name2}")
+                    self.comp.append(f"Please check extra Ns added in the accessions {name1} and {name2}")
                 else:
                     self.comp.append(
                         f"ALERT INSERTIONS at the end or diff assembly level {name1} and {name2}"
