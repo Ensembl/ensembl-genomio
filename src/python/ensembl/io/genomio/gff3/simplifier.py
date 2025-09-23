@@ -12,13 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Standardize the gene model representation of a GFF3 file, and extract the functional annotation
-in a separate file.
+"""Standardize the gene model representation of a GFF3 file, and extract its functional annotation.
+
+The functional annotation will be stored in a separate file.
 """
 
 __all__ = [
-    "Records",
     "GFFSimplifier",
+    "Records",
 ]
 
 from importlib.resources import as_file, files
@@ -27,7 +28,6 @@ import logging
 from os import PathLike
 from pathlib import Path
 import re
-from typing import List, Optional, Set
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
@@ -44,12 +44,13 @@ from .features import GFFSeqFeature
 class Records(list):
     """List of GFF3 SeqRecords."""
 
-    def from_gff(self, in_gff_path: PathLike, excluded: Optional[List[str]] = None) -> None:
-        """Loads records from a GFF3 file.
+    def from_gff(self, in_gff_path: PathLike, excluded: list[str] | None = None) -> None:
+        """Load records from a GFF3 file.
 
         Args:
             in_gff_path: Input GFF3 file path.
             excluded: Record IDs to not load from the GFF3 file.
+
         """
         if excluded is None:
             excluded = []
@@ -63,10 +64,11 @@ class Records(list):
                 self.append(clean_record)
 
     def to_gff(self, out_gff_path: PathLike) -> None:
-        """Writes the current list of records in a GFF3 file.
+        """Write the current list of records in a GFF3 file.
 
         Args:
             out_gff_path: Path to GFF3 file where to write the records.
+
         """
         with Path(out_gff_path).open("w") as out_gff_fh:
             GFF.write(self, out_gff_fh)
@@ -77,14 +79,15 @@ class GFFSimplifier:
 
     Raises:
         GFFParserError: If an error cannot be automatically fixed.
+
     """
 
     def __init__(
         self,
-        genome_path: Optional[PathLike] = None,
+        genome_path: PathLike | None = None,
         skip_unrecognized: bool = False,
         allow_pseudogene_with_cds: bool = False,
-    ):
+    ) -> None:
         """Create an object that simplifies `SeqFeature` objects.
 
         Args:
@@ -94,6 +97,7 @@ class GFFSimplifier:
 
         Raises:
             GFFParserError: If a biotype is unknown and `skip_unrecognized` is False.
+
         """
         self.skip_unrecognized = skip_unrecognized
         self.allow_pseudogene_with_cds = allow_pseudogene_with_cds
@@ -116,15 +120,15 @@ class GFFSimplifier:
         # Other preparations
         self.stable_ids = StableIDAllocator()
         self.stable_ids.set_prefix(self.genome)
-        self.exclude_seq_regions: List[str] = []
-        self.fail_types: Set = set()
+        self.exclude_seq_regions: list[str] = []
+        self.fail_types: set = set()
 
         # Init the actual data we will store
         self.records = Records()
         self.annotations = FunctionalAnnotations(self.get_provider_name())
 
     def get_provider_name(self) -> str:
-        """Returns the provider name for this genome.
+        """Return the provider name for this genome.
 
         If this information is not available, will try to infer it from the assembly accession. Will
         return "GenBank" otherwise.
@@ -141,8 +145,9 @@ class GFFSimplifier:
         return provider_name
 
     def simpler_gff3(self, in_gff_path: PathLike) -> None:
-        """Loads a GFF3 from INSDC and rewrites it in a simpler version, whilst also writing a
-        functional annotation file.
+        """Load a GFF3 from INSDC and rewrite it in a simpler version.
+
+        It will also write a functional annotation file.
         """
         self.records.from_gff(in_gff_path, self.exclude_seq_regions)
         for record in self.records:
@@ -166,11 +171,12 @@ class GFFSimplifier:
                 raise GFFParserError("Unrecognized types found, abort")
 
     def simpler_gff3_feature(self, gene: GFFSeqFeature) -> GFFSeqFeature:
-        """Creates a simpler version of a GFF3 feature.
+        """Create a simpler version of a GFF3 feature.
 
         Raises:
             IgnoredFeatureError: If the feature type is ignored.
             UnsupportedFeatureError: If the feature type is not supported.
+
         """
         # Special cases
         non_gene = self.normalize_non_gene(gene)
@@ -198,10 +204,11 @@ class GFFSimplifier:
         return self.clean_gene(gene)
 
     def create_gene_for_lone_transcript(self, feat: GFFSeqFeature) -> GFFSeqFeature:
-        """Returns a gene for lone transcripts: 'gene' for tRNA/rRNA/mRNA, and 'ncRNA_gene' for all others.
+        """Return a gene for lone transcripts: 'gene' for tRNA/rRNA/mRNA, and 'ncRNA_gene' for all others.
 
         Args:
             feat: The transcript for which we want to create a gene.
+
         """
         transcript_types = self._biotypes["transcript"]["supported"]
         if feat.type not in transcript_types:
@@ -240,10 +247,11 @@ class GFFSimplifier:
         return new_gene
 
     def create_gene_for_lone_cds(self, feat: GFFSeqFeature) -> GFFSeqFeature:
-        """Returns a gene created for a lone CDS.
+        """Return a gene created for a lone CDS.
 
         Args:
             feat: The CDS for which we want to create a gene.
+
         """
         if feat.type != "CDS":
             return feat
@@ -275,8 +283,8 @@ class GFFSimplifier:
 
         return new_gene
 
-    def normalize_non_gene(self, feat: GFFSeqFeature) -> Optional[GFFSeqFeature]:
-        """Returns a normalised "non-gene" or `None` if not applicable.
+    def normalize_non_gene(self, feat: GFFSeqFeature) -> GFFSeqFeature | None:
+        """Return a normalised "non-gene" or `None` if not applicable.
 
         Only transposable elements supported at the moment.
 
@@ -285,8 +293,8 @@ class GFFSimplifier:
 
         Raises:
             NotImplementedError: If the feature is a not supported non-gene.
-        """
 
+        """
         if feat.type not in self._biotypes["non_gene"]["supported"]:
             return None
         if feat.type in ("mobile_genetic_element", "transposable_element"):
@@ -324,7 +332,6 @@ class GFFSimplifier:
 
     def clean_gene(self, gene: GFFSeqFeature) -> GFFSeqFeature:
         """Return the same gene without qualifiers unrelated to the gene structure."""
-
         old_gene_qualifiers = gene.qualifiers
         gene.qualifiers = {"ID": gene.id, "source": old_gene_qualifiers["source"]}
         for transcript in gene.sub_features:
@@ -349,14 +356,13 @@ class GFFSimplifier:
         return gene
 
     def normalize_gene(self, gene: GFFSeqFeature) -> GFFSeqFeature:
-        """Returns a normalized gene structure, separate from the functional elements.
+        """Return a normalized gene structure, separate from the functional elements.
 
         Args:
             gene: Gene object to normalize.
             functional_annotation: List of feature annotations (appended by this method).
 
         """
-
         gene.id = self.stable_ids.normalize_gene_id(gene, refseq=self.refseq)
         restructure_gene(gene)
         self.normalize_transcripts(gene)
@@ -375,8 +381,7 @@ class GFFSimplifier:
             remove_cds_from_pseudogene(gene)
 
     def normalize_transcripts(self, gene: GFFSeqFeature) -> None:
-        """Normalizes a transcript."""
-
+        """Normalize a transcript."""
         allowed_transcript_types = self._biotypes["transcript"]["supported"]
         ignored_transcript_types = self._biotypes["transcript"]["ignored"]
 
@@ -388,7 +393,7 @@ class GFFSimplifier:
             ):
                 self.fail_types.add(f"transcript={transcript.type}")
                 logging.warning(
-                    f"Unrecognized transcript type: {transcript.type}" f" for {transcript.id} ({gene.id})"
+                    f"Unrecognized transcript type: {transcript.type} for {transcript.id} ({gene.id})",
                 )
                 transcripts_to_delete.append(count)
                 continue
@@ -397,17 +402,17 @@ class GFFSimplifier:
             transcript_number = count + 1
             transcript.id = self.stable_ids.generate_transcript_id(gene.id, transcript_number)
 
-            transcript = self.format_gene_segments(transcript)
+            updated_transcript = self.format_gene_segments(transcript)
 
             # EXONS AND CDS
-            transcript = self._normalize_transcript_subfeatures(gene, transcript)
+            gene.sub_features[count] = self._normalize_transcript_subfeatures(gene, updated_transcript)
 
         if transcripts_to_delete:
             for elt in sorted(transcripts_to_delete, reverse=True):
                 gene.sub_features.pop(elt)
 
     def format_gene_segments(self, transcript: GFFSeqFeature) -> GFFSeqFeature:
-        """Returns the equivalent Ensembl biotype feature for gene segment transcript features.
+        """Return the equivalent Ensembl biotype feature for gene segment transcript features.
 
         Supported features: "C_gene_segment" and "V_gene_segment".
 
@@ -416,6 +421,7 @@ class GFFSimplifier:
 
         Raises:
             GeneSegmentError: Unable to get the segment type information from the feature.
+
         """
         if transcript.type not in ("C_gene_segment", "V_gene_segment"):
             return transcript
@@ -424,8 +430,8 @@ class GFFSimplifier:
         seg_type = self._get_segment_type(transcript)
         if not seg_type:
             # Get the information from a CDS instead
-            sub_feats: List[GFFSeqFeature] = transcript.sub_features
-            cdss: List[GFFSeqFeature] = list(filter(lambda x: x.type == "CDS", sub_feats))
+            sub_feats: list[GFFSeqFeature] = transcript.sub_features
+            cdss: list[GFFSeqFeature] = list(filter(lambda x: x.type == "CDS", sub_feats))
             if cdss:
                 seg_type = self._get_segment_type(cdss[0])
             if not seg_type:
@@ -440,7 +446,6 @@ class GFFSimplifier:
 
         Returns an empty string if no segment type info was found.
         """
-
         product = feature.qualifiers.get("standard_name", [""])[0]
         if not product:
             product = feature.qualifiers.get("product", [""])[0]
@@ -454,9 +459,11 @@ class GFFSimplifier:
         return ""
 
     def _normalize_transcript_subfeatures(
-        self, gene: GFFSeqFeature, transcript: GFFSeqFeature
+        self,
+        gene: GFFSeqFeature,
+        transcript: GFFSeqFeature,
     ) -> GFFSeqFeature:
-        """Returns a transcript with normalized sub-features."""
+        """Return a transcript with normalized sub-features."""
         exons_to_delete = []
         exon_number = 1
         for tcount, feat in enumerate(transcript.sub_features):
@@ -481,7 +488,7 @@ class GFFSimplifier:
                 self.fail_types.add(f"sub_transcript={feat.type}")
                 logging.warning(
                     f"Unrecognized exon type for {feat.type}: {feat.id}"
-                    f" (for transcript {transcript.id} of type {transcript.type})"
+                    f" (for transcript {transcript.id} of type {transcript.type})",
                 )
                 exons_to_delete.append(tcount)
                 continue
@@ -491,8 +498,8 @@ class GFFSimplifier:
                 transcript.sub_features.pop(elt)
         return transcript
 
-    def normalize_mirna(self, gene: GFFSeqFeature) -> List[GFFSeqFeature]:
-        """Returns gene representations from a miRNA gene that can be loaded in an Ensembl database.
+    def normalize_mirna(self, gene: GFFSeqFeature) -> list[GFFSeqFeature]:
+        """Return gene representations from a miRNA gene that can be loaded in an Ensembl database.
 
         Change the representation from the form `gene[ primary_transcript[ exon, miRNA[ exon ] ] ]`
         to `ncRNA_gene[ miRNA_primary_transcript[ exon ] ]` and `gene[ miRNA[ exon ] ]`
@@ -500,6 +507,7 @@ class GFFSimplifier:
         Raises:
             GFFParserError: If gene has more than 1 transcript, the transcript was not formatted
                 correctly or there are unknown sub-features.
+
         """
         base_id = gene.id
         transcripts = gene.sub_features
@@ -547,12 +555,12 @@ class GFFSimplifier:
             logging.debug(f"Primary_transcript without miRNA in {gene.id}")
             all_genes = [gene]
         else:
-            all_genes = [gene] + new_genes
+            all_genes = [gene, *new_genes]
 
         # Normalize like other genes
         all_genes_cleaned = []
         for new_gene in all_genes:
-            new_gene = self.normalize_gene(new_gene)
-            self.annotations.store_gene(new_gene)
-            all_genes_cleaned.append(self.clean_gene(new_gene))
+            norm_gene = self.normalize_gene(new_gene)
+            self.annotations.store_gene(norm_gene)
+            all_genes_cleaned.append(self.clean_gene(norm_gene))
         return all_genes_cleaned
