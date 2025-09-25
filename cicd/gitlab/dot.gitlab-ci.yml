@@ -19,11 +19,11 @@ workflow:
   rules:
     - if: $CI_EXTERNAL_PULL_REQUEST_IID &&
           $CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY == $CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY &&
-          ( $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH ||
-            $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME =~ /hackathon\/.+/ )
+          $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
       when: always
-    - if: $CI_PIPELINE_SOURCE == "push" &&
-          ( $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH && $CI_COMMIT_BRANCH !~ /hackathon\/.+/ )
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-[a-zA-Z0-9\-]+)?$/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
       when: never
     - when: always
 
@@ -43,24 +43,35 @@ include:
   - local: cicd/gitlab/parts/debug.gitlab-ci.yml
   # Perl checks
   - local: cicd/gitlab/parts/perl.gitlab-ci.yml
+    rules:
+      - if: $CI_COMMIT_TAG
+        when: never
   # Python checks
   - local: cicd/gitlab/parts/python.gitlab-ci.yml
+    rules:
+      - if: $CI_COMMIT_TAG
+        when: never
   # License checks
   - local: cicd/gitlab/parts/license.gitlab-ci.yml
+    rules:
+      - if: $CI_COMMIT_TAG
+        when: never
   # Flat file checks
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
-  # Genomio docker deploy (on release tag creation)
+    rules:
+      - if: $CI_COMMIT_TAG
+        when: never
+  # GenomIO docker deploy (on release tag creation)
   - local: cicd/gitlab/parts/dockerbuild.genomio.gitlab-ci.yml
     rules:
-      - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+[ab]?(_rebuild_[a-z])?$/'
+      - if: $CI_COMMIT_TAG
         when: always
-
 
 # External pipelines
 # (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
 
 external:code_quality:
-  # https://gitlab.ebi.ac.uk/help/user/project/merge_requests/code_quality.md
+  # https://docs.gitlab.com/ci/testing/code_quality/
   when: manual
   stage: test
   trigger:
@@ -70,4 +81,3 @@ external:code_quality:
       yaml_variables: false
     include:
       - template: Code-Quality.gitlab-ci.yml
-
