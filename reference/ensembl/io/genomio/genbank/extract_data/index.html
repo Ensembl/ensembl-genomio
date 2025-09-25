@@ -1,0 +1,4749 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Pipelines to turn basic genomic data into Ensembl cores and back.">
+      
+      
+      
+        <link rel="canonical" href="https://ensembl.github.io/ensembl-genomio/reference/ensembl/io/genomio/genbank/extract_data/">
+      
+      
+        <link rel="prev" href="../download/">
+      
+      
+        <link rel="next" href="../../genome_metadata/">
+      
+      
+      <link rel="icon" href="../../../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.20">
+    
+    
+      
+        <title>extract_data - Ensembl-GenomIO</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../../../assets/stylesheets/main.e53b48f4.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300i,400,400i,700,700i%7CIBM+Plex+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Lato";--md-code-font:"IBM Plex Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../../../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../../../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="ensembl" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ensembl.io.genomio.genbank.extract_data" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../../../.." title="Ensembl-GenomIO" class="md-header__button md-logo" aria-label="Ensembl-GenomIO" data-md-component="logo">
+      
+  <img src="../../../../../../img/ensembl-logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Ensembl-GenomIO
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              extract_data
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Ensembl/ensembl-genomio" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Ensembl/ensembl-genomio
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../../../.." title="Ensembl-GenomIO" class="md-nav__button md-logo" aria-label="Ensembl-GenomIO" data-md-component="logo">
+      
+  <img src="../../../../../../img/ensembl-logo.png" alt="logo">
+
+    </a>
+    Ensembl-GenomIO
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Ensembl/ensembl-genomio" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Ensembl/ensembl-genomio
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Install
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Usage
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../../code_of_conduct/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Code of Conduct
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Code Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Code Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5_1" id="__nav_5_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    ensembl
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_1">
+            <span class="md-nav__icon md-icon"></span>
+            ensembl
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../../brc4/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    brc4
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_1" id="__nav_5_1_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_1_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_1">
+            <span class="md-nav__icon md-icon"></span>
+            brc4
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_1_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../../brc4/runnable/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    runnable
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_1_1" id="__nav_5_1_1_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_5_1_1_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_1_1">
+            <span class="md-nav__icon md-icon"></span>
+            runnable
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brc4/runnable/compare_fasta/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    compare_fasta
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brc4/runnable/compare_report/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    compare_report
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brc4/runnable/fill_metadata/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    fill_metadata
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brc4/runnable/json_schema_factory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    json_schema_factory
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brc4/runnable/load_sequence_data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    load_sequence_data
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brc4/runnable/prepare_genome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    prepare_genome
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brc4/runnable/seqregion_parser/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    seqregion_parser
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5_1_2" id="__nav_5_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    io
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_1_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            io
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    genomio
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1" id="__nav_5_1_2_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_5_1_2_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_1_2_1">
+            <span class="md-nav__icon md-icon"></span>
+            genomio
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../annotation/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    annotation
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_1" id="__nav_5_1_2_1_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_1">
+            <span class="md-nav__icon md-icon"></span>
+            annotation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../annotation/update_description/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    update_description
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../assembly/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    assembly
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_2" id="__nav_5_1_2_1_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            assembly
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../assembly/download/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    download
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../assembly/status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    status
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../data/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    data
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_3" id="__nav_5_1_2_1_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            data
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data/external_db_map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    external_db_map
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data/gff3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    gff3
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data/schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    schemas
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../database/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    database
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_4" id="__nav_5_1_2_1_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_4">
+            <span class="md-nav__icon md-icon"></span>
+            database
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/core_server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    core_server
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/dbconnection_lite/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    dbconnection_lite
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/factory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    factory
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/meta_getter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    meta_getter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../events/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    events
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_5" id="__nav_5_1_2_1_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_5">
+            <span class="md-nav__icon md-icon"></span>
+            events
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../events/dump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    dump
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../events/format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    format
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../events/load/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    load
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../external_db/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    external_db
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_6" id="__nav_5_1_2_1_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_6">
+            <span class="md-nav__icon md-icon"></span>
+            external_db
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../external_db/db_map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    db_map
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../fasta/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    fasta
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_7" id="__nav_5_1_2_1_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_7">
+            <span class="md-nav__icon md-icon"></span>
+            fasta
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fasta/chunk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    chunk
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fasta/compare/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    compare
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fasta/process/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    process
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_8" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    genbank
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_8" id="__nav_5_1_2_1_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_1_2_1_8">
+            <span class="md-nav__icon md-icon"></span>
+            genbank
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../download/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    download
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    extract_data
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    extract_data
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;extract_data
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" extract_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;FormattedFilesGenerator
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" FormattedFilesGenerator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.allowed_feat_types" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;allowed_feat_types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;files
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.gb_file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;gb_file
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;locations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.prefix" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;prefix
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.prod_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;prod_name
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.seq_records" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;seq_records
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.format_write_record" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;format_write_record
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.parse_genbank" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;parse_genbank
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.GBParseError" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;GBParseError
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.GenomeFiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;GenomeFiles
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.UnsupportedData" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UnsupportedData
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.main" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;main
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../genome_metadata/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    genome_metadata
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_9" id="__nav_5_1_2_1_9_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_9">
+            <span class="md-nav__icon md-icon"></span>
+            genome_metadata
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../genome_metadata/dump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    dump
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../genome_metadata/extend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    extend
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../genome_metadata/prepare/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    prepare
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../genome_stats/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    genome_stats
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_10" id="__nav_5_1_2_1_10_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_10">
+            <span class="md-nav__icon md-icon"></span>
+            genome_stats
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../genome_stats/compare/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    compare
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../genome_stats/dump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    dump
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_11" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../gff3/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    gff3
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_11" id="__nav_5_1_2_1_11_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_11">
+            <span class="md-nav__icon md-icon"></span>
+            gff3
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gff3/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    exceptions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gff3/extract_annotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    extract_annotation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gff3/features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    features
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gff3/gene_merger/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    gene_merger
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gff3/id_allocator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    id_allocator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gff3/overlaps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    overlaps
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gff3/process/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    process
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gff3/restructure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    restructure
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gff3/simplifier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    simplifier
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_12" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../manifest/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    manifest
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_12" id="__nav_5_1_2_1_12_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_12">
+            <span class="md-nav__icon md-icon"></span>
+            manifest
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/check_integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    check_integrity
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/compute_stats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    compute_stats
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    generate
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    manifest
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/manifest_stats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    manifest_stats
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_13" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../schemas/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    schemas
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_13" id="__nav_5_1_2_1_13_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_13">
+            <span class="md-nav__icon md-icon"></span>
+            schemas
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_13_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../schemas/json/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    json
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_13_1" id="__nav_5_1_2_1_13_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="6" aria-labelledby="__nav_5_1_2_1_13_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_13_1">
+            <span class="md-nav__icon md-icon"></span>
+            json
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schemas/json/factory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    factory
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schemas/json/validate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    validate
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_14" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../seq_region/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    seq_region
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_14" id="__nav_5_1_2_1_14_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_14">
+            <span class="md-nav__icon md-icon"></span>
+            seq_region
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../seq_region/collection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../seq_region/dump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    dump
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../seq_region/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    exceptions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../seq_region/gbff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    gbff
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../seq_region/mappings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    mappings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../seq_region/prepare/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    prepare
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../seq_region/report/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    report
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1_2_1_15" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../utils/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    utils
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_1_2_1_15" id="__nav_5_1_2_1_15_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_5_1_2_1_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_1_2_1_15">
+            <span class="md-nav__icon md-icon"></span>
+            utils
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/json_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    json_utils
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../../nextflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Running Nextflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../../pipelines/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Ensembl-Genomio Pipelines
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;extract_data
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" extract_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;FormattedFilesGenerator
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" FormattedFilesGenerator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.allowed_feat_types" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;allowed_feat_types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;files
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.gb_file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;gb_file
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;locations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.prefix" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;prefix
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.prod_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;prod_name
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.seq_records" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;seq_records
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.format_write_record" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;format_write_record
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.parse_genbank" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;parse_genbank
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.GBParseError" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;GBParseError
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.GenomeFiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;GenomeFiles
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.UnsupportedData" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UnsupportedData
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensembl.io.genomio.genbank.extract_data.main" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;main
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+  <h1>extract_data</h1>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="ensembl.io.genomio.genbank.extract_data" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <code>ensembl.io.genomio.genbank.extract_data</code>
+
+
+<a href="#ensembl.io.genomio.genbank.extract_data" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Parse a Genbank file and creates cleaned up files from it:
+- DNA fasta
+- Peptide fasta
+- Gene models GFF3
+- seq_regions json
+- genome metadata json</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;code&gt;GBParseError&lt;/code&gt; (&lt;code&gt;ensembl.io.genomio.genbank.extract_data.GBParseError&lt;/code&gt;)" href="#ensembl.io.genomio.genbank.extract_data.GBParseError">GBParseError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the structure of the gb file cannot be parsed.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;code&gt;UnsupportedData&lt;/code&gt; (&lt;code&gt;ensembl.io.genomio.genbank.extract_data.UnsupportedData&lt;/code&gt;)" href="#ensembl.io.genomio.genbank.extract_data.UnsupportedData">UnsupportedData</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If some data is not as expected.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>json_output</code></td>            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>json file with a dict that contains all genome files created.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>FormattedFilesGenerator</code>
+
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>Contains a parser to load data from a file, and output a set of files that follow our schema
+for input into a core database</p>
+
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/python/ensembl/io/genomio/genbank/extract_data.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span>
+<span class="normal">391</span>
+<span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span>
+<span class="normal">413</span>
+<span class="normal">414</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span>
+<span class="normal">418</span>
+<span class="normal">419</span>
+<span class="normal">420</span>
+<span class="normal">421</span>
+<span class="normal">422</span>
+<span class="normal">423</span>
+<span class="normal">424</span>
+<span class="normal">425</span>
+<span class="normal">426</span>
+<span class="normal">427</span>
+<span class="normal">428</span>
+<span class="normal">429</span>
+<span class="normal">430</span>
+<span class="normal">431</span>
+<span class="normal">432</span>
+<span class="normal">433</span>
+<span class="normal">434</span>
+<span class="normal">435</span>
+<span class="normal">436</span>
+<span class="normal">437</span>
+<span class="normal">438</span>
+<span class="normal">439</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span>
+<span class="normal">445</span>
+<span class="normal">446</span>
+<span class="normal">447</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span>
+<span class="normal">451</span>
+<span class="normal">452</span>
+<span class="normal">453</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span>
+<span class="normal">457</span>
+<span class="normal">458</span>
+<span class="normal">459</span>
+<span class="normal">460</span>
+<span class="normal">461</span>
+<span class="normal">462</span>
+<span class="normal">463</span>
+<span class="normal">464</span>
+<span class="normal">465</span>
+<span class="normal">466</span>
+<span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span>
+<span class="normal">471</span>
+<span class="normal">472</span>
+<span class="normal">473</span>
+<span class="normal">474</span>
+<span class="normal">475</span>
+<span class="normal">476</span>
+<span class="normal">477</span>
+<span class="normal">478</span>
+<span class="normal">479</span>
+<span class="normal">480</span>
+<span class="normal">481</span>
+<span class="normal">482</span>
+<span class="normal">483</span>
+<span class="normal">484</span>
+<span class="normal">485</span>
+<span class="normal">486</span>
+<span class="normal">487</span>
+<span class="normal">488</span>
+<span class="normal">489</span>
+<span class="normal">490</span>
+<span class="normal">491</span>
+<span class="normal">492</span>
+<span class="normal">493</span>
+<span class="normal">494</span>
+<span class="normal">495</span>
+<span class="normal">496</span>
+<span class="normal">497</span>
+<span class="normal">498</span>
+<span class="normal">499</span>
+<span class="normal">500</span>
+<span class="normal">501</span>
+<span class="normal">502</span>
+<span class="normal">503</span>
+<span class="normal">504</span>
+<span class="normal">505</span>
+<span class="normal">506</span>
+<span class="normal">507</span>
+<span class="normal">508</span>
+<span class="normal">509</span>
+<span class="normal">510</span>
+<span class="normal">511</span>
+<span class="normal">512</span>
+<span class="normal">513</span>
+<span class="normal">514</span>
+<span class="normal">515</span>
+<span class="normal">516</span>
+<span class="normal">517</span>
+<span class="normal">518</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">FormattedFilesGenerator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Contains a parser to load data from a file, and output a set of files that follow our schema</span>
+<span class="sd">    for input into a core database</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">locations</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;mitochondrion&quot;</span><span class="p">:</span> <span class="s2">&quot;mitochondrial_chromosome&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;apicoplast&quot;</span><span class="p">:</span> <span class="s2">&quot;apicoplast_chromosome&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;chloroplast&quot;</span><span class="p">:</span> <span class="s2">&quot;chloroplast_chromosome&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;chromoplast&quot;</span><span class="p">:</span> <span class="s2">&quot;chromoplast_chromosome&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;cyanelle&quot;</span><span class="p">:</span> <span class="s2">&quot;cyanelle_chromosome&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;leucoplast&quot;</span><span class="p">:</span> <span class="s2">&quot;leucoplast_chromosome&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">allowed_feat_types</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;transcript&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;tRNA&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;rRNA&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;CDS&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prod_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">gb_file</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">=</span> <span class="n">prefix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prod_name</span> <span class="o">=</span> <span class="n">prod_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gb_file</span> <span class="o">=</span> <span class="n">gb_file</span>
+
+        <span class="c1"># Output the gff3 file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="n">GenomeFiles</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">parse_genbank</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gb_file</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load records metadata from a Genbank file</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            gb_file: Path to downloaded genbank file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">organella</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_organella</span><span class="p">(</span><span class="n">gb_file</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Organella loaded: </span><span class="si">{</span><span class="n">organella</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gb_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">gbh</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">SeqIO</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">gbh</span><span class="p">,</span> <span class="s2">&quot;genbank&quot;</span><span class="p">):</span>
+                <span class="c1"># We don&#39;t want the record description (especially for the fasta file)</span>
+                <span class="n">record</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                <span class="n">record</span><span class="o">.</span><span class="n">organelle</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">organella</span><span class="p">:</span>
+                    <span class="n">record</span><span class="o">.</span><span class="n">annotations</span><span class="p">[</span><span class="s2">&quot;organelle&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">organella</span><span class="p">[</span><span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">format_write_record</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No records are found in gb_file&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_write_record</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate the prepared files from genbank record</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_format_genome_data</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_format_write_genes_gff</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_format_write_seq_json</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_fasta_dna</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_organella</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gb_file</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve the organelle from the genbank file, using the specific GenBank object,</span>
+<span class="sd">        because SeqIO does not support this field</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            gb_file: path to genbank file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">organella</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gb_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">gbh</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">GenBank</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">gbh</span><span class="p">):</span>
+                <span class="n">accession</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">version</span>
+                <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">features</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">q</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;/organelle=&quot;</span><span class="p">:</span>
+                        <span class="n">organelle</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                        <span class="n">organella</span><span class="p">[</span><span class="n">accession</span><span class="p">]</span> <span class="o">=</span> <span class="n">organelle</span>
+        <span class="k">return</span> <span class="n">organella</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_fasta_dna</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a DNA fasta file with all the sequences in the record</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Write </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="p">)</span><span class="si">}</span><span class="s2"> DNA sequences to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;fasta_dna&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s2">&quot;fasta_dna&quot;</span><span class="p">],</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fasta_fh</span><span class="p">:</span>
+            <span class="n">SeqIO</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="p">,</span> <span class="n">fasta_fh</span><span class="p">,</span> <span class="s2">&quot;fasta&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_write_genes_gff</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract gene models from the record, and write a GFF and peptide fasta file.</span>
+<span class="sd">        Raise GBParseError If the IDs in all the records are not unique.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">peptides</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">gff_records</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">all_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="p">:</span>
+            <span class="n">new_record</span><span class="p">,</span> <span class="n">rec_ids</span><span class="p">,</span> <span class="n">rec_peptides</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_record</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">new_record</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
+                <span class="n">gff_records</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_record</span><span class="p">)</span>
+            <span class="n">all_ids</span> <span class="o">+=</span> <span class="n">rec_ids</span>
+            <span class="n">peptides</span> <span class="o">+=</span> <span class="n">rec_peptides</span>
+
+        <span class="k">if</span> <span class="n">gff_records</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_genes_gff</span><span class="p">(</span><span class="n">gff_records</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">peptides</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_pep_fasta</span><span class="p">(</span><span class="n">peptides</span><span class="p">)</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Check that IDs are unique&quot;</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Counter</span><span class="p">(</span><span class="n">all_ids</span><span class="p">))</span>
+        <span class="n">num_duplicates</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">count</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">count</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">num_duplicates</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ID </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> is duplicated </span><span class="si">{</span><span class="n">count</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="si">}</span><span class="s2"> times&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">num_duplicates</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GBParseError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Some </span><span class="si">{</span><span class="n">num_duplicates</span><span class="si">}</span><span class="s2"> IDs are duplicated&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_genes_gff</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gff_records</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate gene_models.gff file with the parsed gff_features</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            gff_records: List of records with features extracted from the record</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Write </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">gff_records</span><span class="p">)</span><span class="si">}</span><span class="s2"> gene records to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;gene_models&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s2">&quot;gene_models&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">gff_fh</span><span class="p">:</span>
+            <span class="n">GFF</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">gff_records</span><span class="p">,</span> <span class="n">gff_fh</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_pep_fasta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">peptides</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a peptide fasta file with the protein ids and sequence</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            peptides: List of extracted peptide features as records</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Write </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">peptides</span><span class="p">)</span><span class="si">}</span><span class="s2"> peptide sequences to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;fasta_pep&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s2">&quot;fasta_pep&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fasta_fh</span><span class="p">:</span>
+            <span class="n">SeqIO</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">peptides</span><span class="p">,</span> <span class="n">fasta_fh</span><span class="p">,</span> <span class="s2">&quot;fasta&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="n">SeqRecord</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parse a gene feature from the genbank file</span>
+<span class="sd">        Args:</span>
+<span class="sd">            gene_feat: Gene feature to parse</span>
+<span class="sd">            gene_name: Gene name associated with the gene feature</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">all_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">peptides</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">feats</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SeqFeature</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">feat</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
+            <span class="c1"># Silently skip any unsupported feature type</span>
+            <span class="k">if</span> <span class="n">feat</span><span class="o">.</span><span class="n">type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">allowed_feat_types</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Create a clean clone of the feature</span>
+            <span class="n">gff_qualifiers</span> <span class="o">=</span> <span class="n">feat</span><span class="o">.</span><span class="n">qualifiers</span>
+            <span class="n">gff_feat</span> <span class="o">=</span> <span class="n">SeqFeature</span><span class="p">(</span>
+                <span class="n">location</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">location</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
+                <span class="n">qualifiers</span><span class="o">=</span><span class="n">gff_qualifiers</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="c1"># Only Genes should have a name: use either attribute gene or locus_tag</span>
+            <span class="n">gene_name</span> <span class="o">=</span> <span class="n">gff_qualifiers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">gene_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">gene_name</span> <span class="o">=</span> <span class="n">gff_qualifiers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;locus_tag&quot;</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Parse this gene</span>
+            <span class="k">if</span> <span class="n">gene_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">gene_feats</span><span class="p">,</span> <span class="n">gene_ids</span><span class="p">,</span> <span class="n">gene_peptides</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gene_feat</span><span class="p">(</span><span class="n">gff_feat</span><span class="p">,</span> <span class="n">gene_name</span><span class="p">)</span>
+                <span class="n">peptides</span> <span class="o">+=</span> <span class="n">gene_peptides</span>
+                <span class="n">feats</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">feats</span><span class="p">,</span> <span class="o">**</span><span class="n">gene_feats</span><span class="p">}</span>
+                <span class="n">all_ids</span> <span class="o">+=</span> <span class="n">gene_ids</span>
+
+            <span class="c1"># No gene ID: parse if it is a tRNA or rRNA</span>
+            <span class="k">elif</span> <span class="n">gff_feat</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;tRNA&quot;</span><span class="p">,</span> <span class="s2">&quot;rRNA&quot;</span><span class="p">):</span>
+                <span class="n">rna_feats</span><span class="p">,</span> <span class="n">rna_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_rna_feat</span><span class="p">(</span><span class="n">gff_feat</span><span class="p">)</span>
+                <span class="n">feats</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">feats</span><span class="p">,</span> <span class="o">**</span><span class="n">rna_feats</span><span class="p">}</span>
+                <span class="n">all_ids</span> <span class="o">+=</span> <span class="n">rna_ids</span>
+
+            <span class="c1"># Any other case? Fail here and check if we should support it, or add it to unsupported list</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GBParseError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No ID for allowed feature: </span><span class="si">{</span><span class="n">feat</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">new_record</span> <span class="o">=</span> <span class="n">SeqRecord</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">seq</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">new_record</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">feats</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">new_record</span><span class="p">,</span> <span class="n">all_ids</span><span class="p">,</span> <span class="n">peptides</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_gene_feat</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">gene_feat</span><span class="p">:</span> <span class="n">SeqFeature</span><span class="p">,</span> <span class="n">gene_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SeqFeature</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parse a gene feature from the genbank file</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            gene_feat: Gene feature to parse</span>
+<span class="sd">            gene_name: Gene name associated with the gene feature</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">gene_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">gene_name</span>
+        <span class="n">gene_qualifiers</span> <span class="o">=</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span>
+        <span class="n">new_feats</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">peptides</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SeqRecord</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">all_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;gene&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;pseudo&quot;</span> <span class="ow">in</span> <span class="n">gene_qualifiers</span><span class="p">:</span>
+                <span class="n">gene_feat</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s2">&quot;pseudogene&quot;</span>
+            <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gene_id</span>
+            <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gene_name</span>
+            <span class="k">if</span> <span class="s2">&quot;gene&quot;</span> <span class="ow">in</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;locus_tag&quot;</span> <span class="ow">in</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;locus_tag&quot;</span><span class="p">]</span>
+            <span class="n">new_feats</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">gene_id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">gene_feat</span>
+            <span class="n">all_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">gene_id</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;tRNA&quot;</span><span class="p">,</span> <span class="s2">&quot;rRNA&quot;</span><span class="p">):</span>
+            <span class="n">tr_id</span> <span class="o">=</span> <span class="n">gene_id</span> <span class="o">+</span> <span class="s2">&quot;_t1&quot;</span>
+            <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tr_id</span>
+            <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;Parent&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gene_id</span>
+            <span class="k">if</span> <span class="s2">&quot;gene&quot;</span> <span class="ow">in</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;locus_tag&quot;</span> <span class="ow">in</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;locus_tag&quot;</span><span class="p">]</span>
+            <span class="n">new_feats</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">tr_id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">gene_feat</span>
+            <span class="n">all_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">tr_id</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;CDS&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;pseudo&quot;</span> <span class="ow">in</span> <span class="n">gene_qualifiers</span><span class="p">:</span>
+                <span class="n">gene_feat</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s2">&quot;exon&quot;</span>
+            <span class="n">cds_id</span> <span class="o">=</span> <span class="n">gene_id</span> <span class="o">+</span> <span class="s2">&quot;_p1&quot;</span>
+            <span class="n">tr_id</span> <span class="o">=</span> <span class="n">gene_id</span> <span class="o">+</span> <span class="s2">&quot;_t1&quot;</span>
+            <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cds_id</span>
+            <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;Parent&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tr_id</span>
+            <span class="k">if</span> <span class="s2">&quot;gene&quot;</span> <span class="ow">in</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;locus_tag&quot;</span> <span class="ow">in</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">gene_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;locus_tag&quot;</span><span class="p">]</span>
+
+            <span class="c1"># Add fasta to pep fasta file</span>
+            <span class="k">if</span> <span class="s2">&quot;translation&quot;</span> <span class="ow">in</span> <span class="n">gene_qualifiers</span><span class="p">:</span>
+                <span class="n">new_pep_record</span> <span class="o">=</span> <span class="n">SeqRecord</span><span class="p">(</span><span class="n">Seq</span><span class="p">(</span><span class="n">gene_qualifiers</span><span class="p">[</span><span class="s2">&quot;translation&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">id</span><span class="o">=</span><span class="n">cds_id</span><span class="p">)</span>
+                <span class="n">peptides</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_pep_record</span><span class="p">)</span>
+
+            <span class="c1"># Also create a parent transcript for this translation</span>
+            <span class="n">tr_qualifiers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;ID&quot;</span><span class="p">:</span> <span class="n">tr_id</span><span class="p">,</span> <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="n">gene_name</span><span class="p">,</span> <span class="s2">&quot;Parent&quot;</span><span class="p">:</span> <span class="n">gene_id</span><span class="p">}</span>
+            <span class="n">gff_tr</span> <span class="o">=</span> <span class="n">SeqFeature</span><span class="p">(</span>
+                <span class="n">location</span><span class="o">=</span><span class="n">gene_feat</span><span class="o">.</span><span class="n">location</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;mRNA&quot;</span><span class="p">,</span>
+                <span class="n">qualifiers</span><span class="o">=</span><span class="n">tr_qualifiers</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">new_feats</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">tr_id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">gff_tr</span>
+            <span class="n">new_feats</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">cds_id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">gene_feat</span>
+            <span class="n">all_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">tr_id</span><span class="p">))</span>
+            <span class="n">all_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cds_id</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">new_feats</span><span class="p">,</span> <span class="n">all_ids</span><span class="p">,</span> <span class="n">peptides</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_rna_feat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rna_feat</span><span class="p">:</span> <span class="n">SeqFeature</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SeqFeature</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parse an RNA feature</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            gene_feat: list of RNA features found in the record</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new_feats</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">all_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">gff_qualifiers</span> <span class="o">=</span> <span class="n">rna_feat</span><span class="o">.</span><span class="n">qualifiers</span>
+        <span class="n">feat_name</span> <span class="o">=</span> <span class="n">gff_qualifiers</span><span class="p">[</span><span class="s2">&quot;product&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">gene_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">feat_name</span>
+
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">gene_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Shortening gene_id to </span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">gene_id</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">gene_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_uniquify_id</span><span class="p">(</span><span class="n">gene_id</span><span class="p">,</span> <span class="n">all_ids</span><span class="p">)</span>
+
+        <span class="n">feat_id</span> <span class="o">=</span> <span class="n">gene_id</span> <span class="o">+</span> <span class="s2">&quot;_t1&quot;</span>
+        <span class="n">rna_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">feat_id</span>
+        <span class="n">rna_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">feat_name</span>
+        <span class="n">rna_feat</span><span class="o">.</span><span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;Parent&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gene_id</span>
+
+        <span class="c1"># Also create a parent gene for this transcript</span>
+        <span class="n">gene_qualifiers</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;ID&quot;</span><span class="p">:</span> <span class="n">gene_id</span><span class="p">,</span>
+            <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="n">feat_name</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">gff_gene</span> <span class="o">=</span> <span class="n">SeqFeature</span><span class="p">(</span>
+            <span class="n">location</span><span class="o">=</span><span class="n">rna_feat</span><span class="o">.</span><span class="n">location</span><span class="p">,</span>
+            <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+            <span class="n">qualifiers</span><span class="o">=</span><span class="n">gene_qualifiers</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">new_feats</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">gene_id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">gff_gene</span>
+        <span class="n">new_feats</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">feat_id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">rna_feat</span>
+        <span class="n">all_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">gene_id</span><span class="p">))</span>
+        <span class="n">all_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">feat_id</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">new_feats</span><span class="p">,</span> <span class="n">all_ids</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_uniquify_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gene_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">all_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Ensure the gene id used is unique,</span>
+<span class="sd">        and append a number otherwise, starting at 2</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            all_ids: list of all the feature ids</span>
+<span class="sd">            gene_id: ids assigned to gene</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">new_id</span> <span class="o">=</span> <span class="n">gene_id</span>
+        <span class="n">num</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">while</span> <span class="n">new_id</span> <span class="ow">in</span> <span class="n">all_ids</span><span class="p">:</span>
+            <span class="n">num</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">new_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">gene_id</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">num</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="n">gene_id</span> <span class="o">!=</span> <span class="n">new_id</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Make gene id unique: </span><span class="si">{</span><span class="n">gene_id</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">new_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">new_id</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_write_seq_json</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the sequence metadata to seq_json based on ensembl requirements</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">json_array</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="p">:</span>
+            <span class="n">codon_table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_codon_table</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">codon_table</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="s2">&quot;No codon table found. Make sure to change the codon table number in &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;seq_region&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> manually if it is not the standard codon table.&quot;</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">codon_table</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">codon_table</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">codon_table</span><span class="p">)</span>
+
+            <span class="n">seq_obj</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">seq</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                <span class="s2">&quot;coord_system_level&quot;</span><span class="p">:</span> <span class="s2">&quot;chromosome&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;circular&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">seq</span><span class="o">.</span><span class="n">annotations</span><span class="p">[</span><span class="s2">&quot;topology&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">),</span>
+                <span class="s2">&quot;codon_table&quot;</span><span class="p">:</span> <span class="n">codon_table</span><span class="p">,</span>
+                <span class="s2">&quot;length&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="o">.</span><span class="n">seq</span><span class="p">),</span>  <span class="c1"># type: ignore[arg-type]</span>
+            <span class="p">}</span>
+            <span class="k">if</span> <span class="s2">&quot;organelle&quot;</span> <span class="ow">in</span> <span class="n">seq</span><span class="o">.</span><span class="n">annotations</span><span class="p">:</span>
+                <span class="n">seq_obj</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_location</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">seq</span><span class="o">.</span><span class="n">annotations</span><span class="p">[</span><span class="s2">&quot;organelle&quot;</span><span class="p">]))</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">codon_table</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">seq</span><span class="o">.</span><span class="n">annotations</span><span class="p">[</span><span class="s1">&#39;organelle&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; is an organelle: &quot;</span>
+                            <span class="s2">&quot;make sure to change the codon table number &quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;seq_region&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> manually if it is not the standard codon table&quot;</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+            <span class="c1"># Additional attributes for Ensembl</span>
+            <span class="n">seq_obj</span><span class="p">[</span><span class="s2">&quot;added_sequence&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;accession&quot;</span><span class="p">:</span> <span class="n">seq</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                <span class="s2">&quot;assembly_provider&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;GenBank&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;https://www.ncbi.nlm.nih.gov/genbank&quot;</span><span class="p">,</span>
+                <span class="p">},</span>
+            <span class="p">}</span>
+            <span class="n">json_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">seq_obj</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_seq_region_json</span><span class="p">(</span><span class="n">json_array</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_seq_region_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_array</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate seq_region.json file with metadata for the sequence</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            json_array: List of extracted sequence with metadata</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Write </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">json_array</span><span class="p">)</span><span class="si">}</span><span class="s2"> seq_region to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;seq_region&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s2">&quot;seq_region&quot;</span><span class="p">],</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">seq_fh</span><span class="p">:</span>
+            <span class="n">seq_fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">json_array</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_codon_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seq</span><span class="p">:</span> <span class="n">SeqRecord</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Look at the CDS features to see if they have a codon table</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            seq: SeqRecord in the genbank file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">feat</span> <span class="ow">in</span> <span class="n">seq</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">feat</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;CDS&quot;</span><span class="p">:</span>
+                <span class="n">qualifiers</span> <span class="o">=</span> <span class="n">feat</span><span class="o">.</span><span class="n">qualifiers</span>
+                <span class="k">if</span> <span class="s2">&quot;transl_table&quot;</span> <span class="ow">in</span> <span class="n">qualifiers</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">qualifiers</span><span class="p">[</span><span class="s2">&quot;transl_table&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_location</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organelle</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given an organelle name, returns the SO term corresponding to its location</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            organelle: SeqRecord with organelle</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">organelle</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">locations</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">locations</span><span class="p">[</span><span class="n">organelle</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="n">UnsupportedData</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown organelle: </span><span class="si">{</span><span class="n">organelle</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_genome_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write a draft for the genome json file</span>
+<span class="sd">        Only the production_name is needed, but the rest of the fields need to be given</span>
+<span class="sd">        for the validation of the json file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">prod_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prod_name</span>
+        <span class="n">genome_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;species&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;production_name&quot;</span><span class="p">:</span> <span class="n">prod_name</span><span class="p">,</span>
+                <span class="s2">&quot;taxonomy_id&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;assembly&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;accession&quot;</span><span class="p">:</span> <span class="s2">&quot;GCA_000000000&quot;</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+            <span class="s2">&quot;added_seq&quot;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">genome_data</span><span class="p">[</span><span class="s2">&quot;species&quot;</span><span class="p">][</span><span class="s2">&quot;production_name&quot;</span><span class="p">]:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Please add the relevant production_name for this genome in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;genome&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">seq</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="p">]</span>
+        <span class="n">genome_data</span><span class="p">[</span><span class="s2">&quot;added_seq&quot;</span><span class="p">][</span><span class="s2">&quot;region_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ids</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_genome_json</span><span class="p">(</span><span class="n">genome_data</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_genome_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">genome_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate genome.json file with metadata for the assembly</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            genome_data: Dict of metadata for assembly</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Write assembly metadata to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;genome&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s2">&quot;genome&quot;</span><span class="p">],</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">genome_fh</span><span class="p">:</span>
+            <span class="n">genome_fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">genome_data</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.allowed_feat_types" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">allowed_feat_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;gene&#39;</span><span class="p">,</span> <span class="s1">&#39;transcript&#39;</span><span class="p">,</span> <span class="s1">&#39;tRNA&#39;</span><span class="p">,</span> <span class="s1">&#39;rRNA&#39;</span><span class="p">,</span> <span class="s1">&#39;CDS&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.allowed_feat_types" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.files" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">files</span> <span class="o">=</span> <span class="n">GenomeFiles</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">))</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.files" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.gb_file" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">gb_file</span> <span class="o">=</span> <span class="n">gb_file</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.gb_file" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.locations" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">locations</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;mitochondrion&#39;</span><span class="p">:</span> <span class="s1">&#39;mitochondrial_chromosome&#39;</span><span class="p">,</span> <span class="s1">&#39;apicoplast&#39;</span><span class="p">:</span> <span class="s1">&#39;apicoplast_chromosome&#39;</span><span class="p">,</span> <span class="s1">&#39;chloroplast&#39;</span><span class="p">:</span> <span class="s1">&#39;chloroplast_chromosome&#39;</span><span class="p">,</span> <span class="s1">&#39;chromoplast&#39;</span><span class="p">:</span> <span class="s1">&#39;chromoplast_chromosome&#39;</span><span class="p">,</span> <span class="s1">&#39;cyanelle&#39;</span><span class="p">:</span> <span class="s1">&#39;cyanelle_chromosome&#39;</span><span class="p">,</span> <span class="s1">&#39;leucoplast&#39;</span><span class="p">:</span> <span class="s1">&#39;leucoplast_chromosome&#39;</span><span class="p">}</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.locations" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.prefix" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">prefix</span> <span class="o">=</span> <span class="n">prefix</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.prefix" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.prod_name" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">prod_name</span> <span class="o">=</span> <span class="n">prod_name</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.prod_name" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.seq_records" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">seq_records</span> <span class="o">=</span> <span class="p">[]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.seq_records" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.format_write_record" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">format_write_record</span><span class="p">()</span></code>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.format_write_record" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Generate the prepared files from genbank record</p>
+
+
+            <details class="quote">
+              <summary>Source code in <code>src/python/ensembl/io/genomio/genbank/extract_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">format_write_record</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate the prepared files from genbank record</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_format_genome_data</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_format_write_genes_gff</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_format_write_seq_json</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_write_fasta_dna</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.parse_genbank" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">parse_genbank</span><span class="p">(</span><span class="n">gb_file</span><span class="p">)</span></code>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator.parse_genbank" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Load records metadata from a Genbank file</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>gb_file</code>
+            </td>
+            <td>
+                  <code><span title="os.PathLike">PathLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to downloaded genbank file</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="quote">
+              <summary>Source code in <code>src/python/ensembl/io/genomio/genbank/extract_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">parse_genbank</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gb_file</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load records metadata from a Genbank file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        gb_file: Path to downloaded genbank file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">organella</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_organella</span><span class="p">(</span><span class="n">gb_file</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Organella loaded: </span><span class="si">{</span><span class="n">organella</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gb_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">gbh</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">SeqIO</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">gbh</span><span class="p">,</span> <span class="s2">&quot;genbank&quot;</span><span class="p">):</span>
+            <span class="c1"># We don&#39;t want the record description (especially for the fasta file)</span>
+            <span class="n">record</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">record</span><span class="o">.</span><span class="n">organelle</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">organella</span><span class="p">:</span>
+                <span class="n">record</span><span class="o">.</span><span class="n">annotations</span><span class="p">[</span><span class="s2">&quot;organelle&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">organella</span><span class="p">[</span><span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seq_records</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">format_write_record</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No records are found in gb_file&quot;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="ensembl.io.genomio.genbank.extract_data.GBParseError" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>GBParseError</code>
+
+
+<a href="#ensembl.io.genomio.genbank.extract_data.GBParseError" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="Exception">Exception</span></code></p>
+
+
+        <p>Error when parsing the Genbank file.</p>
+
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/python/ensembl/io/genomio/genbank/extract_data.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">50</span>
+<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GBParseError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Error when parsing the Genbank file.&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="ensembl.io.genomio.genbank.extract_data.GenomeFiles" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>GenomeFiles</code>
+
+
+<a href="#ensembl.io.genomio.genbank.extract_data.GenomeFiles" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="dict">dict</span></code></p>
+
+
+        <p>Store the representation of the genome files created.</p>
+
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/python/ensembl/io/genomio/genbank/extract_data.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GenomeFiles</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Store the representation of the genome files created.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">out_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s2">&quot;genome&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;genome.json&quot;</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s2">&quot;seq_region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;seq_region.json&quot;</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s2">&quot;fasta_dna&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;dna.fasta&quot;</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s2">&quot;fasta_pep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;pep.fasta&quot;</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s2">&quot;gene_models&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;genes.gff&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="ensembl.io.genomio.genbank.extract_data.UnsupportedData" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>UnsupportedData</code>
+
+
+<a href="#ensembl.io.genomio.genbank.extract_data.UnsupportedData" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="Exception">Exception</span></code></p>
+
+
+        <p>When an expected data is not supported by the current parser.</p>
+
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/python/ensembl/io/genomio/genbank/extract_data.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">54</span>
+<span class="normal">55</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">UnsupportedData</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;When an expected data is not supported by the current parser.&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ensembl.io.genomio.genbank.extract_data.main" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">main</span><span class="p">()</span></code>
+
+<a href="#ensembl.io.genomio.genbank.extract_data.main" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Main script entry-point.</p>
+
+
+            <details class="quote">
+              <summary>Source code in <code>src/python/ensembl/io/genomio/genbank/extract_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">521</span>
+<span class="normal">522</span>
+<span class="normal">523</span>
+<span class="normal">524</span>
+<span class="normal">525</span>
+<span class="normal">526</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Main script entry-point.&quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Parse a GenBank file and create cleaned up files from it.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_src_path</span><span class="p">(</span><span class="s2">&quot;--gb_file&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;sequence accession file&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--prefix&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;prefix to add to every feature ID&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--prod_name&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;production name for the species&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_dst_path</span><span class="p">(</span>
+        <span class="s2">&quot;--out_dir&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">(),</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;output folder where the generated files will be stored&quot;</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--version&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">ensembl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">genomio</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_log_arguments</span><span class="p">(</span><span class="n">add_log_file</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="n">init_logging_with_args</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="n">gb_extractor</span> <span class="o">=</span> <span class="n">FormattedFilesGenerator</span><span class="p">(</span>
+        <span class="n">prefix</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">prefix</span><span class="p">,</span> <span class="n">prod_name</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">prod_name</span><span class="p">,</span> <span class="n">gb_file</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">gb_file</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">out_dir</span>
+    <span class="p">)</span>
+    <span class="n">gb_extractor</span><span class="o">.</span><span class="n">parse_genbank</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">gb_file</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; [2016-<script>document.write(new Date().getFullYear())</script>] <a href="https://www.ebi.ac.uk">EMBL-European Bioinformatics Institute</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../../../../../..", "features": ["content.tooltips", "navigation.top", "search.highlight", "search.suggest", "toc.follow"], "search": "../../../../../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../../../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>
