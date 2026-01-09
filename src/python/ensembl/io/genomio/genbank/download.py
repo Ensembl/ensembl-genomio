@@ -27,6 +27,9 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
+HTTP_OK_STATUS = 200
+
+
 class DownloadError(Exception):
     """In case a download failed."""
 
@@ -35,7 +38,7 @@ class DownloadError(Exception):
 
 
 def download_genbank(accession: str, output_file: PathLike) -> None:
-    """Given a GenBank accession, download the corresponding file in GenBank format.
+    """Download GenBank accession's corresponding file in GenBank format.
 
     Uses NCBI Entrez service to fetch the data.
 
@@ -47,7 +50,6 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
         DownloadError: If the download fails.
 
     """
-
     # Get the list of assemblies for this accession
     entrez_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     entrez_params = {
@@ -58,7 +60,7 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
     entrez_params["id"] = accession
     logging.debug(f"Getting file from {entrez_url} with params {entrez_params}")
     result = requests.get(entrez_url, params=entrez_params, timeout=60)
-    if result and result.status_code == 200:
+    if result and result.status_code == HTTP_OK_STATUS:
         with Path(output_file).open("wb") as gbff:
             gbff.write(result.content)
         logging.info(f"GenBank file written to {output_file}")
@@ -67,7 +69,7 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Run module's entry-point."""
     parser = ArgumentParser(description="Download a sequence from GenBank.")
     parser.add_argument("--accession", required=True, help="Sequence accession")
     parser.add_argument_dst_path("--output_file", required=True, help="Output GenBank file")

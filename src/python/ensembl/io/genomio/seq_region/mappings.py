@@ -15,9 +15,9 @@
 """Seq region mappings."""
 
 __all__ = [
-    "SYNONYM_MAP",
-    "MOLECULE_LOCATION",
     "LOCATION_CODON",
+    "MOLECULE_LOCATION",
+    "SYNONYM_MAP",
 ]
 
 from types import MappingProxyType
@@ -30,7 +30,7 @@ SYNONYM_MAP: Mapping[str, str] = MappingProxyType(
         "GenBank-Accn": "GenBank",
         "RefSeq-Accn": "RefSeq",
         "Sequence-Name": "INSDC_submitted_name",
-    }
+    },
 )
 MOLECULE_LOCATION: Mapping[str, str] = MappingProxyType(
     {
@@ -40,6 +40,6 @@ MOLECULE_LOCATION: Mapping[str, str] = MappingProxyType(
         "linkage group": "linkage_group",
         "mitochondrion": "mitochondrial_chromosome",
         "plasmid": "plasmid",
-    }
+    },
 )
 LOCATION_CODON: Mapping[str, int] = MappingProxyType({"apicoplast_chromosome": 4})

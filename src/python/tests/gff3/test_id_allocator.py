@@ -18,15 +18,14 @@ from contextlib import nullcontext as does_not_raise
 from difflib import unified_diff
 import filecmp
 from pathlib import Path
-from typing import ContextManager, Dict, List, Optional
-
-import pytest
+from typing import ContextManager
 
 from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
-from ensembl.io.genomio.gff3.id_allocator import StableIDAllocator, InvalidStableID
+import pytest
+
+from ensembl.io.genomio.gff3.id_allocator import StableIDAllocator, InvalidStableIDError
 from ensembl.io.genomio.gff3.features import GFFSeqFeature
-from pytest import raises
 
 
 def _read_record(in_gff: Path) -> SeqRecord:
@@ -48,22 +47,22 @@ def _write_record(out_record: SeqRecord, out_gff: Path) -> None:
 
 def _show_diff(result_path: Path, expected_path: Path) -> str:
     """Create a useful diff between 2 files."""
-    with open(result_path, "r") as result_fh:
+    with result_path.open() as result_fh:
         results = result_fh.readlines()
-    with open(expected_path, "r") as expected_fh:
+    with expected_path.open() as expected_fh:
         expected = expected_fh.readlines()
     diff = list(unified_diff(expected, results))
     return "".join(diff)
 
 
 @pytest.mark.parametrize(
-    "genome, expected_prefix",
+    ("genome", "expected_prefix"),
     [
         pytest.param({}, "TMP_PREFIX_", id="Default prefix"),
         pytest.param({"BRC4": {"organism_abbrev": "LOREM"}}, "TMP_LOREM_", id="Prefix from genome meta"),
     ],
 )
-def test_set_prefix(genome: Dict, expected_prefix: str) -> None:
+def test_set_prefix(genome: dict, expected_prefix: str) -> None:
     """Test prefix setting from genome metadata."""
     ids = StableIDAllocator()
     ids.set_prefix(genome)
@@ -71,14 +70,14 @@ def test_set_prefix(genome: Dict, expected_prefix: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "prefix, expected_ids",
+    ("prefix", "expected_ids"),
     [
         pytest.param(None, ["TMP_1", "TMP_2"], id="Default prefix"),
         pytest.param("", ["1", "2"], id="No prefix as empty string"),
         pytest.param("MYPREF_", ["MYPREF_1", "MYPREF_2"], id="Prefix MYPREF_"),
     ],
 )
-def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
+def test_generate_id(prefix: str, expected_ids: list[str]) -> None:
     """Test IDs generation."""
     ids = StableIDAllocator()
     if prefix is not None:
@@ -91,7 +90,7 @@ def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
 
 
 @pytest.mark.parametrize(
-    "min_id_length, test_id, outcome",
+    ("min_id_length", "test_id", "outcome"),
     [
         pytest.param(None, "LOREMIPSUM_01", True, id="OK ID"),
         pytest.param(None, "", False, id="Empty"),
@@ -106,7 +105,7 @@ def test_generate_id(prefix: str, expected_ids: List[str]) -> None:
         pytest.param(None, "TRNAA-UAA", False, id="Trna ID, upper case"),
     ],
 )
-def test_valid_id(min_id_length: Optional[int], test_id: str, outcome: bool) -> None:
+def test_valid_id(min_id_length: int | None, test_id: str, outcome: bool) -> None:
     """Test ID validity check."""
     ids = StableIDAllocator()
     if min_id_length is not None:
@@ -116,7 +115,7 @@ def test_valid_id(min_id_length: Optional[int], test_id: str, outcome: bool) -> 
 
 
 @pytest.mark.parametrize(
-    "test_id, skip_flag, outcome",
+    ("test_id", "skip_flag", "outcome"),
     [
         pytest.param("LOREMIPSUM_01", True, True, id="Skip Good ID"),
         pytest.param("LO..rem|ipsum", True, True, id="Skip Bad ID"),
@@ -131,7 +130,7 @@ def test_valid_id_skip(test_id: str, skip_flag: bool, outcome: bool) -> None:
 
 
 @pytest.mark.parametrize(
-    "test_id, prefixes, outcome",
+    ("test_id", "prefixes", "outcome"),
     [
         pytest.param("LOREM-IPSUM1", [], "LOREM-IPSUM1", id="No prefixes"),
         pytest.param("LOREM-IPSUM1", ["DOLOR"], "LOREM-IPSUM1", id="Unused prefix"),
@@ -139,13 +138,13 @@ def test_valid_id_skip(test_id: str, skip_flag: bool, outcome: bool) -> None:
         pytest.param("LOREM-IPSUM1", ["LOREM-", "IPSUM"], "IPSUM1", id="Only 1 prefix is removed"),
     ],
 )
-def test_remove_prefixes(test_id: str, prefixes: List[str], outcome: str) -> None:
+def test_remove_prefixes(test_id: str, prefixes: list[str], outcome: str) -> None:
     """Test prefix removal."""
     assert StableIDAllocator.remove_prefix(test_id, prefixes) == outcome
 
 
 @pytest.mark.parametrize(
-    "test_id, outcome",
+    ("test_id", "outcome"),
     [
         pytest.param("LOREM-IPSUM1", "LOREM-IPSUM1", id="No prefixes"),
         pytest.param("cds-LOREM-IPSUM1", "LOREM-IPSUM1", id="Prefix cds-"),
@@ -161,24 +160,21 @@ def test_normalize_cds_id(test_id: str, outcome: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "test_id, numbers, outcomes",
+    ("test_id", "numbers", "outcomes"),
     [
         pytest.param("LOREM-IPSUM1", [1], ["LOREM-IPSUM1_t1"], id="1 transcript ID"),
         pytest.param("LOREM-IPSUM1", [1, 2], ["LOREM-IPSUM1_t1", "LOREM-IPSUM1_t2"], id="2 transcript IDs"),
         pytest.param("LOREM-IPSUM1", [1, 1], ["LOREM-IPSUM1_t1", "LOREM-IPSUM1_t1"], id="Same number (!)"),
     ],
 )
-def test_normalize_transcript_id(test_id: str, numbers: List[int], outcomes: List[str]) -> None:
+def test_normalize_transcript_id(test_id: str, numbers: list[int], outcomes: list[str]) -> None:
     """Test transcript id normalization."""
-    new_ids = []
-    for number in numbers:
-        new_ids.append(StableIDAllocator.generate_transcript_id(test_id, number))
-
+    new_ids = [StableIDAllocator.generate_transcript_id(test_id, x) for x in numbers]
     assert new_ids == outcomes
 
 
 @pytest.mark.parametrize(
-    "input_gff, expected_gff",
+    ("input_gff", "expected_gff"),
     [
         pytest.param("pseudo_01.gff3", "pseudo_01.gff3", id="Good ID, no change"),
         pytest.param("pseudo_02_in.gff3", "pseudo_02_out.gff3", id="invalid ID"),
@@ -187,7 +183,10 @@ def test_normalize_transcript_id(test_id: str, numbers: List[int], outcomes: Lis
     ],
 )
 def test_normalize_pseudogene_cds_id(
-    tmp_path: Path, data_dir: Path, input_gff: str, expected_gff: str
+    tmp_path: Path,
+    data_dir: Path,
+    input_gff: str,
+    expected_gff: str,
 ) -> None:
     """Test pseudogene CDS ID normalization."""
     ids = StableIDAllocator()
@@ -209,17 +208,21 @@ def test_normalize_pseudogene_cds_id(
 
 
 @pytest.mark.parametrize(
-    "input_gff, expected_id, make_id, expected",
+    ("input_gff", "expected_id", "make_id", "expected"),
     [
         pytest.param("geneid_ok.gff3", "LOREMIPSUM1", None, does_not_raise(), id="Good ID, no change"),
         pytest.param("geneid_makeid.gff3", "TMP_1", True, does_not_raise(), id="Make ID"),
-        pytest.param("geneid_bad.gff3", "", False, raises(InvalidStableID), id="Bad ID, fail"),
+        pytest.param("geneid_bad.gff3", "", False, pytest.raises(InvalidStableIDError), id="Bad ID, fail"),
         pytest.param("geneid_GeneID.gff3", "GeneID_000001", None, does_not_raise(), id="Replace with GeneID"),
         pytest.param("geneid_noGeneID.gff3", "TMP_1", True, does_not_raise(), id="Dbxref without Gene ID"),
     ],
 )
 def test_normalize_gene_id(
-    data_dir: Path, input_gff: str, expected_id: str, make_id: Optional[bool], expected: ContextManager
+    data_dir: Path,
+    input_gff: str,
+    expected_id: str,
+    make_id: bool | None,
+    expected: ContextManager,
 ) -> None:
     """Test gene ID normalization."""
     ids = StableIDAllocator()
@@ -238,15 +241,21 @@ def test_normalize_gene_id(
 
 
 @pytest.mark.parametrize(
-    "input_gff, expected_ids, expected",
+    ("input_gff", "expected_ids", "expected"),
     [
         pytest.param(
-            "geneid_GeneID2.gff3", ["GeneID_000001", "GeneID_000001_2"], does_not_raise(), id="Same GeneIDs"
+            "geneid_GeneID2.gff3",
+            ["GeneID_000001", "GeneID_000001_2"],
+            does_not_raise(),
+            id="Same GeneIDs",
         ),
     ],
 )
 def test_normalize_gene_id_duplicate(
-    data_dir: Path, input_gff: str, expected_ids: List[str], expected: ContextManager
+    data_dir: Path,
+    input_gff: str,
+    expected_ids: list[str],
+    expected: ContextManager,
 ) -> None:
     """Test gene ID normalization with duplicate Gene ID features."""
     ids = StableIDAllocator()

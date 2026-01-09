@@ -21,12 +21,14 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 def main() -> None:
-    """Main entrypoint."""
+    """Run module's entrypoint."""
     parser = ArgumentParser(
-        description="Compare the genomic data between the files present in a manifest file."
+        description="Compare the genomic data between the files present in a manifest file.",
     )
     parser.add_argument_dst_path(
-        "--manifest_dir", required=True, help="Folder where to create a manifest file"
+        "--manifest_dir",
+        required=True,
+        help="Folder where to create a manifest file",
     )
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
@@ -35,7 +37,3 @@ def main() -> None:
 
     manifest = Manifest(args.manifest_dir)
     manifest.create()
-
-
-if __name__ == "__main__":
-    main()

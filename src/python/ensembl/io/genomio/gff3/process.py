@@ -12,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Simplify and fix a GFF3 file and returns both a cleaned up GFF3 file and a functional annotation
-JSON file.
-"""
+"""Simplify and fix a GFF3 file and return a cleaned up GFF3 file and a functional annotation JSON file."""
 
 import logging
 from pathlib import Path
@@ -28,17 +26,19 @@ from .gene_merger import GFFGeneMerger
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Run main script entry-point."""
     parser = ArgumentParser(
         description=(
             "Standardize the gene model representation of a GFF3 file, and extract the functional "
             "annotation in a separate file."
-        )
+        ),
     )
     parser.add_argument_src_path("--in_gff_path", required=True, help="Input GFF3 file")
     parser.add_argument_src_path("--genome_data", required=True, help="Genome JSON file")
     parser.add_argument(
-        "--fail_missing_stable_ids", action="store_true", help="Do not generate IDs when missing/invalid"
+        "--fail_missing_stable_ids",
+        action="store_true",
+        help="Do not generate IDs when missing/invalid",
     )
     parser.add_argument_dst_path("--out_gff_path", default=Path("gene_models.gff3"), help="Output GFF3 file")
     parser.add_argument_dst_path(

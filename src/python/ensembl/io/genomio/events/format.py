@@ -19,12 +19,14 @@ __all__ = ["IdsMapper", "load_list"]
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List
 
 import ensembl.io.genomio
 from ensembl.io.genomio.events.load import EventCollection
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+
+
+_NUM_COLS = 2
 
 
 class IdsMapper:
@@ -33,11 +35,12 @@ class IdsMapper:
     def __init__(self, map_file: PathLike) -> None:
         self.map = self._load_mapping(Path(map_file))
 
-    def _load_mapping(self, map_file: Path) -> Dict[str, str]:
+    def _load_mapping(self, map_file: Path) -> dict[str, str]:
         """Return a mapping in a simple dict from a tab file with 2 columns: from_id, to_id.
 
         Args:
             map_file: Tab file path.
+
         """
         mapping = {}
         with map_file.open("r") as map_fh:
@@ -45,37 +48,42 @@ class IdsMapper:
                 if line == "":
                     continue
                 items = line.split("\t")
-                if len(items) < 2:
-                    raise ValueError(f"Not 2 elements in {line}")
+                if len(items) < _NUM_COLS:
+                    msg = f"Not 2 elements in {line}"
+                    raise ValueError(msg)
                 (from_id, to_id) = items[0:2]
                 mapping[from_id] = to_id
 
         return mapping
 
 
-def load_list(list_file: Path) -> List[str]:
+def load_list(list_file: Path) -> list[str]:
     """Return a simple list from a file."""
     items = set()
     empty_spaces = re.compile(r"\s+")
     with Path(list_file).open("r") as map_fh:
         for line in map_fh:
-            line = re.sub(empty_spaces, "", line)
-            if line == "":
+            trimmed_line = re.sub(empty_spaces, "", line)
+            if trimmed_line == "":
                 continue
-            items.add(line)
+            items.add(trimmed_line)
 
     return list(items)
 
 
 def main() -> None:
-    """Main entrypoint"""
+    """Run module's entry-point."""
     parser = ArgumentParser(description="Map stable IDs in a file and produce an events file.")
     parser.add_argument_src_path("--input_file", required=True, help="Input file from gene_diff")
     parser.add_argument_src_path(
-        "--deletes_file", required=True, help="Deleted genes file (apart from the deletes from the gene diff)"
+        "--deletes_file",
+        required=True,
+        help="Deleted genes file (apart from the deletes from the gene diff)",
     )
     parser.add_argument_src_path(
-        "--map_file", required=True, help="Mapping tab file with 2 columns: old_id, new_id"
+        "--map_file",
+        required=True,
+        help="Mapping tab file with 2 columns: old_id, new_id",
     )
     parser.add_argument("--release_name", required=True, metavar="NAME", help="Release name for all events")
     parser.add_argument("--release_date", required=True, metavar="DATE", help="Release date for all events")

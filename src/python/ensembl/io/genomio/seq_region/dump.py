@@ -15,11 +15,11 @@
 """Fetch all the sequence regions from a core database and print them in JSON format."""
 
 __all__ = [
-    "fetch_coord_systems",
-    "get_seq_regions",
     "add_attribs",
-    "get_synonyms",
+    "fetch_coord_systems",
     "get_karyotype",
+    "get_seq_regions",
+    "get_synonyms",
 ]
 
 import json
@@ -49,6 +49,7 @@ def fetch_coord_systems(session: Session) -> Iterator[CoordSystem]:
 
     Yields:
         All default coord_systems in the core database.
+
     """
     coord_system_select = select(CoordSystem).filter(CoordSystem.attrib.like(r"%default_version%"))
     for row in session.execute(coord_system_select).unique().all():
@@ -65,6 +66,7 @@ def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Iterator[S
 
     Yields:
         All seq_regions for the coord_system.
+
     """
     seq_region_select = (
         select(SeqRegion)
@@ -81,7 +83,7 @@ def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Iterator[S
 
 
 def get_attribs_dict(seq_region: SeqRegion) -> dict[str, Any]:
-    """Returns a dict of attrib code-value for all the attributes of the given sequence region."""
+    """Return a dict of attrib code-value for all the attributes of the given sequence region."""
     return {attrib.attrib_type.code: attrib.value for attrib in seq_region.seq_region_attrib}
 
 
@@ -91,6 +93,7 @@ def add_attribs(seq_region: dict, seq_region_attrib: dict) -> None:
     Args:
         seq_region: A seq_region dict to modify.
         seq_region_attrib: The attribs for this seq_region.
+
     """
     bool_attribs = {
         "circular_seq": "circular",
@@ -132,6 +135,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict[str, str]) -> list
 
     Returns:
         List of all synonyms as a dict with 'name' and 'source' keys.
+
     """
     synonyms = seq_region.seq_region_synonym
     syns = []
@@ -146,18 +150,18 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict[str, str]) -> list
                 syn_obj = {"name": syn.synonym}
             syns.append(syn_obj)
 
-    syns = sorted(syns, key=lambda syn: (syn["name"], syn.get("source", "")))
-    return syns
+    return sorted(syns, key=lambda syn: (syn["name"], syn.get("source", "")))
 
 
 def get_karyotype(seq_region: SeqRegion) -> list[dict[str, str]]:
-    """Given a seq_region, extract the karyotype bands.
+    """Extract the karyotype bands given a sequence region.
 
     Args:
         seq_region: The seq_region from which the karyotype bands are extracted.
 
     Returns:
         List of all karyotype bands as a dict with values 'start', 'end', 'name' 'stain', 'structure'.
+
     """
     bands = seq_region.karyotype
     kars = []
@@ -173,18 +177,18 @@ def get_karyotype(seq_region: SeqRegion) -> list[dict[str, str]]:
                     kar["structure"] = structure
             kars.append(kar)
 
-    kars = sorted(kars, key=lambda kar: kar.get("name", ""))
-    return kars
+    return sorted(kars, key=lambda kar: kar.get("name", ""))
 
 
 def get_added_sequence(seq_region: SeqRegion) -> dict[str, str | dict[str, str]]:
-    """Extracts added sequence information of the given sequence region.
+    """Extract added sequence information of the given sequence region.
 
     Args:
         seq_region: Sequence region.
 
     Returns:
         Accession as well as assembly and annotation provider information of the added sequence.
+
     """
     attribs = get_attribs_dict(seq_region)
     accession = attribs.get("added_seq_accession")
@@ -215,7 +219,7 @@ def get_added_sequence(seq_region: SeqRegion) -> dict[str, str | dict[str, str]]
 
 
 def get_seq_regions(session: Session, external_db_map: dict) -> list[SeqRegion]:
-    """Returns all the sequence regions from the current core database.
+    """Return all the sequence regions from the current core database.
 
     Include synonyms, attribs and karyotypes. Only the top level sequences are exported.
 
@@ -254,18 +258,19 @@ def get_seq_regions(session: Session, external_db_map: dict) -> list[SeqRegion]:
 
             seq_regions.append(seq_region)
 
-    seq_regions = sorted(seq_regions, key=lambda seqr: (seqr["coord_system_level"], seqr["name"]))
-    return seq_regions
+    return sorted(seq_regions, key=lambda seqr: (seqr["coord_system_level"], seqr["name"]))
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Run module's entry-point."""
     parser = ArgumentParser(
-        description="Fetch all the sequence regions from a core database and print them in JSON format."
+        description="Fetch all the sequence regions from a core database and print them in JSON format.",
     )
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path(
-        "--external_db_map", default=DEFAULT_EXTERNAL_DB_MAP.resolve(), help="File with external_db mapping"
+        "--external_db_map",
+        default=DEFAULT_EXTERNAL_DB_MAP.resolve(),
+        help="File with external_db mapping",
     )
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments(add_log_file=True)

@@ -17,28 +17,29 @@
 from contextlib import nullcontext as no_raise
 from os import PathLike
 from pathlib import Path
-from typing import Callable, ContextManager, List, Optional
+from typing import Callable, ContextManager
 
 import pytest
-from pytest import param, raises
 
 from ensembl.io.genomio.gff3.simplifier import Records
 
 
 @pytest.mark.parametrize(
-    "in_gff, excluded, expected_loaded, expectation",
+    ("in_gff", "excluded", "expected_loaded", "expectation"),
     [
-        param("record_n2.gff", None, ["scaffold1", "scaffold2"], no_raise(), id="2 records"),
-        param("record_n2.gff", ["scaffold1"], ["scaffold2"], no_raise(), id="2 records, exclude 1"),
-        param("record_n1.gff", ["Lorem"], ["scaffold1"], no_raise(), id="1 record, exclude not in record"),
-        param("invalid.gff", None, [], raises(AssertionError), id="Invalid GFF3"),
+        pytest.param("record_n2.gff", None, ["scaffold1", "scaffold2"], no_raise(), id="2 records"),
+        pytest.param("record_n2.gff", ["scaffold1"], ["scaffold2"], no_raise(), id="2 records, exclude 1"),
+        pytest.param(
+            "record_n1.gff", ["Lorem"], ["scaffold1"], no_raise(), id="1 record, exclude not in record"
+        ),
+        pytest.param("invalid.gff", None, [], pytest.raises(AssertionError), id="Invalid GFF3"),
     ],
 )
 def test_from_gff(
     data_dir: Path,
     in_gff: PathLike,
-    excluded: Optional[List[str]],
-    expected_loaded: List[str],
+    excluded: list[str] | None,
+    expected_loaded: list[str],
     expectation: ContextManager,
 ) -> None:
     """Test loading GFF records from file."""
@@ -55,8 +56,8 @@ def test_from_gff(
 @pytest.mark.parametrize(
     "in_gff",
     [
-        param("record_n1.gff", id="1 record"),
-        param("record_n2.gff", id="2 records"),
+        pytest.param("record_n1.gff", id="1 record"),
+        pytest.param("record_n2.gff", id="2 records"),
     ],
 )
 def test_to_gff(tmp_path: Path, data_dir: Path, assert_files: Callable, in_gff: PathLike) -> None:

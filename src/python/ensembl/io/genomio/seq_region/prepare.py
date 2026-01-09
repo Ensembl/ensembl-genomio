@@ -33,7 +33,7 @@ def prepare_seq_region_metadata(
     to_exclude: list[str] | None = None,
     mock_run: bool = False,
 ) -> None:
-    """Prepares the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
+    """Prepare the sequence region metadata found in the INSDC/RefSeq report and GBFF files.
 
     The sequence region information is loaded from both sources and combined. Elements are added/excluded
     as requested, and the final sequence region metadata is dumped in a JSON file that follows the schema
@@ -70,18 +70,25 @@ def prepare_seq_region_metadata(
 
 
 def main() -> None:
-    """Module's entry-point."""
+    """Run module's entry-point."""
     parser = ArgumentParser(description="Construct a sequence region metadata file from INSDC files.")
     parser.add_argument_src_path("--genome_file", required=True, help="Genome metadata JSON file")
     parser.add_argument_src_path(
-        "--report_file", required=True, help="INSDC/RefSeq sequences report file to parse"
+        "--report_file",
+        required=True,
+        help="INSDC/RefSeq sequences report file to parse",
     )
     parser.add_argument_src_path("--gbff_file", help="INSDC/RefSeq GBFF file to parse")
     parser.add_argument_dst_path(
-        "--dst_file", default="seq_region.json", help="Output JSON file for the processed sequence regions"
+        "--dst_file",
+        default="seq_region.json",
+        help="Output JSON file for the processed sequence regions",
     )
     parser.add_argument(
-        "--to_exclude", nargs="*", metavar="SEQ_REGION_NAME", help="Sequence region names to exclude"
+        "--to_exclude",
+        nargs="*",
+        metavar="SEQ_REGION_NAME",
+        help="Sequence region names to exclude",
     )
     parser.add_argument("--mock_run", action="store_true", help="Do not call external APIs")
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)

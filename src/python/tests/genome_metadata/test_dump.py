@@ -20,14 +20,12 @@ Typical usage example::
 """
 # pylint: disable=too-many-positional-arguments
 
-from collections import namedtuple
 from contextlib import nullcontext as does_not_raise
-from typing import Any, ContextManager
+from typing import Any, ContextManager, NamedTuple
 from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
-from pytest import param
 from _pytest.capture import CaptureFixture
 from sqlalchemy.engine import make_url, URL
 
@@ -35,7 +33,11 @@ from ensembl.io.genomio.genome_metadata import dump
 from ensembl.utils import StrPath
 
 
-MetaRow = namedtuple("MetaRow", "meta_key meta_value")
+class MetaRow(NamedTuple):
+    """Named tuple for the `meta` table row."""
+
+    meta_key: str
+    meta_value: str
 
 
 @pytest.mark.parametrize(
@@ -57,7 +59,7 @@ MetaRow = namedtuple("MetaRow", "meta_key meta_value")
         pytest.param(
             {"assembly": {"accession": "GCA_00000001"}},
             0,
-            pytest.raises(ValueError),
+            pytest.raises(ValueError, match="Assembly version is not an integer in GCA_00000001"),
             id="No version, accession without version",
         ),
     ],
@@ -65,12 +67,13 @@ MetaRow = namedtuple("MetaRow", "meta_key meta_value")
 def test_check_assembly_version(
     genome_metadata: dict[str, Any], output: int, expectation: ContextManager
 ) -> None:
-    """Tests the `dump.check_assembly_version()` method.
+    """Test the `dump.check_assembly_version()` method.
 
     Args:
         genome_metadata: Nested genome metadata key values.
         output: Expected assembly version.
         expectation: Context manager for the expected exception (if any).
+
     """
     with expectation:
         dump.check_assembly_version(genome_metadata)
@@ -99,18 +102,24 @@ def test_check_assembly_version(
             does_not_raise(),
             id="No version, ID moved to version",
         ),
-        pytest.param({"genebuild": {}}, {}, pytest.raises(ValueError), id="No version or ID"),
+        pytest.param(
+            {"genebuild": {}},
+            {},
+            pytest.raises(ValueError, match="No genebuild version or ID found"),
+            id="No version or ID",
+        ),
     ],
 )
 def test_check_genebuild_version(
     genome_metadata: dict[str, Any], output: dict[str, Any], expectation: ContextManager
 ) -> None:
-    """Tests the `dump.check_genebuild_version()` method.
+    """Test the `dump.check_genebuild_version()` method.
 
     Args:
         genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
+
     """
     with expectation:
         dump.check_genebuild_version(genome_metadata)
@@ -210,13 +219,14 @@ def test_filter_genome_meta(
     metafilter: StrPath,
     meta_update: bool,
 ) -> None:
-    """Tests the `dump.filter_genome_meta()` method.
+    """Test the `dump.filter_genome_meta()` method.
 
     Args:
         genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
         metafilter: Type evaluated meta filter.
         meta_update: Permit meta updating.
+
     """
     result = dump.filter_genome_meta(genome_metadata, metafilter, meta_update)
     assert not DeepDiff(result, output)
@@ -233,11 +243,12 @@ def test_filter_genome_meta(
     ],
 )
 def test_convert_dict(meta_dict: dict, expected_dict: dict) -> None:
-    """Tests the `dump.convert_dict()` method.
+    """Test the `dump.convert_dict()` method.
 
     Args:
         meta_dict: Dict containing string based meta 'subkey' value pairs.
         expected_dict: Dict with converted 'subkey' class types.
+
     """
     convert_dict = dump.convert_dict(meta_dict)
     string_convert = str(convert_dict)
@@ -284,7 +295,7 @@ def test_convert_dict(meta_dict: dict, expected_dict: dict) -> None:
             None,
             [[MetaRow("species", "dog")], [MetaRow("species.synonym", "puppy")]],
             {},
-            pytest.raises(ValueError),
+            pytest.raises(ValueError, match="Unexpected meta keys for 'species': , synonym"),
             id="'species' and 'species.synonym' meta keys",
         ),
         pytest.param(
@@ -315,14 +326,16 @@ def test_get_genome_metadata(
     output: dict[str, Any],
     expectation: ContextManager,
 ) -> None:
-    """Tests the `dump.get_genome_metadata()` method.
+    """Test the `dump.get_genome_metadata()` method.
 
     Args:
         mock_session: A mock of `sqlalchemy.orm.Session()` class.
+        mock_result: A mock of `sqlalchemy.engine.Result()` class.
         db_name: Target core database name.
         meta_data: `meta` table content in a list of named tuples.
         output: Expected genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
+
     """
     mock_result.unique.return_value = mock_result
     mock_result.all.return_value = meta_data
@@ -333,9 +346,9 @@ def test_get_genome_metadata(
 
 
 @pytest.mark.parametrize(
-    "arg_list, expected",
+    ("arg_list", "expected"),
     [
-        param(
+        pytest.param(
             ["--host", "localhost", "--port", "42", "--user", "me", "--database", "test_db"],
             {
                 "host": "localhost",
@@ -353,7 +366,7 @@ def test_get_genome_metadata(
             },
             id="Default args",
         ),
-        param(
+        pytest.param(
             [
                 "--host",
                 "localhost",
@@ -386,19 +399,19 @@ def test_get_genome_metadata(
     ],
 )
 def test_parse_args(arg_list: list[str], expected: dict) -> None:
-    """Tests the `dump.parse_args()` function."""
+    """Test the `dump.parse_args()` function."""
     # pylint: disable=too-many-positional-arguments
     args = dump.parse_args(arg_list)
     if args.metafilter:
         # DeepDiff is not able to compare two objects of Path type, so convert it to string
-        setattr(args, "metafilter", str(args.metafilter))
+        args.metafilter = str(args.metafilter)
     assert not DeepDiff(vars(args), expected)
 
 
 @pytest.mark.parametrize(
     ("arg_list", "db_url", "metafilter", "meta_update", "append_db", "stdout"),
     [
-        param(
+        pytest.param(
             [
                 "--host",
                 "localhost",
@@ -430,10 +443,7 @@ def test_main(
     append_db: bool,
     stdout: str,
 ) -> None:
-    """Tests the `dump.main()` function (entry point).
-
-    Fixtures: capsys
-    """
+    """Test the `dump.main()` function (entry point)."""
     # pylint: disable=too-many-positional-arguments
     mock_metadata_dump_setup.return_value = {"database": {"name": "test_dbname_core_110_1"}}
     dump.main(arg_list)

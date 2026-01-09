@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Callable, ContextManager
 
 import pytest
-from pytest import CaptureFixture, param, raises
 import sqlalchemy
 from sqlalchemy import text
 
@@ -41,6 +40,7 @@ def add_gene(dialect: str, session: sqlalchemy.orm.Session, gene_data: dict[str,
         "tr_name" -> transcript.stable_id
         "tr_desc" -> transcript.description
         "gene_xref" -> xref display_name attached to the gene
+
     """
     gene_name = gene_data.get("gene_name", "gene1")
     gene_description = gene_data.get("gene_desc", "")
@@ -92,18 +92,18 @@ def add_gene(dialect: str, session: sqlalchemy.orm.Session, gene_data: dict[str,
 
 @pytest.fixture(name="annot_test_db", scope="module")
 def fixture_annotation_test_db(db_factory: Callable) -> UnitTestDB:
-    """Returns a test database with all core tables and basic data."""
+    """Return a test database with all core tables and basic data."""
     test_db: UnitTestDB = db_factory(src="no_src", name="load_annotation")
     test_db.dbc.create_all_tables(metadata)
     return test_db
 
 
 @pytest.mark.parametrize(
-    "gene_data, table, expected_ids, expectation",
+    ("gene_data", "table", "expected_ids", "expectation"),
     [
-        param({"name": "gene1", "tr_name": "tr1"}, "gene", ["gene1"], no_raise()),
-        param({"name": "gene1", "tr_name": "tr1"}, "transcript", ["tr1"], no_raise()),
-        param({}, "foo", [], raises(ValueError, match="Table foo is not supported")),
+        pytest.param({"name": "gene1", "tr_name": "tr1"}, "gene", ["gene1"], no_raise()),
+        pytest.param({"name": "gene1", "tr_name": "tr1"}, "transcript", ["tr1"], no_raise()),
+        pytest.param({}, "foo", [], pytest.raises(ValueError, match="Table foo is not supported")),
     ],
 )
 def test_get_core_data(
@@ -113,7 +113,7 @@ def test_get_core_data(
     expected_ids: list[str],
     expectation: ContextManager,
 ) -> None:
-    """Tests the method `get_core_data()`"""
+    """Test the method `get_core_data()`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         with expectation:
@@ -122,10 +122,10 @@ def test_get_core_data(
 
 
 @pytest.mark.parametrize(
-    "input_file, gene_data, do_update, expected_description",
+    ("input_file", "gene_data", "do_update", "expected_description"),
     [
-        param("gene1_desc.json", {"gene_name": "gene1"}, False, "", id="No update"),
-        param("gene1_desc.json", {"gene_name": "gene1"}, True, "new_desc", id="Do update"),
+        pytest.param("gene1_desc.json", {"gene_name": "gene1"}, False, "", id="No update"),
+        pytest.param("gene1_desc.json", {"gene_name": "gene1"}, True, "new_desc", id="Do update"),
     ],
 )
 def test_load_description_do_update(
@@ -136,7 +136,7 @@ def test_load_description_do_update(
     do_update: bool,
     expected_description: str,
 ) -> None:
-    """Tests the method `load_description()`"""
+    """Test the method `load_description()`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=do_update)
@@ -148,76 +148,80 @@ def test_load_description_do_update(
 
 
 @pytest.mark.parametrize(
-    "input_file, gene_data, table, expected_description",
+    ("input_file", "gene_data", "table", "expected_description"),
     [
-        param("gene1_nodesc.json", {"gene_name": "gene1"}, "gene", "", id="Gene: no desc -> no desc"),
-        param(
+        pytest.param("gene1_nodesc.json", {"gene_name": "gene1"}, "gene", "", id="Gene: no desc -> no desc"),
+        pytest.param(
             "gene1_nodesc.json",
             {"gene_name": "gene1", "gene_desc": "old_desc"},
             "gene",
             "",
             id="Gene: old desc -> deleted desc",
         ),
-        param("gene1_desc.json", {"gene_name": "gene1"}, "gene", "new_desc", id="Gene: no desc -> new desc"),
-        param(
+        pytest.param(
+            "gene1_desc.json", {"gene_name": "gene1"}, "gene", "new_desc", id="Gene: no desc -> new desc"
+        ),
+        pytest.param(
             "gene1_desc.json",
             {"gene_name": "gene1", "gene_desc": "new_desc"},
             "gene",
             "new_desc",
             id="Gene: old desc -> same desc",
         ),
-        param(
+        pytest.param(
             "gene1_desc.json",
             {"gene_name": "gene1", "gene_desc": "old_desc"},
             "gene",
             "new_desc",
             id="Gene: old desc -> new desc",
         ),
-        param(
+        pytest.param(
             "gene1_nodesc.json",
             {"gene_name": "gene1", "gene_desc": "old_desc [Source: ext]"},
             "gene",
             "old_desc [Source: ext]",
             id="Gene: source desc -> no change",
         ),
-        param(
+        pytest.param(
             "gene1_desc.json",
             {"gene_name": "gene1", "gene_desc": "old_desc [Source: ext]"},
             "gene",
             "new_desc",
             id="Gene: source desc -> new desc",
         ),
-        param(
+        pytest.param(
             "gene1_syn.json",
             {"gene_name": "gene1"},
             "gene",
             "new_desc",
             id="Gene: no desc -> new_desc from syn match",
         ),
-        param(
+        pytest.param(
             "gene1_syn_nouse.json",
             {"gene_name": "gene1"},
             "gene",
             "",
             id="Gene: no desc -> no syn match",
         ),
-        param(
+        pytest.param(
             "gene1_xref.json",
             {"gene_name": "gene1"},
             "gene",
             "new_desc",
             id="Gene: no desc -> new_desc from xref match",
         ),
-        param(
+        pytest.param(
             "gene1_xref_nouse.json",
             {"gene_name": "gene1"},
             "gene",
             "",
             id="Gene: no desc -> no xref match",
         ),
-        param("tr1_nodesc.json", {"tr_name": "tr1"}, "transcript", "", id="Tr: no desc -> no desc"),
-        param("tr1_desc.json", {"tr_name": "tr1"}, "transcript", "new_desc", id="Tr: no desc -> new desc"),
-        param(
+        pytest.param("tr1_nodesc.json", {"tr_name": "tr1"}, "transcript", "", id="Tr: no desc -> no desc"),
+        pytest.param(
+            "tr1_desc.json", {"tr_name": "tr1"}, "transcript", "new_desc", id="Tr: no desc -> new desc"
+        ),
+        pytest.param(
             "tr1_desc.json",
             {"tr_name": "tr1", "tr_desc": "old_desc"},
             "transcript",
@@ -234,7 +238,7 @@ def test_load_description(
     table: str,
     expected_description: str,
 ) -> None:
-    """Tests the method `load_description()`"""
+    """Test the method `load_description()`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True)
@@ -250,16 +254,16 @@ def test_load_description(
 
 
 @pytest.mark.parametrize(
-    "input_file, gene_data, expected_description, match_xrefs",
+    ("input_file", "gene_data", "expected_description", "match_xrefs"),
     [
-        param(
+        pytest.param(
             "gene1_desc.json",
             {"gene_name": "foobar", "gene_xref": "gene1"},
             "",
             False,
             id="Gene: no desc -> no changed no xref match",
         ),
-        param(
+        pytest.param(
             "gene1_desc.json",
             {"gene_name": "foobar", "gene_xref": "gene1"},
             "new_desc",
@@ -276,7 +280,7 @@ def test_load_description_match_xrefs(
     match_xrefs: bool,
     expected_description: str,
 ) -> None:
-    """Tests the method `load_description()` with `match_xrefs`"""
+    """Test the method `load_description()` with `match_xrefs`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True, match_xrefs=match_xrefs)
@@ -287,21 +291,25 @@ def test_load_description_match_xrefs(
 
 
 @pytest.mark.parametrize(
-    "input_file, gene_data, do_report",
+    ("input_file", "gene_data", "do_report"),
     [
-        param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc"}, False, id="No report"),
-        param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc"}, True, id="Do report"),
+        pytest.param(
+            "gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc"}, False, id="No report"
+        ),
+        pytest.param(
+            "gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc"}, True, id="Do report"
+        ),
     ],
 )
 def test_load_description_do_report(
     annot_test_db: UnitTestDB,
     data_dir: Path,
-    capsys: CaptureFixture,
+    capsys: pytest.CaptureFixture,
     input_file: str,
     gene_data: dict[str, str],
     do_report: bool,
 ) -> None:
-    """Tests the method `load_description()`"""
+    """Test the method `load_description()`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, report=do_report)

@@ -79,6 +79,7 @@ cicd = [
     "pytest-dependency",
     "pytest-mock",
     "pytest-workflow >= 2.1.0",
+    "ruff >= 0.11.11",
     "types-requests",
 ]
 docs = [
@@ -191,9 +192,70 @@ show-fixes = true
 [tool.ruff.format]
 docstring-code-format = true
 
+[tool.ruff.lint]
+select = [
+    "ALL",
+]
+ignore = [
+    "ANN401",  # https://docs.astral.sh/ruff/rules/any-type/
+    "COM812",  # https://docs.astral.sh/ruff/rules/trailing-comma-on-bare-tuple/
+    "D107",  # https://docs.astral.sh/ruff/rules/undocumented-public-init/
+    "D203",  # https://docs.astral.sh/ruff/rules/one-blank-line-before-class/
+    "D211",  # https://docs.astral.sh/ruff/rules/blank-line-before-class/
+    "D213",  # https://docs.astral.sh/ruff/rules/multi-line-summary-second-line/
+    "DTZ001",  # https://docs.astral.sh/ruff/rules/call-datetime-without-tzinfo/
+    "DTZ011",  # https://docs.astral.sh/ruff/rules/call-date-today/
+    "EM101",  # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
+    "EM102",  # https://docs.astral.sh/ruff/rules/f-string-in-exception/
+    "FBT001",  # https://docs.astral.sh/ruff/rules/boolean-type-hint-positional-argument/
+    "FBT002",  # https://docs.astral.sh/ruff/rules/boolean-default-value-positional-argument/
+    "G004",  # https://docs.astral.sh/ruff/rules/logging-f-string/
+    "I001",  # https://docs.astral.sh/ruff/rules/unsorted-imports/
+    "ICN001",  # https://docs.astral.sh/ruff/rules/unconventional-import-alias/
+    "ISC001",  # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
+    "LOG015",  # https://docs.astral.sh/ruff/rules/root-logger-call/
+    "S324",  # https://docs.astral.sh/ruff/rules/hashlib-insecure-hash-function/
+    "S603",  # https://docs.astral.sh/ruff/rules/subprocess-without-shell-equals-true/
+    "T201",  # https://docs.astral.sh/ruff/rules/print/
+    "T203",  # https://docs.astral.sh/ruff/rules/p-print/
+    "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
+    "UP035",  # https://docs.astral.sh/ruff/rules/deprecated-import/
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
 [tool.ruff.lint.per-file-ignores]
 # Ignore `F403` (unable to detect undefined names) in all `__init__.py` files
 "__init__.py" = ["F403"]
+# Ignore insecure FTP usage
+"src/python/ensembl/io/genomio/assembly/download.py" = ["S321"]
+# Ignore builtin argument shadowing for wrapper class
+"src/python/ensembl/io/genomio/gff3/features.py" = ["A002"]
+# Ignore the following checks in all pytest files
+"src/python/tests/**.py" = [
+    "INP001",  # https://docs.astral.sh/ruff/rules/implicit-namespace-package/
+    "PLR0913",  # https://docs.astral.sh/ruff/rules/too-many-arguments/
+    "PLR2004",  # https://docs.astral.sh/ruff/rules/magic-value-comparison/
+    "S101",  # https://docs.astral.sh/ruff/rules/assert/
+    "SLF001",  # https://docs.astral.sh/ruff/rules/private-member-access/
+]
+# Ignore `ARG001` (unused function argument) in `test_status.py` file
+"src/python/tests/assembly/test_status.py" = ["ARG001"]
+# Ignore `PT011` (pytest raises too broad) in `test_download.py` file
+"src/python/tests/assembly/test_download.py" = ["PT011"]
+# Ignore `ARG002` (unused method argument) in `test_core_server.py` file
+"src/python/tests/database/test_core_server.py" = ["ARG002"]
+# Ignore `ARG001` (unused function argument) in `test_chunk.py` file
+"src/python/tests/fasta/test_chunk.py" = ["ARG001"]
+# Ignore `PLR0911` (too many return statements) in `test_dump.py` file
+"src/python/tests/genome_stats/test_dump.py" = ["PLR0911"]
+
+[tool.ruff.lint.pydocstyle]
+ignore-var-parameters = true
+
+[tool.ruff.lint.pylint]
+max-args = 10
 
 [tool.mypy]
 mypy_path = "src/python"
@@ -216,6 +278,9 @@ norecursedirs = ["data", "docs", "*.egg_info"]
 branch = true
 source = [
     "ensembl.io.genomio",
+]
+omit = [
+    "src/python/ensembl/io/genomio/events/*",
 ]
 
 [tool.coverage.report]

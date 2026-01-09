@@ -22,7 +22,7 @@ Typical usage example::
 from dataclasses import dataclass
 from pathlib import Path
 from string import Template
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -38,14 +38,14 @@ from ensembl.io.genomio.utils import get_json
 class MockResult:
     """Mocker of `sqlalchemy.engine.Result` class."""
 
-    rows: List
+    rows: list
 
     def __iter__(self) -> Any:
-        """Iterates over the elements in `rows` attribute."""
+        """Iterate over the elements in `rows` attribute."""
         yield from self.rows
 
-    def one(self) -> Tuple:
-        """Returns the first element in `rows` attribute."""
+    def one(self) -> tuple:
+        """Return the first element in `rows` attribute."""
         return self.rows[0]
 
 
@@ -53,17 +53,17 @@ class MockResult:
 ATTRIB_COUNTS_QUERY = Template(
     "SELECT seq_region_attrib.value, count(*) AS count_1 "
     "FROM seq_region_attrib JOIN attrib_type ON attrib_type.attrib_type_id = seq_region_attrib.attrib_type_id"
-    " WHERE attrib_type.code = '${code}' GROUP BY seq_region_attrib.value"
+    " WHERE attrib_type.code = '${code}' GROUP BY seq_region_attrib.value",
 )
 BIOTYPES_QUERY = Template(
-    "SELECT ${table}.biotype, count(*) AS count_1 FROM ${table} GROUP BY ${table}.biotype"
+    "SELECT ${table}.biotype, count(*) AS count_1 FROM ${table} GROUP BY ${table}.biotype",
 )
 FEATURE_STATS_TOTAL_QUERY = Template("SELECT count(*) AS count_1 FROM ${table}")
 FEATURE_STATS_NULL_QUERY = Template(
-    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description IS NULL"
+    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description IS NULL",
 )
 FEATURE_STATS_SOURCE_QUERY = Template(
-    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description LIKE '%[Source:%'"
+    "SELECT count(*) AS count_1 FROM ${table} WHERE ${table}.description LIKE '%[Source:%'",
 )
 
 
@@ -72,7 +72,7 @@ class MockSession(Session):
 
     # pylint: disable-next=too-many-return-statements
     def execute(self, statement: ClauseElement) -> MockResult:  # type: ignore[override]
-        """Returns a `MockResult` object representing results of the statement execution.
+        """Return a `MockResult` object representing results of the statement execution.
 
         Args:
             statement: An executable statement.
@@ -111,14 +111,14 @@ class MockSession(Session):
 
 
 class TestStatsGenerator:
-    """Tests for the `StatsGenerator` class."""
+    """Test for the `StatsGenerator` class."""
 
     stats_gen: dump.StatsGenerator
-    genome_stats: Dict[str, Any]
+    genome_stats: dict[str, Any]
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, data_dir: Path) -> None:
-        """Loads the required fixtures and values as class attributes.
+        """Load the required fixtures and values as class attributes.
 
         Args:
             data_dir: Module's test data directory fixture.
@@ -128,7 +128,7 @@ class TestStatsGenerator:
         type(self).genome_stats = get_json(data_dir / "genome_stats.json")
 
     @pytest.mark.parametrize(
-        "stats, output",
+        ("stats", "output"),
         [
             ({}, {}),
             (
@@ -139,8 +139,8 @@ class TestStatsGenerator:
         ],
     )
     @pytest.mark.dependency(name="fix_scaffolds")
-    def test_fix_scaffolds(self, stats: Dict, output: Dict) -> None:
-        """Tests the `StatsGenerator._fix_scaffolds()` static method.
+    def test_fix_scaffolds(self, stats: dict, output: dict) -> None:
+        """Test the `StatsGenerator._fix_scaffolds()` static method.
 
         Args:
             stats: Input statistic dictionary.
@@ -151,7 +151,7 @@ class TestStatsGenerator:
         assert stats == output
 
     @pytest.mark.parametrize(
-        "code, attribute",
+        ("code", "attribute"),
         [
             ("coord_system_tag", "coord_system"),
             ("sequence_location", "locations"),
@@ -159,7 +159,7 @@ class TestStatsGenerator:
     )
     @pytest.mark.dependency(name="get_attrib_counts")
     def test_get_attrib_counts(self, code: str, attribute: str) -> None:
-        """Tests the `StatsGenerator.get_attrib_counts()` method.
+        """Test the `StatsGenerator.get_attrib_counts()` method.
 
         Args:
             code: Core database attribute type code.
@@ -170,7 +170,7 @@ class TestStatsGenerator:
         assert attrib_counts == self.genome_stats["assembly_stats"][attribute]
 
     @pytest.mark.parametrize(
-        "table, table_name",
+        ("table", "table_name"),
         [
             (Gene, "genes"),
             (Transcript, "transcripts"),
@@ -178,7 +178,7 @@ class TestStatsGenerator:
     )
     @pytest.mark.dependency(name="get_biotypes")
     def test_get_biotypes(self, table: Any, table_name: str) -> None:
-        """Tests the `StatsGenerator.get_biotypes()` method.
+        """Test the `StatsGenerator.get_biotypes()` method.
 
         Args:
             table: Core database table model class.
@@ -189,7 +189,7 @@ class TestStatsGenerator:
         assert biotypes == self.genome_stats["annotation_stats"][table_name]["biotypes"]
 
     @pytest.mark.parametrize(
-        "table, table_name",
+        ("table", "table_name"),
         [
             (Gene, "genes"),
             (Transcript, "transcripts"),
@@ -197,7 +197,7 @@ class TestStatsGenerator:
     )
     @pytest.mark.dependency(name="get_feature_stats", depends=["get_biotypes"])
     def test_get_feature_stats(self, table: Any, table_name: str) -> None:
-        """Tests the `StatsGenerator.get_feature_stats()` method.
+        """Test the `StatsGenerator.get_feature_stats()` method.
 
         Args:
             table: Core database table model class.
@@ -209,19 +209,19 @@ class TestStatsGenerator:
 
     @pytest.mark.dependency(name="get_assembly_stats", depends=["fix_scaffolds", "get_attrib_counts"])
     def test_get_assembly_stats(self) -> None:
-        """Tests the `StatsGenerator.get_assembly_stats()` method."""
+        """Test the `StatsGenerator.get_assembly_stats()` method."""
         assembly_stats = self.stats_gen.get_assembly_stats()
         assert assembly_stats == self.genome_stats["assembly_stats"]
 
     @pytest.mark.dependency(name="get_annotation_stats", depends=["get_feature_stats"])
     def test_get_annotation_stats(self) -> None:
-        """Tests the `StatsGenerator.get_annotation_stats()` method."""
+        """Test the `StatsGenerator.get_annotation_stats()` method."""
         annotation_stats = self.stats_gen.get_annotation_stats()
         assert annotation_stats == self.genome_stats["annotation_stats"]
 
     @pytest.mark.dependency(name="get_genome_stats", depends=["get_assembly_stats", "get_annotation_stats"])
     def test_get_genome_stats(self) -> None:
-        """Tests the `StatsGenerator.get_genome_stats()` method."""
+        """Test the `StatsGenerator.get_genome_stats()` method."""
         genome_stats = self.stats_gen.get_genome_stats()
         assert genome_stats == self.genome_stats
 
@@ -229,7 +229,7 @@ class TestStatsGenerator:
 @pytest.mark.dependency(depends=["get_genome_stats"])
 @patch("ensembl.io.genomio.genome_stats.dump.DBConnectionLite")
 def test_dump_genome_stats(mock_dbconnection: MagicMock, json_data: Callable) -> None:
-    """Tests the `dump_genome_stats()` method.
+    """Test the `dump_genome_stats()` method.
 
     Args:
         mock_dbconnection: Mock of DBConnectionLite to avoid needing an actual core database.
