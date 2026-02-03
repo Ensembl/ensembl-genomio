@@ -6,7 +6,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from ensembl.io.genomio.fasta.split_fasta import main as SplitFasta
+from ensembl.io.genomio.fasta.split import main as FastaSplit
 
 
 def write_fasta(path: Path, records):
@@ -48,7 +48,7 @@ def test_no_agp_by_default(tmp_path: Path):
     out = tmp_path / "out"
     write_fasta(input_fasta, [SeqRecord(Seq("ACGT"), id="seq1", description="")])
 
-    SplitFasta(
+    FastaSplit(
         [
             "--fasta-file",
             str(input_fasta),
@@ -76,7 +76,7 @@ def test_split_by_max_seqs_per_file(tmp_path: Path):
     ]
     write_fasta(input_fasta, recs)
 
-    SplitFasta(
+    FastaSplit(
         [
             "--fasta-file",
             str(input_fasta),
@@ -103,7 +103,7 @@ def test_chunk_merge_final_small_chunk_and_agp(tmp_path: Path):
     out = tmp_path / "out"
     write_fasta(input_fasta, [SeqRecord(Seq("A" * 2100), id="chr1", description="chr1")])
 
-    SplitFasta(
+    FastaSplit(
         [
             "--fasta-file",
             str(input_fasta),
@@ -170,7 +170,7 @@ def test_agp_part_numbers_restart_per_object(tmp_path: Path):
     ]
     write_fasta(input_fasta, recs)
 
-    SplitFasta(
+    FastaSplit(
         [
             "--fasta-file",
             str(input_fasta),

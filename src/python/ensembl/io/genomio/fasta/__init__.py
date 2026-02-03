@@ -17,4 +17,4 @@
 from .chunk import *
 from .compare import *
 from .process import *
-from .split_fasta import *
+from .split import *
