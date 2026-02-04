@@ -34,7 +34,6 @@ Input FASTA records can be spread across multiple files and nested directories u
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-import inspect
 import logging
 from pathlib import Path
 import re
