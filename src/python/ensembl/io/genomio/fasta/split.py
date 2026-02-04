@@ -1,5 +1,3 @@
-#!env python3
-
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -19,7 +17,7 @@
 Split a FASTA file into multiple FASTA files, optionally chunking long sequences.
 
 This script reads an input FASTA (optionally gzipped) and writes one or more FASTA
-files to an output directory. Records can be split across output files either by:
+files to an output directory. The number of output files is determined by:
 
 - maximum number of records per file (``max_seqs_per_file``), and/or
 - maximum cumulative sequence length per file (``max_seq_length_per_file``).
@@ -30,92 +28,56 @@ chunk shorter than ``min_chunk_length`` can be merged into the previous chunk.
 
 Optionally, an AGP v2.0 file can be written describing how each input sequence
 maps to output contigs/chunks.
-
-The implementation is designed to stream the input once and write outputs in a
-single pass.
 """
 
-
+from dataclasses import dataclass
 import inspect
 import logging
-import shutil
 from pathlib import Path
-from typing import Optional, List, Set, Tuple
+import shutil
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
-from ensembl.utils.archive import open_gz_file  # type: ignore
-from ensembl.utils.argparse import ArgumentParser  # type: ignore
-from ensembl.utils.logging import init_logging_with_args  # type: ignore
+from ensembl.utils.archive import open_gz_file
+from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 
+@dataclass
 class Params:
     """
-    Validated configuration for splitting a FASTA file.
+    Parameters for splitting a FASTA file.
 
     Attributes correspond to CLI arguments and control:
     - output location and cleanup behaviour,
     - how records are grouped into output FASTA files,
     - whether long sequences are chunked, and
     - whether to write an AGP file describing the splits.
-
-    Validation is performed in ``_validate_params()`` and will raise ``ValueError``
-    for invalid combinations (e.g. ``min_chunk_length`` without
-    ``max_seq_length_per_file``).
     """
 
-    def __init__(
-        self,
-        fasta_file: Path,
-        out_dir: Optional[Path] = None,
-        write_agp: bool = False,
-        max_seqs_per_file: Optional[int] = None,
-        max_seq_length_per_file: Optional[int] = None,
-        min_chunk_length: Optional[int] = None,
-        max_files_per_directory: Optional[int] = None,
-        max_dirs_per_directory: Optional[int] = None,
-        delete_existing_files: bool = False,
-        unique_file_names: bool = False,
-        delete_original_file: bool = False,
-        force_max_seq_length: bool = False,
-    ):
-        self.fasta_file = fasta_file
-        self.out_dir = out_dir if out_dir is not None else fasta_file.parent
-        self.write_agp = write_agp
-        self.max_seqs_per_file = max_seqs_per_file
-        self.max_seq_length_per_file = max_seq_length_per_file
-        self.min_chunk_length = min_chunk_length
-        self.max_files_per_directory = max_files_per_directory
-        self.max_dirs_per_directory = max_dirs_per_directory
-        self.delete_existing_files = delete_existing_files
-        self.unique_file_names = unique_file_names
-        self.delete_original_file = delete_original_file
-        self.force_max_seq_length = force_max_seq_length
+    fasta_file: Path
+    out_dir: Path
+    write_agp: bool = False
+    max_seqs_per_file: int | None = None
+    max_seq_length_per_file: int | None = None
+    min_chunk_length: int | None = None
+    max_files_per_directory: int | None = None
+    max_dirs_per_directory: int | None = None
+    delete_existing_files: bool = False
+    unique_file_names: bool = False
+    delete_input_file: bool = False
+    force_max_seq_length: bool = False
 
+    def __post_init__(self) -> None:
         self._validate_params()
 
     def _validate_params(self) -> None:
         """
-        Validate parameter values and combinations.
-
-        Raises:
-            ValueError: If any numeric limit is <= 0, or if ``min_chunk_length`` is
-                set without ``max_seq_length_per_file``.
+        Validation of parameter combinations.
         """
-        if self.max_dirs_per_directory is not None and self.max_dirs_per_directory <= 0:
-            raise ValueError("--max-dirs-per-directory must be > 0 or None")
-        if self.max_files_per_directory is not None and self.max_files_per_directory <= 0:
-            raise ValueError("--max-files-per-directory must be > 0 or None")
-        if self.max_seqs_per_file is not None and self.max_seqs_per_file <= 0:
-            raise ValueError("--max-seqs-per-file must be > 0 or None")
-        if self.max_seq_length_per_file is not None and self.max_seq_length_per_file <= 0:
-            raise ValueError("--max-seq-length-per-file must be > 0 or None")
-        if self.min_chunk_length is not None:
-            if self.max_seq_length_per_file is None:
-                raise ValueError("--min-chunk-length requires --max-seq-length-per-file")
-            if self.min_chunk_length <= 0:
-                raise ValueError("--min-chunk-length must be > 0")
+        if self.min_chunk_length is not None and self.max_seq_length_per_file is None:
+            raise ValueError("--min-chunk-length requires --max-seq-length-per-file")
 
 
 class OutputWriter:
@@ -147,7 +109,7 @@ class OutputWriter:
         self.file_len = 0
         self._fh = None
         self._agp_fh = None
-        self._cleaned_dirs: Set[Path] = set()
+        self._cleaned_dirs: set[Path] = set()
 
         self.open_new_file()
 
@@ -187,7 +149,7 @@ class OutputWriter:
         parts.reverse()
         return self.params.out_dir.joinpath(*parts)
 
-    def _get_file_and_dir_index(self) -> Tuple[int, int]:
+    def _get_file_and_dir_index(self) -> tuple[int, int]:
         """Compute the file index within a directory and the directory index.
 
         ``file_count`` increments monotonically for each output file. If
@@ -427,7 +389,7 @@ def split_fasta(params: Params) -> None:
     finally:
         writer.close()
 
-    if params.delete_original_file:
+    if params.delete_input_file:
         try:
             params.fasta_file.unlink(missing_ok=True)
         except Exception:
@@ -438,7 +400,7 @@ def split_fasta(params: Params) -> None:
             )
 
 
-def parse_args(argv: Optional[List[str]] = None) -> Params:
+def parse_args(argv: list[str] | None = None) -> Params:
     """
     Parse CLI arguments and return a validated Params object.
 
@@ -452,7 +414,7 @@ def parse_args(argv: Optional[List[str]] = None) -> Params:
     parser = ArgumentParser(
         description="Split a FASTA file into multiple FASTA files, optionally chunking long sequences."
     )
-    parser.add_argument(
+    parser.add_argument_src_path(
         "--fasta-file",
         type=Path,
         metavar="FASTA",
@@ -470,31 +432,31 @@ def parse_args(argv: Optional[List[str]] = None) -> Params:
         action="store_true",
         help=f"Write AGP file describing the splits (default: {defaults['write_agp']})",
     )
-    parser.add_argument(
+    parser.add_numeric_argument(
         "--max-seqs-per-file",
         metavar="N",
         type=int,
         help=f"Max records per output file (default: {defaults['max_seqs_per_file']})",
     )
-    parser.add_argument(
+    parser.add_numeric_argument(
         "--max-seq-length-per-file",
         type=int,
         metavar="BP",
         help=f"Max cumulative sequence length per output file (default: {defaults['max_seq_length_per_file']})",
     )
-    parser.add_argument(
+    parser.add_numeric_argument(
         "--min-chunk-length",
         type=int,
         metavar="BP",
         help=f"Minimum length of a chunk allowed as a remainder (default: {defaults['min_chunk_length']})",
     )
-    parser.add_argument(
+    parser.add_numeric_argument(
         "--max-files-per-directory",
         type=int,
         metavar="N",
         help=f"Max files per directory before moving to next computed dir (default: {defaults['max_files_per_directory']})",
     )
-    parser.add_argument(
+    parser.add_numeric_argument(
         "--max-dirs-per-directory",
         type=int,
         metavar="N",
@@ -511,22 +473,23 @@ def parse_args(argv: Optional[List[str]] = None) -> Params:
         help=f"Make output file names unique across dirs by including dir_index (default: {defaults['unique_file_names']})",
     )
     parser.add_argument(
-        "--delete-original-file",
+        "--delete-input-file",
         action="store_true",
-        help=f"Delete original input FASTA after splitting (default: {defaults['delete_original_file']})",
+        help=f"Delete original input FASTA after splitting (default: {defaults['delete_input_file']})",
     )
     parser.add_argument(
         "--force-max-seq-length",
         action="store_true",
         help=f"Chunk single sequences longer than max-seq-length-per-file (default: {defaults['force_max_seq_length']})",
     )
+    parser.add_log_arguments()
 
     args = parser.parse_args(argv)
     init_logging_with_args(args)
 
     params = Params(
         fasta_file=args.fasta_file,
-        out_dir=args.out_dir,
+        out_dir=args.out_dir if args.out_dir is not None else args.fasta_file.parent,
         write_agp=args.write_agp,
         max_seqs_per_file=args.max_seqs_per_file,
         max_seq_length_per_file=args.max_seq_length_per_file,
@@ -535,20 +498,17 @@ def parse_args(argv: Optional[List[str]] = None) -> Params:
         max_dirs_per_directory=args.max_dirs_per_directory,
         delete_existing_files=args.delete_existing_files,
         unique_file_names=args.unique_file_names,
-        delete_original_file=args.delete_original_file,
+        delete_input_file=args.delete_input_file,
         force_max_seq_length=args.force_max_seq_length,
     )
     return params
 
 
-def main(argv: Optional[List[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
+
+    params = parse_args(argv)
     try:
-        params = parse_args(argv)
         split_fasta(params)
     except Exception:
         logging.exception("Error processing FASTA file '%s'", params.fasta_file)
         raise
-
-
-if __name__ == "__main__":
-    main()
