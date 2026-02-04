@@ -68,29 +68,6 @@ class AgpEntry:
     orientation: str
 
 
-@dataclass
-class Params:
-    """Validated configuration for recombining FASTA splits."""
-
-    in_dir: Path
-    out_fasta: Path
-    agp_file: Path | None = None
-    extra_suffixes: str | None = None
-    allow_revcomp: bool = False
-    chunk_id_regex: str | None = r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$"
-
-    def _validate_params(self, chunk_regex) -> None:
-        try:
-            self.chunk_re: re.Pattern[str] = re.compile(chunk_regex)
-        except re.error as e:
-            raise ValueError(f"Invalid --chunk-regex: {e}") from e
-
-        if "base" not in self.chunk_re.groupindex or "start" not in self.chunk_re.groupindex:
-            raise ValueError("--chunk-regex must define named capture groups 'base' and 'start'")
-        if not self.in_dir.exists() or not self.in_dir.is_dir():
-            raise ValueError(f"--in-dir does not exist or is not a directory: {self.in_dir}")
-
-
 class FastaRecordCache:
     """
     Cache for FASTA records keyed by file path in order to keep at most
@@ -151,17 +128,22 @@ def _numeric_path_key(path: Path, suffixes: list[str]) -> list[str]:
     return key
 
 
-def _get_fasta_paths(params: Params) -> list[Path]:
-    suffixes = ["fa", "fasta", "fna"] + list(params.extra_suffixes)
+def _get_fasta_paths(in_dir: Path, extra_suffixes: str | None) -> list[Path]:
+    suffixes = ["fa", "fasta", "fna"]
+    if extra_suffixes is not None:
+        suffixes.extend(extra_suffixes.split(","))
 
     seen: dict[Path, None] = {}
     for suffix in suffixes:
         compression_suffixes = ("",) if suffix.endswith(".gz") else ("", ".gz")
         for compression_suffix in compression_suffixes:
             pattern = f"**/*{suffix}{compression_suffix}"
-            for result in params.in_dir.glob(pattern):
+            for result in in_dir.glob(pattern):
                 if result.is_file():
                     seen[result.resolve()] = None
+
+    if not seen:
+        raise ValueError(f"No FASTA files found under: {in_dir}")
     return sorted(seen.keys(), key=lambda p: _numeric_path_key(p, suffixes))
 
 
@@ -175,7 +157,7 @@ def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
 
 
 def _build_index(
-    params: Params,
+    chunk_re: re.Pattern[str],
     fasta_paths: Iterable[Path],
 ) -> tuple[dict[str, RecordLocation], dict[str, int], dict[str, list[tuple[int, str]]]]:
     """
@@ -198,7 +180,7 @@ def _build_index(
                 raise ValueError(f"Duplicate FASTA record id encountered during indexing: {record_id}")
             locations[record_id] = RecordLocation(path=fasta_path, description=desc)
 
-            m = params.chunk_re.match(record_id)
+            m = chunk_re.match(record_id)
             base = m.group("base") if m else record_id
             if base not in first_seen:
                 first_seen[base] = order
@@ -212,10 +194,10 @@ def _build_index(
     return locations, first_seen, chunks
 
 
-def _parse_agp(params: Params) -> dict[str, list[AgpEntry]]:
-    agp_entries: dict[str, list[AgpEntry]] = defaultdict(list)
+def _parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
+    agp_records: dict[str, list[AgpEntry]] = defaultdict(list)
 
-    with open_gz_file(params.agp_file) as fh:
+    with open_gz_file(agp_file) as fh:
         for line in fh:
             line = line.strip()
             if not line or line.startswith("#"):
@@ -227,12 +209,12 @@ def _parse_agp(params: Params) -> dict[str, list[AgpEntry]]:
             if cols[4] != "W":
                 raise ValueError(f"Unsupported AGP component type '{cols[4]}' in line: {line}")
 
-            if not params.allow_revcomp and cols[8] != "+":
+            if not allow_revcomp and cols[8] != "+":
                 raise ValueError(
                     f"AGP contains '-' orientation for component '{cols[5]}' but --allow-revcomp is not enabled."
                 )
 
-            agp_entries[cols[0]].append(
+            agp_records[cols[0]].append(
                 AgpEntry(
                     record=cols[0],
                     record_start=int(cols[1]),
@@ -245,9 +227,9 @@ def _parse_agp(params: Params) -> dict[str, list[AgpEntry]]:
                 )
             )
 
-    if not agp_entries:
-        raise ValueError(f"AGP file '{params.agp_file}' contained no component lines.")
-    return agp_entries
+    if not agp_records:
+        raise ValueError(f"AGP file '{agp_file}' contained no component lines.")
+    return agp_records
 
 
 def _agp_component_seq(
@@ -308,7 +290,7 @@ def _records_from_agp(
                 expected_next = part.record_start
             if part.record_start != expected_next:
                 raise ValueError(
-                    f"Non-contiguous AGP for '{record_id}': expected next start {expected_next}, got {c.record_start}"
+                    f"Non-contiguous AGP for '{record_id}': expected next start {expected_next}, got {part.record_start}"
                 )
             expected_next = part.record_end + 1
 
@@ -374,111 +356,106 @@ def _records_from_headers(
         yield SeqRecord(assembled, id=base, description=description or base)
 
 
-def recombine_fasta(params: Params) -> None:
-    fasta_paths = _get_fasta_paths(params)
-    if not fasta_paths:
-        raise ValueError(f"No FASTA files found under: {params.in_dir}")
+def recombine_fasta(
+    in_dir: Path,
+    out_fasta: Path,
+    chunk_re: re.Pattern[str],
+    agp_file: Path | None = None,
+    extra_suffixes: str | None = None,
+    allow_revcomp: bool = False,
+) -> None:
+    fasta_paths = _get_fasta_paths(in_dir, extra_suffixes)
 
     # Build lightweight index (headers only)
-    locations, first_seen, chunks = _build_index(params, fasta_paths)
+    locations, first_seen, chunks = _build_index(chunk_re, fasta_paths)
 
     cache = FastaRecordCache()
 
-    if params.agp_file is not None:
-        agp_by_obj = _parse_agp(params)
-        record_iter = _records_from_agp(agp_by_obj, locations, cache, params.allow_revcomp)
+    if agp_file is not None:
+        agp_records = _parse_agp(agp_file, allow_revcomp)
+        record_iter = _records_from_agp(agp_records, locations, cache, allow_revcomp)
     else:
         record_iter = _records_from_headers(locations, first_seen, chunks, cache)
 
-    params.out_fasta.parent.mkdir(parents=True, exist_ok=True)
-    with open(params.out_fasta, "w") as out_fh:
+    out_fasta.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_fasta, "w") as out_fh:
         n = 0
         for rec in record_iter:
             # Write per-record to avoid materialising the whole iterator
             SeqIO.write(rec, out_fh, "fasta")
             n += 1
-    logging.info("Wrote %d records to %s", n, params.out_fasta)
+    logging.info("Wrote %d records to %s", n, out_fasta)
 
 
-def _get_param_defaults() -> dict:
-    """
-    Return default values from the ``Params`` constructor signature.
+def _validate_regex(chunk_regex) -> re.Pattern[str]:
+    try:
+        chunk_re = re.compile(chunk_regex)
+    except re.error as e:
+        raise ValueError(f"Invalid --chunk-regex: {e}") from e
 
-    Keeps CLI help text in sync with the defaults defined in ``Params.__init__``.
-    """
-    signature = inspect.signature(Params.__init__)
-    defaults = {}
-    for name, param in signature.parameters.items():
-        if name != "self" and param.default is not inspect.Parameter.empty:
-            defaults[name] = param.default
-    return defaults
+    if "base" not in chunk_re.groupindex or "start" not in chunk_re.groupindex:
+        raise ValueError("--chunk-regex must define named capture groups 'base' and 'start'")
+
+    return chunk_re
 
 
-def parse_args(argv: list[str] | None = None) -> Params:
-    """Parse CLI arguments and return a validated Params object."""
-    defaults = _get_param_defaults()
+def main(argv: list[str] | None = None) -> None:
     parser = ArgumentParser(description="Recombine split FASTA outputs into a single FASTA.")
-    parser.add_argument(
+    parser.add_argument_src_path(
         "--in-dir",
-        type=Path,
         metavar="DIR",
         required=True,
-        help="Directory containing split FASTA outputs (searched recursively, split files may be gzipped)",
+        help="Directory containing split FASTA outputs (searched recursively, split files may be gzipped).",
     )
-    parser.add_argument(
+    parser.add_argument_dst_path(
         "--out-fasta",
-        type=Path,
         metavar="FASTA",
         required=True,
-        help="Output recombined FASTA file",
+        help="Path for recombined FASTA file.",
     )
-    parser.add_argument(
+    parser.add_argument_src_path(
         "--agp-file",
-        type=Path,
         metavar="AGP",
-        help=f"Optional AGP file; if provided, reconstruction uses AGP ordering (default: {defaults['agp_file']})",
+        help="Optional AGP file; if provided, reconstruction uses AGP ordering.",
     )
     parser.add_argument(
         "--extra-suffixes",
         metavar="SUFFIXES",
+        type=str,
         help=(
             "Comma-separated list of additional file suffixes to search for under --in-dir (repeatable), "
-            "e.g. fsa,fsta (fa/fasta/fna are searched for by default, .gz doesn't need to be specified)"
+            "e.g. fsa,fsta (fa/fasta/fna are searched for by default, .gz doesn't need to be specified)."
         ),
     )
     parser.add_argument(
         "--allow-revcomp",
         action="store_true",
-        help=f"Allow reverse-complementing components if AGP orientation is '-' (default: {defaults['allow_revcomp']})",
+        help=f"Allow reverse-complementing components if AGP orientation is '-'",
     )
     parser.add_argument(
         "--chunk-id-regex",
         type=str,
         metavar="REGEX",
+        default=r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$",
         help=(
             "Regex used to identify chunked records and extract coordinates. "
-            "Must define named groups 'base' and 'start', e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$' "
-            f"(default: {defaults['chunk_id_regex']})"
+            "Must define named groups 'base' and 'start', e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$'."
         ),
     )
 
     args = parser.parse_args(argv)
     init_logging_with_args(args)
 
-    return Params(
-        in_dir=args.in_dir,
-        out_fasta=args.out_fasta,
-        agp_file=args.agp_file,
-        extra_suffixes=args.extra_suffixes,
-        allow_revcomp=args.allow_revcomp,
-        chunk_id_regex=args.chunk_id_regex,
-    )
-
-
-def main(argv: list[str] | None = None) -> None:
-    params = parse_args(argv)
+    chunk_re = _validate_regex(args.chunk_id_regex)
     try:
-        recombine_fasta(params)
+        recombine_fasta(
+            in_dir=args.in_dir,
+            out_fasta=args.out_fasta,
+            agp_file=args.agp_file,
+            extra_suffixes=args.extra_suffixes,
+            allow_revcomp=args.allow_revcomp,
+            chunk_re=chunk_re,
+        )
     except Exception:
-        logging.exception("Error recombining FASTA")
+        logging.exception(f"Error recombining FASTA from files in {args.in_dir}")
         raise
