@@ -100,10 +100,22 @@ class OutputWriter:
         - ``unique_file_names``: whether to include directory index in filenames.
     """
 
-    def __init__(self, params: Params):
-        self.params = params
-        self.basename = params.fasta_file.name.removesuffix(".gz").removesuffix(".fa").removesuffix(".fasta")
-        self.agp_file = self.params.out_dir.joinpath(self.basename + ".agp") if params.write_agp else None
+    def __init__(
+        self,
+        fasta_file: Path,
+        out_dir: Path,
+        write_agp: bool,
+        unique_file_names: bool,
+        max_files_per_directory: int | None = None,
+        max_dirs_per_directory: int | None = None,
+    ):
+        unzipped_name = fasta_file.name.removesuffix(".gz")
+        self.basename = unzipped_name.rsplit(".", 1)[0] if "." in unzipped_name else unzipped_name
+        self.out_dir = out_dir
+        self.agp_file = out_dir.joinpath(f"{self.basename}.agp") if write_agp else None
+        self.unique_file_names = unique_file_names
+        self.max_files_per_directory = max_files_per_directory
+        self.max_dirs_per_directory = max_dirs_per_directory
         self.file_count = 0
         self.record_count = 0
         self.file_len = 0
@@ -113,20 +125,6 @@ class OutputWriter:
 
         self.open_new_file()
 
-    def _create_or_clean_dir(self, dir_path: Path) -> None:
-        try:
-            dir_path.mkdir(parents=True, exist_ok=True)
-            if self.params.delete_existing_files and dir_path not in self._cleaned_dirs:
-                for child in dir_path.iterdir():
-                    if child.is_dir():
-                        shutil.rmtree(child)
-                    else:
-                        child.unlink()
-                self._cleaned_dirs.add(dir_path)
-        except Exception:
-            logging.exception("Failed to prepare output directory '%s'", dir_path)
-            raise
-
     def _get_subdir_path(self, dir_index: int) -> Path:
         """Return the output subdirectory path for a given directory index.
 
@@ -134,10 +132,10 @@ class OutputWriter:
             dir_index: Zero-based directory index computed from file count.
 
         Returns:
-            A Path under ``params.out_dir`` into which output files are written.
+            A Path under ``out_dir`` into which output files are written.
         """
         parts = []
-        max_dirs = self.params.max_dirs_per_directory
+        max_dirs = self.max_dirs_per_directory
         if max_dirs is None:
             parts.append("1")
         else:
@@ -147,7 +145,7 @@ class OutputWriter:
                 current_index = current_index // max_dirs - 1
 
         parts.reverse()
-        return self.params.out_dir.joinpath(*parts)
+        return self.out_dir.joinpath(*parts)
 
     def _get_file_and_dir_index(self) -> tuple[int, int]:
         """Compute the file index within a directory and the directory index.
@@ -161,7 +159,7 @@ class OutputWriter:
             - file_index is 1-based within the directory, and
             - dir_index is 0-based across directories.
         """
-        max_files = self.params.max_files_per_directory
+        max_files = self.max_files_per_directory
         if max_files is None:
             return self.file_count, 0
         adjusted_count = self.file_count - 1
@@ -172,9 +170,9 @@ class OutputWriter:
         self.file_count += 1
         file_index, dir_index = self._get_file_and_dir_index()
         subdir_path = self._get_subdir_path(dir_index)
-        self._create_or_clean_dir(subdir_path)
+        subdir_path.mkdir(parents=True, exist_ok=True)
 
-        if self.params.unique_file_names:
+        if self.unique_file_names:
             file_name = f"{self.basename}.{dir_index}.{file_index}.fa"
         else:
             file_name = f"{self.basename}.{file_index}.fa"
@@ -207,7 +205,7 @@ class OutputWriter:
             line = f"{object_id}\t{start}\t{end}\t{part_nr}\tW\t{part_id}\t1\t{part_length}\t+\n"
             self._agp_fh.write(line)
         except Exception:
-            logging.exception("Failed to write AGP entry for part '%s'", part_id)
+            logging.exception(f"Failed to write AGP entry for part '{part_id}'")
             raise
 
     def create_agp_file(self) -> None:
@@ -215,13 +213,13 @@ class OutputWriter:
         if self.agp_file is None:
             return
         try:
-            self.params.out_dir.mkdir(parents=True, exist_ok=True)
             self._agp_fh = open(self.agp_file, "w")
-            self._agp_fh.write("# AGP-version 2.0\n")
-            logging.info("Created AGP file '%s'", self.agp_file)
+            logging.debug(f"Opened AGP file '{self.agp_file}' for writing")
         except Exception:
-            logging.exception("Failed to open AGP file '%s'", self.agp_file)
+            logging.exception(f"Failed to open AGP file '{self.agp_file}'")
             raise
+        self._agp_fh.write("# AGP-version 2.0\n")
+        logging.info(f"Created AGP file '{self.agp_file}'")
 
     def open_new_file(self) -> None:
         """Closes current file (if any) and opens a new output file."""
@@ -231,9 +229,9 @@ class OutputWriter:
         path = self._get_path_for_next_file()
         try:
             self._fh = open(path, "w")
-            logging.debug("Opened output file '%s'", path)
+            logging.debug(f"Opened output file '{path}' for writing")
         except Exception:
-            logging.exception("Failed to open output file '%s'", path)
+            logging.exception(f"Failed to open output file '{path}'")
             raise
         self.record_count = 0
         self.file_len = 0
@@ -245,7 +243,7 @@ class OutputWriter:
             self.record_count += 1
             self.file_len += len(record.seq)
         except Exception:
-            logging.exception("Failed to write record '%s' to output file", record.id)
+            logging.exception(f"Failed to write record '{record.id}' to output file")
             raise
 
     def close(self) -> None:
@@ -271,7 +269,20 @@ def _get_param_defaults() -> dict:
     return defaults
 
 
-def split_fasta(params: Params) -> None:
+def split_fasta(
+    fasta_file: Path,
+    out_dir: Path,
+    write_agp: bool,
+    delete_existing_files: bool,
+    unique_file_names: bool,
+    delete_input_file: bool,
+    force_max_seq_length: bool,
+    max_seqs_per_file: int | None,
+    max_seq_length_per_file: int | None,
+    min_chunk_length: int | None,
+    max_files_per_directory: int | None = None,
+    max_dirs_per_directory: int | None = None,
+) -> None:
     """
     Split an input FASTA into multiple output FASTA files.
 
@@ -287,65 +298,61 @@ def split_fasta(params: Params) -> None:
 
     When ``write_agp`` is enabled, an AGP v2.0 file is written describing the
     mapping from each original sequence to its output contigs/chunks.
-
-    Args:
-        params: Validated configuration controlling splitting/chunking behaviour.
-
-    Raises:
-        FileNotFoundError: If the input FASTA does not exist.
-        ValueError: If parameter validation fails (raised when Params is created).
-        Exception: Propagates unexpected I/O or parsing errors.
     """
-    if not params.fasta_file.exists():
-        logging.error(
-            "DEBUG: fasta_file=%r resolved=%r cwd=%r",
-            str(params.fasta_file),
-            str(Path(params.fasta_file).resolve()),
-            str(Path.cwd()),
-        )
-        raise FileNotFoundError(f"Fasta file '{params.fasta_file}' does not exist")
 
     # Do nothing if file size is 0
-    if params.fasta_file.stat().st_size == 0:
-        logging.info("Input FASTA '%s' is empty; nothing to do", params.fasta_file)
+    if fasta_file.stat().st_size == 0:
+        logging.info(f"Input FASTA '{fasta_file}' is empty; nothing to do")
         return
 
-    params.out_dir.mkdir(parents=True, exist_ok=True)
+    if delete_existing_files and out_dir.exists():
+        logging.info(f"Deleting existing output directory '{out_dir}'")
+        try:
+            shutil.rmtree(out_dir)
+        except Exception:
+            logging.warning(
+                f"Failed to delete existing output directory '{out_dir}'",
+                exc_info=True,
+            )
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    writer = OutputWriter(params)
+    writer = OutputWriter(
+        fasta_file=fasta_file,
+        out_dir=out_dir,
+        write_agp=write_agp,
+        unique_file_names=unique_file_names,
+        max_dirs_per_directory=max_files_per_directory,
+        max_files_per_directory=max_dirs_per_directory,
+    )
 
     try:
-        if params.write_agp:
+        if write_agp:
             writer.create_agp_file()
 
-        with open_gz_file(params.fasta_file) as fh:
+        with open_gz_file(fasta_file) as fh:
             for record in SeqIO.parse(fh, "fasta"):
                 seq_len = len(record.seq)
-                max_seq_len = params.max_seq_length_per_file
-                max_seqs = params.max_seqs_per_file
 
-                if max_seqs is not None and writer.record_count >= max_seqs:
+                if max_seqs_per_file is not None and writer.record_count >= max_seqs_per_file:
                     writer.open_new_file()
 
-                if max_seq_len is None or writer.file_len + seq_len <= max_seq_len:
+                if max_seq_length_per_file is None or writer.file_len + seq_len <= max_seq_length_per_file:
                     writer.write_record(record)
-                    if params.write_agp:
+                    if write_agp:
                         writer.add_agp_entry(record.id, 1, seq_len, 1, record.id, seq_len)
                     continue
 
-                if params.force_max_seq_length and seq_len > max_seq_len:
-                    starts = list(range(0, seq_len, max_seq_len))
-                    ends = [min(s + max_seq_len, seq_len) for s in starts]
+                if force_max_seq_length and seq_len > max_seq_length_per_file:
+                    starts = list(range(0, seq_len, max_seq_length_per_file))
+                    ends = [min(s + max_seq_length_per_file, seq_len) for s in starts]
 
-                    if params.min_chunk_length is not None and len(starts) > 1:
+                    if min_chunk_length is not None and len(starts) > 1:
                         last_chunk_len = ends[-1] - starts[-1]
-                        if last_chunk_len < params.min_chunk_length:
+                        if last_chunk_len < min_chunk_length:
                             logging.warning(
-                                "Length of last chunk of record '%s' is %d, lower than min_chunk_length: %d;"
-                                + "merging with previous chunk",
-                                record.id,
-                                last_chunk_len,
-                                params.min_chunk_length,
+                                f"Length of last chunk of record '{record.id}' is {last_chunk_len}, lower than "
+                                f"min_chunk_length: {min_chunk_length}; merging with previous chunk"
+                                "merging with previous chunk"
                             )
                             ends[-2] = seq_len
                             starts.pop()
@@ -362,7 +369,7 @@ def split_fasta(params: Params) -> None:
                             writer.open_new_file()
                         writer.write_record(chunk_record)
 
-                        if params.write_agp:
+                        if write_agp:
                             writer.add_agp_entry(
                                 record.id,
                                 start + 1,
@@ -373,142 +380,131 @@ def split_fasta(params: Params) -> None:
                             )
                 else:
                     logging.warning(
-                        "Record '%s' length %d exceeds max_seq_length_per_file %d but chunking not enabled",
-                        record.id,
-                        seq_len,
-                        max_seq_len,
+                        f"Record {record.id} length {seq_len} exceeds max_seq_length_per_file "
+                        f"{max_seq_length_per_file} but chunking not enabled"
                     )
                     if writer.record_count > 0:
                         writer.open_new_file()
                     writer.write_record(record)
-                    if params.write_agp:
+                    if write_agp:
                         writer.add_agp_entry(record.id, 1, seq_len, 1, record.id, seq_len)
     except Exception:
-        logging.exception("Error processing FASTA file '%s'", params.fasta_file)
+        logging.exception(f"Error processing FASTA file {fasta_file}")
         raise
     finally:
         writer.close()
 
-    if params.delete_input_file:
+    if delete_input_file:
         try:
-            params.fasta_file.unlink(missing_ok=True)
+            fasta_file.unlink(missing_ok=True)
         except Exception:
             logging.warning(
-                "Failed to delete original FASTA file '%s'",
-                params.fasta_file,
+                f"Failed to delete original FASTA file '{fasta_file}' after splitting",
                 exc_info=True,
             )
 
 
-def parse_args(argv: list[str] | None = None) -> Params:
-    """
-    Parse CLI arguments and return a validated Params object.
+def main(argv: list[str] | None = None) -> None:
 
-    Args:
-        argv: Optional argument list for testing. If None, uses sys.argv.
-
-    Returns:
-        A validated Params instance.
-    """
-    defaults = _get_param_defaults()
     parser = ArgumentParser(
         description="Split a FASTA file into multiple FASTA files, optionally chunking long sequences."
     )
     parser.add_argument_src_path(
         "--fasta-file",
-        type=Path,
         metavar="FASTA",
         required=True,
         help="Input raw or compressed FASTA file containing sequences to split",
     )
-    parser.add_argument(
+    parser.add_argument_dst_path(
         "--out-dir",
         metavar="DIR",
-        type=Path,
         help="Top-level output directory (default: input FASTA directory)",
     )
     parser.add_argument(
         "--write-agp",
         action="store_true",
-        help=f"Write AGP file describing the splits (default: {defaults['write_agp']})",
+        help="Write AGP file describing the splits.",
+    )
+    parser.add_argument(
+        "--delete-existing-files",
+        action="store_true",
+        help="Delete existing files within computed output dirs.",
+    )
+    parser.add_argument(
+        "--unique-file-names",
+        action="store_true",
+        help="Make output file names unique across dirs by including dir_index",
+    )
+    parser.add_argument(
+        "--delete-input-file",
+        action="store_true",
+        help="Delete original input FASTA after splitting.",
+    )
+    parser.add_argument(
+        "--force-max-seq-length",
+        action="store_true",
+        help="Chunk single sequences longer than max-seq-length-per-file.",
     )
     parser.add_numeric_argument(
         "--max-seqs-per-file",
-        metavar="N",
         type=int,
-        help=f"Max records per output file (default: {defaults['max_seqs_per_file']})",
+        metavar="N",
+        min_value=1,
+        help="Maximum records per output file.",
     )
     parser.add_numeric_argument(
         "--max-seq-length-per-file",
         type=int,
         metavar="BP",
-        help=f"Max cumulative sequence length per output file (default: {defaults['max_seq_length_per_file']})",
+        min_value=1,
+        help="Maximum cumulative sequence length per output file.",
     )
     parser.add_numeric_argument(
         "--min-chunk-length",
         type=int,
+        min_value=1,
         metavar="BP",
-        help=f"Minimum length of a chunk allowed as a remainder (default: {defaults['min_chunk_length']})",
+        help="Minimum length of a chunk allowed as a remainder.",
     )
     parser.add_numeric_argument(
         "--max-files-per-directory",
         type=int,
+        min_value=1,
         metavar="N",
-        help=f"Max files per directory before moving to next computed dir (default: {defaults['max_files_per_directory']})",
+        help="Maximum files per directory before moving to next computed directory level.",
     )
     parser.add_numeric_argument(
         "--max-dirs-per-directory",
         type=int,
+        min_value=1,
         metavar="N",
-        help=f"Max subdirectories per directory level (default: {defaults['max_dirs_per_directory']})",
-    )
-    parser.add_argument(
-        "--delete-existing-files",
-        action="store_true",
-        help=f"Delete existing files within computed output dirs (default: {defaults['delete_existing_files']})",
-    )
-    parser.add_argument(
-        "--unique-file-names",
-        action="store_true",
-        help=f"Make output file names unique across dirs by including dir_index (default: {defaults['unique_file_names']})",
-    )
-    parser.add_argument(
-        "--delete-input-file",
-        action="store_true",
-        help=f"Delete original input FASTA after splitting (default: {defaults['delete_input_file']})",
-    )
-    parser.add_argument(
-        "--force-max-seq-length",
-        action="store_true",
-        help=f"Chunk single sequences longer than max-seq-length-per-file (default: {defaults['force_max_seq_length']})",
+        help="Maximum subdirectories per directory level.",
     )
     parser.add_log_arguments()
 
     args = parser.parse_args(argv)
+    if args.min_chunk_length is not None and args.max_seq_length_per_file is None:
+        raise ValueError("--min-chunk-length requires --max-seq-length-per-file")
+
     init_logging_with_args(args)
 
-    params = Params(
-        fasta_file=args.fasta_file,
-        out_dir=args.out_dir if args.out_dir is not None else args.fasta_file.parent,
-        write_agp=args.write_agp,
-        max_seqs_per_file=args.max_seqs_per_file,
-        max_seq_length_per_file=args.max_seq_length_per_file,
-        min_chunk_length=args.min_chunk_length,
-        max_files_per_directory=args.max_files_per_directory,
-        max_dirs_per_directory=args.max_dirs_per_directory,
-        delete_existing_files=args.delete_existing_files,
-        unique_file_names=args.unique_file_names,
-        delete_input_file=args.delete_input_file,
-        force_max_seq_length=args.force_max_seq_length,
-    )
-    return params
+    out_dir = args.out_dir if args.out_dir is not None else args.fasta_file.parent
 
-
-def main(argv: list[str] | None = None) -> None:
-
-    params = parse_args(argv)
     try:
-        split_fasta(params)
+        split_fasta(
+            fasta_file=args.fasta_file,
+            out_dir=out_dir,
+            write_agp=args.write_agp,
+            delete_existing_files=args.delete_existing_files,
+            unique_file_names=args.unique_file_names,
+            delete_input_file=args.delete_input_file,
+            force_max_seq_length=args.force_max_seq_length,
+            max_seqs_per_file=args.max_seqs_per_file,
+            max_seq_length_per_file=args.max_seq_length_per_file,
+            min_chunk_length=args.min_chunk_length,
+            max_files_per_directory=args.max_files_per_directory,
+            max_dirs_per_directory=args.max_dirs_per_directory,
+        )
     except Exception:
-        logging.exception("Error processing FASTA file '%s'", params.fasta_file)
+        logging.exception("Error processing FASTA file '%s'", args.fasta_file)
         raise
