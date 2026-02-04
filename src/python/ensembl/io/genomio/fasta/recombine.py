@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -32,21 +31,21 @@ Reconstruction modes:
 Input FASTA records can be spread across multiple files and nested directories under --in-dir.
 """
 
+from collections import defaultdict
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 import inspect
 import logging
-import re
-from collections import defaultdict
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional, Pattern, Tuple
+import re
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from ensembl.utils.archive import open_gz_file  # type: ignore
-from ensembl.utils.argparse import ArgumentParser  # type: ignore
-from ensembl.utils.logging import init_logging_with_args  # type: ignore
+from ensembl.utils.archive import open_gz_file
+from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 _num_re = re.compile(r"(\d+)")
 
@@ -69,37 +68,27 @@ class AgpEntry:
     orientation: str
 
 
+@dataclass
 class Params:
     """Validated configuration for recombining FASTA splits."""
 
-    def __init__(
-        self,
-        in_dir: Path,
-        out_fasta: Path,
-        agp_file: Optional[Path] = None,
-        extra_suffix: Optional[List[str]] = None,
-        allow_revcomp: bool = False,
-        chunk_id_regex: Optional[str] = r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$",
-    ):
-        self.in_dir = in_dir
-        self.out_fasta = out_fasta
-        self.agp_file = agp_file
-        self.extra_suffixes = extra_suffix or []
-        self.allow_revcomp = allow_revcomp
-        self._validate_params(chunk_id_regex)
+    in_dir: Path
+    out_fasta: Path
+    agp_file: Path | None = None
+    extra_suffixes: str | None = None
+    allow_revcomp: bool = False
+    chunk_id_regex: str | None = r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$"
 
     def _validate_params(self, chunk_regex) -> None:
         try:
-            self.chunk_re: Pattern[str] = re.compile(chunk_regex)
-
+            self.chunk_re: re.Pattern[str] = re.compile(chunk_regex)
         except re.error as e:
             raise ValueError(f"Invalid --chunk-regex: {e}") from e
+
         if "base" not in self.chunk_re.groupindex or "start" not in self.chunk_re.groupindex:
             raise ValueError("--chunk-regex must define named capture groups 'base' and 'start'")
         if not self.in_dir.exists() or not self.in_dir.is_dir():
             raise ValueError(f"--in-dir does not exist or is not a directory: {self.in_dir}")
-        if self.agp_file is not None and not self.agp_file.exists():
-            raise ValueError(f"--agp-file does not exist: {self.agp_file}")
 
 
 class FastaRecordCache:
@@ -109,8 +98,8 @@ class FastaRecordCache:
     """
 
     def __init__(self) -> None:
-        self._current_path: Optional[Path] = None
-        self._records: Dict[str, SeqRecord] = {}
+        self._current_path: Path | None = None
+        self._records: dict[str, SeqRecord] = {}
 
     def get(self, record_id: str, loc: RecordLocation) -> SeqRecord:
         if self._current_path is None or self._current_path != loc.path:
@@ -123,7 +112,7 @@ class FastaRecordCache:
 
     def _load_file(self, path: Path) -> None:
         logging.debug("Loading FASTA records from %s", path)
-        records: Dict[str, SeqRecord] = {}
+        records: dict[str, SeqRecord] = {}
         with open_gz_file(path) as fh:
             for rec in SeqIO.parse(fh, "fasta"):
                 if rec.id in records:
@@ -133,7 +122,7 @@ class FastaRecordCache:
         self._records = records
 
 
-def _strip_fasta_suffix(name: str, suffixes: List[str]) -> str:
+def _strip_fasta_suffix(name: str, suffixes: list[str]) -> str:
     if name.endswith(".gz"):
         name = name[:-3]
     for suffix in suffixes:
@@ -142,7 +131,7 @@ def _strip_fasta_suffix(name: str, suffixes: List[str]) -> str:
     return name
 
 
-def _numeric_path_key(path: Path, suffixes: List[str]) -> List[str]:
+def _numeric_path_key(path: Path, suffixes: list[str]) -> list[str]:
     key = []
     parts = path.parts
 
@@ -162,10 +151,10 @@ def _numeric_path_key(path: Path, suffixes: List[str]) -> List[str]:
     return key
 
 
-def _get_fasta_paths(params: Params) -> List[Path]:
+def _get_fasta_paths(params: Params) -> list[Path]:
     suffixes = ["fa", "fasta", "fna"] + list(params.extra_suffixes)
 
-    seen: Dict[Path, None] = {}
+    seen: dict[Path, None] = {}
     for suffix in suffixes:
         compression_suffixes = ("",) if suffix.endswith(".gz") else ("", ".gz")
         for compression_suffix in compression_suffixes:
@@ -176,7 +165,7 @@ def _get_fasta_paths(params: Params) -> List[Path]:
     return sorted(seen.keys(), key=lambda p: _numeric_path_key(p, suffixes))
 
 
-def _parse_fasta_headers(path: Path) -> Iterator[Tuple[str, str]]:
+def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
     """
     Iterate over FASTA headers, yielding (record_id, description) tuples.
     """
@@ -188,7 +177,7 @@ def _parse_fasta_headers(path: Path) -> Iterator[Tuple[str, str]]:
 def _build_index(
     params: Params,
     fasta_paths: Iterable[Path],
-) -> Tuple[Dict[str, RecordLocation], Dict[str, int], Dict[str, List[Tuple[int, str]]]]:
+) -> tuple[dict[str, RecordLocation], dict[str, int], dict[str, list[tuple[int, str]]]]:
     """
     Build an index from record_id -> (file_path, description) using headers only.
 
@@ -197,9 +186,9 @@ def _build_index(
       - first_seen: base_id -> first-seen order index (stable output ordering in header mode)
       - chunks: base_id -> list of (start, chunk_record_id) for header-driven reconstruction
     """
-    locations: Dict[str, RecordLocation] = {}
-    first_seen: Dict[str, int] = {}
-    chunks: Dict[str, List[Tuple[int, str]]] = defaultdict(list)
+    locations: dict[str, RecordLocation] = {}
+    first_seen: dict[str, int] = {}
+    chunks: dict[str, list[tuple[int, str]]] = defaultdict(list)
     order = 0
 
     for fasta_path in fasta_paths:
@@ -223,8 +212,8 @@ def _build_index(
     return locations, first_seen, chunks
 
 
-def _parse_agp(params: Params) -> Dict[str, List[AgpEntry]]:
-    agp_entries: Dict[str, List[AgpEntry]] = defaultdict(list)
+def _parse_agp(params: Params) -> dict[str, list[AgpEntry]]:
+    agp_entries: dict[str, list[AgpEntry]] = defaultdict(list)
 
     with open_gz_file(params.agp_file) as fh:
         for line in fh:
@@ -285,17 +274,17 @@ def _agp_component_seq(
 
 
 def _records_from_agp(
-    agp_entries: Dict[str, List[AgpEntry]],
-    locations: Dict[str, RecordLocation],
+    agp_entries: dict[str, list[AgpEntry]],
+    locations: dict[str, RecordLocation],
     cache: FastaRecordCache,
     allow_revcomp: bool,
 ) -> Iterator[SeqRecord]:
     for record_id, parts in agp_entries.items():
         sorted_parts = sorted(parts, key=lambda p: (p.part_start, p.part_number))
 
-        sequence_parts: List[Seq] = []
-        expected_next: Optional[int] = None
-        description: Optional[str] = None
+        sequence_parts: list[Seq] = []
+        expected_next: int | None = None
+        description: str | None = None
 
         for part in sorted_parts:
             loc = locations.get(part.part_id)
@@ -332,9 +321,9 @@ def _records_from_agp(
 
 
 def _records_from_headers(
-    locations: Dict[str, RecordLocation],
-    first_seen: Dict[str, int],
-    chunks: Dict[str, List[Tuple[int, str]]],
+    locations: dict[str, RecordLocation],
+    first_seen: dict[str, int],
+    chunks: dict[str, list[tuple[int, str]]],
     cache: FastaRecordCache,
 ) -> Iterator[SeqRecord]:
     """
@@ -357,9 +346,9 @@ def _records_from_headers(
 
         chunk_list_sorted = sorted(chunk_list, key=lambda x: x[0])
 
-        parts: List[Seq] = []
-        prev_end: Optional[int] = None
-        description: Optional[str] = None
+        parts: list[Seq] = []
+        prev_end: int | None = None
+        description: str | None = None
 
         for start, chunk_id in chunk_list_sorted:
             loc = locations.get(chunk_id)
@@ -425,7 +414,7 @@ def _get_param_defaults() -> dict:
     return defaults
 
 
-def parse_args(argv: Optional[List[str]] = None) -> Params:
+def parse_args(argv: list[str] | None = None) -> Params:
     """Parse CLI arguments and return a validated Params object."""
     defaults = _get_param_defaults()
     parser = ArgumentParser(description="Recombine split FASTA outputs into a single FASTA.")
@@ -450,12 +439,11 @@ def parse_args(argv: Optional[List[str]] = None) -> Params:
         help=f"Optional AGP file; if provided, reconstruction uses AGP ordering (default: {defaults['agp_file']})",
     )
     parser.add_argument(
-        "--extra-suffix",
-        action="append",
-        metavar="SUFFIX",
+        "--extra-suffixes",
+        metavar="SUFFIXES",
         help=(
-            "Additional file suffixes to search for under --in-dir (repeatable), e.g. 'fsa'. "
-            "(fa/fasta/fna are searched for by default, .gz doesn't need to be specified)"
+            "Comma-separated list of additional file suffixes to search for under --in-dir (repeatable), "
+            "e.g. fsa,fsta (fa/fasta/fna are searched for by default, .gz doesn't need to be specified)"
         ),
     )
     parser.add_argument(
@@ -469,7 +457,7 @@ def parse_args(argv: Optional[List[str]] = None) -> Params:
         metavar="REGEX",
         help=(
             "Regex used to identify chunked records and extract coordinates. "
-            "Must define named groups 'base' and 'start'. "
+            "Must define named groups 'base' and 'start', e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$' "
             f"(default: {defaults['chunk_id_regex']})"
         ),
     )
@@ -481,20 +469,16 @@ def parse_args(argv: Optional[List[str]] = None) -> Params:
         in_dir=args.in_dir,
         out_fasta=args.out_fasta,
         agp_file=args.agp_file,
-        extra_suffix=args.extra_suffix,
+        extra_suffixes=args.extra_suffixes,
         allow_revcomp=args.allow_revcomp,
         chunk_id_regex=args.chunk_id_regex,
     )
 
 
-def main(argv: Optional[List[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
+    params = parse_args(argv)
     try:
-        params = parse_args(argv)
         recombine_fasta(params)
     except Exception:
         logging.exception("Error recombining FASTA")
         raise
-
-
-if __name__ == "__main__":
-    main()
