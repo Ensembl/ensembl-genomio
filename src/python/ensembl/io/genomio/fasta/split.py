@@ -44,42 +44,6 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-@dataclass
-class Params:
-    """
-    Parameters for splitting a FASTA file.
-
-    Attributes correspond to CLI arguments and control:
-    - output location and cleanup behaviour,
-    - how records are grouped into output FASTA files,
-    - whether long sequences are chunked, and
-    - whether to write an AGP file describing the splits.
-    """
-
-    fasta_file: Path
-    out_dir: Path
-    write_agp: bool = False
-    max_seqs_per_file: int | None = None
-    max_seq_length_per_file: int | None = None
-    min_chunk_length: int | None = None
-    max_files_per_directory: int | None = None
-    max_dirs_per_directory: int | None = None
-    delete_existing_files: bool = False
-    unique_file_names: bool = False
-    delete_input_file: bool = False
-    force_max_seq_length: bool = False
-
-    def __post_init__(self) -> None:
-        self._validate_params()
-
-    def _validate_params(self) -> None:
-        """
-        Validation of parameter combinations.
-        """
-        if self.min_chunk_length is not None and self.max_seq_length_per_file is None:
-            raise ValueError("--min-chunk-length requires --max-seq-length-per-file")
-
-
 class OutputWriter:
     """
     Write split FASTA outputs and (optionally) an AGP file.
@@ -399,12 +363,12 @@ def main(argv: list[str] | None = None) -> None:
         "--fasta-file",
         metavar="FASTA",
         required=True,
-        help="Input raw or compressed FASTA file containing sequences to split",
+        help="Input raw or compressed FASTA file containing sequences to split.",
     )
     parser.add_argument_dst_path(
         "--out-dir",
         metavar="DIR",
-        help="Top-level output directory (default: input FASTA directory)",
+        help="Top-level output directory (default: input FASTA directory).",
     )
     parser.add_argument(
         "--write-agp",
@@ -419,7 +383,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--unique-file-names",
         action="store_true",
-        help="Make output file names unique across dirs by including dir_index",
+        help="Make output file names unique across dirs by including dir_index.",
     )
     parser.add_argument(
         "--delete-input-file",
@@ -492,5 +456,5 @@ def main(argv: list[str] | None = None) -> None:
             max_dirs_per_directory=args.max_dirs_per_directory,
         )
     except Exception:
-        logging.exception("Error processing FASTA file '%s'", args.fasta_file)
+        logging.exception(f"Error processing FASTA file {args.fasta_file}")
         raise
