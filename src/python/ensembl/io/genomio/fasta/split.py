@@ -255,20 +255,6 @@ class OutputWriter:
             self._agp_fh = None
 
 
-def _get_param_defaults() -> dict:
-    """
-    Return default values from the ``Params`` constructor signature.
-
-    Keeps CLI help text in sync with the defaults defined in ``Params.__init__``.
-    """
-    signature = inspect.signature(Params.__init__)
-    defaults = {}
-    for name, param in signature.parameters.items():
-        if name != "self" and param.default is not inspect.Parameter.empty:
-            defaults[name] = param.default
-    return defaults
-
-
 def split_fasta(
     fasta_file: Path,
     out_dir: Path,
