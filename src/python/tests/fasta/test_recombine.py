@@ -280,14 +280,30 @@ def test_agp_component_seq_plus_and_minus(fasta_recombine):
 
 
 def test_records_from_agp_success(fasta_recombine, write_fasta, chunk_re, tmp_path):
-    # parts in FASTA
-    f1 = write_fasta("parts.fa", [("p1", "AAAA", "p1desc"), ("p2", "TT", "p2desc")])
-    locations, first_seen, chunks = fasta_recombine._build_index(chunk_re, [f1])
+    parts = write_fasta("parts.fa", [("p1", "AAAA", "p1desc"), ("p2", "TT", "p2desc")])
+    locations, _, _ = fasta_recombine._build_index(chunk_re, [parts])
 
     # AGP describes obj = p1(1..4) + p2(1..2)
     agp = tmp_path / "x.agp"
     agp.write_text(
         "obj\t1\t4\t1\tW\tp1\t1\t4\t+\n" "obj\t5\t6\t2\tW\tp2\t1\t2\t+\n",
+        encoding="utf-8",
+    )
+    agp_entries = fasta_recombine._parse_agp(agp, allow_revcomp=False)
+
+    cache = fasta_recombine.FastaRecordCache()
+    recs = list(fasta_recombine._records_from_agp(agp_entries, locations, cache, allow_revcomp=False))
+    assert [(r.id, str(r.seq)) for r in recs] == [("obj", "AAAATT")]
+
+
+def test_records_from_agp_sorts_parts_out_of_order(fasta_recombine, write_fasta, chunk_re, tmp_path):
+    parts = write_fasta("parts.fa", [("p1", "AAAA", "p1desc"), ("p2", "TT", "p2desc")])
+    locations, _, _ = fasta_recombine._build_index(chunk_re, [parts])
+
+    # AGP lines deliberately out-of-order (p2 line first); should still assemble p1 + p2
+    agp = tmp_path / "x.agp"
+    agp.write_text(
+        "obj\t5\t6\t2\tW\tp2\t1\t2\t+\n" "obj\t1\t4\t1\tW\tp1\t1\t4\t+\n",
         encoding="utf-8",
     )
     agp_entries = fasta_recombine._parse_agp(agp, allow_revcomp=False)
@@ -435,3 +451,36 @@ def test_recombine_header_mode_with_alternative_regex_end_to_end(
     seqs = read_fasta(out)
     assert seqs["X"] == "AAAATT"
     assert seqs["Y"] == "CC"
+
+
+def test_parse_args_minimal_required(fasta_recombine, tmp_path):
+    out = tmp_path / "out.fa"
+    args = fasta_recombine.parse_args(
+        [
+            "--in-dir",
+            str(tmp_path),
+            "--out-fasta",
+            str(out),
+        ]
+    )
+
+    assert args.in_dir == tmp_path
+    assert args.out_fasta == out
+
+    assert args.allow_revcomp is False
+    assert isinstance(args.chunk_id_regex, str)
+    assert fasta_recombine._validate_regex(args.chunk_id_regex).match("X_chunk_start_0")
+
+
+def test_parse_args_boolean_flags(fasta_recombine, tmp_path):
+    out = tmp_path / "out.fa"
+    args = fasta_recombine.parse_args(
+        [
+            "--in-dir",
+            str(tmp_path),
+            "--out-fasta",
+            str(out),
+            "--allow-revcomp",
+        ]
+    )
+    assert args.allow_revcomp is True

@@ -13,24 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Recombine split FASTA outputs back into a single FASTA, optionally using an AGP.
+"""Recombine split/chunked FASTA outputs back into a single FASTA, optionally using an AGP."""
 
-Reconstruction modes:
-
-1) AGP-driven (recommended)
-   - Provide --agp-file (e.g. <basename>.agp created by the splitter with --write-agp)
-   - Output sequences are assembled per AGP 'object' in coordinate order.
-
-2) Header-driven (no AGP)
-   - Detect chunk records created by the splitter:
-       <orig_id>_chunk_start_<0-based-start>
-   - Group by <orig_id>, sort by start, and concatenate.
-   - Unchunked records pass through unchanged.
-
-Input FASTA records can be spread across multiple files and nested directories under --in-dir.
-"""
-
+import argparse
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
@@ -68,10 +53,7 @@ class AgpEntry:
 
 
 class FastaRecordCache:
-    """
-    Cache for FASTA records keyed by file path in order to keep at most
-    one file's records in memory at once.
-    """
+    """Cache for FASTA records keyed by file path, to keep single file's records in memory at once."""
 
     def __init__(self) -> None:
         self._current_path: Path | None = None
@@ -99,6 +81,7 @@ class FastaRecordCache:
 
 
 def _strip_fasta_suffix(name: str, suffixes: list[str]) -> str:
+    """Removes a known FASTA extension (and optional `.gz`) from a filename."""
     if name.endswith(".gz"):
         name = name[:-3]
     for suffix in suffixes:
@@ -108,6 +91,7 @@ def _strip_fasta_suffix(name: str, suffixes: list[str]) -> str:
 
 
 def _numeric_path_key(path: Path, suffixes: list[str]) -> list[str]:
+    """Key function for natural sorting of FASTA paths."""
     key = []
     parts = path.parts
 
@@ -128,6 +112,17 @@ def _numeric_path_key(path: Path, suffixes: list[str]) -> list[str]:
 
 
 def _get_fasta_paths(in_dir: Path, extra_suffixes: str | None) -> list[Path]:
+    """
+    Discovers FASTA files under an input directory.
+
+    Searches recursively for files ending in one of the default suffixes: "fa", "fasta", "fna".
+    If `extra_suffixes` is provided, it is treated as a comma-separated list of additional
+    suffixes (without leading dots). For any suffix that does not already end in ".gz", both
+    the plain and ".gz" variants are searched.
+
+    Paths are resolved and de-duplicated (to avoid duplicates via symlinks), then returned in
+    a deterministic "natural" order using `_numeric_path_key`.
+    """
     suffixes = ["fa", "fasta", "fna"]
     if extra_suffixes is not None:
         suffixes.extend(extra_suffixes.split(","))
@@ -147,9 +142,7 @@ def _get_fasta_paths(in_dir: Path, extra_suffixes: str | None) -> list[Path]:
 
 
 def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
-    """
-    Iterate over FASTA headers, yielding (record_id, description) tuples.
-    """
+    """Iterate over FASTA headers, yielding (record_id, description) tuples."""
     with open_gz_file(path) as fh:
         for record in SeqIO.parse(fh, "fasta"):
             yield record.id, record.description
@@ -194,6 +187,13 @@ def _build_index(
 
 
 def _parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
+    """
+    Parses an AGP v2.x file into per-object component entries.
+
+    Supported subset:
+      - component type 'W' only (sequence components)
+      - orientation '+' always, '-' only if `allow_revcomp=True`
+    """
     agp_records: dict[str, list[AgpEntry]] = defaultdict(list)
 
     with open_gz_file(agp_file) as fh:
@@ -238,7 +238,12 @@ def _agp_component_seq(
     orientation: str,
     allow_revcomp: bool,
 ) -> Seq:
-    # AGP coords: 1-based inclusive -> Python slice [beg-1 : end]
+    """
+    Extracts the component subsequence described by AGP coordinates.
+
+    Converts 1-based AGP coordinates to Python slicing and returns the subsequence.
+    If orientation is '-', reverse-complement is applied when allowed.
+    """
     sub: Seq = component_record.seq[comp_beg - 1 : comp_end]
 
     if orientation == "+":
@@ -260,6 +265,7 @@ def _records_from_agp(
     cache: FastaRecordCache,
     allow_revcomp: bool,
 ) -> Iterator[SeqRecord]:
+    """AGP-driven reconstruction of sequences."""
     for record_id, parts in agp_entries.items():
         sorted_parts = sorted(parts, key=lambda p: (p.part_start, p.part_number))
 
@@ -308,7 +314,7 @@ def _records_from_headers(
     cache: FastaRecordCache,
 ) -> Iterator[SeqRecord]:
     """
-    Header-driven reconstruction:
+    Header-driven reconstruction of sequences:
       - If a base id has chunk records, concatenate in start order (enforcing contiguity).
       - Otherwise, pass through the unchunked record.
     """
@@ -317,7 +323,6 @@ def _records_from_headers(
     for base in all_bases:
         chunk_list = chunks.get(base, [])
         if not chunk_list:
-            # unchunked: base record id must exist
             loc = locations.get(base)
             if loc is None:
                 raise KeyError(f"Base record '{base}' not found in indexed headers.")
@@ -363,6 +368,21 @@ def recombine_fasta(
     extra_suffixes: str | None = None,
     allow_revcomp: bool = False,
 ) -> None:
+    """
+    Recombine split/chunked FASTA outputs into a single FASTA.  Inputs may be gzipped.
+
+    Reconstruction modes:
+
+    1) AGP-driven (recommended)
+    - Output sequences are assembled per AGP 'object' in coordinate order.
+
+    2) Header-driven (no AGP)
+    - Chunk records detected by parsing the header
+    - Chunks grouped by <orig_id>, sorted by start, and concatenated.
+    - Unchunked records pass through unchanged.
+
+    Input FASTA records can be spread across multiple files and nested directories under --in-dir.
+    """
     fasta_paths = _get_fasta_paths(in_dir, extra_suffixes)
 
     # Build lightweight index (headers only)
@@ -380,13 +400,13 @@ def recombine_fasta(
     with open(out_fasta, "w") as out_fh:
         n = 0
         for rec in record_iter:
-            # Write per-record to avoid materialising the whole iterator
             SeqIO.write(rec, out_fh, "fasta")
             n += 1
     logging.info("Wrote %d records to %s", n, out_fasta)
 
 
 def _validate_regex(chunk_regex) -> re.Pattern[str]:
+    """Compiles and validates the chunk-id regex, ensuring 'base' and 'start' capture groups present."""
     try:
         chunk_re = re.compile(chunk_regex)
     except re.error as e:
@@ -398,8 +418,8 @@ def _validate_regex(chunk_regex) -> re.Pattern[str]:
     return chunk_re
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = ArgumentParser(description="Recombine split FASTA outputs into a single FASTA.")
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
         "--in-dir",
         metavar="DIR",
@@ -415,12 +435,14 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument_src_path(
         "--agp-file",
         metavar="AGP",
+        default=argparse.SUPPRESS,
         help="Optional AGP file; if provided, reconstruction uses AGP ordering.",
     )
     parser.add_argument(
         "--extra-suffixes",
         metavar="SUFFIXES",
         type=str,
+        default=argparse.SUPPRESS,
         help=(
             "Comma-separated list of additional file suffixes to search for under --in-dir (repeatable), "
             "e.g. fsa,fsta (fa/fasta/fna are searched for by default, .gz doesn't need to be specified)."
@@ -445,6 +467,11 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     init_logging_with_args(args)
 
+    return args
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     chunk_re = _validate_regex(args.chunk_id_regex)
     try:
         recombine_fasta(
