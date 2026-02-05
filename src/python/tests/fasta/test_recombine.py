@@ -391,6 +391,15 @@ def test_recombine_fasta_agp_mode_end_to_end(fasta_recombine, write_fasta, chunk
     assert seqs["obj"] == "AATT"
 
 
+def test_validate_regex_accepts_alternative_pattern(fasta_recombine):
+    # Alternative chunk naming scheme: "<base>.part.<start>_<end>"
+    chunk_re = fasta_recombine._validate_regex(r"^(?P<base>.+)\.part\.(?P<start>\d+)_(?P<end>\d+)$")
+    m = chunk_re.match("contigA.part.11_20")
+    assert m is not None
+    assert m.group("base") == "contigA"
+    assert m.group("start") == "11"
+
+
 def test_validate_regex_rejects_invalid_pattern(fasta_recombine):
     with pytest.raises(ValueError, match="Invalid --chunk-regex"):
         fasta_recombine._validate_regex(r"^(?P<base>.+)_(?P<start>\d+$")  # missing ')'
@@ -402,3 +411,27 @@ def test_validate_regex_requires_named_groups(fasta_recombine):
 
     ok = fasta_recombine._validate_regex(r"^(?P<base>.+)_(?P<start>\d+)$")
     assert ok.match("X_12")
+
+
+def test_recombine_header_mode_with_alternative_regex_end_to_end(
+    fasta_recombine, write_fasta, tmp_path: Path
+):
+    chunk_re = fasta_recombine._validate_regex(r"^(?P<base>.+)\.chunk\.(?P<start>\d+)$")
+
+    write_fasta("d/a.fa", [("X.chunk.0", "AAAA", None)])
+    write_fasta("d/b.fa", [("X.chunk.4", "TT", None)])
+    write_fasta("d/c.fa", [("Y", "CC", None)])
+
+    out = tmp_path / "out.fa"
+    fasta_recombine.recombine_fasta(
+        in_dir=tmp_path,
+        out_fasta=out,
+        chunk_re=chunk_re,
+        agp_file=None,
+        extra_suffixes=None,
+        allow_revcomp=False,
+    )
+
+    seqs = read_fasta(out)
+    assert seqs["X"] == "AAAATT"
+    assert seqs["Y"] == "CC"
