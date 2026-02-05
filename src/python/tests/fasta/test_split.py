@@ -1,195 +1,513 @@
-# tests/test_split_fasta.py
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Unit testing of `ensembl.io.genomio.fasta.split` module."""
+import importlib
 from pathlib import Path
+import re
 
 import pytest
 from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 
-from ensembl.io.genomio.fasta.split import main as FastaSplit
+from .utils import read_fasta
 
 
-def write_fasta(path: Path, records):
-    """Write a list of SeqRecord objects to a FASTA file."""
-    with open(path, "w", encoding="utf-8", newline="\n") as fh:
-        SeqIO.write(records, fh, "fasta")
+@pytest.fixture(scope="session")
+def fasta_split():
+    return importlib.import_module("ensembl.io.genomio.fasta.split")
 
 
-def list_output_fastas(out_dir: Path):
-    """Return all FASTA files produced under the output directory."""
-    return sorted(out_dir.rglob("*.fa"))
+def list_output_fastas(out_dir: Path) -> list[Path]:
+    return sorted(p for p in out_dir.rglob("*.fa") if p.is_file())
 
 
-def read_all_ids_from_fastas(out_dir: Path):
-    """Read and return all sequence IDs from all FASTA files under out_dir."""
-    ids = []
-    for fa in list_output_fastas(out_dir):
-        with open(fa, "r", encoding="utf-8") as fh:
-            ids.extend([r.id for r in SeqIO.parse(fh, "fasta")])
-    return ids
+def read_agp_lines(agp_path: Path) -> list[str]:
+    return agp_path.read_text(encoding="utf-8").splitlines()
 
 
-def parse_agp_lines(agp_path: Path):
-    """
-    Parse an AGP file into a list of column lists, excluding comments
-    and blank lines.
-    """
-    lines = [l.rstrip("\n") for l in agp_path.read_text(encoding="utf-8").splitlines()]
-    lines = [l for l in lines if l and not l.startswith("#")]
-    return [l.split("\t") for l in lines]
+def test_outputwriter_basename_and_first_file_created(fasta_split, tmp_path):
+    in_fa = tmp_path / "in.fa.gz"  # basename should strip .gz and extension -> "in"
+    in_fa.write_text(">x\nACGT\n", encoding="utf-8")
 
-
-def test_no_agp_by_default(tmp_path: Path):
-    """
-    By default, splitting a FASTA should produce one or more FASTA outputs
-    but must NOT create an AGP file unless write_agp is explicitly enabled.
-    """
-    input_fasta = tmp_path / "in.fa"
     out = tmp_path / "out"
-    write_fasta(input_fasta, [SeqRecord(Seq("ACGT"), id="seq1", description="")])
+    w = fasta_split.OutputWriter(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        unique_file_names=False,
+        max_files_per_directory=None,
+        max_dirs_per_directory=None,
+    )
+    try:
+        assert w.basename == "in"
+        fastas = list_output_fastas(out)
+        # open_new_file called in __init__ -> one file exists
+        assert len(fastas) == 1
+        assert fastas[0].name == "in.1.fa"
+    finally:
+        w.close()
 
-    FastaSplit(
-        [
-            "--fasta-file",
-            str(input_fasta),
-            "--out-dir",
-            str(out),
-        ]
+
+@pytest.mark.parametrize(
+    "max_dirs_per_directory,dir_index,expected",
+    [
+        (None, 1, ["1"]),
+        (None, 99, ["1"]),
+        (10, 1, ["1"]),
+        (10, 2, ["2"]),
+        (10, 10, ["10"]),
+        (10, 11, ["1", "1"]),
+        (10, 12, ["1", "2"]),
+        (2, 1, ["1"]),
+        (2, 2, ["2"]),
+        (2, 3, ["1", "1"]),
+        (2, 4, ["1", "2"]),
+    ],
+)
+def test_get_subdir_path_math(
+    fasta_split, write_fasta, tmp_path, max_dirs_per_directory, dir_index, expected
+):
+    in_fa = write_fasta("in.fa", [("x", "A", None)])
+    out = tmp_path / "out"
+
+    writer = fasta_split.OutputWriter(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        unique_file_names=False,
+        max_files_per_directory=1,
+        max_dirs_per_directory=max_dirs_per_directory,
+    )
+    try:
+        sub = writer._get_subdir_path(dir_index)
+        # compare only relative parts under out
+        relative = sub.relative_to(out)
+        assert list(relative.parts) == expected
+    finally:
+        writer.close()
+
+
+def test_file_and_dir_index_with_max_files(fasta_split, write_fasta, tmp_path):
+    in_fa = write_fasta("in.fa", [("x", "A", None)])
+    out = tmp_path / "out"
+
+    writer = fasta_split.OutputWriter(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        unique_file_names=False,
+        max_files_per_directory=3,
+        max_dirs_per_directory=10,
+    )
+    try:
+        # file_count starts at 1 after open_new_file in __init__
+        assert writer._get_file_and_dir_index() == (1, 1)
+
+        writer._get_path_for_next_file()  # file_count -> 2
+        assert writer._get_file_and_dir_index() == (2, 1)
+
+        writer._get_path_for_next_file()  # 3
+        assert writer._get_file_and_dir_index() == (3, 1)
+
+        writer._get_path_for_next_file()  # 4 -> rollover to dir_index=2, file_index=1
+        assert writer._get_file_and_dir_index() == (1, 2)
+    finally:
+        writer.close()
+
+
+def test_unique_file_names_include_dir_index(fasta_split, write_fasta, tmp_path):
+    in_fa = write_fasta("in.fa", [("x", "A", None)])
+    out = tmp_path / "out"
+
+    writer = fasta_split.OutputWriter(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        unique_file_names=True,
+        max_files_per_directory=1,
+        max_dirs_per_directory=10,
+    )
+    try:
+        # First file created in __init__
+        f1 = list_output_fastas(out)[0]
+        assert re.match(r"in\.1\.1\.fa$", f1.name)
+
+        writer.open_new_file()
+        f2 = list_output_fastas(out)[-1]
+        assert re.match(r"in\.2\.1\.fa$", f2.name)
+    finally:
+        writer.close()
+
+
+def test_add_agp_entry_when_agp_disabled(fasta_split, write_fasta, tmp_path):
+    in_fa = write_fasta("in.fa", [("x", "A", None)])
+    out = tmp_path / "out"
+
+    writer = fasta_split.OutputWriter(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        unique_file_names=False,
+    )
+    try:
+        # should not raise; _agp_fh is None
+        writer.add_agp_entry("obj", 1, 1, 1, "part", 1)
+        assert not (out / "in.agp").exists()
+    finally:
+        writer.close()
+
+
+def test_add_agp_entry_exception_is_logged_and_reraised(fasta_split, write_fasta, tmp_path, caplog):
+    in_fa = write_fasta("in.fa", [("x", "A", None)])
+    out = tmp_path / "out"
+
+    writer = fasta_split.OutputWriter(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=True,
+        unique_file_names=False,
+    )
+    try:
+        writer.create_agp_file()
+        # Break the handle: close it then write -> ValueError
+        assert writer._agp_fh is not None
+        writer._agp_fh.close()
+
+        with pytest.raises(Exception):
+            writer.add_agp_entry("obj", 1, 1, 1, "part", 1)
+
+        assert any("Failed to write AGP entry" in r.message for r in caplog.records)
+    finally:
+        writer.close()
+
+
+def test_split_fasta_empty_input_no_outputs(fasta_split, tmp_path):
+    in_fa = tmp_path / "empty.fa"
+    in_fa.write_bytes(b"")
+    out = tmp_path / "out"
+
+    fasta_split.split_fasta(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        delete_existing_files=False,
+        unique_file_names=False,
+        force_max_seq_length=False,
+        max_seqs_per_file=None,
+        max_seq_length_per_file=None,
+        min_chunk_length=None,
+        max_files_per_directory=None,
+        max_dirs_per_directory=None,
+    )
+    assert not out.exists() or len(list(out.rglob("*"))) == 0
+
+
+def test_split_fasta_delete_existing_dir_warns_but_continues(
+    fasta_split, tmp_path, write_fasta, monkeypatch, caplog
+):
+    in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "old.txt").write_text("old", encoding="utf-8")
+
+    # Force rmtree to fail -> code should warn and continue
+    def fail(*args, **kwargs):
+        raise OSError("forced fail")
+
+    monkeypatch.setattr(fasta_split.shutil, "rmtree", fail)
+
+    fasta_split.split_fasta(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        delete_existing_files=True,
+        unique_file_names=False,
+        force_max_seq_length=False,
+        max_seqs_per_file=None,
+        max_seq_length_per_file=None,
+        min_chunk_length=None,
+        max_files_per_directory=None,
+        max_dirs_per_directory=None,
     )
 
-    assert not (out / "in.agp").exists()
+    assert any("Failed to delete existing output directory" in r.message for r in caplog.records)
     assert len(list_output_fastas(out)) >= 1
 
 
-def test_split_by_max_seqs_per_file(tmp_path: Path):
-    """
-    When max_seqs_per_file is set, sequences should be split across
-    multiple FASTA files while preserving original sequence order
-    and IDs.
-    """
-    input_fasta = tmp_path / "in.fa"
-    out = tmp_path / "out"
-    recs = [
-        SeqRecord(Seq("A" * 10), id="s1", description=""),
-        SeqRecord(Seq("C" * 10), id="s2", description=""),
-        SeqRecord(Seq("G" * 10), id="s3", description=""),
-    ]
-    write_fasta(input_fasta, recs)
-
-    FastaSplit(
-        [
-            "--fasta-file",
-            str(input_fasta),
-            "--out-dir",
-            str(out),
-            "--max-seqs-per-file",
-            "2",
-            "--write-agp",
-        ]
+def test_split_by_max_seqs_per_file_rollover(fasta_split, tmp_path, write_fasta):
+    in_fa = write_fasta(
+        "in.fa",
+        [("a", "AA", None), ("b", "CC", None), ("c", "GG", None), ("d", "TT", None), ("e", "AT", None)],
     )
-    fas = list_output_fastas(out)
-    assert len(fas) == 2
-    assert read_all_ids_from_fastas(out) == ["s1", "s2", "s3"]
-
-
-def test_chunk_merge_final_small_chunk_and_agp(tmp_path: Path):
-    """
-    When force_max_seq_length is enabled, long sequences are chunked.
-    If the final chunk is shorter than min_chunk_length, it should be
-    merged with the previous chunk, and the AGP file must reflect the
-    merged coordinates correctly.
-    """
-    input_fasta = tmp_path / "in.fa"
     out = tmp_path / "out"
-    write_fasta(input_fasta, [SeqRecord(Seq("A" * 2100), id="chr1", description="chr1")])
 
-    FastaSplit(
-        [
-            "--fasta-file",
-            str(input_fasta),
-            "--out-dir",
-            str(out),
-            "--write-agp",
-            "--force-max-seq-length",
-            "--max-seq-length-per-file",
-            "1000",
-            "--min-chunk-length",
-            "200",
-            "--max-seqs-per-file",
-            "100000",  # avoid seq-count splitting interfering
-        ]
+    fasta_split.split_fasta(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        delete_existing_files=False,
+        unique_file_names=False,
+        force_max_seq_length=False,
+        max_seqs_per_file=2,
+        max_seq_length_per_file=None,
+        min_chunk_length=None,
+        max_files_per_directory=None,
+        max_dirs_per_directory=None,
     )
 
-    # 2 chunks expected after merge
-    assert read_all_ids_from_fastas(out) == [
-        "chr1_chunk_start_0",
-        "chr1_chunk_start_1000",
-    ]
+    fastas = list_output_fastas(out)
+    assert len(fastas) == 3
+
+    counts = [len(read_fasta(fasta)) for fasta in fastas]
+    assert counts == [2, 2, 1]
+
+
+def test_split_by_max_seq_length_per_file_rollover(fasta_split, tmp_path, write_fasta):
+    in_fa = write_fasta("in.fa", [("a", "AAAA", None), ("b", "TTTT", None)])
+    out = tmp_path / "out"
+
+    fasta_split.split_fasta(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        delete_existing_files=False,
+        unique_file_names=False,
+        force_max_seq_length=False,
+        max_seqs_per_file=None,
+        max_seq_length_per_file=4,
+        min_chunk_length=None,
+        max_files_per_directory=None,
+        max_dirs_per_directory=None,
+    )
+
+    fastas = list_output_fastas(out)
+    assert len(fastas) == 2
+
+
+def test_force_chunking_splits_long_record(fasta_split, tmp_path, write_fasta):
+    in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", "desc")])
+    out = tmp_path / "out"
+
+    fasta_split.split_fasta(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        delete_existing_files=False,
+        unique_file_names=False,
+        force_max_seq_length=True,
+        max_seqs_per_file=None,
+        max_seq_length_per_file=4,
+        min_chunk_length=None,
+        max_files_per_directory=None,
+        max_dirs_per_directory=None,
+    )
+
+    fastas = list_output_fastas(out)
+    ids = []
+    seqs = []
+    for fasta in fastas:
+        for record_id, seq in read_fasta(fasta).items():
+            ids.append(record_id)
+            seqs.append(seq)
+    assert ids == ["X_chunk_start_0", "X_chunk_start_4", "X_chunk_start_8"]
+    assert seqs == ["ATCG", "GATT", "AC"]
+
+
+def test_force_chunking_merges_small_remainder(fasta_split, tmp_path, write_fasta, caplog):
+    in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])
+    out = tmp_path / "out"
+
+    fasta_split.split_fasta(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        delete_existing_files=False,
+        unique_file_names=False,
+        force_max_seq_length=True,
+        max_seqs_per_file=None,
+        max_seq_length_per_file=4,
+        min_chunk_length=3,
+        max_files_per_directory=None,
+        max_dirs_per_directory=None,
+    )
+
+    assert any("merging with previous chunk" in r.message for r in caplog.records)
+
+    fastas = list_output_fastas(out)
+    ids = []
+    seqs = []
+    for fasta in fastas:
+        for record_id, seq in read_fasta(fasta).items():
+            ids.append(record_id)
+            seqs.append(seq)
+
+    assert ids == ["X_chunk_start_0", "X_chunk_start_4"]
+    assert seqs == ["ATCG", "GATTAC"]
+
+
+def test_overlong_record_without_chunking_warns_and_written_whole(fasta_split, tmp_path, write_fasta, caplog):
+    in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])
+    out = tmp_path / "out"
+
+    fasta_split.split_fasta(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=False,
+        delete_existing_files=False,
+        unique_file_names=False,
+        force_max_seq_length=False,
+        max_seqs_per_file=None,
+        max_seq_length_per_file=4,
+        min_chunk_length=None,
+        max_files_per_directory=None,
+        max_dirs_per_directory=None,
+    )
+
+    assert any("chunking not enabled" in r.message for r in caplog.records)
+
+    fastas = list_output_fastas(out)
+    assert len(fastas) == 1
+
+    record_id, seq = next(iter(read_fasta(fastas[0]).items()))
+    assert record_id == "X"
+    assert seq == "ATCGGATTAC"
+
+
+def test_write_agp_creates_agp_creates_all_expected_rows_and_columns(fasta_split, tmp_path, write_fasta):
+    in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None), ("Y", "CC", None)])
+    out = tmp_path / "out"
+
+    fasta_split.split_fasta(
+        fasta_file=in_fa,
+        out_dir=out,
+        write_agp=True,
+        delete_existing_files=False,
+        unique_file_names=False,
+        force_max_seq_length=True,
+        max_seqs_per_file=None,
+        max_seq_length_per_file=4,
+        min_chunk_length=None,
+        max_files_per_directory=None,
+        max_dirs_per_directory=None,
+    )
 
     agp = out / "in.agp"
     assert agp.exists()
 
-    cols = parse_agp_lines(agp)
-    assert len(cols) == 2
+    lines = read_agp_lines(agp)
+    assert lines[0].startswith("# AGP-version 2.0")
 
-    # object, obj_start, obj_end, part_no, type, comp_id, comp_start, comp_end, orientation
-    assert cols[0] == [
-        "chr1",
-        "1",
-        "1000",
-        "1",
-        "W",
-        "chr1_chunk_start_0",
-        "1",
-        "1000",
-        "+",
-    ]
-    assert cols[1] == [
-        "chr1",
-        "1001",
-        "2100",
-        "2",
-        "W",
-        "chr1_chunk_start_1000",
-        "1",
-        "1100",
-        "+",
+    comp_lines = [ln for ln in lines[1:] if ln and not ln.startswith("#")]
+    assert len(comp_lines) == 4
+
+    expected_values = [
+        ["X", "1", "4", "1", "W", "X_chunk_start_0", "1", "4", "+"],
+        ["X", "5", "8", "2", "W", "X_chunk_start_4", "1", "4", "+"],
+        ["X", "9", "10", "3", "W", "X_chunk_start_8", "1", "2", "+"],
+        ["Y", "1", "2", "1", "W", "Y", "1", "2", "+"],
     ]
 
+    returned_values = [ln.split("\t") for ln in comp_lines]
 
-def test_agp_part_numbers_restart_per_object(tmp_path: Path):
-    """
-    AGP part numbers must restart at 1 for each new input sequence
-    (object), even when multiple sequences are chunked in the same run.
-    """
-    input_fasta = tmp_path / "in.fa"
+    def agp_key(cols: list[str]) -> tuple[str, int]:
+        return cols[0], int(cols[3])
+
+    expected_values_sorted = sorted(expected_values, key=agp_key)
+    returned_values_sorted = sorted(returned_values, key=agp_key)
+
+    # Validate every column in every row
+    assert returned_values_sorted == expected_values_sorted
+
+
+def test_main_rejects_min_chunk_without_max_seq_length(fasta_split, tmp_path, write_fasta):
+    in_fa = write_fasta("in.fa", [("a", "AA", None)])
     out = tmp_path / "out"
-    recs = [
-        SeqRecord(Seq("A" * 1200), id="obj1", description=""),
-        SeqRecord(Seq("C" * 1200), id="obj2", description=""),
-    ]
-    write_fasta(input_fasta, recs)
 
-    FastaSplit(
+    # --min-chunk-length requires --max-seq-length-per-file
+    with pytest.raises(ValueError, match="--min-chunk-length requires --max-seq-length-per-file"):
+        fasta_split.parse_args(
+            [
+                "--fasta-file",
+                str(in_fa),
+                "--out-dir",
+                str(out),
+                "--min-chunk-length",
+                "5",
+            ]
+        )
+
+
+def test_parse_args_minimal_required(fasta_split, write_fasta):
+    in_fa = write_fasta("in.fa", [("a", "AA", None)])
+
+    args = fasta_split.parse_args(
         [
             "--fasta-file",
-            str(input_fasta),
-            "--out-dir",
-            str(out),
-            "--write-agp",
-            "--force-max-seq-length",
-            "--max-seq-length-per-file",
-            "1000",
-            "--min-chunk-length",
-            "100",  # => 2 chunks each, no merge
+            str(in_fa),
         ]
     )
 
-    cols = parse_agp_lines(out / "in.agp")
+    assert args.fasta_file == in_fa
+    assert args.write_agp is False
+    assert args.force_max_seq_length is False
 
-    by_obj = {}
-    for c in cols:
-        by_obj.setdefault(c[0], []).append(int(c[3]))
 
-    assert by_obj["obj1"] == [1, 2]
-    assert by_obj["obj2"] == [1, 2]
+def test_parse_args_boolean_flags(fasta_split, write_fasta):
+    in_fa = write_fasta("in.fa", [("a", "AA", None)])
+
+    args = fasta_split.parse_args(
+        [
+            "--fasta-file",
+            str(in_fa),
+            "--write-agp",
+            "--force-max-seq-length",
+            "--unique-file-names",
+        ]
+    )
+
+    assert args.write_agp
+    assert args.force_max_seq_length
+    assert args.unique_file_names
+
+
+def test_parse_args_numeric_arguments(fasta_split, write_fasta):
+    in_fa = write_fasta("in.fa", [("a", "AA", None)])
+
+    args = fasta_split.parse_args(
+        [
+            "--fasta-file",
+            str(in_fa),
+            "--max-seqs-per-file",
+            "5",
+            "--max-seq-length-per-file",
+            "100",
+        ]
+    )
+
+    assert args.max_seqs_per_file == 5
+    assert args.max_seq_length_per_file == 100
+
+
+def test_parse_args_numeric_min_value_enforced(fasta_split, write_fasta):
+    in_fa = write_fasta("in.fa", [("a", "AA", None)])
+
+    with pytest.raises(SystemExit):
+        fasta_split.parse_args(
+            [
+                "--fasta-file",
+                str(in_fa),
+                "--max-seqs-per-file",
+                "0",
+            ]
+        )
