@@ -103,7 +103,7 @@ def _strip_fasta_suffix(name: str, suffixes: list[str]) -> str:
         name = name[:-3]
     for suffix in suffixes:
         if name.endswith(suffix):
-            return name[: -len(suffix)]
+            return name[: -(len(suffix) + 1)]
     return name
 
 
