@@ -87,10 +87,10 @@ class OutputWriter:
         if max_dirs is None:
             parts.append("1")
         else:
-            current_index = dir_index
-            while current_index >= 0:
-                parts.append(f"{current_index % max_dirs}")
-                current_index = current_index // max_dirs - 1
+            n = dir_index
+            while n > 0:
+                parts.append(str((n - 1) % max_dirs + 1))
+                n = (n - 1) // max_dirs
 
         parts.reverse()
         return self.out_dir.joinpath(*parts)
@@ -105,13 +105,13 @@ class OutputWriter:
         Returns:
             (file_index, dir_index) where:
             - file_index is 1-based within the directory, and
-            - dir_index is 0-based across directories.
+            - dir_index is 1-based across directories.
         """
         max_files = self.max_files_per_directory
         if max_files is None:
             return self.file_count, 0
         adjusted_count = self.file_count - 1
-        return (adjusted_count % max_files + 1, adjusted_count // max_files)
+        return (adjusted_count % max_files + 1, adjusted_count // max_files + 1)
 
     def _get_path_for_next_file(self) -> Path:
         """Computes path for the next output file."""
