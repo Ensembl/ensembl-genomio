@@ -42,11 +42,11 @@ def read_fasta(path: Path) -> dict[str, str]:
 
 
 def test_strip_fasta_suffix_plain_and_gz(fasta_recombine):
-    assert fasta_recombine._strip_fasta_suffix("x.fa", ["fa", "fasta"]) == "x"
-    assert fasta_recombine._strip_fasta_suffix("x.fasta", ["fa", "fasta"]) == "x"
-    assert fasta_recombine._strip_fasta_suffix("x.fna.gz", ["fna"]) == "x"
-    assert fasta_recombine._strip_fasta_suffix("x.unknown.gz", ["fa", "fasta"]) == "x.unknown"
-    assert fasta_recombine._strip_fasta_suffix("x.unknown.gz", ["fa", "fasta", "unknown"]) == "x"
+    assert fasta_recombine._strip_fasta_suffix("x.fa", [".fa", ".fasta"]) == "x"
+    assert fasta_recombine._strip_fasta_suffix("x.fasta", [".fa", ".fasta"]) == "x"
+    assert fasta_recombine._strip_fasta_suffix("x.fna.gz", [".fna"]) == "x"
+    assert fasta_recombine._strip_fasta_suffix("x.unknown.gz", [".fa", ".fasta"]) == "x.unknown"
+    assert fasta_recombine._strip_fasta_suffix("x.unknown.gz", [".fa", ".fasta", ".unknown"]) == "x"
 
 
 def test_numeric_path_key_orders_numbers_numerically(fasta_recombine, tmp_path):
@@ -56,12 +56,12 @@ def test_numeric_path_key_orders_numbers_numerically(fasta_recombine, tmp_path):
     path1_9 = tmp_path / "dir" / "file1_9.fa"
     path1_pt9 = tmp_path / "dir" / "file1_pt9.fa"
     path1_21 = tmp_path / "dir" / "file_1_21.fa"
-    key01 = fasta_recombine._numeric_path_key(path01, ["fa", "fasta", "fna"])
-    key2 = fasta_recombine._numeric_path_key(path2, ["fa", "fasta", "fna"])
-    key10 = fasta_recombine._numeric_path_key(path10, ["fa", "fasta", "fna"])
-    key1_9 = fasta_recombine._numeric_path_key(path1_9, ["fa", "fasta", "fna"])
-    key1_pt9 = fasta_recombine._numeric_path_key(path1_pt9, ["fa", "fasta", "fna"])
-    key1_21 = fasta_recombine._numeric_path_key(path1_21, ["fa", "fasta", "fna"])
+    key01 = fasta_recombine._numeric_path_key(path01, [".fa", ".fasta", ".fna"])
+    key2 = fasta_recombine._numeric_path_key(path2, [".fa", ".fasta", ".fna"])
+    key10 = fasta_recombine._numeric_path_key(path10, [".fa", ".fasta", ".fna"])
+    key1_9 = fasta_recombine._numeric_path_key(path1_9, [".fa", ".fasta", ".fna"])
+    key1_pt9 = fasta_recombine._numeric_path_key(path1_pt9, [".fa", ".fasta", ".fna"])
+    key1_21 = fasta_recombine._numeric_path_key(path1_21, [".fa", ".fasta", ".fna"])
     assert key01 < key2
     assert key2 < key10
     assert key1_9 < key1_pt9
@@ -80,9 +80,28 @@ def test_get_fasta_paths_finds_gz_and_plain_and_dedups(fasta_recombine, write_fa
 def test_get_fasta_paths_extra_suffixes(fasta_recombine, write_fasta, tmp_path):
     x = write_fasta("sub/x.fsa", [("r1", "AAA", None)], gz=False)
     y = write_fasta("sub/y.fsa.gz", [("r2", "CCC", None)], gz=True)
-    paths = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes="fsa")
+    paths = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes=".fsa")
     assert x.resolve() in paths
     assert y.resolve() in paths
+
+
+def test_get_fasta_paths_extra_suffixes_preceding_dot(fasta_recombine, write_fasta, tmp_path):
+    x = write_fasta("x.fsa", [("r1", "AAA", None)])
+    y = write_fasta("y.fsa.gz", [("r2", "CCC", None)], gz=True)
+
+    paths_no_dot = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes="fsa")
+    paths_dot = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes=".fsa")
+
+    assert set(paths_no_dot) == set(paths_dot)
+    assert {x.resolve(), y.resolve()} == set(paths_no_dot)
+
+
+def test_get_fasta_paths_suffix_whitespace_and_empty_entries(fasta_recombine, write_fasta, tmp_path):
+    f = write_fasta("x.fsa", [("r1", "AAA", None)])
+
+    paths = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes=" .fsa , , ")
+
+    assert f.resolve() in paths
 
 
 def test_get_fasta_paths_raises_when_none(fasta_recombine, tmp_path):

@@ -86,11 +86,11 @@ def _strip_fasta_suffix(name: str, suffixes: list[str]) -> str:
         name = name[:-3]
     for suffix in suffixes:
         if name.endswith(suffix):
-            return name[: -(len(suffix) + 1)]
+            return name[: -len(suffix)]
     return name
 
 
-def _numeric_path_key(path: Path, suffixes: list[str]) -> list[str]:
+def _numeric_path_key(path: Path, suffixes: list[str]) -> list[tuple[str, str]]:
     """Key function for natural sorting of FASTA paths."""
     key = []
     parts = path.parts
@@ -123,9 +123,12 @@ def _get_fasta_paths(in_dir: Path, extra_suffixes: str | None) -> list[Path]:
     Paths are resolved and de-duplicated (to avoid duplicates via symlinks), then returned in
     a deterministic "natural" order using `_numeric_path_key`.
     """
-    suffixes = ["fa", "fasta", "fna"]
+    suffixes = [".fa", ".fasta", ".fna"]
     if extra_suffixes is not None:
-        suffixes.extend(extra_suffixes.split(","))
+        suffixes_to_add = [
+            s if s.startswith(".") else f".{s}" for s in (s.strip() for s in extra_suffixes.split(",")) if s
+        ]
+        suffixes.extend(suffixes_to_add)
 
     seen: dict[Path, None] = {}
     for suffix in suffixes:
@@ -445,7 +448,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=argparse.SUPPRESS,
         help=(
             "Comma-separated list of additional file suffixes to search for under --in-dir (repeatable), "
-            "e.g. fsa,fsta (fa/fasta/fna are searched for by default, .gz doesn't need to be specified)."
+            "e.g. .fsa,.fsta (fa/fasta/fna are searched for by default, .gz doesn't need to be specified)."
         ),
     )
     parser.add_argument(
