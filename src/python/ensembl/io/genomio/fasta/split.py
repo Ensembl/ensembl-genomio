@@ -309,7 +309,6 @@ def split_fasta(
                         logging.warning(
                             f"Length of last chunk of record '{record.id}' is {last_chunk_len}, lower than "
                             f"min_chunk_length: {min_chunk_length}; merging with previous chunk"
-                            "merging with previous chunk"
                         )
                         ends[-2] = seq_len
                         starts.pop()
