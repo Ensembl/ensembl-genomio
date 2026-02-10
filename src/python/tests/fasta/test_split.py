@@ -36,8 +36,78 @@ def read_agp_lines(agp_path: Path) -> list[str]:
     return agp_path.read_text(encoding="utf-8").splitlines()
 
 
+@pytest.mark.parametrize(
+    "name,expected",
+    [("in.fa", "in"), ("in.fa.gz", "in"), ("in", "in")],
+)
+def test_get_fasta_basename(fasta_split, tmp_path, name, expected):
+    p = tmp_path / name
+    p.write_text(">x\nA\n", encoding="utf-8")
+    assert fasta_split._get_fasta_basename(p) == expected
+
+
+def test_clean_previous_output_deletes_numeric_top_level_dirs(fasta_split, tmp_path, write_fasta):
+    in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+
+    # Create numeric dirs with valid outputs
+    d1 = out_dir / "1"
+    d2 = out_dir / "2"
+    d1.mkdir()
+    d2.mkdir()
+    (d1 / "in.1.fa").write_text(">x\nA\n", encoding="utf-8")
+    (d2 / "in.2.1.fa").write_text(">y\nC\n", encoding="utf-8")  # accept both naming modes
+
+    # Non-numeric dir should be untouched, as should numeric folders with preceding zeroes or named '0'
+    other = out_dir / "misc"
+    other.mkdir()
+    (other / "in.3.fa").write_text(">other\nT\n", encoding="utf-8")
+    other_numeric = out_dir / "01"
+    other_numeric.mkdir()
+    (other_numeric / "in.4.fa").write_text(">other_numeric\nG\n", encoding="utf-8")
+    other_zero = out_dir / "0"
+    other_zero.mkdir()
+    (other_zero / "in.5.fa").write_text(">other_zero\nA\n", encoding="utf-8")
+
+    fasta_split.clean_previous_output(in_fa, out_dir)
+
+    assert not d1.exists()
+    assert not d2.exists()
+    assert other.exists()
+    assert other_numeric.exists()
+    assert other_zero.exists()
+    assert (other / "in.3.fa").exists()
+    assert (other_numeric / "in.4.fa").exists()
+    assert (other_zero / "in.5.fa").exists()
+
+
+def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(
+    fasta_split, tmp_path, write_fasta
+):
+    in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+
+    d1 = out_dir / "1"
+    d2 = out_dir / "2"
+    d1.mkdir()
+    d2.mkdir()
+    (d1 / "in.1.fa").write_text(">x\nA\n", encoding="utf-8")
+    (d2 / "unexpected.fa").write_text(">x\nU\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match=r"Unexpected file identified.*out/2/unexpected.fa"):
+        fasta_split.clean_previous_output(in_fa, out_dir)
+
+    # Nothing deleted because validation failed before deletion loop
+    assert d1.exists()
+    assert d2.exists()
+    assert (d1 / "in.1.fa").exists()
+    assert (d2 / "unexpected.fa").exists()
+
+
 def test_outputwriter_basename_and_first_file_created(fasta_split, tmp_path):
-    in_fa = tmp_path / "in.fa.gz"  # basename should strip .gz and extension -> "in"
+    in_fa = tmp_path / "in.fa.gz"
     in_fa.write_text(">x\nACGT\n", encoding="utf-8")
 
     out = tmp_path / "out"
@@ -168,30 +238,6 @@ def test_add_agp_entry_when_agp_disabled(fasta_split, write_fasta, tmp_path):
         writer.close()
 
 
-def test_add_agp_entry_exception_is_logged_and_reraised(fasta_split, write_fasta, tmp_path, caplog):
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out = tmp_path / "out"
-
-    writer = fasta_split.OutputWriter(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=True,
-        unique_file_names=False,
-    )
-    try:
-        writer.create_agp_file()
-        # Break the handle: close it then write -> ValueError
-        assert writer._agp_fh is not None
-        writer._agp_fh.close()
-
-        with pytest.raises(Exception):
-            writer.add_agp_entry("obj", 1, 1, 1, "part", 1)
-
-        assert any("Failed to write AGP entry" in r.message for r in caplog.records)
-    finally:
-        writer.close()
-
-
 def test_split_fasta_empty_input_no_outputs(fasta_split, tmp_path):
     in_fa = tmp_path / "empty.fa"
     in_fa.write_bytes(b"")
@@ -211,38 +257,6 @@ def test_split_fasta_empty_input_no_outputs(fasta_split, tmp_path):
         max_dirs_per_directory=None,
     )
     assert not out.exists() or len(list(out.rglob("*"))) == 0
-
-
-def test_split_fasta_delete_existing_dir_warns_but_continues(
-    fasta_split, tmp_path, write_fasta, monkeypatch, caplog
-):
-    in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
-    out = tmp_path / "out"
-    out.mkdir()
-    (out / "old.txt").write_text("old", encoding="utf-8")
-
-    # Force rmtree to fail -> code should warn and continue
-    def fail(*args, **kwargs):
-        raise OSError("forced fail")
-
-    monkeypatch.setattr(fasta_split.shutil, "rmtree", fail)
-
-    fasta_split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        delete_existing_files=True,
-        unique_file_names=False,
-        force_max_seq_length=False,
-        max_seqs_per_file=None,
-        max_seq_length_per_file=None,
-        min_chunk_length=None,
-        max_files_per_directory=None,
-        max_dirs_per_directory=None,
-    )
-
-    assert any("Failed to delete existing output directory" in r.message for r in caplog.records)
-    assert len(list_output_fastas(out)) >= 1
 
 
 def test_split_by_max_seqs_per_file_rollover(fasta_split, tmp_path, write_fasta):

@@ -18,6 +18,7 @@
 import argparse
 import logging
 from pathlib import Path
+import re
 import shutil
 
 from Bio import SeqIO
@@ -26,6 +27,17 @@ from Bio.SeqRecord import SeqRecord
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+
+
+_NUMERIC_DIR_RE = re.compile(r"^[1-9]\d*$")
+
+
+def _get_fasta_basename(fasta: Path) -> str:
+    """Returns base name of file stripped of suffixes"""
+    filename = fasta.name
+    filename = filename.removesuffix(".gz")
+    basename = filename.rsplit(".", 1)[0] if "." in filename else filename
+    return basename
 
 
 class OutputWriter:
@@ -57,8 +69,7 @@ class OutputWriter:
         max_files_per_directory: int | None = None,
         max_dirs_per_directory: int | None = None,
     ):
-        unzipped_name = fasta_file.name.removesuffix(".gz")
-        self.basename = unzipped_name.rsplit(".", 1)[0] if "." in unzipped_name else unzipped_name
+        self.basename = _get_fasta_basename(fasta_file)
         self.out_dir = out_dir
         self.agp_file = out_dir.joinpath(f"{self.basename}.agp") if write_agp else None
         self.unique_file_names = unique_file_names
@@ -149,12 +160,8 @@ class OutputWriter:
         """
         if self._agp_fh is None:
             return
-        try:
-            line = f"{object_id}\t{start}\t{end}\t{part_nr}\tW\t{part_id}\t1\t{part_length}\t+\n"
-            self._agp_fh.write(line)
-        except Exception:
-            logging.exception(f"Failed to write AGP entry for part '{part_id}'")
-            raise
+        line = f"{object_id}\t{start}\t{end}\t{part_nr}\tW\t{part_id}\t1\t{part_length}\t+\n"
+        self._agp_fh.write(line)
 
     def create_agp_file(self) -> None:
         """Creates the AGP file for recording sequence chunking."""
@@ -162,10 +169,8 @@ class OutputWriter:
             return
         try:
             self._agp_fh = open(self.agp_file, "w")
-            logging.debug(f"Opened AGP file '{self.agp_file}' for writing")
-        except Exception:
-            logging.exception(f"Failed to open AGP file '{self.agp_file}'")
-            raise
+        except OSError as e:
+            raise RuntimeError(f"Failed to open AGP file '{self.agp_file}'") from e
         self._agp_fh.write("# AGP-version 2.0\n")
         logging.info(f"Created AGP file '{self.agp_file}'")
 
@@ -178,21 +183,16 @@ class OutputWriter:
         try:
             self._fh = open(path, "w")
             logging.debug(f"Opened output file '{path}' for writing")
-        except Exception:
-            logging.exception(f"Failed to open output file '{path}'")
-            raise
+        except OSError as e:
+            raise RuntimeError(f"Failed to open output file '{path}'") from e
         self.record_count = 0
         self.file_len = 0
 
     def write_record(self, record: SeqRecord) -> None:
         """Writes a SeqRecord to the current output file and update counters."""
-        try:
-            SeqIO.write(record, self._fh, "fasta")
-            self.record_count += 1
-            self.file_len += len(record.seq)
-        except Exception:
-            logging.exception(f"Failed to write record '{record.id}' to output file")
-            raise
+        SeqIO.write(record, self._fh, "fasta")
+        self.record_count += 1
+        self.file_len += len(record.seq)
 
     def close(self) -> None:
         if self._fh is not None:
@@ -201,6 +201,41 @@ class OutputWriter:
         if self._agp_fh is not None:
             self._agp_fh.close()
             self._agp_fh = None
+
+
+def _check_contents_deletable(dir: Path, output_file_re: re.Pattern[str]) -> None:
+    for p in dir.rglob("*"):
+        if not p.is_dir():
+            if not output_file_re.match(p.name):
+                msg = (
+                    "Unexpected file identified amongst existing output, cleanup of existing files "
+                    f"failed: {dir.parent.name}/{p.relative_to(dir.parent)}"
+                )
+                raise RuntimeError(msg)
+
+
+def clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
+    """Checks for existing output and removes if no unexpected files encountered."""
+    logging.info(f"Cleaning outputs from previous runs under '{out_dir}'")
+    if not out_dir.exists():
+        return
+
+    # Identify top-level numeric children of out_dir (e.g. "1", "2", ...)
+    top_level_dirs = [p for p in out_dir.iterdir() if p.is_dir() and _NUMERIC_DIR_RE.match(p.name)]
+
+    basename = _get_fasta_basename(fasta_file)
+    b = re.escape(basename)
+    output_file_re = re.compile(rf"^{b}\.[1-9]\d*(?:\.[1-9]\d*)?\.fa$")
+    for d in top_level_dirs:
+        _check_contents_deletable(d, output_file_re)
+    for d in top_level_dirs:
+        shutil.rmtree(d)
+        logging.info(f"Deleted existing output directory '{d}'.")
+
+    agp_path = out_dir / f"{basename}.agp"
+    if agp_path.exists():
+        agp_path.unlink()
+        logging.info(f"Deleted existing AGP file '{agp_path}'.")
 
 
 def split_fasta(
@@ -236,14 +271,7 @@ def split_fasta(
         return
 
     if delete_existing_files and out_dir.exists():
-        logging.info(f"Deleting existing output directory '{out_dir}'")
-        try:
-            shutil.rmtree(out_dir)
-        except Exception:
-            logging.warning(
-                f"Failed to delete existing output directory '{out_dir}'",
-                exc_info=True,
-            )
+        clean_previous_output(fasta_file, out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     writer = OutputWriter(
@@ -251,8 +279,8 @@ def split_fasta(
         out_dir=out_dir,
         write_agp=write_agp,
         unique_file_names=unique_file_names,
-        max_dirs_per_directory=max_files_per_directory,
-        max_files_per_directory=max_dirs_per_directory,
+        max_files_per_directory=max_files_per_directory,
+        max_dirs_per_directory=max_dirs_per_directory,
     )
 
     if write_agp:
