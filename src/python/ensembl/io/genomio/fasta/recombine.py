@@ -31,7 +31,7 @@ from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-_num_re = re.compile(r"(\d+)")
+_NUMERIC_RE = re.compile(r"(\d+)")
 
 
 @dataclass(frozen=True)
@@ -101,7 +101,7 @@ def _numeric_path_key(path: Path, suffixes: list[str]) -> list[tuple[str, str]]:
         if i == len(parts) - 1:
             text = _strip_fasta_suffix(text, suffixes)
 
-        for token in _num_re.split(text):
+        for token in _NUMERIC_RE.split(text):
             if not token:
                 continue
             if token.isdigit():
@@ -119,9 +119,6 @@ def _get_fasta_paths(in_dir: Path, extra_suffixes: str | None) -> list[Path]:
     If `extra_suffixes` is provided, it is treated as a comma-separated list of additional
     suffixes (without leading dots). For any suffix that does not already end in ".gz", both
     the plain and ".gz" variants are searched.
-
-    Paths are resolved and de-duplicated (to avoid duplicates via symlinks), then returned in
-    a deterministic "natural" order using `_numeric_path_key`.
     """
     suffixes = [".fa", ".fasta", ".fna"]
     if extra_suffixes is not None:
@@ -156,7 +153,7 @@ def _build_index(
     fasta_paths: Iterable[Path],
 ) -> tuple[dict[str, RecordLocation], dict[str, int], dict[str, list[tuple[int, str]]]]:
     """
-    Build an index from record_id -> (file_path, description) using headers only.
+    Builds an index from record_id -> (file_path, description) using headers only.
 
     Returns:
       - locations: record_id -> RecordLocation(path, description)
@@ -372,7 +369,7 @@ def recombine_fasta(
     allow_revcomp: bool = False,
 ) -> None:
     """
-    Recombine split/chunked FASTA outputs into a single FASTA.  Inputs may be gzipped.
+    Recombines split/chunked FASTA outputs into a single FASTA.  Inputs may be gzipped.
 
     Reconstruction modes:
 
