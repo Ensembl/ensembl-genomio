@@ -41,72 +41,98 @@ def read_fasta(path: Path) -> dict[str, str]:
         return {r.id: str(r.seq) for r in SeqIO.parse(fh, "fasta")}
 
 
-def test_strip_fasta_suffix_plain_and_gz(fasta_recombine):
-    assert fasta_recombine._strip_fasta_suffix("x.fa", [".fa", ".fasta"]) == "x"
-    assert fasta_recombine._strip_fasta_suffix("x.fasta", [".fa", ".fasta"]) == "x"
-    assert fasta_recombine._strip_fasta_suffix("x.fna.gz", [".fna"]) == "x"
-    assert fasta_recombine._strip_fasta_suffix("x.unknown.gz", [".fa", ".fasta"]) == "x.unknown"
-    assert fasta_recombine._strip_fasta_suffix("x.unknown.gz", [".fa", ".fasta", ".unknown"]) == "x"
+def write_manifest(path: Path, lines: list[str]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
 
 
-def test_numeric_path_key_orders_numbers_numerically(fasta_recombine, tmp_path):
-    path01 = tmp_path / "dir" / "file01.fa"
-    path2 = tmp_path / "dir" / "file2.fa"
-    path10 = tmp_path / "dir" / "file10.fa"
-    path1_9 = tmp_path / "dir" / "file1_9.fa"
-    path1_pt9 = tmp_path / "dir" / "file1_pt9.fa"
-    path1_21 = tmp_path / "dir" / "file_1_21.fa"
-    key01 = fasta_recombine._numeric_path_key(path01, [".fa", ".fasta", ".fna"])
-    key2 = fasta_recombine._numeric_path_key(path2, [".fa", ".fasta", ".fna"])
-    key10 = fasta_recombine._numeric_path_key(path10, [".fa", ".fasta", ".fna"])
-    key1_9 = fasta_recombine._numeric_path_key(path1_9, [".fa", ".fasta", ".fna"])
-    key1_pt9 = fasta_recombine._numeric_path_key(path1_pt9, [".fa", ".fasta", ".fna"])
-    key1_21 = fasta_recombine._numeric_path_key(path1_21, [".fa", ".fasta", ".fna"])
-    assert key01 < key2
-    assert key2 < key10
-    assert key1_9 < key1_pt9
-    assert key1_9 < key1_21
+def test_get_fasta_paths_preserves_manifest_order(fasta_recombine, write_fasta, tmp_path):
+    a = write_fasta("a.fa", [("r1", "AAA", None)])
+    b = write_fasta("b.fa", [("r2", "BBB", None)])
+
+    manifest = write_manifest(
+        tmp_path / "manifest.txt",
+        [
+            str(b),
+            str(a),
+        ],
+    )
+
+    paths = fasta_recombine._get_fasta_paths(manifest)
+    assert paths == [b.resolve(), a.resolve()]
 
 
-def test_get_fasta_paths_finds_gz_and_plain_and_dedups(fasta_recombine, write_fasta, tmp_path):
-    a = write_fasta("a.fa", [("r1", "ACGT", "unzipped")], gz=False)
-    b = write_fasta("b.fa.gz", [("r2", "TT", "gzipped")], gz=True)
-    c = write_fasta("c.fa", [("r3", "CAT", "gzipped missing suffix")], gz=True)
+def test_get_fasta_paths_ignores_comments_and_blank_lines(fasta_recombine, write_fasta, tmp_path):
+    a = write_fasta("a.fa", [("r1", "AAA", None)])
+    b = write_fasta("b.fa.gz", [("r2", "TT", None)], gz=True)
 
-    paths = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes=None)
-    assert set(paths) == {a.resolve(), b.resolve(), c.resolve()}
+    manifest = write_manifest(
+        tmp_path / "manifest.txt",
+        [
+            "# comment",
+            "",
+            str(a),
+            "   ",
+            str(b),
+            "# trailing comment",
+        ],
+    )
 
-
-def test_get_fasta_paths_extra_suffixes(fasta_recombine, write_fasta, tmp_path):
-    x = write_fasta("sub/x.fsa", [("r1", "AAA", None)], gz=False)
-    y = write_fasta("sub/y.fsa.gz", [("r2", "CCC", None)], gz=True)
-    paths = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes=".fsa")
-    assert x.resolve() in paths
-    assert y.resolve() in paths
-
-
-def test_get_fasta_paths_extra_suffixes_preceding_dot(fasta_recombine, write_fasta, tmp_path):
-    x = write_fasta("x.fsa", [("r1", "AAA", None)])
-    y = write_fasta("y.fsa.gz", [("r2", "CCC", None)], gz=True)
-
-    paths_no_dot = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes="fsa")
-    paths_dot = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes=".fsa")
-
-    assert set(paths_no_dot) == set(paths_dot)
-    assert {x.resolve(), y.resolve()} == set(paths_no_dot)
+    paths = fasta_recombine._get_fasta_paths(manifest)
+    assert paths == [a.resolve(), b.resolve()]
 
 
-def test_get_fasta_paths_suffix_whitespace_and_empty_entries(fasta_recombine, write_fasta, tmp_path):
-    f = write_fasta("x.fsa", [("r1", "AAA", None)])
+def test_get_fasta_paths_relative_paths_are_anchored_to_manifest_dir(fasta_recombine, write_fasta, tmp_path):
+    sub = tmp_path / "sub"
+    a = write_fasta("sub/a.fa", [("r1", "AAA", None)])
 
-    paths = fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes=" .fsa , , ")
+    manifest = write_manifest(
+        sub / "manifest.txt",
+        [
+            "a.fa",  # relative to manifest dir
+        ],
+    )
 
-    assert f.resolve() in paths
+    paths = fasta_recombine._get_fasta_paths(manifest)
+    assert paths == [a.resolve()]
 
 
-def test_get_fasta_paths_raises_when_none(fasta_recombine, tmp_path):
-    with pytest.raises(ValueError, match="No FASTA files found"):
-        fasta_recombine._get_fasta_paths(tmp_path, extra_suffixes=None)
+def test_get_fasta_paths_missing_entry_raises_with_line_number(fasta_recombine, write_fasta, tmp_path):
+    a = write_fasta("a.fa", [("r1", "AAA", None)])
+    manifest = write_manifest(
+        tmp_path / "manifest.txt",
+        [
+            str(a),
+            "missing.fa",
+        ],
+    )
+
+    with pytest.raises(FileNotFoundError, match=r"line 2"):
+        fasta_recombine._get_fasta_paths(manifest)
+
+
+def test_get_fasta_paths_directory_entry_raises(fasta_recombine, tmp_path):
+    d = tmp_path / "adir"
+    d.mkdir()
+
+    manifest = write_manifest(
+        tmp_path / "manifest.txt",
+        [
+            str(d),
+        ],
+    )
+
+    with pytest.raises(ValueError, match=r"Manifest entry.*line 1"):
+        fasta_recombine._get_fasta_paths(manifest)
+
+
+def test_get_fasta_paths_manifest_must_be_a_file(fasta_recombine, tmp_path):
+    manifest_dir = tmp_path / "manifest_dir"
+    manifest_dir.mkdir()
+
+    with pytest.raises(ValueError, match="Manifest is not a file"):
+        fasta_recombine._get_fasta_paths(manifest_dir)
 
 
 def test_fasta_record_cache_load_and_switch_files(fasta_recombine, write_fasta):
@@ -383,29 +409,33 @@ def test_records_from_agp_length_mismatch_raises(fasta_recombine, write_fasta, c
         list(fasta_recombine._records_from_agp(agp_entries, locations, cache, allow_revcomp=False))
 
 
-def test_recombine_fasta_header_mode_end_to_end(fasta_recombine, write_fasta, chunk_re, tmp_path):
-    # mix chunks and unchunked across multiple files/dirs
-    write_fasta("d1/a1.fa", [("X_chunk_start_0", "AAAA", None)])
-    write_fasta("d1/a2.fa", [("Y", "CC", None)])
-    write_fasta("d2/b1.fa", [("X_chunk_start_4", "TT", None)])
+def test_recombine_fasta_header_mode_end_to_end_manifest_order(
+    fasta_recombine, write_fasta, chunk_re, tmp_path
+):
+    f1 = write_fasta("f1.fa", [("Y", "CC", None)])
+    f2 = write_fasta("f2.fa", [("X_chunk_start_0", "AAAA", None), ("X_chunk_start_4", "TT", None)])
+
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(f1), str(f2)])
 
     out = tmp_path / "out.fa"
     fasta_recombine.recombine_fasta(
-        in_dir=tmp_path,
+        fasta_manifest=manifest,
         out_fasta=out,
         chunk_re=chunk_re,
         agp_file=None,
-        extra_suffixes=None,
         allow_revcomp=False,
     )
+
     seqs = read_fasta(out)
     assert seqs["X"] == "AAAATT"
     assert seqs["Y"] == "CC"
 
+    ids_in_file = [r.id for r in SeqIO.parse(out, "fasta")]
+    assert ids_in_file == ["Y", "X"]
+
 
 def test_recombine_fasta_agp_mode_end_to_end(fasta_recombine, write_fasta, chunk_re, tmp_path):
-    # AGP ignores header chunking: it uses AGP objects + part ids
-    write_fasta("parts.fa", [("p1", "AACCGG", None), ("p2", "TTAA", None)])
+    parts = write_fasta("parts.fa", [("p1", "AACCGG", None), ("p2", "TTAA", None)])
 
     agp = tmp_path / "x.agp"
     agp.write_text(
@@ -413,13 +443,14 @@ def test_recombine_fasta_agp_mode_end_to_end(fasta_recombine, write_fasta, chunk
         encoding="utf-8",
     )
 
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(parts)])
+
     out = tmp_path / "out.fa"
     fasta_recombine.recombine_fasta(
-        in_dir=tmp_path,
+        fasta_manifest=manifest,
         out_fasta=out,
         chunk_re=chunk_re,
         agp_file=agp,
-        extra_suffixes=None,
         allow_revcomp=True,
     )
     seqs = read_fasta(out)
@@ -436,7 +467,7 @@ def test_validate_regex_accepts_alternative_pattern(fasta_recombine):
 
 
 def test_validate_regex_rejects_invalid_pattern(fasta_recombine):
-    with pytest.raises(ValueError, match="Invalid --chunk-regex"):
+    with pytest.raises(ValueError, match="Invalid --chunk-id-regex"):
         fasta_recombine._validate_regex(r"^(?P<base>.+)_(?P<start>\d+$")  # missing ')'
 
 
@@ -453,17 +484,18 @@ def test_recombine_header_mode_with_alternative_regex_end_to_end(
 ):
     chunk_re = fasta_recombine._validate_regex(r"^(?P<base>.+)\.chunk\.(?P<start>\d+)$")
 
-    write_fasta("d/a.fa", [("X.chunk.0", "AAAA", None)])
-    write_fasta("d/b.fa", [("X.chunk.4", "TT", None)])
-    write_fasta("d/c.fa", [("Y", "CC", None)])
+    f1 = write_fasta("d/a.fa", [("X.chunk.0", "AAAA", None)])
+    f2 = write_fasta("d/b.fa", [("X.chunk.4", "TT", None)])
+    f3 = write_fasta("d/c.fa", [("Y", "CC", None)])
+
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(f1), str(f2), str(f3)])
 
     out = tmp_path / "out.fa"
     fasta_recombine.recombine_fasta(
-        in_dir=tmp_path,
+        fasta_manifest=manifest,
         out_fasta=out,
         chunk_re=chunk_re,
         agp_file=None,
-        extra_suffixes=None,
         allow_revcomp=False,
     )
 
@@ -472,18 +504,20 @@ def test_recombine_header_mode_with_alternative_regex_end_to_end(
     assert seqs["Y"] == "CC"
 
 
-def test_parse_args_minimal_required(fasta_recombine, tmp_path):
+def test_parse_args_minimal_required(fasta_recombine, write_fasta, tmp_path):
+    f = write_fasta("a.fa", [("A", "AAA", None)])
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(f)])
     out = tmp_path / "out.fa"
     args = fasta_recombine.parse_args(
         [
-            "--in-dir",
-            str(tmp_path),
+            "--fasta-manifest",
+            str(manifest),
             "--out-fasta",
             str(out),
         ]
     )
 
-    assert args.in_dir == tmp_path
+    assert args.fasta_manifest == manifest
     assert args.out_fasta == out
 
     assert args.allow_revcomp is False
@@ -491,12 +525,15 @@ def test_parse_args_minimal_required(fasta_recombine, tmp_path):
     assert fasta_recombine._validate_regex(args.chunk_id_regex).match("X_chunk_start_0")
 
 
-def test_parse_args_boolean_flags(fasta_recombine, tmp_path):
+def test_parse_args_boolean_flags_manifest(fasta_recombine, write_fasta, tmp_path):
+    f = write_fasta("a.fa", [("A", "AAA", None)])
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(f)])
     out = tmp_path / "out.fa"
+
     args = fasta_recombine.parse_args(
         [
-            "--in-dir",
-            str(tmp_path),
+            "--fasta-manifest",
+            str(manifest),
             "--out-fasta",
             str(out),
             "--allow-revcomp",

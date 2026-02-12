@@ -31,8 +31,6 @@ from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-_NUMERIC_RE = re.compile(r"(\d+)")
-
 
 @dataclass(frozen=True)
 class RecordLocation:
@@ -80,65 +78,38 @@ class FastaRecordCache:
         self._records = records
 
 
-def _strip_fasta_suffix(name: str, suffixes: list[str]) -> str:
-    """Removes a known FASTA extension (and optional `.gz`) from a filename."""
-    if name.endswith(".gz"):
-        name = name[:-3]
-    for suffix in suffixes:
-        if name.endswith(suffix):
-            return name[: -len(suffix)]
-    return name
+def _get_fasta_paths(fasta_manifest: Path) -> list[Path]:
+    """
+    Parses manifest file to return list of validated input FASTA paths
+    """
+    fasta_manifest = fasta_manifest.expanduser().resolve(strict=True)
 
+    if not fasta_manifest.is_file():
+        raise ValueError(f"Manifest is not a file: {fasta_manifest}")
 
-def _numeric_path_key(path: Path, suffixes: list[str]) -> list[tuple[str, str]]:
-    """Key function for natural sorting of FASTA paths."""
-    key = []
-    parts = path.parts
+    base_dir = fasta_manifest.parent
+    paths: list[Path] = []
 
-    for i, part in enumerate(parts):
-        text = part
+    with fasta_manifest.open() as fh:
+        for line_nr, line in enumerate(fh, start=1):
+            line = line.strip()
 
-        if i == len(parts) - 1:
-            text = _strip_fasta_suffix(text, suffixes)
-
-        for token in _NUMERIC_RE.split(text):
-            if not token:
+            if not line or line.startswith("#"):
                 continue
-            if token.isdigit():
-                key.append((0, int(token)))  # numbers first, numeric compare
-            else:
-                key.append((1, token))  # then text, lexicographic compare
-    return key
 
+            p = Path(line).expanduser()
+            if not p.is_absolute():
+                p = base_dir / p
+            try:
+                p = p.resolve(strict=True)
+            except FileNotFoundError as e:
+                raise FileNotFoundError(f"Manifest entry does not exist (line {line_nr}): {line}") from e
+            if not p.is_file():
+                raise ValueError(f"Manifest entry is not a file (line {line_nr}): {p}")
 
-def _get_fasta_paths(in_dir: Path, extra_suffixes: str | None) -> list[Path]:
-    """
-    Discovers FASTA files under an input directory.
+            paths.append(p)
 
-    Searches recursively for files ending in one of the default suffixes: "fa", "fasta", "fna".
-    If `extra_suffixes` is provided, it is treated as a comma-separated list of additional
-    suffixes (without leading dots). For any suffix that does not already end in ".gz", both
-    the plain and ".gz" variants are searched.
-    """
-    suffixes = [".fa", ".fasta", ".fna"]
-    if extra_suffixes is not None:
-        suffixes_to_add = [
-            s if s.startswith(".") else f".{s}" for s in (s.strip() for s in extra_suffixes.split(",")) if s
-        ]
-        suffixes.extend(suffixes_to_add)
-
-    seen: dict[Path, None] = {}
-    for suffix in suffixes:
-        compression_suffixes = ("",) if suffix.endswith(".gz") else ("", ".gz")
-        for compression_suffix in compression_suffixes:
-            pattern = f"**/*{suffix}{compression_suffix}"
-            for result in in_dir.glob(pattern):
-                if result.is_file():
-                    seen[result.resolve()] = None
-
-    if not seen:
-        raise ValueError(f"No FASTA files found under: {in_dir}")
-    return sorted(seen.keys(), key=lambda p: _numeric_path_key(p, suffixes))
+    return paths
 
 
 def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
@@ -182,7 +153,7 @@ def _build_index(
                 chunks[base].append((start, record_id))
 
     if not locations:
-        raise ValueError("No FASTA headers found under the input directory.")
+        raise ValueError("No FASTA headers found in the manifest files.")
     return locations, first_seen, chunks
 
 
@@ -361,15 +332,14 @@ def _records_from_headers(
 
 
 def recombine_fasta(
-    in_dir: Path,
+    fasta_manifest: Path,
     out_fasta: Path,
     chunk_re: re.Pattern[str],
     agp_file: Path | None = None,
-    extra_suffixes: str | None = None,
     allow_revcomp: bool = False,
 ) -> None:
     """
-    Recombines split/chunked FASTA outputs into a single FASTA.  Inputs may be gzipped.
+    Recombines split/chunked FASTA files listed in manifest into a single FASTA.  Inputs may be gzipped.
 
     Reconstruction modes:
 
@@ -380,10 +350,8 @@ def recombine_fasta(
     - Chunk records detected by parsing the header
     - Chunks grouped by <orig_id>, sorted by start, and concatenated.
     - Unchunked records pass through unchanged.
-
-    Input FASTA records can be spread across multiple files and nested directories under --in-dir.
     """
-    fasta_paths = _get_fasta_paths(in_dir, extra_suffixes)
+    fasta_paths = _get_fasta_paths(fasta_manifest)
 
     # Build lightweight index (headers only)
     locations, first_seen, chunks = _build_index(chunk_re, fasta_paths)
@@ -410,10 +378,10 @@ def _validate_regex(chunk_regex) -> re.Pattern[str]:
     try:
         chunk_re = re.compile(chunk_regex)
     except re.error as e:
-        raise ValueError(f"Invalid --chunk-regex: {e}") from e
+        raise ValueError(f"Invalid --chunk-id-regex: {e}") from e
 
     if "base" not in chunk_re.groupindex or "start" not in chunk_re.groupindex:
-        raise ValueError("--chunk-regex must define named capture groups 'base' and 'start'")
+        raise ValueError("--chunk-id-regex must define named capture groups 'base' and 'start'")
 
     return chunk_re
 
@@ -421,10 +389,10 @@ def _validate_regex(chunk_regex) -> re.Pattern[str]:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
-        "--in-dir",
-        metavar="DIR",
+        "--fasta-manifest",
+        metavar="TXT",
         required=True,
-        help="Directory containing split FASTA outputs (searched recursively, split files may be gzipped).",
+        help="Manifest file containing paths of FASTA files to be combined (files may be gzipped).",
     )
     parser.add_argument_dst_path(
         "--out-fasta",
@@ -439,19 +407,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Optional AGP file; if provided, reconstruction uses AGP ordering.",
     )
     parser.add_argument(
-        "--extra-suffixes",
-        metavar="SUFFIXES",
-        type=str,
-        default=argparse.SUPPRESS,
-        help=(
-            "Comma-separated list of additional file suffixes to search for under --in-dir (repeatable), "
-            "e.g. .fsa,.fsta (fa/fasta/fna are searched for by default, .gz doesn't need to be specified)."
-        ),
-    )
-    parser.add_argument(
         "--allow-revcomp",
         action="store_true",
-        help=f"Allow reverse-complementing components if AGP orientation is '-'",
+        help="Allow reverse-complementing components if AGP orientation is '-'",
     )
     parser.add_argument(
         "--chunk-id-regex",
@@ -475,13 +433,12 @@ def main(argv: list[str] | None = None) -> None:
     chunk_re = _validate_regex(args.chunk_id_regex)
     try:
         recombine_fasta(
-            in_dir=args.in_dir,
+            fasta_manifest=args.fasta_manifest,
             out_fasta=args.out_fasta,
             agp_file=args.agp_file,
-            extra_suffixes=args.extra_suffixes,
             allow_revcomp=args.allow_revcomp,
             chunk_re=chunk_re,
         )
     except Exception:
-        logging.exception(f"Error recombining FASTA from files in {args.in_dir}")
+        logging.exception(f"Error recombining FASTA from files in {args.fasta_manifest}")
         raise
