@@ -403,7 +403,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument_src_path(
         "--agp-file",
         metavar="AGP",
-        default=argparse.SUPPRESS,
+        default=None,
         help="Optional AGP file; if provided, reconstruction uses AGP ordering.",
     )
     parser.add_argument(
