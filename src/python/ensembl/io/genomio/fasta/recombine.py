@@ -112,11 +112,18 @@ def _get_fasta_paths(fasta_manifest: Path) -> list[Path]:
     return paths
 
 
+def _description_without_id(record: SeqRecord) -> str:
+    """Removes ID from FASTA record description"""
+    if record.description.startswith(record.id):
+        return record.description[len(record.id) :].lstrip()
+    return record.description
+
+
 def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
     """Iterate over FASTA headers, yielding (record_id, description) tuples."""
     with open_gz_file(path) as fh:
         for record in SeqIO.parse(fh, "fasta"):
-            yield record.id, record.description
+            yield record.id, _description_without_id(record)
 
 
 def _build_index(
