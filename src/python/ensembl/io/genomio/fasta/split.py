@@ -238,6 +238,12 @@ def clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
         logging.info(f"Deleted existing AGP file '{agp_path}'.")
 
 
+def _description_without_id(record: SeqRecord) -> str:
+    if record.description.startswith(record.id):
+        return record.description[len(record.id) :].lstrip()
+    return record.description
+
+
 def split_fasta(
     fasta_file: Path,
     out_dir: Path,
@@ -319,7 +325,7 @@ def split_fasta(
                     chunk_record = SeqRecord(
                         chunk_seq,
                         id=f"{record.id}_chunk_start_{start}",
-                        description=f"{record.description} (part {i})",
+                        description=_description_without_id(record),
                     )
                     if writer.record_count > 0:
                         writer.open_new_file()
