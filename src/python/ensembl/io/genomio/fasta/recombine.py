@@ -114,9 +114,12 @@ def _get_fasta_paths(fasta_manifest: Path) -> list[Path]:
 
 def _description_without_id(record: SeqRecord) -> str:
     """Removes ID from FASTA record description"""
-    if record.description.startswith(record.id):
-        return record.description[len(record.id) :].lstrip()
-    return record.description
+    desc = record.description or ""
+    if desc == record.id:
+        return ""
+    if desc.startswith(record.id):
+        return desc[len(record.id) + 1 :]
+    return desc
 
 
 def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
