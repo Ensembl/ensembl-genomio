@@ -358,7 +358,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument_dst_path(
         "--out-dir",
         metavar="DIR",
-        default=argparse.SUPPRESS,
+        default=None,
         help="Top-level output directory (default: input FASTA directory).",
     )
     parser.add_argument(
