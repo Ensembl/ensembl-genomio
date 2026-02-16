@@ -239,6 +239,7 @@ def clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
 
 
 def _description_without_id(record: SeqRecord) -> str:
+    """Removes ID from FASTA record description"""
     if record.description.startswith(record.id):
         return record.description[len(record.id) :].lstrip()
     return record.description
