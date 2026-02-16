@@ -19,6 +19,8 @@ import re
 
 import pytest
 from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 from .utils import read_fasta
 
@@ -30,6 +32,12 @@ def fasta_split():
 
 def list_output_fastas(out_dir: Path) -> list[Path]:
     return sorted(p for p in out_dir.rglob("*.fa") if p.is_file())
+
+
+def make_record(record_id: str, description: str) -> SeqRecord:
+    r = SeqRecord(Seq("ACGT"), id=record_id)
+    r.description = description
+    return r
 
 
 def read_agp_lines(agp_path: Path) -> list[str]:
@@ -44,6 +52,22 @@ def test_get_fasta_basename(fasta_split, tmp_path, name, expected):
     p = tmp_path / name
     p.write_text(">x\nA\n", encoding="utf-8")
     assert fasta_split._get_fasta_basename(p) == expected
+
+
+def test_desc_without_id_header_only(fasta_split):
+    rec = make_record("seq1", "seq1")
+    assert fasta_split._description_without_id(rec) == ""
+
+
+def test_desc_without_id_with_description(fasta_split):
+    rec = make_record("seq1", "seq1 some annotation")
+    assert fasta_split._description_without_id(rec) == "some annotation"
+
+
+def test_desc_without_id_repeated_id_in_description(fasta_split):
+    # original header: >seq1 seq1 description
+    rec = make_record("seq1", "seq1 seq1 description")
+    assert fasta_split._description_without_id(rec) == "seq1 description"
 
 
 def test_clean_previous_output_deletes_numeric_top_level_dirs(fasta_split, tmp_path, write_fasta):
