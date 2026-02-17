@@ -12,9 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Fasta files processing module."""
+"""Utility methods for testing of `ensembl.io.genomio.fasta modules`."""
+from pathlib import Path
 
-from .chunk import *
-from .compare import *
-from .process import *
-from .split import *
+from Bio import SeqIO
+
+
+def read_fasta(path: Path) -> dict[str, str]:
+    with open(path, "r", encoding="utf-8") as fh:
+        return {r.id: str(r.seq) for r in SeqIO.parse(fh, "fasta")}
