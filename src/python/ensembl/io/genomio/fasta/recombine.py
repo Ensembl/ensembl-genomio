@@ -27,6 +27,9 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+from ensembl.io.genomio.utils.agp_utils import AgpEntry, parse_agp
+from ensembl.io.genomio.utils.chunk_utils import get_paths_from_manifest, validate_regex
+
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -36,18 +39,6 @@ from ensembl.utils.logging import init_logging_with_args
 class RecordLocation:
     path: Path
     description: str
-
-
-@dataclass(frozen=True)
-class AgpEntry:
-    record: str
-    record_start: int
-    record_end: int
-    part_number: int
-    part_id: str
-    part_start: int
-    part_end: int
-    orientation: str
 
 
 class FastaRecordCache:
@@ -76,40 +67,6 @@ class FastaRecordCache:
                 records[rec.id] = rec
         self._current_path = path
         self._records = records
-
-
-def _get_fasta_paths(fasta_manifest: Path) -> list[Path]:
-    """
-    Parses manifest file to return list of validated input FASTA paths
-    """
-    fasta_manifest = fasta_manifest.expanduser().resolve(strict=True)
-
-    if not fasta_manifest.is_file():
-        raise ValueError(f"Manifest is not a file: {fasta_manifest}")
-
-    base_dir = fasta_manifest.parent
-    paths: list[Path] = []
-
-    with fasta_manifest.open() as fh:
-        for line_nr, line in enumerate(fh, start=1):
-            line = line.strip()
-
-            if not line or line.startswith("#"):
-                continue
-
-            p = Path(line).expanduser()
-            if not p.is_absolute():
-                p = base_dir / p
-            try:
-                p = p.resolve(strict=True)
-            except FileNotFoundError as e:
-                raise FileNotFoundError(f"Manifest entry does not exist (line {line_nr}): {line}") from e
-            if not p.is_file():
-                raise ValueError(f"Manifest entry is not a file (line {line_nr}): {p}")
-
-            paths.append(p)
-
-    return paths
 
 
 def _description_without_id(record: SeqRecord) -> str:
@@ -165,51 +122,6 @@ def _build_index(
     if not locations:
         raise ValueError("No FASTA headers found in the manifest files.")
     return locations, first_seen, chunks
-
-
-def _parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
-    """
-    Parses an AGP v2.x file into per-object component entries.
-
-    Supported subset:
-      - component type 'W' only (sequence components)
-      - orientation '+' always, '-' only if `allow_revcomp=True`
-    """
-    agp_records: dict[str, list[AgpEntry]] = defaultdict(list)
-
-    with open_gz_file(agp_file) as fh:
-        for line in fh:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            cols = line.split("\t")
-            if len(cols) < 9:
-                raise ValueError(f"Invalid AGP line (expected >= 9 columns): {line}")
-
-            if cols[4] != "W":
-                raise ValueError(f"Unsupported AGP component type '{cols[4]}' in line: {line}")
-
-            if not allow_revcomp and cols[8] != "+":
-                raise ValueError(
-                    f"AGP contains '-' orientation for component '{cols[5]}' but --allow-revcomp is not enabled."
-                )
-
-            agp_records[cols[0]].append(
-                AgpEntry(
-                    record=cols[0],
-                    record_start=int(cols[1]),
-                    record_end=int(cols[2]),
-                    part_number=int(cols[3]),
-                    part_id=cols[5],
-                    part_start=int(cols[6]),
-                    part_end=int(cols[7]),
-                    orientation=cols[8],
-                )
-            )
-
-    if not agp_records:
-        raise ValueError(f"AGP file '{agp_file}' contained no component lines.")
-    return agp_records
 
 
 def _agp_component_seq(
@@ -361,7 +273,7 @@ def recombine_fasta(
     - Chunks grouped by <orig_id>, sorted by start, and concatenated.
     - Unchunked records pass through unchanged.
     """
-    fasta_paths = _get_fasta_paths(fasta_manifest)
+    fasta_paths = get_paths_from_manifest(fasta_manifest)
 
     # Build lightweight index (headers only)
     locations, first_seen, chunks = _build_index(chunk_re, fasta_paths)
@@ -369,7 +281,7 @@ def recombine_fasta(
     cache = FastaRecordCache()
 
     if agp_file is not None:
-        agp_records = _parse_agp(agp_file, allow_revcomp)
+        agp_records = parse_agp(agp_file, allow_revcomp)
         record_iter = _records_from_agp(agp_records, locations, cache, allow_revcomp)
     else:
         record_iter = _records_from_headers(locations, first_seen, chunks, cache)
@@ -381,19 +293,6 @@ def recombine_fasta(
             SeqIO.write(rec, out_fh, "fasta")
             n += 1
     logging.info("Wrote %d records to %s", n, out_fasta)
-
-
-def _validate_regex(chunk_regex) -> re.Pattern[str]:
-    """Compiles and validates the chunk-id regex, ensuring 'base' and 'start' capture groups present."""
-    try:
-        chunk_re = re.compile(chunk_regex)
-    except re.error as e:
-        raise ValueError(f"Invalid --chunk-id-regex: {e}") from e
-
-    if "base" not in chunk_re.groupindex or "start" not in chunk_re.groupindex:
-        raise ValueError("--chunk-id-regex must define named capture groups 'base' and 'start'")
-
-    return chunk_re
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -440,7 +339,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    chunk_re = _validate_regex(args.chunk_id_regex)
+    chunk_re = validate_regex(args.chunk_id_regex)
     try:
         recombine_fasta(
             fasta_manifest=args.fasta_manifest,

@@ -12,8 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Utils module."""
+"""Helper methods for testing of ensembl-genomio."""
 
-from .agp_utils import *
-from .chunk_utils import *
-from .json_utils import *
+from pathlib import Path
+
+
+def write_manifest(path: Path, lines: list[str]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
