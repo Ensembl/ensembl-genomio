@@ -22,12 +22,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+from ensembl.io.genomio.fasta import split
 from .utils import read_fasta
-
-
-@pytest.fixture(scope="session")
-def fasta_split():
-    return importlib.import_module("ensembl.io.genomio.fasta.split")
 
 
 def list_output_fastas(out_dir: Path) -> list[Path]:
@@ -48,29 +44,29 @@ def read_agp_lines(agp_path: Path) -> list[str]:
     "name,expected",
     [("in.fa", "in"), ("in.fa.gz", "in"), ("in", "in")],
 )
-def test_get_fasta_basename(fasta_split, tmp_path, name, expected):
+def test_get_fasta_basename(tmp_path, name, expected):
     p = tmp_path / name
     p.write_text(">x\nA\n", encoding="utf-8")
-    assert fasta_split._get_fasta_basename(p) == expected
+    assert split._get_fasta_basename(p) == expected
 
 
-def test_desc_without_id_header_only(fasta_split):
+def test_desc_without_id_header_only():
     rec = make_record("seq1", "seq1")
-    assert fasta_split._description_without_id(rec) == ""
+    assert split._description_without_id(rec) == ""
 
 
-def test_desc_without_id_with_description(fasta_split):
+def test_desc_without_id_with_description():
     rec = make_record("seq1", "seq1 some annotation")
-    assert fasta_split._description_without_id(rec) == "some annotation"
+    assert split._description_without_id(rec) == "some annotation"
 
 
-def test_desc_without_id_repeated_id_in_description(fasta_split):
+def test_desc_without_id_repeated_id_in_description():
     # original header: >seq1 seq1 description
     rec = make_record("seq1", "seq1 seq1 description")
-    assert fasta_split._description_without_id(rec) == "seq1 description"
+    assert split._description_without_id(rec) == "seq1 description"
 
 
-def test_clean_previous_output_deletes_numeric_top_level_dirs(fasta_split, tmp_path, write_fasta):
+def test_clean_previous_output_deletes_numeric_top_level_dirs(tmp_path, write_fasta):
     in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
     out_dir = tmp_path / "out"
     out_dir.mkdir()
@@ -94,7 +90,7 @@ def test_clean_previous_output_deletes_numeric_top_level_dirs(fasta_split, tmp_p
     other_zero.mkdir()
     (other_zero / "in.5.fa").write_text(">other_zero\nA\n", encoding="utf-8")
 
-    fasta_split.clean_previous_output(in_fa, out_dir)
+    split.clean_previous_output(in_fa, out_dir)
 
     assert not d1.exists()
     assert not d2.exists()
@@ -106,9 +102,7 @@ def test_clean_previous_output_deletes_numeric_top_level_dirs(fasta_split, tmp_p
     assert (other_zero / "in.5.fa").exists()
 
 
-def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(
-    fasta_split, tmp_path, write_fasta
-):
+def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(tmp_path, write_fasta):
     in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
     out_dir = tmp_path / "out"
     out_dir.mkdir()
@@ -121,7 +115,7 @@ def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(
     (d2 / "unexpected.fa").write_text(">x\nU\n", encoding="utf-8")
 
     with pytest.raises(RuntimeError, match=r"Unexpected file identified.*out/2/unexpected.fa"):
-        fasta_split.clean_previous_output(in_fa, out_dir)
+        split.clean_previous_output(in_fa, out_dir)
 
     # Nothing deleted because validation failed before deletion loop
     assert d1.exists()
@@ -130,12 +124,12 @@ def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(
     assert (d2 / "unexpected.fa").exists()
 
 
-def test_outputwriter_basename_and_first_file_created(fasta_split, tmp_path):
+def test_outputwriter_basename_and_first_file_created(tmp_path):
     in_fa = tmp_path / "in.fa.gz"
     in_fa.write_text(">x\nACGT\n", encoding="utf-8")
 
     out = tmp_path / "out"
-    w = fasta_split.OutputWriter(
+    w = split.OutputWriter(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -169,13 +163,11 @@ def test_outputwriter_basename_and_first_file_created(fasta_split, tmp_path):
         (2, 4, ["1", "2"]),
     ],
 )
-def test_get_subdir_path_math(
-    fasta_split, write_fasta, tmp_path, max_dirs_per_directory, dir_index, expected
-):
+def test_get_subdir_path_math(write_fasta, tmp_path, max_dirs_per_directory, dir_index, expected):
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
-    writer = fasta_split.OutputWriter(
+    writer = split.OutputWriter(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -192,11 +184,11 @@ def test_get_subdir_path_math(
         writer.close()
 
 
-def test_file_and_dir_index_with_max_files(fasta_split, write_fasta, tmp_path):
+def test_file_and_dir_index_with_max_files(write_fasta, tmp_path):
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
-    writer = fasta_split.OutputWriter(
+    writer = split.OutputWriter(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -220,11 +212,11 @@ def test_file_and_dir_index_with_max_files(fasta_split, write_fasta, tmp_path):
         writer.close()
 
 
-def test_unique_file_names_include_dir_index(fasta_split, write_fasta, tmp_path):
+def test_unique_file_names_include_dir_index(write_fasta, tmp_path):
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
-    writer = fasta_split.OutputWriter(
+    writer = split.OutputWriter(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -244,11 +236,11 @@ def test_unique_file_names_include_dir_index(fasta_split, write_fasta, tmp_path)
         writer.close()
 
 
-def test_add_agp_entry_when_agp_disabled(fasta_split, write_fasta, tmp_path):
+def test_add_agp_entry_when_agp_disabled(write_fasta, tmp_path):
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
-    writer = fasta_split.OutputWriter(
+    writer = split.OutputWriter(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -262,12 +254,12 @@ def test_add_agp_entry_when_agp_disabled(fasta_split, write_fasta, tmp_path):
         writer.close()
 
 
-def test_split_fasta_empty_input_no_outputs(fasta_split, tmp_path):
+def test_split_fasta_empty_input_no_outputs(tmp_path):
     in_fa = tmp_path / "empty.fa"
     in_fa.write_bytes(b"")
     out = tmp_path / "out"
 
-    fasta_split.split_fasta(
+    split.split_fasta(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -283,14 +275,14 @@ def test_split_fasta_empty_input_no_outputs(fasta_split, tmp_path):
     assert not out.exists() or len(list(out.rglob("*"))) == 0
 
 
-def test_split_by_max_seqs_per_file_rollover(fasta_split, tmp_path, write_fasta):
+def test_split_by_max_seqs_per_file_rollover(tmp_path, write_fasta):
     in_fa = write_fasta(
         "in.fa",
         [("a", "AA", None), ("b", "CC", None), ("c", "GG", None), ("d", "TT", None), ("e", "AT", None)],
     )
     out = tmp_path / "out"
 
-    fasta_split.split_fasta(
+    split.split_fasta(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -311,11 +303,11 @@ def test_split_by_max_seqs_per_file_rollover(fasta_split, tmp_path, write_fasta)
     assert counts == [2, 2, 1]
 
 
-def test_split_by_max_seq_length_per_file_rollover(fasta_split, tmp_path, write_fasta):
+def test_split_by_max_seq_length_per_file_rollover(tmp_path, write_fasta):
     in_fa = write_fasta("in.fa", [("a", "AAAA", None), ("b", "TTTT", None)])
     out = tmp_path / "out"
 
-    fasta_split.split_fasta(
+    split.split_fasta(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -333,11 +325,11 @@ def test_split_by_max_seq_length_per_file_rollover(fasta_split, tmp_path, write_
     assert len(fastas) == 2
 
 
-def test_force_chunking_splits_long_record(fasta_split, tmp_path, write_fasta):
+def test_force_chunking_splits_long_record(tmp_path, write_fasta):
     in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", "desc")])
     out = tmp_path / "out"
 
-    fasta_split.split_fasta(
+    split.split_fasta(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -362,11 +354,11 @@ def test_force_chunking_splits_long_record(fasta_split, tmp_path, write_fasta):
     assert seqs == ["ATCG", "GATT", "AC"]
 
 
-def test_force_chunking_merges_small_remainder(fasta_split, tmp_path, write_fasta, caplog):
+def test_force_chunking_merges_small_remainder(tmp_path, write_fasta, caplog):
     in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])
     out = tmp_path / "out"
 
-    fasta_split.split_fasta(
+    split.split_fasta(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -394,11 +386,11 @@ def test_force_chunking_merges_small_remainder(fasta_split, tmp_path, write_fast
     assert seqs == ["ATCG", "GATTAC"]
 
 
-def test_overlong_record_without_chunking_warns_and_written_whole(fasta_split, tmp_path, write_fasta, caplog):
+def test_overlong_record_without_chunking_warns_and_written_whole(tmp_path, write_fasta, caplog):
     in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])
     out = tmp_path / "out"
 
-    fasta_split.split_fasta(
+    split.split_fasta(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=False,
@@ -422,11 +414,11 @@ def test_overlong_record_without_chunking_warns_and_written_whole(fasta_split, t
     assert seq == "ATCGGATTAC"
 
 
-def test_write_agp_creates_agp_creates_all_expected_rows_and_columns(fasta_split, tmp_path, write_fasta):
+def test_write_agp_creates_agp_creates_all_expected_rows_and_columns(tmp_path, write_fasta):
     in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None), ("Y", "CC", None)])
     out = tmp_path / "out"
 
-    fasta_split.split_fasta(
+    split.split_fasta(
         fasta_file=in_fa,
         out_dir=out,
         write_agp=True,
@@ -468,13 +460,13 @@ def test_write_agp_creates_agp_creates_all_expected_rows_and_columns(fasta_split
     assert returned_values_sorted == expected_values_sorted
 
 
-def test_main_rejects_min_chunk_without_max_seq_length(fasta_split, tmp_path, write_fasta):
+def test_main_rejects_min_chunk_without_max_seq_length(tmp_path, write_fasta):
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
     out = tmp_path / "out"
 
     # --min-chunk-length requires --max-seq-length-per-file
     with pytest.raises(ValueError, match="--min-chunk-length requires --max-seq-length-per-file"):
-        fasta_split.parse_args(
+        split.parse_args(
             [
                 "--fasta-file",
                 str(in_fa),
@@ -486,10 +478,10 @@ def test_main_rejects_min_chunk_without_max_seq_length(fasta_split, tmp_path, wr
         )
 
 
-def test_parse_args_minimal_required(fasta_split, write_fasta):
+def test_parse_args_minimal_required(write_fasta):
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
 
-    args = fasta_split.parse_args(
+    args = split.parse_args(
         [
             "--fasta-file",
             str(in_fa),
@@ -501,10 +493,10 @@ def test_parse_args_minimal_required(fasta_split, write_fasta):
     assert args.force_max_seq_length is False
 
 
-def test_parse_args_boolean_flags(fasta_split, write_fasta):
+def test_parse_args_boolean_flags(write_fasta):
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
 
-    args = fasta_split.parse_args(
+    args = split.parse_args(
         [
             "--fasta-file",
             str(in_fa),
@@ -519,10 +511,10 @@ def test_parse_args_boolean_flags(fasta_split, write_fasta):
     assert args.unique_file_names
 
 
-def test_parse_args_numeric_arguments(fasta_split, write_fasta):
+def test_parse_args_numeric_arguments(write_fasta):
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
 
-    args = fasta_split.parse_args(
+    args = split.parse_args(
         [
             "--fasta-file",
             str(in_fa),
@@ -537,11 +529,11 @@ def test_parse_args_numeric_arguments(fasta_split, write_fasta):
     assert args.max_seq_length_per_file == 100
 
 
-def test_parse_args_numeric_min_value_enforced(fasta_split, write_fasta):
+def test_parse_args_numeric_min_value_enforced(write_fasta):
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
 
     with pytest.raises(SystemExit):
-        fasta_split.parse_args(
+        split.parse_args(
             [
                 "--fasta-file",
                 str(in_fa),
