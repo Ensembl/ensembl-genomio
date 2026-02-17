@@ -14,20 +14,17 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.utils.chunk_utils` module."""
 
-import importlib
 import pytest
 
+from ensembl.io.genomio.utils import chunk_utils
 from .._helpers import write_manifest
 
 
-@pytest.fixture(scope="session")
-def chunk_utils():
-    return importlib.import_module("ensembl.io.genomio.utils.chunk_utils")
-
-
-def test_get_paths_from_manifest_preserves_order(chunk_utils, tmp_path):
+def test_get_paths_from_manifest_preserves_order(tmp_path):
     a = tmp_path / "a.txt"
     b = tmp_path / "b.txt"
+    a.touch()
+    b.touch()
 
     manifest = write_manifest(
         tmp_path / "manifest.txt",
@@ -41,9 +38,11 @@ def test_get_paths_from_manifest_preserves_order(chunk_utils, tmp_path):
     assert paths == [b.resolve(), a.resolve()]
 
 
-def test_get_paths_from_manifest_ignores_comments_and_blank_lines(chunk_utils, tmp_path):
+def test_get_paths_from_manifest_ignores_comments_and_blank_lines(tmp_path):
     a = tmp_path / "a.txt"
     b = tmp_path / "b.txt.gz"
+    a.touch()
+    b.touch()
 
     manifest = write_manifest(
         tmp_path / "manifest.txt",
@@ -61,9 +60,11 @@ def test_get_paths_from_manifest_ignores_comments_and_blank_lines(chunk_utils, t
     assert paths == [a.resolve(), b.resolve()]
 
 
-def test_get_paths_from_manifest_relative_paths_are_anchored_to_manifest_dir(chunk_utils, tmp_path):
+def test_get_paths_from_manifest_relative_paths_are_anchored_to_manifest_dir(tmp_path):
     sub = tmp_path / "sub"
+    sub.mkdir()
     a = tmp_path / "sub" / "a.txt"
+    a.touch()
 
     manifest = write_manifest(
         sub / "manifest.txt",
@@ -76,8 +77,10 @@ def test_get_paths_from_manifest_relative_paths_are_anchored_to_manifest_dir(chu
     assert paths == [a.resolve()]
 
 
-def test_get_paths_from_manifest_missing_entry_raises_with_line_number(chunk_utils, tmp_path):
+def test_get_paths_from_manifest_missing_entry_raises_with_line_number(tmp_path):
     a = tmp_path / "a.txt"
+    a.touch()
+
     manifest = write_manifest(
         tmp_path / "manifest.txt",
         [
@@ -90,7 +93,7 @@ def test_get_paths_from_manifest_missing_entry_raises_with_line_number(chunk_uti
         chunk_utils.get_paths_from_manifest(manifest)
 
 
-def test_get_paths_from_manifest_directory_entry_raises(chunk_utils, tmp_path):
+def test_get_paths_from_manifest_directory_entry_raises(tmp_path):
     d = tmp_path / "adir"
     d.mkdir()
 
@@ -105,7 +108,7 @@ def test_get_paths_from_manifest_directory_entry_raises(chunk_utils, tmp_path):
         chunk_utils.get_paths_from_manifest(manifest)
 
 
-def test_get_paths_from_manifest_manifest_must_be_a_file(chunk_utils, tmp_path):
+def test_get_paths_from_manifest_manifest_must_be_a_file(tmp_path):
     manifest_dir = tmp_path / "manifest_dir"
     manifest_dir.mkdir()
 
@@ -113,7 +116,7 @@ def test_get_paths_from_manifest_manifest_must_be_a_file(chunk_utils, tmp_path):
         chunk_utils.get_paths_from_manifest(manifest_dir)
 
 
-def test_validate_regex_accepts_alternative_pattern(chunk_utils):
+def test_validate_regex_accepts_alternative_pattern():
     # Alternative chunk naming scheme: "<base>.part.<start>_<end>"
     chunk_re = chunk_utils.validate_regex(r"^(?P<base>.+)\.part\.(?P<start>\d+)_(?P<end>\d+)$")
     m = chunk_re.match("contigA.part.11_20")
@@ -122,12 +125,12 @@ def test_validate_regex_accepts_alternative_pattern(chunk_utils):
     assert m.group("start") == "11"
 
 
-def test_validate_regex_rejects_invalid_pattern(chunk_utils):
+def test_validate_regex_rejects_invalid_pattern():
     with pytest.raises(ValueError, match="Invalid --chunk-id-regex"):
         chunk_utils.validate_regex(r"^(?P<base>.+)_(?P<start>\d+$")  # missing ')'
 
 
-def test_validate_regex_requires_named_groups(chunk_utils):
+def test_validate_regex_requires_named_groups():
     with pytest.raises(ValueError, match="must define named capture groups"):
         chunk_utils.validate_regex(r"^(.+)_(\d+)$")
 

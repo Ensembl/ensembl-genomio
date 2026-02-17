@@ -18,6 +18,10 @@ from pathlib import Path
 import pytest
 import re
 
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 from ensembl.io.genomio.fasta import recombine
 from ensembl.io.genomio.utils.agp_utils import parse_agp
 from ensembl.io.genomio.utils.chunk_utils import validate_regex
@@ -166,48 +170,6 @@ def test_records_from_headers_missing_chunk_record_raises():
         list(recombine._records_from_headers(locations, first_seen, chunks, cache))
 
 
-def test_parse_agp_ignores_comments_and_blank_lines(tmp_path):
-    agp = tmp_path / "x.agp"
-    agp.write_text(
-        "# comment\n\n" "obj1\t1\t4\t1\tW\tpart1\t1\t4\t+\n",
-        encoding="utf-8",
-    )
-    out = recombine._parse_agp(agp, allow_revcomp=False)
-    assert "obj1" in out
-    assert out["obj1"][0].part_id == "part1"
-
-
-def test_parse_agp_rejects_short_line(tmp_path):
-    agp = tmp_path / "bad.agp"
-    agp.write_text("obj\t1\t2\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="expected >= 9 columns"):
-        recombine._parse_agp(agp, allow_revcomp=False)
-
-
-def test_parse_agp_rejects_non_W_component(tmp_path):
-    agp = tmp_path / "bad.agp"
-    agp.write_text("obj\t1\t2\t1\tN\tgap\t1\t2\t+\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="Unsupported AGP component type"):
-        recombine._parse_agp(agp, allow_revcomp=False)
-
-
-def test_parse_agp_rejects_minus_orientation_unless_allowed(tmp_path):
-    agp = tmp_path / "bad.agp"
-    agp.write_text("obj\t1\t2\t1\tW\tpart\t1\t2\t-\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="--allow-revcomp is not enabled"):
-        recombine._parse_agp(agp, allow_revcomp=False)
-
-    ok = recombine._parse_agp(agp, allow_revcomp=True)
-    assert ok["obj"][0].orientation == "-"
-
-
-def test_parse_agp_empty_file_raises(tmp_path):
-    agp = tmp_path / "empty.agp"
-    agp.write_text("# only comment\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="contained no component lines"):
-        recombine._parse_agp(agp, allow_revcomp=False)
-
-
 def test_agp_component_seq_plus_and_minus():
     record = SeqRecord(Seq("ACGTGGTT"), "part", "test_record")
     assert str(recombine._agp_component_seq(record, 1, 4, "+", allow_revcomp=False)) == "ACGT"
@@ -353,9 +315,7 @@ def test_recombine_fasta_agp_mode_end_to_end(write_fasta, tmp_path):
     assert seqs["obj"] == "AATT"
 
 
-def test_recombine_header_mode_with_alternative_regex_end_to_end(
-    fasta_recombine, write_fasta, tmp_path: Path
-):
+def test_recombine_header_mode_with_alternative_regex_end_to_end(write_fasta, tmp_path: Path):
     alt_chunk_re = validate_regex(r"^(?P<base>.+)\.chunk\.(?P<start>\d+)$")
 
     f1 = write_fasta("d/a.fa", [("X.chunk.0", "AAAA", None)])
