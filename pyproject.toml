@@ -137,6 +137,8 @@ annotation_update_description = "ensembl.io.genomio.annotation.update_descriptio
 manifest_check_integrity = "ensembl.io.genomio.manifest.check_integrity:main"
 manifest_compute_stats = "ensembl.io.genomio.manifest.compute_stats:main"
 manifest_generate = "ensembl.io.genomio.manifest.generate:main"
+# Repeats
+repeats_combine_json = "ensembl.io.genomio.repeats.combine_json:main"
 # Schemas
 schemas_json_factory = "ensembl.io.genomio.schemas.json.factory:main"
 schemas_json_validate = "ensembl.io.genomio.schemas.json.validate:main"
