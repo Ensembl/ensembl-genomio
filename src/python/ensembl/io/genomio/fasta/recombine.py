@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Recombine split/chunked FASTA outputs back into a single FASTA, optionally using an AGP."""
+"""Recombines split/chunked FASTA outputs back into a single FASTA, optionally using an AGP."""
 
 import argparse
 from collections import defaultdict

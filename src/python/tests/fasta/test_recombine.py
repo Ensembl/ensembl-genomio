@@ -29,7 +29,7 @@ from ensembl.io.genomio.utils.chunk_utils import validate_regex
 from .._helpers import write_manifest
 
 
-chunk_re = re.compile(r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$")
+CHUNK_RE = re.compile(r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$")
 
 
 def read_fasta(path: Path) -> dict[str, str]:
@@ -86,7 +86,7 @@ def test_build_index_collects_locations_first_seen_and_chunks(write_fasta):
         ],
     )
 
-    locations, first_seen, chunks = recombine._build_index(chunk_re, [f1, f2])
+    locations, first_seen, chunks = recombine._build_index(CHUNK_RE, [f1, f2])
 
     assert "Y" in locations
     assert "X_chunk_start_0" in locations
@@ -98,7 +98,7 @@ def test_build_index_duplicate_record_id_raises(write_fasta):
     f1 = write_fasta("f1.fa", [("A", "AAA", None)])
     f2 = write_fasta("f2.fa", [("A", "TTT", None)])  # duplicate id across files
     with pytest.raises(ValueError, match="Duplicate FASTA record id encountered during indexing"):
-        recombine._build_index(chunk_re, [f1, f2])
+        recombine._build_index(CHUNK_RE, [f1, f2])
 
 
 def test_build_index_no_headers_raises(tmp_path):
@@ -106,12 +106,12 @@ def test_build_index_no_headers_raises(tmp_path):
     p = tmp_path / "empty.fa"
     p.write_text("", encoding="utf-8")
     with pytest.raises(ValueError, match="No FASTA headers found"):
-        recombine._build_index(chunk_re, [p])
+        recombine._build_index(CHUNK_RE, [p])
 
 
 def test_records_from_headers_passes_unchunked(write_fasta):
     f1 = write_fasta("f1.fa", [("A", "AAA", "descA")])
-    locations, first_seen, chunks = recombine._build_index(chunk_re, [f1])
+    locations, first_seen, chunks = recombine._build_index(CHUNK_RE, [f1])
 
     cache = recombine.FastaRecordCache()
     recs = list(recombine._records_from_headers(locations, first_seen, chunks, cache))
@@ -127,7 +127,7 @@ def test_records_from_headers_reassembles_contiguous_chunks(write_fasta):
             ("X_chunk_start_4", "TT", "c4"),
         ],
     )
-    locations, first_seen, chunks = recombine._build_index(chunk_re, [f1])
+    locations, first_seen, chunks = recombine._build_index(CHUNK_RE, [f1])
     cache = recombine.FastaRecordCache()
 
     recs = list(recombine._records_from_headers(locations, first_seen, chunks, cache))
@@ -144,7 +144,7 @@ def test_records_from_headers_noncontiguous_chunks_raises(write_fasta):
             ("X_chunk_start_99", "TT", None),  # wrong start
         ],
     )
-    locations, first_seen, chunks = recombine._build_index(chunk_re, [f1])
+    locations, first_seen, chunks = recombine._build_index(CHUNK_RE, [f1])
     cache = recombine.FastaRecordCache()
 
     with pytest.raises(ValueError, match="Non-contiguous chunks for 'X'"):
@@ -186,7 +186,7 @@ def test_agp_component_seq_plus_and_minus():
 
 def test_records_from_agp_success(write_fasta, tmp_path):
     parts = write_fasta("parts.fa", [("p1", "AAAA", "p1desc"), ("p2", "TT", "p2desc")])
-    locations, _, _ = recombine._build_index(chunk_re, [parts])
+    locations, _, _ = recombine._build_index(CHUNK_RE, [parts])
 
     # AGP describes obj = p1(1..4) + p2(1..2)
     agp = tmp_path / "x.agp"
@@ -203,7 +203,7 @@ def test_records_from_agp_success(write_fasta, tmp_path):
 
 def test_records_from_agp_sorts_parts_out_of_order(write_fasta, tmp_path):
     parts = write_fasta("parts.fa", [("p1", "AAAA", "p1desc"), ("p2", "TT", "p2desc")])
-    locations, _, _ = recombine._build_index(chunk_re, [parts])
+    locations, _, _ = recombine._build_index(CHUNK_RE, [parts])
 
     # AGP lines deliberately out-of-order (p2 line first); should still assemble p1 + p2
     agp = tmp_path / "x.agp"
@@ -220,7 +220,7 @@ def test_records_from_agp_sorts_parts_out_of_order(write_fasta, tmp_path):
 
 def test_records_from_agp_missing_component_raises(write_fasta):
     f1 = write_fasta("parts.fa", [("p1", "AAAA", None)])
-    locations, _, _ = recombine._build_index(chunk_re, [f1])
+    locations, _, _ = recombine._build_index(CHUNK_RE, [f1])
 
     agp_entries = {
         "obj": [
@@ -244,7 +244,7 @@ def test_records_from_agp_missing_component_raises(write_fasta):
 
 def test_records_from_agp_noncontiguous_object_raises(write_fasta):
     f1 = write_fasta("parts.fa", [("p1", "AAAA", None), ("p2", "TT", None)])
-    locations, _, _ = recombine._build_index(chunk_re, [f1])
+    locations, _, _ = recombine._build_index(CHUNK_RE, [f1])
 
     agp_entries = {
         "obj": [
@@ -260,7 +260,7 @@ def test_records_from_agp_noncontiguous_object_raises(write_fasta):
 
 def test_records_from_agp_length_mismatch_raises(write_fasta):
     f1 = write_fasta("parts.fa", [("p1", "AAAA", None)])
-    locations, _, _ = recombine._build_index(chunk_re, [f1])
+    locations, _, _ = recombine._build_index(CHUNK_RE, [f1])
 
     # asks for 1..10 but record shorter => extracted length != expected_len
     agp_entries = {"obj": [recombine.AgpEntry("obj", 1, 10, 1, "p1", 1, 10, "+")]}
@@ -279,7 +279,7 @@ def test_recombine_fasta_header_mode_end_to_end_manifest_order(write_fasta, tmp_
     recombine.recombine_fasta(
         fasta_manifest=manifest,
         out_fasta=out,
-        chunk_re=chunk_re,
+        chunk_re=CHUNK_RE,
         agp_file=None,
         allow_revcomp=False,
     )
@@ -307,7 +307,7 @@ def test_recombine_fasta_agp_mode_end_to_end(write_fasta, tmp_path):
     recombine.recombine_fasta(
         fasta_manifest=manifest,
         out_fasta=out,
-        chunk_re=chunk_re,
+        chunk_re=CHUNK_RE,
         agp_file=agp,
         allow_revcomp=True,
     )

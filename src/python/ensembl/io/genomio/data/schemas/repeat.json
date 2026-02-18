@@ -1,0 +1,210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.org/schemas/repeat_load.schema.json",
+  "description": "JSON schema for loading repeat features and optional consensus sequences for a single analysis+source.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["analysis", "source", "repeat_features"],
+  "properties": {
+    "analysis": {
+      "$ref": "#/definitions/analysis",
+      "description": "Single analysis definition for this load; loader resolves/creates analysis_id by logic_name."
+    },
+
+    "source": {
+      "$ref": "#/definitions/annotation_source",
+      "description": "Single annotation source for this load; loader resolves/creates source_id by source_provider."
+    },
+
+    "repeat_consensus": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/repeat_consensus" },
+      "description": "Optional consensus entries keyed by (repeat_name, repeat_class, repeat_type)."
+    },
+
+    "repeat_features": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/repeat_feature" },
+      "description": "Repeat features for this analysis+source."
+    }
+  },
+
+  "definitions": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "positive_int": {
+      "type": "integer",
+      "minimum": 1
+    },
+
+    "strand": {
+      "type": "integer",
+      "enum": [-1, 1],
+      "description": "repeat_feature.seq_region_strand uses -1/+1."
+    },
+
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_date", "logic_name", "display_label", "description"],
+      "properties": {
+        "run_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "analysis.run_date (datetime)"
+        },
+        "logic_name": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 128,
+          "description": "Unique key for analysis; corresponds to analysis.logic_name."
+        },
+        "display_label": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 255
+        },
+        "description": {
+          "$ref": "#/definitions/non_empty_string"
+        },
+        "program": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "program_version": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "program_parameters": {
+          "type": "string",
+          "description": "analysis.program_parameters"
+        },
+        "db": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "analysis.db"
+        },
+        "db_version": {
+          "type": "string",
+          "maxLength": 40
+        }
+      },
+      "anyOf": [
+        { "required": ["program"] },
+        { "required": ["db"] }
+      ]
+    },
+
+    "annotation_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_provider"],
+      "properties": {
+        "source_provider": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 24,
+          "description": "Natural key for source; loader maps/creates annotation_source.source_id for this provider."
+        },
+        "is_primary": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+
+    "repeat_consensus_key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repeat_name", "repeat_class", "repeat_type"],
+      "properties": {
+        "repeat_name": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 255
+        },
+        "repeat_class": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 100
+        },
+        "repeat_type": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 40
+        }
+      },
+      "description": "Natural key matching repeat_consensus fields."
+    },
+
+    "repeat_consensus": {
+      "allOf": [
+        { "$ref": "#/definitions/repeat_consensus_key" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repeat_consensus": {
+              "type": "string",
+              "description": "repeat_consensus.repeat_consensus (optional consensus sequence)."
+            }
+          }
+        }
+      ]
+    },
+
+    "repeat_consensus_ref": {
+      "description": "Reference to consensus by natural key; may be null if consensus unknown/not applicable.",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/definitions/repeat_consensus_key" }
+      ]
+    },
+
+    "repeat_feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seq_region",
+        "seq_region_start",
+        "seq_region_end",
+        "seq_region_strand",
+        "repeat_start",
+        "repeat_end"
+      ],
+      "properties": {
+        "seq_region": {
+          "$ref": "#/definitions/non_empty_string",
+          "description": "Seq_region name (chromosome/scaffold/contig). Loader resolves to seq_region_id."
+        },
+
+        "seq_region_start": { "$ref": "#/definitions/positive_int" },
+        "seq_region_end": { "$ref": "#/definitions/positive_int" },
+        "seq_region_strand": { "$ref": "#/definitions/strand" },
+
+        "repeat_start": {
+          "$ref": "#/definitions/positive_int",
+          "description": "repeat_feature.repeat_start (on the consensus)."
+        },
+        "repeat_end": {
+          "$ref": "#/definitions/positive_int",
+          "description": "repeat_feature.repeat_end (on the consensus)."
+        },
+
+        "repeat_consensus": {
+          "$ref": "#/definitions/repeat_consensus_ref",
+          "description": "Consensus natural key (or null). Loader resolves/creates repeat_consensus_id if provided."
+        },
+
+        "score": {
+          "type": ["number", "null"],
+          "description": "repeat_feature.score"
+        },
+
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Tool-specific extras (e.g. divergence, motif, period, etc.)."
+        }
+      }
+    }
+  }
+}
