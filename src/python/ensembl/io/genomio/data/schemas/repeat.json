@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://example.org/schemas/repeat_load.schema.json",
-  "description": "JSON schema for loading repeat features and optional consensus sequences for a single analysis+source.",
+  "description": "JSON schema for loading repeat features and optional consensus sequences for a single analysis+source. RepeatConsensus uniqueness is determined by (repeat_name, repeat_class, repeat_type, repeat_consensus) and referenced via an md5 key.",
   "type": "object",
   "additionalProperties": false,
   "required": ["analysis", "source", "repeat_features"],
@@ -19,7 +19,7 @@
     "repeat_consensus": {
       "type": "array",
       "items": { "$ref": "#/definitions/repeat_consensus" },
-      "description": "Optional consensus entries keyed by (repeat_name, repeat_class, repeat_type)."
+      "description": "Optional consensus entries. Each entry has an md5 key computed from (repeat_name, repeat_class, repeat_type, repeat_consensus)."
     },
 
     "repeat_features": {
@@ -45,6 +45,12 @@
       "type": "integer",
       "enum": [-1, 1],
       "description": "repeat_feature.seq_region_strand uses -1/+1."
+    },
+
+    "md5_hex": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{32}$",
+      "description": "32-char hex MD5 digest."
     },
 
     "analysis": {
@@ -91,10 +97,7 @@
           "maxLength": 40
         }
       },
-      "anyOf": [
-        { "required": ["program"] },
-        { "required": ["db"] }
-      ]
+      "anyOf": [{ "required": ["program"] }, { "required": ["db"] }]
     },
 
     "annotation_source": {
@@ -114,11 +117,15 @@
       }
     },
 
-    "repeat_consensus_key": {
+    "repeat_consensus": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repeat_name", "repeat_class", "repeat_type"],
+      "required": ["repeat_consensus_key", "repeat_name", "repeat_class", "repeat_type"],
       "properties": {
+        "repeat_consensus_key": {
+          "$ref": "#/definitions/md5_hex",
+          "description": "MD5 key computed from (repeat_name, repeat_class, repeat_type, repeat_consensus) after whatever normalization the producer/loader defines (e.g. uppercase and whitespace-stripped for repeat_consensus)."
+        },
         "repeat_name": {
           "$ref": "#/definitions/non_empty_string",
           "maxLength": 255
@@ -130,33 +137,18 @@
         "repeat_type": {
           "$ref": "#/definitions/non_empty_string",
           "maxLength": 40
+        },
+        "repeat_consensus": {
+          "type": "string",
+          "minLength": 1,
+          "description": "repeat_consensus.repeat_consensus (consensus sequence)."
         }
-      },
-      "description": "Natural key matching repeat_consensus fields."
-    },
-
-    "repeat_consensus": {
-      "allOf": [
-        { "$ref": "#/definitions/repeat_consensus_key" },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "repeat_consensus": {
-              "type": "string",
-              "description": "repeat_consensus.repeat_consensus (optional consensus sequence)."
-            }
-          }
-        }
-      ]
+      }
     },
 
     "repeat_consensus_ref": {
-      "description": "Reference to consensus by natural key; may be null if consensus unknown/not applicable.",
-      "oneOf": [
-        { "type": "null" },
-        { "$ref": "#/definitions/repeat_consensus_key" }
-      ]
+      "description": "Reference to consensus by md5 key; may be null if consensus unknown/not applicable.",
+      "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/md5_hex" }]
     },
 
     "repeat_feature": {
@@ -191,7 +183,7 @@
 
         "repeat_consensus": {
           "$ref": "#/definitions/repeat_consensus_ref",
-          "description": "Consensus natural key (or null). Loader resolves/creates repeat_consensus_id if provided."
+          "description": "Consensus md5 key (or null)."
         },
 
         "score": {

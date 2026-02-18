@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Combines JSON documents from split/chunked inputs and performs coordinate liftover, optionally using an AGP."""
+"""Combines repeat feature JSON documents from split/chunked inputs and performs coordinate liftover."""
 
 import argparse
 from collections.abc import Iterable
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -31,13 +32,14 @@ from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-
+_MD5_RE = re.compile(r"^[a-fA-F0-9]{32}$")
 _REPEAT_SCHEMA_NAME = "repeat"
 
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
 class RepeatConsensus(TypedDict):
+    repeat_consensus_key: str  # md5hex
     repeat_name: str
     repeat_class: str
     repeat_type: str
@@ -51,7 +53,7 @@ class RepeatFeature(TypedDict):
     seq_region_strand: int  # constrained to -1/+1 by validation
     repeat_start: int
     repeat_end: int
-    repeat_consensus: NotRequired[RepeatConsensus | None]
+    repeat_consensus: NotRequired[str | None]
     score: NotRequired[float | None]
     attributes: NotRequired[dict[str, JsonValue]]
 
@@ -82,8 +84,6 @@ def _load_json_document(path: Path) -> dict[str, JsonValue]:
 
     text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
     parsed: JsonValue = json.loads(text)
-    if not isinstance(parsed, dict):
-        raise ValueError(f"Top-level JSON in {path} must be an object (got {type(parsed).__name__})")
 
     return cast(dict[str, JsonValue], parsed)
 
@@ -131,116 +131,77 @@ def _assert_same_top_level(
         )
 
 
+def _is_md5_hex(s: str) -> bool:
+    return bool(_MD5_RE.fullmatch(s))
+
+
+def _norm_consensus(seq: str) -> str:
+    return "".join(seq.split()).upper()
+
+
+def _compute_consensus_md5(rn: str, rc_class: str, rt: str, rc_seq: str | None) -> str:
+    norm = _norm_consensus(rc_seq) if rc_seq else ""
+    payload = "\t".join([rn, rc_class, rt, norm])
+    return hashlib.md5(payload.encode("utf-8")).hexdigest()
+
+
 def _coerce_repeat_consensus(obj: JsonValue, source_path: Path) -> RepeatConsensus:
     """Validates and casts an arbitrary object to RepeatConsensus."""
-    if not isinstance(obj, dict):
-        raise ValueError(f"repeat_consensus entries must be objects ({source_path})")
-
-    rn = obj.get("repeat_name")
-    rc_class = obj.get("repeat_class")
-    rt = obj.get("repeat_type")
-
-    if not isinstance(rn, str) or not rn:
-        raise ValueError(f"repeat_consensus.repeat_name must be a non-empty string ({source_path})")
-    if not isinstance(rc_class, str) or not rc_class:
-        raise ValueError(f"repeat_consensus.repeat_class must be a non-empty string ({source_path})")
-    if not isinstance(rt, str) or not rt:
-        raise ValueError(f"repeat_consensus.repeat_type must be a non-empty string ({source_path})")
-
-    if "repeat_consensus" in obj:
-        rc_seq = obj.get("repeat_consensus")
-        if rc_seq is not None and not isinstance(rc_seq, str):
-            raise ValueError(f"repeat_consensus.repeat_consensus must be a string if present ({source_path})")
-
-    return cast(RepeatConsensus, obj)
+    rc = cast(RepeatConsensus, obj)
+    expected = _compute_consensus_md5(
+        rc["repeat_name"],
+        rc["repeat_class"],
+        rc["repeat_type"],
+        rc.get("repeat_consensus"),
+    )
+    if rc["repeat_consensus_key"].lower() != expected:
+        raise ValueError(
+            f"repeat_consensus_key mismatch for {rc['repeat_name']}|{rc['repeat_class']}|{rc['repeat_type']} "
+            f"({source_path}). expected={expected} got={rc['repeat_consensus_key']}"
+        )
+    return rc
 
 
 def _coerce_repeat_feature(obj: JsonValue, source_path: Path) -> RepeatFeature:
     """Validates and casts an arbitrary object to RepeatFeature (minimal fields)."""
-    if not isinstance(obj, dict):
-        raise ValueError(f"repeat_features entries must be objects ({source_path})")
-
-    seq_region = obj.get("seq_region")
-    if not isinstance(seq_region, str) or not seq_region:
-        raise ValueError(f"repeat_feature.seq_region must be a non-empty string ({source_path})")
-
-    for k in ("seq_region_start", "seq_region_end", "repeat_start", "repeat_end"):
-        v = obj.get(k)
-        if not isinstance(v, int):
-            raise ValueError(f"repeat_feature.{k} must be an integer ({source_path})")
-
-    strand = obj.get("seq_region_strand")
-    if strand not in (-1, 1):
-        raise ValueError(f"repeat_feature.seq_region_strand must be -1 or 1 ({source_path})")
-
-    if "score" in obj:
-        score = obj.get("score")
-        if score is not None and not isinstance(score, (int, float)):
-            raise ValueError(f"repeat_feature.score must be numeric or null ({source_path})")
-
-    if "attributes" in obj:
-        attrs = obj.get("attributes")
-        if attrs is not None and not isinstance(attrs, dict):
-            raise ValueError(f"repeat_feature.attributes must be an object if present ({source_path})")
-
-    if "repeat_consensus" in obj:
-        rc_ref = obj.get("repeat_consensus")
-        if rc_ref is not None:
-            _coerce_repeat_consensus(rc_ref, source_path=source_path)
-
-    return cast(RepeatFeature, obj)
-
-
-def _consensus_key(rc: RepeatConsensus, source_path: Path) -> tuple[str, str, str]:
-    """Extracts and validates the natural key for a repeat_consensus entry."""
-    rn = rc["repeat_name"]
-    rc_class = rc["repeat_class"]
-    rt = rc["repeat_type"]
-
-    if not rn or not rc_class or not rt:
+    feat = cast(RepeatFeature, obj)
+    if feat["seq_region_start"] > feat["seq_region_end"]:
         raise ValueError(
-            "repeat_consensus entries must include non-empty repeat_name, repeat_class, repeat_type "
-            f"({source_path})"
+            f"seq_region_start > seq_region_end for {feat['seq_region']}: "
+            f"{feat['seq_region_start']}>{feat['seq_region_end']} ({source_path})"
         )
-    return rn, rc_class, rt
+    return feat
 
 
 def _merge_repeat_consensus(
-    combined: dict[tuple[str, str, str], RepeatConsensus],
+    combined: dict[str, RepeatConsensus],
     incoming: Iterable[JsonValue],
     source_path: Path,
 ) -> None:
-    """Merges repeat_consensus entries keyed by (repeat_name, repeat_class, repeat_type); duplicates must be identical."""
+    """Merges repeat_consensus entries; duplicates must be identical."""
     for raw in incoming:
         rc = _coerce_repeat_consensus(raw, source_path=source_path)
-        key = _consensus_key(rc, source_path=source_path)
-        if key not in combined:
+        key = rc["repeat_consensus_key"].lower()
+
+        existing = combined.get(key)
+        if existing is None:
             combined[key] = rc
             continue
-        if combined[key] != rc:
+        if existing != rc:
             raise ValueError(
                 f"Conflicting repeat_consensus for key={key} ({source_path}). "
                 "Entries differ; cannot safely merge."
             )
 
 
-def _feature_consensus_key(feature: RepeatFeature, source_path: Path) -> tuple[str, str, str] | None:
-    """Constructs the natural consensus key from a feature."""
+def _feature_consensus_key(feature: RepeatFeature, source_path: Path) -> str | None:
+    """Validates and returns consensus key from a feature."""
     ref = feature.get("repeat_consensus")
     if ref is None:
         return None
-
-    rn = ref["repeat_name"]
-    rc_class = ref["repeat_class"]
-    rt = ref["repeat_type"]
-
-    if not rn or not rc_class or not rt:
-        raise ValueError(
-            "repeat_feature.repeat_consensus must contain non-empty repeat_name, repeat_class, repeat_type "
-            f"({source_path})"
-        )
-
-    return rn, rc_class, rt
+    if not isinstance(ref, str) or not _is_md5_hex(ref):
+        raise ValueError(f"repeat_feature.repeat_consensus must be a 32-char hex md5 ({source_path})")
+    return ref.lower()
 
 
 def _lift_repeat_feature(
@@ -297,8 +258,6 @@ def combine_repeat_json(
     chunk_re: re.Pattern[str],
     agp_file: Path | None = None,
     allow_revcomp: bool = False,
-    validate_inputs: bool = True,
-    validate_output: bool = True,
 ) -> None:
     """
     Combines JSON documents from split/chunked inputs and performs coordinate liftover.
@@ -334,7 +293,7 @@ def combine_repeat_json(
     analysis_path: Path | None = None
     source_path: Path | None = None
 
-    consensus_by_key: dict[tuple[str, str, str], RepeatConsensus] = {}
+    consensus_by_key: dict[str, RepeatConsensus] = {}
     combined_features: list[RepeatFeature] = []
 
     n_files = 0
@@ -343,21 +302,12 @@ def combine_repeat_json(
     for p in json_paths:
         n_files += 1
 
-        if validate_inputs:
-            _schema_validate_file(p)
+        _schema_validate_file(p)
 
         document = _load_json_document(p)
 
-        analysis_val = document.get("analysis")
-        source_val = document.get("source")
-
-        if not isinstance(analysis_val, dict):
-            raise ValueError(f"Top-level 'analysis' must be an object ({p})")
-        if not isinstance(source_val, dict):
-            raise ValueError(f"Top-level 'source' must be an object ({p})")
-
-        analysis = cast(dict[str, JsonValue], analysis_val)
-        source = cast(dict[str, JsonValue], source_val)
+        analysis = cast(dict[str, JsonValue], document["analysis"])
+        source = cast(dict[str, JsonValue], document["source"])
 
         if combined_analysis is None:
             combined_analysis = analysis
@@ -373,19 +323,13 @@ def combine_repeat_json(
         else:
             _assert_same_top_level("source", combined_source, source, path_a=source_path or p, path_b=p)
 
-        incoming_consensus_val = document.get("repeat_consensus", [])
-        if incoming_consensus_val is None:
-            incoming_consensus_val = []
-        if not isinstance(incoming_consensus_val, list):
-            raise ValueError(f"Top-level repeat_consensus must be a list if present ({p})")
+        incoming_consensus = cast(list[JsonValue], document.get("repeat_consensus", []))
 
-        _merge_repeat_consensus(consensus_by_key, incoming_consensus_val, source_path=p)
+        _merge_repeat_consensus(consensus_by_key, incoming_consensus, p)
 
-        feats_val = document.get("repeat_features")
-        if not isinstance(feats_val, list):
-            raise ValueError(f"Top-level repeat_features must be a list ({p})")
+        features = cast(list[JsonValue], document["repeat_features"])
 
-        for raw_feat in feats_val:
+        for raw_feat in features:
             n_features_in += 1
             feat = _coerce_repeat_feature(raw_feat, source_path=p)
             combined_features.append(
@@ -401,7 +345,7 @@ def combine_repeat_json(
     if combined_analysis is None or combined_source is None:
         raise ValueError("No JSON files were read from the manifest (empty manifest?)")
 
-    missing: set[tuple[str, str, str]] = set()
+    missing: set[str] = set()
     for feat in combined_features:
         key = _feature_consensus_key(feat, source_path=out_json)
         if key is None:
@@ -410,7 +354,7 @@ def combine_repeat_json(
             missing.add(key)
 
     if missing:
-        missing_list = ", ".join([f"{k[0]}|{k[1]}|{k[2]}" for k in sorted(missing)[:20]])
+        missing_list = ", ".join(missing)
         extra = "" if len(missing) <= 20 else f" (+{len(missing) - 20} more)"
         raise ValueError(
             "repeat_features reference repeat_consensus key(s) not present in repeat_consensus: "
@@ -429,8 +373,7 @@ def combine_repeat_json(
         json.dump(combined_json, out_fh, ensure_ascii=False, indent=2)
         out_fh.write("\n")
 
-    if validate_output:
-        schema_validator(out_json, json_schema=_REPEAT_SCHEMA_NAME)
+    schema_validator(out_json, json_schema=_REPEAT_SCHEMA_NAME)
 
     logging.info(f"Read {n_files} file(s)")
     logging.info(f"Read {n_features_in} repeat_feature(s); wrote {len(combined_features)} repeat_feature(s)")
@@ -472,16 +415,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Must define named groups 'base' and 'start'."
         ),
     )
-    parser.add_argument(
-        "--no-input-validation",
-        action="store_true",
-        help="Skip schema validation for inputs (not recommended).",
-    )
-    parser.add_argument(
-        "--no-output-validation",
-        action="store_true",
-        help="Skip schema validation for output (not recommended).",
-    )
 
     args = parser.parse_args(argv)
     init_logging_with_args(args)
@@ -498,8 +431,6 @@ def main(argv: list[str] | None = None) -> None:
             agp_file=args.agp_file,
             allow_revcomp=args.allow_revcomp,
             chunk_re=chunk_re,
-            validate_inputs=not args.no_input_validation,
-            validate_output=not args.no_output_validation,
         )
     except Exception:
         logging.exception(f"Error combining repeat JSON from files in {args.json_manifest}")

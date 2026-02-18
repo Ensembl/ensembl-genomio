@@ -15,9 +15,11 @@
 """Unit testing of `ensembl.io.genomio.repeats.combine_json` module."""
 
 import gzip
+import hashlib
 import json
 from pathlib import Path
 import re
+from typing import cast
 
 import pytest
 
@@ -57,15 +59,41 @@ def _write_json_gz(path: Path, obj: object) -> Path:
 
 
 def _analysis(name: str = "rm") -> dict[str, object]:
-    return {"logic_name": name}
+    return {
+        "run_date": "2026-02-18T00:00:00Z",
+        "logic_name": name,
+        "display_label": name,
+        "description": f"{name} analysis",
+        "program": "test",
+        "program_version": "0.0",
+    }
 
 
 def _source(provider: str = "prov") -> dict[str, object]:
     return {"source_provider": provider, "is_primary": True}
 
 
-def _consensus(rn: str = "Alu", rc: str = "SINE", rt: str = "Alu") -> combine_json.RepeatConsensus:
-    return {"repeat_name": rn, "repeat_class": rc, "repeat_type": rt}
+def _md5_key(rn: str, rc: str, rt: str, seq: str | None = None) -> str:
+    norm = "".join((seq or "").split()).upper()
+    payload = "\t".join([rn, rc, rt, norm])
+    return hashlib.md5(payload.encode("utf-8")).hexdigest()
+
+
+def _consensus(
+    rn: str = "Alu",
+    rc_class: str = "SINE",
+    rt: str = "Alu",
+    seq: str | None = None,
+) -> combine_json.RepeatConsensus:
+    rc: combine_json.RepeatConsensus = {
+        "repeat_consensus_key": _md5_key(rn, rc_class, rt, seq),
+        "repeat_name": rn,
+        "repeat_class": rc_class,
+        "repeat_type": rt,
+    }
+    if seq is not None:
+        rc["repeat_consensus"] = seq
+    return rc
 
 
 def _feature(
@@ -73,7 +101,7 @@ def _feature(
     s: int,
     e: int,
     strand: int = 1,
-    consensus: combine_json.RepeatConsensus | None = None,
+    consensus_key: str | None = None,
 ) -> combine_json.RepeatFeature:
     feat: combine_json.RepeatFeature = {
         "seq_region": seq_region,
@@ -83,14 +111,18 @@ def _feature(
         "repeat_start": 1,
         "repeat_end": 10,
     }
-    if consensus is not None:
-        feat["repeat_consensus"] = consensus
+    if consensus_key is not None:
+        feat["repeat_consensus"] = consensus_key
     return feat
 
 
 @pytest.mark.parametrize("gz", [False, True])
 def test_load_json_document_accepts_object(tmp_path: Path, gz: bool):
-    doc = {"analysis": _analysis(), "source": _source(), "repeat_features": []}
+    doc = {
+        "analysis": _analysis(),
+        "source": _source(),
+        "repeat_features": [_feature(seq_region="chr1", s=1, e=2)],
+    }
     p = tmp_path / ("in.json.gz" if gz else "in.json")
     (_write_json_gz if gz else _write_json)(p, doc)
 
@@ -99,17 +131,13 @@ def test_load_json_document_accepts_object(tmp_path: Path, gz: bool):
     assert "analysis" in got
 
 
-def test_load_json_document_rejects_non_object(tmp_path: Path):
-    p = tmp_path / "bad.json"
-    _write_json(p, [1, 2, 3])
-
-    with pytest.raises(ValueError, match=r"Top-level JSON .* must be an object"):
-        combine_json._load_json_document(p)
-
-
 @pytest.mark.parametrize("gz", [False, True])
 def test_schema_validate_file_calls_validator(schema_validator_calls, tmp_path: Path, gz: bool):
-    doc = {"analysis": _analysis(), "source": _source(), "repeat_features": []}
+    doc = {
+        "analysis": _analysis(),
+        "source": _source(),
+        "repeat_features": [_feature(seq_region="chr1", s=1, e=2)],
+    }
     p = tmp_path / ("v.json.gz" if gz else "v.json")
     (_write_json_gz if gz else _write_json)(p, doc)
 
@@ -146,24 +174,28 @@ def test_get_agp_entry_for_range_raises_when_ambiguous(tmp_path: Path):
         combine_json._get_agp_entry_for_range(parts, 60, 70, component_id="comp", path=tmp_path / "x.agp")
 
 
-def test_merge_repeat_consensus_rejects_conflicting_duplicates(tmp_path: Path):
-    rc1: dict[str, combine_json.JsonValue] = {
-        "repeat_name": "Alu",
-        "repeat_class": "SINE",
-        "repeat_type": "Alu",
-    }
-    rc2: dict[str, combine_json.JsonValue] = {
-        "repeat_name": "Alu",
-        "repeat_class": "SINE",
-        "repeat_type": "Alu",
-        "repeat_consensus": "ACGT",
-    }
+def test_coerce_repeat_consensus_rejects_key_mismatch(tmp_path: Path):
+    rc = _consensus("Alu", "SINE", "Alu", seq="ACGT")
+    # Break it: change sequence but keep key
+    bad = dict(rc)
+    bad["repeat_consensus"] = "TTTT"
 
-    combined: dict[tuple[str, str, str], combine_json.RepeatConsensus] = {}
-    combine_json._merge_repeat_consensus(combined, [rc1], source_path=tmp_path / "a.json")
+    with pytest.raises(ValueError, match=r"repeat_consensus_key mismatch"):
+        combine_json._coerce_repeat_consensus(
+            cast(combine_json.JsonValue, bad), source_path=tmp_path / "a.json"
+        )
 
-    with pytest.raises(ValueError, match=r"Conflicting repeat_consensus"):
-        combine_json._merge_repeat_consensus(combined, [rc2], source_path=tmp_path / "b.json")
+
+def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path):
+    rc = _consensus("Alu", "SINE", "Alu", seq="ACGT")
+    combined: dict[str, combine_json.RepeatConsensus] = {}
+
+    incoming = [cast(combine_json.JsonValue, rc)]
+
+    combine_json._merge_repeat_consensus(combined, incoming, source_path=tmp_path / "a.json")
+    combine_json._merge_repeat_consensus(combined, incoming, source_path=tmp_path / "b.json")
+
+    assert len(combined) == 1
 
 
 @pytest.mark.parametrize(
@@ -249,19 +281,20 @@ def test_lift_repeat_feature_agp_driven_forward_and_reverse_strand(tmp_path: Pat
 def test_combine_repeat_json_header_driven_merge_and_coord_liftover(schema_validator_calls, tmp_path: Path):
     analysis = _analysis("rm")
     source = _source("prov")
-    rc = _consensus("Alu", "SINE", "Alu")
+    rc = _consensus("Alu", "SINE", "Alu", "ACGT")
+    rc_key = rc["repeat_consensus_key"]
 
     d1 = {
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [rc],
-        "repeat_features": [_feature(seq_region="chr1_chunk_start_1", s=1, e=3, consensus=rc)],
+        "repeat_features": [_feature(seq_region="chr1_chunk_start_1", s=1, e=3, consensus_key=rc_key)],
     }
     d2 = {
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [rc],
-        "repeat_features": [_feature(seq_region="chr1_chunk_start_4", s=1, e=2, consensus=rc)],
+        "repeat_features": [_feature(seq_region="chr1_chunk_start_4", s=1, e=2, consensus_key=rc_key)],
     }
 
     p1 = _write_json(tmp_path / "a.json", d1)
@@ -273,8 +306,6 @@ def test_combine_repeat_json_header_driven_merge_and_coord_liftover(schema_valid
         json_manifest=manifest,
         out_json=out_json,
         chunk_re=CHUNK_RE,
-        validate_inputs=True,
-        validate_output=True,
     )
 
     out = json.loads(out_json.read_text(encoding="utf-8"))
@@ -305,14 +336,15 @@ def test_combine_repeat_json_agp_driven_lifts_coordinates_and_strand(
 ):
     analysis = _analysis("rm")
     source = _source("prov")
-    rc = _consensus("Alu", "SINE", "Alu")
+    rc = _consensus("Alu", "SINE", "Alu", "ACGT")
+    rc_key = rc["repeat_consensus_key"]
 
     # Feature refers to AGP component_id "comp1"
     doc = {
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [rc],
-        "repeat_features": [_feature(seq_region="comp1", s=10, e=20, strand=1, consensus=rc)],
+        "repeat_features": [_feature(seq_region="comp1", s=10, e=20, strand=1, consensus_key=rc_key)],
     }
 
     json_path = _write_json(tmp_path / "in.json", doc)
@@ -333,8 +365,6 @@ def test_combine_repeat_json_agp_driven_lifts_coordinates_and_strand(
         chunk_re=CHUNK_RE,
         agp_file=agp,
         allow_revcomp=allow_revcomp,
-        validate_inputs=False,
-        validate_output=False,
     )
 
     out = json.loads(out_json.read_text(encoding="utf-8"))
@@ -349,13 +379,14 @@ def test_combine_repeat_json_agp_driven_lifts_coordinates_and_strand(
 def test_combine_repeat_json_agp_driven_missing_component_raises(tmp_path: Path):
     analysis = _analysis("rm")
     source = _source("prov")
-    rc = _consensus("Alu", "SINE", "Alu")
+    rc = _consensus("Alu", "SINE", "Alu", "ACGT")
+    rc_key = rc["repeat_consensus_key"]
 
     doc = {
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [rc],
-        "repeat_features": [_feature(seq_region="comp_missing", s=10, e=20, strand=1, consensus=rc)],
+        "repeat_features": [_feature(seq_region="comp_missing", s=10, e=20, strand=1, consensus_key=rc_key)],
     }
 
     json_path = _write_json(tmp_path / "in.json", doc)
@@ -371,21 +402,20 @@ def test_combine_repeat_json_agp_driven_missing_component_raises(tmp_path: Path)
             chunk_re=CHUNK_RE,
             agp_file=agp,
             allow_revcomp=False,
-            validate_inputs=False,
-            validate_output=False,
         )
 
 
 def test_combine_repeat_json_missing_consensus_reference_raises(tmp_path: Path):
     analysis = _analysis("rm")
     source = _source("prov")
-    rc = _consensus("X", "Y", "Z")
+    rc = _consensus("X", "Y", "Z", seq="ACGT")
+    rc_key = rc["repeat_consensus_key"]
 
     doc = {
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [],
-        "repeat_features": [_feature(seq_region="chr1", s=1, e=2, consensus=rc)],
+        "repeat_features": [_feature(seq_region="chr1", s=1, e=2, consensus_key=rc_key)],
     }
 
     p = _write_json(tmp_path / "a.json", doc)
@@ -396,8 +426,6 @@ def test_combine_repeat_json_missing_consensus_reference_raises(tmp_path: Path):
             json_manifest=manifest,
             out_json=tmp_path / "out.json",
             chunk_re=CHUNK_RE,
-            validate_inputs=False,
-            validate_output=False,
         )
 
 
@@ -405,13 +433,13 @@ def test_combine_repeat_json_analysis_mismatch_raises(tmp_path: Path):
     d1 = {
         "analysis": _analysis("a"),
         "source": _source("prov"),
-        "repeat_features": [],
+        "repeat_features": [_feature(seq_region="chr1", s=1, e=2)],
         "repeat_consensus": [],
     }
     d2 = {
         "analysis": _analysis("b"),
         "source": _source("prov"),
-        "repeat_features": [],
+        "repeat_features": [_feature(seq_region="chr1", s=1, e=2)],
         "repeat_consensus": [],
     }
 
@@ -424,36 +452,4 @@ def test_combine_repeat_json_analysis_mismatch_raises(tmp_path: Path):
             json_manifest=manifest,
             out_json=tmp_path / "out.json",
             chunk_re=CHUNK_RE,
-            validate_inputs=False,
-            validate_output=False,
-        )
-
-
-def test_combine_repeat_json_invalid_feature_strand_raises(tmp_path: Path):
-    doc = {
-        "analysis": _analysis("rm"),
-        "source": _source("prov"),
-        "repeat_consensus": [],
-        "repeat_features": [
-            {
-                "seq_region": "chr1",
-                "seq_region_start": 1,
-                "seq_region_end": 2,
-                "seq_region_strand": 0,  # invalid
-                "repeat_start": 1,
-                "repeat_end": 2,
-            }
-        ],
-    }
-
-    p = _write_json(tmp_path / "a.json", doc)
-    manifest = write_manifest(tmp_path / "manifest.txt", [str(p)])
-
-    with pytest.raises(ValueError, match=r"repeat_feature\.seq_region_strand must be -1 or 1"):
-        combine_json.combine_repeat_json(
-            json_manifest=manifest,
-            out_json=tmp_path / "out.json",
-            chunk_re=CHUNK_RE,
-            validate_inputs=False,
-            validate_output=False,
         )
