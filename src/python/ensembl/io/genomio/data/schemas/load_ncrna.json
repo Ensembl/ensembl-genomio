@@ -1,0 +1,333 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.org/schemas/ncrna_load.json",
+  "description": "JSON schema for loading ncRNA features from tRNAscan, Rfam/cmscan, and mirBase.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["analysis", "ncrna_tool", "source", "ncrna_features"],
+
+
+  "properties": {
+    "analysis": {
+      "$ref": "load_common.json#/definitions/analysis",
+      "description": "Single analysis definition for this load."
+    },
+
+    "ncrna_tool": {
+        "type": "string",
+        "enum": ["trnascan", "cmscan", "mirbase"],
+        "description": "Tool used to generate this set of ncRNA features."
+    },
+
+    "source": {
+      "$ref": "load_common.json#/definitions/annotation_source",
+      "description": "Single annotation source for this load."
+    },
+
+    "ncrna_features": {
+      "type": "array",
+      "minItems": 1,
+      "description": "ncRNA features for this analysis+source."
+    }
+  },
+
+  "allOf": [
+    {
+      "if": { "properties": { "ncrna_tool": { "const": "trnascan" } } },
+      "then": {
+        "properties": {
+          "ncrna_features": {
+            "items": { "$ref": "#/definitions/trnascan_feature" }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "ncrna_tool": { "const": "cmscan" } } },
+      "then": {
+        "properties": {
+          "ncrna_features": {
+            "items": { "$ref": "#/definitions/cmscan_feature" }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "ncrna_tool": { "const": "mirbase" } } },
+      "then": {
+        "properties": {
+          "ncrna_features": {
+            "items": { "$ref": "#/definitions/mirbase_feature" }
+          }
+        }
+      }
+    }
+  ],
+
+  "definitions": {
+    "ncrna_feature_base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seq_region",
+        "seq_region_start",
+        "seq_region_end",
+        "seq_region_strand",
+        "biotype"
+      ],
+      "properties": {
+        "seq_region": {
+          "$ref": "load_common.json#/definitions/non_empty_string",
+          "description": "seq_region name"
+        },
+        "seq_region_start": { "$ref": "load_common.json#/definitions/positive_int" },
+        "seq_region_end": { "$ref": "load_common.json#/definitions/positive_int" },
+        "seq_region_strand": { "$ref": "load_common.json#/definitions/strand" },
+        "biotype": {
+          "$ref": "load_common.json#/definitions/non_empty_string",
+          "maxLength": 64,
+          "description": "Target biotype for the gene/transcript (e.g. tRNA, miRNA, snoRNA, snRNA, rRNA, ncRNA)."
+        },
+        "score": {
+          "type": "number",
+          "description": "Primary score from the tool (Infernal bitscore, tRNAscan score, etc.)."
+        },
+        "evalue": {
+          "type": "number",
+          "minimum": 0,
+          "description": "e-value."
+        }
+      }
+    },
+
+    "trnascan_feature": {
+      "description": "tRNAscan-SE feature. Tool-specific fields are stored directly on the feature object.",
+      "allOf": [
+        { "$ref": "#/definitions/ncrna_feature_base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["isotype", "anticodon"],
+          "properties": {
+            "isotype": {
+              "$ref": "load_common.json#/definitions/non_empty_string",
+              "maxLength": 32,
+              "description": "tRNAscan isotype/amino acid (e.g. Phe, Leu, iMet)."
+            },
+            "anticodon": {
+              "$ref": "load_common.json#/definitions/non_empty_string",
+              "maxLength": 16,
+              "description": "Anticodon string as reported."
+            },
+            "codon": {
+              "type": "string",
+              "maxLength": 16,
+              "description": "Codon string, if you choose to record it."
+            },
+            "intron_start": {
+              "$ref": "load_common.json#/definitions/positive_int",
+              "description": "Coordinate of intron start on seq_region."
+            },
+            "intron_end": {
+              "$ref": "load_common.json#/definitions/positive_int",
+              "description": "Coordinate of intron end on seq_region."
+            },
+            "is_pseudogene": {
+              "type": "boolean",
+              "description": "Optional pseudogene flag if produced."
+            }
+          }
+        },
+        {
+          "allOf": [
+            {
+              "if": { "required": ["intron_start"] },
+              "then": { "required": ["intron_end"] }
+            },
+            {
+              "if": { "required": ["intron_end"] },
+              "then": { "required": ["intron_start"] }
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "seq_region": "chr1",
+          "seq_region_start": 1056,
+          "seq_region_end": 1128,
+          "seq_region_strand": 1,
+          "biotype": "tRNA",
+          "display_label": "tRNA-Phe",
+          "score": 74.3,
+          "isotype": "Phe",
+          "anticodon": "GAA",
+          "codon": "TTC",
+          "is_pseudogene": false
+        }
+      ]
+    },
+
+    "cmscan_feature": {
+      "description": "Infernal cmscan feature (e.g. Rfam). Tool-specific fields are stored directly on the feature object.",
+      "allOf": [
+        { "$ref": "#/definitions/ncrna_feature_base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target_name", "is_significant"],
+          "properties": {
+            "target_name": {
+              "$ref": "load_common.json#/definitions/non_empty_string",
+              "maxLength": 255,
+              "description": "CM/target name."
+            },
+            "target_accession": {
+              "type": "string",
+              "maxLength": 32,
+              "description": "Rfam accession."
+            },
+            "model_start": {
+              "$ref": "load_common.json#/definitions/positive_int",
+              "description": "Alignment/model start coordinate."
+            },
+            "model_end": {
+              "$ref": "load_common.json#/definitions/positive_int",
+              "description": "Alignment/model end coordinate."
+            },
+            "truncation": {
+              "type": "string",
+              "enum": ["none", "5prime", "3prime", "both"],
+              "description": "Truncation status of the feature."
+            },
+            "pass_nr": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3,
+              "description": "Infernal pass number."
+            },
+            "gc": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "GC fraction."
+            },
+            "bias": {
+              "type": "number",
+              "description": "Bias value."
+            },
+            "is_significant": {
+              "type": "boolean",
+              "description": "Infernal's inclusion flag / thresholding decision (! = true, ? = false)."
+            }
+          }
+        },
+        {
+          "allOf": [
+            {
+              "if": { "required": ["model_start"] },
+              "then": { "required": ["model_end"] }
+            },
+            {
+              "if": { "required": ["model_end"] },
+              "then": { "required": ["model_start"] }
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "seq_region": "chr2",
+          "seq_region_start": 20450,
+          "seq_region_end": 20530,
+          "seq_region_strand": -1,
+          "biotype": "snoRNA",
+          "display_label": "SNORD14",
+          "score": 42.3,
+          "evalue": 1.2e-09,
+          "target_name": "RF00005",
+          "target_accession": "RF00005",
+          "model_start": 1,
+          "model_end": 75,
+          "truncation": "none",
+          "pass": 1,
+          "gc": 0.48,
+          "bias": 0.1,
+          "is_significant": true
+        }
+      ]
+    },
+
+    "mirbase_feature": {
+      "description": "miRBase feature (hairpin or mature). Tool-specific fields are stored directly on the feature object.",
+      "allOf": [
+        { "$ref": "#/definitions/ncrna_feature_base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mirna_name", "mirna_type"],
+          "properties": {
+            "mirna_name": {
+              "$ref": "load_common.json#/definitions/non_empty_string",
+              "maxLength": 255,
+              "description": "miRBase name (e.g. ath-miR156a, hsa-miR-21-5p)."
+            },
+            "mirna_accession": {
+              "type": "string",
+              "maxLength": 32,
+              "description": "miRBase accession."
+            },
+            "mirna_type": {
+              "type": "string",
+              "enum": ["hairpin", "mature"],
+              "description": "Type of feature (hairpin or mature)."
+            },
+            "parent_hairpin_name": {
+              "type": "string",
+              "maxLength": 255,
+              "description": "For mature products, the parent hairpin name if known."
+            },
+            "arm": {
+              "type": "string",
+              "enum": ["5p", "3p"],
+              "description": "For mature products, the arm if known."
+            },
+            "evidence_type": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Optional evidence label (e.g. curated, homology, smallRNA-seq)."
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "seq_region": "chr3",
+          "seq_region_start": 555000,
+          "seq_region_end": 555072,
+          "seq_region_strand": 1,
+          "biotype": "miRNA",
+          "display_label": "ath-miR156a",
+          "mirna_name": "ath-miR156a",
+          "mirna_accession": "MI0000123",
+          "mirna_type": "hairpin",
+          "evidence_type": "curated"
+        },
+        {
+          "seq_region": "chr3",
+          "seq_region_start": 555020,
+          "seq_region_end": 555041,
+          "seq_region_strand": 1,
+          "biotype": "miRNA",
+          "display_label": "ath-miR156a-5p",
+          "mirna_name": "ath-miR156a-5p",
+          "mirna_accession": "MIMAT0000123",
+          "mirna_type": "mature",
+          "parent_hairpin_name": "ath-miR156a",
+          "arm": "5p",
+          "evidence_type": "curated"
+        }
+      ]
+    }
+  }
+}

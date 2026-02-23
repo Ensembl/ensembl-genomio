@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.org/schemas/load_common.json",
+  "description": "Shared definitions for Ensembl Genomio JSON loader schemas.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "definitions": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "positive_int": {
+      "type": "integer",
+      "minimum": 1
+    },
+
+    "strand": {
+      "type": "integer",
+      "enum": [-1, 1],
+      "description": "Ensembl-style strand -1/+1."
+    },
+
+    "md5_hex": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{32}$",
+      "description": "32-char hex MD5 digest."
+    },
+
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_date", "logic_name", "display_label", "description"],
+      "properties": {
+        "run_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "analysis.run_date (datetime)"
+        },
+        "logic_name": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 128,
+          "description": "Unique key for analysis; corresponds to analysis.logic_name."
+        },
+        "display_label": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 255
+        },
+        "description": {
+          "$ref": "#/definitions/non_empty_string"
+        },
+        "program": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "program_version": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "program_parameters": {
+          "type": "string",
+          "description": "analysis.program_parameters"
+        },
+        "db": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "analysis.db"
+        },
+        "db_version": {
+          "type": "string",
+          "maxLength": 40
+        }
+      },
+      "anyOf": [{ "required": ["program"] }, { "required": ["db"] }]
+    },
+
+    "annotation_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_provider"],
+      "properties": {
+        "source_provider": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 24,
+          "description": "Natural key for source/provider; loader maps/creates source_id for this provider."
+        },
+        "is_primary": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  }
+}
