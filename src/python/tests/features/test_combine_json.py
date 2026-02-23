@@ -23,7 +23,7 @@ from typing import cast
 
 import pytest
 
-from ensembl.io.genomio.repeats import combine_json  # <-- adjust if needed
+from ensembl.io.genomio.features import combine_json
 from .._helpers import write_manifest
 
 
@@ -79,7 +79,7 @@ def _md5_key(rn: str, rc: str, rt: str, seq: str | None = None) -> str:
     return hashlib.md5(payload.encode("utf-8")).hexdigest()
 
 
-def _consensus(
+def _repeat_consensus(
     rn: str = "Alu",
     rc_class: str = "SINE",
     rt: str = "Alu",
@@ -96,7 +96,7 @@ def _consensus(
     return rc
 
 
-def _feature(
+def _repeat_feature(
     seq_region: str,
     s: int,
     e: int,
@@ -116,12 +116,38 @@ def _feature(
     return feat
 
 
+def _ncrna_feature(seq_region: str, s: int, e: int, strand: int = 1) -> dict[str, object]:
+    return {
+        "seq_region": seq_region,
+        "seq_region_start": s,
+        "seq_region_end": e,
+        "seq_region_strand": strand,
+        "biotype": "miRNA",
+        "score": 1.0,
+        "target_name": "MIRTEST",
+        "is_significant": True,
+    }
+
+
+def _trnascan_feature(seq_region: str, s: int, e: int, strand: int = 1) -> dict[str, object]:
+    return {
+        "seq_region": seq_region,
+        "seq_region_start": s,
+        "seq_region_end": e,
+        "seq_region_strand": strand,
+        "biotype": "tRNA",
+        "score": 50.0,
+        "isotype": "Phe",
+        "anticodon": "GAA",
+    }
+
+
 @pytest.mark.parametrize("gz", [False, True])
 def test_load_json_document_accepts_object(tmp_path: Path, gz: bool):
     doc = {
         "analysis": _analysis(),
         "source": _source(),
-        "repeat_features": [_feature(seq_region="chr1", s=1, e=2)],
+        "repeat_features": [_repeat_feature(seq_region="chr1", s=1, e=2)],
     }
     p = tmp_path / ("in.json.gz" if gz else "in.json")
     (_write_json_gz if gz else _write_json)(p, doc)
@@ -136,7 +162,7 @@ def test_schema_validate_file_calls_validator(schema_validator_calls, tmp_path: 
     doc = {
         "analysis": _analysis(),
         "source": _source(),
-        "repeat_features": [_feature(seq_region="chr1", s=1, e=2)],
+        "repeat_features": [_repeat_feature(seq_region="chr1", s=1, e=2)],
     }
     p = tmp_path / ("v.json.gz" if gz else "v.json")
     (_write_json_gz if gz else _write_json)(p, doc)
@@ -149,7 +175,7 @@ def test_schema_validate_file_calls_validator(schema_validator_calls, tmp_path: 
 
     assert schema_validator_calls, "schema_validator was not called"
     args, kwargs = schema_validator_calls[-1]
-    assert kwargs.get("json_schema") == "repeat"
+    assert kwargs.get("json_schema") == "load_features"
 
     validated_path = kwargs.get("json_file") or (args[0] if args else None)
     assert isinstance(validated_path, Path)
@@ -175,7 +201,7 @@ def test_get_agp_entry_for_range_raises_when_ambiguous(tmp_path: Path):
 
 
 def test_coerce_repeat_consensus_rejects_key_mismatch(tmp_path: Path):
-    rc = _consensus("Alu", "SINE", "Alu", seq="ACGT")
+    rc = _repeat_consensus("Alu", "SINE", "Alu", seq="ACGT")
     # Break it: change sequence but keep key
     bad = dict(rc)
     bad["repeat_consensus"] = "TTTT"
@@ -187,7 +213,7 @@ def test_coerce_repeat_consensus_rejects_key_mismatch(tmp_path: Path):
 
 
 def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path):
-    rc = _consensus("Alu", "SINE", "Alu", seq="ACGT")
+    rc = _repeat_consensus("Alu", "SINE", "Alu", seq="ACGT")
     combined: dict[str, combine_json.RepeatConsensus] = {}
 
     incoming = [cast(combine_json.JsonValue, rc)]
@@ -196,6 +222,24 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path):
     combine_json._merge_repeat_consensus(combined, incoming, source_path=tmp_path / "b.json")
 
     assert len(combined) == 1
+
+
+def test_coerce_repeat_feature_rejects_start_gt_end(tmp_path: Path):
+    feat = _repeat_feature(seq_region="chr1", s=10, e=5)
+    with pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"):
+        combine_json._coerce_repeat_feature(
+            cast(combine_json.JsonValue, feat),
+            source_path=tmp_path / "a.json",
+        )
+
+
+def test_coerce_ncrna_feature_rejects_start_gt_end(tmp_path: Path):
+    feat = _ncrna_feature("chr1", 10, 5, strand=1)
+    with pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"):
+        combine_json._coerce_ncrna_feature(
+            cast(combine_json.JsonValue, feat),
+            source_path=tmp_path / "a.json",
+        )
 
 
 @pytest.mark.parametrize(
@@ -214,14 +258,17 @@ def test_lift_repeat_feature_header_driven(
     expected_start: int,
     expected_end: int,
 ):
-    feat = _feature(seq_region=name, s=s, e=e)
+    feat = _repeat_feature(seq_region=name, s=s, e=e)
 
-    out = combine_json._lift_repeat_feature(
-        feat,
-        chunk_re=CHUNK_RE,
-        agp_by_component=None,
-        allow_revcomp=False,
-        source_path=tmp_path / "x.json",
+    out = cast(
+        combine_json.RepeatFeature,
+        combine_json._lift_feature_coords(
+            feat,
+            chunk_re=CHUNK_RE,
+            agp_by_component=None,
+            allow_revcomp=False,
+            source_path=tmp_path / "x.json",
+        ),
     )
 
     assert out["seq_region"] == expected_region
@@ -253,48 +300,64 @@ def test_lift_repeat_feature_agp_driven_forward_and_reverse_strand(tmp_path: Pat
         orientation="-",
     )
 
-    forward_strand_feature = _feature(seq_region="compP", s=10, e=20, strand=1)
-    forward_strand_result = combine_json._lift_repeat_feature(
-        forward_strand_feature,
-        chunk_re=CHUNK_RE,
-        agp_by_component={"compP": [forward_strand_entry]},
-        allow_revcomp=False,
-        source_path=tmp_path / "x.json",
+    forward_strand_feature = _repeat_feature(seq_region="compP", s=10, e=20, strand=1)
+    forward_strand_result = cast(
+        combine_json.RepeatFeature,
+        combine_json._lift_feature_coords(
+            forward_strand_feature,
+            chunk_re=CHUNK_RE,
+            agp_by_component={"compP": [forward_strand_entry]},
+            allow_revcomp=False,
+            source_path=tmp_path / "x.json",
+        ),
     )
     assert forward_strand_result["seq_region"] == "objP"
     assert forward_strand_result["seq_region_start"] == 109
     assert forward_strand_result["seq_region_end"] == 119
     assert forward_strand_result["seq_region_strand"] == 1
 
-    reverse_strand_feature = _feature(seq_region="compM", s=10, e=20, strand=1)
-    reverse_strand_result = combine_json._lift_repeat_feature(
-        reverse_strand_feature,
-        chunk_re=CHUNK_RE,
-        agp_by_component={"compM": [reverse_strand_entry]},
-        allow_revcomp=True,
-        source_path=tmp_path / "x.json",
+    reverse_strand_feature = _repeat_feature(seq_region="compM", s=10, e=20, strand=1)
+    reverse_strand_result = cast(
+        combine_json.RepeatFeature,
+        combine_json._lift_feature_coords(
+            reverse_strand_feature,
+            chunk_re=CHUNK_RE,
+            agp_by_component={"compM": [reverse_strand_entry]},
+            allow_revcomp=True,
+            source_path=tmp_path / "x.json",
+        ),
     )
     assert reverse_strand_result["seq_region"] == "objM"
     assert reverse_strand_result["seq_region_strand"] == -1
 
 
+def test_combine_feature_json_empty_manifest_raises(tmp_path: Path):
+    manifest = write_manifest(tmp_path / "manifest.txt", [])
+    with pytest.raises(ValueError, match=r"empty manifest"):
+        combine_json.combine_feature_json(
+            json_manifest=manifest,
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+        )
+
+
 def test_combine_repeat_json_header_driven_merge_and_coord_liftover(schema_validator_calls, tmp_path: Path):
     analysis = _analysis("rm")
     source = _source("prov")
-    rc = _consensus("Alu", "SINE", "Alu", "ACGT")
+    rc = _repeat_consensus("Alu", "SINE", "Alu", "ACGT")
     rc_key = rc["repeat_consensus_key"]
 
     d1 = {
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [rc],
-        "repeat_features": [_feature(seq_region="chr1_chunk_start_1", s=1, e=3, consensus_key=rc_key)],
+        "repeat_features": [_repeat_feature(seq_region="chr1_chunk_start_1", s=1, e=3, consensus_key=rc_key)],
     }
     d2 = {
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [rc],
-        "repeat_features": [_feature(seq_region="chr1_chunk_start_4", s=1, e=2, consensus_key=rc_key)],
+        "repeat_features": [_repeat_feature(seq_region="chr1_chunk_start_4", s=1, e=2, consensus_key=rc_key)],
     }
 
     p1 = _write_json(tmp_path / "a.json", d1)
@@ -302,7 +365,7 @@ def test_combine_repeat_json_header_driven_merge_and_coord_liftover(schema_valid
     manifest = write_manifest(tmp_path / "manifest.txt", [str(p1), str(p2)])
     out_json = tmp_path / "out.json"
 
-    combine_json.combine_repeat_json(
+    combine_json.combine_feature_json(
         json_manifest=manifest,
         out_json=out_json,
         chunk_re=CHUNK_RE,
@@ -336,7 +399,7 @@ def test_combine_repeat_json_agp_driven_lifts_coordinates_and_strand(
 ):
     analysis = _analysis("rm")
     source = _source("prov")
-    rc = _consensus("Alu", "SINE", "Alu", "ACGT")
+    rc = _repeat_consensus("Alu", "SINE", "Alu", "ACGT")
     rc_key = rc["repeat_consensus_key"]
 
     # Feature refers to AGP component_id "comp1"
@@ -344,7 +407,7 @@ def test_combine_repeat_json_agp_driven_lifts_coordinates_and_strand(
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [rc],
-        "repeat_features": [_feature(seq_region="comp1", s=10, e=20, strand=1, consensus_key=rc_key)],
+        "repeat_features": [_repeat_feature(seq_region="comp1", s=10, e=20, strand=1, consensus_key=rc_key)],
     }
 
     json_path = _write_json(tmp_path / "in.json", doc)
@@ -359,7 +422,7 @@ def test_combine_repeat_json_agp_driven_lifts_coordinates_and_strand(
 
     out_json = tmp_path / "out.json"
 
-    combine_json.combine_repeat_json(
+    combine_json.combine_feature_json(
         json_manifest=manifest,
         out_json=out_json,
         chunk_re=CHUNK_RE,
@@ -379,14 +442,16 @@ def test_combine_repeat_json_agp_driven_lifts_coordinates_and_strand(
 def test_combine_repeat_json_agp_driven_missing_component_raises(tmp_path: Path):
     analysis = _analysis("rm")
     source = _source("prov")
-    rc = _consensus("Alu", "SINE", "Alu", "ACGT")
+    rc = _repeat_consensus("Alu", "SINE", "Alu", "ACGT")
     rc_key = rc["repeat_consensus_key"]
 
     doc = {
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [rc],
-        "repeat_features": [_feature(seq_region="comp_missing", s=10, e=20, strand=1, consensus_key=rc_key)],
+        "repeat_features": [
+            _repeat_feature(seq_region="comp_missing", s=10, e=20, strand=1, consensus_key=rc_key)
+        ],
     }
 
     json_path = _write_json(tmp_path / "in.json", doc)
@@ -396,7 +461,47 @@ def test_combine_repeat_json_agp_driven_missing_component_raises(tmp_path: Path)
     agp.write_text("chr1\t100\t199\t1\tW\tcomp1\t1\t100\t+\n", encoding="utf-8")
 
     with pytest.raises(KeyError, match=r"not found as an AGP component_id"):
-        combine_json.combine_repeat_json(
+        combine_json.combine_feature_json(
+            json_manifest=manifest,
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+            agp_file=agp,
+            allow_revcomp=False,
+        )
+
+
+def test_combine_repeat_json_agp_driven_ambiguous_mapping_raises(tmp_path: Path):
+    analysis = _analysis("rm")
+    source = _source("prov")
+    rc = _repeat_consensus("Alu", "SINE", "Alu", "ACGT")
+    rc_key = rc["repeat_consensus_key"]
+
+    # This feature range will match *both* AGP entries below (overlapping component spans).
+    doc = {
+        "analysis": analysis,
+        "source": source,
+        "repeat_consensus": [rc],
+        "repeat_features": [_repeat_feature(seq_region="comp1", s=60, e=70, strand=1, consensus_key=rc_key)],
+    }
+
+    json_path = _write_json(tmp_path / "in.json", doc)
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(json_path)])
+
+    agp = tmp_path / "test.agp"
+    agp.write_text(
+        "\n".join(
+            [
+                # Both have component_id comp1, overlapping comp spans that contain 60..70
+                "chr1\t100\t199\t1\tW\tcomp1\t1\t100\t+",
+                "chr1\t300\t399\t2\tW\tcomp1\t50\t150\t+",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"Ambiguous AGP mapping"):
+        combine_json.combine_feature_json(
             json_manifest=manifest,
             out_json=tmp_path / "out.json",
             chunk_re=CHUNK_RE,
@@ -408,21 +513,21 @@ def test_combine_repeat_json_agp_driven_missing_component_raises(tmp_path: Path)
 def test_combine_repeat_json_missing_consensus_reference_raises(tmp_path: Path):
     analysis = _analysis("rm")
     source = _source("prov")
-    rc = _consensus("X", "Y", "Z", seq="ACGT")
+    rc = _repeat_consensus("X", "Y", "Z", seq="ACGT")
     rc_key = rc["repeat_consensus_key"]
 
     doc = {
         "analysis": analysis,
         "source": source,
         "repeat_consensus": [],
-        "repeat_features": [_feature(seq_region="chr1", s=1, e=2, consensus_key=rc_key)],
+        "repeat_features": [_repeat_feature(seq_region="chr1", s=1, e=2, consensus_key=rc_key)],
     }
 
     p = _write_json(tmp_path / "a.json", doc)
     manifest = write_manifest(tmp_path / "manifest.txt", [str(p)])
 
     with pytest.raises(ValueError, match=r"not present in repeat_consensus"):
-        combine_json.combine_repeat_json(
+        combine_json.combine_feature_json(
             json_manifest=manifest,
             out_json=tmp_path / "out.json",
             chunk_re=CHUNK_RE,
@@ -433,13 +538,13 @@ def test_combine_repeat_json_analysis_mismatch_raises(tmp_path: Path):
     d1 = {
         "analysis": _analysis("a"),
         "source": _source("prov"),
-        "repeat_features": [_feature(seq_region="chr1", s=1, e=2)],
+        "repeat_features": [_repeat_feature(seq_region="chr1", s=1, e=2)],
         "repeat_consensus": [],
     }
     d2 = {
         "analysis": _analysis("b"),
         "source": _source("prov"),
-        "repeat_features": [_feature(seq_region="chr1", s=1, e=2)],
+        "repeat_features": [_repeat_feature(seq_region="chr1", s=1, e=2)],
         "repeat_consensus": [],
     }
 
@@ -448,7 +553,184 @@ def test_combine_repeat_json_analysis_mismatch_raises(tmp_path: Path):
     manifest = write_manifest(tmp_path / "manifest.txt", [str(p1), str(p2)])
 
     with pytest.raises(ValueError, match=r"Top-level 'analysis' differs"):
-        combine_json.combine_repeat_json(
+        combine_json.combine_feature_json(
+            json_manifest=manifest,
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+        )
+
+
+def test_combine_ncrna_json_header_driven_merge_and_coord_liftover(schema_validator_calls, tmp_path: Path):
+    analysis = _analysis("cmscan")
+    source = _source("prov")
+
+    d1 = {
+        "analysis": analysis,
+        "source": source,
+        "ncrna_tool": "cmscan",
+        "ncrna_features": [_ncrna_feature("chr1_chunk_start_1", 1, 3, strand=1)],
+    }
+    d2 = {
+        "analysis": analysis,
+        "source": source,
+        "ncrna_tool": "cmscan",
+        "ncrna_features": [_ncrna_feature("chr1_chunk_start_4", 1, 2, strand=1)],
+    }
+
+    p1 = _write_json(tmp_path / "a.json", d1)
+    p2 = _write_json(tmp_path / "b.json", d2)
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(p1), str(p2)])
+
+    out_json = tmp_path / "out.json"
+    combine_json.combine_feature_json(json_manifest=manifest, out_json=out_json, chunk_re=CHUNK_RE)
+
+    out = json.loads(out_json.read_text(encoding="utf-8"))
+    assert out["analysis"] == analysis
+    assert out["source"] == source
+    assert out["ncrna_tool"] == "cmscan"
+    assert len(out["ncrna_features"]) == 2
+    assert out["ncrna_features"][0]["seq_region"] == "chr1"
+    assert out["ncrna_features"][1]["seq_region_start"] == 4
+
+    assert schema_validator_calls
+
+
+@pytest.mark.parametrize(
+    "orientation,allow_revcomp,expected_strand,expected_start,expected_end",
+    [
+        ("+", False, 1, 109, 119),
+        ("-", True, -1, 180, 190),
+    ],
+)
+def test_combine_ncrna_json_agp_driven_lifts_coordinates_and_strand(
+    tmp_path: Path,
+    orientation: str,
+    allow_revcomp: bool,
+    expected_strand: int,
+    expected_start: int,
+    expected_end: int,
+):
+    analysis = _analysis("cmscan")
+    source = _source("prov")
+
+    doc = {
+        "analysis": analysis,
+        "source": source,
+        "ncrna_tool": "cmscan",
+        "ncrna_features": [_ncrna_feature("comp1", 10, 20, strand=1)],
+    }
+
+    json_path = _write_json(tmp_path / "in.json", doc)
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(json_path)])
+
+    agp = tmp_path / "test.agp"
+    agp.write_text(f"chr1\t100\t199\t1\tW\tcomp1\t1\t100\t{orientation}\n", encoding="utf-8")
+
+    out_json = tmp_path / "out.json"
+    combine_json.combine_feature_json(
+        json_manifest=manifest,
+        out_json=out_json,
+        chunk_re=CHUNK_RE,
+        agp_file=agp,
+        allow_revcomp=allow_revcomp,
+    )
+
+    out = json.loads(out_json.read_text(encoding="utf-8"))
+    feat = out["ncrna_features"][0]
+    assert feat["seq_region"] == "chr1"
+    assert feat["seq_region_start"] == expected_start
+    assert feat["seq_region_end"] == expected_end
+    assert feat["seq_region_strand"] == expected_strand
+
+
+def test_combine_ncrna_json_tool_mismatch_raises(tmp_path: Path):
+    analysis = _analysis("ncrna")
+    source = _source("prov")
+
+    d1 = {
+        "analysis": analysis,
+        "source": source,
+        "ncrna_tool": "cmscan",
+        "ncrna_features": [_ncrna_feature("chr1", 1, 2)],
+    }
+    d2 = {
+        "analysis": analysis,
+        "source": source,
+        "ncrna_tool": "trnascan",
+        "ncrna_features": [_trnascan_feature("chr1", 3, 4)],
+    }
+
+    p1 = _write_json(tmp_path / "a.json", d1)
+    p2 = _write_json(tmp_path / "b.json", d2)
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(p1), str(p2)])
+
+    with pytest.raises(ValueError, match=r"ncrna_tool.*differs"):
+        combine_json.combine_feature_json(
+            json_manifest=manifest,
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+        )
+
+
+def test_combine_feature_json_mixed_schema_kinds_raises(tmp_path: Path):
+    analysis = _analysis("mix")
+    source = _source("prov")
+
+    repeat_doc = {
+        "analysis": analysis,
+        "source": source,
+        "repeat_consensus": [],
+        "repeat_features": [_repeat_feature("chr1", 1, 2)],
+    }
+    ncrna_doc = {
+        "analysis": analysis,
+        "source": source,
+        "ncrna_tool": "cmscan",
+        "ncrna_features": [_ncrna_feature("chr1", 1, 2)],
+    }
+
+    p1 = _write_json(tmp_path / "repeat.json", repeat_doc)
+    p2 = _write_json(tmp_path / "ncrna.json", ncrna_doc)
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(p1), str(p2)])
+
+    with pytest.raises(ValueError, match=r"Mixed load types detected"):
+        combine_json.combine_feature_json(
+            json_manifest=manifest,
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+        )
+
+
+def test_combine_repeat_json_empty_feature_array_raises(tmp_path: Path):
+    doc = {
+        "analysis": _analysis("rm"),
+        "source": _source("prov"),
+        "repeat_consensus": [],
+        "repeat_features": [],
+    }
+    p = _write_json(tmp_path / "in.json", doc)
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(p)])
+
+    with pytest.raises(Exception):
+        combine_json.combine_feature_json(
+            json_manifest=manifest,
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+        )
+
+
+def test_combine_ncrna_json_empty_feature_array_raises(tmp_path: Path):
+    doc = {
+        "analysis": _analysis("cmscan"),
+        "source": _source("prov"),
+        "ncrna_tool": "cmscan",
+        "ncrna_features": [],
+    }
+    p = _write_json(tmp_path / "in.json", doc)
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(p)])
+
+    with pytest.raises(Exception):
+        combine_json.combine_feature_json(
             json_manifest=manifest,
             out_json=tmp_path / "out.json",
             chunk_re=CHUNK_RE,

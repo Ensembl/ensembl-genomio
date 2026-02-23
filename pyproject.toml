@@ -118,6 +118,8 @@ fasta_chunk = "ensembl.io.genomio.fasta.chunk:main"
 fasta_compare = "ensembl.io.genomio.fasta.compare:main"
 fasta_process = "ensembl.io.genomio.fasta.process:main"
 fasta_recombine = "ensembl.io.genomio.fasta.recombine:main"
+# Features
+features_combine_json = "ensembl.io.genomio.features.combine_json:main"
 # GenBank
 genbank_download = "ensembl.io.genomio.genbank.download:main"
 genbank_extract_data = "ensembl.io.genomio.genbank.extract_data:main"
@@ -137,8 +139,6 @@ annotation_update_description = "ensembl.io.genomio.annotation.update_descriptio
 manifest_check_integrity = "ensembl.io.genomio.manifest.check_integrity:main"
 manifest_compute_stats = "ensembl.io.genomio.manifest.compute_stats:main"
 manifest_generate = "ensembl.io.genomio.manifest.generate:main"
-# Repeats
-repeats_combine_json = "ensembl.io.genomio.repeats.combine_json:main"
 # Schemas
 schemas_json_factory = "ensembl.io.genomio.schemas.json.factory:main"
 schemas_json_validate = "ensembl.io.genomio.schemas.json.validate:main"

@@ -1,18 +1,18 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.org/schemas/load_repeat.json",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/load_repeat.json",
   "description": "JSON schema for loading repeat features and optional consensus sequences for a single analysis+source. RepeatConsensus uniqueness is determined by (repeat_name, repeat_class, repeat_type, repeat_consensus) and referenced via an md5 key.",
   "type": "object",
   "additionalProperties": false,
   "required": ["analysis", "source", "repeat_features"],
   "properties": {
     "analysis": {
-      "$ref": "load_common.json#/definitions/analysis",
+      "$ref": "#/definitions/analysis",
       "description": "Single analysis definition for this load; loader resolves/creates analysis_id by logic_name."
     },
 
     "source": {
-      "$ref": "load_common.json#/definitions/annotation_source",
+      "$ref": "#/definitions/annotation_source",
       "description": "Single annotation source for this load; loader resolves/creates source_id by source_provider."
     },
 
@@ -31,6 +31,86 @@
   },
 
   "definitions": {
+     "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "positive_int": {
+      "type": "integer",
+      "minimum": 1
+    },
+
+    "strand": {
+      "type": "integer",
+      "enum": [-1, 1],
+      "description": "Ensembl-style strand -1/+1."
+    },
+
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_date", "logic_name", "display_label", "description"],
+      "properties": {
+        "run_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "analysis.run_date (datetime)"
+        },
+        "logic_name": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 128,
+          "description": "Unique key for analysis; corresponds to analysis.logic_name."
+        },
+        "display_label": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 255
+        },
+        "description": {
+          "$ref": "#/definitions/non_empty_string"
+        },
+        "program": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "program_version": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "program_parameters": {
+          "type": "string",
+          "description": "analysis.program_parameters"
+        },
+        "db": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "analysis.db"
+        },
+        "db_version": {
+          "type": "string",
+          "maxLength": 40
+        }
+      },
+      "anyOf": [{ "required": ["program"] }, { "required": ["db"] }]
+    },
+
+    "annotation_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_provider"],
+      "properties": {
+        "source_provider": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 24,
+          "description": "Natural key for source/provider; loader maps/creates source_id for this provider."
+        },
+        "is_primary": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+
     "md5_hex": {
       "type": "string",
       "pattern": "^[a-fA-F0-9]{32}$",
@@ -47,15 +127,15 @@
           "description": "MD5 key computed from (repeat_name, repeat_class, repeat_type, repeat_consensus) after whatever normalization the producer/loader defines (e.g. uppercase and whitespace-stripped for repeat_consensus)."
         },
         "repeat_name": {
-          "$ref": "load_common.json#/definitions/non_empty_string",
+          "$ref": "#/definitions/non_empty_string",
           "maxLength": 255
         },
         "repeat_class": {
-          "$ref": "load_common.json#/definitions/non_empty_string",
+          "$ref": "#/definitions/non_empty_string",
           "maxLength": 100
         },
         "repeat_type": {
-          "$ref": "load_common.json#/definitions/non_empty_string",
+          "$ref": "#/definitions/non_empty_string",
           "maxLength": 40
         },
         "repeat_consensus": {
@@ -84,20 +164,20 @@
       ],
       "properties": {
         "seq_region": {
-          "$ref": "load_common.json#/definitions/non_empty_string",
+          "$ref": "#/definitions/non_empty_string",
           "description": "Seq_region name (chromosome/scaffold/contig). Loader resolves to seq_region_id."
         },
 
-        "seq_region_start": { "$ref": "load_common.json#/definitions/positive_int" },
-        "seq_region_end": { "$ref": "load_common.json#/definitions/positive_int" },
-        "seq_region_strand": { "$ref": "load_common.json#/definitions/strand" },
+        "seq_region_start": { "$ref": "#/definitions/positive_int" },
+        "seq_region_end": { "$ref": "#/definitions/positive_int" },
+        "seq_region_strand": { "$ref": "#/definitions/strand" },
 
         "repeat_start": {
-          "$ref": "load_common.json#/definitions/positive_int",
+          "$ref": "#/definitions/positive_int",
           "description": "repeat_feature.repeat_start (on the consensus)."
         },
         "repeat_end": {
-          "$ref": "load_common.json#/definitions/positive_int",
+          "$ref": "#/definitions/positive_int",
           "description": "repeat_feature.repeat_end (on the consensus)."
         },
 

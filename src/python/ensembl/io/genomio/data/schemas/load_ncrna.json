@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.org/schemas/ncrna_load.json",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/ncrna_load.json",
   "description": "JSON schema for loading ncRNA features from tRNAscan, Rfam/cmscan, and mirBase.",
   "type": "object",
   "additionalProperties": false,
@@ -9,7 +9,7 @@
 
   "properties": {
     "analysis": {
-      "$ref": "load_common.json#/definitions/analysis",
+      "$ref": "#/definitions/analysis",
       "description": "Single analysis definition for this load."
     },
 
@@ -20,7 +20,7 @@
     },
 
     "source": {
-      "$ref": "load_common.json#/definitions/annotation_source",
+      "$ref": "#/definitions/annotation_source",
       "description": "Single annotation source for this load."
     },
 
@@ -65,6 +65,86 @@
   ],
 
   "definitions": {
+     "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "positive_int": {
+      "type": "integer",
+      "minimum": 1
+    },
+
+    "strand": {
+      "type": "integer",
+      "enum": [-1, 1],
+      "description": "Ensembl-style strand -1/+1."
+    },
+
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_date", "logic_name", "display_label", "description"],
+      "properties": {
+        "run_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "analysis.run_date (datetime)"
+        },
+        "logic_name": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 128,
+          "description": "Unique key for analysis; corresponds to analysis.logic_name."
+        },
+        "display_label": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 255
+        },
+        "description": {
+          "$ref": "#/definitions/non_empty_string"
+        },
+        "program": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "program_version": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "program_parameters": {
+          "type": "string",
+          "description": "analysis.program_parameters"
+        },
+        "db": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "analysis.db"
+        },
+        "db_version": {
+          "type": "string",
+          "maxLength": 40
+        }
+      },
+      "anyOf": [{ "required": ["program"] }, { "required": ["db"] }]
+    },
+
+    "annotation_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_provider"],
+      "properties": {
+        "source_provider": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 24,
+          "description": "Natural key for source/provider; loader maps/creates source_id for this provider."
+        },
+        "is_primary": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+
     "ncrna_feature_base": {
       "type": "object",
       "additionalProperties": false,
@@ -77,14 +157,14 @@
       ],
       "properties": {
         "seq_region": {
-          "$ref": "load_common.json#/definitions/non_empty_string",
+          "$ref": "#/definitions/non_empty_string",
           "description": "seq_region name"
         },
-        "seq_region_start": { "$ref": "load_common.json#/definitions/positive_int" },
-        "seq_region_end": { "$ref": "load_common.json#/definitions/positive_int" },
-        "seq_region_strand": { "$ref": "load_common.json#/definitions/strand" },
+        "seq_region_start": { "$ref": "#/definitions/positive_int" },
+        "seq_region_end": { "$ref": "#/definitions/positive_int" },
+        "seq_region_strand": { "$ref": "#/definitions/strand" },
         "biotype": {
-          "$ref": "load_common.json#/definitions/non_empty_string",
+          "$ref": "#/definitions/non_empty_string",
           "maxLength": 64,
           "description": "Target biotype for the gene/transcript (e.g. tRNA, miRNA, snoRNA, snRNA, rRNA, ncRNA)."
         },
@@ -110,12 +190,12 @@
           "required": ["isotype", "anticodon"],
           "properties": {
             "isotype": {
-              "$ref": "load_common.json#/definitions/non_empty_string",
+              "$ref": "#/definitions/non_empty_string",
               "maxLength": 32,
               "description": "tRNAscan isotype/amino acid (e.g. Phe, Leu, iMet)."
             },
             "anticodon": {
-              "$ref": "load_common.json#/definitions/non_empty_string",
+              "$ref": "#/definitions/non_empty_string",
               "maxLength": 16,
               "description": "Anticodon string as reported."
             },
@@ -125,11 +205,11 @@
               "description": "Codon string, if you choose to record it."
             },
             "intron_start": {
-              "$ref": "load_common.json#/definitions/positive_int",
+              "$ref": "#/definitions/positive_int",
               "description": "Coordinate of intron start on seq_region."
             },
             "intron_end": {
-              "$ref": "load_common.json#/definitions/positive_int",
+              "$ref": "#/definitions/positive_int",
               "description": "Coordinate of intron end on seq_region."
             },
             "is_pseudogene": {
@@ -178,7 +258,7 @@
           "required": ["target_name", "is_significant"],
           "properties": {
             "target_name": {
-              "$ref": "load_common.json#/definitions/non_empty_string",
+              "$ref": "#/definitions/non_empty_string",
               "maxLength": 255,
               "description": "CM/target name."
             },
@@ -188,11 +268,11 @@
               "description": "Rfam accession."
             },
             "model_start": {
-              "$ref": "load_common.json#/definitions/positive_int",
+              "$ref": "#/definitions/positive_int",
               "description": "Alignment/model start coordinate."
             },
             "model_end": {
-              "$ref": "load_common.json#/definitions/positive_int",
+              "$ref": "#/definitions/positive_int",
               "description": "Alignment/model end coordinate."
             },
             "truncation": {
@@ -268,7 +348,7 @@
           "required": ["mirna_name", "mirna_type"],
           "properties": {
             "mirna_name": {
-              "$ref": "load_common.json#/definitions/non_empty_string",
+              "$ref": "#/definitions/non_empty_string",
               "maxLength": 255,
               "description": "miRBase name (e.g. ath-miR156a, hsa-miR-21-5p)."
             },
