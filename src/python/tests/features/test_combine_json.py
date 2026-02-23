@@ -249,7 +249,7 @@ def test_coerce_ncrna_feature_rejects_start_gt_end(tmp_path: Path):
         ("chr1", 1, 5, "chr1", 1, 5),
     ],
 )
-def test_lift_repeat_feature_header_driven(
+def test_lift_repeat_feature_seq_region_driven(
     tmp_path: Path,
     name: str,
     s: int,
@@ -341,7 +341,9 @@ def test_combine_feature_json_empty_manifest_raises(tmp_path: Path):
         )
 
 
-def test_combine_repeat_json_header_driven_merge_and_coord_liftover(schema_validator_calls, tmp_path: Path):
+def test_combine_repeat_json_seq_region_driven_merge_and_coord_liftover(
+    schema_validator_calls, tmp_path: Path
+):
     analysis = _analysis("rm")
     source = _source("prov")
     rc = _repeat_consensus("Alu", "SINE", "Alu", "ACGT")

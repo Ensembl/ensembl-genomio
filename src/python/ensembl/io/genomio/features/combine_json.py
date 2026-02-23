@@ -81,7 +81,22 @@ Feature = TypeVar("Feature", bound=_FeatureCoords)
 def _get_agp_entry_for_range(
     parts: list[AgpEntry], start: int, end: int, *, component_id: str, path: Path
 ) -> AgpEntry:
-    """Retrieves the unique AGP part whose component span fully contains a given range."""
+    """
+    Retrieves the unique AGP part whose component span fully contains a given range.
+
+    Args:
+        parts: AGP entries for a single component_id.
+        start: Feature start on the component (1-based, inclusive).
+        end: Feature end on the component (1-based, inclusive).
+        component_id: Component identifier being lifted (used for error messages).
+        path: Path of the source file being processed (used for error messages).
+
+    Returns:
+        The single AGP entry whose ``part_start``/``part_end`` contains the range.
+
+    Raises:
+        ValueError: If no entry contains the range, or if multiple entries match (ambiguous mapping).
+    """
     matches = [pt for pt in parts if pt.part_start <= start and end <= pt.part_end]
     if not matches:
         spans = ", ".join(f"{pt.part_start}-{pt.part_end}@{pt.record}" for pt in parts)
@@ -152,6 +167,7 @@ def _assert_same_top_level(
 
 
 def _detect_load_type(document: dict[str, JsonValue], path: Path) -> str:
+    """Detects the load type (repeat vs ncRNA) of a JSON document based on presence of top-level keys."""
     if "repeat_features" in document:
         return "repeat"
     if "ncrna_features" in document and "ncrna_tool" in document:
@@ -253,7 +269,29 @@ def _lift_feature_coords(
     allow_revcomp: bool,
     source_path: Path,
 ) -> Feature:
-    """Constructs a modified copy of a feature with lifted seq_region and coordinates."""
+    """
+    Constructs a modified copy of a feature with lifted seq_region and coordinates.
+
+    Uses AGP-driven lifting when ``agp_by_component`` is provided; otherwise uses seq_region-driven lifting
+    via ``chunk_re``. If the feature does not appear chunked in seq_region-driven mode, it is returned
+    unchanged.
+
+    Args:
+        feature: Feature mapping containing seq_region and coordinates to lift.
+        chunk_re: Regex identifying chunked seq_region IDs; must include named groups ``base`` and ``start``.
+        agp_by_component: Optional mapping from AGP component_id to its AGP entries. If provided, AGP-driven
+            lifting is used.
+        allow_revcomp: Whether to allow reverse-oriented AGP entries (orientation '-') when lifting.
+        source_path: Path of the source JSON file (used for error messages).
+
+    Returns:
+        A copy of the input feature with updated seq_region / start / end / strand as needed,
+        or the original feature if no lifting is required.
+
+    Raises:
+        ValueError: If seq_region_start > seq_region_end, or if AGP mapping is ambiguous/invalid.
+        KeyError: If AGP-driven lifting is requested but feature.seq_region is not present in the AGP index.
+    """
     name = feature["seq_region"]
     sr_start = feature["seq_region_start"]
     sr_end = feature["seq_region_end"]
@@ -301,7 +339,25 @@ def _combine_repeat_json_paths(
     agp_by_component: dict[str, list[AgpEntry]] | None,
     allow_revcomp: bool,
 ) -> None:
-    """Combines JSON documents containing repeat features and consensus, with coordinate liftover."""
+    """
+    Combines JSON documents containing repeat features and consensus, with coordinate liftover.
+
+    Args:
+        json_paths: Input JSON file paths (optionally gzipped).
+        out_json: Output path for the combined JSON document.
+        chunk_re: Regex identifying chunked seq_region IDs for seq_region-driven lifting.
+        agp_by_component: Optional AGP component index enabling AGP-driven lifting.
+        allow_revcomp: Whether to allow reverse-oriented AGP entries when lifting.
+
+    Raises:
+        ValueError: If:
+            - input files differ in top-level analysis or source,
+            - consensus entries conflict,
+            - features reference missing consensus keys,
+            - coordinates are invalid or ambiguous,
+            - no input files are provided.
+        KeyError: If AGP-driven lifting is requested but a feature seq_region is not present in the AGP index.
+    """
 
     combined_analysis: dict[str, JsonValue] | None = None
     combined_source: dict[str, JsonValue] | None = None
@@ -394,6 +450,21 @@ def _combine_ncrna_json_paths(
     agp_by_component: dict[str, list[AgpEntry]] | None,
     allow_revcomp: bool,
 ) -> None:
+    """
+    Combines JSON documents containing ncRNA features for a single tool, with coordinate liftover.
+
+    Args:
+        json_paths: Input JSON file paths (optionally gzipped).
+        out_json: Output path for the combined JSON document.
+        chunk_re: Regex identifying chunked seq_region IDs for seq_region-driven lifting.
+        agp_by_component: Optional AGP component index enabling AGP-driven lifting.
+        allow_revcomp: Whether to allow reverse-oriented AGP entries when lifting.
+
+    Raises:
+        ValueError: If top-level metadata differs between inputs, if ncrna_tool differs between inputs,
+            if no inputs are provided, or if any feature has invalid coordinates.
+        KeyError: If AGP-driven lifting is requested but a feature seq_region is not present in the AGP index.
+    """
     combined_analysis: dict[str, JsonValue] | None = None
     combined_source: dict[str, JsonValue] | None = None
     combined_tool: str | None = None
@@ -549,6 +620,15 @@ def combine_feature_json(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """
+    Parses command-line arguments for the feature JSON combining CLI.
+
+    Args:
+        argv: Optional argument vector (excluding program name). If None, arguments are read from ``sys.argv``.
+
+    Returns:
+        Parsed argparse namespace with validated options and logging configuration applied.
+    """
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
         "--json-manifest",
@@ -565,7 +645,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument_src_path(
         "--agp-file",
         metavar="AGP",
-        default=None,
+        default=argparse.SUPPRESS,
         help="Optional AGP file; if provided, coordinate lifting uses AGP component mapping.",
     )
     parser.add_argument(
@@ -590,18 +670,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Entry point for the feature JSON combining CLI."""
     args = parse_args(argv)
     chunk_re = validate_regex(args.chunk_id_regex)
     try:
         combine_feature_json(
             json_manifest=args.json_manifest,
             out_json=args.out_json,
-            agp_file=args.agp_file,
+            agp_file=getattr(args, "agp_file", None),
             allow_revcomp=args.allow_revcomp,
             chunk_re=chunk_re,
         )
     except Exception:
-        logging.exception(f"Error combining repeat JSON from files in {args.json_manifest}")
+        logging.exception(f"Error combining feature JSON from files in {args.json_manifest}")
         raise
 
 

@@ -37,18 +37,40 @@ from ensembl.utils.logging import init_logging_with_args
 
 @dataclass(frozen=True)
 class RecordLocation:
+    """Location and metadata for a FASTA record discovered during header indexing."""
+
     path: Path
     description: str
 
 
 class FastaRecordCache:
-    """Cache for FASTA records keyed by file path, to keep single file's records in memory at once."""
+    """
+    Cache for FASTA records keyed by file path.
+
+    Only one input FASTA is loaded into memory at a time. When a requested record is in a
+    different file, the cache is replaced by indexing that file's records.
+    """
 
     def __init__(self) -> None:
         self._current_path: Path | None = None
         self._records: dict[str, SeqRecord] = {}
 
     def get(self, record_id: str, loc: RecordLocation) -> SeqRecord:
+        """
+        Return a record by ID from the file indicated by ``loc``.
+
+        Args:
+            record_id: FASTA record identifier to retrieve.
+            loc: Location/metadata for the file containing the record.
+
+        Returns:
+            The requested ``SeqRecord``.
+
+        Raises:
+            KeyError: If the record ID is not found in the indexed file.
+            ValueError: If the file contains duplicate record IDs.
+            OSError: If the file cannot be opened/read.
+        """
         if self._current_path is None or self._current_path != loc.path:
             self._load_file(loc.path)
 
@@ -69,9 +91,10 @@ class FastaRecordCache:
         self._records = records
 
 
+# TODO: move to shared utils module once merged with splitter
 def _description_without_id(record: SeqRecord) -> str:
     """Removes ID from FASTA record description"""
-    desc = record.description or ""
+    desc = record.description
     if desc == record.id:
         return ""
     if desc.startswith(record.id):
@@ -80,7 +103,12 @@ def _description_without_id(record: SeqRecord) -> str:
 
 
 def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
-    """Iterate over FASTA headers, yielding (record_id, description) tuples."""
+    """
+    Iterates over FASTA headers, yielding (record_id, description) tuples.
+
+    Yields:
+        Tuples of (record_id, description_without_id).
+    """
     with open_gz_file(path) as fh:
         for record in SeqIO.parse(fh, "fasta"):
             yield record.id, _description_without_id(record)
@@ -91,12 +119,27 @@ def _build_index(
     fasta_paths: Iterable[Path],
 ) -> tuple[dict[str, RecordLocation], dict[str, int], dict[str, list[tuple[int, str]]]]:
     """
-    Builds an index from record_id -> (file_path, description) using headers only.
+    Builds lightweight indices from FASTA headers across the manifest files.
+
+    The function scans each FASTA file and records:
+    - ``locations``: mapping of every record ID to its source file path and description.
+    - ``first_seen``: stable ordering of base IDs based on first appearance across inputs
+      (used to keep output order deterministic in header-driven mode).
+    - ``chunks``: mapping of base ID to a list of (start, chunk_record_id) pairs extracted
+      from record IDs that match ``chunk_re``.
+
+    Args:
+        chunk_re: Regex that identifies chunk records and defines named groups:
+            - ``base``: original (unchunked) record ID
+            - ``start``: 0-based chunk start coordinate used for ordering/contiguity checks.
+        fasta_paths: Paths to FASTA files to index (may be gzipped).
 
     Returns:
-      - locations: record_id -> RecordLocation(path, description)
-      - first_seen: base_id -> first-seen order index (stable output ordering in header mode)
-      - chunks: base_id -> list of (start, chunk_record_id) for header-driven reconstruction
+        A tuple ``(locations, first_seen, chunks)``.
+
+    Raises:
+        ValueError: If no FASTA headers are found, or if duplicate record IDs are encountered.
+        OSError: If any input file cannot be opened/read.
     """
     locations: dict[str, RecordLocation] = {}
     first_seen: dict[str, int] = {}
@@ -134,8 +177,18 @@ def _agp_component_seq(
     """
     Extracts the component subsequence described by AGP coordinates.
 
-    Converts 1-based AGP coordinates to Python slicing and returns the subsequence.
-    If orientation is '-', reverse-complement is applied when allowed.
+    Args:
+        component_record: The component sequence record (AGP ``component_id``).
+        comp_beg: 1-based inclusive start on the component.
+        comp_end: 1-based inclusive end on the component.
+        orientation: '+' or '-' orientation from AGP.
+        allow_revcomp: Whether reverse-complementing is permitted for '-' orientation.
+
+    Returns:
+        The extracted component sequence (possibly reverse-complemented).
+
+    Raises:
+        ValueError: If orientation is invalid, or if orientation is '-' when ``allow_revcomp`` is False.
     """
     sub: Seq = component_record.seq[comp_beg - 1 : comp_end]
 
@@ -158,7 +211,25 @@ def _records_from_agp(
     cache: FastaRecordCache,
     allow_revcomp: bool,
 ) -> Iterator[SeqRecord]:
-    """AGP-driven reconstruction of sequences."""
+    """
+    Yields recombined records using AGP-driven reconstruction.
+
+    For each AGP object, components are ordered by (record_start, part_number) and concatenated.
+    Contiguity is enforced on the AGP object coordinates.
+
+    Args:
+        agp_entries: Mapping of AGP object ID -> list of component entries.
+        locations: Mapping of record ID -> source path/description from header indexing.
+        cache: Record cache used to load component sequences on demand.
+        allow_revcomp: Whether reverse-complementing is permitted for '-' orientation.
+
+    Yields:
+        Reconstructed ``SeqRecord`` objects, one per AGP object.
+
+    Raises:
+        KeyError: If the AGP references a component ID not present in ``locations``.
+        ValueError: If AGP parts are non-contiguous or extracted component lengths do not match AGP spans.
+    """
     for record_id, parts in agp_entries.items():
         sorted_parts = sorted(parts, key=lambda p: (p.part_start, p.part_number))
 
@@ -207,9 +278,26 @@ def _records_from_headers(
     cache: FastaRecordCache,
 ) -> Iterator[SeqRecord]:
     """
-    Header-driven reconstruction of sequences:
-      - If a base id has chunk records, concatenate in start order (enforcing contiguity).
-      - Otherwise, pass through the unchunked record.
+    Yields recombined records using header-driven reconstruction.
+
+    If a base ID has chunk records, chunk sequences are concatenated in increasing start order and
+    contiguity is enforced (each chunk start must equal the previous end). If a base ID has no
+    chunks, the record is passed through unchanged.
+
+    Output order is stable based on first appearance of each base ID during indexing.
+
+    Args:
+        locations: Mapping of record ID -> source path/description.
+        first_seen: Stable ordering index for each base ID.
+        chunks: Mapping of base ID -> list of (start, chunk_record_id).
+        cache: Record cache used to load sequences on demand.
+
+    Yields:
+        Reconstructed ``SeqRecord`` objects.
+
+    Raises:
+        KeyError: If a referenced base/chunk record is missing from ``locations``.
+        ValueError: If chunk coordinates are non-contiguous.
     """
     all_bases = sorted(first_seen.keys(), key=lambda b: first_seen[b])
 
@@ -261,9 +349,9 @@ def recombine_fasta(
     allow_revcomp: bool = False,
 ) -> None:
     """
-    Recombines split/chunked FASTA files listed in manifest into a single FASTA.  Inputs may be gzipped.
+    Recombines split/chunked FASTA files listed in manifest into a single FASTA.
 
-    Reconstruction modes:
+    Inputs may be gzipped. Reconstruction uses one of twomodes:
 
     1) AGP-driven (recommended)
     - Output sequences are assembled per AGP 'object' in coordinate order.
@@ -327,7 +415,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$",
         help=(
             "Regex used to identify chunked records and extract coordinates. "
-            "Must define named groups 'base' and 'start', e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$'."
+            "Must define named groups 'base' and 'start', e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$'. "
+            "Start is expected to be a 0-based coordinate indicating the chunk's position within the original sequence."
         ),
     )
 
