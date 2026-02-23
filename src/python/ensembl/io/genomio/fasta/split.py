@@ -58,6 +58,8 @@ class OutputWriter:
         - ``max_dirs_per_directory``: how directory indices are expanded into a multi-level path
           (base-N style).
         - ``unique_file_names``: whether to include directory index in filenames.
+
+
     """
 
     def __init__(
@@ -200,7 +202,24 @@ class OutputWriter:
         agp_end: int | None = None,
         agp_part_nr: int | None = None,
     ) -> None:
-        """Writes a SeqRecord to the current output file and update counters."""
+        """
+        Writes a SeqRecord to the current output file and update counters.
+
+        If AGP writing is enabled, also writes a corresponding AGP component line describing how the
+        written record maps back to the original input sequence.
+
+        Args:
+            record: Sequence record to write to the current output FASTA file.
+            agp_object_id: Original (unchunked) input sequence ID to write into the AGP ``object`` column.
+                Required if ``write_agp`` is True.
+            agp_start: Start coordinate on the AGP object (1-based, inclusive). Required if ``write_agp`` is True.
+            agp_end: End coordinate on the AGP object (1-based, inclusive). Required if ``write_agp`` is True.
+            agp_part_nr: Component part number for this object (starts at 1 per object). Required if
+                ``write_agp`` is True.
+
+        Raises:
+            ValueError: If ``write_agp`` is True but any of the AGP arguments are missing.
+        """
         SeqIO.write(record, self._fh, "fasta")
         self.record_count += 1
         self.file_len += len(record.seq)
@@ -222,6 +241,7 @@ class OutputWriter:
 
 
 def _check_contents_deletable(dir: Path, output_file_re: re.Pattern[str]) -> None:
+    """Checks that a directory contains only expected output files (recursively)."""
     for p in dir.rglob("*"):
         if not p.is_dir():
             if not output_file_re.match(p.name):
@@ -381,6 +401,19 @@ def split_fasta(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """
+    Parses command-line arguments for the FASTA splitting CLI.
+
+    Args:
+        argv: Optional argument vector (excluding the program name). If None, arguments are read from
+            ``sys.argv`` by argparse.
+
+    Returns:
+        Parsed argparse namespace with validated options and logging configuration applied.
+
+    Raises:
+        ValueError: If ``--min-chunk-length`` is provided without ``--max-seq-length-per-file``.
+    """
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
         "--fasta-file",
@@ -466,7 +499,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-
+    """Entry point for the FASTA splitting CLI."""
     args = parse_args(argv)
     try:
         split_fasta(
