@@ -88,7 +88,7 @@ def test_clean_previous_output_deletes_numeric_top_level_dirs(tmp_path, write_fa
     other_zero.mkdir()
     (other_zero / "in.5.fa").write_text(">other_zero\nA\n", encoding="utf-8")
 
-    split.clean_previous_output(in_fa, out_dir)
+    split._clean_previous_output(in_fa, out_dir)
 
     assert not d1.exists()
     assert not d2.exists()
@@ -113,7 +113,7 @@ def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(tmp
     (d2 / "unexpected.fa").write_text(">x\nU\n", encoding="utf-8")
 
     with pytest.raises(RuntimeError, match=r"Unexpected file identified.*out/2/unexpected.fa"):
-        split.clean_previous_output(in_fa, out_dir)
+        split._clean_previous_output(in_fa, out_dir)
 
     # Nothing deleted because validation failed before deletion loop
     assert d1.exists()
