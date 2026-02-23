@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.org/schemas/repeat_load.schema.json",
+  "$id": "https://example.org/schemas/load_repeat.schema.json",
   "description": "JSON schema for loading repeat features and optional consensus sequences for a single analysis+source. RepeatConsensus uniqueness is determined by (repeat_name, repeat_class, repeat_type, repeat_consensus) and referenced via an md5 key.",
   "type": "object",
   "additionalProperties": false,

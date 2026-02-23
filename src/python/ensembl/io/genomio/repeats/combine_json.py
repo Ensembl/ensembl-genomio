@@ -33,7 +33,7 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 _MD5_RE = re.compile(r"^[a-fA-F0-9]{32}$")
-_REPEAT_SCHEMA_NAME = "repeat"
+_REPEAT_SCHEMA_NAME = "load_repeat"
 
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
