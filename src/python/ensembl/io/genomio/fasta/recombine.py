@@ -349,17 +349,28 @@ def recombine_fasta(
     allow_revcomp: bool = False,
 ) -> None:
     """
-    Recombines split/chunked FASTA files listed in manifest into a single FASTA.
+    Recombines split/chunked FASTA files listed in a manifest into a single FASTA.
 
-    Inputs may be gzipped. Reconstruction uses one of twomodes:
+    Inputs may be plain FASTA or gzipped FASTA. Reconstruction uses one of two modes:
 
-    1) AGP-driven (recommended)
-    - Output sequences are assembled per AGP 'object' in coordinate order.
+    1) AGP-driven (recommended):
+       Assembles output sequences per AGP object using component coordinates and ordering.
 
-    2) Header-driven (no AGP)
-    - Chunk records detected by parsing the header
-    - Chunks grouped by <orig_id>, sorted by start, and concatenated.
-    - Unchunked records pass through unchanged.
+    2) Header-driven (no AGP):
+       Detects chunk records by matching ``chunk_re`` against record IDs, groups by ``base``, sorts by
+       ``start``, enforces contiguity, and concatenates chunks. Unchunked records pass through unchanged.
+
+    Args:
+        fasta_manifest: Path to a text file containing one FASTA path per line.
+        out_fasta: Destination path for the recombined FASTA output.
+        chunk_re: Regex used for header-driven mode; must define named groups ``base`` and ``start``.
+        agp_file: Optional AGP file. If provided, AGP-driven reconstruction is used.
+        allow_revcomp: Allow reverse-complementing components when AGP orientation is '-'.
+
+    Raises:
+        ValueError: If inputs contain no records, contain duplicate IDs, or chunk/AGP coordinates are invalid.
+        KeyError: If AGP references a component ID that is not present in the FASTA inputs.
+        OSError: If input/output files cannot be read/written.
     """
     fasta_paths = get_paths_from_manifest(fasta_manifest)
 
@@ -415,8 +426,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$",
         help=(
             "Regex used to identify chunked records and extract coordinates. "
-            "Must define named groups 'base' and 'start', e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$'. "
-            "Start is expected to be a 0-based coordinate indicating the chunk's position within the original sequence."
+            "Must define named groups 'base' and 'start', e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$'."
         ),
     )
 

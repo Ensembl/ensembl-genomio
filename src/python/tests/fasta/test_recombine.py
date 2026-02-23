@@ -136,6 +136,23 @@ def test_records_from_headers_reassembles_contiguous_chunks(write_fasta):
     assert str(recs[0].seq) == "AAAATT"
 
 
+def test_records_from_1_based_start_headers_reassembles_contiguous_chunks(write_fasta):
+    f1 = write_fasta(
+        "f1.fa",
+        [
+            ("X_chunk_start_1", "CCCC", "c1"),
+            ("X_chunk_start_5", "GG", "c5"),
+        ],
+    )
+    locations, first_seen, chunks = recombine._build_index(CHUNK_RE, [f1])
+    cache = recombine.FastaRecordCache()
+
+    recs = list(recombine._records_from_headers(locations, first_seen, chunks, cache))
+    assert len(recs) == 1
+    assert recs[0].id == "X"
+    assert str(recs[0].seq) == "CCCCGG"
+
+
 def test_records_from_headers_noncontiguous_chunks_raises(write_fasta):
     f1 = write_fasta(
         "f1.fa",
