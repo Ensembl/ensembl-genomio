@@ -17,6 +17,7 @@
 
 import argparse
 import logging
+from io import TextIOWrapper
 from pathlib import Path
 import re
 import shutil
@@ -53,13 +54,11 @@ class OutputWriter:
 
     Notes:
         Output layout is controlled by:
-        - ``max_files_per_directory``: how many FASTA files to write per directory before incrementing
-          the directory index.
+        - ``max_files_per_directory``: how many FASTA files to write per directory before
+            incrementing the directory index.
         - ``max_dirs_per_directory``: how directory indices are expanded into a multi-level path
-          (base-N style).
+            (base-N style).
         - ``unique_file_names``: whether to include directory index in filenames.
-
-
     """
 
     def __init__(
@@ -81,8 +80,8 @@ class OutputWriter:
         self.file_count = 0
         self.record_count = 0
         self.file_len = 0
-        self._fh = None
-        self._agp_fh = None
+        self._fh: TextIOWrapper | None = None
+        self._agp_fh: TextIOWrapper | None = None
         self._cleaned_dirs: set[Path] = set()
 
         self.open_new_file()
@@ -102,12 +101,11 @@ class OutputWriter:
         parts = []
         max_dirs = self.max_dirs_per_directory
         if max_dirs is None:
-            parts.append("1")
-        else:
-            n = dir_index
-            while n > 0:
-                parts.append(str((n - 1) % max_dirs + 1))
-                n = (n - 1) // max_dirs
+            return self.out_dir / "1"
+        n = dir_index
+        while n > 0:
+            parts.append(str((n - 1) % max_dirs + 1))
+            n = (n - 1) // max_dirs
 
         parts.reverse()
         return self.out_dir.joinpath(*parts)
@@ -126,7 +124,7 @@ class OutputWriter:
         """
         max_files = self.max_files_per_directory
         if max_files is None:
-            return self.file_count, 0
+            return (self.file_count, 0)
         adjusted_count = self.file_count - 1
         return (adjusted_count % max_files + 1, adjusted_count // max_files + 1)
 
@@ -141,7 +139,7 @@ class OutputWriter:
             file_name = f"{self.basename}.{dir_index}.{file_index}.fa"
         else:
             file_name = f"{self.basename}.{file_index}.fa"
-        return subdir_path.joinpath(file_name)
+        return subdir_path / file_name
 
     def add_agp_entry(
         self,
@@ -154,6 +152,7 @@ class OutputWriter:
     ) -> None:
         """
         Write a single AGP v2.0 component line for a chunk/contig.
+
         Coordinates written to AGP are 1-based and inclusive.
 
         Args:
@@ -210,10 +209,12 @@ class OutputWriter:
 
         Args:
             record: Sequence record to write to the current output FASTA file.
-            agp_object_id: Original (unchunked) input sequence ID to write into the AGP ``object`` column.
-                Required if ``write_agp`` is True.
-            agp_start: Start coordinate on the AGP object (1-based, inclusive). Required if ``write_agp`` is True.
-            agp_end: End coordinate on the AGP object (1-based, inclusive). Required if ``write_agp`` is True.
+            agp_object_id: Original (unchunked) input sequence ID to write into the AGP ``object``
+                column. Required if ``write_agp`` is True.
+            agp_start: Start coordinate on the AGP object (1-based, inclusive). Required if
+                ``write_agp`` is True.
+            agp_end: End coordinate on the AGP object (1-based, inclusive). Required if
+                ``write_agp`` is True.
             agp_part_nr: Component part number for this object (starts at 1 per object). Required if
                 ``write_agp`` is True.
 
@@ -224,12 +225,10 @@ class OutputWriter:
         self.record_count += 1
         self.file_len += len(record.seq)
 
-        if not self.write_agp:
-            return
-
-        if agp_object_id is None or agp_start is None or agp_end is None or agp_part_nr is None:
-            raise ValueError("All AGP arguments must be provided if writing AGP entries")
-        self.add_agp_entry(agp_object_id, agp_start, agp_end, agp_part_nr, record.id, len(record.seq))
+        if self.write_agp:
+            if [x for x in (agp_object_id, agp_start, agp_end, agp_part_nr) if x is None]:
+                raise ValueError("All AGP arguments must be provided if writing AGP entries")
+            self.add_agp_entry(agp_object_id, agp_start, agp_end, agp_part_nr, record.id, len(record.seq))
 
     def close(self) -> None:
         if self._fh is not None:
@@ -262,8 +261,7 @@ def _clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
     top_level_dirs = [p for p in out_dir.iterdir() if p.is_dir() and _NUMERIC_DIR_RE.match(p.name)]
 
     basename = _get_fasta_basename(fasta_file)
-    b = re.escape(basename)
-    output_file_re = re.compile(rf"^{b}\.[1-9]\d*(?:\.[1-9]\d*)?\.fa$")
+    output_file_re = re.compile(rf"^{re.escape(basename)}\.[1-9]\d*(\.[1-9]\d*)?\.fa$")
     for d in top_level_dirs:
         _check_contents_deletable(d, output_file_re)
     for d in top_level_dirs:
@@ -306,31 +304,38 @@ def split_fasta(
     - maximum number of records per file (``max_seqs_per_file``), and/or
     - maximum cumulative sequence length per file (``max_seq_length_per_file``).
 
-    If ``force_max_seq_length`` is enabled, individual sequences longer than ``max_seq_length_per_file`` are
-    split into chunks.  Otherwise, the whole sequence will be written into a single file When chunking, a final
-    remainder chunk shorter than ``min_chunk_length`` can be merged into the previous chunk.
+    If ``force_max_seq_length`` is enabled, individual sequences longer than ``max_seq_length_per_file``
+    are split into chunks.  Otherwise, the whole sequence will be written into a single file. When
+    chunking, a final remainder chunk shorter than ``min_chunk_length`` can be merged into the
+    previous chunk.
 
-    Optionally, an AGP v2.0 file can be written describing how each input sequence maps to output contigs/chunks.
+    Optionally, an AGP v2.0 file can be written describing how each input sequence maps to output
+    contigs/chunks.
 
     Args:
         fasta_file: Input raw or compressed FASTA file containing sequences to split.
-        out_dir: Top-level output directory into which split FASTA files (and optionally an AGP file) are written.
-        write_agp: If True, write an AGP v2.0 file describing how each input sequence maps to output contigs/chunks.
-        delete_existing_files: If True, remove outputs from previous runs under ``out_dir`` (only if no unexpected
-            files are found).
-        unique_file_names: If True, include directory index in output FASTA filenames to make them unique across
-            nested output directories.
-        force_max_seq_length: If True, sequences longer than ``max_seq_length_per_file`` are split into chunks.
-        max_seqs_per_file: Maximum number of sequences (records) per output FASTA file. If None, no record-count
-            limit is applied.
-        max_seq_length_per_file: Maximum cumulative sequence length (in bp) per output FASTA file. If None, no
-            cumulative-length limit is applied.
-        min_chunk_length: Minimum allowed length (in bp) of the final remainder chunk when chunking. If the final
-            chunk would be shorter than this, it is merged into the previous chunk. If None, no minimum is applied.
-        max_files_per_directory: Maximum number of FASTA files per directory before moving to the next computed
-            directory level. If None, all output files are written under a single directory.
-        max_dirs_per_directory: Maximum number of subdirectories per directory level when expanding directory indices
-            into a multi-level path (base-N style). If None, a single directory level is used.
+        out_dir: Top-level output directory into which split FASTA files (and optionally an AGP
+            file) are written.
+        write_agp: If True, write an AGP v2.0 file describing how each input sequence maps to output
+            contigs/chunks.
+        delete_existing_files: If True, remove outputs from previous runs under ``out_dir`` (only if
+            no unexpected files are found).
+        unique_file_names: If True, include directory index in output FASTA filenames to make them
+            unique across nested output directories.
+        force_max_seq_length: If True, sequences longer than ``max_seq_length_per_file`` are split
+            into chunks.
+        max_seqs_per_file: Maximum number of sequences (records) per output FASTA file. If None, no
+            record-count limit is applied.
+        max_seq_length_per_file: Maximum cumulative sequence length (in bp) per output FASTA file.
+            If None, no cumulative-length limit is applied.
+        min_chunk_length: Minimum allowed length (in bp) of the final remainder chunk when chunking.
+            If the final chunk would be shorter than this, it is merged into the previous chunk. If
+            None, no minimum is applied.
+        max_files_per_directory: Maximum number of FASTA files per directory before moving to the
+            next computed directory level. If None, all output files are written under a single directory.
+        max_dirs_per_directory: Maximum number of subdirectories per directory level when expanding
+            directory indices into a multi-level path (base-N style). If None, a single directory
+            level is used.
     """
 
     out_dir = out_dir if out_dir is not None else fasta_file.parent
@@ -353,51 +358,53 @@ def split_fasta(
         max_dirs_per_directory=max_dirs_per_directory,
     )
 
-    with open_gz_file(fasta_file) as fh:
-        for record in SeqIO.parse(fh, "fasta"):
-            seq_len = len(record.seq)
+    try:
+        with open_gz_file(fasta_file) as fh:
+            for record in SeqIO.parse(fh, "fasta"):
+                seq_len = len(record.seq)
 
-            if max_seqs_per_file is not None and writer.record_count >= max_seqs_per_file:
-                writer.open_new_file()
+                if max_seqs_per_file is not None and writer.record_count >= max_seqs_per_file:
+                    writer.open_new_file()
 
-            if max_seq_length_per_file is None or writer.file_len + seq_len <= max_seq_length_per_file:
-                writer.write_record(record, record.id, 1, seq_len, 1)
-                continue
+                if max_seq_length_per_file is None or writer.file_len + seq_len <= max_seq_length_per_file:
+                    writer.write_record(record, record.id, 1, seq_len, 1)
+                    continue
 
-            if force_max_seq_length and seq_len > max_seq_length_per_file:
-                starts = list(range(0, seq_len, max_seq_length_per_file))
-                ends = [min(s + max_seq_length_per_file, seq_len) for s in starts]
+                if force_max_seq_length and seq_len > max_seq_length_per_file:
+                    starts = list(range(0, seq_len, max_seq_length_per_file))
+                    ends = [min(s + max_seq_length_per_file, seq_len) for s in starts]
 
-                if min_chunk_length is not None:
-                    last_chunk_len = ends[-1] - starts[-1]
-                    if last_chunk_len < min_chunk_length:
-                        logging.warning(
-                            f"Length of last chunk of record '{record.id}' is {last_chunk_len}, lower than "
-                            f"min_chunk_length {min_chunk_length}; merging with previous chunk"
+                    if min_chunk_length is not None:
+                        last_chunk_len = ends[-1] - starts[-1]
+                        if last_chunk_len < min_chunk_length:
+                            logging.warning(
+                                f"Length of last chunk of record '{record.id}' is {last_chunk_len}, "
+                                f"lower than min_chunk_length {min_chunk_length}; merging with previous chunk"
+                            )
+                            ends[-2] = seq_len
+                            starts.pop()
+                            ends.pop()
+
+                    for i, (start, end) in enumerate(zip(starts, ends), start=1):
+                        chunk_seq = record.seq[start:end]
+                        chunk_record = SeqRecord(
+                            chunk_seq,
+                            id=f"{record.id}_chunk_start_{start}",
+                            description=_description_without_id(record),
                         )
-                        ends[-2] = seq_len
-                        starts.pop()
-                        ends.pop()
-
-                for i, (start, end) in enumerate(zip(starts, ends), start=1):
-                    chunk_seq = record.seq[start:end]
-                    chunk_record = SeqRecord(
-                        chunk_seq,
-                        id=f"{record.id}_chunk_start_{start}",
-                        description=_description_without_id(record),
+                        if writer.record_count > 0:
+                            writer.open_new_file()
+                        writer.write_record(chunk_record, record.id, start + 1, end, i)
+                else:
+                    logging.warning(
+                        f"Record {record.id} length {seq_len} exceeds max_seq_length_per_file "
+                        f"{max_seq_length_per_file} but chunking not enabled"
                     )
                     if writer.record_count > 0:
                         writer.open_new_file()
-                    writer.write_record(chunk_record, record.id, start + 1, end, i)
-            else:
-                logging.warning(
-                    f"Record {record.id} length {seq_len} exceeds max_seq_length_per_file "
-                    f"{max_seq_length_per_file} but chunking not enabled"
-                )
-                if writer.record_count > 0:
-                    writer.open_new_file()
-                writer.write_record(record, record.id, 1, seq_len, 1)
-    writer.close()
+                    writer.write_record(record, record.id, 1, seq_len, 1)
+    finally:
+        writer.close()
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -477,7 +484,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         min_value=1,
         metavar="N",
         default=argparse.SUPPRESS,
-        help="Maximum files per directory before moving to next computed directory level (default: all files in top-level directory).",
+        help=(
+            "Maximum files per directory before moving to next computed directory level "
+            "(default: all files in top-level directory)."
+        ),
     )
     parser.add_numeric_argument(
         "--max-dirs-per-directory",
@@ -485,7 +495,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         min_value=1,
         metavar="N",
         default=argparse.SUPPRESS,
-        help="Maximum subdirectories per directory level (default: all subdirectories in top-level directory).",
+        help=(
+            "Maximum subdirectories per directory level "
+            "(default: all subdirectories in top-level directory)."
+        ),
     )
     parser.add_log_arguments()
 
