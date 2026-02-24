@@ -259,7 +259,8 @@ def _records_from_agp(
                 expected_next = part.record_start
             if part.record_start != expected_next:
                 raise ValueError(
-                    f"Non-contiguous AGP for '{record_id}': expected next start {expected_next}, got {part.record_start}"
+                    f"Non-contiguous AGP for '{record_id}': expected next start {expected_next}, "
+                    f"got {part.record_start}"
                 )
             expected_next = part.record_end + 1
 
@@ -426,7 +427,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$",
         help=(
             "Regex used to identify chunked records and extract coordinates. "
-            "Must define named groups 'base' and 'start', e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$'."
+            "Must define named groups 'base' and 'start', "
+            "e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$'."
         ),
     )
 

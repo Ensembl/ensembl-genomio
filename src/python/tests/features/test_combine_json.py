@@ -169,7 +169,7 @@ def test_schema_validate_file_calls_validator(schema_validator_calls, tmp_path: 
 
     # Force the "tmp exists" branch for gz: v.json already exists.
     if gz:
-        tmp_path.joinpath("v.json").write_text("preexisting", encoding="utf-8")
+        (tmp_path / "v.json").write_text("preexisting", encoding="utf-8")
 
     combine_json._schema_validate_file(p)
 

@@ -272,9 +272,9 @@ def _lift_feature_coords(
     """
     Constructs a modified copy of a feature with lifted seq_region and coordinates.
 
-    Uses AGP-driven lifting when ``agp_by_component`` is provided; otherwise uses seq_region-driven lifting
-    via ``chunk_re``. If the feature does not appear chunked in seq_region-driven mode, it is returned
-    unchanged.
+    Uses AGP-driven lifting when ``agp_by_component`` is provided; otherwise uses seq_region-driven
+    lifting via ``chunk_re``. If the feature does not appear chunked in seq_region-driven mode, it
+    is returned unchanged.
 
     Args:
         feature: Feature mapping containing seq_region and coordinates to lift.
@@ -624,7 +624,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     Parses command-line arguments for the feature JSON combining CLI.
 
     Args:
-        argv: Optional argument vector (excluding program name). If None, arguments are read from ``sys.argv``.
+        argv: Optional argument vector (excluding program name). If None, arguments are read from
+        ``sys.argv``.
 
     Returns:
         Parsed argparse namespace with validated options and logging configuration applied.
@@ -634,7 +635,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--json-manifest",
         metavar="TXT",
         required=True,
-        help="Manifest file containing paths of schema-valid JSON files to be combined (files may be gzipped).",
+        help=(
+            "Manifest file containing paths of schema-valid JSON files to be combined (files may "
+            "be gzipped)."
+        ),
     )
     parser.add_argument_dst_path(
         "--out-json",
