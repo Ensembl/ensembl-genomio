@@ -37,7 +37,7 @@ def _get_fasta_basename(fasta: Path) -> str:
     """Returns base name of file stripped of suffixes"""
     filename = fasta.name
     filename = filename.removesuffix(".gz")
-    basename = filename.rsplit(".", 1)[0] if "." in filename else filename
+    basename = filename.rsplit(".", 1)[0]
     return basename
 
 
