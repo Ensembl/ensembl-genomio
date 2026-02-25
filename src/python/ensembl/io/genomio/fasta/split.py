@@ -49,8 +49,7 @@ class OutputWriter:
     - output directory creation/cleanup (lazy, per-directory),
     - output file naming (optionally unique across directories),
     - record and length counters used to decide when to roll over to a new file,
-    - an optional AGP v2.0 file describing the mapping from original sequences
-      to output contigs/chunks.
+    - an optional AGP v2.0 file describing the mapping from original sequences to output contigs/chunks.
 
     Notes:
         Output layout is controlled by:
