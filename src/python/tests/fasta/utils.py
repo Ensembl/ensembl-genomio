@@ -21,3 +21,16 @@ from Bio import SeqIO
 def read_fasta(path: Path) -> dict[str, str]:
     with open(path, "r", encoding="utf-8") as fh:
         return {r.id: str(r.seq) for r in SeqIO.parse(fh, "fasta")}
+
+
+def force_open_failure_for_suffix(suffix: str):
+    """Monkeypatches `open` to raise an IOError when trying to open a file with the given suffix."""
+    exception = OSError(f"Simulated open failure for files ending with '{suffix}'")
+    real_open = open
+
+    def patched_open(file, *args, **kwargs):
+        if str(file).endswith(suffix):
+            raise exception
+        return real_open(file, *args, **kwargs)
+
+    return patched_open

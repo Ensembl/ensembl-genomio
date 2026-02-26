@@ -72,7 +72,7 @@ class OutputWriter:
         self.basename = _get_fasta_basename(fasta_file)
         self.out_dir = out_dir
         self.write_agp = write_agp
-        self.agp_file: Path | None = out_dir / f"{self.basename}.agp" if write_agp else None
+        self.agp_file: Path | None = out_dir / f"{self.basename}.agp" if self.write_agp else None
         self.unique_file_names = unique_file_names
         self.max_files_per_directory = max_files_per_directory
         self.max_dirs_per_directory = max_dirs_per_directory
