@@ -19,5 +19,6 @@ from pathlib import Path
 
 def write_manifest(path: Path, lines: list[str]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    text = "" if not lines else "\n".join(lines) + "\n"
+    path.write_text(text, encoding="utf-8")
     return path

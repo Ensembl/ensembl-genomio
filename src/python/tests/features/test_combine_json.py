@@ -14,9 +14,11 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.repeats.combine_json` module."""
 
+import argparse
 import gzip
 import hashlib
 import json
+import logging
 from pathlib import Path
 import re
 from typing import cast
@@ -155,30 +157,6 @@ def test_load_json_document_accepts_object(tmp_path: Path, gz: bool):
     got = combine_json._load_json_document(p)
     assert isinstance(got, dict)
     assert "analysis" in got
-
-
-@pytest.mark.parametrize("gz", [False, True])
-def test_schema_validate_file_calls_validator(schema_validator_calls, tmp_path: Path, gz: bool):
-    doc = {
-        "analysis": _analysis(),
-        "source": _source(),
-        "repeat_features": [_repeat_feature(seq_region="chr1", s=1, e=2)],
-    }
-    p = tmp_path / ("v.json.gz" if gz else "v.json")
-    (_write_json_gz if gz else _write_json)(p, doc)
-
-    # Force the "tmp exists" branch for gz: v.json already exists.
-    if gz:
-        (tmp_path / "v.json").write_text("preexisting", encoding="utf-8")
-
-    combine_json._schema_validate_file(p)
-
-    assert schema_validator_calls, "schema_validator was not called"
-    args, kwargs = schema_validator_calls[-1]
-    assert kwargs.get("json_schema") == "load_features"
-
-    validated_path = kwargs.get("json_file") or (args[0] if args else None)
-    assert isinstance(validated_path, Path)
 
 
 def test_get_agp_entry_for_range_raises_when_no_span_matches(tmp_path: Path):
@@ -331,17 +309,106 @@ def test_lift_repeat_feature_agp_driven_forward_and_reverse_strand(tmp_path: Pat
     assert reverse_strand_result["seq_region_strand"] == -1
 
 
-def test_combine_feature_json_empty_manifest_raises(tmp_path: Path):
-    manifest = write_manifest(tmp_path / "manifest.txt", [])
-    with pytest.raises(ValueError, match=r"empty manifest"):
-        combine_json.combine_feature_json(
-            json_manifest=manifest,
-            out_json=tmp_path / "out.json",
+def test_lift_feature_coords_rejects_end_greater_than_start(tmp_path: Path):
+    feat = _repeat_feature(seq_region="chr1", s=10, e=5)
+    with pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"):
+        combine_json._lift_feature_coords(
+            feat,
             chunk_re=CHUNK_RE,
+            agp_by_component=None,
+            allow_revcomp=False,
+            source_path=tmp_path / "x.json",
         )
 
 
-def test_combine_repeat_json_seq_region_driven_merge_and_coord_liftover(
+def test_detect_load_type_rejects_unknown_type(tmp_path: Path):
+    with pytest.raises(ValueError, match=r"Cannot auto-detect schema kind"):
+        combine_json._detect_load_type(
+            {"unexpected_key": "value"},
+            tmp_path / "x.json",
+        )
+
+
+def test_feature_consensus_key_returns_none_when_no_consensus(tmp_path: Path):
+    feat = _repeat_feature(seq_region="chr1", s=1, e=10, consensus_key=None)
+    assert combine_json._feature_consensus_key(feat, tmp_path / "x.json") is None
+
+
+def test_feature_consensus_key_rejects_invalid_consensus_key(tmp_path: Path):
+    feat = _repeat_feature(seq_region="chr1", s=1, e=10, consensus_key="invalid_key")
+    with pytest.raises(ValueError, match=r"repeat_consensus must be a 32-char hex md5"):
+        combine_json._feature_consensus_key(feat, tmp_path / "x.json")
+
+
+def test_combine_repeat_json_paths_empty_manifest_raises(tmp_path: Path):
+    with pytest.raises(ValueError, match=r"empty manifest"):
+        combine_json._combine_repeat_json_paths(
+            json_paths=[],
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+            agp_by_component=None,
+            allow_revcomp=False,
+        )
+
+
+def test_combine_feature_json_paths_empty_manifest_raises(tmp_path: Path):
+    with pytest.raises(ValueError, match=r"empty manifest"):
+        combine_json._combine_ncrna_json_paths(
+            json_paths=[],
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+            agp_by_component=None,
+            allow_revcomp=False,
+        )
+
+
+def test_combine_repeat_json_paths_feature_consensus_key_none_is_skipped(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    analysis = _analysis("rm")
+    source = _source("prov")
+    rc = _repeat_consensus("Alu", "SINE", "Alu", "ACGT")
+    rc_key = rc["repeat_consensus_key"]
+
+    consensus_key_feat = _repeat_feature(seq_region="chr1", s=1, e=3, consensus_key=rc_key)
+    no_consensus_key_feat = _repeat_feature(seq_region="chr1", s=5, e=6)
+
+    doc = {
+        "analysis": analysis,
+        "source": source,
+        "repeat_consensus": [rc],
+        "repeat_features": [consensus_key_feat, no_consensus_key_feat],
+    }
+
+    p = _write_json(tmp_path / "in.json", doc)
+    out_json = tmp_path / "out.json"
+
+    real_fc_key = combine_json._feature_consensus_key
+    calls = {"n": 0}
+
+    def return_none_on_second_call(feat, source_path):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            return None
+        return real_fc_key(feat, source_path)
+
+    monkeypatch.setattr(combine_json, "_feature_consensus_key", return_none_on_second_call)
+
+    combine_json._combine_repeat_json_paths(
+        json_paths=[p],
+        out_json=out_json,
+        chunk_re=CHUNK_RE,
+        agp_by_component=None,
+        allow_revcomp=False,
+    )
+
+    out = json.loads(out_json.read_text(encoding="utf-8"))
+    assert len(out["repeat_features"]) == 2
+    assert calls["n"] >= 2
+
+
+def test_combine_feature_json_seq_region_driven_merge_and_coord_liftover(
     schema_validator_calls, tmp_path: Path
 ):
     analysis = _analysis("rm")
@@ -391,7 +458,7 @@ def test_combine_repeat_json_seq_region_driven_merge_and_coord_liftover(
         ("-", True, -1, 180, 190),
     ],
 )
-def test_combine_repeat_json_agp_driven_lifts_coordinates_and_strand(
+def test_combine_feature_json_agp_driven_lifts_coordinates_and_strand(
     tmp_path: Path,
     orientation: str,
     allow_revcomp: bool,
@@ -441,7 +508,17 @@ def test_combine_repeat_json_agp_driven_lifts_coordinates_and_strand(
     assert feat["seq_region_strand"] == expected_strand
 
 
-def test_combine_repeat_json_agp_driven_missing_component_raises(tmp_path: Path):
+def test_combin_feature_json_rejects_empty_manifest(tmp_path: Path):
+    manifest = write_manifest(tmp_path / "manifest.txt", [])
+    with pytest.raises(ValueError, match=r"empty manifest"):
+        combine_json.combine_feature_json(
+            json_manifest=manifest,
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+        )
+
+
+def test_combine_feature_json_agp_driven_missing_component_raises(tmp_path: Path):
     analysis = _analysis("rm")
     source = _source("prov")
     rc = _repeat_consensus("Alu", "SINE", "Alu", "ACGT")
@@ -472,7 +549,7 @@ def test_combine_repeat_json_agp_driven_missing_component_raises(tmp_path: Path)
         )
 
 
-def test_combine_repeat_json_agp_driven_ambiguous_mapping_raises(tmp_path: Path):
+def test_combine_feature_json_agp_driven_ambiguous_mapping_raises(tmp_path: Path):
     analysis = _analysis("rm")
     source = _source("prov")
     rc = _repeat_consensus("Alu", "SINE", "Alu", "ACGT")
@@ -512,7 +589,7 @@ def test_combine_repeat_json_agp_driven_ambiguous_mapping_raises(tmp_path: Path)
         )
 
 
-def test_combine_repeat_json_missing_consensus_reference_raises(tmp_path: Path):
+def test_combine_feature_json_missing_consensus_reference_raises(tmp_path: Path):
     analysis = _analysis("rm")
     source = _source("prov")
     rc = _repeat_consensus("X", "Y", "Z", seq="ACGT")
@@ -536,7 +613,7 @@ def test_combine_repeat_json_missing_consensus_reference_raises(tmp_path: Path):
         )
 
 
-def test_combine_repeat_json_analysis_mismatch_raises(tmp_path: Path):
+def test_combine_feature_json_analysis_mismatch_raises(tmp_path: Path):
     d1 = {
         "analysis": _analysis("a"),
         "source": _source("prov"),
@@ -737,3 +814,172 @@ def test_combine_ncrna_json_empty_feature_array_raises(tmp_path: Path):
             out_json=tmp_path / "out.json",
             chunk_re=CHUNK_RE,
         )
+
+
+def test_parse_args_minimal_required_calls_init_logging(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    manifest = write_manifest(tmp_path / "manifest.txt", ["a.json"])
+    out_json = tmp_path / "out.json"
+
+    called: dict[str, object] = {}
+
+    def fake_init_logging(args: argparse.Namespace) -> None:
+        called["args"] = args
+
+    monkeypatch.setattr(combine_json, "init_logging_with_args", fake_init_logging)
+
+    args = combine_json.parse_args(
+        [
+            "--json-manifest",
+            str(manifest),
+            "--out-json",
+            str(out_json),
+        ]
+    )
+
+    assert args.json_manifest == manifest
+    assert args.out_json == out_json
+    assert not hasattr(args, "agp_file")
+    assert args.allow_revcomp is False
+    assert isinstance(args.chunk_id_regex, str)
+    assert re.compile(args.chunk_id_regex).match("chr1_chunk_start_0")
+
+    assert called["args"] is args
+
+
+def test_parse_args_allow_revcomp_flag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    manifest = write_manifest(tmp_path / "manifest.txt", ["a.json"])
+    out_json = tmp_path / "out.json"
+
+    monkeypatch.setattr(combine_json, "init_logging_with_args", lambda args: None)
+
+    args = combine_json.parse_args(
+        [
+            "--json-manifest",
+            str(manifest),
+            "--out-json",
+            str(out_json),
+            "--allow-revcomp",
+        ]
+    )
+
+    assert args.allow_revcomp is True
+
+
+def test_parse_args_agp_file_sets_attribute(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    manifest = write_manifest(tmp_path / "manifest.txt", ["a.json"])
+    out_json = tmp_path / "out.json"
+
+    agp = tmp_path / "in.agp"
+    agp.write_text("obj\t1\t1\t1\tW\tp1\t1\t1\t+\n")
+
+    monkeypatch.setattr(combine_json, "init_logging_with_args", lambda args: None)
+
+    args = combine_json.parse_args(
+        [
+            "--json-manifest",
+            str(manifest),
+            "--out-json",
+            str(out_json),
+            "--agp-file",
+            str(agp),
+        ]
+    )
+
+    assert args.agp_file == agp
+    assert args.allow_revcomp is False
+
+
+def test_parse_args_custom_chunk_id_regex(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    manifest = write_manifest(tmp_path / "manifest.txt", ["a.json"])
+    out_json = tmp_path / "out.json"
+
+    monkeypatch.setattr(combine_json, "init_logging_with_args", lambda args: None)
+
+    custom = r"^(?P<base>.+)\.chunk\.(?P<start>\d+)$"
+
+    args = combine_json.parse_args(
+        [
+            "--json-manifest",
+            str(manifest),
+            "--out-json",
+            str(out_json),
+            "--chunk-id-regex",
+            custom,
+        ]
+    )
+
+    assert args.chunk_id_regex == custom
+    assert re.compile(args.chunk_id_regex).match("scaf_1.chunk.12")
+
+
+def test_parse_args_missing_required_out_json_exits(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    manifest = write_manifest(tmp_path / "manifest.txt", ["a.json"])
+    monkeypatch.setattr(combine_json, "init_logging_with_args", lambda args: None)
+
+    with pytest.raises(SystemExit) as e:
+        combine_json.parse_args(["--json-manifest", str(manifest)])
+
+    assert e.value.code == 2
+
+
+def test_parse_args_missing_manifest_file_exits(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    missing_manifest = tmp_path / "missing.txt"
+    out_json = tmp_path / "out.json"
+    monkeypatch.setattr(combine_json, "init_logging_with_args", lambda args: None)
+
+    with pytest.raises(SystemExit) as e:
+        combine_json.parse_args(["--json-manifest", str(missing_manifest), "--out-json", str(out_json)])
+
+    assert e.value.code == 2
+
+
+def test_parse_args_missing_agp_file_exits(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    manifest = write_manifest(tmp_path / "manifest.txt", ["a.json"])
+    out_json = tmp_path / "out.json"
+    missing_agp = tmp_path / "missing.agp"
+
+    monkeypatch.setattr(combine_json, "init_logging_with_args", lambda args: None)
+
+    with pytest.raises(SystemExit) as e:
+        combine_json.parse_args(
+            [
+                "--json-manifest",
+                str(manifest),
+                "--out-json",
+                str(out_json),
+                "--agp-file",
+                str(missing_agp),
+            ]
+        )
+
+    assert e.value.code == 2
+
+
+def test_main_logs_and_reraises_on_exception(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    manifest = write_manifest(tmp_path / "manifest.txt", ["a.json"])
+    out_json = tmp_path / "out.json"
+
+    monkeypatch.setattr(combine_json, "init_logging_with_args", lambda args: None)
+    monkeypatch.setattr(combine_json, "validate_regex", lambda s: re.compile(s))
+
+    def raise_main_exception(*args, **kwargs):
+        raise RuntimeError("Simulated exception in main")
+
+    monkeypatch.setattr(combine_json, "combine_feature_json", raise_main_exception)
+
+    caplog.set_level(logging.ERROR)
+
+    with pytest.raises(RuntimeError, match="Simulated exception in main"):
+        combine_json.main(
+            [
+                "--json-manifest",
+                str(manifest),
+                "--out-json",
+                str(out_json),
+            ]
+        )
+
+    assert "Error combining feature JSON from files in" in caplog.text
+    assert str(manifest) in caplog.text

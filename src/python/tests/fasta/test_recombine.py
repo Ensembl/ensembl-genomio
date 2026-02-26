@@ -15,8 +15,10 @@
 """Unit testing of `ensembl.io.genomio.fasta.recombine` module."""
 
 from pathlib import Path
-import pytest
+import logging
 import re
+
+import pytest
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -391,3 +393,48 @@ def test_parse_args_boolean_flags_manifest(write_fasta, tmp_path):
         ]
     )
     assert args.allow_revcomp is True
+
+
+def test_main_end_to_end_success(write_fasta, tmp_path):
+    f1 = write_fasta("f1.fa", [("Y", "CC", None)])
+    f2 = write_fasta("f2.fa", [("X_chunk_start_0", "AAAA", None), ("X_chunk_start_4", "TT", None)])
+
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(f1), str(f2)])
+    out = tmp_path / "out.fa"
+
+    recombine.main(
+        [
+            "--fasta-manifest",
+            str(manifest),
+            "--out-fasta",
+            str(out),
+        ]
+    )
+
+    seqs = read_fasta(out)
+    assert seqs["X"] == "AAAATT"
+    assert seqs["Y"] == "CC"
+
+
+def test_main_logs_and_reraises_exceptions(monkeypatch, write_fasta, tmp_path, caplog):
+    f1 = write_fasta("f1.fa", [("Y", "CC", None)])
+    manifest = write_manifest(tmp_path / "manifest.txt", [str(f1)])
+    monkeypatch.setattr(recombine, "init_logging_with_args", lambda args: None)
+
+    def raise_main_exception(*args, **kwargs):
+        raise RuntimeError("Simulated exception in main")
+
+    monkeypatch.setattr(recombine, "recombine_fasta", raise_main_exception)
+
+    caplog.set_level(logging.ERROR, logger="root")
+
+    with pytest.raises(RuntimeError, match="Simulated exception in main"):
+        recombine.main(
+            [
+                "--fasta-manifest",
+                str(manifest),
+                "--out-fasta",
+                str(f1),
+            ]
+        )
+    assert "Error recombining FASTA from files" in caplog.text

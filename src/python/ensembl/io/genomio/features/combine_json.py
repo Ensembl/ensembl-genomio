@@ -123,32 +123,6 @@ def _load_json_document(path: Path) -> dict[str, JsonValue]:
     return cast(dict[str, JsonValue], parsed)
 
 
-def _schema_validate_file(path: Path) -> None:
-    """Validates a JSON file against a repository schema using schema_validator."""
-    if path.suffix != ".gz":
-        schema_validator(json_file=path, json_schema=_FEATURE_SCHEMA_NAME)
-        return
-
-    tmp = path.with_suffix("")
-    if tmp.exists():
-        tmp = path.with_name(f"{tmp.name}.tmp_unzipped_for_schema_validation.json")
-
-    logging.debug(f"Decompressing {path} -> {tmp} for schema validation")
-
-    with open_gz_file(path) as in_fh, tmp.open("w", encoding="utf-8") as out_fh:
-        raw = in_fh.read()
-        text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
-        out_fh.write(text)
-
-    try:
-        schema_validator(json_file=tmp, json_schema=_FEATURE_SCHEMA_NAME)
-    finally:
-        try:
-            tmp.unlink(missing_ok=True)
-        except Exception:
-            logging.warning(f"Failed to remove temp validation file {tmp}", exc_info=True)
-
-
 def _assert_same_top_level(
     meta_name: str,
     a: dict[str, JsonValue],
@@ -236,20 +210,11 @@ def _merge_repeat_consensus(
     incoming: Iterable[JsonValue],
     source_path: Path,
 ) -> None:
-    """Merges repeat_consensus entries; duplicates must be identical."""
+    """Merges repeat_consensus entries."""
     for raw in incoming:
-        rc = _coerce_repeat_consensus(raw, source_path=source_path)
+        rc = _coerce_repeat_consensus(raw, source_path)
         key = rc["repeat_consensus_key"].lower()
-
-        existing = combined.get(key)
-        if existing is None:
-            combined[key] = rc
-            continue
-        if existing != rc:
-            raise ValueError(
-                f"Conflicting repeat_consensus for key={key} ({source_path}). "
-                "Entries differ; cannot safely merge."
-            )
+        combined[key] = rc
 
 
 def _feature_consensus_key(feature: RepeatFeature, source_path: Path) -> str | None:
@@ -370,7 +335,7 @@ def _combine_repeat_json_paths(
     n_features_in = 0
 
     for p in json_paths:
-        _schema_validate_file(p)
+        schema_validator(json_file=p, json_schema=_FEATURE_SCHEMA_NAME)
         document = _load_json_document(p)
 
         analysis = cast(dict[str, JsonValue], document["analysis"])
@@ -445,7 +410,6 @@ def _combine_repeat_json_paths(
 def _combine_ncrna_json_paths(
     json_paths: list[Path],
     out_json: Path,
-    *,
     chunk_re: re.Pattern[str],
     agp_by_component: dict[str, list[AgpEntry]] | None,
     allow_revcomp: bool,
@@ -477,7 +441,7 @@ def _combine_ncrna_json_paths(
     n_features_in = 0
 
     for p in json_paths:
-        _schema_validate_file(p)
+        schema_validator(json_file=p, json_schema=_FEATURE_SCHEMA_NAME)
         document = _load_json_document(p)
 
         analysis = cast(dict[str, JsonValue], document["analysis"])

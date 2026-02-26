@@ -86,8 +86,6 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
 
     with open_gz_file(agp_file) as fh:
         for line in fh:
-            if isinstance(line, bytes):
-                line = line.decode("utf-8")
             line = line.strip()
             if not line or line.startswith("#"):
                 continue

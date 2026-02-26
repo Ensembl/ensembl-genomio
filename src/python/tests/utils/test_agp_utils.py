@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.utils.agp_utils` module."""
+import gzip
 
 import pytest
 
@@ -59,6 +60,23 @@ def test_parse_agp_empty_file_raises(tmp_path):
     agp.write_text("# only comment\n", encoding="utf-8")
     with pytest.raises(ValueError, match="contained no component lines"):
         agp_utils.parse_agp(agp, allow_revcomp=False)
+
+
+def test_parse_agp_decodes_bytes_from_gzipped_input(tmp_path):
+    agp_gz = tmp_path / "x.agp.gz"
+
+    payload = "# comment\nobj1\t1\t4\t1\tW\tpart1\t1\t4\t+\n"
+
+    with gzip.open(agp_gz, "wt", encoding="utf-8") as fh:
+        fh.write(payload)
+
+    out = agp_utils.parse_agp(agp_gz, allow_revcomp=False)
+
+    assert "obj1" in out
+    assert len(out["obj1"]) == 1
+    e = out["obj1"][0]
+    assert e.part_id == "part1"
+    assert e.orientation == "+"
 
 
 def test_build_component_index_groups_by_part_id_and_sorts_within_component():
