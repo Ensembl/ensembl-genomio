@@ -16,6 +16,7 @@
 import logging
 from pathlib import Path
 import re
+from typing import Any
 
 import pytest
 from Bio.Seq import Seq
@@ -43,34 +44,34 @@ def read_agp_lines(agp_path: Path) -> list[str]:
     "name,expected",
     [("in.fa", "in"), ("in.fa.gz", "in"), ("in", "in")],
 )
-def test_get_fasta_basename(tmp_path, name, expected):
+def test_get_fasta_basename(tmp_path: Path, name: str, expected: str) -> None:
     p = tmp_path / name
     p.write_text(">x\nA\n", encoding="utf-8")
     assert split._get_fasta_basename(p) == expected
 
 
-def test_desc_without_id_header_only():
+def test_desc_without_id_header_only() -> None:
     rec = make_record("seq1", "seq1")
     assert split._description_without_id(rec) == ""
 
 
-def test_desc_without_id_with_description():
+def test_desc_without_id_with_description() -> None:
     rec = make_record("seq1", "seq1 some annotation")
     assert split._description_without_id(rec) == "some annotation"
 
 
-def test_desc_without_id_repeated_id_in_description():
+def test_desc_without_id_repeated_id_in_description() -> None:
     # original header: >seq1 seq1 description
     rec = make_record("seq1", "seq1 seq1 description")
     assert split._description_without_id(rec) == "seq1 description"
 
 
-def test_desc_without_id_returns_original_when_id_not_prefix():
+def test_desc_without_id_returns_original_when_id_not_prefix() -> None:
     rec = make_record("seq1", "other description")
     assert split._description_without_id(rec) == "other description"
 
 
-def test_clean_previous_output_deletes_numeric_top_level_dirs(tmp_path, write_fasta):
+def test_clean_previous_output_deletes_numeric_top_level_dirs(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
     out_dir = tmp_path / "out"
     out_dir.mkdir()
@@ -111,7 +112,7 @@ def test_clean_previous_output_deletes_numeric_top_level_dirs(tmp_path, write_fa
     assert (other_zero / "in.5.fa").exists()
 
 
-def test_clean_previous_output_unlinks_agp_when_present(tmp_path, write_fasta):
+def test_clean_previous_output_unlinks_agp_when_present(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
     out_dir = tmp_path / "out"
     out_dir.mkdir()
@@ -129,7 +130,9 @@ def test_clean_previous_output_unlinks_agp_when_present(tmp_path, write_fasta):
     assert not agp.exists()
 
 
-def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(tmp_path, write_fasta):
+def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(
+    tmp_path: Path, write_fasta: Any
+) -> None:
     in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
     out_dir = tmp_path / "out"
     out_dir.mkdir()
@@ -151,7 +154,7 @@ def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(tmp
     assert (d2 / "unexpected.fa").exists()
 
 
-def test_clean_previous_output_returns_when_out_dir_missing(tmp_path, write_fasta):
+def test_clean_previous_output_returns_when_out_dir_missing(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out_dir = tmp_path / "does_not_exist"
     assert not out_dir.exists()
@@ -159,7 +162,7 @@ def test_clean_previous_output_returns_when_out_dir_missing(tmp_path, write_fast
     split._clean_previous_output(in_fa, out_dir)
 
 
-def test_check_contents_deletable_rejects_unexpected_nested_file(tmp_path):
+def test_check_contents_deletable_rejects_unexpected_nested_file(tmp_path: Path) -> None:
     out_dir = tmp_path / "out"
     d1 = out_dir / "1"
     d2 = d1 / "1"
@@ -175,7 +178,7 @@ def test_check_contents_deletable_rejects_unexpected_nested_file(tmp_path):
     assert (d2 / "unexpected.txt").exists()
 
 
-def test_outputwriter_basename_and_first_file_created(tmp_path):
+def test_outputwriter_basename_and_first_file_created(tmp_path: Path) -> None:
     in_fa = tmp_path / "in.fa.gz"
     in_fa.write_text(">x\nACGT\n", encoding="utf-8")
 
@@ -214,7 +217,13 @@ def test_outputwriter_basename_and_first_file_created(tmp_path):
         (2, 4, ["1", "2"]),
     ],
 )
-def test_get_subdir_path_math(write_fasta, tmp_path, max_dirs_per_directory, dir_index, expected):
+def test_get_subdir_path_math(
+    write_fasta: Any,
+    tmp_path: Path,
+    max_dirs_per_directory: int | None,
+    dir_index: int,
+    expected: list[str],
+) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
@@ -235,7 +244,7 @@ def test_get_subdir_path_math(write_fasta, tmp_path, max_dirs_per_directory, dir
         writer.close()
 
 
-def test_file_and_dir_index_with_max_files(write_fasta, tmp_path):
+def test_file_and_dir_index_with_max_files(write_fasta: Any, tmp_path: Path) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
@@ -263,7 +272,7 @@ def test_file_and_dir_index_with_max_files(write_fasta, tmp_path):
         writer.close()
 
 
-def test_unique_file_names_include_dir_index(write_fasta, tmp_path):
+def test_unique_file_names_include_dir_index(write_fasta: Any, tmp_path: Path) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
@@ -287,7 +296,7 @@ def test_unique_file_names_include_dir_index(write_fasta, tmp_path):
         writer.close()
 
 
-def test_add_agp_entry_when_agp_disabled(write_fasta, tmp_path):
+def test_add_agp_entry_when_agp_disabled(write_fasta: Any, tmp_path: Path) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
@@ -305,7 +314,7 @@ def test_add_agp_entry_when_agp_disabled(write_fasta, tmp_path):
         writer.close()
 
 
-def test_write_record_requires_agp_args_when_write_agp_true(tmp_path, write_fasta):
+def test_write_record_requires_agp_args_when_write_agp_true(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("x", "ACGT", None)])
     out = tmp_path / "out"
     w = split.OutputWriter(
@@ -322,7 +331,7 @@ def test_write_record_requires_agp_args_when_write_agp_true(tmp_path, write_fast
         w.close()
 
 
-def test_split_fasta_empty_input_no_outputs(tmp_path):
+def test_split_fasta_empty_input_no_outputs(tmp_path: Path) -> None:
     in_fa = tmp_path / "empty.fa"
     in_fa.write_bytes(b"")
     out = tmp_path / "out"
@@ -343,7 +352,7 @@ def test_split_fasta_empty_input_no_outputs(tmp_path):
     assert not out.exists() or len(list(out.rglob("*"))) == 0
 
 
-def test_split_by_max_seqs_per_file_rollover(tmp_path, write_fasta):
+def test_split_by_max_seqs_per_file_rollover(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta(
         "in.fa",
         [("a", "AA", None), ("b", "CC", None), ("c", "GG", None), ("d", "TT", None), ("e", "AT", None)],
@@ -371,7 +380,7 @@ def test_split_by_max_seqs_per_file_rollover(tmp_path, write_fasta):
     assert counts == [2, 2, 1]
 
 
-def test_split_by_max_seq_length_per_file_rollover(tmp_path, write_fasta):
+def test_split_by_max_seq_length_per_file_rollover(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("a", "AAAA", None), ("b", "TTTT", None)])
     out = tmp_path / "out"
 
@@ -393,7 +402,7 @@ def test_split_by_max_seq_length_per_file_rollover(tmp_path, write_fasta):
     assert len(fastas) == 2
 
 
-def test_force_chunking_splits_long_record(tmp_path, write_fasta):
+def test_force_chunking_splits_long_record(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", "desc")])
     out = tmp_path / "out"
 
@@ -422,7 +431,9 @@ def test_force_chunking_splits_long_record(tmp_path, write_fasta):
     assert seqs == ["ATCG", "GATT", "AC"]
 
 
-def test_force_chunking_merges_small_remainder(tmp_path, write_fasta, caplog):
+def test_force_chunking_merges_small_remainder(
+    tmp_path: Path, write_fasta: Any, caplog: pytest.LogCaptureFixture
+) -> None:
     in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])
     out = tmp_path / "out"
 
@@ -454,7 +465,9 @@ def test_force_chunking_merges_small_remainder(tmp_path, write_fasta, caplog):
     assert seqs == ["ATCG", "GATTAC"]
 
 
-def test_force_chunking_does_not_merge_when_remainder_meets_min_chunk_length(tmp_path, write_fasta, caplog):
+def test_force_chunking_does_not_merge_when_remainder_meets_min_chunk_length(
+    tmp_path: Path, write_fasta: Any, caplog: pytest.LogCaptureFixture
+) -> None:
     in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])  # len=10
     out = tmp_path / "out"
 
@@ -481,7 +494,9 @@ def test_force_chunking_does_not_merge_when_remainder_meets_min_chunk_length(tmp
     assert seqs == ["ATCG", "GATT", "AC"]
 
 
-def test_overlong_record_without_chunking_warns_and_written_whole(tmp_path, write_fasta, caplog):
+def test_overlong_record_without_chunking_warns_and_written_whole(
+    tmp_path: Path, write_fasta: Any, caplog: pytest.LogCaptureFixture
+) -> None:
     in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])
     out = tmp_path / "out"
 
@@ -510,8 +525,8 @@ def test_overlong_record_without_chunking_warns_and_written_whole(tmp_path, writ
 
 
 def test_overlong_record_without_chunking_rolls_over_if_file_already_has_record(
-    tmp_path, write_fasta, caplog
-):
+    tmp_path: Path, write_fasta: Any, caplog: pytest.LogCaptureFixture
+) -> None:
     # first record short, second record overlong
     in_fa = write_fasta("in.fa", [("A", "AA", None), ("X", "ATCGGATTAC", None)])
     out = tmp_path / "out"
@@ -530,14 +545,16 @@ def test_overlong_record_without_chunking_rolls_over_if_file_already_has_record(
     assert len(fastas) == 2
 
 
-def test_split_fasta_calls_clean_previous_output_when_requested(tmp_path, write_fasta, monkeypatch):
+def test_split_fasta_calls_clean_previous_output_when_requested(
+    tmp_path: Path, write_fasta: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out_dir = tmp_path / "out"
     out_dir.mkdir()
 
     called = {"clean": False}
 
-    def fake_clean(fasta_file, out_dir_arg):
+    def fake_clean(fasta_file: Path, out_dir_arg: Path) -> None:
         called["clean"] = True
 
     monkeypatch.setattr(split, "_clean_previous_output", fake_clean)
@@ -551,7 +568,9 @@ def test_split_fasta_calls_clean_previous_output_when_requested(tmp_path, write_
     assert called["clean"] is True
 
 
-def test_create_agp_file_open_failure_raises_runtimeerror(monkeypatch, tmp_path, write_fasta):
+def test_create_agp_file_open_failure_raises_runtimeerror(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, write_fasta: Any
+) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
@@ -566,7 +585,7 @@ def test_create_agp_file_open_failure_raises_runtimeerror(monkeypatch, tmp_path,
         )
 
 
-def test_create_agp_file_returns_if_agp_file_none(tmp_path, write_fasta):
+def test_create_agp_file_returns_if_agp_file_none(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
@@ -583,7 +602,9 @@ def test_create_agp_file_returns_if_agp_file_none(tmp_path, write_fasta):
         w.close()
 
 
-def test_open_new_file_open_failure_raises_runtimeerror(monkeypatch, tmp_path, write_fasta):
+def test_open_new_file_open_failure_raises_runtimeerror(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, write_fasta: Any
+) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
@@ -598,7 +619,9 @@ def test_open_new_file_open_failure_raises_runtimeerror(monkeypatch, tmp_path, w
         )
 
 
-def test_write_agp_creates_agp_creates_all_expected_rows_and_columns(tmp_path, write_fasta):
+def test_write_agp_creates_agp_creates_all_expected_rows_and_columns(
+    tmp_path: Path, write_fasta: Any
+) -> None:
     in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None), ("Y", "CC", None)])
     out = tmp_path / "out"
 
@@ -644,7 +667,7 @@ def test_write_agp_creates_agp_creates_all_expected_rows_and_columns(tmp_path, w
     assert returned_values_sorted == expected_values_sorted
 
 
-def test_outputwriter_close_closes_open_handles(tmp_path, write_fasta):
+def test_outputwriter_close_closes_open_handles(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("x", "A", None)])
     out = tmp_path / "out"
 
@@ -670,7 +693,7 @@ def test_outputwriter_close_closes_open_handles(tmp_path, write_fasta):
     assert w._agp_fh is None
 
 
-def test_parse_args_rejects_min_chunk_without_max_seq_length(tmp_path, write_fasta):
+def test_parse_args_rejects_min_chunk_without_max_seq_length(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
     out = tmp_path / "out"
 
@@ -688,7 +711,7 @@ def test_parse_args_rejects_min_chunk_without_max_seq_length(tmp_path, write_fas
         )
 
 
-def test_parse_args_minimal_required(write_fasta):
+def test_parse_args_minimal_required(write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
 
     args = split.parse_args(
@@ -703,7 +726,7 @@ def test_parse_args_minimal_required(write_fasta):
     assert args.force_max_seq_length is False
 
 
-def test_parse_args_boolean_flags(write_fasta):
+def test_parse_args_boolean_flags(write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
 
     args = split.parse_args(
@@ -721,7 +744,7 @@ def test_parse_args_boolean_flags(write_fasta):
     assert args.unique_file_names
 
 
-def test_parse_args_numeric_arguments(write_fasta):
+def test_parse_args_numeric_arguments(write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
 
     args = split.parse_args(
@@ -739,7 +762,7 @@ def test_parse_args_numeric_arguments(write_fasta):
     assert args.max_seq_length_per_file == 100
 
 
-def test_parse_args_numeric_min_value_enforced(write_fasta):
+def test_parse_args_numeric_min_value_enforced(write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
 
     with pytest.raises(SystemExit):
@@ -753,7 +776,7 @@ def test_parse_args_numeric_min_value_enforced(write_fasta):
         )
 
 
-def test_parse_args_out_dir_is_path(tmp_path, write_fasta):
+def test_parse_args_out_dir_is_path(tmp_path: Path, write_fasta: Any) -> None:
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
     out = tmp_path / "out"
 
@@ -762,11 +785,13 @@ def test_parse_args_out_dir_is_path(tmp_path, write_fasta):
     assert args.out_dir == out
 
 
-def test_main_logs_and_reraises_exceptions(monkeypatch, write_fasta, caplog):
+def test_main_logs_and_reraises_exceptions(
+    monkeypatch: pytest.MonkeyPatch, write_fasta: Any, caplog: pytest.LogCaptureFixture
+) -> None:
     in_fa = write_fasta("in.fa", [("a", "AA", None)])
     monkeypatch.setattr(split, "init_logging_with_args", lambda args: None)
 
-    def raise_main_exception(*args, **kwargs):
+    def raise_main_exception(*args: object, **kwargs: object) -> None:
         raise RuntimeError("Simulated exception in main")
 
     monkeypatch.setattr(split, "split_fasta", raise_main_exception)
