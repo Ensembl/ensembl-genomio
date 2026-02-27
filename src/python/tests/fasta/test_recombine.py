@@ -17,7 +17,6 @@
 from pathlib import Path
 import logging
 import re
-from typing import Any
 
 import pytest
 
