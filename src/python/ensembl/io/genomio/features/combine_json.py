@@ -137,7 +137,7 @@ CoerceFeatureFn = Callable[[JsonValue, Path], Feature]
 
 
 def _get_agp_entry_for_range(
-    parts: list[AgpEntry], start: int, end: int, *, component_id: str, path: Path
+    parts: list[AgpEntry], start: int, end: int, component_id: str, path: Path
 ) -> AgpEntry:
     """
     Retrieves the unique AGP part whose component span fully contains a given range.

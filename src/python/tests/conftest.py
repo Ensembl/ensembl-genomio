@@ -92,7 +92,7 @@ def mock_response() -> Callable:
 
 
 @pytest.fixture
-def write_fasta(tmp_path):
+def write_fasta(tmp_path: Path) -> Callable[[str, list[tuple[str, str, str | None]], bool], Path]:
     """Helper to create FASTA (optionally gzipped) from a list of (id, seq, desc)."""
 
     def _writer(relpath: str, record_info: list[tuple[str, str, str | None]], gz: bool = False) -> Path:

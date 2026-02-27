@@ -18,6 +18,7 @@ from pathlib import Path
 
 
 def write_manifest(path: Path, lines: list[str]) -> Path:
+    """Writes a manifest file with the given lines, ensuring the parent directory exists."""
     path.parent.mkdir(parents=True, exist_ok=True)
     text = "" if not lines else "\n".join(lines) + "\n"
     path.write_text(text, encoding="utf-8")

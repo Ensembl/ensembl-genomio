@@ -17,6 +17,7 @@
 from pathlib import Path
 import logging
 import re
+from typing import Any
 
 import pytest
 
@@ -39,7 +40,7 @@ def read_fasta(path: Path) -> dict[str, str]:
         return {r.id: str(r.seq) for r in SeqIO.parse(fh, "fasta")}
 
 
-def test_fasta_record_cache_load_and_switch_files(write_fasta):
+def test_fasta_record_cache_load_and_switch_files(write_fasta) -> None:
     f1 = write_fasta("one.fa", [("a", "AAAA", None), ("b", "CC", None)])
     f2 = write_fasta("two.fa", [("c", "GGG", None)])
 
@@ -57,7 +58,7 @@ def test_fasta_record_cache_load_and_switch_files(write_fasta):
     assert str(rec_c.seq) == "GGG"
 
 
-def test_fasta_record_cache_missing_record_raises_keyerror(write_fasta):
+def test_fasta_record_cache_missing_record_raises_keyerror(write_fasta) -> None:
     f = write_fasta("one.fa", [("a", "AAAA", None)])
     loc = recombine.RecordLocation(path=f, description="x")
     cache = recombine.FastaRecordCache()
@@ -65,14 +66,14 @@ def test_fasta_record_cache_missing_record_raises_keyerror(write_fasta):
         cache.get("invalid", loc)
 
 
-def test_fasta_record_cache_duplicate_id_within_file_raises(write_fasta):
+def test_fasta_record_cache_duplicate_id_within_file_raises(write_fasta) -> None:
     f = write_fasta("dup.fa", [("a", "AAAA", None), ("a", "TTTT", None)])
     cache = recombine.FastaRecordCache()
     with pytest.raises(ValueError, match="Duplicate record id 'a'"):
         cache._load_file(f)
 
 
-def test_build_index_collects_locations_first_seen_and_chunks(write_fasta):
+def test_build_index_collects_locations_first_seen_and_chunks(write_fasta) -> None:
     f1 = write_fasta(
         "d/f1.fa",
         [
@@ -96,14 +97,14 @@ def test_build_index_collects_locations_first_seen_and_chunks(write_fasta):
     assert chunks["X"] == [(0, "X_chunk_start_0"), (4, "X_chunk_start_4")]
 
 
-def test_build_index_duplicate_record_id_raises(write_fasta):
+def test_build_index_duplicate_record_id_raises(write_fasta) -> None:
     f1 = write_fasta("f1.fa", [("A", "AAA", None)])
     f2 = write_fasta("f2.fa", [("A", "TTT", None)])  # duplicate id across files
     with pytest.raises(ValueError, match="Duplicate FASTA record id encountered during indexing"):
         recombine._build_index(CHUNK_RE, [f1, f2])
 
 
-def test_build_index_no_headers_raises(tmp_path):
+def test_build_index_no_headers_raises(tmp_path: Path) -> None:
     # create an empty file that parses to no records
     p = tmp_path / "empty.fa"
     p.write_text("", encoding="utf-8")
@@ -111,7 +112,7 @@ def test_build_index_no_headers_raises(tmp_path):
         recombine._build_index(CHUNK_RE, [p])
 
 
-def test_records_from_headers_passes_unchunked(write_fasta):
+def test_records_from_headers_passes_unchunked(write_fasta) -> None:
     f1 = write_fasta("f1.fa", [("A", "AAA", "descA")])
     locations, first_seen, chunks = recombine._build_index(CHUNK_RE, [f1])
 
@@ -121,7 +122,7 @@ def test_records_from_headers_passes_unchunked(write_fasta):
     assert recs[0].description.endswith("descA")
 
 
-def test_records_from_headers_reassembles_contiguous_chunks(write_fasta):
+def test_records_from_headers_reassembles_contiguous_chunks(write_fasta) -> None:
     f1 = write_fasta(
         "f1.fa",
         [
@@ -138,7 +139,7 @@ def test_records_from_headers_reassembles_contiguous_chunks(write_fasta):
     assert str(recs[0].seq) == "AAAATT"
 
 
-def test_records_from_1_based_start_headers_reassembles_contiguous_chunks(write_fasta):
+def test_records_from_1_based_start_headers_reassembles_contiguous_chunks(write_fasta) -> None:
     f1 = write_fasta(
         "f1.fa",
         [
@@ -155,7 +156,7 @@ def test_records_from_1_based_start_headers_reassembles_contiguous_chunks(write_
     assert str(recs[0].seq) == "CCCCGG"
 
 
-def test_records_from_headers_noncontiguous_chunks_raises(write_fasta):
+def test_records_from_headers_noncontiguous_chunks_raises(write_fasta) -> None:
     f1 = write_fasta(
         "f1.fa",
         [
@@ -170,26 +171,26 @@ def test_records_from_headers_noncontiguous_chunks_raises(write_fasta):
         list(recombine._records_from_headers(locations, first_seen, chunks, cache))
 
 
-def test_records_from_headers_missing_base_record_raises():
-    locations = {}
-    first_seen = {"A": 0}
-    chunks = {}
+def test_records_from_headers_missing_base_record_raises() -> None:
+    locations: dict[str, recombine.RecordLocation] = {}
+    first_seen: dict[str, int] = {"A": 0}
+    chunks: dict[str, list[tuple[int, str]]] = {}
     cache = recombine.FastaRecordCache()
     with pytest.raises(KeyError, match="Base record 'A' not found"):
         list(recombine._records_from_headers(locations, first_seen, chunks, cache))
 
 
-def test_records_from_headers_missing_chunk_record_raises():
+def test_records_from_headers_missing_chunk_record_raises() -> None:
     # base "X" has chunks but one chunk id isn't in locations
-    locations = {}
-    first_seen = {"X": 0}
-    chunks = {"X": [(0, "X_chunk_start_0")]}
+    locations: dict[str, recombine.RecordLocation] = {}
+    first_seen: dict[str, int] = {"X": 0}
+    chunks: dict[str, list[tuple[int, str]]] = {"X": [(0, "X_chunk_start_0")]}
     cache = recombine.FastaRecordCache()
     with pytest.raises(KeyError, match="Chunk record 'X_chunk_start_0' not found"):
         list(recombine._records_from_headers(locations, first_seen, chunks, cache))
 
 
-def test_agp_component_seq_plus_and_minus():
+def test_agp_component_seq_plus_and_minus() -> None:
     record = SeqRecord(Seq("ACGTGGTT"), "part", "test_record")
     assert str(recombine._agp_component_seq(record, 1, 4, "+", allow_revcomp=False)) == "ACGT"
     assert str(recombine._agp_component_seq(record, 3, 6, "-", allow_revcomp=True)) == str(
@@ -203,7 +204,7 @@ def test_agp_component_seq_plus_and_minus():
         recombine._agp_component_seq(record, 1, 2, "?", allow_revcomp=True)
 
 
-def test_records_from_agp_success(write_fasta, tmp_path):
+def test_records_from_agp_success(write_fasta, tmp_path: Path) -> None:
     parts = write_fasta("parts.fa", [("p1", "AAAA", "p1desc"), ("p2", "TT", "p2desc")])
     locations, _, _ = recombine._build_index(CHUNK_RE, [parts])
 
@@ -220,7 +221,7 @@ def test_records_from_agp_success(write_fasta, tmp_path):
     assert [(r.id, str(r.seq)) for r in recs] == [("obj", "AAAATT")]
 
 
-def test_records_from_agp_sorts_parts_out_of_order(write_fasta, tmp_path):
+def test_records_from_agp_sorts_parts_out_of_order(write_fasta, tmp_path: Path) -> None:
     parts = write_fasta("parts.fa", [("p1", "AAAA", "p1desc"), ("p2", "TT", "p2desc")])
     locations, _, _ = recombine._build_index(CHUNK_RE, [parts])
 
@@ -237,11 +238,11 @@ def test_records_from_agp_sorts_parts_out_of_order(write_fasta, tmp_path):
     assert [(r.id, str(r.seq)) for r in recs] == [("obj", "AAAATT")]
 
 
-def test_records_from_agp_missing_component_raises(write_fasta):
+def test_records_from_agp_missing_component_raises(write_fasta) -> None:
     f1 = write_fasta("parts.fa", [("p1", "AAAA", None)])
     locations, _, _ = recombine._build_index(CHUNK_RE, [f1])
 
-    agp_entries = {
+    agp_entries: dict[str, list[recombine.AgpEntry]] = {
         "obj": [
             recombine.AgpEntry(
                 record="obj",
@@ -261,11 +262,11 @@ def test_records_from_agp_missing_component_raises(write_fasta):
         list(recombine._records_from_agp(agp_entries, locations, cache, allow_revcomp=False))
 
 
-def test_records_from_agp_noncontiguous_object_raises(write_fasta):
+def test_records_from_agp_noncontiguous_object_raises(write_fasta) -> None:
     f1 = write_fasta("parts.fa", [("p1", "AAAA", None), ("p2", "TT", None)])
     locations, _, _ = recombine._build_index(CHUNK_RE, [f1])
 
-    agp_entries = {
+    agp_entries: dict[str, list[recombine.AgpEntry]] = {
         "obj": [
             recombine.AgpEntry("obj", 1, 4, 1, "p1", 1, 4, "+"),
             # should start at 5, but starts at 6
@@ -277,18 +278,20 @@ def test_records_from_agp_noncontiguous_object_raises(write_fasta):
         list(recombine._records_from_agp(agp_entries, locations, cache, allow_revcomp=False))
 
 
-def test_records_from_agp_length_mismatch_raises(write_fasta):
+def test_records_from_agp_length_mismatch_raises(write_fasta) -> None:
     f1 = write_fasta("parts.fa", [("p1", "AAAA", None)])
     locations, _, _ = recombine._build_index(CHUNK_RE, [f1])
 
     # asks for 1..10 but record shorter => extracted length != expected_len
-    agp_entries = {"obj": [recombine.AgpEntry("obj", 1, 10, 1, "p1", 1, 10, "+")]}
+    agp_entries: dict[str, list[recombine.AgpEntry]] = {
+        "obj": [recombine.AgpEntry("obj", 1, 10, 1, "p1", 1, 10, "+")]
+    }
     cache = recombine.FastaRecordCache()
     with pytest.raises(ValueError, match="Length mismatch"):
         list(recombine._records_from_agp(agp_entries, locations, cache, allow_revcomp=False))
 
 
-def test_recombine_fasta_header_mode_end_to_end_manifest_order(write_fasta, tmp_path):
+def test_recombine_fasta_header_mode_end_to_end_manifest_order(write_fasta, tmp_path: Path) -> None:
     f1 = write_fasta("f1.fa", [("Y", "CC", None)])
     f2 = write_fasta("f2.fa", [("X_chunk_start_0", "AAAA", None), ("X_chunk_start_4", "TT", None)])
 
@@ -311,7 +314,7 @@ def test_recombine_fasta_header_mode_end_to_end_manifest_order(write_fasta, tmp_
     assert ids_in_file == ["Y", "X"]
 
 
-def test_recombine_fasta_agp_mode_end_to_end(write_fasta, tmp_path):
+def test_recombine_fasta_agp_mode_end_to_end(write_fasta, tmp_path: Path) -> None:
     parts = write_fasta("parts.fa", [("p1", "AACCGG", None), ("p2", "TTAA", None)])
 
     agp = tmp_path / "x.agp"
@@ -334,7 +337,7 @@ def test_recombine_fasta_agp_mode_end_to_end(write_fasta, tmp_path):
     assert seqs["obj"] == "AATT"
 
 
-def test_recombine_header_mode_with_alternative_regex_end_to_end(write_fasta, tmp_path: Path):
+def test_recombine_header_mode_with_alternative_regex_end_to_end(write_fasta, tmp_path: Path) -> None:
     alt_chunk_re = validate_regex(r"^(?P<base>.+)\.chunk\.(?P<start>\d+)$")
 
     f1 = write_fasta("d/a.fa", [("X.chunk.0", "AAAA", None)])
@@ -357,7 +360,7 @@ def test_recombine_header_mode_with_alternative_regex_end_to_end(write_fasta, tm
     assert seqs["Y"] == "CC"
 
 
-def test_parse_args_minimal_required(write_fasta, tmp_path):
+def test_parse_args_minimal_required(write_fasta, tmp_path: Path) -> None:
     f = write_fasta("a.fa", [("A", "AAA", None)])
     manifest = write_manifest(tmp_path / "manifest.txt", [str(f)])
     out = tmp_path / "out.fa"
@@ -378,7 +381,7 @@ def test_parse_args_minimal_required(write_fasta, tmp_path):
     assert validate_regex(args.chunk_id_regex).match("X_chunk_start_0")
 
 
-def test_parse_args_boolean_flags_manifest(write_fasta, tmp_path):
+def test_parse_args_boolean_flags_manifest(write_fasta, tmp_path: Path) -> None:
     f = write_fasta("a.fa", [("A", "AAA", None)])
     manifest = write_manifest(tmp_path / "manifest.txt", [str(f)])
     out = tmp_path / "out.fa"
@@ -395,7 +398,7 @@ def test_parse_args_boolean_flags_manifest(write_fasta, tmp_path):
     assert args.allow_revcomp is True
 
 
-def test_main_end_to_end_success(write_fasta, tmp_path):
+def test_main_end_to_end_success(write_fasta, tmp_path: Path) -> None:
     f1 = write_fasta("f1.fa", [("Y", "CC", None)])
     f2 = write_fasta("f2.fa", [("X_chunk_start_0", "AAAA", None), ("X_chunk_start_4", "TT", None)])
 
@@ -416,12 +419,17 @@ def test_main_end_to_end_success(write_fasta, tmp_path):
     assert seqs["Y"] == "CC"
 
 
-def test_main_logs_and_reraises_exceptions(monkeypatch, write_fasta, tmp_path, caplog):
+def test_main_logs_and_reraises_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+    write_fasta,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     f1 = write_fasta("f1.fa", [("Y", "CC", None)])
     manifest = write_manifest(tmp_path / "manifest.txt", [str(f1)])
     monkeypatch.setattr(recombine, "init_logging_with_args", lambda args: None)
 
-    def raise_main_exception(*args, **kwargs):
+    def raise_main_exception(*args: object, **kwargs: object) -> None:
         raise RuntimeError("Simulated exception in main")
 
     monkeypatch.setattr(recombine, "recombine_fasta", raise_main_exception)
