@@ -16,7 +16,7 @@
 """Combines repeat/ncRNA feature JSON documents from split/chunked inputs and performs coordinate liftover."""
 
 import argparse
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Iterator
 import hashlib
 import json
 import logging
@@ -75,7 +75,65 @@ class _FeatureCoords(TypedDict):
     seq_region_strand: int
 
 
+class _TopLevelAccumulator:
+    """Accumulates and validates that selected top-level fields are identical across documents."""
+
+    def __init__(self) -> None:
+        self._values: dict[str, JsonValue] = {}
+        self._paths: dict[str, Path] = {}
+
+    def require_same(self, key: str, value: JsonValue, path: Path) -> None:
+        """
+        Registers a top-level field value and ensures consistency.
+
+        Args:
+            key: Top-level JSON field name (e.g. "analysis", "source").
+            value: Parsed JSON value associated with the field.
+            path: Path of the document providing this value (used for error reporting).
+
+        Raises:
+            ValueError:
+                If the same key has already been seen with a different value
+                in a previous document.
+        """
+        if key not in self._values:
+            self._values[key] = value
+            self._paths[key] = path
+            return
+
+        prev = self._values[key]
+        if prev != value:
+            prev_path = self._paths[key]
+            raise ValueError(
+                f"Top-level '{key}' differs between inputs:\n"
+                f"  - {prev_path}\n"
+                f"  - {path}\n"
+                "This script currently requires them to be identical."
+            )
+
+    def get_required(self, key: str) -> JsonValue:
+        """
+        Returns the stored value for a required top-level field.
+
+        Args:
+            key: Field name that must have been previously registered.
+
+        Returns:
+            The JSON value previously recorded for the field.
+
+        Raises:
+            ValueError:
+                If the key was never observed (e.g. empty manifest or
+                required field missing from all inputs).
+        """
+        if key not in self._values:
+            raise ValueError(f"Missing required top-level '{key}' (empty manifest?)")
+        return self._values[key]
+
+
 Feature = TypeVar("Feature", bound=_FeatureCoords)
+
+CoerceFeatureFn = Callable[[JsonValue, Path], Feature]
 
 
 def _get_agp_entry_for_range(
@@ -112,6 +170,29 @@ def _get_agp_entry_for_range(
     return matches[0]
 
 
+def _iterate_validated_documents(
+    json_paths: Iterable[Path], validate: bool = True
+) -> Iterator[tuple[Path, dict[str, JsonValue]]]:
+    """
+    Yields (path, document) pairs after schema-validating and loading each JSON file.
+
+    Args:
+        json_paths: Iterable of input JSON paths (optionally gzipped).
+        validate: If False, skips schema validation.
+
+    Yields:
+        Tuples of (path, parsed_document).
+
+    Raises:
+        ValueError:
+            If schema validation fails for any input file (when ``validate=True``).
+    """
+    for p in json_paths:
+        if validate:
+            schema_validator(json_file=p, json_schema=_FEATURE_SCHEMA_NAME)
+        yield p, _load_json_document(p)
+
+
 def _load_json_document(path: Path) -> dict[str, JsonValue]:
     """Loads a single JSON object from (optionally gzipped) file."""
     with open_gz_file(path) as fh:
@@ -123,21 +204,24 @@ def _load_json_document(path: Path) -> dict[str, JsonValue]:
     return cast(dict[str, JsonValue], parsed)
 
 
-def _assert_same_top_level(
-    meta_name: str,
-    a: dict[str, JsonValue],
-    b: dict[str, JsonValue],
-    path_a: Path,
-    path_b: Path,
-) -> None:
-    """Ensures top-level metadata objects are identical."""
-    if a != b:
-        raise ValueError(
-            f"Top-level '{meta_name}' differs between inputs:\n"
-            f"  - {path_a}\n"
-            f"  - {path_b}\n"
-            "This script currently requires them to be identical."
-        )
+def _write_and_validate(out_json: Path, combined_json: dict[str, JsonValue]) -> None:
+    """
+    Writes a combined JSON document to disk and validates it against the schema.
+
+    Args:
+        out_json: Destination file path for the combined JSON document.
+        combined_json: Fully constructed JSON object to serialise.
+
+    Raises:
+        ValueError:
+            If schema validation fails.
+    """
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    out_json.write_text(
+        json.dumps(combined_json, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    schema_validator(out_json, json_schema=_FEATURE_SCHEMA_NAME)
 
 
 def _detect_load_type(document: dict[str, JsonValue], path: Path) -> str:
@@ -297,6 +381,84 @@ def _lift_feature_coords(
     return cast(Feature, out)
 
 
+def _combine_feature_docs(
+    documents: Iterable[tuple[Path, dict[str, JsonValue]]],
+    feature_list_key: str,
+    coerce_feature: CoerceFeatureFn,
+    chunk_re: re.Pattern[str],
+    agp_by_component: dict[str, list[AgpEntry]] | None,
+    allow_revcomp: bool,
+    required_top_level_keys: list[str],
+) -> tuple[dict[str, JsonValue], list[Feature], int]:
+    """
+    Generic combination engine for feature-based JSON documents.
+
+    This function implements the shared logic for combining multiple
+    schema-valid JSON documents that contain:
+        - One or more required top-level metadata fields that must be identical across all inputs
+        (e.g. ``analysis``, ``source``, ``ncrna_tool``).
+        - A list of feature objects under a known key (e.g. ``repeat_features`` or ``ncrna_features``).
+
+    Args:
+        documents: Iterable of ``(path, document)`` pairs.
+        feature_list_key: Top-level key containing the list of feature objects.
+        coerce_feature: Function that validates and casts raw feature JSON
+            objects into the expected TypedDict form.
+        chunk_re: Regex identifying chunked seq_region identifiers when
+            AGP-driven lifting is not used.
+        agp_by_component: Optional AGP component index enabling AGP-driven lifting.
+        allow_revcomp: Whether to allow reverse-orientation AGP lifting.
+        required_top_level_keys: List of top-level keys that must be identical
+            across all input documents.
+
+    Returns:
+        A tuple containing:
+            - A dict of required top-level metadata values.
+            - The combined list of lifted features.
+            - The number of features read across all inputs.
+
+    Raises:
+        ValueError:
+            If:
+                - required top-level fields differ between inputs,
+                - no documents are provided,
+                - a feature fails coercion or has invalid coordinates,
+                - header-driven lifting fails due to malformed chunk identifiers.
+        KeyError:
+            If AGP-driven lifting is requested but a feature seq_region
+            is not present in the AGP index.
+    """
+    acc = _TopLevelAccumulator()
+    combined_features: list[Feature] = []
+    nr_features = 0
+
+    any_docs = False
+    for p, document in documents:
+        any_docs = True
+
+        for k in required_top_level_keys:
+            acc.require_same(key=k, value=document[k], path=p)
+
+        raw_features = cast(list[JsonValue], document[feature_list_key])
+        for raw in raw_features:
+            nr_features += 1
+            feat = coerce_feature(raw, p)
+            lifted = _lift_feature_coords(
+                feature=feat,
+                chunk_re=chunk_re,
+                agp_by_component=agp_by_component,
+                allow_revcomp=allow_revcomp,
+                source_path=p,
+            )
+            combined_features.append(lifted)
+
+    if not any_docs:
+        raise ValueError("No JSON files were read from the manifest (empty manifest?)")
+
+    top_level: dict[str, JsonValue] = {k: acc.get_required(k) for k in required_top_level_keys}
+    return top_level, combined_features, nr_features
+
+
 def _combine_repeat_json_paths(
     json_paths: list[Path],
     out_json: Path,
@@ -315,71 +477,38 @@ def _combine_repeat_json_paths(
         allow_revcomp: Whether to allow reverse-oriented AGP entries when lifting.
 
     Raises:
-        ValueError: If:
-            - input files differ in top-level analysis or source,
-            - consensus entries conflict,
-            - features reference missing consensus keys,
-            - coordinates are invalid or ambiguous,
-            - no input files are provided.
-        KeyError: If AGP-driven lifting is requested but a feature seq_region is not present in the AGP index.
+        ValueError:
+            If:
+                - input files differ in required top-level fields (``analysis``, ``source``, ``ncrna_tool``),
+                - no input files are provided,
+                - a feature has invalid coordinates (e.g. start > end),
+                - coordinate lifting fails due to invalid or ambiguous mapping.
+        KeyError:
+            If AGP-driven lifting is requested but a feature.seq_region is not present in the AGP
+            component index.
     """
-
-    combined_analysis: dict[str, JsonValue] | None = None
-    combined_source: dict[str, JsonValue] | None = None
-    analysis_path: Path | None = None
-    source_path: Path | None = None
-
     consensus_by_key: dict[str, RepeatConsensus] = {}
-    combined_features: list[RepeatFeature] = []
 
-    n_features_in = 0
+    for p, document in _iterate_validated_documents(json_paths):
+        incoming = cast(list[JsonValue], document.get("repeat_consensus", []))
+        _merge_repeat_consensus(consensus_by_key, incoming, p)
 
-    for p in json_paths:
-        schema_validator(json_file=p, json_schema=_FEATURE_SCHEMA_NAME)
-        document = _load_json_document(p)
+    top_level, features, nr_features = _combine_feature_docs(
+        documents=_iterate_validated_documents(json_paths, validate=False),
+        feature_list_key="repeat_features",
+        coerce_feature=_coerce_repeat_feature,
+        chunk_re=chunk_re,
+        agp_by_component=agp_by_component,
+        allow_revcomp=allow_revcomp,
+        required_top_level_keys=["analysis", "source"],
+    )
 
-        analysis = cast(dict[str, JsonValue], document["analysis"])
-        source = cast(dict[str, JsonValue], document["source"])
-
-        if combined_analysis is None:
-            combined_analysis = analysis
-            analysis_path = p
-        else:
-            _assert_same_top_level(
-                "analysis", combined_analysis, analysis, path_a=analysis_path or p, path_b=p
-            )
-
-        if combined_source is None:
-            combined_source = source
-            source_path = p
-        else:
-            _assert_same_top_level("source", combined_source, source, path_a=source_path or p, path_b=p)
-
-        incoming_consensus = cast(list[JsonValue], document.get("repeat_consensus", []))
-        _merge_repeat_consensus(consensus_by_key, incoming_consensus, p)
-
-        features = cast(list[JsonValue], document["repeat_features"])
-        for raw_feat in features:
-            n_features_in += 1
-            feat = _coerce_repeat_feature(raw_feat, source_path=p)
-            lifted = _lift_feature_coords(
-                feature=feat,
-                chunk_re=chunk_re,
-                agp_by_component=agp_by_component,
-                allow_revcomp=allow_revcomp,
-                source_path=p,
-            )
-            combined_features.append(lifted)
-
-    if combined_analysis is None or combined_source is None:
-        raise ValueError("No JSON files were read from the manifest (empty manifest?)")
+    repeat_features = cast(list[RepeatFeature], features)
 
     missing: set[str] = set()
-    for feat in combined_features:
+    for feat in repeat_features:
         key = _feature_consensus_key(feat, source_path=out_json)
-        if key is None:
-            continue
-        if key not in consensus_by_key:
+        if key is not None and key not in consensus_by_key:
             missing.add(key)
 
     if missing:
@@ -391,20 +520,14 @@ def _combine_repeat_json_paths(
         )
 
     combined_json: dict[str, JsonValue] = {
-        "analysis": cast(JsonValue, combined_analysis),
-        "source": cast(JsonValue, combined_source),
+        "analysis": top_level["analysis"],
+        "source": top_level["source"],
         "repeat_consensus": cast(JsonValue, list(consensus_by_key.values())),
-        "repeat_features": cast(JsonValue, combined_features),
+        "repeat_features": cast(JsonValue, repeat_features),
     }
 
-    out_json.parent.mkdir(parents=True, exist_ok=True)
-    with out_json.open("w", encoding="utf-8") as out_fh:
-        json.dump(combined_json, out_fh, ensure_ascii=False, indent=2)
-        out_fh.write("\n")
-
-    schema_validator(out_json, json_schema=_FEATURE_SCHEMA_NAME)
-
-    logging.info(f"Read {n_features_in} repeat_feature(s); wrote {len(combined_features)} repeat_feature(s)")
+    _write_and_validate(out_json, combined_json)
+    logging.info(f"Read {nr_features} repeat_feature(s); wrote {len(features)} repeat_feature(s)")
 
 
 def _combine_ncrna_json_paths(
@@ -418,93 +541,47 @@ def _combine_ncrna_json_paths(
     Combines JSON documents containing ncRNA features for a single tool, with coordinate liftover.
 
     Args:
-        json_paths: Input JSON file paths (optionally gzipped).
+        json_paths: Input JSON file paths (optionally gzipped). All files must conform to the
+            ``load_features`` schema and contain ``ncrna_features`` and ``ncrna_tool`` top-level keys.
         out_json: Output path for the combined JSON document.
-        chunk_re: Regex identifying chunked seq_region IDs for seq_region-driven lifting.
-        agp_by_component: Optional AGP component index enabling AGP-driven lifting.
+        chunk_re: Regex identifying chunked seq_region IDs for seq_region-driven coordinate lifting.
+            Must define named groups ``base`` and ``start``.
+        agp_by_component: Optional AGP component index enabling AGP-driven lifting. If provided,
+            feature.seq_region is treated as an AGP component_id and coordinates are lifted into AGP
+            object coordinates.
         allow_revcomp: Whether to allow reverse-oriented AGP entries when lifting.
+            If True and an AGP entry has orientation '-', feature strand will be flipped.
 
     Raises:
-        ValueError: If top-level metadata differs between inputs, if ncrna_tool differs between inputs,
-            if no inputs are provided, or if any feature has invalid coordinates.
-        KeyError: If AGP-driven lifting is requested but a feature seq_region is not present in the AGP index.
+        ValueError:
+            If:
+                - input files differ in required top-level fields,
+                - no input files are provided,
+                - a feature has invalid coordinates (e.g. start > end),
+                - coordinate lifting fails due to ambiguous or invalid AGP spans.
+        KeyError:
+            If AGP-driven lifting is requested but a feature.seq_region
+            is not present in the AGP component index.
     """
-    combined_analysis: dict[str, JsonValue] | None = None
-    combined_source: dict[str, JsonValue] | None = None
-    combined_tool: str | None = None
-
-    analysis_path: Path | None = None
-    source_path: Path | None = None
-    tool_path: Path | None = None
-
-    combined_features: list[NcrnaFeature] = []
-    n_features_in = 0
-
-    for p in json_paths:
-        schema_validator(json_file=p, json_schema=_FEATURE_SCHEMA_NAME)
-        document = _load_json_document(p)
-
-        analysis = cast(dict[str, JsonValue], document["analysis"])
-        source = cast(dict[str, JsonValue], document["source"])
-        tool = cast(str, document["ncrna_tool"])
-
-        if combined_analysis is None:
-            combined_analysis = analysis
-            analysis_path = p
-        else:
-            _assert_same_top_level(
-                "analysis", combined_analysis, analysis, path_a=analysis_path or p, path_b=p
-            )
-
-        if combined_source is None:
-            combined_source = source
-            source_path = p
-        else:
-            _assert_same_top_level("source", combined_source, source, path_a=source_path or p, path_b=p)
-
-        if combined_tool is None:
-            combined_tool = tool
-            tool_path = p
-        else:
-            if combined_tool != tool:
-                raise ValueError(
-                    "Top-level 'ncrna_tool' differs between inputs:\n"
-                    f"  - {tool_path or p}: {combined_tool}\n"
-                    f"  - {p}: {tool}\n"
-                    "This script requires ncrna_tool to be identical across input files."
-                )
-
-        features = cast(list[JsonValue], document["ncrna_features"])
-        for raw_feat in features:
-            n_features_in += 1
-            feat = _coerce_ncrna_feature(raw_feat, source_path=p)
-            lifted = _lift_feature_coords(
-                feature=feat,
-                chunk_re=chunk_re,
-                agp_by_component=agp_by_component,
-                allow_revcomp=allow_revcomp,
-                source_path=p,
-            )
-            combined_features.append(lifted)
-
-    if combined_analysis is None or combined_source is None or combined_tool is None:
-        raise ValueError("No JSON files were read from the manifest (empty manifest?)")
+    top_level, features, nr_features = _combine_feature_docs(
+        documents=_iterate_validated_documents(json_paths),
+        feature_list_key="ncrna_features",
+        coerce_feature=_coerce_ncrna_feature,
+        chunk_re=chunk_re,
+        agp_by_component=agp_by_component,
+        allow_revcomp=allow_revcomp,
+        required_top_level_keys=["analysis", "source", "ncrna_tool"],
+    )
 
     combined_json: dict[str, JsonValue] = {
-        "analysis": cast(JsonValue, combined_analysis),
-        "ncrna_tool": cast(JsonValue, combined_tool),
-        "source": cast(JsonValue, combined_source),
-        "ncrna_features": cast(JsonValue, combined_features),
+        "analysis": top_level["analysis"],
+        "source": top_level["source"],
+        "ncrna_tool": top_level["ncrna_tool"],
+        "ncrna_features": cast(JsonValue, cast(list[NcrnaFeature], features)),
     }
 
-    out_json.parent.mkdir(parents=True, exist_ok=True)
-    with out_json.open("w", encoding="utf-8") as out_fh:
-        json.dump(combined_json, out_fh, ensure_ascii=False, indent=2)
-        out_fh.write("\n")
-
-    schema_validator(out_json, json_schema=_FEATURE_SCHEMA_NAME)
-
-    logging.info(f"Read {n_features_in} ncrna_feature(s); wrote {len(combined_features)} ncrna_feature(s)")
+    _write_and_validate(out_json, combined_json)
+    logging.info(f"Read {nr_features} ncrna_feature(s); wrote {len(features)} ncrna_feature(s)")
 
 
 def combine_feature_json(
@@ -517,24 +594,50 @@ def combine_feature_json(
     """
     Combines JSON documents from split/chunked inputs and performs coordinate liftover.
 
-    Supports:
-    - load_repeat schema (repeat features + optional repeat consensus)
-    - load_ncrna schema (ncRNA features for one tool type per file set)
+    Supports load_features schema documents containing either repeat features with (optional) consensus,
+    or ncRNA features for a single tool.
 
     Liftover modes:
     1) AGP-driven (recommended):
-        - Treat feature.seq_region as AGP component_id (part_id)
-        - Lift seq_region_start/end into AGP object coordinates (record_start/end)
-        - Replace seq_region with AGP object id (record)
-        - If AGP orientation is '-', flip seq_region_strand (requires --allow-revcomp)
+        - Treats feature.seq_region as AGP component_id (part_id).
+        - Lifts seq_region_start/end into AGP object coordinates (record_start/end).
+        - Replaces seq_region with AGP object id (record).
+        - If AGP orientation is '-', flips seq_region_strand (requires --allow-revcomp).
 
     2) Header-driven (no AGP):
-        - Parse seq_region with --chunk-id-regex
-        - Replace seq_region with base id and shift coordinates by (chunk_start - 1)
+        - Parses seq_region with ``chunk-id-regex``
+        - Replaces seq_region with base id and shift coordinates by (chunk_start - 1).
 
     Merging:
     - Features are concatenated after lifting.
-    - Top-level analysis and source must be identical across input files.
+    - Top-level metadata must be identical across input files.
+
+    Args:
+        json_manifest: Path to a manifest file containing one JSON file path
+            per line. Files may be gzipped.
+        out_json: Destination path for the combined JSON output.
+        chunk_re: Compiled regex used to identify chunked seq_region identifiers
+            and extract coordinate offsets when AGP-driven lifting is not used.
+            Must define named groups ``base`` and ``start``.
+        agp_file: Optional AGP file enabling AGP-driven coordinate lifting.
+            If provided, feature.seq_region values are interpreted as AGP
+            component IDs.
+        allow_revcomp: Whether to allow reverse-oriented AGP entries when
+            lifting coordinates. If True and an AGP entry has orientation '-',
+            feature strand will be flipped.
+
+    Raises:
+        ValueError:
+            If:
+                - the manifest is empty,
+                - mixed load types (repeat vs ncRNA) are detected in the manifest,
+                - required top-level metadata fields differ between inputs,
+                - consensus validation fails (repeat mode),
+                - features reference missing repeat_consensus keys (repeat mode),
+                - feature coordinates are invalid or coordinate lifting is ambiguous.
+        KeyError:
+            If AGP-driven lifting is requested but a feature.seq_region is not present in the AGP
+            component index.
     """
     json_paths = get_paths_from_manifest(json_manifest)
     if not json_paths:

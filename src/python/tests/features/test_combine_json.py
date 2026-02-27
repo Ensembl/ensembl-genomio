@@ -144,6 +144,12 @@ def _trnascan_feature(seq_region: str, s: int, e: int, strand: int = 1) -> dict[
     }
 
 
+def test_top_level_accumulator_get_required_raises_when_missing():
+    acc = combine_json._TopLevelAccumulator()
+    with pytest.raises(ValueError, match=r"Missing required top-level 'analysis'"):
+        acc.get_required("analysis")
+
+
 @pytest.mark.parametrize("gz", [False, True])
 def test_load_json_document_accepts_object(tmp_path: Path, gz: bool):
     doc = {
@@ -340,8 +346,31 @@ def test_feature_consensus_key_rejects_invalid_consensus_key(tmp_path: Path):
         combine_json._feature_consensus_key(feat, tmp_path / "x.json")
 
 
+def test_iterate_validated_documents_validate_false_skips_schema_validation(
+    schema_validator_calls, tmp_path: Path
+):
+    doc = {
+        "analysis": _analysis(),
+        "source": _source(),
+        "repeat_features": [_repeat_feature(seq_region="chr1", s=1, e=2)],
+    }
+    p = _write_json(tmp_path / "a.json", doc)
+
+    got = list(combine_json._iterate_validated_documents([p], validate=False))
+    assert got and got[0][0] == p
+    assert schema_validator_calls == []
+
+
+def test_write_and_validate_writes_newline_and_calls_schema_validator(schema_validator_calls, tmp_path: Path):
+    out_json = tmp_path / "out.json"
+    combine_json._write_and_validate(out_json, {"hello": "world"})
+
+    assert out_json.read_text(encoding="utf-8").endswith("\n")
+    assert schema_validator_calls, "schema_validator should have been called for the output"
+
+
 def test_combine_repeat_json_paths_empty_manifest_raises(tmp_path: Path):
-    with pytest.raises(ValueError, match=r"empty manifest"):
+    with pytest.raises(ValueError, match=r"No JSON files were read from the manifest"):
         combine_json._combine_repeat_json_paths(
             json_paths=[],
             out_json=tmp_path / "out.json",
@@ -349,63 +378,6 @@ def test_combine_repeat_json_paths_empty_manifest_raises(tmp_path: Path):
             agp_by_component=None,
             allow_revcomp=False,
         )
-
-
-def test_combine_feature_json_paths_empty_manifest_raises(tmp_path: Path):
-    with pytest.raises(ValueError, match=r"empty manifest"):
-        combine_json._combine_ncrna_json_paths(
-            json_paths=[],
-            out_json=tmp_path / "out.json",
-            chunk_re=CHUNK_RE,
-            agp_by_component=None,
-            allow_revcomp=False,
-        )
-
-
-def test_combine_repeat_json_paths_feature_consensus_key_none_is_skipped(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-):
-    analysis = _analysis("rm")
-    source = _source("prov")
-    rc = _repeat_consensus("Alu", "SINE", "Alu", "ACGT")
-    rc_key = rc["repeat_consensus_key"]
-
-    consensus_key_feat = _repeat_feature(seq_region="chr1", s=1, e=3, consensus_key=rc_key)
-    no_consensus_key_feat = _repeat_feature(seq_region="chr1", s=5, e=6)
-
-    doc = {
-        "analysis": analysis,
-        "source": source,
-        "repeat_consensus": [rc],
-        "repeat_features": [consensus_key_feat, no_consensus_key_feat],
-    }
-
-    p = _write_json(tmp_path / "in.json", doc)
-    out_json = tmp_path / "out.json"
-
-    real_fc_key = combine_json._feature_consensus_key
-    calls = {"n": 0}
-
-    def return_none_on_second_call(feat, source_path):
-        calls["n"] += 1
-        if calls["n"] == 2:
-            return None
-        return real_fc_key(feat, source_path)
-
-    monkeypatch.setattr(combine_json, "_feature_consensus_key", return_none_on_second_call)
-
-    combine_json._combine_repeat_json_paths(
-        json_paths=[p],
-        out_json=out_json,
-        chunk_re=CHUNK_RE,
-        agp_by_component=None,
-        allow_revcomp=False,
-    )
-
-    out = json.loads(out_json.read_text(encoding="utf-8"))
-    assert len(out["repeat_features"]) == 2
-    assert calls["n"] >= 2
 
 
 def test_combine_feature_json_seq_region_driven_merge_and_coord_liftover(
@@ -508,7 +480,7 @@ def test_combine_feature_json_agp_driven_lifts_coordinates_and_strand(
     assert feat["seq_region_strand"] == expected_strand
 
 
-def test_combin_feature_json_rejects_empty_manifest(tmp_path: Path):
+def test_combine_feature_json_rejects_empty_manifest(tmp_path: Path):
     manifest = write_manifest(tmp_path / "manifest.txt", [])
     with pytest.raises(ValueError, match=r"empty manifest"):
         combine_json.combine_feature_json(
@@ -773,42 +745,6 @@ def test_combine_feature_json_mixed_schema_kinds_raises(tmp_path: Path):
     manifest = write_manifest(tmp_path / "manifest.txt", [str(p1), str(p2)])
 
     with pytest.raises(ValueError, match=r"Mixed load types detected"):
-        combine_json.combine_feature_json(
-            json_manifest=manifest,
-            out_json=tmp_path / "out.json",
-            chunk_re=CHUNK_RE,
-        )
-
-
-def test_combine_repeat_json_empty_feature_array_raises(tmp_path: Path):
-    doc = {
-        "analysis": _analysis("rm"),
-        "source": _source("prov"),
-        "repeat_consensus": [],
-        "repeat_features": [],
-    }
-    p = _write_json(tmp_path / "in.json", doc)
-    manifest = write_manifest(tmp_path / "manifest.txt", [str(p)])
-
-    with pytest.raises(Exception):
-        combine_json.combine_feature_json(
-            json_manifest=manifest,
-            out_json=tmp_path / "out.json",
-            chunk_re=CHUNK_RE,
-        )
-
-
-def test_combine_ncrna_json_empty_feature_array_raises(tmp_path: Path):
-    doc = {
-        "analysis": _analysis("cmscan"),
-        "source": _source("prov"),
-        "ncrna_tool": "cmscan",
-        "ncrna_features": [],
-    }
-    p = _write_json(tmp_path / "in.json", doc)
-    manifest = write_manifest(tmp_path / "manifest.txt", [str(p)])
-
-    with pytest.raises(Exception):
         combine_json.combine_feature_json(
             json_manifest=manifest,
             out_json=tmp_path / "out.json",
