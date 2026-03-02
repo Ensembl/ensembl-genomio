@@ -21,12 +21,11 @@ from contextlib import nullcontext as does_not_raise
 import json
 import os
 from pathlib import Path
-from typing import Any, Callable, ContextManager
+from typing import Any, Callable, ContextManager, TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
-from pytest import FixtureRequest, param, raises
 from sqlalchemy import Column, Index, String, text
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.engine import make_url
@@ -44,8 +43,10 @@ from ensembl.io.genomio.assembly.status import (
     singularity_image_setter,
 )
 from ensembl.io.genomio.utils.json_utils import get_json
-from ensembl.utils import StrPath
-from ensembl.utils.database import UnitTestDB
+
+if TYPE_CHECKING:
+    from ensembl.utils import StrPath
+    from ensembl.utils.database import UnitTestDB
 
 
 MINIMUM_METADATA = {
@@ -56,7 +57,7 @@ MINIMUM_METADATA = {
         assembly_type="haploid",
         accession="GCF_001194135.2",
         assembly_status="current",
-    )
+    ),
 }
 
 STRAIN_METADATA = {
@@ -68,7 +69,7 @@ STRAIN_METADATA = {
         assembly_type="haploid",
         accession="GCF_001194135.2",
         assembly_status="current",
-    )
+    ),
 }
 
 COMPLETE_METADATA = {
@@ -83,7 +84,7 @@ COMPLETE_METADATA = {
         last_updated="2015-06-29T09:51:41.073",
         assembly_status="current",
         assembly_notes="RefSeq",
-    )
+    ),
 }
 
 
@@ -91,7 +92,7 @@ Base: Any = declarative_base()  # only possible type hint compatible with SQLAlc
 
 
 class Meta(Base):
-    """Meta class mirroring the Ensembl core database meta table without any foreign keys"""
+    """Meta class mirroring the Ensembl core database meta table without any foreign key."""
 
     __tablename__ = "meta"
     __table_args__ = (
@@ -105,15 +106,15 @@ class Meta(Base):
     meta_value: Column = Column(String(255), nullable=False)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_report_structure() -> None:
-    """Tests the `ReportStructure` class."""
+    """Test the `ReportStructure` class."""
     assert ReportStructure()
 
 
 @pytest.mark.dependency(depends=["test_report_structure"])
 def test_report_structure_to_dict() -> None:
-    """Tests the `ReportStructure.to_dict()` method."""
+    """Test the `ReportStructure.to_dict()` method."""
     assert not DeepDiff(
         COMPLETE_METADATA["my_core"].to_dict(),
         {
@@ -133,7 +134,7 @@ def test_report_structure_to_dict() -> None:
 
 @pytest.mark.dependency(depends=["test_report_structure"])
 def test_report_structure_header() -> None:
-    """Tests the `ReportStructure.header()` method."""
+    """Test the `ReportStructure.header()` method."""
     expected_header = [
         "Species Name",
         "Taxon ID",
@@ -151,7 +152,7 @@ def test_report_structure_header() -> None:
 
 @pytest.mark.dependency(depends=["test_report_structure"])
 def test_report_structure_values() -> None:
-    """Tests the `ReportStructure.values()` method."""
+    """Test the `ReportStructure.values()` method."""
     expected_values = [
         "Octopus bimaculoides",
         "37653",
@@ -168,12 +169,12 @@ def test_report_structure_values() -> None:
 
 
 @pytest.mark.parametrize(
-    "sif_cache_dir, datasets_version, nextflow_cachedir, singularity_cachedir",
+    ("sif_cache_dir", "datasets_version", "nextflow_cachedir", "singularity_cachedir"),
     [
-        param("sif_cache", None, None, None, id="Personal SIF cache, default datasets"),
-        param(None, None, "nxf_cache", None, id="Nextflow SIF cache, default datasets"),
-        param(None, None, None, "singularity_cache", id="Singularity SIF cache, default datasets"),
-        param(None, "my_datasets", None, None, id="No SIF cache, user datasets"),
+        pytest.param("sif_cache", None, None, None, id="Personal SIF cache, default datasets"),
+        pytest.param(None, None, "nxf_cache", None, id="Nextflow SIF cache, default datasets"),
+        pytest.param(None, None, None, "singularity_cache", id="Singularity SIF cache, default datasets"),
+        pytest.param(None, "my_datasets", None, None, id="No SIF cache, user datasets"),
     ],
 )
 @patch("ensembl.io.genomio.assembly.status.Client")
@@ -185,15 +186,16 @@ def test_singularity_image_setter(
     nextflow_cachedir: str | None,
     singularity_cachedir: str | None,
 ) -> None:
-    """Tests the `singularity_image_setter()` function.
-
-    Fixtures: tmp_path
+    """Test the `singularity_image_setter()` function.
 
     Args:
+        mock_client: Mocked spython client to pull the SIF container image.
+        tmp_path: Test's unique temporary directory fixture.
         sif_cache_dir: Path to locate existing, or download new SIF container image.
         datasets_version: URL of singularity container (custom `datasets` version if desired).
         nextflow_cachedir: Value to assign to environment variable NXF_SINGULARITY_CACHEDIR.
         singularity_cachedir: Value to assign to environment variable SINGULARITY_CACHEDIR.
+
     """
     mock_client.pull.return_value = True
     # Define SIF cache path and expected path used to pull the container
@@ -223,29 +225,38 @@ def test_singularity_image_setter(
         assert singularity_image_setter(sif_cache_path, datasets_version)
     # Check that the spython pull method was called with the right arguments
     mock_client.pull.assert_called_with(
-        expected_container_url, stream=False, pull_folder=expected_cache_path, quiet=True
+        expected_container_url,
+        stream=False,
+        pull_folder=expected_cache_path,
+        quiet=True,
     )
 
 
 @pytest.mark.parametrize(
-    "file_name, expected_output, expectation",
+    ("file_name", "expected_output", "expectation"),
     [
-        param("assemblies.txt", ["GCA_900524668.2", "GCF_123456789.1"], does_not_raise(), id="Valid file"),
-        param("meta_report.tsv", [], raises(UnsupportedFormatError), id="Wrong accession format"),
+        pytest.param(
+            "assemblies.txt", ["GCA_900524668.2", "GCF_123456789.1"], does_not_raise(), id="Valid file"
+        ),
+        pytest.param(
+            "meta_report.tsv", [], pytest.raises(UnsupportedFormatError), id="Wrong accession format"
+        ),
     ],
 )
 def test_get_assembly_accessions(
-    data_dir: Path, file_name: str, expected_output: list[str], expectation: ContextManager
+    data_dir: Path,
+    file_name: str,
+    expected_output: list[str],
+    expectation: ContextManager,
 ) -> None:
-    """Tests the `get_assembly_accessions()` function.
-
-    Fixtures:
-        data_dir
+    """Test the `get_assembly_accessions()` function.
 
     Args:
+        data_dir: Module's test data directory fixture.
         file_name: File with one line per INSDC assembly accession.
         expected_output: Expected assembly accessions returned.
         expectation: Context manager of expected raise exception.
+
     """
     file_path = data_dir / file_name
     with expectation:
@@ -265,11 +276,17 @@ def test_get_assembly_accessions(
     indirect=True,
 )
 def test_fetch_accessions_from_core_dbs(
-    request: FixtureRequest, tmp_path: Path, test_dbs: dict[str, UnitTestDB]
+    request: pytest.FixtureRequest,
+    tmp_path: Path,
+    test_dbs: dict[str, UnitTestDB],
 ) -> None:
-    """Tests the `fetch_accessions_from_core_dbs()` function.
+    """Test the `fetch_accessions_from_core_dbs()` function.
 
-    Fixtures: request, tmp_path, test_dbs
+    Args:
+        request: Pytest request fixture to access command line options.
+        tmp_path: Test's unique temporary directory fixture.
+        test_dbs: Dictionary of test databases created by the `test_dbs` fixture.
+
     """
     # Create a file with each test database name
     tmp_file = tmp_path / "core_dbs_list.txt"
@@ -283,17 +300,23 @@ def test_fetch_accessions_from_core_dbs(
 
 @patch("ensembl.io.genomio.assembly.status.Client")
 def test_fetch_datasets_reports(
-    mock_client: Mock, tmp_path: Path, data_dir: Path, assert_files: Callable[[StrPath, StrPath], None]
+    mock_client: Mock,
+    tmp_path: Path,
+    data_dir: Path,
+    assert_files: Callable[[StrPath, StrPath], None],
 ) -> None:
-    """Tests the `fetch_datasets_reports()` function.
+    """Test the `fetch_datasets_reports()` function.
 
-    Fixtures:
-        tmp_path, data_dir, assert_files
+    Args:
+        mock_client: Mocked spython client to execute the command.
+        tmp_path: Test's unique temporary directory fixture.
+        data_dir: Module's test data directory fixture.
+        assert_files: Function to assert that two files are equal.
+
     """
 
-    def execute_return(
-        command: list[str], **kwargs: Any  # pylint: disable=unused-argument
-    ) -> dict[str, str]:
+    # pylint: disable=unused-argument
+    def execute_return(command: list[str], **kwargs: Any) -> dict[str, str]:
         report_path = data_dir / f"{command[-1]}.asm_report.json"
         if report_path.exists():
             report = get_json(report_path)
@@ -313,42 +336,46 @@ def test_fetch_datasets_reports(
 
 @patch("ensembl.io.genomio.assembly.status.Client")
 def test_fetch_datasets_reports_value_error(mock_client: Mock) -> None:
-    """Tests the `fetch_datasets_reports()` function when `ValueError` is raised."""
+    """Test the `fetch_datasets_reports()` function when `TypeError` is raised."""
     mock_client.execute.return_value = {"message": [["unexpected nested list"]]}
     accessions = {"my_core": "GCF_001194135.2"}
-    with raises(ValueError):
+    with pytest.raises(TypeError, match=r"Result obtained from datasets is not a string"):
         fetch_datasets_reports(mock_client, accessions, Path(), 1)
 
 
 @patch("ensembl.io.genomio.assembly.status.Client")
 def test_fetch_datasets_reports_runtime_error(mock_client: Mock) -> None:
-    """Tests the `fetch_datasets_reports()` function when `RuntimeError` is raised."""
+    """Test the `fetch_datasets_reports()` function when `RuntimeError` is raised."""
     mock_client.execute.return_value = {"message": "FATAL error message"}
     accessions = {"my_core": "GCF_001194135.2"}
-    with raises(RuntimeError, match=r"Singularity image execution failed! -> '.*'"):
+    with pytest.raises(RuntimeError, match=r"Singularity image execution failed! -> '.*'"):
         fetch_datasets_reports(mock_client, accessions, Path(), 1)
 
 
 @pytest.mark.dependency(depends=["test_report_structure"])
 @pytest.mark.parametrize(
-    "file_name, expected_metadata",
+    ("file_name", "expected_metadata"),
     [
-        param("simple.asm_report.json", MINIMUM_METADATA, id="Minimum report"),
-        param("strain.asm_report.json", STRAIN_METADATA, id="Strain report"),
-        param("cultivar.asm_report.json", MINIMUM_METADATA, id="Unexpected infraspecific name (cultivar)"),
-        param("GCF_001194135.2.asm_report.json", COMPLETE_METADATA, id="Detailed report"),
+        pytest.param("simple.asm_report.json", MINIMUM_METADATA, id="Minimum report"),
+        pytest.param("strain.asm_report.json", STRAIN_METADATA, id="Strain report"),
+        pytest.param(
+            "cultivar.asm_report.json", MINIMUM_METADATA, id="Unexpected infraspecific name (cultivar)"
+        ),
+        pytest.param("GCF_001194135.2.asm_report.json", COMPLETE_METADATA, id="Detailed report"),
     ],
 )
 def test_extract_assembly_metadata(
-    data_dir: Path, file_name: str, expected_metadata: dict[str, ReportStructure]
+    data_dir: Path,
+    file_name: str,
+    expected_metadata: dict[str, ReportStructure],
 ) -> None:
-    """Tests the `extract_assembly_metadata()` function.
-
-    Fixtures: data_dir
+    """Test the `extract_assembly_metadata()` function.
 
     Args:
+        data_dir: Module's test data directory fixture.
         file_name: Test data file to extract the assembly metadata from.
         expected_metadata: Expected key value pairs of source name <> assembly report.
+
     """
     report_path = data_dir / file_name
     report = {"my_core": get_json(report_path)}
@@ -358,11 +385,17 @@ def test_extract_assembly_metadata(
 
 @pytest.mark.dependency(depends=["test_report_structure"])
 def test_generate_report_tsv(
-    tmp_path: Path, data_dir: Path, assert_files: Callable[[StrPath, StrPath], None]
+    tmp_path: Path,
+    data_dir: Path,
+    assert_files: Callable[[StrPath, StrPath], None],
 ) -> None:
-    """Tests the `generate_report_tsv()` function.
+    """Test the `generate_report_tsv()` function.
 
-    Fixtures: tmp_path, data_dir, assert_files
+    Args:
+        tmp_path: Test's unique temporary directory fixture.
+        data_dir: Module's test data directory fixture.
+        assert_files: Function to assert that two files are equal.
+
     """
     generate_report_tsv(COMPLETE_METADATA, "core_db", tmp_path, "test_output")
     assert_files(tmp_path / "test_output.tsv", data_dir / "meta_report.tsv")

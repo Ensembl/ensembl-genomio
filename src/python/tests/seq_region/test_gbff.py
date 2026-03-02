@@ -22,14 +22,13 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import pytest
-from pytest import param, raises
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
-from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
+from ensembl.io.genomio.seq_region.exceptions import UnknownMetadataError
 
 
 def get_record(gbff_path: Path) -> SeqRecord:
-    """Returns the first SeqRecord from a Genbank file."""
+    """Return the first SeqRecord from a Genbank file."""
     with gbff_path.open("r") as gbff_file:
         for record in SeqIO.parse(gbff_file, "genbank"):
             return record
@@ -43,19 +42,20 @@ def test_gbff(data_dir: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "input_gb, expected_id",
+    ("input_gb", "expected_id"),
     [
-        param("apicoplast.gb", "U87145", id="Found genbank ID"),
-        param("apicoplast_nocomment.gb", None, id="No comment"),
-        param("apicoplast_simple_comment.gb", None, id="Comment without ID"),
+        pytest.param("apicoplast.gb", "U87145", id="Found genbank ID"),
+        pytest.param("apicoplast_nocomment.gb", None, id="No comment"),
+        pytest.param("apicoplast_simple_comment.gb", None, id="Comment without ID"),
     ],
 )
 def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None) -> None:
     """Test for `gbff.get_genbank_id()`.
 
     Args:
+        data_dir: Module's test data directory fixture.
         input_gb: Genbank file to use.
-        expect_id: Expected Genbank ID.
+        expected_id: Expected Genbank ID.
 
     """
     seq_record = get_record(data_dir / input_gb)
@@ -64,18 +64,19 @@ def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None) 
 
 
 @pytest.mark.parametrize(
-    "input_gb, expected_table",
+    ("input_gb", "expected_table"),
     [
-        param("apicoplast.gb", 4, id="Found codon table"),
-        param("apicoplast_nogene.gb", None, id="No codon table"),
+        pytest.param("apicoplast.gb", 4, id="Found codon table"),
+        pytest.param("apicoplast_nogene.gb", None, id="No codon table"),
     ],
 )
 def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | None) -> None:
     """Test for `gbff.get_codon_table()`.
 
     Args:
+        data_dir: Module's test data directory fixture.
         input_gb: Genbank file to use.
-        expect_table: Expected codon table number.
+        expected_table: Expected codon table number.
 
     """
     seq_record = get_record(data_dir / input_gb)
@@ -84,22 +85,29 @@ def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | No
 
 
 @pytest.mark.parametrize(
-    "input_gb, expected_location, expectation",
+    ("input_gb", "expected_location", "expectation"),
     [
-        param("apicoplast.gb", "apicoplast_chromosome", no_raise(), id="Found location"),
-        param("apicoplast_nofeatures.gb", None, no_raise(), id="No features"),
-        param("apicoplast_unknown_location.gb", None, raises(UnknownMetadata), id="Unknown location"),
-        param("apicoplast_noprefix_location.gb", "apicoplast_chromosome", no_raise(), id="No prefix"),
+        pytest.param("apicoplast.gb", "apicoplast_chromosome", no_raise(), id="Found location"),
+        pytest.param("apicoplast_nofeatures.gb", None, no_raise(), id="No features"),
+        pytest.param(
+            "apicoplast_unknown_location.gb", None, pytest.raises(UnknownMetadataError), id="Unknown location"
+        ),
+        pytest.param("apicoplast_noprefix_location.gb", "apicoplast_chromosome", no_raise(), id="No prefix"),
     ],
 )
 def test_get_organelle(
-    data_dir: Path, input_gb: str, expected_location: str | None, expectation: ContextManager
+    data_dir: Path,
+    input_gb: str,
+    expected_location: str | None,
+    expectation: ContextManager,
 ) -> None:
     """Test for `gbff.get_organelle()`.
 
     Args:
+        data_dir: Module's test data directory fixture.
         input_gb: Genbank file to use.
-        expect_location: Expected location of an organelle.
+        expected_location: Expected location of an organelle.
+        expectation: Context manager for the expected exception (if any).
 
     """
     seq_record = get_record(data_dir / input_gb)
@@ -119,18 +127,19 @@ def test_get_organelle_custom(data_dir: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "input_gb, expected_circular",
+    ("input_gb", "expected_circular"),
     [
-        param("apicoplast.gb", True, id="Circular"),
-        param("apicoplast_linear.gb", False, id="Not circular"),
+        pytest.param("apicoplast.gb", True, id="Circular"),
+        pytest.param("apicoplast_linear.gb", False, id="Not circular"),
     ],
 )
 def test_is_circular(data_dir: Path, input_gb: str, expected_circular: bool) -> None:
     """Test for `gbff.is_circular()`.
 
     Args:
+        data_dir: Module's test data directory fixture.
         input_gb: Genbank file to use.
-        expect_circular: If the sequence is circular.
+        expected_circular: If the sequence is circular.
 
     """
     seq_record = get_record(data_dir / input_gb)
