@@ -205,13 +205,15 @@
           "analysis": {
             "run_date": "2026-02-18T00:00:00Z",
             "logic_name": "repeatmasker_customlib",
-            "display_label": "RepeatMasker custom library",
-            "description": "RepeatMasker run with custom library",
+            "display_label": "Repeats: Custom Library",
+            "description": "Repeats identified by <a rel=\"external\" href=\"http://www.repeatmasker.org\">RepeatMasker</a>, using a custom library of <em>ab initio</em> repeat profiles for this species.",
             "program": "RepeatMasker",
-            "program_version": "4.1.7"
+            "program_version": "4.1.7",
+            "program_parameters": "-lib custom_repeats.lib -nolow -no_is -gff"
+
           },
           "source": {
-            "source_provider": "prov",
+            "source_provider": "Ensembl",
             "is_primary": true
           },
           "repeat_consensus": [
@@ -564,16 +566,16 @@
           "analysis": {
             "run_date": "2026-02-18T00:00:00Z",
             "logic_name": "cmscan_rfam",
-            "display_label": "Infernal cmscan (Rfam)",
-            "description": "Infernal cmscan against Rfam",
+            "display_label": "Rfam Models (LCA)",
+            "description": "Covariance models from <a href='https://rfam.xfam.org'>Rfam</a> (release 15.0), aligned to the genome with 'cmscan' from the <a href='http://eddylab.org/infernal'>Infernal</a> suite of programs. Models are restricted to those observed in species that share a last common ancestor (LCA).",
             "program": "cmscan",
             "program_version": "1.1.5",
             "db": "Rfam",
-            "db_version": "14.10"
+            "db_version": "15.0"
           },
           "ncrna_tool": "cmscan",
           "source": {
-            "source_provider": "rfam",
+            "source_provider": "Ensembl",
             "is_primary": true
           },
           "ncrna_features": [
@@ -597,7 +599,7 @@
             }
           ]
         }
-      ]
+    ] 
     }
   }
 }
