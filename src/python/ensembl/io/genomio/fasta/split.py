@@ -151,8 +151,9 @@ class OutputWriter:
 
     def _create_agp_file(self) -> None:
         """Creates the AGP file for recording sequence chunking."""
+        assert self.agp_file is not None
         try:
-            self._agp_fh = self.agp_file.open("w")  # type: ignore[union-attr]
+            self._agp_fh = self.agp_file.open("w")
         except OSError as e:
             raise RuntimeError(f"Failed to open AGP file '{self.agp_file}'") from e
         self._agp_fh.write("# AGP-version 2.0\n")
@@ -196,14 +197,18 @@ class OutputWriter:
         self.file_len += len(record.seq)
 
         if self.write_agp:
-            if [x for x in (agp_object_id, agp_start, agp_end, agp_part_nr) if x is None]:
+            if None in (agp_object_id, agp_start, agp_end, agp_part_nr):
                 raise ValueError("All AGP arguments must be provided if writing AGP entries")
-            # type: ignore[arg-type]
+            assert agp_object_id is not None
+            assert agp_start is not None
+            assert agp_end is not None
+            assert agp_part_nr is not None
             line = (
                 f"{agp_object_id}\t{agp_start}\t{agp_end}\t{agp_part_nr}\tW\t"
                 f"{record.id}\t1\t{len(record.seq)}\t+\n"
             )
-            self._agp_fh.write(line)  # type: ignore[union-attr]
+            assert self._agp_fh is not None
+            self._agp_fh.write(line)
 
     def close(self) -> None:
         self._fh.close()
