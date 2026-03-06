@@ -79,14 +79,12 @@ class OutputWriter:
         self.file_count = 0
         self.record_count = 0
         self.file_len = 0
-        self._fh: TextIOWrapper | None = None
         self._agp_fh: TextIOWrapper | None = None
         self._cleaned_dirs: set[Path] = set()
 
-        self.open_new_file()
-
+        self._create_output_file()
         if self.write_agp:
-            self.create_agp_file()
+            self._create_agp_file()
 
     def _get_subdir_path(self, dir_index: int) -> Path:
         """Return the output subdirectory path for a given directory index.
@@ -140,39 +138,21 @@ class OutputWriter:
             file_name = f"{self.basename}.{file_index}.fa"
         return subdir_path / file_name
 
-    def add_agp_entry(
-        self,
-        object_id: str,
-        start: int,
-        end: int,
-        part_nr: int,
-        part_id: str,
-        part_length: int,
-    ) -> None:
-        """
-        Write a single AGP v2.0 component line for a chunk/contig.
-
-        Coordinates written to AGP are 1-based and inclusive.
-
-        Args:
-            object_id: The original input sequence ID (AGP 'object').
-            start: Start coordinate on the object (1-based, inclusive).
-            end: End coordinate on the object (1-based, inclusive).
-            part_nr: Component part number for this object (starts at 1 per object).
-            part_id: Output contig/chunk identifier (AGP 'component_id').
-            part_length: Length of the component in bases.
-        """
-        if self._agp_fh is None:
-            return
-        line = f"{object_id}\t{start}\t{end}\t{part_nr}\tW\t{part_id}\t1\t{part_length}\t+\n"
-        self._agp_fh.write(line)
-
-    def create_agp_file(self) -> None:
-        """Creates the AGP file for recording sequence chunking."""
-        if self.agp_file is None:
-            return
+    def _create_output_file(self) -> None:
+        """Creates a new output FASTA file and updates internal state accordingly."""
+        path = self._get_path_for_next_file()
         try:
-            self._agp_fh = open(self.agp_file, "w")
+            self._fh = path.open("w")
+        except OSError as e:
+            raise RuntimeError(f"Failed to open output file '{path}'") from e
+        logging.debug(f"Opened output file '{path}' for writing")
+        self.record_count = 0
+        self.file_len = 0
+
+    def _create_agp_file(self) -> None:
+        """Creates the AGP file for recording sequence chunking."""
+        try:
+            self._agp_fh = self.agp_file.open("w")  # type: ignore[union-attr]
         except OSError as e:
             raise RuntimeError(f"Failed to open AGP file '{self.agp_file}'") from e
         self._agp_fh.write("# AGP-version 2.0\n")
@@ -180,17 +160,8 @@ class OutputWriter:
 
     def open_new_file(self) -> None:
         """Closes current file (if any) and opens a new output file."""
-        if self._fh is not None:
-            self._fh.close()
-
-        path = self._get_path_for_next_file()
-        try:
-            self._fh = open(path, "w")
-            logging.debug(f"Opened output file '{path}' for writing")
-        except OSError as e:
-            raise RuntimeError(f"Failed to open output file '{path}'") from e
-        self.record_count = 0
-        self.file_len = 0
+        self._fh.close()
+        self._create_output_file()
 
     def write_record(
         self,
@@ -227,13 +198,16 @@ class OutputWriter:
         if self.write_agp:
             if [x for x in (agp_object_id, agp_start, agp_end, agp_part_nr) if x is None]:
                 raise ValueError("All AGP arguments must be provided if writing AGP entries")
-            self.add_agp_entry(agp_object_id, agp_start, agp_end, agp_part_nr, record.id, len(record.seq))
+            # type: ignore[arg-type]
+            line = (
+                f"{agp_object_id}\t{agp_start}\t{agp_end}\t{agp_part_nr}\tW\t"
+                f"{record.id}\t1\t{len(record.seq)}\t+\n"
+            )
+            self._agp_fh.write(line)  # type: ignore[union-attr]
 
     def close(self) -> None:
-        if self._fh is not None:
-            self._fh.close()
-            self._fh = None
-        if self._agp_fh is not None:
+        self._fh.close()
+        if self._agp_fh:
             self._agp_fh.close()
             self._agp_fh = None
 
