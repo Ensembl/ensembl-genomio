@@ -61,31 +61,48 @@ def add_organism(url: str, user: str, key: str, org_data: Dict[str, str]) -> Non
 
     add_org_url = url + "/organisms"
     headers = {"Content-type": "application/json", "Accept": "application/json"}
-    result = requests.post(add_org_url, auth=(user, key), headers=headers, json=org_data, timeout=10)
-
-    if result and result.status_code == 200:
-        print("Successfully added organism")
-    else:
-        print("Error: " + str(result))
-        print(json.dumps(json.loads(result.content), indent=4))
+    
+    try:
+        result = requests.post(add_org_url, auth=(user, key), headers=headers, json=org_data, timeout=10)
+        
+        if result and result.status_code == 200:
+            print("Successfully added organism")
+        else:
+            print(f"Error: {result.status_code}")
+            try:
+                print(json.dumps(result.json(), indent=4))
+            except ValueError:  # Catches JSONDecodeError if in case respobse is not JSON
+                print(result.text)
+    except requests.exceptions.RequestException as e:
+        print(f"Network error occurred while adding organism: {e}")
 
 
 def update_organism(url: str, user: str, key: str, org_data: Dict[str, str], organism_id: int) -> None:
     """Update an organism in OSID."""
 
-    del org_data["organismName"]
-    update_org_url = url + "/organisms" + "/" + str(organism_id)
+    # Safely creates a copy and removes the name without directly mutating the original dictionary
+    payload = org_data.copy()
+    payload.pop("organismName", None)
+
+    update_org_url = f"{url}/organisms/{organism_id}"
     headers = {"Content-type": "application/json", "Accept": "application/json"}
-    result = requests.put(update_org_url, auth=(user, key), headers=headers, json=org_data, timeout=10)
+    
+    try:
+        result = requests.put(update_org_url, auth=(user, key), headers=headers, json=payload, timeout=10)
 
-    if result and result.status_code == 204:
-        print("Successfully updated organism")
-    else:
-        print("Error: " + str(result))
-        print(json.dumps(json.loads(result.content), indent=4))
+        if result and result.status_code == 204:
+            print("Successfully updated organism")
+        else:
+            print(f"Error: {result.status_code}")
+            try:
+                print(json.dumps(result.json(), indent=4))
+            except ValueError:
+                print(result.text)
+    except requests.exceptions.RequestException as e:
+        print(f"Network error occurred while updating organism: {e}")
 
 
-def add_or_update_organism(url: str, user, key: str, organism_data: Dict[str, str], update: bool) -> None:
+def add_or_update_organism(url: str, user: str, key: str, organism_data: Dict[str, str], update: bool) -> None:
     """Either add an organism or update it if it's already in OSID."""
 
     organism_id = get_organism(url, user, key, organism_data)
