@@ -120,6 +120,7 @@ fasta_process = "ensembl.io.genomio.fasta.process:main"
 fasta_recombine = "ensembl.io.genomio.fasta.recombine:main"
 # Features
 features_combine_json = "ensembl.io.genomio.features.combine_json:main"
+fasta_split = "ensembl.io.genomio.fasta.split:main"
 # GenBank
 genbank_download = "ensembl.io.genomio.genbank.download:main"
 genbank_extract_data = "ensembl.io.genomio.genbank.extract_data:main"

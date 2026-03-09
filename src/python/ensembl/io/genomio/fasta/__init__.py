@@ -18,3 +18,4 @@ from .chunk import *
 from .compare import *
 from .process import *
 from .recombine import *
+from .split import *
