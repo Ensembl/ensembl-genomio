@@ -13,30 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.fasta.split` module."""
-import logging
+
+
+from contextlib import nullcontext as does_not_raise
+import filecmp
+from io import TextIOWrapper
 from pathlib import Path
 import re
+from typing import Any, Callable, ContextManager
+from unittest.mock import Mock, patch
 
-import pytest
+from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from deepdiff import DeepDiff
+import pytest
+from pytest import MonkeyPatch, param
 
 from ensembl.io.genomio.fasta import split
-from .utils import force_open_failure_for_suffix, read_fasta
 
 
-def list_output_fastas(out_dir: Path) -> list[Path]:
-    return sorted(p for p in out_dir.rglob("*.fa") if p.is_file())
+def force_open_failure_for_suffix(suffix: str) -> Callable:
+    """Monkeypatches `open` to raise an OSError when trying to open a file with the given suffix."""
+    real_open = open
 
+    def _patched_open(self: Path, *args: Any, **kwargs: Any) -> TextIOWrapper | Exception:
+        if self.suffix == suffix:
+            raise OSError(f"Simulated open failure for files ending with '{suffix}'")
+        return real_open(self, *args, **kwargs)
 
-def make_record(record_id: str, description: str) -> SeqRecord:
-    r = SeqRecord(Seq("ACGT"), id=record_id)
-    r.description = description
-    return r
-
-
-def read_agp_lines(agp_path: Path) -> list[str]:
-    return agp_path.read_text(encoding="utf-8").splitlines()
+    return _patched_open
 
 
 @pytest.mark.parametrize(
@@ -44,757 +50,481 @@ def read_agp_lines(agp_path: Path) -> list[str]:
     [("in.fa", "in"), ("in.fa.gz", "in"), ("in", "in")],
 )
 def test_get_fasta_basename(tmp_path: Path, name: str, expected: str) -> None:
-    p = tmp_path / name
-    p.write_text(">x\nA\n", encoding="utf-8")
-    assert split._get_fasta_basename(p) == expected
+    """Tests the `split._get_fasta_basename()` function.
 
+    Args:
+        tmp_path: Test's unique temporary directory fixture.
+        name: File name.
+        expected: Expected value returned by the function.
 
-def test_desc_without_id_header_only() -> None:
-    rec = make_record("seq1", "seq1")
-    assert split._description_without_id(rec) == ""
-
-
-def test_desc_without_id_with_description() -> None:
-    rec = make_record("seq1", "seq1 some annotation")
-    assert split._description_without_id(rec) == "some annotation"
-
-
-def test_desc_without_id_repeated_id_in_description() -> None:
-    # original header: >seq1 seq1 description
-    rec = make_record("seq1", "seq1 seq1 description")
-    assert split._description_without_id(rec) == "seq1 description"
-
-
-def test_desc_without_id_returns_original_when_id_not_prefix() -> None:
-    rec = make_record("seq1", "other description")
-    assert split._description_without_id(rec) == "other description"
-
-
-def test_clean_previous_output_deletes_numeric_top_level_dirs(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
-    out_dir = tmp_path / "out"
-    out_dir.mkdir()
-
-    # Create numeric dirs with valid outputs
-    d1 = out_dir / "1"
-    d2 = out_dir / "2"
-    d1.mkdir()
-    d2.mkdir()
-    fasta1 = d1 / "in.1.fa"
-    fasta1.write_text(">x\nA\n", encoding="utf-8")
-    fasta2 = d2 / "in.2.1.fa"
-    fasta2.write_text(">y\nC\n", encoding="utf-8")
-
-    # Non-numeric dir should be untouched, as should numeric folders with preceding zeroes or named '0'
-    other = out_dir / "misc"
-    other.mkdir()
-    (other / "in.3.fa").write_text(">other\nT\n", encoding="utf-8")
-    other_numeric = out_dir / "01"
-    other_numeric.mkdir()
-    (other_numeric / "in.4.fa").write_text(">other_numeric\nG\n", encoding="utf-8")
-    other_zero = out_dir / "0"
-    other_zero.mkdir()
-    (other_zero / "in.5.fa").write_text(">other_zero\nA\n", encoding="utf-8")
-
-    assert fasta1.exists()
-    assert fasta2.exists()
-
-    split._clean_previous_output(in_fa, out_dir)
-
-    assert not d1.exists()
-    assert not d2.exists()
-    assert other.exists()
-    assert other_numeric.exists()
-    assert other_zero.exists()
-    assert (other / "in.3.fa").exists()
-    assert (other_numeric / "in.4.fa").exists()
-    assert (other_zero / "in.5.fa").exists()
-
-
-def test_clean_previous_output_unlinks_agp_when_present(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
-    out_dir = tmp_path / "out"
-    out_dir.mkdir()
-
-    d1 = out_dir / "1"
-    d1.mkdir()
-    (d1 / "in.1.fa").write_text(">x\nA\n", encoding="utf-8")
-
-    agp = out_dir / "in.agp"
-    agp.write_text("# AGP-version 2.0\n", encoding="utf-8")
-    assert agp.exists()
-
-    split._clean_previous_output(in_fa, out_dir)
-
-    assert not agp.exists()
-
-
-def test_clean_previous_output_aborts_on_unexpected_file_and_deletes_nothing(
-    tmp_path: Path, write_fasta
-) -> None:
-    in_fa = write_fasta("in.fa", [("seq1", "ACGT", None)])
-    out_dir = tmp_path / "out"
-    out_dir.mkdir()
-
-    d1 = out_dir / "1"
-    d2 = out_dir / "2"
-    d1.mkdir()
-    d2.mkdir()
-    (d1 / "in.1.fa").write_text(">x\nA\n", encoding="utf-8")
-    (d2 / "unexpected.fa").write_text(">x\nU\n", encoding="utf-8")
-
-    with pytest.raises(RuntimeError, match=r"Unexpected file identified.*out/2/unexpected.fa"):
-        split._clean_previous_output(in_fa, out_dir)
-
-    # Nothing deleted because validation failed before deletion loop
-    assert d1.exists()
-    assert d2.exists()
-    assert (d1 / "in.1.fa").exists()
-    assert (d2 / "unexpected.fa").exists()
-
-
-def test_clean_previous_output_returns_when_out_dir_missing(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out_dir = tmp_path / "does_not_exist"
-    assert not out_dir.exists()
-
-    split._clean_previous_output(in_fa, out_dir)
-
-
-def test_check_contents_deletable_rejects_unexpected_nested_file(tmp_path: Path) -> None:
-    out_dir = tmp_path / "out"
-    d1 = out_dir / "1"
-    d2 = d1 / "1"
-    d2.mkdir(parents=True)
-
-    (d2 / "unexpected.txt").write_text("x", encoding="utf-8")
-
-    output_file_re = re.compile(r"^in\.[1-9]\d*(\.[1-9]\d*)?\.fa$")
-    with pytest.raises(RuntimeError, match=r"Unexpected file identified"):
-        split._check_contents_deletable(d1, output_file_re)
-
-    assert d2.exists()
-    assert (d2 / "unexpected.txt").exists()
-
-
-def test_outputwriter_basename_and_first_file_created(tmp_path: Path) -> None:
-    in_fa = tmp_path / "in.fa.gz"
-    in_fa.write_text(">x\nACGT\n", encoding="utf-8")
-
-    out = tmp_path / "out"
-    w = split.OutputWriter(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        unique_file_names=False,
-        max_files_per_directory=None,
-        max_dirs_per_directory=None,
-    )
-    try:
-        assert w.basename == "in"
-        fastas = list_output_fastas(out)
-        # open_new_file called in __init__ -> one file exists
-        assert len(fastas) == 1
-        assert fastas[0].name == "in.1.fa"
-    finally:
-        w.close()
+    """
+    tmp_file = tmp_path / name
+    tmp_file.touch()
+    assert split._get_fasta_basename(tmp_file) == expected
 
 
 @pytest.mark.parametrize(
-    "max_dirs_per_directory,dir_index,expected",
+    "tree, expectation",
     [
-        (None, 1, ["1"]),
-        (None, 99, ["1"]),
-        (10, 1, ["1"]),
-        (10, 2, ["2"]),
-        (10, 10, ["10"]),
-        (10, 11, ["1", "1"]),
-        (10, 12, ["1", "2"]),
-        (2, 1, ["1"]),
-        (2, 2, ["2"]),
-        (2, 3, ["1", "1"]),
-        (2, 4, ["1", "2"]),
+        (Path("1/1/in.1.fa"), does_not_raise()),
+        (Path("1/1/unexpected.gff3"), pytest.raises(RuntimeError, match=r"Unexpected file identified")),
     ],
 )
-def test_get_subdir_path_math(
-    write_fasta,
-    tmp_path: Path,
-    max_dirs_per_directory: int | None,
-    dir_index: int,
-    expected: list[str],
-) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out = tmp_path / "out"
+def test_check_contents_deletable(tmp_path: Path, tree: Path, expectation: ContextManager) -> None:
+    """Tests the `split._check_contents_deletable()` function.
 
-    writer = split.OutputWriter(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        unique_file_names=False,
-        max_files_per_directory=1,
-        max_dirs_per_directory=max_dirs_per_directory,
-    )
-    try:
-        sub = writer._get_subdir_path(dir_index)
-        # compare only relative parts under out
-        relative = sub.relative_to(out)
-        assert list(relative.parts) == expected
-    finally:
-        writer.close()
+    Args:
+        tmp_path: Test's unique temporary directory fixture.
+        tree: Path to the file tree to create under the temporary directory.
+        expectation: Context manager for the expected exception. Use `~contextlib.nullcontext` with
+            the expected output if no exception is expected.
 
-
-def test_file_and_dir_index_with_max_files(write_fasta, tmp_path: Path) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out = tmp_path / "out"
-
-    writer = split.OutputWriter(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        unique_file_names=False,
-        max_files_per_directory=3,
-        max_dirs_per_directory=10,
-    )
-    try:
-        # file_count starts at 1 after open_new_file in __init__
-        assert writer._get_file_and_dir_index() == (1, 1)
-
-        writer._get_path_for_next_file()  # file_count -> 2
-        assert writer._get_file_and_dir_index() == (2, 1)
-
-        writer._get_path_for_next_file()  # 3
-        assert writer._get_file_and_dir_index() == (3, 1)
-
-        writer._get_path_for_next_file()  # 4 -> rollover to dir_index=2, file_index=1
-        assert writer._get_file_and_dir_index() == (1, 2)
-    finally:
-        writer.close()
-
-
-def test_unique_file_names_include_dir_index(write_fasta, tmp_path: Path) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out = tmp_path / "out"
-
-    writer = split.OutputWriter(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        unique_file_names=True,
-        max_files_per_directory=1,
-        max_dirs_per_directory=10,
-    )
-    try:
-        # First file created in __init__
-        f1 = list_output_fastas(out)[0]
-        assert re.match(r"in\.1\.1\.fa$", f1.name)
-
-        writer.open_new_file()
-        f2 = list_output_fastas(out)[-1]
-        assert re.match(r"in\.2\.1\.fa$", f2.name)
-    finally:
-        writer.close()
-
-
-def test_add_agp_entry_when_agp_disabled(write_fasta, tmp_path: Path) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out = tmp_path / "out"
-
-    writer = split.OutputWriter(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        unique_file_names=False,
-    )
-    try:
-        # should not raise; _agp_fh is None
-        writer.add_agp_entry("obj", 1, 1, 1, "part", 1)
-        assert not (out / "in.agp").exists()
-    finally:
-        writer.close()
-
-
-def test_write_record_requires_agp_args_when_write_agp_true(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("x", "ACGT", None)])
-    out = tmp_path / "out"
-    w = split.OutputWriter(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=True,
-        unique_file_names=False,
-    )
-    try:
-        rec = SeqRecord(Seq("ACGT"), id="x")
-        with pytest.raises(ValueError, match="All AGP arguments must be provided"):
-            w.write_record(rec, agp_object_id="x")  # missing agp_start/agp_end/agp_part_nr
-    finally:
-        w.close()
-
-
-def test_split_fasta_empty_input_no_outputs(tmp_path: Path) -> None:
-    in_fa = tmp_path / "empty.fa"
-    in_fa.write_bytes(b"")
-    out = tmp_path / "out"
-
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        delete_existing_files=False,
-        unique_file_names=False,
-        force_max_seq_length=False,
-        max_seqs_per_file=None,
-        max_seq_length_per_file=None,
-        min_chunk_length=None,
-        max_files_per_directory=None,
-        max_dirs_per_directory=None,
-    )
-    assert not out.exists() or len(list(out.rglob("*"))) == 0
-
-
-def test_split_by_max_seqs_per_file_rollover(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta(
-        "in.fa",
-        [("a", "AA", None), ("b", "CC", None), ("c", "GG", None), ("d", "TT", None), ("e", "AT", None)],
-    )
-    out = tmp_path / "out"
-
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        delete_existing_files=False,
-        unique_file_names=False,
-        force_max_seq_length=False,
-        max_seqs_per_file=2,
-        max_seq_length_per_file=None,
-        min_chunk_length=None,
-        max_files_per_directory=None,
-        max_dirs_per_directory=None,
-    )
-
-    fastas = list_output_fastas(out)
-    assert len(fastas) == 3
-
-    counts = [len(read_fasta(fasta)) for fasta in fastas]
-    assert counts == [2, 2, 1]
-
-
-def test_split_by_max_seq_length_per_file_rollover(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("a", "AAAA", None), ("b", "TTTT", None)])
-    out = tmp_path / "out"
-
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        delete_existing_files=False,
-        unique_file_names=False,
-        force_max_seq_length=False,
-        max_seqs_per_file=None,
-        max_seq_length_per_file=4,
-        min_chunk_length=None,
-        max_files_per_directory=None,
-        max_dirs_per_directory=None,
-    )
-
-    fastas = list_output_fastas(out)
-    assert len(fastas) == 2
-
-
-def test_force_chunking_splits_long_record(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", "desc")])
-    out = tmp_path / "out"
-
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        delete_existing_files=False,
-        unique_file_names=False,
-        force_max_seq_length=True,
-        max_seqs_per_file=None,
-        max_seq_length_per_file=4,
-        min_chunk_length=None,
-        max_files_per_directory=None,
-        max_dirs_per_directory=None,
-    )
-
-    fastas = list_output_fastas(out)
-    ids = []
-    seqs = []
-    for fasta in fastas:
-        for record_id, seq in read_fasta(fasta).items():
-            ids.append(record_id)
-            seqs.append(seq)
-    assert ids == ["X_chunk_start_0", "X_chunk_start_4", "X_chunk_start_8"]
-    assert seqs == ["ATCG", "GATT", "AC"]
-
-
-def test_force_chunking_merges_small_remainder(
-    tmp_path: Path, write_fasta, caplog: pytest.LogCaptureFixture
-) -> None:
-    in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])
-    out = tmp_path / "out"
-
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        delete_existing_files=False,
-        unique_file_names=False,
-        force_max_seq_length=True,
-        max_seqs_per_file=None,
-        max_seq_length_per_file=4,
-        min_chunk_length=3,
-        max_files_per_directory=None,
-        max_dirs_per_directory=None,
-    )
-
-    assert any("merging with previous chunk" in r.message for r in caplog.records)
-
-    fastas = list_output_fastas(out)
-    ids = []
-    seqs = []
-    for fasta in fastas:
-        for record_id, seq in read_fasta(fasta).items():
-            ids.append(record_id)
-            seqs.append(seq)
-
-    assert ids == ["X_chunk_start_0", "X_chunk_start_4"]
-    assert seqs == ["ATCG", "GATTAC"]
-
-
-def test_force_chunking_does_not_merge_when_remainder_meets_min_chunk_length(
-    tmp_path: Path, write_fasta, caplog: pytest.LogCaptureFixture
-) -> None:
-    in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])  # len=10
-    out = tmp_path / "out"
-
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        force_max_seq_length=True,
-        max_seq_length_per_file=4,
-        min_chunk_length=2,  # last chunk length is 2 -> should NOT merge
-    )
-
-    assert not any("merging with previous chunk" in r.message for r in caplog.records)
-
-    fastas = list_output_fastas(out)
-    ids = []
-    seqs = []
-    for fasta in fastas:
-        for record_id, seq in read_fasta(fasta).items():
-            ids.append(record_id)
-            seqs.append(seq)
-
-    assert ids == ["X_chunk_start_0", "X_chunk_start_4", "X_chunk_start_8"]
-    assert seqs == ["ATCG", "GATT", "AC"]
-
-
-def test_overlong_record_without_chunking_warns_and_written_whole(
-    tmp_path: Path, write_fasta, caplog: pytest.LogCaptureFixture
-) -> None:
-    in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None)])
-    out = tmp_path / "out"
-
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        delete_existing_files=False,
-        unique_file_names=False,
-        force_max_seq_length=False,
-        max_seqs_per_file=None,
-        max_seq_length_per_file=4,
-        min_chunk_length=None,
-        max_files_per_directory=None,
-        max_dirs_per_directory=None,
-    )
-
-    assert any("chunking not enabled" in r.message for r in caplog.records)
-
-    fastas = list_output_fastas(out)
-    assert len(fastas) == 1
-
-    record_id, seq = next(iter(read_fasta(fastas[0]).items()))
-    assert record_id == "X"
-    assert seq == "ATCGGATTAC"
-
-
-def test_overlong_record_without_chunking_rolls_over_if_file_already_has_record(
-    tmp_path: Path, write_fasta, caplog: pytest.LogCaptureFixture
-) -> None:
-    # first record short, second record overlong
-    in_fa = write_fasta("in.fa", [("A", "AA", None), ("X", "ATCGGATTAC", None)])
-    out = tmp_path / "out"
-
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=False,
-        force_max_seq_length=False,
-        max_seq_length_per_file=4,
-    )
-
-    assert any("chunking not enabled" in r.message for r in caplog.records)
-
-    fastas = list_output_fastas(out)
-    assert len(fastas) == 2
-
-
-def test_split_fasta_calls_clean_previous_output_when_requested(
-    tmp_path: Path, write_fasta, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
+    """
     out_dir = tmp_path / "out"
-    out_dir.mkdir()
+    out_tree = out_dir / tree
+    out_tree.parent.mkdir(parents=True, exist_ok=True)
+    out_tree.touch()
+    output_file_re = re.compile(r"^in\.[1-9]\d*(\.[1-9]\d*)?\.fa$")
+    with expectation:
+        split._check_contents_deletable(out_dir, output_file_re)
+    assert out_tree.exists()
 
-    called = {"clean": False}
 
-    def fake_clean(fasta_file: Path, out_dir_arg: Path) -> None:
-        called["clean"] = True
+@pytest.mark.parametrize(
+    "fasta_file, tree, expected",
+    [
+        param(Path("in.fa"), [], [], id="No output dir"),
+        param(
+            Path("in.fa"),
+            [Path("1/in.1.fa"), Path("2/in.2.fa"), Path("keep")],
+            [False, False, True],
+            id="Default case without AGP file",
+        ),
+        param(Path("in.fa"), [Path("in.agp")], [False], id="Delete AGP file"),
+    ],
+)
+def test_clean_previous_output(tmp_path: Path, fasta_file: Path, tree: list[Path], expected: str) -> None:
+    """Tests the `split._clean_previous_output()` function.
 
-    monkeypatch.setattr(split, "_clean_previous_output", fake_clean)
+    Args:
+        tmp_path: Test's unique temporary directory fixture.
+        fasta_file: Path to the input FASTA file.
+        tree: List of output files to create for the test.
+        expected: List of whether the corresponding file in the tree is expected to exist after cleaning.
 
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out_dir,
-        delete_existing_files=True,
+    """
+    out_dir = tmp_path / "out"
+    for rel_path in tree:
+        out_path = out_dir / rel_path
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.touch()
+    split._clean_previous_output(fasta_file, out_dir)
+    if not tree:
+        assert not out_dir.exists()
+    else:
+        assert out_dir.exists()
+        for i, rel_path in enumerate(tree):
+            assert (out_dir / rel_path).exists() == expected[i]
+            # Expect folders inside out_dir to be deleted as well
+            if rel_path.parent != Path("."):
+                assert (out_dir / rel_path.parent).exists() == expected[i]
+
+
+@pytest.mark.parametrize(
+    "seq_id, description, expected",
+    [
+        ("seq1", "seq1", ""),
+        ("seq1", "seq1 some annotation", "some annotation"),
+        ("seq1", "seq1 seq1 description", "seq1 description"),
+        ("seq1", "description without id", "description without id"),
+    ],
+)
+def test_description_without_id(seq_id: str, description: str, expected: str) -> None:
+    """Tests the `split._description_without_id()` function.
+
+    Args:
+        seq_id: Sequence identifier.
+        description: Sequence description.
+        expected: Expected value returned by the function.
+
+    """
+    rec = SeqRecord(Seq("ACGT"), id=seq_id, description=description)
+    assert split._description_without_id(rec) == expected
+
+
+class TestOutputWriter:
+    """Tests `split.OutputWriter` class."""
+
+    @pytest.mark.parametrize(
+        "fasta_file, write_agp, unique_file_names, max_files, max_dirs, expected_out_path, expected_agp_name",
+        [
+            param(Path("in.fa"), False, False, None, None, "1/in.1.fa", "", id="Default args"),
+            param(Path("in.fa"), True, False, None, None, "1/in.1.fa", "in.agp", id="AGP enabled"),
+            param(Path("in.fa"), False, True, None, None, "1/in.0.1.fa", "", id="Unique file names"),
+            param(Path("in.fa"), False, False, 2, 2, "1/in.1.fa", "", id="Set max elements per dir"),
+        ],
     )
+    def test_init(
+        self,
+        tmp_path: Path,
+        fasta_file: Path,
+        write_agp: bool,
+        unique_file_names: bool,
+        max_files: int | None,
+        max_dirs: int | None,
+        expected_out_path: str,
+        expected_agp_name: str,
+    ) -> None:
+        """Tests the `__init__()` method of the `split.OutputWriter` class.
 
-    assert called["clean"] is True
+        Args:
+            tmp_path: Test's unique temporary directory fixture.
+            fasta_file: Input raw or compressed FASTA file containing sequences to split.
+            write_agp: Write an AGP v2.0 file describing how each input sequence maps to output chunks.
+            unique_file_names: Include folder index in output FASTA filenames to make them unique.
+            max_files_per_directory: Maximum number of FASTA files per directory.
+            max_dirs_per_directory: Maximum number of subdirectories per directory level.
+            expected_out_path: Expected relative path to the output FASTA file.
+            expected_agp_name: Expected name of the AGP file in the output directory.
 
-
-def test_create_agp_file_open_failure_raises_runtimeerror(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, write_fasta
-) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out = tmp_path / "out"
-
-    monkeypatch.setattr("builtins.open", force_open_failure_for_suffix(".agp"))
-
-    with pytest.raises(RuntimeError, match=r"Failed to open AGP file"):
-        split.OutputWriter(
-            fasta_file=in_fa,
-            out_dir=out,
-            write_agp=True,
-            unique_file_names=False,
+        """
+        out_dir = tmp_path / "out"
+        writer = split.OutputWriter(
+            fasta_file=fasta_file,
+            out_dir=out_dir,
+            write_agp=write_agp,
+            unique_file_names=unique_file_names,
+            max_files_per_directory=max_files,
+            max_dirs_per_directory=max_dirs,
         )
+        writer.close()
+        assert writer
+        assert writer.basename == fasta_file.stem
+        assert writer.file_count == 1
+        assert (out_dir / expected_out_path).exists()
+        if write_agp:
+            assert writer.agp_file == out_dir / expected_agp_name and writer.agp_file.exists()
+            with writer.agp_file.open("r") as agp_fh:
+                header = agp_fh.readline().strip()
+                assert header == "# AGP-version 2.0"
+        else:
+            assert writer.agp_file is None
+
+    @pytest.mark.parametrize(
+        "write_agp, suffix, exc_msg",
+        [
+            param(False, ".fa", "Failed to open output file", id="FASTA file"),
+            param(True, ".agp", "Failed to open AGP file", id="AGP file"),
+        ],
+    )
+    def test_create_file_exception(
+        self, monkeypatch: MonkeyPatch, tmp_path: Path, write_agp: bool, suffix: str, exc_msg: str
+    ) -> None:
+        """Tests the `_create_output_file()` and `_create_agp_file()` methods of the `split.OutputWriter`
+        class when an OSError is raised.
+
+        Args:
+            monkeypatch: Pytest fixture to patch methods.
+            tmp_path: Test's unique temporary directory fixture.
+            write_agp: Write an AGP v2.0 file describing how each input sequence maps to output chunks.
+            suffix: Suffix of the file for which to simulate the open failure.
+            exc_msg: Expected message in the raised RuntimeError.
+
+        """
+        monkeypatch.setattr("pathlib.Path.open", force_open_failure_for_suffix(suffix))
+        with pytest.raises(RuntimeError, match=rf"{exc_msg}"):
+            writer = split.OutputWriter(
+                fasta_file=Path("in.fa"), out_dir=tmp_path, write_agp=write_agp, unique_file_names=False
+            )
+            writer.close()
+
+    def test_open_new_file(self, tmp_path: Path) -> None:
+        """Tests the `open_new_file()` method of the `split.OutputWriter` class.
+
+        Args:
+            tmp_path: Test's unique temporary directory fixture.
+
+        """
+        out_dir = tmp_path / "out"
+        writer = split.OutputWriter(
+            fasta_file=Path("in.fa"), out_dir=out_dir, write_agp=False, unique_file_names=False
+        )
+        writer.open_new_file()
+        writer.close()
+        assert writer.file_count == 2
+        assert (out_dir / "1" / "in.1.fa").exists()
+        assert (out_dir / "1" / "in.2.fa").exists()
+
+    @pytest.mark.parametrize(
+        "write_agp, agp_obj_id, agp_start, agp_end, agp_part_nr, expectation",
+        [
+            param(False, None, None, None, None, does_not_raise(), id="Default args"),
+            param(True, "seq1", 1, 4, 1, does_not_raise(), id="Write AGP"),
+            param(
+                True,
+                None,
+                1,
+                4,
+                1,
+                pytest.raises(ValueError, match=r"All AGP arguments must be provided if writing AGP entries"),
+                id="Missing AGP args",
+            ),
+        ],
+    )
+    def test_write_record(
+        self,
+        tmp_path: Path,
+        write_agp: bool,
+        agp_obj_id: str | None,
+        agp_start: int | None,
+        agp_end: int | None,
+        agp_part_nr: int | None,
+        expectation: ContextManager,
+    ) -> None:
+        """Tests the `write_record()` method of the `split.OutputWriter` class.
+
+        Args:
+            tmp_path: Test's unique temporary directory fixture.
+            write_agp: Write an AGP v2.0 file describing how each input sequence maps to output chunks.
+            agp_obj_id: Original (unchunked) input sequence ID to write into the AGP ``object`` column.
+            agp_start: Start coordinate on the AGP object (1-based, inclusive).
+            agp_end: End coordinate on the AGP object (1-based, inclusive).
+            agp_part_nr: Component part number for this object (starts at 1 per object).
+            expectation: Context manager for the expected exception. Use `~contextlib.nullcontext` with
+                the expected output if no exception is expected.
+
+        """
+        out_dir = tmp_path / "out"
+        writer = split.OutputWriter(
+            fasta_file=Path("in.fa"), out_dir=out_dir, write_agp=write_agp, unique_file_names=False
+        )
+        assert writer.record_count == 0
+        assert writer.file_len == 0
+        in_record = SeqRecord(Seq("ACGT"), id="seq1", description="test sequence")
+        with expectation:
+            writer.write_record(
+                record=in_record,
+                agp_object_id=agp_obj_id,
+                agp_start=agp_start,
+                agp_end=agp_end,
+                agp_part_nr=agp_part_nr,
+            )
+            writer.close()
+            out_fasta_file = out_dir / "1" / "in.1.fa"
+            assert writer.record_count == 1
+            assert writer.file_len == 4
+            out_record = SeqIO.read(out_fasta_file, "fasta")
+            assert out_record.id == in_record.id
+            assert out_record.seq == in_record.seq
+            assert out_record.description == f"{in_record.id} {in_record.description}"
+            if write_agp:
+                with writer.agp_file.open("r") as agp_fh:  # type: ignorep[union-attr]
+                    # Skip header line
+                    agp_fh.readline()
+                    agp_line = agp_fh.readline().strip()
+                    expected_line = (
+                        f"{agp_obj_id}\t{agp_start}\t{agp_end}\t{agp_part_nr}\tW\t"
+                        f"{out_record.id}\t1\t{len(out_record.seq)}\t+"
+                    )
+                    assert agp_line == expected_line
 
 
-def test_create_agp_file_returns_if_agp_file_none(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out = tmp_path / "out"
+@pytest.mark.parametrize(
+    "extra_args, expected",
+    [
+        ({}, "default"),
+        ({"max_seqs_per_file": 1}, "1_seq"),
+        ({"max_seq_length_per_file": 6}, "1_seq"),
+        ({"max_seq_length_per_file": 6, "force_max_seq_length": True}, "6bp_force"),
+        (
+            {"max_seq_length_per_file": 6, "force_max_seq_length": True, "min_chunk_length": 4},
+            "6bp_force_min_chunk",
+        ),
+        (
+            {"max_seq_length_per_file": 4, "force_max_seq_length": True, "min_chunk_length": 4},
+            "4bp_force_min_chunk",
+        ),
+    ],
+)
+def test_split_fasta(tmp_path: Path, data_dir: Path, extra_args: dict[str, Any], expected: str) -> None:
+    """Tests the `split.split_fasta()` function.
 
-    w = split.OutputWriter(
-        fasta_file=in_fa,
-        out_dir=out,
+    Args:
+        tmp_path: Test's unique temporary directory fixture.
+        data_dir: Module's test data directory fixture.
+        extra_args:
+        expected:
+
+    """
+    in_fasta = data_dir / "input.fa"
+    out_dir = tmp_path / "out"
+    out_dir.mkdir(exist_ok=True)
+    split.split_fasta(in_fasta, out_dir, **extra_args)
+    report = filecmp.dircmp(data_dir / expected, out_dir)
+    report.subdirs["."] = report
+    for diff_report in report.subdirs.values():
+        assert diff_report.left_only == []
+        assert diff_report.right_only == []
+        assert diff_report.diff_files == []
+
+
+def test_split_fasta_empty_file(tmp_path: Path) -> None:
+    """Tests the `split.split_fasta()` function when an empty input file is provided.
+
+    Args:
+        tmp_path: Test's unique temporary directory fixture.
+
+    """
+    in_fasta = tmp_path / "empty.fa"
+    in_fasta.touch()
+    out_dir = tmp_path / "out"
+    out_dir.mkdir(exist_ok=True)
+    split.split_fasta(in_fasta, out_dir)
+    assert list(out_dir.iterdir()) == []
+
+
+def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
+    """Tests the `split.split_fasta()` function when there are files from a previous run and we want to
+    delete them.
+
+    Args:
+        tmp_path: Test's unique temporary directory fixture.
+        data_dir: Module's test data directory fixture.
+
+    """
+    in_fasta = data_dir / "input.fa"
+    out_dir = tmp_path / "out"
+    # Create a subtree that resembles what would have been produced in a previous run
+    (out_dir / "2").mkdir(parents=True, exist_ok=True)
+    (out_dir / "2" / "input.2.fa").touch()
+    split.split_fasta(in_fasta, out_dir, delete_existing_files=True)
+    report = filecmp.dircmp(data_dir / "default", out_dir)
+    report.subdirs["."] = report
+    for diff_report in report.subdirs.values():
+        assert diff_report.left_only == []
+        assert diff_report.right_only == []
+        assert diff_report.diff_files == []
+
+
+@pytest.mark.parametrize(
+    "arg_list, expectation",
+    [
+        param(
+            ["--fasta-file", __file__],
+            does_not_raise(
+                {
+                    "fasta_file": __file__,
+                    "write_agp": False,
+                    "delete_existing_files": False,
+                    "unique_file_names": False,
+                    "force_max_seq_length": False,
+                    "log_level": "WARNING",
+                },
+            ),
+            id="Default args",
+        ),
+        param(
+            [
+                "--fasta-file",
+                __file__,
+                "--out-dir",
+                str(Path(__file__).parent),
+                "--write-agp",
+                "--delete-existing-files",
+                "--unique-file-names",
+                "--force-max-seq-length",
+                "--max-seqs-per-file",
+                "1",
+                "--max-seq-length-per-file",
+                "1",
+                "--min-chunk-length",
+                "1",
+                "--max-files-per-directory",
+                "1",
+                "--max-dirs-per-directory",
+                "1",
+            ],
+            does_not_raise(
+                {
+                    "fasta_file": __file__,
+                    "out_dir": str(Path(__file__).parent),
+                    "write_agp": True,
+                    "delete_existing_files": True,
+                    "unique_file_names": True,
+                    "force_max_seq_length": True,
+                    "max_seqs_per_file": 1,
+                    "max_seq_length_per_file": 1,
+                    "min_chunk_length": 1,
+                    "max_files_per_directory": 1,
+                    "max_dirs_per_directory": 1,
+                    "log_level": "WARNING",
+                },
+            ),
+            id="New arg values",
+        ),
+        param(
+            ["--fasta-file", __file__, "--min-chunk-length", "2"],
+            pytest.raises(ValueError, match=r"--min-chunk-length requires --max-seq-length-per-file"),
+            id="min_chunk_length without max_seq_length_per_file",
+        ),
+    ],
+)
+def test_parse_args(arg_list: list[str], expectation: ContextManager) -> None:
+    """Tests the `split.parse_args()` function.
+
+    Args:
+        arg_list: List of command line arguments to parse.
+        expectation: Context manager for the expected exception. Use `~contextlib.nullcontext` with
+            the expected output if no exception is expected.
+    """
+    with expectation as exp:
+        args = split.parse_args(arg_list)
+        # DeepDiff is not able to compare two objects of Path type - need to convert them to string
+        setattr(args, "fasta_file", str(args.fasta_file))
+        if hasattr(args, "out_dir"):
+            setattr(args, "out_dir", str(args.out_dir))
+        assert not DeepDiff(vars(args), exp)
+
+
+@patch("ensembl.io.genomio.fasta.split.split_fasta")
+def test_main(mock_split_fasta: Mock, tmp_path: Path) -> None:
+    """Tests the `split.main()` function (entry point).
+
+    Args:
+        mock_split_fasta: Mock object for the `split.split_fasta()` function.
+        tmp_path: Temporary directory provided by pytest.
+
+    """
+    fasta_path = tmp_path / "in.fa"
+    fasta_path.touch()
+    split.main(["--fasta-file", str(fasta_path)])
+    # Check that we have called the mocked function once with the expected parameters
+    mock_split_fasta.assert_called_once_with(
+        fasta_file=fasta_path,
+        out_dir=None,
         write_agp=False,
-        unique_file_names=False,
-    )
-    try:
-        w.create_agp_file()
-        assert not (out / "in.agp").exists()
-    finally:
-        w.close()
-
-
-def test_open_new_file_open_failure_raises_runtimeerror(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, write_fasta
-) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out = tmp_path / "out"
-
-    monkeypatch.setattr("builtins.open", force_open_failure_for_suffix(".fa"))
-
-    with pytest.raises(RuntimeError, match=r"Failed to open output file"):
-        split.OutputWriter(
-            fasta_file=in_fa,
-            out_dir=out,
-            write_agp=False,
-            unique_file_names=False,
-        )
-
-
-def test_write_agp_creates_agp_creates_all_expected_rows_and_columns(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("X", "ATCGGATTAC", None), ("Y", "CC", None)])
-    out = tmp_path / "out"
-
-    split.split_fasta(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=True,
         delete_existing_files=False,
         unique_file_names=False,
-        force_max_seq_length=True,
+        force_max_seq_length=False,
         max_seqs_per_file=None,
-        max_seq_length_per_file=4,
+        max_seq_length_per_file=None,
         min_chunk_length=None,
         max_files_per_directory=None,
         max_dirs_per_directory=None,
     )
 
-    agp = out / "in.agp"
-    assert agp.exists()
 
-    lines = read_agp_lines(agp)
-    assert lines[0].startswith("# AGP-version 2.0")
+@patch("ensembl.io.genomio.fasta.split.split_fasta")
+def test_main_raise_exception(mock_split_fasta: Mock, tmp_path: Path) -> None:
+    """Tests the `split.main()` function (entry point).
 
-    comp_lines = [ln for ln in lines[1:] if ln and not ln.startswith("#")]
-    assert len(comp_lines) == 4
+    Args:
+        mock_split_fasta: Mock object for the `split.split_fasta()` function.
+        tmp_path: Temporary directory provided by pytest.
 
-    expected_values = [
-        ["X", "1", "4", "1", "W", "X_chunk_start_0", "1", "4", "+"],
-        ["X", "5", "8", "2", "W", "X_chunk_start_4", "1", "4", "+"],
-        ["X", "9", "10", "3", "W", "X_chunk_start_8", "1", "2", "+"],
-        ["Y", "1", "2", "1", "W", "Y", "1", "2", "+"],
-    ]
-
-    returned_values = [ln.split("\t") for ln in comp_lines]
-
-    def agp_key(cols: list[str]) -> tuple[str, int]:
-        return cols[0], int(cols[3])
-
-    expected_values_sorted = sorted(expected_values, key=agp_key)
-    returned_values_sorted = sorted(returned_values, key=agp_key)
-
-    # Validate every column in every row
-    assert returned_values_sorted == expected_values_sorted
-
-
-def test_outputwriter_close_closes_open_handles(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("x", "A", None)])
-    out = tmp_path / "out"
-
-    w = split.OutputWriter(
-        fasta_file=in_fa,
-        out_dir=out,
-        write_agp=True,
-        unique_file_names=False,
-    )
-
-    assert w._fh is not None
-    assert not w._fh.closed
-    assert w._agp_fh is not None
-    assert not w._agp_fh.closed
-
-    w.close()
-    assert w._fh is None
-    assert w._agp_fh is None
-
-    # Closing again should be no-op and not raise an exception
-    w.close()
-    assert w._fh is None
-    assert w._agp_fh is None
-
-
-def test_parse_args_rejects_min_chunk_without_max_seq_length(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("a", "AA", None)])
-    out = tmp_path / "out"
-
-    # --min-chunk-length requires --max-seq-length-per-file
-    with pytest.raises(ValueError, match="--min-chunk-length requires --max-seq-length-per-file"):
-        split.parse_args(
-            [
-                "--fasta-file",
-                str(in_fa),
-                "--out-dir",
-                str(out),
-                "--min-chunk-length",
-                "5",
-            ]
-        )
-
-
-def test_parse_args_minimal_required(write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("a", "AA", None)])
-
-    args = split.parse_args(
-        [
-            "--fasta-file",
-            str(in_fa),
-        ]
-    )
-
-    assert args.fasta_file == in_fa
-    assert args.write_agp is False
-    assert args.force_max_seq_length is False
-
-
-def test_parse_args_boolean_flags(write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("a", "AA", None)])
-
-    args = split.parse_args(
-        [
-            "--fasta-file",
-            str(in_fa),
-            "--write-agp",
-            "--force-max-seq-length",
-            "--unique-file-names",
-        ]
-    )
-
-    assert args.write_agp
-    assert args.force_max_seq_length
-    assert args.unique_file_names
-
-
-def test_parse_args_numeric_arguments(write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("a", "AA", None)])
-
-    args = split.parse_args(
-        [
-            "--fasta-file",
-            str(in_fa),
-            "--max-seqs-per-file",
-            "5",
-            "--max-seq-length-per-file",
-            "100",
-        ]
-    )
-
-    assert args.max_seqs_per_file == 5
-    assert args.max_seq_length_per_file == 100
-
-
-def test_parse_args_numeric_min_value_enforced(write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("a", "AA", None)])
-
-    with pytest.raises(SystemExit):
-        split.parse_args(
-            [
-                "--fasta-file",
-                str(in_fa),
-                "--max-seqs-per-file",
-                "0",
-            ]
-        )
-
-
-def test_parse_args_out_dir_is_path(tmp_path: Path, write_fasta) -> None:
-    in_fa = write_fasta("in.fa", [("a", "AA", None)])
-    out = tmp_path / "out"
-
-    args = split.parse_args(["--fasta-file", str(in_fa), "--out-dir", str(out)])
-    assert isinstance(args.out_dir, Path)
-    assert args.out_dir == out
-
-
-def test_main_logs_and_reraises_exceptions(
-    monkeypatch: pytest.MonkeyPatch, write_fasta, caplog: pytest.LogCaptureFixture
-) -> None:
-    in_fa = write_fasta("in.fa", [("a", "AA", None)])
-    monkeypatch.setattr(split, "init_logging_with_args", lambda args: None)
-
-    def raise_main_exception(*args: object, **kwargs: object) -> None:
-        raise RuntimeError("Simulated exception in main")
-
-    monkeypatch.setattr(split, "split_fasta", raise_main_exception)
-
-    caplog.set_level(logging.ERROR, logger="root")
-
-    with pytest.raises(RuntimeError, match="Simulated exception in main"):
-        split.main(["--fasta-file", str(in_fa)])
-    assert "Error processing FASTA file" in caplog.text
+    """
+    fasta_path = tmp_path / "in.fa"
+    fasta_path.touch()
+    mock_split_fasta.side_effect = RuntimeError("Mocked exception")
+    with pytest.raises(RuntimeError, match=r"Mocked exception"):
+        split.main(["--fasta-file", str(fasta_path)])
