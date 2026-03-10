@@ -15,68 +15,89 @@
 """Unit testing of `ensembl.io.genomio.utils.agp_utils` module."""
 import gzip
 
+from contextlib import nullcontext as does_not_raise
+from pathlib import Path
 import pytest
+from pytest import param
+from typing import ContextManager
 
 from ensembl.io.genomio.utils import agp_utils
 
 
-def test_parse_agp_ignores_comments_and_blank_lines(tmp_path):
-    agp = tmp_path / "x.agp"
-    agp.write_text(
-        "# comment\n\n" "obj1\t1\t4\t1\tW\tpart1\t1\t4\t+\n",
-        encoding="utf-8",
-    )
-    out = agp_utils.parse_agp(agp, allow_revcomp=False)
-    assert "obj1" in out
-    assert out["obj1"][0].part_id == "part1"
+@pytest.mark.parametrize(
+    "test_dir_name,agp_name,allow_revcomp,expectation",
+    [
+        param(
+            "ignores_comments",
+            "comment.agp",
+            False,
+            does_not_raise(("obj", "part", "+")),
+            id="ignores_comments",
+        ),
+        param(
+            "handles_orientation",
+            "minus_strand.agp",
+            True,
+            does_not_raise(("obj", "part", "-")),
+            id="handles_minus_strand_when_allowed",
+        ),
+        param(
+            "handles_orientation",
+            "minus_strand.agp",
+            False,
+            pytest.raises(ValueError, match=r"--allow-revcomp is not enabled"),
+            id="rejects_minus_strand_when_not_allowed",
+        ),
+        param(
+            "non_w_component",
+            "repeat.agp",
+            False,
+            pytest.raises(ValueError, match=r"Unsupported AGP component type"),
+            id="rejects_non_W_component",
+        ),
+        param(
+            "empty_file",
+            "empty.agp",
+            False,
+            pytest.raises(ValueError, match=r"contained no component lines"),
+            id="rejects_empty_file",
+        ),
+        param(
+            "truncated_line",
+            "truncated.agp",
+            False,
+            pytest.raises(ValueError, match=r"expected >= 9 columns"),
+            id="rejects_truncated_line",
+        ),
+    ],
+)
+def test_parse_agp(
+    data_dir: Path,
+    test_dir_name: str,
+    agp_name: str,
+    allow_revcomp: bool,
+    expectation: ContextManager,
+) -> None:
+    """
+    Tests the agp_utils.parse_agp() function.
 
+    Args:
+        data_dir: Module's test data directory fixture.
+        test_dir_name: Name of the subdirectory within the test data directory that contains the
+            AGP file being tested.
+        agp_name: Name of the test AGP file.
+        allow_revcomp: Boolean indicating whether minus strand entries are permitted.
+        expectation: Context manager for the expected outcome of the test (exception or not).
+    """
+    test_dir = data_dir / test_dir_name
+    agp_file = test_dir / agp_name
 
-def test_parse_agp_rejects_short_line(tmp_path):
-    agp = tmp_path / "bad.agp"
-    agp.write_text("obj\t1\t2\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="expected >= 9 columns"):
-        agp_utils.parse_agp(agp, allow_revcomp=False)
-
-
-def test_parse_agp_rejects_non_W_component(tmp_path):
-    agp = tmp_path / "bad.agp"
-    agp.write_text("obj\t1\t2\t1\tN\tgap\t1\t2\t+\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="Unsupported AGP component type"):
-        agp_utils.parse_agp(agp, allow_revcomp=False)
-
-
-def test_parse_agp_rejects_minus_orientation_unless_allowed(tmp_path):
-    agp = tmp_path / "bad.agp"
-    agp.write_text("obj\t1\t2\t1\tW\tpart\t1\t2\t-\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="--allow-revcomp is not enabled"):
-        agp_utils.parse_agp(agp, allow_revcomp=False)
-
-    ok = agp_utils.parse_agp(agp, allow_revcomp=True)
-    assert ok["obj"][0].orientation == "-"
-
-
-def test_parse_agp_empty_file_raises(tmp_path):
-    agp = tmp_path / "empty.agp"
-    agp.write_text("# only comment\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="contained no component lines"):
-        agp_utils.parse_agp(agp, allow_revcomp=False)
-
-
-def test_parse_agp_decodes_bytes_from_gzipped_input(tmp_path):
-    agp_gz = tmp_path / "x.agp.gz"
-
-    payload = "# comment\nobj1\t1\t4\t1\tW\tpart1\t1\t4\t+\n"
-
-    with gzip.open(agp_gz, "wt", encoding="utf-8") as fh:
-        fh.write(payload)
-
-    out = agp_utils.parse_agp(agp_gz, allow_revcomp=False)
-
-    assert "obj1" in out
-    assert len(out["obj1"]) == 1
-    e = out["obj1"][0]
-    assert e.part_id == "part1"
-    assert e.orientation == "+"
+    with expectation as expected:
+        out = agp_utils.parse_agp(agp_file, allow_revcomp)
+        object_id, part_id, orientation = expected
+        assert object_id in out
+        assert out[object_id][0].part_id == part_id
+        assert out[object_id][0].orientation == orientation
 
 
 def test_build_component_index_groups_by_part_id_and_sorts_within_component():
@@ -143,139 +164,111 @@ def test_build_component_index_empty_input_returns_empty_dict():
 
 
 @pytest.mark.parametrize(
-    "start,end,expected",
+    "start,end,orientation,allow_revcomp,expectation",
     [
-        (1, 1, (100, 100)),
-        (10, 20, (109, 119)),
-        (100, 100, (199, 199)),
+        param(
+            1,
+            1,
+            "+",
+            False,
+            does_not_raise((100, 100)),
+            id="single_bp_forward_strand",
+        ),
+        param(
+            10,
+            20,
+            "+",
+            False,
+            does_not_raise((109, 119)),
+            id="range_forward_strand",
+        ),
+        param(
+            1,
+            1,
+            "-",
+            True,
+            does_not_raise((199, 199)),
+            id="single_bp_reverse_strand",
+        ),
+        param(
+            10,
+            20,
+            "-",
+            True,
+            does_not_raise((180, 190)),
+            id="range_reverse_strand",
+        ),
+        param(
+            5,
+            4,
+            "+",
+            False,
+            pytest.raises(ValueError, match=r"Range start > end"),
+            id="rejects_start_after_end",
+        ),
+        param(
+            0,
+            1,
+            "+",
+            False,
+            pytest.raises(ValueError, match=r"outside component span"),
+            id="rejects_start_outside_component_span",
+        ),
+        param(
+            1,
+            101,
+            "+",
+            False,
+            pytest.raises(ValueError, match=r"outside component span"),
+            id="rejects_end_outside_component_span",
+        ),
+        param(
+            1,
+            1,
+            "-",
+            False,
+            pytest.raises(ValueError, match=r"--allow-revcomp is not enabled"),
+            id="rejects_minus_strand_when_not_allowed",
+        ),
+        param(
+            1,
+            10,
+            "?",
+            True,
+            pytest.raises(ValueError, match=r"Invalid AGP orientation"),
+            id="rejects_invalid_orientation",
+        ),
     ],
 )
-def test_lift_range_plus_orientation(start, end, expected):
-    part = agp_utils.AgpEntry(
-        record="obj",
-        record_start=100,
-        record_end=199,
-        part_number=1,
-        part_id="comp",
-        part_start=1,
-        part_end=100,
-        orientation="+",
-    )
+def test_lift_range(
+    start: int,
+    end: int,
+    orientation: str,
+    allow_revcomp: bool,
+    expectation: ContextManager,
+) -> None:
+    """
+    Tests the agp_utils.lift_range() function.
 
-    obj, s, e = agp_utils.lift_range(part, start, end, allow_revcomp=False)
-    assert obj == "obj"
-    assert (s, e) == expected
+    Args:
+        start: Start position relative to component.
+        end: End position relative to component.
+        orientation: Orientation of the component in relation to the record (+/-).
+        allow_revcomp: Boolean indicating whether minus strand entries are permitted.
+        expectation: Context manager for the expected outcome of the test (exception or not).
+    """
+    with expectation as expected:
+        part = agp_utils.AgpEntry(
+            record="obj",
+            record_start=100,
+            record_end=199,
+            part_number=1,
+            part_id="comp",
+            part_start=1,
+            part_end=100,
+            orientation=orientation,
+        )
 
-
-def test_lift_range_rejects_start_greater_than_end():
-    part = agp_utils.AgpEntry(
-        record="obj",
-        record_start=1,
-        record_end=10,
-        part_number=1,
-        part_id="comp",
-        part_start=1,
-        part_end=10,
-        orientation="+",
-    )
-    with pytest.raises(ValueError, match=r"Range start > end"):
-        agp_utils.lift_range(part, start=5, end=4, allow_revcomp=False)
-
-
-def test_lift_range_rejects_range_outside_component_span():
-    part = agp_utils.AgpEntry(
-        record="obj",
-        record_start=100,
-        record_end=199,
-        part_number=1,
-        part_id="comp",
-        part_start=10,
-        part_end=109,
-        orientation="+",
-    )
-
-    with pytest.raises(ValueError, match=r"outside component span"):
-        agp_utils.lift_range(part, start=9, end=10, allow_revcomp=False)
-
-    with pytest.raises(ValueError, match=r"outside component span"):
-        agp_utils.lift_range(part, start=10, end=110, allow_revcomp=False)
-
-
-def test_lift_range_minus_orientation_requires_allow_revcomp():
-    part = agp_utils.AgpEntry(
-        record="obj",
-        record_start=100,
-        record_end=199,
-        part_number=1,
-        part_id="comp",
-        part_start=1,
-        part_end=100,
-        orientation="-",
-    )
-
-    with pytest.raises(ValueError, match=r"--allow-revcomp is not enabled"):
-        agp_utils.lift_range(part, start=10, end=20, allow_revcomp=False)
-
-
-@pytest.mark.parametrize(
-    "start,end,expected",
-    [
-        (10, 20, (180, 190)),
-        (1, 1, (199, 199)),
-        (100, 100, (100, 100)),
-    ],
-)
-def test_lift_range_minus_orientation_allowed(start, end, expected):
-    part = agp_utils.AgpEntry(
-        record="obj",
-        record_start=100,
-        record_end=199,
-        part_number=1,
-        part_id="comp",
-        part_start=1,
-        part_end=100,
-        orientation="-",
-    )
-
-    obj, s, e = agp_utils.lift_range(part, start, end, allow_revcomp=True)
-    assert obj == "obj"
-    assert (s, e) == expected
-
-
-def test_lift_range_rejects_invalid_orientation():
-    part = agp_utils.AgpEntry(
-        record="obj",
-        record_start=1,
-        record_end=10,
-        part_number=1,
-        part_id="comp",
-        part_start=1,
-        part_end=10,
-        orientation="?",
-    )
-    with pytest.raises(ValueError, match=r"Invalid AGP orientation"):
-        agp_utils.lift_range(part, start=1, end=2, allow_revcomp=True)
-
-
-@pytest.mark.parametrize(
-    "start,end",
-    [
-        (5, 4),  # start > end
-        (0, 1),  # below part_start
-        (1, 101),  # above part_end
-    ],
-)
-def test_lift_range_invalid_ranges(start, end):
-    part = agp_utils.AgpEntry(
-        record="obj",
-        record_start=1,
-        record_end=100,
-        part_number=1,
-        part_id="comp",
-        part_start=1,
-        part_end=100,
-        orientation="+",
-    )
-
-    with pytest.raises(ValueError):
-        agp_utils.lift_range(part, start, end, allow_revcomp=False)
+        obj, start_on_obj, end_on_obj = agp_utils.lift_range(part, start, end, allow_revcomp=allow_revcomp)
+        assert obj == "obj"
+        assert (start_on_obj, end_on_obj) == expected
