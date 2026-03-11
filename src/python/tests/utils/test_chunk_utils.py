@@ -21,6 +21,9 @@ from pytest import param
 from typing import ContextManager
 
 
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 from ensembl.io.genomio.utils import chunk_utils
 
 
@@ -157,3 +160,26 @@ def test_validate_regex(
             assert expected_groups is not None
             for group, value in expected_groups.items():
                 assert match.group(group) == value
+
+
+@pytest.mark.parametrize(
+    "seq_id, description, expected",
+    [
+        ("seq1", "seq1", ""),
+        ("seq1", "seq1 some annotation", "some annotation"),
+        ("seq1", "seq1 seq1 description", "seq1 description"),
+        ("seq1", "description without id", "description without id"),
+    ],
+)
+def test_description_without_id(seq_id: str, description: str, expected: str) -> None:
+    """
+    Tests the `chunk_utils.seq_description_without_id()` function.
+
+    Args:
+        seq_id: Sequence identifier.
+        description: Sequence description.
+        expected: Expected value returned by the function.
+
+    """
+    rec = SeqRecord(Seq("ACGT"), id=seq_id, description=description)
+    assert chunk_utils.seq_description_without_id(rec) == expected

@@ -14,10 +14,12 @@
 # limitations under the License.
 """Utils to deal with processing of chunked files."""
 
-__all__ = ["get_paths_from_manifest"]
+__all__ = ["get_paths_from_manifest", "seq_description_without_id", "validate_regex"]
 
 from pathlib import Path
 import re
+
+from Bio.SeqRecord import SeqRecord
 
 
 def get_paths_from_manifest(manifest: Path) -> list[Path]:
@@ -52,6 +54,16 @@ def get_paths_from_manifest(manifest: Path) -> list[Path]:
             paths.append(p)
 
     return paths
+
+
+def seq_description_without_id(record: SeqRecord) -> str:
+    """Removes ID from FASTA record description"""
+    desc = record.description
+    if desc == record.id:
+        return ""
+    if desc.startswith(record.id):
+        return desc[len(record.id) + 1 :]
+    return desc
 
 
 def validate_regex(chunk_regex) -> re.Pattern[str]:

@@ -28,11 +28,17 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from ensembl.io.genomio.utils.agp_utils import AgpEntry, parse_agp
-from ensembl.io.genomio.utils.chunk_utils import get_paths_from_manifest, validate_regex
+from ensembl.io.genomio.utils.chunk_utils import (
+    get_paths_from_manifest,
+    seq_description_without_id,
+    validate_regex,
+)
 
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+
+_CHUNK_RE_STRING = r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$"
 
 
 @dataclass(frozen=True)
@@ -91,17 +97,6 @@ class FastaRecordCache:
         self._records = records
 
 
-# TODO: move to shared utils module once merged with splitter
-def _description_without_id(record: SeqRecord) -> str:
-    """Removes ID from FASTA record description"""
-    desc = record.description
-    if desc == record.id:
-        return ""
-    if desc.startswith(record.id):
-        return desc[len(record.id) + 1 :]
-    return desc
-
-
 def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
     """
     Iterates over FASTA headers, yielding (record_id, description) tuples.
@@ -111,7 +106,7 @@ def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
     """
     with open_gz_file(path) as fh:
         for record in SeqIO.parse(fh, "fasta"):
-            yield record.id, _description_without_id(record)
+            yield record.id, seq_description_without_id(record)
 
 
 def _build_index(
@@ -345,7 +340,7 @@ def _records_from_headers(
 def recombine_fasta(
     fasta_manifest: Path,
     out_fasta: Path,
-    chunk_re: re.Pattern[str],
+    chunk_re: re.Pattern[str] = re.compile(_CHUNK_RE_STRING),
     agp_file: Path | None = None,
     allow_revcomp: bool = False,
 ) -> None:
@@ -412,7 +407,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument_src_path(
         "--agp-file",
         metavar="AGP",
-        default=None,
+        default=argparse.SUPPRESS,
         help="Optional AGP file; if provided, reconstruction uses AGP ordering.",
     )
     parser.add_argument(
@@ -424,13 +419,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--chunk-id-regex",
         type=str,
         metavar="REGEX",
-        default=r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$",
+        default=_CHUNK_RE_STRING,
         help=(
             "Regex used to identify chunked records and extract coordinates. "
             "Must define named groups 'base' and 'start', "
             "e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$'."
         ),
     )
+    parser.add_log_arguments()
 
     args = parser.parse_args(argv)
     init_logging_with_args(args)
@@ -445,7 +441,7 @@ def main(argv: list[str] | None = None) -> None:
         recombine_fasta(
             fasta_manifest=args.fasta_manifest,
             out_fasta=args.out_fasta,
-            agp_file=args.agp_file,
+            agp_file=getattr(args, "agp_file", None),
             allow_revcomp=args.allow_revcomp,
             chunk_re=chunk_re,
         )

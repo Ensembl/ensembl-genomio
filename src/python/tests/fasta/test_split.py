@@ -133,29 +133,6 @@ def test_clean_previous_output(tmp_path: Path, fasta_file: Path, tree: list[Path
                 assert (out_dir / rel_path.parent).exists() == expected[i]
 
 
-@pytest.mark.parametrize(
-    "seq_id, description, expected",
-    [
-        ("seq1", "seq1", ""),
-        ("seq1", "seq1 some annotation", "some annotation"),
-        ("seq1", "seq1 seq1 description", "seq1 description"),
-        ("seq1", "description without id", "description without id"),
-    ],
-)
-def test_description_without_id(seq_id: str, description: str, expected: str) -> None:
-    """
-    Tests the `split._description_without_id()` function.
-
-    Args:
-        seq_id: Sequence identifier.
-        description: Sequence description.
-        expected: Expected value returned by the function.
-
-    """
-    rec = SeqRecord(Seq("ACGT"), id=seq_id, description=description)
-    assert split._description_without_id(rec) == expected
-
-
 class TestOutputWriter:
     """Tests `split.OutputWriter` class."""
 
@@ -506,7 +483,6 @@ def test_main(mock_split_fasta: Mock, tmp_path: Path) -> None:
     Args:
         mock_split_fasta: Mock object for the `split.split_fasta()` function.
         tmp_path: Temporary directory provided by pytest.
-
     """
     fasta_path = tmp_path / "in.fa"
     fasta_path.touch()
@@ -535,7 +511,6 @@ def test_main_raise_exception(mock_split_fasta: Mock, tmp_path: Path) -> None:
     Args:
         mock_split_fasta: Mock object for the `split.split_fasta()` function.
         tmp_path: Temporary directory provided by pytest.
-
     """
     fasta_path = tmp_path / "in.fa"
     fasta_path.touch()

@@ -32,6 +32,7 @@ from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
+_CHUNK_RE_STRING = r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$"
 _MD5_RE = re.compile(r"^[a-fA-F0-9]{32}$")
 _FEATURE_SCHEMA_NAME = "load_features"
 
@@ -587,7 +588,7 @@ def _combine_ncrna_json_paths(
 def combine_feature_json(
     json_manifest: Path,
     out_json: Path,
-    chunk_re: re.Pattern[str],
+    chunk_re: re.Pattern[str] = re.compile(_CHUNK_RE_STRING),
     agp_file: Path | None = None,
     allow_revcomp: bool = False,
 ) -> None:
@@ -728,12 +729,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--chunk-id-regex",
         type=str,
         metavar="REGEX",
-        default=r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$",
+        default=_CHUNK_RE_STRING,
         help=(
             "Regex used to identify chunked sequence IDs and extract coordinates when no AGP is provided. "
             "Must define named groups 'base' and 'start'."
         ),
     )
+    parser.add_log_arguments()
 
     args = parser.parse_args(argv)
     init_logging_with_args(args)
