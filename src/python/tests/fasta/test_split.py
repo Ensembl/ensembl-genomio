@@ -57,7 +57,6 @@ def test_get_fasta_basename(tmp_path: Path, name: str, expected: str) -> None:
         tmp_path: Test's unique temporary directory fixture.
         name: File name.
         expected: Expected value returned by the function.
-
     """
     tmp_file = tmp_path / name
     tmp_file.touch()
@@ -78,9 +77,7 @@ def test_check_contents_deletable(tmp_path: Path, tree: Path, expectation: Conte
     Args:
         tmp_path: Test's unique temporary directory fixture.
         tree: Path to the file tree to create under the temporary directory.
-        expectation: Context manager for the expected exception. Use `~contextlib.nullcontext` with
-            the expected output if no exception is expected.
-
+        expectation: Context manager for the expected exception.
     """
     out_dir = tmp_path / "out"
     out_tree = out_dir / tree
@@ -114,7 +111,6 @@ def test_clean_previous_output(tmp_path: Path, fasta_file: Path, tree: list[Path
         fasta_file: Path to the input FASTA file.
         tree: List of output files to create for the test.
         expected: List of whether the corresponding file in the tree is expected to exist after cleaning.
-
     """
     out_dir = tmp_path / "out"
     for rel_path in tree:
@@ -168,7 +164,6 @@ class TestOutputWriter:
             max_dirs_per_directory: Maximum number of subdirectories per directory level.
             expected_out_path: Expected relative path to the output FASTA file.
             expected_agp_name: Expected name of the AGP file in the output directory.
-
         """
         out_dir = tmp_path / "out"
         writer = split.OutputWriter(
@@ -212,7 +207,6 @@ class TestOutputWriter:
             write_agp: Write an AGP v2.0 file describing how each input sequence maps to output chunks.
             suffix: Suffix of the file for which to simulate the open failure.
             exc_msg: Expected message in the raised RuntimeError.
-
         """
         monkeypatch.setattr("pathlib.Path.open", force_open_failure_for_suffix(suffix))
         with pytest.raises(RuntimeError, match=rf"{exc_msg}"):
@@ -227,7 +221,6 @@ class TestOutputWriter:
 
         Args:
             tmp_path: Test's unique temporary directory fixture.
-
         """
         out_dir = tmp_path / "out"
         writer = split.OutputWriter(
@@ -275,9 +268,7 @@ class TestOutputWriter:
             agp_start: Start coordinate on the AGP object (1-based, inclusive).
             agp_end: End coordinate on the AGP object (1-based, inclusive).
             agp_part_nr: Component part number for this object (starts at 1 per object).
-            expectation: Context manager for the expected exception. Use `~contextlib.nullcontext` with
-                the expected output if no exception is expected.
-
+            expectation: Context manager for the expected exception.
         """
         out_dir = tmp_path / "out"
         writer = split.OutputWriter(
@@ -338,9 +329,8 @@ def test_split_fasta(tmp_path: Path, data_dir: Path, extra_args: dict[str, Any],
     Args:
         tmp_path: Test's unique temporary directory fixture.
         data_dir: Module's test data directory fixture.
-        extra_args:
-        expected:
-
+        extra_args: additional arguments to be passed to `split.split_fasta()`.
+        expected: name of directory within data_dir containing expected results.
     """
     in_fasta = data_dir / "input.fa"
     out_dir = tmp_path / "out"
@@ -360,7 +350,6 @@ def test_split_fasta_empty_file(tmp_path: Path) -> None:
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
-
     """
     in_fasta = tmp_path / "empty.fa"
     in_fasta.touch()
@@ -378,7 +367,6 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
     Args:
         tmp_path: Test's unique temporary directory fixture.
         data_dir: Module's test data directory fixture.
-
     """
     in_fasta = data_dir / "input.fa"
     out_dir = tmp_path / "out"
