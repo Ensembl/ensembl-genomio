@@ -50,13 +50,13 @@ def force_open_failure_for_suffix(suffix: str) -> Callable:
     [("in.fa", "in"), ("in.fa.gz", "in"), ("in", "in")],
 )
 def test_get_fasta_basename(tmp_path: Path, name: str, expected: str) -> None:
-    """Tests the `split._get_fasta_basename()` function.
+    """
+    Tests the `split._get_fasta_basename()` function.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
         name: File name.
         expected: Expected value returned by the function.
-
     """
     tmp_file = tmp_path / name
     tmp_file.touch()
@@ -71,14 +71,13 @@ def test_get_fasta_basename(tmp_path: Path, name: str, expected: str) -> None:
     ],
 )
 def test_check_contents_deletable(tmp_path: Path, tree: Path, expectation: ContextManager) -> None:
-    """Tests the `split._check_contents_deletable()` function.
+    """
+    Tests the `split._check_contents_deletable()` function.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
         tree: Path to the file tree to create under the temporary directory.
-        expectation: Context manager for the expected exception. Use `~contextlib.nullcontext` with
-            the expected output if no exception is expected.
-
+        expectation: Context manager for the expected exception.
     """
     out_dir = tmp_path / "out"
     out_tree = out_dir / tree
@@ -104,14 +103,14 @@ def test_check_contents_deletable(tmp_path: Path, tree: Path, expectation: Conte
     ],
 )
 def test_clean_previous_output(tmp_path: Path, fasta_file: Path, tree: list[Path], expected: str) -> None:
-    """Tests the `split._clean_previous_output()` function.
+    """
+    Tests the `split._clean_previous_output()` function.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
         fasta_file: Path to the input FASTA file.
         tree: List of output files to create for the test.
         expected: List of whether the corresponding file in the tree is expected to exist after cleaning.
-
     """
     out_dir = tmp_path / "out"
     for rel_path in tree:
@@ -146,7 +145,6 @@ def test_description_without_id(seq_id: str, description: str, expected: str) ->
         seq_id: Sequence identifier.
         description: Sequence description.
         expected: Expected value returned by the function.
-
     """
     rec = SeqRecord(Seq("ACGT"), id=seq_id, description=description)
     assert split._description_without_id(rec) == expected
@@ -175,7 +173,8 @@ class TestOutputWriter:
         expected_out_path: str,
         expected_agp_name: str,
     ) -> None:
-        """Tests the `__init__()` method of the `split.OutputWriter` class.
+        """
+        Tests the `__init__()` method of the `split.OutputWriter` class.
 
         Args:
             tmp_path: Test's unique temporary directory fixture.
@@ -186,7 +185,6 @@ class TestOutputWriter:
             max_dirs_per_directory: Maximum number of subdirectories per directory level.
             expected_out_path: Expected relative path to the output FASTA file.
             expected_agp_name: Expected name of the AGP file in the output directory.
-
         """
         out_dir = tmp_path / "out"
         writer = split.OutputWriter(
@@ -220,7 +218,8 @@ class TestOutputWriter:
     def test_create_file_exception(
         self, monkeypatch: MonkeyPatch, tmp_path: Path, write_agp: bool, suffix: str, exc_msg: str
     ) -> None:
-        """Tests the `_create_output_file()` and `_create_agp_file()` methods of the `split.OutputWriter`
+        """
+        Tests the `_create_output_file()` and `_create_agp_file()` methods of the `split.OutputWriter`
         class when an OSError is raised.
 
         Args:
@@ -229,7 +228,6 @@ class TestOutputWriter:
             write_agp: Write an AGP v2.0 file describing how each input sequence maps to output chunks.
             suffix: Suffix of the file for which to simulate the open failure.
             exc_msg: Expected message in the raised RuntimeError.
-
         """
         monkeypatch.setattr("pathlib.Path.open", force_open_failure_for_suffix(suffix))
         with pytest.raises(RuntimeError, match=rf"{exc_msg}"):
@@ -239,11 +237,11 @@ class TestOutputWriter:
             writer.close()
 
     def test_open_new_file(self, tmp_path: Path) -> None:
-        """Tests the `open_new_file()` method of the `split.OutputWriter` class.
+        """
+        Tests the `open_new_file()` method of the `split.OutputWriter` class.
 
         Args:
             tmp_path: Test's unique temporary directory fixture.
-
         """
         out_dir = tmp_path / "out"
         writer = split.OutputWriter(
@@ -281,7 +279,8 @@ class TestOutputWriter:
         agp_part_nr: int | None,
         expectation: ContextManager,
     ) -> None:
-        """Tests the `write_record()` method of the `split.OutputWriter` class.
+        """
+        Tests the `write_record()` method of the `split.OutputWriter` class.
 
         Args:
             tmp_path: Test's unique temporary directory fixture.
@@ -290,9 +289,7 @@ class TestOutputWriter:
             agp_start: Start coordinate on the AGP object (1-based, inclusive).
             agp_end: End coordinate on the AGP object (1-based, inclusive).
             agp_part_nr: Component part number for this object (starts at 1 per object).
-            expectation: Context manager for the expected exception. Use `~contextlib.nullcontext` with
-                the expected output if no exception is expected.
-
+            expectation: Context manager for the expected exception.
         """
         out_dir = tmp_path / "out"
         writer = split.OutputWriter(
@@ -347,14 +344,14 @@ class TestOutputWriter:
     ],
 )
 def test_split_fasta(tmp_path: Path, data_dir: Path, extra_args: dict[str, Any], expected: str) -> None:
-    """Tests the `split.split_fasta()` function.
+    """
+    Tests the `split.split_fasta()` function.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
         data_dir: Module's test data directory fixture.
-        extra_args:
-        expected:
-
+        extra_args: additional arguments to be passed to `split.split_fasta()`.
+        expected: name of directory within data_dir containing expected results.
     """
     in_fasta = data_dir / "input.fa"
     out_dir = tmp_path / "out"
@@ -369,11 +366,11 @@ def test_split_fasta(tmp_path: Path, data_dir: Path, extra_args: dict[str, Any],
 
 
 def test_split_fasta_empty_file(tmp_path: Path) -> None:
-    """Tests the `split.split_fasta()` function when an empty input file is provided.
+    """
+    Tests the `split.split_fasta()` function when an empty input file is provided.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
-
     """
     in_fasta = tmp_path / "empty.fa"
     in_fasta.touch()
@@ -384,13 +381,13 @@ def test_split_fasta_empty_file(tmp_path: Path) -> None:
 
 
 def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
-    """Tests the `split.split_fasta()` function when there are files from a previous run and we want to
+    """
+    Tests the `split.split_fasta()` function when there are files from a previous run and we want to
     delete them.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
         data_dir: Module's test data directory fixture.
-
     """
     in_fasta = data_dir / "input.fa"
     out_dir = tmp_path / "out"
@@ -470,7 +467,8 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
     ],
 )
 def test_parse_args(arg_list: list[str], expectation: ContextManager) -> None:
-    """Tests the `split.parse_args()` function.
+    """
+    Tests the `split.parse_args()` function.
 
     Args:
         arg_list: List of command line arguments to parse.
@@ -488,12 +486,12 @@ def test_parse_args(arg_list: list[str], expectation: ContextManager) -> None:
 
 @patch("ensembl.io.genomio.fasta.split.split_fasta")
 def test_main(mock_split_fasta: Mock, tmp_path: Path) -> None:
-    """Tests the `split.main()` function (entry point).
+    """
+    Tests the `split.main()` function (entry point).
 
     Args:
         mock_split_fasta: Mock object for the `split.split_fasta()` function.
         tmp_path: Temporary directory provided by pytest.
-
     """
     fasta_path = tmp_path / "in.fa"
     fasta_path.touch()
@@ -516,12 +514,12 @@ def test_main(mock_split_fasta: Mock, tmp_path: Path) -> None:
 
 @patch("ensembl.io.genomio.fasta.split.split_fasta")
 def test_main_raise_exception(mock_split_fasta: Mock, tmp_path: Path) -> None:
-    """Tests the `split.main()` function (entry point).
+    """
+    Tests the `split.main()` function (entry point).
 
     Args:
         mock_split_fasta: Mock object for the `split.split_fasta()` function.
         tmp_path: Temporary directory provided by pytest.
-
     """
     fasta_path = tmp_path / "in.fa"
     fasta_path.touch()
