@@ -17,3 +17,4 @@
 from .chunk import *
 from .compare import *
 from .process import *
+from .split import *
