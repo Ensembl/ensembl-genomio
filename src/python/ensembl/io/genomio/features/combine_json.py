@@ -33,14 +33,14 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 _CHUNK_RE_STRING = r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$"
-_MD5_RE = re.compile(r"^[a-fA-F0-9]{32}$")
+_SHA256_RE = re.compile(r"^[a-fA-F0-9]{64}$")
 _FEATURE_SCHEMA_NAME = "load_features"
 
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
 class RepeatConsensus(TypedDict):
-    repeat_consensus_key: str  # md5hex
+    repeat_consensus_key: str  # SHA-256 hex
     repeat_name: str
     repeat_class: str
     repeat_type: str
@@ -51,7 +51,7 @@ class RepeatFeature(TypedDict):
     seq_region: str
     seq_region_start: int
     seq_region_end: int
-    seq_region_strand: int
+    seq_region_strand: str
     repeat_start: int
     repeat_end: int
     repeat_consensus: NotRequired[str | None]
@@ -63,7 +63,7 @@ class NcrnaFeature(TypedDict):
     seq_region: str
     seq_region_start: int
     seq_region_end: int
-    seq_region_strand: int
+    seq_region_strand: str
     biotype: str
     score: NotRequired[float]
     evalue: NotRequired[float]
@@ -73,7 +73,7 @@ class _FeatureCoords(TypedDict):
     seq_region: str
     seq_region_start: int
     seq_region_end: int
-    seq_region_strand: int
+    seq_region_strand: str
 
 
 class _TopLevelAccumulator:
@@ -237,24 +237,24 @@ def _detect_load_type(document: dict[str, JsonValue], path: Path) -> str:
     )
 
 
-def _is_md5_hex(s: str) -> bool:
-    return bool(_MD5_RE.fullmatch(s))
+def _is_sha256_hex(s: str) -> bool:
+    return bool(_SHA256_RE.fullmatch(s))
 
 
 def _norm_consensus(seq: str) -> str:
     return "".join(seq.split()).upper()
 
 
-def _compute_consensus_md5(rn: str, rc_class: str, rt: str, rc_seq: str | None) -> str:
+def _compute_consensus_sha256(rn: str, rc_class: str, rt: str, rc_seq: str | None) -> str:
     norm = _norm_consensus(rc_seq) if rc_seq else ""
     payload = "\t".join([rn, rc_class, rt, norm])
-    return hashlib.md5(payload.encode("utf-8")).hexdigest()
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _coerce_repeat_consensus(obj: JsonValue, source_path: Path) -> RepeatConsensus:
     """Validates and casts an arbitrary object to RepeatConsensus."""
     rc = cast(RepeatConsensus, obj)
-    expected = _compute_consensus_md5(
+    expected = _compute_consensus_sha256(
         rc["repeat_name"],
         rc["repeat_class"],
         rc["repeat_type"],
@@ -307,8 +307,8 @@ def _feature_consensus_key(feature: RepeatFeature, source_path: Path) -> str | N
     ref = feature.get("repeat_consensus")
     if ref is None:
         return None
-    if not isinstance(ref, str) or not _is_md5_hex(ref):
-        raise ValueError(f"repeat_feature.repeat_consensus must be a 32-char hex md5 ({source_path})")
+    if not isinstance(ref, str) or not _is_sha256_hex(ref):
+        raise ValueError(f"repeat_feature.repeat_consensus must be a 64-char SHA-256 hex ({source_path})")
     return ref.lower()
 
 
@@ -339,7 +339,8 @@ def _lift_feature_coords(
         or the original feature if no lifting is required.
 
     Raises:
-        ValueError: If seq_region_start > seq_region_end, or if AGP mapping is ambiguous/invalid.
+        ValueError: If seq_region_start > seq_region_end, if seq_region_strand is invalid, or if AGP mapping
+            is ambiguous/invalid.
         KeyError: If AGP-driven lifting is requested but feature.seq_region is not present in the AGP index.
     """
     name = feature["seq_region"]
@@ -365,7 +366,12 @@ def _lift_feature_coords(
         out["seq_region_end"] = new_end
 
         if part.orientation == "-":
-            out["seq_region_strand"] = -strand
+            if strand == "+":
+                out["seq_region_strand"] = "-"
+            elif strand == "-":
+                out["seq_region_strand"] = "+"
+            else:
+                raise ValueError(f"Invalid strand value: {strand}")
 
         return cast(Feature, out)
 

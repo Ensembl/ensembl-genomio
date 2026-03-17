@@ -85,9 +85,9 @@ def _source(provider: str = "prov") -> dict[str, combine_json.JsonValue]:
     return {"source_provider": provider, "is_primary": True}
 
 
-def _md5_key(rn: str, rc_class: str, rt: str, seq: str | None = None) -> str:
+def _sha256_key(rn: str, rc_class: str, rt: str, seq: str | None = None) -> str:
     """
-    Computes the repeat-consensus MD5 key used by the schema.
+    Computes the repeat-consensus SHA-256 key used by the schema.
 
     Args:
         rn: Repeat name.
@@ -96,11 +96,11 @@ def _md5_key(rn: str, rc_class: str, rt: str, seq: str | None = None) -> str:
         seq: Optional consensus sequence.
 
     Returns:
-        MD5 hash string.
+        SHA-256 hash string.
     """
     norm = "".join((seq or "").split()).upper()
     payload = "\t".join([rn, rc_class, rt, norm])
-    return hashlib.md5(payload.encode("utf-8")).hexdigest()
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _repeat_consensus(
@@ -122,7 +122,7 @@ def _repeat_consensus(
         Repeat-consensus dictionary.
     """
     rc: combine_json.RepeatConsensus = {
-        "repeat_consensus_key": _md5_key(repeat_name, repeat_class, repeat_type, sequence),
+        "repeat_consensus_key": _sha256_key(repeat_name, repeat_class, repeat_type, sequence),
         "repeat_name": repeat_name,
         "repeat_class": repeat_class,
         "repeat_type": repeat_type,
@@ -136,7 +136,7 @@ def _repeat_feature(
     seq_region: str,
     start: int,
     end: int,
-    strand: int = 1,
+    strand: str = "+",
     consensus_key: str | None = None,
 ) -> combine_json.RepeatFeature:
     """
@@ -166,7 +166,7 @@ def _repeat_feature(
 
 
 def _ncrna_feature(
-    seq_region: str, start: int, end: int, strand: int = 1
+    seq_region: str, start: int, end: int, strand: str = "+"
 ) -> dict[str, combine_json.JsonValue]:
     """
     Builds a cmscan-style ncRNA feature object for tests.
@@ -323,7 +323,7 @@ def test_get_agp_entry_for_range(
             id="coerce_repeat_feature_rejects_start_gt_end",
         ),
         param(
-            _ncrna_feature("chr1", 10, 5, strand=1),
+            _ncrna_feature("chr1", 10, 5, strand="+"),
             combine_json._coerce_ncrna_feature,
             pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"),
             id="coerce_ncrna_feature_rejects_start_gt_end",
@@ -370,7 +370,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
     "feature,agp_by_component,allow_revcomp,expectation",
     [
         param(
-            _repeat_feature(seq_region="chr1_chunk_start_11", start=1, end=5, strand=1),
+            _repeat_feature(seq_region="chr1_chunk_start_11", start=1, end=5, strand="+"),
             None,
             False,
             does_not_raise(
@@ -378,13 +378,13 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
                     "seq_region": "chr1",
                     "seq_region_start": 11,
                     "seq_region_end": 15,
-                    "seq_region_strand": 1,
+                    "seq_region_strand": "+",
                 }
             ),
             id="seq_region_driven_chunked",
         ),
         param(
-            _repeat_feature(seq_region="chr1", start=1, end=5, strand=1),
+            _repeat_feature(seq_region="chr1", start=1, end=5, strand="+"),
             None,
             False,
             does_not_raise(
@@ -392,13 +392,13 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
                     "seq_region": "chr1",
                     "seq_region_start": 1,
                     "seq_region_end": 5,
-                    "seq_region_strand": 1,
+                    "seq_region_strand": "+",
                 }
             ),
             id="seq_region_driven_unchunked",
         ),
         param(
-            _repeat_feature(seq_region="compP", start=10, end=20, strand=1),
+            _repeat_feature(seq_region="compP", start=10, end=20, strand="+"),
             {
                 "compP": [
                     combine_json.AgpEntry(
@@ -419,13 +419,13 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
                     "seq_region": "objP",
                     "seq_region_start": 109,
                     "seq_region_end": 119,
-                    "seq_region_strand": 1,
+                    "seq_region_strand": "+",
                 }
             ),
             id="agp_driven_forward",
         ),
         param(
-            _repeat_feature(seq_region="compM", start=10, end=20, strand=1),
+            _repeat_feature(seq_region="compM", start=10, end=20, strand="+"),
             {
                 "compM": [
                     combine_json.AgpEntry(
@@ -446,13 +446,13 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
                     "seq_region": "objM",
                     "seq_region_start": 180,
                     "seq_region_end": 190,
-                    "seq_region_strand": -1,
+                    "seq_region_strand": "-",
                 }
             ),
             id="agp_driven_reverse",
         ),
         param(
-            _repeat_feature(seq_region="chr1", start=10, end=5, strand=1),
+            _repeat_feature(seq_region="chr1", start=10, end=5, strand="+"),
             None,
             False,
             pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"),
@@ -517,13 +517,13 @@ def test_detect_load_type_rejects_unknown_type(tmp_path: Path):
             id="returns_none_when_no_consensus",
         ),
         param(
-            _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key="A" * 32),
-            does_not_raise("a" * 32),
+            _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key="A" * 64),
+            does_not_raise("a" * 64),
             id="returns_lowercased_consensus_key",
         ),
         param(
             _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key="invalid_key"),
-            pytest.raises(ValueError, match=r"repeat_consensus must be a 32-char hex md5"),
+            pytest.raises(ValueError, match=r"repeat_consensus must be a 64-char SHA-256 hex"),
             id="rejects_invalid_consensus_key",
         ),
     ],
@@ -592,7 +592,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "analysis": _analysis("rm"),
                         "source": _source("prov"),
                         "repeat_features": [
-                            _repeat_feature(seq_region="chr1_chunk_start_1", start=1, end=3, strand=1),
+                            _repeat_feature(seq_region="chr1_chunk_start_1", start=1, end=3, strand="+"),
                         ],
                     },
                 ),
@@ -602,7 +602,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "analysis": _analysis("rm"),
                         "source": _source("prov"),
                         "repeat_features": [
-                            _repeat_feature(seq_region="chr1_chunk_start_4", start=1, end=2, strand=1),
+                            _repeat_feature(seq_region="chr1_chunk_start_4", start=1, end=2, strand="+"),
                         ],
                     },
                 ),
@@ -619,8 +619,8 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "source": _source("prov"),
                     },
                     "features": [
-                        _repeat_feature(seq_region="chr1", start=1, end=3, strand=1),
-                        _repeat_feature(seq_region="chr1", start=4, end=5, strand=1),
+                        _repeat_feature(seq_region="chr1", start=1, end=3, strand="+"),
+                        _repeat_feature(seq_region="chr1", start=4, end=5, strand="+"),
                     ],
                     "nr_features": 2,
                 }
@@ -636,7 +636,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "source": _source("prov"),
                         "ncrna_tool": "cmscan",
                         "ncrna_features": [
-                            _ncrna_feature(seq_region="chr1_chunk_start_1", start=1, end=3, strand=1),
+                            _ncrna_feature(seq_region="chr1_chunk_start_1", start=1, end=3, strand="+"),
                         ],
                     },
                 ),
@@ -647,7 +647,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "source": _source("prov"),
                         "ncrna_tool": "cmscan",
                         "ncrna_features": [
-                            _ncrna_feature(seq_region="chr1_chunk_start_4", start=1, end=2, strand=1),
+                            _ncrna_feature(seq_region="chr1_chunk_start_4", start=1, end=2, strand="+"),
                         ],
                     },
                 ),
@@ -665,8 +665,8 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "ncrna_tool": "cmscan",
                     },
                     "features": [
-                        _ncrna_feature(seq_region="chr1", start=1, end=3, strand=1),
-                        _ncrna_feature(seq_region="chr1", start=4, end=5, strand=1),
+                        _ncrna_feature(seq_region="chr1", start=1, end=3, strand="+"),
+                        _ncrna_feature(seq_region="chr1", start=4, end=5, strand="+"),
                     ],
                     "nr_features": 2,
                 }
@@ -681,7 +681,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "analysis": _analysis("rm"),
                         "source": _source("prov"),
                         "repeat_features": [
-                            _repeat_feature(seq_region="comp1", start=10, end=20, strand=1),
+                            _repeat_feature(seq_region="comp1", start=10, end=20, strand="+"),
                         ],
                     },
                 ),
@@ -711,7 +711,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "source": _source("prov"),
                     },
                     "features": [
-                        _repeat_feature(seq_region="chr1", start=109, end=119, strand=1),
+                        _repeat_feature(seq_region="chr1", start=109, end=119, strand="+"),
                     ],
                     "nr_features": 1,
                 }
@@ -727,7 +727,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "source": _source("prov"),
                         "ncrna_tool": "cmscan",
                         "ncrna_features": [
-                            _ncrna_feature(seq_region="comp1", start=10, end=20, strand=1),
+                            _ncrna_feature(seq_region="comp1", start=10, end=20, strand="+"),
                         ],
                     },
                 ),
@@ -758,7 +758,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "ncrna_tool": "cmscan",
                     },
                     "features": [
-                        _ncrna_feature(seq_region="chr1", start=180, end=190, strand=-1),
+                        _ncrna_feature(seq_region="chr1", start=180, end=190, strand="-"),
                     ],
                     "nr_features": 1,
                 }
@@ -783,7 +783,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "analysis": _analysis("a"),
                         "source": _source("prov"),
                         "repeat_features": [
-                            _repeat_feature(seq_region="chr1", start=1, end=2, strand=1),
+                            _repeat_feature(seq_region="chr1", start=1, end=2, strand="+"),
                         ],
                     },
                 ),
@@ -793,7 +793,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "analysis": _analysis("b"),
                         "source": _source("prov"),
                         "repeat_features": [
-                            _repeat_feature(seq_region="chr1", start=3, end=4, strand=1),
+                            _repeat_feature(seq_region="chr1", start=3, end=4, strand="+"),
                         ],
                     },
                 ),
@@ -815,7 +815,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "source": _source("prov"),
                         "ncrna_tool": "cmscan",
                         "ncrna_features": [
-                            _ncrna_feature(seq_region="chr1", start=1, end=2, strand=1),
+                            _ncrna_feature(seq_region="chr1", start=1, end=2, strand="+"),
                         ],
                     },
                 ),
@@ -826,7 +826,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                         "source": _source("prov"),
                         "ncrna_tool": "trnascan",
                         "ncrna_features": [
-                            _ncrna_feature(seq_region="chr1", start=3, end=4, strand=1),
+                            _ncrna_feature(seq_region="chr1", start=3, end=4, strand="+"),
                         ],
                     },
                 ),
@@ -898,15 +898,15 @@ def test_combine_feature_docs(
                             seq_region="chr1",
                             start=1,
                             end=3,
-                            strand=1,
-                            consensus_key=_md5_key("Alu", "SINE", "Alu", "ACGT"),
+                            strand="+",
+                            consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
                         ),
                         _repeat_feature(
                             seq_region="chr1",
                             start=4,
                             end=5,
-                            strand=1,
-                            consensus_key=_md5_key("Alu", "SINE", "Alu", "ACGT"),
+                            strand="+",
+                            consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
                         ),
                     ],
                 }
@@ -927,8 +927,8 @@ def test_combine_feature_docs(
                             seq_region="chr1",
                             start=109,
                             end=119,
-                            strand=1,
-                            consensus_key=_md5_key("Alu", "SINE", "Alu", "ACGT"),
+                            strand="+",
+                            consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
                         ),
                     ],
                 }
@@ -949,8 +949,8 @@ def test_combine_feature_docs(
                             seq_region="chr1",
                             start=180,
                             end=190,
-                            strand=-1,
-                            consensus_key=_md5_key("Alu", "SINE", "Alu", "ACGT"),
+                            strand="-",
+                            consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
                         ),
                     ],
                 }
@@ -1023,9 +1023,9 @@ def test_combine_repeat_json_paths(
                     "source": _source("prov"),
                     "ncrna_tool": "cmscan",
                     "ncrna_features": [
-                        _ncrna_feature("chr1", 1, 3, strand=1),
-                        _ncrna_feature("chr1", 4, 5, strand=1),
-                        _ncrna_feature("chr1", 6, 7, strand=1),
+                        _ncrna_feature("chr1", 1, 3, strand="+"),
+                        _ncrna_feature("chr1", 4, 5, strand="+"),
+                        _ncrna_feature("chr1", 6, 7, strand="+"),
                     ],
                 }
             ),
@@ -1041,7 +1041,7 @@ def test_combine_repeat_json_paths(
                     "source": _source("prov"),
                     "ncrna_tool": "cmscan",
                     "ncrna_features": [
-                        _ncrna_feature("chr1", 109, 119, strand=1),
+                        _ncrna_feature("chr1", 109, 119, strand="+"),
                     ],
                 }
             ),
@@ -1057,7 +1057,7 @@ def test_combine_repeat_json_paths(
                     "source": _source("prov"),
                     "ncrna_tool": "cmscan",
                     "ncrna_features": [
-                        _ncrna_feature("chr1", 180, 190, strand=-1),
+                        _ncrna_feature("chr1", 180, 190, strand="-"),
                     ],
                 }
             ),
@@ -1122,9 +1122,9 @@ def test_combine_ncrna_json_paths(
                     "source": _source("prov"),
                     "ncrna_tool": "cmscan",
                     "ncrna_features": [
-                        _ncrna_feature("chr1", 1, 3, strand=1),
-                        _ncrna_feature("chr1", 4, 5, strand=1),
-                        _ncrna_feature("chr1", 6, 7, strand=1),
+                        _ncrna_feature("chr1", 1, 3, strand="+"),
+                        _ncrna_feature("chr1", 4, 5, strand="+"),
+                        _ncrna_feature("chr1", 6, 7, strand="+"),
                     ],
                 }
             ),

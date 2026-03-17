@@ -17,7 +17,7 @@
       "seq_region": "comp1",
       "seq_region_start": 10,
       "seq_region_end": 20,
-      "seq_region_strand": 1,
+      "seq_region_strand": "+",
       "biotype": "miRNA",
       "score": 1.0,
       "target_name": "MIRTEST",

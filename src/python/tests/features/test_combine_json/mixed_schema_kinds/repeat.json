@@ -17,7 +17,7 @@
       "seq_region": "chr1",
       "seq_region_start": 1,
       "seq_region_end": 2,
-      "seq_region_strand": 1,
+      "seq_region_strand": "+",
       "repeat_start": 1,
       "repeat_end": 10
     }

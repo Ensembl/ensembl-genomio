@@ -13,7 +13,7 @@
   },
   "repeat_consensus": [
     {
-      "repeat_consensus_key": "58bc82baa00a592e0b49f526b80a7c89",
+      "repeat_consensus_key": "a22e6f5e2ecee2db8186bf74429a61dbcf906707ae188d32b55857e3ed63ce2e",
       "repeat_name": "Alu",
       "repeat_class": "SINE",
       "repeat_type": "Alu",
@@ -25,10 +25,10 @@
       "seq_region": "chr1_chunk_start_1",
       "seq_region_start": 1,
       "seq_region_end": 3,
-      "seq_region_strand": 1,
+      "seq_region_strand": "+",
       "repeat_start": 1,
       "repeat_end": 10,
-      "repeat_consensus": "58bc82baa00a592e0b49f526b80a7c89"
+      "repeat_consensus": "a22e6f5e2ecee2db8186bf74429a61dbcf906707ae188d32b55857e3ed63ce2e"
     }
   ]
 }

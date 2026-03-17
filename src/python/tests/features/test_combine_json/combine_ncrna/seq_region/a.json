@@ -17,7 +17,7 @@
       "seq_region": "chr1_chunk_start_1",
       "seq_region_start": 1,
       "seq_region_end": 3,
-      "seq_region_strand": 1,
+      "seq_region_strand": "+",
       "biotype": "miRNA",
       "score": 1.0,
       "target_name": "MIRTEST",
