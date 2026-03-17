@@ -1,0 +1,600 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/load_features.json",
+  "title": "GenomIO repeat & ncRNA feature load schema",
+  "description": "Combined JSON schema for loading either repeat features or ncRNA features for a single analysis + source.",
+  "type": "object",
+
+  "oneOf": [
+    { "$ref": "#/definitions/repeat_load" },
+    { "$ref": "#/definitions/ncrna_load" }
+  ],
+
+  "definitions": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "positive_int": {
+      "type": "integer",
+      "minimum": 1
+    },
+
+    "strand": {
+      "type": "string",
+      "enum": ["-", "+"],
+      "description": "Strand (+/-)."
+    },
+
+    "sha256_hex": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "64-char hex SHA-256 digest."
+    },
+
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_date", "logic_name", "display_label", "description"],
+      "properties": {
+        "run_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "analysis.run_date (datetime)."
+        },
+        "logic_name": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 128,
+          "description": "Unique key for analysis; corresponds to analysis.logic_name."
+        },
+        "display_label": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 255
+        },
+        "description": {
+          "$ref": "#/definitions/non_empty_string"
+        },
+        "program": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "program_version": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "program_parameters": {
+          "type": "string",
+          "description": "analysis.program_parameters"
+        },
+        "db": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "analysis.db"
+        },
+        "db_version": {
+          "type": "string",
+          "maxLength": 40
+        }
+      },
+      "anyOf": [{ "required": ["program"] }, { "required": ["db"] }]
+    },
+
+    "annotation_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_provider"],
+      "properties": {
+        "source_provider": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 24,
+          "description": "Natural key for annotation source; loader maps/creates source_id for this provider."
+        },
+        "is_primary": {
+          "type": "boolean",
+          "default": true,
+          "description": "annotation_source.is_primary"
+        }
+      }
+    },
+
+    "repeat_consensus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repeat_consensus_key", "repeat_name", "repeat_class", "repeat_type"],
+      "properties": {
+        "repeat_consensus_key": {
+          "$ref": "#/definitions/sha256_hex",
+          "description": "SHA-256 key computed from (repeat_name, repeat_class, repeat_type, repeat_consensus) after normalization defined by producer/loader."
+        },
+        "repeat_name": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 255
+        },
+        "repeat_class": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 100
+        },
+        "repeat_type": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 40
+        },
+        "repeat_consensus": {
+          "type": "string",
+          "minLength": 1,
+          "description": "repeat_consensus.repeat_consensus (consensus sequence)."
+        }
+      }
+    },
+
+    "repeat_feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seq_region",
+        "seq_region_start",
+        "seq_region_end",
+        "seq_region_strand",
+        "repeat_start",
+        "repeat_end"
+      ],
+      "properties": {
+        "seq_region": {
+          "$ref": "#/definitions/non_empty_string",
+          "description": "Seq_region name (chromosome/scaffold/contig). Loader resolves to seq_region_id."
+        },
+        "seq_region_start": { "$ref": "#/definitions/positive_int" },
+        "seq_region_end": { "$ref": "#/definitions/positive_int" },
+        "seq_region_strand": { "$ref": "#/definitions/strand" },
+        "repeat_start": {
+          "$ref": "#/definitions/positive_int",
+          "description": "repeat_feature.repeat_start (on the consensus)."
+        },
+        "repeat_end": {
+          "$ref": "#/definitions/positive_int",
+          "description": "repeat_feature.repeat_end (on the consensus)."
+        },
+        "repeat_consensus": {
+          "$ref": "#/definitions/sha256_hex",
+          "description": "Optional reference to consensus by SHA-256 key. If absent, consensus is unknown/not applicable."
+        },
+        "score": {
+          "type": "number",
+          "description": "repeat_feature.score (optional)."
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Tool-specific extras (e.g. divergence, motif, period, etc.)."
+        }
+      }
+    },
+
+    "repeat_load": {
+      "description": "Repeat-load document (load_repeat): a single analysis+source with repeat_features and optional repeat_consensus.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["analysis", "source", "repeat_features"],
+      "properties": {
+        "analysis": {
+          "$ref": "#/definitions/analysis",
+          "description": "Single analysis definition for this load."
+        },
+        "source": {
+          "$ref": "#/definitions/annotation_source",
+          "description": "Single annotation source for this load."
+        },
+        "repeat_consensus": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/repeat_consensus" },
+          "description": "Optional consensus entries. Each entry has an SHA-256 key."
+        },
+        "repeat_features": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/repeat_feature" },
+          "description": "Repeat features for this analysis+source."
+        }
+      },
+      "examples": [
+        {
+          "analysis": {
+            "run_date": "2026-02-18T00:00:00Z",
+            "logic_name": "repeatmasker_customlib",
+            "display_label": "Repeats: Custom Library",
+            "description": "Repeats identified by <a rel=\"external\" href=\"http://www.repeatmasker.org\">RepeatMasker</a>, using a custom library of <em>ab initio</em> repeat profiles for this species.",
+            "program": "RepeatMasker",
+            "program_version": "4.1.7",
+            "program_parameters": "-lib custom_repeats.lib -nolow -no_is -gff"
+          },
+          "source": {
+            "source_provider": "Ensembl",
+            "is_primary": true
+          },
+          "repeat_consensus": [
+            {
+              "repeat_consensus_key": "d41d8cd98f00b204e9800998ecf8427e",
+              "repeat_name": "Alu",
+              "repeat_class": "SINE",
+              "repeat_type": "Alu",
+              "repeat_consensus": "ACGTACGT"
+            }
+          ],
+          "repeat_features": [
+            {
+              "seq_region": "chr1",
+              "seq_region_start": 100,
+              "seq_region_end": 200,
+              "seq_region_strand": 1,
+              "repeat_start": 1,
+              "repeat_end": 101,
+              "repeat_consensus": "d41d8cd98f00b204e9800998ecf8427e",
+              "score": 86.9,
+              "attributes": {
+                "perc_div": 3.2,
+                "perc_del": 0.1,
+                "perc_ins": 0.3
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    "ncrna_tool": {
+      "type": "string",
+      "enum": ["trnascan", "cmscan", "mirbase"],
+      "description": "Tool used to generate this set of ncRNA features."
+    },
+
+    "ncrna_feature_base": {
+      "type": "object",
+      "required": ["seq_region", "seq_region_start", "seq_region_end", "seq_region_strand", "biotype"],
+      "properties": {
+        "seq_region": {
+          "$ref": "#/definitions/non_empty_string",
+          "description": "seq_region name"
+        },
+        "seq_region_start": { "$ref": "#/definitions/positive_int" },
+        "seq_region_end": { "$ref": "#/definitions/positive_int" },
+        "seq_region_strand": { "$ref": "#/definitions/strand" },
+        "biotype": {
+          "$ref": "#/definitions/non_empty_string",
+          "maxLength": 64,
+          "description": "Target biotype for the gene/transcript (e.g. tRNA, miRNA, snoRNA, snRNA, rRNA, ncRNA)."
+        },
+        "display_label": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Optional display label for the feature."
+        },
+        "score": {
+          "type": "number",
+          "description": "Primary score from the tool (Infernal bitscore, tRNAscan score, etc.)."
+        },
+        "evalue": {
+          "type": "number",
+          "minimum": 0,
+          "description": "E-value (optional)."
+        }
+      }
+    },
+
+    "trnascan_feature": {
+      "description": "tRNAscan-SE feature. Tool-specific fields are stored directly on the feature object.",
+      "allOf": [
+        { "$ref": "#/definitions/ncrna_feature_base" },
+        {
+          "type": "object",
+          "required": ["isotype", "anticodon"],
+          "properties": {
+            "isotype": {
+              "$ref": "#/definitions/non_empty_string",
+              "maxLength": 32,
+              "description": "tRNAscan isotype/amino acid (e.g. Phe, Leu, iMet)."
+            },
+            "anticodon": {
+              "$ref": "#/definitions/non_empty_string",
+              "maxLength": 16,
+              "description": "Anticodon string as reported."
+            },
+            "codon": {
+              "type": "string",
+              "maxLength": 16,
+              "description": "Codon string, if you choose to record it."
+            },
+            "intron_start": {
+              "$ref": "#/definitions/positive_int",
+              "description": "Coordinate of intron start on seq_region."
+            },
+            "intron_end": {
+              "$ref": "#/definitions/positive_int",
+              "description": "Coordinate of intron end on seq_region."
+            },
+            "is_pseudogene": {
+              "type": "boolean",
+              "description": "Optional pseudogene flag if produced."
+            }
+          }
+        },
+        {
+          "allOf": [
+            {
+              "if": { "required": ["intron_start"] },
+              "then": { "required": ["intron_end"] }
+            },
+            {
+              "if": { "required": ["intron_end"] },
+              "then": { "required": ["intron_start"] }
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "seq_region": "chr1",
+          "seq_region_start": 1056,
+          "seq_region_end": 1128,
+          "seq_region_strand": 1,
+          "biotype": "tRNA",
+          "display_label": "tRNA-Phe",
+          "score": 74.3,
+          "isotype": "Phe",
+          "anticodon": "GAA",
+          "codon": "TTC",
+          "is_pseudogene": false
+        }
+      ]
+    },
+
+    "cmscan_feature": {
+      "description": "Infernal cmscan feature (e.g. Rfam). Tool-specific fields are stored directly on the feature object.",
+      "allOf": [
+        { "$ref": "#/definitions/ncrna_feature_base" },
+        {
+          "type": "object",
+          "required": ["target_name", "is_significant"],
+          "properties": {
+            "target_name": {
+              "$ref": "#/definitions/non_empty_string",
+              "maxLength": 255,
+              "description": "Target/family name (e.g. MIR7533, RFxxxxx)."
+            },
+            "target_accession": {
+              "type": "string",
+              "maxLength": 32,
+              "description": "Accession (e.g. Rfam RFxxxxx), if present."
+            },
+            "model_start": {
+              "$ref": "#/definitions/positive_int",
+              "description": "Model start coordinate."
+            },
+            "model_end": {
+              "$ref": "#/definitions/positive_int",
+              "description": "Model end coordinate."
+            },
+            "truncation": {
+              "type": "string",
+              "enum": ["none", "5prime", "3prime", "both"],
+              "description": "Truncation status."
+            },
+            "pass_nr": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3,
+              "description": "Infernal pass number."
+            },
+            "gc": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "GC fraction."
+            },
+            "bias": {
+              "type": "number",
+              "description": "Bias value."
+            },
+            "is_significant": {
+              "type": "boolean",
+              "description": "Infernal inclusion flag / thresholding decision (! = true, ? = false)."
+            }
+          }
+        },
+        {
+          "allOf": [
+            { "if": { "required": ["model_start"] }, "then": { "required": ["model_end"] } },
+            { "if": { "required": ["model_end"] }, "then": { "required": ["model_start"] } }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "seq_region": "NC_090874.1",
+          "seq_region_start": 3036562,
+          "seq_region_end": 3036725,
+          "seq_region_strand": -1,
+          "biotype": "miRNA",
+          "score": 86.9,
+          "evalue": 2.2e-15,
+          "target_name": "MIR7533",
+          "target_accession": "RF04209",
+          "model_start": 1,
+          "model_end": 249,
+          "truncation": "none",
+          "pass_nr": 1,
+          "gc": 0.39,
+          "bias": 0.0,
+          "is_significant": true
+        }
+      ]
+    },
+
+    "mirbase_feature": {
+      "description": "miRBase feature (hairpin or mature). Tool-specific fields are stored directly on the feature object.",
+      "allOf": [
+        { "$ref": "#/definitions/ncrna_feature_base" },
+        {
+          "type": "object",
+          "required": ["mirna_name", "mirna_type"],
+          "properties": {
+            "mirna_name": {
+              "$ref": "#/definitions/non_empty_string",
+              "maxLength": 255,
+              "description": "miRBase name (e.g. ath-miR156a, hsa-miR-21-5p)."
+            },
+            "mirna_accession": {
+              "type": "string",
+              "maxLength": 32,
+              "description": "miRBase accession (MIxxxxx hairpin, MIMATxxxx mature), if present."
+            },
+            "mirna_type": {
+              "type": "string",
+              "enum": ["hairpin", "mature"],
+              "description": "Type of feature (hairpin or mature)."
+            },
+            "parent_hairpin_name": {
+              "type": "string",
+              "maxLength": 255,
+              "description": "For mature products, the parent hairpin name (optional; may be unknown)."
+            },
+            "arm": {
+              "type": "string",
+              "enum": ["5p", "3p"],
+              "description": "For mature products, the arm (optional; may be unknown)."
+            },
+            "evidence_type": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Optional evidence label (e.g. curated, homology, smallRNA-seq)."
+            }
+          }
+        },
+        {
+          "allOf": [
+            {
+              "if": { "properties": { "mirna_type": { "const": "mature" } }, "required": ["mirna_type"] },
+              "then": {
+                "description": "If you require parent_hairpin_name for mature entries, add it to required here. Currently optional."
+              }
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "seq_region": "chr3",
+          "seq_region_start": 555000,
+          "seq_region_end": 555072,
+          "seq_region_strand": 1,
+          "biotype": "miRNA",
+          "display_label": "ath-miR156a",
+          "mirna_name": "ath-miR156a",
+          "mirna_accession": "MI0000123",
+          "mirna_type": "hairpin",
+          "evidence_type": "curated"
+        },
+        {
+          "seq_region": "chr3",
+          "seq_region_start": 555020,
+          "seq_region_end": 555041,
+          "seq_region_strand": 1,
+          "biotype": "miRNA",
+          "display_label": "ath-miR156a-5p",
+          "mirna_name": "ath-miR156a-5p",
+          "mirna_accession": "MIMAT0000123",
+          "mirna_type": "mature",
+          "parent_hairpin_name": "ath-miR156a",
+          "arm": "5p",
+          "evidence_type": "curated"
+        }
+      ]
+    },
+
+    "ncrna_feature": {
+      "description": "A single ncRNA feature record, selected by ncrna_tool at the document level.",
+      "oneOf": [
+        { "$ref": "#/definitions/trnascan_feature" },
+        { "$ref": "#/definitions/cmscan_feature" },
+        { "$ref": "#/definitions/mirbase_feature" }
+      ]
+    },
+
+    "ncrna_load": {
+      "description": "ncRNA-load document (load_ncrna): a single analysis+source and tool-specific array of ncRNA features.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["analysis", "ncrna_tool", "source", "ncrna_features"],
+      "properties": {
+        "analysis": {
+          "$ref": "#/definitions/analysis",
+          "description": "Single analysis definition for this load."
+        },
+        "ncrna_tool": { "$ref": "#/definitions/ncrna_tool" },
+        "source": {
+          "$ref": "#/definitions/annotation_source",
+          "description": "Single annotation source for this load."
+        },
+        "ncrna_features": {
+          "type": "array",
+          "minItems": 1,
+          "description": "ncRNA features for this analysis+source."
+        }
+      },
+
+      "allOf": [
+        {
+          "if": { "properties": { "ncrna_tool": { "const": "trnascan" } }, "required": ["ncrna_tool"] },
+          "then": { "properties": { "ncrna_features": { "items": { "$ref": "#/definitions/trnascan_feature" } } } }
+        },
+        {
+          "if": { "properties": { "ncrna_tool": { "const": "cmscan" } }, "required": ["ncrna_tool"] },
+          "then": { "properties": { "ncrna_features": { "items": { "$ref": "#/definitions/cmscan_feature" } } } }
+        },
+        {
+          "if": { "properties": { "ncrna_tool": { "const": "mirbase" } }, "required": ["ncrna_tool"] },
+          "then": { "properties": { "ncrna_features": { "items": { "$ref": "#/definitions/mirbase_feature" } } } }
+        }
+      ],
+
+      "examples": [
+        {
+          "analysis": {
+            "run_date": "2026-02-18T00:00:00Z",
+            "logic_name": "cmscan_rfam",
+            "display_label": "Rfam Models (LCA)",
+            "description": "Covariance models from <a href='https://rfam.xfam.org'>Rfam</a> (release 15.0), aligned to the genome with 'cmscan' from the <a href='http://eddylab.org/infernal'>Infernal</a> suite of programs. Models are restricted to those observed in species that share a last common ancestor (LCA).",
+            "program": "cmscan",
+            "program_version": "1.1.5",
+            "db": "Rfam",
+            "db_version": "15.0"
+          },
+          "ncrna_tool": "cmscan",
+          "source": {
+            "source_provider": "Ensembl",
+            "is_primary": true
+          },
+          "ncrna_features": [
+            {
+              "seq_region": "NC_090874.1",
+              "seq_region_start": 3036562,
+              "seq_region_end": 3036725,
+              "seq_region_strand": -1,
+              "biotype": "miRNA",
+              "score": 86.9,
+              "evalue": 2.2e-15,
+              "target_name": "MIR7533",
+              "target_accession": "RF04209",
+              "model_start": 1,
+              "model_end": 249,
+              "truncation": "none",
+              "pass_nr": 1,
+              "gc": 0.39,
+              "bias": 0.0,
+              "is_significant": true
+            }
+          ]
+        }
+    ] 
+    }
+  }
+}
