@@ -192,19 +192,17 @@ class OutputWriter:
                 ``write_agp`` is True.
 
         Raises:
-            ValueError: If ``write_agp`` is True but any of the AGP arguments are missing.
+            AssertionError: If ``write_agp`` is True but any of the AGP arguments are missing.
         """
         SeqIO.write(record, self._fh, "fasta")
         self.record_count += 1
         self.file_len += len(record.seq)
 
         if self.write_agp:
-            if None in (agp_object_id, agp_start, agp_end, agp_part_nr):
-                raise ValueError("All AGP arguments must be provided if writing AGP entries")
-            assert agp_object_id is not None
-            assert agp_start is not None
-            assert agp_end is not None
-            assert agp_part_nr is not None
+            assert agp_object_id is not None, "AGP object ID must be provided if writing AGP entries"
+            assert agp_start is not None, "AGP start must be provided if writing AGP entries"
+            assert agp_end is not None, "AGP end must be provided if writing AGP entries"
+            assert agp_part_nr is not None, "AGP part no. must be provided if writing AGP entries"
             line = (
                 f"{agp_object_id}\t{agp_start}\t{agp_end}\t{agp_part_nr}\tW\t"
                 f"{record.id}\t1\t{len(record.seq)}\t+\n"

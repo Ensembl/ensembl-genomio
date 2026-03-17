@@ -243,8 +243,35 @@ class TestOutputWriter:
                 1,
                 4,
                 1,
-                pytest.raises(ValueError, match=r"All AGP arguments must be provided if writing AGP entries"),
-                id="Missing AGP args",
+                pytest.raises(AssertionError, match=r"AGP object ID must be provided if writing AGP entries"),
+                id="Missing AGP object ID",
+            ),
+            param(
+                True,
+                "seq1",
+                None,
+                4,
+                1,
+                pytest.raises(AssertionError, match=r"AGP start must be provided if writing AGP entries"),
+                id="Missing AGP start",
+            ),
+            param(
+                True,
+                "seq1",
+                1,
+                None,
+                1,
+                pytest.raises(AssertionError, match=r"AGP end must be provided if writing AGP entries"),
+                id="Missing AGP end",
+            ),
+            param(
+                True,
+                "seq1",
+                1,
+                4,
+                None,
+                pytest.raises(AssertionError, match=r"AGP part no. must be provided if writing AGP entries"),
+                id="Missing AGP part no.",
             ),
         ],
     )
@@ -329,8 +356,8 @@ def test_split_fasta(tmp_path: Path, data_dir: Path, extra_args: dict[str, Any],
     Args:
         tmp_path: Test's unique temporary directory fixture.
         data_dir: Module's test data directory fixture.
-        extra_args: additional arguments to be passed to `split.split_fasta()`.
-        expected: name of directory within data_dir containing expected results.
+        extra_args: Additional arguments to be passed to `split.split_fasta()`.
+        expected: Name of directory within data_dir containing expected results.
     """
     in_fasta = data_dir / "input.fa"
     out_dir = tmp_path / "out"
