@@ -452,11 +452,58 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
             id="agp_driven_reverse",
         ),
         param(
+            _repeat_feature(seq_region="compM", start=10, end=20, strand="-"),
+            {
+                "compM": [
+                    combine_json.AgpEntry(
+                        record="objM",
+                        record_start=100,
+                        record_end=199,
+                        part_number=1,
+                        part_id="compM",
+                        part_start=1,
+                        part_end=100,
+                        orientation="-",
+                    )
+                ]
+            },
+            True,
+            does_not_raise(
+                {
+                    "seq_region": "objM",
+                    "seq_region_start": 180,
+                    "seq_region_end": 190,
+                    "seq_region_strand": "+",
+                }
+            ),
+            id="agp_driven_reverse_flips_minus_to_plus",
+        ),
+        param(
             _repeat_feature(seq_region="chr1", start=10, end=5, strand="+"),
             None,
             False,
             pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"),
             id="rejects_end_less_than_start",
+        ),
+        param(
+            _repeat_feature(seq_region="compM", start=10, end=20, strand="."),
+            {
+                "compM": [
+                    combine_json.AgpEntry(
+                        record="objM",
+                        record_start=100,
+                        record_end=199,
+                        part_number=1,
+                        part_id="compM",
+                        part_start=1,
+                        part_end=100,
+                        orientation="-",
+                    )
+                ]
+            },
+            True,
+            pytest.raises(ValueError, match=r"Invalid strand value: \."),
+            id="rejects_invalid_strand",
         ),
     ],
 )
