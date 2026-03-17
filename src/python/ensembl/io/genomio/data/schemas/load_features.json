@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://.../.../src/python/ensembl/io/genomio/data/schemas/load_features.json",
-  "title": "Genomio repeat & ncRNA feature load schema",
+  "title": "GenomIO repeat & ncRNA feature load schema",
   "description": "Combined JSON schema for loading either repeat features or ncRNA features for a single analysis + source.",
   "type": "object",
 
@@ -22,15 +22,15 @@
     },
 
     "strand": {
-      "type": "integer",
-      "enum": [-1, 1],
-      "description": "Ensembl-style strand -1/+1."
+      "type": "string",
+      "enum": ["-", "+"],
+      "description": "Strand (+/-)."
     },
 
-    "md5_hex": {
+    "sha256_hex": {
       "type": "string",
-      "pattern": "^[a-fA-F0-9]{32}$",
-      "description": "32-char hex MD5 digest."
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "64-char hex SHA-256 digest."
     },
 
     "analysis": {
@@ -88,12 +88,12 @@
         "source_provider": {
           "$ref": "#/definitions/non_empty_string",
           "maxLength": 24,
-          "description": "Natural key for assembly_source/annotation source; loader maps/creates source_id for this provider."
+          "description": "Natural key for annotation source; loader maps/creates source_id for this provider."
         },
         "is_primary": {
           "type": "boolean",
           "default": true,
-          "description": "assembly_source.is_primary"
+          "description": "annotation_source.is_primary"
         }
       }
     },
@@ -104,8 +104,8 @@
       "required": ["repeat_consensus_key", "repeat_name", "repeat_class", "repeat_type"],
       "properties": {
         "repeat_consensus_key": {
-          "$ref": "#/definitions/md5_hex",
-          "description": "MD5 key computed from (repeat_name, repeat_class, repeat_type, repeat_consensus) after normalization defined by producer/loader."
+          "$ref": "#/definitions/sha256_hex",
+          "description": "SHA-256 key computed from (repeat_name, repeat_class, repeat_type, repeat_consensus) after normalization defined by producer/loader."
         },
         "repeat_name": {
           "$ref": "#/definitions/non_empty_string",
@@ -146,7 +146,6 @@
         "seq_region_start": { "$ref": "#/definitions/positive_int" },
         "seq_region_end": { "$ref": "#/definitions/positive_int" },
         "seq_region_strand": { "$ref": "#/definitions/strand" },
-
         "repeat_start": {
           "$ref": "#/definitions/positive_int",
           "description": "repeat_feature.repeat_start (on the consensus)."
@@ -155,17 +154,14 @@
           "$ref": "#/definitions/positive_int",
           "description": "repeat_feature.repeat_end (on the consensus)."
         },
-
         "repeat_consensus": {
-          "$ref": "#/definitions/md5_hex",
-          "description": "Optional reference to consensus by md5 key. If absent, consensus is unknown/not applicable."
+          "$ref": "#/definitions/sha256_hex",
+          "description": "Optional reference to consensus by SHA-256 key. If absent, consensus is unknown/not applicable."
         },
-
         "score": {
           "type": "number",
           "description": "repeat_feature.score (optional)."
         },
-
         "attributes": {
           "type": "object",
           "additionalProperties": true,
@@ -191,7 +187,7 @@
         "repeat_consensus": {
           "type": "array",
           "items": { "$ref": "#/definitions/repeat_consensus" },
-          "description": "Optional consensus entries. Each entry has an md5 key."
+          "description": "Optional consensus entries. Each entry has an SHA-256 key."
         },
         "repeat_features": {
           "type": "array",
@@ -210,7 +206,6 @@
             "program": "RepeatMasker",
             "program_version": "4.1.7",
             "program_parameters": "-lib custom_repeats.lib -nolow -no_is -gff"
-
           },
           "source": {
             "source_provider": "Ensembl",
