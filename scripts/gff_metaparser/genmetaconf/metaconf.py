@@ -228,15 +228,12 @@ class MetaConf:
                         self.update("assembly.alt_accession", asm_acc_insdc)
                     else:
                         self.update("assembly.alt_accession", asm_acc_refseq)
-        asm_acc_main = asm_acc_insdc or asm_acc
         # species metadata
         _acc = str(asm_acc).replace("_", "").replace(".", "v")
         _sci_name = self.get("species.scientific_name", default="")
         _prod_name_pfx = _sci_name.strip().lower()
         _prod_name_pfx = "_".join(re.sub(r"[^a-z0-9A-Z]+", "_", _prod_name_pfx).split("_")[:2])
         _prod_name = ("%s_%s" % (_prod_name_pfx, _acc)).lower().replace(" ", "_")
-        _acc_main = str(asm_acc_main).replace("_", "").replace(".", "v")
-        _prod_name_main = ("%s_%s" % (_prod_name_pfx, _acc_main)).lower().replace(" ", "_")
         #
         _strain = self.get("species.strain")
         self.update_from_dict(defaults, "species.division")
@@ -246,15 +243,12 @@ class MetaConf:
         if _ann_source_sfx:
             self.update("ANNOTATION_SOURCE_SFX", _ann_source_sfx, tech=True)
             _prod_name += _ann_source_sfx
-            _prod_name_main += _ann_source_sfx
         self.update("species.production_name", _prod_name)
-        self.update("species.production_name_main", _prod_name_main)
         _comm_name = self.get("species.common_name")
         _display_name = _sci_name
         if _strain or _comm_name:
             _strain_comm_part = ", ".join(map(str, filter(None, [_comm_name, _strain])))
             _display_name += f" ({_strain_comm_part})"
-        _display_name_main = _display_name
         _display_name += " - " + asm_acc
         # possibly add annotation source tag
         _ann_source = self.get("species.annotation_source", default="").strip()
@@ -264,7 +258,6 @@ class MetaConf:
             self.update("genebuild.annotation_source", _ann_source)
             _display_name = f"{_display_name} [{_ann_source} annotation]"
         self.update("species.display_name", _display_name)
-        self.update("species.display_name_main", _display_name_main)
         # back to using "Binomial_name_GCA_000001.1rs" names, only for GenBank ('GCA') accessions
         # get a s/_gc([af])(\d+)v(\d+)/_GC\U\1_\2.\3/i equivalent
         gc_map = lambda m: f"_GC{m.group(1).upper()}_{m.group(2)}.{m.group(3)}"
@@ -272,10 +265,6 @@ class MetaConf:
         _species_url = _prod_name.capitalize()
         _species_url = re.sub(r"_gc([af])(\d+)v(\d+)", gc_map, _species_url, flags=re.I)
         self.update("species.url", _species_url)
-        # url for the main
-        _species_url_main = _prod_name_main.capitalize()
-        _species_url_main = re.sub(r"_gc([af])(\d+)v(\d+)", gc_map, _species_url_main, flags=re.I)
-        self.update("species.url_main", _species_url_main)
         # syns
         syns = []
         sci_name_words = list(filter(None, _sci_name.split()))

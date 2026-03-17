@@ -1,8 +1,8 @@
 # Ensembl GenomIO
 
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/Ensembl/ensembl-genomio/blob/main/LICENSE)
-[![Coverage](https://vectorbase.gitdocs.ebi.ac.uk/ensembl-genomio/coverage-badge.svg)](https://vectorbase.gitdocs.ebi.ac.uk/ensembl-genomio/)
-[![CI](https://img.shields.io/github/checks-status/Ensembl/ensembl-genomio/main?label=CI)](https://gitlab.ebi.ac.uk/vectorbase/ensembl-genomio/-/pipelines)
+[![Coverage](https://plantazoa.gitdocs.ebi.ac.uk/ensembl-genomio/coverage-badge.svg)](https://plantazoa.gitdocs.ebi.ac.uk/ensembl-genomio/)
+[![CI](https://img.shields.io/github/checks-status/Ensembl/ensembl-genomio/main?label=CI)](https://gitlab.ebi.ac.uk/plantazoa/ensembl-genomio/-/pipelines)
 [![Release](https://img.shields.io/pypi/v/ensembl-genomio)](https://pypi.org/project/ensembl-genomio)
 
 Pipelines to turn basic genomic data into Ensembl cores and back.

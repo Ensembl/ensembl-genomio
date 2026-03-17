@@ -63,6 +63,8 @@ LJMU	LJMU	gene
 NasoniaBase	NasoniaBase	gene
 I5KNAL	I5KNAL	gene
 
+Phytozome	Phytozome	gene
+
 UniProt/GCRP	Uniprot/GCRP_gene	gene
 Uniprot/GCRP_gene	Uniprot/GCRP_gene	gene
 
