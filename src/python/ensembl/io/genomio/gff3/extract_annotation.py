@@ -16,24 +16,25 @@
 
 __all__ = [
     "Annotation",
-    "DuplicateIdError",
-    "MissingParentError",
     "AnnotationError",
+    "DuplicateIdError",
     "FunctionalAnnotations",
+    "MissingParentError",
 ]
 
 from os import PathLike
 import logging
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ensembl.io.genomio.utils.json_utils import print_json
 from .features import GFFSeqFeature
 
 
-Annotation = Dict[str, Any]
+Annotation = dict[str, Any]
 
+_IGNORED_XREFS = {"go", "interpro", "uniprot"}
 _PARENTS = {
     "transcript": "gene",
     "translation": "transcript",
@@ -55,28 +56,26 @@ class AnnotationError(Exception):
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
-    ignored_xrefs = {"go", "interpro", "uniprot"}
-
     def __init__(self, provider_name: str = "") -> None:
-        self.annotations: List[Annotation] = []
+        self.annotations: list[Annotation] = []
         self.provider_name = provider_name
         # Annotated features
         # Under each feature, each dict's key is a feature ID
-        self.features: Dict[str, Dict[str, Annotation]] = {
+        self.features: dict[str, dict[str, Annotation]] = {
             "gene": {},
             "transcript": {},
             "translation": {},
             "transposable_element": {},
         }
         # Keep parent info: key is the feature ID, value is the parent ID
-        self.parents: Dict[str, Dict[str, str]] = {
+        self.parents: dict[str, dict[str, str]] = {
             "gene": {},
             "transcript": {},
         }
 
-    def get_xrefs(self, feature: GFFSeqFeature) -> List[Dict[str, Any]]:
+    def get_xrefs(self, feature: GFFSeqFeature) -> list[dict[str, Any]]:
         """Get the xrefs from the Dbxref field."""
-        all_xref: List[Dict[str, str]] = []
+        all_xref: list[dict[str, str]] = []
 
         if "Dbxref" in feature.qualifiers:
             for xref in feature.qualifiers["Dbxref"]:
@@ -84,22 +83,21 @@ class FunctionalAnnotations:
                 if dbname == "GenBank" and self.provider_name == "RefSeq":
                     dbname = "RefSeq"
 
-                if dbname.lower() in self.ignored_xrefs:
+                if dbname.lower() in _IGNORED_XREFS:
                     continue
 
                 xrefs = {"dbname": dbname, "id": name}
                 all_xref.append(xrefs)
 
         # Add RefSeq ID xref if it looks like one
-        if self.provider_name == "RefSeq":
-            if feature.type == "gene" and feature.id.startswith("LOC"):
-                xref_dbs = {x["dbname"] for x in all_xref}
-                if "RefSeq" not in xref_dbs:
-                    all_xref.append({"dbname": "RefSeq", "id": feature.id})
+        if self.provider_name == "RefSeq" and feature.type == "gene" and feature.id.startswith("LOC"):
+            xref_dbs = {x["dbname"] for x in all_xref}
+            if "RefSeq" not in xref_dbs:
+                all_xref.append({"dbname": "RefSeq", "id": feature.id})
 
         return all_xref
 
-    def get_features(self, feat_type: str) -> Dict[str, Annotation]:
+    def get_features(self, feat_type: str) -> dict[str, Annotation]:
         """Get all feature annotations for the requested type."""
         try:
             return self.features[feat_type]
@@ -114,7 +112,7 @@ class FunctionalAnnotations:
         self.parents[parent_type][child_id] = parent_id
 
     def get_parent(self, parent_type: str, child_id: str) -> str:
-        """Returns the parent ID of a given child for a given parent biotype."""
+        """Return the parent ID of a given child for a given parent biotype."""
         try:
             parents = self.parents[parent_type]
         except KeyError as err:
@@ -129,8 +127,8 @@ class FunctionalAnnotations:
         self,
         feature: GFFSeqFeature,
         feat_type: str,
-        parent_id: Optional[str] = None,
-        all_parent_ids: Optional[List[str]] = None,
+        parent_id: str | None = None,
+        all_parent_ids: list[str] | None = None,
     ) -> None:
         """Add annotation for a feature of a given type. If a parent_id is provided, record the relationship.
 
@@ -139,6 +137,7 @@ class FunctionalAnnotations:
             feat_type: Type of the feature to annotate.
             parent_id: Parent ID of this feature to keep it linked.
             all_parent_ids: All parent IDs to remove from non-informative descriptions.
+
         """
         if all_parent_ids is None:
             all_parent_ids = []
@@ -157,14 +156,17 @@ class FunctionalAnnotations:
                 raise AnnotationError(f"No parent possible for {feat_type} {feature.id}")
 
     def _generic_feature(
-        self, feature: GFFSeqFeature, feat_type: str, parent_ids: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self,
+        feature: GFFSeqFeature,
+        feat_type: str,
+        parent_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Create a feature object following the specifications.
 
         Args:
             feature: The GFFSeqFeature to add to the list.
             feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
-            all_parent_ids: All parent IDs to remove from non-informative descriptions.
+            parent_ids: All parent IDs to remove from non-informative descriptions.
 
         """
         if parent_ids is None:
@@ -176,7 +178,7 @@ class FunctionalAnnotations:
         for qname in ("description", "product"):
             if qname in feature.qualifiers:
                 description = feature.qualifiers[qname][0]
-                if self.product_is_informative(description, feat_ids=parent_ids + [feature.id]):
+                if self.product_is_informative(description, feat_ids=[*parent_ids, feature.id]):
                     feature_object["description"] = description
                     break
                 logging.debug(f"Non informative description for {feature.id}: {description}")
@@ -206,9 +208,11 @@ class FunctionalAnnotations:
         return feature_object
 
     def transfer_descriptions(self) -> None:
-        """Transfers the feature descriptions in 2 steps:
-        - from translations to transcripts (if the transcript description is empty)
-        - from transcripts to genes (same case)
+        """Transfer the feature descriptions.
+
+        Done in 2 steps:
+          - from translations to transcripts (if the transcript description is empty)
+          - from transcripts to genes (same case)
 
         """
         self._transfer_description_up("translation")
@@ -239,14 +243,13 @@ class FunctionalAnnotations:
 
     @staticmethod
     def _clean_description(description: str) -> str:
-        """Returns the description without "transcript variant" information."""
+        """Return the description without "transcript variant" information."""
         variant_re = re.compile(r", transcript variant [A-Z][0-9]+$", re.IGNORECASE)
-        description = re.sub(variant_re, "", description)
-        return description
+        return re.sub(variant_re, "", description)
 
     @staticmethod
-    def product_is_informative(product: str, feat_ids: Optional[List[str]] = None) -> bool:
-        """Returns True if the product name contains informative words, False otherwise.
+    def product_is_informative(product: str, feat_ids: list[str] | None = None) -> bool:
+        """Return True if the product name contains informative words, False otherwise.
 
         It is considered uninformative when the description contains words such as "hypothetical" or
         or "putative". If feature IDs are provided, consider it uninformative as well (we do not want
@@ -300,6 +303,7 @@ class FunctionalAnnotations:
         return not bool(empty_re.match(product))
 
     def _to_list(self) -> list[Annotation]:
+        """Return list with annotations."""
         all_list: list[Annotation] = []
         for feat_dict in self.features.values():
             all_list += feat_dict.values()

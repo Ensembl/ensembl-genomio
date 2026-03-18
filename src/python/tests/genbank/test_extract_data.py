@@ -16,7 +16,6 @@
 # pylint: disable=too-many-positional-arguments
 
 from pathlib import Path
-from typing import List
 from unittest.mock import Mock, patch
 
 from BCBio import GFF
@@ -25,14 +24,13 @@ from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.SeqRecord import SeqRecord
 import pytest
-from pytest import TempPathFactory
 
 from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError
 from ensembl.io.genomio.utils import get_json
 
 
 class TestWriteFormattedFiles:
-    """Test if all the expected output files are generated and formatted correctly"""
+    """Test if all the expected output files are generated and formatted correctly."""
 
     prod_name = "TEST_prod"
     gb_file = "input_file.gb"
@@ -40,9 +38,12 @@ class TestWriteFormattedFiles:
 
     @pytest.fixture(scope="class", autouse=True)
     def formatted_files_generator(
-        self, data_dir: Path, tmp_path_factory: TempPathFactory
+        self,
+        data_dir: Path,
+        tmp_path_factory: pytest.TempPathFactory,
     ) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters.
+
         Fixture that returns the class of the module that we are testing
         """
         gb_file = self.gb_file
@@ -74,7 +75,7 @@ class TestWriteFormattedFiles:
         expected: str,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test that organellas are correctly identified in the genbank file"""
+        """Test that organellas are correctly identified in the GenBank file."""
         gb_file_path = data_dir / self.gb_file
         # pylint: disable=protected-access
         organella = formatted_files_generator._get_organella(gb_file_path)
@@ -137,12 +138,14 @@ class TestWriteFormattedFiles:
         mock_write_seq_json: Mock,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Check seq_region.json file contains the correct metadata"""
+        """Check seq_region.json file contains the correct metadata."""
         record = SeqRecord(Seq("ATGC"), id="record", annotations={"topology": "circular"})
-        CDS_feature = SeqFeature(
-            FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
+        cds_feature = SeqFeature(
+            FeatureLocation(10, 20),
+            type="CDS",
+            qualifiers={"gene": ["GlyrA"], "transl_table": "2"},
         )
-        record.features.append(CDS_feature)
+        record.features.append(cds_feature)
         record.annotations["organelle"] = "mitochondrion"
         formatted_files_generator.seq_records = [record]
         # pylint: disable=protected-access
@@ -155,7 +158,7 @@ class TestWriteFormattedFiles:
 
     @pytest.mark.dependency(name="format_gff", depends=["parse_genbank"])
     @pytest.mark.parametrize(
-        "all_ids, peptides",
+        ("all_ids", "peptides"),
         [(["ID1", "ID2", "ID3"], ["pep1", "pep2"])],
     )
     @patch("ensembl.io.genomio.genbank.extract_data.FormattedFilesGenerator._parse_record")
@@ -166,8 +169,8 @@ class TestWriteFormattedFiles:
         mock_write_pep: Mock,
         mock_write_genes: Mock,
         mock_parse_record: Mock,
-        all_ids: List[str],
-        peptides: List[str],
+        all_ids: list[str],
+        peptides: list[str],
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Check gene features in GFF3 format are generated as expected."""
@@ -210,14 +213,15 @@ class TestWriteFormattedFiles:
         tmp_path: Path,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test if GFF3 file is generated when there are SeqFeatures present"""
-
+        """Test if GFF3 file is generated when there are SeqFeatures present."""
         record = SeqRecord(Seq("ATGC"), id="record")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
-        CDS_feature = SeqFeature(
-            FeatureLocation(10, 15), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
+        cds_feature = SeqFeature(
+            FeatureLocation(10, 15),
+            type="CDS",
+            qualifiers={"gene": ["GlyrA"], "transl_table": "2"},
         )
-        record.features = [gene_feature, CDS_feature]
+        record.features = [gene_feature, cds_feature]
         formatted_files_generator.seq_records = [record]
 
         formatted_files_generator.files["gene_models"] = tmp_path / "genes.gff"
@@ -234,12 +238,14 @@ class TestWriteFormattedFiles:
         tmp_path: Path,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test if peptides FASTA file is generated when peptides are identified"""
+        """Test if peptides FASTA file is generated when peptides are identified."""
         record = SeqRecord(Seq("MFLRTQARFFHATTKKM"), id="cds-record")
-        CDS_feature = SeqFeature(
-            FeatureLocation(10, 20), type="CDS", qualifiers={"gene": ["GlyrA"], "transl_table": "2"}
+        cds_feature = SeqFeature(
+            FeatureLocation(10, 20),
+            type="CDS",
+            qualifiers={"gene": ["GlyrA"], "transl_table": "2"},
         )
-        record.features.append(CDS_feature)
+        record.features.append(cds_feature)
         formatted_files_generator.files["fasta_pep"] = tmp_path / "pep.fasta"
         # pylint: disable=protected-access
         formatted_files_generator._write_pep_fasta([record])

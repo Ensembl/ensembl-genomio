@@ -12,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Connect to a core database and retrieve a meta_key:meta_value pair(s) and dump meta_key/value
-pairs to stdout / JSON.
-"""
+"""Connect to a core database and retrieve a meta_key:meta_value pair(s) and dump meta_key/value pairs."""
 
 __all__ = ["get_meta_values"]
 
@@ -34,7 +32,7 @@ from .dbconnection_lite import DBConnectionLite
 
 
 def get_meta_values(db_url: URL, meta_keys: StrPath | list[str]) -> dict[str, str]:
-    """Returns a set of meta values based on set of 1 or more input DB meta_keys.
+    """Return a set of meta values based on set of 1 or more input DB meta_keys.
 
     Args:
         db_url: Target core database URL.
@@ -52,7 +50,7 @@ def get_meta_values(db_url: URL, meta_keys: StrPath | list[str]) -> dict[str, st
     # Check input type and populated query list
     if isinstance(meta_keys, PosixPath):
         with Path(meta_keys).open(mode="r", encoding="UTF-8") as fh:
-            for line in fh.readlines():
+            for line in fh:
                 meta_key = line.strip()
                 query_meta_keys.append(meta_key)
     elif isinstance(meta_keys, list):
@@ -103,10 +101,11 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 
 def main(arg_list: list[str] | None = None) -> None:
-    """Main script entry-point.
+    """Run module's entry-point.
 
     Args:
         arg_list: Arguments to parse passing list to parse_args().
+
     """
     args = parse_args(arg_list)
     init_logging_with_args(args)
