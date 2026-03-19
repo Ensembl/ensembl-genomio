@@ -25,6 +25,8 @@ import shutil
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
+from ensembl.io.genomio.utils.chunk_utils import seq_description_without_id
+
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -250,16 +252,6 @@ def _clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
         logging.info(f"Deleted existing AGP file '{agp_path}'.")
 
 
-def _description_without_id(record: SeqRecord) -> str:
-    """Removes ID from FASTA record description"""
-    desc = record.description
-    if desc == record.id:
-        return ""
-    if desc.startswith(record.id):
-        return desc[len(record.id) + 1 :]
-    return desc
-
-
 def split_fasta(
     fasta_file: Path,
     out_dir: Path | None = None,
@@ -366,7 +358,7 @@ def split_fasta(
                         chunk_record = SeqRecord(
                             chunk_seq,
                             id=f"{record.id}_chunk_start_{start}",
-                            description=_description_without_id(record),
+                            description=seq_description_without_id(record),
                         )
                         if writer.record_count > 0:
                             writer.open_new_file()

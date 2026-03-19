@@ -19,12 +19,17 @@ will have access to the plugins, hooks and fixtures defined here.
 
 """
 
+import gzip
 import json
 from pathlib import Path
 from typing import Any, Callable
 
 import pytest
 from pytest import Config
+
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 from ensembl.io.genomio.utils import get_json
 
@@ -84,3 +89,30 @@ def mock_response() -> Callable:
         return MockResponse(json_str)
 
     return _mock_response
+
+
+@pytest.fixture
+def write_fasta(tmp_path: Path) -> Callable[[str, list[tuple[str, str, str | None]], bool], Path]:
+    """Helper to create FASTA (optionally gzipped) from a list of (id, seq, desc)."""
+
+    def _writer(relpath: str, record_info: list[tuple[str, str, str | None]], gz: bool = False) -> Path:
+        p = tmp_path / relpath
+        p.parent.mkdir(parents=True, exist_ok=True)
+
+        records: list[SeqRecord] = []
+        for record_id, seq, desc in record_info:
+            records.append(SeqRecord(Seq(seq), id=record_id, description=desc or ""))
+
+        opener = open
+        mode = "w"
+        if gz:
+            opener = gzip.open
+            mode = "wt"
+            if p.suffix != ".gz":
+                p = p.with_suffix(p.suffix + ".gz") if p.suffix else Path(str(p) + ".gz")
+        with opener(p, mode, encoding="utf-8", newline="\n") as fh:
+            SeqIO.write(records, fh, "fasta")
+
+        return p
+
+    return _writer

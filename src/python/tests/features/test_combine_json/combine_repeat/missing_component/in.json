@@ -1,0 +1,34 @@
+{
+  "analysis": {
+    "run_date": "2026-02-18T00:00:00Z",
+    "logic_name": "rm",
+    "display_label": "rm",
+    "description": "rm analysis",
+    "program": "test",
+    "program_version": "0.0"
+  },
+  "source": {
+    "source_provider": "prov",
+    "is_primary": true
+  },
+  "repeat_consensus": [
+    {
+      "repeat_consensus_key": "a22e6f5e2ecee2db8186bf74429a61dbcf906707ae188d32b55857e3ed63ce2e",
+      "repeat_name": "Alu",
+      "repeat_class": "SINE",
+      "repeat_type": "Alu",
+      "repeat_consensus": "ACGT"
+    }
+  ],
+  "repeat_features": [
+    {
+      "seq_region": "comp_missing",
+      "seq_region_start": 10,
+      "seq_region_end": 20,
+      "seq_region_strand": "+",
+      "repeat_start": 1,
+      "repeat_end": 10,
+      "repeat_consensus": "a22e6f5e2ecee2db8186bf74429a61dbcf906707ae188d32b55857e3ed63ce2e"
+    }
+  ]
+}
