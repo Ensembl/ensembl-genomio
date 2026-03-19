@@ -191,7 +191,6 @@
         },
         "repeat_features": {
           "type": "array",
-          "minItems": 1,
           "items": { "$ref": "#/definitions/repeat_feature" },
           "description": "Repeat features for this analysis+source."
         }
@@ -536,7 +535,6 @@
         },
         "ncrna_features": {
           "type": "array",
-          "minItems": 1,
           "description": "ncRNA features for this analysis+source."
         }
       },
