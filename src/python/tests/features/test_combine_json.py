@@ -52,7 +52,7 @@ def schema_validator_calls(monkeypatch: pytest.MonkeyPatch):
     return calls
 
 
-def _analysis(name: str = "rm") -> dict[str, combine_json.JsonValue]:
+def _analysis(name: str = "rm", date: str = "2026-02-18T00:00:00Z") -> dict[str, combine_json.JsonValue]:
     """
     Returns a standard analysis payload for assertions.
 
@@ -63,7 +63,7 @@ def _analysis(name: str = "rm") -> dict[str, combine_json.JsonValue]:
         Analysis dictionary.
     """
     return {
-        "run_date": "2026-02-18T00:00:00Z",
+        "run_date": date,
         "logic_name": name,
         "display_label": name,
         "description": f"{name} analysis",
@@ -203,6 +203,12 @@ def _load_json(path: Path) -> dict[str, combine_json.JsonValue]:
         Parsed JSON document.
     """
     return cast(dict[str, combine_json.JsonValue], json.loads(path.read_text(encoding="utf-8")))
+
+
+def _without_run_date(d: dict[str, combine_json.JsonValue]) -> dict[str, combine_json.JsonValue]:
+    out = dict(d)
+    out.pop("run_date", None)
+    return out
 
 
 def test_top_level_accumulator_get_required_raises_when_missing():
@@ -636,7 +642,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                 (
                     Path("a.json"),
                     {
-                        "analysis": _analysis("rm"),
+                        "analysis": _analysis("rm", "2026-02-18T01:10:00Z"),
                         "source": _source("prov"),
                         "repeat_features": [
                             _repeat_feature(seq_region="chr1_chunk_start_1", start=1, end=3, strand="+"),
@@ -923,7 +929,12 @@ def test_combine_feature_docs(
             allow_revcomp=allow_revcomp,
             required_top_level_keys=required_top_level_keys,
         )
-        assert top_level == expected["top_level"]
+        assert top_level["source"] == expected["top_level"]["source"]
+        assert _without_run_date(
+            cast(dict[str, combine_json.JsonValue], top_level["analysis"])
+        ) == _without_run_date(cast(dict[str, combine_json.JsonValue], expected["top_level"]["analysis"]))
+        if "ncrna_tool" in expected["top_level"]:
+            assert top_level["ncrna_tool"] == expected["top_level"]["ncrna_tool"]
         assert features == expected["features"]
         assert nr_features == expected["nr_features"]
 

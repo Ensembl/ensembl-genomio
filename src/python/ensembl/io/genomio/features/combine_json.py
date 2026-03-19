@@ -76,11 +76,26 @@ class _FeatureCoords(TypedDict):
     seq_region_strand: str
 
 
+def _normalise_for_comparison(key: str, value: JsonValue) -> JsonValue:
+    """
+    Returns a normalised copy of a top-level value for equality comparison.
+
+    For 'analysis', ignore run_date so documents produced at different times
+    can still be merged as long as the rest of the analysis metadata matches.
+    """
+    if key == "analysis" and isinstance(value, dict):
+        analysis = dict(value)
+        analysis.pop("run_date", None)
+        return cast(JsonValue, analysis)
+    return value
+
+
 class _TopLevelAccumulator:
     """Accumulates and validates that selected top-level fields are identical across documents."""
 
     def __init__(self) -> None:
-        self._values: dict[str, JsonValue] = {}
+        self._comparison_values: dict[str, JsonValue] = {}
+        self._original_values: dict[str, JsonValue] = {}
         self._paths: dict[str, Path] = {}
 
     def require_same(self, key: str, value: JsonValue, path: Path) -> None:
@@ -97,13 +112,16 @@ class _TopLevelAccumulator:
                 If the same key has already been seen with a different value
                 in a previous document.
         """
-        if key not in self._values:
-            self._values[key] = value
+        date_removed_value = _normalise_for_comparison(key, value)
+
+        if key not in self._comparison_values:
+            self._comparison_values[key] = date_removed_value
+            self._original_values[key] = value
             self._paths[key] = path
             return
 
-        prev = self._values[key]
-        if prev != value:
+        prev = self._comparison_values[key]
+        if prev != date_removed_value:
             prev_path = self._paths[key]
             raise ValueError(
                 f"Top-level '{key}' differs between inputs:\n"
@@ -127,9 +145,9 @@ class _TopLevelAccumulator:
                 If the key was never observed (e.g. empty manifest or
                 required field missing from all inputs).
         """
-        if key not in self._values:
+        if key not in self._original_values:
             raise ValueError(f"Missing required top-level '{key}' (empty manifest?)")
-        return self._values[key]
+        return self._original_values[key]
 
 
 Feature = TypeVar("Feature", bound=_FeatureCoords)
