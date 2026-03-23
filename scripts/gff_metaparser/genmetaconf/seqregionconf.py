@@ -424,6 +424,7 @@ class SeqRegionConf:
             "apicoplast": "chromosome",
             "plasmid": "chromosome",
             "chloroplast": "chromosome",
+            "plastid": "chromosome",
         }
 
         # location part
@@ -433,6 +434,7 @@ class SeqRegionConf:
             "mitochondrion": "mitochondrial_chromosome",
             "apicoplast": "apicoplast_chromosome",
             "chloroplast": "chloroplast_chromosome",
+            "plastid": "chloroplast_chromosome",
         }
 
         if not location_type:
