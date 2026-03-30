@@ -71,7 +71,7 @@ def add_organism(url: str, user: str, key: str, org_data: Dict[str, str]) -> Non
             print(f"Error: {result.status_code}")
             try:
                 print(json.dumps(result.json(), indent=4))
-            except ValueError:  # Catches JSONDecodeError if in case respobse is not JSON
+            except ValueError:  # Catches JSONDecodeError if in case response is not JSON
                 print(result.text)
     except requests.exceptions.RequestException as e:
         print(f"Network error occurred while adding organism: {e}")
