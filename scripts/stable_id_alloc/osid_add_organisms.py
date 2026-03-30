@@ -72,7 +72,8 @@ def add_organism(url: str, user: str, key: str, org_data: Dict[str, str]) -> Non
             try:
                 print(json.dumps(result.json(), indent=4))
             except ValueError:  # Catches JSONDecodeError if in case response is not JSON
-                print(result.text)
+                error_payload = {"error": "Non-JSON response from server", "raw_response": result.text}
+                print(json.dumps(error_payload, indent=4))
     except requests.exceptions.RequestException as e:
         print(f"Network error occurred while adding organism: {e}")
 
@@ -97,7 +98,8 @@ def update_organism(url: str, user: str, key: str, org_data: Dict[str, str], org
             try:
                 print(json.dumps(result.json(), indent=4))
             except ValueError:
-                print(result.text)
+                error_payload = {"error": "Non-JSON response from server", "raw_response": result.text}
+                print(json.dumps(error_payload, indent=4))
     except requests.exceptions.RequestException as e:
         print(f"Network error occurred while updating organism: {e}")
 
