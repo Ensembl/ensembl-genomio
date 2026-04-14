@@ -34,7 +34,7 @@ _ROOT_PATH = _SCRIPTS_DIR.parents[1]
 _SUFFIXES_WITH_HEADER = set(
     ["pl", "pm", "py", "nf", "config", "mysql", "pgsql", "sql", "sqlite", "bash", "sh", "toml", "yml"]
 )
-_EXCLUDE_DIRS = ["data/test", "src/python/tests/data"]
+_EXCLUDE_DIRS: list[str] = []
 
 
 def check_notice(notice_template: PathLike) -> None:

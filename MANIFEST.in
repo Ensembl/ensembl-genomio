@@ -1,1 +1,1 @@
-recursive-include src/python/ensembl/io/genomio/data/ *
+recursive-include src/ensembl/io/genomio/data/ *

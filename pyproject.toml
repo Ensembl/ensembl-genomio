@@ -14,13 +14,12 @@
 
 # pyproject.toml -- Ensembl GenomIO project configuration
 
-## Generic configuration
 [project]
 name = "ensembl-genomio"
 dynamic = [
     "version",
 ]
-requires-python = ">= 3.10"
+requires-python = ">= 3.12"
 description = "Ensembl GenomIO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
 readme = "README.md"
 authors = [
@@ -36,15 +35,14 @@ keywords = [
     "setup",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -55,8 +53,6 @@ dependencies = [
     "ensembl-utils >= 0.5.1",
     "jsonschema >= 4.6.0",
     "intervaltree >= 3.1.0",
-    "mysql-connector-python >= 8.0.29",
-    "python-redmine >= 2.3.0",
     "requests >= 2.28.0",
     "spython >= 0.3.13",
 ]
@@ -103,6 +99,8 @@ repository = "https://github.com/Ensembl/ensembl-genomio"
 documentation = "https://ensembl.github.io/ensembl-genomio"
 
 [project.scripts]
+# Annotation
+annotation_update_description = "ensembl.io.genomio.annotation.update_description:main"
 # Assembly
 assembly_download = "ensembl.io.genomio.assembly.download:main"
 assembly_tracker = "ensembl.io.genomio.assembly.status:main"
@@ -131,8 +129,6 @@ genome_stats_dump = "ensembl.io.genomio.genome_stats.dump:main"
 # GFF3
 gff3_process = "ensembl.io.genomio.gff3.process:main"
 gff3_overlaps = "ensembl.io.genomio.gff3.overlaps:main"
-# annotation
-annotation_update_description = "ensembl.io.genomio.annotation.update_description:main"
 # Manifest
 manifest_check_integrity = "ensembl.io.genomio.manifest.check_integrity:main"
 manifest_compute_stats = "ensembl.io.genomio.manifest.compute_stats:main"
@@ -145,22 +141,17 @@ seq_region_dump = "ensembl.io.genomio.seq_region.dump:main"
 seq_region_prepare = "ensembl.io.genomio.seq_region.prepare:main"
 
 [tool.setuptools]
-package-dir = {"" = "src/python"}
+package-dir = {"" = "src"}
 
 [tool.setuptools.dynamic]
 version = {attr = "ensembl.io.genomio.__version__"}
 
 [tool.setuptools.packages.find]
-where = ["src/python"]  # list of folders that contain the packages (["."] by default)
-
-# For additional information on `setuptools` configuration see:
-#    https://setuptools.pypa.io/en/latest/userguide/quickstart.html
-#    https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
-#    https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
+where = ["src"]
 
 [build-system]
 requires = [
-    "setuptools",
+    "setuptools >= 64",
     "setuptools-scm",
     "wheel"
 ]
@@ -185,19 +176,8 @@ disable = [
 max-attributes = 12
 max-branches = 15
 
-[tool.ruff]
-line-length = 110
-show-fixes = true
-
-[tool.ruff.format]
-docstring-code-format = true
-
-[tool.ruff.lint.per-file-ignores]
-# Ignore `F403` (unable to detect undefined names) in all `__init__.py` files
-"__init__.py" = ["F403"]
-
 [tool.mypy]
-mypy_path = "src/python"
+mypy_path = "src"
 disallow_untyped_defs = true
 explicit_package_bases = true
 ignore_missing_imports = true
@@ -210,7 +190,7 @@ addopts = [
     "--import-mode=importlib",
     "--tb=native",
 ]
-testpaths = ["src/python/tests"]
+testpaths = ["tests"]
 norecursedirs = ["data", "docs", "*.egg_info"]
 
 [tool.coverage.run]
@@ -232,3 +212,14 @@ exclude_lines = [
     # Do not complain about abstract methods, they are not run
     "@(abc\\.)?abstractmethod",
 ]
+
+[tool.ruff]
+line-length = 110
+show-fixes = true
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore `F403` (unable to detect undefined names) in all `__init__.py` files
+"__init__.py" = ["F403"]

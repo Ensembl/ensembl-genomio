@@ -26,8 +26,9 @@
       - cicd/gitlab/parts/python.gitlab-ci.yml
       - pyproject.toml
       - "*.py"
-      - src/python/**/*.py
+      - src/**/*.py
       - scripts/**/*.py
+      - tests/**/*.py
 
 ## Prepare and load the Python virtual environment
 
@@ -64,12 +65,12 @@ python:prepare_venv:
 python:pylint:src:
   extends: .python:pylint
   script:
-    - $PYLINT_CMD src/python/ensembl/io/genomio
+    - $PYLINT_CMD src/ensembl/io/genomio
 
 python:pylint:tests:
   extends: .python:pylint
   script:
-    - $PYLINT_CMD src/python/tests
+    - $PYLINT_CMD tests
 
 .python:mypy:
   extends: .python:test
@@ -79,12 +80,12 @@ python:pylint:tests:
 python:mypy:src:
   extends: .python:mypy
   script:
-    - $MYPY_CMD src/python/ensembl/io
+    - $MYPY_CMD src/ensembl/io
 
 python:mypy:tests:
   extends: .python:mypy
   script:
-    - $MYPY_CMD src/python/tests
+    - $MYPY_CMD tests
 
 python:black:
   extends: .python:test

@@ -19,7 +19,7 @@ inputs:
   python-version:
     description: "Python version"
     required: true
-    default: "3.10"
+    default: "3.12"
   tags:
     description: "Optional dependencies (via available tags) to install, e.g. [cicd]"
     required: true
