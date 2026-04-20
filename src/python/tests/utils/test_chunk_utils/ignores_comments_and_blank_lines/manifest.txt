@@ -1,0 +1,6 @@
+# comment
+
+a.txt
+
+b.txt.gz
+#trailing comment
