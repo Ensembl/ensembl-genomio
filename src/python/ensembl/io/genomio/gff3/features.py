@@ -24,7 +24,7 @@ from Bio.SeqFeature import SeqFeature, Location
 
 
 class GFFSeqFeature(SeqFeature):
-    """Extends `Bio.SeqFeature.SeqFeature` with sub_features, to be used for typing."""
+    """Extend `Bio.SeqFeature.SeqFeature` with sub_features, to be used for typing."""
 
     def __init__(
         self,
@@ -34,7 +34,7 @@ class GFFSeqFeature(SeqFeature):
         id: str = "<unknown id>",  # pylint: disable=W0622
         qualifiers: dict | None = None,
         sub_features: list[GFFSeqFeature] | None = None,
-    ):
+    ) -> None:
         super().__init__(location, type=type, id=id, qualifiers=qualifiers)
         if sub_features is None:
             sub_features = []

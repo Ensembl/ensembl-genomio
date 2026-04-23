@@ -15,17 +15,16 @@
 """Update a genome metadata file to include additional sequence regions (e.g. MT chromosome)."""
 
 __all__ = [
+    "amend_genome_metadata",
     "get_additions",
     "get_gbff_regions",
     "get_report_regions_names",
-    "amend_genome_metadata",
 ]
 
 import csv
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List, Tuple, Optional
 
 from Bio import SeqIO
 
@@ -39,12 +38,13 @@ from ensembl.utils.logging import init_logging_with_args
 _VERSION_END = re.compile(r"\.\d+$")
 
 
-def get_additions(report_path: PathLike, gbff_path: Optional[PathLike]) -> List[str]:
-    """Returns all `seq_regions` that are mentioned in the report but that are not in the data.
+def get_additions(report_path: PathLike, gbff_path: PathLike | None) -> list[str]:
+    """Return all `seq_regions` that are mentioned in the report but that are not in the data.
 
     Args:
         report_path: Path to the report file.
         gbff_path: Path to the GBFF file.
+
     """
     gbff_regions = set(get_gbff_regions(gbff_path))
     report_regions = get_report_regions_names(report_path)
@@ -56,15 +56,15 @@ def get_additions(report_path: PathLike, gbff_path: Optional[PathLike]) -> List[
                 additions.append(refseq_seq_name)
             else:
                 additions.append(genbank_seq_name)
-    additions = sorted(additions)
-    return additions
+    return sorted(additions)
 
 
-def get_gbff_regions(gbff_path: Optional[PathLike]) -> List[str]:
-    """Returns the `seq_region` data from a GBFF file.
+def get_gbff_regions(gbff_path: PathLike | None) -> list[str]:
+    """Return the `seq_region` data from a GBFF file.
 
     Args:
         gbff_path: GBFF file path to use.
+
     """
     seq_regions = []
     if gbff_path:
@@ -75,11 +75,12 @@ def get_gbff_regions(gbff_path: Optional[PathLike]) -> List[str]:
     return seq_regions
 
 
-def _report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
-    """Returns the assembly report as a CSV string, and its metadata as a dictionary.
+def _report_to_csv(report_path: PathLike) -> tuple[str, dict]:
+    """Return the assembly report as a CSV string, and its metadata as a dictionary.
 
     Args:
         report_path: Path to the assembly report file from INSDC/RefSeq.
+
     """
     data = ""
     metadata = {}
@@ -101,11 +102,12 @@ def _report_to_csv(report_path: PathLike) -> Tuple[str, Dict]:
     return data, metadata
 
 
-def get_report_regions_names(report_path: PathLike) -> List[Tuple[str, str]]:
-    """Returns a list of GenBank-RefSeq `seq_region` names from the assembly report file.
+def get_report_regions_names(report_path: PathLike) -> list[tuple[str, str]]:
+    """Return a list of GenBank-RefSeq `seq_region` names from the assembly report file.
 
     Args:
         report_path: Path to the assembly report file from INSDC/RefSeq.
+
     """
     # Get the report in a CSV format, easier to manipulate
     report_csv, _ = _report_to_csv(report_path)
@@ -129,15 +131,17 @@ def get_report_regions_names(report_path: PathLike) -> List[Tuple[str, str]]:
 def amend_genome_metadata(
     genome_infile: PathLike,
     genome_outfile: PathLike,
-    report_file: Optional[PathLike] = None,
-    genbank_file: Optional[PathLike] = None,
+    report_file: PathLike | None = None,
+    genbank_file: PathLike | None = None,
 ) -> None:
-    """
+    """Amend genome metadata from report and GBFF file.
+
     Args:
         genome_infile: Genome metadata following the `src/python/ensembl/io/genomio/data/schemas/genome.json`.
         genome_outfile: Amended genome metadata file.
         report_file: INSDC/RefSeq sequences report file.
         genbank_file: INSDC/RefSeq GBFF file.
+
     """
     genome_metadata = get_json(genome_infile)
     # Get additional sequences in the assembly but not in the data
@@ -160,7 +164,9 @@ def main() -> None:
         help="Input genome metadata file (following src/python/ensembl/io/genomio/data/schemas/genome.json)",
     )
     parser.add_argument_dst_path(
-        "--genome_outfile", required=True, help="Path to the new amended genome metadata file"
+        "--genome_outfile",
+        required=True,
+        help="Path to the new amended genome metadata file",
     )
     parser.add_argument_src_path("--report_file", help="INSDC/RefSeq sequences report file")
     parser.add_argument_src_path("--genbank_file", help="INSDC/RefSeq GBFF file")

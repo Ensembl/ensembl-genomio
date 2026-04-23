@@ -18,10 +18,9 @@
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
 from pathlib import Path
-from typing import Callable, ContextManager, Dict, Optional
+from typing import Callable, ContextManager
 
 import pytest
-from pytest import param, raises
 
 from ensembl.io.genomio.gff3.exceptions import GeneSegmentError, GFFParserError
 from ensembl.io.genomio.gff3.simplifier import GFFSimplifier
@@ -31,30 +30,30 @@ from ensembl.io.genomio.utils import print_json
 
 
 @pytest.mark.parametrize(
-    "genome_meta, expected_provider_name",
+    ("genome_meta", "expected_provider_name"),
     [
-        param({}, "GenBank", id="No metadata"),
-        param(
+        pytest.param({}, "GenBank", id="No metadata"),
+        pytest.param(
             {"assembly": {"provider_name": "LOREM", "accession": "GCA000"}},
             "LOREM",
             id="Explicit provider name",
         ),
-        param({"assembly": {"accession": "GCA00000"}}, "GenBank", id="Genbank from accession"),
-        param({"assembly": {"accession": "GCF00000"}}, "RefSeq", id="RefSeq from accession"),
-        param(
+        pytest.param({"assembly": {"accession": "GCA00000"}}, "GenBank", id="Genbank from accession"),
+        pytest.param({"assembly": {"accession": "GCF00000"}}, "RefSeq", id="RefSeq from accession"),
+        pytest.param(
             {"assembly": {"provider_name": "LOREM", "accession": "GCA00000"}},
             "LOREM",
             id="Explicit provider_name, GCA accession",
         ),
-        param(
+        pytest.param(
             {"assembly": {"provider_name": "LOREM", "accession": "GCF00000"}},
             "LOREM",
             id="Explicit provider_name, GCF accession",
         ),
     ],
 )
-def test_get_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
-    """Tests `GFFSimplifier.get_provider_name().`"""
+def test_get_provider_name(tmp_path: Path, genome_meta: dict, expected_provider_name: str) -> None:
+    """Test `GFFSimplifier.get_provider_name()`."""
     # Write metadata file
     meta_path = tmp_path / "meta.json"
     print_json(meta_path, genome_meta)
@@ -63,18 +62,18 @@ def test_get_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_
 
 
 @pytest.mark.parametrize(
-    "genome_meta, expected_provider_name",
+    ("genome_meta", "expected_provider_name"),
     [
-        param({}, "GenBank", id="No metadata"),
-        param(
+        pytest.param({}, "GenBank", id="No metadata"),
+        pytest.param(
             {"assembly": {"provider_name": "LOREM", "accession": "GCA000"}},
             "LOREM",
             id="Explicit provider name",
         ),
     ],
 )
-def test_init_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
-    """Tests `GFFSimplifier.__init__` to set the `provider_name` to its `FunctionalAnnotations` attrib."""
+def test_init_provider_name(tmp_path: Path, genome_meta: dict, expected_provider_name: str) -> None:
+    """Test `GFFSimplifier.__init__` to set the `provider_name` to its `FunctionalAnnotations` attrib."""
     # Write metadata file
     meta_path = tmp_path / "meta.json"
     print_json(meta_path, genome_meta)
@@ -101,14 +100,14 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff",
+    ("in_gff", "expected_gff"),
     [
-        param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
-        param("lone/transcript.gff", "lone/transcript_simped.gff", id="lone transcript"),
-        param("lone/trna.gff", "lone/trna_simped.gff", id="lone tRNA"),
-        param("lone/rrna.gff", "lone/rrna_simped.gff", id="lone rRNA"),
-        param("lone/mrna.gff", "lone/mrna_simped.gff", id="lone mRNA"),
-        param("lone/mrna_pseudo.gff", "lone/mrna_pseudo_simped.gff", id="lone pseudo mRNA"),
+        pytest.param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
+        pytest.param("lone/transcript.gff", "lone/transcript_simped.gff", id="lone transcript"),
+        pytest.param("lone/trna.gff", "lone/trna_simped.gff", id="lone tRNA"),
+        pytest.param("lone/rrna.gff", "lone/rrna_simped.gff", id="lone rRNA"),
+        pytest.param("lone/mrna.gff", "lone/mrna_simped.gff", id="lone mRNA"),
+        pytest.param("lone/mrna_pseudo.gff", "lone/mrna_pseudo_simped.gff", id="lone pseudo mRNA"),
     ],
 )
 def test_create_gene_for_lone_transcript(
@@ -126,11 +125,11 @@ def test_create_gene_for_lone_transcript(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff",
+    ("in_gff", "expected_gff"),
     [
-        param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
-        param("lone/cds.gff", "lone/cds_simped.gff", id="lone CDS"),
-        param("lone/cds_pseudo.gff", "lone/cds_pseudo_simped.gff", id="lone pseudo CDS"),
+        pytest.param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
+        pytest.param("lone/cds.gff", "lone/cds_simped.gff", id="lone CDS"),
+        pytest.param("lone/cds_pseudo.gff", "lone/cds_pseudo_simped.gff", id="lone pseudo CDS"),
     ],
 )
 def test_create_gene_for_lone_cds(
@@ -148,12 +147,16 @@ def test_create_gene_for_lone_cds(
 
 
 @pytest.mark.parametrize(
-    "in_type, in_mobile_type, in_product, out_type, out_description, expectation",
+    ("in_type", "in_mobile_type", "in_product", "out_type", "out_description", "expectation"),
     [
-        param("gene", None, None, "gene", None, does_not_raise(), id="Gene, skip"),
-        param("transposable_element", None, None, "transposable_element", None, does_not_raise(), id="TE"),
-        param("mobile_genetic_element", None, None, "transposable_element", None, does_not_raise(), id="MGE"),
-        param(
+        pytest.param("gene", None, None, "gene", None, does_not_raise(), id="Gene, skip"),
+        pytest.param(
+            "transposable_element", None, None, "transposable_element", None, does_not_raise(), id="TE"
+        ),
+        pytest.param(
+            "mobile_genetic_element", None, None, "transposable_element", None, does_not_raise(), id="MGE"
+        ),
+        pytest.param(
             "transposable_element",
             "transposon",
             None,
@@ -162,7 +165,7 @@ def test_create_gene_for_lone_cds(
             does_not_raise(),
             id="MGE, transposon",
         ),
-        param(
+        pytest.param(
             "transposable_element",
             "transposon:LOREM",
             None,
@@ -171,7 +174,7 @@ def test_create_gene_for_lone_cds(
             does_not_raise(),
             id="MGE, transposon named",
         ),
-        param(
+        pytest.param(
             "transposable_element",
             "retrotransposon:LOREM",
             None,
@@ -180,16 +183,16 @@ def test_create_gene_for_lone_cds(
             does_not_raise(),
             id="MGE, retrotransposon named",
         ),
-        param(
+        pytest.param(
             "transposable_element",
             "UNKNOWNtransposon:LOREM",
             None,
             "transposable_element",
             None,
-            raises(GFFParserError),
+            pytest.raises(GFFParserError),
             id="MGE, unknown type",
         ),
-        param(
+        pytest.param(
             "transposable_element",
             "transposon",
             "PROD",
@@ -202,10 +205,10 @@ def test_create_gene_for_lone_cds(
 )
 def test_normalize_non_gene(
     in_type: str,
-    in_mobile_type: Optional[str],
-    in_product: Optional[str],
+    in_mobile_type: str | None,
+    in_product: str | None,
     out_type: str,
-    out_description: Optional[str],
+    out_description: str | None,
     expectation: ContextManager,
 ) -> None:
     """Test non-gene normalization."""
@@ -229,20 +232,24 @@ def test_normalize_non_gene_not_implemented() -> None:
     simp = GFFSimplifier()
     simp._biotypes = {"non_gene": {"supported": ["non_gene_name"]}}  # pylint: disable=protected-access
     feat = GFFSeqFeature(None, type="non_gene_name")
-    with raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):
         simp.normalize_non_gene(feat)
 
 
 @pytest.mark.parametrize(
-    "in_type, tr_name, out_type, expectation",
+    ("in_type", "tr_name", "out_type", "expectation"),
     [
-        param("mRNA", "", "mRNA", does_not_raise(), id="mRNA no change"),
-        param("C_gene_segment", "", "C_gene_segment", raises(GeneSegmentError), id="no standard name"),
-        param("C_gene_segment", "immunoglobulin", "IG_C_gene", does_not_raise(), id="C immunoglobulin"),
-        param("C_gene_segment", "ig", "IG_C_gene", does_not_raise(), id="C ig"),
-        param("V_gene_segment", "t-cell", "TR_V_gene", does_not_raise(), id="V t-cell"),
-        param("V_gene_segment", "T_cell", "TR_V_gene", does_not_raise(), id="V T_cell"),
-        param("V_gene_segment", "Lorem Ipsum", "", raises(GeneSegmentError), id="V T_cell"),
+        pytest.param("mRNA", "", "mRNA", does_not_raise(), id="mRNA no change"),
+        pytest.param(
+            "C_gene_segment", "", "C_gene_segment", pytest.raises(GeneSegmentError), id="no standard name"
+        ),
+        pytest.param(
+            "C_gene_segment", "immunoglobulin", "IG_C_gene", does_not_raise(), id="C immunoglobulin"
+        ),
+        pytest.param("C_gene_segment", "ig", "IG_C_gene", does_not_raise(), id="C ig"),
+        pytest.param("V_gene_segment", "t-cell", "TR_V_gene", does_not_raise(), id="V t-cell"),
+        pytest.param("V_gene_segment", "T_cell", "TR_V_gene", does_not_raise(), id="V T_cell"),
+        pytest.param("V_gene_segment", "Lorem Ipsum", "", pytest.raises(GeneSegmentError), id="V T_cell"),
     ],
 )
 def test_format_gene_segments(
@@ -262,12 +269,12 @@ def test_format_gene_segments(
 
 
 @pytest.mark.parametrize(
-    "has_cds, cds_name, out_type, expectation",
+    ("has_cds", "cds_name", "out_type", "expectation"),
     [
-        param(False, "", "", raises(GeneSegmentError), id="No CDS"),
-        param(True, "", "", raises(GeneSegmentError), id="CDS no info"),
-        param(True, "ig", "IG_C_gene", does_not_raise(), id="C ig"),
-        param(True, "t-cell", "TR_C_gene", does_not_raise(), id="C t-cell"),
+        pytest.param(False, "", "", pytest.raises(GeneSegmentError), id="No CDS"),
+        pytest.param(True, "", "", pytest.raises(GeneSegmentError), id="CDS no info"),
+        pytest.param(True, "ig", "IG_C_gene", does_not_raise(), id="C ig"),
+        pytest.param(True, "t-cell", "TR_C_gene", does_not_raise(), id="C t-cell"),
     ],
 )
 def test_format_gene_segments_cds(
@@ -289,10 +296,10 @@ def test_format_gene_segments_cds(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff",
+    ("in_gff", "expected_gff"),
     [
-        param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
-        param("clean/extra.gff", "clean/extra_clean.gff", id="ok gene with extra attribs"),
+        pytest.param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
+        pytest.param("clean/extra.gff", "clean/extra_clean.gff", id="ok gene with extra attribs"),
     ],
 )
 def test_clean_gene(
@@ -310,14 +317,18 @@ def test_clean_gene(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    ("in_gff", "expected_gff", "expectation"),
     [
-        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
-        param("gene_ignored.gff", None, raises(IgnoredFeatureError), id="gene ignored"),
-        param("gene_unsupported.gff", None, raises(UnsupportedFeatureError), id="gene unsupported"),
-        param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
-        param("ok_protein_coding_gene.gff", "ok_gene.gff", does_not_raise(), id="ok protein_coding_gene"),
-        param(
+        pytest.param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
+        pytest.param("gene_ignored.gff", None, pytest.raises(IgnoredFeatureError), id="gene ignored"),
+        pytest.param(
+            "gene_unsupported.gff", None, pytest.raises(UnsupportedFeatureError), id="gene unsupported"
+        ),
+        pytest.param("mobile_te.gff", "mobile_te.gff", does_not_raise(), id="TE"),
+        pytest.param(
+            "ok_protein_coding_gene.gff", "ok_gene.gff", does_not_raise(), id="ok protein_coding_gene"
+        ),
+        pytest.param(
             "ok_tr_ignored.gff",
             "ok_gene.gff",
             does_not_raise(),
@@ -330,7 +341,7 @@ def test_simpler_gff3_feature(
     tmp_path: Path,
     assert_files: Callable,
     in_gff: PathLike,
-    expected_gff: Optional[PathLike],
+    expected_gff: PathLike | None,
     expectation: ContextManager,
 ) -> None:
     """Test simplifying one gene (from a GFF3 file)."""
@@ -343,12 +354,14 @@ def test_simpler_gff3_feature(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    ("in_gff", "expected_gff", "expectation"),
     [
-        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
-        param("bad_gene_type.gff", "", raises(GFFParserError), id="Unsupported gene type"),
-        param("bad_tr_type.gff", "", raises(GFFParserError), id="Unsupported transcript type"),
-        param("bad_subtr_type.gff", "", raises(GFFParserError), id="Unsupported subtranscript type"),
+        pytest.param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
+        pytest.param("bad_gene_type.gff", "", pytest.raises(GFFParserError), id="Unsupported gene type"),
+        pytest.param("bad_tr_type.gff", "", pytest.raises(GFFParserError), id="Unsupported transcript type"),
+        pytest.param(
+            "bad_subtr_type.gff", "", pytest.raises(GFFParserError), id="Unsupported subtranscript type"
+        ),
     ],
 )
 def test_simpler_gff3(
@@ -371,13 +384,13 @@ def test_simpler_gff3(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, allow_cds",
+    ("in_gff", "expected_gff", "allow_cds"),
     [
-        param("ok_gene.gff", "ok_gene.gff", False, id="ok gene"),
-        param("ok_gene.gff", "ok_gene.gff", True, id="ok gene, allow pseudo CDS"),
-        param("pseudogene.gff", "pseudogene.gff", False, id="ok pseudogene"),
-        param("pseudogene_cds.gff", "pseudogene_cds_removed.gff", False, id="pseudogene cds removed"),
-        param("pseudogene_cds.gff", "pseudogene_cds.gff", True, id="pseudogene cds kept"),
+        pytest.param("ok_gene.gff", "ok_gene.gff", False, id="ok gene"),
+        pytest.param("ok_gene.gff", "ok_gene.gff", True, id="ok gene, allow pseudo CDS"),
+        pytest.param("pseudogene.gff", "pseudogene.gff", False, id="ok pseudogene"),
+        pytest.param("pseudogene_cds.gff", "pseudogene_cds_removed.gff", False, id="pseudogene cds removed"),
+        pytest.param("pseudogene_cds.gff", "pseudogene_cds.gff", True, id="pseudogene cds kept"),
     ],
 )
 def test_simpler_gff3_pseudogene(
@@ -399,18 +412,20 @@ def test_simpler_gff3_pseudogene(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, skip_unrecognized, expectation",
+    ("in_gff", "expected_gff", "skip_unrecognized", "expectation"),
     [
-        param("bad_gene_type.gff", "", False, raises(GFFParserError), id="Unset skip unrecognized, fail"),
-        param(
+        pytest.param(
+            "bad_gene_type.gff", "", False, pytest.raises(GFFParserError), id="Unset skip unrecognized, fail"
+        ),
+        pytest.param(
             "bad_gene_type.gff",
             "bad_gene_type_skipped.gff",
             True,
             does_not_raise(),
             id="True skip unrecognized, no fail",
         ),
-        param("bad_gene_type.gff", "", False, raises(GFFParserError), id="bad type, fail"),
-        param("ok_gene.gff", "ok_gene.gff", False, does_not_raise(), id="ok type, fail"),
+        pytest.param("bad_gene_type.gff", "", False, pytest.raises(GFFParserError), id="bad type, fail"),
+        pytest.param("ok_gene.gff", "ok_gene.gff", False, does_not_raise(), id="ok type, fail"),
     ],
 )
 def test_simpler_gff3_skip(
@@ -434,21 +449,21 @@ def test_simpler_gff3_skip(
 
 
 @pytest.mark.parametrize(
-    "genome_file, in_gff, expected_gff",
+    ("genome_file", "in_gff", "expected_gff"),
     [
-        param(
+        pytest.param(
             None,
             "genes_badnames.gff",
             "genes_badnames_noname.gff",
             id="Genes with bad names, no genome",
         ),
-        param(
+        pytest.param(
             "genome_no_brc4.json",
             "genes_badnames.gff",
             "genes_badnames_noname.gff",
             id="Genes with bad names, genome not BRC4",
         ),
-        param(
+        pytest.param(
             "genome_brc4.json",
             "genes_badnames.gff",
             "genes_badnames_brc4name.gff",
@@ -460,60 +475,57 @@ def test_gffsimplifier_with_genome(
     data_dir: Path,
     tmp_path: Path,
     assert_files: Callable,
-    genome_file: Optional[PathLike],
+    genome_file: PathLike | None,
     in_gff: PathLike,
     expected_gff: PathLike,
 ) -> None:
     """Test simplifying genes from GFF3 files."""
     input_gff = data_dir / in_gff
     output_gff = tmp_path / in_gff
-    if genome_file is None:
-        simp = GFFSimplifier()
-    else:
-        simp = GFFSimplifier(genome_path=data_dir / genome_file)
+    simp = GFFSimplifier() if genome_file is None else GFFSimplifier(genome_path=data_dir / genome_file)
     simp.simpler_gff3(input_gff)
     simp.records.to_gff(output_gff)
     assert_files(output_gff, data_dir / expected_gff)
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    ("in_gff", "expected_gff", "expectation"),
     [
-        param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="normal gene"),
-        param(
+        pytest.param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="normal gene"),
+        pytest.param(
             "mirna/gene.gff",
             "mirna/gene_simped.gff",
             does_not_raise(),
             id="gene + primary_transcript + miRNA",
         ),
-        param(
+        pytest.param(
             "mirna/pseudogene.gff",
             "mirna/pseudogene_simped.gff",
             does_not_raise(),
             id="gene + primary_transcript - miRNA",
         ),
-        param(
+        pytest.param(
             "mirna/nogene.gff",
             "mirna/nogene_simped.gff",
             does_not_raise(),
             id="primary_transcript + miRNA",
         ),
-        param(
+        pytest.param(
             "mirna/pseudo_nogene.gff",
             "mirna/pseudo_nogene_simped.gff",
             does_not_raise(),
             id="primary_transcript - miRNA",
         ),
-        param(
+        pytest.param(
             "mirna/unsupported_tr.gff",
             "",
-            raises(GFFParserError, match="Unknown subtype"),
+            pytest.raises(GFFParserError, match="Unknown subtype"),
             id="gene + primary_transcript + mRNA, not supported",
         ),
-        param(
+        pytest.param(
             "mirna/two_primary.gff",
             "",
-            raises(GFFParserError, match="too many sub_features"),
+            pytest.raises(GFFParserError, match="too many sub_features"),
             id="gene + 2x primary_transcript, not supported",
         ),
     ],

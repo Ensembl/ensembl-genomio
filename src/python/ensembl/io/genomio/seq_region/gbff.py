@@ -25,7 +25,7 @@ from typing import Mapping
 from Bio.SeqRecord import SeqRecord
 
 from ensembl.io.genomio.seq_region.mappings import MOLECULE_LOCATION
-from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
+from ensembl.io.genomio.seq_region.exceptions import UnknownMetadataError
 
 
 @dataclass
@@ -35,7 +35,7 @@ class GBFFRecord:
     record: SeqRecord
 
     def get_genbank_id(self) -> str | None:
-        """Returns the GenBank accession from a given sequence record (if present).
+        """Return the GenBank accession from a given sequence record (if present).
 
         Only useful for RefSeq sequence records, where the GenBank accession is stored in a comment.
 
@@ -53,21 +53,21 @@ class GBFFRecord:
         return match.group(1)
 
     def get_codon_table(self) -> int | None:
-        """Returns the codon table number from a given a GenBank sequence record (if present)."""
+        """Return the codon table number from a given a GenBank sequence record (if present)."""
         for feat in self.record.features:
             if "transl_table" in feat.qualifiers:
                 return int(feat.qualifiers["transl_table"][0])
         return None
 
     def get_organelle(self, molecule_location: Mapping[str, str] = MOLECULE_LOCATION) -> str | None:
-        """Returns the organelle location from the given GenBank record (if present).
+        """Return the organelle location from the given GenBank record (if present).
 
         Args:
             record: GenBank sequence record.
             molecule_location: Map of sequence type to SO location.
 
         Raises:
-            UnknownMetadata: If the location is not part of the controlled vocabulary.
+            UnknownMetadataError: If the location is not part of the controlled vocabulary.
 
         """
         location = None
@@ -83,10 +83,10 @@ class GBFFRecord:
             try:
                 location = molecule_location[organelle]
             except KeyError as exc:
-                raise UnknownMetadata(f"Unrecognized sequence location: {organelle}") from exc
+                raise UnknownMetadataError(f"Unrecognized sequence location: {organelle}") from exc
             break
         return location
 
     def is_circular(self) -> bool:
-        """Returns True if the record says that the sequence is circular, False otherwise."""
+        """Return True if the record says that the sequence is circular, False otherwise."""
         return self.record.annotations.get("topology", "") == "circular"

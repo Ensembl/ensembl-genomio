@@ -14,17 +14,19 @@
 # limitations under the License.
 """Check and allocate IDs for gene features in a GFF3 file."""
 
-__all__ = ["StableIDAllocator", "InvalidStableID"]
+__all__ = ["InvalidStableIDError", "StableIDAllocator"]
 
 from dataclasses import dataclass, field
 import logging
 import re
-from typing import Dict, List, Optional, Set
 
 from .features import GFFSeqFeature
 
 
-class InvalidStableID(ValueError):
+_MAX_NUMBER_OF_STABLE_IDS = 10
+
+
+class InvalidStableIDError(ValueError):
     """Raised when there is a problem with an stable ID."""
 
 
@@ -38,10 +40,10 @@ class StableIDAllocator:
     current_id_number: int = 0
     make_missing_stable_ids: bool = True
     prefix: str = "TMP_"
-    _loaded_ids: Set = field(default_factory=set)
+    _loaded_ids: set = field(default_factory=set)
 
-    def set_prefix(self, genome: Dict) -> None:
-        """Sets the ID prefix using the organism abbrev if it exists in the genome metadata."""
+    def set_prefix(self, genome: dict) -> None:
+        """Set the ID prefix using the organism abbrev if it exists in the genome metadata."""
         try:
             org = genome["BRC4"]["organism_abbrev"]
         except KeyError:
@@ -51,21 +53,21 @@ class StableIDAllocator:
         self.prefix = prefix
 
     def generate_gene_id(self) -> str:
-        """Returns a new unique gene stable_id with a prefix.
+        """Return a new unique gene stable_id with a prefix.
 
         The ID is made up of a prefix and a number, which is auto incremented.
 
         """
         self.current_id_number += 1
-        new_id = f"{self.prefix}{self.current_id_number}"
-        return new_id
+        return f"{self.prefix}{self.current_id_number}"
 
     def is_valid(self, stable_id: str) -> bool:
-        """Checks that the format of a stable ID is valid.
+        """Check that the format of a stable ID is valid.
+
         Args:
             stable_id: Stable ID to validate.
-        """
 
+        """
         if self.skip_gene_id_validation:
             logging.debug(f"Validation deactivated by user: '{stable_id}' not checked")
             return True
@@ -93,16 +95,16 @@ class StableIDAllocator:
         return True
 
     @staticmethod
-    def remove_prefix(stable_id: str, prefixes: List[str]) -> str:
-        """Returns the stable ID after removing its prefix (if any).
+    def remove_prefix(stable_id: str, prefixes: list[str]) -> str:
+        """Return the stable ID after removing its prefix (if any).
 
         If more than one prefix may be found, only the first one is removed.
 
         Args:
             stable_id: Stable ID to process.
             prefixes: List of prefixes to search for.
-        """
 
+        """
         for prefix in prefixes:
             if stable_id.startswith(prefix):
                 return stable_id[len(prefix) :]
@@ -110,10 +112,12 @@ class StableIDAllocator:
 
     @staticmethod
     def generate_transcript_id(gene_id: str, number: int) -> str:
-        """Returns a formatted transcript ID generated from a gene ID and number.
+        """Return a formatted transcript ID generated from a gene ID and number.
+
         Args:
             gene_id: Gene stable ID.
             number: Positive number.
+
         Raises:
             ValueError: If the number provided is not greater than zero.
 
@@ -121,11 +125,10 @@ class StableIDAllocator:
         if number < 1:
             raise ValueError("Number has to be a positive integer.")
 
-        transcript_id = f"{gene_id}_t{number}"
-        return transcript_id
+        return f"{gene_id}_t{number}"
 
     def normalize_cds_id(self, cds_id: str) -> str:
-        """Returns a normalized version of the provided CDS ID.
+        """Return a normalized version of the provided CDS ID.
 
         The normalisation implies to remove any unnecessary prefixes around the CDS ID. However, if
         the CDS ID is still not proper, an empty string will be returned.
@@ -134,7 +137,6 @@ class StableIDAllocator:
             cds_id: CDS ID to normalize.
 
         """
-
         prefixes = ["cds-", "cds:"]
         normalized_cds_id = StableIDAllocator.remove_prefix(cds_id, prefixes)
 
@@ -144,7 +146,7 @@ class StableIDAllocator:
         return normalized_cds_id
 
     def normalize_pseudogene_cds_id(self, pseudogene: GFFSeqFeature) -> None:
-        """Normalizes every CDS ID of the provided pseudogene.
+        """Normalize every CDS ID of the provided pseudogene.
 
         Ensure each CDS from a pseudogene has a proper ID:
         - Different from the gene
@@ -152,6 +154,7 @@ class StableIDAllocator:
 
         Args:
             pseudogene: Pseudogene feature.
+
         """
         for transcript in pseudogene.sub_features:
             for feat in transcript.sub_features:
@@ -161,14 +164,16 @@ class StableIDAllocator:
                         feat.id = f"{transcript.id}_cds"
                         feat.qualifiers["ID"] = feat.id
 
-    def normalize_gene_id(self, gene: GFFSeqFeature, refseq: Optional[bool] = False) -> str:
-        """Returns a normalized gene stable ID.
+    def normalize_gene_id(self, gene: GFFSeqFeature, refseq: bool | None = False) -> str:
+        """Return a normalized gene stable ID.
 
-        Removes any unnecessary prefixes, but will generate a new stable ID if the normalized one is
+        Remove any unnecessary prefixes, but will generate a new stable ID if the normalized one is
         not recognized as valid.
 
         Args:
             gene: Gene feature to normalize.
+            refseq: True if source is RefSeq, False otherwise.
+
         """
         prefixes = ["gene-", "gene:"]
         new_gene_id = StableIDAllocator.remove_prefix(gene.id, prefixes)
@@ -198,8 +203,8 @@ class StableIDAllocator:
                 while new_gene_id in self._loaded_ids:
                     number += 1
                     new_gene_id = f"{new_gene_id_base}_{number}"
-                    if number > 10:
-                        raise InvalidStableID(f"Duplicate ID {new_gene_id_base} (up to {new_gene_id})")
+                    if number > _MAX_NUMBER_OF_STABLE_IDS:
+                        raise InvalidStableIDError(f"Duplicate ID {new_gene_id_base} (up to {new_gene_id})")
                 self._loaded_ids.add(new_gene_id)
                 logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
                 return new_gene_id
@@ -209,4 +214,4 @@ class StableIDAllocator:
             new_gene_id = self.generate_gene_id()
             logging.debug(f"New ID: {new_gene_id} -> {new_gene_id}")
             return new_gene_id
-        raise InvalidStableID(f"Can't use invalid gene id for {gene}")
+        raise InvalidStableIDError(f"Can't use invalid gene id for {gene}")

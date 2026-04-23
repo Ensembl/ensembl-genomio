@@ -31,7 +31,7 @@ from .dbconnection_lite import DBConnectionLite
 
 
 def format_db_data(server_url: URL, dbs: list[str], brc_mode: bool = False) -> list[dict]:
-    """Returns a metadata list from the given databases on a server.
+    """Return a metadata list from the given databases on a server.
 
     Args:
         server_url: Server URL where all the databases are hosted.
@@ -42,6 +42,7 @@ def format_db_data(server_url: URL, dbs: list[str], brc_mode: bool = False) -> l
 
     Returns:
         List of dictionaries with 3 keys: "database", "species" and "division".
+
     """
     databases_data = []
     for db_name in dbs:
@@ -96,7 +97,7 @@ def get_core_dbs_metadata(
     db_list: Path | None = None,
     brc_mode: bool = False,
 ) -> list[dict]:
-    """Returns all the metadata fetched for the selected core databases.
+    """Return all the metadata fetched for the selected core databases.
 
     Args:
         server_url: Server URL where the core databases are stored.
@@ -109,6 +110,7 @@ def get_core_dbs_metadata(
 
     Returns:
         List of dictionaries with 3 keys: "database", "species" and "division".
+
     """
     db_list_file = None
     if db_list:
@@ -118,7 +120,11 @@ def get_core_dbs_metadata(
     server = CoreServer(server_url)
     logging.debug("Fetching databases...")
     databases = server.get_cores(
-        prefix=prefix, build=build, version=version, dbname_re=db_regex, db_list=db_list_file
+        prefix=prefix,
+        build=build,
+        version=version,
+        dbname_re=db_regex,
+        db_list=db_list_file,
     )
     logging.info(f"Got {len(databases)} databases")
     logging.debug("\n".join(databases))
@@ -152,7 +158,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 
 def main(arg_list: list[str] | None = None) -> None:
-    """Main script entry-point.
+    """Run module's entry-point.
 
     Args:
         arg_list: Arguments to parse passing list to parse_args().
