@@ -25,7 +25,7 @@ import re
 from typing import NotRequired, TypeAlias, TypedDict, TypeVar, cast
 
 from coverage import parser
-import ensembl.io.genomios
+import ensembl.io.genomio
 from ensembl.io.genomio.schemas.json.validate import schema_validator
 from ensembl.io.genomio.utils.agp_utils import AgpEntry, build_component_index, lift_range, parse_agp
 from ensembl.io.genomio.utils.chunk_utils import get_paths_from_manifest, validate_regex
