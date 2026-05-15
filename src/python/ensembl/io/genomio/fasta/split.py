@@ -25,12 +25,12 @@ import shutil
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
+import ensembl.io.genomio
 from ensembl.io.genomio.utils.chunk_utils import seq_description_without_id
 
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
-
 
 _NUMERIC_DIR_RE = re.compile(r"^[1-9]\d*$")
 
@@ -469,6 +469,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_log_arguments()
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
 
     args = parser.parse_args(argv)
     if hasattr(args, "min_chunk_length") and not hasattr(args, "max_seq_length_per_file"):

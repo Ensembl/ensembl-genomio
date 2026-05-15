@@ -27,6 +27,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+import ensembl.io.genomio
 from ensembl.io.genomio.utils.agp_utils import AgpEntry, parse_agp
 from ensembl.io.genomio.utils.chunk_utils import (
     get_paths_from_manifest,
@@ -426,6 +427,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "e.g. --chunk-id-regex '^(?P<base>.+)_(?P<start>\\d+)$'."
         ),
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
 
     args = parser.parse_args(argv)

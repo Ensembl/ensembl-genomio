@@ -24,6 +24,8 @@ from pathlib import Path
 import re
 from typing import NotRequired, TypeAlias, TypedDict, TypeVar, cast
 
+from coverage import parser
+import ensembl.io.genomios
 from ensembl.io.genomio.schemas.json.validate import schema_validator
 from ensembl.io.genomio.utils.agp_utils import AgpEntry, build_component_index, lift_range, parse_agp
 from ensembl.io.genomio.utils.chunk_utils import get_paths_from_manifest, validate_regex
@@ -759,6 +761,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Must define named groups 'base' and 'start'."
         ),
     )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
 
     args = parser.parse_args(argv)
