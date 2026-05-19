@@ -118,6 +118,7 @@ fasta_chunk = "ensembl.io.genomio.fasta.chunk:main"
 fasta_compare = "ensembl.io.genomio.fasta.compare:main"
 fasta_process = "ensembl.io.genomio.fasta.process:main"
 fasta_split = "ensembl.io.genomio.fasta.split:main"
+fasta_stats = "ensembl.io.genomio.fasta.stats:main"
 # GenBank
 genbank_download = "ensembl.io.genomio.genbank.download:main"
 genbank_extract_data = "ensembl.io.genomio.genbank.extract_data:main"
