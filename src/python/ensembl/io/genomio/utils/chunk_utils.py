@@ -66,7 +66,7 @@ def seq_description_without_id(record: SeqRecord) -> str:
     return desc
 
 
-def validate_regex(chunk_regex) -> re.Pattern[str]:
+def validate_regex(chunk_regex: str) -> re.Pattern[str]:
     """Compiles and validates the chunk-id regex, ensuring 'base' and 'start' capture groups present."""
     try:
         chunk_re = re.compile(chunk_regex)

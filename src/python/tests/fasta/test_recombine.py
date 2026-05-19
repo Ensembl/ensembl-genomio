@@ -31,7 +31,6 @@ from deepdiff import DeepDiff
 from ensembl.io.genomio.fasta import recombine
 from ensembl.io.genomio.utils.agp_utils import parse_agp
 
-
 CHUNK_RE = re.compile(r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$")
 
 
@@ -49,12 +48,12 @@ def test_fasta_record_cache_load_and_switch_files(data_dir: Path) -> None:
     loc2 = recombine.RecordLocation(path=fasta_file2, description="b desc")
 
     cache = recombine.FastaRecordCache()
-    rec_a_seq1 = cache.get("a_seq1", loc1)
+    rec_a_seq1 = cache.get_record("a_seq1", loc1)
     assert rec_a_seq1.id == "a_seq1"
     assert str(rec_a_seq1.seq) == "AAAA"
 
     # switch file
-    rec_b_seq1 = cache.get("b_seq1", loc2)
+    rec_b_seq1 = cache.get_record("b_seq1", loc2)
     assert rec_b_seq1.id == "b_seq1"
     assert str(rec_b_seq1.seq) == "GGG"
 
@@ -70,7 +69,7 @@ def test_fasta_record_cache_missing_record_raises_keyerror(data_dir: Path) -> No
     loc = recombine.RecordLocation(path=fasta_file, description="description")
     cache = recombine.FastaRecordCache()
     with pytest.raises(KeyError, match="Record 'missing' not found"):
-        cache.get("missing", loc)
+        cache.get_record("missing", loc)
 
 
 def test_fasta_record_cache_duplicate_id_within_file_raises(data_dir: Path) -> None:

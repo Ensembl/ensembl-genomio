@@ -62,7 +62,7 @@ class FastaRecordCache:
         self._current_path: Path | None = None
         self._records: dict[str, SeqRecord] = {}
 
-    def get(self, record_id: str, loc: RecordLocation) -> SeqRecord:
+    def get_record(self, record_id: str, loc: RecordLocation) -> SeqRecord:
         """
         Return a record by ID from the file indicated by ``loc``.
 
@@ -98,14 +98,14 @@ class FastaRecordCache:
         self._records = records
 
 
-def _parse_fasta_headers(path: Path) -> Iterator[tuple[str, str]]:
+def _parse_fasta_headers(file_path: Path) -> Iterator[tuple[str, str]]:
     """
     Iterates over FASTA headers, yielding (record_id, description) tuples.
 
     Yields:
         Tuples of (record_id, description_without_id).
     """
-    with open_gz_file(path) as fh:
+    with open_gz_file(file_path) as fh:
         for record in SeqIO.parse(fh, "fasta"):
             yield record.id, seq_description_without_id(record)
 
@@ -142,12 +142,12 @@ def _build_index(
     chunks: dict[str, list[tuple[int, str]]] = defaultdict(list)
     order = 0
 
-    for fasta_path in fasta_paths:
-        logging.info("Indexing headers in %s", fasta_path)
-        for record_id, desc in _parse_fasta_headers(fasta_path):
+    for input_fasta in fasta_paths:
+        logging.info("Indexing headers in %s", input_fasta)
+        for record_id, desc in _parse_fasta_headers(input_fasta):
             if record_id in locations:
                 raise ValueError(f"Duplicate FASTA record id encountered during indexing: {record_id}")
-            locations[record_id] = RecordLocation(path=fasta_path, description=desc)
+            locations[record_id] = RecordLocation(path=input_fasta, description=desc)
 
             m = chunk_re.match(record_id)
             base = m.group("base") if m else record_id
@@ -190,7 +190,7 @@ def _agp_component_seq(
 
     if orientation == "+":
         return sub
-    if orientation == "-":
+    elif orientation == "-":
         if not allow_revcomp:
             raise ValueError(
                 f"AGP has '-' orientation for component '{component_record.id}', "
@@ -240,7 +240,7 @@ def _records_from_agp(
                     f"AGP references component_id '{part.part_id}' not found in indexed FASTA headers."
                 )
 
-            rec = cache.get(part.part_id, loc)
+            rec = cache.get_record(part.part_id, loc)
             sequence_part = _agp_component_seq(
                 rec, part.part_start, part.part_end, part.orientation, allow_revcomp
             )
@@ -304,7 +304,7 @@ def _records_from_headers(
             loc = locations.get(base)
             if loc is None:
                 raise KeyError(f"Base record '{base}' not found in indexed headers.")
-            rec = cache.get(base, loc)
+            rec = cache.get_record(base, loc)
             yield SeqRecord(rec.seq, id=rec.id, description=loc.description)
             continue
 
@@ -318,7 +318,7 @@ def _records_from_headers(
             loc = locations.get(chunk_id)
             if loc is None:
                 raise KeyError(f"Chunk record '{chunk_id}' not found in indexed headers.")
-            rec = cache.get(chunk_id, loc)
+            rec = cache.get_record(chunk_id, loc)
 
             if prev_end is None:
                 parts.append(rec.seq)
