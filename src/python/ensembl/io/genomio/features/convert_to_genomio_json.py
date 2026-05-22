@@ -28,6 +28,8 @@ from pathlib import Path
 
 from Bio import SeqIO
 
+import ensembl.io.genomio
+
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.archive import open_gz_file
 
@@ -673,6 +675,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-provider", default="Ensembl")
     parser.add_argument("--is-primary", action="store_true")
     parser.add_log_arguments()
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
 
     args = parser.parse_args(argv)
     if args.analysis_logic_name not in DEFAULT_ANALYSIS_PARAMS:
