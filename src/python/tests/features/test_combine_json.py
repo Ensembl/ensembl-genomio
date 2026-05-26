@@ -28,7 +28,6 @@ from pytest import param
 
 from ensembl.io.genomio.features import combine_json
 
-
 CHUNK_RE = re.compile(r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$")
 
 
@@ -940,6 +939,64 @@ def test_combine_feature_docs(
 
 
 @pytest.mark.parametrize(
+    "consensus_key,valid_consensus_keys,expectation",
+    [
+        param(
+            _sha256_key("Alu", "SINE", "Alu", "ACGT"),
+            {_sha256_key("Alu", "SINE", "Alu", "ACGT")},
+            does_not_raise(
+                [
+                    _repeat_feature(
+                        seq_region="chr1",
+                        start=1,
+                        end=10,
+                        strand="+",
+                        consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
+                    )
+                ]
+            ),
+            id="valid_consensus_key_is_accepted",
+        ),
+        param(
+            _sha256_key("Alu", "SINE", "Alu", "ACGT"),
+            set(),
+            pytest.raises(ValueError, match=r"not present in repeat_consensus"),
+            id="missing_consensus_key_raises",
+        ),
+    ],
+)
+def test_combine_feature_docs_validates_repeat_consensus_keys(
+    tmp_path: Path,
+    consensus_key: str,
+    valid_consensus_keys: set[str],
+    expectation: ContextManager,
+) -> None:
+    """Tests ``_combine_feature_docs()`` validates repeat-consensus references when requested."""
+    document = {
+        "analysis": _analysis("rm"),
+        "source": _source("prov"),
+        "repeat_features": [
+            _repeat_feature(seq_region="chr1_chunk_start_1", start=1, end=10, consensus_key=consensus_key),
+        ],
+    }
+
+    with expectation as expected:
+        _, features, nr_features = combine_json._combine_feature_docs(
+            documents=[(tmp_path / "a.json", document)],
+            feature_list_key="repeat_features",
+            coerce_feature=combine_json._coerce_repeat_feature,
+            chunk_re=CHUNK_RE,
+            agp_by_component=None,
+            allow_revcomp=False,
+            required_top_level_keys=["analysis", "source"],
+            valid_consensus_keys=valid_consensus_keys,
+        )
+
+        assert features == expected
+        assert nr_features == 1
+
+
+@pytest.mark.parametrize(
     "test_dir_name,agp_filename,allow_revcomp,expectation",
     [
         param(
@@ -1025,6 +1082,7 @@ def test_combine_feature_docs(
     ],
 )
 def test_combine_repeat_json_paths(
+    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     data_dir: Path,
     tmp_path: Path,
     test_dir_name: str,
@@ -1036,6 +1094,7 @@ def test_combine_repeat_json_paths(
     Tests the `combine_json._combine_repeat_json_paths()` function.
 
     Args:
+        schema_validator_calls: Captured ``schema_validator`` calls.
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
         test_dir_name: Name of data subdirectory for the test case.
@@ -1124,6 +1183,7 @@ def test_combine_repeat_json_paths(
     ],
 )
 def test_combine_ncrna_json_paths(
+    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     data_dir: Path,
     tmp_path: Path,
     test_dir_name: str,
@@ -1135,6 +1195,7 @@ def test_combine_ncrna_json_paths(
     Tests the `combine_json._combine_ncrna_json_paths()` function.
 
     Args:
+        schema_validator_calls: Captured ``schema_validator`` calls.
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
         test_dir_name: Name of data subdirectory for the test case.
@@ -1219,6 +1280,7 @@ def test_combine_ncrna_json_paths(
     ],
 )
 def test_combine_feature_json(
+    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     data_dir: Path,
     tmp_path: Path,
     test_dir_name: str,
@@ -1230,6 +1292,7 @@ def test_combine_feature_json(
     Tests ``combine_json.combine_feature_json()`` for successful and failing file-based inputs.
 
     Args:
+        schema_validator_calls: Captured ``schema_validator`` calls.
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
         test_dir_name: Name of data subdirectory for the test case.

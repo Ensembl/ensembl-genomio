@@ -415,6 +415,7 @@ def _combine_feature_docs(
     agp_by_component: dict[str, list[AgpEntry]] | None,
     allow_revcomp: bool,
     required_top_level_keys: list[str],
+    valid_consensus_keys: set[str] | None = None,
 ) -> tuple[dict[str, JsonValue], list[Feature], int]:
     """
     Generic combination engine for feature-based JSON documents.
@@ -436,6 +437,7 @@ def _combine_feature_docs(
         allow_revcomp: Whether to allow reverse-orientation AGP lifting.
         required_top_level_keys: List of top-level keys that must be identical
             across all input documents.
+        valid_consensus_keys: Optional set of valid repeat_consensus keys.
 
     Returns:
         A tuple containing:
@@ -476,6 +478,15 @@ def _combine_feature_docs(
                 allow_revcomp=allow_revcomp,
                 source_path=p,
             )
+
+            if valid_consensus_keys is not None:
+                key = _feature_consensus_key(cast(RepeatFeature, lifted), source_path=p)
+                if key is not None and key not in valid_consensus_keys:
+                    raise ValueError(
+                        "repeat_features reference repeat_consensus key(s) not present in repeat_consensus: "
+                        f"{key} ({p})"
+                    )
+
             combined_features.append(lifted)
 
     if not any_docs:
@@ -527,23 +538,10 @@ def _combine_repeat_json_paths(
         agp_by_component=agp_by_component,
         allow_revcomp=allow_revcomp,
         required_top_level_keys=["analysis", "source"],
+        valid_consensus_keys=set(consensus_by_key.keys()),
     )
 
     repeat_features = cast(list[RepeatFeature], features)
-
-    missing: set[str] = set()
-    for feat in repeat_features:
-        key = _feature_consensus_key(feat, source_path=out_json)
-        if key is not None and key not in consensus_by_key:
-            missing.add(key)
-
-    if missing:
-        missing_list = ", ".join(sorted(missing)[:20])
-        extra = "" if len(missing) <= 20 else f" (+{len(missing) - 20} more)"
-        raise ValueError(
-            "repeat_features reference repeat_consensus key(s) not present in repeat_consensus: "
-            f"{missing_list}{extra}"
-        )
 
     combined_json: dict[str, JsonValue] = {
         "analysis": top_level["analysis"],
