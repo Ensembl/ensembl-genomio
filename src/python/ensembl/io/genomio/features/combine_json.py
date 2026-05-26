@@ -15,6 +15,8 @@
 
 """Combines repeat/ncRNA feature JSON documents from split/chunked inputs and performs coordinate liftover."""
 
+__all__ = ["JsonValue", "RepeatConsensus", "RepeatFeature", "NcrnaFeature", "combine_feature_json"]
+
 import argparse
 from collections.abc import Callable, Iterable, Iterator
 import hashlib

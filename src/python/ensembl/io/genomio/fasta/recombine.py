@@ -15,6 +15,8 @@
 
 """Recombines split/chunked FASTA outputs back into a single FASTA, optionally using an AGP."""
 
+__all__ = ["RecordLocation", "FastaRecordCache", "recombine_fasta"]
+
 import argparse
 from collections import defaultdict
 from collections.abc import Iterable, Iterator

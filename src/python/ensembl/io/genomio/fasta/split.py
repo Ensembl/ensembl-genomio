@@ -15,6 +15,8 @@
 
 """Split a FASTA file into multiple FASTA files, optionally chunking long sequences."""
 
+__all__ = ["OutputWriter", "split_fasta"]
+
 import argparse
 import logging
 from io import TextIOWrapper
