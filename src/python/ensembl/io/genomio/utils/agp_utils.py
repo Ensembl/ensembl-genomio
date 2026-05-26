@@ -61,8 +61,7 @@ def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tup
         obj_start = part.record_start + (start - part.part_start)
         obj_end = part.record_start + (end - part.part_start)
         return part.record, obj_start, obj_end
-
-    if part.orientation == "-":
+    elif part.orientation == "-":
         if not allow_revcomp:
             raise ValueError(
                 f"AGP has '-' orientation for component '{part.part_id}', but --allow-revcomp is not enabled."
