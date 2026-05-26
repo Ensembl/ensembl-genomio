@@ -516,7 +516,7 @@ def _combine_repeat_json_paths(
     Raises:
         ValueError:
             If:
-                - input files differ in required top-level fields (``analysis``, ``source``, ``ncrna_tool``),
+                - input files differ in required top-level fields (``analysis``, ``source``),
                 - no input files are provided,
                 - a feature has invalid coordinates (e.g. start > end),
                 - coordinate lifting fails due to invalid or ambiguous mapping.
