@@ -16,57 +16,88 @@
 
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
+from typing import ContextManager
 import pytest
 from pytest import param
-from typing import ContextManager
 
 from ensembl.io.genomio.utils import agp_utils
 
 
 @pytest.mark.parametrize(
-    "test_dir_name,agp_name,allow_revcomp,expectation",
+    "test_dir_name,agp_name,allow_revcomp,expect_error,error_pattern,check_type,check_data",
     [
         param(
             "ignores_comments",
             "comment.agp",
             False,
-            does_not_raise(("obj", "part", "+")),
+            False,
+            None,
+            "single",
+            ("obj", "part", "+"),
             id="ignores_comments",
         ),
         param(
             "handles_orientation",
             "minus_strand.agp",
             True,
-            does_not_raise(("obj", "part", "-")),
+            False,
+            None,
+            "single",
+            ("obj", "part", "-"),
             id="handles_minus_strand_when_allowed",
         ),
         param(
             "handles_orientation",
             "minus_strand.agp",
             False,
-            pytest.raises(ValueError, match=r"--allow-revcomp is not enabled"),
+            True,
+            r"--allow-revcomp is not enabled",
+            None,
+            None,
             id="rejects_minus_strand_when_not_allowed",
         ),
         param(
             "non_w_component",
             "repeat.agp",
             False,
-            pytest.raises(ValueError, match=r"Unsupported AGP component type"),
+            True,
+            r"Unsupported AGP component type",
+            None,
+            None,
             id="rejects_non_W_component",
         ),
         param(
             "empty_file",
             "empty.agp",
             False,
-            pytest.raises(ValueError, match=r"contained no component lines"),
+            True,
+            r"contained no component lines",
+            None,
+            None,
             id="rejects_empty_file",
         ),
         param(
             "truncated_line",
             "truncated.agp",
             False,
-            pytest.raises(ValueError, match=r"expected >= 9 columns"),
+            True,
+            r"expected >= 9 columns",
+            None,
+            None,
             id="rejects_truncated_line",
+        ),
+        param(
+            "multiple_objects",
+            "multi.agp",
+            False,
+            False,
+            None,
+            "multiple",
+            {
+                "keys": {"obj1", "obj2"},
+                "parts": {"obj1": [("part_a", "+")], "obj2": [("part_b", "+"), ("part_c", "+")]},
+            },
+            id="parses_multiple_objects",
         ),
     ],
 )
@@ -75,28 +106,48 @@ def test_parse_agp(
     test_dir_name: str,
     agp_name: str,
     allow_revcomp: bool,
-    expectation: ContextManager,
+    expect_error: bool,
+    error_pattern: str | None,
+    check_type: str | None,
+    check_data,
 ) -> None:
     """
     Tests the agp_utils.parse_agp() function.
 
+    Tests both single-object and multi-object AGP files, as well as error conditions.
+
     Args:
         data_dir: Module's test data directory fixture.
-        test_dir_name: Name of the subdirectory within the test data directory that contains the
-            AGP file being tested.
+        test_dir_name: Name of the subdirectory within the test data directory that contains the AGP file.
         agp_name: Name of the test AGP file.
         allow_revcomp: Boolean indicating whether minus strand entries are permitted.
-        expectation: Context manager for the expected outcome of the test (exception or not).
+        expect_error: Whether parsing should raise an error.
+        error_pattern: Regex pattern for the expected error message (if expect_error=True).
+        check_type: Type of check to perform ("single", "multiple", or None for error cases).
+        check_data: Data needed for assertions (varies by check_type).
     """
     test_dir = data_dir / test_dir_name
     agp_file = test_dir / agp_name
 
-    with expectation as expected:
+    if expect_error:
+        with pytest.raises(ValueError, match=error_pattern):
+            agp_utils.parse_agp(agp_file, allow_revcomp)
+    else:
         out = agp_utils.parse_agp(agp_file, allow_revcomp)
-        object_id, part_id, orientation = expected
-        assert object_id in out
-        assert out[object_id][0].part_id == part_id
-        assert out[object_id][0].orientation == orientation
+
+        if check_type == "single":
+            object_id, part_id, orientation = check_data
+            assert object_id in out
+            assert out[object_id][0].part_id == part_id
+            assert out[object_id][0].orientation == orientation
+
+        elif check_type == "multiple":
+            assert set(out.keys()) == check_data["keys"]
+            for obj_id, expected_parts in check_data["parts"].items():
+                assert len(out[obj_id]) == len(expected_parts)
+                for i, (expected_part_id, expected_orientation) in enumerate(expected_parts):
+                    assert out[obj_id][i].part_id == expected_part_id
+                    assert out[obj_id][i].orientation == expected_orientation
 
 
 def test_build_component_index_groups_by_part_id_and_sorts_within_component():

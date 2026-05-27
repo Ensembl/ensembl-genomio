@@ -60,6 +60,12 @@ from ensembl.io.genomio.utils import chunk_utils
             pytest.raises(ValueError, match="Manifest is not a file"),
             id="manifest_must_be_a_file",
         ),
+        param(
+            "empty_manifest",
+            "manifest.txt",
+            does_not_raise([]),
+            id="empty_manifest_returns_empty_list",
+        ),
     ],
 )
 def test_get_paths_from_manifest(
@@ -169,6 +175,11 @@ def test_validate_regex(
         ("seq1", "seq1 some annotation", "some annotation"),
         ("seq1", "seq1 seq1 description", "seq1 description"),
         ("seq1", "description without id", "description without id"),
+        (
+            "seq1",
+            "seq1 seq12 description starting with id but not equal",
+            "seq12 description starting with id but not equal",
+        ),
     ],
 )
 def test_description_without_id(seq_id: str, description: str, expected: str) -> None:
