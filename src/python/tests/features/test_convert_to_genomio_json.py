@@ -31,8 +31,8 @@ from ensembl.io.genomio.features.convert_to_genomio_json import (
     main,
     parse_args,
     parse_repeatmasker_out,
-    parse_rm_consensus_library,
     parse_trf_out,
+    _parse_rm_consensus_library,
     _map_rm_repeat_type,
 )
 
@@ -94,7 +94,7 @@ def test_map_rm_repeat_type(repeat_type: str, expected: str) -> None:
 
 def test_parse_rm_consensus_library(data_dir: Path) -> None:
     """
-    Tests the `parse_rm_consensus_library()` function.
+    Tests the `_parse_rm_consensus_library()` internal helper.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -128,7 +128,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
         ("Bar", "Unknown", "Unknown"): _sha256_key("Bar", "Unknown", "Unknown", "ccgg"),
     }
 
-    consensus_keys_by_triplet, consensuses_by_key = parse_rm_consensus_library(fasta_path)
+    consensus_keys_by_triplet, consensuses_by_key = _parse_rm_consensus_library(fasta_path)
 
     assert consensus_keys_by_triplet == expected_keys_by_triplet
     assert consensuses_by_key == expected_consensuses

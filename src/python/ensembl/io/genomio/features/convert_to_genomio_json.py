@@ -34,6 +34,16 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.archive import open_gz_file
 
 
+__all__ = [
+    "Consensus",
+    "parse_args",
+    "parse_repeatmasker_out",
+    "parse_trf_out",
+    "create_genomio_json",
+    "main",
+]
+
+
 @dataclass(frozen=True)
 class Consensus:
     name: str
@@ -238,7 +248,7 @@ def _has_valid_parsed_coordinates(
     return no_warnings
 
 
-def parse_rm_consensus_library(
+def _parse_rm_consensus_library(
     rm_consensus_lib_path: Path,
 ) -> tuple[dict[tuple[str, str, str], str], dict[str, Consensus]]:
     """
@@ -304,7 +314,7 @@ def parse_repeatmasker_out(
     consensus_keys_by_triplet: dict[tuple[str, str, str], str] = {}
     consensuses_by_key: dict[str, Consensus] = {}
     if rm_consensus_lib_path is not None:
-        consensus_keys_by_triplet, consensuses_by_key = parse_rm_consensus_library(rm_consensus_lib_path)
+        consensus_keys_by_triplet, consensuses_by_key = _parse_rm_consensus_library(rm_consensus_lib_path)
 
     features: list[dict] = []
     with open_gz_file(input_path) as fh:
