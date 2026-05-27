@@ -101,7 +101,7 @@ def test_write_fasta_stats(tmp_path: Path) -> None:
     """
     output_file = tmp_path / "stats.txt"
 
-    stats.write_fasta_stats(stats.FastaStats(longest=4, total=10, n_seqs=3), output_file)
+    stats._write_fasta_stats(stats.FastaStats(longest=4, total=10, n_seqs=3), output_file)
 
     assert output_file.read_text(encoding="utf-8") == "4 10 3\n"
 

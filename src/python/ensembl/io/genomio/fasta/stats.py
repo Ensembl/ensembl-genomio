@@ -26,12 +26,33 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.logging import init_logging_with_args
 
+__all__ = [
+    "FastaStats",
+    "compute_fasta_stats",
+    "parse_args",
+    "main",
+]
+
 
 @dataclass(frozen=True)
 class FastaStats:
     longest: int
     total: int
     n_seqs: int
+
+
+def _write_fasta_stats(stats: FastaStats, output_file: Path) -> None:
+    """
+    Write FASTA statistics to the output file.
+
+    Args:
+        stats: FASTA statistics to write.
+        output: Path to the output text file.
+    """
+    output_file.write_text(
+        f"{stats.longest} {stats.total} {stats.n_seqs}\n",
+        encoding="utf-8",
+    )
 
 
 def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
@@ -70,21 +91,7 @@ def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
         total += current
 
     output_file = output_file or Path(fasta_file).with_suffix(".stats.txt")
-    write_fasta_stats(FastaStats(longest=longest, total=total, n_seqs=n_seqs), output_file)
-
-
-def write_fasta_stats(stats: FastaStats, output_file: Path) -> None:
-    """
-    Write FASTA statistics to the output file.
-
-    Args:
-        stats: FASTA statistics to write.
-        output: Path to the output text file.
-    """
-    output_file.write_text(
-        f"{stats.longest} {stats.total} {stats.n_seqs}\n",
-        encoding="utf-8",
-    )
+    _write_fasta_stats(FastaStats(longest=longest, total=total, n_seqs=n_seqs), output_file)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
