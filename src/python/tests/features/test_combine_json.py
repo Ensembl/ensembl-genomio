@@ -32,7 +32,9 @@ CHUNK_RE = re.compile(r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$")
 
 
 @pytest.fixture()
-def schema_validator_calls(monkeypatch: pytest.MonkeyPatch):
+def schema_validator_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[tuple[tuple[object, ...], dict[str, object]]]:
     """
     Records calls made to schema_validator and replaces it with a no-op.
 
