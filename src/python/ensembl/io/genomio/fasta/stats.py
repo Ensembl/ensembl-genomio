@@ -48,7 +48,11 @@ def _write_fasta_stats(stats: FastaStats, output_file: Path) -> None:
         output: Path to the output text file.
     """
     output_file.write_text(
-        f"{stats.longest} {stats.total} {stats.n_seqs}\n",
+        (
+            f"longest sequence (bp): {stats.longest}\n"
+            f"total sequence length (bp): {stats.total}\n"
+            f"number of sequences: {stats.n_seqs}\n"
+        ),
         encoding="utf-8",
     )
 
