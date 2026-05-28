@@ -33,14 +33,11 @@ import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.archive import open_gz_file
 
-
 __all__ = [
     "Consensus",
-    "parse_args",
     "parse_repeatmasker_out",
     "parse_trf_out",
     "create_genomio_json",
-    "main",
 ]
 
 
