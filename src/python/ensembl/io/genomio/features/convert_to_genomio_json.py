@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -50,7 +48,7 @@ class Consensus:
 
     def sha256_key(self) -> str:
         """
-        Return a normalized SHA256 digest for this consensus record.
+        Returns a normalized SHA256 digest for this consensus record.
 
         The digest is computed from the consensus name, repeat class, repeat type,
         and normalized sequence content.
@@ -124,7 +122,7 @@ TRF_PARAMETERS_RE = re.compile(r"^Parameters:\s+(?P<params>.+)\s*$")
 
 def _parse_int(token: str, field_name: str, raw_line: str, path: Path) -> int:
     """
-    Parse an integer field from TRF output.
+    Parses an integer field from TRF output.
 
     Args:
         token: Raw token to parse.
@@ -146,7 +144,7 @@ def _parse_int(token: str, field_name: str, raw_line: str, path: Path) -> int:
 
 def _parse_float(token: str, field_name: str, raw_line: str, path: Path) -> float:
     """
-    Parse a floating-point field from TRF output.
+    Parses a floating-point field from TRF output.
 
     Args:
         token: Raw token to parse.
@@ -179,7 +177,7 @@ def _file_last_modified_time(file_path: Path) -> str:
 
 def _map_rm_repeat_type(repeat_type: str) -> str:
     """
-    Map a raw RepeatMasker repeat type to a GenomIO repeat category.
+    Maps a raw RepeatMasker repeat type to a GenomIO repeat category.
 
     Args:
         repeat_type: Raw repeat type string extracted from RepeatMasker output.
@@ -202,7 +200,7 @@ def _has_valid_parsed_coordinates(
     line: str,
 ) -> bool:
     """
-    Validate parsed coordinate values for a feature.
+    Validates parsed coordinate values for a feature.
 
     Args:
         seq_region_start: Start coordinate on the sequence region.
@@ -249,7 +247,7 @@ def _parse_rm_consensus_library(
     rm_consensus_lib_path: Path,
 ) -> tuple[dict[tuple[str, str, str], str], dict[str, Consensus]]:
     """
-    Parse a RepeatMasker consensus library FASTA file into a dictionary of Consensus records.
+    Parses a RepeatMasker consensus library FASTA file into a dictionary of Consensus records.
 
     The parser expects FASTA headers in the format:
         >consensus_name#repeat_class/repeat_type
@@ -413,7 +411,7 @@ def parse_repeatmasker_out(
 
 def parse_trf_out(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
     """
-    Parse a TRF .dat file into repeat feature dictionaries and consensus records.
+    Parses a TRF .dat file into repeat feature dictionaries and consensus records.
 
     Coordinates are converted from TRF's sequence-relative coordinates to genomic
     coordinates if the header provides a window like:
@@ -552,7 +550,7 @@ def create_genomio_json(
     is_primary: bool,
 ) -> None:
     """
-    Create a GenomIO JSON document from feature identificationtool output.
+    Creates a GenomIO JSON document from feature identificationtool output.
 
     Args:
         input: Path to the input file containing repeat masking results (e.g. RepeatMasker .out file).
@@ -567,9 +565,6 @@ def create_genomio_json(
         program_parameters: Parameters supplied to the program used for feature identification.
         source_provider: Name of the source provider for the features (e.g. "Ensembl").
         is_primary: Whether these features are primary or secondary annotations.
-
-    Returns:
-        None
     """
     features: list[dict[str, object]] = []
     consensuses_by_key: dict[str, Consensus] = {}
@@ -708,7 +703,7 @@ def main(argv: list[str] | None = None) -> None:
 
     Args:
         argv: Optional list of command-line arguments. If None, arguments are
-            taken from `sys.argv`.
+            taken from ``sys.argv``.
 
     Returns:
         None

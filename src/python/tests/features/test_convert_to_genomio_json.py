@@ -21,7 +21,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from ensembl.utils.archive import open_gz_file
 from pytest import param
 
 from ensembl.io.genomio.features import convert_to_genomio_json
@@ -48,7 +47,7 @@ def _sha256_key(name: str, repeat_class: str, repeat_type: str, seq: str) -> str
         seq: Consensus sequence.
 
     Returns:
-        Expected SHA-256 digest.
+        str:Expected SHA-256 digest.
     """
     norm_name = name.strip()
     norm_class = repeat_class.strip()
@@ -348,7 +347,7 @@ def test_parse_repeatmasker_out_errors(data_dir: Path, filename: str, error_patt
 
     Args:
         data_dir: Module's test data directory fixture.
-        filename: Input RepeatMasker `.out` filename containing invalid data.
+        filename: Name of RepeatMasker .out file containing invalid data.
         error_pattern: Regex expected in the raised error message.
     """
     out_path = data_dir / filename
