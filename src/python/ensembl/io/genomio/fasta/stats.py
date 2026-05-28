@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -16,13 +14,14 @@
 # limitations under the License.
 """Compute longest, total, and count statistics for FASTA records."""
 
+from dataclasses import dataclass
 import argparse
 import json
 import logging
-from dataclasses import dataclass
 from pathlib import Path
 
 import ensembl.io.genomio
+from ensembl.io.genomio.utils import json_utils
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.logging import init_logging_with_args
@@ -40,39 +39,13 @@ class FastaStats:
     n_seqs: int
 
 
-def _write_fasta_stats(stats: FastaStats, output_file: Path) -> None:
-    """
-    Write FASTA statistics to the output JSON file.
-
-    Args:
-        stats: FASTA statistics to write.
-        output_file: Path to the output JSON file.
-    """
-    output_file.write_text(
-        json.dumps(
-            {
-                "longest_seq": stats.longest,
-                "total_seq_length": stats.total,
-                "nr_seqs": stats.n_seqs,
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-
-
 def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
     """
     Compute basic FASTA stats in a single streaming pass.
 
     Args:
         fasta_file: Path to raw or compressed input FASTA file.
-        output_file: Path to the output stats JSON file.
-
-    Returns:
-        None
+        output_file: Path to the output stats JSON file (defaults to <fasta_file>.stats.json if `None`).
     """
     longest = 0
     total = 0
@@ -96,8 +69,15 @@ def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
         longest = max(longest, current)
         total += current
 
+    stats = FastaStats(longest=longest, total=total, n_seqs=n_seqs)
+    json_content = {
+        "longest_seq": stats.longest,
+        "total_seq_length": stats.total,
+        "nr_seqs": stats.n_seqs,
+    }
+
     output_file = output_file or Path(fasta_file).with_suffix(".stats.json")
-    _write_fasta_stats(FastaStats(longest=longest, total=total, n_seqs=n_seqs), output_file)
+    json_utils.print_json(output_file, json_content)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -105,7 +85,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     Parse command-line arguments.
 
     Args:
-        argv: Optional command-line arguments. If None, argparse reads from sys.argv.
+        argv: Optional command-line arguments. If None, argparse reads from ``sys.argv``.
 
     Returns:
         argparse.Namespace: Parsed command-line arguments.
@@ -136,10 +116,7 @@ def main(argv: list[str] | None = None) -> None:
     Run the FASTA stats command-line interface.
 
     Args:
-        argv: Optional command-line arguments. If None, argparse reads from sys.argv.
-
-    Returns:
-        int: Exit status code.
+        argv: Optional command-line arguments. If `None`, argparse reads from ``sys.argv``.
     """
     args = parse_args(argv)
 
