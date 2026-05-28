@@ -51,9 +51,9 @@ def _write_fasta_stats(stats: FastaStats, output_file: Path) -> None:
     output_file.write_text(
         json.dumps(
             {
-                "longest": stats.longest,
-                "total": stats.total,
-                "n_seqs": stats.n_seqs,
+                "longest_seq": stats.longest,
+                "total_seq_length": stats.total,
+                "nr_seqs": stats.n_seqs,
             },
             ensure_ascii=False,
             indent=2,

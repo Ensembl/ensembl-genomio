@@ -43,12 +43,12 @@ def write_gzip_text(path: Path, text: str) -> Path:
     [
         param(
             ">seq1\nACGT\nAC\n>seq2 description\nNNN\n",
-            {"longest": 6, "total": 9, "n_seqs": 2},
+            {"longest_seq": 6, "total_seq_length": 9, "nr_seqs": 2},
             id="Multiline records",
         ),
-        param(">empty\n>seq\nAC\n", {"longest": 2, "total": 2, "n_seqs": 2}, id="Empty record"),
-        param("", {"longest": 0, "total": 0, "n_seqs": 0}, id="Empty file"),
-        param("ACGT\n", {"longest": 0, "total": 0, "n_seqs": 0}, id="Sequence without record header"),
+        param(">empty\n>seq\nAC\n", {"longest_seq": 2, "total_seq_length": 2, "nr_seqs": 2}, id="Empty record"),
+        param("", {"longest_seq": 0, "total_seq_length": 0, "nr_seqs": 0}, id="Empty file"),
+        param("ACGT\n", {"longest_seq": 0, "total_seq_length": 0, "nr_seqs": 0}, id="Sequence without record header"),
     ],
 )
 def test_compute_fasta_stats(tmp_path: Path, contents: str, expected: str) -> None:
@@ -79,7 +79,7 @@ def test_compute_fasta_stats_default_output_file(tmp_path: Path) -> None:
 
     stats.compute_fasta_stats(fasta_file=fasta_file, output_file=None)
 
-    assert json.loads(output_file.read_text(encoding="utf-8")) == {"longest": 4, "total": 4, "n_seqs": 1}
+    assert json.loads(output_file.read_text(encoding="utf-8")) == {"longest_seq": 4, "total_seq_length": 4, "nr_seqs": 1}
 
 
 def test_compute_fasta_stats_reads_gzipped_fasta(tmp_path: Path) -> None:
@@ -94,7 +94,7 @@ def test_compute_fasta_stats_reads_gzipped_fasta(tmp_path: Path) -> None:
 
     stats.compute_fasta_stats(fasta_file=fasta_file, output_file=output_file)
 
-    assert json.loads(output_file.read_text(encoding="utf-8")) == {"longest": 4, "total": 4, "n_seqs": 1}
+    assert json.loads(output_file.read_text(encoding="utf-8")) == {"longest_seq": 4, "total_seq_length": 4, "nr_seqs": 1}
 
 
 def test_write_fasta_stats(tmp_path: Path) -> None:
@@ -108,7 +108,7 @@ def test_write_fasta_stats(tmp_path: Path) -> None:
 
     stats._write_fasta_stats(stats.FastaStats(longest=4, total=10, n_seqs=3), output_file)
 
-    assert json.loads(output_file.read_text(encoding="utf-8")) == {"longest": 4, "total": 10, "n_seqs": 3}
+    assert json.loads(output_file.read_text(encoding="utf-8")) == {"longest_seq": 4, "total_seq_length": 10, "nr_seqs": 3}
 
 
 @pytest.mark.parametrize(
@@ -166,9 +166,9 @@ def test_main(tmp_path: Path, argv: list[str], expected_output: str) -> None:
 
     assert stats.main(args_list) is None
     assert json.loads((tmp_path / expected_output).read_text(encoding="utf-8")) == {
-        "longest": 4,
-        "total": 4,
-        "n_seqs": 1,
+        "longest_seq": 4,
+        "total_seq_length": 4,
+        "nr_seqs": 1,
     }
 
 
