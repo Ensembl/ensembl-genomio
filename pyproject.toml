@@ -76,18 +76,11 @@ cicd = [
     "mypy >= 1.2.0",
     "pylint >= 3.0.2",
     "pytest >= 7.4.3",
+    "pytest-datadir",
     "pytest-dependency",
     "pytest-mock",
     "pytest-workflow >= 2.1.0",
     "types-requests",
-]
-test = [
-    "coverage >= 7.3.2",
-    "deepdiff >= 6.7.1",
-    "pytest-datadir",
-    "pytest >= 7.4.3",
-    "pytest-dependency",
-    "pytest-mock",
 ]
 docs = [
     "mkdocs >= 1.5.3",

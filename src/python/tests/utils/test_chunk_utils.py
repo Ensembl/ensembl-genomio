@@ -16,13 +16,12 @@
 
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-import pytest
-from pytest import param
 from typing import ContextManager
-
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+import pytest
+from pytest import param
 
 from ensembl.io.genomio.utils import chunk_utils
 
@@ -75,7 +74,7 @@ def test_get_paths_from_manifest(
     expectation: ContextManager,
 ) -> None:
     """
-    Tests the chunk_utils.get_paths_from_manifest() function.
+    Tests the `chunk_utils.get_paths_from_manifest()` function.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -123,14 +122,14 @@ def test_get_paths_from_manifest_absolute_path(tmp_path: Path) -> None:
             r"^(?P<base>.+)_(?P<start>\d+$",
             None,
             None,
-            pytest.raises(ValueError, match="Invalid --chunk-id-regex"),
+            pytest.raises(ValueError, match="Invalid regex"),
             id="rejects_invalid_pattern",
         ),
         param(
             r"^(.+)_(\d+)$",
             None,
             None,
-            pytest.raises(ValueError, match="must define named capture groups"),
+            pytest.raises(ValueError, match="Chunk ID regex must define named capture groups"),
             id="requires_named_groups",
         ),
         param(
@@ -175,11 +174,7 @@ def test_validate_regex(
         ("seq1", "seq1 some annotation", "some annotation"),
         ("seq1", "seq1 seq1 description", "seq1 description"),
         ("seq1", "description without id", "description without id"),
-        (
-            "seq1",
-            "seq1 seq12 description starting with id but not equal",
-            "seq12 description starting with id but not equal",
-        ),
+        ("seq1", "seq12-like sequence", "seq12-like sequence"),
     ],
 )
 def test_description_without_id(seq_id: str, description: str, expected: str) -> None:

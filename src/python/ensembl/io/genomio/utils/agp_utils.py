@@ -36,19 +36,41 @@ class AgpEntry:
 
 
 def build_component_index(agp_entries: dict[str, list[AgpEntry]]) -> dict[str, list[AgpEntry]]:
-    """component_id -> list[AgpEntry] mapping (a component should usually map to exactly one object range)."""
-    by_component: dict[str, list[AgpEntry]] = defaultdict(list)
+    """
+    Builds an index of component IDs to AGP entries.
+
+    Args:
+        agp_entries: Mapping of object IDs to lists of AGP entries.
+
+    Returns:
+        A mapping from component ID to sorted lists of AGP entries.
+    """
+    component_index: dict[str, list[AgpEntry]] = defaultdict(list)
     for _, parts in agp_entries.items():
         for p in parts:
-            by_component[p.part_id].append(p)
+            component_index[p.part_id].append(p)
 
-    for comp_id, lst in by_component.items():
-        by_component[comp_id] = sorted(lst, key=lambda e: (e.record, e.record_start, e.part_number))
-    return by_component
+    for key, values in component_index.items():
+        component_index[key] = sorted(values, key=lambda e: (e.record, e.record_start, e.part_number))
+    return component_index
 
 
 def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tuple[str, int, int]:
-    """Lift 1-based inclusive component coords -> (object_id, start, end) in object coords."""
+    """
+    Lifts component coordinates into object coordinates.
+
+    Args:
+        part: AGP entry describing the component span.
+        start: Start coordinate on the component (1-based inclusive).
+        end: End coordinate on the component (1-based inclusive).
+        allow_revcomp: Whether reverse-complement orientation is permitted.
+
+    Returns:
+        A tuple of object ID, object start, and object end.
+
+    Raises:
+        ValueError: If the requested range is invalid or not covered by the component.
+    """
     if start > end:
         raise ValueError(f"Range start > end: {start} > {end}")
 
@@ -64,7 +86,8 @@ def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tup
     elif part.orientation == "-":
         if not allow_revcomp:
             raise ValueError(
-                f"AGP has '-' orientation for component '{part.part_id}', but --allow-revcomp is not enabled."
+                f"AGP contains '-' orientation for component '{part.part_id}' but processing of "
+                "reverse complement AGP entries is not enabled."
             )
         obj_start = part.record_start + (part.part_end - end)
         obj_end = part.record_start + (part.part_end - start)
@@ -77,9 +100,15 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
     """
     Parses an AGP v2.x file into per-object component entries.
 
-    Supported subset:
-      - component type 'W' only (sequence components)
-      - orientation '+' always, '-' only if `allow_revcomp=True`
+    Args:
+        agp_file: Path to the input AGP file (optionally gzipped).
+        allow_revcomp: Whether '-' orientations are permitted.
+
+    Returns:
+        Mapping from object ID to lists of AGP entries.
+
+    Raises:
+        ValueError: If the AGP file is invalid, unsupported, or contains no component lines.
     """
     agp_records: dict[str, list[AgpEntry]] = defaultdict(list)
 
@@ -97,7 +126,8 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
 
             if not allow_revcomp and cols[8] != "+":
                 raise ValueError(
-                    f"AGP contains '-' orientation for component '{cols[5]}' but --allow-revcomp is not enabled."
+                    f"AGP contains '-' orientation for component '{cols[5]}' but processing of "
+                    "reverse complement AGP entries is not enabled."
                 )
 
             agp_records[cols[0]].append(

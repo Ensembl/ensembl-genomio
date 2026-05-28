@@ -20,12 +20,24 @@ from pathlib import Path
 import re
 
 from Bio.SeqRecord import SeqRecord
+from ensembl.utils import StrPath
 
 
-def get_paths_from_manifest(manifest: Path) -> list[Path]:
+def get_paths_from_manifest(manifest: StrPath) -> list[Path]:
+    """Parses a manifest file and return a list of validated input paths.
+
+    Args:
+        manifest: Path to a manifest file containing one input path per line.
+
+    Returns:
+        A list of resolved ``Path`` objects for each file listed in the manifest,
+        preserving the manifest order.
+
+    Raises:
+        FileNotFoundError: If the manifest file or any listed entry does not exist.
+        ValueError: If the manifest path is not a file or any listed entry is not a file.
     """
-    Parses manifest file to return list of validated input paths
-    """
+    manifest = Path(manifest)
     manifest = manifest.expanduser().resolve(strict=True)
 
     if not manifest.is_file():
@@ -57,23 +69,43 @@ def get_paths_from_manifest(manifest: Path) -> list[Path]:
 
 
 def seq_description_without_id(record: SeqRecord) -> str:
-    """Removes ID from FASTA record description"""
+    """Returns the FASTA record description with the record ID removed.
+
+    Args:
+        record: A ``SeqRecord`` whose ``description`` may start with ``id``.
+
+    Returns:
+        The description text with the leading identifier and following space
+        removed. Returns an empty string if the description equals the id.
+    """
     desc = record.description
-    if desc == record.id:
+    if record.id is None or desc == record.id:
         return ""
-    if desc.startswith(record.id):
-        return desc[len(record.id) + 1 :]
-    return desc
+    return desc.removeprefix(record.id + " ")
 
 
 def validate_regex(chunk_regex: str) -> re.Pattern[str]:
-    """Compiles and validates the chunk-id regex, ensuring 'base' and 'start' capture groups present."""
+    """
+    Compiles and validates a chunk-id regex.
+
+    The compiled regex must define named capture groups ``base`` and ``start``.
+
+    Args:
+        chunk_regex: Regular expression string to compile.
+
+    Returns:
+        A compiled ``re.Pattern`` instance.
+
+    Raises:
+        ValueError: If the regex is invalid or does not contain the required
+            named capture groups ``base`` and ``start``.
+    """
     try:
         chunk_re = re.compile(chunk_regex)
     except re.error as e:
-        raise ValueError(f"Invalid --chunk-id-regex: {e}") from e
+        raise ValueError(f"Invalid regex: {e}") from e
 
     if "base" not in chunk_re.groupindex or "start" not in chunk_re.groupindex:
-        raise ValueError("--chunk-id-regex must define named capture groups 'base' and 'start'")
+        raise ValueError("Chunk ID regex must define named capture groups 'base' and 'start'")
 
     return chunk_re
