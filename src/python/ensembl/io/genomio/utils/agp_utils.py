@@ -109,39 +109,51 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
 
     Raises:
         ValueError: If the AGP file is invalid, unsupported, or contains no component lines.
+                    All validation errors are collected and raised together.
     """
     agp_records: dict[str, list[AgpEntry]] = defaultdict(list)
+    errors: list[str] = []
 
     with open_gz_file(agp_file) as fh:
-        for line in fh:
+        for line_nr, line in enumerate(fh, start=1):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
             cols = line.split("\t")
             if len(cols) < 9:
-                raise ValueError(f"Invalid AGP line (expected >= 9 columns): {line}")
+                errors.append(f"Line {line_nr}: Invalid AGP line (expected >= 9 columns): {line}")
+                continue
 
             if cols[4] != "W":
-                raise ValueError(f"Unsupported AGP component type '{cols[4]}' in line: {line}")
+                errors.append(f"Line {line_nr}: Unsupported AGP component type '{cols[4]}' in line: {line}")
+                continue
 
             if not allow_revcomp and cols[8] != "+":
-                raise ValueError(
-                    f"AGP contains '-' orientation for component '{cols[5]}' but processing of "
+                errors.append(
+                    f"Line {line_nr}: AGP contains '-' orientation for component '{cols[5]}' but processing of "
                     "reverse complement AGP entries is not enabled."
                 )
+                continue
 
-            agp_records[cols[0]].append(
-                AgpEntry(
-                    record=cols[0],
-                    record_start=int(cols[1]),
-                    record_end=int(cols[2]),
-                    part_number=int(cols[3]),
-                    part_id=cols[5],
-                    part_start=int(cols[6]),
-                    part_end=int(cols[7]),
-                    orientation=cols[8],
+            try:
+                agp_records[cols[0]].append(
+                    AgpEntry(
+                        record=cols[0],
+                        record_start=int(cols[1]),
+                        record_end=int(cols[2]),
+                        part_number=int(cols[3]),
+                        part_id=cols[5],
+                        part_start=int(cols[6]),
+                        part_end=int(cols[7]),
+                        orientation=cols[8],
+                    )
                 )
-            )
+            except ValueError as e:
+                errors.append(f"Line {line_nr}: {str(e)}")
+
+    if errors:
+        error_msg = f"AGP file '{agp_file}' had {len(errors)} error(s):\n  - " + "\n  - ".join(errors)
+        raise ValueError(error_msg)
 
     if not agp_records:
         raise ValueError(f"AGP file '{agp_file}' contained no component lines.")

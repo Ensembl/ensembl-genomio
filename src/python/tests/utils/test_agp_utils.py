@@ -93,6 +93,33 @@ from ensembl.io.genomio.utils import agp_utils
             },
             id="parses_multiple_objects",
         ),
+        param(
+            "multiple_errors",
+            "multi_errors.agp",
+            False,
+            pytest.raises(ValueError, match=r"had \d+ error\(s\)"),
+            None,
+            None,
+            id="collates_multiple_errors",
+        ),
+        param(
+            "invalid_integers",
+            "bad_int.agp",
+            False,
+            pytest.raises(ValueError, match=r"invalid literal for int"),
+            None,
+            None,
+            id="rejects_invalid_integer_values",
+        ),
+        param(
+            "gzipped_file",
+            "valid.agp.gz",
+            False,
+            does_not_raise(),
+            "single",
+            ("obj", "part_a", "+"),
+            id="parses_gzipped_agp_files",
+        ),
     ],
 )
 def test_parse_agp(
