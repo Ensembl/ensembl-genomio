@@ -16,8 +16,6 @@
 
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-import pytest
-from pytest import param
 import re
 from typing import ContextManager
 from unittest.mock import Mock, patch
@@ -27,11 +25,13 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from deepdiff import DeepDiff
+import pytest
+from pytest import param
 
 from ensembl.io.genomio.fasta import recombine
 from ensembl.io.genomio.utils.agp_utils import parse_agp
 
-CHUNK_RE = re.compile(r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$")
+CHUNK_RE = re.compile(recombine._CHUNK_RE_STRING)
 
 
 def test_fasta_record_cache_load_and_switch_files(data_dir: Path) -> None:
@@ -81,8 +81,11 @@ def test_fasta_record_cache_duplicate_id_within_file_raises(data_dir: Path) -> N
     """
     fasta_file = data_dir / "duplicate_id.fa"
     cache = recombine.FastaRecordCache()
+    loc = recombine.RecordLocation(path=fasta_file, description="dup")
+    # loading via `get_record()` exercises the same file-parsing path and will
+    # raise on duplicate record IDs during indexing.
     with pytest.raises(ValueError, match="Duplicate record id 'seq_a'"):
-        cache._load_file(fasta_file)
+        cache.get_record("seq_a", loc)
 
 
 def test_build_index_collects_locations_first_seen_and_chunks(data_dir: Path) -> None:
@@ -128,7 +131,7 @@ def test_build_index_no_headers_raises(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "input_filename,regex,expectation",
+    "input_filename, regex,expectation",
     [
         param(
             "0_based_start.fa",
@@ -174,7 +177,7 @@ def test_recombine_records_from_headers(
     Args:
         data_dir: Module's test data directory fixture.
         input_filename: Name of input FASTA file.
-        regex: re.Pattern for matching base and start groups in FASTA headers.
+        regex: Regular expression pattern for matching base and start groups in FASTA headers.
         expectation: Context manager for the expected outcome of the test (exception or not).
     """
     input_fa = data_dir / "from_headers" / input_filename
@@ -190,7 +193,7 @@ def test_recombine_records_from_headers(
 
 
 @pytest.mark.parametrize(
-    "first_seen,chunks,key_error_str",
+    "first_seen, chunks, key_error_str",
     [
         param(
             {"A": 0},
@@ -212,12 +215,12 @@ def test_records_from_headers_exceptions(
     key_error_str: str,
 ) -> None:
     """
-    Tests exceptions raised by the recombine._records_from_headers() function.
+    Tests exceptions raised by the `recombine._records_from_headers()` function.
 
     Args:
-        first_seen: dictionary representing order in which records observed.
-        chunks: mapping of base record ID to a list of (start, chunk_record_id) pairs.
-        key_error: expected string matching raised KeyError.
+        first_seen: Dictionary representing order in which records observed.
+        chunks: Mapping of base record ID to a list of (start, chunk_record_id) pairs.
+        key_error: Expected string matching raised ``KeyError``.
     """
     locations = {}
     cache = recombine.FastaRecordCache()
@@ -226,7 +229,7 @@ def test_records_from_headers_exceptions(
 
 
 @pytest.mark.parametrize(
-    "orientation,allow_revcomp,expectation",
+    "orientation, allow_revcomp, expectation",
     [
         param(
             "+",
@@ -238,7 +241,7 @@ def test_records_from_headers_exceptions(
         param(
             "-",
             False,
-            pytest.raises(ValueError, match="--allow-revcomp is not enabled"),
+            pytest.raises(ValueError, match="'allow-revcomp' is not enabled"),
             id="rejects_minus_strand_when_not_allowed",
         ),
         param(
@@ -249,17 +252,13 @@ def test_records_from_headers_exceptions(
         ),
     ],
 )
-def test_agp_component_seq(
-    orientation: str,
-    allow_revcomp: bool,
-    expectation: ContextManager,
-) -> None:
+def test_agp_component_seq(orientation: str, allow_revcomp: bool, expectation: ContextManager) -> None:
     """
     Tests the `recombine._agp_component_seq()` function.
 
     Args:
         orientation: '+' or '-' orientation from AGP.
-        allow_revcomp: Boolean indicating whether minus strand entries are permitted.
+        allow_revcomp: Boolean indicating whether reverse strand entries are permitted.
         expectation: Context manager for the expected outcome of the test (exception or not).
     """
     record = SeqRecord(Seq("ACGTGGTT"), "part", "test_record")
@@ -269,7 +268,7 @@ def test_agp_component_seq(
 
 
 @pytest.mark.parametrize(
-    "agp_filename,expectation",
+    "agp_filename, expectation",
     [
         param(
             "ordered.agp",
@@ -298,11 +297,7 @@ def test_agp_component_seq(
         ),
     ],
 )
-def test_records_from_agp(
-    data_dir: Path,
-    agp_filename: str,
-    expectation: ContextManager,
-) -> None:
+def test_records_from_agp(data_dir: Path, agp_filename: str, expectation: ContextManager) -> None:
     """
     Tests the `recombine._records_from_agp()` function.
 
@@ -322,7 +317,7 @@ def test_records_from_agp(
 
 
 @pytest.mark.parametrize(
-    "test_dir_name,agp_filename,expected",
+    "test_dir_name, agp_filename, expected",
     [
         param(
             "from_agp",
@@ -378,7 +373,7 @@ def test_recombine_fasta(
                 "fasta_manifest": str(__file__),
                 "out_fasta": "out.fa",
                 "allow_revcomp": False,
-                "chunk_id_regex": CHUNK_RE.pattern,
+                "chunk_id_regex": recombine._CHUNK_RE_STRING,
                 "log_level": "WARNING",
             },
             id="Default args",
@@ -440,7 +435,7 @@ def test_main(mock_recombine_fasta: Mock, tmp_path: Path) -> None:
     mock_recombine_fasta.assert_called_once_with(
         fasta_manifest=manifest_path,
         out_fasta=fasta_path,
-        chunk_re=re.compile(r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$"),
+        chunk_re=CHUNK_RE,
         agp_file=None,
         allow_revcomp=False,
     )

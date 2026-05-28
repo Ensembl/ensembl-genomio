@@ -36,9 +36,8 @@ from ensembl.io.genomio.utils.chunk_utils import (
     seq_description_without_id,
     validate_regex,
 )
-
 from ensembl.utils.archive import open_gz_file
-from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.argparse import ArgumentParser, StrPath
 from ensembl.utils.logging import init_logging_with_args
 
 _CHUNK_RE_STRING = r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$"
@@ -81,26 +80,23 @@ class FastaRecordCache:
             OSError: If the file cannot be opened/read.
         """
         if self._current_path is None or self._current_path != loc.path:
-            self._load_file(loc.path)
+            logging.debug("Loading FASTA records from %s", loc.path)
+            records: dict[str, SeqRecord] = {}
+            with open_gz_file(loc.path) as fh:
+                for record in SeqIO.parse(fh, "fasta"):
+                    if record.id in records:
+                        raise ValueError(f"Duplicate record id '{record.id}' within file '{loc.path}'")
+                    records[record.id] = record
+            self._current_path = loc.path
+            self._records = records
 
-        rec = self._records.get(record_id)
-        if rec is None:
+        record = self._records.get(record_id)
+        if record is None:
             raise KeyError(f"Record '{record_id}' not found in indexed file '{loc.path}'")
-        return rec
-
-    def _load_file(self, path: Path) -> None:
-        logging.debug("Loading FASTA records from %s", path)
-        records: dict[str, SeqRecord] = {}
-        with open_gz_file(path) as fh:
-            for rec in SeqIO.parse(fh, "fasta"):
-                if rec.id in records:
-                    raise ValueError(f"Duplicate record id '{rec.id}' within file '{path}'")
-                records[rec.id] = rec
-        self._current_path = path
-        self._records = records
+        return record
 
 
-def _parse_fasta_headers(file_path: Path) -> Iterator[tuple[str, str]]:
+def _parse_fasta_headers(file_path: StrPath) -> Iterator[tuple[str, str]]:
     """
     Iterates over FASTA headers, yielding (record_id, description) tuples.
 
@@ -137,7 +133,6 @@ def _build_index(
 
     Raises:
         ValueError: If no FASTA headers are found, or if duplicate record IDs are encountered.
-        OSError: If any input file cannot be opened/read.
     """
     locations: dict[str, RecordLocation] = {}
     first_seen: dict[str, int] = {}
@@ -188,17 +183,17 @@ def _agp_component_seq(
     Raises:
         ValueError: If orientation is invalid, or if orientation is '-' when ``allow_revcomp`` is False.
     """
-    sub: Seq = component_record.seq[comp_beg - 1 : comp_end]
+    subsequence: Seq = component_record.seq[comp_beg - 1 : comp_end]
 
     if orientation == "+":
-        return sub
+        return subsequence
     elif orientation == "-":
         if not allow_revcomp:
             raise ValueError(
                 f"AGP has '-' orientation for component '{component_record.id}', "
-                "but --allow-revcomp is not enabled."
+                "but 'allow-revcomp' is not enabled."
             )
-        return sub.reverse_complement()
+        return subsequence.reverse_complement()
 
     raise ValueError(f"Invalid AGP orientation '{orientation}' for component '{component_record.id}'")
 
@@ -369,7 +364,6 @@ def recombine_fasta(
     Raises:
         ValueError: If inputs contain no records, contain duplicate IDs, or chunk/AGP coordinates are invalid.
         KeyError: If AGP references a component ID that is not present in the FASTA inputs.
-        OSError: If input/output files cannot be read/written.
     """
     fasta_paths = get_paths_from_manifest(fasta_manifest)
 
@@ -390,16 +384,15 @@ def recombine_fasta(
         for rec in record_iter:
             SeqIO.write(rec, out_fh, "fasta")
             n += 1
-    logging.info("Wrote %d records to %s", n, out_fasta)
+    logging.info(f"Wrote {n} records to {out_fasta}")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
         "--fasta-manifest",
-        metavar="TXT",
         required=True,
-        help="Manifest file containing paths of FASTA files to be combined (files may be gzipped).",
+        help="Manifest file containing paths of FASTA files (which may be gzipped) to be combined.",
     )
     parser.add_argument_dst_path(
         "--out-fasta",

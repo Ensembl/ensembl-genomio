@@ -28,7 +28,7 @@ from pytest import param
 
 from ensembl.io.genomio.features import combine_json
 
-CHUNK_RE = re.compile(r"^(?P<base>.+)_chunk_start_(?P<start>\d+)$")
+CHUNK_RE = re.compile(combine_json._CHUNK_RE_STRING)
 
 
 @pytest.fixture()
@@ -213,10 +213,42 @@ def _without_run_date(d: dict[str, combine_json.JsonValue]) -> dict[str, combine
 
 
 def test_top_level_accumulator_get_required_raises_when_missing():
-    """Tests ``combine_json._TopLevelAccumulator.get_required()`` raises for a missing key."""
+    """Tests `combine_json._TopLevelAccumulator.get_required()` raises for a missing key."""
     acc = combine_json._TopLevelAccumulator()
     with pytest.raises(ValueError, match=r"Missing required top-level 'analysis'"):
         acc.get_required("analysis")
+
+
+def test_top_level_accumulator_require_same_accepts_identical_values(tmp_path: Path) -> None:
+    """Tests `combine_json._TopLevelAccumulator.require_same()` accepts identical top-level values."""
+    acc = combine_json._TopLevelAccumulator()
+    path1 = tmp_path / "a.json"
+    path2 = tmp_path / "b.json"
+    path1.write_text("{}", encoding="utf-8")
+    path2.write_text("{}", encoding="utf-8")
+
+    expected_source = _source("prov")
+    acc.require_same("source", expected_source, path1)
+    acc.require_same("source", dict(expected_source), path2)
+
+    assert acc.get_required("source") == expected_source
+
+
+def test_top_level_accumulator_require_same_ignores_analysis_run_date(tmp_path: Path) -> None:
+    """Tests `combine_json._TopLevelAccumulator.require_same()` ignores `run_date` when comparing metadata."""
+    acc = combine_json._TopLevelAccumulator()
+    path1 = tmp_path / "a.json"
+    path2 = tmp_path / "b.json"
+    path1.write_text("{}", encoding="utf-8")
+    path2.write_text("{}", encoding="utf-8")
+
+    analysis_a = _analysis("rm", "2026-01-01T00:00:00Z")
+    analysis_b = _analysis("rm", "2026-02-01T00:00:00Z")
+
+    acc.require_same("analysis", analysis_a, path1)
+    acc.require_same("analysis", analysis_b, path2)
+
+    assert acc.get_required("analysis") == analysis_a
 
 
 @pytest.mark.parametrize(
@@ -244,7 +276,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
 
 
 @pytest.mark.parametrize(
-    "parts,start,end,expectation",
+    "parts, start, end, expectation",
     [
         param(
             [
@@ -315,7 +347,7 @@ def test_get_agp_entry_for_range(
 
 
 @pytest.mark.parametrize(
-    "value,coercer,expectation",
+    "value, coercer, expectation",
     [
         param(
             dict(_repeat_consensus("Alu", "SINE", "Alu", sequence="ACGT"), repeat_consensus="TTTT"),
@@ -340,7 +372,7 @@ def test_get_agp_entry_for_range(
 def test_coercion_exceptions(
     tmp_path: Path,
     value: combine_json.JsonValue,
-    coercer: combine_json.CoerceFeatureFn,
+    coercer: combine_json.CoerceFeatureFunction,
     expectation: ContextManager,
 ) -> None:
     """
@@ -358,7 +390,7 @@ def test_coercion_exceptions(
 
 def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
     """
-    Tests ``combine_json._merge_repeat_consensus()`` deduplicates identical consensus entries.
+    Tests `combine_json._merge_repeat_consensus()` deduplicates identical consensus entries.
 
     Args:
         tmp_path: Temporary directory provided by pytest.
@@ -374,7 +406,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "feature,agp_by_component,allow_revcomp,expectation",
+    "feature, agp_by_component, allow_revcomp, expectation",
     [
         param(
             _repeat_feature(seq_region="chr1_chunk_start_11", start=1, end=5, strand="+"),
@@ -550,7 +582,7 @@ def test_lift_feature_coords(
 
 def test_detect_load_type_rejects_unknown_type(tmp_path: Path):
     """
-    Tests ``combine_json._detect_load_type()`` rejects documents whose schema kind cannot be inferred.
+    Tests `combine_json._detect_load_type()` rejects documents whose schema kind cannot be inferred.
 
     Args:
         tmp_path: Temporary directory provided by pytest.
@@ -563,7 +595,7 @@ def test_detect_load_type_rejects_unknown_type(tmp_path: Path):
 
 
 @pytest.mark.parametrize(
-    "feature,expectation",
+    "feature, expectation",
     [
         param(
             _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key=None),
@@ -604,7 +636,7 @@ def test_iterate_validated_documents_validate_false_skips_schema_validation(
     data_dir: Path,
 ) -> None:
     """
-    Tests ``combine_json._iterate_validated_documents()`` skips validation when requested.
+    Tests `combine_json._iterate_validated_documents()` skips validation when requested.
 
     Args:
         schema_validator_calls: Captured ``schema_validator`` calls.
@@ -622,7 +654,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
     tmp_path: Path,
 ) -> None:
     """
-    Tests ``combine_json._write_and_validate()`` writes a trailing newline and validates output.
+    Tests `combine_json._write_and_validate()` writes a trailing newline and validates output.
 
     Args:
         schema_validator_calls: Captured ``schema_validator`` calls.
@@ -636,7 +668,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
 
 
 @pytest.mark.parametrize(
-    "documents,feature_list_key,coerce_feature,agp_by_component,allow_revcomp,required_top_level_keys,expectation",
+    "documents, feature_list_key, coerce_feature, agp_by_component, allow_revcomp, required_top_level_keys, expectation",
     [
         param(
             [
@@ -899,7 +931,7 @@ def test_combine_feature_docs(
     tmp_path: Path,
     documents: list[tuple[Path, dict[str, combine_json.JsonValue]]],
     feature_list_key: str,
-    coerce_feature: combine_json.CoerceFeatureFn,
+    coerce_feature: combine_json.CoerceFeatureFunction,
     agp_by_component: dict[str, list[combine_json.AgpEntry]] | None,
     allow_revcomp: bool,
     required_top_level_keys: list[str],
@@ -941,7 +973,7 @@ def test_combine_feature_docs(
 
 
 @pytest.mark.parametrize(
-    "consensus_key,valid_consensus_keys,expectation",
+    "consensus_key, valid_consensus_keys, expectation",
     [
         param(
             _sha256_key("Alu", "SINE", "Alu", "ACGT"),
@@ -999,7 +1031,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
 
 
 @pytest.mark.parametrize(
-    "test_dir_name,agp_filename,allow_revcomp,expectation",
+    "test_dir_name, agp_filename, allow_revcomp, expectation",
     [
         param(
             "seq_region",
@@ -1130,7 +1162,7 @@ def test_combine_repeat_json_paths(
 
 
 @pytest.mark.parametrize(
-    "test_dir_name,agp_filename,allow_revcomp,expectation",
+    "test_dir_name, agp_filename, allow_revcomp, expectation",
     [
         param(
             "seq_region",
@@ -1231,7 +1263,7 @@ def test_combine_ncrna_json_paths(
 
 
 @pytest.mark.parametrize(
-    "test_dir_name,agp_filename,allow_revcomp,expectation",
+    "test_dir_name, agp_filename, allow_revcomp, expectation",
     [
         param(
             "combine_ncrna/seq_region",
@@ -1291,7 +1323,7 @@ def test_combine_feature_json(
     expectation: ContextManager,
 ) -> None:
     """
-    Tests ``combine_json.combine_feature_json()`` for successful and failing file-based inputs.
+    Tests `combine_json.combine_feature_json()` for successful and failing file-based inputs.
 
     Args:
         schema_validator_calls: Captured ``schema_validator`` calls.
