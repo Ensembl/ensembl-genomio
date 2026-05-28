@@ -29,8 +29,6 @@ from ensembl.utils.logging import init_logging_with_args
 __all__ = [
     "FastaStats",
     "compute_fasta_stats",
-    "parse_args",
-    "main",
 ]
 
 
@@ -70,23 +68,21 @@ def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
     total = 0
     n_seqs = 0
     current = 0
-    saw_record = False
 
     with open_gz_file(fasta_file) as fh:
         for raw_line in fh:
-            line = raw_line.strip()
             if line.startswith(">"):
-                if saw_record:
+                if n_seqs > 0:
                     longest = max(longest, current)
                     total += current
                 n_seqs += 1
                 current = 0
-                saw_record = True
                 continue
 
-            current += len(line.strip())
+            line = raw_line.strip()
+            current += len(line)
 
-    if saw_record:
+    if n_seqs > 0:
         longest = max(longest, current)
         total += current
 
