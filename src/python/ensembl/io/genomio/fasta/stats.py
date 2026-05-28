@@ -17,6 +17,7 @@
 """Compute longest, total, and count statistics for FASTA records."""
 
 import argparse
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -41,18 +42,23 @@ class FastaStats:
 
 def _write_fasta_stats(stats: FastaStats, output_file: Path) -> None:
     """
-    Write FASTA statistics to the output file.
+    Write FASTA statistics to the output JSON file.
 
     Args:
         stats: FASTA statistics to write.
-        output: Path to the output text file.
+        output_file: Path to the output JSON file.
     """
     output_file.write_text(
-        (
-            f"longest sequence (bp): {stats.longest}\n"
-            f"total sequence length (bp): {stats.total}\n"
-            f"number of sequences: {stats.n_seqs}\n"
-        ),
+        json.dumps(
+            {
+                "longest": stats.longest,
+                "total": stats.total,
+                "n_seqs": stats.n_seqs,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -63,7 +69,7 @@ def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
 
     Args:
         fasta_file: Path to raw or compressed input FASTA file.
-        output_file: Path to the output stats file.
+        output_file: Path to the output stats JSON file.
 
     Returns:
         None
@@ -90,7 +96,7 @@ def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
         longest = max(longest, current)
         total += current
 
-    output_file = output_file or Path(fasta_file).with_suffix(".stats.txt")
+    output_file = output_file or Path(fasta_file).with_suffix(".stats.json")
     _write_fasta_stats(FastaStats(longest=longest, total=total, n_seqs=n_seqs), output_file)
 
 
@@ -112,9 +118,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument_dst_path(
         "--output",
-        metavar="STATS.txt",
+        metavar="STATS.json",
         default=argparse.SUPPRESS,
-        help="Output stats text file.",
+        help="Output stats JSON file.",
     )
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()

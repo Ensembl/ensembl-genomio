@@ -15,6 +15,7 @@
 """Unit testing of `ensembl.io.genomio.fasta.stats` module."""
 
 import gzip
+import json
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -40,10 +41,14 @@ def write_gzip_text(path: Path, text: str) -> Path:
 @pytest.mark.parametrize(
     "contents, expected",
     [
-        param(">seq1\nACGT\nAC\n>seq2 description\nNNN\n", "6 9 2\n", id="Multiline records"),
-        param(">empty\n>seq\nAC\n", "2 2 2\n", id="Empty record"),
-        param("", "0 0 0\n", id="Empty file"),
-        param("ACGT\n", "0 0 0\n", id="Sequence without record header"),
+        param(
+            ">seq1\nACGT\nAC\n>seq2 description\nNNN\n",
+            {"longest": 6, "total": 9, "n_seqs": 2},
+            id="Multiline records",
+        ),
+        param(">empty\n>seq\nAC\n", {"longest": 2, "total": 2, "n_seqs": 2}, id="Empty record"),
+        param("", {"longest": 0, "total": 0, "n_seqs": 0}, id="Empty file"),
+        param("ACGT\n", {"longest": 0, "total": 0, "n_seqs": 0}, id="Sequence without record header"),
     ],
 )
 def test_compute_fasta_stats(tmp_path: Path, contents: str, expected: str) -> None:
@@ -56,10 +61,10 @@ def test_compute_fasta_stats(tmp_path: Path, contents: str, expected: str) -> No
         expected: Expected stats file content.
     """
     fasta_file = write_text(tmp_path / "in.fa", contents)
-    output_file = tmp_path / "stats.txt"
+    output_file = tmp_path / "stats.json"
 
     assert stats.compute_fasta_stats(fasta_file=fasta_file, output_file=output_file) is None
-    assert output_file.read_text(encoding="utf-8") == expected
+    assert json.loads(output_file.read_text(encoding="utf-8")) == expected
 
 
 def test_compute_fasta_stats_default_output_file(tmp_path: Path) -> None:
@@ -70,11 +75,11 @@ def test_compute_fasta_stats_default_output_file(tmp_path: Path) -> None:
         tmp_path: Test's unique temporary directory fixture.
     """
     fasta_file = write_text(tmp_path / "in.fa", ">seq\nACGT\n")
-    output_file = tmp_path / "in.stats.txt"
+    output_file = tmp_path / "in.stats.json"
 
     stats.compute_fasta_stats(fasta_file=fasta_file, output_file=None)
 
-    assert output_file.read_text(encoding="utf-8") == "4 4 1\n"
+    assert json.loads(output_file.read_text(encoding="utf-8")) == {"longest": 4, "total": 4, "n_seqs": 1}
 
 
 def test_compute_fasta_stats_reads_gzipped_fasta(tmp_path: Path) -> None:
@@ -85,11 +90,11 @@ def test_compute_fasta_stats_reads_gzipped_fasta(tmp_path: Path) -> None:
         tmp_path: Test's unique temporary directory fixture.
     """
     fasta_file = write_gzip_text(tmp_path / "in.fa.gz", ">seq\nAAAA\n")
-    output_file = tmp_path / "stats.txt"
+    output_file = tmp_path / "stats.json"
 
     stats.compute_fasta_stats(fasta_file=fasta_file, output_file=output_file)
 
-    assert output_file.read_text(encoding="utf-8") == "4 4 1\n"
+    assert json.loads(output_file.read_text(encoding="utf-8")) == {"longest": 4, "total": 4, "n_seqs": 1}
 
 
 def test_write_fasta_stats(tmp_path: Path) -> None:
@@ -99,18 +104,18 @@ def test_write_fasta_stats(tmp_path: Path) -> None:
     Args:
         tmp_path: Test's unique temporary directory fixture.
     """
-    output_file = tmp_path / "stats.txt"
+    output_file = tmp_path / "stats.json"
 
     stats._write_fasta_stats(stats.FastaStats(longest=4, total=10, n_seqs=3), output_file)
 
-    assert output_file.read_text(encoding="utf-8") == "4 10 3\n"
+    assert json.loads(output_file.read_text(encoding="utf-8")) == {"longest": 4, "total": 10, "n_seqs": 3}
 
 
 @pytest.mark.parametrize(
     "argv, expected_output",
     [
         param(["--fasta"], None, id="Default output"),
-        param(["--fasta", "--output"], "stats.txt", id="Explicit output"),
+        param(["--fasta", "--output"], "stats.json", id="Explicit output"),
     ],
 )
 def test_parse_args(tmp_path: Path, argv: list[str], expected_output: str | None) -> None:
@@ -141,7 +146,7 @@ def test_parse_args(tmp_path: Path, argv: list[str], expected_output: str | None
 @pytest.mark.parametrize(
     "argv, expected_output",
     [
-        param(["--fasta"], "in.stats.txt", id="Default output"),
+        param(["--fasta"], "in.stats.json", id="Default output"),
         param(["--fasta", "--output"], "stats.txt", id="Explicit output"),
     ],
 )
@@ -160,7 +165,11 @@ def test_main(tmp_path: Path, argv: list[str], expected_output: str) -> None:
         args_list.extend([argv[1], str(tmp_path / expected_output)])
 
     assert stats.main(args_list) is None
-    assert (tmp_path / expected_output).read_text(encoding="utf-8") == "4 4 1\n"
+    assert json.loads((tmp_path / expected_output).read_text(encoding="utf-8")) == {
+        "longest": 4,
+        "total": 4,
+        "n_seqs": 1,
+    }
 
 
 @patch.object(stats, "compute_fasta_stats")
@@ -173,7 +182,7 @@ def test_main_calls_compute_fasta_stats(mock_compute_fasta_stats: Mock, tmp_path
         tmp_path: Test's unique temporary directory fixture.
     """
     fasta_file = write_text(tmp_path / "in.fa", ">seq\nA\n")
-    output_file = tmp_path / "stats.txt"
+    output_file = tmp_path / "stats.json"
 
     stats.main(["--fasta", str(fasta_file), "--output", str(output_file)])
 
