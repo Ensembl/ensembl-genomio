@@ -71,7 +71,7 @@ def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
 
     with open_gz_file(fasta_file) as fh:
         for raw_line in fh:
-            if line.startswith(">"):
+            if raw_line.startswith(">"):
                 if n_seqs > 0:
                     longest = max(longest, current)
                     total += current
