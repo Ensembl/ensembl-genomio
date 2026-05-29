@@ -20,6 +20,7 @@ from pathlib import Path
 import re
 
 from Bio.SeqRecord import SeqRecord
+
 from ensembl.utils import StrPath
 
 
