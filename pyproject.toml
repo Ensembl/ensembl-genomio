@@ -76,6 +76,7 @@ cicd = [
     "mypy >= 1.2.0",
     "pylint >= 3.0.2",
     "pytest >= 7.4.3",
+    "pytest-datadir",
     "pytest-dependency",
     "pytest-mock",
     "pytest-workflow >= 2.1.0",
@@ -117,6 +118,9 @@ events_format = "ensembl.io.genomio.events.format:main"
 fasta_chunk = "ensembl.io.genomio.fasta.chunk:main"
 fasta_compare = "ensembl.io.genomio.fasta.compare:main"
 fasta_process = "ensembl.io.genomio.fasta.process:main"
+fasta_recombine = "ensembl.io.genomio.fasta.recombine:main"
+# Features
+features_combine_json = "ensembl.io.genomio.features.combine_json:main"
 fasta_split = "ensembl.io.genomio.fasta.split:main"
 # Features
 features_convert_to_genomio_json = "ensembl.io.genomio.features.convert_to_genomio_json:main"

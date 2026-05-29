@@ -7,3 +7,4 @@
 **/.coverage
 **/htmlcov
 **/.ruff_cache
+.DS_Store
