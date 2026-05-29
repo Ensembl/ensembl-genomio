@@ -1,0 +1,342 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Unit testing of `ensembl.io.genomio.utils.agp_utils` module."""
+
+from contextlib import nullcontext as does_not_raise
+from pathlib import Path
+from typing import ContextManager
+
+import pytest
+from pytest import param
+
+from ensembl.io.genomio.utils import agp_utils
+
+
+@pytest.mark.parametrize(
+    "test_dir_name, agp_name, allow_revcomp, expectation, check_type, check_data",
+    [
+        param(
+            "ignores_comments",
+            "comment.agp",
+            False,
+            does_not_raise(),
+            "single",
+            ("obj", "part", "+"),
+            id="Comment lines ignored",
+        ),
+        param(
+            "handles_orientation",
+            "minus_strand.agp",
+            True,
+            does_not_raise(),
+            "single",
+            ("obj", "part", "-"),
+            id="Reverse strand entry parsed when allowed",
+        ),
+        param(
+            "handles_orientation",
+            "minus_strand.agp",
+            False,
+            pytest.raises(ValueError, match=r"processing of reverse complement AGP entries is not enabled"),
+            None,
+            None,
+            id="Reverse strand entries rejected when disallowed",
+        ),
+        param(
+            "non_w_component",
+            "repeat.agp",
+            False,
+            pytest.raises(ValueError, match=r"Unsupported AGP component type"),
+            None,
+            None,
+            id="Ununsupported component type raises error",
+        ),
+        param(
+            "empty_file",
+            "empty.agp",
+            False,
+            pytest.raises(ValueError, match=r"contained no component lines"),
+            None,
+            None,
+            id="Empty AGP file raises error",
+        ),
+        param(
+            "truncated_line",
+            "truncated.agp",
+            False,
+            pytest.raises(ValueError, match=r"expected >= 9 columns"),
+            None,
+            None,
+            id="Truncated AGP line raises error",
+        ),
+        param(
+            "multiple_objects",
+            "multi.agp",
+            False,
+            does_not_raise(),
+            "multiple",
+            {
+                "keys": {"obj1", "obj2"},
+                "parts": {"obj1": [("part_a", "+")], "obj2": [("part_b", "+"), ("part_c", "+")]},
+            },
+            id="Multiple objects with multiple parts parsed correctly",
+        ),
+        param(
+            "multiple_errors",
+            "multi_errors.agp",
+            False,
+            pytest.raises(ValueError, match=r"had \d+ error\(s\)"),
+            None,
+            None,
+            id="Multiple AGP errors are collected and raised together",
+        ),
+        param(
+            "invalid_integers",
+            "bad_int.agp",
+            False,
+            pytest.raises(ValueError, match=r"invalid literal for int"),
+            None,
+            None,
+            id="Invalid integer fields raise error",
+        ),
+        param(
+            "gzipped_file",
+            "valid.agp.gz",
+            False,
+            does_not_raise(),
+            "single",
+            ("obj", "part_a", "+"),
+            id="Gzipped AGP file is read correctly",
+        ),
+    ],
+)
+def test_parse_agp(
+    data_dir: Path,
+    test_dir_name: str,
+    agp_name: str,
+    allow_revcomp: bool,
+    expectation: ContextManager,
+    check_type: str | None,
+    check_data: tuple[str] | dict[str, dict] | None,
+) -> None:
+    """
+    Tests the `agp_utils.parse_agp()` function.
+
+    Tests both single-object and multi-object AGP files, as well as error conditions.
+
+    Args:
+        data_dir: Module's test data directory fixture.
+        test_dir_name: Name of the subdirectory within the test data directory that contains the AGP file.
+        agp_name: Name of the test AGP file.
+        allow_revcomp: Boolean indicating whether minus strand entries are permitted.
+        expectation: Context manager for the expected outcome of the test (exception or not).
+        check_type: Type of check to perform ("single", "multiple", or `None` for error cases).
+        check_data: Data needed for assertions (varies by `check_type`).
+    """
+    test_dir = data_dir / test_dir_name
+    agp_file = test_dir / agp_name
+
+    with expectation:
+        out = agp_utils.parse_agp(agp_file, allow_revcomp)
+
+    if check_type == "single":
+        object_id, part_id, orientation = check_data
+        assert object_id in out
+        assert out[object_id][0].part_id == part_id
+        assert out[object_id][0].orientation == orientation
+
+    elif check_type == "multiple":
+        assert set(out.keys()) == check_data["keys"]
+        for obj_id, expected_parts in check_data["parts"].items():
+            assert len(out[obj_id]) == len(expected_parts)
+            for i, (expected_part_id, expected_orientation) in enumerate(expected_parts):
+                assert out[obj_id][i].part_id == expected_part_id
+                assert out[obj_id][i].orientation == expected_orientation
+
+
+def test_build_component_index_groups_by_part_id_and_sorts_within_component():
+    """Tests that component entries are grouped by component ID and sorted properly."""
+    e1 = agp_utils.AgpEntry(
+        record="objB",
+        record_start=50,
+        record_end=60,
+        part_number=2,
+        part_id="comp1",
+        part_start=1,
+        part_end=11,
+        orientation="+",
+    )
+    e2 = agp_utils.AgpEntry(
+        record="objA",
+        record_start=10,
+        record_end=20,
+        part_number=1,
+        part_id="comp1",
+        part_start=1,
+        part_end=11,
+        orientation="+",
+    )
+    e3 = agp_utils.AgpEntry(
+        record="objA",
+        record_start=21,
+        record_end=30,
+        part_number=2,
+        part_id="comp1",
+        part_start=1,
+        part_end=10,
+        orientation="+",
+    )
+    e4 = agp_utils.AgpEntry(
+        record="objA",
+        record_start=5,
+        record_end=9,
+        part_number=1,
+        part_id="comp2",
+        part_start=1,
+        part_end=5,
+        orientation="+",
+    )
+
+    agp_entries = {
+        "objA": [e3, e2, e4],  # deliberately unsorted
+        "objB": [e1],
+    }
+
+    idx = agp_utils.build_component_index(agp_entries)
+
+    assert set(idx) == {"comp1", "comp2"}
+
+    # comp2 only appears once
+    assert idx["comp2"] == [e4]
+
+    # comp1 should be sorted by (record, record_start, part_number):
+    # objA start=10 pn=1, objA start=21 pn=2, objB start=50 pn=2
+    assert idx["comp1"] == [e2, e3, e1]
+
+
+def test_build_component_index_empty_input_returns_empty_dict():
+    """Tests that `build_component_index()` returns an empty dict for empty input."""
+    assert agp_utils.build_component_index({}) == {}
+
+
+@pytest.mark.parametrize(
+    "start,end,orientation,allow_revcomp,expectation",
+    [
+        param(
+            1,
+            1,
+            "+",
+            False,
+            does_not_raise((100, 100)),
+            id="Single bp forward strand",
+        ),
+        param(
+            10,
+            20,
+            "+",
+            False,
+            does_not_raise((109, 119)),
+            id="Range forward strand",
+        ),
+        param(
+            1,
+            1,
+            "-",
+            True,
+            does_not_raise((199, 199)),
+            id="Single bp reverse strand",
+        ),
+        param(
+            10,
+            20,
+            "-",
+            True,
+            does_not_raise((180, 190)),
+            id="Range reverse strand",
+        ),
+        param(
+            5,
+            4,
+            "+",
+            False,
+            pytest.raises(ValueError, match=r"Range start > end"),
+            id="Start > end raises error",
+        ),
+        param(
+            0,
+            1,
+            "+",
+            False,
+            pytest.raises(ValueError, match=r"outside component span"),
+            id="Start outside component span raises error",
+        ),
+        param(
+            1,
+            101,
+            "+",
+            False,
+            pytest.raises(ValueError, match=r"outside component span"),
+            id="End outside component span raises error",
+        ),
+        param(
+            1,
+            1,
+            "-",
+            False,
+            pytest.raises(ValueError, match=r"processing of reverse complement AGP entries is not enabled"),
+            id="Reverse strand entry raises error when disallowed",
+        ),
+        param(
+            1,
+            10,
+            "?",
+            True,
+            pytest.raises(ValueError, match=r"Invalid AGP orientation"),
+            id="Invalid orientation raises error",
+        ),
+    ],
+)
+def test_lift_range(
+    start: int,
+    end: int,
+    orientation: str,
+    allow_revcomp: bool,
+    expectation: ContextManager,
+) -> None:
+    """
+    Tests the `agp_utils.lift_range()` function.
+
+    Args:
+        start: Start position relative to component.
+        end: End position relative to component.
+        orientation: Orientation of the component in relation to the record (+/-).
+        allow_revcomp: Boolean indicating whether minus strand entries are permitted.
+        expectation: Context manager for the expected outcome of the test (exception or not).
+    """
+    with expectation as expected:
+        part = agp_utils.AgpEntry(
+            record="obj",
+            record_start=100,
+            record_end=199,
+            part_number=1,
+            part_id="comp",
+            part_start=1,
+            part_end=100,
+            orientation=orientation,
+        )
+
+        obj, start_on_obj, end_on_obj = agp_utils.lift_range(part, start, end, allow_revcomp=allow_revcomp)
+        assert obj == "obj"
+        assert (start_on_obj, end_on_obj) == expected
