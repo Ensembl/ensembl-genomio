@@ -1005,7 +1005,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
     valid_consensus_keys: set[str],
     expectation: ContextManager,
 ) -> None:
-    """Tests ``_combine_feature_docs()`` validates repeat-consensus references when requested."""
+    """Tests `combine_json._combine_feature_docs()` validates repeat-consensus references when requested."""
     document = {
         "analysis": _analysis("rm"),
         "source": _source("prov"),
