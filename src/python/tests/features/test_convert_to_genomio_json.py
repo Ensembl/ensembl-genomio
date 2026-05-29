@@ -155,7 +155,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                     },
                 }
             ],
-            id="plus_strand_with_trailing_star",
+            id="Forward strand entry with trailing *",
         ),
         param(
             "repeatmasker_out/success_c_strand.out",
@@ -176,7 +176,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                     },
                 }
             ],
-            id="c_strand",
+            id="Complement strand entry",
         ),
         param(
             "repeatmasker_out/stop_no_repeats.out",
@@ -197,7 +197,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                     },
                 }
             ],
-            id="stops_on_no_repeats_message",
+            id="Stops on no repeats message",
         ),
         param(
             "repeatmasker_out/stop_ambiguous_bases.out",
@@ -218,7 +218,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                     },
                 }
             ],
-            id="stops_on_ambiguous_bases_message",
+            id="Stops on ambiguous bases in repeat coordinates",
         ),
         param(
             "repeatmasker_out/with_blank_lines.out",
@@ -254,7 +254,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                     },
                 },
             ],
-            id="skips_blank_lines",
+            id="Skips blank lines",
         ),
     ],
 )
@@ -287,57 +287,58 @@ def test_parse_repeatmasker_out_success(
         param(
             "repeatmasker_out/error_13_columns.out",
             r"Expected 14 or 15 columns",
-            id="rejects_13_columns",
+            id="Rejects lines with incorrect number of columns",
         ),
         param(
             "repeatmasker_out/error_invalid_score.out",
             r"Invalid 'score'",
-            id="rejects_invalid_score",
+            id="Rejects invalid score",
+        ),
         ),
         param(
             "repeatmasker_out/error_invalid_perc_div.out",
             r"Invalid 'perc_div'",
-            id="rejects_invalid_perc_div",
+            id="Rejects invalid perc_div",
         ),
         param(
             "repeatmasker_out/error_invalid_seq_region_start.out",
             r"Invalid 'seq_region_start'",
-            id="rejects_invalid_seq_region_start",
+            id="Rejects invalid sequence region start",
         ),
         param(
             "repeatmasker_out/error_non_positive_seq_region_start.out",
             r"Invalid seq_region coordinates",
-            id="rejects_non_positive_seq_region_start",
+            id="Rejects non-positive sequence region start",
         ),
         param(
             "repeatmasker_out/error_seq_region_end_before_start.out",
             r"seq_region_end < seq_region_start",
-            id="rejects_seq_region_end_before_start",
+            id="Rejects sequence region end before start",
         ),
         param(
             "repeatmasker_out/error_unexpected_strand.out",
             r"Unexpected strand token",
-            id="rejects_unexpected_strand_token",
+            id="Rejects unexpected strand token",
         ),
         param(
             "repeatmasker_out/error_empty_repeat_type.out",
             r"Malformed repeat_class/family",
-            id="rejects_empty_repeat_type",
+            id="Rejects empty repeat type",
         ),
         param(
             "repeatmasker_out/error_empty_repeat_class.out",
             r"Malformed repeat_class/family",
-            id="rejects_empty_repeat_class",
+            id="Rejects empty repeat class",
         ),
         param(
             "repeatmasker_out/error_plus_repeat_start_invalid.out",
             r"Invalid 'repeat_start'",
-            id="rejects_invalid_plus_repeat_start",
+            id="Rejects invalid forward strand repeat start",
         ),
         param(
             "repeatmasker_out/error_c_repeat_start_invalid.out",
             r"Invalid 'repeat_start'",
-            id="rejects_invalid_c_repeat_start",
+            id="Rejects invalid reverse strand repeat start",
         ),
     ],
 )
@@ -361,12 +362,12 @@ def test_parse_repeatmasker_out_errors(data_dir: Path, filename: str, error_patt
         param(
             "repeatmasker_out/error_non_positive_repeat_end.out",
             r"Invalid repeat coordinates",
-            id="skips_non_positive_repeat_end_with_warning",
+            id="Skips non-positive repeat end with warning",
         ),
         param(
             "repeatmasker_out/error_repeat_end_before_start.out",
             r"repeat_end < repeat_start",
-            id="skips_repeat_end_before_repeat_start_with_warning",
+            id="Skips repeat end before start with warning",
         ),
     ],
 )
@@ -435,7 +436,7 @@ def test_parse_repeatmasker_out_skips_invalid_repeat_coordinates(
                     seq="AT",
                 )
             },
-            id="window_coordinates_with_parameters",
+            id="Window coordinates with parameters",
         ),
         param(
             "trf/success_plain_no_params.dat",
@@ -472,7 +473,7 @@ def test_parse_repeatmasker_out_skips_invalid_repeat_coordinates(
                     seq="",
                 )
             },
-            id="plain_coordinates_without_parameters_or_motif",
+            id="Plain coordinates without parameters or motif",
         ),
     ],
 )
@@ -563,7 +564,7 @@ def test_parse_trf_out_errors_without_sequence_header(
                     "rm_repeat_type": "Alu",
                 },
             },
-            id="without_repeatmodeler_lib",
+            id="RepeatMasker without RepeatModeler consensuslibrary",
         ),
         param(
             "create_json/basic.out",
@@ -594,7 +595,7 @@ def test_parse_trf_out_errors_without_sequence_header(
                     "rm_repeat_type": "Alu",
                 },
             },
-            id="with_repeatmodeler_lib",
+            id="RepeatMasker with RepeatModeler consensus library",
         ),
         param(
             "trf/success_window_with_params.dat",
@@ -633,7 +634,7 @@ def test_parse_trf_out_errors_without_sequence_header(
                     "trf_parameters": "2 7 7 80 10 50 500",
                 },
             },
-            id="trf",
+            id="Tandem Repeat Finder",
         ),
         param(
             "create_json/basic.out",
@@ -641,7 +642,7 @@ def test_parse_trf_out_errors_without_sequence_header(
             None,
             None,
             None,
-            id="unsupported_logic_name",
+            id="Unsupported logic name",
         ),
     ],
 )
@@ -740,8 +741,8 @@ def test_create_genomio_json_omits_program_parameters_when_none(data_dir: Path, 
 @pytest.mark.parametrize(
     "use_repeatmodeler_lib",
     [
-        param(False, id="required_args_only"),
-        param(True, id="all_optional_args_overridden"),
+        param(False, id="Required arguments only"),
+        param(True, id="All optional arguments overridden"),
     ],
 )
 def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool) -> None:
@@ -831,13 +832,13 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
             "unsupported",
             False,
             r"Unsupported analysis logic name",
-            id="unsupported_analysis_logic_name",
+            id="Unsupported analysis logic name",
         ),
         param(
             "trf",
             True,
             r"--rm-consensus-lib is not applicable",
-            id="rejects_rm_consensus_lib_for_trf",
+            id="Rejects --rm-consensus-lib with non-RepeatMasker logic name",
         ),
     ],
 )
@@ -886,8 +887,8 @@ def test_parse_args_errors(
 @pytest.mark.parametrize(
     "use_repeatmodeler_lib",
     [
-        param(False, id="main_required_args_only"),
-        param(True, id="main_all_optional_args"),
+        param(False, id="Required arguments only"),
+        param(True, id="All optional arguments overridden"),
     ],
 )
 def test_main_passes_expected_arguments(
