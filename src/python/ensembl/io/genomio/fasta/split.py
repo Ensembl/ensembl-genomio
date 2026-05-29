@@ -15,6 +15,8 @@
 
 """Split a FASTA file into multiple FASTA files, optionally chunking long sequences."""
 
+__all__ = ["OutputWriter", "split_fasta"]
+
 import argparse
 import logging
 from io import TextIOWrapper
@@ -25,10 +27,12 @@ import shutil
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
+import ensembl.io.genomio
+from ensembl.io.genomio.utils.chunk_utils import seq_description_without_id
+
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
-
 
 _NUMERIC_DIR_RE = re.compile(r"^[1-9]\d*$")
 
@@ -250,16 +254,6 @@ def _clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
         logging.info(f"Deleted existing AGP file '{agp_path}'.")
 
 
-def _description_without_id(record: SeqRecord) -> str:
-    """Removes ID from FASTA record description"""
-    desc = record.description
-    if desc == record.id:
-        return ""
-    if desc.startswith(record.id):
-        return desc[len(record.id) + 1 :]
-    return desc
-
-
 def split_fasta(
     fasta_file: Path,
     out_dir: Path | None = None,
@@ -366,7 +360,7 @@ def split_fasta(
                         chunk_record = SeqRecord(
                             chunk_seq,
                             id=f"{record.id}_chunk_start_{start}",
-                            description=_description_without_id(record),
+                            description=seq_description_without_id(record),
                         )
                         if writer.record_count > 0:
                             writer.open_new_file()
@@ -477,6 +471,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_log_arguments()
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
 
     args = parser.parse_args(argv)
     if hasattr(args, "min_chunk_length") and not hasattr(args, "max_seq_length_per_file"):

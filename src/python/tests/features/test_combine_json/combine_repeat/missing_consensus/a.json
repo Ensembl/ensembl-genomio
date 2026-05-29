@@ -1,0 +1,26 @@
+{
+  "analysis": {
+    "run_date": "2026-02-18T00:00:00Z",
+    "logic_name": "rm",
+    "display_label": "rm",
+    "description": "rm analysis",
+    "program": "test",
+    "program_version": "0.0"
+  },
+  "source": {
+    "source_provider": "prov",
+    "is_primary": true
+  },
+  "repeat_consensus": [],
+  "repeat_features": [
+    {
+      "seq_region": "chr1",
+      "seq_region_start": 1,
+      "seq_region_end": 2,
+      "seq_region_strand": "+",
+      "repeat_start": 1,
+      "repeat_end": 10,
+      "repeat_consensus": "9e116ce4690736a73e9519e360b8cd929e116ce4690736a73e9519e360b8cd92"
+    }
+  ]
+}
