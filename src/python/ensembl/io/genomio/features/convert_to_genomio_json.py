@@ -210,7 +210,7 @@ def _has_valid_parsed_coordinates(
         line: Original input line for error reporting.
 
     Returns:
-        bool: True if all coordinates are valid, False otherwise.
+        bool: `True` if all coordinates are valid, `False` otherwise.
 
     Raises:
         ValueError: If any of the coordinate values are invalid (i.e. negative, zero, or end < start).
@@ -621,7 +621,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     Parse command-line arguments for JSON conversion.
 
     Args:
-        argv: Optional list of command-line arguments. If None, arguments are
+        argv: Optional list of command-line arguments. If `None`, arguments are
             taken from `sys.argv`.
 
     Returns:
@@ -702,11 +702,8 @@ def main(argv: list[str] | None = None) -> None:
     Run the JSON conversion command-line entry point.
 
     Args:
-        argv: Optional list of command-line arguments. If None, arguments are
+        argv: Optional list of command-line arguments. If `None`, arguments are
             taken from ``sys.argv``.
-
-    Returns:
-        None
     """
     args = parse_args(argv)
     try:
