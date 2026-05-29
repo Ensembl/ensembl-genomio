@@ -14,9 +14,8 @@
 # limitations under the License.
 """Compute longest, total, and count statistics for FASTA records."""
 
-from dataclasses import dataclass
 import argparse
-import json
+from dataclasses import dataclass
 import logging
 from pathlib import Path
 
@@ -45,7 +44,7 @@ def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
 
     Args:
         fasta_file: Path to raw or compressed input FASTA file.
-        output_file: Path to the output stats JSON file (defaults to <fasta_file>.stats.json if `None`).
+        output_file: Path to the output stats JSON file (defaults to ``<fasta_file>.stats.json`` if `None`).
     """
     longest = 0
     total = 0
@@ -85,7 +84,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     Parse command-line arguments.
 
     Args:
-        argv: Optional command-line arguments. If None, argparse reads from ``sys.argv``.
+        argv: Optional command-line arguments. If `None`, argparse reads from ``sys.argv``.
 
     Returns:
         argparse.Namespace: Parsed command-line arguments.
