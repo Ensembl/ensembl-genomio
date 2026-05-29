@@ -254,8 +254,8 @@ def test_top_level_accumulator_require_same_ignores_analysis_run_date(tmp_path: 
 @pytest.mark.parametrize(
     "json_filename",
     [
-        param("object.json", id="plain_json"),
-        param("object.json.gz", id="gzipped_json"),
+        param("object.json", id="Loads plain JSON"),
+        param("object.json.gz", id="Loads gzipped JSON"),
     ],
 )
 def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -> None:
@@ -285,7 +285,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
             10,
             20,
             does_not_raise(combine_json.AgpEntry("obj", 1, 100, 1, "comp", 1, 100, "+")),
-            id="returns_matching_entry",
+            id="Returns correct entry when single match",
         ),
         param(
             [
@@ -295,7 +295,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
             120,
             150,
             does_not_raise(combine_json.AgpEntry("obj", 101, 200, 2, "comp", 101, 200, "+")),
-            id="returns_correct_entry_when_multiple_non_overlapping",
+            id="Returns correct entry when multiple non-overlapping",
         ),
         param(
             [
@@ -304,7 +304,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
             200,
             210,
             pytest.raises(ValueError, match=r"does not fit within any AGP span"),
-            id="raises_when_no_span_matches",
+            id="Raises ValueError when no matching entry",
         ),
         param(
             [
@@ -314,7 +314,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
             60,
             70,
             pytest.raises(ValueError, match=r"Ambiguous AGP mapping"),
-            id="raises_when_ambiguous",
+            id="Raises ValueError when mapping is ambiguous",
         ),
     ],
 )
@@ -353,19 +353,19 @@ def test_get_agp_entry_for_range(
             dict(_repeat_consensus("Alu", "SINE", "Alu", sequence="ACGT"), repeat_consensus="TTTT"),
             combine_json._coerce_repeat_consensus,
             pytest.raises(ValueError, match=r"repeat_consensus_key mismatch"),
-            id="coerce_repeat_consensus_rejects_key_mismatch",
+            id="Coerce repeat consensus rejects key mismatch",
         ),
         param(
             _repeat_feature(seq_region="chr1", start=10, end=5),
             combine_json._coerce_repeat_feature,
             pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"),
-            id="coerce_repeat_feature_rejects_start_gt_end",
+            id="Coerce repeat feature rejects start > end",
         ),
         param(
             _ncrna_feature("chr1", 10, 5, strand="+"),
             combine_json._coerce_ncrna_feature,
             pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"),
-            id="coerce_ncrna_feature_rejects_start_gt_end",
+            id="Coerce ncRNA feature rejects start > end",
         ),
     ],
 )
@@ -420,7 +420,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
                     "seq_region_strand": "+",
                 }
             ),
-            id="seq_region_driven_chunked",
+            id="Sequence-region-driven lifting for chunked region",
         ),
         param(
             _repeat_feature(seq_region="chr1", start=1, end=5, strand="+"),
@@ -434,7 +434,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
                     "seq_region_strand": "+",
                 }
             ),
-            id="seq_region_driven_unchunked",
+            id="Sequence-region-driven lifting for unchunked region",
         ),
         param(
             _repeat_feature(seq_region="compP", start=10, end=20, strand="+"),
@@ -461,7 +461,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
                     "seq_region_strand": "+",
                 }
             ),
-            id="agp_driven_forward",
+            id="AGP-driven lifting for forward strand",
         ),
         param(
             _repeat_feature(seq_region="compM", start=10, end=20, strand="+"),
@@ -488,7 +488,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
                     "seq_region_strand": "-",
                 }
             ),
-            id="agp_driven_reverse",
+            id="AGP-driven lifting for reverse strand",
         ),
         param(
             _repeat_feature(seq_region="compM", start=10, end=20, strand="-"),
@@ -515,14 +515,14 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
                     "seq_region_strand": "+",
                 }
             ),
-            id="agp_driven_reverse_flips_minus_to_plus",
+            id="AGP-driven lifting flips reverse to forward strand",
         ),
         param(
             _repeat_feature(seq_region="chr1", start=10, end=5, strand="+"),
             None,
             False,
             pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"),
-            id="rejects_end_less_than_start",
+            id="Rejects end less than start",
         ),
         param(
             _repeat_feature(seq_region="compM", start=10, end=20, strand="."),
@@ -542,7 +542,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
             },
             True,
             pytest.raises(ValueError, match=r"Invalid strand value: \."),
-            id="rejects_invalid_strand",
+            id="Rejects invalid strand",
         ),
     ],
 )
@@ -600,17 +600,17 @@ def test_detect_load_type_rejects_unknown_type(tmp_path: Path):
         param(
             _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key=None),
             does_not_raise(None),
-            id="returns_none_when_no_consensus",
+            id="Returns None when no consensus",
         ),
         param(
             _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key="A" * 64),
             does_not_raise("a" * 64),
-            id="returns_lowercased_consensus_key",
+            id="Returns lower-cased consensue key",
         ),
         param(
             _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key="invalid_key"),
             pytest.raises(ValueError, match=r"repeat_consensus must be a 64-char SHA-256 hex"),
-            id="rejects_invalid_consensus_key",
+            id="Rejects invalid consensus key",
         ),
     ],
 )
@@ -711,7 +711,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                     "nr_features": 2,
                 }
             ),
-            id="repeat_seq_region_driven_combines_and_lifts",
+            id="Repeat features with sequence-region-driven lifting",
         ),
         param(
             [
@@ -757,7 +757,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                     "nr_features": 2,
                 }
             ),
-            id="ncrna_seq_region_driven_combines_and_lifts",
+            id="NcRNA features with sequence-region-driven lifting",
         ),
         param(
             [
@@ -802,7 +802,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                     "nr_features": 1,
                 }
             ),
-            id="repeat_agp_driven_forward_lifts",
+            id="Repeat features with AGP-driven lifting for forward strand",
         ),
         param(
             [
@@ -849,7 +849,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
                     "nr_features": 1,
                 }
             ),
-            id="ncrna_agp_driven_reverse_lifts_and_flips_strand",
+            id="NcRNA features with AGP-driven lifting for reverse strand",
         ),
         param(
             [],
@@ -859,7 +859,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
             False,
             ["analysis", "source"],
             pytest.raises(ValueError, match=r"No JSON files were read from the manifest"),
-            id="empty_documents_raises",
+            id="Empty documents raises error",
         ),
         param(
             [
@@ -890,7 +890,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
             False,
             ["analysis", "source"],
             pytest.raises(ValueError, match=r"Top-level 'analysis' differs"),
-            id="analysis_mismatch_raises",
+            id="Analysis mismatch raises error",
         ),
         param(
             [
@@ -923,7 +923,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
             False,
             ["analysis", "source", "ncrna_tool"],
             pytest.raises(ValueError, match=r"Top-level 'ncrna_tool' differs"),
-            id="ncrna_tool_mismatch_raises",
+            id="NcRNA tool mismatch raises error",
         ),
     ],
 )
@@ -995,7 +995,7 @@ def test_combine_feature_docs(
             _sha256_key("Alu", "SINE", "Alu", "ACGT"),
             set(),
             pytest.raises(ValueError, match=r"not present in repeat_consensus"),
-            id="missing_consensus_key_raises",
+            id="Missing consensus key raises error",
         ),
     ],
 )
@@ -1060,7 +1060,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
                     ],
                 }
             ),
-            id="seq_region_driven_repeat_merge_and_liftover",
+            id="Sequence-region-driven lifting for repeat features",
         ),
         param(
             "agp_forward",
@@ -1082,7 +1082,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
                     ],
                 }
             ),
-            id="agp_driven_forward_repeat_merge_and_liftover",
+            id="AGP-driven lifting for forward strand repeat features",
         ),
         param(
             "agp_reverse",
@@ -1104,14 +1104,14 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
                     ],
                 }
             ),
-            id="agp_driven_reverse_repeat_merge_and_liftover",
+            id="AGP-driven lifting for reverse strand repeat features",
         ),
         param(
             "missing_consensus",
             None,
             False,
             pytest.raises(ValueError, match=r"not present in repeat_consensus"),
-            id="missing_consensus_reference_raises",
+            id="Missing consensus reference raises error",
         ),
     ],
 )
@@ -1180,7 +1180,7 @@ def test_combine_repeat_json_paths(
                     ],
                 }
             ),
-            id="seq_region_driven_ncrna_merge_and_liftover",
+            id="Sequence-region-driven lifting for ncRNA features",
         ),
         param(
             "agp_forward",
@@ -1196,7 +1196,7 @@ def test_combine_repeat_json_paths(
                     ],
                 }
             ),
-            id="agp_driven_forward_ncrna_merge_and_liftover",
+            id="AGP-driven lifting for forward strand ncRNA features",
         ),
         param(
             "agp_reverse",
@@ -1212,7 +1212,7 @@ def test_combine_repeat_json_paths(
                     ],
                 }
             ),
-            id="agp_driven_reverse_ncrna_merge_and_liftover",
+            id="AGP-driven lifting for reverse strand ncRNA features",
         ),
     ],
 )
@@ -1281,35 +1281,35 @@ def test_combine_ncrna_json_paths(
                     ],
                 }
             ),
-            id="ncrna_success",
+            id="NcRNA features with sequence-region-driven lifting",
         ),
         param(
             "empty_manifest",
             None,
             False,
             pytest.raises(ValueError, match=r"empty manifest"),
-            id="rejects_empty_manifest",
+            id="Empty manifest raises error",
         ),
         param(
             "combine_repeat/missing_component",
             "test.agp",
             False,
             pytest.raises(KeyError, match=r"not found as an AGP component_id"),
-            id="agp_driven_missing_component_raises",
+            id="AGP-driven missing component raises error",
         ),
         param(
             "combine_repeat/ambiguous_mapping",
             "test.agp",
             False,
             pytest.raises(ValueError, match=r"Ambiguous AGP mapping"),
-            id="agp_driven_ambiguous_mapping_raises",
+            id="AGP-driven ambiguous mapping raises error",
         ),
         param(
             "mixed_schema_kinds",
             None,
             False,
             pytest.raises(ValueError, match=r"Mixed load types detected"),
-            id="mixed_schema_kinds_raises",
+            id="Mixed load types raises error",
         ),
     ],
 )

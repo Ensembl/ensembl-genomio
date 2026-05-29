@@ -34,7 +34,7 @@ from ensembl.io.genomio.utils import agp_utils
             does_not_raise(),
             "single",
             ("obj", "part", "+"),
-            id="ignores_comments",
+            id="Comment lines ignored",
         ),
         param(
             "handles_orientation",
@@ -43,7 +43,7 @@ from ensembl.io.genomio.utils import agp_utils
             does_not_raise(),
             "single",
             ("obj", "part", "-"),
-            id="handles_minus_strand_when_allowed",
+            id="Reverse strand entry parsed when allowed",
         ),
         param(
             "handles_orientation",
@@ -52,7 +52,7 @@ from ensembl.io.genomio.utils import agp_utils
             pytest.raises(ValueError, match=r"processing of reverse complement AGP entries is not enabled"),
             None,
             None,
-            id="rejects_minus_strand_when_not_allowed",
+            id="Reverse strand entries rejected when disallowed",
         ),
         param(
             "non_w_component",
@@ -61,7 +61,7 @@ from ensembl.io.genomio.utils import agp_utils
             pytest.raises(ValueError, match=r"Unsupported AGP component type"),
             None,
             None,
-            id="rejects_non_W_component",
+            id="Ununsupported component type raises error",
         ),
         param(
             "empty_file",
@@ -70,7 +70,7 @@ from ensembl.io.genomio.utils import agp_utils
             pytest.raises(ValueError, match=r"contained no component lines"),
             None,
             None,
-            id="rejects_empty_file",
+            id="Empty AGP file raises error",
         ),
         param(
             "truncated_line",
@@ -79,7 +79,7 @@ from ensembl.io.genomio.utils import agp_utils
             pytest.raises(ValueError, match=r"expected >= 9 columns"),
             None,
             None,
-            id="rejects_truncated_line",
+            id="Truncated AGP line raises error",
         ),
         param(
             "multiple_objects",
@@ -91,7 +91,7 @@ from ensembl.io.genomio.utils import agp_utils
                 "keys": {"obj1", "obj2"},
                 "parts": {"obj1": [("part_a", "+")], "obj2": [("part_b", "+"), ("part_c", "+")]},
             },
-            id="parses_multiple_objects",
+            id="Multiple objects with multiple parts parsed correctly",
         ),
         param(
             "multiple_errors",
@@ -100,7 +100,7 @@ from ensembl.io.genomio.utils import agp_utils
             pytest.raises(ValueError, match=r"had \d+ error\(s\)"),
             None,
             None,
-            id="collates_multiple_errors",
+            id="Multiple AGP errors are collected and raised together",
         ),
         param(
             "invalid_integers",
@@ -109,7 +109,7 @@ from ensembl.io.genomio.utils import agp_utils
             pytest.raises(ValueError, match=r"invalid literal for int"),
             None,
             None,
-            id="rejects_invalid_integer_values",
+            id="Invalid integer fields raise error",
         ),
         param(
             "gzipped_file",
@@ -118,7 +118,7 @@ from ensembl.io.genomio.utils import agp_utils
             does_not_raise(),
             "single",
             ("obj", "part_a", "+"),
-            id="parses_gzipped_agp_files",
+            id="Gzipped AGP file is read correctly",
         ),
     ],
 )
@@ -240,7 +240,7 @@ def test_build_component_index_empty_input_returns_empty_dict():
             "+",
             False,
             does_not_raise((100, 100)),
-            id="single_bp_forward_strand",
+            id="Single bp forward strand",
         ),
         param(
             10,
@@ -248,7 +248,7 @@ def test_build_component_index_empty_input_returns_empty_dict():
             "+",
             False,
             does_not_raise((109, 119)),
-            id="range_forward_strand",
+            id="Range forward strand",
         ),
         param(
             1,
@@ -256,7 +256,7 @@ def test_build_component_index_empty_input_returns_empty_dict():
             "-",
             True,
             does_not_raise((199, 199)),
-            id="single_bp_reverse_strand",
+            id="Single bp reverse strand",
         ),
         param(
             10,
@@ -264,7 +264,7 @@ def test_build_component_index_empty_input_returns_empty_dict():
             "-",
             True,
             does_not_raise((180, 190)),
-            id="range_reverse_strand",
+            id="Range reverse strand",
         ),
         param(
             5,
@@ -272,7 +272,7 @@ def test_build_component_index_empty_input_returns_empty_dict():
             "+",
             False,
             pytest.raises(ValueError, match=r"Range start > end"),
-            id="rejects_start_after_end",
+            id="Start > end raises error",
         ),
         param(
             0,
@@ -280,7 +280,7 @@ def test_build_component_index_empty_input_returns_empty_dict():
             "+",
             False,
             pytest.raises(ValueError, match=r"outside component span"),
-            id="rejects_start_outside_component_span",
+            id="Start outside component span raises error",
         ),
         param(
             1,
@@ -288,7 +288,7 @@ def test_build_component_index_empty_input_returns_empty_dict():
             "+",
             False,
             pytest.raises(ValueError, match=r"outside component span"),
-            id="rejects_end_outside_component_span",
+            id="End outside component span raises error",
         ),
         param(
             1,
@@ -296,7 +296,7 @@ def test_build_component_index_empty_input_returns_empty_dict():
             "-",
             False,
             pytest.raises(ValueError, match=r"processing of reverse complement AGP entries is not enabled"),
-            id="rejects_minus_strand_when_not_allowed",
+            id="Reverse strand entry raises error when disallowed",
         ),
         param(
             1,
@@ -304,7 +304,7 @@ def test_build_component_index_empty_input_returns_empty_dict():
             "?",
             True,
             pytest.raises(ValueError, match=r"Invalid AGP orientation"),
-            id="rejects_invalid_orientation",
+            id="Invalid orientation raises error",
         ),
     ],
 )
