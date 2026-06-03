@@ -15,85 +15,29 @@
 """Constructs a GenomIO JSON document from output of feature identification tools."""
 
 import argparse
+from dataclasses import dataclass
+from datetime import datetime, timezone
 import hashlib
 import json
 import logging
-import re
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
-
+import re
+from typing import Callable, TypeVar
 
 from Bio import SeqIO
 
 import ensembl.io.genomio
-
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.archive import open_gz_file
 
 __all__ = [
     "Consensus",
-    "parse_repeatmasker_out",
-    "parse_trf_out",
+    "parse_repeatmasker_output",
+    "parse_trf_output",
     "create_genomio_json",
 ]
 
-
-@dataclass(frozen=True)
-class Consensus:
-    name: str
-    repeat_class: str
-    repeat_type: str
-    seq: str
-
-    def sha256_key(self) -> str:
-        """
-        Returns a normalized SHA256 digest for this consensus record.
-
-        The digest is computed from the consensus name, repeat class, repeat type,
-        and normalized sequence content.
-
-        Returns:
-            str: SHA256 hex digest for the consensus record.
-        """
-        norm_name = self.name.strip()
-        norm_class = self.repeat_class.strip()
-        norm_type = self.repeat_type.strip()
-        norm_seq = "".join(self.seq.split()).upper()
-        payload = f"{norm_name}\t{norm_class}\t{norm_type}\t{norm_seq}".encode("utf-8")
-        return hashlib.sha256(payload).hexdigest()
-
-
-DEFAULT_ANALYSIS_PARAMS = {
-    "repeatmask_customlib": {
-        "description": (
-            'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, '
-            "using a custom library of <em>ab initio</em> repeat profiles for this species."
-        ),
-        "display_label": "Repeats: Custom library",
-        "program": "RepeatMasker",
-    },
-    "repeatmask_rmlib": {
-        "description": (
-            'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, '
-            'using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of '
-            "repeat profiles."
-        ),
-        "display_label": "Repeats: Repbase",
-        "program": "RepeatMasker",
-    },
-    "trf": {
-        "description": (
-            '<a rel="external" href="https://tandem.bu.edu/trf/trf.html">Tandem Repeats Finder</a> '
-            "locates adjacent copies of a pattern of nucleotides."
-        ),
-        "display_label": "Tandem repeats (TRF)",
-        "program": "trf",
-    },
-}
-
-
-RM_MAPPINGS = [
+REPEATMASKER_MAPPINGS = [
     (r"^Low_Comp.*$", "Low complexity regions"),
     (r"^LINE.*$", "Type I Transposons/LINE"),
     (r"^SINE.*$", "Type I Transposons/SINE"),
@@ -113,58 +57,72 @@ RM_MAPPINGS = [
     (r".*RNA$", "RNA repeats"),
 ]
 
-RM_COMPILED_MAPPINGS = [(re.compile(pattern), mapped) for pattern, mapped in RM_MAPPINGS]
+REPEATMASKER_COMPILED_MAPPINGS = [(re.compile(pattern), mapped) for pattern, mapped in REPEATMASKER_MAPPINGS]
+
+T = TypeVar("T")
 
 TRF_SEQUENCE_RE = re.compile(r"^Sequence:\s+(?P<seq_region>\S+?)(?::(?P<start>\d+)-\d+)?\s*$")
 
 TRF_PARAMETERS_RE = re.compile(r"^Parameters:\s+(?P<params>.+)\s*$")
 
 
-def _parse_int(token: str, field_name: str, raw_line: str, path: Path) -> int:
+@dataclass(frozen=True)
+class Consensus:
+    name: str
+    repeat_class: str
+    repeat_type: str
+    seq: str
+
+    def sha256_key(self) -> str:
+        """
+        Returns a normalized SHA256 digest for this consensus record.
+
+        The digest is computed from the consensus name, repeat class, repeat type,
+        and normalized sequence content.
+
+        Returns:
+            SHA256 hex digest for the consensus record.
+        """
+        norm_name = self.name.strip()
+        norm_class = self.repeat_class.strip()
+        norm_type = self.repeat_type.strip()
+        norm_seq = "".join(self.seq.split()).upper()
+        payload = f"{norm_name}\t{norm_class}\t{norm_type}\t{norm_seq}".encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
+
+
+def _parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_line: str, path: Path) -> T:
     """
-    Parses an integer field from TRF output.
+    Parses a field from tool output into the specified class type.
 
     Args:
+        parser: A callable that takes a string and returns a value of type T.
         token: Raw token to parse.
         field_name: Field name used in error messages.
         raw_line: Original input line.
         path: Input file path.
 
     Returns:
-        int: Parsed integer value.
+        The parsed value.
 
     Raises:
-        ValueError: If the token is not a valid integer.
+        ValueError: If the token cannot be cast to the specified type.
     """
     try:
-        return int(token)
+        return parser(token)
     except ValueError:
         raise ValueError(f"Invalid {field_name!r} in {path}: token={token!r}, line={raw_line!r}")
 
 
-def _parse_float(token: str, field_name: str, raw_line: str, path: Path) -> float:
-    """
-    Parses a floating-point field from TRF output.
-
-    Args:
-        token: Raw token to parse.
-        field_name: Field name used in error messages.
-        raw_line: Original input line.
-        path: Input file path.
-
-    Returns:
-        float: Parsed floating-point value.
-
-    Raises:
-        ValueError: If the token is not a valid float.
-    """
-    try:
-        return float(token)
-    except ValueError:
-        raise ValueError(f"Invalid {field_name!r} in {path}: token={token!r}, line={raw_line!r}")
+def _format_parse_errors(parser_name: str, input_path: Path, errors: list[str]) -> str:
+    """Formats multiple parser errors into a single exception message."""
+    return f"Found {len(errors)} errors while parsing {parser_name} in {input_path}:\n" + "\n".join(
+        f"- {error}" for error in errors
+    )
 
 
 def _file_last_modified_time(file_path: Path) -> str:
+    """Returns the last modified time of the given file."""
     return (
         datetime.fromtimestamp(
             file_path.stat().st_mtime,
@@ -175,7 +133,7 @@ def _file_last_modified_time(file_path: Path) -> str:
     )
 
 
-def _map_rm_repeat_type(repeat_type: str) -> str:
+def _map_repeatmasker_repeat_type(repeat_type: str) -> str:
     """
     Maps a raw RepeatMasker repeat type to a GenomIO repeat category.
 
@@ -183,9 +141,9 @@ def _map_rm_repeat_type(repeat_type: str) -> str:
         repeat_type: Raw repeat type string extracted from RepeatMasker output.
 
     Returns:
-        str: Mapped repeat type category. Returns "Unknown" when no mapping matches.
+        Mapped repeat type category. Returns "Unknown" when no mapping matches.
     """
-    for regex, mapped in RM_COMPILED_MAPPINGS:
+    for regex, mapped in REPEATMASKER_COMPILED_MAPPINGS:
         if regex.match(repeat_type):
             return mapped
     return "Unknown"
@@ -210,7 +168,7 @@ def _has_valid_parsed_coordinates(
         line: Original input line for error reporting.
 
     Returns:
-        bool: `True` if all coordinates are valid, `False` otherwise.
+        `True` if all coordinates are valid, `False` otherwise.
 
     Raises:
         ValueError: If any of the coordinate values are invalid (i.e. negative, zero, or end < start).
@@ -243,8 +201,8 @@ def _has_valid_parsed_coordinates(
     return no_warnings
 
 
-def _parse_rm_consensus_library(
-    rm_consensus_lib_path: Path,
+def _parse_repeatmasker_consensus_library(
+    consensus_lib_path: Path,
 ) -> tuple[dict[tuple[str, str, str], str], dict[str, Consensus]]:
     """
     Parses a RepeatMasker consensus library FASTA file into a dictionary of Consensus records.
@@ -253,16 +211,16 @@ def _parse_rm_consensus_library(
         >consensus_name#repeat_class/repeat_type
 
     Args:
-        rm_consensus_lib_path: Path to the RepeatMasker consensus library FASTA file.
+        consensus_lib_path: Path to the RepeatMasker consensus library FASTA file.
 
     Returns:
-        tuple[dict[tuple[str, str, str], str], dict[str, Consensus]]: A tuple containing:
+        A tuple containing:
             - A dictionary mapping (consensus_name, repeat_class, repeat_type) tuples to SHA256 digests.
             - A dictionary of Consensus records keyed by SHA256 digest.
     """
     consensus_keys_by_triplet: dict[tuple[str, str, str], str] = {}
     consensuses_by_key: dict[str, Consensus] = {}
-    with open_gz_file(rm_consensus_lib_path) as fh:
+    with open_gz_file(consensus_lib_path) as fh:
         for record in SeqIO.parse(fh, "fasta"):
             repeat_name = record.id
             repeat_class = "Unknown"
@@ -278,7 +236,7 @@ def _parse_rm_consensus_library(
             consensus_obj = Consensus(
                 name=repeat_name,
                 repeat_class=repeat_class,
-                repeat_type=_map_rm_repeat_type(repeat_type),
+                repeat_type=_map_repeatmasker_repeat_type(repeat_type),
                 seq=str(record.seq),
             )
             consensus_key = consensus_obj.sha256_key()
@@ -287,8 +245,8 @@ def _parse_rm_consensus_library(
     return consensus_keys_by_triplet, consensuses_by_key
 
 
-def parse_repeatmasker_out(
-    input_path: Path, rm_consensus_lib_path: Path | None
+def parse_repeatmasker_output(
+    input_path: Path, consensus_lib_path: Path | None
 ) -> tuple[list[dict], dict[str, Consensus]]:
     """
     Parse a RepeatMasker .out file into repeat feature dictionaries and consensus records.
@@ -297,21 +255,27 @@ def parse_repeatmasker_out(
     extracted from the library and associated with features based on their repeat names.
     Otherwise, consensus records will be created with empty sequences.
 
+    Args:
+        input_path: Path to the RepeatMasker .out file to parse.
+        consensus_lib_path: Optional path to a RepeatMasker consensus library FASTA file.
+
     Returns:
-        tuple[list[dict], dict[str, Consensus]]: A tuple containing:
+        A tuple containing:
             - repeat feature dictionaries
             - repeat consensus dictionary keyed by consensus SHA256 digest
 
     Raises:
-        ValueError: If the RepeatMasker output contains malformed rows or invalid
-            coordinate values.
+        ValueError: If the RepeatMasker output contains malformed rows or invalid coordinate values.
     """
     consensus_keys_by_triplet: dict[tuple[str, str, str], str] = {}
     consensuses_by_key: dict[str, Consensus] = {}
-    if rm_consensus_lib_path is not None:
-        consensus_keys_by_triplet, consensuses_by_key = _parse_rm_consensus_library(rm_consensus_lib_path)
+    if consensus_lib_path is not None:
+        consensus_keys_by_triplet, consensuses_by_key = _parse_repeatmasker_consensus_library(
+            consensus_lib_path
+        )
 
     features: list[dict] = []
+    errors: list[str] = []
     with open_gz_file(input_path) as fh:
         for raw_line in fh:
             line = raw_line.strip()
@@ -319,68 +283,73 @@ def parse_repeatmasker_out(
                 continue
 
             lower_line = line.lower()
-            if "no repetitive sequences detected" in lower_line:
-                break
-            if "only contains ambiguous bases" in lower_line:
+            if (
+                "no repetitive sequences detected" in lower_line
+                or "only contains ambiguous bases" in lower_line
+            ):
                 break
 
-            if line.startswith("SW") or line.startswith("score") or line.startswith("There were"):
+            if line.startswith(("SW", "score", "There were")):
                 continue
 
-            columns = line.split()
-            if columns[-1] == "*":
-                columns.pop()
+            try:
+                columns = line.split()
+                if columns[-1] == "*":
+                    columns.pop()
 
-            if len(columns) < 14 or len(columns) > 15:
-                raise ValueError(
-                    f"Expected 14 or 15 columns in {input_path}, got {len(columns)}: line={line!r}"
-                )
-
-            score = _parse_float(columns[0], "score", line, input_path)
-            perc_div = _parse_float(columns[1], "perc_div", line, input_path)
-            perc_del = _parse_float(columns[2], "perc_del", line, input_path)
-            perc_ins = _parse_float(columns[3], "perc_ins", line, input_path)
-
-            seq_region = columns[4]
-            seq_region_start = _parse_int(columns[5], "seq_region_start", line, input_path)
-            seq_region_end = _parse_int(columns[6], "seq_region_end", line, input_path)
-
-            strand_token = columns[8]
-            if strand_token == "+":
-                seq_region_strand = "+"
-                repeat_start = _parse_int(columns[11], "repeat_start", line, input_path)
-                repeat_end = _parse_int(columns[12], "repeat_end", line, input_path)
-            elif strand_token == "C":
-                seq_region_strand = "-"
-                repeat_end = _parse_int(columns[12], "repeat_end", line, input_path)
-                repeat_start = _parse_int(columns[13], "repeat_start", line, input_path)
-            else:
-                raise ValueError(
-                    f"Unexpected strand token in {input_path}: token={strand_token!r}, line={line!r}"
-                )
-
-            repeat_name = columns[9]
-            repeat_class_field = columns[10]
-
-            if "/" in repeat_class_field:
-                repeat_class, repeat_type = repeat_class_field.split("/", 1)
-                if not repeat_class or not repeat_type:
+                if len(columns) < 14 or len(columns) > 15:
                     raise ValueError(
-                        f"Malformed repeat_class/family in {input_path}: "
-                        f"value={repeat_class_field!r}, line={line!r}"
+                        f"Expected 14 or 15 columns in {input_path}, got {len(columns)}: line={line!r}"
                     )
-            else:
-                repeat_class = repeat_class_field
-                repeat_type = "Unknown"
 
-            if not _has_valid_parsed_coordinates(
-                input_path,
-                seq_region_start,
-                seq_region_end,
-                repeat_start,
-                repeat_end,
-                line,
-            ):
+                score = _parse_token(float, columns[0], "score", line, input_path)
+                perc_div = _parse_token(float, columns[1], "perc_div", line, input_path)
+                perc_del = _parse_token(float, columns[2], "perc_del", line, input_path)
+                perc_ins = _parse_token(float, columns[3], "perc_ins", line, input_path)
+
+                seq_region = columns[4]
+                seq_region_start = _parse_token(int, columns[5], "seq_region_start", line, input_path)
+                seq_region_end = _parse_token(int, columns[6], "seq_region_end", line, input_path)
+
+                strand_token = columns[8]
+                if strand_token == "+":
+                    seq_region_strand = "+"
+                    repeat_start = _parse_token(int, columns[11], "repeat_start", line, input_path)
+                    repeat_end = _parse_token(int, columns[12], "repeat_end", line, input_path)
+                elif strand_token == "C":
+                    seq_region_strand = "-"
+                    repeat_end = _parse_token(int, columns[12], "repeat_end", line, input_path)
+                    repeat_start = _parse_token(int, columns[13], "repeat_start", line, input_path)
+                else:
+                    raise ValueError(
+                        f"Unexpected strand token in {input_path}: token={strand_token!r}, line={line!r}"
+                    )
+
+                repeat_name = columns[9]
+                repeat_class_field = columns[10]
+
+                if "/" in repeat_class_field:
+                    repeat_class, repeat_type = repeat_class_field.split("/", 1)
+                    if not repeat_class or not repeat_type:
+                        raise ValueError(
+                            f"Malformed repeat_class/family in {input_path}: "
+                            f"value={repeat_class_field}, line={line!r}"
+                        )
+                else:
+                    repeat_class = repeat_class_field
+                    repeat_type = "Unknown"
+
+                if not _has_valid_parsed_coordinates(
+                    input_path,
+                    seq_region_start,
+                    seq_region_end,
+                    repeat_start,
+                    repeat_end,
+                    line,
+                ):
+                    continue
+            except ValueError as exc:
+                errors.append(str(exc))
                 continue
 
             feature = {
@@ -395,7 +364,7 @@ def parse_repeatmasker_out(
                     "perc_div": perc_div,
                     "perc_del": perc_del,
                     "perc_ins": perc_ins,
-                    "rm_repeat_type": repeat_type,
+                    "repeatmasker_repeat_type": repeat_type,
                 },
             }
 
@@ -406,10 +375,13 @@ def parse_repeatmasker_out(
 
             features.append(feature)
 
+    if errors:
+        raise ValueError(_format_parse_errors("RepeatMasker output", input_path, errors))
+
     return features, consensuses_by_key
 
 
-def parse_trf_out(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
+def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
     """
     Parses a TRF .dat file into repeat feature dictionaries and consensus records.
 
@@ -418,23 +390,47 @@ def parse_trf_out(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
         Sequence: NC_135497.1:379500001-380000000
 
     Returns:
-        tuple[list[dict], dict[str, Consensus]]: A tuple containing:
+        A tuple containing:
             - repeat feature dictionaries
             - repeat consensus dictionary keyed by consensus SHA256 digest
+
+    Raises:
+        ValueError: If the TRF output contains malformed rows or invalid coordinate values.
     """
     features: list[dict] = []
     consensuses_by_key: dict[str, Consensus] = {}
+    errors: list[str] = []
 
     seq_region: str | None = None
     window_start: int | None = None
     trf_parameters: str | None = None
-
     header_line = True
+    in_data_block = False
+    skip_data_block_without_sequence = False
+    skipped_data_block_first_line: int | None = None
+    skipped_data_block_entries = 0
+
     with open_gz_file(input_path) as fh:
-        for raw_line in fh:
+        for line_number, raw_line in enumerate(fh, start=1):
             line = raw_line.strip()
             if not line:
                 continue
+
+            columns = line.split()
+            if in_data_block and len(columns) < 13:
+                if skip_data_block_without_sequence:
+                    errors.append(
+                        f"TRF sequence header not found before data lines in {input_path}: "
+                        f"unprocessed_entries={skipped_data_block_entries}, "
+                        f"first_data_line={skipped_data_block_first_line}"
+                    )
+                seq_region = None
+                window_start = None
+                trf_parameters = None
+                in_data_block = False
+                skip_data_block_without_sequence = False
+                skipped_data_block_first_line = None
+                skipped_data_block_entries = 0
 
             seq_match = TRF_SEQUENCE_RE.match(line)
             if seq_match is not None:
@@ -445,6 +441,7 @@ def parse_trf_out(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
                 else:
                     window_start = None
                 trf_parameters = None
+                skip_data_block_without_sequence = False
                 continue
 
             if header_line:
@@ -455,36 +452,55 @@ def parse_trf_out(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
                 trf_parameters = params_match.group("params")
                 continue
 
-            columns = line.split()
             if len(columns) < 13:
                 continue
 
-            start = _parse_int(columns[0], "start", line, input_path)
-            end = _parse_int(columns[1], "end", line, input_path)
-            period_size = _parse_int(columns[2], "period_size", line, input_path)
-            copy_number = _parse_float(columns[3], "copy_number", line, input_path)
-            consensus_size = _parse_int(columns[4], "consensus_size", line, input_path)
-            perc_match = _parse_float(columns[5], "perc_match", line, input_path)
-            perc_indel = _parse_float(columns[6], "perc_indel", line, input_path)
-            score = _parse_float(columns[7], "score", line, input_path)
-            a_pct = _parse_float(columns[8], "a_pct", line, input_path)
-            c_pct = _parse_float(columns[9], "c_pct", line, input_path)
-            g_pct = _parse_float(columns[10], "g_pct", line, input_path)
-            t_pct = _parse_float(columns[11], "t_pct", line, input_path)
-            entropy = _parse_float(columns[12], "entropy", line, input_path)
-            motif = columns[13] if len(columns) >= 14 else ""
+            if skip_data_block_without_sequence:
+                skipped_data_block_entries += 1
+                continue
 
-            if seq_region is None:
-                raise ValueError(
-                    f"TRF sequence header not found before data lines in {input_path}: line={line!r}"
+            in_data_block = True
+
+            try:
+                if seq_region is None:
+                    skip_data_block_without_sequence = True
+                    skipped_data_block_first_line = line_number
+                    skipped_data_block_entries = 1
+                    continue
+
+                start = _parse_token(int, columns[0], "start", line, input_path)
+                end = _parse_token(int, columns[1], "end", line, input_path)
+                period_size = _parse_token(int, columns[2], "period_size", line, input_path)
+                copy_number = _parse_token(float, columns[3], "copy_number", line, input_path)
+                consensus_size = _parse_token(int, columns[4], "consensus_size", line, input_path)
+                perc_match = _parse_token(float, columns[5], "perc_match", line, input_path)
+                perc_indel = _parse_token(float, columns[6], "perc_indel", line, input_path)
+                score = _parse_token(float, columns[7], "score", line, input_path)
+                a_pct = _parse_token(float, columns[8], "a_pct", line, input_path)
+                c_pct = _parse_token(float, columns[9], "c_pct", line, input_path)
+                g_pct = _parse_token(float, columns[10], "g_pct", line, input_path)
+                t_pct = _parse_token(float, columns[11], "t_pct", line, input_path)
+                entropy = _parse_token(float, columns[12], "entropy", line, input_path)
+                motif = columns[13] if len(columns) >= 14 else ""
+
+                if window_start is not None:
+                    seq_region_start = window_start + start - 1
+                    seq_region_end = window_start + end - 1
+                else:
+                    seq_region_start = start
+                    seq_region_end = end
+
+                _has_valid_parsed_coordinates(
+                    input_path,
+                    seq_region_start,
+                    seq_region_end,
+                    1,
+                    period_size,
+                    line,
                 )
-
-            if window_start is not None:
-                seq_region_start = window_start + start - 1
-                seq_region_end = window_start + end - 1
-            else:
-                seq_region_start = start
-                seq_region_end = end
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
 
             repeat_consensus = Consensus(
                 name="trf",
@@ -494,15 +510,6 @@ def parse_trf_out(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
             )
             repeat_consensus_key = repeat_consensus.sha256_key()
             consensuses_by_key[repeat_consensus_key] = repeat_consensus
-
-            _has_valid_parsed_coordinates(
-                input_path,
-                seq_region_start,
-                seq_region_end,
-                1,
-                period_size,
-                line,
-            )
 
             feature = {
                 "seq_region": seq_region,
@@ -533,46 +540,61 @@ def parse_trf_out(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
 
             features.append(feature)
 
+    if skip_data_block_without_sequence:
+        errors.append(
+            f"TRF sequence header not found before data lines in {input_path}: "
+            f"unprocessed_entries={skipped_data_block_entries}, "
+            f"first_data_line={skipped_data_block_first_line}"
+        )
+
+    if errors:
+        raise ValueError(_format_parse_errors("TRF output", input_path, errors))
+
     return features, consensuses_by_key
 
 
 def create_genomio_json(
     input_path: Path,
     output_path: Path,
-    rm_consensus_lib_path: Path | None,
     analysis_logic_name: str,
     analysis_display_label: str,
     analysis_description: str,
     program: str,
     program_version: str,
-    program_parameters: str | None,
     source_provider: str,
     is_primary: bool,
+    repeatmasker_consensus_lib_path: Path | None = None,
+    program_parameters: str | None = None,
 ) -> None:
     """
-    Creates a GenomIO JSON document from feature identificationtool output.
+    Creates a GenomIO JSON document from feature identification tool output.
 
     Args:
         input: Path to the input file containing repeat masking results (e.g. RepeatMasker .out file).
         output: Path to the output JSON file to be created.
-        rm_consensus_lib: Optional path to a FASTA file containing consensus sequences for the
-            RepeatMasker library used.
         analysis_logic_name: Logic name for the analysis (e.g. "repeatmask_customlib").
         analysis_display_label: Display label for the analysis.
         analysis_description: Description of the analysis (HTML allowed).
         program: Name of the program used to identify the features.
         program_version: Version of the program used to identify the features.
-        program_parameters: Parameters supplied to the program used for feature identification.
         source_provider: Name of the source provider for the features (e.g. "Ensembl").
         is_primary: Whether these features are primary or secondary annotations.
+        repeatmasker_consensus_lib: Optional path to a FASTA file containing consensus sequences for the
+            RepeatMasker library used.
+        program_parameters: Optional parameters supplied to the program used for feature identification.
+
+    Raises:
+        ValueError: If an unsupported analysis logic name is provided.
     """
     features: list[dict[str, object]] = []
     consensuses_by_key: dict[str, Consensus] = {}
 
     if analysis_logic_name.startswith("repeatmask_"):
-        features, consensuses_by_key = parse_repeatmasker_out(input_path, rm_consensus_lib_path)
+        features, consensuses_by_key = parse_repeatmasker_output(input_path, repeatmasker_consensus_lib_path)
     elif analysis_logic_name == "trf":
-        features, consensuses_by_key = parse_trf_out(input_path)
+        features, consensuses_by_key = parse_trf_output(input_path)
+    else:
+        raise ValueError(f"Unsupported analysis logic name: {analysis_logic_name}")
 
     # Create dictionary for analysis metadata
     analysis: dict[str, str] = {
@@ -622,79 +644,110 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     Args:
         argv: Optional list of command-line arguments. If `None`, arguments are
-            taken from `sys.argv`.
+            taken from ``sys.argv``.
 
     Returns:
-        argparse.Namespace: Parsed command-line arguments.
+        Parsed command-line arguments.
     """
+
+    def _add_common_arguments(subparser: ArgumentParser) -> None:
+
+        subparser.add_argument_src_path(
+            "--input",
+            metavar="IN",
+            required=True,
+            help="Input file to be converted.",
+        )
+        subparser.add_argument_dst_path("--output", metavar="JSON", required=True, help="Output JSON path.")
+        subparser.add_argument(
+            "--program-version",
+            required=True,
+            help="Version of the program used to identify the features.",
+        )
+        subparser.add_argument(
+            "--program-parameters",
+            default=argparse.SUPPRESS,
+            help="Parameters supplied to the program used for feature identification.",
+        )
+        subparser.add_argument(
+            "--source-provider",
+            default="Ensembl",
+            help="Source provider for the features (default: Ensembl).",
+        )
+        subparser.add_argument(
+            "--is-primary",
+            action="store_true",
+            help="Whether the source provider is the primary source for these features.",
+        )
+        subparser.add_log_arguments()
+
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument_src_path(
-        "--input",
-        metavar="IN",
-        required=True,
-        help="Output from repeat masking tool to be converted(e.g. RepeatMasker .out file).",
-    )
-    parser.add_argument_dst_path("--output", metavar="JSON", required=True, help="Output JSON path.")
-    parser.add_argument_src_path(
-        "--rm-consensus-lib",
-        metavar="RM_LIB",
-        default=argparse.SUPPRESS,
-        help="FASTA file containing consensus sequences for the RepeatMasker library used.",
-    )
-    parser.add_argument(
-        "--analysis-logic-name",
-        required=True,
-        help="Logic name for the analysis.",
-    )
-    parser.add_argument(
-        "--analysis-display-label",
-        default=argparse.SUPPRESS,
-        help="Display label for the analysis (default is auto-generated based on logic name).",
-    )
-    parser.add_argument(
-        "--analysis-description",
-        default=argparse.SUPPRESS,
-        help="Description of the analysis (HTML allowed, default is auto-generated based on logic name).",
-    )
-    parser.add_argument(
-        "--program",
-        default=argparse.SUPPRESS,
-        help=(
-            "Name of the program used to identify the features (default is auto-generated based on "
-            "logic name)."
-        ),
-    )
-    parser.add_argument(
-        "--program-version",
-        required=True,
-        help="Version of the program used to identify the features.",
-    )
-    parser.add_argument(
-        "--program-parameters",
-        default=argparse.SUPPRESS,
-        help="Parameters supplied to the program used for feature identification.",
-    )
-    parser.add_argument("--source-provider", default="Ensembl")
-    parser.add_argument("--is-primary", action="store_true")
-    parser.add_log_arguments()
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
 
-    args = parser.parse_args(argv)
-    if args.analysis_logic_name not in DEFAULT_ANALYSIS_PARAMS:
-        raise ValueError(f"Unsupported analysis logic name: {args.analysis_logic_name}")
-    if hasattr(args, "rm_consensus_lib") and not args.analysis_logic_name.startswith("repeatmask_"):
-        raise ValueError(
-            f"--rm-consensus-lib is not applicable for analysis logic name: {args.analysis_logic_name}"
-        )
-    default_analysis_params = DEFAULT_ANALYSIS_PARAMS[args.analysis_logic_name]
-    if not hasattr(args, "analysis_display_label"):
-        args.analysis_display_label = default_analysis_params["display_label"]
-    if not hasattr(args, "analysis_description"):
-        args.analysis_description = default_analysis_params["description"]
-    if not hasattr(args, "program"):
-        args.program = default_analysis_params["program"]
+    subparsers = parser.add_subparsers(dest="tool", required=True)
 
-    return args
+    # TRF subparser
+    trf_parser = subparsers.add_parser("trf", help="Convert TRF output to GenomIO JSON.")
+    _add_common_arguments(trf_parser)
+    trf_parser.set_defaults(
+        analysis_logic_name="trf",
+        analysis_display_label="Tandem repeats (TRF)",
+        analysis_description=(
+            '<a rel="external" href="https://tandem.bu.edu/trf/trf.html">Tandem Repeats Finder</a> '
+            "locates adjacent copies of a pattern of nucleotides."
+        ),
+        program="trf",
+        repeatmasker_consensus_lib_path=None,
+    )
+
+    # RepeatMasker
+    repeatmasker_parser = subparsers.add_parser(
+        "repeatmasker", help="Convert RepeatMasker output to GenomIO JSON."
+    )
+    repeatmasker_parser.set_defaults(program="RepeatMasker")
+    repeatmasker_subparsers = repeatmasker_parser.add_subparsers(dest="repeatmasker_mode", required=True)
+
+    def _add_repeatmasker_common_args(subparser: ArgumentParser) -> None:
+        _add_common_arguments(subparser)
+        subparser.add_argument_src_path(
+            "--rm-consensus-lib",
+            metavar="RM_LIB",
+            default=argparse.SUPPRESS,
+            help="FASTA file containing consensus sequences for the RepeatMasker library used.",
+        )
+
+    # RepeatMasker / custom
+    custom_parser = repeatmasker_subparsers.add_parser(
+        "custom",
+        help="Convert RepeatMasker output generated using a custom library.",
+    )
+    _add_repeatmasker_common_args(custom_parser)
+    custom_parser.set_defaults(
+        analysis_logic_name="repeatmask_customlib",
+        analysis_display_label="Repeats: Custom library",
+        analysis_description=(
+            'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, '
+            "using a custom library of <em>ab initio</em> repeat profiles for this species."
+        ),
+    )
+
+    # RepeatMasker / repbase
+    repbase_parser = repeatmasker_subparsers.add_parser(
+        "repbase",
+        help="Convert RepeatMasker output geneterated using Repbase.",
+    )
+    _add_repeatmasker_common_args(repbase_parser)
+    repbase_parser.set_defaults(
+        analysis_logic_name="repeatmask_rmlib",
+        analysis_display_label="Repeats: Repbase",
+        analysis_description=(
+            'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, '
+            'using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of '
+            "repeat profiles."
+        ),
+    )
+
+    return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -702,23 +755,22 @@ def main(argv: list[str] | None = None) -> None:
     Run the JSON conversion command-line entry point.
 
     Args:
-        argv: Optional list of command-line arguments. If `None`, arguments are
-            taken from ``sys.argv``.
+        argv: Optional list of command-line arguments. If `None`, arguments are taken from ``sys.argv``.
     """
     args = parse_args(argv)
     try:
         create_genomio_json(
             input_path=args.input,
             output_path=args.output,
-            rm_consensus_lib_path=getattr(args, "rm_consensus_lib", None),
             analysis_logic_name=args.analysis_logic_name,
             analysis_display_label=args.analysis_display_label,
             analysis_description=args.analysis_description,
             program=args.program,
             program_version=args.program_version,
-            program_parameters=getattr(args, "program_parameters", None),
             source_provider=args.source_provider,
             is_primary=args.is_primary,
+            repeatmasker_consensus_lib_path=getattr(args, "rm_consensus_lib", None),
+            program_parameters=getattr(args, "program_parameters", None),
         )
     except Exception:
         logging.exception(f"Error processing file {args.input}")

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for the repeatmasker_out_to_genomio_json module."""
+"""Unit testing of `ensembl.io.genomio.repeats.convert_to_genomio_json` module."""
 
 import hashlib
 import json
@@ -70,20 +70,20 @@ def test_consensus_sha256_key_normalises_fields() -> None:
         ("NotInMap", "Unknown"),
     ],
 )
-def test_map_rm_repeat_type(repeat_type: str, expected: str) -> None:
+def test_map_repeatmasker_repeat_type(repeat_type: str, expected: str) -> None:
     """
-    Tests the ``convert_to_genomio_json._map_rm_repeat_type()`` function for known and unknown patterns.
+    Tests the mapping of RepeatMasker repeat types to GenomIO categories for known and unknown patterns.
 
     Args:
         repeat_type: Input repeat type string.
         expected: Expected mapped output.
     """
-    assert convert_to_genomio_json._map_rm_repeat_type(repeat_type) == expected
+    assert convert_to_genomio_json._map_repeatmasker_repeat_type(repeat_type) == expected
 
 
-def test_parse_rm_consensus_library(data_dir: Path) -> None:
+def test_parse_repeatmasker_consensus_library(data_dir: Path) -> None:
     """
-    Tests the ``convert_to_genomio_json._parse_rm_consensus_library()`` internal helper.
+    Tests the ``convert_to_genomio_json._parse_repeatmasker_consensus_library()`` internal helper.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -117,8 +117,8 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
         ("Bar", "Unknown", "Unknown"): _sha256_key("Bar", "Unknown", "Unknown", "ccgg"),
     }
 
-    consensus_keys_by_triplet, consensuses_by_key = convert_to_genomio_json._parse_rm_consensus_library(
-        fasta_path
+    consensus_keys_by_triplet, consensuses_by_key = (
+        convert_to_genomio_json._parse_repeatmasker_consensus_library(fasta_path)
     )
 
     assert consensus_keys_by_triplet == expected_keys_by_triplet
@@ -143,7 +143,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                         "perc_div": 1.0,
                         "perc_del": 0.0,
                         "perc_ins": 0.0,
-                        "rm_repeat_type": "Alu",
+                        "repeatmasker_repeat_type": "Alu",
                     },
                 }
             ],
@@ -164,7 +164,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                         "perc_div": 2.5,
                         "perc_del": 1.5,
                         "perc_ins": 0.5,
-                        "rm_repeat_type": "L1",
+                        "repeatmasker_repeat_type": "L1",
                     },
                 }
             ],
@@ -185,7 +185,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                         "perc_div": 4.0,
                         "perc_del": 0.1,
                         "perc_ins": 0.2,
-                        "rm_repeat_type": "Unknown",
+                        "repeatmasker_repeat_type": "Unknown",
                     },
                 }
             ],
@@ -206,7 +206,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                         "perc_div": 0.0,
                         "perc_del": 0.0,
                         "perc_ins": 0.0,
-                        "rm_repeat_type": "Alu",
+                        "repeatmasker_repeat_type": "Alu",
                     },
                 }
             ],
@@ -227,7 +227,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                         "perc_div": 1.0,
                         "perc_del": 0.0,
                         "perc_ins": 0.0,
-                        "rm_repeat_type": "Alu",
+                        "repeatmasker_repeat_type": "Alu",
                     },
                 },
                 {
@@ -242,7 +242,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
                         "perc_div": 2.0,
                         "perc_del": 0.0,
                         "perc_ins": 0.0,
-                        "rm_repeat_type": "Unknown",
+                        "repeatmasker_repeat_type": "Unknown",
                     },
                 },
             ],
@@ -250,7 +250,7 @@ def test_parse_rm_consensus_library(data_dir: Path) -> None:
         ),
     ],
 )
-def test_parse_repeatmasker_out_success(
+def test_parse_repeatmasker_output_success(
     data_dir: Path,
     filename: str,
     expected_features: list[dict[str, object]],
@@ -264,9 +264,9 @@ def test_parse_repeatmasker_out_success(
         expected_features: Expected parsed repeat feature dictionaries.
     """
     out_path = data_dir / filename
-    features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_out(
+    features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_output(
         out_path,
-        rm_consensus_lib_path=None,
+        consensus_lib_path=None,
     )
 
     assert features == expected_features
@@ -333,7 +333,7 @@ def test_parse_repeatmasker_out_success(
         ),
     ],
 )
-def test_parse_repeatmasker_out_errors(data_dir: Path, filename: str, error_pattern: str) -> None:
+def test_parse_repeatmasker_output_errors(data_dir: Path, filename: str, error_pattern: str) -> None:
     """
     Tests that malformed RepeatMasker ``.out`` rows raise errors.
 
@@ -344,7 +344,7 @@ def test_parse_repeatmasker_out_errors(data_dir: Path, filename: str, error_patt
     """
     out_path = data_dir / filename
     with pytest.raises(ValueError, match=error_pattern):
-        convert_to_genomio_json.parse_repeatmasker_out(out_path, None)
+        convert_to_genomio_json.parse_repeatmasker_output(out_path, None)
 
 
 @pytest.mark.parametrize(
@@ -362,14 +362,14 @@ def test_parse_repeatmasker_out_errors(data_dir: Path, filename: str, error_patt
         ),
     ],
 )
-def test_parse_repeatmasker_out_skips_invalid_repeat_coordinates(
+def test_parse_repeatmasker_output_skips_invalid_repeat_coordinates(
     data_dir: Path,
     filename: str,
     warning_pattern: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """
-    Tests that `convert_to_genomio_json.parse_repeatmasker_out()` logs a warning and skips invalid records.
+    Tests that ``convert_to_genomio_json.parse_repeatmasker_output()`` logs a warning and skips invalid records.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -380,7 +380,7 @@ def test_parse_repeatmasker_out_skips_invalid_repeat_coordinates(
     out_path = data_dir / filename
 
     with caplog.at_level("WARNING"):
-        features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_out(out_path, None)
+        features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_output(out_path, None)
 
     assert features == []
     assert consensuses_by_key == {}
@@ -468,7 +468,7 @@ def test_parse_repeatmasker_out_skips_invalid_repeat_coordinates(
         ),
     ],
 )
-def test_parse_trf_out_success(
+def test_parse_trf_output_success(
     data_dir: Path,
     filename: str,
     expected_features: list[dict[str, object]],
@@ -485,45 +485,94 @@ def test_parse_trf_out_success(
     """
     trf_path = data_dir / filename
 
-    features, consensuses_by_key = convert_to_genomio_json.parse_trf_out(trf_path)
+    features, consensuses_by_key = convert_to_genomio_json.parse_trf_output(trf_path)
 
     assert features == expected_features
     assert consensuses_by_key == expected_consensuses
 
 
-def test_parse_trf_out_errors_without_sequence_header(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize(
+    ("parser_name", "filename", "expected_fragments"),
+    [
+        param(
+            "repeatmasker",
+            "repeatmasker_out/error_multiple_errors.out",
+            [
+                "Found 3 errors while parsing RepeatMasker output",
+                "Invalid 'score'",
+                "seq_region_end < seq_region_start",
+                "Unexpected strand token",
+            ],
+            id="RepeatMasker multiple row errors",
+        ),
+        param(
+            "trf",
+            "trf/error_multiple_errors.dat",
+            [
+                "Found 3 errors while parsing TRF output",
+                "Invalid 'start'",
+                "seq_region_end < seq_region_start",
+                "Invalid 'period_size'",
+            ],
+            id="TRF multiple row errors",
+        ),
+        param(
+            "trf",
+            "trf/error_missing_sequence_between_blocks.dat",
+            [
+                "Found 1 errors while parsing TRF output",
+                "TRF sequence header not found before data lines",
+                "unprocessed_entries=2",
+                "first_data_line=7",
+                "not:Invalid 'start'",
+            ],
+            id="TRF missing Sequence line between data blocks",
+        ),
+        param(
+            "trf",
+            "trf/error_missing_sequence_at_eof.dat",
+            [
+                "Found 1 errors while parsing TRF output",
+                "TRF sequence header not found before data lines",
+                "unprocessed_entries=2",
+                "first_data_line=7",
+                "not:Invalid 'start'",
+            ],
+            id="TRF missing Sequence line before EOF",
+        ),
+    ],
+)
+def test_parse_output_collates_all_errors(
+    data_dir: Path,
+    parser_name: str,
+    filename: str,
+    expected_fragments: list[str],
 ) -> None:
     """
-    Tests ``convert_to_genomio_json.parse_trf_out()`` raises when lines are parsed without a sequence header.
+    Tests that malformed parser rows are collated before raising.
 
     Args:
-        tmp_path: Temporary directory provided by pytest.
-        monkeypatch: Pytest fixture for temporarily patching module attributes.
+        data_dir: Module's test data directory fixture.
+        parser_name: Parser to run against the input file.
+        filename: Input filename containing invalid data.
+        expected_fragments: Expected substrings in the raised error message.
     """
+    input_path = data_dir / filename
 
-    class FakeSeqMatch:
-        @staticmethod
-        def group(name: str) -> str | None:
-            return None
+    with pytest.raises(ValueError) as excinfo:
+        if parser_name == "repeatmasker":
+            convert_to_genomio_json.parse_repeatmasker_output(input_path, None)
+        elif parser_name == "trf":
+            convert_to_genomio_json.parse_trf_output(input_path)
+        else:
+            raise AssertionError(f"Unsupported parser name: {parser_name}")
 
-    class FakeSequenceRegex:
-        @staticmethod
-        def match(line: str) -> FakeSeqMatch | None:
-            if line == "Sequence:":
-                return FakeSeqMatch()
-            return None
-
-    trf_path = tmp_path / "missing_sequence_name.dat"
-    trf_path.write_text(
-        "Sequence:\n1 4 4 1.0 4 100 0 50 25 25 25 25 2.0 AT\n",
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(convert_to_genomio_json, "TRF_SEQUENCE_RE", FakeSequenceRegex)
-
-    with pytest.raises(ValueError, match=r"TRF sequence header not found before data lines"):
-        convert_to_genomio_json.parse_trf_out(trf_path)
+    error_message = str(excinfo.value)
+    for expected_fragment in expected_fragments:
+        if expected_fragment.startswith("not:"):
+            assert expected_fragment.removeprefix("not:") not in error_message
+        else:
+            assert expected_fragment in error_message
 
 
 @pytest.mark.parametrize(
@@ -552,7 +601,7 @@ def test_parse_trf_out_errors_without_sequence_header(
                     "perc_div": 1.0,
                     "perc_del": 0.0,
                     "perc_ins": 0.0,
-                    "rm_repeat_type": "Alu",
+                    "repeatmasker_repeat_type": "Alu",
                 },
             },
             id="RepeatMasker without RepeatModeler consensuslibrary",
@@ -583,7 +632,7 @@ def test_parse_trf_out_errors_without_sequence_header(
                     "perc_div": 1.0,
                     "perc_del": 0.0,
                     "perc_ins": 0.0,
-                    "rm_repeat_type": "Alu",
+                    "repeatmasker_repeat_type": "Alu",
                 },
             },
             id="RepeatMasker with RepeatModeler consensus library",
@@ -627,14 +676,6 @@ def test_parse_trf_out_errors_without_sequence_header(
             },
             id="Tandem Repeat Finder",
         ),
-        param(
-            "create_json/basic.out",
-            "unsupported",
-            None,
-            None,
-            None,
-            id="Unsupported logic name",
-        ),
     ],
 )
 def test_create_genomio_json(
@@ -664,7 +705,7 @@ def test_create_genomio_json(
 
     convert_to_genomio_json.create_genomio_json(
         input_path=input,
-        rm_consensus_lib_path=rm_consensus_lib,
+        repeatmasker_consensus_lib_path=rm_consensus_lib,
         output_path=output,
         analysis_logic_name=analysis_logic_name,
         analysis_display_label="Repeats: Custom library",
@@ -699,6 +740,30 @@ def test_create_genomio_json(
         assert doc["repeat_consensus"] == expected_repeat_consensus
 
 
+def test_create_genomio_json_rejects_unsupported_logic_name(data_dir: Path, tmp_path: Path) -> None:
+    """
+    Tests JSON creation rejects unsupported analysis logic names.
+
+    Args:
+        data_dir: Module's test data directory fixture.
+        tmp_path: Temporary directory provided by pytest.
+    """
+    with pytest.raises(ValueError, match=r"Unsupported analysis logic name"):
+        convert_to_genomio_json.create_genomio_json(
+            input_path=data_dir / "create_json" / "basic.out",
+            repeatmasker_consensus_lib_path=None,
+            output_path=tmp_path / "out.json",
+            analysis_logic_name="unsupported",
+            analysis_display_label="label",
+            analysis_description="desc",
+            program="RepeatMasker",
+            program_version="4.1.5",
+            program_parameters=None,
+            source_provider="Ensembl",
+            is_primary=False,
+        )
+
+
 def test_create_genomio_json_omits_program_parameters_when_none(data_dir: Path, tmp_path: Path) -> None:
     """
     Tests that program parameters are omitted when no value is provided.
@@ -707,12 +772,12 @@ def test_create_genomio_json_omits_program_parameters_when_none(data_dir: Path, 
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
     """
-    input = data_dir / "create_json" / "basic_dna.out"
+    input = data_dir / "create_json" / "basic.out"
     output = tmp_path / "out.json"
 
     convert_to_genomio_json.create_genomio_json(
         input_path=input,
-        rm_consensus_lib_path=None,
+        repeatmasker_consensus_lib_path=None,
         output_path=output,
         analysis_logic_name="repeatmask_customlib",
         analysis_display_label="label",
@@ -738,7 +803,7 @@ def test_create_genomio_json_omits_program_parameters_when_none(data_dir: Path, 
 )
 def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool) -> None:
     """
-    Tests the ``convert_to_genomio_json.parse_args()`` function with real input files.
+    Tests the ``convert_to_genomio_json.parse_args()`` function.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -749,12 +814,12 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
     output = tmp_path / "out.json"
 
     argv = [
+        "repeatmasker",
+        "custom",
         "--input",
         str(input),
         "--output",
         str(output),
-        "--analysis-logic-name",
-        "repeatmask_customlib",
         "--program-version",
         "4.1.5",
     ]
@@ -762,20 +827,14 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
     if use_repeatmodeler_lib:
         rm_consensus_lib = data_dir / "create_json" / "repeatmodeler_match.fa"
         argv = [
+            "repeatmasker",
+            "repbase",
             "--input",
             str(input),
             "--rm-consensus-lib",
             str(rm_consensus_lib),
             "--output",
             str(output),
-            "--analysis-logic-name",
-            "repeatmask_rmlib",
-            "--analysis-display-label",
-            "Repeats: RepBase",
-            "--analysis-description",
-            "RepBase description",
-            "--program",
-            "RepeatMasker",
             "--program-version",
             "4.1.7",
             "--program-parameters",
@@ -794,8 +853,11 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
     if use_repeatmodeler_lib:
         assert args.program_version == "4.1.7"
         assert args.analysis_logic_name == "repeatmask_rmlib"
-        assert args.analysis_display_label == "Repeats: RepBase"
-        assert args.analysis_description == "RepBase description"
+        assert args.analysis_display_label == "Repeats: Repbase"
+        assert (
+            args.analysis_description
+            == 'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of repeat profiles.'
+        )
         assert args.program == "RepeatMasker"
         assert args.source_provider == "Custom"
         assert args.is_primary is True
@@ -817,60 +879,38 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
 
 
 @pytest.mark.parametrize(
-    ("analysis_logic_name", "include_rm_consensus_lib", "error_pattern"),
+    "argv_prefix",
     [
-        param(
-            "unsupported",
-            False,
-            r"Unsupported analysis logic name",
-            id="Unsupported analysis logic name",
-        ),
-        param(
-            "trf",
-            True,
-            r"--rm-consensus-lib is not applicable",
-            id="Rejects --rm-consensus-lib with non-RepeatMasker logic name",
-        ),
+        param(["unsupported"], id="Unsupported tool"),
+        param(["trf", "--rm-consensus-lib"], id="Rejects --rm-consensus-lib with TRF"),
     ],
 )
-def test_parse_args_errors(
-    data_dir: Path,
-    tmp_path: Path,
-    analysis_logic_name: str,
-    include_rm_consensus_lib: bool,
-    error_pattern: str,
-) -> None:
+def test_parse_args_errors(data_dir: Path, tmp_path: Path, argv_prefix: list[str]) -> None:
     """
     Tests ``convert_to_genomio_json.parse_args()`` rejects unsupported argument combinations.
 
     Args:
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
-        analysis_logic_name: Analysis logic name to parse.
-        include_rm_consensus_lib: Whether to include a RepeatMasker consensus library path.
-        error_pattern: Regex expected in the raised error message.
+        argv_prefix: Invalid leading arguments to parse.
     """
     input = data_dir / "create_json" / "basic.out"
     output = tmp_path / "out.json"
-    argv = [
-        "--input",
-        str(input),
-        "--output",
-        str(output),
-        "--analysis-logic-name",
-        analysis_logic_name,
-        "--program-version",
-        "4.1.5",
-    ]
-    if include_rm_consensus_lib:
-        argv.extend(
-            [
-                "--rm-consensus-lib",
-                str(data_dir / "create_json" / "repeatmodeler_match.fa"),
-            ]
-        )
+    argv = [*argv_prefix]
+    if argv_prefix == ["trf", "--rm-consensus-lib"]:
+        argv.append(str(data_dir / "create_json" / "repeatmodeler_match.fa"))
+    argv.extend(
+        [
+            "--input",
+            str(input),
+            "--output",
+            str(output),
+            "--program-version",
+            "4.1.5",
+        ]
+    )
 
-    with pytest.raises(ValueError, match=error_pattern):
+    with pytest.raises(SystemExit):
         convert_to_genomio_json.parse_args(argv)
 
 
@@ -901,19 +941,19 @@ def test_main_passes_expected_arguments(
     output = tmp_path / "out.json"
 
     argv = [
+        "repeatmasker",
+        "custom",
         "--input",
         str(input),
         "--output",
         str(output),
-        "--analysis-logic-name",
-        "repeatmask_customlib",
         "--program-version",
         "4.1.5",
     ]
 
     expected = {
         "input_path": input,
-        "rm_consensus_lib_path": None,
+        "repeatmasker_consensus_lib_path": None,
         "output_path": output,
         "analysis_logic_name": "repeatmask_customlib",
         "analysis_display_label": "Repeats: Custom library",
@@ -928,20 +968,14 @@ def test_main_passes_expected_arguments(
     if use_repeatmodeler_lib:
         rm_consensus_lib = data_dir / "create_json" / "repeatmodeler_match.fa"
         argv = [
+            "repeatmasker",
+            "repbase",
             "--input",
             str(input),
             "--rm-consensus-lib",
             str(rm_consensus_lib),
             "--output",
             str(output),
-            "--analysis-logic-name",
-            "repeatmask_rmlib",
-            "--analysis-display-label",
-            "RepBase",
-            "--analysis-description",
-            "RepBase desc",
-            "--program",
-            "RepeatMasker",
             "--program-version",
             "4.1.7",
             "--program-parameters",
@@ -952,11 +986,11 @@ def test_main_passes_expected_arguments(
         ]
         expected = {
             "input_path": input,
-            "rm_consensus_lib_path": rm_consensus_lib,
+            "repeatmasker_consensus_lib_path": rm_consensus_lib,
             "output_path": output,
             "analysis_logic_name": "repeatmask_rmlib",
-            "analysis_display_label": "RepBase",
-            "analysis_description": "RepBase desc",
+            "analysis_display_label": "Repeats: Repbase",
+            "analysis_description": 'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of repeat profiles.',
             "program": "RepeatMasker",
             "program_version": "4.1.7",
             "program_parameters": "-lib foo",
@@ -986,12 +1020,12 @@ def test_main_reraises_exceptions(mock_create_genomio_json: Mock, data_dir: Path
     with pytest.raises(RuntimeError, match="boom"):
         convert_to_genomio_json.main(
             [
+                "repeatmasker",
+                "custom",
                 "--input",
                 str(input),
                 "--output",
                 str(output),
-                "--analysis-logic-name",
-                "repeatmask_customlib",
                 "--program-version",
                 "4.1.5",
             ]
