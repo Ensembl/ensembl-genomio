@@ -133,18 +133,18 @@ def _file_last_modified_time(file_path: Path) -> str:
     )
 
 
-def _map_repeatmasker_repeat_type(repeat_type: str) -> str:
+def _map_repeatmasker_repeat_consensus_type(repeat_class: str) -> str:
     """
-    Maps a raw RepeatMasker repeat type to a GenomIO repeat category.
+    Maps a raw RepeatMasker repeat class to a GenomIO repeat category.
 
     Args:
-        repeat_type: Raw repeat type string extracted from RepeatMasker output.
+        repeat_class: Raw repeat class string extracted from RepeatMasker output.
 
     Returns:
         Mapped repeat type category. Returns "Unknown" when no mapping matches.
     """
     for regex, mapped in REPEATMASKER_COMPILED_MAPPINGS:
-        if regex.match(repeat_type):
+        if regex.match(repeat_class):
             return mapped
     return "Unknown"
 
@@ -236,7 +236,7 @@ def _parse_repeatmasker_consensus_library(
             consensus_obj = Consensus(
                 name=repeat_name,
                 repeat_class=repeat_class,
-                repeat_type=_map_repeatmasker_repeat_type(repeat_type),
+                repeat_type=_map_repeatmasker_repeat_consensus_type(repeat_class),
                 seq=str(record.seq),
             )
             consensus_key = consensus_obj.sha256_key()
@@ -710,7 +710,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     def _add_repeatmasker_common_args(subparser: ArgumentParser) -> None:
         _add_common_arguments(subparser)
         subparser.add_argument_src_path(
-            "--rm-consensus-lib",
+            "--consensus-lib",
             metavar="RM_LIB",
             default=argparse.SUPPRESS,
             help="FASTA file containing consensus sequences for the RepeatMasker library used.",
@@ -769,7 +769,7 @@ def main(argv: list[str] | None = None) -> None:
             program_version=args.program_version,
             source_provider=args.source_provider,
             is_primary=args.is_primary,
-            repeatmasker_consensus_lib_path=getattr(args, "rm_consensus_lib", None),
+            repeatmasker_consensus_lib_path=getattr(args, "consensus_lib", None),
             program_parameters=getattr(args, "program_parameters", None),
         )
     except Exception:
