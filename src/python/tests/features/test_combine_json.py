@@ -1013,11 +1013,8 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
             cast(
                 combine_json.JsonValue,
                 _repeat_feature(
-                    seq_region="chr1_chunk_start_1",
-                    start=1,
-                    end=10,
-                    consensus_key=consensus_key
-                )
+                    seq_region="chr1_chunk_start_1", start=1, end=10, consensus_key=consensus_key
+                ),
             ),
         ],
     }
