@@ -198,12 +198,9 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
 @pytest.mark.parametrize(
     "input_fasta_text, chunk_size, chunk_size_tolerated, n_sequence_len, "
     "chunk_sfx, append_offset_to_chunk_name, "
-    "expected_chunked_fasta_text, expected_agp_list, expected_individual_files_count, "
-    "expected_raised",
+    "expected_chunked_fasta_text, expected_agp_list, expected_individual_files_count",
     [
-        ("", 2, 2, 2, "p", True, "", [], 0, does_not_raise()),
-        ("\n", 2, 2, 2, "p", True, "", [], 0, does_not_raise()),
-        ("AA\n", 2, 2, 2, "p", True, "", [], 0, does_not_raise()),
+        ("", 2, 2, 2, "p", True, "", [], 0),
         (
             # title, no sequence
             ">a\n",
@@ -215,7 +212,6 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
             ">a_p_001_off_0 AGP a 1 0 1 W a_p_001_off_0 1 0 +\n",
             ["a\t1\t0\t1\tW\ta_p_001_off_0\t1\t0\t+"],
             1,
-            does_not_raise(),
         ),
         (
             ">c\nAAANNAAA\n",
@@ -236,7 +232,6 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
                 "c\t7\t8\t3\tW\tc_p_003_off_6\t1\t2\t+",
             ],
             3,
-            does_not_raise(),
         ),
         (
             ">c\nAAANNAAA\n",
@@ -254,7 +249,6 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
                 "c\t6\t8\t2\tW\tc_p_002_off_5\t1\t3\t+",
             ],
             2,
-            does_not_raise(),
         ),
     ],
 )
@@ -268,7 +262,6 @@ def test_chunk_fasta_stream(
     expected_chunked_fasta_text: str,
     expected_agp_list: list[str],
     expected_individual_files_count: int,
-    expected_raised: ContextManager,
 ) -> None:
     """Tests the `chunk.chunk_fasta_stream` function.
 
@@ -282,7 +275,6 @@ def test_chunk_fasta_stream(
         expected_chunked_fasta_text: Expected chunked output.
         expected_agp_list: A list with expected AGP entries.
         expected_individual_files_count: A number of individually created entities/chunks with files.
-        expected_raised: A context manager with expected exception (`pytest.raises` or nullcontext)
     """
 
     # a workaround for storing individual chunks
@@ -305,18 +297,17 @@ def test_chunk_fasta_stream(
     with StringIO(input_fasta_text) as input_fasta:
         with StringIO() as output_fasta:
             parts.clear()
-            with expected_raised:
-                agp_list = FastaChunking.chunk_fasta_stream(
-                    input_fasta,  # type: ignore[arg-type]
-                    chunk_size,
-                    chunk_size_tolerated,
-                    output_fasta,  # type: ignore[arg-type]
-                    None,
-                    n_sequence_len=n_sequence_len,
-                    chunk_sfx=chunk_sfx,
-                    append_offset_to_chunk_name=append_offset_to_chunk_name,
-                    open_individual=_individual_opener,
-                )
+            agp_list = FastaChunking.chunk_fasta_stream(
+                input_fasta,  # type: ignore[arg-type]
+                chunk_size,
+                chunk_size_tolerated,
+                output_fasta,  # type: ignore[arg-type]
+                None,
+                n_sequence_len=n_sequence_len,
+                chunk_sfx=chunk_sfx,
+                append_offset_to_chunk_name=append_offset_to_chunk_name,
+                open_individual=_individual_opener,
+            )
             assert output_fasta.getvalue() == expected_chunked_fasta_text
             assert agp_list == expected_agp_list
             assert len(parts) == 0
@@ -324,21 +315,48 @@ def test_chunk_fasta_stream(
     with StringIO(input_fasta_text) as input_fasta:
         with nullcontext() as no_output_fasta:
             parts.clear()
-            with expected_raised:
-                agp_list = FastaChunking.chunk_fasta_stream(
-                    input_fasta,  # type: ignore[arg-type]
-                    chunk_size,
-                    chunk_size_tolerated,
-                    no_output_fasta,
-                    Path("/path/prefix"),
-                    n_sequence_len=n_sequence_len,
-                    chunk_sfx=chunk_sfx,
-                    append_offset_to_chunk_name=append_offset_to_chunk_name,
-                    open_individual=_individual_opener,
-                )
+            agp_list = FastaChunking.chunk_fasta_stream(
+                input_fasta,  # type: ignore[arg-type]
+                chunk_size,
+                chunk_size_tolerated,
+                no_output_fasta,
+                Path("/path/prefix"),
+                n_sequence_len=n_sequence_len,
+                chunk_sfx=chunk_sfx,
+                append_offset_to_chunk_name=append_offset_to_chunk_name,
+                open_individual=_individual_opener,
+            )
             assert "".join(map(lambda p: p[1], parts)) == expected_chunked_fasta_text
             assert agp_list == expected_agp_list
             assert len(parts) == expected_individual_files_count
+
+
+@pytest.mark.parametrize(
+    "input_fasta_text",
+    [
+        "\n",
+        "AA\n",
+    ],
+)
+def test_chunk_fasta_stream_rejects_invalid_fasta(input_fasta_text: str) -> None:
+    """Tests that `chunk.chunk_fasta_stream` rejects input without a FASTA header.
+
+    Args:
+        input_fasta_text: Invalid FASTA input text.
+    """
+    with StringIO(input_fasta_text) as input_fasta:
+        with StringIO() as output_fasta:
+            with pytest.raises(ValueError, match=r"comments at the beginning of the file"):
+                FastaChunking.chunk_fasta_stream(
+                    input_fasta,  # type: ignore[arg-type]
+                    2,
+                    2,
+                    output_fasta,  # type: ignore[arg-type]
+                    None,
+                    n_sequence_len=2,
+                    chunk_sfx="p",
+                    append_offset_to_chunk_name=True,
+                )
 
 
 @pytest.mark.parametrize(
