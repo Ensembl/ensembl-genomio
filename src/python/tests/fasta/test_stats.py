@@ -57,7 +57,7 @@ def write_gzip_text(path: Path, text: str) -> Path:
         ),
     ],
 )
-def test_compute_fasta_stats(tmp_path: Path, contents: str, expected: str) -> None:
+def test_compute_fasta_stats(tmp_path: Path, contents: str, expected: dict[str, int]) -> None:
     """
     Tests the `stats.compute_fasta_stats()` function.
 
@@ -68,6 +68,8 @@ def test_compute_fasta_stats(tmp_path: Path, contents: str, expected: str) -> No
     """
     fasta_file = write_text(tmp_path / "in.fa", contents)
     output_file = tmp_path / "stats.json"
+
+    stats.compute_fasta_stats(fasta_file=fasta_file, output_file=output_file)
 
     assert json.loads(output_file.read_text(encoding="utf-8")) == expected
 
