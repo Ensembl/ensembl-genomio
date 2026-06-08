@@ -24,7 +24,9 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import NotRequired, TypedDict, TypeVar, cast
+from typing import TypedDict, TypeVar, cast
+
+from typing_extensions import NotRequired
 
 import ensembl.io.genomio
 from ensembl.io.genomio.schemas.json.validate import schema_validator

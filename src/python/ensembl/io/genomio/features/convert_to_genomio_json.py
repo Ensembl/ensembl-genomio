@@ -511,6 +511,23 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
             repeat_consensus_key = repeat_consensus.sha256_key()
             consensuses_by_key[repeat_consensus_key] = repeat_consensus
 
+            attributes: dict[str, object] = {
+                "period_size": period_size,
+                "copy_number": copy_number,
+                "consensus_size": consensus_size,
+                "perc_match": perc_match,
+                "perc_indel": perc_indel,
+                "entropy": entropy,
+                "motif": motif,
+                "a_pct": a_pct,
+                "c_pct": c_pct,
+                "g_pct": g_pct,
+                "t_pct": t_pct,
+            }
+
+            if trf_parameters is not None:
+                attributes["trf_parameters"] = trf_parameters
+
             feature = {
                 "seq_region": seq_region,
                 "seq_region_start": seq_region_start,
@@ -520,23 +537,8 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
                 "repeat_end": period_size,
                 "repeat_consensus": repeat_consensus.sha256_key(),
                 "score": score,
-                "attributes": {
-                    "period_size": period_size,
-                    "copy_number": copy_number,
-                    "consensus_size": consensus_size,
-                    "perc_match": perc_match,
-                    "perc_indel": perc_indel,
-                    "entropy": entropy,
-                    "motif": motif,
-                    "a_pct": a_pct,
-                    "c_pct": c_pct,
-                    "g_pct": g_pct,
-                    "t_pct": t_pct,
-                },
+                "attributes": attributes,
             }
-
-            if trf_parameters is not None:
-                feature["attributes"]["trf_parameters"] = trf_parameters
 
             features.append(feature)
 

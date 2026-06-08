@@ -24,6 +24,7 @@ from dataclasses import dataclass
 import logging
 from pathlib import Path
 import re
+from typing import cast
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -181,9 +182,13 @@ def _agp_component_seq(
         The extracted component sequence (possibly reverse-complemented).
 
     Raises:
-        ValueError: If orientation is invalid, or if orientation is '-' when ``allow_revcomp`` is False.
+        ValueError: If the component record has no sequence, orientation is invalid, or orientation is '-'
+            when ``allow_revcomp`` is False.
     """
-    subsequence: Seq = component_record.seq[comp_beg - 1 : comp_end]
+    component_seq = component_record.seq
+    if component_seq is None:
+        raise ValueError(f"Component record '{component_record.id}' has no sequence")
+    subsequence = cast(Seq, component_seq[comp_beg - 1 : comp_end])
 
     if orientation == "+":
         return subsequence
@@ -221,7 +226,8 @@ def _records_from_agp(
 
     Raises:
         KeyError: If the AGP references a component ID not present in ``locations``.
-        ValueError: If AGP parts are non-contiguous or extracted component lengths do not match AGP spans.
+        ValueError: If a component record has no sequence, AGP parts are non-contiguous, or extracted
+            component lengths do not match AGP spans.
     """
     for record_id, parts in agp_entries.items():
         sorted_parts = sorted(parts, key=lambda p: (p.part_start, p.part_number))
@@ -291,7 +297,8 @@ def _records_from_headers(
 
     Raises:
         KeyError: If a referenced base/chunk record is missing from ``locations``.
-        ValueError: If chunk coordinates are non-contiguous.
+        ValueError: If a referenced base/chunk record has no sequence, or if chunk coordinates are
+            non-contiguous.
     """
     all_bases = sorted(first_seen.keys(), key=lambda b: first_seen[b])
 
@@ -302,7 +309,10 @@ def _records_from_headers(
             if loc is None:
                 raise KeyError(f"Base record '{base}' not found in indexed headers.")
             rec = cache.get_record(base, loc)
-            yield SeqRecord(rec.seq, id=rec.id, description=loc.description)
+            sequence = rec.seq
+            if sequence is None:
+                raise ValueError(f"Base record '{base}' has no sequence")
+            yield SeqRecord(sequence, id=rec.id, description=loc.description)
             continue
 
         chunk_list_sorted = sorted(chunk_list, key=lambda x: x[0])
@@ -316,10 +326,14 @@ def _records_from_headers(
             if loc is None:
                 raise KeyError(f"Chunk record '{chunk_id}' not found in indexed headers.")
             rec = cache.get_record(chunk_id, loc)
+            sequence = rec.seq
+            if sequence is None:
+                raise ValueError(f"Chunk record '{chunk_id}' has no sequence")
+            sequence = cast(Seq, sequence)
 
             if prev_end is None:
-                parts.append(rec.seq)
-                prev_end = start + len(rec.seq)
+                parts.append(sequence)
+                prev_end = start + len(sequence)
                 description = loc.description
                 continue
 
@@ -328,8 +342,8 @@ def _records_from_headers(
                     f"Non-contiguous chunks for '{base}': expected start {prev_end}, got {start} "
                     f"(chunk id={chunk_id})"
                 )
-            parts.append(rec.seq)
-            prev_end = start + len(rec.seq)
+            parts.append(sequence)
+            prev_end = start + len(sequence)
 
         assembled = Seq("").join(parts)
         yield SeqRecord(assembled, id=base, description=description or base)

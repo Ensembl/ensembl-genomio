@@ -63,7 +63,7 @@ def test_consensus_sha256_key_normalises_fields() -> None:
 
 
 @pytest.mark.parametrize(
-    ("repeat_type", "expected"),
+    ("repeat_class", "expected"),
     [
         ("LINE1", "Type I Transposons/LINE"),
         ("Satellite", "Satellite repeats"),
@@ -71,15 +71,15 @@ def test_consensus_sha256_key_normalises_fields() -> None:
         ("NotInMap", "Unknown"),
     ],
 )
-def test_map_repeatmasker_repeat_consensus_type(repeat_type: str, expected: str) -> None:
+def test_map_repeatmasker_repeat_consensus_type(repeat_class: str, expected: str) -> None:
     """
-    Tests the mapping of RepeatMasker repeat types to GenomIO categories for known and unknown patterns.
+    Tests the mapping of RepeatMasker repeat classes to GenomIO categories for known and unknown patterns.
 
     Args:
-        repeat_type: Input repeat type string.
+        repeat_class: Input repeat class string.
         expected: Expected mapped output.
     """
-    assert convert_to_genomio_json._map_repeatmasker_repeat_consensus_type(repeat_type) == expected
+    assert convert_to_genomio_json._map_repeatmasker_repeat_consensus_type(repeat_class) == expected
 
 
 @pytest.mark.parametrize(
