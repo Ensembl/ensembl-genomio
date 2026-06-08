@@ -25,6 +25,8 @@ from ensembl.utils.archive import open_gz_file
 
 @dataclass(frozen=True)
 class AgpEntry:
+    """Single AGP component entry used for coordinate liftover."""
+
     record: str
     record_start: int
     record_end: int
@@ -51,7 +53,10 @@ def build_component_index(agp_entries: dict[str, list[AgpEntry]]) -> dict[str, l
             component_index[p.part_id].append(p)
 
     for key, values in component_index.items():
-        component_index[key] = sorted(values, key=lambda e: (e.record, e.record_start, e.part_number))
+        component_index[key] = sorted(
+            values,
+            key=lambda e: (e.record, e.record_start, e.part_number),
+        )
     return component_index
 
 
@@ -76,14 +81,16 @@ def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tup
 
     if start < part.part_start or end > part.part_end:
         raise ValueError(
-            f"Range {start}-{end} is outside component span {part.part_start}-{part.part_end} for '{part.part_id}'"
+            f"Range {start}-{end} is outside component span "
+            f"{part.part_start}-{part.part_end} for '{part.part_id}'"
         )
 
     if part.orientation == "+":
         obj_start = part.record_start + (start - part.part_start)
         obj_end = part.record_start + (end - part.part_start)
         return part.record, obj_start, obj_end
-    elif part.orientation == "-":
+
+    if part.orientation == "-":
         if not allow_revcomp:
             raise ValueError(
                 f"AGP contains '-' orientation for component '{part.part_id}' but processing of "
@@ -130,8 +137,8 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
 
             if not allow_revcomp and cols[8] != "+":
                 errors.append(
-                    f"Line {line_nr}: AGP contains '-' orientation for component '{cols[5]}' but processing of "
-                    "reverse complement AGP entries is not enabled."
+                    f"Line {line_nr}: AGP contains '-' orientation for component '{cols[5]}' "
+                    "but processing of reverse complement AGP entries is not enabled."
                 )
                 continue
 

@@ -105,8 +105,8 @@ def _parse_fasta_headers(file_path: StrPath) -> Iterator[tuple[str, str]]:
         Tuples of (record_id, description_without_id).
     """
     with open_gz_file(file_path) as fh:
-        for record in SeqIO.parse(fh, "fasta"):
-            yield record.id, seq_description_without_id(record)
+        headers = [(record.id, seq_description_without_id(record)) for record in SeqIO.parse(fh, "fasta")]
+    yield from headers
 
 
 def _build_index(
@@ -192,7 +192,8 @@ def _agp_component_seq(
 
     if orientation == "+":
         return subsequence
-    elif orientation == "-":
+
+    if orientation == "-":
         if not allow_revcomp:
             raise ValueError(
                 f"AGP has '-' orientation for component '{component_record.id}', "
@@ -402,6 +403,7 @@ def recombine_fasta(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse command-line arguments for the FASTA recombination CLI."""
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
         "--fasta-manifest",
@@ -446,6 +448,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Entry point for the FASTA recombination CLI."""
     args = parse_args(argv)
     chunk_re = validate_regex(args.chunk_id_regex)
     try:

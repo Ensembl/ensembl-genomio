@@ -68,6 +68,8 @@ TRF_PARAMETERS_RE = re.compile(r"^Parameters:\s+(?P<params>.+)\s*$")
 
 @dataclass(frozen=True)
 class Consensus:
+    """Repeat consensus record used for feature-to-consensus linking."""
+
     name: str
     repeat_class: str
     repeat_type: str
@@ -110,8 +112,8 @@ def _parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_li
     """
     try:
         return parser(token)
-    except ValueError:
-        raise ValueError(f"Invalid {field_name!r} in {path}: token={token!r}, line={raw_line!r}")
+    except ValueError as exc:
+        raise ValueError(f"Invalid {field_name!r} in {path}: token={token!r}, line={raw_line!r}") from exc
 
 
 def _format_parse_errors(parser_name: str, input_path: Path, errors: list[str]) -> str:
@@ -151,6 +153,7 @@ def _map_repeatmasker_repeat_consensus_type(repeat_class: str) -> str:
 
 def _has_valid_parsed_coordinates(
     input_path: Path,
+    *,
     seq_region_start: int,
     seq_region_end: int,
     repeat_start: int,
@@ -248,6 +251,7 @@ def _parse_repeatmasker_consensus_library(
 def parse_repeatmasker_output(
     input_path: Path, consensus_lib_path: Path | None
 ) -> tuple[list[dict], dict[str, Consensus]]:
+    # pylint: disable=too-many-branches
     """
     Parse a RepeatMasker .out file into repeat feature dictionaries and consensus records.
 
@@ -341,11 +345,11 @@ def parse_repeatmasker_output(
 
                 if not _has_valid_parsed_coordinates(
                     input_path,
-                    seq_region_start,
-                    seq_region_end,
-                    repeat_start,
-                    repeat_end,
-                    line,
+                    seq_region_start=seq_region_start,
+                    seq_region_end=seq_region_end,
+                    repeat_start=repeat_start,
+                    repeat_end=repeat_end,
+                    line=line,
                 ):
                     continue
             except ValueError as exc:
@@ -382,6 +386,7 @@ def parse_repeatmasker_output(
 
 
 def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
+    # pylint: disable=too-many-branches
     """
     Parses a TRF .dat file into repeat feature dictionaries and consensus records.
 
@@ -492,11 +497,11 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
 
                 _has_valid_parsed_coordinates(
                     input_path,
-                    seq_region_start,
-                    seq_region_end,
-                    1,
-                    period_size,
-                    line,
+                    seq_region_start=seq_region_start,
+                    seq_region_end=seq_region_end,
+                    repeat_start=1,
+                    repeat_end=period_size,
+                    line=line,
                 )
             except ValueError as exc:
                 errors.append(str(exc))
@@ -558,6 +563,7 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
 def create_genomio_json(
     input_path: Path,
     output_path: Path,
+    *,
     analysis_logic_name: str,
     analysis_display_label: str,
     analysis_description: str,

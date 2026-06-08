@@ -24,7 +24,7 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import TypedDict, TypeVar, cast
+from typing import TypedDict, cast
 
 from typing_extensions import NotRequired
 
@@ -46,6 +46,8 @@ JsonValue = bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"
 
 
 class RepeatConsensus(TypedDict):
+    """Repeat consensus JSON object."""
+
     repeat_consensus_key: str  # SHA-256 hex
     repeat_name: str
     repeat_class: str
@@ -54,6 +56,8 @@ class RepeatConsensus(TypedDict):
 
 
 class RepeatFeature(TypedDict):
+    """Repeat feature JSON object."""
+
     seq_region: str
     seq_region_start: int
     seq_region_end: int
@@ -66,6 +70,8 @@ class RepeatFeature(TypedDict):
 
 
 class NcRNAFeature(TypedDict):
+    """ncRNA feature JSON object."""
+
     seq_region: str
     seq_region_start: int
     seq_region_end: int
@@ -76,6 +82,8 @@ class NcRNAFeature(TypedDict):
 
 
 class Feature(TypedDict):
+    """Common feature fields used for coordinate liftover."""
+
     seq_region: str
     seq_region_start: int
     seq_region_end: int
@@ -401,6 +409,7 @@ def _combine_feature_docs(
     documents: Iterable[tuple[Path, dict[str, JsonValue]]],
     feature_list_key: str,
     coerce_feature: CoerceFeatureFunction,
+    *,
     chunk_re: re.Pattern[str],
     agp_by_component: dict[str, list[AgpEntry]] | None,
     allow_revcomp: bool,

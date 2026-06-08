@@ -33,6 +33,8 @@ __all__ = [
 
 @dataclass(frozen=True)
 class FastaStats:
+    """Basic FASTA sequence length summary."""
+
     longest: int
     total: int
     n_seqs: int

@@ -45,7 +45,7 @@ def _get_fasta_basename(fasta: Path) -> str:
     return basename
 
 
-class OutputWriter:
+class OutputWriter:  # pylint: disable=too-many-instance-attributes
     """
     Write split FASTA outputs and (optionally) an AGP file.
 
@@ -68,6 +68,7 @@ class OutputWriter:
         self,
         fasta_file: Path,
         out_dir: Path,
+        *,
         write_agp: bool,
         unique_file_names: bool,
         max_files_per_directory: int | None = None,
@@ -171,6 +172,7 @@ class OutputWriter:
     def write_record(
         self,
         record: SeqRecord,
+        *,
         agp_object_id: str | None = None,
         agp_start: int | None = None,
         agp_end: int | None = None,
@@ -216,20 +218,21 @@ class OutputWriter:
             self._agp_fh.write(line)
 
     def close(self) -> None:
+        """Closes any open FASTA and AGP file handles."""
         self._fh.close()
         if self._agp_fh:
             self._agp_fh.close()
             self._agp_fh = None
 
 
-def _check_contents_deletable(dir: Path, output_file_re: re.Pattern[str]) -> None:
+def _check_contents_deletable(directory: Path, output_file_re: re.Pattern[str]) -> None:
     """Checks that a directory contains only expected output files (recursively)."""
-    for p in dir.rglob("*"):
+    for p in directory.rglob("*"):
         if not p.is_dir():
             if not output_file_re.match(p.name):
                 msg = (
                     "Unexpected file identified amongst existing output, cleanup of existing files "
-                    f"failed: {dir.parent.name}/{p.relative_to(dir.parent)}"
+                    f"failed: {directory.parent.name}/{p.relative_to(directory.parent)}"
                 )
                 raise RuntimeError(msg)
 
@@ -261,6 +264,7 @@ def split_fasta(
     fasta_file: Path,
     out_dir: Path | None = None,
     write_agp: bool = False,
+    *,
     delete_existing_files: bool = False,
     unique_file_names: bool = False,
     force_max_seq_length: bool = False,
@@ -340,7 +344,9 @@ def split_fasta(
                     writer.open_new_file()
 
                 if max_seq_length_per_file is None or writer.file_len + seq_len <= max_seq_length_per_file:
-                    writer.write_record(record, record.id, 1, seq_len, 1)
+                    writer.write_record(
+                        record, agp_object_id=record.id, agp_start=1, agp_end=seq_len, agp_part_nr=1
+                    )
                     continue
 
                 if force_max_seq_length and seq_len > max_seq_length_per_file:
@@ -367,7 +373,13 @@ def split_fasta(
                         )
                         if writer.record_count > 0:
                             writer.open_new_file()
-                        writer.write_record(chunk_record, record.id, start + 1, end, i)
+                        writer.write_record(
+                            chunk_record,
+                            agp_object_id=record.id,
+                            agp_start=start + 1,
+                            agp_end=end,
+                            agp_part_nr=i,
+                        )
                 else:
                     logging.warning(
                         f"Record {record.id} length {seq_len} exceeds max_seq_length_per_file "
@@ -375,7 +387,9 @@ def split_fasta(
                     )
                     if writer.record_count > 0:
                         writer.open_new_file()
-                    writer.write_record(record, record.id, 1, seq_len, 1)
+                    writer.write_record(
+                        record, agp_object_id=record.id, agp_start=1, agp_end=seq_len, agp_part_nr=1
+                    )
     finally:
         writer.close()
 
