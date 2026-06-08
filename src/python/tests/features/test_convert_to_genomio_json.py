@@ -44,11 +44,7 @@ def _sha256_key(name: str, repeat_class: str, repeat_type: str, seq: str) -> str
     Returns:
         str:Expected SHA-256 digest.
     """
-    norm_name = name.strip()
-    norm_class = repeat_class.strip()
-    norm_type = repeat_type.strip()
-    norm_seq = "".join(seq.split()).upper()
-    payload = f"{norm_name}\t{norm_class}\t{norm_type}\t{norm_seq}".encode("utf-8")
+    payload = f"{name}\t{repeat_class}\t{repeat_type}\t{seq}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -1091,7 +1087,7 @@ def test_main_passes_expected_arguments(
     use_repeatmodeler_lib: bool,
 ) -> None:
     """
-    Tests ``convert_to_genomio_json.main()`` passes parsed arguments through to `create_genomio_json()` using real input files.
+    Tests ``convert_to_genomio_json.main()`` passes parsed arguments correctly.
 
     Args:
         mock_create_genomio_json: Mock for ``convert_to_genomio_json.create_genomio_json()``.
