@@ -286,6 +286,134 @@ def test_parse_repeatmasker_consensus_library(
 
 
 @pytest.mark.parametrize(
+    ("repeat_class_field", "expected"),
+    [
+        param("SINE/Alu", ("SINE", "Alu"), id="Class and type"),
+        param("Simple_repeat", ("Simple_repeat", "Unknown"), id="Class only"),
+    ],
+)
+def test_parse_repeatmasker_repeat_class_field(
+    repeat_class_field: str,
+    expected: tuple[str, str],
+) -> None:
+    """
+    Tests ``convert_to_genomio_json._parse_repeatmasker_repeat_class_field()`` splits class fields.
+
+    Args:
+        repeat_class_field: Raw RepeatMasker repeat class/family field.
+        expected: Expected repeat class and raw repeat type.
+    """
+    assert (
+        convert_to_genomio_json._parse_repeatmasker_repeat_class_field(
+            Path("input.out"),
+            repeat_class_field,
+            "raw line",
+        )
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    "repeat_class_field",
+    [
+        param("SINE/", id="Missing type"),
+        param("/Alu", id="Missing class"),
+    ],
+)
+def test_parse_repeatmasker_repeat_class_field_errors(repeat_class_field: str) -> None:
+    """
+    Tests ``convert_to_genomio_json._parse_repeatmasker_repeat_class_field()`` rejects malformed fields.
+
+    Args:
+        repeat_class_field: Raw RepeatMasker repeat class/family field.
+    """
+    with pytest.raises(ValueError, match=r"Malformed repeat_class/family"):
+        convert_to_genomio_json._parse_repeatmasker_repeat_class_field(
+            Path("input.out"),
+            repeat_class_field,
+            "raw line",
+        )
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected"),
+    [
+        param(
+            ["100", "1.0", "0.0", "0.0", "chr1", "10", "20", "(0)", "+", "Foo", "SINE/Alu", "1", "11", "(0)"],
+            ("+", 1, 11),
+            id="Forward strand",
+        ),
+        param(
+            [
+                "200",
+                "2.5",
+                "1.5",
+                "0.5",
+                "chr2",
+                "100",
+                "150",
+                "(0)",
+                "C",
+                "Foo",
+                "LINE/L1",
+                "(0)",
+                "40",
+                "2",
+            ],
+            ("-", 2, 40),
+            id="Complement strand",
+        ),
+    ],
+)
+def test_parse_repeatmasker_strand_coordinates(
+    columns: list[str],
+    expected: tuple[str, int, int],
+) -> None:
+    """
+    Tests ``convert_to_genomio_json._parse_repeatmasker_strand_coordinates()`` parses strand coordinates.
+
+    Args:
+        columns: Split RepeatMasker data row columns.
+        expected: Expected sequence-region strand, repeat start, and repeat end.
+    """
+    assert (
+        convert_to_genomio_json._parse_repeatmasker_strand_coordinates(
+            Path("input.out"),
+            columns,
+            "raw line",
+        )
+        == expected
+    )
+
+
+def test_parse_repeatmasker_row() -> None:
+    """
+    Tests ``convert_to_genomio_json._parse_repeatmasker_row()`` parses one RepeatMasker data row.
+    """
+    line = "100 1.0 0.0 0.0 chr1 10 20 (0) + Foo SINE/Alu 1 11 (0) *"
+
+    parsed_row = convert_to_genomio_json._parse_repeatmasker_row(Path("input.out"), line)
+
+    assert parsed_row is not None
+    assert parsed_row.feature == {
+        "seq_region": "chr1",
+        "seq_region_start": 10,
+        "seq_region_end": 20,
+        "seq_region_strand": "+",
+        "repeat_start": 1,
+        "repeat_end": 11,
+        "score": 100.0,
+        "attributes": {
+            "perc_div": 1.0,
+            "perc_del": 0.0,
+            "perc_ins": 0.0,
+            "repeatmasker_repeat_type": "Alu",
+        },
+    }
+    assert parsed_row.consensus_triplet == ("Foo", "SINE", "Alu")
+
+
+@pytest.mark.parametrize(
     ("filename", "expected_features"),
     [
         param(
@@ -474,6 +602,125 @@ def test_parse_repeatmasker_output_adds_consensus_from_library(data_dir: Path) -
         }
     ]
     assert consensuses_by_key == {expected_consensus_key: expected_consensus}
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        param("Sequence: chrA:104-200", ("chrA", 104), id="Windowed sequence header"),
+        param("Sequence: chrB", ("chrB", None), id="Plain sequence header"),
+    ],
+)
+def test_parse_trf_sequence_header(line: str, expected: tuple[str, int | None]) -> None:
+    """
+    Tests ``convert_to_genomio_json._parse_trf_sequence_header()`` extracts sequence ID and window start.
+
+    Args:
+        line: TRF sequence header line.
+        expected: Expected sequence region and optional window start.
+    """
+    assert convert_to_genomio_json._parse_trf_sequence_header(line) == expected
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        param("Parameters: 2 7 7 80 10 50 500", "2 7 7 80 10 50 500", id="Parameters line"),
+        param("Sequence: chrA", None, id="Different line type"),
+    ],
+)
+def test_parse_trf_parameters(line: str, expected: str | None) -> None:
+    """
+    Tests ``convert_to_genomio_json._parse_trf_parameters()`` extracts TRF parameters.
+
+    Args:
+        line: Raw TRF line.
+        expected: Expected parameters string, or ``None`` for non-parameter lines.
+    """
+    assert convert_to_genomio_json._parse_trf_parameters(line) == expected
+
+
+def test_missing_trf_sequence_error() -> None:
+    """
+    Tests ``convert_to_genomio_json._missing_trf_sequence_error()`` includes skipped block context.
+    """
+    assert convert_to_genomio_json._missing_trf_sequence_error(Path("input.dat"), 3, 12) == (
+        "TRF sequence header not found before data lines in input.dat: "
+        "unprocessed_entries=3, first_data_line=12"
+    )
+
+
+@pytest.mark.parametrize(
+    ("line", "expectation"),
+    [
+        param(
+            "1 6 2 3.0 2 90.0 1.0 42 25 25 25 25 1.5 AT",
+            does_not_raise(
+                (
+                    {
+                        "seq_region": "chrA",
+                        "seq_region_start": 104,
+                        "seq_region_end": 109,
+                        "seq_region_strand": "+",
+                        "repeat_start": 1,
+                        "repeat_end": 2,
+                        "repeat_consensus": _sha256_key("trf", "trf", "Tandem repeats", "AT"),
+                        "score": 42.0,
+                        "attributes": {
+                            "period_size": 2,
+                            "copy_number": 3.0,
+                            "consensus_size": 2,
+                            "perc_match": 90.0,
+                            "perc_indel": 1.0,
+                            "entropy": 1.5,
+                            "motif": "AT",
+                            "a_pct": 25.0,
+                            "c_pct": 25.0,
+                            "g_pct": 25.0,
+                            "t_pct": 25.0,
+                            "trf_parameters": "2 7 7 80 10 50 500",
+                        },
+                    },
+                    convert_to_genomio_json.Consensus(
+                        name="trf",
+                        repeat_class="trf",
+                        repeat_type="Tandem repeats",
+                        seq="AT",
+                    ),
+                )
+            ),
+            id="Valid data row",
+        ),
+        param(
+            "1 6 2 3.0 2 90.0 1.0 42 25 25 25 25",
+            pytest.raises(ValueError, match=r"Expected at least 13 columns"),
+            id="Too few columns",
+        ),
+    ],
+)
+def test_parse_trf_data_row(
+    line: str,
+    expectation: ContextManager,
+) -> None:
+    """
+    Tests ``convert_to_genomio_json._parse_trf_data_row()`` parses or rejects one TRF data row.
+
+    Args:
+        line: Raw TRF data row.
+        expectation: Context manager for the expected result or exception.
+    """
+    with expectation as expected:
+        parsed_row = convert_to_genomio_json._parse_trf_data_row(
+            Path("input.dat"),
+            line,
+            seq_region="chrA",
+            window_start=104,
+            trf_parameters="2 7 7 80 10 50 500",
+        )
+
+        expected_feature, expected_consensus = expected
+        assert parsed_row.feature == expected_feature
+        assert parsed_row.consensus == expected_consensus
 
 
 @pytest.mark.parametrize(
@@ -1152,6 +1399,8 @@ def test_main_passes_expected_arguments(
             "source_provider": "Custom",
             "is_primary": True,
         }
+
+    convert_to_genomio_json.main(argv)
 
     mock_create_genomio_json.assert_called_once_with(**expected)
 
