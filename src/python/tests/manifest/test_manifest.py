@@ -25,7 +25,6 @@ from pytest import LogCaptureFixture, param, raises
 
 from ensembl.io.genomio.manifest.manifest import Manifest, ManifestError
 
-
 _CONTENT_MD5 = "45685e95985e20822fb2538a522a5ccf"
 
 

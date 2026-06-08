@@ -22,7 +22,6 @@ import logging
 from pathlib import Path
 from typing import Any, TypeAlias
 
-
 ManifestDict: TypeAlias = dict[str, dict[str, Any]]
 
 

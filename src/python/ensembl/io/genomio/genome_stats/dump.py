@@ -78,7 +78,7 @@ class StatsGenerator:
         )
         attributes = {}
         for row in self.session.execute(seqs_st):
-            (attribute_name, count) = row
+            attribute_name, count = row
             attributes[attribute_name] = count
         return attributes
 
@@ -96,7 +96,7 @@ class StatsGenerator:
         seqs_st = select(table.biotype, func.count()).group_by(table.biotype)
         biotypes = {}
         for row in self.session.execute(seqs_st):
-            (biotype, count) = row
+            biotype, count = row
             biotypes[biotype] = count
         return biotypes
 

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.fasta.chunk` module."""
+
 # pylint: disable=too-many-positional-arguments
 
 from contextlib import contextmanager, nullcontext
@@ -24,7 +25,6 @@ from typing import Any, Callable, ContextManager, Generator, Optional
 import pytest
 
 import ensembl.io.genomio.fasta.chunk as FastaChunking
-
 
 does_not_raise = nullcontext
 

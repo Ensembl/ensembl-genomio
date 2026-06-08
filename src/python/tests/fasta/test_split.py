@@ -14,7 +14,6 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.fasta.split` module."""
 
-
 from contextlib import nullcontext as does_not_raise
 import filecmp
 from io import TextIOWrapper

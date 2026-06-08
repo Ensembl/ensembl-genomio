@@ -37,7 +37,6 @@ from ensembl.io.genomio.external_db.db_map import get_external_db_map, DEFAULT_E
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-
 _KARYOTYPE_STRUCTURE = {"TEL": "telomere", "ACEN": "centromere"}
 
 

@@ -189,7 +189,7 @@ class StableIDAllocator:
         qual = gene.qualifiers
         if "Dbxref" in qual:
             for xref in qual["Dbxref"]:
-                (db, value) = xref.split(":")
+                db, value = xref.split(":")
                 if db != "GeneID":
                     continue
                 new_gene_id_base = f"{db}_{value}"

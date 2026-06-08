@@ -56,6 +56,6 @@ def get_external_db_map(map_file: Path) -> dict[str, str]:
             parts = line.split("\t")
             if len(parts) < 2:
                 raise MapFormatError(f"External db file is not formatted correctly for: {line}")
-            (main_name, alt_name) = parts[0:2]
+            main_name, alt_name = parts[0:2]
             db_map[alt_name] = main_name
     return db_map

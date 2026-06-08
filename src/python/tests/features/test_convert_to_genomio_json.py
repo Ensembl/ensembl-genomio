@@ -123,9 +123,10 @@ def test_parse_token(
         expectation: Context manager for the expected result or exception.
     """
     with expectation as expected:
-        assert convert_to_genomio_json._parse_token(
-            parser, token, field_name, raw_line, Path("input.out")
-        ) == expected
+        assert (
+            convert_to_genomio_json._parse_token(parser, token, field_name, raw_line, Path("input.out"))
+            == expected
+        )
 
 
 def test_format_parse_errors() -> None:
@@ -136,11 +137,7 @@ def test_format_parse_errors() -> None:
         "TRF output",
         Path("input.dat"),
         ["first error", "second error"],
-    ) == (
-        "Found 2 errors while parsing TRF output in input.dat:\n"
-        "- first error\n"
-        "- second error"
-    )
+    ) == ("Found 2 errors while parsing TRF output in input.dat:\n" "- first error\n" "- second error")
 
 
 def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:

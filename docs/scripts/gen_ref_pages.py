@@ -19,7 +19,6 @@ from pathlib import Path
 
 import mkdocs_gen_files
 
-
 nav = mkdocs_gen_files.Nav()
 
 root = Path("src/python").resolve()

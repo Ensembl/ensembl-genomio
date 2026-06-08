@@ -35,7 +35,6 @@ from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-
 _VERSION_END = re.compile(r"\.\d+$")
 
 
@@ -50,7 +49,7 @@ def get_additions(report_path: PathLike, gbff_path: Optional[PathLike]) -> List[
     report_regions = get_report_regions_names(report_path)
     additions = []
     for seq_region_name in report_regions:
-        (genbank_seq_name, refseq_seq_name) = seq_region_name
+        genbank_seq_name, refseq_seq_name = seq_region_name
         if genbank_seq_name not in gbff_regions and refseq_seq_name not in gbff_regions:
             if refseq_seq_name:
                 additions.append(refseq_seq_name)
