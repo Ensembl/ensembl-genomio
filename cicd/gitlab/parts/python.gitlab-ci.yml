@@ -21,13 +21,15 @@
 .python:
   stage: test
   image: $PYTHON_IMAGE
-  only:
-    changes:
-      - cicd/gitlab/parts/python.gitlab-ci.yml
-      - pyproject.toml
-      - "*.py"
-      - src/python/**/*.py
-      - scripts/**/*.py
+  rules:
+    - changes:
+        - cicd/gitlab/parts/python.gitlab-ci.yml
+        - pyproject.toml
+        - "*.py"
+        - src/python/**/*.py
+        - scripts/**/*.py
+      when: on_success
+    - when: manual
 
 ## Prepare and load the Python virtual environment
 
@@ -123,23 +125,3 @@ python:coverage:
     when: always
     paths:
       - $RUN_DIR/coverage
-
-
-# Deploy stage instances
-
-## Generate GitLab pages with HTML coverage report
-
-pages:
-  extends: .python
-  stage: deploy
-  needs:
-    - job: python:coverage
-      artifacts: true
-  script:
-    - mv $RUN_DIR/coverage/ public/
-  artifacts:
-    paths:
-      - public
-  only:
-    refs:
-      - main

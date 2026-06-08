@@ -18,9 +18,17 @@
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
 .flatfile:
   stage: test
-  image: python:3.11
+  image: python:3.12
   variables:
     CMD: python cicd/scripts/check_flatfile.py
+  rules:
+    - changes:
+        - "**/*.json"
+        - "**/*.yaml"
+        - "**/*.yml"
+        - cicd/gitlab/parts/flatfile.gitlab-ci.yml
+      when: on_success
+    - when: manual
 
 flatfile:prepare_venv:
   extends: .flatfile
@@ -44,20 +52,12 @@ flatfile:prepare_venv:
   before_script:
     - source $RUN_DIR/venv/bin/activate
 
-
 flatfile:json:
   extends: .flatfile:test
   script:
     - $CMD json
-  only:
-    changes:
-      - "**/*.json"
 
 flatfile:yaml:
   extends: .flatfile:test
   script:
     - $CMD yaml
-  only:
-    changes:
-      - "**/*.yml"
-      - "**/*.yaml"

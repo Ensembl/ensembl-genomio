@@ -18,16 +18,16 @@
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
 .license:
   stage: test
-  image: python:3.11
+  image: python:3.12
   variables:
     CMD: python cicd/scripts/check_license.py
+  rules:
+    - when: on_success
 
 license:notice:
   extends: .license
   script:
     - $CMD notice
-  except:
-    - external_pull_requests
 
 license:header:
   extends: .license

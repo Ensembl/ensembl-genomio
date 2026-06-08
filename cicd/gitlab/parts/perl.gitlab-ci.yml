@@ -19,16 +19,15 @@
 # A generic job to be used by all Perl jobs with the "extends" mechanism
 # (https://docs.gitlab.com/ee/ci/yaml/#extends)
 .perl:
-  when: manual
   stage: test
   image: perl:5.26
-  only:
-    changes:
-      - cicd/gitlab/parts/perl.gitlab-ci.yml
-      - scripts/**/*.pl
-      - src/perl/**/*.pm
-
-## Static analyses
+  rules:
+    - changes:
+        - cicd/gitlab/parts/perl.gitlab-ci.yml
+        - scripts/**/*.pl
+        - src/perl/**/*.pm
+      when: on_success
+    - when: manual
 
 perl:critic:
   extends: .perl
