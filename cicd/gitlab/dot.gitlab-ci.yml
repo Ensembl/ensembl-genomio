@@ -12,72 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Workflow rules (https://docs.gitlab.com/ee/ci/yaml/#workflow):
-# Run CI/CD automatically only for pull requests originated within ensembl-genomio and targeting "main"
-# branch or for commits pushed directly to "main" branch
-workflow:
+stages:
+  - pipelines
+
+trigger:ci:
+  stage: pipelines
   rules:
-    - if: $CI_EXTERNAL_PULL_REQUEST_IID &&
-          $CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY == $CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY &&
-          $CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+    - if: >
+        $CI_EXTERNAL_PULL_REQUEST_IID &&
+        $CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY == $CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY
       when: always
-    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-[a-zA-Z0-9\-]+)?$/
-      when: always
-    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
-      when: never
-    - when: always
-
-variables:
-  PYTHON_IMAGE: python:3.10
-  RUN_DIR: ./cicd/runtime
-
-default:
-  tags:
-    - docker
-
-# Using default stages (https://docs.gitlab.com/ee/ci/yaml/#stages): .pre > build > test > deploy > .post
-
-# In-house pipelines
-include:
-  # CI/CD debugging
-  - local: cicd/gitlab/parts/debug.gitlab-ci.yml
-  # Perl checks
-  - local: cicd/gitlab/parts/perl.gitlab-ci.yml
-    rules:
-      - if: $CI_COMMIT_TAG
-        when: never
-  # Python checks
-  - local: cicd/gitlab/parts/python.gitlab-ci.yml
-    rules:
-      - if: $CI_COMMIT_TAG
-        when: never
-  # License checks
-  - local: cicd/gitlab/parts/license.gitlab-ci.yml
-    rules:
-      - if: $CI_COMMIT_TAG
-        when: never
-  # Flat file checks
-  - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
-    rules:
-      - if: $CI_COMMIT_TAG
-        when: never
-  # GenomIO docker deploy (on release tag creation)
-  - local: cicd/gitlab/parts/dockerbuild.genomio.gitlab-ci.yml
-    rules:
-      - if: $CI_COMMIT_TAG
-        when: always
-
-# External pipelines
-# (from https://gitlab.com/gitlab-org/gitlab/-/tree/master/lib/gitlab/ci/templates)
-
-external:code_quality:
-  # https://docs.gitlab.com/ci/testing/code_quality/
-  when: manual
-  stage: test
+    - when: manual
   trigger:
+    include:
+      - local: cicd/gitlab/parts/ci.gitlab-ci.yml
     strategy: depend
     forward:
-      pipeline_variables: false
-      yaml_variables: false
+      pipeline_variables: true
+      yaml_variables: true
+
+trigger:release:
+  stage: pipelines
+  rules:
+    - if: >
+        $CI_COMMIT_TAG &&
+        $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-[a-zA-Z0-9-]+)?$/
+      when: always
+    - when: never
+  trigger:
     include:
-      - template: Code-Quality.gitlab-ci.yml
+      # GenomIO docker deploy
+      - local: cicd/gitlab/parts/dockerbuild.gitlab-ci.yml
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
