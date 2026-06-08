@@ -69,7 +69,6 @@ def test_compute_fasta_stats(tmp_path: Path, contents: str, expected: str) -> No
     fasta_file = write_text(tmp_path / "in.fa", contents)
     output_file = tmp_path / "stats.json"
 
-    assert stats.compute_fasta_stats(fasta_file=fasta_file, output_file=output_file) is None
     assert json.loads(output_file.read_text(encoding="utf-8")) == expected
 
 

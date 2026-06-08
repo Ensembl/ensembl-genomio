@@ -23,7 +23,7 @@ import pytest
 from ensembl.io.genomio.utils import json_utils
 
 
-def test_get_json_loads_data(tmp_path: Path):
+def test_get_json_loads_data(tmp_path: Path) -> None:
     """Tests that `json_utils.get_json()` loads JSON from a file and returns the parsed object."""
     p = tmp_path / "in.json"
     payload = {"b": 2, "a": 1, "nested": {"x": [1, 2, 3]}}
@@ -33,7 +33,7 @@ def test_get_json_loads_data(tmp_path: Path):
     assert out == payload
 
 
-def test_get_json_passes_parse_int_kwarg(tmp_path):
+def test_get_json_passes_parse_int_kwarg(tmp_path: Path) -> None:
     """Tests that `json_utils.get_json()` forwards `parse_int` to the JSON parser."""
     p = tmp_path / "data.json"
     p.write_text('{"value": 123}', encoding="utf-8")
@@ -46,7 +46,7 @@ def test_get_json_passes_parse_int_kwarg(tmp_path):
     assert out["value"] == "INT:123"
 
 
-def test_print_json_uses_defaults_sort_keys_and_indent(tmp_path: Path):
+def test_print_json_uses_defaults_sort_keys_and_indent(tmp_path: Path) -> None:
     """Tests that `json_utils.print_json()` formats JSON using default sorting and indentation."""
     p = tmp_path / "out.json"
 
@@ -63,7 +63,7 @@ def test_print_json_uses_defaults_sort_keys_and_indent(tmp_path: Path):
     assert json.loads(text) == {"a": 1, "b": 2}
 
 
-def test_print_json_respects_overrides_for_sort_keys_and_indent(tmp_path: Path):
+def test_print_json_respects_overrides_for_sort_keys_and_indent(tmp_path: Path) -> None:
     """Tests that `json_utils.print_json()` respects explicit sort key and indentation options."""
     p = tmp_path / "out.json"
 
@@ -77,7 +77,7 @@ def test_print_json_respects_overrides_for_sort_keys_and_indent(tmp_path: Path):
     assert json.loads(text) == {"a": 1, "b": 2}
 
 
-def test_print_json_allows_non_default_serialization_options(tmp_path: Path):
+def test_print_json_allows_non_default_serialization_options(tmp_path: Path) -> None:
     """Tests that `json_utils.print_json()` can write JSON using custom serialization options."""
     p = tmp_path / "out.json"
 

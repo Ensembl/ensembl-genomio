@@ -129,7 +129,7 @@ def test_parse_agp(
     allow_revcomp: bool,
     expectation: ContextManager,
     check_type: str | None,
-    check_data: tuple[str] | dict[str, dict] | None,
+    check_data: tuple[str, str, str] | dict[str, dict] | None,
 ) -> None:
     """
     Tests the `agp_utils.parse_agp()` function.
@@ -152,12 +152,14 @@ def test_parse_agp(
         out = agp_utils.parse_agp(agp_file, allow_revcomp)
 
     if check_type == "single":
+        assert isinstance(check_data, tuple)
         object_id, part_id, orientation = check_data
         assert object_id in out
         assert out[object_id][0].part_id == part_id
         assert out[object_id][0].orientation == orientation
 
     elif check_type == "multiple":
+        assert isinstance(check_data, dict) and "keys" in check_data and "parts" in check_data
         assert set(out.keys()) == check_data["keys"]
         for obj_id, expected_parts in check_data["parts"].items():
             assert len(out[obj_id]) == len(expected_parts)
@@ -166,7 +168,7 @@ def test_parse_agp(
                 assert out[obj_id][i].orientation == expected_orientation
 
 
-def test_build_component_index_groups_by_part_id_and_sorts_within_component():
+def test_build_component_index_groups_by_part_id_and_sorts_within_component() -> None:
     """Tests that component entries are grouped by component ID and sorted properly."""
     e1 = agp_utils.AgpEntry(
         record="objB",
@@ -226,7 +228,7 @@ def test_build_component_index_groups_by_part_id_and_sorts_within_component():
     assert idx["comp1"] == [e2, e3, e1]
 
 
-def test_build_component_index_empty_input_returns_empty_dict():
+def test_build_component_index_empty_input_returns_empty_dict() -> None:
     """Tests that `build_component_index()` returns an empty dict for empty input."""
     assert agp_utils.build_component_index({}) == {}
 

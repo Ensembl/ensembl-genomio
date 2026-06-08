@@ -212,7 +212,7 @@ def _without_run_date(d: dict[str, combine_json.JsonValue]) -> dict[str, combine
     return out
 
 
-def test_top_level_accumulator_get_required_raises_when_missing():
+def test_top_level_accumulator_get_required_raises_when_missing() -> None:
     """Tests `combine_json._TopLevelAccumulator.get_required()` raises for a missing key."""
     acc = combine_json._TopLevelAccumulator()
     with pytest.raises(ValueError, match=r"Missing required top-level 'analysis'"):
@@ -580,7 +580,7 @@ def test_lift_feature_coords(
         assert out["seq_region_strand"] == expected["seq_region_strand"]
 
 
-def test_detect_load_type_rejects_unknown_type(tmp_path: Path):
+def test_detect_load_type_rejects_unknown_type(tmp_path: Path) -> None:
     """
     Tests `combine_json._detect_load_type()` rejects documents whose schema kind cannot be inferred.
 
@@ -1006,11 +1006,19 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
     expectation: ContextManager,
 ) -> None:
     """Tests `combine_json._combine_feature_docs()` validates repeat-consensus references when requested."""
-    document = {
+    document: dict[str, combine_json.JsonValue] = {
         "analysis": _analysis("rm"),
         "source": _source("prov"),
         "repeat_features": [
-            _repeat_feature(seq_region="chr1_chunk_start_1", start=1, end=10, consensus_key=consensus_key),
+            cast(
+                combine_json.JsonValue,
+                _repeat_feature(
+                    seq_region="chr1_chunk_start_1",
+                    start=1,
+                    end=10,
+                    consensus_key=consensus_key
+                )
+            ),
         ],
     }
 

@@ -320,7 +320,7 @@ class TestOutputWriter:
             assert out_record.seq == in_record.seq
             assert out_record.description == f"{in_record.id} {in_record.description}"
             if write_agp:
-                with writer.agp_file.open("r") as agp_fh:  # type: ignorep[union-attr]
+                with writer.agp_file.open("r") as agp_fh:  # type: ignore[union-attr]
                     # Skip header line
                     agp_fh.readline()
                     agp_line = agp_fh.readline().strip()

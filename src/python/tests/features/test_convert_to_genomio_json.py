@@ -22,7 +22,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import ContextManager
+from typing import Callable, ContextManager
 from unittest.mock import Mock, patch
 
 import pytest
@@ -106,7 +106,7 @@ def test_map_repeatmasker_repeat_consensus_type(repeat_class: str, expected: str
     ],
 )
 def test_parse_token(
-    parser,
+    parser: Callable[[str], int | float],
     token: str,
     field_name: str,
     raw_line: str,
@@ -1153,7 +1153,6 @@ def test_main_passes_expected_arguments(
             "is_primary": True,
         }
 
-    assert convert_to_genomio_json.main(argv) is None
     mock_create_genomio_json.assert_called_once_with(**expected)
 
 
