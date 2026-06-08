@@ -215,7 +215,7 @@ def test_has_valid_parsed_coordinates(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """
-    Tests ``convert_to_genomio_json._has_valid_parsed_coordinates()`` correctly validatescoordinates.
+    Tests ``convert_to_genomio_json._has_valid_parsed_coordinates()`` correctly validates coordinates.
 
     Args:
         seq_region_start: Sequence region start coordinate.
