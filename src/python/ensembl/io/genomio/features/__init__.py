@@ -15,3 +15,4 @@
 """Repeat/ncRNA features processing module."""
 
 from .combine_json import *
+from .convert_to_genomio_json import *

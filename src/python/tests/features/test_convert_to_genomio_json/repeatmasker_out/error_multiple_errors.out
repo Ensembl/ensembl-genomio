@@ -1,0 +1,5 @@
+SW  perc perc perc  query         position in query      matching repeat           position in repeat
+score div. del. ins. sequence      begin end   (left) strand repeat          class/family  begin  end   (left) ID
+bad 1.0 0.0 0.0 chr1 10 20 (0) + Foo SINE/Alu 1 11 (0) 1
+100 1.0 0.0 0.0 chr1 20 10 (0) + Foo SINE/Alu 1 11 (0) 2
+100 1.0 0.0 0.0 chr1 10 20 (0) X Foo SINE/Alu 1 11 (0) 3
