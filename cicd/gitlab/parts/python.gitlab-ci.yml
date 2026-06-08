@@ -125,23 +125,3 @@ python:coverage:
     when: always
     paths:
       - $RUN_DIR/coverage
-
-
-# Deploy stage instances
-
-## Generate GitLab pages with HTML coverage report
-
-pages:
-  extends: .python
-  stage: deploy
-  needs:
-    - job: python:coverage
-      artifacts: true
-  script:
-    - mv $RUN_DIR/coverage/ public/
-  artifacts:
-    paths:
-      - public
-  only:
-    refs:
-      - main
