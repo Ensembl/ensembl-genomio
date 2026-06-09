@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# pylint: disable=too-many-lines
 """Unit testing of `ensembl.io.genomio.repeats.combine_json` module."""
 
 from contextlib import nullcontext as does_not_raise
@@ -632,43 +634,46 @@ def test_feature_consensus_key(
 
 
 def test_iterate_validated_documents_validate_false_skips_schema_validation(
-    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
+    captured_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     data_dir: Path,
 ) -> None:
     """
     Tests `combine_json._iterate_validated_documents()` skips validation when requested.
 
     Args:
-        schema_validator_calls: Captured ``schema_validator`` calls.
+        captured_validator_calls: Captured ``schema_validator`` calls.
         data_dir: Module's test data directory fixture.
     """
     json_path = data_dir / "iterate_validated_documents" / "validate_false" / "a.json"
 
     documents = list(combine_json._iterate_validated_documents([json_path], validate=False))
     assert documents and documents[0][0] == json_path
-    assert schema_validator_calls == []
+    assert not captured_validator_calls
 
 
 def test_write_and_validate_writes_newline_and_calls_schema_validator(
-    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
+    captured_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     tmp_path: Path,
 ) -> None:
     """
     Tests `combine_json._write_and_validate()` writes a trailing newline and validates output.
 
     Args:
-        schema_validator_calls: Captured ``schema_validator`` calls.
+        captured_validator_calls: Captured ``schema_validator`` calls.
         tmp_path: Temporary directory provided by pytest.
     """
     out_json = tmp_path / "out.json"
     combine_json._write_and_validate(out_json, {"hello": "world"})
 
     assert out_json.read_text(encoding="utf-8").endswith("\n")
-    assert schema_validator_calls, "schema_validator should have been called for the output"
+    assert captured_validator_calls, "schema_validator should have been called for the output"
 
 
 @pytest.mark.parametrize(
-    "documents, feature_list_key, coerce_feature, agp_by_component, allow_revcomp, required_top_level_keys, expectation",
+    (
+        "documents, feature_list_key, coerce_feature, agp_by_component, allow_revcomp,"
+        "required_top_level_keys, expectation"
+    ),
     [
         param(
             [
@@ -929,6 +934,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
 )
 def test_combine_feature_docs(
     tmp_path: Path,
+    *,
     documents: list[tuple[Path, dict[str, combine_json.JsonValue]]],
     feature_list_key: str,
     coerce_feature: combine_json.CoerceFeatureFunction,
@@ -1121,9 +1127,9 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
     ],
 )
 def test_combine_repeat_json_paths(
-    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     data_dir: Path,
     tmp_path: Path,
+    *,
     test_dir_name: str,
     agp_filename: str | None,
     allow_revcomp: bool,
@@ -1133,7 +1139,6 @@ def test_combine_repeat_json_paths(
     Tests the `combine_json._combine_repeat_json_paths()` function.
 
     Args:
-        schema_validator_calls: Captured ``schema_validator`` calls.
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
         test_dir_name: Name of data subdirectory for the test case.
@@ -1222,9 +1227,9 @@ def test_combine_repeat_json_paths(
     ],
 )
 def test_combine_ncrna_json_paths(
-    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     data_dir: Path,
     tmp_path: Path,
+    *,
     test_dir_name: str,
     agp_filename: str | None,
     allow_revcomp: bool,
@@ -1234,7 +1239,6 @@ def test_combine_ncrna_json_paths(
     Tests the `combine_json._combine_ncrna_json_paths()` function.
 
     Args:
-        schema_validator_calls: Captured ``schema_validator`` calls.
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
         test_dir_name: Name of data subdirectory for the test case.
@@ -1319,9 +1323,9 @@ def test_combine_ncrna_json_paths(
     ],
 )
 def test_combine_feature_json(
-    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     data_dir: Path,
     tmp_path: Path,
+    *,
     test_dir_name: str,
     agp_filename: str | None,
     allow_revcomp: bool,
@@ -1331,7 +1335,6 @@ def test_combine_feature_json(
     Tests `combine_json.combine_feature_json()` for successful and failing file-based inputs.
 
     Args:
-        schema_validator_calls: Captured ``schema_validator`` calls.
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
         test_dir_name: Name of data subdirectory for the test case.

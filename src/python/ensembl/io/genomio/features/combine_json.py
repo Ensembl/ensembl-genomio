@@ -242,12 +242,12 @@ def _write_and_validate(out_json: Path, combined_json: dict[str, JsonValue]) -> 
     Raises:
         ValueError: If schema validation fails.
     """
-    schema_validator(out_json, json_schema=_FEATURE_SCHEMA_NAME)
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(
         json.dumps(combined_json, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    schema_validator(out_json, json_schema=_FEATURE_SCHEMA_NAME)
 
 
 def _detect_load_type(document: dict[str, JsonValue], path: Path) -> str:

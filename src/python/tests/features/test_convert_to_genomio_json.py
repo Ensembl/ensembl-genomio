@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=too-many-lines
 """Unit testing of `ensembl.io.genomio.repeats.convert_to_genomio_json` module."""
 
 from contextlib import nullcontext as does_not_raise
@@ -199,6 +200,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
     ],
 )
 def test_has_valid_parsed_coordinates(
+    *,
     seq_region_start: int,
     seq_region_end: int,
     repeat_start: int,
@@ -558,7 +560,7 @@ def test_parse_repeatmasker_output_success(
     )
 
     assert features == expected_features
-    assert consensuses_by_key == {}
+    assert not consensuses_by_key
 
 
 def test_parse_repeatmasker_output_adds_consensus_from_library(data_dir: Path) -> None:
@@ -819,7 +821,7 @@ def test_parse_repeatmasker_output_skips_invalid_repeat_coordinates(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """
-    Tests that ``convert_to_genomio_json.parse_repeatmasker_output()`` logs a warning and skips invalid records.
+    Tests ``convert_to_genomio_json.parse_repeatmasker_output()`` logs a warning and skips invalid records.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -827,13 +829,13 @@ def test_parse_repeatmasker_output_skips_invalid_repeat_coordinates(
         warning_pattern: Substring expected to appear in the logged warning message.
         caplog: Pytest fixture for capturing log output.
     """
-    out_path = data_dir / filename
+    output_path = data_dir / filename
 
     with caplog.at_level("WARNING"):
-        features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_output(out_path, None)
+        features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_output(output_path, None)
 
-    assert features == []
-    assert consensuses_by_key == {}
+    assert not features
+    assert not consensuses_by_key
     assert caplog.text
     assert any(warning_pattern in record.message for record in caplog.records)
 
@@ -1037,9 +1039,9 @@ def test_create_genomio_json_uses_repeatmasker_parser_output(
         mock_parse_repeatmasker_output: Mock for ``convert_to_genomio_json.parse_repeatmasker_output()``.
         tmp_path: Temporary directory provided by pytest.
     """
-    input = tmp_path / "input.out"
-    input.write_text("parser input", encoding="utf-8")
-    output = tmp_path / "out.json"
+    input_path = tmp_path / "input.out"
+    input_path.write_text("parser input", encoding="utf-8")
+    output_path = tmp_path / "out.json"
     consensus_lib = Path("consensus.fa")
     expected_features = [
         {
@@ -1063,9 +1065,9 @@ def test_create_genomio_json_uses_repeatmasker_parser_output(
     mock_parse_repeatmasker_output.return_value = (expected_features, {"consensus-key": expected_consensus})
 
     convert_to_genomio_json.create_genomio_json(
-        input_path=input,
+        input_path=input_path,
         repeatmasker_consensus_lib_path=consensus_lib,
-        output_path=output,
+        output_path=output_path,
         analysis_logic_name="repeatmask_customlib",
         analysis_display_label="Repeats: Custom library",
         analysis_description="desc",
@@ -1076,9 +1078,9 @@ def test_create_genomio_json_uses_repeatmasker_parser_output(
         is_primary=False,
     )
 
-    mock_parse_repeatmasker_output.assert_called_once_with(input, consensus_lib)
+    mock_parse_repeatmasker_output.assert_called_once_with(input_path, consensus_lib)
 
-    doc = json.loads(output.read_text(encoding="utf-8"))
+    doc = json.loads(output_path.read_text(encoding="utf-8"))
 
     assert doc["analysis"]["logic_name"] == "repeatmask_customlib"
     assert doc["analysis"]["display_label"] == "Repeats: Custom library"
@@ -1113,9 +1115,9 @@ def test_create_genomio_json_uses_trf_parser_output(
         mock_parse_trf_output: Mock for ``convert_to_genomio_json.parse_trf_output()``.
         tmp_path: Temporary directory provided by pytest.
     """
-    input = tmp_path / "input.out"
-    input.write_text("parser input", encoding="utf-8")
-    output = tmp_path / "out.json"
+    input_path = tmp_path / "input.out"
+    input_path.write_text("parser input", encoding="utf-8")
+    output_path = tmp_path / "out.json"
     expected_features = [
         {
             "seq_region": "chrA",
@@ -1138,9 +1140,9 @@ def test_create_genomio_json_uses_trf_parser_output(
     mock_parse_trf_output.return_value = (expected_features, {"trf-key": expected_consensus})
 
     convert_to_genomio_json.create_genomio_json(
-        input_path=input,
+        input_path=input_path,
         repeatmasker_consensus_lib_path=None,
-        output_path=output,
+        output_path=output_path,
         analysis_logic_name="trf",
         analysis_display_label="Repeats: Custom library",
         analysis_description="desc",
@@ -1151,9 +1153,9 @@ def test_create_genomio_json_uses_trf_parser_output(
         is_primary=False,
     )
 
-    mock_parse_trf_output.assert_called_once_with(input)
+    mock_parse_trf_output.assert_called_once_with(input_path)
 
-    doc = json.loads(output.read_text(encoding="utf-8"))
+    doc = json.loads(output_path.read_text(encoding="utf-8"))
 
     assert doc["analysis"]["logic_name"] == "trf"
     assert doc["analysis"]["program"] == "TRF"
@@ -1208,15 +1210,15 @@ def test_create_genomio_json_omits_program_parameters_when_none(
         mock_parse_repeatmasker_output: Mock for ``convert_to_genomio_json.parse_repeatmasker_output()``.
         tmp_path: Temporary directory provided by pytest.
     """
-    input = tmp_path / "input.out"
-    input.write_text("parser input", encoding="utf-8")
-    output = tmp_path / "out.json"
+    input_path = tmp_path / "input.out"
+    input_path.write_text("parser input", encoding="utf-8")
+    output_path = tmp_path / "out.json"
     mock_parse_repeatmasker_output.return_value = ([], {})
 
     convert_to_genomio_json.create_genomio_json(
-        input_path=input,
+        input_path=input_path,
         repeatmasker_consensus_lib_path=None,
-        output_path=output,
+        output_path=output_path,
         analysis_logic_name="repeatmask_customlib",
         analysis_display_label="label",
         analysis_description="desc",
@@ -1227,7 +1229,7 @@ def test_create_genomio_json_omits_program_parameters_when_none(
         is_primary=True,
     )
 
-    doc = json.loads(output.read_text(encoding="utf-8"))
+    doc = json.loads(output_path.read_text(encoding="utf-8"))
     assert "program_parameters" not in doc["analysis"]
     assert doc["source"]["is_primary"] is True
 
@@ -1248,16 +1250,16 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
         tmp_path: Temporary directory provided by pytest.
         use_repeatmodeler_lib: Whether to include optional repeatmodeler/program-parameters args.
     """
-    input = data_dir / "create_json" / "basic.out"
-    output = tmp_path / "out.json"
+    input_path = data_dir / "create_json" / "basic.out"
+    output_path = tmp_path / "out.json"
 
     argv = [
         "repeatmasker",
         "custom",
         "--input",
-        str(input),
+        str(input_path),
         "--output",
-        str(output),
+        str(output_path),
         "--program-version",
         "4.1.5",
     ]
@@ -1268,11 +1270,11 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
             "repeatmasker",
             "repbase",
             "--input",
-            str(input),
+            str(input_path),
             "--consensus-lib",
             str(consensus_lib),
             "--output",
-            str(output),
+            str(output_path),
             "--program-version",
             "4.1.7",
             "--program-parameters",
@@ -1285,16 +1287,17 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
     args = convert_to_genomio_json.parse_args(argv)
 
     assert args.__class__.__name__ == "Namespace"
-    assert args.input == input
-    assert args.output == output
+    assert args.input == input_path
+    assert args.output == output_path
 
     if use_repeatmodeler_lib:
         assert args.program_version == "4.1.7"
         assert args.analysis_logic_name == "repeatmask_rmlib"
         assert args.analysis_display_label == "Repeats: Repbase"
-        assert (
-            args.analysis_description
-            == 'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of repeat profiles.'
+        assert args.analysis_description == (
+            'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
+            '</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> '
+            "library of repeat profiles."
         )
         assert args.program == "RepeatMasker"
         assert args.source_provider == "Custom"
@@ -1305,9 +1308,9 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
         assert args.program_version == "4.1.5"
         assert args.analysis_logic_name == "repeatmask_customlib"
         assert args.analysis_display_label == "Repeats: Custom library"
-        assert (
-            args.analysis_description
-            == 'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, using a custom library of <em>ab initio</em> repeat profiles for this species.'
+        assert args.analysis_description == (
+            'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
+            "</a>, using a custom library of <em>ab initio</em> repeat profiles for this species."
         )
         assert args.program == "RepeatMasker"
         assert args.source_provider == "Ensembl"
@@ -1339,27 +1342,30 @@ def test_main_passes_expected_arguments(
         tmp_path: Temporary directory provided by pytest.
         use_repeatmodeler_lib: Whether to include optional repeatmodeler/program-parameters args.
     """
-    input = data_dir / "create_json" / "basic.out"
-    output = tmp_path / "out.json"
+    input_path = data_dir / "create_json" / "basic.out"
+    output_path = tmp_path / "out.json"
 
     argv = [
         "repeatmasker",
         "custom",
         "--input",
-        str(input),
+        str(input_path),
         "--output",
-        str(output),
+        str(output_path),
         "--program-version",
         "4.1.5",
     ]
 
     expected = {
-        "input_path": input,
+        "input_path": input_path,
         "repeatmasker_consensus_lib_path": None,
-        "output_path": output,
+        "output_path": output_path,
         "analysis_logic_name": "repeatmask_customlib",
         "analysis_display_label": "Repeats: Custom library",
-        "analysis_description": 'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, using a custom library of <em>ab initio</em> repeat profiles for this species.',
+        "analysis_description": (
+            'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
+            "</a>, using a custom library of <em>ab initio</em> repeat profiles for this species."
+        ),
         "program": "RepeatMasker",
         "program_version": "4.1.5",
         "program_parameters": None,
@@ -1373,11 +1379,11 @@ def test_main_passes_expected_arguments(
             "repeatmasker",
             "repbase",
             "--input",
-            str(input),
+            str(input_path),
             "--consensus-lib",
             str(consensus_lib),
             "--output",
-            str(output),
+            str(output_path),
             "--program-version",
             "4.1.7",
             "--program-parameters",
@@ -1387,12 +1393,16 @@ def test_main_passes_expected_arguments(
             "--is-primary",
         ]
         expected = {
-            "input_path": input,
+            "input_path": input_path,
             "repeatmasker_consensus_lib_path": consensus_lib,
-            "output_path": output,
+            "output_path": output_path,
             "analysis_logic_name": "repeatmask_rmlib",
             "analysis_display_label": "Repeats: Repbase",
-            "analysis_description": 'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of repeat profiles.',
+            "analysis_description": (
+                'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
+                '</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> '
+                "library of repeat profiles."
+            ),
             "program": "RepeatMasker",
             "program_version": "4.1.7",
             "program_parameters": "-lib foo",
@@ -1415,8 +1425,8 @@ def test_main_reraises_exceptions(mock_create_genomio_json: Mock, data_dir: Path
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
     """
-    input = data_dir / "create_json" / "basic.out"
-    output = tmp_path / "out.json"
+    input_path = data_dir / "create_json" / "basic.out"
+    output_path = tmp_path / "out.json"
 
     mock_create_genomio_json.side_effect = RuntimeError("boom")
 
@@ -1426,9 +1436,9 @@ def test_main_reraises_exceptions(mock_create_genomio_json: Mock, data_dir: Path
                 "repeatmasker",
                 "custom",
                 "--input",
-                str(input),
+                str(input_path),
                 "--output",
-                str(output),
+                str(output_path),
                 "--program-version",
                 "4.1.5",
             ]

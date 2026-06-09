@@ -119,12 +119,11 @@ def test_compute_fasta_stats_reads_gzipped_fasta(tmp_path: Path) -> None:
         param(["--fasta", "--output"], "stats.json", id="Explicit output"),
     ],
 )
-def test_parse_args(tmp_path: Path, argv: list[str], expected_output: str | None) -> None:
+def test_parse_args(argv: list[str], expected_output: str | None) -> None:
     """
     Tests the `stats.parse_args()` function.
 
     Args:
-        tmp_path: Test's unique temporary directory fixture.
         argv: Argument names to pass to the parser.
         expected_output: Expected output argument value.
     """

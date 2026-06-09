@@ -14,11 +14,8 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.utils.json_utils` module."""
 
-from email.mime import text
 import json
 from pathlib import Path
-
-import pytest
 
 from ensembl.io.genomio.utils import json_utils
 
@@ -52,15 +49,15 @@ def test_print_json_uses_defaults_sort_keys_and_indent(tmp_path: Path) -> None:
 
     json_utils.print_json(p, {"b": 2, "a": 1})
 
-    text = p.read_text(encoding="utf-8")
+    json_text = p.read_text(encoding="utf-8")
 
     # Default indent=4 should introduce newline + 4 spaces before keys
-    assert "\n    " in text
+    assert "\n    " in json_text
 
     # Default sort_keys=True means "a" should appear before "b"
-    assert text.index('"a"') < text.index('"b"')
+    assert json_text.index('"a"') < json_text.index('"b"')
 
-    assert json.loads(text) == {"a": 1, "b": 2}
+    assert json.loads(json_text) == {"a": 1, "b": 2}
 
 
 def test_print_json_respects_overrides_for_sort_keys_and_indent(tmp_path: Path) -> None:
@@ -69,12 +66,12 @@ def test_print_json_respects_overrides_for_sort_keys_and_indent(tmp_path: Path) 
 
     json_utils.print_json(p, {"b": 2, "a": 1}, sort_keys=False, indent=2)
 
-    text = p.read_text(encoding="utf-8")
+    json_text = p.read_text(encoding="utf-8")
 
-    assert "\n  " in text
-    assert "\n    " not in text
-    assert text.index('"b"') < text.index('"a"')
-    assert json.loads(text) == {"a": 1, "b": 2}
+    assert "\n  " in json_text
+    assert "\n    " not in json_text
+    assert json_text.index('"b"') < json_text.index('"a"')
+    assert json.loads(json_text) == {"a": 1, "b": 2}
 
 
 def test_print_json_allows_non_default_serialization_options(tmp_path: Path) -> None:
@@ -84,6 +81,6 @@ def test_print_json_allows_non_default_serialization_options(tmp_path: Path) -> 
     # separators removes spaces after commas/colons
     json_utils.print_json(p, {"a": 1, "b": 2}, separators=(",", ":"))
 
-    text = p.read_text(encoding="utf-8")
-    assert '": ' not in text
-    assert json.loads(text) == {"a": 1, "b": 2}
+    json_text = p.read_text(encoding="utf-8")
+    assert '": ' not in json_text
+    assert json.loads(json_text) == {"a": 1, "b": 2}

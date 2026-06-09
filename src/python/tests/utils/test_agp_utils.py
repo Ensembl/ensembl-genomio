@@ -124,6 +124,7 @@ from ensembl.io.genomio.utils import agp_utils
 )
 def test_parse_agp(
     data_dir: Path,
+    *,
     test_dir_name: str,
     agp_name: str,
     allow_revcomp: bool,

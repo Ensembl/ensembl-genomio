@@ -70,6 +70,8 @@ python:pylint:src:
 
 python:pylint:tests:
   extends: .python:pylint
+  variables:
+    PYLINT_CMD: pylint --rcfile pyproject.toml --disable=protected-access
   script:
     - $PYLINT_CMD src/python/tests
 
