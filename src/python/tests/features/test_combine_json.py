@@ -33,8 +33,8 @@ from ensembl.io.genomio.features import combine_json
 CHUNK_RE = re.compile(combine_json._CHUNK_RE_STRING)
 
 
-@pytest.fixture()
-def schema_validator_calls(
+@pytest.fixture(name="schema_validator_calls")
+def fixture_schema_validator_calls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> list[tuple[tuple[object, ...], dict[str, object]]]:
     """
@@ -634,39 +634,39 @@ def test_feature_consensus_key(
 
 
 def test_iterate_validated_documents_validate_false_skips_schema_validation(
-    captured_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
+    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     data_dir: Path,
 ) -> None:
     """
     Tests `combine_json._iterate_validated_documents()` skips validation when requested.
 
     Args:
-        captured_validator_calls: Captured ``schema_validator`` calls.
+        schema_validator_calls: Captured ``schema_validator`` calls.
         data_dir: Module's test data directory fixture.
     """
     json_path = data_dir / "iterate_validated_documents" / "validate_false" / "a.json"
 
     documents = list(combine_json._iterate_validated_documents([json_path], validate=False))
     assert documents and documents[0][0] == json_path
-    assert not captured_validator_calls
+    assert not schema_validator_calls
 
 
 def test_write_and_validate_writes_newline_and_calls_schema_validator(
-    captured_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
+    schema_validator_calls: list[tuple[tuple[object, ...], dict[str, object]]],
     tmp_path: Path,
 ) -> None:
     """
     Tests `combine_json._write_and_validate()` writes a trailing newline and validates output.
 
     Args:
-        captured_validator_calls: Captured ``schema_validator`` calls.
+        schema_validator_calls: Captured ``schema_validator`` calls.
         tmp_path: Temporary directory provided by pytest.
     """
     out_json = tmp_path / "out.json"
     combine_json._write_and_validate(out_json, {"hello": "world"})
 
     assert out_json.read_text(encoding="utf-8").endswith("\n")
-    assert captured_validator_calls, "schema_validator should have been called for the output"
+    assert schema_validator_calls, "schema_validator should have been called for the output"
 
 
 @pytest.mark.parametrize(
