@@ -305,14 +305,10 @@ def test_parse_repeatmasker_repeat_class_field(
         repeat_class_field: Raw RepeatMasker repeat class/family field.
         expected: Expected repeat class and raw repeat type.
     """
-    assert (
-        convert_to_genomio_json._parse_repeatmasker_repeat_class_field(
-            Path("input.out"),
-            repeat_class_field,
-            "raw line",
-        )
-        == expected
+    output = convert_to_genomio_json._parse_repeatmasker_repeat_class_field(
+        Path("input.out"), repeat_class_field, "raw line"
     )
+    assert output == expected
 
 
 @pytest.mark.parametrize(

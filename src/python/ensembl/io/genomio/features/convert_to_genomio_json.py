@@ -102,7 +102,7 @@ class RepeatMaskerParsedRow:
 
 
 @dataclass(frozen=True)
-class TrfParsedRow:
+class TRFParsedRow:
     """Parsed TRF row and its repeat consensus record."""
 
     feature: dict[str, object]
@@ -528,7 +528,7 @@ def _parse_trf_data_row(
     seq_region: str,
     window_start: int | None,
     trf_parameters: str | None,
-) -> TrfParsedRow:
+) -> TRFParsedRow:
     """
     Parses a single TRF data row.
 
@@ -604,7 +604,7 @@ def _parse_trf_data_row(
     if trf_parameters is not None:
         attributes["trf_parameters"] = trf_parameters
 
-    return TrfParsedRow(
+    return TRFParsedRow(
         feature={
             "seq_region": seq_region,
             "seq_region_start": seq_region_start,
