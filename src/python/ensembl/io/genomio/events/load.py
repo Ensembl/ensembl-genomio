@@ -86,7 +86,7 @@ class EventCollection:
                 line.strip()
                 if line == "":
                     continue
-                (from_id, to_id, event_name, release, release_date) = line.split("\t")
+                from_id, to_id, event_name, release, release_date = line.split("\t")
                 event = IdEvent(
                     from_id=from_id, to_id=to_id, event=event_name, release=release, release_date=release_date
                 )
@@ -113,9 +113,9 @@ class EventCollection:
             for line in events_fh:
                 if line.startswith("//") or line == "":
                     continue
-                (_, event_string, _) = line.split("\t")
+                _, event_string, _ = line.split("\t")
                 for pair in self._parse_gene_diff_event(event_string):
-                    (from_id, to_id, event_name) = pair
+                    from_id, to_id, event_name = pair
                     if event_name == "identical":
                         continue
                     fingerprint = f"{from_id} {to_id}"

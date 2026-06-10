@@ -22,7 +22,6 @@ from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.core.models import CoordSystem, Meta, metadata
 from ensembl.utils.database import UnitTestDB
 
-
 _METADATA_CONTENT = {
     "species.scientific_name": ["Lorem Ipsum"],
     "species.taxonomy_id": ["123456"],

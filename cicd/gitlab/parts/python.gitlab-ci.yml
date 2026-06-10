@@ -71,7 +71,7 @@ python:pylint:src:
 python:pylint:tests:
   extends: .python:pylint
   script:
-    - $PYLINT_CMD src/python/tests
+    - $PYLINT_CMD --disable=protected-access src/python/tests
 
 .python:mypy:
   extends: .python:test

@@ -36,7 +36,6 @@ from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-
 PROVIDER_DATA = {
     "GenBank": {
         "assembly": {

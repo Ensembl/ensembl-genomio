@@ -66,7 +66,7 @@ class GFFGeneMerger:
                     attr_fields = fields[8].split(";")
                     attrs = {}
                     for a in attr_fields:
-                        (key, value) = a.split("=")
+                        key, value = a.split("=")
                         attrs[key] = value
 
                     # Check this is a gene to merge; cache it then

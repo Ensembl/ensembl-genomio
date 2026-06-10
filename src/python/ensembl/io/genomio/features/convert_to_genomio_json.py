@@ -68,6 +68,8 @@ TRF_PARAMETERS_RE = re.compile(r"^Parameters:\s+(?P<params>.+)\s*$")
 
 @dataclass(frozen=True)
 class Consensus:
+    """Repeat consensus record used for feature-to-consensus linking."""
+
     name: str
     repeat_class: str
     repeat_type: str
@@ -91,6 +93,22 @@ class Consensus:
         return hashlib.sha256(payload).hexdigest()
 
 
+@dataclass(frozen=True)
+class RepeatMaskerParsedRow:
+    """Parsed RepeatMasker row and its consensus lookup triplet."""
+
+    feature: dict[str, object]
+    consensus_triplet: tuple[str, str, str]
+
+
+@dataclass(frozen=True)
+class TRFParsedRow:
+    """Parsed TRF row and its repeat consensus record."""
+
+    feature: dict[str, object]
+    consensus: Consensus
+
+
 def _parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_line: str, path: Path) -> T:
     """
     Parses a field from tool output into the specified class type.
@@ -110,8 +128,8 @@ def _parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_li
     """
     try:
         return parser(token)
-    except ValueError:
-        raise ValueError(f"Invalid {field_name!r} in {path}: token={token!r}, line={raw_line!r}")
+    except ValueError as exc:
+        raise ValueError(f"Invalid {field_name!r} in {path}: token={token!r}, line={raw_line!r}") from exc
 
 
 def _format_parse_errors(parser_name: str, input_path: Path, errors: list[str]) -> str:
@@ -151,6 +169,7 @@ def _map_repeatmasker_repeat_consensus_type(repeat_class: str) -> str:
 
 def _has_valid_parsed_coordinates(
     input_path: Path,
+    *,
     seq_region_start: int,
     seq_region_end: int,
     repeat_start: int,
@@ -161,6 +180,7 @@ def _has_valid_parsed_coordinates(
     Validates parsed coordinate values for a feature.
 
     Args:
+        input_path: Input file path used.
         seq_region_start: Start coordinate on the sequence region.
         seq_region_end: End coordinate on the sequence region.
         repeat_start: Start coordinate on the repeat consensus.
@@ -168,10 +188,10 @@ def _has_valid_parsed_coordinates(
         line: Original input line for error reporting.
 
     Returns:
-        `True` if all coordinates are valid, `False` otherwise.
+        `True` if all coordinates are valid, `False` if invalid but error not raised.
 
     Raises:
-        ValueError: If any of the coordinate values are invalid (i.e. negative, zero, or end < start).
+        ValueError: If sequence region coordinate values are invalid (i.e. negative, zero, or end < start).
     """
     if seq_region_start < 1 or seq_region_end < 1:
         raise ValueError(
@@ -245,6 +265,138 @@ def _parse_repeatmasker_consensus_library(
     return consensus_keys_by_triplet, consensuses_by_key
 
 
+def _parse_repeatmasker_repeat_class_field(
+    input_path: Path,
+    repeat_class_field: str,
+    line: str,
+) -> tuple[str, str]:
+    """
+    Parses a RepeatMasker repeat class/family field into class and raw repeat type.
+
+    Args:
+        input_path: Input RepeatMasker output path used for error messages.
+        repeat_class_field: Raw class/family field from a RepeatMasker row.
+        line: Original input line.
+
+    Returns:
+        Repeat class and raw repeat type.
+
+    Raises:
+        ValueError: If a slash-delimited class/family field is malformed.
+    """
+    if "/" not in repeat_class_field:
+        return repeat_class_field, "Unknown"
+
+    repeat_class, repeat_type = repeat_class_field.split("/", 1)
+    if not repeat_class or not repeat_type:
+        raise ValueError(
+            f"Malformed repeat_class/family in {input_path}: " f"value={repeat_class_field}, line={line!r}"
+        )
+    return repeat_class, repeat_type
+
+
+def _parse_repeatmasker_strand_coordinates(
+    input_path: Path,
+    columns: list[str],
+    line: str,
+) -> tuple[str, int, int]:
+    """
+    Parses RepeatMasker strand and repeat coordinates.
+
+    Args:
+        input_path: Input RepeatMasker output path used for error messages.
+        columns: Split RepeatMasker row columns.
+        line: Original input line.
+
+    Returns:
+        Sequence-region strand, repeat start, and repeat end.
+
+    Raises:
+        ValueError: If the strand token or coordinate tokens are invalid.
+    """
+    strand_token = columns[8]
+    if strand_token == "+":
+        return (
+            "+",
+            _parse_token(int, columns[11], "repeat_start", line, input_path),
+            _parse_token(int, columns[12], "repeat_end", line, input_path),
+        )
+    if strand_token == "C":
+        return (
+            "-",
+            _parse_token(int, columns[13], "repeat_start", line, input_path),
+            _parse_token(int, columns[12], "repeat_end", line, input_path),
+        )
+    raise ValueError(f"Unexpected strand token in {input_path}: token={strand_token!r}, line={line!r}")
+
+
+def _parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRow | None:
+    """
+    Parses a single RepeatMasker data row.
+
+    Args:
+        input_path: Input RepeatMasker output path used for error messages.
+        line: Raw RepeatMasker row without surrounding whitespace.
+
+    Returns:
+        Parsed row, or ``None`` if repeat coordinates are invalid and the row should be skipped.
+
+    Raises:
+        ValueError: If the row is malformed or contains invalid sequence-region coordinates.
+    """
+    columns = line.split()
+    if columns[-1] == "*":
+        columns.pop()
+
+    if len(columns) < 14 or len(columns) > 15:
+        raise ValueError(f"Expected 14 or 15 columns in {input_path}, got {len(columns)}: line={line!r}")
+
+    score = _parse_token(float, columns[0], "score", line, input_path)
+    perc_div = _parse_token(float, columns[1], "perc_div", line, input_path)
+    perc_del = _parse_token(float, columns[2], "perc_del", line, input_path)
+    perc_ins = _parse_token(float, columns[3], "perc_ins", line, input_path)
+
+    seq_region = columns[4]
+    seq_region_start = _parse_token(int, columns[5], "seq_region_start", line, input_path)
+    seq_region_end = _parse_token(int, columns[6], "seq_region_end", line, input_path)
+    seq_region_strand, repeat_start, repeat_end = _parse_repeatmasker_strand_coordinates(
+        input_path,
+        columns,
+        line,
+    )
+    repeat_name = columns[9]
+    repeat_class, repeat_type = _parse_repeatmasker_repeat_class_field(input_path, columns[10], line)
+
+    if not _has_valid_parsed_coordinates(
+        input_path,
+        seq_region_start=seq_region_start,
+        seq_region_end=seq_region_end,
+        repeat_start=repeat_start,
+        repeat_end=repeat_end,
+        line=line,
+    ):
+        return None
+
+    return RepeatMaskerParsedRow(
+        feature={
+            "seq_region": seq_region,
+            "seq_region_start": seq_region_start,
+            "seq_region_end": seq_region_end,
+            "seq_region_strand": seq_region_strand,
+            "repeat_start": repeat_start,
+            "repeat_end": repeat_end,
+            "score": score,
+            "attributes": {
+                "perc_div": perc_div,
+                "perc_del": perc_del,
+                "perc_ins": perc_ins,
+                "repeatmasker_repeat_type": repeat_type,
+            },
+        },
+        consensus_triplet=(repeat_name, repeat_class, repeat_type),
+    )
+
+
 def parse_repeatmasker_output(
     input_path: Path, consensus_lib_path: Path | None
 ) -> tuple[list[dict], dict[str, Consensus]]:
@@ -253,7 +405,7 @@ def parse_repeatmasker_output(
 
     If a RepeatMasker consensus library FASTA file is provided, consensus sequences will be
     extracted from the library and associated with features based on their repeat names.
-    Otherwise, consensus records will be created with empty sequences.
+    Otherwise, an empty consensus dictionary will be returned.
 
     Args:
         input_path: Path to the RepeatMasker .out file to parse.
@@ -293,92 +445,179 @@ def parse_repeatmasker_output(
                 continue
 
             try:
-                columns = line.split()
-                if columns[-1] == "*":
-                    columns.pop()
-
-                if len(columns) < 14 or len(columns) > 15:
-                    raise ValueError(
-                        f"Expected 14 or 15 columns in {input_path}, got {len(columns)}: line={line!r}"
-                    )
-
-                score = _parse_token(float, columns[0], "score", line, input_path)
-                perc_div = _parse_token(float, columns[1], "perc_div", line, input_path)
-                perc_del = _parse_token(float, columns[2], "perc_del", line, input_path)
-                perc_ins = _parse_token(float, columns[3], "perc_ins", line, input_path)
-
-                seq_region = columns[4]
-                seq_region_start = _parse_token(int, columns[5], "seq_region_start", line, input_path)
-                seq_region_end = _parse_token(int, columns[6], "seq_region_end", line, input_path)
-
-                strand_token = columns[8]
-                if strand_token == "+":
-                    seq_region_strand = "+"
-                    repeat_start = _parse_token(int, columns[11], "repeat_start", line, input_path)
-                    repeat_end = _parse_token(int, columns[12], "repeat_end", line, input_path)
-                elif strand_token == "C":
-                    seq_region_strand = "-"
-                    repeat_end = _parse_token(int, columns[12], "repeat_end", line, input_path)
-                    repeat_start = _parse_token(int, columns[13], "repeat_start", line, input_path)
-                else:
-                    raise ValueError(
-                        f"Unexpected strand token in {input_path}: token={strand_token!r}, line={line!r}"
-                    )
-
-                repeat_name = columns[9]
-                repeat_class_field = columns[10]
-
-                if "/" in repeat_class_field:
-                    repeat_class, repeat_type = repeat_class_field.split("/", 1)
-                    if not repeat_class or not repeat_type:
-                        raise ValueError(
-                            f"Malformed repeat_class/family in {input_path}: "
-                            f"value={repeat_class_field}, line={line!r}"
-                        )
-                else:
-                    repeat_class = repeat_class_field
-                    repeat_type = "Unknown"
-
-                if not _has_valid_parsed_coordinates(
-                    input_path,
-                    seq_region_start,
-                    seq_region_end,
-                    repeat_start,
-                    repeat_end,
-                    line,
-                ):
-                    continue
+                parsed_row = _parse_repeatmasker_row(input_path, line)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
 
-            feature = {
-                "seq_region": seq_region,
-                "seq_region_start": seq_region_start,
-                "seq_region_end": seq_region_end,
-                "seq_region_strand": seq_region_strand,
-                "repeat_start": repeat_start,
-                "repeat_end": repeat_end,
-                "score": score,
-                "attributes": {
-                    "perc_div": perc_div,
-                    "perc_del": perc_del,
-                    "perc_ins": perc_ins,
-                    "repeatmasker_repeat_type": repeat_type,
-                },
-            }
+            if parsed_row is None:
+                continue
 
-            consensus_triplet = (repeat_name, repeat_class, repeat_type)
-            if consensus_triplet in consensus_keys_by_triplet:
-                consensus_key = consensus_keys_by_triplet[consensus_triplet]
-                feature["repeat_consensus"] = consensus_key
+            if parsed_row.consensus_triplet in consensus_keys_by_triplet:
+                consensus_key = consensus_keys_by_triplet[parsed_row.consensus_triplet]
+                parsed_row.feature["repeat_consensus"] = consensus_key
 
-            features.append(feature)
+            features.append(parsed_row.feature)
 
     if errors:
         raise ValueError(_format_parse_errors("RepeatMasker output", input_path, errors))
 
     return features, consensuses_by_key
+
+
+def _parse_trf_sequence_header(line: str) -> tuple[str, int | None] | None:
+    """
+    Parses a TRF sequence header line.
+
+    Args:
+        line: Raw TRF line without surrounding whitespace.
+
+    Returns:
+        Sequence region and optional window start, or ``None`` if the line is not a sequence header.
+    """
+    seq_match = TRF_SEQUENCE_RE.match(line)
+    if seq_match is None:
+        return None
+
+    seq_region = seq_match.group("seq_region")
+    window_start = int(seq_match.group("start")) if seq_match.group("start") is not None else None
+    return seq_region, window_start
+
+
+def _parse_trf_parameters(line: str) -> str | None:
+    """
+    Parses a TRF parameters line, returning ``None`` if the line is not a parameters line.
+
+    Args:
+        line: Raw TRF line without surrounding whitespace.
+
+    Returns:
+        TRF parameters string, or ``None`` if the line is not a parameters line.
+    """
+    params_match = TRF_PARAMETERS_RE.match(line)
+    return params_match.group("params") if params_match is not None else None
+
+
+def _missing_trf_sequence_error(
+    input_path: Path,
+    skipped_data_block_entries: int,
+    skipped_data_block_first_line: int | None,
+) -> str:
+    """
+    Formats an error for TRF data rows that were not preceded by a Sequence header.
+
+    Args:
+        input_path: Input path of processed file.
+        skipped_data_block_entries: Number of skipped data block entries.
+        skipped_data_block_first_line: Line number of the first skipped data block line.
+
+    Returns:
+        Formatted error message describing the missing Sequence header and skipped data block.
+    """
+    return (
+        f"TRF sequence header not found before data lines in {input_path}: "
+        f"unprocessed_entries={skipped_data_block_entries}, "
+        f"first_data_line={skipped_data_block_first_line}"
+    )
+
+
+def _parse_trf_data_row(
+    input_path: Path,
+    line: str,
+    *,
+    seq_region: str,
+    window_start: int | None,
+    trf_parameters: str | None,
+) -> TRFParsedRow:
+    """
+    Parses a single TRF data row.
+
+    Args:
+        input_path: Input TRF output path used for error messages.
+        line: Raw TRF data row without surrounding whitespace.
+        seq_region: Current sequence region from the preceding Sequence header.
+        window_start: Optional genomic window start from the preceding Sequence header.
+        trf_parameters: Optional current TRF parameters string.
+
+    Returns:
+        Parsed row containing feature data and consensus.
+
+    Raises:
+        ValueError: If the row is malformed or contains invalid coordinates.
+    """
+    columns = line.split()
+    if len(columns) < 13:
+        raise ValueError(f"Expected at least 13 columns in {input_path}, got {len(columns)}: line={line!r}")
+
+    start = _parse_token(int, columns[0], "start", line, input_path)
+    end = _parse_token(int, columns[1], "end", line, input_path)
+    period_size = _parse_token(int, columns[2], "period_size", line, input_path)
+    copy_number = _parse_token(float, columns[3], "copy_number", line, input_path)
+    consensus_size = _parse_token(int, columns[4], "consensus_size", line, input_path)
+    perc_match = _parse_token(float, columns[5], "perc_match", line, input_path)
+    perc_indel = _parse_token(float, columns[6], "perc_indel", line, input_path)
+    score = _parse_token(float, columns[7], "score", line, input_path)
+    a_pct = _parse_token(float, columns[8], "a_pct", line, input_path)
+    c_pct = _parse_token(float, columns[9], "c_pct", line, input_path)
+    g_pct = _parse_token(float, columns[10], "g_pct", line, input_path)
+    t_pct = _parse_token(float, columns[11], "t_pct", line, input_path)
+    entropy = _parse_token(float, columns[12], "entropy", line, input_path)
+    motif = columns[13] if len(columns) >= 14 else ""
+
+    if window_start is not None:
+        seq_region_start = window_start + start - 1
+        seq_region_end = window_start + end - 1
+    else:
+        seq_region_start = start
+        seq_region_end = end
+
+    _has_valid_parsed_coordinates(
+        input_path,
+        seq_region_start=seq_region_start,
+        seq_region_end=seq_region_end,
+        repeat_start=1,
+        repeat_end=period_size,
+        line=line,
+    )
+
+    repeat_consensus = Consensus(
+        name="trf",
+        repeat_class="trf",
+        repeat_type="Tandem repeats",
+        seq="".join(motif.split()).upper(),
+    )
+
+    attributes: dict[str, object] = {
+        "period_size": period_size,
+        "copy_number": copy_number,
+        "consensus_size": consensus_size,
+        "perc_match": perc_match,
+        "perc_indel": perc_indel,
+        "entropy": entropy,
+        "motif": motif,
+        "a_pct": a_pct,
+        "c_pct": c_pct,
+        "g_pct": g_pct,
+        "t_pct": t_pct,
+    }
+
+    if trf_parameters is not None:
+        attributes["trf_parameters"] = trf_parameters
+
+    return TRFParsedRow(
+        feature={
+            "seq_region": seq_region,
+            "seq_region_start": seq_region_start,
+            "seq_region_end": seq_region_end,
+            "seq_region_strand": "+",
+            "repeat_start": 1,
+            "repeat_end": period_size,
+            "repeat_consensus": repeat_consensus.sha256_key(),
+            "score": score,
+            "attributes": attributes,
+        },
+        consensus=repeat_consensus,
+    )
 
 
 def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
@@ -420,9 +659,11 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
             if in_data_block and len(columns) < 13:
                 if skip_data_block_without_sequence:
                     errors.append(
-                        f"TRF sequence header not found before data lines in {input_path}: "
-                        f"unprocessed_entries={skipped_data_block_entries}, "
-                        f"first_data_line={skipped_data_block_first_line}"
+                        _missing_trf_sequence_error(
+                            input_path,
+                            skipped_data_block_entries,
+                            skipped_data_block_first_line,
+                        )
                     )
                 seq_region = None
                 window_start = None
@@ -432,14 +673,10 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
                 skipped_data_block_first_line = None
                 skipped_data_block_entries = 0
 
-            seq_match = TRF_SEQUENCE_RE.match(line)
-            if seq_match is not None:
+            sequence_header = _parse_trf_sequence_header(line)
+            if sequence_header is not None:
                 header_line = False
-                seq_region = seq_match.group("seq_region")
-                if seq_match.group("start") is not None:
-                    window_start = int(seq_match.group("start"))
-                else:
-                    window_start = None
+                seq_region, window_start = sequence_header
                 trf_parameters = None
                 skip_data_block_without_sequence = False
                 continue
@@ -447,9 +684,9 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
             if header_line:
                 continue
 
-            params_match = TRF_PARAMETERS_RE.match(line)
-            if params_match is not None:
-                trf_parameters = params_match.group("params")
+            parsed_parameters = _parse_trf_parameters(line)
+            if parsed_parameters is not None:
+                trf_parameters = parsed_parameters
                 continue
 
             if len(columns) < 13:
@@ -461,90 +698,34 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
 
             in_data_block = True
 
+            if seq_region is None:
+                skip_data_block_without_sequence = True
+                skipped_data_block_first_line = line_number
+                skipped_data_block_entries = 1
+                continue
+
             try:
-                if seq_region is None:
-                    skip_data_block_without_sequence = True
-                    skipped_data_block_first_line = line_number
-                    skipped_data_block_entries = 1
-                    continue
-
-                start = _parse_token(int, columns[0], "start", line, input_path)
-                end = _parse_token(int, columns[1], "end", line, input_path)
-                period_size = _parse_token(int, columns[2], "period_size", line, input_path)
-                copy_number = _parse_token(float, columns[3], "copy_number", line, input_path)
-                consensus_size = _parse_token(int, columns[4], "consensus_size", line, input_path)
-                perc_match = _parse_token(float, columns[5], "perc_match", line, input_path)
-                perc_indel = _parse_token(float, columns[6], "perc_indel", line, input_path)
-                score = _parse_token(float, columns[7], "score", line, input_path)
-                a_pct = _parse_token(float, columns[8], "a_pct", line, input_path)
-                c_pct = _parse_token(float, columns[9], "c_pct", line, input_path)
-                g_pct = _parse_token(float, columns[10], "g_pct", line, input_path)
-                t_pct = _parse_token(float, columns[11], "t_pct", line, input_path)
-                entropy = _parse_token(float, columns[12], "entropy", line, input_path)
-                motif = columns[13] if len(columns) >= 14 else ""
-
-                if window_start is not None:
-                    seq_region_start = window_start + start - 1
-                    seq_region_end = window_start + end - 1
-                else:
-                    seq_region_start = start
-                    seq_region_end = end
-
-                _has_valid_parsed_coordinates(
+                parsed_row = _parse_trf_data_row(
                     input_path,
-                    seq_region_start,
-                    seq_region_end,
-                    1,
-                    period_size,
                     line,
+                    seq_region=seq_region,
+                    window_start=window_start,
+                    trf_parameters=trf_parameters,
                 )
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
 
-            repeat_consensus = Consensus(
-                name="trf",
-                repeat_class="trf",
-                repeat_type="Tandem repeats",
-                seq="".join(motif.split()).upper(),
-            )
-            repeat_consensus_key = repeat_consensus.sha256_key()
-            consensuses_by_key[repeat_consensus_key] = repeat_consensus
-
-            feature = {
-                "seq_region": seq_region,
-                "seq_region_start": seq_region_start,
-                "seq_region_end": seq_region_end,
-                "seq_region_strand": "+",
-                "repeat_start": 1,
-                "repeat_end": period_size,
-                "repeat_consensus": repeat_consensus.sha256_key(),
-                "score": score,
-                "attributes": {
-                    "period_size": period_size,
-                    "copy_number": copy_number,
-                    "consensus_size": consensus_size,
-                    "perc_match": perc_match,
-                    "perc_indel": perc_indel,
-                    "entropy": entropy,
-                    "motif": motif,
-                    "a_pct": a_pct,
-                    "c_pct": c_pct,
-                    "g_pct": g_pct,
-                    "t_pct": t_pct,
-                },
-            }
-
-            if trf_parameters is not None:
-                feature["attributes"]["trf_parameters"] = trf_parameters
-
-            features.append(feature)
+            consensuses_by_key[parsed_row.consensus.sha256_key()] = parsed_row.consensus
+            features.append(parsed_row.feature)
 
     if skip_data_block_without_sequence:
         errors.append(
-            f"TRF sequence header not found before data lines in {input_path}: "
-            f"unprocessed_entries={skipped_data_block_entries}, "
-            f"first_data_line={skipped_data_block_first_line}"
+            _missing_trf_sequence_error(
+                input_path,
+                skipped_data_block_entries,
+                skipped_data_block_first_line,
+            )
         )
 
     if errors:
@@ -556,6 +737,7 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
 def create_genomio_json(
     input_path: Path,
     output_path: Path,
+    *,
     analysis_logic_name: str,
     analysis_display_label: str,
     analysis_description: str,
@@ -570,8 +752,8 @@ def create_genomio_json(
     Creates a GenomIO JSON document from feature identification tool output.
 
     Args:
-        input: Path to the input file containing repeat masking results (e.g. RepeatMasker .out file).
-        output: Path to the output JSON file to be created.
+        input_path: Path to the input file containing repeat masking results (e.g. RepeatMasker .out file).
+        output_path: Path to the output JSON file to be created.
         analysis_logic_name: Logic name for the analysis (e.g. "repeatmask_customlib").
         analysis_display_label: Display label for the analysis.
         analysis_description: Description of the analysis (HTML allowed).
@@ -579,7 +761,7 @@ def create_genomio_json(
         program_version: Version of the program used to identify the features.
         source_provider: Name of the source provider for the features (e.g. "Ensembl").
         is_primary: Whether these features are primary or secondary annotations.
-        repeatmasker_consensus_lib: Optional path to a FASTA file containing consensus sequences for the
+        repeatmasker_consensus_lib_path: Optional path to a FASTA file containing consensus sequences for the
             RepeatMasker library used.
         program_parameters: Optional parameters supplied to the program used for feature identification.
 

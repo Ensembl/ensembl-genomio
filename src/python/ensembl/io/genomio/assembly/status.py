@@ -42,7 +42,6 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.database import DBConnection
 from ensembl.utils.logging import init_logging_with_args
 
-
 DATASETS_SINGULARITY = {
     "datasets_version_url": "docker://ensemblorg/datasets-cli:latest",
 }

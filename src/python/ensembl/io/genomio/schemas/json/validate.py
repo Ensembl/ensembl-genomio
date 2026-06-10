@@ -43,7 +43,6 @@ import jsonschema
 import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 
-
 _JSON_SCHEMAS = {}
 for schema_file in files("ensembl.io.genomio.data.schemas").iterdir():
     with as_file(schema_file) as file_path:
