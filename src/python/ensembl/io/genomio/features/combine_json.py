@@ -263,7 +263,7 @@ def _detect_load_type(document: dict[str, JsonValue], path: Path) -> str:
 
 def _compute_consensus_sha256(rn: str, rc_class: str, rt: str, rc_seq: str | None) -> str:
     norm = "".join(rc_seq.split()).upper() if rc_seq else ""
-    payload = "\t".join([rn, rc_class, rt, norm])
+    payload = f"{rn}\t{rc_class}\t{rt}\t{norm}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 

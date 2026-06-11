@@ -84,11 +84,10 @@ class StatsGenerator:
 
     def get_annotation_stats(self) -> dict[str, Any]:
         """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
-        stats = {
+        return {
             "genes": self.get_feature_stats(Gene),
             "transcripts": self.get_feature_stats(Transcript),
         }
-        return stats
 
     def get_biotypes(self, table: Any) -> dict[str, int]:
         """Returns a dict of stats about the feature biotypes."""
@@ -112,7 +111,7 @@ class StatsGenerator:
         xref_desc_st = select(func.count()).where(table.description.like("%[Source:%"))
         (xref_desc,) = session.execute(xref_desc_st).one()
         left_over = total - no_desc - xref_desc
-        feat_stats = {
+        return {
             "total": total,
             "biotypes": self.get_biotypes(table),
             "description": {
@@ -121,15 +120,13 @@ class StatsGenerator:
                 "normal": left_over,
             },
         }
-        return feat_stats
 
     def get_genome_stats(self) -> dict[str, Any]:
         """Returns a dict of stats about the assembly and annotation."""
-        genome_stats = {
+        return {
             "assembly_stats": self.get_assembly_stats(),
             "annotation_stats": self.get_annotation_stats(),
         }
-        return genome_stats
 
 
 def dump_genome_stats(url: StrURL) -> dict[str, Any]:
@@ -142,8 +139,7 @@ def dump_genome_stats(url: StrURL) -> dict[str, Any]:
     dbc = DBConnectionLite(url)
     with dbc.session_scope() as session:
         generator = StatsGenerator(session)
-        genome_stats = generator.get_genome_stats()
-        return genome_stats
+        return generator.get_genome_stats()
 
 
 def main() -> None:

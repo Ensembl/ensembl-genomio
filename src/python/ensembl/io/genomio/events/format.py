@@ -68,7 +68,7 @@ def load_list(list_file: Path) -> list[str]:
 
 
 def main() -> None:
-    """Main entrypoint"""
+    """Main entrypoint."""
     parser = ArgumentParser(description="Map stable IDs in a file and produce an events file.")
     parser.add_argument_src_path("--input_file", required=True, help="Input file from gene_diff")
     parser.add_argument_src_path(

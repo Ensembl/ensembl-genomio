@@ -139,10 +139,7 @@ def filter_genome_meta(
                     value_type = type(value_type)
                 if subkey in genome_metadata[key]:
                     value = genome_metadata[key][subkey]
-                    if isinstance(value, list):
-                        value = [value_type(x) for x in value]
-                    else:
-                        value = value_type(value)
+                    value = [value_type(x) for x in value] if isinstance(value, list) else value_type(value)
                     filtered_metadata[key][subkey] = value
 
     # Optional assembly and genebuild based filtering:
@@ -231,7 +228,7 @@ def check_genebuild_version(genome_metadata: dict[str, Any]) -> None:
 
 
 def convert_dict(meta_dict: dict) -> dict:
-    """Converts text JSON to add type properties from string
+    """Converts text JSON to add type properties from string.
 
     Args:
         meta_dict: User meta dictionary with literal string typing to be converted.
@@ -270,9 +267,8 @@ def metadata_dump_setup(
 
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session, db_name)
-        genome_meta = filter_genome_meta(genome_meta, meta_filter, meta_update)
+        return filter_genome_meta(genome_meta, meta_filter, meta_update)
 
-    return genome_meta
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:

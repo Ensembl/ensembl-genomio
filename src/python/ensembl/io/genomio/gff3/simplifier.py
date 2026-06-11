@@ -86,7 +86,7 @@ class GFFSimplifier:
         genome_path: PathLike | None = None,
         skip_unrecognized: bool = False,
         allow_pseudogene_with_cds: bool = False,
-    ):
+    ) -> None:
         """Create an object that simplifies `SeqFeature` objects.
 
         Args:
@@ -551,7 +551,7 @@ class GFFSimplifier:
             logging.debug(f"Primary_transcript without miRNA in {gene.id}")
             all_genes = [gene]
         else:
-            all_genes = [gene] + new_genes
+            all_genes = [gene, *new_genes]
 
         # Normalize like other genes
         all_genes_cleaned = []

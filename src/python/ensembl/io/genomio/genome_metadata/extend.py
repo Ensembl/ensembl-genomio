@@ -55,8 +55,7 @@ def get_additions(report_path: PathLike, gbff_path: PathLike | None) -> list[str
                 additions.append(refseq_seq_name)
             else:
                 additions.append(genbank_seq_name)
-    additions = sorted(additions)
-    return additions
+    return sorted(additions)
 
 
 def get_gbff_regions(gbff_path: PathLike | None) -> list[str]:

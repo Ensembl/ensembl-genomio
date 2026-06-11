@@ -212,8 +212,7 @@ def compare_stats_files(ncbi_file: PathLike, core_file: PathLike) -> dict[str, d
     ncbi_stats = {}
     ncbi_stats = get_json(ncbi_file)["reports"][0]
     core_stats = get_json(core_file)
-    all_stats = compare_stats(ncbi_stats, core_stats)
-    return all_stats
+    return compare_stats(ncbi_stats, core_stats)
 
 
 def main() -> None:

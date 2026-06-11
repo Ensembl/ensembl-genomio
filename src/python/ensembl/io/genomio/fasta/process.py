@@ -35,8 +35,7 @@ class FastaParserError(Exception):
 
 
 def get_peptides_to_exclude(genbank_path: PathLike, seqr_to_exclude: set[str]) -> set[str]:
-    """Extract peptide IDs from a genbank file that are in a given list of seq regions
-    """
+    """Extract peptide IDs from a genbank file that are in a given list of seq regions."""
     peptides_to_exclude: set[str] = set()
     with open_gz_file(genbank_path) as in_genbank:
         for record in SeqIO.parse(in_genbank, "genbank"):
@@ -62,7 +61,7 @@ def prep_fasta_data(
     fasta_file: Input FASTA file - DNA / Protein
     genbank_infile: Input GenBank GBFF file (Optional)
     fasta_outfile: Output FASTA sequence file.
-    peptide_mode: Process proteins instead of DNA
+    peptide_mode: Process proteins instead of DNA.
 
     """
     file_path = Path(fasta_infile)

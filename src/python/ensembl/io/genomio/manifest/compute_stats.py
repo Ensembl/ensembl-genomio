@@ -74,7 +74,7 @@ class StatsError(Exception):
 class manifest_stats:
     """Representation of the statistics of the set of files listed in the manifest file provided."""
 
-    def __init__(self, manifest_dir: str, accession: str | None, datasets_bin: str | None):
+    def __init__(self, manifest_dir: str, accession: str | None, datasets_bin: str | None) -> None:
         self.manifest = f"{manifest_dir}/manifest.json"
         self.accession: str | None = accession
         self.errors: list[str] = []
@@ -191,7 +191,7 @@ class manifest_stats:
     def coord_systems_stats(self, coord_systems: dict[str, list[int]]) -> list[str]:
         """For each coord_system compute various stats:
             - number of sequences
-            - sequence length sum, minimum, maximum, mean
+            - sequence length sum, minimum, maximum, mean.
 
         Args:
             coord_systems: Coordinate system dictionary of lengths.
@@ -226,8 +226,8 @@ class manifest_stats:
         locations: list[str] | None = None,
         codon_tables: list[str] | None = None,
     ) -> list[str]:
-        """Prepare stats in case there are circular regions, specific locations and codon_tables.
-                stats.append(f"{count: 9f}\t{name}")
+        r"""Prepare stats in case there are circular regions, specific locations and codon_tables.
+                stats.append(f"{count: 9f}\t{name}").
 
         Args:
             circular: Number of circular regions. Defaults to 0.
@@ -335,14 +335,13 @@ class manifest_stats:
             data: BiotypeCounter = biotypes[name]
             sorted_biotypes[name] = data
 
-        stats = [
+        return [
             f"{data.unique_count():>9}\t{biotype:<20}\tID = {data.example}"
             for (biotype, data) in sorted_biotypes.items()
         ]
-        return stats
 
     def check_ncbi_stats(self, biotypes: dict[str, BiotypeCounter]) -> list[str]:
-        """Use the dataset tool from NCBI to get stats and compare with what we have"""
+        """Use the dataset tool from NCBI to get stats and compare with what we have."""
         stats: list[str] = []
         if not self.check_ncbi:
             return stats
@@ -373,7 +372,7 @@ class manifest_stats:
         return stats
 
     def compare_ncbi_counts(self, biotypes: dict[str, BiotypeCounter], ncbi: dict) -> list[str]:
-        """Compare specific gene stats from NCBI"""
+        """Compare specific gene stats from NCBI."""
         stats: list[str] = []
 
         maps = [

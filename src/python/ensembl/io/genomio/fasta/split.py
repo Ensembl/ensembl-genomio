@@ -19,7 +19,6 @@ __all__ = ["OutputWriter", "split_fasta"]
 
 import argparse
 import logging
-from io import TextIOWrapper
 from pathlib import Path
 import re
 import shutil
@@ -33,16 +32,19 @@ from ensembl.io.genomio.utils.chunk_utils import seq_description_without_id
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from io import TextIOWrapper
 
 _NUMERIC_DIR_RE = re.compile(r"^[1-9]\d*$")
 
 
 def _get_fasta_basename(fasta: Path) -> str:
-    """Returns base name of file stripped of suffixes"""
+    """Returns base name of file stripped of suffixes."""
     filename = fasta.name
     filename = filename.removesuffix(".gz")
-    basename = filename.rsplit(".", 1)[0]
-    return basename
+    return filename.rsplit(".", 1)[0]
 
 
 class OutputWriter:  # pylint: disable=too-many-instance-attributes
@@ -73,7 +75,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         unique_file_names: bool,
         max_files_per_directory: int | None = None,
         max_dirs_per_directory: int | None = None,
-    ):
+    ) -> None:
         self.basename = _get_fasta_basename(fasta_file)
         self.out_dir = out_dir
         self.write_agp = write_agp
@@ -230,13 +232,12 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
 def _check_contents_deletable(directory: Path, output_file_re: re.Pattern[str]) -> None:
     """Checks that a directory contains only expected output files (recursively)."""
     for p in directory.rglob("*"):
-        if not p.is_dir():
-            if not output_file_re.match(p.name):
-                msg = (
-                    "Unexpected file identified amongst existing output, cleanup of existing files "
-                    f"failed: {directory.parent.name}/{p.relative_to(directory.parent)}"
-                )
-                raise RuntimeError(msg)
+        if not p.is_dir() and not output_file_re.match(p.name):
+            msg = (
+                "Unexpected file identified amongst existing output, cleanup of existing files "
+                f"failed: {directory.parent.name}/{p.relative_to(directory.parent)}"
+            )
+            raise RuntimeError(msg)
 
 
 def _clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
@@ -365,7 +366,7 @@ def split_fasta(
                             starts.pop()
                             ends.pop()
 
-                    for i, (start, end) in enumerate(zip(starts, ends), start=1):
+                    for i, (start, end) in enumerate(zip(starts, ends, strict=True), start=1):
                         chunk_seq = record.seq[start:end]
                         chunk_record = SeqRecord(
                             chunk_seq,

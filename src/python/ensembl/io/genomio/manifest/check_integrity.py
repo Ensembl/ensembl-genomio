@@ -30,7 +30,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 class IntegrityTool:
-    """Check the integrity of sequence and annotation files in the genome"""
+    """Check the integrity of sequence and annotation files in the genome."""
 
     def __init__(
         self,

@@ -128,7 +128,7 @@ def md5_files(dl_dir: Path, md5_path: Path | None = None, md5_filename: str = "m
 
 
 def get_checksums(checksum_path: Path) -> dict[str, str]:
-    """Get a dict of checksums from a file, with file names as keys and sums as values
+    """Get a dict of checksums from a file, with file names as keys and sums as values.
 
     Args:
         checksum_path: Path location to MD5 checksum file.
@@ -147,7 +147,7 @@ def get_checksums(checksum_path: Path) -> dict[str, str]:
 
 
 def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: int) -> None:
-    """Given an INSDC accession, download all available files from the ftp to the download dir
+    """Given an INSDC accession, download all available files from the ftp to the download dir.
 
     Args:
         ftp_connection: An open FTP connection object

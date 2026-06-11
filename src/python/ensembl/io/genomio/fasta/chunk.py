@@ -59,7 +59,7 @@ def check_chunk_size_and_tolerance(
     chunk_tolerance: int,
     error_f: Callable[[str], None] = _on_value_error,
 ) -> None:
-    """Check the chunk size and the tolerance are positive and chunk size is not too small
+    """Check the chunk size and the tolerance are positive and chunk size is not too small.
 
     Args:
         chunk_size: Chunk size to check

@@ -37,7 +37,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 @dataclass
 class IdEvent:
-    """Simple representation for the events from the input file"""
+    """Simple representation for the events from the input file."""
 
     from_id: str
     to_id: str
@@ -56,7 +56,7 @@ class IdEvent:
 
 
 class MapSession:
-    """Simple mapping_sessions representation from the input file"""
+    """Simple mapping_sessions representation from the input file."""
 
     def __init__(self, release: str, release_date: str) -> None:
         self.release = release
@@ -64,7 +64,7 @@ class MapSession:
         self.events: list[IdEvent] = []
 
     def add_event(self, event: IdEvent) -> None:
-        """Add an event to this mapping_session"""
+        """Add an event to this mapping_session."""
         self.events.append(event)
 
 
@@ -76,7 +76,7 @@ class EventCollection:
 
     def load_events(self, input_file: PathLike) -> None:
         """Load events from input file.
-        Expected tab file columns: old_id, new_id, event_name, release, release_date
+        Expected tab file columns: old_id, new_id, event_name, release, release_date.
 
         """
         events: list[IdEvent] = []
@@ -231,7 +231,7 @@ class EventCollection:
 
 
 def main() -> None:
-    """Main entrypoint"""
+    """Main entrypoint."""
     parser = ArgumentParser(description="Load the events in the input file into a core database.")
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path(

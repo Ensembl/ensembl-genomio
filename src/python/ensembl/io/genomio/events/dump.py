@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Module to dump stable id events from an Ensembl Core database"""
+"""Module to dump stable id events from an Ensembl Core database."""
 
 __all__ = [
     "BRC4_START_DATE",
@@ -43,10 +43,10 @@ DictToIdsSet = dict[str, IdsSet]
 
 
 class Pair:
-    """Simple old_id - new_id pair representation"""
+    """Simple old_id - new_id pair representation."""
 
     def __init__(self, old_id: str | None, new_id: str | None) -> None:
-        """Create a pair with an old_id and a new_id if provided"""
+        """Create a pair with an old_id and a new_id if provided."""
         self.old_id = old_id if old_id is not None else ""
         if new_id is not None:
             self.new_id = new_id
@@ -54,11 +54,11 @@ class Pair:
             self.new_id = ""
 
     def has_old_id(self) -> bool:
-        """Check if the pair has an old_id"""
+        """Check if the pair has an old_id."""
         return self.old_id != ""
 
     def has_new_id(self) -> bool:
-        """Check if the pair has a new_id"""
+        """Check if the pair has a new_id."""
         return self.new_id != ""
 
     def is_empty(self) -> bool:
@@ -67,7 +67,7 @@ class Pair:
 
 
 class UnsupportedEvent(ValueError):
-    """If an event is not supported"""
+    """If an event is not supported."""
 
 
 class Event:
@@ -76,7 +76,7 @@ class Event:
     - deleted genes
     - merged genes (several genes to one)
     - split genes (one gene to several)
-    - mixed (several genes to several)
+    - mixed (several genes to several).
 
     Attributes:
         from_list: List of genes the previous gene set.
@@ -97,7 +97,7 @@ class Event:
         release: str | None = None,
         date: datetime | None = None,
     ) -> None:
-        """Create a stable id event from a set of old_ids to a set of new_ids"""
+        """Create a stable id event from a set of old_ids to a set of new_ids."""
         if from_list is None:
             from_list = set()
         if to_list is None:
@@ -110,7 +110,7 @@ class Event:
         self.pairs: list[Pair] = []
 
     def __str__(self) -> str:
-        """String representation of the stable id event"""
+        """String representation of the stable id event."""
         from_str = ",".join(self.from_set)
         to_str = ",".join(self.to_set)
         return f"From {from_str} to {to_str} = {self.get_name()} in release {self.release}"
@@ -122,16 +122,13 @@ class Event:
         - release
         - release date
         - list of old gene ids in the event (comma-separated)
-        - list of new gene ids in the event (comma-separated)
+        - list of new gene ids in the event (comma-separated).
 
         """
         from_str = ",".join(self.from_set)
         to_str = ",".join(self.to_set)
         release = self.get_full_release()
-        if self.date:
-            date = self.date.strftime("%Y-%m")
-        else:
-            date = "no_date"
+        date = self.date.strftime("%Y-%m") if self.date else "no_date"
         name = self.get_name()
         line_list = []
         for identifier in self.from_set:
@@ -161,14 +158,11 @@ class Event:
         - new gene id
         - event name
         - release
-        - release date
+        - release date.
 
         """
         release = self.get_full_release()
-        if self.date:
-            date = self.date.strftime("%Y-%m")
-        else:
-            date = "no_date"
+        date = self.date.strftime("%Y-%m") if self.date else "no_date"
         name = self.get_name()
         line_list = []
 
@@ -207,11 +201,11 @@ class Event:
             self.to_set.add(to_id)
 
     def set_release(self, release: str) -> None:
-        """Set the release name of the event"""
+        """Set the release name of the event."""
         self.release = release
 
     def set_date(self, date: datetime) -> None:
-        """Set the date of the release for this event"""
+        """Set the date of the release for this event."""
         self.date = date
 
     def add_pair(self, pair: Pair) -> None:
@@ -233,12 +227,8 @@ class Event:
         release = self.release
         date = self.date
 
-        if date and date > BRC4_START_DATE:
-            release = f"build {release}"
-        else:
-            release = f"pre-BRC4 {release}"
+        return f"build {release}" if date and date > BRC4_START_DATE else f"pre-BRC4 {release}"
 
-        return release
 
     def _name_event(self) -> None:
         """Identify the event name based on the old vs new id lists."""
@@ -303,7 +293,7 @@ class DumpStableIDs:
     """
 
     def __init__(self, session: Session) -> None:
-        """Create a processor for events"""
+        """Create a processor for events."""
         self.session = session
 
     def get_history(self) -> list:
@@ -353,8 +343,7 @@ class DumpStableIDs:
 
         """
         map_sessions_stmt = select(MappingSession)
-        map_sessions = list(self.session.scalars(map_sessions_stmt).unique().all())
-        return map_sessions
+        return list(self.session.scalars(map_sessions_stmt).unique().all())
 
     def get_pairs(self, session_id: int) -> list[Pair]:
         """Retrieve all pair of ids for a given session.
@@ -408,7 +397,7 @@ class DumpStableIDs:
         for old_id, from_old_list in from_list.items():
             if not old_id or old_id not in from_list:
                 continue
-            event = Event(set([old_id]), set(from_old_list))
+            event = Event({old_id}, set(from_old_list))
             event, from_list, to_list = self.extend_event(event, from_list, to_list)
             event.add_pairs(pairs)
             events.append(event)
@@ -417,7 +406,7 @@ class DumpStableIDs:
         for new_id, to_new_list in to_list.items():
             if not new_id:
                 continue
-            event = Event(set(to_new_list), set([new_id]))
+            event = Event(set(to_new_list), {new_id})
             event.add_pairs(pairs)
             events.append(event)
 
@@ -462,12 +451,12 @@ class DumpStableIDs:
             if old_id in from_list:
                 from_list[old_id].add(new_id)
             else:
-                from_list[old_id] = set([new_id])
+                from_list[old_id] = {new_id}
 
             if new_id in to_list:
                 to_list[new_id].add(old_id)
             else:
-                to_list[new_id] = set([old_id])
+                to_list[new_id] = {old_id}
 
         # Remove empty elements
         for from_id in from_list:
@@ -525,7 +514,7 @@ class DumpStableIDs:
 
 
 def main() -> None:
-    """Main entrypoint"""
+    """Main entrypoint."""
     parser = ArgumentParser(
         description="Dump the stable ID events from the information available in a core database."
     )

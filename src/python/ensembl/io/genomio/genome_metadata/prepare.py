@@ -34,6 +34,7 @@ import ensembl.io.genomio
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
+import contextlib
 
 PROVIDER_DATA = {
     "GenBank": {
@@ -155,10 +156,8 @@ def add_species_metadata(genome_metadata: dict, ncbi_data: dict) -> None:
     if "organism_name" in organism:
         species.setdefault("scientific_name", organism["organism_name"])
 
-    try:
+    with contextlib.suppress(KeyError):
         species.setdefault("strain", organism["infraspecific_names"]["strain"])
-    except KeyError:
-        pass
 
 
 def prepare_genome_metadata(

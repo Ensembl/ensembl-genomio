@@ -93,7 +93,7 @@ def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: 
 
 def scan_tree(feature_intervals: list) -> set:
     """Construct an interval tree using supplied genomic intervals, check all elements on the tree against
-    itself and return any that hit 2 or more intervals (i.e. itself + 1 other)
+    itself and return any that hit 2 or more intervals (i.e. itself + 1 other).
 
     Args:
         feature_intervals: Genome features to examine for coordinate (start/end) overlaps.

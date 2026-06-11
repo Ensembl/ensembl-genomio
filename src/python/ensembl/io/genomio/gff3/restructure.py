@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Restructure a gene model to a standard representation: `gene -> [ mRNAs -> [CDSs, exons] ]`"""
+"""Restructure a gene model to a standard representation: `gene -> [ mRNAs -> [CDSs, exons] ]`."""
 
 __all__ = [
     "add_transcript_to_naked_gene",
@@ -38,7 +38,7 @@ def _get_feat_counts(gene: GFFSeqFeature) -> Counter:
 def restructure_gene(gene: GFFSeqFeature) -> None:
     """Standardize the structure of a gene model:
     - Add a transcript if there are no children
-    - Move the CDS and exons to an mRNA if they are directly under the gene
+    - Move the CDS and exons to an mRNA if they are directly under the gene.
 
     Args:
         gene: Gene feature to restructure.

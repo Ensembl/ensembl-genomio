@@ -37,7 +37,7 @@ StatsLengths: TypeAlias = dict[str, int]
 
 
 class InvalidIntegrityError(Exception):
-    """When a file integrity check fails"""
+    """When a file integrity check fails."""
 
 
 class ManifestStats:

@@ -90,11 +90,10 @@ class FunctionalAnnotations:
                 all_xref.append(xrefs)
 
         # Add RefSeq ID xref if it looks like one
-        if self.provider_name == "RefSeq":
-            if feature.type == "gene" and feature.id.startswith("LOC"):
-                xref_dbs = {x["dbname"] for x in all_xref}
-                if "RefSeq" not in xref_dbs:
-                    all_xref.append({"dbname": "RefSeq", "id": feature.id})
+        if self.provider_name == "RefSeq" and feature.type == "gene" and feature.id.startswith("LOC"):
+            xref_dbs = {x["dbname"] for x in all_xref}
+            if "RefSeq" not in xref_dbs:
+                all_xref.append({"dbname": "RefSeq", "id": feature.id})
 
         return all_xref
 
@@ -176,7 +175,7 @@ class FunctionalAnnotations:
         for qname in ("description", "product"):
             if qname in feature.qualifiers:
                 description = feature.qualifiers[qname][0]
-                if self.product_is_informative(description, feat_ids=parent_ids + [feature.id]):
+                if self.product_is_informative(description, feat_ids=[*parent_ids, feature.id]):
                     feature_object["description"] = description
                     break
                 logging.debug(f"Non informative description for {feature.id}: {description}")
@@ -208,7 +207,7 @@ class FunctionalAnnotations:
     def transfer_descriptions(self) -> None:
         """Transfers the feature descriptions in 2 steps:
         - from translations to transcripts (if the transcript description is empty)
-        - from transcripts to genes (same case)
+        - from transcripts to genes (same case).
 
         """
         self._transfer_description_up("translation")
@@ -241,8 +240,7 @@ class FunctionalAnnotations:
     def _clean_description(description: str) -> str:
         """Returns the description without "transcript variant" information."""
         variant_re = re.compile(r", transcript variant [A-Z][0-9]+$", re.IGNORECASE)
-        description = re.sub(variant_re, "", description)
-        return description
+        return re.sub(variant_re, "", description)
 
     @staticmethod
     def product_is_informative(product: str, feat_ids: list[str] | None = None) -> bool:

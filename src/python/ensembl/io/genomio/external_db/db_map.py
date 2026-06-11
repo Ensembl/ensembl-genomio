@@ -51,7 +51,7 @@ def get_external_db_map(map_file: Path) -> dict[str, str]:
     with map_file.open("r") as map_fh:
         for line in map_fh:
             line = line.rstrip()
-            if line.startswith("#") or line.startswith(" ") or line == "":
+            if line.startswith(("#", " ")) or line == "":
                 continue
             parts = line.split("\t")
             if len(parts) < 2:

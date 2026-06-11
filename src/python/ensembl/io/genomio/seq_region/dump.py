@@ -149,8 +149,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict[str, str]) -> list
                 syn_obj = {"name": syn.synonym}
             syns.append(syn_obj)
 
-    syns = sorted(syns, key=lambda syn: (syn["name"], syn.get("source", "")))
-    return syns
+    return sorted(syns, key=lambda syn: (syn["name"], syn.get("source", "")))
 
 
 def get_karyotype(seq_region: SeqRegion) -> list[dict[str, str]]:
@@ -177,8 +176,7 @@ def get_karyotype(seq_region: SeqRegion) -> list[dict[str, str]]:
                     kar["structure"] = structure
             kars.append(kar)
 
-    kars = sorted(kars, key=lambda kar: kar.get("name", ""))
-    return kars
+    return sorted(kars, key=lambda kar: kar.get("name", ""))
 
 
 def get_added_sequence(seq_region: SeqRegion) -> dict[str, str | dict[str, str]]:
@@ -259,8 +257,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> list[SeqRegion]:
 
             seq_regions.append(seq_region)
 
-    seq_regions = sorted(seq_regions, key=lambda seqr: (seqr["coord_system_level"], seqr["name"]))
-    return seq_regions
+    return sorted(seq_regions, key=lambda seqr: (seqr["coord_system_level"], seqr["name"]))
 
 
 def main() -> None:

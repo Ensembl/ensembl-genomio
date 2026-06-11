@@ -129,9 +129,8 @@ def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str |
         logging.info(f"Using user defined 'ncbi datasets' version '{container_url}'")
 
     # Pull or load pre-existing 'datasets' singularity container image.
-    datasets_image = Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
+    return Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
 
-    return datasets_image
 
 
 def get_assembly_accessions(src_file: StrPath) -> list[str]:
@@ -237,10 +236,7 @@ def fetch_datasets_reports(
         ## Test what result we have obtained following execution of sif image and accession value
         # Returned a list, i.e. datasets returned a result to client.execute
         # Returned a str, i.e. no datasets result obtained exited with fatal error
-        if isinstance(raw_result, list):
-            result = raw_result[0]
-        else:
-            result = raw_result
+        result = raw_result[0] if isinstance(raw_result, list) else raw_result
         if not isinstance(result, str):
             raise ValueError("Result obtained from datasets is not a string")
         if re.search("^FATAL", result):
@@ -336,13 +332,13 @@ def generate_report_tsv(
     tsv_outfile = Path(output_directory, f"{outfile_name}.tsv")
 
     header_list = next(iter(parsed_asm_reports.values())).header()
-    header_list = [query_type.capitalize().replace("_", " ")] + header_list
+    header_list = [query_type.capitalize().replace("_", " "), *header_list]
 
     with open(tsv_outfile, "w+") as tsv_out:
         writer = csv.writer(tsv_out, delimiter="\t", lineterminator="\n")
         writer.writerow(header_list)
         for core, report_meta in parsed_asm_reports.items():
-            final_asm_report = [core] + report_meta.values()
+            final_asm_report = [core, *report_meta.values()]
             writer.writerow(final_asm_report)
 
 

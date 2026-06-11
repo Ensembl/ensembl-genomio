@@ -48,7 +48,7 @@ def build_component_index(agp_entries: dict[str, list[AgpEntry]]) -> dict[str, l
 
     """
     component_index: dict[str, list[AgpEntry]] = defaultdict(list)
-    for _, parts in agp_entries.items():
+    for parts in agp_entries.values():
         for p in parts:
             component_index[p.part_id].append(p)
 

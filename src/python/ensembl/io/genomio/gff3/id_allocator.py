@@ -56,8 +56,7 @@ class StableIDAllocator:
 
         """
         self.current_id_number += 1
-        new_id = f"{self.prefix}{self.current_id_number}"
-        return new_id
+        return f"{self.prefix}{self.current_id_number}"
 
     def is_valid(self, stable_id: str) -> bool:
         """Checks that the format of a stable ID is valid.
@@ -123,8 +122,7 @@ class StableIDAllocator:
         if number < 1:
             raise ValueError("Number has to be a positive integer.")
 
-        transcript_id = f"{gene_id}_t{number}"
-        return transcript_id
+        return f"{gene_id}_t{number}"
 
     def normalize_cds_id(self, cds_id: str) -> str:
         """Returns a normalized version of the provided CDS ID.
