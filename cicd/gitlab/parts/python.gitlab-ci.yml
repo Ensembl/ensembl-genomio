@@ -21,13 +21,15 @@
 .python:
   stage: test
   image: $PYTHON_IMAGE
-  only:
-    changes:
-      - cicd/gitlab/parts/python.gitlab-ci.yml
-      - pyproject.toml
-      - "*.py"
-      - src/python/**/*.py
-      - scripts/**/*.py
+  rules:
+    - changes:
+        - cicd/gitlab/parts/python.gitlab-ci.yml
+        - pyproject.toml
+        - "*.py"
+        - src/python/**/*.py
+        - scripts/**/*.py
+      when: on_success
+    - when: manual
 
 ## Prepare and load the Python virtual environment
 
@@ -69,7 +71,7 @@ python:pylint:src:
 python:pylint:tests:
   extends: .python:pylint
   script:
-    - $PYLINT_CMD src/python/tests
+    - $PYLINT_CMD --disable=protected-access src/python/tests
 
 .python:mypy:
   extends: .python:test
@@ -90,6 +92,24 @@ python:black:
   extends: .python:test
   script:
     - black --config pyproject.toml --check .
+
+.python:ruff:
+  extends: .python:test
+  variables:
+    RUFF_CMD: ruff --config pyproject.toml
+  allow_failure: true
+
+python:ruff:src:
+  extends: .python:ruff
+  script:
+    - $RUFF_CMD check --no-fix src/python/ensembl/io/genomio
+    - $RUFF_CMD format --check src/python/ensembl/io/genomio
+
+python:ruff:tests:
+  extends: .python:ruff
+  script:
+    - $RUFF_CMD check --no-fix src/python/tests
+    - $RUFF_CMD format --check src/python/tests
 
 ## Unit tests and coverage
 
@@ -123,23 +143,3 @@ python:coverage:
     when: always
     paths:
       - $RUN_DIR/coverage
-
-
-# Deploy stage instances
-
-## Generate GitLab pages with HTML coverage report
-
-pages:
-  extends: .python
-  stage: deploy
-  needs:
-    - job: python:coverage
-      artifacts: true
-  script:
-    - mv $RUN_DIR/coverage/ public/
-  artifacts:
-    paths:
-      - public
-  only:
-    refs:
-      - main

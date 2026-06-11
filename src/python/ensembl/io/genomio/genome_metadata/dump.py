@@ -40,7 +40,6 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils import StrPath
 from ensembl.utils.logging import init_logging_with_args
 
-
 DEFAULT_FILTER: dict[str, dict[str, Type]] = {
     "database": {"name": str},
     "added_seq": {"region_name": str},
@@ -81,7 +80,7 @@ def get_genome_metadata(session: Session, db_name: str | None) -> dict[str, Any]
     for row in session.execute(meta_statement).unique().all():
         meta_key = row[0].meta_key
         meta_value = row[0].meta_value
-        (main_key, _, subkey) = meta_key.partition(".")
+        main_key, _, subkey = meta_key.partition(".")
         # Use empty string as subkey when no "." found to simplify dictionary creation
         if main_key in genome_metadata:
             if subkey in genome_metadata[main_key]:
@@ -169,10 +168,8 @@ def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
         else:
             logging.info(f"Meta check 'assembly is RefSeq': Asm provider = {assembly['provider_name']}")
     else:
-        logging.debug(
-            "Meta filter update to RefSeq accession not done: user meta filter missing: \
-            'assembly.provider_name'"
-        )
+        logging.debug("Meta filter update to RefSeq accession not done: user meta filter missing: \
+            'assembly.provider_name'")
 
 
 def check_assembly_version(genome_metadata: dict[str, Any]) -> None:

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.assembly.status` module."""
+
 # pylint: disable=too-many-positional-arguments
 
 from __future__ import annotations
@@ -46,7 +47,6 @@ from ensembl.io.genomio.assembly.status import (
 from ensembl.io.genomio.utils.json_utils import get_json
 from ensembl.utils import StrPath
 from ensembl.utils.database import UnitTestDB
-
 
 MINIMUM_METADATA = {
     "my_core": ReportStructure(

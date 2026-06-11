@@ -19,17 +19,12 @@ will have access to the plugins, hooks and fixtures defined here.
 
 """
 
-import gzip
 import json
 from pathlib import Path
 from typing import Any, Callable
 
 import pytest
 from pytest import Config
-
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 
 from ensembl.io.genomio.utils import get_json
 

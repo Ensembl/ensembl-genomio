@@ -22,7 +22,6 @@ from pathlib import Path
 import re
 import sys
 
-
 # Do not show traceback for an easier error readability
 sys.tracebacklimit = 0
 

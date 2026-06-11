@@ -92,7 +92,6 @@ def test_load_seq_regions(
     [
         param(">prot1\nCGTA\n", {"prot1": 4}, "", id="Normal DNA seq"),
         param("", {}, "", id="Empty fasta"),
-        param("CGTA", {}, "No sequences found", id="No sequences in fasta"),
         param(">\nCGTA\n", {}, "1 sequences with empty ids", id="empty ID"),
     ],
 )
@@ -126,12 +125,27 @@ def test_load_dna_fasta_lengths(
         assert stats.errors[0].startswith(expected_error)
 
 
+def test_load_dna_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> None:
+    """Tests `ManifestStats.load_dna_fasta_lengths()` rejects FASTA content without a header.
+
+    Fixtures: tmp_path
+    """
+    fasta_path = tmp_path / "fasta_dna.fasta"
+    with fasta_path.open("w") as fasta_fh:
+        fasta_fh.write("CGTA")
+    manifest = Manifest(tmp_path)
+    manifest.create()
+    stats = ManifestStats(manifest.root_dir / "manifest.json")
+
+    with pytest.raises(ValueError, match=r"comments at the beginning of the file"):
+        stats.load_dna_fasta_lengths()
+
+
 @mark.parametrize(
     "fasta_str, ignore_final_stops, expected_lengths, expected_error",
     [
         param(">prot1\nMAGIC\n", False, {"prot1": 5}, "", id="Normal prot"),
         param("", False, {}, "", id="Empty fasta"),
-        param("AH", False, {}, "No sequences found", id="No sequences in fasta"),
         param(">\nMAGIC\n", False, {}, "1 sequences with empty ids", id="Empty ID"),
         param(">prot1\nMAGIC*\n", False, {"prot1": 6}, "1 sequences with stop codons", id="End stop codon"),
         param(">prot1\nMAGIC\n", True, {"prot1": 5}, "", id="End stop codon, ignore"),
@@ -175,6 +189,22 @@ def test_load_peptides_fasta_lengths(
     else:
         assert len(stats.errors) == 1
         assert stats.errors[0].startswith(expected_error)
+
+
+def test_load_peptides_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> None:
+    """Tests `ManifestStats.load_peptides_fasta_lengths()` rejects FASTA content without a header.
+
+    Fixtures: tmp_path
+    """
+    fasta_path = tmp_path / "fasta_pep.fasta"
+    with fasta_path.open("w") as fasta_fh:
+        fasta_fh.write("AH")
+    manifest = Manifest(tmp_path)
+    manifest.create()
+    stats = ManifestStats(manifest.root_dir / "manifest.json")
+
+    with pytest.raises(ValueError, match=r"comments at the beginning of the file"):
+        stats.load_peptides_fasta_lengths()
 
 
 @mark.parametrize(

@@ -18,6 +18,7 @@ Typical usage example::
     $ pytest test_dump.py
 
 """
+
 # pylint: disable=too-many-positional-arguments
 
 from collections import namedtuple
@@ -33,7 +34,6 @@ from sqlalchemy.engine import make_url, URL
 
 from ensembl.io.genomio.genome_metadata import dump
 from ensembl.utils import StrPath
-
 
 MetaRow = namedtuple("MetaRow", "meta_key meta_value")
 

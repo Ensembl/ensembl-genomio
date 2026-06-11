@@ -222,7 +222,7 @@ def test_records_from_headers_exceptions(
         chunks: Mapping of base record ID to a list of (start, chunk_record_id) pairs.
         key_error: Expected string matching raised ``KeyError``.
     """
-    locations = {}
+    locations: dict[str, recombine.RecordLocation] = {}
     cache = recombine.FastaRecordCache()
     with pytest.raises(KeyError, match=key_error_str):
         list(recombine._records_from_headers(locations, first_seen, chunks, cache))

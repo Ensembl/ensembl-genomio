@@ -67,7 +67,7 @@ class Manifest:
             return
         pre = sp.check_output("md5sum %s" % name, shell=True)
         # pre = sp.check_output("md5 %s" % name, shell=True)
-        (md5sum, *rest) = pre.split()
+        md5sum, *rest = pre.split()
         return md5sum
 
     def dump(self, json_out, outdir=None):

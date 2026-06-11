@@ -33,7 +33,6 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.database import DBConnection
 from ensembl.utils.logging import init_logging_with_args
 
-
 FEAT_TABLE = {
     "gene": "gene",
     "mobile_element": "gene",
@@ -80,7 +79,7 @@ def get_core_data(session: Session, table: str, match_xrefs: bool = False) -> Di
 
     feat_data = {}
     for row in session.execute(stmt):
-        (feat_id, stable_id, desc, xref_name) = row
+        feat_id, stable_id, desc, xref_name = row
         feat_struct: FeatStruct = (feat_id, stable_id, desc)
         feat_data[stable_id.lower()] = feat_struct
         if match_xrefs and xref_name:
@@ -205,7 +204,7 @@ def _get_features_to_update(
         # Prepare some data to compare
         new_stable_id = new_feat["id"]
         new_desc = new_feat.get("description", "")
-        (row_id, cur_stable_id, cur_desc) = cur_feat
+        row_id, cur_stable_id, cur_desc = cur_feat
 
         # No description: replace unless the current description is from an Xref
         if not cur_desc:

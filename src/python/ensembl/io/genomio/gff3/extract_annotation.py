@@ -31,7 +31,6 @@ from typing import Any, Dict, List, Optional
 from ensembl.io.genomio.utils.json_utils import print_json
 from .features import GFFSeqFeature
 
-
 Annotation = Dict[str, Any]
 
 _PARENTS = {

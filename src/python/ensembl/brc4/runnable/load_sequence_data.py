@@ -452,7 +452,7 @@ class load_sequence_data(eHive.BaseRunnable):
         ]  # storing path and the corresponding value, to prevent repetetive traversals
         # iterate
         while paths_to_go:
-            (path, value) = paths_to_go.pop()  # get last item
+            path, value = paths_to_go.pop()  # get last item
             if isinstance(value, list):
                 # perhaps, it's better to raise exception then to continue silently
                 continue
@@ -1086,7 +1086,7 @@ class load_sequence_data(eHive.BaseRunnable):
                 line = re.sub(r"#.*", "", line)
                 if re.match(r"^\s*$", line):
                     continue
-                (from_name, to_name, *rest) = line.strip().split("\t")
+                from_name, to_name, *rest = line.strip().split("\t")
                 if len(rest) > 0 and rest[0].upper() != "SEQ_REGION":
                     continue
                 if to_name == "_IGNORE_":
@@ -1156,7 +1156,7 @@ class load_sequence_data(eHive.BaseRunnable):
                 if skip_header:
                     skip_header = False
                     continue
-                (key, val) = line.strip().split("\t")
+                key, val = line.strip().split("\t")
                 data[key] = val
         return data
 
@@ -1243,7 +1243,7 @@ class load_sequence_data(eHive.BaseRunnable):
     def load_agp(self, pair, asm_v, src_file, log_pfx):
         """ensembl script (load_agp.pl) based utility for loading seq_regions assembly data (AGPs)"""
         en_root = self.param_required("ensembl_root_dir")
-        (asm_n, cmp_n) = pair.strip().split("-")
+        asm_n, cmp_n = pair.strip().split("-")
         cmd = (
             r"""{_loader} {_db_string} -assembled_version {_asm_v} """
             + r"""    -assembled_name {_asm} -component_name {_cmp} """
@@ -1320,9 +1320,7 @@ class load_sequence_data(eHive.BaseRunnable):
                 where   sr.coord_system_id = cs.coord_system_id
                     and cs.name = "%s"
                     and at.code = "external_db"
-              ;""" % (
-            cs_name
-        )
+              ;""" % (cs_name)
         return self.run_sql_req(sql, log_pfx)
 
     def copy_sr_name_to_syn(self, cs, x_db, log_pfx):
@@ -1365,9 +1363,7 @@ class load_sequence_data(eHive.BaseRunnable):
             higher, lower = pair.strip().split("-")
             sql = r"""insert ignore into meta (species_id, meta_key, meta_value) values
                     (1, "assembly.mapping", "{_higher}:{_v}|{_lower}:{_v}")
-                  ;""".format(
-                _v=asm_v, _higher=higher, _lower=lower
-            )
+                  ;""".format(_v=asm_v, _higher=higher, _lower=lower)
             self.run_sql_req(sql, self.pjc(log_pfx, pair))
 
     def remove_components_from_toplevel(self, log_pfx):
@@ -1436,9 +1432,7 @@ class load_sequence_data(eHive.BaseRunnable):
                       and sr.coord_system_id = cs.coord_system_id
                       and cs.name = "{_cs}"
                       and cs.version = "{_asm_v}"
-                ;""".format(
-            _tbl=tbl, _fld=fld, _cs=cs, _asm_v=asm_v
-        )
+                ;""".format(_tbl=tbl, _fld=fld, _cs=cs, _asm_v=asm_v)
         return self.run_sql_req(sql, log_pfx)
 
     def nullify_ctg_cs_version(self, cs_order, log_pfx: str):
@@ -1462,9 +1456,7 @@ class load_sequence_data(eHive.BaseRunnable):
                       ) as tl on tl.coord_system_id = cs.coord_system_id
                     where cs.version = "{_asm_v}"
                     order by rank
-              ;""".format(
-            _asm_v=asm_v
-        )
+              ;""".format(_asm_v=asm_v)
         # run_sql
         toplvl_pfx = self.pjc(log_pfx, "toplvl_info")
         self.run_sql_req(sql, toplvl_pfx)
@@ -1504,9 +1496,7 @@ class load_sequence_data(eHive.BaseRunnable):
                             meta_value=replace(meta_value, "|{_cs_name}:{_asm_v}", "|{_cs_name}")
                             where meta_key="assembly.mapping";
                         update coord_system set version = NULL where coord_system_id = {_cs_id};
-                    """.format(
-                        _asm_v=asm_v, _cs_name=cs_name, _cs_id=cs_id
-                    )
+                    """.format(_asm_v=asm_v, _cs_name=cs_name, _cs_id=cs_id)
                     print(sql, file=clear_sql)
             self.run_sql_req(clear_pfx + ".sql", clear_pfx, from_file=True)
 
@@ -1551,7 +1541,7 @@ class load_sequence_data(eHive.BaseRunnable):
                 if skip_header:
                     skip_header = False
                     continue
-                (sr_id, name, syn) = line.strip().split("\t")
+                sr_id, name, syn = line.strip().split("\t")
                 syn_trios.append((sr_id, name, syn))
         return syn_trios
 
@@ -1663,7 +1653,7 @@ class load_sequence_data(eHive.BaseRunnable):
                 if skip_header:
                     skip_header = False
                     continue
-                (name, sr_id) = line.strip().split("\t")
+                name, sr_id = line.strip().split("\t")
                 sr_trios.append((name, sr_id, ""))
 
         return sr_trios

@@ -14,7 +14,6 @@
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.fasta.split` module."""
 
-
 from contextlib import nullcontext as does_not_raise
 import filecmp
 from io import TextIOWrapper
@@ -144,6 +143,7 @@ class TestOutputWriter:
     def test_init(
         self,
         tmp_path: Path,
+        *,
         fasta_file: Path,
         write_agp: bool,
         unique_file_names: bool,
@@ -195,7 +195,7 @@ class TestOutputWriter:
         ],
     )
     def test_create_file_exception(
-        self, monkeypatch: MonkeyPatch, tmp_path: Path, write_agp: bool, suffix: str, exc_msg: str
+        self, monkeypatch: MonkeyPatch, tmp_path: Path, *, write_agp: bool, suffix: str, exc_msg: str
     ) -> None:
         """
         Tests the `_create_output_file()` and `_create_agp_file()` methods of the `split.OutputWriter`
@@ -278,6 +278,7 @@ class TestOutputWriter:
     def test_write_record(
         self,
         tmp_path: Path,
+        *,
         write_agp: bool,
         agp_obj_id: str | None,
         agp_start: int | None,
@@ -321,7 +322,7 @@ class TestOutputWriter:
             assert out_record.seq == in_record.seq
             assert out_record.description == f"{in_record.id} {in_record.description}"
             if write_agp:
-                with writer.agp_file.open("r") as agp_fh:  # type: ignorep[union-attr]
+                with writer.agp_file.open("r") as agp_fh:  # type: ignore[union-attr]
                     # Skip header line
                     agp_fh.readline()
                     agp_line = agp_fh.readline().strip()
@@ -383,7 +384,7 @@ def test_split_fasta_empty_file(tmp_path: Path) -> None:
     out_dir = tmp_path / "out"
     out_dir.mkdir(exist_ok=True)
     split.split_fasta(in_fasta, out_dir)
-    assert list(out_dir.iterdir()) == []
+    assert not list(out_dir.iterdir())
 
 
 def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:

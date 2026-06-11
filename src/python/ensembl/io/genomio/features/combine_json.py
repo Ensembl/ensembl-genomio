@@ -24,7 +24,9 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import NotRequired, TypedDict, TypeVar, cast
+from typing import TypedDict, cast
+
+from typing_extensions import NotRequired
 
 import ensembl.io.genomio
 from ensembl.io.genomio.schemas.json.validate import schema_validator
@@ -44,6 +46,8 @@ JsonValue = bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"
 
 
 class RepeatConsensus(TypedDict):
+    """Repeat consensus JSON object."""
+
     repeat_consensus_key: str  # SHA-256 hex
     repeat_name: str
     repeat_class: str
@@ -52,6 +56,8 @@ class RepeatConsensus(TypedDict):
 
 
 class RepeatFeature(TypedDict):
+    """Repeat feature JSON object."""
+
     seq_region: str
     seq_region_start: int
     seq_region_end: int
@@ -64,6 +70,8 @@ class RepeatFeature(TypedDict):
 
 
 class NcRNAFeature(TypedDict):
+    """ncRNA feature JSON object."""
+
     seq_region: str
     seq_region_start: int
     seq_region_end: int
@@ -74,6 +82,8 @@ class NcRNAFeature(TypedDict):
 
 
 class Feature(TypedDict):
+    """Common feature fields used for coordinate liftover."""
+
     seq_region: str
     seq_region_start: int
     seq_region_end: int
@@ -232,12 +242,12 @@ def _write_and_validate(out_json: Path, combined_json: dict[str, JsonValue]) -> 
     Raises:
         ValueError: If schema validation fails.
     """
-    schema_validator(out_json, json_schema=_FEATURE_SCHEMA_NAME)
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(
         json.dumps(combined_json, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    schema_validator(out_json, json_schema=_FEATURE_SCHEMA_NAME)
 
 
 def _detect_load_type(document: dict[str, JsonValue], path: Path) -> str:
@@ -399,6 +409,7 @@ def _combine_feature_docs(
     documents: Iterable[tuple[Path, dict[str, JsonValue]]],
     feature_list_key: str,
     coerce_feature: CoerceFeatureFunction,
+    *,
     chunk_re: re.Pattern[str],
     agp_by_component: dict[str, list[AgpEntry]] | None,
     allow_revcomp: bool,

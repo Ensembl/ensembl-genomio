@@ -23,7 +23,6 @@ __all__ = [
 from types import MappingProxyType
 from typing import Mapping
 
-
 SYNONYM_MAP: Mapping[str, str] = MappingProxyType(
     {
         "Assigned-Molecule": "INSDC",

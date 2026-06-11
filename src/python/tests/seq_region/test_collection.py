@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.seq_region.collection` module."""
+
 # pylint: disable=too-many-positional-arguments
 
 from contextlib import nullcontext as no_raise
@@ -28,7 +29,6 @@ from pytest import param, raises
 from ensembl.io.genomio.seq_region.collection import SeqCollection
 from ensembl.io.genomio.seq_region.exceptions import UnknownMetadata
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
-
 
 _test_report_seq = {
     "Assembly-Unit": "Primary Assembly",

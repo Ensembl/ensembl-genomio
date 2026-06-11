@@ -19,7 +19,6 @@ import io
 import json
 import sys
 
-
 # locals
 from gffstruct.fannkeeper import FannKeeper
 from gffstruct.gff3walker import GFF3Walker

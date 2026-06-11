@@ -21,7 +21,6 @@ import sys
 
 import yaml
 
-
 # Do not show traceback for an easier error readability
 sys.tracebacklimit = 0
 

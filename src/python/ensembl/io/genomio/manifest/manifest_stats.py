@@ -32,7 +32,6 @@ from ensembl.io.genomio.utils import get_json
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils import StrPath
 
-
 # Record the lengths of the sequence for features/regions
 StatsLengths: TypeAlias = dict[str, int]
 

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.database.core_server` module."""
+
 # pylint: disable=too-many-positional-arguments
 
 from __future__ import annotations
@@ -24,7 +25,6 @@ from pytest_mock import MockerFixture
 from sqlalchemy.engine import make_url
 
 from ensembl.io.genomio.database import CoreServer
-
 
 TEST_CORES = [
     "speciesA_genus_core_60_110_1",

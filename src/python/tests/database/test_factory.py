@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.database.factory` module."""
+
 # pylint: disable=too-many-positional-arguments
 
 from pathlib import Path
@@ -25,7 +26,6 @@ from _pytest.capture import CaptureFixture
 from sqlalchemy.engine import make_url, URL
 
 from ensembl.io.genomio.database import factory
-
 
 _META = {
     "species.production_name": "dog",

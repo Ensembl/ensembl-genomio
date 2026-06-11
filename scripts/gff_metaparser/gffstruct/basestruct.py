@@ -58,7 +58,7 @@ class BaseStructures:
             self.regex_patterns += factory.regex_patterns()
 
     def parse_conf_str(self, raw):
-        (nocmt, *_) = raw.partition("#")
+        nocmt, *_ = raw.partition("#")
         nocmt = nocmt.strip()
         if not nocmt:
             return None, None, None

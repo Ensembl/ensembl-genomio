@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit testing of `ensembl.io.genomio.fasta.process` module."""
+
 # pylint: disable=too-many-positional-arguments
 
 from contextlib import nullcontext as does_not_raise

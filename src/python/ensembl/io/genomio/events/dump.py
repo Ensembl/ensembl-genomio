@@ -38,7 +38,6 @@ from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-
 BRC4_START_DATE = datetime(2020, 5, 1)
 IdsSet = Set[str]
 DictToIdsSet = Dict[str, IdsSet]
@@ -418,7 +417,7 @@ class DumpStableIDs:
             if not old_id or old_id not in from_list:
                 continue
             event = Event(set([old_id]), set(from_old_list))
-            (event, from_list, to_list) = self.extend_event(event, from_list, to_list)
+            event, from_list, to_list = self.extend_event(event, from_list, to_list)
             event.add_pairs(pairs)
             events.append(event)
 
