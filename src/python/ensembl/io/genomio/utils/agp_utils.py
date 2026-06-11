@@ -38,14 +38,14 @@ class AgpEntry:
 
 
 def build_component_index(agp_entries: dict[str, list[AgpEntry]]) -> dict[str, list[AgpEntry]]:
-    """
-    Builds an index of component IDs to AGP entries.
+    """Builds an index of component IDs to AGP entries.
 
     Args:
         agp_entries: Mapping of object IDs to lists of AGP entries.
 
     Returns:
         A mapping from component ID to sorted lists of AGP entries.
+
     """
     component_index: dict[str, list[AgpEntry]] = defaultdict(list)
     for _, parts in agp_entries.items():
@@ -61,8 +61,7 @@ def build_component_index(agp_entries: dict[str, list[AgpEntry]]) -> dict[str, l
 
 
 def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tuple[str, int, int]:
-    """
-    Lifts component coordinates into object coordinates.
+    """Lifts component coordinates into object coordinates.
 
     Args:
         part: AGP entry describing the component span.
@@ -75,6 +74,7 @@ def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tup
 
     Raises:
         ValueError: If the requested range is invalid or not covered by the component.
+
     """
     if start > end:
         raise ValueError(f"Range start > end: {start} > {end}")
@@ -104,8 +104,7 @@ def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tup
 
 
 def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
-    """
-    Parses an AGP v2.x file into per-object component entries.
+    """Parses an AGP v2.x file into per-object component entries.
 
     Args:
         agp_file: Path to the input AGP file (optionally gzipped).
@@ -117,6 +116,7 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
     Raises:
         ValueError: If the AGP file is invalid, unsupported, or contains no component lines.
                     All validation errors are collected and raised together.
+
     """
     agp_records: dict[str, list[AgpEntry]] = defaultdict(list)
     errors: list[str] = []
@@ -156,7 +156,7 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
                     )
                 )
             except ValueError as e:
-                errors.append(f"Line {line_nr}: {str(e)}")
+                errors.append(f"Line {line_nr}: {e!s}")
 
     if errors:
         error_msg = f"AGP file '{agp_file}' had {len(errors)} error(s):\n  - " + "\n  - ".join(errors)

@@ -27,8 +27,8 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 __all__ = [
-    "SeqGroup",
     "CompareFasta",
+    "SeqGroup",
 ]
 
 
@@ -64,8 +64,7 @@ class CompareFasta:
     """Read and compare the FASTA sequences."""
 
     def __init__(self, fasta_ext: Path, fasta_core: Path, output_dir: Path) -> None:
-        """
-        Initialize the `CompareFasta` with input fasta files and output directory.
+        """Initialize the `CompareFasta` with input fasta files and output directory.
 
         Args:
             fasta_ext: Path to INSDC fasta file.
@@ -100,9 +99,9 @@ class CompareFasta:
         common = self.find_common_groups(seq_ext_dict, seq_core_dict)
 
         # Sequences that are not common
-        only1 = {seq: group for seq, group in seq_ext_dict.items() if not seq in seq_core_dict}
+        only1 = {seq: group for seq, group in seq_ext_dict.items() if seq not in seq_core_dict}
 
-        only2 = {seq: group for seq, group in seq_core_dict.items() if not seq in seq_ext_dict}
+        only2 = {seq: group for seq, group in seq_core_dict.items() if seq not in seq_ext_dict}
 
         if only1:
             self.comp.append(f"Sequences only in Fasta_1: {', '.join([str(ids) for ids in only1.values()])}")
@@ -128,6 +127,7 @@ class CompareFasta:
         Returns:
             A dictionary where keys are sequence IDs and values are sequences with all non-CGTA
                 characters replaced by "N".
+
         """
         logging.info(f"Read fasta file {fasta_path}")
         sequences = {}
@@ -146,6 +146,7 @@ class CompareFasta:
         Returns:
             A dictionary where keys are unique sequences and values are `SeqGroup` objects that
                 group sequence IDs sharing the same sequence.
+
         """
         seqs_dict: dict[str, SeqGroup] = {}
         for name, seq in seqs.items():
@@ -182,7 +183,7 @@ class CompareFasta:
                         self.comp.append(f"Matched 2 identical groups of sequences: {group1} and {group2}")
                         # Map each ID in group1 to a possible group2 ID
                         possible_id2 = " OR ".join(group2.ids)
-                        common.update({id1: possible_id2 for id1 in group1.ids})
+                        common.update(dict.fromkeys(group1.ids, possible_id2))
                 else:
                     self.comp.append(
                         "Matched 2 different groups of sequences"

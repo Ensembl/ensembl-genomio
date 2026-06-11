@@ -15,7 +15,7 @@
 
 """Combines repeat/ncRNA feature JSON documents from split/chunked inputs and performs coordinate liftover."""
 
-__all__ = ["JsonValue", "RepeatConsensus", "RepeatFeature", "NcRNAFeature", "combine_feature_json"]
+__all__ = ["JsonValue", "NcRNAFeature", "RepeatConsensus", "RepeatFeature", "combine_feature_json"]
 
 import argparse
 from collections.abc import Callable, Iterable, Iterator
@@ -91,8 +91,7 @@ class Feature(TypedDict):
 
 
 def _normalise_for_comparison(key: str, value: JsonValue) -> JsonValue:
-    """
-    Returns a normalised copy of a top-level value for equality comparison.
+    """Returns a normalised copy of a top-level value for equality comparison.
 
     For 'analysis', ignore 'run_date' so documents produced at different times
     can still be merged as long as the rest of the analysis metadata matches.
@@ -100,7 +99,7 @@ def _normalise_for_comparison(key: str, value: JsonValue) -> JsonValue:
     if key == "analysis" and isinstance(value, dict):
         analysis = dict(value)
         analysis.pop("run_date", None)
-        return cast(JsonValue, analysis)
+        return cast("JsonValue", analysis)
     return value
 
 
@@ -113,8 +112,7 @@ class _TopLevelAccumulator:
         self._paths: dict[str, Path] = {}
 
     def require_same(self, key: str, value: JsonValue, path: Path) -> None:
-        """
-        Registers a top-level field value and ensures consistency.
+        """Registers a top-level field value and ensures consistency.
 
         Args:
             key: Top-level JSON field name (e.g. "analysis", "source").
@@ -125,6 +123,7 @@ class _TopLevelAccumulator:
             ValueError:
                 If the same key has already been seen with a different value
                 in a previous document.
+
         """
         date_removed_value = _normalise_for_comparison(key, value)
 
@@ -140,8 +139,7 @@ class _TopLevelAccumulator:
             raise ValueError(f"Top-level '{key}' differs between inputs:\n  - {prev_path}\n  - {path}\n")
 
     def get_required(self, key: str) -> JsonValue:
-        """
-        Returns the stored value for a required top-level field.
+        """Returns the stored value for a required top-level field.
 
         Args:
             key: Field name that must have been previously registered.
@@ -153,6 +151,7 @@ class _TopLevelAccumulator:
             ValueError:
                 If the key was never observed (e.g. empty manifest or
                 required field missing from all inputs).
+
         """
         if key not in self._original_values:
             raise ValueError(f"Missing required top-level '{key}' (empty manifest?)")
@@ -166,8 +165,7 @@ CoerceFeatureFunction = Callable[[JsonValue, Path], Feature]
 def _get_agp_entry_for_range(
     parts: list[AgpEntry], start: int, end: int, component_id: str, path: Path
 ) -> AgpEntry:
-    """
-    Retrieves the unique AGP part whose component span fully contains a given range.
+    """Retrieves the unique AGP part whose component span fully contains a given range.
 
     Args:
         parts: AGP entries for a single component_id.
@@ -181,6 +179,7 @@ def _get_agp_entry_for_range(
 
     Raises:
         ValueError: If no entry contains the range, or if multiple entries match (ambiguous mapping).
+
     """
     matches = [pt for pt in parts if pt.part_start <= start and end <= pt.part_end]
     if not matches:
@@ -200,8 +199,7 @@ def _get_agp_entry_for_range(
 def _iterate_validated_documents(
     json_paths: Iterable[Path], validate: bool = True
 ) -> Iterator[tuple[Path, dict[str, JsonValue]]]:
-    """
-    Yields (path, document) pairs after schema-validating and loading each JSON file.
+    """Yields (path, document) pairs after schema-validating and loading each JSON file.
 
     Args:
         json_paths: Iterable of input JSON paths (optionally gzipped).
@@ -213,6 +211,7 @@ def _iterate_validated_documents(
     Raises:
         ValueError:
             If schema validation fails for any input file (when `validate=True`).
+
     """
     for p in json_paths:
         if validate:
@@ -228,12 +227,11 @@ def _load_json_document(path: Path) -> dict[str, JsonValue]:
     text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
     parsed: JsonValue = json.loads(text)
 
-    return cast(dict[str, JsonValue], parsed)
+    return cast("dict[str, JsonValue]", parsed)
 
 
 def _write_and_validate(out_json: Path, combined_json: dict[str, JsonValue]) -> None:
-    """
-    Writes a combined JSON document to disk and validates it against the schema.
+    """Writes a combined JSON document to disk and validates it against the schema.
 
     Args:
         out_json: Destination file path for the combined JSON document.
@@ -241,6 +239,7 @@ def _write_and_validate(out_json: Path, combined_json: dict[str, JsonValue]) -> 
 
     Raises:
         ValueError: If schema validation fails.
+
     """
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(
@@ -270,7 +269,7 @@ def _compute_consensus_sha256(rn: str, rc_class: str, rt: str, rc_seq: str | Non
 
 def _coerce_repeat_consensus(obj: JsonValue, source_path: Path) -> RepeatConsensus:
     """Validates and casts an arbitrary object to RepeatConsensus."""
-    rc = cast(RepeatConsensus, obj)
+    rc = cast("RepeatConsensus", obj)
     expected = _compute_consensus_sha256(
         rc["repeat_name"],
         rc["repeat_class"],
@@ -287,7 +286,7 @@ def _coerce_repeat_consensus(obj: JsonValue, source_path: Path) -> RepeatConsens
 
 def _coerce_repeat_feature(obj: JsonValue, source_path: Path) -> RepeatFeature:
     """Validates and casts the given object to RepeatFeature (minimal fields)."""
-    feat = cast(RepeatFeature, obj)
+    feat = cast("RepeatFeature", obj)
     if feat["seq_region_start"] > feat["seq_region_end"]:
         raise ValueError(
             f"seq_region_start > seq_region_end for {feat['seq_region']}: "
@@ -298,7 +297,7 @@ def _coerce_repeat_feature(obj: JsonValue, source_path: Path) -> RepeatFeature:
 
 def _coerce_ncrna_feature(obj: JsonValue, source_path: Path) -> NcRNAFeature:
     """Validates and casts the given object to NcRNAFeature."""
-    feat = cast(NcRNAFeature, obj)
+    feat = cast("NcRNAFeature", obj)
     if feat["seq_region_start"] > feat["seq_region_end"]:
         raise ValueError(
             f"seq_region_start > seq_region_end for {feat['seq_region']}: "
@@ -336,8 +335,7 @@ def _lift_feature_coords(
     allow_revcomp: bool,
     source_path: Path,
 ) -> Feature:
-    """
-    Constructs a modified copy of a feature with lifted seq_region and coordinates.
+    """Constructs a modified copy of a feature with lifted seq_region and coordinates.
 
     Uses AGP-driven lifting when ``agp_by_component`` is provided; otherwise uses seq_region-driven
     lifting via ``chunk_re``. If the feature does not appear chunked in seq_region-driven mode, it
@@ -359,6 +357,7 @@ def _lift_feature_coords(
         ValueError: If seq_region_start > seq_region_end, if seq_region_strand is invalid, or if AGP mapping
             is ambiguous/invalid.
         KeyError: If AGP-driven lifting is requested but feature.seq_region is not present in the AGP index.
+
     """
     name = feature["seq_region"]
     sr_start = feature["seq_region_start"]
@@ -368,7 +367,7 @@ def _lift_feature_coords(
     if sr_start > sr_end:
         raise ValueError(f"seq_region_start > seq_region_end for {name}: {sr_start}>{sr_end} ({source_path})")
 
-    out: dict[str, JsonValue] = cast(dict[str, JsonValue], dict(feature))
+    out: dict[str, JsonValue] = cast("dict[str, JsonValue]", dict(feature))
 
     if agp_by_component is not None:
         parts = agp_by_component.get(name)
@@ -390,7 +389,7 @@ def _lift_feature_coords(
             else:
                 raise ValueError(f"Invalid strand value: {strand}")
 
-        return cast(Feature, out)
+        return cast("Feature", out)
 
     m = chunk_re.match(name)
     if not m:
@@ -402,7 +401,7 @@ def _lift_feature_coords(
     out["seq_region"] = base
     out["seq_region_start"] = sr_start + offset
     out["seq_region_end"] = sr_end + offset
-    return cast(Feature, out)
+    return cast("Feature", out)
 
 
 def _combine_feature_docs(
@@ -416,8 +415,7 @@ def _combine_feature_docs(
     required_top_level_keys: list[str],
     valid_consensus_keys: set[str] | None = None,
 ) -> tuple[dict[str, JsonValue], list[Feature], int]:
-    """
-    Generic combination engine for feature-based JSON documents.
+    """Generic combination engine for feature-based JSON documents.
 
     This function implements the shared logic for combining multiple
     schema-valid JSON documents that contain:
@@ -449,6 +447,7 @@ def _combine_feature_docs(
             If:
                 - no documents are provided,
                 - an invalid consensus key was generated from a RepeatFeature.
+
     """
     accumulator = _TopLevelAccumulator()
     combined_features: list[Feature] = []
@@ -461,7 +460,7 @@ def _combine_feature_docs(
         for k in required_top_level_keys:
             accumulator.require_same(key=k, value=document[k], path=filepath)
 
-        raw_features = cast(list[JsonValue], document[feature_list_key])
+        raw_features = cast("list[JsonValue]", document[feature_list_key])
         for raw in raw_features:
             total_features += 1
             feat = coerce_feature(raw, filepath)
@@ -474,7 +473,7 @@ def _combine_feature_docs(
             )
 
             if valid_consensus_keys is not None:
-                key = _feature_consensus_key(cast(RepeatFeature, lifted), source_path=filepath)
+                key = _feature_consensus_key(cast("RepeatFeature", lifted), source_path=filepath)
                 if key is not None and key not in valid_consensus_keys:
                     raise ValueError(
                         "repeat_features reference repeat_consensus key(s) not present in repeat_consensus: "
@@ -497,8 +496,7 @@ def _combine_repeat_json_paths(
     agp_by_component: dict[str, list[AgpEntry]] | None,
     allow_revcomp: bool,
 ) -> None:
-    """
-    Combines JSON documents containing repeat features and consensus, with coordinate liftover.
+    """Combines JSON documents containing repeat features and consensus, with coordinate liftover.
 
     Args:
         json_paths: Input JSON file paths (optionally gzipped).
@@ -506,11 +504,12 @@ def _combine_repeat_json_paths(
         chunk_re: Regex identifying chunked seq_region IDs for seq_region-driven lifting.
         agp_by_component: Optional AGP component index enabling AGP-driven lifting.
         allow_revcomp: Whether to allow reverse-oriented AGP entries when lifting.
+
     """
     consensus_by_key: dict[str, RepeatConsensus] = {}
 
     for filepath, document in _iterate_validated_documents(json_paths):
-        incoming = cast(list[JsonValue], document.get("repeat_consensus", []))
+        incoming = cast("list[JsonValue]", document.get("repeat_consensus", []))
         _merge_repeat_consensus(consensus_by_key, incoming, filepath)
 
     top_level, features, total_features = _combine_feature_docs(
@@ -524,13 +523,13 @@ def _combine_repeat_json_paths(
         valid_consensus_keys=set(consensus_by_key.keys()),
     )
 
-    repeat_features = cast(list[RepeatFeature], features)
+    repeat_features = cast("list[RepeatFeature]", features)
 
     combined_json: dict[str, JsonValue] = {
         "analysis": top_level["analysis"],
         "source": top_level["source"],
-        "repeat_consensus": cast(JsonValue, list(consensus_by_key.values())),
-        "repeat_features": cast(JsonValue, repeat_features),
+        "repeat_consensus": cast("JsonValue", list(consensus_by_key.values())),
+        "repeat_features": cast("JsonValue", repeat_features),
     }
 
     _write_and_validate(out_json, combined_json)
@@ -544,8 +543,7 @@ def _combine_ncrna_json_paths(
     agp_by_component: dict[str, list[AgpEntry]] | None,
     allow_revcomp: bool,
 ) -> None:
-    """
-    Combines JSON documents containing ncRNA features for a single tool, with coordinate liftover.
+    """Combines JSON documents containing ncRNA features for a single tool, with coordinate liftover.
 
     Args:
         json_paths: Input JSON file paths (optionally gzipped). All files must conform to the
@@ -558,6 +556,7 @@ def _combine_ncrna_json_paths(
             object coordinates.
         allow_revcomp: Whether to allow reverse-oriented AGP entries when lifting.
             If True and an AGP entry has orientation '-', feature strand will be flipped.
+
     """
     top_level, features, total_features = _combine_feature_docs(
         documents=_iterate_validated_documents(json_paths),
@@ -573,7 +572,7 @@ def _combine_ncrna_json_paths(
         "analysis": top_level["analysis"],
         "source": top_level["source"],
         "ncrna_tool": top_level["ncrna_tool"],
-        "ncrna_features": cast(JsonValue, cast(list[NcRNAFeature], features)),
+        "ncrna_features": cast("JsonValue", cast("list[NcRNAFeature]", features)),
     }
 
     _write_and_validate(out_json, combined_json)
@@ -587,8 +586,7 @@ def combine_feature_json(
     agp_file: Path | None = None,
     allow_revcomp: bool = False,
 ) -> None:
-    """
-    Combines JSON documents from split/chunked inputs and performs coordinate liftover.
+    """Combines JSON documents from split/chunked inputs and performs coordinate liftover.
 
     Supports load_features schema documents containing either repeat features with (optional) consensus,
     or ncRNA features for a single tool.
@@ -632,6 +630,7 @@ def combine_feature_json(
                 - feature coordinates are invalid or coordinate lifting is ambiguous.
         KeyError: If AGP-driven lifting is requested but a feature.seq_region is not present in the
             AGP component index.
+
     """
     json_paths = get_paths_from_manifest(json_manifest)
     if not json_paths:
@@ -681,8 +680,7 @@ def combine_feature_json(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """
-    Parses command-line arguments for the feature JSON combining CLI.
+    """Parses command-line arguments for the feature JSON combining CLI.
 
     Args:
         argv: Optional argument vector (excluding program name). If `None`, arguments are read from
@@ -690,6 +688,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     Returns:
         Parsed argparse namespace with validated options and logging configuration applied.
+
     """
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(

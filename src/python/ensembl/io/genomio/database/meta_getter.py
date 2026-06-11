@@ -52,7 +52,7 @@ def get_meta_values(db_url: URL, meta_keys: StrPath | list[str]) -> dict[str, st
     # Check input type and populated query list
     if isinstance(meta_keys, PosixPath):
         with Path(meta_keys).open(mode="r", encoding="UTF-8") as fh:
-            for line in fh.readlines():
+            for line in fh:
                 meta_key = line.strip()
                 query_meta_keys.append(meta_key)
     elif isinstance(meta_keys, list):
@@ -107,6 +107,7 @@ def main(arg_list: list[str] | None = None) -> None:
 
     Args:
         arg_list: Arguments to parse passing list to parse_args().
+
     """
     args = parse_args(arg_list)
     init_logging_with_args(args)

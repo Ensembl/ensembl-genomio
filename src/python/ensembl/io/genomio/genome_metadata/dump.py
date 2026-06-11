@@ -15,16 +15,16 @@
 """Generates a JSON file representing the genome metadata from a core database."""
 
 __all__ = [
-    "get_genome_metadata",
-    "filter_genome_meta",
     "check_assembly_version",
     "check_genebuild_version",
+    "filter_genome_meta",
+    "get_genome_metadata",
     "metadata_dump_setup",
 ]
 
 import argparse
 import json
-from typing import Any, Type
+from typing import Any
 import logging
 from pydoc import locate
 
@@ -40,7 +40,7 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils import StrPath
 from ensembl.utils.logging import init_logging_with_args
 
-DEFAULT_FILTER: dict[str, dict[str, Type]] = {
+DEFAULT_FILTER: dict[str, dict[str, type]] = {
     "database": {"name": str},
     "added_seq": {"region_name": str},
     "annotation": {"provider_name": str, "provider_url": str},
@@ -73,6 +73,7 @@ def get_genome_metadata(session: Session, db_name: str | None) -> dict[str, Any]
     Args:
         session: Session for the current core.
         db_name: Target database name
+
     """
     genome_metadata: dict[str, Any] = {}
 
@@ -159,6 +160,7 @@ def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
 
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
+
     """
     assembly = gmeta_out.get("assembly", {})
     if assembly.get("provider_name"):
@@ -183,6 +185,7 @@ def check_assembly_version(genome_metadata: dict[str, Any]) -> None:
 
     Raises:
         ValueError: If both `version` and the assembly accession's version are not integers or are missing.
+
     """
     assembly = genome_metadata["assembly"]
     version = assembly.get("version")
@@ -210,6 +213,7 @@ def check_genebuild_version(genome_metadata: dict[str, Any]) -> None:
 
     Raises:
         ValueError: If there is no genebuild version or ID available.
+
     """
     try:
         genebuild = genome_metadata["genebuild"]
@@ -231,6 +235,7 @@ def convert_dict(meta_dict: dict) -> dict:
 
     Args:
         meta_dict: User meta dictionary with literal string typing to be converted.
+
     """
     new_dict = meta_dict.copy()
     for key, value in meta_dict.items():
@@ -245,6 +250,7 @@ def metadata_dump_setup(
     db_url: URL, input_filter: StrPath | None, meta_update: bool, append_db: bool
 ) -> dict[str, Any]:
     """Setup main stages of genome meta dump from user input arguments provided.
+
     Args:
         db_url: Target core database URL.
         input_filter: Input JSON containing subset of meta table values to filter on.
@@ -297,6 +303,7 @@ def main(arg_list: list[str] | None = None) -> None:
 
     Args:
         arg_list: Arguments to parse passing list to parse_args().
+
     """
     args = parse_args(arg_list)
     init_logging_with_args(args)

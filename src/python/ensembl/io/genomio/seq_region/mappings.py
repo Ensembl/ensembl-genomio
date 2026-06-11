@@ -15,9 +15,9 @@
 """Seq region mappings."""
 
 __all__ = [
-    "SYNONYM_MAP",
-    "MOLECULE_LOCATION",
     "LOCATION_CODON",
+    "MOLECULE_LOCATION",
+    "SYNONYM_MAP",
 ]
 
 from types import MappingProxyType

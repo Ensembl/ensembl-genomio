@@ -17,19 +17,18 @@ gene build versions.
 """
 
 __all__ = [
-    "add_provider",
+    "PROVIDER_DATA",
+    "MetadataError",
+    "MissingNodeError",
     "add_assembly_version",
     "add_genebuild_metadata",
+    "add_provider",
     "add_species_metadata",
     "prepare_genome_metadata",
-    "PROVIDER_DATA",
-    "MissingNodeError",
-    "MetadataError",
 ]
 
 import datetime
 from os import PathLike
-from typing import Dict
 
 import ensembl.io.genomio
 from ensembl.io.genomio.utils import get_json, print_json
@@ -68,7 +67,7 @@ class MetadataError(Exception):
     """When a metadata value is not expected."""
 
 
-def add_provider(genome_metadata: Dict, ncbi_data: Dict) -> None:
+def add_provider(genome_metadata: dict, ncbi_data: dict) -> None:
     """Updates the genome metadata adding provider information for assembly and gene models.
 
     Assembly provider metadata will only be added if it is missing, i.e. neither `"provider_name"` or
@@ -80,6 +79,7 @@ def add_provider(genome_metadata: Dict, ncbi_data: Dict) -> None:
 
     Raises:
         MetadataError: If accession's format in genome metadata does not match with a known provider.
+
     """
     # Get accession provider
     accession = genome_metadata["assembly"]["accession"]
@@ -104,11 +104,12 @@ def add_provider(genome_metadata: Dict, ncbi_data: Dict) -> None:
             annotation["provider_url"] = f'{provider["annotation"]["provider_url"]}/{accession}'
 
 
-def add_assembly_version(genome_data: Dict) -> None:
+def add_assembly_version(genome_data: dict) -> None:
     """Adds version number to the genome's assembly information if one is not present already.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
+
     """
     assembly = genome_data["assembly"]
     if "version" not in assembly:
@@ -118,13 +119,14 @@ def add_assembly_version(genome_data: Dict) -> None:
             assembly["version"] = int(version)
 
 
-def add_genebuild_metadata(genome_data: Dict) -> None:
+def add_genebuild_metadata(genome_data: dict) -> None:
     """Adds genebuild metadata to genome information if not present already.
 
     The default convention is to use the current date as `"version"` and `"start_date"`.
 
     Args:
         genome_data: Genome information of assembly, accession and annotation.
+
     """
     genebuild = genome_data.setdefault("genebuild", {})
     current_date = datetime.date.today().isoformat()
@@ -134,7 +136,7 @@ def add_genebuild_metadata(genome_data: Dict) -> None:
         genebuild["start_date"] = current_date
 
 
-def add_species_metadata(genome_metadata: Dict, ncbi_data: Dict) -> None:
+def add_species_metadata(genome_metadata: dict, ncbi_data: dict) -> None:
     """Adds taxonomy ID, scientific name and strain (if present) from the NCBI dataset report.
 
     Args:

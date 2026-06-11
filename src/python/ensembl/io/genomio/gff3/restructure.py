@@ -15,18 +15,17 @@
 """Restructure a gene model to a standard representation: `gene -> [ mRNAs -> [CDSs, exons] ]`"""
 
 __all__ = [
-    "restructure_gene",
     "add_transcript_to_naked_gene",
+    "move_cds_to_existing_mrna",
     "move_only_cdss_to_new_mrna",
     "move_only_exons_to_new_mrna",
-    "move_cds_to_existing_mrna",
-    "remove_extra_exons",
     "remove_cds_from_pseudogene",
+    "remove_extra_exons",
+    "restructure_gene",
 ]
 
 from collections import Counter
 import logging
-from typing import List
 
 from .exceptions import GFFParserError
 from .features import GFFSeqFeature
@@ -46,6 +45,7 @@ def restructure_gene(gene: GFFSeqFeature) -> None:
 
     Raises:
         GFFParserError: If there are CDSs/exons remaining under the gene after applying the fixes.
+
     """
     # Skip if the children of the gene look ok
     counts = _get_feat_counts(gene)
@@ -69,7 +69,6 @@ def restructure_gene(gene: GFFSeqFeature) -> None:
 
 def add_transcript_to_naked_gene(gene: GFFSeqFeature) -> None:
     """Add an unspecific transcript to a gene without any sub features."""
-
     if (len(gene.sub_features) > 0) or (gene.type != "gene"):
         return
 
@@ -83,7 +82,6 @@ def move_only_cdss_to_new_mrna(gene: GFFSeqFeature) -> None:
     """Add intermediate mRNAs to a gene with only CDS children.
     Do nothing if some sub-features are not CDS.
     """
-
     counts = _get_feat_counts(gene)
     if (len(counts) != 1) or not counts.get("CDS"):
         return
@@ -116,7 +114,6 @@ def move_only_exons_to_new_mrna(gene: GFFSeqFeature) -> None:
     """Add an mRNA for a gene that only has exons and move the exons under the mRNA.
     No change if the gene has other sub_features than exon.
     """
-
     counts = _get_feat_counts(gene)
     if (len(counts) != 1) or not counts.get("exon"):
         return
@@ -145,6 +142,7 @@ def move_cds_to_existing_mrna(gene: GFFSeqFeature) -> None:
 
     Raises:
         GFFParserError: If the feature structure is not recognized.
+
     """
     counts = _get_feat_counts(gene)
     if not counts.get("mRNA") or not counts.get("CDS"):
@@ -193,11 +191,10 @@ def move_cds_to_existing_mrna(gene: GFFSeqFeature) -> None:
     logging.debug(f"Gene {gene.id}: moved {len(cdss)} CDSs to the mRNA")
 
 
-def _check_sub_exons(mrna: GFFSeqFeature, cdss: List[GFFSeqFeature], sub_exons: List[GFFSeqFeature]) -> None:
+def _check_sub_exons(mrna: GFFSeqFeature, cdss: list[GFFSeqFeature], sub_exons: list[GFFSeqFeature]) -> None:
     """Check that the exons of the mRNA and the CDSs match.
     If there are no exons, create them from the CDSs.
     """
-
     new_sub_exons = []
     if sub_exons:
         # Check that they match the CDS outside
@@ -231,6 +228,7 @@ def remove_extra_exons(gene: GFFSeqFeature) -> None:
 
     Raises:
         GFFParserError: If not all exons of this gene start with "id-".
+
     """
     counts = _get_feat_counts(gene)
     if not counts.get("mRNA") and not counts.get("exon"):

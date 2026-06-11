@@ -37,6 +37,7 @@ def get_paths_from_manifest(manifest: StrPath) -> list[Path]:
     Raises:
         FileNotFoundError: If the manifest file or any listed entry does not exist.
         ValueError: If the manifest path is not a file or any listed entry is not a file.
+
     """
     manifest = Path(manifest)
     manifest = manifest.expanduser().resolve(strict=True)
@@ -78,6 +79,7 @@ def seq_description_without_id(record: SeqRecord) -> str:
     Returns:
         The description text with the leading identifier and following space
         removed. Returns an empty string if the description equals the id.
+
     """
     desc = record.description
     if record.id is None or desc == record.id:
@@ -86,8 +88,7 @@ def seq_description_without_id(record: SeqRecord) -> str:
 
 
 def validate_regex(chunk_regex: str) -> re.Pattern[str]:
-    """
-    Compiles and validates a chunk-id regex.
+    """Compiles and validates a chunk-id regex.
 
     The compiled regex must define named capture groups ``base`` and ``start``.
 
@@ -100,6 +101,7 @@ def validate_regex(chunk_regex: str) -> re.Pattern[str]:
     Raises:
         ValueError: If the regex is invalid or does not contain the required
             named capture groups ``base`` and ``start``.
+
     """
     try:
         chunk_re = re.compile(chunk_regex)

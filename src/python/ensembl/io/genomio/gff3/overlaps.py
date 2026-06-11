@@ -15,10 +15,10 @@
 """Scan a GFF3 file to detect overlapping SeqFeature objects. Default object level => gene."""
 
 __all__ = [
-    "summarize_feature_stats",
+    "get_intervals",
     "identify_feature_overlaps",
     "scan_tree",
-    "get_intervals",
+    "summarize_feature_stats",
 ]
 
 from collections import defaultdict
@@ -43,8 +43,8 @@ def summarize_feature_stats(gff_in: Path) -> None:
 
     Args:
         gff_in: User supplied GFF3 input file.
-    """
 
+    """
     logging.info("Alt processing: Not parsing the GFF3, producing summary feature stats instead!")
 
     examiner = GFFExaminer()
@@ -60,9 +60,10 @@ def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: 
         gff_in: User supplied GFF3 input file.
         output_file: Output file to write feature overlaps.
         isolate_feature: Sequence feature type to filter by.
+
     """
     logging.info("Processing sequence feature overlaps!")
-    logging.info(f"Output file = {str(output_file)}")
+    logging.info(f"Output file = {output_file!s}")
     logging.info(f"Features filtered by type: {isolate_feature}")
 
     gff_type_filter: dict = {"gff_type": [isolate_feature]}
@@ -99,8 +100,8 @@ def scan_tree(feature_intervals: list) -> set:
 
     Return:
         Set of intervals identified in the input GFF3 file that overlap with 2 or more intervals.
-    """
 
+    """
     interval_sets = set()
     traversed_tree = IntervalTree(Interval(*iv) for iv in feature_intervals)
 
@@ -124,6 +125,7 @@ def _write_report(out_file: Path, seq_dict: dict, genes_dict: dict) -> int:
 
     Returns:
         Count of overlaps detected
+
     """
     overlap_count = 0
     overlap_features = []
@@ -157,8 +159,8 @@ def get_intervals(record: SeqRecord, genes_dict: dict, seq_dict: dict, seq_name:
         genes_dict: Genes.
         seq_dict: Sequences.
         seq_name: Feature sequence name.
-    """
 
+    """
     for feature in record.features:
         genes_dict[str(feature.id)] = {
             "sequence": f"{record.id}",
@@ -203,7 +205,7 @@ def main() -> None:
     init_logging_with_args(args)
 
     logging.info("Starting processing...")
-    logging.info(f"GFF input file = {str(args.input_gff)}")
+    logging.info(f"GFF input file = {args.input_gff!s}")
 
     # Check optional processing param
     if args.subcommand == "stats":

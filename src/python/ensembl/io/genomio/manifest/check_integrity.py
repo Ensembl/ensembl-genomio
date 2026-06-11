@@ -58,7 +58,6 @@ class IntegrityTool:
         and lengths are consistent with the information in gff.
         Compare sequence length from fasta_dna file to seq_region.json metadata.
         """
-
         # Load the manifest integrity counts
         manifest = self.manifest
         manifest.prepare_integrity_data()
@@ -176,8 +175,8 @@ class IntegrityTool:
 
         Return:
             List of message errors of sequence IDs found only in one of the lists provided.
-        """
 
+        """
         only1 = []
         only2 = []
         common = []
@@ -229,8 +228,8 @@ class IntegrityTool:
 
         Returns:
             Error if there is a difference in length or ids between the lists.
-        """
 
+        """
         # check list differences, checks if abs(values diff) < allowed_len_diff
 
         set1 = frozenset(list1)
@@ -264,17 +263,17 @@ class IntegrityTool:
                     _dlist.append(f"{e}: {list1[e]}, {list2[e]}")
             if diff_len_special_list:
                 errors.append(
-                    (
+
                         f"{len(diff_len_special_list)} common elements with one BP/AA length diff for {name}"
                         f"(e.g. {diff_len_special_list[0]})"
-                    )
+
                 )
             if diff_len_list:
                 errors.append(
-                    (
+
                         f"{len(diff_len_list)} common elements with length diff for {name}"
                         f"(e.g. {diff_len_list[0]})"
-                    )
+
                 )
         if common_len > 0:
             logging.warning(f"{common_len} common elements between lists for {name}")
@@ -304,6 +303,7 @@ class IntegrityTool:
         Returns:
             Error if there are common sequences with difference in ids
             and if the sequences are not consistent in the files.
+
         """
         if not seqrs or not feats:
             return

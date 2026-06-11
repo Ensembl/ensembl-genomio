@@ -32,9 +32,9 @@ from ensembl.utils.archive import open_gz_file
 
 __all__ = [
     "Consensus",
+    "create_genomio_json",
     "parse_repeatmasker_output",
     "parse_trf_output",
-    "create_genomio_json",
 ]
 
 REPEATMASKER_MAPPINGS = [
@@ -76,20 +76,20 @@ class Consensus:
     seq: str
 
     def sha256_key(self) -> str:
-        """
-        Returns a normalized SHA256 digest for this consensus record.
+        """Returns a normalized SHA256 digest for this consensus record.
 
         The digest is computed from the consensus name, repeat class, repeat type,
         and normalized sequence content.
 
         Returns:
             SHA256 hex digest for the consensus record.
+
         """
         norm_name = self.name.strip()
         norm_class = self.repeat_class.strip()
         norm_type = self.repeat_type.strip()
         norm_seq = "".join(self.seq.split()).upper()
-        payload = f"{norm_name}\t{norm_class}\t{norm_type}\t{norm_seq}".encode("utf-8")
+        payload = f"{norm_name}\t{norm_class}\t{norm_type}\t{norm_seq}".encode()
         return hashlib.sha256(payload).hexdigest()
 
 
@@ -110,8 +110,7 @@ class TRFParsedRow:
 
 
 def _parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_line: str, path: Path) -> T:
-    """
-    Parses a field from tool output into the specified class type.
+    """Parses a field from tool output into the specified class type.
 
     Args:
         parser: A callable that takes a string and returns a value of type T.
@@ -125,6 +124,7 @@ def _parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_li
 
     Raises:
         ValueError: If the token cannot be cast to the specified type.
+
     """
     try:
         return parser(token)
@@ -152,14 +152,14 @@ def _file_last_modified_time(file_path: Path) -> str:
 
 
 def _map_repeatmasker_repeat_consensus_type(repeat_class: str) -> str:
-    """
-    Maps a raw RepeatMasker repeat class to a GenomIO repeat category.
+    """Maps a raw RepeatMasker repeat class to a GenomIO repeat category.
 
     Args:
         repeat_class: Raw repeat class string extracted from RepeatMasker output.
 
     Returns:
         Mapped repeat type category. Returns "Unknown" when no mapping matches.
+
     """
     for regex, mapped in REPEATMASKER_COMPILED_MAPPINGS:
         if regex.match(repeat_class):
@@ -176,8 +176,7 @@ def _has_valid_parsed_coordinates(
     repeat_end: int,
     line: str,
 ) -> bool:
-    """
-    Validates parsed coordinate values for a feature.
+    """Validates parsed coordinate values for a feature.
 
     Args:
         input_path: Input file path used.
@@ -192,6 +191,7 @@ def _has_valid_parsed_coordinates(
 
     Raises:
         ValueError: If sequence region coordinate values are invalid (i.e. negative, zero, or end < start).
+
     """
     if seq_region_start < 1 or seq_region_end < 1:
         raise ValueError(
@@ -224,8 +224,7 @@ def _has_valid_parsed_coordinates(
 def _parse_repeatmasker_consensus_library(
     consensus_lib_path: Path,
 ) -> tuple[dict[tuple[str, str, str], str], dict[str, Consensus]]:
-    """
-    Parses a RepeatMasker consensus library FASTA file into a dictionary of Consensus records.
+    """Parses a RepeatMasker consensus library FASTA file into a dictionary of Consensus records.
 
     The parser expects FASTA headers in the format:
         >consensus_name#repeat_class/repeat_type
@@ -237,6 +236,7 @@ def _parse_repeatmasker_consensus_library(
         A tuple containing:
             - A dictionary mapping (consensus_name, repeat_class, repeat_type) tuples to SHA256 digests.
             - A dictionary of Consensus records keyed by SHA256 digest.
+
     """
     consensus_keys_by_triplet: dict[tuple[str, str, str], str] = {}
     consensuses_by_key: dict[str, Consensus] = {}
@@ -270,8 +270,7 @@ def _parse_repeatmasker_repeat_class_field(
     repeat_class_field: str,
     line: str,
 ) -> tuple[str, str]:
-    """
-    Parses a RepeatMasker repeat class/family field into class and raw repeat type.
+    """Parses a RepeatMasker repeat class/family field into class and raw repeat type.
 
     Args:
         input_path: Input RepeatMasker output path used for error messages.
@@ -283,6 +282,7 @@ def _parse_repeatmasker_repeat_class_field(
 
     Raises:
         ValueError: If a slash-delimited class/family field is malformed.
+
     """
     if "/" not in repeat_class_field:
         return repeat_class_field, "Unknown"
@@ -300,8 +300,7 @@ def _parse_repeatmasker_strand_coordinates(
     columns: list[str],
     line: str,
 ) -> tuple[str, int, int]:
-    """
-    Parses RepeatMasker strand and repeat coordinates.
+    """Parses RepeatMasker strand and repeat coordinates.
 
     Args:
         input_path: Input RepeatMasker output path used for error messages.
@@ -313,6 +312,7 @@ def _parse_repeatmasker_strand_coordinates(
 
     Raises:
         ValueError: If the strand token or coordinate tokens are invalid.
+
     """
     strand_token = columns[8]
     if strand_token == "+":
@@ -331,8 +331,7 @@ def _parse_repeatmasker_strand_coordinates(
 
 
 def _parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRow | None:
-    """
-    Parses a single RepeatMasker data row.
+    """Parses a single RepeatMasker data row.
 
     Args:
         input_path: Input RepeatMasker output path used for error messages.
@@ -343,6 +342,7 @@ def _parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRo
 
     Raises:
         ValueError: If the row is malformed or contains invalid sequence-region coordinates.
+
     """
     columns = line.split()
     if columns[-1] == "*":
@@ -400,8 +400,7 @@ def _parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRo
 def parse_repeatmasker_output(
     input_path: Path, consensus_lib_path: Path | None
 ) -> tuple[list[dict], dict[str, Consensus]]:
-    """
-    Parse a RepeatMasker .out file into repeat feature dictionaries and consensus records.
+    """Parse a RepeatMasker .out file into repeat feature dictionaries and consensus records.
 
     If a RepeatMasker consensus library FASTA file is provided, consensus sequences will be
     extracted from the library and associated with features based on their repeat names.
@@ -418,6 +417,7 @@ def parse_repeatmasker_output(
 
     Raises:
         ValueError: If the RepeatMasker output contains malformed rows or invalid coordinate values.
+
     """
     consensus_keys_by_triplet: dict[tuple[str, str, str], str] = {}
     consensuses_by_key: dict[str, Consensus] = {}
@@ -466,14 +466,14 @@ def parse_repeatmasker_output(
 
 
 def _parse_trf_sequence_header(line: str) -> tuple[str, int | None] | None:
-    """
-    Parses a TRF sequence header line.
+    """Parses a TRF sequence header line.
 
     Args:
         line: Raw TRF line without surrounding whitespace.
 
     Returns:
         Sequence region and optional window start, or ``None`` if the line is not a sequence header.
+
     """
     seq_match = TRF_SEQUENCE_RE.match(line)
     if seq_match is None:
@@ -485,14 +485,14 @@ def _parse_trf_sequence_header(line: str) -> tuple[str, int | None] | None:
 
 
 def _parse_trf_parameters(line: str) -> str | None:
-    """
-    Parses a TRF parameters line, returning ``None`` if the line is not a parameters line.
+    """Parses a TRF parameters line, returning ``None`` if the line is not a parameters line.
 
     Args:
         line: Raw TRF line without surrounding whitespace.
 
     Returns:
         TRF parameters string, or ``None`` if the line is not a parameters line.
+
     """
     params_match = TRF_PARAMETERS_RE.match(line)
     return params_match.group("params") if params_match is not None else None
@@ -503,8 +503,7 @@ def _missing_trf_sequence_error(
     skipped_data_block_entries: int,
     skipped_data_block_first_line: int | None,
 ) -> str:
-    """
-    Formats an error for TRF data rows that were not preceded by a Sequence header.
+    """Formats an error for TRF data rows that were not preceded by a Sequence header.
 
     Args:
         input_path: Input path of processed file.
@@ -513,6 +512,7 @@ def _missing_trf_sequence_error(
 
     Returns:
         Formatted error message describing the missing Sequence header and skipped data block.
+
     """
     return (
         f"TRF sequence header not found before data lines in {input_path}: "
@@ -529,8 +529,7 @@ def _parse_trf_data_row(
     window_start: int | None,
     trf_parameters: str | None,
 ) -> TRFParsedRow:
-    """
-    Parses a single TRF data row.
+    """Parses a single TRF data row.
 
     Args:
         input_path: Input TRF output path used for error messages.
@@ -544,6 +543,7 @@ def _parse_trf_data_row(
 
     Raises:
         ValueError: If the row is malformed or contains invalid coordinates.
+
     """
     columns = line.split()
     if len(columns) < 13:
@@ -621,8 +621,7 @@ def _parse_trf_data_row(
 
 
 def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
-    """
-    Parses a TRF .dat file into repeat feature dictionaries and consensus records.
+    """Parses a TRF .dat file into repeat feature dictionaries and consensus records.
 
     Coordinates are converted from TRF's sequence-relative coordinates to genomic
     coordinates if the header provides a window like:
@@ -635,6 +634,7 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
 
     Raises:
         ValueError: If the TRF output contains malformed rows or invalid coordinate values.
+
     """
     features: list[dict] = []
     consensuses_by_key: dict[str, Consensus] = {}
@@ -748,8 +748,7 @@ def create_genomio_json(
     repeatmasker_consensus_lib_path: Path | None = None,
     program_parameters: str | None = None,
 ) -> None:
-    """
-    Creates a GenomIO JSON document from feature identification tool output.
+    """Creates a GenomIO JSON document from feature identification tool output.
 
     Args:
         input_path: Path to the input file containing repeat masking results (e.g. RepeatMasker .out file).
@@ -767,6 +766,7 @@ def create_genomio_json(
 
     Raises:
         ValueError: If an unsupported analysis logic name is provided.
+
     """
     features: list[dict[str, object]] = []
     consensuses_by_key: dict[str, Consensus] = {}
@@ -821,8 +821,7 @@ def create_genomio_json(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """
-    Parse command-line arguments for JSON conversion.
+    """Parse command-line arguments for JSON conversion.
 
     Args:
         argv: Optional list of command-line arguments. If `None`, arguments are
@@ -830,6 +829,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     Returns:
         Parsed command-line arguments.
+
     """
 
     def _add_common_arguments(subparser: ArgumentParser) -> None:
@@ -933,11 +933,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """
-    Run the JSON conversion command-line entry point.
+    """Run the JSON conversion command-line entry point.
 
     Args:
         argv: Optional list of command-line arguments. If `None`, arguments are taken from ``sys.argv``.
+
     """
     args = parse_args(argv)
     try:

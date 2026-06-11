@@ -213,7 +213,7 @@ class SeqCollection:
             logging.info("Skip mitochondrial codon table: no taxon_id to use")
             return
 
-        url = f"https://www.ebi.ac.uk/ena/taxonomy/rest/tax-id/{str(taxon_id)}"
+        url = f"https://www.ebi.ac.uk/ena/taxonomy/rest/tax-id/{taxon_id!s}"
         response = requests.get(url, headers={"Content-Type": "application/json"}, timeout=60)
         response.raise_for_status()
         # In case we have been redirected, check for HTML opening tag

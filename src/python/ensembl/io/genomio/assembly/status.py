@@ -16,8 +16,8 @@
 
 __all__ = [
     "extract_assembly_metadata",
-    "fetch_datasets_reports",
     "fetch_accessions_from_core_dbs",
+    "fetch_datasets_reports",
     "generate_report_tsv",
     "get_assembly_accessions",
     "singularity_image_setter",
@@ -100,8 +100,8 @@ def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str |
 
     Returns:
         `spython.main.client` instance of singularity container image housing `datasets`.
-    """
 
+    """
     # Set singularity cache dir from user defined path or use environment
     if sif_cache_dir and sif_cache_dir.is_dir():
         image_dl_path = sif_cache_dir
@@ -142,10 +142,11 @@ def get_assembly_accessions(src_file: StrPath) -> list[str]:
 
     Raises:
         UnsupportedFormatError: If an accession does not match the INSDC assembly accession format.
+
     """
     query_accessions: list[str] = []
     with Path(src_file).open(mode="r") as fin:
-        for line in fin.readlines():
+        for line in fin:
             line = line.strip()
             match = re.match(r"^GC[AF]_[0-9]{9}\.[1-9][0-9]*$", line)
             if not match:
@@ -165,14 +166,14 @@ def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[s
 
     Returns:
         Dict of core database names (key) and their corresponding INSDC assembly accession (value).
-    """
 
+    """
     core_accn_meta = {}
     database_count = 0
     count_accn_found = 0
 
     with Path(src_file).open("r") as fin:
-        for line in fin.readlines():
+        for line in fin:
             core_db = line.strip()
             database_count += 1
             db_connection_url = server_url.set(database=core_db)
@@ -272,6 +273,7 @@ def extract_assembly_metadata(assembly_reports: dict[str, dict]) -> dict[str, Re
 
     Returns:
         Parsed assembly report meta (source, meta).
+
     """
     parsed_meta = {}
 
@@ -329,6 +331,7 @@ def generate_report_tsv(
         query_type: Type of query (either core databases or accessions).
         output_directory: Directory to store report TSV file.
         outfile_name: Name to give to the output TSV file.
+
     """
     tsv_outfile = Path(output_directory, f"{outfile_name}.tsv")
 

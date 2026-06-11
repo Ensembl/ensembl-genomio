@@ -18,7 +18,7 @@ __all__ = ["StatsGenerator"]
 
 from dataclasses import dataclass
 import json
-from typing import Any, Dict
+from typing import Any
 
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
@@ -37,7 +37,7 @@ class StatsGenerator:
 
     session: Session
 
-    def get_assembly_stats(self) -> Dict[str, Any]:
+    def get_assembly_stats(self) -> dict[str, Any]:
         """Returns a dict of stats about the assembly."""
         stats = {
             "coord_system": self.get_attrib_counts("coord_system_tag"),
@@ -49,7 +49,7 @@ class StatsGenerator:
         return stats
 
     @staticmethod
-    def _fix_scaffolds(stats: Dict[str, Any]) -> None:
+    def _fix_scaffolds(stats: dict[str, Any]) -> None:
         """Renames supercontigs to scaffolds in the provided stats.
 
         If scaffolds are present already, nothing is done.
@@ -63,7 +63,7 @@ class StatsGenerator:
             coords["scaffold"] = coords["supercontig"]
             del coords["supercontig"]
 
-    def get_attrib_counts(self, code: str) -> Dict[str, Any]:
+    def get_attrib_counts(self, code: str) -> dict[str, Any]:
         """Returns a dict of count for each value counted with the attrib_type code provided.
 
         Args:
@@ -82,7 +82,7 @@ class StatsGenerator:
             attributes[attribute_name] = count
         return attributes
 
-    def get_annotation_stats(self) -> Dict[str, Any]:
+    def get_annotation_stats(self) -> dict[str, Any]:
         """Returns a dict of stats about the coordinate systems (number of biotypes, etc.)."""
         stats = {
             "genes": self.get_feature_stats(Gene),
@@ -90,7 +90,7 @@ class StatsGenerator:
         }
         return stats
 
-    def get_biotypes(self, table: Any) -> Dict[str, int]:
+    def get_biotypes(self, table: Any) -> dict[str, int]:
         """Returns a dict of stats about the feature biotypes."""
         # pylint: disable-next=not-callable
         seqs_st = select(table.biotype, func.count()).group_by(table.biotype)
@@ -100,7 +100,7 @@ class StatsGenerator:
             biotypes[biotype] = count
         return biotypes
 
-    def get_feature_stats(self, table: Any) -> Dict[str, int]:
+    def get_feature_stats(self, table: Any) -> dict[str, int]:
         """Returns a dict of stats about a given feature."""
         session = self.session
         totals_st = select(func.count()).select_from(table)  # pylint: disable=not-callable
@@ -123,7 +123,7 @@ class StatsGenerator:
         }
         return feat_stats
 
-    def get_genome_stats(self) -> Dict[str, Any]:
+    def get_genome_stats(self) -> dict[str, Any]:
         """Returns a dict of stats about the assembly and annotation."""
         genome_stats = {
             "assembly_stats": self.get_assembly_stats(),
@@ -132,7 +132,7 @@ class StatsGenerator:
         return genome_stats
 
 
-def dump_genome_stats(url: StrURL) -> Dict[str, Any]:
+def dump_genome_stats(url: StrURL) -> dict[str, Any]:
     """Returns JSON object containing the genome stats (assembly and annotation) of the given core database.
 
     Args:

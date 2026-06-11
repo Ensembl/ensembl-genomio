@@ -20,14 +20,13 @@ import json
 from os import PathLike
 from pathlib import Path
 import shutil
-from typing import List
 
 import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
-def schema_factory(manifest_dir: PathLike, metadata_types: List[str], output_dir: PathLike) -> None:
+def schema_factory(manifest_dir: PathLike, metadata_types: list[str], output_dir: PathLike) -> None:
     """Generates one JSON file per metadata type inside `manifest`, including "manifest.json" itself.
 
     Each JSON file will have the file name of the metadata type, e.g. "seq_region.json".

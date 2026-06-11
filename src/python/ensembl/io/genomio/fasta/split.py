@@ -46,8 +46,7 @@ def _get_fasta_basename(fasta: Path) -> str:
 
 
 class OutputWriter:  # pylint: disable=too-many-instance-attributes
-    """
-    Write split FASTA outputs and (optionally) an AGP file.
+    """Write split FASTA outputs and (optionally) an AGP file.
 
     The writer manages:
     - output directory creation/cleanup (lazy, per-directory),
@@ -62,6 +61,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         - ``max_dirs_per_directory``: how directory indices are expanded into a multi-level path
             (base-N style).
         - ``unique_file_names``: whether to include directory index in filenames.
+
     """
 
     def __init__(
@@ -99,6 +99,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
 
         Returns:
             A Path under ``out_dir`` into which output files are written.
+
         """
         parts = []
         max_dirs = self.max_dirs_per_directory
@@ -123,6 +124,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
             (file_index, dir_index) where:
             - file_index is 1-based within the directory, and
             - dir_index is 1-based across directories.
+
         """
         max_files = self.max_files_per_directory
         if max_files is None:
@@ -178,8 +180,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         agp_end: int | None = None,
         agp_part_nr: int | None = None,
     ) -> None:
-        """
-        Writes a SeqRecord to the current output file and update counters.
+        """Writes a SeqRecord to the current output file and update counters.
 
         If AGP writing is enabled, also writes a corresponding AGP component line describing how the
         written record maps back to the original input sequence.
@@ -198,6 +199,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         Raises:
             AssertionError: If the record has no sequence, or if ``write_agp`` is True but any of the
                 AGP arguments are missing.
+
         """
         SeqIO.write(record, self._fh, "fasta")
         sequence = record.seq
@@ -274,8 +276,7 @@ def split_fasta(
     max_files_per_directory: int | None = None,
     max_dirs_per_directory: int | None = None,
 ) -> None:
-    """
-    Reads an input FASTA (optionally gzipped) and writes one or more FASTA files to an output directory.
+    """Reads an input FASTA (optionally gzipped) and writes one or more FASTA files to an output directory.
 
     The number of output files is determined by:
     - maximum number of records per file (``max_seqs_per_file``), and/or
@@ -313,8 +314,8 @@ def split_fasta(
         max_dirs_per_directory: Maximum number of subdirectories per directory level when expanding
             directory indices into a multi-level path (base-N style). If None, a single directory
             level is used.
-    """
 
+    """
     out_dir = out_dir if out_dir is not None else fasta_file.parent
 
     # Do nothing if file size is 0
@@ -395,8 +396,7 @@ def split_fasta(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """
-    Parses command-line arguments for the FASTA splitting CLI.
+    """Parses command-line arguments for the FASTA splitting CLI.
 
     Args:
         argv: Optional argument vector (excluding the program name). If None, arguments are read from
@@ -407,6 +407,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     Raises:
         ValueError: If ``--min-chunk-length`` is provided without ``--max-seq-length-per-file``.
+
     """
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
