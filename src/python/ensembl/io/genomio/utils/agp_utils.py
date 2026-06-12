@@ -23,6 +23,9 @@ from pathlib import Path
 from ensembl.utils.archive import open_gz_file
 
 
+MIN_AGP_COLUMNS = 9
+SUPPORTED_COMPONENT_TYPES = {"W"}
+
 @dataclass(frozen=True)
 class AgpEntry:
     """Single AGP component entry used for coordinate liftover."""
@@ -38,7 +41,7 @@ class AgpEntry:
 
 
 def build_component_index(agp_entries: dict[str, list[AgpEntry]]) -> dict[str, list[AgpEntry]]:
-    """Builds an index of component IDs to AGP entries.
+    """Build an index of component IDs to AGP entries.
 
     Args:
         agp_entries: Mapping of object IDs to lists of AGP entries.
@@ -61,7 +64,7 @@ def build_component_index(agp_entries: dict[str, list[AgpEntry]]) -> dict[str, l
 
 
 def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tuple[str, int, int]:
-    """Lifts component coordinates into object coordinates.
+    """Lift component coordinates into object coordinates.
 
     Args:
         part: AGP entry describing the component span.
@@ -104,7 +107,7 @@ def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tup
 
 
 def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
-    """Parses an AGP v2.x file into per-object component entries.
+    """Parse an AGP v2.x file into per-object component entries.
 
     Args:
         agp_file: Path to the input AGP file (optionally gzipped).
@@ -122,16 +125,18 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
     errors: list[str] = []
 
     with open_gz_file(agp_file) as fh:
-        for line_nr, line in enumerate(fh, start=1):
-            line = line.strip()
+        for line_nr, raw_line in enumerate(fh, start=1):
+            line = raw_line.strip()
             if not line or line.startswith("#"):
                 continue
             cols = line.split("\t")
-            if len(cols) < 9:
-                errors.append(f"Line {line_nr}: Invalid AGP line (expected >= 9 columns): {line}")
+            if len(cols) < MIN_AGP_COLUMNS:
+                errors.append(
+                    f"Line {line_nr}: Invalid AGP line (expected >= {MIN_AGP_COLUMNS} columns): {line}"
+                )
                 continue
 
-            if cols[4] != "W":
+            if cols[4] not in SUPPORTED_COMPONENT_TYPES:
                 errors.append(f"Line {line_nr}: Unsupported AGP component type '{cols[4]}' in line: {line}")
                 continue
 

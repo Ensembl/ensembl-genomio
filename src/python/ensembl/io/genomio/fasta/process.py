@@ -57,11 +57,13 @@ def prep_fasta_data(
     fasta_outfile: PathLike,
     peptide_mode: bool = False,
 ) -> None:
-    """Args:
-    fasta_file: Input FASTA file - DNA / Protein
-    genbank_infile: Input GenBank GBFF file (Optional)
-    fasta_outfile: Output FASTA sequence file.
-    peptide_mode: Process proteins instead of DNA.
+    """Prepare FASTA data.
+
+    Args:
+        fasta_infile: Input FASTA file - DNA / Protein
+        genbank_infile: Input GenBank GBFF file (Optional)
+        fasta_outfile: Output FASTA sequence file.
+        peptide_mode: Process proteins instead of DNA.
 
     """
     file_path = Path(fasta_infile)
@@ -90,7 +92,7 @@ def prep_fasta_data(
 
 
 def main() -> None:
-    """Module's entry-point."""
+    """Execute the main function."""
     parser = ArgumentParser(description="Clean-up a given FASTA file to remove unwanted elements.")
     parser.add_argument_src_path("--fasta_infile", required=True, help="Input FASTA file - DNA / Protein")
     parser.add_argument_src_path("--genbank_infile", help="Input GenBank GBFF file")

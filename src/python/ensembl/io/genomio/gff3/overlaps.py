@@ -92,8 +92,10 @@ def identify_feature_overlaps(gff_in: Path, output_file: Path, isolate_feature: 
 
 
 def scan_tree(feature_intervals: list) -> set:
-    """Construct an interval tree using supplied genomic intervals, check all elements on the tree against
-    itself and return any that hit 2 or more intervals (i.e. itself + 1 other).
+    """Construct an interval tree using supplied genomic intervals.
+
+    Checks all elements on the tree against itself and return any that hit 2 or more intervals (i.e.
+    itself + 1 other).
 
     Args:
         feature_intervals: Genome features to examine for coordinate (start/end) overlaps.
@@ -183,7 +185,7 @@ def get_intervals(record: SeqRecord, genes_dict: dict, seq_dict: dict, seq_name:
 
 
 def main() -> None:
-    """Module entry-point."""
+    """Execute the main function."""
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     # Create parser with common arguments to be used by both subparsers

@@ -91,6 +91,7 @@ def establish_ftp(ftp_conn: FTP, ftp_url: str, accession: str) -> FTP:
 
 def md5_files(dl_dir: Path, md5_path: Path | None = None, md5_filename: str = "md5checksums.txt") -> bool:
     """Check all files checksums with the sums listed in a checksum file, if available.
+
     Return False if there is no checksum file, or a file is missing, or has a wrong checksum.
 
     Args:
@@ -182,7 +183,7 @@ def download_files(ftp_connection: FTP, accession: str, dl_dir: Path, max_redo: 
 def _download_file(
     ftp_connection: FTP, ftp_file: str, md5_sums: dict[str, str], dl_dir: Path, max_redo: int = 0
 ) -> None:
-    """Downloads individual files from FTP server.
+    """Download individual files from FTP server.
 
     Args:
         ftp_connection: Established connection FTP object.
@@ -239,7 +240,7 @@ def _download_file(
 
 
 def get_files_selection(dl_dir: Path) -> dict[str, str]:
-    """Returns a dictionary with the relevant downloaded files classified.
+    """Return a dictionary with the relevant downloaded files classified.
 
     Args:
         dl_dir: Local path to downloaded FTP files.
@@ -264,7 +265,7 @@ def get_files_selection(dl_dir: Path) -> dict[str, str]:
 
 
 def get_root_name(dl_dir: Path) -> str:
-    """Returns the root name, i.e. shared files basename prefix, using the assembly report file as base.
+    """Return the root name, i.e. shared files basename prefix, using the assembly report file as base.
 
     Args:
         dl_dir: Path location of downloaded FTP files.
@@ -285,8 +286,7 @@ def retrieve_assembly_data(
     max_increment: int = 0,
     max_redo: int = 3,
 ) -> None:
-    """Establishes an FTP connection and downloads a predefined subset of assembly data files from either
-    INSDC or RefSeq.
+    """Download a predefined subset of assembly data files from either INSDC or RefSeq via FTP.
 
     Args:
         accession: Genome assembly accession.
@@ -330,7 +330,7 @@ def retrieve_assembly_data(
 
 
 def main() -> None:
-    """Module's entry-point."""
+    """Execute the main script."""
     parser = ArgumentParser(description="Download an assembly data files from INSDC or RefSeq.")
     parser.add_argument("--accession", required=True, help="Genome assembly accession")
     parser.add_argument_dst_path(

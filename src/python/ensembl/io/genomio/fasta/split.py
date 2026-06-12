@@ -32,16 +32,17 @@ from ensembl.io.genomio.utils.chunk_utils import seq_description_without_id
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
-from typing import TYPE_CHECKING
+from typing import cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from Bio.Seq import Seq
     from io import TextIOWrapper
 
 _NUMERIC_DIR_RE = re.compile(r"^[1-9]\d*$")
 
 
 def _get_fasta_basename(fasta: Path) -> str:
-    """Returns base name of file stripped of suffixes."""
+    """Return the file base name stripped of suffixes."""
     filename = fasta.name
     filename = filename.removesuffix(".gz")
     return filename.rsplit(".", 1)[0]
@@ -135,7 +136,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         return (adjusted_count % max_files + 1, adjusted_count // max_files + 1)
 
     def _get_path_for_next_file(self) -> Path:
-        """Computes path for the next output file."""
+        """Compute the path for the next output file."""
         self.file_count += 1
         file_index, dir_index = self._get_file_and_dir_index()
         subdir_path = self._get_subdir_path(dir_index)
@@ -148,7 +149,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         return subdir_path / file_name
 
     def _create_output_file(self) -> None:
-        """Creates a new output FASTA file and updates internal state accordingly."""
+        """Create a new output FASTA file and update internal state accordingly."""
         path = self._get_path_for_next_file()
         try:
             self._fh = path.open("w")
@@ -159,8 +160,15 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         self.file_len = 0
 
     def _create_agp_file(self) -> None:
-        """Creates the AGP file for recording sequence chunking."""
-        assert self.agp_file is not None
+        """Create the AGP file for recording sequence chunking.
+
+        Raises:
+            ValueError: If ``write_agp`` is True but AGP file path is not set.
+            RuntimeError: If the AGP file handle is not initialized.
+
+        """
+        if self.agp_file is None:
+            raise ValueError("AGP file path is not set; cannot create AGP file")
         try:
             self._agp_fh = self.agp_file.open("w")
         except OSError as e:
@@ -169,7 +177,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         logging.info(f"Created AGP file '{self.agp_file}'")
 
     def open_new_file(self) -> None:
-        """Closes current file (if any) and opens a new output file."""
+        """Close the current file (if any) and open a new output file."""
         self._fh.close()
         self._create_output_file()
 
@@ -182,7 +190,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         agp_end: int | None = None,
         agp_part_nr: int | None = None,
     ) -> None:
-        """Writes a SeqRecord to the current output file and update counters.
+        """Write a SeqRecord to the current output file and update counters.
 
         If AGP writing is enabled, also writes a corresponding AGP component line describing how the
         written record maps back to the original input sequence.
@@ -199,30 +207,34 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
                 ``write_agp`` is True.
 
         Raises:
-            AssertionError: If the record has no sequence, or if ``write_agp`` is True but any of the
-                AGP arguments are missing.
+            AssertionError: If ``write_agp`` is True but any of the AGP arguments are missing.
+            RuntimeError: If the AGP file handle is not initialized when attempting to write an AGP line.
 
         """
         SeqIO.write(record, self._fh, "fasta")
-        sequence = record.seq
-        assert sequence is not None, "FASTA records must have a sequence"
+        sequence = cast("Seq", record.seq)
         self.record_count += 1
         self.file_len += len(sequence)
 
         if self.write_agp:
-            assert agp_object_id is not None, "AGP object ID must be provided if writing AGP entries"
-            assert agp_start is not None, "AGP start must be provided if writing AGP entries"
-            assert agp_end is not None, "AGP end must be provided if writing AGP entries"
-            assert agp_part_nr is not None, "AGP part no. must be provided if writing AGP entries"
+            if agp_object_id is None:
+                raise AssertionError("AGP object ID must be provided if writing AGP entries")
+            if agp_start is None:
+                raise AssertionError("AGP start must be provided if writing AGP entries")
+            if agp_end is None:
+                raise AssertionError("AGP end must be provided if writing AGP entries")
+            if agp_part_nr is None:
+                raise AssertionError("AGP part no. must be provided if writing AGP entries")
             line = (
                 f"{agp_object_id}\t{agp_start}\t{agp_end}\t{agp_part_nr}\tW\t"
                 f"{record.id}\t1\t{len(sequence)}\t+\n"
             )
-            assert self._agp_fh is not None
+            if self._agp_fh is None:
+                raise RuntimeError("AGP file handle is not initialized")
             self._agp_fh.write(line)
 
     def close(self) -> None:
-        """Closes any open FASTA and AGP file handles."""
+        """Close any open FASTA and AGP file handles."""
         self._fh.close()
         if self._agp_fh:
             self._agp_fh.close()
@@ -230,7 +242,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
 
 
 def _check_contents_deletable(directory: Path, output_file_re: re.Pattern[str]) -> None:
-    """Checks that a directory contains only expected output files (recursively)."""
+    """Check that a directory contains only expected output files (recursively)."""
     for p in directory.rglob("*"):
         if not p.is_dir() and not output_file_re.match(p.name):
             msg = (
@@ -241,7 +253,7 @@ def _check_contents_deletable(directory: Path, output_file_re: re.Pattern[str]) 
 
 
 def _clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
-    """Checks for existing output and removes if no unexpected files encountered."""
+    """Check for existing output and removes if no unexpected files encountered."""
     logging.info(f"Cleaning outputs from previous runs under '{out_dir}'")
     if not out_dir.exists():
         return
@@ -263,7 +275,7 @@ def _clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
         logging.info(f"Deleted existing AGP file '{agp_path}'.")
 
 
-def split_fasta(
+def split_fasta(    # noqa: PLR0912, PLR0913
     fasta_file: Path,
     out_dir: Path | None = None,
     write_agp: bool = False,
@@ -277,7 +289,7 @@ def split_fasta(
     max_files_per_directory: int | None = None,
     max_dirs_per_directory: int | None = None,
 ) -> None:
-    """Reads an input FASTA (optionally gzipped) and writes one or more FASTA files to an output directory.
+    """Read an input FASTA (optionally gzipped) and write one or more FASTA files to an output directory.
 
     The number of output files is determined by:
     - maximum number of records per file (``max_seqs_per_file``), and/or
@@ -397,7 +409,7 @@ def split_fasta(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parses command-line arguments for the FASTA splitting CLI.
+    """Parse command-line arguments for the FASTA splitting CLI.
 
     Args:
         argv: Optional argument vector (excluding the program name). If None, arguments are read from
@@ -502,7 +514,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Entry point for the FASTA splitting CLI."""
+    """Execute the FASTA splitting function."""
     args = parse_args(argv)
     try:
         split_fasta(

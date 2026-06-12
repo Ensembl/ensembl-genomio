@@ -97,7 +97,7 @@ class FastaRecordCache:
 
 
 def _parse_fasta_headers(file_path: StrPath) -> Iterator[tuple[str, str]]:
-    """Iterates over FASTA headers, yielding (record_id, description) tuples.
+    """Iterate over FASTA headers, yielding (record_id, description) tuples.
 
     Yields:
         Tuples of (record_id, description_without_id).
@@ -112,7 +112,7 @@ def _build_index(
     chunk_re: re.Pattern[str],
     fasta_paths: Iterable[Path],
 ) -> tuple[dict[str, RecordLocation], dict[str, int], dict[str, list[tuple[int, str]]]]:
-    """Builds lightweight indices from FASTA headers across the manifest files.
+    """Build lightweight indices from FASTA headers across the manifest files.
 
     The function scans each FASTA file and records:
     - ``locations``: mapping of every record ID to its source file path and description.
@@ -167,7 +167,7 @@ def _agp_component_seq(
     orientation: str,
     allow_revcomp: bool,
 ) -> Seq:
-    """Extracts the component subsequence described by AGP coordinates.
+    """Extract the component subsequence described by AGP coordinates.
 
     Args:
         component_record: The component sequence record (AGP ``component_id``).
@@ -209,7 +209,7 @@ def _records_from_agp(
     cache: FastaRecordCache,
     allow_revcomp: bool,
 ) -> Iterator[SeqRecord]:
-    """Yields recombined records using AGP-driven reconstruction.
+    """Yield recombined records using AGP-driven reconstruction.
 
     For each AGP object, components are ordered by (record_start, part_number) and concatenated.
     Contiguity is enforced on the AGP object coordinates.
@@ -277,7 +277,7 @@ def _records_from_headers(
     chunks: dict[str, list[tuple[int, str]]],
     cache: FastaRecordCache,
 ) -> Iterator[SeqRecord]:
-    """Yields recombined records using header-driven reconstruction.
+    """Yield recombined records using header-driven reconstruction.
 
     If a base ID has chunk records, chunk sequences are concatenated in increasing start order and
     contiguity is enforced (each chunk start must equal the previous end). If a base ID has no
@@ -356,7 +356,7 @@ def recombine_fasta(
     agp_file: Path | None = None,
     allow_revcomp: bool = False,
 ) -> None:
-    """Recombines split/chunked FASTA files listed in a manifest into a single FASTA.
+    """Recombine split/chunked FASTA files listed in a manifest into a single FASTA.
 
     Inputs may be plain FASTA or gzipped FASTA. Reconstruction uses one of two modes:
 
@@ -393,7 +393,7 @@ def recombine_fasta(
         record_iter = _records_from_headers(locations, first_seen, chunks, cache)
 
     out_fasta.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_fasta, "w") as out_fh:
+    with out_fasta.open("w") as out_fh:
         n = 0
         for rec in record_iter:
             SeqIO.write(rec, out_fh, "fasta")
@@ -447,7 +447,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Entry point for the FASTA recombination CLI."""
+    """Execute the FASTA recombination function."""
     args = parse_args(argv)
     chunk_re = validate_regex(args.chunk_id_regex)
     try:

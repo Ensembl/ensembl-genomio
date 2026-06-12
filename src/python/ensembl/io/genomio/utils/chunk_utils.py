@@ -25,7 +25,7 @@ from ensembl.utils import StrPath
 
 
 def get_paths_from_manifest(manifest: StrPath) -> list[Path]:
-    """Parses a manifest file and return a list of validated input paths.
+    """Parse a manifest file and return a list of validated input paths.
 
     Args:
         manifest: Path to a manifest file containing one input path per line.
@@ -49,8 +49,8 @@ def get_paths_from_manifest(manifest: StrPath) -> list[Path]:
     paths: list[Path] = []
 
     with manifest.open() as fh:
-        for line_nr, line in enumerate(fh, start=1):
-            line = line.strip()
+        for line_nr, raw_line in enumerate(fh, start=1):
+            line = raw_line.strip()
 
             if not line or line.startswith("#"):
                 continue
@@ -71,7 +71,7 @@ def get_paths_from_manifest(manifest: StrPath) -> list[Path]:
 
 
 def seq_description_without_id(record: SeqRecord) -> str:
-    """Returns the FASTA record description with the record ID removed.
+    """Return the FASTA record description with the record ID removed.
 
     Args:
         record: A ``SeqRecord`` whose ``description`` may start with ``id``.
@@ -88,7 +88,7 @@ def seq_description_without_id(record: SeqRecord) -> str:
 
 
 def validate_regex(chunk_regex: str) -> re.Pattern[str]:
-    """Compiles and validates a chunk-id regex.
+    """Compile and validate a chunk-id regex.
 
     The compiled regex must define named capture groups ``base`` and ``start``.
 

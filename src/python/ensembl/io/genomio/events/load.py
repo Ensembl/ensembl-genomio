@@ -46,6 +46,7 @@ class IdEvent:
     release_date: str
 
     def __str__(self) -> str:
+        """Return a string representation of this event."""
         fields = [self.from_id, self.to_id, self.event, self.release, self.release_date]
         return "\t".join(fields)
 
@@ -76,6 +77,7 @@ class EventCollection:
 
     def load_events(self, input_file: PathLike) -> None:
         """Load events from input file.
+
         Expected tab file columns: old_id, new_id, event_name, release, release_date.
 
         """
@@ -133,7 +135,7 @@ class EventCollection:
                     self.events.append(event)
 
     def _parse_gene_diff_event(self, event_string: str) -> Generator[tuple[str, str, str], None, None]:
-        """Gets all the pairs of IDs from an event string from gene diff."""
+        """Get all the pairs of IDs from an event string from gene diff."""
         event_symbol = {
             "~": "identical",
             "=+": "iso_gain",
@@ -147,7 +149,7 @@ class EventCollection:
         event_sep = r"|".join([symbol.replace(r"+", r"\+") for symbol in event_symbol])
         splitter = f"({event_sep})"
         parts = re.split(splitter, event_string)
-        if len(parts) != 3:
+        if len(parts) != 3: # noqa: PLR2004
             logging.warning(f"Wrong partition: from '{event_string}' to '{parts}'")
             return
         [from_ids, sep, to_ids] = parts
@@ -159,7 +161,7 @@ class EventCollection:
                 yield (from_id, to_id, event_name)
 
     def remap_to_ids(self, map_dict: dict[str, str]) -> None:
-        """Using a mapping dict, remap the to_id of all events.
+        """Remap the ``to_id`` of all events.
 
         Raises:
             ValueError: If there are events without map information.
@@ -188,6 +190,7 @@ class EventCollection:
 
     def write_events_to_db(self, session: Session, update: bool = False) -> None:
         """Insert the events in the core database.
+
         A mapping session is created for each different 'release'.
 
         """
@@ -231,7 +234,7 @@ class EventCollection:
 
 
 def main() -> None:
-    """Main entrypoint."""
+    """Execute the main script."""
     parser = ArgumentParser(description="Load the events in the input file into a core database.")
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path(

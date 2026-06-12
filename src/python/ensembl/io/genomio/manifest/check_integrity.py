@@ -12,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Compare the genomic data in a DNA FASTA file, seq_region JSON, gene models GFF3 and peptide FASTA
-to ensure their contents are in sync.
-"""
+"""Ensure contents of DNA FASTA file, seq_region JSON, gene models GFF3 and peptide FASTA are in sync."""
 
 __all__ = ["IntegrityTool"]
 
@@ -53,6 +51,7 @@ class IntegrityTool:
 
     def check_integrity(self) -> None:
         """Load files listed in the manifest.json and check the integrity.
+
         Check if the files are correct by verifying the MD5 hash.
         Check if translation, functional annotation and sequence region ids
         and lengths are consistent with the information in gff.
@@ -177,18 +176,9 @@ class IntegrityTool:
             List of message errors of sequence IDs found only in one of the lists provided.
 
         """
-        only1 = []
-        only2 = []
-        common = []
-
-        for item_id in list1:
-            if item_id in list2:
-                common.append(item_id)
-            else:
-                only1.append(item_id)
-        for item_id in list2:
-            if item_id not in common:
-                only2.append(item_id)
+        common = [item_id for item_id in list1 if item_id in list2]
+        only1 = [item_id for item_id in list1 if item_id not in list2]
+        only2 = [item_id for item_id in list2 if item_id not in list1]
 
         errors = []
         if common:
@@ -212,18 +202,18 @@ class IntegrityTool:
         special_diff: bool = False,
     ) -> list[str]:
         """Check the difference in ids and length between list1 and list2.
-            There are a few special cases here where we allow a certain asymmetry
-            by changing the values of the arguments.
+
+        There are a few special cases here where we allow a certain asymmetry by changing the values
+        of the arguments.
 
         Args:
             list1: dict containing length and id of the sequence from fasta files.
             list2: dict containing length and id in the retrieved from the gff.
             name:  string
-
-        allowed_len_diff : None to to not accept differences in length between list1 and list2.
-            The value can be changed based on how much difference in sequence length we are wanting to accept.
-
-        special_diff: set as False when no special length difference is expected between the lists.
+            allowed_len_diff : None to to not accept differences in length between list1 and list2.
+                    The value can be changed based on how much difference in sequence length we are
+                    wanting to accept.
+            special_diff: set as False when no special length difference is expected between the lists.
                     This can be changed if we want to report common sequences with 1 BP difference.
 
         Returns:
@@ -287,15 +277,14 @@ class IntegrityTool:
         name: str,
         circular: dict[str, Any] | None = None,
     ) -> None:
-        """Check the integrity of seq_region.json file by comparing the length of the sequence
-            to fasta files and the gff.
+        """Check the integrity of seq_region.json file.
 
-            Seq_region file is in json format containing the metadata of the sequence.
-            It contains sequence id, length, location and the synonyms for the sequence name
-            from different sources.
+        Seq_region file is in JSON format containing the metadata of the sequence. It contains
+        sequence id, length, location and the synonyms for the sequence name from different sources.
+        Its integrity is checked by comparing the length of the sequence to FASTA files and the GFF.
 
         Args:
-            seqs: Sequence name and length retrieved from seq_region.json file.
+            seqrs: Sequence name and length retrieved from seq_region.json file.
             feats: Sequence name and length retrieved from the fasta and gff file.
             name: Name of the check to show in the logs.
             circular: Whether any sequence is circular.
@@ -334,7 +323,7 @@ class IntegrityTool:
         """Give the intersection and other comparison between two groups of sequences.
 
         Args:
-            seqs: Sequence name and length retrieved from seq_region.json file.
+            seqrs: Sequence name and length retrieved from seq_region.json file.
             feats: Sequence name and length retrieved from the fasta and gff file.
             circular: Whether any sequence is circular.
 
@@ -354,11 +343,11 @@ class IntegrityTool:
             "diff_circular": [],
         }
 
-        for seq_id in seqrs:
+        for seq_id, value in seqrs.items():
             if seq_id in feats:
                 # Check that feature is within the seq_region length
-                if feats[seq_id] > seqrs[seq_id]:
-                    diff_str = f"{seq_id}: {seqrs[seq_id]} vs {feats[seq_id]}"
+                if feats[seq_id] > value:
+                    diff_str = f"{seq_id}: {value} vs {feats[seq_id]}"
                     if circular and circular.get(seq_id, False):
                         comp["diff_circular"].append(diff_str)
                     else:
@@ -381,7 +370,7 @@ class IntegrityTool:
 
 
 def main() -> None:
-    """Main entrypoint."""
+    """Execute the main function."""
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path("--manifest_file", required=True, help="Manifest file for the data to check")
     parser.add_argument(

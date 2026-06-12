@@ -82,7 +82,7 @@ def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parse command-line arguments.
+    """Parse the command-line arguments.
 
     Args:
         argv: Optional command-line arguments. If `None`, argparse reads from ``sys.argv``.

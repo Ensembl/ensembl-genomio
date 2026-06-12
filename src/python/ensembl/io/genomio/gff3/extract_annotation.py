@@ -26,7 +26,7 @@ from os import PathLike
 import logging
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, ClassVar
 
 from ensembl.io.genomio.utils.json_utils import print_json
 from .features import GFFSeqFeature
@@ -54,7 +54,7 @@ class AnnotationError(Exception):
 class FunctionalAnnotations:
     """List of annotations extracted from a GFF3 file."""
 
-    ignored_xrefs = {"go", "interpro", "uniprot"}
+    ignored_xrefs: ClassVar[set[str]] = {"go", "interpro", "uniprot"}
 
     def __init__(self, provider_name: str = "") -> None:
         self.annotations: list[Annotation] = []
@@ -112,7 +112,7 @@ class FunctionalAnnotations:
         self.parents[parent_type][child_id] = parent_id
 
     def get_parent(self, parent_type: str, child_id: str) -> str:
-        """Returns the parent ID of a given child for a given parent biotype."""
+        """Return the parent ID of a given child for a given parent biotype."""
         try:
             parents = self.parents[parent_type]
         except KeyError as err:
@@ -163,7 +163,7 @@ class FunctionalAnnotations:
         Args:
             feature: The GFFSeqFeature to add to the list.
             feat_type: Feature type of the feature to store (e.g. gene, transcript, translation).
-            all_parent_ids: All parent IDs to remove from non-informative descriptions.
+            parent_ids: All parent IDs to remove from non-informative descriptions.
 
         """
         if parent_ids is None:
@@ -205,9 +205,11 @@ class FunctionalAnnotations:
         return feature_object
 
     def transfer_descriptions(self) -> None:
-        """Transfers the feature descriptions in 2 steps:
-        - from translations to transcripts (if the transcript description is empty)
-        - from transcripts to genes (same case).
+        """Transfer the feature descriptions.
+
+        Transfer occurs in 2 steps:
+            - from translations to transcripts (if the transcript description is empty)
+            - from transcripts to genes (same case).
 
         """
         self._transfer_description_up("translation")
@@ -238,13 +240,13 @@ class FunctionalAnnotations:
 
     @staticmethod
     def _clean_description(description: str) -> str:
-        """Returns the description without "transcript variant" information."""
+        """Return the description without "transcript variant" information."""
         variant_re = re.compile(r", transcript variant [A-Z][0-9]+$", re.IGNORECASE)
         return re.sub(variant_re, "", description)
 
     @staticmethod
     def product_is_informative(product: str, feat_ids: list[str] | None = None) -> bool:
-        """Returns True if the product name contains informative words, False otherwise.
+        """Return `True` if the product name contains informative words, `False` otherwise.
 
         It is considered uninformative when the description contains words such as "hypothetical" or
         or "putative". If feature IDs are provided, consider it uninformative as well (we do not want

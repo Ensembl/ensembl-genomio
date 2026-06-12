@@ -26,11 +26,14 @@ from Bio.SeqRecord import SeqRecord
 import pytest
 from pytest import TempPathFactory
 
-from ensembl.io.genomio.genbank.extract_data import FormattedFilesGenerator, GBParseError, UnsupportedData
-
+from ensembl.io.genomio.genbank.extract_data import (
+    FormattedFilesGenerator,
+    GBParseError,
+    UnsupportedDataError,
+)
 
 class TestFormattedFilesGenerator:
-    """Test if all the internal methods of `FormattedFilesGenerator` are giving the correct output"""
+    """Test if all the internal methods of `FormattedFilesGenerator` are giving the correct output."""
 
     prod_name = "TEST_prod"
     gb_file = "input_file.gb"
@@ -227,7 +230,7 @@ class TestFormattedFilesGenerator:
     ) -> None:
         """Test that organelle location if not identifies throws an error"""
         # An organelle not in the dictionary
-        with pytest.raises(UnsupportedData, match=f"Unknown organelle: {organelle}"):
+        with pytest.raises(UnsupportedDataError, match=f"Unknown organelle: {organelle}"):
             # pylint: disable=protected-access
             formatted_files_generator._prepare_location(organelle)
 

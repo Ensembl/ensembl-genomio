@@ -37,6 +37,9 @@ __all__ = [
     "parse_trf_output",
 ]
 
+
+MIN_TRF_COLUMNS = 13
+
 REPEATMASKER_MAPPINGS = [
     (r"^Low_Comp.*$", "Low complexity regions"),
     (r"^LINE.*$", "Type I Transposons/LINE"),
@@ -76,7 +79,7 @@ class Consensus:
     seq: str
 
     def sha256_key(self) -> str:
-        """Returns a normalized SHA256 digest for this consensus record.
+        """Return a normalized SHA256 digest for this consensus record.
 
         The digest is computed from the consensus name, repeat class, repeat type,
         and normalized sequence content.
@@ -110,7 +113,7 @@ class TRFParsedRow:
 
 
 def _parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_line: str, path: Path) -> T:
-    """Parses a field from tool output into the specified class type.
+    """Parse a field from tool output into the specified class type.
 
     Args:
         parser: A callable that takes a string and returns a value of type T.
@@ -133,14 +136,14 @@ def _parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_li
 
 
 def _format_parse_errors(parser_name: str, input_path: Path, errors: list[str]) -> str:
-    """Formats multiple parser errors into a single exception message."""
+    """Format multiple parser errors into a single exception message."""
     return f"Found {len(errors)} errors while parsing {parser_name} in {input_path}:\n" + "\n".join(
         f"- {error}" for error in errors
     )
 
 
 def _file_last_modified_time(file_path: Path) -> str:
-    """Returns the last modified time of the given file."""
+    """Return the last modified time of the given file."""
     return (
         datetime.fromtimestamp(
             file_path.stat().st_mtime,
@@ -152,7 +155,7 @@ def _file_last_modified_time(file_path: Path) -> str:
 
 
 def _map_repeatmasker_repeat_consensus_type(repeat_class: str) -> str:
-    """Maps a raw RepeatMasker repeat class to a GenomIO repeat category.
+    """Map a raw RepeatMasker repeat class to a GenomIO repeat category.
 
     Args:
         repeat_class: Raw repeat class string extracted from RepeatMasker output.
@@ -176,7 +179,7 @@ def _has_valid_parsed_coordinates(
     repeat_end: int,
     line: str,
 ) -> bool:
-    """Validates parsed coordinate values for a feature.
+    """Validate parsed coordinate values for a feature.
 
     Args:
         input_path: Input file path used.
@@ -224,7 +227,7 @@ def _has_valid_parsed_coordinates(
 def _parse_repeatmasker_consensus_library(
     consensus_lib_path: Path,
 ) -> tuple[dict[tuple[str, str, str], str], dict[str, Consensus]]:
-    """Parses a RepeatMasker consensus library FASTA file into a dictionary of Consensus records.
+    """Parse a RepeatMasker consensus library FASTA file into a dictionary of Consensus records.
 
     The parser expects FASTA headers in the format:
         >consensus_name#repeat_class/repeat_type
@@ -270,7 +273,7 @@ def _parse_repeatmasker_repeat_class_field(
     repeat_class_field: str,
     line: str,
 ) -> tuple[str, str]:
-    """Parses a RepeatMasker repeat class/family field into class and raw repeat type.
+    """Parse a RepeatMasker repeat class/family field into class and raw repeat type.
 
     Args:
         input_path: Input RepeatMasker output path used for error messages.
@@ -300,7 +303,7 @@ def _parse_repeatmasker_strand_coordinates(
     columns: list[str],
     line: str,
 ) -> tuple[str, int, int]:
-    """Parses RepeatMasker strand and repeat coordinates.
+    """Parse RepeatMasker strand and repeat coordinates.
 
     Args:
         input_path: Input RepeatMasker output path used for error messages.
@@ -315,13 +318,13 @@ def _parse_repeatmasker_strand_coordinates(
 
     """
     strand_token = columns[8]
-    if strand_token == "+":
+    if strand_token == "+": # noqa: S105
         return (
             "+",
             _parse_token(int, columns[11], "repeat_start", line, input_path),
             _parse_token(int, columns[12], "repeat_end", line, input_path),
         )
-    if strand_token == "C":
+    if strand_token == "C": # noqa: S105
         return (
             "-",
             _parse_token(int, columns[13], "repeat_start", line, input_path),
@@ -331,7 +334,7 @@ def _parse_repeatmasker_strand_coordinates(
 
 
 def _parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRow | None:
-    """Parses a single RepeatMasker data row.
+    """Parse a single RepeatMasker data row.
 
     Args:
         input_path: Input RepeatMasker output path used for error messages.
@@ -348,7 +351,7 @@ def _parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRo
     if columns[-1] == "*":
         columns.pop()
 
-    if len(columns) < 14 or len(columns) > 15:
+    if len(columns) < 14 or len(columns) > 15:  # noqa: PLR2004
         raise ValueError(f"Expected 14 or 15 columns in {input_path}, got {len(columns)}: line={line!r}")
 
     score = _parse_token(float, columns[0], "score", line, input_path)
@@ -466,7 +469,7 @@ def parse_repeatmasker_output(
 
 
 def _parse_trf_sequence_header(line: str) -> tuple[str, int | None] | None:
-    """Parses a TRF sequence header line.
+    """Parse a TRF sequence header line.
 
     Args:
         line: Raw TRF line without surrounding whitespace.
@@ -485,7 +488,7 @@ def _parse_trf_sequence_header(line: str) -> tuple[str, int | None] | None:
 
 
 def _parse_trf_parameters(line: str) -> str | None:
-    """Parses a TRF parameters line, returning ``None`` if the line is not a parameters line.
+    """Parse a TRF parameters line, returning ``None`` if the line is not a parameters line.
 
     Args:
         line: Raw TRF line without surrounding whitespace.
@@ -503,7 +506,7 @@ def _missing_trf_sequence_error(
     skipped_data_block_entries: int,
     skipped_data_block_first_line: int | None,
 ) -> str:
-    """Formats an error for TRF data rows that were not preceded by a Sequence header.
+    """Format an error for TRF data rows that were not preceded by a Sequence header.
 
     Args:
         input_path: Input path of processed file.
@@ -529,7 +532,7 @@ def _parse_trf_data_row(
     window_start: int | None,
     trf_parameters: str | None,
 ) -> TRFParsedRow:
-    """Parses a single TRF data row.
+    """Parse a single TRF data row.
 
     Args:
         input_path: Input TRF output path used for error messages.
@@ -546,8 +549,10 @@ def _parse_trf_data_row(
 
     """
     columns = line.split()
-    if len(columns) < 13:
-        raise ValueError(f"Expected at least 13 columns in {input_path}, got {len(columns)}: line={line!r}")
+    if len(columns) < MIN_TRF_COLUMNS:
+        raise ValueError(
+            f"Expected at least {MIN_TRF_COLUMNS} columns in {input_path}, got {len(columns)}: line={line!r}"
+        )
 
     start = _parse_token(int, columns[0], "start", line, input_path)
     end = _parse_token(int, columns[1], "end", line, input_path)
@@ -562,7 +567,7 @@ def _parse_trf_data_row(
     g_pct = _parse_token(float, columns[10], "g_pct", line, input_path)
     t_pct = _parse_token(float, columns[11], "t_pct", line, input_path)
     entropy = _parse_token(float, columns[12], "entropy", line, input_path)
-    motif = columns[13] if len(columns) >= 14 else ""
+    motif = columns[13] if len(columns) >= 14 else ""   # noqa: PLR2004
 
     if window_start is not None:
         seq_region_start = window_start + start - 1
@@ -620,8 +625,8 @@ def _parse_trf_data_row(
     )
 
 
-def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:
-    """Parses a TRF .dat file into repeat feature dictionaries and consensus records.
+def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:  # noqa: PLR0912, PLR0915
+    """Parse a TRF .dat file into repeat feature dictionaries and consensus records.
 
     Coordinates are converted from TRF's sequence-relative coordinates to genomic
     coordinates if the header provides a window like:
@@ -656,7 +661,7 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
                 continue
 
             columns = line.split()
-            if in_data_block and len(columns) < 13:
+            if in_data_block and len(columns) < MIN_TRF_COLUMNS:
                 if skip_data_block_without_sequence:
                     errors.append(
                         _missing_trf_sequence_error(
@@ -689,7 +694,7 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
                 trf_parameters = parsed_parameters
                 continue
 
-            if len(columns) < 13:
+            if len(columns) < MIN_TRF_COLUMNS:
                 continue
 
             if skip_data_block_without_sequence:
@@ -734,7 +739,7 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
     return features, consensuses_by_key
 
 
-def create_genomio_json(
+def create_genomio_json(  # noqa: PLR0913
     input_path: Path,
     output_path: Path,
     *,
@@ -748,7 +753,7 @@ def create_genomio_json(
     repeatmasker_consensus_lib_path: Path | None = None,
     program_parameters: str | None = None,
 ) -> None:
-    """Creates a GenomIO JSON document from feature identification tool output.
+    """Create a GenomIO JSON document from feature identification tool output.
 
     Args:
         input_path: Path to the input file containing repeat masking results (e.g. RepeatMasker .out file).

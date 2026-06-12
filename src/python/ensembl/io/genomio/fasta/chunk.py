@@ -1,5 +1,3 @@
-#!env python3
-
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -44,8 +42,11 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
 
+MIN_CHUNK_SIZE = 50_000
+
+
 def _on_value_error(msg: str) -> None:
-    """A default on_value_handler, raises ValueError with the provided `msg`.
+    """Raise a ValueError with the provided `msg`.
 
     Args:
         msg: A message to raise ValueError with.
@@ -64,23 +65,25 @@ def check_chunk_size_and_tolerance(
     Args:
         chunk_size: Chunk size to check
         chunk_tolerance: Chunk tolerance to check
+        error_f: A callable to call with an error message if checks fail, default is to raise ValueError.
 
     Dies:
         If checks failed dies with `parser.error`
 
     """
-    if chunk_size < 50_000:
-        error_f(f"wrong '--chunk_size' value: '{chunk_size}'. should be greater then 50_000. exiting...")
+    if chunk_size < MIN_CHUNK_SIZE:
+        error_f(
+            f"wrong '--chunk_size' value: '{chunk_size}'. should be greater then {MIN_CHUNK_SIZE}. exiting..."
+        )
     if chunk_tolerance < 0:
         error_f(f"wrong '--chunk_tolerance' value: '{chunk_tolerance}'. can't be less then 0. exiting...")
 
 
 def split_seq_by_n(seq: str, split_pattern: re.Pattern | None) -> list[int]:
-    """Split a string into chunks at the positions where the
-    pattern is found. `N`s (pattern) are appended to the chunk on the left.
+    """Split a string into chunks at the positions where the pattern is found.
 
-    The end point of each chunk will correspond to the end
-    of the matching part.
+    `N`s (pattern) are appended to the chunk on the left. The end point of each chunk will correspond
+    to the end of the matching part.
 
     Args:
         seq: Sequence to be split into chunks.
@@ -102,8 +105,7 @@ def split_seq_by_n(seq: str, split_pattern: re.Pattern | None) -> list[int]:
 def split_seq_by_chunk_size(
     ends: list[int], chunk_size: int, tolerated_size: int | None = None
 ) -> list[int]:
-    """Split list of end coordinates, to form chunks not longer then
-    chunk_size.
+    """Split list of end coordinates, to form chunks not longer than ``chunk_size``.
 
     Args:
         ends: List of one or more chunk(s) to split a sequence.
@@ -132,13 +134,13 @@ def split_seq_by_chunk_size(
 
 
 def _individual_file_opener(name: str) -> TextIOWrapper:
-    """Is used to open file for an individual chunk sequence.
+    """Open file for an individual chunk sequence.
 
     Args:
         name: Name of the file to open
 
     """
-    return open(name, "w", encoding="utf-8")
+    return Path(name).open("w", encoding="utf-8")
 
 
 def chunk_fasta_stream(
@@ -153,10 +155,11 @@ def chunk_fasta_stream(
     append_offset_to_chunk_name: bool | None = None,
     open_individual: Callable[[str], ContextManager[Any]] = _individual_file_opener,
 ) -> list[str]:
-    """Split input TextIOWrapper stream with fasta into a smaller chunks based on
-    stretches of "N"s and then based on chunk_size_tolerated and store either to
-    the output_fasta stream (if valid) or to the files created by
-    invocation of the `open_individual` callable.
+    """Split input TextIOWrapper stream with fasta into a smaller chunks.
+
+    Splitting based on stretches of "N"s and then based on ``chunk_size_tolerated``. Results stored
+    to either the ``output_fasta`` stream (if valid) or to the files created by invocation of the
+    ``open_individual`` callable.
 
     Args:
         input_fasta: Input FASTA as the TextIOWrapper stream.
@@ -260,17 +263,18 @@ def chunk_fasta(
     chunk_sfx: str = "ens_chunk",
     append_offset_to_chunk_name: bool | None = None,
 ) -> None:
-    """Open `input_fasta_file` and split into a smaller chunks based on
-    stretches of "N"s and then based on chunk_size_tolerated and store either to
-    the `out_file_name` if no `individual_file_prefix` is provided or
-    store each individual chunk to a file starting with non-empty `individual_file_prefix`.
+    """Open ``input_fasta_file`` and split into a smaller chunks.
+
+    Splitting is based on stretches of "N"s and then based on ``chunk_size_tolerated``.  Results are
+    stored either to ``out_file_name`` if no ``individual_file_prefix`` is provided or
+    to files starting with non-empty ``individual_file_prefix``.
 
     Args:
         input_fasta_file: Input FASTA
         chunk_size: Size of the chunks to split into.
         chunk_size_tolerated: If more flexibility allowed, use this as the maximum size of a chunk.
-        out_file_name: Output FASTA to store the chunks into if no `individual_file_prefix` is provided.
-        individual_file_prefix: A file path prefix including dirs and filenames part to use as a
+        out_file_name: Output FASTA to store the chunks into if no ``individual_file_prefix`` is provided.
+        individual_file_prefix: A file path prefix including dirs and filenames part to use as the
                 first part of the chunk file name.
         agp_output_file: Output AGP file to store the map for the chunking procedure if present and non-empty.
         n_sequence_len: Length of the stretch of `N`s to split at; not slitting on `N`s if 0.
@@ -286,7 +290,7 @@ def chunk_fasta(
         with (
             (individual_file_prefix
             and nullcontext(None))
-            or open(out_file_name, "w", encoding="utf-8") as out_file_joined
+            or Path(out_file_name).open("w", encoding="utf-8") as out_file_joined
         ):
             agp_lines = chunk_fasta_stream(
                 fasta,
@@ -301,12 +305,12 @@ def chunk_fasta(
 
         # dump AGP
         if agp_output_file:
-            with open(agp_output_file, "w", encoding="utf-8") as agp_out:
+            with Path(agp_output_file).open("w", encoding="utf-8") as agp_out:
                 agp_out.write("\n".join(agp_lines) + "\n")
 
 
 def prepare_out_dir_for_individuals(dir_name: Path, file_part: str) -> Path | None:
-    """Creates `dir_name` (including upstream dirs) and returns its paths with the `file_part` appended.
+    """Create ``dir_name`` (including upstream dirs) and returns its paths with the ``file_part`` appended.
 
     Args:
         dir_name: Directory to create.
@@ -327,7 +331,7 @@ def prepare_out_dir_for_individuals(dir_name: Path, file_part: str) -> Path | No
 
 
 def main() -> None:
-    """Module entry-point."""
+    """Execute the main function."""
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
         "--fasta_dna",

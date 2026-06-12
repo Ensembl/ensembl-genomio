@@ -67,7 +67,7 @@ class ReportStructure:
     assembly_notes: str = "NA"
 
     def to_dict(self) -> dict[str, str]:
-        """Returns a dictionary representation of this object."""
+        """Return a dictionary representation of this object."""
         return {
             "Species Name": self.species_name,
             "Taxon ID": str(self.taxon_id),
@@ -82,17 +82,18 @@ class ReportStructure:
         }
 
     def header(self) -> list[str]:
-        """Returns the dictionary keys matching each of the properties of the report."""
+        """Return the dictionary keys matching each of the properties of the report."""
         return list(self.to_dict().keys())
 
     def values(self) -> list[str]:
-        """Returns the values of each of the properties of the report."""
+        """Return the values of each of the properties of the report."""
         return list(self.to_dict().values())
 
 
 def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str | None) -> Client:
-    """Parse ENV and User specified variables related to `datasets` singularity SIF
-    container and define version and location of container.
+    """Parse ENV and User specified variables related to `datasets` singularity SIF container.
+
+    This function defines the version and location of the container.
 
     Args:
         sif_cache_dir: Path to locate existing, or download new SIF container image.
@@ -134,7 +135,7 @@ def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str |
 
 
 def get_assembly_accessions(src_file: StrPath) -> list[str]:
-    """Returns the list of assembly accessions found in the provided file.
+    """Return the list of assembly accessions found in the provided file.
 
     Args:
         src_file: Path to file with one line per INSDC assembly accession.
@@ -145,8 +146,8 @@ def get_assembly_accessions(src_file: StrPath) -> list[str]:
     """
     query_accessions: list[str] = []
     with Path(src_file).open(mode="r") as fin:
-        for line in fin:
-            line = line.strip()
+        for raw_line in fin:
+            line = raw_line.strip()
             match = re.match(r"^GC[AF]_[0-9]{9}\.[1-9][0-9]*$", line)
             if not match:
                 raise UnsupportedFormatError(f"Could not recognize GCA/GCF accession format: {line}")
@@ -214,7 +215,7 @@ def fetch_datasets_reports(
         Dictionary of accession source and its associated assembly report.
 
     Raises:
-        ValueError: If result returned by `datasets` is not a string.
+        TypeError: If result returned by `datasets` is not a string.
         RuntimeError: If there was an error raised by `datasets`.
 
     """
@@ -238,7 +239,7 @@ def fetch_datasets_reports(
         # Returned a str, i.e. no datasets result obtained exited with fatal error
         result = raw_result[0] if isinstance(raw_result, list) else raw_result
         if not isinstance(result, str):
-            raise ValueError("Result obtained from datasets is not a string")
+            raise TypeError("Result obtained from datasets is not a string")
         if re.search("^FATAL", result):
             raise RuntimeError(f"Singularity image execution failed! -> '{result.strip()}'")
 
@@ -334,7 +335,7 @@ def generate_report_tsv(
     header_list = next(iter(parsed_asm_reports.values())).header()
     header_list = [query_type.capitalize().replace("_", " "), *header_list]
 
-    with open(tsv_outfile, "w+") as tsv_out:
+    with tsv_outfile.open("w+") as tsv_out:
         writer = csv.writer(tsv_out, delimiter="\t", lineterminator="\n")
         writer.writerow(header_list)
         for core, report_meta in parsed_asm_reports.items():

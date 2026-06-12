@@ -16,8 +16,11 @@
 
 __all__ = [
     "UnknownMetadata",
+    "UnknownMetadataError",
 ]
 
 
-class UnknownMetadata(Exception):
+class UnknownMetadataError(Exception):
     """If a metadata is not supported or recognized."""
+
+UnknownMetadata = UnknownMetadataError  # Backwards compatibility

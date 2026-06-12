@@ -58,7 +58,7 @@ class BiotypeCounter:
         self.ids.add(feature_id)
 
     def unique_count(self) -> int:
-        """Total number feature ids added to the counter so far.
+        """Count the total number of unique feature ids added to the counter so far.
 
         Returns:
             int: number of features in the counter.
@@ -71,7 +71,7 @@ class StatsError(Exception):
     """Raised when stats could not be computed."""
 
 
-class manifest_stats:
+class ManifestStats:
     """Representation of the statistics of the set of files listed in the manifest file provided."""
 
     def __init__(self, manifest_dir: str, accession: str | None, datasets_bin: str | None) -> None:
@@ -123,7 +123,7 @@ class manifest_stats:
             Dict: A representation of the manifest json data.
 
         """
-        with open(self.manifest) as f_json:
+        with Path(self.manifest).open("r") as f_json:
             manifest = json.load(f_json)
             manifest_root = self.manifest_parent
 
@@ -189,7 +189,9 @@ class manifest_stats:
         return stats
 
     def coord_systems_stats(self, coord_systems: dict[str, list[int]]) -> list[str]:
-        """For each coord_system compute various stats:
+        """Compute various stats for each coordinate system.
+
+        Statistics include:
             - number of sequences
             - sequence length sum, minimum, maximum, mean.
 
@@ -226,8 +228,7 @@ class manifest_stats:
         locations: list[str] | None = None,
         codon_tables: list[str] | None = None,
     ) -> list[str]:
-        r"""Prepare stats in case there are circular regions, specific locations and codon_tables.
-                stats.append(f"{count: 9f}\t{name}").
+        """Prepare stats in case there are circular regions, specific locations and codon_tables.
 
         Args:
             circular: Number of circular regions. Defaults to 0.
@@ -245,12 +246,10 @@ class manifest_stats:
                 stats.append(f"{circular: 9d}\tcircular sequences")
             if locations is not None:
                 stats.append(f"{len(locations): 9d} sequences with location")
-                for loc in locations:
-                    stats.append(f"\t\t\t{loc}")
+                stats.extend([f"\t\t\t{loc}" for loc in locations])
             if codon_tables:
                 stats.append(f"{len(codon_tables): 9d} sequences with codon_table")
-                for table in codon_tables:
-                    stats.append(f"\t\t\t{table}")
+                stats.extend([f"\t\t\t{table}" for table in codon_tables])
         return stats
 
     def get_gff3_stats(self, gff3_path: Path) -> list[str]:
@@ -414,8 +413,11 @@ class manifest_stats:
         biotypes[feature_biotype].add_id(feature_id)
 
 
+manifest_stats = ManifestStats  # Alias for easier access to static methods
+
+
 def main() -> None:
-    """Main entrypoint."""
+    """Execute the main function."""
     parser = ArgumentParser(
         description="Compute stats from the current genome files associated with the manifest."
     )

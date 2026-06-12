@@ -215,6 +215,27 @@ class TestOutputWriter:
             )
             writer.close()
 
+    def test_create_agp_file_no_path(self, tmp_path: Path) -> None:
+        """
+        Tests the `_create_agp_file()` method when the AGP path is not set.
+
+        Args:
+            tmp_path: Test's unique temporary directory fixture.
+        """
+        writer = split.OutputWriter(
+            fasta_file=Path("in.fa"),
+            out_dir=tmp_path,
+            write_agp=False,
+            unique_file_names=False,
+        )
+
+        writer.agp_file = None
+
+        with pytest.raises(ValueError, match=r"AGP file path is not set"):
+            writer._create_agp_file()
+
+        writer.close()
+
     def test_open_new_file(self, tmp_path: Path) -> None:
         """
         Tests the `open_new_file()` method of the `split.OutputWriter` class.
@@ -233,16 +254,17 @@ class TestOutputWriter:
         assert (out_dir / "1" / "in.2.fa").exists()
 
     @pytest.mark.parametrize(
-        "write_agp, agp_obj_id, agp_start, agp_end, agp_part_nr, expectation",
+        "write_agp, agp_obj_id, agp_start, agp_end, agp_part_nr, break_agp_handle, expectation",
         [
-            param(False, None, None, None, None, does_not_raise(), id="Default args"),
-            param(True, "seq1", 1, 4, 1, does_not_raise(), id="Write AGP"),
+            param(False, None, None, None, None, False, does_not_raise(), id="Default args"),
+            param(True, "seq1", 1, 4, 1, False, does_not_raise(), id="Write AGP"),
             param(
                 True,
                 None,
                 1,
                 4,
                 1,
+                False,
                 pytest.raises(AssertionError, match=r"AGP object ID must be provided if writing AGP entries"),
                 id="Missing AGP object ID",
             ),
@@ -252,6 +274,7 @@ class TestOutputWriter:
                 None,
                 4,
                 1,
+                False,
                 pytest.raises(AssertionError, match=r"AGP start must be provided if writing AGP entries"),
                 id="Missing AGP start",
             ),
@@ -261,6 +284,7 @@ class TestOutputWriter:
                 1,
                 None,
                 1,
+                False,
                 pytest.raises(AssertionError, match=r"AGP end must be provided if writing AGP entries"),
                 id="Missing AGP end",
             ),
@@ -270,8 +294,19 @@ class TestOutputWriter:
                 1,
                 4,
                 None,
+                False,
                 pytest.raises(AssertionError, match=r"AGP part no. must be provided if writing AGP entries"),
                 id="Missing AGP part no.",
+            ),
+            param(
+                True,
+                "seq1",
+                1,
+                4,
+                1,
+                True,
+                pytest.raises(RuntimeError, match=r"AGP file handle is not initialized"),
+                id="Missing AGP file handle",
             ),
         ],
     )
@@ -284,6 +319,7 @@ class TestOutputWriter:
         agp_start: int | None,
         agp_end: int | None,
         agp_part_nr: int | None,
+        break_agp_handle: bool,
         expectation: ContextManager,
     ) -> None:
         """
@@ -305,6 +341,12 @@ class TestOutputWriter:
         assert writer.record_count == 0
         assert writer.file_len == 0
         in_record = SeqRecord(Seq("ACGT"), id="seq1", description="test sequence")
+
+        if break_agp_handle:
+            assert writer._agp_fh is not None
+            writer._agp_fh.close()
+            writer._agp_fh = None
+            
         with expectation:
             writer.write_record(
                 record=in_record,

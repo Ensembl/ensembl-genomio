@@ -36,7 +36,7 @@ class SeqGroup:
     """Represents a group of sequence identifiers and maintains a count of them."""
 
     def __init__(self, identifier: str | None = None) -> None:
-        """Initializes a `SeqGroup` instance.
+        """Initialize a `SeqGroup` instance.
 
         Args:
             identifier: The first identifier to add to the group. If `None`, adds "None" as the identifier.
@@ -79,7 +79,8 @@ class CompareFasta:
 
     def compare_seqs(self) -> None:
         """Compare two FASTA files for common, unique, and differing sequences.
-        Use `write_results()` to generate a report.
+
+        Uses `write_results()` to generate a report.
         """
         seq_ext = self.read_fasta(self.fasta_ext)
         seq_core = self.read_fasta(self.fasta_core)
@@ -113,13 +114,13 @@ class CompareFasta:
 
         # Check for sequences with extra Ns
         if only1 and only2:
-            self.compare_seq_for_Ns(only1, only2)
+            self.compare_seq_n_count(only1, only2)
 
         # Write results to file
         self.write_results()
 
     def read_fasta(self, fasta_path: Path) -> dict[str, str]:
-        """Reads a FASTA file and returns a dictionary mapping sequence IDs to sequences.
+        """Read a FASTA file and returns a dictionary mapping sequence IDs to sequences.
 
         Args:
             fasta_path: Path to the FASTA file. Supports gzipped files.
@@ -138,7 +139,7 @@ class CompareFasta:
         return sequences
 
     def build_seq_dict(self, seqs: dict[str, str]) -> dict[str, SeqGroup]:
-        """Builds a dictionary of unique sequences and their associated IDs, accounting for duplicates.
+        """Build a dictionary of unique sequences and their associated IDs, accounting for duplicates.
 
         Args:
             seqs: A dictionary where keys are sequence IDs and values are sequences.
@@ -198,13 +199,13 @@ class CompareFasta:
         observed_compare = set()
 
         logging.info(f"Writing results to {output_file}")
-        with open(output_file, "w") as out_fh:
+        with output_file.open("w") as out_fh:
             for line in self.comp:
                 if line not in observed_compare:
                     observed_compare.add(line)
                     out_fh.write(str(line) + "\n")
 
-    def compare_seq_for_Ns(self, only1: dict[str, SeqGroup], only2: dict[str, SeqGroup]) -> None:
+    def compare_seq_n_count(self, only1: dict[str, SeqGroup], only2: dict[str, SeqGroup]) -> None:
         """Compare sequences in `only1` and `only2` for differences in `N` content and length.
 
         Args:
@@ -215,13 +216,13 @@ class CompareFasta:
         # sequences which have extra N at the end
         for seq_1, name1 in only1.items():
             len1 = len(seq_1)
-            seq1_N = seq_1.count("N")
+            seq1_n_count = seq_1.count("N")
 
             for seq_2, name2 in only2.items():
                 len2 = len(seq_2)
-                seq2_N = seq_2.count("N")
+                seq2_n_count = seq_2.count("N")
 
-                if abs(seq1_N - seq2_N) == abs(len1 - len2):
+                if abs(seq1_n_count - seq2_n_count) == abs(len1 - len2):
                     self.comp.append(f"Please check extra Ns added in the accessions {name1} and {name2}")
                 else:
                     self.comp.append(
@@ -229,7 +230,7 @@ class CompareFasta:
                     )
 
                 if len1 == len2:
-                    if seq2_N > seq1_N:
+                    if seq2_n_count > seq1_n_count:
                         self.comp.append(f"your fasta_core has more Ns, check {name1} and {name2}")
                     else:
                         self.comp.append(f"sequences have the same length, check {name1} and {name2}")
@@ -264,7 +265,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 
 def main(arg_list: list[str] | None = None) -> None:
-    """Main script entry-point.
+    """Execute the main function.
 
     Args:
         arg_list: Parsed arguments as an `argparse.Namespace` object.

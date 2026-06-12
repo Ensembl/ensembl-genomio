@@ -12,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Connect to a core database and retrieve a meta_key:meta_value pair(s) and dump meta_key/value
-pairs to stdout / JSON.
-"""
+"""Connect to a core database and retrieve a meta_key:meta_value pair(s) and dump to stdout / JSON."""
 
 __all__ = ["get_meta_values"]
 
@@ -34,7 +32,7 @@ from .dbconnection_lite import DBConnectionLite
 
 
 def get_meta_values(db_url: URL, meta_keys: StrPath | list[str]) -> dict[str, str]:
-    """Returns a set of meta values based on set of 1 or more input DB meta_keys.
+    """Return a set of meta values based on set of 1 or more input DB meta_keys.
 
     Args:
         db_url: Target core database URL.
@@ -103,7 +101,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 
 def main(arg_list: list[str] | None = None) -> None:
-    """Main script entry-point.
+    """Execute the main script.
 
     Args:
         arg_list: Arguments to parse passing list to parse_args().

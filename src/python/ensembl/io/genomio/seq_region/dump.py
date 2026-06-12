@@ -82,7 +82,7 @@ def fetch_seq_regions(session: Session, coord_system: CoordSystem) -> Iterator[S
 
 
 def get_attribs_dict(seq_region: SeqRegion) -> dict[str, Any]:
-    """Returns a dict of attrib code-value for all the attributes of the given sequence region."""
+    """Return a dict of attrib code-value for all the attributes of the given sequence region."""
     return {attrib.attrib_type.code: attrib.value for attrib in seq_region.seq_region_attrib}
 
 
@@ -153,7 +153,7 @@ def get_synonyms(seq_region: SeqRegion, external_db_map: dict[str, str]) -> list
 
 
 def get_karyotype(seq_region: SeqRegion) -> list[dict[str, str]]:
-    """Given a seq_region, extract the karyotype bands.
+    """Extract the karyotype bands, given a sequence region..
 
     Args:
         seq_region: The seq_region from which the karyotype bands are extracted.
@@ -180,7 +180,7 @@ def get_karyotype(seq_region: SeqRegion) -> list[dict[str, str]]:
 
 
 def get_added_sequence(seq_region: SeqRegion) -> dict[str, str | dict[str, str]]:
-    """Extracts added sequence information of the given sequence region.
+    """Extract added sequence information of the given sequence region.
 
     Args:
         seq_region: Sequence region.
@@ -218,7 +218,7 @@ def get_added_sequence(seq_region: SeqRegion) -> dict[str, str | dict[str, str]]
 
 
 def get_seq_regions(session: Session, external_db_map: dict) -> list[SeqRegion]:
-    """Returns all the sequence regions from the current core database.
+    """Return all the sequence regions from the current core database.
 
     Include synonyms, attribs and karyotypes. Only the top level sequences are exported.
 
@@ -261,7 +261,7 @@ def get_seq_regions(session: Session, external_db_map: dict) -> list[SeqRegion]:
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Execute the main script."""
     parser = ArgumentParser(
         description="Fetch all the sequence regions from a core database and print them in JSON format."
     )
