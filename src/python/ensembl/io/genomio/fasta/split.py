@@ -22,6 +22,7 @@ import logging
 from pathlib import Path
 import re
 import shutil
+from typing import cast, TYPE_CHECKING
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -32,7 +33,6 @@ from ensembl.io.genomio.utils.chunk_utils import seq_description_without_id
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
-from typing import cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from Bio.Seq import Seq
@@ -275,7 +275,7 @@ def _clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
         logging.info(f"Deleted existing AGP file '{agp_path}'.")
 
 
-def split_fasta(    # noqa: PLR0912, PLR0913
+def split_fasta(  # noqa: PLR0912, PLR0913
     fasta_file: Path,
     out_dir: Path | None = None,
     write_agp: bool = False,

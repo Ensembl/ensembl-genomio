@@ -45,7 +45,7 @@ class IdsMapper:
                 if line == "":
                     continue
                 items = line.split("\t")
-                if len(items) < 2:      # noqa: PLR2004
+                if len(items) < 2:  # noqa: PLR2004
                     raise ValueError(f"Not 2 elements in {line}")
                 from_id, to_id = items[0:2]
                 mapping[from_id] = to_id

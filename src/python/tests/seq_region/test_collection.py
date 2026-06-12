@@ -27,7 +27,7 @@ import pytest
 from pytest import param, raises
 
 from ensembl.io.genomio.seq_region.collection import SeqCollection
-from ensembl.io.genomio.seq_region.exceptions import UnkownMetadataError
+from ensembl.io.genomio.seq_region.exceptions import UnknownMetadataError
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
 
 _test_report_seq = {
@@ -157,13 +157,15 @@ def test_from_gbff(data_dir: Path) -> None:
             no_raise(),
             id="Chromosome level, plasmid location",
         ),
-        param({"Sequence-Role": "foo"}, False, None, None, raises(UnkownMetadataError), id="Unsupported role"),
+        param(
+            {"Sequence-Role": "foo"}, False, None, None, raises(UnknownMetadataError), id="Unsupported role"
+        ),
         param(
             {"Sequence-Role": "assembled-molecule", "Assigned-Molecule-Location/Type": "foo"},
             False,
             None,
             None,
-            raises(UnkownMetadataError),
+            raises(UnknownMetadataError),
             id="Unsupported location",
         ),
     ],

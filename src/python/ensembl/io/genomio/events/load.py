@@ -149,7 +149,7 @@ class EventCollection:
         event_sep = r"|".join([symbol.replace(r"+", r"\+") for symbol in event_symbol])
         splitter = f"({event_sep})"
         parts = re.split(splitter, event_string)
-        if len(parts) != 3: # noqa: PLR2004
+        if len(parts) != 3:  # noqa: PLR2004
             logging.warning(f"Wrong partition: from '{event_string}' to '{parts}'")
             return
         [from_ids, sep, to_ids] = parts

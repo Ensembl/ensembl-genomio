@@ -170,9 +170,8 @@ class ManifestStats:
             # Store sequence id and length
             data[rec.id] = len(rec.seq)
             stops = rec.seq.count("*")
-            if (
-                (stops >= 1 and not rec.seq.endswith("*"))
-                or (rec.seq.endswith("*") and not ignore_final_stops)
+            if (stops >= 1 and not rec.seq.endswith("*")) or (
+                rec.seq.endswith("*") and not ignore_final_stops
             ):
                 contains_stop_codon += 1
 

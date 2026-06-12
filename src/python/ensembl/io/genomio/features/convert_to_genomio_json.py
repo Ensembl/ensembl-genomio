@@ -318,13 +318,13 @@ def _parse_repeatmasker_strand_coordinates(
 
     """
     strand_token = columns[8]
-    if strand_token == "+": # noqa: S105
+    if strand_token == "+":  # noqa: S105
         return (
             "+",
             _parse_token(int, columns[11], "repeat_start", line, input_path),
             _parse_token(int, columns[12], "repeat_end", line, input_path),
         )
-    if strand_token == "C": # noqa: S105
+    if strand_token == "C":  # noqa: S105
         return (
             "-",
             _parse_token(int, columns[13], "repeat_start", line, input_path),
@@ -567,7 +567,7 @@ def _parse_trf_data_row(
     g_pct = _parse_token(float, columns[10], "g_pct", line, input_path)
     t_pct = _parse_token(float, columns[11], "t_pct", line, input_path)
     entropy = _parse_token(float, columns[12], "entropy", line, input_path)
-    motif = columns[13] if len(columns) >= 14 else ""   # noqa: PLR2004
+    motif = columns[13] if len(columns) >= 14 else ""  # noqa: PLR2004
 
     if window_start is not None:
         seq_region_start = window_start + start - 1

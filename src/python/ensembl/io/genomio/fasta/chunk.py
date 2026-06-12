@@ -41,7 +41,6 @@ from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-
 MIN_CHUNK_SIZE = 50_000
 
 
@@ -102,9 +101,7 @@ def split_seq_by_n(seq: str, split_pattern: re.Pattern | None) -> list[int]:
     return split_points
 
 
-def split_seq_by_chunk_size(
-    ends: list[int], chunk_size: int, tolerated_size: int | None = None
-) -> list[int]:
+def split_seq_by_chunk_size(ends: list[int], chunk_size: int, tolerated_size: int | None = None) -> list[int]:
     """Split list of end coordinates, to form chunks not longer than ``chunk_size``.
 
     Args:
@@ -287,11 +284,9 @@ def chunk_fasta(
         logging.info(f"splitting sequences from '{input_fasta_file}', chunk size {chunk_size:_}, \
                 splitting on {n_sequence_len} Ns (0 -- disabled)")
         # do not open a joined file if you plan to open many individual ones
-        with (
-            (individual_file_prefix
-            and nullcontext(None))
-            or Path(out_file_name).open("w", encoding="utf-8") as out_file_joined
-        ):
+        with (individual_file_prefix and nullcontext(None)) or Path(out_file_name).open(
+            "w", encoding="utf-8"
+        ) as out_file_joined:
             agp_lines = chunk_fasta_stream(
                 fasta,
                 chunk_size,

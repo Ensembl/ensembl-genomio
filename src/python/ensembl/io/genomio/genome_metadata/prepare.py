@@ -25,6 +25,7 @@ __all__ = [
     "prepare_genome_metadata",
 ]
 
+import contextlib
 import datetime
 from os import PathLike
 
@@ -32,7 +33,6 @@ import ensembl.io.genomio
 from ensembl.io.genomio.utils import get_json, print_json
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
-import contextlib
 
 PROVIDER_DATA = {
     "GenBank": {

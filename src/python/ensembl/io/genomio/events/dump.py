@@ -70,7 +70,9 @@ class Pair:
 class UnsupportedEventError(ValueError):
     """If an event is not supported."""
 
+
 UnsupportedEvent = UnsupportedEventError  # Backwards compatibility
+
 
 class Event:
     """Represents a stable id event from one gene set version to another one.
@@ -235,7 +237,6 @@ class Event:
         date = self.date
 
         return f"build {release}" if date and date > BRC4_START_DATE else f"pre-BRC4 {release}"
-
 
     def _name_event(self) -> None:
         """Identify the event name based on the old vs new id lists."""

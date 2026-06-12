@@ -54,7 +54,7 @@ def get_external_db_map(map_file: Path) -> dict[str, str]:
             if line.startswith(("#", " ")) or line == "":
                 continue
             parts = line.split("\t")
-            if len(parts) < 2:      # noqa: PLR2004
+            if len(parts) < 2:  # noqa: PLR2004
                 raise MapFormatError(f"External db file is not formatted correctly for: {line}")
             main_name, alt_name = parts[0:2]
             db_map[alt_name] = main_name

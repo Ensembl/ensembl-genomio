@@ -22,13 +22,15 @@ import re
 
 from .features import GFFSeqFeature
 
-
 MAX_IDS_PER_STABLE_BASE = 10
+
 
 class InvalidStableIDError(ValueError):
     """Raised when there is a problem with an stable ID."""
 
+
 InvalidStableID = InvalidStableIDError  # Alias for backward compatibility
+
 
 @dataclass
 class StableIDAllocator:

@@ -23,4 +23,5 @@ __all__ = [
 class UnknownMetadataError(Exception):
     """If a metadata is not supported or recognized."""
 
+
 UnknownMetadata = UnknownMetadataError  # Backwards compatibility

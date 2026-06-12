@@ -25,7 +25,7 @@ from typing import Mapping
 from Bio.SeqRecord import SeqRecord
 
 from ensembl.io.genomio.seq_region.mappings import MOLECULE_LOCATION
-from ensembl.io.genomio.seq_region.exceptions import UnkownMetadataError
+from ensembl.io.genomio.seq_region.exceptions import UnknownMetadataError
 
 
 @dataclass
@@ -67,7 +67,7 @@ class GBFFRecord:
             molecule_location: Map of sequence type to SO location.
 
         Raises:
-            UnkownMetadataError: If the location is not part of the controlled vocabulary.
+            UnknownMetadataError: If the location is not part of the controlled vocabulary.
 
         """
         location = None
@@ -83,7 +83,7 @@ class GBFFRecord:
             try:
                 location = molecule_location[organelle]
             except KeyError as exc:
-                raise UnkownMetadataError(f"Unrecognized sequence location: {organelle}") from exc
+                raise UnknownMetadataError(f"Unrecognized sequence location: {organelle}") from exc
             break
         return location
 

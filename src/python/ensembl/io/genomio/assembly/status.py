@@ -133,7 +133,6 @@ def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str |
     return Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
 
 
-
 def get_assembly_accessions(src_file: StrPath) -> list[str]:
     """Return the list of assembly accessions found in the provided file.
 

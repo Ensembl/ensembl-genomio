@@ -27,6 +27,7 @@ ManifestDict: TypeAlias = dict[str, dict[str, Any]]
 
 MAXIMUM_SAME_BASENAME_FILES = 10
 
+
 class ManifestError(Exception):
     """Could not load a manifest file."""
 

@@ -32,6 +32,7 @@ from ensembl.io.genomio.genbank.extract_data import (
     UnsupportedDataError,
 )
 
+
 class TestFormattedFilesGenerator:
     """Test if all the internal methods of `FormattedFilesGenerator` are giving the correct output."""
 

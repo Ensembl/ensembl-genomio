@@ -346,7 +346,7 @@ class TestOutputWriter:
             assert writer._agp_fh is not None
             writer._agp_fh.close()
             writer._agp_fh = None
-            
+
         with expectation:
             writer.write_record(
                 record=in_record,

@@ -253,17 +253,13 @@ class IntegrityTool:
                     _dlist.append(f"{e}: {list1[e]}, {list2[e]}")
             if diff_len_special_list:
                 errors.append(
-
-                        f"{len(diff_len_special_list)} common elements with one BP/AA length diff for {name}"
-                        f"(e.g. {diff_len_special_list[0]})"
-
+                    f"{len(diff_len_special_list)} common elements with one BP/AA length diff for {name}"
+                    f"(e.g. {diff_len_special_list[0]})"
                 )
             if diff_len_list:
                 errors.append(
-
-                        f"{len(diff_len_list)} common elements with length diff for {name}"
-                        f"(e.g. {diff_len_list[0]})"
-
+                    f"{len(diff_len_list)} common elements with length diff for {name}"
+                    f"(e.g. {diff_len_list[0]})"
                 )
         if common_len > 0:
             logging.warning(f"{common_len} common elements between lists for {name}")

@@ -266,7 +266,6 @@ def metadata_dump_setup(
         return filter_genome_meta(genome_meta, meta_filter, meta_update)
 
 
-
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """Return a populated namespace with the arguments parsed from a list or from the command line.
 

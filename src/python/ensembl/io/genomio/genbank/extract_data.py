@@ -35,7 +35,7 @@ __all__ = [
     "GBParseError",
     "GenomeFiles",
     "UnsupportedData",
-    "UnsupportedDataError"
+    "UnsupportedDataError",
 ]
 
 from collections import Counter
@@ -63,7 +63,8 @@ class GBParseError(Exception):
 class UnsupportedDataError(Exception):
     """When an expected data is not supported by the current parser."""
 
-UnsupportedData = UnsupportedDataError # Alias for backward compatibility
+
+UnsupportedData = UnsupportedDataError  # Alias for backward compatibility
 
 
 class GenomeFiles(dict):
@@ -354,7 +355,7 @@ class FormattedFilesGenerator:
         gene_id = self.prefix + feat_name
 
         parts = gene_id.split(" ")
-        if len(parts) > 2:   # noqa: PLR2004
+        if len(parts) > 2:  # noqa: PLR2004
             logging.info(f"Shortening gene_id to {parts[0]}")
             gene_id = parts[0]
         gene_id = self._uniquify_id(gene_id, all_ids)
@@ -406,10 +407,8 @@ class FormattedFilesGenerator:
             codon_table = self._get_codon_table(seq)
             if codon_table is None:
                 logging.warning(
-
-                        "No codon table found. Make sure to change the codon table number in "
-                        f"{self.files['seq_region']} manually if it is not the standard codon table."
-
+                    "No codon table found. Make sure to change the codon table number in "
+                    f"{self.files['seq_region']} manually if it is not the standard codon table."
                 )
                 codon_table = 1
             else:
@@ -426,11 +425,9 @@ class FormattedFilesGenerator:
                 seq_obj["location"] = self._prepare_location(str(seq.annotations["organelle"]))
                 if not codon_table:
                     logging.warning(
-
-                            f"'{seq.annotations['organelle']}' is an organelle: "
-                            "make sure to change the codon table number "
-                            f"in {self.files['seq_region']} manually if it is not the standard codon table"
-
+                        f"'{seq.annotations['organelle']}' is an organelle: "
+                        "make sure to change the codon table number "
+                        f"in {self.files['seq_region']} manually if it is not the standard codon table"
                     )
 
             # Additional attributes for Ensembl

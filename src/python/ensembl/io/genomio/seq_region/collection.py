@@ -27,7 +27,7 @@ from Bio import SeqIO
 import requests
 
 from ensembl.io.genomio.seq_region.gbff import GBFFRecord
-from ensembl.io.genomio.seq_region.exceptions import UnkownMetadataError
+from ensembl.io.genomio.seq_region.exceptions import UnknownMetadataError
 from ensembl.io.genomio.seq_region.mappings import SYNONYM_MAP, MOLECULE_LOCATION, LOCATION_CODON
 from ensembl.io.genomio.seq_region.report import ReportRecord
 from ensembl.utils.archive import open_gz_file
@@ -130,7 +130,7 @@ class SeqCollection:
             molecule_location: Map of sequence type to SO location.
 
         Raises:
-            UnkownMetadataError: If the sequence role or location is not recognised.
+            UnknownMetadataError: If the sequence role or location is not recognised.
 
         """
         seq_region = {}
@@ -170,9 +170,9 @@ class SeqCollection:
             try:
                 seq_region["location"] = molecule_location[location]
             except KeyError as exc:
-                raise UnkownMetadataError(f"Unrecognized sequence location: {location}") from exc
+                raise UnknownMetadataError(f"Unrecognized sequence location: {location}") from exc
         else:
-            raise UnkownMetadataError(f"Unrecognized sequence role: {seq_role}")
+            raise UnknownMetadataError(f"Unrecognized sequence role: {seq_role}")
 
         return seq_region
 

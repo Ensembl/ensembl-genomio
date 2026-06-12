@@ -26,8 +26,8 @@ import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-
 HTTP_OK_STATUS = 200
+
 
 class DownloadError(Exception):
     """In case a download failed."""

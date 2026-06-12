@@ -22,9 +22,9 @@ from pathlib import Path
 
 from ensembl.utils.archive import open_gz_file
 
-
 MIN_AGP_COLUMNS = 9
 SUPPORTED_COMPONENT_TYPES = {"W"}
+
 
 @dataclass(frozen=True)
 class AgpEntry:
