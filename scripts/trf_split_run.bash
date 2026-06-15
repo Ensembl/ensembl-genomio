@@ -28,7 +28,7 @@
 #    * "DNA_FEATURES_TRF_SPLIT_NO_TRF" -- set to "YES" to skip trf stage
 #    * "DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE" -- chunk size [1_000_000]
 #    * "DNA_FEATURES_TRF_SPLIT_SPLITTER_OPTIONS" -- for a finer control [--n_seq 1 --chunk_tolerance 10 --chunk_size ${DNA_FEATURES_TRF_SPLIT_SPLITTER_CHUNK_SIZE}] 
-#    * "DNA_FEATURES_TRF_SPLIT_TRF_EXE" -- trf executrable (or abs path to be used) [trf]
+#    * "DNA_FEATURES_TRF_SPLIT_TRF_EXE" -- trf executable (or abs path to be used) [trf]
 #    * "DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS" -- addtitional options for TRF (like "-l 10", N.B. "-l chunk_size / 10^6") []
 #
 # examples
@@ -84,7 +84,7 @@ echo "trf_split_run is called as $SCRIPT" >> /dev/stderr
 # SLITTING
 if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" -o x"$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" != x"YES" ]; then
   SPLITTER_SCRIPT="fasta_chunk"
-  echo "using chunk_fasta sctipt: $SPLITTER_SCRIPT" >> /dev/stderr 
+  echo "using chunk_fasta script: $SPLITTER_SCRIPT" >> /dev/stderr 
 
   SPLITTER_OPTIONS="--n_seq 1 --chunk_tolerance ${DEFAULT_CHUNK_TOLERANCE}"
   if [ -n "$DNA_FEATURES_TRF_SPLIT_SPLITTER_OPTIONS" ]; then
@@ -98,7 +98,7 @@ if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" -o x"$DNA_FEATURES_TRF_SPLIT_NO_S
     fi
     SPLITTER_OPTIONS="$SPLITTER_OPTIONS --chunk_size $CHUNK_SIZE"
   fi
-  echo "using spitter options: $SPLITTER_OPTIONS" >> /dev/stderr
+  echo "using splitter options: $SPLITTER_OPTIONS" >> /dev/stderr
 
   SPLIT_CMD="'$SPLITTER_SCRIPT' $SPLITTER_OPTIONS --chunk_sfx '${DEFAULT_CHUNK_SFX}' --add_offset --individual_out_dir '$PARTS_DIRi' --out part --fasta_dna '$FILE_NAME'"
   echo "Running \"$SPLIT_CMD\"" >> /dev/stderr
@@ -106,7 +106,7 @@ if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_SPLITTING" -o x"$DNA_FEATURES_TRF_SPLIT_NO_S
 fi # DNA_FEATURES_TRF_SPLIT_NO_SPLITTING
 
 # APPENDING OPTIONS
-if [ -n "DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS" ]; then
+if [ -n "$DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS" ]; then
   echo "appending '$DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS' to trf params" >> /dev/stderr
   PARAMS="$PARAMS $DNA_FEATURES_TRF_SPLIT_TRF_OPTIONS"
 fi
@@ -120,11 +120,11 @@ if [ -z "$DNA_FEATURES_TRF_SPLIT_NO_TRF" -o x"$DNA_FEATURES_TRF_SPLIT_NO_TRF" !=
   echo "using DNA_FEATURES_TRF_SPLIT_TRF_EXE '$DNA_FEATURES_TRF_SPLIT_TRF_EXE' with '$PARAMS' for trf" >> /dev/stderr
 
   pushd "$PARTS_DIR"
-    ls -1 part.*.fa |
-      sort -k2,2n -k3,3n -t . |
-      xargs -r -n 1 -I XXX sh -c "
+    find . -maxdepth 1 -type f -name 'part.*.fa' -printf '%f\0' |
+      sort -z -k2,2n -k3,3n -t . |
+      xargs -0 -r -n 1 -I XXX sh -c "
         echo running '\"$DNA_FEATURES_TRF_SPLIT_TRF_EXE\" \"XXX\" $PARAMS' >> /dev/stderr
-        \"$DNA_FEATURES_TRF_SPLIT_TRF_EXE\" \"XXX\" $PARAMS 2 >> /dev/stderr || [ $(($? % 256)) -eq 0 ]
+        \"$DNA_FEATURES_TRF_SPLIT_TRF_EXE\" \"XXX\" $PARAMS 2>> /dev/stderr || [ $(($? % 256)) -eq 0 ]
       "
   popd
 
@@ -133,9 +133,9 @@ fi # DNA_FEATURES_TRF_SPLIT_NO_TRF
 # MERGE
 echo "doing merge step for '$PARTS_DIR'" >> /dev/stderr
 pushd "$PARTS_DIR"
-  ls -1 part.*.fa.*.dat |
-    sort -k2,2n -k3,3n -t . |
-    xargs -n 1 -I XXX cat XXX |
+  find . -maxdepth 1 -type f -name 'part.*.fa.*.dat' -printf '%f\0' |
+    sort -z -k2,2n -k3,3n -t . |
+    xargs -0 -n 1 -I XXX cat XXX |
     perl -pe 's/^(Sequence:\s+[^\s]+)(?:_'"${DEFAULT_CHUNK_SFX}"'_[^\s]*_off_?)(\d+)\s.*\s*/$1 $2\n/' |
     awk '/^Sequence:/ {offset = 0; if (!seen[$2]) {print $1, $2}; seen[$2] = 1; offset = $3}
          /^[0-9]+/ {$1 += offset; $2 += offset; print}' |
