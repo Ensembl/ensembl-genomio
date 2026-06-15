@@ -43,7 +43,7 @@ def test_gbff(data_dir: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "input_gb, expected_id",
+    ("input_gb", "expected_id"),
     [
         param("apicoplast.gb", "U87145", id="Found genbank ID"),
         param("apicoplast_nocomment.gb", None, id="No comment"),
@@ -64,7 +64,7 @@ def test_get_genbank_id(data_dir: Path, input_gb: str, expected_id: str | None) 
 
 
 @pytest.mark.parametrize(
-    "input_gb, expected_table",
+    ("input_gb", "expected_table"),
     [
         param("apicoplast.gb", 4, id="Found codon table"),
         param("apicoplast_nogene.gb", None, id="No codon table"),
@@ -84,7 +84,7 @@ def test_get_codon_table(data_dir: Path, input_gb: str, expected_table: str | No
 
 
 @pytest.mark.parametrize(
-    "input_gb, expected_location, expectation",
+    ("input_gb", "expected_location", "expectation"),
     [
         param("apicoplast.gb", "apicoplast_chromosome", no_raise(), id="Found location"),
         param("apicoplast_nofeatures.gb", None, no_raise(), id="No features"),
@@ -119,7 +119,7 @@ def test_get_organelle_custom(data_dir: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "input_gb, expected_circular",
+    ("input_gb", "expected_circular"),
     [
         param("apicoplast.gb", True, id="Circular"),
         param("apicoplast_linear.gb", False, id="Not circular"),

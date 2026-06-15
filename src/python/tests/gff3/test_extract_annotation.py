@@ -32,7 +32,7 @@ from ensembl.io.genomio.gff3.features import GFFSeqFeature
 
 
 @pytest.mark.parametrize(
-    "description, feature_id, output",
+    ("description", "feature_id", "output"),
     [
         ("", [], False),
         ("", "PROTID12345", False),
@@ -73,7 +73,7 @@ def test_product_is_informative(description: str, feature_id: list[str] | None, 
 
 
 @pytest.mark.parametrize(
-    "seq_feat_type, feat_type, expected",
+    ("seq_feat_type", "feat_type", "expected"),
     [
         ("gene", "gene", does_not_raise()),
         ("pseudogene", "gene", does_not_raise()),
@@ -101,7 +101,7 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
 
 
 @pytest.mark.parametrize(
-    "feat_id, feat_name, expected_synonyms",
+    ("feat_id", "feat_name", "expected_synonyms"),
     [
         pytest.param("featA", "featA", [], id="Same name and ID"),
         pytest.param("featA", "featA_name", ["featA_name"], id="Diff name and ID"),
@@ -121,7 +121,7 @@ def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: list[
 
 
 @pytest.mark.parametrize(
-    "parent_type, parent_id, child_id, expected",
+    ("parent_type", "parent_id", "child_id", "expected"),
     [
         ("gene", "geneA", "mrnA", does_not_raise()),
         ("bad_type", "geneA", "mrnA", raises(KeyError)),
@@ -150,7 +150,7 @@ def test_add_parent_link(parent_type: str, parent_id: str, child_id: str, expect
 
 
 @pytest.mark.parametrize(
-    "in_parent_type, in_parent_id, in_child_id, out_parent_type, out_child_id, expected",
+    ("in_parent_type", "in_parent_id", "in_child_id", "out_parent_type", "out_child_id", "expected"),
     [
         ("gene", "geneA", "mrnA", "gene", "mrnA", does_not_raise()),
         ("gene", "geneA", "mrnA", "bad_type", "mrnA", raises(KeyError)),
@@ -190,7 +190,7 @@ def test_get_parent(
 
 
 @pytest.mark.parametrize(
-    "child_type, child_id, out_parent_id, expected",
+    ("child_type", "child_id", "out_parent_id", "expected"),
     [
         ("transcript", "mrna_A", "gene_A", does_not_raise()),
         pytest.param("bad_type", "mrna_A", "gene_A", raises(KeyError), id="Child type does not exist"),
@@ -224,7 +224,7 @@ def test_add_feature_fail(
 
 
 @pytest.mark.parametrize(
-    "in_id, in_xrefs, provider_name, expected_xrefs",
+    ("in_id", "in_xrefs", "provider_name", "expected_xrefs"),
     [
         param("LOREMID", None, "", [], id="No xref"),
         param("LOREMID", [], "", [], id="Empty xref"),
@@ -283,7 +283,7 @@ def test_get_xrefs(
 
 
 @pytest.mark.parametrize(
-    "feat_type, expected_number, expected",
+    ("feat_type", "expected_number", "expected"),
     [
         ("gene", 1, does_not_raise()),
         ("transcript", 1, does_not_raise()),
@@ -314,7 +314,7 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
 
 
 @pytest.mark.parametrize(
-    "gene_desc, transc_desc, transl_desc, out_gene_desc, out_transc_desc",
+    ("gene_desc", "transc_desc", "transl_desc", "out_gene_desc", "out_transc_desc"),
     [
         param(None, None, None, None, None, id="Nothing provided"),
         param("Foobar", None, None, "Foobar", None, id="Only gene description"),
@@ -379,7 +379,7 @@ def test_transfer_descriptions(
 
 @pytest.mark.dependency(depends=["add_feature"])
 @pytest.mark.parametrize(
-    "num_cds, cds_parts, expected_num_genes, expected_num_tr, expected_num_cds",
+    ("num_cds", "cds_parts", "expected_num_genes", "expected_num_tr", "expected_num_cds"),
     [
         pytest.param(0, 0, 1, 1, 0, id="Store gene without CDS"),
         pytest.param(1, 1, 1, 1, 1, id="Store gene with 1 CDS in one part"),
@@ -430,7 +430,7 @@ def test_store_gene(
 
 
 @pytest.mark.parametrize(
-    "gene, transcript, translation, expected_json",
+    ("gene", "transcript", "translation", "expected_json"),
     [
         pytest.param(
             GFFSeqFeature(type="gene", id="gene_A"),

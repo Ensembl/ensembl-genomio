@@ -45,7 +45,7 @@ def force_open_failure_for_suffix(suffix: str) -> Callable:
 
 
 @pytest.mark.parametrize(
-    "name,expected",
+    ("name", "expected"),
     [("in.fa", "in"), ("in.fa.gz", "in"), ("in", "in")],
 )
 def test_get_fasta_basename(tmp_path: Path, name: str, expected: str) -> None:
@@ -63,7 +63,7 @@ def test_get_fasta_basename(tmp_path: Path, name: str, expected: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "tree, expectation",
+    ("tree", "expectation"),
     [
         (Path("1/1/in.1.fa"), does_not_raise()),
         (Path("1/1/unexpected.gff3"), pytest.raises(RuntimeError, match=r"Unexpected file identified")),
@@ -89,7 +89,7 @@ def test_check_contents_deletable(tmp_path: Path, tree: Path, expectation: Conte
 
 
 @pytest.mark.parametrize(
-    "fasta_file, tree, expected",
+    ("fasta_file", "tree", "expected"),
     [
         param(Path("in.fa"), [], [], id="No output dir"),
         param(
@@ -132,7 +132,7 @@ class TestOutputWriter:
     """Test `split.OutputWriter` class."""
 
     @pytest.mark.parametrize(
-        "fasta_file, write_agp, unique_file_names, max_files, max_dirs, expected_out_path, expected_agp_name",
+        ("fasta_file", "write_agp", "unique_file_names", "max_files", "max_dirs", "expected_out_path", "expected_agp_name"),
         [
             param(Path("in.fa"), False, False, None, None, "1/in.1.fa", "", id="Default args"),
             param(Path("in.fa"), True, False, None, None, "1/in.1.fa", "in.agp", id="AGP enabled"),
@@ -180,7 +180,8 @@ class TestOutputWriter:
         assert writer.file_count == 1
         assert (out_dir / expected_out_path).exists()
         if write_agp:
-            assert writer.agp_file == out_dir / expected_agp_name and writer.agp_file.exists()
+            assert writer.agp_file == out_dir / expected_agp_name
+            assert writer.agp_file.exists()
             with writer.agp_file.open("r") as agp_fh:
                 header = agp_fh.readline().strip()
                 assert header == "# AGP-version 2.0"
@@ -188,7 +189,7 @@ class TestOutputWriter:
             assert writer.agp_file is None
 
     @pytest.mark.parametrize(
-        "write_agp, suffix, exc_msg",
+        ("write_agp", "suffix", "exc_msg"),
         [
             param(False, ".fa", "Failed to open output file", id="FASTA file"),
             param(True, ".agp", "Failed to open AGP file", id="AGP file"),
@@ -254,7 +255,7 @@ class TestOutputWriter:
         assert (out_dir / "1" / "in.2.fa").exists()
 
     @pytest.mark.parametrize(
-        "write_agp, agp_obj_id, agp_start, agp_end, agp_part_nr, break_agp_handle, expectation",
+        ("write_agp", "agp_obj_id", "agp_start", "agp_end", "agp_part_nr", "break_agp_handle", "expectation"),
         [
             param(False, None, None, None, None, False, does_not_raise(), id="Default args"),
             param(True, "seq1", 1, 4, 1, False, does_not_raise(), id="Write AGP"),
@@ -376,7 +377,7 @@ class TestOutputWriter:
 
 
 @pytest.mark.parametrize(
-    "extra_args, expected",
+    ("extra_args", "expected"),
     [
         ({}, "default"),
         ({"max_seqs_per_file": 1}, "1_seq"),
@@ -453,7 +454,7 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "arg_list, expectation",
+    ("arg_list", "expectation"),
     [
         param(
             ["--fasta-file", __file__],

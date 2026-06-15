@@ -39,7 +39,7 @@ from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
 )
 @patch("ensembl.io.genomio.genbank.download.requests.get")
 class TestDownloadGenbank:
-    """Test for the `download_genbank` class"""
+    """Test for the `download_genbank` class."""
 
     def test_successful_download(self, mock_requests_get: Mock, tmp_path: Path, accession: str) -> None:
         """Test the successful download of `download_genbank()` method.

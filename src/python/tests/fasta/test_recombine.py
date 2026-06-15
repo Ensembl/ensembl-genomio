@@ -131,7 +131,7 @@ def test_build_index_no_headers_raises(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "input_filename, regex,expectation",
+    ("input_filename", "regex", "expectation"),
     [
         param(
             "0_based_start.fa",
@@ -193,7 +193,7 @@ def test_recombine_records_from_headers(
 
 
 @pytest.mark.parametrize(
-    "first_seen, chunks, key_error_str",
+    ("first_seen", "chunks", "key_error_str"),
     [
         param(
             {"A": 0},
@@ -229,7 +229,7 @@ def test_records_from_headers_exceptions(
 
 
 @pytest.mark.parametrize(
-    "orientation, allow_revcomp, expectation",
+    ("orientation", "allow_revcomp", "expectation"),
     [
         param(
             "+",
@@ -268,7 +268,7 @@ def test_agp_component_seq(orientation: str, allow_revcomp: bool, expectation: C
 
 
 @pytest.mark.parametrize(
-    "agp_filename, expectation",
+    ("agp_filename", "expectation"),
     [
         param(
             "ordered.agp",
@@ -317,7 +317,7 @@ def test_records_from_agp(data_dir: Path, agp_filename: str, expectation: Contex
 
 
 @pytest.mark.parametrize(
-    "test_dir_name, agp_filename, expected",
+    ("test_dir_name", "agp_filename", "expected"),
     [
         param(
             "from_agp",
@@ -365,7 +365,7 @@ def test_recombine_fasta(
 
 
 @pytest.mark.parametrize(
-    "arg_list, expected_params",
+    ("arg_list", "expected_params"),
     [
         param(
             ["--fasta-manifest", __file__, "--out-fasta", "out.fa"],

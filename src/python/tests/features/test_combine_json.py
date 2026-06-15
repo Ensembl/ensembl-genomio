@@ -102,7 +102,7 @@ def _sha256_key(rn: str, rc_class: str, rt: str, seq: str | None = None) -> str:
 
     """
     norm = "".join((seq or "").split()).upper()
-    payload = "\t".join([rn, rc_class, rt, norm])
+    payload = f"{rn}\t{rc_class}\t{rt}\t{norm}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -278,7 +278,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
 
 
 @pytest.mark.parametrize(
-    "parts, start, end, expectation",
+    ("parts", "start", "end", "expectation"),
     [
         param(
             [
@@ -349,7 +349,7 @@ def test_get_agp_entry_for_range(
 
 
 @pytest.mark.parametrize(
-    "value, coercer, expectation",
+    ("value", "coercer", "expectation"),
     [
         param(
             dict(_repeat_consensus("Alu", "SINE", "Alu", sequence="ACGT"), repeat_consensus="TTTT"),
@@ -408,7 +408,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "feature, agp_by_component, allow_revcomp, expectation",
+    ("feature", "agp_by_component", "allow_revcomp", "expectation"),
     [
         param(
             _repeat_feature(seq_region="chr1_chunk_start_11", start=1, end=5, strand="+"),
@@ -597,7 +597,7 @@ def test_detect_load_type_rejects_unknown_type(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "feature, expectation",
+    ("feature", "expectation"),
     [
         param(
             _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key=None),
@@ -647,7 +647,8 @@ def test_iterate_validated_documents_validate_false_skips_schema_validation(
     json_path = data_dir / "iterate_validated_documents" / "validate_false" / "a.json"
 
     documents = list(combine_json._iterate_validated_documents([json_path], validate=False))
-    assert documents and documents[0][0] == json_path
+    assert documents
+    assert documents[0][0] == json_path
     assert not schema_validator_calls
 
 
@@ -670,10 +671,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
 
 
 @pytest.mark.parametrize(
-    (
-        "documents, feature_list_key, coerce_feature, agp_by_component, allow_revcomp,"
-        "required_top_level_keys, expectation"
-    ),
+    ("documents", "feature_list_key", "coerce_feature", "agp_by_component", "allow_revcomp", "required_top_level_keys", "expectation"),
     [
         param(
             [
@@ -979,7 +977,7 @@ def test_combine_feature_docs(
 
 
 @pytest.mark.parametrize(
-    "consensus_key, valid_consensus_keys, expectation",
+    ("consensus_key", "valid_consensus_keys", "expectation"),
     [
         param(
             _sha256_key("Alu", "SINE", "Alu", "ACGT"),
@@ -1042,7 +1040,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
 
 
 @pytest.mark.parametrize(
-    "test_dir_name, agp_filename, allow_revcomp, expectation",
+    ("test_dir_name", "agp_filename", "allow_revcomp", "expectation"),
     [
         param(
             "seq_region",
@@ -1172,7 +1170,7 @@ def test_combine_repeat_json_paths(
 
 
 @pytest.mark.parametrize(
-    "test_dir_name, agp_filename, allow_revcomp, expectation",
+    ("test_dir_name", "agp_filename", "allow_revcomp", "expectation"),
     [
         param(
             "seq_region",
@@ -1272,7 +1270,7 @@ def test_combine_ncrna_json_paths(
 
 
 @pytest.mark.parametrize(
-    "test_dir_name, agp_filename, allow_revcomp, expectation",
+    ("test_dir_name", "agp_filename", "allow_revcomp", "expectation"),
     [
         param(
             "combine_ncrna/seq_region",
@@ -1364,7 +1362,7 @@ def test_combine_feature_json(
 
 
 @pytest.mark.parametrize(
-    "arg_list, expected_params",
+    ("arg_list", "expected_params"),
     [
         param(
             ["--json-manifest", __file__, "--out-json", "out.json"],

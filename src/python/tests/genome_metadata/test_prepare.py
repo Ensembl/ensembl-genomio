@@ -28,7 +28,7 @@ from ensembl.io.genomio.genome_metadata import prepare
 
 
 @pytest.mark.parametrize(
-    "genome_file, ncbi_data, output, expectation",
+    ("genome_file", "ncbi_data", "output", "expectation"),
     [
         pytest.param(
             "genbank_genome.json",
@@ -99,7 +99,7 @@ def test_add_provider(
 
 
 @pytest.mark.parametrize(
-    "genome_file, output",
+    ("genome_file", "output"),
     [
         pytest.param("genbank_genome.json", 2, id="Added assembly version"),
         pytest.param("updated_genome.json", 1, id="Version found, nothing to add"),
@@ -122,7 +122,7 @@ def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str,
 
 @patch("datetime.date")
 @pytest.mark.parametrize(
-    "genome_file, output",
+    ("genome_file", "output"),
     [
         pytest.param("genbank_genome.json", "03-2024", id="Added '03-2024' as genebuild metadata"),
         pytest.param("updated_genome.json", "01-2021", id="Found '01-2021', nothing to add"),
@@ -149,7 +149,7 @@ def test_add_genebuild_metadata(
 
 
 @pytest.mark.parametrize(
-    "genome_file, ncbi_data_organism, output",
+    ("genome_file", "ncbi_data_organism", "output"),
     [
         pytest.param(
             "genbank_genome.json",
@@ -198,7 +198,7 @@ def test_add_species_metadata(
 
 @patch("datetime.date")
 @pytest.mark.parametrize(
-    "input_filename, ncbi_filename, expected_filename",
+    ("input_filename", "ncbi_filename", "expected_filename"),
     [
         pytest.param(
             "genome_accession.json",

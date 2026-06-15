@@ -35,7 +35,7 @@ from ensembl.io.genomio.schemas import json
 
 
 @pytest.mark.parametrize(
-    "metadata_types, output",
+    ("metadata_types", "output"),
     [
         (["new_metadata"], ["manifest.json"]),
         (
@@ -64,7 +64,7 @@ def test_schema_factory(
 
 
 @pytest.mark.parametrize(
-    "json_file, json_schema, expected",
+    ("json_file", "json_schema", "expected"),
     [
         ("seq_region.json", "seq_region", does_not_raise()),
         ("functional_annotation.json", "functional_annotation_schema.json", does_not_raise()),

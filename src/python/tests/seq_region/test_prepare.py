@@ -27,7 +27,7 @@ from ensembl.io.genomio.seq_region.prepare import prepare_seq_region_metadata
 
 
 @pytest.mark.parametrize(
-    "gbff_path, expected_path, to_exclude",
+    ("gbff_path", "expected_path", "to_exclude"),
     [
         param(None, "out/no_gbff.json", [], id="Prepare without gbff"),
         param("apicoplast.gb", "out/with_gbff.json", [], id="Prepare with gbff"),

@@ -23,7 +23,7 @@ from ensembl.io.genomio.gff3 import GFFGeneMerger
 
 
 @pytest.mark.parametrize(
-    "input_file, expected_file",
+    ("input_file", "expected_file"),
     [
         pytest.param("merge_split_in.gff3", "merge_split_out.gff3", id="Split gene"),
         pytest.param("merge_fasta_in.gff3", "merge_fasta_out.gff3", id="Split gene with fasta"),

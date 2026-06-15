@@ -27,7 +27,7 @@ from ensembl.io.genomio.utils import chunk_utils
 
 
 @pytest.mark.parametrize(
-    "test_dir_name, manifest_name, expectation",
+    ("test_dir_name", "manifest_name", "expectation"),
     [
         param(
             "preserves_order",
@@ -109,7 +109,7 @@ def test_get_paths_from_manifest_absolute_path(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "pattern, text, expected_groups, expectation",
+    ("pattern", "text", "expected_groups", "expectation"),
     [
         param(
             r"^(?P<base>.+)\.part\.(?P<start>\d+)_(?P<end>\d+)$",
@@ -168,7 +168,7 @@ def test_validate_regex(
 
 
 @pytest.mark.parametrize(
-    "seq_id, description, expected",
+    ("seq_id", "description", "expected"),
     [
         ("seq1", "seq1", ""),
         ("seq1", "seq1 some annotation", "some annotation"),

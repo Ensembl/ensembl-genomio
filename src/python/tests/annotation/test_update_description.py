@@ -101,7 +101,7 @@ def fixture_annotation_test_db(db_factory: Callable) -> UnitTestDB:
 
 
 @pytest.mark.parametrize(
-    "gene_data, table, expected_ids, expectation",
+    ("gene_data", "table", "expected_ids", "expectation"),
     [
         param({"name": "gene1", "tr_name": "tr1"}, "gene", ["gene1"], no_raise()),
         param({"name": "gene1", "tr_name": "tr1"}, "transcript", ["tr1"], no_raise()),
@@ -115,7 +115,7 @@ def test_get_core_data(
     expected_ids: list[str],
     expectation: ContextManager,
 ) -> None:
-    """Test the method `get_core_data()`"""
+    """Test the method `get_core_data()`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         with expectation:
@@ -124,7 +124,7 @@ def test_get_core_data(
 
 
 @pytest.mark.parametrize(
-    "input_file, gene_data, do_update, expected_description",
+    ("input_file", "gene_data", "do_update", "expected_description"),
     [
         param("gene1_desc.json", {"gene_name": "gene1"}, False, "", id="No update"),
         param("gene1_desc.json", {"gene_name": "gene1"}, True, "new_desc", id="Do update"),
@@ -138,7 +138,7 @@ def test_load_description_do_update(
     do_update: bool,
     expected_description: str,
 ) -> None:
-    """Test the method `load_description()`"""
+    """Test the method `load_description()`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=do_update)
@@ -150,7 +150,7 @@ def test_load_description_do_update(
 
 
 @pytest.mark.parametrize(
-    "input_file, gene_data, table, expected_description",
+    ("input_file", "gene_data", "table", "expected_description"),
     [
         param("gene1_nodesc.json", {"gene_name": "gene1"}, "gene", "", id="Gene: no desc -> no desc"),
         param(
@@ -236,7 +236,7 @@ def test_load_description(
     table: str,
     expected_description: str,
 ) -> None:
-    """Test the method `load_description()`"""
+    """Test the method `load_description()`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True)
@@ -252,7 +252,7 @@ def test_load_description(
 
 
 @pytest.mark.parametrize(
-    "input_file, gene_data, expected_description, match_xrefs",
+    ("input_file", "gene_data", "expected_description", "match_xrefs"),
     [
         param(
             "gene1_desc.json",
@@ -278,7 +278,7 @@ def test_load_description_match_xrefs(
     match_xrefs: bool,
     expected_description: str,
 ) -> None:
-    """Test the method `load_description()` with `match_xrefs`"""
+    """Test the method `load_description()` with `match_xrefs`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True, match_xrefs=match_xrefs)
@@ -289,7 +289,7 @@ def test_load_description_match_xrefs(
 
 
 @pytest.mark.parametrize(
-    "input_file, gene_data, do_report",
+    ("input_file", "gene_data", "do_report"),
     [
         param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc"}, False, id="No report"),
         param("gene1_desc.json", {"gene_name": "gene1", "gene_desc": "old_desc"}, True, id="Do report"),
@@ -303,7 +303,7 @@ def test_load_description_do_report(
     gene_data: dict[str, str],
     do_report: bool,
 ) -> None:
-    """Test the method `load_description()`"""
+    """Test the method `load_description()`."""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, report=do_report)

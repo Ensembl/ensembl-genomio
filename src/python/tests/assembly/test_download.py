@@ -37,7 +37,7 @@ from ensembl.io.genomio.assembly.download import download_files, get_files_selec
 #################
 @pytest.mark.dependency(name="test_ftp_connection")
 @pytest.mark.parametrize(
-    "ftp_url, accession, expectation",
+    ("ftp_url", "accession", "expectation"),
     [
         pytest.param(
             "ftp.ncbi.nlm.nih.gov", "GCA_017607445.1", does_not_raise(), id="Successful ftp connection"
@@ -72,7 +72,7 @@ def test_ftp_connection(
 
     def side_eff_conn(url: str) -> None:
         if not url:
-            raise FTPConnectionError()
+            raise FTPConnectionError
 
     mock_ftp.connect.side_effect = side_eff_conn
 
@@ -86,7 +86,7 @@ def test_ftp_connection(
 #################
 @pytest.mark.dependency(name="test_checksums")
 @pytest.mark.parametrize(
-    "checksum_file, checksum, expectation",
+    ("checksum_file", "checksum", "expectation"),
     [
         pytest.param(
             Path("md5checksums.txt"), "40df91d5c40cb55621c4c92201da6834", does_not_raise(), id="Normal case"
@@ -121,7 +121,7 @@ def test_checksums(
 #################
 @pytest.mark.dependency(name="test_md5_files", depends=["test_checksums"])
 @pytest.mark.parametrize(
-    "md5_file, md5_path, checksum_bool",
+    ("md5_file", "md5_path", "checksum_bool"),
     [
         pytest.param("md5checksums.txt", None, True, id="Normal case"),
         pytest.param("wrong_md5_checksums.txt", None, False, id="Incorrect md5 checksum"),
@@ -136,7 +136,7 @@ def test_md5_files(data_dir: Path, md5_file: str, md5_path: Path | None, checksu
         data_dir: Path to test data root dir
         md5_file: MD5 file used for test
         md5_path: Path location to MD5 file
-        checksum_bool: Test comparison checksum value
+        checksum_bool: Test comparison checksum value.
     """
     if md5_file is None:
         return_bool_on_md5files = md5_files(data_dir, md5_path=md5_path)
@@ -148,7 +148,7 @@ def test_md5_files(data_dir: Path, md5_file: str, md5_path: Path | None, checksu
 #################
 @pytest.mark.dependency(name="test_download_single_file")
 @pytest.mark.parametrize(
-    "ftp_file, md5_sums, expectation",
+    ("ftp_file", "md5_sums", "expectation"),
     [
         pytest.param(
             "test_ftp_file.txt",
@@ -223,7 +223,7 @@ def test_download_single_file(
 #################
 @pytest.mark.dependency(name="test_download_all_files", depends=["test_download_single_file"])
 @pytest.mark.parametrize(
-    "ftp_url, ftp_accession, compare_accession, md5, exception, max_redo",
+    ("ftp_url", "ftp_accession", "compare_accession", "md5", "exception", "max_redo"),
     [
         pytest.param(
             "ftp.ncbi.nlm.nih.gov",
@@ -256,7 +256,7 @@ def test_download_all_files(
     exception: ContextManager,
     max_redo: int,
 ) -> None:
-    """Test the download.download_files() function
+    """Test the download.download_files() function.
 
     Args:
         mock_ftp: Mock of `ensembl.io.genomio.assembly.download.FTP` object
@@ -310,7 +310,7 @@ def test_download_all_files(
 #################
 @pytest.mark.dependency(name="test_get_files_selection")
 @pytest.mark.parametrize(
-    "has_download_dir, files_expected, expectation",
+    ("has_download_dir", "files_expected", "expectation"),
     [
         pytest.param(
             True,
@@ -343,10 +343,7 @@ def test_get_files_selection(
         expectation: Context manager expected raise exception
 
     """
-    if has_download_dir:
-        download_dir = data_dir
-    else:
-        download_dir = Path()
+    download_dir = data_dir if has_download_dir else Path()
 
     with expectation:
         subset_files = get_files_selection(download_dir)
@@ -359,7 +356,7 @@ def test_get_files_selection(
 ##################
 @pytest.mark.dependency(name="test_retrieve_assembly_data")
 @pytest.mark.parametrize(
-    "accession, is_dir, files_downloaded, md5_return, exception",
+    ("accession", "is_dir", "files_downloaded", "md5_return", "exception"),
     [
         pytest.param(
             "GCA_017607445.1",
@@ -421,14 +418,11 @@ def test_retrieve_assembly_data(
         expectation: Context manager expected raise exception
 
     """
-    if is_dir:
-        download_dir = data_dir
-    else:
-        download_dir = data_dir / "test_ftp_file.txt"
+    download_dir = data_dir if is_dir else data_dir / "test_ftp_file.txt"
 
     def side_eff_conn(url: str) -> None:
         if not url:
-            raise FileDownloadError()
+            raise FileDownloadError
 
     mock_ftp.connect.side_effect = side_eff_conn
     mock_file_select.return_value = files_downloaded

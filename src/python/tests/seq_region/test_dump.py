@@ -180,7 +180,7 @@ def test_fetch_coord_systems(seq_test_db: UnitTestDB) -> None:
 def test_fetch_seq_regions(seq_test_db: UnitTestDB) -> None:
     """Test the `fetch_seq_regions` method."""
     with seq_test_db.dbc.test_session_scope() as session:
-        coord_system = list(fetch_coord_systems(session))[0]
+        coord_system = next(iter(fetch_coord_systems(session)))
         seqrs = list(fetch_seq_regions(session, coord_system))
         assert len(seqrs) == 1
         seqr = seqrs[0]
@@ -191,8 +191,8 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
     """Test the `get_synonyms` method."""
     with seq_test_db.dbc.test_session_scope() as session:
         _add_test_synonym(session, seq_test_db.dbc.dialect, "synA", "db1", 1)
-        coord_system = list(fetch_coord_systems(session))[0]
-        seqr = list(fetch_seq_regions(session, coord_system))[0]
+        coord_system = next(iter(fetch_coord_systems(session)))
+        seqr = next(iter(fetch_seq_regions(session, coord_system)))
         syns = get_synonyms(seqr, db_map)
         assert len(syns) == 1
         syn = syns[0]
@@ -200,7 +200,7 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
 
 
 @pytest.mark.parametrize(
-    "bands, expected_kar",
+    ("bands", "expected_kar"),
     [
         param([], [], id="no karyotype"),
         param([{}], [{"start": 1, "end": 10}], id="no name/stain"),
@@ -224,14 +224,14 @@ def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict)
     with seq_test_db.dbc.test_session_scope() as session:
         for band in bands:
             _add_test_karyotype(session, seq_test_db.dbc.dialect, 1, 10, band.get("name"), band.get("stain"))
-        coord_system = list(fetch_coord_systems(session))[0]
-        seqr = list(fetch_seq_regions(session, coord_system))[0]
+        coord_system = next(iter(fetch_coord_systems(session)))
+        seqr = next(iter(fetch_seq_regions(session, coord_system)))
         kar = get_karyotype(seqr)
         assert kar == expected_kar
 
 
 @pytest.mark.parametrize(
-    "attribs, expected_output",
+    ("attribs", "expected_output"),
     [
         param({}, None, id="no toplevel"),
         param({"codon_table": 1}, None, id="no toplevel, other attribs"),
@@ -273,7 +273,7 @@ def test_get_seq_regions_attribs(
 
 
 @pytest.mark.parametrize(
-    "attribs, expected_output",
+    ("attribs", "expected_output"),
     [
         param({}, {}, id="no added seq"),
         param({"added_seq_accession": "ACC1"}, {"accession": "ACC1"}, id="added accession"),
@@ -321,8 +321,8 @@ def test_get_added_sequence(
         for attrib_name, attrib_value in attribs.items():
             _add_test_attrib(session, seq_test_db.dbc.dialect, attrib_name, attrib_value, attrib_num)
             attrib_num += 1
-        coord_system = list(fetch_coord_systems(session))[0]
-        seqr = list(fetch_seq_regions(session, coord_system))[0]
+        coord_system = next(iter(fetch_coord_systems(session)))
+        seqr = next(iter(fetch_seq_regions(session, coord_system)))
         added = get_added_sequence(seqr)
         assert added == expected_output
 

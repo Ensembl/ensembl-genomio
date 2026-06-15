@@ -38,7 +38,7 @@ _META = {
 
 @patch("ensembl.io.genomio.database.factory.DBConnectionLite")
 @pytest.mark.parametrize(
-    "server_url, dbs, brc_mode, skip_keys, output",
+    ("server_url", "dbs", "brc_mode", "skip_keys", "output"),
     [
         param(URL.create("mysql"), [], False, False, [], id="No databases selected"),
         param(
@@ -151,7 +151,7 @@ def test_format_db_data(
 @patch("ensembl.io.genomio.database.factory.format_db_data")
 @patch("ensembl.io.genomio.database.factory.CoreServer")
 @pytest.mark.parametrize(
-    "use_db_file, output",
+    ("use_db_file", "output"),
     [
         param(
             False,
@@ -197,7 +197,7 @@ def test_get_core_dbs_metadata(
 
 
 @pytest.mark.parametrize(
-    "arg_list, expected",
+    ("arg_list", "expected"),
     [
         param(
             ["--host", "localhost", "--port", "42", "--user", "me"],
@@ -267,7 +267,7 @@ def test_parse_args(arg_list: list[str], expected: dict) -> None:
 
 
 @pytest.mark.parametrize(
-    "arg_list, server_url, stdout",
+    ("arg_list", "server_url", "stdout"),
     [
         (
             ["--host", "localhost", "--port", "42", "--user", "me"],

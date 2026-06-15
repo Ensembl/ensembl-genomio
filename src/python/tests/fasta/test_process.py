@@ -27,7 +27,7 @@ import ensembl.io.genomio.fasta.process as FastaProcessing
 
 
 @pytest.mark.parametrize(
-    "input_fasta, input_gbff, pep_mode, expected_output_fasta",
+    ("input_fasta", "input_gbff", "pep_mode", "expected_output_fasta"),
     [
         (
             "input.protein.fa.gz",
@@ -70,10 +70,7 @@ def test_fasta_prep(
 
     """
     fasta_input_path = data_dir / input_fasta
-    if input_gbff is not None:
-        gbff_input_path = data_dir / input_gbff
-    else:
-        gbff_input_path = input_gbff
+    gbff_input_path = data_dir / input_gbff if input_gbff is not None else input_gbff
     fasta_output_path = tmp_path / f"{input_fasta}.test.fasta"
 
     FastaProcessing.prep_fasta_data(
@@ -89,18 +86,18 @@ def test_fasta_prep(
 
 
 @pytest.mark.parametrize(
-    "input_gbff, excluded_seq_regions, output, expectation",
+    ("input_gbff", "excluded_seq_regions", "output", "expectation"),
     [
         (
             "input.gbff.gz",
-            set(["LR605957.1"]),
-            set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
+            {"LR605957.1"},
+            {"VWP78966.1", "VWP78967.1", "VWP78968.1"},
             does_not_raise(),
         ),
         (
             "input.mod.gbff.gz",
-            set(["LR605957.1"]),
-            set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
+            {"LR605957.1"},
+            {"VWP78966.1", "VWP78967.1", "VWP78968.1"},
             pytest.raises(FastaProcessing.FastaParserError),
         ),
     ],
@@ -122,10 +119,7 @@ def test_exclude_seq_regions(
             exception is raised. Use `~contextlib.nullcontext` if no exception is expected.
 
     """
-    if input_gbff is not None:
-        gbff_input_path = data_dir / input_gbff
-    else:
-        gbff_input_path = input_gbff
+    gbff_input_path = data_dir / input_gbff if input_gbff is not None else input_gbff
     with expectation:
         excluded_proteins = FastaProcessing.get_peptides_to_exclude(gbff_input_path, excluded_seq_regions)
         assert set(excluded_proteins) == set(output)

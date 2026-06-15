@@ -30,7 +30,7 @@ from ensembl.io.genomio.genome_stats import compare
 
 @pytest.mark.dependency(name="test_compare_dicts")
 @pytest.mark.parametrize(
-    "ncbi, core, output",
+    ("ncbi", "core", "output"),
     [
         pytest.param({}, {}, {}, id="empty_dicts"),
         pytest.param({"a": 0}, {"a": 0}, {}, id="same_dicts_zero_values"),
@@ -61,7 +61,7 @@ def test_compare_dicts(ncbi: dict[str, int], core: dict[str, int], output: dict[
 
 @pytest.mark.dependency(name="test_compare_assembly", depends=["test_compare_dicts"])
 @pytest.mark.parametrize(
-    "ncbi_file, core_file, output_file",
+    ("ncbi_file", "core_file", "output_file"),
     [
         ("ncbi_unannotated.json", "core_unannotated.json", "output_unannotated.json"),
         ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
@@ -86,7 +86,7 @@ def test_compare_assembly(json_data: Callable, ncbi_file: dict, core_file: dict,
 
 @pytest.mark.dependency(name="test_compare_annotation", depends=["test_compare_dicts"])
 @pytest.mark.parametrize(
-    "ncbi_file, core_file, output_file",
+    ("ncbi_file", "core_file", "output_file"),
     [
         ("ncbi_unannotated.json", "core_unannotated.json", "output_unannotated.json"),
         ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
@@ -115,7 +115,7 @@ def test_compare_annotation(json_data: Callable, ncbi_file: str, core_file: str,
     name="test_compare_stats", depends=["test_compare_assembly", "test_compare_annotation"]
 )
 @pytest.mark.parametrize(
-    "ncbi_file, core_file, output_file",
+    ("ncbi_file", "core_file", "output_file"),
     [
         ("ncbi_unannotated.json", "core_unannotated.json", "output_unannotated.json"),
         ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
@@ -140,7 +140,7 @@ def test_compare_stats(json_data: Callable, ncbi_file: str, core_file: str, outp
 
 @pytest.mark.dependency(name="test_compare_stats_files", depends=["test_compare_stats"])
 @pytest.mark.parametrize(
-    "ncbi_file, core_file, output_file",
+    ("ncbi_file", "core_file", "output_file"),
     [
         ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
     ],

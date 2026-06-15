@@ -338,7 +338,7 @@ def test_get_genome_metadata(
 
 
 @pytest.mark.parametrize(
-    "arg_list, expected",
+    ("arg_list", "expected"),
     [
         param(
             ["--host", "localhost", "--port", "42", "--user", "me", "--database", "test_db"],

@@ -29,7 +29,7 @@ from ensembl.io.genomio.external_db.db_map import (
 
 
 @pytest.mark.parametrize(
-    "file_content, expected_output, expected",
+    ("file_content", "expected_output", "expected"),
     [
         param("", {}, no_raise()),
         param("#Comment", {}, no_raise()),

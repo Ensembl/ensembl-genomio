@@ -48,7 +48,7 @@ def test_add_error(manifest_path: Path) -> None:
 
 
 @mark.parametrize(
-    "manifest_dir, expected_lengths, expected_circular",
+    ("manifest_dir", "expected_lengths", "expected_circular"),
     [
         param("", {}, {}),
         param(
@@ -89,7 +89,7 @@ def test_load_seq_regions(
 
 
 @mark.parametrize(
-    "fasta_str, expected_lengths, expected_error",
+    ("fasta_str", "expected_lengths", "expected_error"),
     [
         param(">prot1\nCGTA\n", {"prot1": 4}, "", id="Normal DNA seq"),
         param("", {}, "", id="Empty fasta"),
@@ -144,7 +144,7 @@ def test_load_dna_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> None:
 
 
 @mark.parametrize(
-    "fasta_str, ignore_final_stops, expected_lengths, expected_error",
+    ("fasta_str", "ignore_final_stops", "expected_lengths", "expected_error"),
     [
         param(">prot1\nMAGIC\n", False, {"prot1": 5}, "", id="Normal prot"),
         param("", False, {}, "", id="Empty fasta"),
@@ -211,7 +211,7 @@ def test_load_peptides_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> No
 
 
 @mark.parametrize(
-    "json_data, expected_key, expected_data",
+    ("json_data", "expected_key", "expected_data"),
     [
         param(None, "", {}, id="No JSON"),
         param({}, "", {}, id="Empty JSON"),
@@ -259,7 +259,7 @@ def test_load_functional_annotations(
 
 
 @mark.parametrize(
-    "gff3_path, expected_data",
+    ("gff3_path", "expected_data"),
     [
         param(None, {}, id="No GFF3"),
         param(
@@ -352,7 +352,7 @@ def test_prepare_integrity_data(tmp_path: Path) -> None:
 
 
 @mark.parametrize(
-    "key, expected_data, expectation",
+    ("key", "expected_data", "expectation"),
     [
         param("ann_genes", True, no_raise(), id="Loaded func annotation"),
         param("gff3_genes", False, no_raise(), id="Not loaded gff genes"),
@@ -379,7 +379,7 @@ def test_has_lengths(
 
 
 @mark.parametrize(
-    "key, expected_data, expectation",
+    ("key", "expected_data", "expectation"),
     [
         param("ann_genes", {"ECC02_000372": 1}, no_raise(), id="OK"),
         param("foobar", {}, raises(KeyError), id="Unknown key"),
@@ -405,7 +405,7 @@ def test_get_lengths(
 
 
 @mark.parametrize(
-    "key, expected_data, expectation",
+    ("key", "expected_data", "expectation"),
     [
         param("seq_regions", {"JABDHM010000001.1": True, "JABDHM010000002.1": False}, no_raise(), id="OK"),
         param("foobar", {}, raises(KeyError), id="Unknown key"),

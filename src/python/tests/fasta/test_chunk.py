@@ -30,7 +30,7 @@ does_not_raise = nullcontext
 
 
 @pytest.mark.parametrize(
-    "msg, expectation",
+    ("msg", "expectation"),
     [
         ("A value error test", pytest.raises(ValueError, match=r"^A value error test$")),
     ],
@@ -48,7 +48,7 @@ def test__on_value_error(msg: str, expectation: ContextManager) -> None:
 
 
 @pytest.mark.parametrize(
-    "chunk_size, chunk_tolerance, expectation",
+    ("chunk_size", "chunk_tolerance", "expectation"),
     [
         (50000, 0, does_not_raise()),
         (50000, 1, does_not_raise()),
@@ -76,7 +76,7 @@ def test_check_chunk_size_and_tolerance(
 
 
 @pytest.mark.parametrize(
-    "seq, pattern, expectation",
+    ("seq", "pattern", "expectation"),
     [
         ("", None, [len("")]),
         ("", re.compile("N"), [0]),
@@ -102,7 +102,7 @@ def test_split_seq_by_n(seq: str, pattern: re.Pattern | None, expectation: list[
 
 
 @pytest.mark.parametrize(
-    "chunk_ends, chunk_size, tolerated_size, expectation",
+    ("chunk_ends", "chunk_size", "tolerated_size", "expectation"),
     [
         (None, 1, None, None),
         ([], 1, None, []),
@@ -177,7 +177,7 @@ def test_prepare_out_dir_for_individuals(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "size, tolerance, expectation",
+    ("size", "tolerance", "expectation"),
     [
         (-1, -1, -1),
         (0, -1, 0),
@@ -201,9 +201,7 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
 
 
 @pytest.mark.parametrize(
-    "input_fasta_text, chunk_size, chunk_size_tolerated, n_sequence_len, "
-    "chunk_sfx, append_offset_to_chunk_name, "
-    "expected_chunked_fasta_text, expected_agp_list, expected_individual_files_count",
+    ("input_fasta_text", "chunk_size", "chunk_size_tolerated", "n_sequence_len", "chunk_sfx", "append_offset_to_chunk_name", "expected_chunked_fasta_text", "expected_agp_list", "expected_individual_files_count"),
     [
         ("", 2, 2, 2, "p", True, "", [], 0),
         (
@@ -330,7 +328,7 @@ def test_chunk_fasta_stream(
             append_offset_to_chunk_name=append_offset_to_chunk_name,
             open_individual=_individual_opener,
         )
-        assert "".join(map(lambda p: p[1], parts)) == expected_chunked_fasta_text
+        assert "".join(p[1] for p in parts) == expected_chunked_fasta_text
         assert agp_list == expected_agp_list
         assert len(parts) == expected_individual_files_count
 
@@ -364,7 +362,7 @@ def test_chunk_fasta_stream_rejects_invalid_fasta(input_fasta_text: str) -> None
 
 
 @pytest.mark.parametrize(
-    "individual_file_prefix, agp_output_file_name, expected_missing_joined",
+    ("individual_file_prefix", "agp_output_file_name", "expected_missing_joined"),
     [
         ("chunk", "test.agp", pytest.raises(FileNotFoundError, match=r"output.fa")),
         ("chunk", None, pytest.raises(FileNotFoundError, match=r"output.fa")),

@@ -51,7 +51,7 @@ def test_collection() -> None:
 
 
 @pytest.mark.parametrize(
-    "genbank_id, codon_table, location, is_circular, expected_seq",
+    ("genbank_id", "codon_table", "location", "is_circular", "expected_seq"),
     [
         param(None, None, None, False, {"length": 3}, id="No extra data"),
         param(
@@ -110,7 +110,7 @@ def test_from_gbff(data_dir: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "seq_data, is_refseq, expected_key, expected_value, expected",
+    ("seq_data", "is_refseq", "expected_key", "expected_value", "expected"),
     [
         param({"GenBank-Accn": "na"}, False, None, None, no_raise(), id="Missing Genbank ID"),
         param({"RefSeq-Accn": "na"}, True, None, None, no_raise(), id="Missing RefSeq ID"),
@@ -245,7 +245,7 @@ def test_remove() -> None:
 
 
 @pytest.mark.parametrize(
-    "input_seq, code_map, expected_codon_table",
+    ("input_seq", "code_map", "expected_codon_table"),
     [
         param({}, None, None, id="No data, no codon table"),
         param({"codon_table": 4}, None, 4, id="Existing codon_table"),
@@ -277,7 +277,7 @@ def test_add_translation_table(
 
 
 @pytest.mark.parametrize(
-    "input_seq, taxon_id, response_data, expected_codon_table, expected",
+    ("input_seq", "taxon_id", "response_data", "expected_codon_table", "expected"),
     [
         param(
             {"location": "mitochondrial_chromosome"},

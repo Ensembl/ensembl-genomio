@@ -32,7 +32,7 @@ from ensembl.io.genomio.utils import print_json
 
 
 @pytest.mark.parametrize(
-    "genome_meta, expected_provider_name",
+    ("genome_meta", "expected_provider_name"),
     [
         param({}, "GenBank", id="No metadata"),
         param(
@@ -55,7 +55,7 @@ from ensembl.io.genomio.utils import print_json
     ],
 )
 def test_get_provider_name(tmp_path: Path, genome_meta: dict, expected_provider_name: str) -> None:
-    """Test `GFFSimplifier.get_provider_name().`"""
+    """Test `GFFSimplifier.get_provider_name().`."""
     # Write metadata file
     meta_path = tmp_path / "meta.json"
     print_json(meta_path, genome_meta)
@@ -64,7 +64,7 @@ def test_get_provider_name(tmp_path: Path, genome_meta: dict, expected_provider_
 
 
 @pytest.mark.parametrize(
-    "genome_meta, expected_provider_name",
+    ("genome_meta", "expected_provider_name"),
     [
         param({}, "GenBank", id="No metadata"),
         param(
@@ -102,7 +102,7 @@ def check_one_feature(input_gff: PathLike, output_gff: PathLike, check_function:
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff",
+    ("in_gff", "expected_gff"),
     [
         param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
         param("lone/transcript.gff", "lone/transcript_simped.gff", id="lone transcript"),
@@ -127,7 +127,7 @@ def test_create_gene_for_lone_transcript(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff",
+    ("in_gff", "expected_gff"),
     [
         param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
         param("lone/cds.gff", "lone/cds_simped.gff", id="lone CDS"),
@@ -149,7 +149,7 @@ def test_create_gene_for_lone_cds(
 
 
 @pytest.mark.parametrize(
-    "in_type, in_mobile_type, in_product, out_type, out_description, expectation",
+    ("in_type", "in_mobile_type", "in_product", "out_type", "out_description", "expectation"),
     [
         param("gene", None, None, "gene", None, does_not_raise(), id="Gene, skip"),
         param("transposable_element", None, None, "transposable_element", None, does_not_raise(), id="TE"),
@@ -235,7 +235,7 @@ def test_normalize_non_gene_not_implemented() -> None:
 
 
 @pytest.mark.parametrize(
-    "in_type, tr_name, out_type, expectation",
+    ("in_type", "tr_name", "out_type", "expectation"),
     [
         param("mRNA", "", "mRNA", does_not_raise(), id="mRNA no change"),
         param("C_gene_segment", "", "C_gene_segment", raises(GeneSegmentError), id="no standard name"),
@@ -263,7 +263,7 @@ def test_format_gene_segments(
 
 
 @pytest.mark.parametrize(
-    "has_cds, cds_name, out_type, expectation",
+    ("has_cds", "cds_name", "out_type", "expectation"),
     [
         param(False, "", "", raises(GeneSegmentError), id="No CDS"),
         param(True, "", "", raises(GeneSegmentError), id="CDS no info"),
@@ -290,7 +290,7 @@ def test_format_gene_segments_cds(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff",
+    ("in_gff", "expected_gff"),
     [
         param("ok_gene.gff", "ok_gene.gff", id="ok gene"),
         param("clean/extra.gff", "clean/extra_clean.gff", id="ok gene with extra attribs"),
@@ -311,7 +311,7 @@ def test_clean_gene(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    ("in_gff", "expected_gff", "expectation"),
     [
         param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
         param("gene_ignored.gff", None, raises(IgnoredFeatureError), id="gene ignored"),
@@ -344,7 +344,7 @@ def test_simpler_gff3_feature(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    ("in_gff", "expected_gff", "expectation"),
     [
         param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="ok gene"),
         param("bad_gene_type.gff", "", raises(GFFParserError), id="Unsupported gene type"),
@@ -372,7 +372,7 @@ def test_simpler_gff3(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, allow_cds",
+    ("in_gff", "expected_gff", "allow_cds"),
     [
         param("ok_gene.gff", "ok_gene.gff", False, id="ok gene"),
         param("ok_gene.gff", "ok_gene.gff", True, id="ok gene, allow pseudo CDS"),
@@ -400,7 +400,7 @@ def test_simpler_gff3_pseudogene(
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, skip_unrecognized, expectation",
+    ("in_gff", "expected_gff", "skip_unrecognized", "expectation"),
     [
         param("bad_gene_type.gff", "", False, raises(GFFParserError), id="Unset skip unrecognized, fail"),
         param(
@@ -435,7 +435,7 @@ def test_simpler_gff3_skip(
 
 
 @pytest.mark.parametrize(
-    "genome_file, in_gff, expected_gff",
+    ("genome_file", "in_gff", "expected_gff"),
     [
         param(
             None,
@@ -468,17 +468,14 @@ def test_gffsimplifier_with_genome(
     """Test simplifying genes from GFF3 files."""
     input_gff = data_dir / in_gff
     output_gff = tmp_path / in_gff
-    if genome_file is None:
-        simp = GFFSimplifier()
-    else:
-        simp = GFFSimplifier(genome_path=data_dir / genome_file)
+    simp = GFFSimplifier() if genome_file is None else GFFSimplifier(genome_path=data_dir / genome_file)
     simp.simpler_gff3(input_gff)
     simp.records.to_gff(output_gff)
     assert_files(output_gff, data_dir / expected_gff)
 
 
 @pytest.mark.parametrize(
-    "in_gff, expected_gff, expectation",
+    ("in_gff", "expected_gff", "expectation"),
     [
         param("ok_gene.gff", "ok_gene.gff", does_not_raise(), id="normal gene"),
         param(

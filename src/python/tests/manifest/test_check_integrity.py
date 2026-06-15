@@ -24,7 +24,7 @@ from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, ManifestS
 
 
 @pytest.mark.parametrize(
-    "manifest_file, ignore_false_stops, expected",
+    ("manifest_file", "ignore_false_stops", "expected"),
     [
         ("manifest.json", False, does_not_raise()),
         ("manifest.json", True, does_not_raise()),
@@ -49,7 +49,7 @@ def test_check_integrity(
 
 
 @pytest.mark.parametrize(
-    "manifest_file, expected",
+    ("manifest_file", "expected"),
     [
         ("manifest.json", does_not_raise()),
     ],

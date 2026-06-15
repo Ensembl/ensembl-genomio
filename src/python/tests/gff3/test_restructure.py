@@ -48,15 +48,15 @@ class FeatGenerator:
     def make_structure(self, children: list[Any]) -> list[GFFSeqFeature]:
         """Returns a list of SeqFeature children structure from the form:
         struct = ["mRNA"]
-        struct = [{"mRNA": ["CDS", "exon"]}, "exon", "exon"]
+        struct = [{"mRNA": ["CDS", "exon"]}, "exon", "exon"].
         """
         output = []
         for child in children:
             if isinstance(child, str):
                 output += self.make(child)
             elif isinstance(child, dict):
-                feat_type = list(child.keys())[0]
-                feat_children = list(child.values())[0]
+                feat_type = next(iter(child.keys()))
+                feat_children = next(iter(child.values()))
 
                 feat = self.make(feat_type)[0]
                 feat.sub_features += self.make_structure(feat_children)
@@ -75,7 +75,7 @@ class FeatGenerator:
 
 
 @pytest.mark.parametrize(
-    "children, expected_children",
+    ("children", "expected_children"),
     [
         param(["gene"], [{"gene": ["transcript"]}], id="gene, no transcript: add"),
         param([{"gene": ["mRNA"]}], [{"gene": ["mRNA"]}], id="gene + mRNA"),
@@ -95,7 +95,7 @@ def test_add_transcript_to_naked_gene(children: list[Any], expected_children: li
 
 
 @pytest.mark.parametrize(
-    "children, expected_children",
+    ("children", "expected_children"),
     [
         param(["mRNA"], ["mRNA"], id="One mRNA, skip"),
         param(["CDS"], [{"mRNA": ["CDS", "exon"]}], id="One CDS, add mRNA"),
@@ -121,7 +121,7 @@ def test_move_only_cdss_to_new_mrna(
 
 
 @pytest.mark.parametrize(
-    "children, expected_children",
+    ("children", "expected_children"),
     [
         param(["mRNA"], ["mRNA"], id="mRNA only, skip"),
         param(["CDS"], ["CDS"], id="1 CDS, skip"),
@@ -143,7 +143,7 @@ def test_move_only_exons_to_new_mrna(
 
 
 @pytest.mark.parametrize(
-    "children, diff_exon, expected_children, expectation",
+    ("children", "diff_exon", "expected_children", "expectation"),
     [
         param(["mRNA"], False, ["mRNA"], does_not_raise(), id="mRNA only, skip"),
         param(["mRNA", "mRNA"], False, ["mRNA", "mRNA"], does_not_raise(), id="2 mRNA only, skip"),
@@ -244,7 +244,7 @@ def test_move_cds_to_existing_mrna(
 
 
 @pytest.mark.parametrize(
-    "children, has_id, expected_children, expectation",
+    ("children", "has_id", "expected_children", "expectation"),
     [
         param(["tRNA"], 0, ["tRNA"], does_not_raise(), id="tRNA only, skip"),
         param(["mRNA"], 0, ["mRNA"], does_not_raise(), id="mRNA only, skip"),
@@ -307,7 +307,7 @@ def test_remove_extra_exons(
 
 
 @pytest.mark.parametrize(
-    "children, expected_children, expectation",
+    ("children", "expected_children", "expectation"),
     [
         param([{"mRNA": ["CDS", "exon"]}], [{"mRNA": ["CDS", "exon"]}], does_not_raise(), id="OK gene"),
         param(["mRNA", "CDS"], [{"mRNA": ["exon", "CDS"]}], does_not_raise(), id="mRNA + CDS, fixed"),
@@ -338,7 +338,7 @@ def test_restructure_gene(
 
 
 @pytest.mark.parametrize(
-    "children, expected_children",
+    ("children", "expected_children"),
     [
         param("gene", "gene", id="gene"),
         param("pseudogene", "pseudogene", id="pseudogene"),

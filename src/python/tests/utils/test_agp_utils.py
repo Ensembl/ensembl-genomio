@@ -25,7 +25,7 @@ from ensembl.io.genomio.utils import agp_utils
 
 
 @pytest.mark.parametrize(
-    "test_dir_name, agp_name, allow_revcomp, expectation, check_type, check_data",
+    ("test_dir_name", "agp_name", "allow_revcomp", "expectation", "check_type", "check_data"),
     [
         param(
             "ignores_comments",
@@ -160,7 +160,9 @@ def test_parse_agp(
         assert out[object_id][0].orientation == orientation
 
     elif check_type == "multiple":
-        assert isinstance(check_data, dict) and "keys" in check_data and "parts" in check_data
+        assert isinstance(check_data, dict)
+        assert "keys" in check_data
+        assert "parts" in check_data
         assert set(out.keys()) == check_data["keys"]
         for obj_id, expected_parts in check_data["parts"].items():
             assert len(out[obj_id]) == len(expected_parts)
@@ -235,7 +237,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
 
 
 @pytest.mark.parametrize(
-    "start,end,orientation,allow_revcomp,expectation",
+    ("start", "end", "orientation", "allow_revcomp", "expectation"),
     [
         param(
             1,

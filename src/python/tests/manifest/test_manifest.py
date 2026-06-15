@@ -35,7 +35,7 @@ def test_init(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "file_name, expected_name",
+    ("file_name", "expected_name"),
     [
         param("gene_models.gff3", "gff3", id="Recognised name and suffix"),
         param("foobar.gff3", "gff3", id="Recognised suffix"),
@@ -67,7 +67,7 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
 
 
 @pytest.mark.parametrize(
-    "file_names, expected_content, expected",
+    ("file_names", "expected_content", "expected"),
     [
         param(
             ["link1.agp", "link2.agp", "link3.agp"],
@@ -150,7 +150,7 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
 
 
 @pytest.mark.parametrize(
-    "files, expected_content",
+    ("files", "expected_content"),
     [
         param([], {}, id="No files"),
         param(["genes.gff3"], {"gff3": {"file": "genes.gff3", "md5sum": _CONTENT_MD5}}, id="1 gff3 file"),
@@ -184,7 +184,7 @@ def test_create_manifest(
 
 
 @pytest.mark.parametrize(
-    "files_dir, expected_files, expected",
+    ("files_dir", "expected_files", "expected"),
     [
         param(
             "full_data", {"functional_annotation", "seq_region"}, no_raise(), id="OK manifest with OK files"

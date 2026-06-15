@@ -50,8 +50,7 @@ def _sha256_key(name: str, repeat_class: str, repeat_type: str, seq: str) -> str
 
 
 def test_consensus_sha256_key_normalises_fields() -> None:
-    """Test ``convert_to_genomio_json.Consensus.sha256_key()`` normalises whitespace and sequence case.
-    """
+    """Test ``convert_to_genomio_json.Consensus.sha256_key()`` normalises whitespace and sequence case."""
     consensus = convert_to_genomio_json.Consensus(
         name=" AluY ",
         repeat_class=" SINE ",
@@ -130,8 +129,7 @@ def test_parse_token(
 
 
 def test_format_parse_errors() -> None:
-    """Test ``convert_to_genomio_json._format_parse_errors()`` formats a counted bullet list.
-    """
+    """Test ``convert_to_genomio_json._format_parse_errors()`` formats a counted bullet list."""
     assert convert_to_genomio_json._format_parse_errors(
         "TRF output",
         Path("input.dat"),
@@ -382,8 +380,7 @@ def test_parse_repeatmasker_strand_coordinates(
 
 
 def test_parse_repeatmasker_row() -> None:
-    """Test ``convert_to_genomio_json._parse_repeatmasker_row()`` parses one RepeatMasker data row.
-    """
+    """Test ``convert_to_genomio_json._parse_repeatmasker_row()`` parses one RepeatMasker data row."""
     line = "100 1.0 0.0 0.0 chr1 10 20 (0) + Foo SINE/Alu 1 11 (0) *"
 
     parsed_row = convert_to_genomio_json._parse_repeatmasker_row(Path("input.out"), line)
@@ -635,8 +632,7 @@ def test_parse_trf_parameters(line: str, expected: str | None) -> None:
 
 
 def test_missing_trf_sequence_error() -> None:
-    """Test ``convert_to_genomio_json._missing_trf_sequence_error()`` includes skipped block context.
-    """
+    """Test ``convert_to_genomio_json._missing_trf_sequence_error()`` includes skipped block context."""
     assert convert_to_genomio_json._missing_trf_sequence_error(Path("input.dat"), 3, 12) == (
         "TRF sequence header not found before data lines in input.dat: "
         "unprocessed_entries=3, first_data_line=12"

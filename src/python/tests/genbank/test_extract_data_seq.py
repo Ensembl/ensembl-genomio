@@ -43,7 +43,7 @@ class TestFormattedFilesGenerator:
     def formatted_files_generator(
         self, data_dir: Path, tmp_path_factory: TempPathFactory
     ) -> FormattedFilesGenerator:
-        """Call the function `FormattedFilesGenerator` with set parameters"""
+        """Call the function `FormattedFilesGenerator` with set parameters."""
         gb_file = self.gb_file
         gb_file_path = data_dir / gb_file
         temp = tmp_path_factory.mktemp("temp")
@@ -51,7 +51,7 @@ class TestFormattedFilesGenerator:
 
     @pytest.mark.dependency(name="parse_record")
     @pytest.mark.parametrize(
-        "type_feature, gene_name, expected_name, expected_id",
+        ("type_feature", "gene_name", "expected_name", "expected_id"),
         [
             ("rRNA", "locus_tag", "gene1", "TESTGlyrA"),
             ("tRNA", "gene", "gene2", "TESTGlyrA"),
@@ -70,7 +70,7 @@ class TestFormattedFilesGenerator:
         gene_name: str,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test to parse the features correctly"""
+        """Test to parse the features correctly."""
         record = SeqRecord(Seq("ATGC"), id="record1")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={gene_name: expected_name})
         rna_feature = SeqFeature(FeatureLocation(10, 15), type=type_feature)
@@ -114,7 +114,7 @@ class TestFormattedFilesGenerator:
 
     @pytest.mark.dependency(depends=["parse_record"])
     @pytest.mark.parametrize(
-        "type_feature, gene_name, test_qualifiers, expected_id",
+        ("type_feature", "gene_name", "test_qualifiers", "expected_id"),
         [
             ("gene", "AGR90MT_t01", "pseudogene", "TESTAGR90MT_t01"),
             ("tRNA", "AGR90MT_t01", "locus_tag", "TESTAGR90MT_t01_t1"),
@@ -130,7 +130,7 @@ class TestFormattedFilesGenerator:
         test_qualifiers: str,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test for a successful parsing of features in `_parse_gene_feat()` method"""
+        """Test for a successful parsing of features in `_parse_gene_feat()` method."""
         seq_feature = SeqFeature(FeatureLocation(5, 10), type=type_feature, id=gene_name)
         seq_feature.qualifiers[test_qualifiers] = "test_qual"
         # Check the returned feature is as expected
@@ -167,7 +167,7 @@ class TestFormattedFilesGenerator:
                 assert len(result_peptide) > 0
 
     @pytest.mark.parametrize(
-        "rna_name, expected_rna_id, expected_gene_id",
+        ("rna_name", "expected_rna_id", "expected_gene_id"),
         [
             ("AGR90MT t01", "AGR90MT t01_t1", "AGR90MT t01"),
             ("AGR90MT t01 t2", "AGR90MT_t1", "AGR90MT"),
@@ -182,7 +182,7 @@ class TestFormattedFilesGenerator:
         rna_name: str,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test for a successful parsing of transcript features `_parse_rna_feat()` method"""
+        """Test for a successful parsing of transcript features `_parse_rna_feat()` method."""
         seq_feature = SeqFeature(FeatureLocation(5, 10), type="tRNA")
         seq_feature.qualifiers["product"] = [rna_name]
         # pylint: disable=protected-access
@@ -195,7 +195,7 @@ class TestFormattedFilesGenerator:
 
     @pytest.mark.dependency(depends=["rna_parse"])
     @pytest.mark.parametrize(
-        "gene_id, all_ids, expected_id",
+        ("gene_id", "all_ids", "expected_id"),
         [("gene_name", ["gene_name"], "gene_name_2"), ("gene_test", [""], "gene_test")],
     )
     def test_uniquify_id(
@@ -205,19 +205,19 @@ class TestFormattedFilesGenerator:
         gene_id: str,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test that _uniquify_id adds a version number to an existing ID"""
+        """Test that _uniquify_id adds a version number to an existing ID."""
         # pylint: disable=protected-access
         new_id = formatted_files_generator._uniquify_id(gene_id, all_ids)
         assert new_id == expected_id
 
-    @pytest.mark.parametrize("organelle, expected_location", [("mitochondrion", "mitochondrial_chromosome")])
+    @pytest.mark.parametrize(("organelle", "expected_location"), [("mitochondrion", "mitochondrial_chromosome")])
     def test_prepare_location_with_supported_organelle(
         self,
         expected_location: str,
         organelle: str,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test that organelle location is present in the allowed types"""
+        """Test that organelle location is present in the allowed types."""
         # pylint: disable=protected-access
         result = formatted_files_generator._prepare_location(organelle)
         assert result == expected_location
@@ -228,14 +228,14 @@ class TestFormattedFilesGenerator:
         organelle: str,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test that organelle location if not identifies throws an error"""
+        """Test that organelle location if not identifies throws an error."""
         # An organelle not in the dictionary
         with pytest.raises(UnsupportedDataError, match=f"Unknown organelle: {organelle}"):
             # pylint: disable=protected-access
             formatted_files_generator._prepare_location(organelle)
 
     @pytest.mark.parametrize(
-        "type_feature, expected_value", [("gene", None), ("mRNA", None), ("CDS", 2), ("CDS", 5)]
+        ("type_feature", "expected_value"), [("gene", None), ("mRNA", None), ("CDS", 2), ("CDS", 5)]
     )
     def test_get_codon_table(
         self,
@@ -243,7 +243,7 @@ class TestFormattedFilesGenerator:
         type_feature: str,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Test that `get_number_of_codons` returns correct value based on feature type and qualifier"""
+        """Test that `get_number_of_codons` returns correct value based on feature type and qualifier."""
         rec = SeqRecord(seq=Seq(""), id="1JOY", name="EnvZ")
         seq_feature = SeqFeature(type=type_feature, qualifiers={"transl_table": [expected_value]})
         rec.features.append(seq_feature)

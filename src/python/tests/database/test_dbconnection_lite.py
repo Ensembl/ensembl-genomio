@@ -47,14 +47,14 @@ def fixture_meta_test_db(db_factory: Callable) -> UnitTestDB:
 
 # Use ensembl-utils UnitTestDB
 def test_get_metadata(meta_test_db: UnitTestDB) -> None:
-    """Test the method get_metadata()"""
+    """Test the method get_metadata()."""
     # Check the new connection lite
     dblite = DBConnectionLite(meta_test_db.dbc.url)
     assert dblite.get_metadata() == _METADATA_CONTENT
 
 
 @pytest.mark.parametrize(
-    "meta_key, meta_value",
+    ("meta_key", "meta_value"),
     [
         pytest.param(
             "species.scientific_name", _METADATA_CONTENT["species.scientific_name"][0], id="Unique key exists"
@@ -67,13 +67,13 @@ def test_get_metadata(meta_test_db: UnitTestDB) -> None:
     ],
 )
 def test_get_meta_value(meta_test_db: UnitTestDB, meta_key: str, meta_value: str | None) -> None:
-    """Test the method get_meta_value()"""
+    """Test the method get_meta_value()."""
     dblite = DBConnectionLite(meta_test_db.dbc.url)
     assert dblite.get_meta_value(meta_key) == meta_value
 
 
 @pytest.mark.parametrize(
-    "db_name, release_version",
+    ("db_name", "release_version"),
     [
         pytest.param("coredb_core_66_111_1", "66", id="Release version in name"),
         pytest.param("coredb_core_111_1", "", id="No release version in name"),

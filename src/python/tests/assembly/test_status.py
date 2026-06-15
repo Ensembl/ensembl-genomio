@@ -22,7 +22,7 @@ from contextlib import nullcontext as does_not_raise
 import json
 import os
 from pathlib import Path
-from typing import Any, Callable, ContextManager
+from typing import Any, Callable, ContextManager, TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
@@ -45,8 +45,10 @@ from ensembl.io.genomio.assembly.status import (
     singularity_image_setter,
 )
 from ensembl.io.genomio.utils.json_utils import get_json
-from ensembl.utils import StrPath
-from ensembl.utils.database import UnitTestDB
+
+if TYPE_CHECKING:
+    from ensembl.utils.database import UnitTestDB
+    from ensembl.utils import StrPath
 
 MINIMUM_METADATA = {
     "my_core": ReportStructure(
@@ -91,7 +93,7 @@ Base: Any = declarative_base()  # only possible type hint compatible with SQLAlc
 
 
 class Meta(Base):
-    """Meta class mirroring the Ensembl core database meta table without any foreign keys"""
+    """Meta class mirroring the Ensembl core database meta table without any foreign keys."""
 
     __tablename__ = "meta"
     __table_args__ = (
@@ -168,7 +170,7 @@ def test_report_structure_values() -> None:
 
 
 @pytest.mark.parametrize(
-    "sif_cache_dir, datasets_version, nextflow_cachedir, singularity_cachedir",
+    ("sif_cache_dir", "datasets_version", "nextflow_cachedir", "singularity_cachedir"),
     [
         param("sif_cache", None, None, None, id="Personal SIF cache, default datasets"),
         param(None, None, "nxf_cache", None, id="Nextflow SIF cache, default datasets"),
@@ -210,10 +212,7 @@ def test_singularity_image_setter(
     else:
         expected_cache_path = Path()
     # Get expected container URL used to pull the container
-    if datasets_version:
-        expected_container_url = datasets_version
-    else:
-        expected_container_url = DATASETS_SINGULARITY["datasets_version_url"]
+    expected_container_url = datasets_version or DATASETS_SINGULARITY["datasets_version_url"]
     # Patch the environment variables
     new_env = {}
     if nextflow_cachedir:
@@ -229,7 +228,7 @@ def test_singularity_image_setter(
 
 
 @pytest.mark.parametrize(
-    "file_name, expected_output, expectation",
+    ("file_name", "expected_output", "expectation"),
     [
         param("assemblies.txt", ["GCA_900524668.2", "GCF_123456789.1"], does_not_raise(), id="Valid file"),
         param("meta_report.tsv", [], raises(UnsupportedFormatError), id="Wrong accession format"),
@@ -333,7 +332,7 @@ def test_fetch_datasets_reports_runtime_error(mock_client: Mock) -> None:
 
 @pytest.mark.dependency(depends=["test_report_structure"])
 @pytest.mark.parametrize(
-    "file_name, expected_metadata",
+    ("file_name", "expected_metadata"),
     [
         param("simple.asm_report.json", MINIMUM_METADATA, id="Minimum report"),
         param("strain.asm_report.json", STRAIN_METADATA, id="Strain report"),

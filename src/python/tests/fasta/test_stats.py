@@ -39,7 +39,7 @@ def write_gzip_text(path: Path, text: str) -> Path:
 
 
 @pytest.mark.parametrize(
-    "contents, expected",
+    ("contents", "expected"),
     [
         param(
             ">seq1\nACGT\nAC\n>seq2 description\nNNN\n",
@@ -113,7 +113,7 @@ def test_compute_fasta_stats_reads_gzipped_fasta(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "argv, expected_output",
+    ("argv", "expected_output"),
     [
         param(["--fasta"], None, id="Default output"),
         param(["--fasta", "--output"], "stats.json", id="Explicit output"),

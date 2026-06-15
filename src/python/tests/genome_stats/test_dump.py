@@ -128,7 +128,7 @@ class TestStatsGenerator:
         type(self).genome_stats = get_json(data_dir / "genome_stats.json")
 
     @pytest.mark.parametrize(
-        "stats, output",
+        ("stats", "output"),
         [
             ({}, {}),
             (
@@ -151,7 +151,7 @@ class TestStatsGenerator:
         assert stats == output
 
     @pytest.mark.parametrize(
-        "code, attribute",
+        ("code", "attribute"),
         [
             ("coord_system_tag", "coord_system"),
             ("sequence_location", "locations"),
@@ -170,7 +170,7 @@ class TestStatsGenerator:
         assert attrib_counts == self.genome_stats["assembly_stats"][attribute]
 
     @pytest.mark.parametrize(
-        "table, table_name",
+        ("table", "table_name"),
         [
             (Gene, "genes"),
             (Transcript, "transcripts"),
@@ -189,7 +189,7 @@ class TestStatsGenerator:
         assert biotypes == self.genome_stats["annotation_stats"][table_name]["biotypes"]
 
     @pytest.mark.parametrize(
-        "table, table_name",
+        ("table", "table_name"),
         [
             (Gene, "genes"),
             (Transcript, "transcripts"),

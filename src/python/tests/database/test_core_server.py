@@ -18,13 +18,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import pytest
-from pytest_mock import MockerFixture
 from sqlalchemy.engine import make_url
 
 from ensembl.io.genomio.database import CoreServer
+from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 TEST_CORES = [
     "speciesA_genus_core_60_110_1",
@@ -39,7 +42,7 @@ TEST_CORES = [
 class MockResult:
     """Mocker of `sqlalchemy.engine.Result` class."""
 
-    def __init__(self, core_dbs: list[str]):
+    def __init__(self, core_dbs: list[str]) -> None:
         self.core_dbs = core_dbs
 
     def fetchall(self) -> list[list[str]]:
@@ -57,7 +60,7 @@ class MockConnection:
         """Returns a `MockResult` object."""
         return self.result
 
-    def __enter__(self, *args: Any, **kwargs: Any) -> MockConnection:  # pylint: disable=unused-argument
+    def __enter__(self, *args: Any, **kwargs: Any) -> Self:  # pylint: disable=unused-argument
         return self
 
     def __exit__(self, *args: object, **kwargs: Any) -> None:  # pylint: disable=unused-argument
@@ -79,7 +82,7 @@ class TestCoreServer:
     """Test for the `CoreServer` class."""
 
     @pytest.mark.parametrize(
-        "dbs, prefix, build, version, dbname_re, db_list, output",
+        ("dbs", "prefix", "build", "version", "dbname_re", "db_list", "output"),
         [
             ([], "", "", None, None, [], []),
             (TEST_CORES, "", None, None, "", [], TEST_CORES),
