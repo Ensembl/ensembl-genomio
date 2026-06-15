@@ -65,12 +65,13 @@ MetaRow = namedtuple("MetaRow", "meta_key meta_value")
 def test_check_assembly_version(
     genome_metadata: dict[str, Any], output: int, expectation: ContextManager
 ) -> None:
-    """Tests the `dump.check_assembly_version()` method.
+    """Test the `dump.check_assembly_version()` method.
 
     Args:
         genome_metadata: Nested genome metadata key values.
         output: Expected assembly version.
         expectation: Context manager for the expected exception (if any).
+
     """
     with expectation:
         dump.check_assembly_version(genome_metadata)
@@ -105,12 +106,13 @@ def test_check_assembly_version(
 def test_check_genebuild_version(
     genome_metadata: dict[str, Any], output: dict[str, Any], expectation: ContextManager
 ) -> None:
-    """Tests the `dump.check_genebuild_version()` method.
+    """Test the `dump.check_genebuild_version()` method.
 
     Args:
         genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
+
     """
     with expectation:
         dump.check_genebuild_version(genome_metadata)
@@ -210,13 +212,14 @@ def test_filter_genome_meta(
     metafilter: StrPath,
     meta_update: bool,
 ) -> None:
-    """Tests the `dump.filter_genome_meta()` method.
+    """Test the `dump.filter_genome_meta()` method.
 
     Args:
         genome_metadata: Nested genome metadata key values.
         output: Expected change in the genome metadata dictionary.
         metafilter: Type evaluated meta filter.
         meta_update: Permit meta updating.
+
     """
     result = dump.filter_genome_meta(genome_metadata, metafilter, meta_update)
     assert not DeepDiff(result, output)
@@ -233,11 +236,12 @@ def test_filter_genome_meta(
     ],
 )
 def test_convert_dict(meta_dict: dict, expected_dict: dict) -> None:
-    """Tests the `dump.convert_dict()` method.
+    """Test the `dump.convert_dict()` method.
 
     Args:
         meta_dict: Dict containing string based meta 'subkey' value pairs.
         expected_dict: Dict with converted 'subkey' class types.
+
     """
     convert_dict = dump.convert_dict(meta_dict)
     string_convert = str(convert_dict)
@@ -315,7 +319,7 @@ def test_get_genome_metadata(
     output: dict[str, Any],
     expectation: ContextManager,
 ) -> None:
-    """Tests the `dump.get_genome_metadata()` method.
+    """Test the `dump.get_genome_metadata()` method.
 
     Args:
         mock_session: A mock of `sqlalchemy.orm.Session()` class.
@@ -323,6 +327,7 @@ def test_get_genome_metadata(
         meta_data: `meta` table content in a list of named tuples.
         output: Expected genome metadata dictionary.
         expectation: Context manager for the expected exception (if any).
+
     """
     mock_result.unique.return_value = mock_result
     mock_result.all.return_value = meta_data
@@ -386,12 +391,12 @@ def test_get_genome_metadata(
     ],
 )
 def test_parse_args(arg_list: list[str], expected: dict) -> None:
-    """Tests the `dump.parse_args()` function."""
+    """Test the `dump.parse_args()` function."""
     # pylint: disable=too-many-positional-arguments
     args = dump.parse_args(arg_list)
     if args.metafilter:
         # DeepDiff is not able to compare two objects of Path type, so convert it to string
-        setattr(args, "metafilter", str(args.metafilter))
+        args.metafilter = str(args.metafilter)
     assert not DeepDiff(vars(args), expected)
 
 
@@ -430,7 +435,7 @@ def test_main(
     append_db: bool,
     stdout: str,
 ) -> None:
-    """Tests the `dump.main()` function (entry point).
+    """Test the `dump.main()` function (entry point).
 
     Fixtures: capsys
     """

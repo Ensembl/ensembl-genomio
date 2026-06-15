@@ -113,7 +113,7 @@ _META = {
 def test_format_db_data(
     mock_dbconn: Mock, server_url: URL, dbs: list[str], brc_mode: bool, skip_keys: bool, output: list[dict]
 ) -> None:
-    """Tests the `factory.format_db_data()` function.
+    """Test the `factory.format_db_data()` function.
 
     Args:
         mock_dbconn: A mock of `ensembl.io.genomio.database.factory.DBConnectionLite` class.
@@ -122,6 +122,7 @@ def test_format_db_data(
         brc_mode: BRC mode?
         skip_keys: Return `None` instead of the assigned value for "BRC4.*" meta keys.
         output: Expected list of dictionaries with metadata per database.
+
     """
 
     def _get_meta_value(meta_key: str) -> str | None:
@@ -167,7 +168,7 @@ def test_get_core_dbs_metadata(
     use_db_file: bool,
     output: list[dict],
 ) -> None:
-    """Tests the `factory.get_core_dbs_metadata()` function.
+    """Test the `factory.get_core_dbs_metadata()` function.
 
     Args:
         mock_core_server: A mock of `ensembl.io.genomio.database.factory.CoreServer` class.
@@ -175,6 +176,7 @@ def test_get_core_dbs_metadata(
         data_dir: Module's test data directory fixture.
         use_db_file: Use database file to filter databases.
         output: Expected list of dictionaries with some metadata for each selected database.
+
     """
 
     def _format_db_data(server_url: URL, dbs: list[str], brc_mode: bool = False) -> list[dict]:
@@ -256,11 +258,11 @@ def test_get_core_dbs_metadata(
     ],
 )
 def test_parse_args(arg_list: list[str], expected: dict) -> None:
-    """Tests the `factory.parse_args()` function."""
+    """Test the `factory.parse_args()` function."""
     args = factory.parse_args(arg_list)
     if args.db_list:
         # DeepDiff is not able to compare two objects of Path type, so convert it to string
-        setattr(args, "db_list", str(args.db_list))
+        args.db_list = str(args.db_list)
     assert not DeepDiff(vars(args), expected)
 
 
@@ -282,7 +284,7 @@ def test_main(
     server_url: URL,
     stdout: str,
 ) -> None:
-    """Tests the `factory.main()` function (entry point).
+    """Test the `factory.main()` function (entry point).
 
     Fixtures: capsys
     """

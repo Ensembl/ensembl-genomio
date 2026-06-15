@@ -35,11 +35,11 @@ CHUNK_RE = re.compile(recombine._CHUNK_RE_STRING)
 
 
 def test_fasta_record_cache_load_and_switch_files(data_dir: Path) -> None:
-    """
-    Tests loading and switching of files by `recombine.FastaRecordCache()`.
+    """Test loading and switching of files by `recombine.FastaRecordCache()`.
 
     Args:
         data_dir: Module's test data directory fixture.
+
     """
     fasta_file1 = data_dir / "input_a.fa"
     fasta_file2 = data_dir / "input_b.fa"
@@ -59,11 +59,11 @@ def test_fasta_record_cache_load_and_switch_files(data_dir: Path) -> None:
 
 
 def test_fasta_record_cache_missing_record_raises_keyerror(data_dir: Path) -> None:
-    """
-    Tests `recombine.FastaRecordCache()` raises error when invalid record requested.
+    """Test `recombine.FastaRecordCache()` raises error when invalid record requested.
 
     Args:
         data_dir: Module's test data directory fixture.
+
     """
     fasta_file = data_dir / "input_a.fa"
     loc = recombine.RecordLocation(path=fasta_file, description="description")
@@ -73,11 +73,11 @@ def test_fasta_record_cache_missing_record_raises_keyerror(data_dir: Path) -> No
 
 
 def test_fasta_record_cache_duplicate_id_within_file_raises(data_dir: Path) -> None:
-    """
-    Tests `recombine.FastaRecordCache()` raises error when loading file with duplicate record ID.
+    """Test `recombine.FastaRecordCache()` raises error when loading file with duplicate record ID.
 
     Args:
         data_dir: Module's test data directory fixture.
+
     """
     fasta_file = data_dir / "duplicate_id.fa"
     cache = recombine.FastaRecordCache()
@@ -89,11 +89,11 @@ def test_fasta_record_cache_duplicate_id_within_file_raises(data_dir: Path) -> N
 
 
 def test_build_index_collects_locations_first_seen_and_chunks(data_dir: Path) -> None:
-    """
-    Tests `recombine._build_index()`, ensuring sequence order captured correctly.
+    """Test `recombine._build_index()`, ensuring sequence order captured correctly.
 
     Args:
         data_dir: Module's test data directory fixture.
+
     """
     fasta_file1 = data_dir / "build_index" / "input_a.fa"
     fasta_file2 = data_dir / "build_index" / "input_b.fa"
@@ -105,11 +105,11 @@ def test_build_index_collects_locations_first_seen_and_chunks(data_dir: Path) ->
 
 
 def test_build_index_duplicate_record_id_raises(data_dir: Path) -> None:
-    """
-    Tests `recombine._build_index()` raises error when duplicate record IDs found in files being indexed.
+    """Test `recombine._build_index()` raises error when duplicate record IDs found in files being indexed.
 
     Args:
         data_dir: Module's test data directory fixture.
+
     """
     fasta_file1 = data_dir / "duplicate_across_files" / "duplicate_a.fa"
     fasta_file2 = data_dir / "duplicate_across_files" / "duplicate_b.fa"
@@ -118,11 +118,11 @@ def test_build_index_duplicate_record_id_raises(data_dir: Path) -> None:
 
 
 def test_build_index_no_headers_raises(tmp_path: Path) -> None:
-    """
-    Tests `recombine._build_index()` raises error when attempting to index empty files.
+    """Test `recombine._build_index()` raises error when attempting to index empty files.
 
     Args:
         tmp_path: Temporary directory provided by pytest.
+
     """
     empty_file = tmp_path / "empty.fa"
     empty_file.touch()
@@ -171,14 +171,14 @@ def test_recombine_records_from_headers(
     regex: re.Pattern[str],
     expectation: ContextManager,
 ) -> None:
-    """
-    Tests the `recombine._records_from_headers()` function.
+    """Test the `recombine._records_from_headers()` function.
 
     Args:
         data_dir: Module's test data directory fixture.
         input_filename: Name of input FASTA file.
         regex: Regular expression pattern for matching base and start groups in FASTA headers.
         expectation: Context manager for the expected outcome of the test (exception or not).
+
     """
     input_fa = data_dir / "from_headers" / input_filename
     with expectation as expected:
@@ -214,13 +214,13 @@ def test_records_from_headers_exceptions(
     chunks: dict[str, list[tuple[int, str]]],
     key_error_str: str,
 ) -> None:
-    """
-    Tests exceptions raised by the `recombine._records_from_headers()` function.
+    """Test exceptions raised by the `recombine._records_from_headers()` function.
 
     Args:
         first_seen: Dictionary representing order in which records observed.
         chunks: Mapping of base record ID to a list of (start, chunk_record_id) pairs.
         key_error: Expected string matching raised ``KeyError``.
+
     """
     locations: dict[str, recombine.RecordLocation] = {}
     cache = recombine.FastaRecordCache()
@@ -253,13 +253,13 @@ def test_records_from_headers_exceptions(
     ],
 )
 def test_agp_component_seq(orientation: str, allow_revcomp: bool, expectation: ContextManager) -> None:
-    """
-    Tests the `recombine._agp_component_seq()` function.
+    """Test the `recombine._agp_component_seq()` function.
 
     Args:
         orientation: '+' or '-' orientation from AGP.
         allow_revcomp: Boolean indicating whether reverse strand entries are permitted.
         expectation: Context manager for the expected outcome of the test (exception or not).
+
     """
     record = SeqRecord(Seq("ACGTGGTT"), "part", "test_record")
     with expectation as expected:
@@ -298,13 +298,13 @@ def test_agp_component_seq(orientation: str, allow_revcomp: bool, expectation: C
     ],
 )
 def test_records_from_agp(data_dir: Path, agp_filename: str, expectation: ContextManager) -> None:
-    """
-    Tests the `recombine._records_from_agp()` function.
+    """Test the `recombine._records_from_agp()` function.
 
     Args:
         data_dir: Module's test data directory fixture.
         agp_filename: Name of input AGP file.
         expectation: Context manager for the expected outcome of the test (exception or not).
+
     """
     locations, _, _ = recombine._build_index(CHUNK_RE, [data_dir / "from_agp" / "input.fa"])
     agp_entries = parse_agp(data_dir / "from_agp" / agp_filename, allow_revcomp=False)
@@ -340,8 +340,7 @@ def test_recombine_fasta(
     agp_filename: str | None,
     expected: list[dict[str, str]],
 ) -> None:
-    """
-    Tests the `recombine.recombine_fasta()` function.
+    """Test the `recombine.recombine_fasta()` function.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -349,6 +348,7 @@ def test_recombine_fasta(
         test_dir_name: Name of data_dir subfolder containing test files.
         agp_filename: Name of (optional) AGP file.
         expected: results of reading FASTA output into list of dictionaries keyed by 'id' and 'seq'.
+
     """
     manifest = data_dir / test_dir_name / "manifest.txt"
     out = tmp_path / "out.fa"
@@ -403,30 +403,30 @@ def test_recombine_fasta(
     ],
 )
 def test_parse_args(arg_list: list[str], expected_params: dict[str, str | int | bool]) -> None:
-    """
-    Tests the `recombine.parse_args()` function.
+    """Test the `recombine.parse_args()` function.
 
     Args:
         arg_list: List of command line arguments to parse.
         expected_params: Expected dictionary of parameters from parsing arguments.
+
     """
     args = recombine.parse_args(arg_list)
     # DeepDiff is not able to compare two objects of Path type - need to convert them to string
-    setattr(args, "fasta_manifest", str(args.fasta_manifest))
-    setattr(args, "out_fasta", str(args.out_fasta))
+    args.fasta_manifest = str(args.fasta_manifest)
+    args.out_fasta = str(args.out_fasta)
     if hasattr(args, "agp_file"):
-        setattr(args, "agp_file", str(args.agp_file))
+        args.agp_file = str(args.agp_file)
     assert not DeepDiff(vars(args), expected_params)
 
 
 @patch("ensembl.io.genomio.fasta.recombine.recombine_fasta")
 def test_main(mock_recombine_fasta: Mock, tmp_path: Path) -> None:
-    """
-    Tests the `recombine.main()` function (entry point).
+    """Test the `recombine.main()` function (entry point).
 
     Args:
         mock_recombine_fasta: Mock object for the `recombine.recombine_fasta()` function.
         tmp_path: Temporary directory provided by pytest.
+
     """
     fasta_path = tmp_path / "in.fa"
     manifest_path = tmp_path / "manifest.txt"
@@ -443,12 +443,12 @@ def test_main(mock_recombine_fasta: Mock, tmp_path: Path) -> None:
 
 @patch("ensembl.io.genomio.fasta.recombine.recombine_fasta")
 def test_main_raises_exception(mock_recombine_fasta: Mock, tmp_path: Path) -> None:
-    """
-    Tests the `recombine.main()` function (entry point) raises exception on error.
+    """Test the `recombine.main()` function (entry point) raises exception on error.
 
     Args:
         mock_recombine_fasta: Mock object for the `recombine.recombine_fasta()` function.
         tmp_path: Temporary directory provided by pytest.
+
     """
     fasta_path = tmp_path / "in.fa"
     manifest_path = tmp_path / "manifest.txt"

@@ -132,8 +132,7 @@ def test_parse_agp(
     check_type: str | None,
     check_data: tuple[str, str, str] | dict[str, dict] | None,
 ) -> None:
-    """
-    Tests the `agp_utils.parse_agp()` function.
+    """Test the `agp_utils.parse_agp()` function.
 
     Tests both single-object and multi-object AGP files, as well as error conditions.
 
@@ -145,6 +144,7 @@ def test_parse_agp(
         expectation: Context manager for the expected outcome of the test (exception or not).
         check_type: Type of check to perform ("single", "multiple", or `None` for error cases).
         check_data: Data needed for assertions (varies by `check_type`).
+
     """
     test_dir = data_dir / test_dir_name
     agp_file = test_dir / agp_name
@@ -170,7 +170,7 @@ def test_parse_agp(
 
 
 def test_build_component_index_groups_by_part_id_and_sorts_within_component() -> None:
-    """Tests that component entries are grouped by component ID and sorted properly."""
+    """Test that component entries are grouped by component ID and sorted properly."""
     e1 = agp_utils.AgpEntry(
         record="objB",
         record_start=50,
@@ -230,7 +230,7 @@ def test_build_component_index_groups_by_part_id_and_sorts_within_component() ->
 
 
 def test_build_component_index_empty_input_returns_empty_dict() -> None:
-    """Tests that `build_component_index()` returns an empty dict for empty input."""
+    """Test that `build_component_index()` returns an empty dict for empty input."""
     assert agp_utils.build_component_index({}) == {}
 
 
@@ -318,8 +318,7 @@ def test_lift_range(
     allow_revcomp: bool,
     expectation: ContextManager,
 ) -> None:
-    """
-    Tests the `agp_utils.lift_range()` function.
+    """Test the `agp_utils.lift_range()` function.
 
     Args:
         start: Start position relative to component.
@@ -327,6 +326,7 @@ def test_lift_range(
         orientation: Orientation of the component in relation to the record (+/-).
         allow_revcomp: Boolean indicating whether minus strand entries are permitted.
         expectation: Context manager for the expected outcome of the test (exception or not).
+
     """
     with expectation as expected:
         part = agp_utils.AgpEntry(

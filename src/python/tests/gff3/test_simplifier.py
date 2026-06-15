@@ -19,7 +19,7 @@
 from contextlib import nullcontext as does_not_raise
 from os import PathLike
 from pathlib import Path
-from typing import Callable, ContextManager, Dict, Optional
+from typing import Callable, ContextManager
 
 import pytest
 from pytest import param, raises
@@ -54,8 +54,8 @@ from ensembl.io.genomio.utils import print_json
         ),
     ],
 )
-def test_get_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
-    """Tests `GFFSimplifier.get_provider_name().`"""
+def test_get_provider_name(tmp_path: Path, genome_meta: dict, expected_provider_name: str) -> None:
+    """Test `GFFSimplifier.get_provider_name().`"""
     # Write metadata file
     meta_path = tmp_path / "meta.json"
     print_json(meta_path, genome_meta)
@@ -74,8 +74,8 @@ def test_get_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_
         ),
     ],
 )
-def test_init_provider_name(tmp_path: Path, genome_meta: Dict, expected_provider_name: str) -> None:
-    """Tests `GFFSimplifier.__init__` to set the `provider_name` to its `FunctionalAnnotations` attrib."""
+def test_init_provider_name(tmp_path: Path, genome_meta: dict, expected_provider_name: str) -> None:
+    """Test `GFFSimplifier.__init__` to set the `provider_name` to its `FunctionalAnnotations` attrib."""
     # Write metadata file
     meta_path = tmp_path / "meta.json"
     print_json(meta_path, genome_meta)
@@ -203,10 +203,10 @@ def test_create_gene_for_lone_cds(
 )
 def test_normalize_non_gene(
     in_type: str,
-    in_mobile_type: Optional[str],
-    in_product: Optional[str],
+    in_mobile_type: str | None,
+    in_product: str | None,
     out_type: str,
-    out_description: Optional[str],
+    out_description: str | None,
     expectation: ContextManager,
 ) -> None:
     """Test non-gene normalization."""
@@ -331,7 +331,7 @@ def test_simpler_gff3_feature(
     tmp_path: Path,
     assert_files: Callable,
     in_gff: PathLike,
-    expected_gff: Optional[PathLike],
+    expected_gff: PathLike | None,
     expectation: ContextManager,
 ) -> None:
     """Test simplifying one gene (from a GFF3 file)."""
@@ -461,7 +461,7 @@ def test_gffsimplifier_with_genome(
     data_dir: Path,
     tmp_path: Path,
     assert_files: Callable,
-    genome_file: Optional[PathLike],
+    genome_file: PathLike | None,
     in_gff: PathLike,
     expected_gff: PathLike,
 ) -> None:

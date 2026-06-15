@@ -33,8 +33,7 @@ from ensembl.io.genomio.features import convert_to_genomio_json
 
 
 def _sha256_key(name: str, repeat_class: str, repeat_type: str, seq: str) -> str:
-    """
-    Computes the expected SHA-256 repeat consensus key.
+    """Computes the expected SHA-256 repeat consensus key.
 
     Args:
         name: Repeat name.
@@ -44,14 +43,14 @@ def _sha256_key(name: str, repeat_class: str, repeat_type: str, seq: str) -> str
 
     Returns:
         str:Expected SHA-256 digest.
+
     """
-    payload = f"{name}\t{repeat_class}\t{repeat_type}\t{seq}".encode("utf-8")
+    payload = f"{name}\t{repeat_class}\t{repeat_type}\t{seq}".encode()
     return hashlib.sha256(payload).hexdigest()
 
 
 def test_consensus_sha256_key_normalises_fields() -> None:
-    """
-    Tests ``convert_to_genomio_json.Consensus.sha256_key()`` normalises whitespace and sequence case.
+    """Test ``convert_to_genomio_json.Consensus.sha256_key()`` normalises whitespace and sequence case.
     """
     consensus = convert_to_genomio_json.Consensus(
         name=" AluY ",
@@ -73,12 +72,12 @@ def test_consensus_sha256_key_normalises_fields() -> None:
     ],
 )
 def test_map_repeatmasker_repeat_consensus_type(repeat_class: str, expected: str) -> None:
-    """
-    Tests the mapping of RepeatMasker repeat classes to GenomIO categories for known and unknown patterns.
+    """Test the mapping of RepeatMasker repeat classes to GenomIO categories for known and unknown patterns.
 
     Args:
         repeat_class: Input repeat class string.
         expected: Expected mapped output.
+
     """
     assert convert_to_genomio_json._map_repeatmasker_repeat_consensus_type(repeat_class) == expected
 
@@ -113,8 +112,7 @@ def test_parse_token(
     raw_line: str,
     expectation: ContextManager,
 ) -> None:
-    """
-    Tests ``convert_to_genomio_json._parse_token()`` parses valid tokens and reports invalid token context.
+    """Test ``convert_to_genomio_json._parse_token()`` parses valid tokens and reports invalid token context.
 
     Args:
         parser: Parser callable to apply to the token.
@@ -122,6 +120,7 @@ def test_parse_token(
         field_name: Field name used in error messages.
         raw_line: Original line used in error messages.
         expectation: Context manager for the expected result or exception.
+
     """
     with expectation as expected:
         assert (
@@ -131,8 +130,7 @@ def test_parse_token(
 
 
 def test_format_parse_errors() -> None:
-    """
-    Tests ``convert_to_genomio_json._format_parse_errors()`` formats a counted bullet list.
+    """Test ``convert_to_genomio_json._format_parse_errors()`` formats a counted bullet list.
     """
     assert convert_to_genomio_json._format_parse_errors(
         "TRF output",
@@ -142,11 +140,11 @@ def test_format_parse_errors() -> None:
 
 
 def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
-    """
-    Tests ``convert_to_genomio_json._file_last_modified_time()`` returns a UTC ISO timestamp.
+    """Test ``convert_to_genomio_json._file_last_modified_time()`` returns a UTC ISO timestamp.
 
     Args:
         tmp_path: Temporary directory provided by pytest.
+
     """
     input_path = tmp_path / "input.out"
     input_path.write_text("content", encoding="utf-8")
@@ -209,8 +207,7 @@ def test_has_valid_parsed_coordinates(
     warning_pattern: str | None,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """
-    Tests ``convert_to_genomio_json._has_valid_parsed_coordinates()`` correctly validates coordinates.
+    """Test ``convert_to_genomio_json._has_valid_parsed_coordinates()`` correctly validates coordinates.
 
     Args:
         seq_region_start: Sequence region start coordinate.
@@ -220,20 +217,20 @@ def test_has_valid_parsed_coordinates(
         expectation: Context manager for the expected result or exception.
         warning_pattern: Optional substring expected to appear in the logged warning message.
         caplog: Pytest fixture for capturing log output.
+
     """
-    with caplog.at_level(logging.WARNING):
-        with expectation as expected:
-            assert (
-                convert_to_genomio_json._has_valid_parsed_coordinates(
-                    Path("input.out"),
-                    seq_region_start=seq_region_start,
-                    seq_region_end=seq_region_end,
-                    repeat_start=repeat_start,
-                    repeat_end=repeat_end,
-                    line="raw line",
-                )
-                == expected
+    with caplog.at_level(logging.WARNING), expectation as expected:
+        assert (
+            convert_to_genomio_json._has_valid_parsed_coordinates(
+                Path("input.out"),
+                seq_region_start=seq_region_start,
+                seq_region_end=seq_region_end,
+                repeat_start=repeat_start,
+                repeat_end=repeat_end,
+                line="raw line",
             )
+            == expected
+        )
 
     if warning_pattern is None:
         assert not caplog.records
@@ -255,12 +252,12 @@ def test_parse_repeatmasker_consensus_library(
     data_dir: Path,
     entries: list[tuple[str, str, str, str, str]],
 ) -> None:
-    """
-    Tests the ``convert_to_genomio_json._parse_repeatmasker_consensus_library()`` internal helper.
+    """Test the ``convert_to_genomio_json._parse_repeatmasker_consensus_library()`` internal helper.
 
     Args:
         data_dir: Module's test data directory fixture.
         entries: Expected consensus name, class, raw repeat type, mapped repeat type, and sequence values.
+
     """
     fasta_path = data_dir / "repeatmodeler" / "classified_mixed.fa"
     expected_consensus_by_triplet = {
@@ -298,12 +295,12 @@ def test_parse_repeatmasker_repeat_class_field(
     repeat_class_field: str,
     expected: tuple[str, str],
 ) -> None:
-    """
-    Tests ``convert_to_genomio_json._parse_repeatmasker_repeat_class_field()`` splits class fields.
+    """Test ``convert_to_genomio_json._parse_repeatmasker_repeat_class_field()`` splits class fields.
 
     Args:
         repeat_class_field: Raw RepeatMasker repeat class/family field.
         expected: Expected repeat class and raw repeat type.
+
     """
     output = convert_to_genomio_json._parse_repeatmasker_repeat_class_field(
         Path("input.out"), repeat_class_field, "raw line"
@@ -319,11 +316,11 @@ def test_parse_repeatmasker_repeat_class_field(
     ],
 )
 def test_parse_repeatmasker_repeat_class_field_errors(repeat_class_field: str) -> None:
-    """
-    Tests ``convert_to_genomio_json._parse_repeatmasker_repeat_class_field()`` rejects malformed fields.
+    """Test ``convert_to_genomio_json._parse_repeatmasker_repeat_class_field()`` rejects malformed fields.
 
     Args:
         repeat_class_field: Raw RepeatMasker repeat class/family field.
+
     """
     with pytest.raises(ValueError, match=r"Malformed repeat_class/family"):
         convert_to_genomio_json._parse_repeatmasker_repeat_class_field(
@@ -367,12 +364,12 @@ def test_parse_repeatmasker_strand_coordinates(
     columns: list[str],
     expected: tuple[str, int, int],
 ) -> None:
-    """
-    Tests ``convert_to_genomio_json._parse_repeatmasker_strand_coordinates()`` parses strand coordinates.
+    """Test ``convert_to_genomio_json._parse_repeatmasker_strand_coordinates()`` parses strand coordinates.
 
     Args:
         columns: Split RepeatMasker data row columns.
         expected: Expected sequence-region strand, repeat start, and repeat end.
+
     """
     assert (
         convert_to_genomio_json._parse_repeatmasker_strand_coordinates(
@@ -385,8 +382,7 @@ def test_parse_repeatmasker_strand_coordinates(
 
 
 def test_parse_repeatmasker_row() -> None:
-    """
-    Tests ``convert_to_genomio_json._parse_repeatmasker_row()`` parses one RepeatMasker data row.
+    """Test ``convert_to_genomio_json._parse_repeatmasker_row()`` parses one RepeatMasker data row.
     """
     line = "100 1.0 0.0 0.0 chr1 10 20 (0) + Foo SINE/Alu 1 11 (0) *"
 
@@ -541,13 +537,13 @@ def test_parse_repeatmasker_output_success(
     filename: str,
     expected_features: list[dict[str, object]],
 ) -> None:
-    """
-    Tests successful parsing of RepeatMasker `.out` files.
+    """Test successful parsing of RepeatMasker `.out` files.
 
     Args:
         data_dir: Module's test data directory fixture.
         filename: Input RepeatMasker `.out` filename.
         expected_features: Expected parsed repeat feature dictionaries.
+
     """
     out_path = data_dir / filename
     features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_output(
@@ -560,11 +556,11 @@ def test_parse_repeatmasker_output_success(
 
 
 def test_parse_repeatmasker_output_adds_consensus_from_library(data_dir: Path) -> None:
-    """
-    Tests RepeatMasker parsing attaches consensus keys when a matching consensus library is provided.
+    """Test RepeatMasker parsing attaches consensus keys when a matching consensus library is provided.
 
     Args:
         data_dir: Module's test data directory fixture.
+
     """
     out_path = data_dir / "create_json" / "basic.out"
     consensus_lib_path = data_dir / "create_json" / "repeatmodeler_match.fa"
@@ -610,12 +606,12 @@ def test_parse_repeatmasker_output_adds_consensus_from_library(data_dir: Path) -
     ],
 )
 def test_parse_trf_sequence_header(line: str, expected: tuple[str, int | None]) -> None:
-    """
-    Tests ``convert_to_genomio_json._parse_trf_sequence_header()`` extracts sequence ID and window start.
+    """Test ``convert_to_genomio_json._parse_trf_sequence_header()`` extracts sequence ID and window start.
 
     Args:
         line: TRF sequence header line.
         expected: Expected sequence region and optional window start.
+
     """
     assert convert_to_genomio_json._parse_trf_sequence_header(line) == expected
 
@@ -628,19 +624,18 @@ def test_parse_trf_sequence_header(line: str, expected: tuple[str, int | None]) 
     ],
 )
 def test_parse_trf_parameters(line: str, expected: str | None) -> None:
-    """
-    Tests ``convert_to_genomio_json._parse_trf_parameters()`` extracts TRF parameters.
+    """Test ``convert_to_genomio_json._parse_trf_parameters()`` extracts TRF parameters.
 
     Args:
         line: Raw TRF line.
         expected: Expected parameters string, or ``None`` for non-parameter lines.
+
     """
     assert convert_to_genomio_json._parse_trf_parameters(line) == expected
 
 
 def test_missing_trf_sequence_error() -> None:
-    """
-    Tests ``convert_to_genomio_json._missing_trf_sequence_error()`` includes skipped block context.
+    """Test ``convert_to_genomio_json._missing_trf_sequence_error()`` includes skipped block context.
     """
     assert convert_to_genomio_json._missing_trf_sequence_error(Path("input.dat"), 3, 12) == (
         "TRF sequence header not found before data lines in input.dat: "
@@ -700,12 +695,12 @@ def test_parse_trf_data_row(
     line: str,
     expectation: ContextManager,
 ) -> None:
-    """
-    Tests ``convert_to_genomio_json._parse_trf_data_row()`` parses or rejects one TRF data row.
+    """Test ``convert_to_genomio_json._parse_trf_data_row()`` parses or rejects one TRF data row.
 
     Args:
         line: Raw TRF data row.
         expectation: Context manager for the expected result or exception.
+
     """
     with expectation as expected:
         parsed_row = convert_to_genomio_json._parse_trf_data_row(
@@ -782,13 +777,13 @@ def test_parse_trf_data_row(
     ],
 )
 def test_parse_repeatmasker_output_errors(data_dir: Path, filename: str, error_pattern: str) -> None:
-    """
-    Tests that malformed RepeatMasker `.out` rows raise errors.
+    """Test that malformed RepeatMasker `.out` rows raise errors.
 
     Args:
         data_dir: Module's test data directory fixture.
         filename: Name of RepeatMasker `.out` file containing invalid data.
         error_pattern: Regex expected in the raised error message.
+
     """
     out_path = data_dir / filename
     with pytest.raises(ValueError, match=error_pattern):
@@ -816,14 +811,14 @@ def test_parse_repeatmasker_output_skips_invalid_repeat_coordinates(
     warning_pattern: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """
-    Tests ``convert_to_genomio_json.parse_repeatmasker_output()`` logs a warning and skips invalid records.
+    """Test ``convert_to_genomio_json.parse_repeatmasker_output()`` logs a warning and skips invalid records.
 
     Args:
         data_dir: Module's test data directory fixture.
         filename: Input RepeatMasker `.out` filename containing invalid coordinates.
         warning_pattern: Substring expected to appear in the logged warning message.
         caplog: Pytest fixture for capturing log output.
+
     """
     output_path = data_dir / filename
 
@@ -922,14 +917,14 @@ def test_parse_trf_output_success(
     expected_features: list[dict[str, object]],
     expected_consensuses: dict[str, convert_to_genomio_json.Consensus],
 ) -> None:
-    """
-    Tests successful parsing of TRF `.dat` examples.
+    """Test successful parsing of TRF `.dat` examples.
 
     Args:
         data_dir: Module's test data directory fixture.
         filename: Input TRF `.dat` filename.
         expected_features: Expected parsed repeat feature dictionaries.
         expected_consensuses: Expected parsed consensus records.
+
     """
     trf_path = data_dir / filename
 
@@ -996,14 +991,14 @@ def test_parse_output_collates_all_errors(
     filename: str,
     expected_fragments: list[str],
 ) -> None:
-    """
-    Tests that malformed parser rows are collated before raising.
+    """Test that malformed parser rows are collated before raising.
 
     Args:
         data_dir: Module's test data directory fixture.
         parser_name: Parser to run against the input file.
         filename: Input filename containing invalid data.
         expected_fragments: Expected substrings in the raised error message.
+
     """
     input_path = data_dir / filename
 
@@ -1028,12 +1023,12 @@ def test_create_genomio_json_uses_repeatmasker_parser_output(
     mock_parse_repeatmasker_output: Mock,
     tmp_path: Path,
 ) -> None:
-    """
-    Tests JSON creation assembles mocked RepeatMasker parser output.
+    """Test JSON creation assembles mocked RepeatMasker parser output.
 
     Args:
         mock_parse_repeatmasker_output: Mock for ``convert_to_genomio_json.parse_repeatmasker_output()``.
         tmp_path: Temporary directory provided by pytest.
+
     """
     input_path = tmp_path / "input.out"
     input_path.write_text("parser input", encoding="utf-8")
@@ -1104,12 +1099,12 @@ def test_create_genomio_json_uses_trf_parser_output(
     mock_parse_trf_output: Mock,
     tmp_path: Path,
 ) -> None:
-    """
-    Tests JSON creation assembles mocked TRF parser output.
+    """Test JSON creation assembles mocked TRF parser output.
 
     Args:
         mock_parse_trf_output: Mock for ``convert_to_genomio_json.parse_trf_output()``.
         tmp_path: Temporary directory provided by pytest.
+
     """
     input_path = tmp_path / "input.out"
     input_path.write_text("parser input", encoding="utf-8")
@@ -1171,12 +1166,12 @@ def test_create_genomio_json_uses_trf_parser_output(
 
 
 def test_create_genomio_json_rejects_unsupported_logic_name(data_dir: Path, tmp_path: Path) -> None:
-    """
-    Tests JSON creation rejects unsupported analysis logic names.
+    """Test JSON creation rejects unsupported analysis logic names.
 
     Args:
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
+
     """
     with pytest.raises(ValueError, match=r"Unsupported analysis logic name"):
         convert_to_genomio_json.create_genomio_json(
@@ -1199,12 +1194,12 @@ def test_create_genomio_json_omits_program_parameters_when_none(
     mock_parse_repeatmasker_output: Mock,
     tmp_path: Path,
 ) -> None:
-    """
-    Tests that program parameters are omitted when no value is provided.
+    """Test that program parameters are omitted when no value is provided.
 
     Args:
         mock_parse_repeatmasker_output: Mock for ``convert_to_genomio_json.parse_repeatmasker_output()``.
         tmp_path: Temporary directory provided by pytest.
+
     """
     input_path = tmp_path / "input.out"
     input_path.write_text("parser input", encoding="utf-8")
@@ -1238,13 +1233,13 @@ def test_create_genomio_json_omits_program_parameters_when_none(
     ],
 )
 def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool) -> None:
-    """
-    Tests the ``convert_to_genomio_json.parse_args()`` function.
+    """Test the ``convert_to_genomio_json.parse_args()`` function.
 
     Args:
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
         use_repeatmodeler_lib: Whether to include optional repeatmodeler/program-parameters args.
+
     """
     input_path = data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
@@ -1329,14 +1324,14 @@ def test_main_passes_expected_arguments(
     tmp_path: Path,
     use_repeatmodeler_lib: bool,
 ) -> None:
-    """
-    Tests ``convert_to_genomio_json.main()`` passes parsed arguments correctly.
+    """Test ``convert_to_genomio_json.main()`` passes parsed arguments correctly.
 
     Args:
         mock_create_genomio_json: Mock for ``convert_to_genomio_json.create_genomio_json()``.
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
         use_repeatmodeler_lib: Whether to include optional repeatmodeler/program-parameters args.
+
     """
     input_path = data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
@@ -1413,13 +1408,13 @@ def test_main_passes_expected_arguments(
 
 @patch("ensembl.io.genomio.features.convert_to_genomio_json.create_genomio_json")
 def test_main_reraises_exceptions(mock_create_genomio_json: Mock, data_dir: Path, tmp_path: Path) -> None:
-    """
-    Tests the ``convert_to_genomio_json.main()`` function reraises exceptions.
+    """Test the ``convert_to_genomio_json.main()`` function reraises exceptions.
 
     Args:
         mock_create_genomio_json: Mock for ``convert_to_genomio_json.create_genomio_json()``.
         data_dir: Module's test data directory fixture.
         tmp_path: Temporary directory provided by pytest.
+
     """
     input_path = data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"

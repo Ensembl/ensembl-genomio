@@ -41,7 +41,7 @@ from ensembl.io.genomio.external_db.db_map import (
 def test_get_external_db_map(
     tmp_path: Path, file_content: str, expected_output: dict, expected: ContextManager
 ) -> None:
-    """Tests the `get_external_db_map` method.
+    """Test the `get_external_db_map` method.
 
     Args:
         file_content: Test db_map file content.
@@ -58,7 +58,7 @@ def test_get_external_db_map(
 
 
 def test_default_map() -> None:
-    """Tests the default_map file."""
+    """Test the default_map file."""
     with no_raise():
         output = get_external_db_map(DEFAULT_EXTERNAL_DB_MAP)
         assert output

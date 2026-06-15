@@ -22,7 +22,7 @@ Typical usage example::
 from dataclasses import dataclass
 from pathlib import Path
 from string import Template
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -38,13 +38,13 @@ from ensembl.io.genomio.utils import get_json
 class MockResult:
     """Mocker of `sqlalchemy.engine.Result` class."""
 
-    rows: List
+    rows: list
 
     def __iter__(self) -> Any:
         """Iterates over the elements in `rows` attribute."""
         yield from self.rows
 
-    def one(self) -> Tuple:
+    def one(self) -> tuple:
         """Returns the first element in `rows` attribute."""
         return self.rows[0]
 
@@ -111,10 +111,10 @@ class MockSession(Session):
 
 
 class TestStatsGenerator:
-    """Tests for the `StatsGenerator` class."""
+    """Test for the `StatsGenerator` class."""
 
     stats_gen: dump.StatsGenerator
-    genome_stats: Dict[str, Any]
+    genome_stats: dict[str, Any]
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, data_dir: Path) -> None:
@@ -139,8 +139,8 @@ class TestStatsGenerator:
         ],
     )
     @pytest.mark.dependency(name="fix_scaffolds")
-    def test_fix_scaffolds(self, stats: Dict, output: Dict) -> None:
-        """Tests the `StatsGenerator._fix_scaffolds()` static method.
+    def test_fix_scaffolds(self, stats: dict, output: dict) -> None:
+        """Test the `StatsGenerator._fix_scaffolds()` static method.
 
         Args:
             stats: Input statistic dictionary.
@@ -159,7 +159,7 @@ class TestStatsGenerator:
     )
     @pytest.mark.dependency(name="get_attrib_counts")
     def test_get_attrib_counts(self, code: str, attribute: str) -> None:
-        """Tests the `StatsGenerator.get_attrib_counts()` method.
+        """Test the `StatsGenerator.get_attrib_counts()` method.
 
         Args:
             code: Core database attribute type code.
@@ -178,7 +178,7 @@ class TestStatsGenerator:
     )
     @pytest.mark.dependency(name="get_biotypes")
     def test_get_biotypes(self, table: Any, table_name: str) -> None:
-        """Tests the `StatsGenerator.get_biotypes()` method.
+        """Test the `StatsGenerator.get_biotypes()` method.
 
         Args:
             table: Core database table model class.
@@ -197,7 +197,7 @@ class TestStatsGenerator:
     )
     @pytest.mark.dependency(name="get_feature_stats", depends=["get_biotypes"])
     def test_get_feature_stats(self, table: Any, table_name: str) -> None:
-        """Tests the `StatsGenerator.get_feature_stats()` method.
+        """Test the `StatsGenerator.get_feature_stats()` method.
 
         Args:
             table: Core database table model class.
@@ -209,19 +209,19 @@ class TestStatsGenerator:
 
     @pytest.mark.dependency(name="get_assembly_stats", depends=["fix_scaffolds", "get_attrib_counts"])
     def test_get_assembly_stats(self) -> None:
-        """Tests the `StatsGenerator.get_assembly_stats()` method."""
+        """Test the `StatsGenerator.get_assembly_stats()` method."""
         assembly_stats = self.stats_gen.get_assembly_stats()
         assert assembly_stats == self.genome_stats["assembly_stats"]
 
     @pytest.mark.dependency(name="get_annotation_stats", depends=["get_feature_stats"])
     def test_get_annotation_stats(self) -> None:
-        """Tests the `StatsGenerator.get_annotation_stats()` method."""
+        """Test the `StatsGenerator.get_annotation_stats()` method."""
         annotation_stats = self.stats_gen.get_annotation_stats()
         assert annotation_stats == self.genome_stats["annotation_stats"]
 
     @pytest.mark.dependency(name="get_genome_stats", depends=["get_assembly_stats", "get_annotation_stats"])
     def test_get_genome_stats(self) -> None:
-        """Tests the `StatsGenerator.get_genome_stats()` method."""
+        """Test the `StatsGenerator.get_genome_stats()` method."""
         genome_stats = self.stats_gen.get_genome_stats()
         assert genome_stats == self.genome_stats
 
@@ -229,7 +229,7 @@ class TestStatsGenerator:
 @pytest.mark.dependency(depends=["get_genome_stats"])
 @patch("ensembl.io.genomio.genome_stats.dump.DBConnectionLite")
 def test_dump_genome_stats(mock_dbconnection: MagicMock, json_data: Callable) -> None:
-    """Tests the `dump_genome_stats()` method.
+    """Test the `dump_genome_stats()` method.
 
     Args:
         mock_dbconnection: Mock of DBConnectionLite to avoid needing an actual core database.

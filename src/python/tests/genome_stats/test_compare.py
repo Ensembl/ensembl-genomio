@@ -20,7 +20,7 @@ Typical usage example::
 """
 
 from pathlib import Path
-from typing import Callable, Dict
+from typing import Callable
 
 from deepdiff import DeepDiff
 import pytest
@@ -46,8 +46,8 @@ from ensembl.io.genomio.genome_stats import compare
         ),
     ],
 )
-def test_compare_dicts(ncbi: Dict[str, int], core: Dict[str, int], output: Dict[str, Dict]) -> None:
-    """Tests the `compare._compare_dicts()` method.
+def test_compare_dicts(ncbi: dict[str, int], core: dict[str, int], output: dict[str, dict]) -> None:
+    """Test the `compare._compare_dicts()` method.
 
     Args:
         ncbi: NCBI dataset statistics in key-value pairs.
@@ -67,8 +67,8 @@ def test_compare_dicts(ncbi: Dict[str, int], core: Dict[str, int], output: Dict[
         ("ncbi_annotated.json", "core_annotated.json", "output_annotated.json"),
     ],
 )
-def test_compare_assembly(json_data: Callable, ncbi_file: Dict, core_file: Dict, output_file: Dict) -> None:
-    """Tests the `compare.compare_assembly()` method.
+def test_compare_assembly(json_data: Callable, ncbi_file: dict, core_file: dict, output_file: dict) -> None:
+    """Test the `compare.compare_assembly()` method.
 
     Args:
         json_data: JSON test file parsing fixture
@@ -93,7 +93,7 @@ def test_compare_assembly(json_data: Callable, ncbi_file: Dict, core_file: Dict,
     ],
 )
 def test_compare_annotation(json_data: Callable, ncbi_file: str, core_file: str, output_file: str) -> None:
-    """Tests the `compare.compare_annotation()` method.
+    """Test the `compare.compare_annotation()` method.
 
     Args:
         json_data: JSON test file parsing fixture
@@ -122,7 +122,7 @@ def test_compare_annotation(json_data: Callable, ncbi_file: str, core_file: str,
     ],
 )
 def test_compare_stats(json_data: Callable, ncbi_file: str, core_file: str, output_file: str) -> None:
-    """Tests the `compare.compare_stats()` method.
+    """Test the `compare.compare_stats()` method.
 
     Args:
         json_data: JSON test file parsing fixture
@@ -148,7 +148,7 @@ def test_compare_stats(json_data: Callable, ncbi_file: str, core_file: str, outp
 def test_compare_stats_files(
     data_dir: Path, json_data: Callable, ncbi_file: str, core_file: str, output_file: str
 ) -> None:
-    """Tests the `compare.compare_stats_files()` method.
+    """Test the `compare.compare_stats_files()` method.
 
     Args:
         data_dir: Module's test data directory fixture.

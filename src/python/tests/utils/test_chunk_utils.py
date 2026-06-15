@@ -73,8 +73,7 @@ def test_get_paths_from_manifest(
     manifest_name: str,
     expectation: ContextManager,
 ) -> None:
-    """
-    Tests the `chunk_utils.get_paths_from_manifest()` function.
+    """Test the `chunk_utils.get_paths_from_manifest()` function.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -82,6 +81,7 @@ def test_get_paths_from_manifest(
             and its referenced files.
         manifest_name: Name of the manifest file within the test subdirectory.
         expectation: Context manager for the expected outcome of the test (exception or not).
+
     """
     test_dir = data_dir / test_dir_name
     manifest = test_dir / manifest_name
@@ -92,11 +92,11 @@ def test_get_paths_from_manifest(
 
 
 def test_get_paths_from_manifest_absolute_path(tmp_path: Path) -> None:
-    """
-    Tests that `chunk_utils.get_paths_from_manifest()` correctly resolves absolute paths in the manifest file.
+    """Test that `chunk_utils.get_paths_from_manifest()` correctly resolves absolute paths in the manifest file.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
+
     """
     a = tmp_path / "a.txt"
     a.touch()
@@ -147,14 +147,14 @@ def test_validate_regex(
     expected_groups: dict[str, str] | None,
     expectation: ContextManager,
 ) -> None:
-    """
-    Tests the `chunk_utils.validate_regex()` function.
+    """Test the `chunk_utils.validate_regex()` function.
 
     Args:
         pattern: The regex pattern to validate.
         text: An optional text to match against the regex to verify the capture groups.
         expected_groups: The expected values of the 'base' and 'start' capture groups if `text` is provided.
         expectation: Context manager for the expected outcome of the test (exception or not).
+
     """
     with expectation:
         chunk_re = chunk_utils.validate_regex(pattern)
@@ -178,8 +178,7 @@ def test_validate_regex(
     ],
 )
 def test_description_without_id(seq_id: str, description: str, expected: str) -> None:
-    """
-    Tests the `chunk_utils.seq_description_without_id()` function.
+    """Test the `chunk_utils.seq_description_without_id()` function.
 
     Args:
         seq_id: Sequence identifier.

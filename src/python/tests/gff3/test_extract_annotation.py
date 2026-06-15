@@ -18,7 +18,7 @@
 
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Callable, ContextManager, Dict, List, Optional
+from typing import Callable, ContextManager
 
 import pytest
 from pytest import raises, param
@@ -67,8 +67,8 @@ from ensembl.io.genomio.gff3.features import GFFSeqFeature
         ("LOW QUALITY PROTEIN: uncharacterized protein PROTID12345", ["PROTID12345"], False),
     ],
 )
-def test_product_is_informative(description: str, feature_id: Optional[List[str]], output: bool) -> None:
-    """Tests the `FunctionalAnnotations.product_is_informative()` method."""
+def test_product_is_informative(description: str, feature_id: list[str] | None, output: bool) -> None:
+    """Test the `FunctionalAnnotations.product_is_informative()` method."""
     assert FunctionalAnnotations.product_is_informative(description, feature_id) == output
 
 
@@ -85,7 +85,7 @@ def test_product_is_informative(description: str, feature_id: Optional[List[str]
 )
 @pytest.mark.dependency(name="add_feature")
 def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManager) -> None:
-    """Tests the `FunctionalAnnotation.add_feature()` method with only one feature.
+    """Test the `FunctionalAnnotation.add_feature()` method with only one feature.
 
     Args:
         seq_feat_type: Type for the sequence feature to add.
@@ -107,8 +107,8 @@ def test_add_feature(seq_feat_type: str, feat_type: str, expected: ContextManage
         pytest.param("featA", "featA_name", ["featA_name"], id="Diff name and ID"),
     ],
 )
-def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[str]) -> None:
-    """Tests the `FunctionalAnnotations.add_feature()` method with a feature name."""
+def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: list[str]) -> None:
+    """Test the `FunctionalAnnotations.add_feature()` method with a feature name."""
     annot = FunctionalAnnotations()
 
     seq_feat_type = "gene"
@@ -130,7 +130,7 @@ def test_add_feature_name(feat_id: str, feat_name: str, expected_synonyms: List[
 )
 @pytest.mark.dependency(name="add_parent_link", depends=["add_feature"])
 def test_add_parent_link(parent_type: str, parent_id: str, child_id: str, expected: ContextManager) -> None:
-    """Tests the `FunctionalAnnotation.add_parent_link()` method.
+    """Test the `FunctionalAnnotation.add_parent_link()` method.
 
     Add a parent feature, and then add a parent link.
 
@@ -166,7 +166,7 @@ def test_get_parent(
     out_child_id: str,
     expected: ContextManager,
 ) -> None:
-    """Tests the `FunctionalAnnotation.get_parent()` method.
+    """Test the `FunctionalAnnotation.get_parent()` method.
 
     Args:
         in_parent_type: Type for the parent sequence feature.
@@ -202,9 +202,9 @@ def test_get_parent(
 )
 @pytest.mark.dependency(name="add_feature_fail", depends=["add_feature", "get_parent"])
 def test_add_feature_fail(
-    child_type: str, child_id: str, out_parent_id: Optional[str], expected: ContextManager
+    child_type: str, child_id: str, out_parent_id: str | None, expected: ContextManager
 ) -> None:
-    """Tests the `FunctionalAnnotation.add_feature()` method failures.
+    """Test the `FunctionalAnnotation.add_feature()` method failures.
 
     Test the addition of a child feature after a parent has already been added.
 
@@ -270,9 +270,9 @@ def test_add_feature_fail(
     ],
 )
 def test_get_xrefs(
-    in_id: str, in_xrefs: Optional[List[str]], provider_name: str, expected_xrefs: List[Dict[str, str]]
+    in_id: str, in_xrefs: list[str] | None, provider_name: str, expected_xrefs: list[dict[str, str]]
 ) -> None:
-    """Tests the `FunctionalAnnotation.get_xrefs()` method."""
+    """Test the `FunctionalAnnotation.get_xrefs()` method."""
     annot = FunctionalAnnotations(provider_name=provider_name)
     one_gene = GFFSeqFeature(type="gene", id=in_id)
     if in_xrefs is not None:
@@ -293,7 +293,7 @@ def test_get_xrefs(
 )
 @pytest.mark.dependency(name="get_features", depends=["add_feature_fail"])
 def test_get_features(feat_type: str, expected_number: int, expected: ContextManager) -> None:
-    """Tests the `FunctionalAnnotation.get_features()` method.
+    """Test the `FunctionalAnnotation.get_features()` method.
 
     Load 2 features, then test the fetching of those features.
 
@@ -336,13 +336,13 @@ def test_get_features(feat_type: str, expected_number: int, expected: ContextMan
 )
 @pytest.mark.dependency(depends=["get_features"])
 def test_transfer_descriptions(
-    gene_desc: Optional[str],
-    transc_desc: Optional[str],
-    transl_desc: Optional[str],
-    out_gene_desc: Optional[str],
-    out_transc_desc: Optional[str],
+    gene_desc: str | None,
+    transc_desc: str | None,
+    transl_desc: str | None,
+    out_gene_desc: str | None,
+    out_transc_desc: str | None,
 ) -> None:
-    """Tests the `FunctionalAnnotation.transfer_descriptions()` method.
+    """Test the `FunctionalAnnotation.transfer_descriptions()` method.
 
     Load 3 features (gene, transcript, translation) with or without a description for each one.
 
@@ -399,6 +399,7 @@ def test_store_gene(
         expected_num_genes: Number of genes stored as expected
         expected_num_tr: Number of transcripts stored as expected
         expected_num_cds: Number of CDSs stored as expected
+
     """
     annot = FunctionalAnnotations()
     gene_name = "gene_A"

@@ -42,6 +42,7 @@ def add_gene(dialect: str, session: sqlalchemy.orm.Session, gene_data: dict[str,
         "tr_name" -> transcript.stable_id
         "tr_desc" -> transcript.description
         "gene_xref" -> xref display_name attached to the gene
+
     """
     gene_name = gene_data.get("gene_name", "gene1")
     gene_description = gene_data.get("gene_desc", "")
@@ -114,7 +115,7 @@ def test_get_core_data(
     expected_ids: list[str],
     expectation: ContextManager,
 ) -> None:
-    """Tests the method `get_core_data()`"""
+    """Test the method `get_core_data()`"""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         with expectation:
@@ -137,7 +138,7 @@ def test_load_description_do_update(
     do_update: bool,
     expected_description: str,
 ) -> None:
-    """Tests the method `load_description()`"""
+    """Test the method `load_description()`"""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=do_update)
@@ -235,7 +236,7 @@ def test_load_description(
     table: str,
     expected_description: str,
 ) -> None:
-    """Tests the method `load_description()`"""
+    """Test the method `load_description()`"""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True)
@@ -277,7 +278,7 @@ def test_load_description_match_xrefs(
     match_xrefs: bool,
     expected_description: str,
 ) -> None:
-    """Tests the method `load_description()` with `match_xrefs`"""
+    """Test the method `load_description()` with `match_xrefs`"""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, do_update=True, match_xrefs=match_xrefs)
@@ -302,7 +303,7 @@ def test_load_description_do_report(
     gene_data: dict[str, str],
     do_report: bool,
 ) -> None:
-    """Tests the method `load_description()`"""
+    """Test the method `load_description()`"""
     with annot_test_db.dbc.test_session_scope() as session:
         add_gene(annot_test_db.dbc.dialect, session, gene_data)
         load_descriptions(session, data_dir / input_file, report=do_report)

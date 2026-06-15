@@ -18,7 +18,7 @@
 
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Any, Callable, ContextManager, Dict, Optional
+from typing import Any, Callable, ContextManager
 from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
@@ -76,11 +76,11 @@ from ensembl.io.genomio.genome_metadata import prepare
 def test_add_provider(
     json_data: Callable[[str], Any],
     genome_file: str,
-    ncbi_data: Dict,
-    output: Dict[str, Dict[str, Optional[str]]],
+    ncbi_data: dict,
+    output: dict[str, dict[str, str | None]],
     expectation: ContextManager,
 ) -> None:
-    """Tests the `prepare.add_provider()` method.
+    """Test the `prepare.add_provider()` method.
 
     Args:
         json_data: JSON test file parsing fixture.
@@ -88,6 +88,7 @@ def test_add_provider(
         ncbi_data: Report from NCBI datasets.
         output: Expected elements present in the updated genome metadata.
         expectation: Context manager for the expected exception (if any).
+
     """
     genome_metadata = json_data(genome_file)
     with expectation:
@@ -106,12 +107,13 @@ def test_add_provider(
     ],
 )
 def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str, output: int) -> None:
-    """Tests the `prepare.add_assembly_version()` method.
+    """Test the `prepare.add_assembly_version()` method.
 
     Args:
         json_data: JSON test file parsing fixture.
         genome_file: Genome metadata JSON file.
         output: Assembly version expected in the updated genome metadata.
+
     """
     genome_metadata = json_data(genome_file)
     prepare.add_assembly_version(genome_metadata)
@@ -129,13 +131,14 @@ def test_add_assembly_version(json_data: Callable[[str], Any], genome_file: str,
 def test_add_genebuild_metadata(
     mock_date: Mock, json_data: Callable[[str], Any], genome_file: str, output: str
 ) -> None:
-    """Tests the `prepare.add_genebuild_metadata()` method.
+    """Test the `prepare.add_genebuild_metadata()` method.
 
     Args:
         mock_date: A mock of `datetime.date` class.
         json_data: JSON test file parsing fixture.
         genome_file: Genome metadata JSON file.
         output: Expected date for genebuild's `"start_date"` and `"version"` in the updated genome metadata.
+
     """
     mock_date.today.return_value = mock_date
     mock_date.isoformat.return_value = output
@@ -175,16 +178,17 @@ def test_add_genebuild_metadata(
 def test_add_species_metadata(
     json_data: Callable[[str], Any],
     genome_file: str,
-    ncbi_data_organism: Dict,
-    output: Dict[str, Any],
+    ncbi_data_organism: dict,
+    output: dict[str, Any],
 ) -> None:
-    """Tests the `prepare.add_species_metadata()` method.
+    """Test the `prepare.add_species_metadata()` method.
 
     Args:
         json_data: JSON test file parsing fixture.
         genome_file: Genome metadata JSON file.
         ncbi_data_organism: NCBI dataset organism report.
         output: Expected `"species"` genome metadata content.
+
     """
     ncbi_data = {"organism": ncbi_data_organism}
     genome_metadata = json_data(genome_file)
@@ -219,12 +223,13 @@ def test_prepare_genome_metadata(
     ncbi_filename: str,
     expected_filename: str,
 ) -> None:
-    """Tests the `prepare.prepare_genome_metadata()` method.
+    """Test the `prepare.prepare_genome_metadata()` method.
 
     Args:
         input_filename: Input genome JSON file.
         ncbi_filename: NCBI dataset report JSON file.
         expected_filename: Expected output genome JSON file.
+
     """
     mock_date.today.return_value = mock_date
     mock_date.isoformat.return_value = "2024-03-19"

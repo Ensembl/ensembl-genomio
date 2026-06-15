@@ -38,7 +38,7 @@ def test_merge(
     input_file: str,
     expected_file: str,
 ) -> None:
-    """Tests the `GFFGeneMerger.merge()` method.
+    """Test the `GFFGeneMerger.merge()` method.
 
     Args:
         data_dir: Module's test data directory fixture.

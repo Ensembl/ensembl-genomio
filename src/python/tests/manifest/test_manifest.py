@@ -28,9 +28,9 @@ from ensembl.io.genomio.manifest.manifest import Manifest, ManifestError
 _CONTENT_MD5 = "45685e95985e20822fb2538a522a5ccf"
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_init(tmp_path: Path) -> None:
-    """Tests `Manifest.__init__()`."""
+    """Test `Manifest.__init__()`."""
     _ = Manifest(tmp_path)
 
 
@@ -46,7 +46,7 @@ def test_init(tmp_path: Path) -> None:
 )
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) -> None:
-    """Tests `Manifest.get_files_checksum()`.
+    """Test `Manifest.get_files_checksum()`.
 
     Fixtures: tmp_path
 
@@ -104,7 +104,7 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
 def test_get_files_checksum_multifiles(
     tmp_path: Path, file_names: list[str], expected_content: dict, expected: ContextManager
 ) -> None:
-    """Tests `Manifest.get_files_checksum()` with several files for the same name.
+    """Test `Manifest.get_files_checksum()` with several files for the same name.
 
     Fixtures: tmp_path
 
@@ -112,6 +112,7 @@ def test_get_files_checksum_multifiles(
         file_names: List of files to create.
         expected_content: Expected checksum dict.
         expected: Expected exception.
+
     """
     for file_name in file_names:
         with Path(tmp_path / file_name).open("w") as fh:
@@ -123,7 +124,7 @@ def test_get_files_checksum_multifiles(
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFixture) -> None:
-    """Tests `Manifest.get_files_checksum()` with a subdir.
+    """Test `Manifest.get_files_checksum()` with a subdir.
 
     Fixtures: tmp_path, caplog
     """
@@ -135,7 +136,7 @@ def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFix
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixture) -> None:
-    """Tests `Manifest.get_files_checksum()` with an empty file, deleted.
+    """Test `Manifest.get_files_checksum()` with an empty file, deleted.
 
     Fixtures: tmp_path, caplog
     """
@@ -159,7 +160,7 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
 def test_create_manifest(
     tmp_path: Path, assert_files: Callable, files: list[str], expected_content: dict
 ) -> None:
-    """Tests `Manifest.create()`.
+    """Test `Manifest.create()`.
 
     Fixtures: tmp_path, assert_files
 
@@ -198,7 +199,7 @@ def test_create_manifest(
 def test_load(
     tmp_path: Path, data_dir: Path, files_dir: str, expected_files: set, expected: ContextManager
 ) -> None:
-    """Tests `Manifest.load()`.
+    """Test `Manifest.load()`.
 
     Fixtures: tmp_path, data_dir
 
@@ -206,6 +207,7 @@ def test_load(
         files_dir: Directory where test data files are copied from.
         expected_files: Set of main files expected to be loaded.
         expected: Catch an expected exception.
+
     """
     # Copy the files to the tmp folder
     if files_dir:

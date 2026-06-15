@@ -17,7 +17,6 @@
 # pylint: disable=too-many-positional-arguments
 
 from pathlib import Path
-from typing import List
 from unittest.mock import Mock, patch
 
 from BCBio import GFF
@@ -167,8 +166,8 @@ class TestWriteFormattedFiles:
         mock_write_pep: Mock,
         mock_write_genes: Mock,
         mock_parse_record: Mock,
-        all_ids: List[str],
-        peptides: List[str],
+        all_ids: list[str],
+        peptides: list[str],
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Check gene features in GFF3 format are generated as expected."""
@@ -212,7 +211,6 @@ class TestWriteFormattedFiles:
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
         """Test if GFF3 file is generated when there are SeqFeatures present"""
-
         record = SeqRecord(Seq("ATGC"), id="record")
         gene_feature = SeqFeature(FeatureLocation(10, 20), type="gene", qualifiers={"gene": ["GlyrA"]})
         CDS_feature = SeqFeature(

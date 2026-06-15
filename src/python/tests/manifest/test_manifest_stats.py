@@ -34,13 +34,13 @@ def fixture_manifest_path(data_dir: Path) -> Path:
 
 
 def test_manifest_stats_init(manifest_path: Path) -> None:
-    """Tests `ManifestStats.__init__()`."""
+    """Test `ManifestStats.__init__()`."""
     manifest_stats = ManifestStats(manifest_path)
     assert manifest_stats
 
 
 def test_add_error(manifest_path: Path) -> None:
-    """Tests `ManifestStats.has_lengths()`."""
+    """Test `ManifestStats.has_lengths()`."""
     stats = ManifestStats(manifest_path)
     assert not stats.errors
     stats.add_error("lorem")
@@ -65,7 +65,7 @@ def test_load_seq_regions(
     expected_lengths: dict[str, int],
     expected_circular: dict[str, bool],
 ) -> None:
-    """Tests `ManifestStats.load_seq_regions()`.
+    """Test `ManifestStats.load_seq_regions()`.
 
     Fixtures: data_dir, tmp_path
 
@@ -73,6 +73,7 @@ def test_load_seq_regions(
         manifest_dir: Directory name with the manifest file in it.
         expected_lengths: Expected length data from the files.
         expected_circular: Expected circular data from the files.
+
     """
     if manifest_dir:
         seq_manifest = data_dir / manifest_dir / "manifest.json"
@@ -101,7 +102,7 @@ def test_load_dna_fasta_lengths(
     expected_lengths: dict[str, int],
     expected_error: str,
 ) -> None:
-    """Tests `ManifestStats.load_dna_fasta_lengths()`.
+    """Test `ManifestStats.load_dna_fasta_lengths()`.
 
     Fixtures: tmp_path
 
@@ -109,6 +110,7 @@ def test_load_dna_fasta_lengths(
         fasta_str: Content of a test input FASTA DNA file.
         expected_lengths: Expected length data from the files.
         expected_error: Expected errors while loading.
+
     """
     fasta_path = tmp_path / "fasta_dna.fasta"
     with fasta_path.open("w") as fasta_fh:
@@ -126,7 +128,7 @@ def test_load_dna_fasta_lengths(
 
 
 def test_load_dna_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> None:
-    """Tests `ManifestStats.load_dna_fasta_lengths()` rejects FASTA content without a header.
+    """Test `ManifestStats.load_dna_fasta_lengths()` rejects FASTA content without a header.
 
     Fixtures: tmp_path
     """
@@ -166,7 +168,7 @@ def test_load_peptides_fasta_lengths(
     expected_lengths: dict[str, int],
     expected_error: str,
 ) -> None:
-    """Tests `ManifestStats.load_peptides_fasta_lengths()`.
+    """Test `ManifestStats.load_peptides_fasta_lengths()`.
 
     Fixtures: tmp_path
 
@@ -175,6 +177,7 @@ def test_load_peptides_fasta_lengths(
         ignore_final_stops: Ignore final stops for the protein sequences.
         expected_lengths: Expected length data from the files.
         expected_error: Expected errors while loading.
+
     """
     fasta_path = tmp_path / "fasta_pep.fasta"
     with fasta_path.open("w") as fasta_fh:
@@ -192,7 +195,7 @@ def test_load_peptides_fasta_lengths(
 
 
 def test_load_peptides_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> None:
-    """Tests `ManifestStats.load_peptides_fasta_lengths()` rejects FASTA content without a header.
+    """Test `ManifestStats.load_peptides_fasta_lengths()` rejects FASTA content without a header.
 
     Fixtures: tmp_path
     """
@@ -230,7 +233,7 @@ def test_load_functional_annotations(
     expected_key: str,
     expected_data: dict[str, int],
 ) -> None:
-    """Tests `ManifestStats.load_functional_annotation()`.
+    """Test `ManifestStats.load_functional_annotation()`.
 
     Fixtures: tmp_path
 
@@ -239,6 +242,7 @@ def test_load_functional_annotations(
         ignore_final_stops: Ignore final stops for the protein sequences.
         expected_lengths: Expected length data from the files.
         expected_error: Expected errors while loading.
+
     """
     func_path = tmp_path / "functional_annotation.json"
     if json_data is not None:
@@ -292,13 +296,14 @@ def test_load_gff3(
     gff3_path: str | None,
     expected_data: dict[str, int],
 ) -> None:
-    """Tests `ManifestStats.load_gff3()`.
+    """Test `ManifestStats.load_gff3()`.
 
     Fixtures: tmp_path, data_dir
 
     Args:
         gff3_path: Path to a test GFF3 file.
         expected_data: Expected length data extracted from the GFF3 file.
+
     """
     if gff3_path:
         copy(data_dir / gff3_path, tmp_path / "test.gff3")
@@ -311,7 +316,7 @@ def test_load_gff3(
 
 
 def test_load_genome(tmp_path: Path) -> None:
-    """Tests `ManifestStats.load_genome()`."""
+    """Test `ManifestStats.load_genome()`."""
     genome_data = {"LOREM": "1"}
     genome_path = tmp_path / "genome.json"
     print_json(genome_path, genome_data)
@@ -323,7 +328,7 @@ def test_load_genome(tmp_path: Path) -> None:
 
 
 def test_prepare_integrity_data(tmp_path: Path) -> None:
-    """Tests `ManifestStats.prepare_integrity_data()`."""
+    """Test `ManifestStats.prepare_integrity_data()`."""
     manifest_path = tmp_path / "manifest.json"
     print_json(manifest_path, {})
     stats = ManifestStats(manifest_path)
@@ -357,7 +362,7 @@ def test_prepare_integrity_data(tmp_path: Path) -> None:
 def test_has_lengths(
     manifest_path: Path, key: str, expected_data: dict[str, bool], expectation: ContextManager
 ) -> None:
-    """Tests `ManifestStats.has_lengths()`.
+    """Test `ManifestStats.has_lengths()`.
 
     Fixtures: manifest_path
 
@@ -365,6 +370,7 @@ def test_has_lengths(
         key: Key for the length dict.
         expected_data: If lengths exist for that key.
         expectation: Expected exception.
+
     """
     stats = ManifestStats(manifest_path)
     stats.load_functional_annotation()
@@ -382,7 +388,7 @@ def test_has_lengths(
 def test_get_lengths(
     manifest_path: Path, key: str, expected_data: dict[str, bool], expectation: ContextManager
 ) -> None:
-    """Tests `ManifestStats.get_lengths()`.
+    """Test `ManifestStats.get_lengths()`.
 
     Fixtures: manifest_path
 
@@ -390,6 +396,7 @@ def test_get_lengths(
         key: Key for the length dict.
         expected_data: Expected length information for that key.
         expectation: Expected exception.
+
     """
     stats = ManifestStats(manifest_path)
     stats.load_functional_annotation()
@@ -407,7 +414,7 @@ def test_get_lengths(
 def test_get_circular(
     manifest_path: Path, key: str, expected_data: dict[str, bool], expectation: ContextManager
 ) -> None:
-    """Tests `ManifestStats.get_circular()`.
+    """Test `ManifestStats.get_circular()`.
 
     Fixtures: manifest_path
 
@@ -415,6 +422,7 @@ def test_get_circular(
         key: Key for the circular dict.
         expected_data: Expected circular information for that key.
         expectation: Expected exception.
+
     """
     stats = ManifestStats(manifest_path)
     stats.load_seq_regions()

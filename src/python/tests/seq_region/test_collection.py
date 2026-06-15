@@ -181,6 +181,7 @@ def test_make_seqregion_from_report(
         expected_key: Check this key.
         expected_value: Check this value for the key.
         expected: Context manager to catch expected exceptions.
+
     """
     collection = SeqCollection()
     input_data = {}
@@ -263,6 +264,7 @@ def test_add_translation_table(
         input_seq: Sequence dict with usable values (`codon_table`, `location`).
         code_map: A custom map location -> codon table number.
         expected_codon_table: Expected codon table number.
+
     """
     collection = SeqCollection()
     seq_name = "foobar"
@@ -324,8 +326,8 @@ def test_add_mitochondrial_codon_table(
         response_data: Return data from the request.
         expected_codon_table: Expected codon table after update.
         expected: Context manager to catch expected exceptions.
-    """
 
+    """
     mock_requests_get.return_value = mock_response(response_data)
     collection = SeqCollection()
     seq_name = "foobar"

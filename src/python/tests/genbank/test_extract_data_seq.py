@@ -17,7 +17,6 @@
 # pylint: disable=too-many-positional-arguments
 
 from pathlib import Path
-from typing import List
 from unittest.mock import Mock, patch
 
 from Bio.Seq import Seq
@@ -79,7 +78,7 @@ class TestFormattedFilesGenerator:
             FeatureLocation(10, 20), type="CDS", qualifiers={gene_name: "GlyrA", "transl_table": "2"}
         )
         record.features = [gene_feature, rna_feature, cds_feature]
-        mock_peptides: List = []
+        mock_peptides: list = []
 
         gene_feature_feat = {expected_id: gene_feature}
         mock_parse_gene_feat.return_value = (
@@ -104,7 +103,7 @@ class TestFormattedFilesGenerator:
         self,
         formatted_files_generator: FormattedFilesGenerator,
     ) -> None:
-        """Tests parsing records with unsupported features."""
+        """Test parsing records with unsupported features."""
         record = SeqRecord(Seq("ATGC"))
         unsupported_feature = SeqFeature(FeatureLocation(5, 10), type="gene")
         record.features.append(unsupported_feature)
@@ -201,7 +200,7 @@ class TestFormattedFilesGenerator:
     )
     def test_uniquify_id(
         self,
-        all_ids: List[str],
+        all_ids: list[str],
         expected_id: str,
         gene_id: str,
         formatted_files_generator: FormattedFilesGenerator,

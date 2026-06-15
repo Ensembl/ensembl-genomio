@@ -168,7 +168,7 @@ def fixture_db_map() -> dict[str, str]:
 
 
 def test_fetch_coord_systems(seq_test_db: UnitTestDB) -> None:
-    """Tests the `fetch_coord_system` method."""
+    """Test the `fetch_coord_system` method."""
     with seq_test_db.dbc.test_session_scope() as session:
         coords = list(fetch_coord_systems(session))
         assert len(coords) == 1
@@ -178,7 +178,7 @@ def test_fetch_coord_systems(seq_test_db: UnitTestDB) -> None:
 
 
 def test_fetch_seq_regions(seq_test_db: UnitTestDB) -> None:
-    """Tests the `fetch_seq_regions` method."""
+    """Test the `fetch_seq_regions` method."""
     with seq_test_db.dbc.test_session_scope() as session:
         coord_system = list(fetch_coord_systems(session))[0]
         seqrs = list(fetch_seq_regions(session, coord_system))
@@ -188,7 +188,7 @@ def test_fetch_seq_regions(seq_test_db: UnitTestDB) -> None:
 
 
 def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
-    """Tests the `get_synonyms` method."""
+    """Test the `get_synonyms` method."""
     with seq_test_db.dbc.test_session_scope() as session:
         _add_test_synonym(session, seq_test_db.dbc.dialect, "synA", "db1", 1)
         coord_system = list(fetch_coord_systems(session))[0]
@@ -214,7 +214,7 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
     ],
 )
 def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict) -> None:
-    """Tests the `get_synonyms` method.
+    """Test the `get_synonyms` method.
 
     Args:
         bands: List of dicts with keys `name`, `stain` for each test band to add.
@@ -251,7 +251,7 @@ def test_get_seq_regions_attribs(
     attribs: dict[str, str],
     expected_output: dict[str, Any] | None,
 ) -> None:
-    """Tests the `get_seq_regions_attribs` method.
+    """Test the `get_seq_regions_attribs` method.
 
     Args:
         attribs: Dicts with all attrib-value pairs for each attrib to add to the seq_region.
@@ -309,7 +309,7 @@ def test_get_seq_regions_attribs(
 def test_get_added_sequence(
     seq_test_db: UnitTestDB, attribs: dict[str, str], expected_output: dict[str, str | dict]
 ) -> None:
-    """Tests the `get_added_sequences` method.
+    """Test the `get_added_sequences` method.
 
     Args:
         attribs: Dicts with all attrib-value pairs for each attrib to add to the seq_region.
@@ -331,7 +331,7 @@ def test_get_seq_regions(
     seq_test_db: UnitTestDB,
     db_map: dict[str, str],
 ) -> None:
-    """Tests the `get_seq_regions` method."""
+    """Test the `get_seq_regions` method."""
     expected_dict = {
         "name": "seqA",
         "length": 1000,

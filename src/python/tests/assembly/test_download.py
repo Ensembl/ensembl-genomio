@@ -20,7 +20,7 @@ from contextlib import nullcontext as does_not_raise
 import filecmp
 import logging
 from pathlib import Path
-from typing import Callable, ContextManager, Optional
+from typing import Callable, ContextManager
 from unittest.mock import Mock, patch, MagicMock
 
 from ftplib import error_reply as ftp_error_reply
@@ -60,13 +60,14 @@ def test_ftp_connection(
     accession: str,
     expectation: ContextManager,
 ) -> None:
-    """Tests the FTPConnection method `establish_ftp()`.
+    """Test the FTPConnection method `establish_ftp()`.
 
     Args:
         mock_ftp: Mock FTP object.
         ftp_url: FTP URL.
         sub_dir: Subdirectory path.
         expectation: Context manager expected raise exception.
+
     """
 
     def side_eff_conn(url: str) -> None:
@@ -100,15 +101,16 @@ def test_ftp_connection(
     ],
 )
 def test_checksums(
-    data_dir: Path, checksum_file: Path, checksum: Optional[str], expectation: ContextManager
+    data_dir: Path, checksum_file: Path, checksum: str | None, expectation: ContextManager
 ) -> None:
-    """Tests the `download.get_checksums()` function.
+    """Test the `download.get_checksums()` function.
 
     Args:
         data_dir: Path to test data root dir
         checksum_file: File name containing checksums
         checksum: Test MD5 checksum
         expectation: Context manager expected raise exception
+
     """
     with expectation:
         md5_input_path = data_dir / checksum_file
@@ -128,8 +130,8 @@ def test_checksums(
         pytest.param("missing_file_md5.txt", None, False, id="md5 checksum with ref of missing file"),
     ],
 )
-def test_md5_files(data_dir: Path, md5_file: str, md5_path: Optional[Path], checksum_bool: bool) -> None:
-    """Tests the md5_files() function
+def test_md5_files(data_dir: Path, md5_file: str, md5_path: Path | None, checksum_bool: bool) -> None:
+    """Test the md5_files() function
     Args:
         data_dir: Path to test data root dir
         md5_file: MD5 file used for test
@@ -189,7 +191,7 @@ def test_download_single_file(
     md5_sums: dict,
     expectation: ContextManager,
 ) -> None:
-    """Tests the private function _download_file.
+    """Test the private function _download_file.
 
     Args:
         mock_ftp: Mock FTP object
@@ -198,8 +200,8 @@ def test_download_single_file(
         ftp_file: FTP file which to mock download
         md5_sums: FTP file and md5_sum value pair
         expectation: Context manager expected raise exception
-    """
 
+    """
     data_file = data_dir / ftp_file
     retr_file = tmp_path / ftp_file
 
@@ -254,7 +256,7 @@ def test_download_all_files(
     exception: ContextManager,
     max_redo: int,
 ) -> None:
-    """Tests the download.download_files() function
+    """Test the download.download_files() function
 
     Args:
         mock_ftp: Mock of `ensembl.io.genomio.assembly.download.FTP` object
@@ -264,8 +266,8 @@ def test_download_all_files(
         compare_accession: Defines test of expected accession
         md5: Source file for md5 checksums to inspect
         expectation: Context manager expected raise exception
-    """
 
+    """
     data_file = data_dir / md5
 
     def side_eff_ftp_mlsd() -> list[tuple[str, list[str]]]:
@@ -333,14 +335,14 @@ def test_download_all_files(
 def test_get_files_selection(
     data_dir: Path, has_download_dir: bool, files_expected: dict, expectation: ContextManager
 ) -> None:
-    """Tests the `download.get_files_selection()` function.
+    """Test the `download.get_files_selection()` function.
 
     Args:
         download_dir: Path to specific location of downloaded files.
         files_expected: Defines contents of test files downloaded
         expectation: Context manager expected raise exception
-    """
 
+    """
     if has_download_dir:
         download_dir = data_dir
     else:
@@ -417,8 +419,8 @@ def test_retrieve_assembly_data(
         is_dir: Param to define state of result output dir
         files_downloaded: Defines contents of test files marked as downloaded
         expectation: Context manager expected raise exception
-    """
 
+    """
     if is_dir:
         download_dir = data_dir
     else:
