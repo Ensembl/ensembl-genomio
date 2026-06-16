@@ -26,7 +26,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from pytest import raises
 
 from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
 
@@ -67,7 +66,7 @@ class TestDownloadGenbank:
         )
 
         # Assert that the content was written to the temporary file
-        with open(output_file, "rb") as f:
+        with output_file.open("rb") as f:
             file_content = f.read()
         assert file_content == mock_content
 
@@ -84,5 +83,5 @@ class TestDownloadGenbank:
         # Set the mock status code to 404 for request not found
         mock_requests_failed.return_value.status_code = 404
         # Raise an error
-        with raises(DownloadError):
+        with pytest.raises(DownloadError):
             download_genbank(accession, output_file)

@@ -65,7 +65,7 @@ def test_ftp_connection(
     Args:
         mock_ftp: Mock FTP object.
         ftp_url: FTP URL.
-        sub_dir: Subdirectory path.
+        accession: Genome assembly accession.
         expectation: Context manager expected raise exception.
 
     """
@@ -131,12 +131,14 @@ def test_checksums(
     ],
 )
 def test_md5_files(data_dir: Path, md5_file: str, md5_path: Path | None, checksum_bool: bool) -> None:
-    """Test the md5_files() function
+    """Test the `md5_files()` function.
+
     Args:
         data_dir: Path to test data root dir
         md5_file: MD5 file used for test
         md5_path: Path location to MD5 file
         checksum_bool: Test comparison checksum value.
+
     """
     if md5_file is None:
         return_bool_on_md5files = md5_files(data_dir, md5_path=md5_path)
@@ -265,7 +267,8 @@ def test_download_all_files(
         ftp_accession: Defines expected accession
         compare_accession: Defines test of expected accession
         md5: Source file for md5 checksums to inspect
-        expectation: Context manager expected raise exception
+        exception: Context manager expected raise exception
+        max_redo: Maximum number of retries
 
     """
     data_file = data_dir / md5
@@ -338,7 +341,8 @@ def test_get_files_selection(
     """Test the `download.get_files_selection()` function.
 
     Args:
-        download_dir: Path to specific location of downloaded files.
+        data_dir: Module's test data directory fixture.
+        has_download_dir: Boolean indicating presence of download directory.
         files_expected: Defines contents of test files downloaded
         expectation: Context manager expected raise exception
 
@@ -408,14 +412,22 @@ def test_retrieve_assembly_data(
     md5_return: bool,
     exception: ContextManager,
 ) -> None:
-    """Test of master function download.retrieve_assembly_data() which calls sub
-    functions for downloading assembly data files.
+    """Test of master function ``download.retrieve_assembly_data()``.
+
+    Function calls sub functions for downloading assembly data files.
 
     Args:
-        accession: Accession of desired genome assembly
-        is_dir: Param to define state of result output dir
-        files_downloaded: Defines contents of test files marked as downloaded
-        expectation: Context manager expected raise exception
+        mock_retrieve: Mock of ``ensembl.io.genomio.assembly.download.md5_files()``.
+        mock_download_single_file: Mock of ``ensembl.io.genomio.assembly.download._download_file()``.
+        mock_download_files: Mock of ``ensembl.io.genomio.assembly.download.download_files()``.
+        mock_file_select: Mock of ``ensembl.io.genomio.assembly.download.get_files_selection()``.
+        mock_ftp: Mock of ``ensembl.io.genomio.assembly.download.FTP``.
+        data_dir: Module's test data directory fixture.
+        accession: Accession of desired genome assembly.
+        is_dir: Param to define state of result output dir.
+        files_downloaded: Defines contents of test files marked as downloaded.
+        md5_return: Mocked result returned by ``md5_files()`` indicating whether checksum validation succeeds.
+        exception: Context manager expected raise exception.
 
     """
     download_dir = data_dir if is_dir else data_dir / "test_ftp_file.txt"
@@ -434,5 +446,3 @@ def test_retrieve_assembly_data(
         # Download is never called with the current examples
         mock_download_files.assert_not_called()
         mock_download_single_file.assert_not_called()
-        # mock_download_files.assert_called_once()
-        # mock_download_single_file.assert_called_once()

@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import ContextManager
 
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.utils import agp_utils
 
@@ -27,7 +26,7 @@ from ensembl.io.genomio.utils import agp_utils
 @pytest.mark.parametrize(
     ("test_dir_name", "agp_name", "allow_revcomp", "expectation", "check_type", "check_data"),
     [
-        param(
+        pytest.param(
             "ignores_comments",
             "comment.agp",
             False,
@@ -36,7 +35,7 @@ from ensembl.io.genomio.utils import agp_utils
             ("obj", "part", "+"),
             id="Comment lines ignored",
         ),
-        param(
+        pytest.param(
             "handles_orientation",
             "minus_strand.agp",
             True,
@@ -45,7 +44,7 @@ from ensembl.io.genomio.utils import agp_utils
             ("obj", "part", "-"),
             id="Reverse strand entry parsed when allowed",
         ),
-        param(
+        pytest.param(
             "handles_orientation",
             "minus_strand.agp",
             False,
@@ -54,7 +53,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Reverse strand entries rejected when disallowed",
         ),
-        param(
+        pytest.param(
             "non_w_component",
             "repeat.agp",
             False,
@@ -63,7 +62,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Ununsupported component type raises error",
         ),
-        param(
+        pytest.param(
             "empty_file",
             "empty.agp",
             False,
@@ -72,7 +71,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Empty AGP file raises error",
         ),
-        param(
+        pytest.param(
             "truncated_line",
             "truncated.agp",
             False,
@@ -81,7 +80,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Truncated AGP line raises error",
         ),
-        param(
+        pytest.param(
             "multiple_objects",
             "multi.agp",
             False,
@@ -93,7 +92,7 @@ from ensembl.io.genomio.utils import agp_utils
             },
             id="Multiple objects with multiple parts parsed correctly",
         ),
-        param(
+        pytest.param(
             "multiple_errors",
             "multi_errors.agp",
             False,
@@ -102,7 +101,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Multiple AGP errors are collected and raised together",
         ),
-        param(
+        pytest.param(
             "invalid_integers",
             "bad_int.agp",
             False,
@@ -111,7 +110,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Invalid integer fields raise error",
         ),
-        param(
+        pytest.param(
             "gzipped_file",
             "valid.agp.gz",
             False,
@@ -239,7 +238,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
 @pytest.mark.parametrize(
     ("start", "end", "orientation", "allow_revcomp", "expectation"),
     [
-        param(
+        pytest.param(
             1,
             1,
             "+",
@@ -247,7 +246,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             does_not_raise((100, 100)),
             id="Single bp forward strand",
         ),
-        param(
+        pytest.param(
             10,
             20,
             "+",
@@ -255,7 +254,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             does_not_raise((109, 119)),
             id="Range forward strand",
         ),
-        param(
+        pytest.param(
             1,
             1,
             "-",
@@ -263,7 +262,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             does_not_raise((199, 199)),
             id="Single bp reverse strand",
         ),
-        param(
+        pytest.param(
             10,
             20,
             "-",
@@ -271,7 +270,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             does_not_raise((180, 190)),
             id="Range reverse strand",
         ),
-        param(
+        pytest.param(
             5,
             4,
             "+",
@@ -279,7 +278,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             pytest.raises(ValueError, match=r"Range start > end"),
             id="Start > end raises error",
         ),
-        param(
+        pytest.param(
             0,
             1,
             "+",
@@ -287,7 +286,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             pytest.raises(ValueError, match=r"outside component span"),
             id="Start outside component span raises error",
         ),
-        param(
+        pytest.param(
             1,
             101,
             "+",
@@ -295,7 +294,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             pytest.raises(ValueError, match=r"outside component span"),
             id="End outside component span raises error",
         ),
-        param(
+        pytest.param(
             1,
             1,
             "-",
@@ -303,7 +302,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             pytest.raises(ValueError, match=r"processing of reverse complement AGP entries is not enabled"),
             id="Reverse strand entry raises error when disallowed",
         ),
-        param(
+        pytest.param(
             1,
             10,
             "?",

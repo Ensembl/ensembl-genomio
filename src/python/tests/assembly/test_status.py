@@ -27,7 +27,6 @@ from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
-from pytest import FixtureRequest, param, raises
 from sqlalchemy import Column, Index, String, text
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.engine import make_url
@@ -172,10 +171,10 @@ def test_report_structure_values() -> None:
 @pytest.mark.parametrize(
     ("sif_cache_dir", "datasets_version", "nextflow_cachedir", "singularity_cachedir"),
     [
-        param("sif_cache", None, None, None, id="Personal SIF cache, default datasets"),
-        param(None, None, "nxf_cache", None, id="Nextflow SIF cache, default datasets"),
-        param(None, None, None, "singularity_cache", id="Singularity SIF cache, default datasets"),
-        param(None, "my_datasets", None, None, id="No SIF cache, user datasets"),
+        pytest.param("sif_cache", None, None, None, id="Personal SIF cache, default datasets"),
+        pytest.param(None, None, "nxf_cache", None, id="Nextflow SIF cache, default datasets"),
+        pytest.param(None, None, None, "singularity_cache", id="Singularity SIF cache, default datasets"),
+        pytest.param(None, "my_datasets", None, None, id="No SIF cache, user datasets"),
     ],
 )
 @patch("ensembl.io.genomio.assembly.status.Client")
@@ -189,9 +188,9 @@ def test_singularity_image_setter(
 ) -> None:
     """Test the `singularity_image_setter()` function.
 
-    Fixtures: tmp_path
-
     Args:
+        mock_client: A mock of the ``ensembl.io.genomio.assembly.status.Client`` class.
+        tmp_path: Temporary directory provided by pytest.
         sif_cache_dir: Path to locate existing, or download new SIF container image.
         datasets_version: URL of singularity container (custom `datasets` version if desired).
         nextflow_cachedir: Value to assign to environment variable NXF_SINGULARITY_CACHEDIR.
@@ -230,8 +229,12 @@ def test_singularity_image_setter(
 @pytest.mark.parametrize(
     ("file_name", "expected_output", "expectation"),
     [
-        param("assemblies.txt", ["GCA_900524668.2", "GCF_123456789.1"], does_not_raise(), id="Valid file"),
-        param("meta_report.tsv", [], raises(UnsupportedFormatError), id="Wrong accession format"),
+        pytest.param(
+            "assemblies.txt", ["GCA_900524668.2", "GCF_123456789.1"], does_not_raise(), id="Valid file"
+        ),
+        pytest.param(
+            "meta_report.tsv", [], pytest.raises(UnsupportedFormatError), id="Wrong accession format"
+        ),
     ],
 )
 def test_get_assembly_accessions(
@@ -239,10 +242,8 @@ def test_get_assembly_accessions(
 ) -> None:
     """Test the `get_assembly_accessions()` function.
 
-    Fixtures:
-        data_dir
-
     Args:
+        data_dir: Module's test data directory fixture.
         file_name: File with one line per INSDC assembly accession.
         expected_output: Expected assembly accessions returned.
         expectation: Context manager of expected raise exception.
@@ -266,7 +267,7 @@ def test_get_assembly_accessions(
     indirect=True,
 )
 def test_fetch_accessions_from_core_dbs(
-    request: FixtureRequest, tmp_path: Path, test_dbs: dict[str, UnitTestDB]
+    request: pytest.FixtureRequest, tmp_path: Path, test_dbs: dict[str, UnitTestDB]
 ) -> None:
     """Test the `fetch_accessions_from_core_dbs()` function.
 
@@ -317,7 +318,7 @@ def test_fetch_datasets_reports_value_error(mock_client: Mock) -> None:
     """Test the `fetch_datasets_reports()` function when `ValueError` is raised."""
     mock_client.execute.return_value = {"message": [["unexpected nested list"]]}
     accessions = {"my_core": "GCF_001194135.2"}
-    with raises(ValueError):
+    with pytest.raises(TypeError, match=r"Result obtained from datasets is not a string"):
         fetch_datasets_reports(mock_client, accessions, Path(), 1)
 
 
@@ -326,7 +327,7 @@ def test_fetch_datasets_reports_runtime_error(mock_client: Mock) -> None:
     """Test the `fetch_datasets_reports()` function when `RuntimeError` is raised."""
     mock_client.execute.return_value = {"message": "FATAL error message"}
     accessions = {"my_core": "GCF_001194135.2"}
-    with raises(RuntimeError, match=r"Singularity image execution failed! -> '.*'"):
+    with pytest.raises(RuntimeError, match=r"Singularity image execution failed! -> '.*'"):
         fetch_datasets_reports(mock_client, accessions, Path(), 1)
 
 
@@ -334,10 +335,12 @@ def test_fetch_datasets_reports_runtime_error(mock_client: Mock) -> None:
 @pytest.mark.parametrize(
     ("file_name", "expected_metadata"),
     [
-        param("simple.asm_report.json", MINIMUM_METADATA, id="Minimum report"),
-        param("strain.asm_report.json", STRAIN_METADATA, id="Strain report"),
-        param("cultivar.asm_report.json", MINIMUM_METADATA, id="Unexpected infraspecific name (cultivar)"),
-        param("GCF_001194135.2.asm_report.json", COMPLETE_METADATA, id="Detailed report"),
+        pytest.param("simple.asm_report.json", MINIMUM_METADATA, id="Minimum report"),
+        pytest.param("strain.asm_report.json", STRAIN_METADATA, id="Strain report"),
+        pytest.param(
+            "cultivar.asm_report.json", MINIMUM_METADATA, id="Unexpected infraspecific name (cultivar)"
+        ),
+        pytest.param("GCF_001194135.2.asm_report.json", COMPLETE_METADATA, id="Detailed report"),
     ],
 )
 def test_extract_assembly_metadata(
@@ -345,9 +348,8 @@ def test_extract_assembly_metadata(
 ) -> None:
     """Test the `extract_assembly_metadata()` function.
 
-    Fixtures: data_dir
-
     Args:
+        data_dir: Module's test data directory fixture.
         file_name: Test data file to extract the assembly metadata from.
         expected_metadata: Expected key value pairs of source name <> assembly report.
 

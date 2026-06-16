@@ -19,7 +19,6 @@
 from typing import Any, Callable
 
 import pytest
-from pytest import param
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -47,7 +46,7 @@ from ensembl.utils.database import UnitTestDB
 
 @pytest.fixture(name="seq_test_db", scope="module")
 def fixture_seq_test_db(db_factory: Callable) -> UnitTestDB:
-    """Returns a test database with all core tables and basic data (1 coord_system + 1 seq_region)."""
+    """Return a test database with all core tables and basic data (1 coord_system + 1 seq_region)."""
     test_db: UnitTestDB = db_factory(src="no_src", name="dump_seq")
     test_db.dbc.create_all_tables(metadata)
 
@@ -163,7 +162,7 @@ def _add_test_karyotype(
 
 @pytest.fixture(name="db_map", scope="module")
 def fixture_db_map() -> dict[str, str]:
-    """Returns the default db_map."""
+    """Return the default db_map."""
     return get_external_db_map(DEFAULT_EXTERNAL_DB_MAP)
 
 
@@ -202,11 +201,11 @@ def test_get_synonyms(seq_test_db: UnitTestDB, db_map: dict[str, str]) -> None:
 @pytest.mark.parametrize(
     ("bands", "expected_kar"),
     [
-        param([], [], id="no karyotype"),
-        param([{}], [{"start": 1, "end": 10}], id="no name/stain"),
-        param([{"name": "bandA"}], [{"start": 1, "end": 10, "name": "bandA"}], id="one band"),
-        param([{"stain": "stainA"}], [{"start": 1, "end": 10, "stain": "stainA"}], id="one stain"),
-        param(
+        pytest.param([], [], id="no karyotype"),
+        pytest.param([{}], [{"start": 1, "end": 10}], id="no name/stain"),
+        pytest.param([{"name": "bandA"}], [{"start": 1, "end": 10, "name": "bandA"}], id="one band"),
+        pytest.param([{"stain": "stainA"}], [{"start": 1, "end": 10, "stain": "stainA"}], id="one stain"),
+        pytest.param(
             [{"stain": "TEL"}],
             [{"start": 1, "end": 10, "stain": "TEL", "structure": "telomere"}],
             id="telomere",
@@ -217,6 +216,7 @@ def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict)
     """Test the `get_synonyms` method.
 
     Args:
+        seq_test_db: Test database.
         bands: List of dicts with keys `name`, `stain` for each test band to add.
         expected_kar: List of expected karyotype dicts output.
 
@@ -233,14 +233,14 @@ def test_get_karyotype(seq_test_db: UnitTestDB, bands: list, expected_kar: dict)
 @pytest.mark.parametrize(
     ("attribs", "expected_output"),
     [
-        param({}, None, id="no toplevel"),
-        param({"codon_table": 1}, None, id="no toplevel, other attribs"),
-        param({"toplevel": 1}, {}, id="1 toplevel"),
-        param({"toplevel": 1, "codon_table": 2}, {"codon_table": 2}, id="with codon table"),
-        param({"toplevel": 1, "sequence_location": "chr"}, {"location": "chr"}, id="location"),
-        param({"toplevel": 1, "circular_seq": 1}, {"circular": 1}, id="circular"),
-        param({"toplevel": 1, "circular_seq": 0}, {}, id="not circular"),
-        param(
+        pytest.param({}, None, id="no toplevel"),
+        pytest.param({"codon_table": 1}, None, id="no toplevel, other attribs"),
+        pytest.param({"toplevel": 1}, {}, id="1 toplevel"),
+        pytest.param({"toplevel": 1, "codon_table": 2}, {"codon_table": 2}, id="with codon table"),
+        pytest.param({"toplevel": 1, "sequence_location": "chr"}, {"location": "chr"}, id="location"),
+        pytest.param({"toplevel": 1, "circular_seq": 1}, {"circular": 1}, id="circular"),
+        pytest.param({"toplevel": 1, "circular_seq": 0}, {}, id="not circular"),
+        pytest.param(
             {"toplevel": 1, "coord_system_tag": "contig"}, {"coord_system_level": "contig"}, id="contig level"
         ),
     ],
@@ -254,8 +254,10 @@ def test_get_seq_regions_attribs(
     """Test the `get_seq_regions_attribs` method.
 
     Args:
+        seq_test_db: Test database.
+        db_map: Map of external database names.
         attribs: Dicts with all attrib-value pairs for each attrib to add to the seq_region.
-        expected_kar: List of expected karyotype dicts output.
+        expected_output: List of expected karyotype dicts output.
 
     """
     expected_dict = {"name": "seqA", "length": 1000, "coord_system_level": "primary_assembly"}
@@ -275,9 +277,9 @@ def test_get_seq_regions_attribs(
 @pytest.mark.parametrize(
     ("attribs", "expected_output"),
     [
-        param({}, {}, id="no added seq"),
-        param({"added_seq_accession": "ACC1"}, {"accession": "ACC1"}, id="added accession"),
-        param(
+        pytest.param({}, {}, id="no added seq"),
+        pytest.param({"added_seq_accession": "ACC1"}, {"accession": "ACC1"}, id="added accession"),
+        pytest.param(
             {
                 "added_seq_accession": "ACC1",
                 "added_seq_asm_pr_nam": "asm_name",
@@ -286,7 +288,7 @@ def test_get_seq_regions_attribs(
             {"accession": "ACC1", "assembly_provider": {"name": "asm_name", "url": "asm_url"}},
             id="added accession + assembly provider",
         ),
-        param(
+        pytest.param(
             {
                 "added_seq_accession": "ACC1",
                 "added_seq_ann_pr_nam": "ann_name",
@@ -295,7 +297,7 @@ def test_get_seq_regions_attribs(
             {"accession": "ACC1", "annotation_provider": {"name": "ann_name", "url": "ann_url"}},
             id="added accession + annotation provider",
         ),
-        param(
+        pytest.param(
             {
                 "added_seq_accession": "ACC1",
                 "added_seq_asm_pr_nam": "asm_name",
@@ -312,6 +314,7 @@ def test_get_added_sequence(
     """Test the `get_added_sequences` method.
 
     Args:
+        seq_test_db: Test database.
         attribs: Dicts with all attrib-value pairs for each attrib to add to the seq_region.
         expected_output: Expected output.
 

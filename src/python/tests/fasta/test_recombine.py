@@ -26,7 +26,6 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from deepdiff import DeepDiff
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.fasta import recombine
 from ensembl.io.genomio.utils.agp_utils import parse_agp
@@ -133,31 +132,31 @@ def test_build_index_no_headers_raises(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("input_filename", "regex", "expectation"),
     [
-        param(
+        pytest.param(
             "0_based_start.fa",
             CHUNK_RE,
             does_not_raise(("X", "AAAATT")),
             id="Reassembles 0-based contiguous chunks",
         ),
-        param(
+        pytest.param(
             "1_based_start.fa",
             CHUNK_RE,
             does_not_raise(("Y", "CCCCGG")),
             id="Reassembles 1-based contiguous chunks",
         ),
-        param(
+        pytest.param(
             "alternative_regex.fa",
             re.compile(r"^(?P<base>.+)\.chunk\.(?P<start>\d+)$"),
             does_not_raise(("Z", "TCCTAGA")),
             id="Reassembles with alternative regex",
         ),
-        param(
+        pytest.param(
             "unchunked.fa",
             CHUNK_RE,
             does_not_raise(("A", "CATTGA")),
             id="Reassembles unchunked sequences",
         ),
-        param(
+        pytest.param(
             "non_contiguous.fa",
             CHUNK_RE,
             pytest.raises(ValueError, match="Non-contiguous chunks for 'X'"),
@@ -195,13 +194,13 @@ def test_recombine_records_from_headers(
 @pytest.mark.parametrize(
     ("first_seen", "chunks", "key_error_str"),
     [
-        param(
+        pytest.param(
             {"A": 0},
             {},
             "Base record 'A' not found",
             id="Missing base record raises KeyError",
         ),
-        param(
+        pytest.param(
             {"X": 0},
             {"X": [(0, "X_chunk_start_0")]},
             "Chunk record 'X_chunk_start_0' not found",
@@ -219,7 +218,7 @@ def test_records_from_headers_exceptions(
     Args:
         first_seen: Dictionary representing order in which records observed.
         chunks: Mapping of base record ID to a list of (start, chunk_record_id) pairs.
-        key_error: Expected string matching raised ``KeyError``.
+        key_error_str: Expected string matching raised ``KeyError``.
 
     """
     locations: dict[str, recombine.RecordLocation] = {}
@@ -231,20 +230,20 @@ def test_records_from_headers_exceptions(
 @pytest.mark.parametrize(
     ("orientation", "allow_revcomp", "expectation"),
     [
-        param(
+        pytest.param(
             "+",
             False,
             does_not_raise("GTGG"),
             id="Retrieves forward strand sequence",
         ),
-        param("-", True, does_not_raise("CCAC"), id="Retrieves reverse complement sequence"),
-        param(
+        pytest.param("-", True, does_not_raise("CCAC"), id="Retrieves reverse complement sequence"),
+        pytest.param(
             "-",
             False,
             pytest.raises(ValueError, match="'allow-revcomp' is not enabled"),
             id="Rejects reverse strand when not allowed",
         ),
-        param(
+        pytest.param(
             "?",
             True,
             pytest.raises(ValueError, match="Invalid AGP orientation"),
@@ -270,27 +269,27 @@ def test_agp_component_seq(orientation: str, allow_revcomp: bool, expectation: C
 @pytest.mark.parametrize(
     ("agp_filename", "expectation"),
     [
-        param(
+        pytest.param(
             "ordered.agp",
             does_not_raise(("obj", "AAAATT")),
             id="Reassembles from ordered AGP",
         ),
-        param(
+        pytest.param(
             "unordered.agp",
             does_not_raise(("obj", "AAAATT")),
             id="Reassembles from unordered AGP",
         ),
-        param(
+        pytest.param(
             "length_mismatch.agp",
             pytest.raises(ValueError, match="Length mismatch"),
             id="Rejects AGP with length mismatch",
         ),
-        param(
+        pytest.param(
             "missing.agp",
             pytest.raises(KeyError, match="not found in indexed FASTA headers"),
             id="Rejects AGP with unknown sequence",
         ),
-        param(
+        pytest.param(
             "non_contiguous.agp",
             pytest.raises(ValueError, match="Non-contiguous AGP"),
             id="Rejects AGP with coordinate gap",
@@ -310,7 +309,7 @@ def test_records_from_agp(data_dir: Path, agp_filename: str, expectation: Contex
     agp_entries = parse_agp(data_dir / "from_agp" / agp_filename, allow_revcomp=False)
     cache = recombine.FastaRecordCache()
     with expectation as expected:
-        records = list(recombine._records_from_agp(agp_entries, locations, cache, False))
+        records = list(recombine._records_from_agp(agp_entries, locations, cache, allow_revcomp=False))
         record_id, record_seq = expected
         assert records[0].id == record_id
         assert str(records[0].seq) == record_seq
@@ -319,13 +318,13 @@ def test_records_from_agp(data_dir: Path, agp_filename: str, expectation: Contex
 @pytest.mark.parametrize(
     ("test_dir_name", "agp_filename", "expected"),
     [
-        param(
+        pytest.param(
             "from_agp",
             "ordered.agp",
             [{"id": "obj", "seq": "AAAATT"}],
             id="AGP-driven recombination",
         ),
-        param(
+        pytest.param(
             "from_headers",
             None,
             [{"id": "Y", "seq": "CCCCGG"}],
@@ -367,7 +366,7 @@ def test_recombine_fasta(
 @pytest.mark.parametrize(
     ("arg_list", "expected_params"),
     [
-        param(
+        pytest.param(
             ["--fasta-manifest", __file__, "--out-fasta", "out.fa"],
             {
                 "fasta_manifest": str(__file__),
@@ -378,7 +377,7 @@ def test_recombine_fasta(
             },
             id="Default args",
         ),
-        param(
+        pytest.param(
             [
                 "--fasta-manifest",
                 __file__,

@@ -226,6 +226,10 @@ def test_prepare_genome_metadata(
     """Test the `prepare.prepare_genome_metadata()` method.
 
     Args:
+        mock_date: A mock of `datetime.date` class.
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
+        data_dir: Pytest fixture providing the path to the test data directory.
+        assert_files: File diff assertion fixture.
         input_filename: Input genome JSON file.
         ncbi_filename: NCBI dataset report JSON file.
         expected_filename: Expected output genome JSON file.

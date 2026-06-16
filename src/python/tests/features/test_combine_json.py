@@ -26,7 +26,6 @@ from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.features import combine_json
 
@@ -37,7 +36,7 @@ CHUNK_RE = re.compile(combine_json._CHUNK_RE_STRING)
 def fixture_schema_validator_calls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> list[tuple[tuple[object, ...], dict[str, object]]]:
-    """Records calls made to schema_validator and replaces it with a no-op.
+    """Record calls made to schema_validator and replaces it with a no-op.
 
     Args:
         monkeypatch: Pytest monkeypatch fixture.
@@ -56,10 +55,11 @@ def fixture_schema_validator_calls(
 
 
 def _analysis(name: str = "rm", date: str = "2026-02-18T00:00:00Z") -> dict[str, combine_json.JsonValue]:
-    """Returns a standard analysis payload for assertions.
+    """Return a standard analysis payload for assertions.
 
     Args:
         name: Analysis logic name.
+        date: Date that analysis was run.
 
     Returns:
         Analysis dictionary.
@@ -76,7 +76,7 @@ def _analysis(name: str = "rm", date: str = "2026-02-18T00:00:00Z") -> dict[str,
 
 
 def _source(provider: str = "prov") -> dict[str, combine_json.JsonValue]:
-    """Returns a standard source payload for assertions.
+    """Return a standard source payload for assertions.
 
     Args:
         provider: Source provider string.
@@ -89,7 +89,7 @@ def _source(provider: str = "prov") -> dict[str, combine_json.JsonValue]:
 
 
 def _sha256_key(rn: str, rc_class: str, rt: str, seq: str | None = None) -> str:
-    """Computes the repeat-consensus SHA-256 key used by the schema.
+    """Compute the repeat-consensus SHA-256 key used by the schema.
 
     Args:
         rn: Repeat name.
@@ -112,12 +112,12 @@ def _repeat_consensus(
     repeat_type: str = "Alu",
     sequence: str | None = None,
 ) -> combine_json.RepeatConsensus:
-    """Builds a repeat-consensus object for tests.
+    """Build a repeat-consensus object for tests.
 
     Args:
         repeat_name: Repeat name.
         repeat_class: Repeat class.
-        repeat: Repeat type.
+        repeat_type: Repeat type.
         sequence: Optional consensus sequence.
 
     Returns:
@@ -142,7 +142,7 @@ def _repeat_feature(
     strand: str = "+",
     consensus_key: str | None = None,
 ) -> combine_json.RepeatFeature:
-    """Builds a repeat-feature object for tests.
+    """Build a repeat-feature object for tests.
 
     Args:
         seq_region: Feature seq_region.
@@ -171,7 +171,7 @@ def _repeat_feature(
 def _ncrna_feature(
     seq_region: str, start: int, end: int, strand: str = "+"
 ) -> dict[str, combine_json.JsonValue]:
-    """Builds a cmscan-style ncRNA feature object for tests.
+    """Build a ncRNA feature object for tests.
 
     Args:
         seq_region: Feature seq_region.
@@ -196,7 +196,7 @@ def _ncrna_feature(
 
 
 def _load_json(path: Path) -> dict[str, combine_json.JsonValue]:
-    """Loads a JSON document from disk.
+    """Load a JSON document from disk.
 
     Args:
         path: Path to JSON file.
@@ -256,8 +256,8 @@ def test_top_level_accumulator_require_same_ignores_analysis_run_date(tmp_path: 
 @pytest.mark.parametrize(
     "json_filename",
     [
-        param("object.json", id="Loads plain JSON"),
-        param("object.json.gz", id="Loads gzipped JSON"),
+        pytest.param("object.json", id="Loads plain JSON"),
+        pytest.param("object.json.gz", id="Loads gzipped JSON"),
     ],
 )
 def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -> None:
@@ -280,7 +280,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
 @pytest.mark.parametrize(
     ("parts", "start", "end", "expectation"),
     [
-        param(
+        pytest.param(
             [
                 combine_json.AgpEntry("obj", 1, 100, 1, "comp", 1, 100, "+"),
             ],
@@ -289,7 +289,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
             does_not_raise(combine_json.AgpEntry("obj", 1, 100, 1, "comp", 1, 100, "+")),
             id="Returns correct entry when single match",
         ),
-        param(
+        pytest.param(
             [
                 combine_json.AgpEntry("obj", 1, 100, 1, "comp", 1, 100, "+"),
                 combine_json.AgpEntry("obj", 101, 200, 2, "comp", 101, 200, "+"),
@@ -299,7 +299,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
             does_not_raise(combine_json.AgpEntry("obj", 101, 200, 2, "comp", 101, 200, "+")),
             id="Returns correct entry when multiple non-overlapping",
         ),
-        param(
+        pytest.param(
             [
                 combine_json.AgpEntry("obj", 1, 100, 1, "comp", 1, 100, "+"),
             ],
@@ -308,7 +308,7 @@ def test_load_json_document_accepts_object(data_dir: Path, json_filename: str) -
             pytest.raises(ValueError, match=r"does not fit within any AGP span"),
             id="Raises ValueError when no matching entry",
         ),
-        param(
+        pytest.param(
             [
                 combine_json.AgpEntry("obj", 1, 100, 1, "comp", 1, 100, "+"),
                 combine_json.AgpEntry("obj", 1, 100, 2, "comp", 50, 150, "+"),
@@ -351,19 +351,19 @@ def test_get_agp_entry_for_range(
 @pytest.mark.parametrize(
     ("value", "coercer", "expectation"),
     [
-        param(
+        pytest.param(
             dict(_repeat_consensus("Alu", "SINE", "Alu", sequence="ACGT"), repeat_consensus="TTTT"),
             combine_json._coerce_repeat_consensus,
             pytest.raises(ValueError, match=r"repeat_consensus_key mismatch"),
             id="Coerce repeat consensus rejects key mismatch",
         ),
-        param(
+        pytest.param(
             _repeat_feature(seq_region="chr1", start=10, end=5),
             combine_json._coerce_repeat_feature,
             pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"),
             id="Coerce repeat feature rejects start > end",
         ),
-        param(
+        pytest.param(
             _ncrna_feature("chr1", 10, 5, strand="+"),
             combine_json._coerce_ncrna_feature,
             pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"),
@@ -410,7 +410,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("feature", "agp_by_component", "allow_revcomp", "expectation"),
     [
-        param(
+        pytest.param(
             _repeat_feature(seq_region="chr1_chunk_start_11", start=1, end=5, strand="+"),
             None,
             False,
@@ -424,7 +424,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
             ),
             id="Sequence-region-driven lifting for chunked region",
         ),
-        param(
+        pytest.param(
             _repeat_feature(seq_region="chr1", start=1, end=5, strand="+"),
             None,
             False,
@@ -438,7 +438,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
             ),
             id="Sequence-region-driven lifting for unchunked region",
         ),
-        param(
+        pytest.param(
             _repeat_feature(seq_region="compP", start=10, end=20, strand="+"),
             {
                 "compP": [
@@ -465,7 +465,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
             ),
             id="AGP-driven lifting for forward strand",
         ),
-        param(
+        pytest.param(
             _repeat_feature(seq_region="compM", start=10, end=20, strand="+"),
             {
                 "compM": [
@@ -492,7 +492,7 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
             ),
             id="AGP-driven lifting for reverse strand",
         ),
-        param(
+        pytest.param(
             _repeat_feature(seq_region="compM", start=10, end=20, strand="-"),
             {
                 "compM": [
@@ -519,14 +519,14 @@ def test_merge_repeat_consensus_dedupes_identical(tmp_path: Path) -> None:
             ),
             id="AGP-driven lifting flips reverse to forward strand",
         ),
-        param(
+        pytest.param(
             _repeat_feature(seq_region="chr1", start=10, end=5, strand="+"),
             None,
             False,
             pytest.raises(ValueError, match=r"seq_region_start > seq_region_end"),
             id="Rejects end less than start",
         ),
-        param(
+        pytest.param(
             _repeat_feature(seq_region="compM", start=10, end=20, strand="."),
             {
                 "compM": [
@@ -599,17 +599,17 @@ def test_detect_load_type_rejects_unknown_type(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("feature", "expectation"),
     [
-        param(
+        pytest.param(
             _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key=None),
             does_not_raise(None),
             id="Returns None when no consensus",
         ),
-        param(
+        pytest.param(
             _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key="A" * 64),
             does_not_raise("a" * 64),
             id="Returns lower-cased consensue key",
         ),
-        param(
+        pytest.param(
             _repeat_feature(seq_region="chr1", start=1, end=10, consensus_key="invalid_key"),
             pytest.raises(ValueError, match=r"repeat_consensus must be a 64-char SHA-256 hex"),
             id="Rejects invalid consensus key",
@@ -671,9 +671,17 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
 
 
 @pytest.mark.parametrize(
-    ("documents", "feature_list_key", "coerce_feature", "agp_by_component", "allow_revcomp", "required_top_level_keys", "expectation"),
+    (
+        "documents",
+        "feature_list_key",
+        "coerce_feature",
+        "agp_by_component",
+        "allow_revcomp",
+        "required_top_level_keys",
+        "expectation",
+    ),
     [
-        param(
+        pytest.param(
             [
                 (
                     Path("a.json"),
@@ -716,7 +724,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
             ),
             id="Repeat features with sequence-region-driven lifting",
         ),
-        param(
+        pytest.param(
             [
                 (
                     Path("a.json"),
@@ -762,7 +770,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
             ),
             id="NcRNA features with sequence-region-driven lifting",
         ),
-        param(
+        pytest.param(
             [
                 (
                     Path("a.json"),
@@ -807,7 +815,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
             ),
             id="Repeat features with AGP-driven lifting for forward strand",
         ),
-        param(
+        pytest.param(
             [
                 (
                     Path("a.json"),
@@ -854,7 +862,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
             ),
             id="NcRNA features with AGP-driven lifting for reverse strand",
         ),
-        param(
+        pytest.param(
             [],
             "repeat_features",
             combine_json._coerce_repeat_feature,
@@ -864,7 +872,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
             pytest.raises(ValueError, match=r"No JSON files were read from the manifest"),
             id="Empty documents raises error",
         ),
-        param(
+        pytest.param(
             [
                 (
                     Path("a.json"),
@@ -895,7 +903,7 @@ def test_write_and_validate_writes_newline_and_calls_schema_validator(
             pytest.raises(ValueError, match=r"Top-level 'analysis' differs"),
             id="Analysis mismatch raises error",
         ),
-        param(
+        pytest.param(
             [
                 (
                     Path("a.json"),
@@ -979,7 +987,7 @@ def test_combine_feature_docs(
 @pytest.mark.parametrize(
     ("consensus_key", "valid_consensus_keys", "expectation"),
     [
-        param(
+        pytest.param(
             _sha256_key("Alu", "SINE", "Alu", "ACGT"),
             {_sha256_key("Alu", "SINE", "Alu", "ACGT")},
             does_not_raise(
@@ -995,7 +1003,7 @@ def test_combine_feature_docs(
             ),
             id="valid_consensus_key_is_accepted",
         ),
-        param(
+        pytest.param(
             _sha256_key("Alu", "SINE", "Alu", "ACGT"),
             set(),
             pytest.raises(ValueError, match=r"not present in repeat_consensus"),
@@ -1042,7 +1050,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
 @pytest.mark.parametrize(
     ("test_dir_name", "agp_filename", "allow_revcomp", "expectation"),
     [
-        param(
+        pytest.param(
             "seq_region",
             None,
             False,
@@ -1071,7 +1079,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
             ),
             id="Sequence-region-driven lifting for repeat features",
         ),
-        param(
+        pytest.param(
             "agp_forward",
             "test.agp",
             False,
@@ -1093,7 +1101,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
             ),
             id="AGP-driven lifting for forward strand repeat features",
         ),
-        param(
+        pytest.param(
             "agp_reverse",
             "test.agp",
             True,
@@ -1115,7 +1123,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
             ),
             id="AGP-driven lifting for reverse strand repeat features",
         ),
-        param(
+        pytest.param(
             "missing_consensus",
             None,
             False,
@@ -1172,7 +1180,7 @@ def test_combine_repeat_json_paths(
 @pytest.mark.parametrize(
     ("test_dir_name", "agp_filename", "allow_revcomp", "expectation"),
     [
-        param(
+        pytest.param(
             "seq_region",
             None,
             False,
@@ -1190,7 +1198,7 @@ def test_combine_repeat_json_paths(
             ),
             id="Sequence-region-driven lifting for ncRNA features",
         ),
-        param(
+        pytest.param(
             "agp_forward",
             "test.agp",
             False,
@@ -1206,7 +1214,7 @@ def test_combine_repeat_json_paths(
             ),
             id="AGP-driven lifting for forward strand ncRNA features",
         ),
-        param(
+        pytest.param(
             "agp_reverse",
             "test.agp",
             True,
@@ -1272,7 +1280,7 @@ def test_combine_ncrna_json_paths(
 @pytest.mark.parametrize(
     ("test_dir_name", "agp_filename", "allow_revcomp", "expectation"),
     [
-        param(
+        pytest.param(
             "combine_ncrna/seq_region",
             None,
             False,
@@ -1290,28 +1298,28 @@ def test_combine_ncrna_json_paths(
             ),
             id="NcRNA features with sequence-region-driven lifting",
         ),
-        param(
+        pytest.param(
             "empty_manifest",
             None,
             False,
             pytest.raises(ValueError, match=r"empty manifest"),
             id="Empty manifest raises error",
         ),
-        param(
+        pytest.param(
             "combine_repeat/missing_component",
             "test.agp",
             False,
             pytest.raises(KeyError, match=r"not found as an AGP component_id"),
             id="AGP-driven missing component raises error",
         ),
-        param(
+        pytest.param(
             "combine_repeat/ambiguous_mapping",
             "test.agp",
             False,
             pytest.raises(ValueError, match=r"Ambiguous AGP mapping"),
             id="AGP-driven ambiguous mapping raises error",
         ),
-        param(
+        pytest.param(
             "mixed_schema_kinds",
             None,
             False,
@@ -1364,7 +1372,7 @@ def test_combine_feature_json(
 @pytest.mark.parametrize(
     ("arg_list", "expected_params"),
     [
-        param(
+        pytest.param(
             ["--json-manifest", __file__, "--out-json", "out.json"],
             {
                 "json_manifest": str(__file__),
@@ -1375,7 +1383,7 @@ def test_combine_feature_json(
             },
             id="Default args",
         ),
-        param(
+        pytest.param(
             [
                 "--json-manifest",
                 __file__,

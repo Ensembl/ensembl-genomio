@@ -24,7 +24,7 @@ from typing import Any, Callable, ContextManager, Generator
 
 import pytest
 
-import ensembl.io.genomio.fasta.chunk as FastaChunking
+import ensembl.io.genomio.fasta.chunk as fasta_chunk
 
 does_not_raise = nullcontext
 
@@ -44,7 +44,7 @@ def test__on_value_error(msg: str, expectation: ContextManager) -> None:
 
     """
     with expectation:
-        FastaChunking._on_value_error(msg)  # pylint: disable=protected-access
+        fasta_chunk._on_value_error(msg)  # pylint: disable=protected-access
 
 
 @pytest.mark.parametrize(
@@ -72,7 +72,7 @@ def test_check_chunk_size_and_tolerance(
 
     """
     with expectation:
-        FastaChunking.check_chunk_size_and_tolerance(chunk_size, chunk_tolerance)
+        fasta_chunk.check_chunk_size_and_tolerance(chunk_size, chunk_tolerance)
 
 
 @pytest.mark.parametrize(
@@ -98,7 +98,7 @@ def test_split_seq_by_n(seq: str, pattern: re.Pattern | None, expectation: list[
         expectation: A list of open chunk ends (like for python list slices)
 
     """
-    assert FastaChunking.split_seq_by_n(seq, pattern) == expectation
+    assert fasta_chunk.split_seq_by_n(seq, pattern) == expectation
 
 
 @pytest.mark.parametrize(
@@ -130,7 +130,7 @@ def test_split_seq_by_chunk_size(
         expectation: A list of open chunk ends (python slices coordinates)
 
     """
-    assert FastaChunking.split_seq_by_chunk_size(chunk_ends, chunk_size, tolerated_size) == expectation
+    assert fasta_chunk.split_seq_by_chunk_size(chunk_ends, chunk_size, tolerated_size) == expectation
 
 
 def test_individual_file_opener(tmp_path: Path) -> None:
@@ -144,12 +144,12 @@ def test_individual_file_opener(tmp_path: Path) -> None:
     test_dir.mkdir()
     test_path = Path(test_dir, "test.file")
 
-    with FastaChunking._individual_file_opener(str(test_path)) as out:  # pylint: disable=protected-access
+    with fasta_chunk._individual_file_opener(str(test_path)) as out:  # pylint: disable=protected-access
         print("test", file=out)
         print("test", file=out)
     assert test_path.read_text(encoding="utf-8") == "test\ntest\n"
 
-    with FastaChunking._individual_file_opener(str(test_path)) as out:  # pylint: disable=protected-access
+    with fasta_chunk._individual_file_opener(str(test_path)) as out:  # pylint: disable=protected-access
         print("test", file=out)
     assert test_path.read_text(encoding="utf-8") == "test\n"
 
@@ -166,13 +166,13 @@ def test_prepare_out_dir_for_individuals(tmp_path: Path) -> None:
     test_dir = Path(tmp_path, "prepare_out_dir_test")
     test_file = Path(test_dir, "test.file")
 
-    assert FastaChunking.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
-    assert FastaChunking.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
+    assert fasta_chunk.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
+    assert fasta_chunk.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
 
     test_file.write_text("test\n", encoding="utf-8")
     assert test_file.read_text(encoding="utf-8") == "test\n"
 
-    assert FastaChunking.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
+    assert fasta_chunk.prepare_out_dir_for_individuals(test_dir, "test.file") == test_file
     assert len(list(test_dir.iterdir())) == 1
 
 
@@ -197,11 +197,21 @@ def test_get_tolerated_size(size: int, tolerance: int, expectation: int) -> None
         expectation: An expected tolerated size
 
     """
-    assert FastaChunking.get_tolerated_size(size, tolerance) == expectation
+    assert fasta_chunk.get_tolerated_size(size, tolerance) == expectation
 
 
 @pytest.mark.parametrize(
-    ("input_fasta_text", "chunk_size", "chunk_size_tolerated", "n_sequence_len", "chunk_sfx", "append_offset_to_chunk_name", "expected_chunked_fasta_text", "expected_agp_list", "expected_individual_files_count"),
+    (
+        "input_fasta_text",
+        "chunk_size",
+        "chunk_size_tolerated",
+        "n_sequence_len",
+        "chunk_sfx",
+        "append_offset_to_chunk_name",
+        "expected_chunked_fasta_text",
+        "expected_agp_list",
+        "expected_individual_files_count",
+    ),
     [
         ("", 2, 2, 2, "p", True, "", [], 0),
         (
@@ -300,7 +310,7 @@ def test_chunk_fasta_stream(
     # assert joined case
     with StringIO(input_fasta_text) as input_fasta, StringIO() as output_fasta:
         parts.clear()
-        agp_list = FastaChunking.chunk_fasta_stream(
+        agp_list = fasta_chunk.chunk_fasta_stream(
             input_fasta,  # type: ignore[arg-type]
             chunk_size,
             chunk_size_tolerated,
@@ -317,7 +327,7 @@ def test_chunk_fasta_stream(
 
     with StringIO(input_fasta_text) as input_fasta, nullcontext() as no_output_fasta:
         parts.clear()
-        agp_list = FastaChunking.chunk_fasta_stream(
+        agp_list = fasta_chunk.chunk_fasta_stream(
             input_fasta,  # type: ignore[arg-type]
             chunk_size,
             chunk_size_tolerated,
@@ -347,18 +357,21 @@ def test_chunk_fasta_stream_rejects_invalid_fasta(input_fasta_text: str) -> None
         input_fasta_text: Invalid FASTA input text.
 
     """
-    with StringIO(input_fasta_text) as input_fasta, StringIO() as output_fasta:
-        with pytest.raises(ValueError, match=r"comments at the beginning of the file"):
-            FastaChunking.chunk_fasta_stream(
-                input_fasta,  # type: ignore[arg-type]
-                2,
-                2,
-                output_fasta,  # type: ignore[arg-type]
-                None,
-                n_sequence_len=2,
-                chunk_sfx="p",
-                append_offset_to_chunk_name=True,
-            )
+    with (
+        StringIO(input_fasta_text) as input_fasta,
+        StringIO() as output_fasta,
+        pytest.raises(ValueError, match=r"comments at the beginning of the file"),
+    ):
+        fasta_chunk.chunk_fasta_stream(
+            input_fasta,  # type: ignore[arg-type]
+            2,
+            2,
+            output_fasta,  # type: ignore[arg-type]
+            None,
+            n_sequence_len=2,
+            chunk_sfx="p",
+            append_offset_to_chunk_name=True,
+        )
 
 
 @pytest.mark.parametrize(
@@ -382,6 +395,7 @@ def test_chunk_fasta(
     """Test the `chunk.chunk_fasta` function.
 
     Args:
+        monkeypatch: Pytest fixture used to mock ``fasta_chunk.chunk_fasta_stream``.
         tmp_path: Where temporary files will be created.
         individual_file_prefix: A file path prefix including dirs and filenames part to use as a
                 first part of the chunk file name or None.
@@ -402,13 +416,22 @@ def test_chunk_fasta(
         append_offset_to_chunk_name: bool | None,  # pylint: disable=unused-argument
         open_individual: Callable[
             [str], TextIOWrapper
-        ] = FastaChunking._individual_file_opener,  # pylint: disable=protected-access
+        ] = fasta_chunk._individual_file_opener,  # pylint: disable=protected-access
     ) -> list[str]:
         """Mock the `chunk.chunk_fasta_stream` function.
 
         Args:
-            *args: Positional arguments.
-            **kwargs: Keyword arguments.
+            input_fasta: Input FASTA.
+            chunk_size: Size of the chunks to split into.
+            chunk_size_tolerated: If more flexibility allowed, use this as the maximum size of a chunk.
+            output_fasta: Output FASTA to store the chunks into if no ``individual_file_prefix`` is provided.
+            individual_file_prefix: A file path prefix including dirs and filenames part to use as the
+                    first part of the chunk file name.
+            n_sequence_len: Length of the stretch of `N`s to split at; not slitting on `N`s if 0.
+            chunk_sfx: A string to put between the original sequence name and the chunk suffix.
+            append_offset_to_chunk_name: Append 0-based offset in the form of `_off_{offset}` to the
+                    chunk name.
+            open_individual: Function used by the mock to create an output stream for individual chunk files.
 
         """
         chunk_file_name = ""
@@ -437,8 +460,8 @@ def test_chunk_fasta(
         output_agp = Path(test_dir, f"{agp_output_file_name}")
 
     # patch and test
-    monkeypatch.setattr(FastaChunking, "chunk_fasta_stream", _chunk_fasta_stream_mock)
-    FastaChunking.chunk_fasta(
+    monkeypatch.setattr(fasta_chunk, "chunk_fasta_stream", _chunk_fasta_stream_mock)
+    fasta_chunk.chunk_fasta(
         str(input_fa),
         1,  # chunk_size
         1,  # chunk_size_tolerated

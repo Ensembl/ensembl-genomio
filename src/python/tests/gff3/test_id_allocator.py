@@ -26,7 +26,6 @@ from BCBio import GFF
 from Bio.SeqRecord import SeqRecord
 from ensembl.io.genomio.gff3.id_allocator import StableIDAllocator, InvalidStableID
 from ensembl.io.genomio.gff3.features import GFFSeqFeature
-from pytest import raises
 
 
 def _read_record(in_gff: Path) -> SeqRecord:
@@ -48,9 +47,9 @@ def _write_record(out_record: SeqRecord, out_gff: Path) -> None:
 
 def _show_diff(result_path: Path, expected_path: Path) -> str:
     """Create a useful diff between 2 files."""
-    with open(result_path) as result_fh:
+    with result_path.open() as result_fh:
         results = result_fh.readlines()
-    with open(expected_path) as expected_fh:
+    with expected_path.open() as expected_fh:
         expected = expected_fh.readlines()
     diff = list(unified_diff(expected, results))
     return "".join(diff)
@@ -170,9 +169,7 @@ def test_normalize_cds_id(test_id: str, outcome: str) -> None:
 )
 def test_normalize_transcript_id(test_id: str, numbers: list[int], outcomes: list[str]) -> None:
     """Test transcript id normalization."""
-    new_ids = []
-    for number in numbers:
-        new_ids.append(StableIDAllocator.generate_transcript_id(test_id, number))
+    new_ids = [StableIDAllocator.generate_transcript_id(test_id, number) for number in numbers]
 
     assert new_ids == outcomes
 
@@ -213,7 +210,7 @@ def test_normalize_pseudogene_cds_id(
     [
         pytest.param("geneid_ok.gff3", "LOREMIPSUM1", None, does_not_raise(), id="Good ID, no change"),
         pytest.param("geneid_makeid.gff3", "TMP_1", True, does_not_raise(), id="Make ID"),
-        pytest.param("geneid_bad.gff3", "", False, raises(InvalidStableID), id="Bad ID, fail"),
+        pytest.param("geneid_bad.gff3", "", False, pytest.raises(InvalidStableID), id="Bad ID, fail"),
         pytest.param("geneid_GeneID.gff3", "GeneID_000001", None, does_not_raise(), id="Replace with GeneID"),
         pytest.param("geneid_noGeneID.gff3", "TMP_1", True, does_not_raise(), id="Dbxref without Gene ID"),
     ],

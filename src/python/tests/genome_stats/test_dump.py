@@ -41,11 +41,11 @@ class MockResult:
     rows: list
 
     def __iter__(self) -> Any:
-        """Iterates over the elements in `rows` attribute."""
+        """Iterate over the elements in `rows` attribute."""
         yield from self.rows
 
     def one(self) -> tuple:
-        """Returns the first element in `rows` attribute."""
+        """Return the first element in `rows` attribute."""
         return self.rows[0]
 
 
@@ -72,7 +72,7 @@ class MockSession(Session):
 
     # pylint: disable-next=too-many-return-statements
     def execute(self, statement: ClauseElement) -> MockResult:  # type: ignore[override]
-        """Returns a `MockResult` object representing results of the statement execution.
+        """Return a `MockResult` object representing results of the statement execution.
 
         Args:
             statement: An executable statement.
@@ -118,7 +118,7 @@ class TestStatsGenerator:
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, data_dir: Path) -> None:
-        """Loads the required fixtures and values as class attributes.
+        """Load the required fixtures and values as class attributes.
 
         Args:
             data_dir: Module's test data directory fixture.

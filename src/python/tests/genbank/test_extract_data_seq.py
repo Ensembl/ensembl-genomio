@@ -23,7 +23,6 @@ from Bio.Seq import Seq
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.SeqRecord import SeqRecord
 import pytest
-from pytest import TempPathFactory
 
 from ensembl.io.genomio.genbank.extract_data import (
     FormattedFilesGenerator,
@@ -41,7 +40,7 @@ class TestFormattedFilesGenerator:
 
     @pytest.fixture(scope="class", autouse=True)
     def formatted_files_generator(
-        self, data_dir: Path, tmp_path_factory: TempPathFactory
+        self, data_dir: Path, tmp_path_factory: pytest.TempPathFactory
     ) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters."""
         gb_file = self.gb_file
@@ -210,7 +209,9 @@ class TestFormattedFilesGenerator:
         new_id = formatted_files_generator._uniquify_id(gene_id, all_ids)
         assert new_id == expected_id
 
-    @pytest.mark.parametrize(("organelle", "expected_location"), [("mitochondrion", "mitochondrial_chromosome")])
+    @pytest.mark.parametrize(
+        ("organelle", "expected_location"), [("mitochondrion", "mitochondrial_chromosome")]
+    )
     def test_prepare_location_with_supported_organelle(
         self,
         expected_location: str,

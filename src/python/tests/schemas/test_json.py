@@ -29,7 +29,6 @@ from typing import ContextManager
 
 from jsonschema.exceptions import ValidationError
 import pytest
-from pytest import raises
 
 from ensembl.io.genomio.schemas import json
 
@@ -68,7 +67,7 @@ def test_schema_factory(
     [
         ("seq_region.json", "seq_region", does_not_raise()),
         ("functional_annotation.json", "functional_annotation_schema.json", does_not_raise()),
-        ("seq_region.json", "functional_annotation", raises(ValidationError)),
+        ("seq_region.json", "functional_annotation", pytest.raises(ValidationError)),
     ],
 )
 def test_schema_validator(data_dir: Path, json_file: str, json_schema: str, expected: ContextManager) -> None:

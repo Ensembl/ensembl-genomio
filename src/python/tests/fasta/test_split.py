@@ -27,13 +27,12 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from deepdiff import DeepDiff
 import pytest
-from pytest import MonkeyPatch, param
 
 from ensembl.io.genomio.fasta import split
 
 
 def force_open_failure_for_suffix(suffix: str) -> Callable:
-    """Monkeypatches `open` to raise an OSError when trying to open a file with the given suffix."""
+    """Monkeypatch `open` to raise an OSError when trying to open a file with the given suffix."""
     real_open = open
 
     def _patched_open(self: Path, *args: Any, **kwargs: Any) -> TextIOWrapper | Exception:
@@ -91,14 +90,14 @@ def test_check_contents_deletable(tmp_path: Path, tree: Path, expectation: Conte
 @pytest.mark.parametrize(
     ("fasta_file", "tree", "expected"),
     [
-        param(Path("in.fa"), [], [], id="No output dir"),
-        param(
+        pytest.param(Path("in.fa"), [], [], id="No output dir"),
+        pytest.param(
             Path("in.fa"),
             [Path("1/in.1.fa"), Path("2/in.2.fa"), Path("keep")],
             [False, False, True],
             id="Default case without AGP file",
         ),
-        param(Path("in.fa"), [Path("in.agp")], [False], id="Delete AGP file"),
+        pytest.param(Path("in.fa"), [Path("in.agp")], [False], id="Delete AGP file"),
     ],
 )
 def test_clean_previous_output(tmp_path: Path, fasta_file: Path, tree: list[Path], expected: str) -> None:
@@ -132,12 +131,20 @@ class TestOutputWriter:
     """Test `split.OutputWriter` class."""
 
     @pytest.mark.parametrize(
-        ("fasta_file", "write_agp", "unique_file_names", "max_files", "max_dirs", "expected_out_path", "expected_agp_name"),
+        (
+            "fasta_file",
+            "write_agp",
+            "unique_file_names",
+            "max_files",
+            "max_dirs",
+            "expected_out_path",
+            "expected_agp_name",
+        ),
         [
-            param(Path("in.fa"), False, False, None, None, "1/in.1.fa", "", id="Default args"),
-            param(Path("in.fa"), True, False, None, None, "1/in.1.fa", "in.agp", id="AGP enabled"),
-            param(Path("in.fa"), False, True, None, None, "1/in.0.1.fa", "", id="Unique file names"),
-            param(Path("in.fa"), False, False, 2, 2, "1/in.1.fa", "", id="Set max elements per dir"),
+            pytest.param(Path("in.fa"), False, False, None, None, "1/in.1.fa", "", id="Default args"),
+            pytest.param(Path("in.fa"), True, False, None, None, "1/in.1.fa", "in.agp", id="AGP enabled"),
+            pytest.param(Path("in.fa"), False, True, None, None, "1/in.0.1.fa", "", id="Unique file names"),
+            pytest.param(Path("in.fa"), False, False, 2, 2, "1/in.1.fa", "", id="Set max elements per dir"),
         ],
     )
     def test_init(
@@ -152,15 +159,15 @@ class TestOutputWriter:
         expected_out_path: str,
         expected_agp_name: str,
     ) -> None:
-        """Tests the `__init__()` method of the `split.OutputWriter` class.
+        """Test the `__init__()` method of the `split.OutputWriter` class.
 
         Args:
             tmp_path: Test's unique temporary directory fixture.
             fasta_file: Input raw or compressed FASTA file containing sequences to split.
             write_agp: Write an AGP v2.0 file describing how each input sequence maps to output chunks.
             unique_file_names: Include folder index in output FASTA filenames to make them unique.
-            max_files_per_directory: Maximum number of FASTA files per directory.
-            max_dirs_per_directory: Maximum number of subdirectories per directory level.
+            max_files: Maximum number of FASTA files per directory.
+            max_dirs: Maximum number of subdirectories per directory level.
             expected_out_path: Expected relative path to the output FASTA file.
             expected_agp_name: Expected name of the AGP file in the output directory.
 
@@ -191,15 +198,14 @@ class TestOutputWriter:
     @pytest.mark.parametrize(
         ("write_agp", "suffix", "exc_msg"),
         [
-            param(False, ".fa", "Failed to open output file", id="FASTA file"),
-            param(True, ".agp", "Failed to open AGP file", id="AGP file"),
+            pytest.param(False, ".fa", "Failed to open output file", id="FASTA file"),
+            pytest.param(True, ".agp", "Failed to open AGP file", id="AGP file"),
         ],
     )
     def test_create_file_exception(
-        self, monkeypatch: MonkeyPatch, tmp_path: Path, *, write_agp: bool, suffix: str, exc_msg: str
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, write_agp: bool, suffix: str, exc_msg: str
     ) -> None:
-        """Tests the `_create_output_file()` and `_create_agp_file()` methods of the `split.OutputWriter`
-        class when an OSError is raised.
+        """Test error handling of the methods of `split.OutputWriter`.
 
         Args:
             monkeypatch: Pytest fixture to patch methods.
@@ -210,14 +216,21 @@ class TestOutputWriter:
 
         """
         monkeypatch.setattr("pathlib.Path.open", force_open_failure_for_suffix(suffix))
-        with pytest.raises(RuntimeError, match=rf"{exc_msg}"):
+
+        def create_and_close() -> None:
             writer = split.OutputWriter(
-                fasta_file=Path("in.fa"), out_dir=tmp_path, write_agp=write_agp, unique_file_names=False
+                fasta_file=Path("in.fa"),
+                out_dir=tmp_path,
+                write_agp=write_agp,
+                unique_file_names=False,
             )
             writer.close()
 
+        with pytest.raises(RuntimeError, match=rf"{exc_msg}"):
+            create_and_close()
+
     def test_create_agp_file_no_path(self, tmp_path: Path) -> None:
-        """Tests the `_create_agp_file()` method when the AGP path is not set.
+        """Test the `_create_agp_file()` method when the AGP path is not set.
 
         Args:
             tmp_path: Test's unique temporary directory fixture.
@@ -238,7 +251,7 @@ class TestOutputWriter:
         writer.close()
 
     def test_open_new_file(self, tmp_path: Path) -> None:
-        """Tests the `open_new_file()` method of the `split.OutputWriter` class.
+        """Test the `open_new_file()` method of the `split.OutputWriter` class.
 
         Args:
             tmp_path: Test's unique temporary directory fixture.
@@ -257,9 +270,9 @@ class TestOutputWriter:
     @pytest.mark.parametrize(
         ("write_agp", "agp_obj_id", "agp_start", "agp_end", "agp_part_nr", "break_agp_handle", "expectation"),
         [
-            param(False, None, None, None, None, False, does_not_raise(), id="Default args"),
-            param(True, "seq1", 1, 4, 1, False, does_not_raise(), id="Write AGP"),
-            param(
+            pytest.param(False, None, None, None, None, False, does_not_raise(), id="Default args"),
+            pytest.param(True, "seq1", 1, 4, 1, False, does_not_raise(), id="Write AGP"),
+            pytest.param(
                 True,
                 None,
                 1,
@@ -269,7 +282,7 @@ class TestOutputWriter:
                 pytest.raises(AssertionError, match=r"AGP object ID must be provided if writing AGP entries"),
                 id="Missing AGP object ID",
             ),
-            param(
+            pytest.param(
                 True,
                 "seq1",
                 None,
@@ -279,7 +292,7 @@ class TestOutputWriter:
                 pytest.raises(AssertionError, match=r"AGP start must be provided if writing AGP entries"),
                 id="Missing AGP start",
             ),
-            param(
+            pytest.param(
                 True,
                 "seq1",
                 1,
@@ -289,7 +302,7 @@ class TestOutputWriter:
                 pytest.raises(AssertionError, match=r"AGP end must be provided if writing AGP entries"),
                 id="Missing AGP end",
             ),
-            param(
+            pytest.param(
                 True,
                 "seq1",
                 1,
@@ -299,7 +312,7 @@ class TestOutputWriter:
                 pytest.raises(AssertionError, match=r"AGP part no. must be provided if writing AGP entries"),
                 id="Missing AGP part no.",
             ),
-            param(
+            pytest.param(
                 True,
                 "seq1",
                 1,
@@ -323,7 +336,7 @@ class TestOutputWriter:
         break_agp_handle: bool,
         expectation: ContextManager,
     ) -> None:
-        """Tests the `write_record()` method of the `split.OutputWriter` class.
+        """Test the `write_record()` method of the `split.OutputWriter` class.
 
         Args:
             tmp_path: Test's unique temporary directory fixture.
@@ -332,6 +345,7 @@ class TestOutputWriter:
             agp_start: Start coordinate on the AGP object (1-based, inclusive).
             agp_end: End coordinate on the AGP object (1-based, inclusive).
             agp_part_nr: Component part number for this object (starts at 1 per object).
+            break_agp_handle: Boolean indicating whether to break the AGP file handle for testing.
             expectation: Context manager for the expected exception.
 
         """
@@ -431,8 +445,7 @@ def test_split_fasta_empty_file(tmp_path: Path) -> None:
 
 
 def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
-    """Test the `split.split_fasta()` function when there are files from a previous run and we want to
-    delete them.
+    """Test the `split.split_fasta()` function deletes files from a previous run.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
@@ -456,7 +469,7 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
 @pytest.mark.parametrize(
     ("arg_list", "expectation"),
     [
-        param(
+        pytest.param(
             ["--fasta-file", __file__],
             does_not_raise(
                 {
@@ -470,7 +483,7 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
             ),
             id="Default args",
         ),
-        param(
+        pytest.param(
             [
                 "--fasta-file",
                 __file__,
@@ -509,7 +522,7 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
             ),
             id="New arg values",
         ),
-        param(
+        pytest.param(
             ["--fasta-file", __file__, "--min-chunk-length", "2"],
             pytest.raises(ValueError, match=r"--min-chunk-length requires --max-seq-length-per-file"),
             id="min_chunk_length without max_seq_length_per_file",

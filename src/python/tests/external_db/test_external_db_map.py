@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import ContextManager
 
 import pytest
-from pytest import param, raises
 
 from ensembl.io.genomio.external_db.db_map import (
     MapFormatError,
@@ -31,11 +30,11 @@ from ensembl.io.genomio.external_db.db_map import (
 @pytest.mark.parametrize(
     ("file_content", "expected_output", "expected"),
     [
-        param("", {}, no_raise()),
-        param("#Comment", {}, no_raise()),
-        param("FOO\tBAR", {"BAR": "FOO"}, no_raise()),
-        param("FOO\tBAR\tLOREM", {"BAR": "FOO"}, no_raise()),
-        param("FOO", {}, raises(MapFormatError)),
+        pytest.param("", {}, no_raise()),
+        pytest.param("#Comment", {}, no_raise()),
+        pytest.param("FOO\tBAR", {"BAR": "FOO"}, no_raise()),
+        pytest.param("FOO\tBAR\tLOREM", {"BAR": "FOO"}, no_raise()),
+        pytest.param("FOO", {}, pytest.raises(MapFormatError)),
     ],
 )
 def test_get_external_db_map(
@@ -44,6 +43,7 @@ def test_get_external_db_map(
     """Test the `get_external_db_map` method.
 
     Args:
+        tmp_path: Test's unique temporary directory fixture.
         file_content: Test db_map file content.
         expected_output: Db map expected output.
         expected: Context Manager for the expected exception.

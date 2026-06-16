@@ -21,7 +21,6 @@ from shutil import copytree
 from typing import Callable, ContextManager
 
 import pytest
-from pytest import LogCaptureFixture, param, raises
 
 from ensembl.io.genomio.manifest.manifest import Manifest, ManifestError
 
@@ -37,20 +36,19 @@ def test_init(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("file_name", "expected_name"),
     [
-        param("gene_models.gff3", "gff3", id="Recognised name and suffix"),
-        param("foobar.gff3", "gff3", id="Recognised suffix"),
-        param("genome.json", "genome", id="Recognised name"),
-        param("foobar_seq_region.json", "seq_region", id="Recognised part of the name"),
-        param("foobar.json", "", id="Not recognized json"),
+        pytest.param("gene_models.gff3", "gff3", id="Recognised name and suffix"),
+        pytest.param("foobar.gff3", "gff3", id="Recognised suffix"),
+        pytest.param("genome.json", "genome", id="Recognised name"),
+        pytest.param("foobar_seq_region.json", "seq_region", id="Recognised part of the name"),
+        pytest.param("foobar.json", "", id="Not recognized json"),
     ],
 )
 @pytest.mark.dependency(depends=["test_init"])
 def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) -> None:
     """Test `Manifest.get_files_checksum()`.
 
-    Fixtures: tmp_path
-
     Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
         file_name: File to create for the test.
         expected_name: Manifest key expected.
 
@@ -69,7 +67,7 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
 @pytest.mark.parametrize(
     ("file_names", "expected_content", "expected"),
     [
-        param(
+        pytest.param(
             ["link1.agp", "link2.agp", "link3.agp"],
             {
                 "agp": {
@@ -81,7 +79,7 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
             no_raise(),
             id="3 agp files, different names",
         ),
-        param(
+        pytest.param(
             ["a_agp.agp", "b_agp.agp"],
             {
                 "agp": {
@@ -92,10 +90,10 @@ def test_get_files_checksum(tmp_path: Path, file_name: str, expected_name: str) 
             no_raise(),
             id="2 agp files with same name",
         ),
-        param(
+        pytest.param(
             [f"{letter}_agp.agp" for letter in "abcdefghijkl"],
             {},
-            raises(ValueError, match="Too many files with same name"),
+            pytest.raises(ValueError, match="Too many files with same name"),
             id="Too many files with same name",
         ),
     ],
@@ -106,9 +104,8 @@ def test_get_files_checksum_multifiles(
 ) -> None:
     """Test `Manifest.get_files_checksum()` with several files for the same name.
 
-    Fixtures: tmp_path
-
     Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
         file_names: List of files to create.
         expected_content: Expected checksum dict.
         expected: Expected exception.
@@ -123,10 +120,13 @@ def test_get_files_checksum_multifiles(
 
 
 @pytest.mark.dependency(depends=["test_init"])
-def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFixture) -> None:
+def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test `Manifest.get_files_checksum()` with a subdir.
 
-    Fixtures: tmp_path, caplog
+    Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
+        caplog: Fixture for capturing log messages.
+
     """
     Path(tmp_path / "sub_dir").mkdir()
     manifest = Manifest(tmp_path)
@@ -135,10 +135,13 @@ def test_get_files_checksum_warning_subdir(tmp_path: Path, caplog: LogCaptureFix
 
 
 @pytest.mark.dependency(depends=["test_init"])
-def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixture) -> None:
+def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test `Manifest.get_files_checksum()` with an empty file, deleted.
 
-    Fixtures: tmp_path, caplog
+    Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
+        caplog: Fixture for capturing log messages.
+
     """
     empty_file = Path(tmp_path / "empty_file.txt")
     empty_file.touch()
@@ -152,8 +155,12 @@ def test_get_files_checksum_warning_empty(tmp_path: Path, caplog: LogCaptureFixt
 @pytest.mark.parametrize(
     ("files", "expected_content"),
     [
-        param([], {}, id="No files"),
-        param(["genes.gff3"], {"gff3": {"file": "genes.gff3", "md5sum": _CONTENT_MD5}}, id="1 gff3 file"),
+        pytest.param([], {}, id="No files"),
+        pytest.param(
+            ["genes.gff3"],
+            {"gff3": {"file": "genes.gff3", "md5sum": _CONTENT_MD5}},
+            id="1 gff3 file",
+        ),
     ],
 )
 @pytest.mark.dependency(depends=["test_init"])
@@ -162,9 +169,9 @@ def test_create_manifest(
 ) -> None:
     """Test `Manifest.create()`.
 
-    Fixtures: tmp_path, assert_files
-
     Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
+        assert_files: File diff assertion fixture.
         files: List of dummy files to create for the manifest to use.
         expected_content: Expected content of the manifest files after creation.
 
@@ -186,13 +193,13 @@ def test_create_manifest(
 @pytest.mark.parametrize(
     ("files_dir", "expected_files", "expected"),
     [
-        param(
+        pytest.param(
             "full_data", {"functional_annotation", "seq_region"}, no_raise(), id="OK manifest with OK files"
         ),
-        param("duplicates", {"agp"}, no_raise(), id="Several files for key"),
-        param("", {}, raises(ManifestError), id="No manifest to load"),
-        param("missing_files", {}, raises(FileNotFoundError), id="Missing files"),
-        param("invalid_checksum", {}, raises(ManifestError), id="Invalid checksum"),
+        pytest.param("duplicates", {"agp"}, no_raise(), id="Several files for key"),
+        pytest.param("", {}, pytest.raises(ManifestError), id="No manifest to load"),
+        pytest.param("missing_files", {}, pytest.raises(FileNotFoundError), id="Missing files"),
+        pytest.param("invalid_checksum", {}, pytest.raises(ManifestError), id="Invalid checksum"),
     ],
 )
 @pytest.mark.dependency(depends=["test_init"])
@@ -201,9 +208,9 @@ def test_load(
 ) -> None:
     """Test `Manifest.load()`.
 
-    Fixtures: tmp_path, data_dir
-
     Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
+        data_dir: Pytest fixture providing the path to the test data directory.
         files_dir: Directory where test data files are copied from.
         expected_files: Set of main files expected to be loaded.
         expected: Catch an expected exception.

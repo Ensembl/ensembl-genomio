@@ -21,7 +21,6 @@ from typing import ContextManager
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.utils import chunk_utils
 
@@ -29,37 +28,37 @@ from ensembl.io.genomio.utils import chunk_utils
 @pytest.mark.parametrize(
     ("test_dir_name", "manifest_name", "expectation"),
     [
-        param(
+        pytest.param(
             "preserves_order",
             "manifest.txt",
             does_not_raise(["b.txt", "a.txt"]),
             id="Order of entries is preserved",
         ),
-        param(
+        pytest.param(
             "ignores_comments_and_blank_lines",
             "manifest.txt",
             does_not_raise(["a.txt", "b.txt.gz"]),
             id="Comment lines and blank lines are ignored",
         ),
-        param(
+        pytest.param(
             "missing_entry",
             "manifest.txt",
             pytest.raises(FileNotFoundError, match=r"line 2"),
             id="Missing file entry raises error with line number",
         ),
-        param(
+        pytest.param(
             "directory_entry",
             "manifest.txt",
             pytest.raises(ValueError, match=r"Manifest entry.*line 1"),
             id="Directory entry raises error with line number",
         ),
-        param(
+        pytest.param(
             "manifest_is_directory",
             "manifest_dir",
             pytest.raises(ValueError, match="Manifest is not a file"),
             id="Invalid manifest path raises error",
         ),
-        param(
+        pytest.param(
             "empty_manifest",
             "manifest.txt",
             does_not_raise([]),
@@ -92,7 +91,7 @@ def test_get_paths_from_manifest(
 
 
 def test_get_paths_from_manifest_absolute_path(tmp_path: Path) -> None:
-    """Test that `chunk_utils.get_paths_from_manifest()` correctly resolves absolute paths in the manifest file.
+    """Test that `chunk_utils.get_paths_from_manifest()` correctly resolves absolute paths in the manifest.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
@@ -111,28 +110,28 @@ def test_get_paths_from_manifest_absolute_path(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("pattern", "text", "expected_groups", "expectation"),
     [
-        param(
+        pytest.param(
             r"^(?P<base>.+)\.part\.(?P<start>\d+)_(?P<end>\d+)$",
             "contigA.part.11_20",
             {"base": "contigA", "start": "11", "end": "20"},
             does_not_raise(),
             id="Valid alternative regex pattern accepted",
         ),
-        param(
+        pytest.param(
             r"^(?P<base>.+)_(?P<start>\d+$",
             None,
             None,
             pytest.raises(ValueError, match="Invalid regex"),
             id="Invalid regex pattern raises error",
         ),
-        param(
+        pytest.param(
             r"^(.+)_(\d+)$",
             None,
             None,
             pytest.raises(ValueError, match="Chunk ID regex must define named capture groups"),
             id="Regex without required named groups raises error",
         ),
-        param(
+        pytest.param(
             r"^(?P<base>.+)_(?P<start>\d+)$",
             "X_12",
             {"base": "X", "start": "12"},

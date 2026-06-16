@@ -27,13 +27,12 @@ from typing import Callable, ContextManager
 from unittest.mock import Mock, patch
 
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.features import convert_to_genomio_json
 
 
 def _sha256_key(name: str, repeat_class: str, repeat_type: str, seq: str) -> str:
-    """Computes the expected SHA-256 repeat consensus key.
+    """Compute the expected SHA-256 repeat consensus key.
 
     Args:
         name: Repeat name.
@@ -84,8 +83,8 @@ def test_map_repeatmasker_repeat_consensus_type(repeat_class: str, expected: str
 @pytest.mark.parametrize(
     ("parser", "token", "field_name", "raw_line", "expectation"),
     [
-        param(int, "42", "count", "42", does_not_raise(42), id="Valid integer"),
-        param(
+        pytest.param(int, "42", "count", "42", does_not_raise(42), id="Valid integer"),
+        pytest.param(
             int,
             "abc",
             "count",
@@ -93,8 +92,8 @@ def test_map_repeatmasker_repeat_consensus_type(repeat_class: str, expected: str
             pytest.raises(ValueError, match=r"Invalid 'count' in input\.out: token='abc', line='abc'"),
             id="Invalid integer",
         ),
-        param(float, "0.25", "score", "0.25", does_not_raise(0.25), id="Valid float"),
-        param(
+        pytest.param(float, "0.25", "score", "0.25", does_not_raise(0.25), id="Valid float"),
+        pytest.param(
             float,
             "abc",
             "score",
@@ -156,8 +155,8 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("seq_region_start", "seq_region_end", "repeat_start", "repeat_end", "expectation", "warning_pattern"),
     [
-        param(1, 10, 2, 5, does_not_raise(True), None, id="Valid coordinates"),
-        param(
+        pytest.param(1, 10, 2, 5, does_not_raise(enter_result=True), None, id="Valid coordinates"),
+        pytest.param(
             0,
             10,
             1,
@@ -166,7 +165,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             None,
             id="Non-positive sequence region start",
         ),
-        param(
+        pytest.param(
             10,
             9,
             1,
@@ -175,21 +174,21 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             None,
             id="Sequence region end before start",
         ),
-        param(
+        pytest.param(
             1,
             10,
             0,
             5,
-            does_not_raise(False),
+            does_not_raise(enter_result=False),
             r"Invalid repeat coordinates",
             id="Non-positive repeat start",
         ),
-        param(
+        pytest.param(
             1,
             10,
             5,
             4,
-            does_not_raise(False),
+            does_not_raise(enter_result=False),
             r"repeat_end < repeat_start",
             id="Repeat end before start",
         ),
@@ -285,8 +284,8 @@ def test_parse_repeatmasker_consensus_library(
 @pytest.mark.parametrize(
     ("repeat_class_field", "expected"),
     [
-        param("SINE/Alu", ("SINE", "Alu"), id="Class and type"),
-        param("Simple_repeat", ("Simple_repeat", "Unknown"), id="Class only"),
+        pytest.param("SINE/Alu", ("SINE", "Alu"), id="Class and type"),
+        pytest.param("Simple_repeat", ("Simple_repeat", "Unknown"), id="Class only"),
     ],
 )
 def test_parse_repeatmasker_repeat_class_field(
@@ -309,8 +308,8 @@ def test_parse_repeatmasker_repeat_class_field(
 @pytest.mark.parametrize(
     "repeat_class_field",
     [
-        param("SINE/", id="Missing type"),
-        param("/Alu", id="Missing class"),
+        pytest.param("SINE/", id="Missing type"),
+        pytest.param("/Alu", id="Missing class"),
     ],
 )
 def test_parse_repeatmasker_repeat_class_field_errors(repeat_class_field: str) -> None:
@@ -331,12 +330,12 @@ def test_parse_repeatmasker_repeat_class_field_errors(repeat_class_field: str) -
 @pytest.mark.parametrize(
     ("columns", "expected"),
     [
-        param(
+        pytest.param(
             ["100", "1.0", "0.0", "0.0", "chr1", "10", "20", "(0)", "+", "Foo", "SINE/Alu", "1", "11", "(0)"],
             ("+", 1, 11),
             id="Forward strand",
         ),
-        param(
+        pytest.param(
             [
                 "200",
                 "2.5",
@@ -407,7 +406,7 @@ def test_parse_repeatmasker_row() -> None:
 @pytest.mark.parametrize(
     ("filename", "expected_features"),
     [
-        param(
+        pytest.param(
             "repeatmasker_out/success_plus_with_star.out",
             [
                 {
@@ -428,7 +427,7 @@ def test_parse_repeatmasker_row() -> None:
             ],
             id="Forward strand entry with trailing *",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/success_c_strand.out",
             [
                 {
@@ -449,7 +448,7 @@ def test_parse_repeatmasker_row() -> None:
             ],
             id="Complement strand entry",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/stop_no_repeats.out",
             [
                 {
@@ -470,7 +469,7 @@ def test_parse_repeatmasker_row() -> None:
             ],
             id="Stops on no repeats message",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/stop_ambiguous_bases.out",
             [
                 {
@@ -491,7 +490,7 @@ def test_parse_repeatmasker_row() -> None:
             ],
             id="Stops on ambiguous bases in repeat coordinates",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/with_blank_lines.out",
             [
                 {
@@ -598,8 +597,8 @@ def test_parse_repeatmasker_output_adds_consensus_from_library(data_dir: Path) -
 @pytest.mark.parametrize(
     ("line", "expected"),
     [
-        param("Sequence: chrA:104-200", ("chrA", 104), id="Windowed sequence header"),
-        param("Sequence: chrB", ("chrB", None), id="Plain sequence header"),
+        pytest.param("Sequence: chrA:104-200", ("chrA", 104), id="Windowed sequence header"),
+        pytest.param("Sequence: chrB", ("chrB", None), id="Plain sequence header"),
     ],
 )
 def test_parse_trf_sequence_header(line: str, expected: tuple[str, int | None]) -> None:
@@ -616,8 +615,8 @@ def test_parse_trf_sequence_header(line: str, expected: tuple[str, int | None]) 
 @pytest.mark.parametrize(
     ("line", "expected"),
     [
-        param("Parameters: 2 7 7 80 10 50 500", "2 7 7 80 10 50 500", id="Parameters line"),
-        param("Sequence: chrA", None, id="Different line type"),
+        pytest.param("Parameters: 2 7 7 80 10 50 500", "2 7 7 80 10 50 500", id="Parameters line"),
+        pytest.param("Sequence: chrA", None, id="Different line type"),
     ],
 )
 def test_parse_trf_parameters(line: str, expected: str | None) -> None:
@@ -642,7 +641,7 @@ def test_missing_trf_sequence_error() -> None:
 @pytest.mark.parametrize(
     ("line", "expectation"),
     [
-        param(
+        pytest.param(
             "1 6 2 3.0 2 90.0 1.0 42 25 25 25 25 1.5 AT",
             does_not_raise(
                 (
@@ -680,7 +679,7 @@ def test_missing_trf_sequence_error() -> None:
             ),
             id="Valid data row",
         ),
-        param(
+        pytest.param(
             "1 6 2 3.0 2 90.0 1.0 42 25 25 25 25",
             pytest.raises(ValueError, match=r"Expected at least 13 columns"),
             id="Too few columns",
@@ -715,57 +714,57 @@ def test_parse_trf_data_row(
 @pytest.mark.parametrize(
     ("filename", "error_pattern"),
     [
-        param(
+        pytest.param(
             "repeatmasker_out/error_13_columns.out",
             r"Expected 14 or 15 columns",
             id="Rejects lines with incorrect number of columns",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_invalid_score.out",
             r"Invalid 'score'",
             id="Rejects invalid score",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_invalid_perc_div.out",
             r"Invalid 'perc_div'",
             id="Rejects invalid perc_div",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_invalid_seq_region_start.out",
             r"Invalid 'seq_region_start'",
             id="Rejects invalid sequence region start",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_non_positive_seq_region_start.out",
             r"Invalid seq_region coordinates",
             id="Rejects non-positive sequence region start",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_seq_region_end_before_start.out",
             r"seq_region_end < seq_region_start",
             id="Rejects sequence region end before start",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_unexpected_strand.out",
             r"Unexpected strand token",
             id="Rejects unexpected strand token",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_empty_repeat_type.out",
             r"Malformed repeat_class/family",
             id="Rejects empty repeat type",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_empty_repeat_class.out",
             r"Malformed repeat_class/family",
             id="Rejects empty repeat class",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_plus_repeat_start_invalid.out",
             r"Invalid 'repeat_start'",
             id="Rejects invalid forward strand repeat start",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_c_repeat_start_invalid.out",
             r"Invalid 'repeat_start'",
             id="Rejects invalid reverse strand repeat start",
@@ -789,12 +788,12 @@ def test_parse_repeatmasker_output_errors(data_dir: Path, filename: str, error_p
 @pytest.mark.parametrize(
     ("filename", "warning_pattern"),
     [
-        param(
+        pytest.param(
             "repeatmasker_out/error_non_positive_repeat_end.out",
             r"Invalid repeat coordinates",
             id="Skips non-positive repeat end with warning",
         ),
-        param(
+        pytest.param(
             "repeatmasker_out/error_repeat_end_before_start.out",
             r"repeat_end < repeat_start",
             id="Skips repeat end before start with warning",
@@ -830,7 +829,7 @@ def test_parse_repeatmasker_output_skips_invalid_repeat_coordinates(
 @pytest.mark.parametrize(
     ("filename", "expected_features", "expected_consensuses"),
     [
-        param(
+        pytest.param(
             "trf/success_window_with_params.dat",
             [
                 {
@@ -868,7 +867,7 @@ def test_parse_repeatmasker_output_skips_invalid_repeat_coordinates(
             },
             id="Window coordinates with parameters",
         ),
-        param(
+        pytest.param(
             "trf/success_plain_no_params.dat",
             [
                 {
@@ -930,11 +929,16 @@ def test_parse_trf_output_success(
     assert consensuses_by_key == expected_consensuses
 
 
+def parse_repeatmasker(path: Path) -> None:
+    """Call ``parse_repeatmasker_output`` using signature matching the TRF parser."""
+    convert_to_genomio_json.parse_repeatmasker_output(path, None)
+
+
 @pytest.mark.parametrize(
-    ("parser_name", "filename", "expected_fragments"),
+    ("parse_func", "filename", "expected_fragments"),
     [
-        param(
-            "repeatmasker",
+        pytest.param(
+            parse_repeatmasker,
             "repeatmasker_out/error_multiple_errors.out",
             [
                 "Found 3 errors while parsing RepeatMasker output",
@@ -944,8 +948,8 @@ def test_parse_trf_output_success(
             ],
             id="RepeatMasker multiple row errors",
         ),
-        param(
-            "trf",
+        pytest.param(
+            convert_to_genomio_json.parse_trf_output,
             "trf/error_multiple_errors.dat",
             [
                 "Found 3 errors while parsing TRF output",
@@ -955,8 +959,8 @@ def test_parse_trf_output_success(
             ],
             id="TRF multiple row errors",
         ),
-        param(
-            "trf",
+        pytest.param(
+            convert_to_genomio_json.parse_trf_output,
             "trf/error_missing_sequence_between_blocks.dat",
             [
                 "Found 1 errors while parsing TRF output",
@@ -967,8 +971,8 @@ def test_parse_trf_output_success(
             ],
             id="TRF missing Sequence line between data blocks",
         ),
-        param(
-            "trf",
+        pytest.param(
+            convert_to_genomio_json.parse_trf_output,
             "trf/error_missing_sequence_at_eof.dat",
             [
                 "Found 1 errors while parsing TRF output",
@@ -983,7 +987,7 @@ def test_parse_trf_output_success(
 )
 def test_parse_output_collates_all_errors(
     data_dir: Path,
-    parser_name: str,
+    parse_func: Callable[[Path], None],
     filename: str,
     expected_fragments: list[str],
 ) -> None:
@@ -991,20 +995,18 @@ def test_parse_output_collates_all_errors(
 
     Args:
         data_dir: Module's test data directory fixture.
-        parser_name: Parser to run against the input file.
+        parse_func: Parser function to run against the input file.
         filename: Input filename containing invalid data.
         expected_fragments: Expected substrings in the raised error message.
 
     """
     input_path = data_dir / filename
 
-    with pytest.raises(ValueError) as excinfo:
-        if parser_name == "repeatmasker":
-            convert_to_genomio_json.parse_repeatmasker_output(input_path, None)
-        elif parser_name == "trf":
-            convert_to_genomio_json.parse_trf_output(input_path)
-        else:
-            raise AssertionError(f"Unsupported parser name: {parser_name}")
+    with pytest.raises(
+        ValueError,
+        match=r"^Found \d+ errors while parsing .* in .*:",
+    ) as excinfo:
+        parse_func(input_path)
 
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:
@@ -1224,8 +1226,8 @@ def test_create_genomio_json_omits_program_parameters_when_none(
 @pytest.mark.parametrize(
     "use_repeatmodeler_lib",
     [
-        param(False, id="Required arguments only"),
-        param(True, id="All optional arguments overridden"),
+        pytest.param(False, id="Required arguments only"),
+        pytest.param(True, id="All optional arguments overridden"),
     ],
 )
 def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool) -> None:
@@ -1310,8 +1312,8 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
 @pytest.mark.parametrize(
     "use_repeatmodeler_lib",
     [
-        param(False, id="Required arguments only, no consensus library"),
-        param(True, id="All optional arguments overridden, consensus library used"),
+        pytest.param(False, id="Required arguments only, no consensus library"),
+        pytest.param(True, id="All optional arguments overridden, consensus library used"),
     ],
 )
 def test_main_passes_expected_arguments(

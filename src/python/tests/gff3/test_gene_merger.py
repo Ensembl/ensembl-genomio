@@ -41,6 +41,7 @@ def test_merge(
     """Test the `GFFGeneMerger.merge()` method.
 
     Args:
+        assert_files: File diff assertion fixture.
         data_dir: Module's test data directory fixture.
         tmp_path: Fixture which will provide a temporary directory unique to the test invocation.
         input_file: Name of the GFF file with example input.

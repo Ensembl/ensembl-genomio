@@ -20,7 +20,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.fasta import stats
 
@@ -41,16 +40,16 @@ def write_gzip_text(path: Path, text: str) -> Path:
 @pytest.mark.parametrize(
     ("contents", "expected"),
     [
-        param(
+        pytest.param(
             ">seq1\nACGT\nAC\n>seq2 description\nNNN\n",
             {"longest_seq": 6, "total_seq_length": 9, "nr_seqs": 2},
             id="Multiline records",
         ),
-        param(
+        pytest.param(
             ">empty\n>seq\nAC\n", {"longest_seq": 2, "total_seq_length": 2, "nr_seqs": 2}, id="Empty record"
         ),
-        param("", {"longest_seq": 0, "total_seq_length": 0, "nr_seqs": 0}, id="Empty file"),
-        param(
+        pytest.param("", {"longest_seq": 0, "total_seq_length": 0, "nr_seqs": 0}, id="Empty file"),
+        pytest.param(
             "ACGT\n",
             {"longest_seq": 0, "total_seq_length": 0, "nr_seqs": 0},
             id="Sequence without record header",
@@ -115,8 +114,8 @@ def test_compute_fasta_stats_reads_gzipped_fasta(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("argv", "expected_output"),
     [
-        param(["--fasta"], None, id="Default output"),
-        param(["--fasta", "--output"], "stats.json", id="Explicit output"),
+        pytest.param(["--fasta"], None, id="Default output"),
+        pytest.param(["--fasta", "--output"], "stats.json", id="Explicit output"),
     ],
 )
 def test_parse_args(argv: list[str], expected_output: str | None) -> None:

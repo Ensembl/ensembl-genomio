@@ -129,7 +129,7 @@ def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output:
     Args:
         data_dir: Module's test data directory fixture.
         report_file: Assembly report file name.
-        gbff_path: GBFF file name.
+        gbff_file: GBFF file name.
         output: Expected sequence regions names that need to be added.
 
     """

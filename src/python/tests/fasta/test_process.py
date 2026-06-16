@@ -23,7 +23,7 @@ from typing import ContextManager
 
 import pytest
 
-import ensembl.io.genomio.fasta.process as FastaProcessing
+import ensembl.io.genomio.fasta.process as fasta_process
 
 
 @pytest.mark.parametrize(
@@ -63,6 +63,7 @@ def test_fasta_prep(
 
     Args:
         tmp_path: Where temporary files will be created.
+        data_dir: Module's test data directory fixture.
         input_fasta: Name of the fasta file with example input, in the test folder.
         input_gbff: Name of the input GBFF example input, in the test folder.
         pep_mode: Boolean flag to set processing in peptide mode.
@@ -73,7 +74,7 @@ def test_fasta_prep(
     gbff_input_path = data_dir / input_gbff if input_gbff is not None else input_gbff
     fasta_output_path = tmp_path / f"{input_fasta}.test.fasta"
 
-    FastaProcessing.prep_fasta_data(
+    fasta_process.prep_fasta_data(
         fasta_infile=fasta_input_path,
         genbank_infile=gbff_input_path,
         fasta_outfile=fasta_output_path,
@@ -98,7 +99,7 @@ def test_fasta_prep(
             "input.mod.gbff.gz",
             {"LR605957.1"},
             {"VWP78966.1", "VWP78967.1", "VWP78968.1"},
-            pytest.raises(FastaProcessing.FastaParserError),
+            pytest.raises(fasta_process.FastaParserError),
         ),
     ],
 )
@@ -112,6 +113,7 @@ def test_exclude_seq_regions(
     """Test the `process.get_peptides_to_exclude()` function.
 
     Args:
+        data_dir: Module's test data directory fixture.
         input_gbff: Name of the input GBFF example input, in the test folder.
         excluded_seq_regions: Set of sequence regions to be excluded.
         output: Set of proteins expected to be excluded given excluded_seq_region
@@ -121,5 +123,5 @@ def test_exclude_seq_regions(
     """
     gbff_input_path = data_dir / input_gbff if input_gbff is not None else input_gbff
     with expectation:
-        excluded_proteins = FastaProcessing.get_peptides_to_exclude(gbff_input_path, excluded_seq_regions)
+        excluded_proteins = fasta_process.get_peptides_to_exclude(gbff_input_path, excluded_seq_regions)
         assert set(excluded_proteins) == set(output)

@@ -20,7 +20,6 @@ from shutil import copy
 from typing import ContextManager
 
 import pytest
-from pytest import raises, param, mark
 
 from ensembl.io.genomio.manifest import Manifest
 from ensembl.io.genomio.manifest.manifest_stats import ManifestStats
@@ -47,11 +46,11 @@ def test_add_error(manifest_path: Path) -> None:
     assert stats.errors[0] == "lorem"
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     ("manifest_dir", "expected_lengths", "expected_circular"),
     [
-        param("", {}, {}),
-        param(
+        pytest.param("", {}, {}),
+        pytest.param(
             "seq_regions",
             {"seq1": 100, "seq1_gb": 100, "seq1_insdc": 100, "seq2": 10},
             {"seq1": True, "seq2": False},
@@ -67,9 +66,9 @@ def test_load_seq_regions(
 ) -> None:
     """Test `ManifestStats.load_seq_regions()`.
 
-    Fixtures: data_dir, tmp_path
-
     Args:
+        data_dir: Pytest fixture providing the path to the test data directory.
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
         manifest_dir: Directory name with the manifest file in it.
         expected_lengths: Expected length data from the files.
         expected_circular: Expected circular data from the files.
@@ -88,12 +87,12 @@ def test_load_seq_regions(
     assert stats.circular["seq_regions"] == expected_circular
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     ("fasta_str", "expected_lengths", "expected_error"),
     [
-        param(">prot1\nCGTA\n", {"prot1": 4}, "", id="Normal DNA seq"),
-        param("", {}, "", id="Empty fasta"),
-        param(">\nCGTA\n", {}, "1 sequences with empty ids", id="empty ID"),
+        pytest.param(">prot1\nCGTA\n", {"prot1": 4}, "", id="Normal DNA seq"),
+        pytest.param("", {}, "", id="Empty fasta"),
+        pytest.param(">\nCGTA\n", {}, "1 sequences with empty ids", id="empty ID"),
     ],
 )
 def test_load_dna_fasta_lengths(
@@ -104,9 +103,8 @@ def test_load_dna_fasta_lengths(
 ) -> None:
     """Test `ManifestStats.load_dna_fasta_lengths()`.
 
-    Fixtures: tmp_path
-
     Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
         fasta_str: Content of a test input FASTA DNA file.
         expected_lengths: Expected length data from the files.
         expected_error: Expected errors while loading.
@@ -130,7 +128,9 @@ def test_load_dna_fasta_lengths(
 def test_load_dna_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> None:
     """Test `ManifestStats.load_dna_fasta_lengths()` rejects FASTA content without a header.
 
-    Fixtures: tmp_path
+    Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
+
     """
     fasta_path = tmp_path / "fasta_dna.fasta"
     with fasta_path.open("w") as fasta_fh:
@@ -143,16 +143,24 @@ def test_load_dna_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> None:
         stats.load_dna_fasta_lengths()
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     ("fasta_str", "ignore_final_stops", "expected_lengths", "expected_error"),
     [
-        param(">prot1\nMAGIC\n", False, {"prot1": 5}, "", id="Normal prot"),
-        param("", False, {}, "", id="Empty fasta"),
-        param(">\nMAGIC\n", False, {}, "1 sequences with empty ids", id="Empty ID"),
-        param(">prot1\nMAGIC*\n", False, {"prot1": 6}, "1 sequences with stop codons", id="End stop codon"),
-        param(">prot1\nMAGIC\n", True, {"prot1": 5}, "", id="End stop codon, ignore"),
-        param(">prot1\nMAG*IC\n", False, {"prot1": 6}, "1 sequences with stop codons", id="In stop codon"),
-        param(
+        pytest.param(">prot1\nMAGIC\n", False, {"prot1": 5}, "", id="Normal prot"),
+        pytest.param("", False, {}, "", id="Empty fasta"),
+        pytest.param(">\nMAGIC\n", False, {}, "1 sequences with empty ids", id="Empty ID"),
+        pytest.param(
+            ">prot1\nMAGIC*\n",
+            False,
+            {"prot1": 6},
+            "1 sequences with stop codons",
+            id="End stop codon",
+        ),
+        pytest.param(">prot1\nMAGIC\n", True, {"prot1": 5}, "", id="End stop codon, ignore"),
+        pytest.param(
+            ">prot1\nMAG*IC\n", False, {"prot1": 6}, "1 sequences with stop codons", id="In stop codon"
+        ),
+        pytest.param(
             ">prot1\nMAGIC\n>prot1\nGICMA\n",
             False,
             {"prot1": 5},
@@ -170,9 +178,8 @@ def test_load_peptides_fasta_lengths(
 ) -> None:
     """Test `ManifestStats.load_peptides_fasta_lengths()`.
 
-    Fixtures: tmp_path
-
     Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
         fasta_str: Content of a test input FASTA DNA file.
         ignore_final_stops: Ignore final stops for the protein sequences.
         expected_lengths: Expected length data from the files.
@@ -197,7 +204,9 @@ def test_load_peptides_fasta_lengths(
 def test_load_peptides_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> None:
     """Test `ManifestStats.load_peptides_fasta_lengths()` rejects FASTA content without a header.
 
-    Fixtures: tmp_path
+    Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
+
     """
     fasta_path = tmp_path / "fasta_pep.fasta"
     with fasta_path.open("w") as fasta_fh:
@@ -210,16 +219,16 @@ def test_load_peptides_fasta_lengths_rejects_invalid_fasta(tmp_path: Path) -> No
         stats.load_peptides_fasta_lengths()
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     ("json_data", "expected_key", "expected_data"),
     [
-        param(None, "", {}, id="No JSON"),
-        param({}, "", {}, id="Empty JSON"),
-        param({"id": "gene1", "object_type": "gene"}, "ann_genes", {"gene1": 1}, id="1 gene"),
-        param(
+        pytest.param(None, "", {}, id="No JSON"),
+        pytest.param({}, "", {}, id="Empty JSON"),
+        pytest.param({"id": "gene1", "object_type": "gene"}, "ann_genes", {"gene1": 1}, id="1 gene"),
+        pytest.param(
             {"id": "pep1", "object_type": "translation"}, "ann_translations", {"pep1": 1}, id="1 translation"
         ),
-        param(
+        pytest.param(
             {"id": "te1", "object_type": "transposable_element"},
             "ann_transposable_elements",
             {"te1": 1},
@@ -235,13 +244,11 @@ def test_load_functional_annotations(
 ) -> None:
     """Test `ManifestStats.load_functional_annotation()`.
 
-    Fixtures: tmp_path
-
     Args:
-        fasta_str: Content of a test input FASTA DNA file.
-        ignore_final_stops: Ignore final stops for the protein sequences.
-        expected_lengths: Expected length data from the files.
-        expected_error: Expected errors while loading.
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
+        json_data: JSON data to write to file.
+        expected_key: Key expected to be in functional annotation dictionary.
+        expected_data: Expected data value corresponding to ``expected_key``.
 
     """
     func_path = tmp_path / "functional_annotation.json"
@@ -258,11 +265,11 @@ def test_load_functional_annotations(
         assert stats.lengths[expected_key] == expected_data
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     ("gff3_path", "expected_data"),
     [
-        param(None, {}, id="No GFF3"),
-        param(
+        pytest.param(None, {}, id="No GFF3"),
+        pytest.param(
             "get_gff3/ok_gene.gff",
             {
                 "gff3_seq_regions": {"scaffold1": 1000},
@@ -272,14 +279,14 @@ def test_load_functional_annotations(
             },
             id="1 gene, 1 translation",
         ),
-        param(
+        pytest.param(
             "get_gff3/te_gene.gff",
             {
                 "gff3_transposable_elements": {"LOREMIPSUM1": 1000},
             },
             id="1 TE",
         ),
-        param(
+        pytest.param(
             "get_gff3/pseudogene_cds.gff",
             {
                 "gff3_genes": {"LOREMIPSUM1": 1000},
@@ -298,9 +305,9 @@ def test_load_gff3(
 ) -> None:
     """Test `ManifestStats.load_gff3()`.
 
-    Fixtures: tmp_path, data_dir
-
     Args:
+        tmp_path: Path to the test manifest file provided by a pytest fixture.
+        data_dir: Pytest fixture providing the path to the test data directory.
         gff3_path: Path to a test GFF3 file.
         expected_data: Expected length data extracted from the GFF3 file.
 
@@ -351,12 +358,12 @@ def test_prepare_integrity_data(tmp_path: Path) -> None:
     }
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     ("key", "expected_data", "expectation"),
     [
-        param("ann_genes", True, no_raise(), id="Loaded func annotation"),
-        param("gff3_genes", False, no_raise(), id="Not loaded gff genes"),
-        param("foobar", False, raises(KeyError), id="Unknown key"),
+        pytest.param("ann_genes", True, no_raise(), id="Loaded func annotation"),
+        pytest.param("gff3_genes", False, no_raise(), id="Not loaded gff genes"),
+        pytest.param("foobar", False, pytest.raises(KeyError), id="Unknown key"),
     ],
 )
 def test_has_lengths(
@@ -364,9 +371,8 @@ def test_has_lengths(
 ) -> None:
     """Test `ManifestStats.has_lengths()`.
 
-    Fixtures: manifest_path
-
     Args:
+        manifest_path: Path to the test manifest file provided by a pytest fixture.
         key: Key for the length dict.
         expected_data: If lengths exist for that key.
         expectation: Expected exception.
@@ -378,11 +384,11 @@ def test_has_lengths(
         assert stats.has_lengths(key) == expected_data
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     ("key", "expected_data", "expectation"),
     [
-        param("ann_genes", {"ECC02_000372": 1}, no_raise(), id="OK"),
-        param("foobar", {}, raises(KeyError), id="Unknown key"),
+        pytest.param("ann_genes", {"ECC02_000372": 1}, no_raise(), id="OK"),
+        pytest.param("foobar", {}, pytest.raises(KeyError), id="Unknown key"),
     ],
 )
 def test_get_lengths(
@@ -390,9 +396,8 @@ def test_get_lengths(
 ) -> None:
     """Test `ManifestStats.get_lengths()`.
 
-    Fixtures: manifest_path
-
     Args:
+        manifest_path: Path to the test manifest file provided by a pytest fixture.
         key: Key for the length dict.
         expected_data: Expected length information for that key.
         expectation: Expected exception.
@@ -404,11 +409,16 @@ def test_get_lengths(
         assert stats.get_lengths(key) == expected_data
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     ("key", "expected_data", "expectation"),
     [
-        param("seq_regions", {"JABDHM010000001.1": True, "JABDHM010000002.1": False}, no_raise(), id="OK"),
-        param("foobar", {}, raises(KeyError), id="Unknown key"),
+        pytest.param(
+            "seq_regions",
+            {"JABDHM010000001.1": True, "JABDHM010000002.1": False},
+            no_raise(),
+            id="OK",
+        ),
+        pytest.param("foobar", {}, pytest.raises(KeyError), id="Unknown key"),
     ],
 )
 def test_get_circular(
@@ -416,9 +426,8 @@ def test_get_circular(
 ) -> None:
     """Test `ManifestStats.get_circular()`.
 
-    Fixtures: manifest_path
-
     Args:
+        manifest_path: Path to the test manifest file provided by a pytest fixture.
         key: Key for the circular dict.
         expected_data: Expected circular information for that key.
         expectation: Expected exception.

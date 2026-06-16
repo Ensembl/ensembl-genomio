@@ -31,7 +31,7 @@ _METADATA_CONTENT = {
 
 @pytest.fixture(name="meta_test_db", scope="module")
 def fixture_meta_test_db(db_factory: Callable) -> UnitTestDB:
-    """Returns a test database with a meta table and basic data."""
+    """Return a test database with a meta table and basic data."""
     test_db: UnitTestDB = db_factory("", "get_metadata")
     test_db.dbc.create_table(metadata.tables["coord_system"])
     test_db.dbc.create_table(metadata.tables["meta"])

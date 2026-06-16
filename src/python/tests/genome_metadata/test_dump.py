@@ -21,21 +21,24 @@ Typical usage example::
 
 # pylint: disable=too-many-positional-arguments
 
-from collections import namedtuple
 from contextlib import nullcontext as does_not_raise
-from typing import Any, ContextManager
+from typing import Any, ContextManager, NamedTuple
 from unittest.mock import Mock, patch
 
 from deepdiff import DeepDiff
 import pytest
-from pytest import param
 from _pytest.capture import CaptureFixture
 from sqlalchemy.engine import make_url, URL
 
 from ensembl.io.genomio.genome_metadata import dump
 from ensembl.utils import StrPath
 
-MetaRow = namedtuple("MetaRow", "meta_key meta_value")
+
+class MetaRow(NamedTuple):
+    """Mock row from the ``meta`` database table."""
+
+    meta_key: str
+    meta_value: str
 
 
 @pytest.mark.parametrize(
@@ -57,7 +60,7 @@ MetaRow = namedtuple("MetaRow", "meta_key meta_value")
         pytest.param(
             {"assembly": {"accession": "GCA_00000001"}},
             0,
-            pytest.raises(ValueError),
+            pytest.raises(ValueError, match=r"^Assembly version is not an integer in"),
             id="No version, accession without version",
         ),
     ],
@@ -100,7 +103,12 @@ def test_check_assembly_version(
             does_not_raise(),
             id="No version, ID moved to version",
         ),
-        pytest.param({"genebuild": {}}, {}, pytest.raises(ValueError), id="No version or ID"),
+        pytest.param(
+            {"genebuild": {}},
+            {},
+            pytest.raises(ValueError, match="No genebuild version or ID found"),
+            id="No version or ID",
+        ),
     ],
 )
 def test_check_genebuild_version(
@@ -288,7 +296,7 @@ def test_convert_dict(meta_dict: dict, expected_dict: dict) -> None:
             None,
             [[MetaRow("species", "dog")], [MetaRow("species.synonym", "puppy")]],
             {},
-            pytest.raises(ValueError),
+            pytest.raises(ValueError, match=r"Unexpected meta keys for '[^']+': .+"),
             id="'species' and 'species.synonym' meta keys",
         ),
         pytest.param(
@@ -322,7 +330,8 @@ def test_get_genome_metadata(
     """Test the `dump.get_genome_metadata()` method.
 
     Args:
-        mock_session: A mock of `sqlalchemy.orm.Session()` class.
+        mock_session: A mock of ``sqlalchemy.orm.Session()`` class.
+        mock_result: A mock of ``sqlalechemy.engine.Result()`` class.
         db_name: Target core database name.
         meta_data: `meta` table content in a list of named tuples.
         output: Expected genome metadata dictionary.
@@ -340,7 +349,7 @@ def test_get_genome_metadata(
 @pytest.mark.parametrize(
     ("arg_list", "expected"),
     [
-        param(
+        pytest.param(
             ["--host", "localhost", "--port", "42", "--user", "me", "--database", "test_db"],
             {
                 "host": "localhost",
@@ -358,7 +367,7 @@ def test_get_genome_metadata(
             },
             id="Default args",
         ),
-        param(
+        pytest.param(
             [
                 "--host",
                 "localhost",
@@ -403,7 +412,7 @@ def test_parse_args(arg_list: list[str], expected: dict) -> None:
 @pytest.mark.parametrize(
     ("arg_list", "db_url", "metafilter", "meta_update", "append_db", "stdout"),
     [
-        param(
+        pytest.param(
             [
                 "--host",
                 "localhost",
