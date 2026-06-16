@@ -281,8 +281,10 @@ def chunk_fasta(
     """
     # process input fasta
     with open_gz_file(input_fasta_file) as fasta:
-        logging.info(f"splitting sequences from '{input_fasta_file}', chunk size {chunk_size:_}, \
-                splitting on {n_sequence_len} Ns (0 -- disabled)")
+        logging.info(
+            f"splitting sequences from '{input_fasta_file}', chunk size {chunk_size:_}, "
+            f"splitting on {n_sequence_len} Ns (0 -- disabled)"
+        )
         # do not open a joined file if you plan to open many individual ones
         with (individual_file_prefix and nullcontext(None)) or Path(out_file_name).open(
             "w", encoding="utf-8"

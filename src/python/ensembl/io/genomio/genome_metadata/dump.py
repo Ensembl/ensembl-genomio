@@ -164,8 +164,10 @@ def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
         else:
             logging.info(f"Meta check 'assembly is RefSeq': Asm provider = {assembly['provider_name']}")
     else:
-        logging.debug("Meta filter update to RefSeq accession not done: user meta filter missing: \
-            'assembly.provider_name'")
+        logging.debug(
+            "Meta filter update to RefSeq accession not done: user meta filter missing: "
+            "'assembly.provider_name'"
+        )
 
 
 def check_assembly_version(genome_metadata: dict[str, Any]) -> None:

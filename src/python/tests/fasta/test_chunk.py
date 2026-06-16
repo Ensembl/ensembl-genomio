@@ -414,9 +414,7 @@ def test_chunk_fasta(
         n_sequence_len: int,  # pylint: disable=unused-argument
         chunk_sfx: str,  # pylint: disable=unused-argument
         append_offset_to_chunk_name: bool | None,  # pylint: disable=unused-argument
-        open_individual: Callable[
-            [str], TextIOWrapper
-        ] = fasta_chunk._individual_file_opener,  # pylint: disable=protected-access
+        open_individual: Callable[[str], TextIOWrapper] = fasta_chunk._individual_file_opener,
     ) -> list[str]:
         """Mock the `chunk.chunk_fasta_stream` function.
 
