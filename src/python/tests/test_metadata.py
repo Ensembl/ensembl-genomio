@@ -25,47 +25,44 @@ import yaml
 
 from ensembl.io.genomio import metadata
 
-
 SAMPLE_ACRONYMS = {
     "GenBank": "insdc",
     "RefSeq": "insdc",
-    "Ensembl": "ebi",
+    "Ensembl": "ensembl",
 }
 
 EXPECTED_YAML_CONTENT = {
+    "ensembl": ["Ensembl"],
     "insdc": ["GenBank", "RefSeq"],
-    "ebi": ["Ensembl"],
 }
 
 
-@patch("ensembl.io.genomio.metadata.get_json", return_value=SAMPLE_ACRONYMS)
-def test_create_provider_ftp_yaml(mock_get_json: MagicMock, tmp_path: Path) -> None:
+def test_create_provider_ftp_yaml(tmp_path: Path) -> None:
     """Test :func:`metadata.create_provider_ftp_yaml`.
 
     Args:
-        mock_get_json: Patched `get_json()` returning a controlled mapping.
         tmp_path: Pytest-provided temporary directory.
 
     """
     output = tmp_path / "providers.yaml"
-    metadata.create_provider_ftp_yaml(output)
+    with patch("ensembl.io.genomio.metadata.yaml.safe_load", return_value=SAMPLE_ACRONYMS):
+        metadata.create_provider_ftp_yaml(output)
     assert output.exists(), "Output YAML file was not created"
     with output.open("r") as fh:
         content = yaml.safe_load(fh)
     assert not DeepDiff(content, EXPECTED_YAML_CONTENT), "YAML content does not match expected structure"
 
 
-@patch("ensembl.io.genomio.metadata.get_json", return_value=SAMPLE_ACRONYMS)
-def test_create_provider_ftp_yaml_accepts_str(mock_get_json: MagicMock, tmp_path: Path) -> None:
+def test_create_provider_ftp_yaml_accepts_str(tmp_path: Path) -> None:
     """Test :func:`metadata.create_provider_ftp_yaml` accepts plain string paths.
 
     Args:
-        mock_get_json: Patched `get_json()` returning a controlled mapping.
         tmp_path: Pytest-provided temporary directory.
 
     """
     output = tmp_path / "providers.yaml"
-    metadata.create_provider_ftp_yaml(str(output))
+    with patch("ensembl.io.genomio.metadata.yaml.safe_load", return_value=SAMPLE_ACRONYMS):
+        metadata.create_provider_ftp_yaml(str(output))
     assert output.exists(), "Output YAML file was not created"
 
 
@@ -75,7 +72,7 @@ def test_create_provider_ftp_yaml_accepts_str(mock_get_json: MagicMock, tmp_path
         pytest.param(
             ["--output", "out.yaml"],
             does_not_raise({"output": "out.yaml", "log_level": "WARNING"}),
-            id="Default args"
+            id="Default args",
         ),
         pytest.param([], pytest.raises(SystemExit), id="Missing required args"),
     ],

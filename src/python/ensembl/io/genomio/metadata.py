@@ -23,7 +23,6 @@ from pathlib import Path
 import yaml
 
 import ensembl.io.genomio.data
-from ensembl.io.genomio.utils import get_json
 from ensembl.utils import StrPath
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -36,9 +35,9 @@ def create_provider_ftp_yaml(output_path: StrPath) -> None:
         output_path: Path to the output YAML file to create.
 
     """
-    source = files(ensembl.io.genomio.data).joinpath("provider_acronyms.json")
-    with as_file(source) as json_file:
-        provider_acronyms = get_json(json_file)
+    source = files(ensembl.io.genomio.data).joinpath("provider_acronyms.yml")
+    with as_file(source) as yaml_file, yaml_file.open("r") as fh:
+        provider_acronyms = yaml.safe_load(fh)
     # Invert the provider_acronyms mapping to group providers by acronym, as multiple providers may share
     # the same acronym
     yaml_content = defaultdict(list)
