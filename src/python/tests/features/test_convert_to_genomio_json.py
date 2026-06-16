@@ -133,7 +133,7 @@ def test_format_parse_errors() -> None:
         "TRF output",
         Path("input.dat"),
         ["first error", "second error"],
-    ) == ("Found 2 errors while parsing TRF output in input.dat:\n" "- first error\n" "- second error")
+    ) == ("Found 2 errors while parsing TRF output in input.dat:\n- first error\n- second error")
 
 
 def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:

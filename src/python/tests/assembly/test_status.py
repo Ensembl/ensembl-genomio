@@ -294,7 +294,8 @@ def test_fetch_datasets_reports(
     """
 
     def execute_return(
-        command: list[str], **kwargs: Any  # pylint: disable=unused-argument
+        command: list[str],
+        **kwargs: Any,  # pylint: disable=unused-argument
     ) -> dict[str, str]:
         report_path = data_dir / f"{command[-1]}.asm_report.json"
         if report_path.exists():

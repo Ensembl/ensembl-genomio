@@ -293,7 +293,7 @@ def _parse_repeatmasker_repeat_class_field(
     repeat_class, repeat_type = repeat_class_field.split("/", 1)
     if not repeat_class or not repeat_type:
         raise ValueError(
-            f"Malformed repeat_class/family in {input_path}: " f"value={repeat_class_field}, line={line!r}"
+            f"Malformed repeat_class/family in {input_path}: value={repeat_class_field}, line={line!r}"
         )
     return repeat_class, repeat_type
 

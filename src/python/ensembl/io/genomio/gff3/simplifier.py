@@ -390,7 +390,7 @@ class GFFSimplifier:
             ):
                 self.fail_types.add(f"transcript={transcript.type}")
                 logging.warning(
-                    f"Unrecognized transcript type: {transcript.type}" f" for {transcript.id} ({gene.id})"
+                    f"Unrecognized transcript type: {transcript.type} for {transcript.id} ({gene.id})"
                 )
                 transcripts_to_delete.append(count)
                 continue

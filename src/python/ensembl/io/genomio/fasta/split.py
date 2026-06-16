@@ -497,8 +497,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         metavar="N",
         default=argparse.SUPPRESS,
         help=(
-            "Maximum subdirectories per directory level "
-            "(default: all subdirectories in top-level directory)."
+            "Maximum subdirectories per directory level (default: all subdirectories in top-level directory)."
         ),
     )
     parser.add_log_arguments()
