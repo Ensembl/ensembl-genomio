@@ -45,11 +45,11 @@ def create_provider_ftp_yaml(output_path: StrPath) -> None:
     for key, value in provider_acronyms.items():
         yaml_content[value].append(key)
     with Path(output_path).open("w") as file:
-        yaml.dump(dict(yaml_content), file)
+        yaml.dump(dict(yaml_content), file, sort_keys=True)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parse command-line arguments for the FASTA splitting CLI.
+    """Parse command-line arguments for the provider acronym YAML generator.
 
     Args:
         argv: Optional argument vector (excluding the program name). If `None`, arguments are read from
@@ -72,7 +72,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Entry point for the FASTA splitting CLI."""
+    """Execute the main script."""
     args = parse_args(argv)
     init_logging_with_args(args)
     try:
