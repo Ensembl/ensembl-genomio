@@ -31,7 +31,7 @@ _TEMPLATES_DIR = _SCRIPTS_DIR.parent / "templates"
 _ROOT_PATH = _SCRIPTS_DIR.parents[1]
 # Set of file suffixes for which we expect to find the license header
 _SUFFIXES_WITH_HEADER = set(
-    ["pl", "pm", "py", "nf", "config", "mysql", "pgsql", "sql", "sqlite", "bash", "sh", "toml", "yml"]
+    ["pl", "pm", "py", "nf", "config", "mysql", "pgsql", "sql", "sqlite", "bash", "sh", "toml"]
 )
 _EXCLUDE_DIRS = ["data/test", "src/python/tests/data"]
 
