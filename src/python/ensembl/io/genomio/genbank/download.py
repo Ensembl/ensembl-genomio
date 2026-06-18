@@ -66,11 +66,11 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
         )
         response.raise_for_status()
 
-        with Path(output_file).open("wb") as gbff:
-            gbff.write(response.content)
-
     except requests.exceptions.RequestException as exc:
         raise DownloadError(f"Could not download the GenBank file for {accession}") from exc
+
+    with Path(output_file).open("wb") as gbff:
+        gbff.write(response.content)
 
     logging.info(f"GenBank file written to {output_file}")
 

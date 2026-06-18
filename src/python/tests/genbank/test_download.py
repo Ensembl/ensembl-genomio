@@ -23,6 +23,7 @@ Typical usage example::
 """
 
 from pathlib import Path
+from requests.exceptions import HTTPError
 from unittest.mock import Mock, patch
 
 import pytest
@@ -81,7 +82,9 @@ class TestDownloadGenbank:
         """
         output_file = tmp_path / f"{accession}.gb"
         # Set the mock status code to 404 for request not found
-        mock_requests_failed.return_value.status_code = 404
+        mock_response = mock_requests_failed.return_value
+        mock_response.status_cide = 404
+        mock_response.raise_for_status.side_effect = HTTPError("404 Client Error")
         # Raise an error
         with pytest.raises(DownloadError):
             download_genbank(accession, output_file)
