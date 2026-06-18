@@ -60,8 +60,8 @@ def prep_fasta_data(
     """Prepare FASTA data.
 
     Args:
-        fasta_infile: Input FASTA file - DNA / Protein
-        genbank_infile: Input GenBank GBFF file (Optional)
+        fasta_infile: Input FASTA file - DNA / Protein.
+        genbank_infile: Input GenBank GBFF file (Optional).
         fasta_outfile: Output FASTA sequence file.
         peptide_mode: Process proteins instead of DNA.
 

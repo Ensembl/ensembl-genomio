@@ -210,10 +210,10 @@ class IntegrityTool:
             list1: dict containing length and id of the sequence from fasta files.
             list2: dict containing length and id in the retrieved from the gff.
             name:  string
-            allowed_len_diff : None to to not accept differences in length between list1 and list2.
+            allowed_len_diff : ``None`` to to not accept differences in length between `list1` and `list2`.
                     The value can be changed based on how much difference in sequence length we are
                     wanting to accept.
-            special_diff: set as False when no special length difference is expected between the lists.
+            special_diff: Set as ``False`` when no special length difference is expected between the lists.
                     This can be changed if we want to report common sequences with 1 BP difference.
 
         Returns:

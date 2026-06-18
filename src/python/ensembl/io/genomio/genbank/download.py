@@ -26,9 +26,6 @@ import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
-HTTP_OK_STATUS = 200
-
-
 class DownloadError(Exception):
     """In case a download failed."""
 
@@ -55,16 +52,28 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
         "db": "nuccore",
         "rettype": "gbwithparts",
         "retmode": "text",
+        "id": accession,
     }
-    entrez_params["id"] = accession
+
     logging.debug(f"Getting file from {entrez_url} with params {entrez_params}")
-    result = requests.get(entrez_url, params=entrez_params, timeout=60)
-    if result and result.status_code == HTTP_OK_STATUS:
+
+    try:
+        response = requests.get(
+            entrez_url,
+            params=entrez_params,
+            timeout=60,
+        )
+        response.raise_for_status()
+
         with Path(output_file).open("wb") as gbff:
-            gbff.write(result.content)
-        logging.info(f"GenBank file written to {output_file}")
-        return
-    raise DownloadError(f"Could not download the genbank ({accession}) file: {result}")
+            gbff.write(response.content)
+
+    except requests.exceptions.RequestException as exc:
+        raise DownloadError(
+            f"Could not download the GenBank file for {accession}"
+        ) from exc
+
+    logging.info(f"GenBank file written to {output_file}")
 
 
 def main() -> None:

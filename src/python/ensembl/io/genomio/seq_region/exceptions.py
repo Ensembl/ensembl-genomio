@@ -15,13 +15,9 @@
 """Exceptions for sequence regions parsers."""
 
 __all__ = [
-    "UnknownMetadata",
     "UnknownMetadataError",
 ]
 
 
 class UnknownMetadataError(Exception):
     """If a metadata is not supported or recognized."""
-
-
-UnknownMetadata = UnknownMetadataError  # Backwards compatibility

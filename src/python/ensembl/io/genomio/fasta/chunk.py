@@ -62,9 +62,9 @@ def check_chunk_size_and_tolerance(
     """Check the chunk size and the tolerance are positive and chunk size is not too small.
 
     Args:
-        chunk_size: Chunk size to check
-        chunk_tolerance: Chunk tolerance to check
-        error_f: A callable to call with an error message if checks fail, default is to raise ValueError.
+        chunk_size: Chunk size to check.
+        chunk_tolerance: Chunk tolerance to check.
+        error_f: A callable to call with an error message if checks fail, default is to raise `ValueError`.
 
     Dies:
         If checks failed dies with `parser.error`

@@ -654,11 +654,11 @@ def combine_feature_json(
 
     if mismatched:
         paths = "\n".join(f"  - {p}" for p in mismatched[:_MISMATCH_ERRORS_TO_REPORT])
-        extra = (
-            ""
-            if len(mismatched) <= _MISMATCH_ERRORS_TO_REPORT
-            else f"\n  (+{len(mismatched) - _MISMATCH_ERRORS_TO_REPORT} more)"
-        )
+        if len(mismatched) <= _MISMATCH_ERRORS_TO_REPORT:
+            extra = ""
+        else:
+            extra = f"\n  (+{len(mismatched) - _MISMATCH_ERRORS_TO_REPORT} more)"
+
         raise ValueError(
             f"Mixed load types detected in manifest {json_manifest}. "
             f"First file is '{load_type}', but these differ:\n{paths}{extra}"

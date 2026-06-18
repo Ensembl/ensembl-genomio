@@ -14,7 +14,7 @@
 # limitations under the License.
 """Check and allocate IDs for gene features in a GFF3 file."""
 
-__all__ = ["InvalidStableID", "InvalidStableIDError", "StableIDAllocator"]
+__all__ = ["InvalidStableIDError", "StableIDAllocator"]
 
 from dataclasses import dataclass, field
 import logging
@@ -27,9 +27,6 @@ MAX_IDS_PER_STABLE_BASE = 10
 
 class InvalidStableIDError(ValueError):
     """Raised when there is a problem with an stable ID."""
-
-
-InvalidStableID = InvalidStableIDError  # Alias for backward compatibility
 
 
 @dataclass
@@ -206,7 +203,7 @@ class StableIDAllocator:
                     number += 1
                     new_gene_id = f"{new_gene_id_base}_{number}"
                     if number > MAX_IDS_PER_STABLE_BASE:
-                        raise InvalidStableID(f"Duplicate ID {new_gene_id_base} (up to {new_gene_id})")
+                        raise InvalidStableIDError(f"Duplicate ID {new_gene_id_base} (up to {new_gene_id})")
                 self._loaded_ids.add(new_gene_id)
                 logging.debug(f"Using GeneID {new_gene_id} for stable_id instead of {gene.id}")
                 return new_gene_id
@@ -216,4 +213,4 @@ class StableIDAllocator:
             new_gene_id = self.generate_gene_id()
             logging.debug(f"New ID: {new_gene_id} -> {new_gene_id}")
             return new_gene_id
-        raise InvalidStableID(f"Can't use invalid gene id for {gene}")
+        raise InvalidStableIDError(f"Can't use invalid gene id for {gene}")

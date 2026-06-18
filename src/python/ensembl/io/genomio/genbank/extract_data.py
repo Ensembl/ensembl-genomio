@@ -34,7 +34,6 @@ __all__ = [
     "FormattedFilesGenerator",
     "GBParseError",
     "GenomeFiles",
-    "UnsupportedData",
     "UnsupportedDataError",
 ]
 
@@ -62,9 +61,6 @@ class GBParseError(Exception):
 
 class UnsupportedDataError(Exception):
     """When an expected data is not supported by the current parser."""
-
-
-UnsupportedData = UnsupportedDataError  # Alias for backward compatibility
 
 
 class GenomeFiles(dict):

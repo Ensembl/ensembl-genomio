@@ -318,13 +318,13 @@ def _parse_repeatmasker_strand_coordinates(
 
     """
     strand_token = columns[8]
-    if strand_token == "+":  # noqa: S105
+    if strand_token == "+":
         return (
             "+",
             _parse_token(int, columns[11], "repeat_start", line, input_path),
             _parse_token(int, columns[12], "repeat_end", line, input_path),
         )
-    if strand_token == "C":  # noqa: S105
+    if strand_token == "C":
         return (
             "-",
             _parse_token(int, columns[13], "repeat_start", line, input_path),

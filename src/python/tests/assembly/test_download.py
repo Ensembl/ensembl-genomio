@@ -424,7 +424,7 @@ def test_retrieve_assembly_data(
         mock_ftp: Mock of ``ensembl.io.genomio.assembly.download.FTP``.
         data_dir: Module's test data directory fixture.
         accession: Accession of desired genome assembly.
-        is_dir: Param to define state of result output dir.
+        is_dir: Defines state of result output dir.
         files_downloaded: Defines contents of test files marked as downloaded.
         md5_return: Mocked result returned by ``md5_files()`` indicating whether checksum validation succeeds.
         exception: Context manager expected raise exception.

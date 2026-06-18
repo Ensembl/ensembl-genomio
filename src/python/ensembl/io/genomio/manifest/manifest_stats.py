@@ -308,7 +308,7 @@ class ManifestStats:
         """Load sequence regions from AGP files.
 
         AGP files describe the assembly of larger sequence objects using smaller objects.
-        e.g. describes the assembly of scaffolds from contigs.
+        E.g. describes the assembly of scaffolds from contigs.
 
         Args:
             agp_dict: Dict containing the information about the sequence.

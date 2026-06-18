@@ -21,7 +21,6 @@ __all__ = [
     "Event",
     "IdsSet",
     "Pair",
-    "UnsupportedEvent",
     "UnsupportedEventError",
 ]
 
@@ -69,9 +68,6 @@ class Pair:
 
 class UnsupportedEventError(ValueError):
     """If an event is not supported."""
-
-
-UnsupportedEvent = UnsupportedEventError  # Backwards compatibility
 
 
 class Event:

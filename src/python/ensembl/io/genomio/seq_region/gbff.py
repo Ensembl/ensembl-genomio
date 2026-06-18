@@ -88,5 +88,5 @@ class GBFFRecord:
         return location
 
     def is_circular(self) -> bool:
-        """Return `True` if the record says that the sequence is circular, `False` otherwise."""
+        """Return ``True`` if the record says that the sequence is circular, ``False`` otherwise."""
         return self.record.annotations.get("topology", "") == "circular"

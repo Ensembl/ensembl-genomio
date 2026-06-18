@@ -119,7 +119,7 @@ def filter_genome_meta(
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
         metafilter: Input JSON containing subset of meta table values to filter on.
-        meta_update: Deactivates additional meta updating.
+        meta_update: Activates additional meta updating.
 
     """
     filtered_metadata: dict[str, Any] = {}
@@ -249,7 +249,7 @@ def metadata_dump_setup(
     Args:
         db_url: Target core database URL.
         input_filter: Input JSON containing subset of meta table values to filter on.
-        meta_update: Deactivate additional meta updating.
+        meta_update: Activate additional meta updating.
         append_db: Append target core database name to output JSON.
 
     """

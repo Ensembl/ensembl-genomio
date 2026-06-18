@@ -223,6 +223,7 @@ ignore = [
     "ICN001",  # https://docs.astral.sh/ruff/rules/unconventional-import-alias/
     "ISC001",  # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
     "LOG015",  # https://docs.astral.sh/ruff/rules/root-logger-call/
+    "S105",  # https://docs.astral.sh/ruff/rules/hardcoded-password-string/
     "S324",  # https://docs.astral.sh/ruff/rules/hashlib-insecure-hash-function/
     "S603",  # https://docs.astral.sh/ruff/rules/subprocess-without-shell-equals-true/
     "T201",  # https://docs.astral.sh/ruff/rules/print/
@@ -301,4 +302,6 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     # Do not complain about abstract methods, they are not run
     "@(abc\\.)?abstractmethod",
+    # Do not complain about type-checking-only imports
+    "if TYPE_CHECKING:",
 ]

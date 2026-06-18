@@ -61,7 +61,7 @@ class Records(list):
                 self.append(clean_record)
 
     def to_gff(self, out_gff_path: PathLike) -> None:
-        """Writethe current list of records in a GFF3 file.
+        """Write the current list of records in a GFF3 file.
 
         Args:
             out_gff_path: Path to GFF3 file where to write the records.
