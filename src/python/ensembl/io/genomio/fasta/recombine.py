@@ -15,7 +15,7 @@
 
 """Recombines split/chunked FASTA outputs back into a single FASTA, optionally using an AGP."""
 
-__all__ = ["RecordLocation", "FastaRecordCache", "recombine_fasta"]
+__all__ = ["FastaRecordCache", "RecordLocation", "recombine_fasta"]
 
 import argparse
 from collections import defaultdict
@@ -53,8 +53,7 @@ class RecordLocation:
 
 
 class FastaRecordCache:
-    """
-    Cache for FASTA records keyed by file path.
+    """Cache for FASTA records keyed by file path.
 
     Only one input FASTA is loaded into memory at a time. When a requested record is in a
     different file, the cache is replaced by indexing that file's records.
@@ -65,8 +64,7 @@ class FastaRecordCache:
         self._records: dict[str, SeqRecord] = {}
 
     def get_record(self, record_id: str, loc: RecordLocation) -> SeqRecord:
-        """
-        Return a record by ID from the file indicated by ``loc``.
+        """Return a record by ID from the file indicated by ``loc``.
 
         Args:
             record_id: FASTA record identifier to retrieve.
@@ -79,6 +77,7 @@ class FastaRecordCache:
             KeyError: If the record ID is not found in the indexed file.
             ValueError: If the file contains duplicate record IDs.
             OSError: If the file cannot be opened/read.
+
         """
         if self._current_path is None or self._current_path != loc.path:
             logging.debug("Loading FASTA records from %s", loc.path)
@@ -98,11 +97,11 @@ class FastaRecordCache:
 
 
 def _parse_fasta_headers(file_path: StrPath) -> Iterator[tuple[str, str]]:
-    """
-    Iterates over FASTA headers, yielding (record_id, description) tuples.
+    """Iterate over FASTA headers, yielding (record_id, description) tuples.
 
     Yields:
         Tuples of (record_id, description_without_id).
+
     """
     with open_gz_file(file_path) as fh:
         headers = [(record.id, seq_description_without_id(record)) for record in SeqIO.parse(fh, "fasta")]
@@ -113,8 +112,7 @@ def _build_index(
     chunk_re: re.Pattern[str],
     fasta_paths: Iterable[Path],
 ) -> tuple[dict[str, RecordLocation], dict[str, int], dict[str, list[tuple[int, str]]]]:
-    """
-    Builds lightweight indices from FASTA headers across the manifest files.
+    """Build lightweight indices from FASTA headers across the manifest files.
 
     The function scans each FASTA file and records:
     - ``locations``: mapping of every record ID to its source file path and description.
@@ -134,6 +132,7 @@ def _build_index(
 
     Raises:
         ValueError: If no FASTA headers are found, or if duplicate record IDs are encountered.
+
     """
     locations: dict[str, RecordLocation] = {}
     first_seen: dict[str, int] = {}
@@ -168,8 +167,7 @@ def _agp_component_seq(
     orientation: str,
     allow_revcomp: bool,
 ) -> Seq:
-    """
-    Extracts the component subsequence described by AGP coordinates.
+    """Extract the component subsequence described by AGP coordinates.
 
     Args:
         component_record: The component sequence record (AGP ``component_id``).
@@ -184,11 +182,12 @@ def _agp_component_seq(
     Raises:
         ValueError: If the component record has no sequence, orientation is invalid, or orientation is '-'
             when ``allow_revcomp`` is False.
+
     """
     component_seq = component_record.seq
     if component_seq is None:
         raise ValueError(f"Component record '{component_record.id}' has no sequence")
-    subsequence = cast(Seq, component_seq[comp_beg - 1 : comp_end])
+    subsequence = cast("Seq", component_seq[comp_beg - 1 : comp_end])
 
     if orientation == "+":
         return subsequence
@@ -210,8 +209,7 @@ def _records_from_agp(
     cache: FastaRecordCache,
     allow_revcomp: bool,
 ) -> Iterator[SeqRecord]:
-    """
-    Yields recombined records using AGP-driven reconstruction.
+    """Yield recombined records using AGP-driven reconstruction.
 
     For each AGP object, components are ordered by (record_start, part_number) and concatenated.
     Contiguity is enforced on the AGP object coordinates.
@@ -229,6 +227,7 @@ def _records_from_agp(
         KeyError: If the AGP references a component ID not present in ``locations``.
         ValueError: If a component record has no sequence, AGP parts are non-contiguous, or extracted
             component lengths do not match AGP spans.
+
     """
     for record_id, parts in agp_entries.items():
         sorted_parts = sorted(parts, key=lambda p: (p.part_start, p.part_number))
@@ -278,8 +277,7 @@ def _records_from_headers(
     chunks: dict[str, list[tuple[int, str]]],
     cache: FastaRecordCache,
 ) -> Iterator[SeqRecord]:
-    """
-    Yields recombined records using header-driven reconstruction.
+    """Yield recombined records using header-driven reconstruction.
 
     If a base ID has chunk records, chunk sequences are concatenated in increasing start order and
     contiguity is enforced (each chunk start must equal the previous end). If a base ID has no
@@ -300,6 +298,7 @@ def _records_from_headers(
         KeyError: If a referenced base/chunk record is missing from ``locations``.
         ValueError: If a referenced base/chunk record has no sequence, or if chunk coordinates are
             non-contiguous.
+
     """
     all_bases = sorted(first_seen.keys(), key=lambda b: first_seen[b])
 
@@ -330,7 +329,7 @@ def _records_from_headers(
             sequence = rec.seq
             if sequence is None:
                 raise ValueError(f"Chunk record '{chunk_id}' has no sequence")
-            sequence = cast(Seq, sequence)
+            sequence = cast("Seq", sequence)
 
             if prev_end is None:
                 parts.append(sequence)
@@ -357,8 +356,7 @@ def recombine_fasta(
     agp_file: Path | None = None,
     allow_revcomp: bool = False,
 ) -> None:
-    """
-    Recombines split/chunked FASTA files listed in a manifest into a single FASTA.
+    """Recombine split/chunked FASTA files listed in a manifest into a single FASTA.
 
     Inputs may be plain FASTA or gzipped FASTA. Reconstruction uses one of two modes:
 
@@ -379,6 +377,7 @@ def recombine_fasta(
     Raises:
         ValueError: If inputs contain no records, contain duplicate IDs, or chunk/AGP coordinates are invalid.
         KeyError: If AGP references a component ID that is not present in the FASTA inputs.
+
     """
     fasta_paths = get_paths_from_manifest(fasta_manifest)
 
@@ -394,7 +393,7 @@ def recombine_fasta(
         record_iter = _records_from_headers(locations, first_seen, chunks, cache)
 
     out_fasta.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_fasta, "w") as out_fh:
+    with out_fasta.open("w") as out_fh:
         n = 0
         for rec in record_iter:
             SeqIO.write(rec, out_fh, "fasta")
@@ -448,7 +447,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Entry point for the FASTA recombination CLI."""
+    """Execute the FASTA recombination function."""
     args = parse_args(argv)
     chunk_re = validate_regex(args.chunk_id_regex)
     try:

@@ -17,7 +17,7 @@
 # pylint: disable=too-many-positional-arguments
 
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple
+from typing import Callable
 
 from deepdiff import DeepDiff
 import pytest
@@ -27,31 +27,29 @@ from ensembl.io.genomio.genome_metadata import extend
 
 @pytest.mark.dependency(name="test_get_gbff_regions")
 @pytest.mark.parametrize(
-    "gbff_file, output",
+    ("gbff_file", "output"),
     [
         pytest.param("", [], id="No GBFF file"),
         pytest.param("sequences.gbff", ["CP089274", "CP089275", "RefChr0002"], id="sequences.gbff"),
     ],
 )
-def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> None:
-    """Tests the `extend.get_gbff_regions()` method.
+def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: list[str]) -> None:
+    """Test the `extend.get_gbff_regions()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
         gbff_file: GBFF file name.
         output: Expected list of sequence region IDs.
+
     """
-    if gbff_file:
-        gbff_path = data_dir / gbff_file
-    else:
-        gbff_path = None
+    gbff_path = data_dir / gbff_file if gbff_file else None
     result = extend.get_gbff_regions(gbff_path)
     assert result == output
 
 
 @pytest.mark.dependency(name="test_report_to_csv")
 @pytest.mark.parametrize(
-    "report_file, output",
+    ("report_file", "output"),
     [
         pytest.param(
             "no_metadata_report.txt",
@@ -72,13 +70,14 @@ def test_get_gbff_regions(data_dir: Path, gbff_file: str, output: List[str]) -> 
         ),
     ],
 )
-def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict]) -> None:
-    """Tests the `extend._report_to_csv()` method.
+def test_report_to_csv(data_dir: Path, report_file: str, output: tuple[str, dict]) -> None:
+    """Test the `extend._report_to_csv()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
         report_file: Assembly report file name.
         output: Expected returned value for the given assembly report file.
+
     """
     report_path = data_dir / report_file
     # pylint: disable=protected-access
@@ -89,7 +88,7 @@ def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict
 
 @pytest.mark.dependency(name="test_get_report_regions_names", depends=["test_report_to_csv"])
 @pytest.mark.parametrize(
-    "report_file, output",
+    ("report_file", "output"),
     [
         pytest.param(
             "assembly_report.txt",
@@ -98,13 +97,14 @@ def test_report_to_csv(data_dir: Path, report_file: str, output: Tuple[str, Dict
         ),
     ],
 )
-def test_get_report_regions_names(data_dir: Path, report_file: str, output: List[Tuple[str, str]]) -> None:
-    """Tests the `extend.get_report_regions_names()` method.
+def test_get_report_regions_names(data_dir: Path, report_file: str, output: list[tuple[str, str]]) -> None:
+    """Test the `extend.get_report_regions_names()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
         report_file: Assembly report file name.
         output: Expected returned value for the given assembly report file.
+
     """
     report_path = data_dir / report_file
     result = extend.get_report_regions_names(report_path)
@@ -115,7 +115,7 @@ def test_get_report_regions_names(data_dir: Path, report_file: str, output: List
     name="test_get_additions", depends=["test_get_gbff_regions", "test_get_report_regions_names"]
 )
 @pytest.mark.parametrize(
-    "report_file, gbff_file, output",
+    ("report_file", "gbff_file", "output"),
     [
         pytest.param(
             "assembly_report.txt", "", ["CP089275", "RefChr0001", "RefChr0002"], id="Additional regions found"
@@ -123,14 +123,15 @@ def test_get_report_regions_names(data_dir: Path, report_file: str, output: List
         pytest.param("assembly_report.txt", "sequences.gbff", [], id="No additional regions"),
     ],
 )
-def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output: List[str]) -> None:
-    """Tests the `extend.get_additions()` method.
+def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output: list[str]) -> None:
+    """Test the `extend.get_additions()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
         report_file: Assembly report file name.
-        gbff_path: GBFF file name.
+        gbff_file: GBFF file name.
         output: Expected sequence regions names that need to be added.
+
     """
     report_path = data_dir / report_file
     gbff_path = data_dir / gbff_file if gbff_file else None
@@ -140,7 +141,7 @@ def test_get_additions(data_dir: Path, report_file: str, gbff_file: str, output:
 
 @pytest.mark.dependency(depends=["test_get_additions"])
 @pytest.mark.parametrize(
-    "genome_infile, report_file, genbank_file, output_file",
+    ("genome_infile", "report_file", "genbank_file", "output_file"),
     [
         pytest.param("genome.json", "", "", "genome.json", id="No report file"),
         pytest.param(
@@ -160,7 +161,7 @@ def test_amend_genome_metadata(
     genbank_file: str,
     output_file: str,
 ) -> None:
-    """Tests the `extend.amend_genome_metadata()` method.
+    """Test the `extend.amend_genome_metadata()` method.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
@@ -170,6 +171,7 @@ def test_amend_genome_metadata(
         report_file: INSDC/RefSeq sequences report file.
         genbank_file: INSDC/RefSeq GBFF file.
         output_file: Expected amended genome metadata file.
+
     """
     genome_inpath = data_dir / genome_infile
     report_path = data_dir / report_file if report_file else None

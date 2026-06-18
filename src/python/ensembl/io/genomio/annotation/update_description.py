@@ -21,7 +21,7 @@ __all__ = [
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, select
@@ -39,18 +39,18 @@ FEAT_TABLE = {
     "transcript": "transcript",
 }
 
-FeatStruct = Tuple[str, str, str]
+FeatStruct = tuple[str, str, str]
 
 
-def get_core_data(session: Session, table: str, match_xrefs: bool = False) -> Dict[str, FeatStruct]:
-    """Returns the table descriptions from a core database.
+def get_core_data(session: Session, table: str, match_xrefs: bool = False) -> dict[str, FeatStruct]:
+    """Return the table descriptions from a core database.
 
     Args:
         session: Session open on a core database.
         table: "gene" or "transcript" table from the core database.
         match_xrefs: If the IDs do not match, try to match an Xref ID instead.
-    """
 
+    """
     if table == "gene":
         stmt = (
             select(Gene.gene_id, Gene.stable_id, Gene.description, Xref.dbprimary_acc)
@@ -95,7 +95,7 @@ def load_descriptions(
     do_update: bool = False,
     match_xrefs: bool = True,
 ) -> None:
-    """Loads gene and transcript descriptions into a core database.
+    """Load gene and transcript descriptions into a core database.
 
     Args:
         session: Session open on a core database.
@@ -103,6 +103,7 @@ def load_descriptions(
         report: Print the mapping of changes to perform in the standard output.
         do_update: Actually update the core database.
         match_xrefs: If the IDs do not match, try to match an Xref ID instead.
+
     """
     func = get_json(func_file)
     logging.info(f"{len(func)} annotations from {func_file}")
@@ -141,8 +142,8 @@ def load_descriptions(
 
 
 def _get_cur_feat(
-    feat_data: Dict[str, FeatStruct], new_feat: Dict[str, Any], match_xrefs: bool = False
-) -> Optional[FeatStruct]:
+    feat_data: dict[str, FeatStruct], new_feat: dict[str, Any], match_xrefs: bool = False
+) -> FeatStruct | None:
     """Match a feature ID, synonyms or xrefs to a core stable ID and return the matching core feature.
 
     Returns None if no match.
@@ -169,15 +170,15 @@ def _get_cur_feat(
 
 def _get_features_to_update(
     table: str,
-    feat_func: List[Dict[str, Any]],
-    feat_data: Dict[str, FeatStruct],
-    stats: Dict[str, int],
+    feat_func: list[dict[str, Any]],
+    feat_data: dict[str, FeatStruct],
+    stats: dict[str, int],
     *,
     report: bool = False,
     do_update: bool = False,
     match_xrefs: bool = True,
-) -> List[Dict[str, Any]]:
-    """Checks a list of features and returns those whose description we want to update.
+) -> list[dict[str, Any]]:
+    """Check a list of features and returns those whose description we want to update.
 
     Args:
         table: "gene" or "transcript" table for the features.
@@ -190,6 +191,7 @@ def _get_features_to_update(
 
     Returns:
         The list of features with their operation changed to update or insert.
+
     """
     to_update = []
     for new_feat in feat_func:
@@ -240,7 +242,7 @@ def _get_features_to_update(
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Execute the main script."""
     parser = ArgumentParser(description=__doc__)
     parser.add_server_arguments(include_database=True)
     parser.add_argument_src_path("--func_file", required=True, help="Input functional annotation JSON")

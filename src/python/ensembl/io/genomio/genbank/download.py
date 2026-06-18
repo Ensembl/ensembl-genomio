@@ -47,27 +47,36 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
         DownloadError: If the download fails.
 
     """
-
     # Get the list of assemblies for this accession
     entrez_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     entrez_params = {
         "db": "nuccore",
         "rettype": "gbwithparts",
         "retmode": "text",
+        "id": accession,
     }
-    entrez_params["id"] = accession
+
     logging.debug(f"Getting file from {entrez_url} with params {entrez_params}")
-    result = requests.get(entrez_url, params=entrez_params, timeout=60)
-    if result and result.status_code == 200:
-        with Path(output_file).open("wb") as gbff:
-            gbff.write(result.content)
-        logging.info(f"GenBank file written to {output_file}")
-        return
-    raise DownloadError(f"Could not download the genbank ({accession}) file: {result}")
+
+    try:
+        response = requests.get(
+            entrez_url,
+            params=entrez_params,
+            timeout=60,
+        )
+        response.raise_for_status()
+
+    except requests.exceptions.RequestException as exc:
+        raise DownloadError(f"Could not download the GenBank file for {accession}") from exc
+
+    with Path(output_file).open("wb") as gbff:
+        gbff.write(response.content)
+
+    logging.info(f"GenBank file written to {output_file}")
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Execute the main function."""
     parser = ArgumentParser(description="Download a sequence from GenBank.")
     parser.add_argument("--accession", required=True, help="Sequence accession")
     parser.add_argument_dst_path("--output_file", required=True, help="Output GenBank file")

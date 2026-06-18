@@ -15,7 +15,6 @@
 """Validates a JSON file with the provided JSON schema.
 
 Examples:
-
     >>> from ensembl.io.genomio.schemas import json
     >>> json.schema_validator(json_file="functional_annotation.json", json_schema="functional_annotation")
     >>> json.schema_validator(json_file="functional_annotation.json", json_schema="genome")
@@ -36,7 +35,6 @@ from importlib.resources import as_file, files
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Union
 
 import jsonschema
 
@@ -50,8 +48,8 @@ for schema_file in files("ensembl.io.genomio.data.schemas").iterdir():
             _JSON_SCHEMAS[file_path.stem] = file_path
 
 
-def schema_validator(json_file: PathLike, json_schema: Union[str, PathLike]) -> None:
-    """Validates a JSON file with the provided JSON schema.
+def schema_validator(json_file: PathLike, json_schema: str | PathLike) -> None:
+    """Validate a JSON file with the provided JSON schema.
 
     Args:
         json_file: Path to the JSON file to check.
@@ -71,7 +69,7 @@ def schema_validator(json_file: PathLike, json_schema: Union[str, PathLike]) -> 
 
 
 def main() -> None:
-    """Main script entry-point."""
+    """Execute the main script."""
     parser = ArgumentParser(description="Validates a JSON file against a JSON schema.")
     parser.add_argument_src_path("--json_file", required=True, help="JSON file to check")
     parser.add_argument(

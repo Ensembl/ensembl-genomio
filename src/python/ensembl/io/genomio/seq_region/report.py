@@ -22,15 +22,16 @@ import csv
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Tuple
 
 from ensembl.utils.archive import open_gz_file
 
 
 class ReportRecord:
-    """Represent an assembly report file. Exposes 2 things:
-    - Metadata as a dict from the comments.
-    - A DictReader that yields all the seq_region lines of the report as dicts.
+    """Represents an assembly report file.
+
+    Exposes 2 things:
+        - Metadata as a dict from the comments.
+        - A DictReader that yields all the seq_region lines of the report as dicts.
     """
 
     def __init__(self, report_path: Path) -> None:
@@ -39,8 +40,8 @@ class ReportRecord:
         self.reader = csv.DictReader(report_csv.splitlines(), delimiter="\t", quoting=csv.QUOTE_NONE)
 
     @staticmethod
-    def report_to_csv(report_path: PathLike) -> Tuple[str, dict]:
-        """Returns an assembly report as a CSV string.
+    def report_to_csv(report_path: PathLike) -> tuple[str, dict]:
+        """Return an assembly report as a CSV string.
 
         Args:
             report_path: Path to a seq_region file from INSDC/RefSeq.
@@ -53,7 +54,8 @@ class ReportRecord:
             data = ""
             metadata = {}
             header_line = ""
-            for line in report:
+            for raw_line in report:
+                line = raw_line.strip()
                 if line.startswith("#"):
                     # Get metadata values if possible
                     match = re.search("# (.+?): (.+?)$", line)

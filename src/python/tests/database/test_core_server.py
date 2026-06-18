@@ -18,13 +18,16 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, TYPE_CHECKING
 
 import pytest
-from pytest_mock import MockerFixture
 from sqlalchemy.engine import make_url
 
 from ensembl.io.genomio.database import CoreServer
+from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 TEST_CORES = [
     "speciesA_genus_core_60_110_1",
@@ -39,10 +42,10 @@ TEST_CORES = [
 class MockResult:
     """Mocker of `sqlalchemy.engine.Result` class."""
 
-    def __init__(self, core_dbs: List[str]):
+    def __init__(self, core_dbs: list[str]) -> None:
         self.core_dbs = core_dbs
 
-    def fetchall(self) -> List[List[str]]:
+    def fetchall(self) -> list[list[str]]:
         """Return a list of lists, each one containing a single core db."""
         return [[x] for x in self.core_dbs]
 
@@ -51,23 +54,25 @@ class MockConnection:
     """Mock a SQLAlchemy connection."""
 
     def __init__(self, result: MockResult) -> None:
+        """Create a mock connection."""
         self.result = result
 
     def execute(self, *args: Any, **kwargs: Any) -> MockResult:  # pylint: disable=unused-argument
-        """Returns a `MockResult` object."""
+        """Return a `MockResult` object."""
         return self.result
 
-    def __enter__(self, *args: Any, **kwargs: Any) -> MockConnection:  # pylint: disable=unused-argument
+    def __enter__(self, *args: Any, **kwargs: Any) -> Self:  # pylint: disable=unused-argument
+        """Enter the context manager."""
         return self
 
-    def __exit__(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=unused-argument
-        pass
+    def __exit__(self, *args: object, **kwargs: Any) -> None:  # pylint: disable=unused-argument
+        """Exit the context manager."""
 
 
 class MockEngine:
     """Mocker of `sqlalchemy.engine.Engine` class."""
 
-    def __init__(self, core_dbs: List[str]) -> None:
+    def __init__(self, core_dbs: list[str]) -> None:
         self.result = MockResult(core_dbs)
 
     def connect(self) -> MockConnection:
@@ -76,10 +81,10 @@ class MockEngine:
 
 
 class TestCoreServer:
-    """Tests for the `CoreServer` class."""
+    """Test for the `CoreServer` class."""
 
     @pytest.mark.parametrize(
-        "dbs, prefix, build, version, dbname_re, db_list, output",
+        ("dbs", "prefix", "build", "version", "dbname_re", "db_list", "output"),
         [
             ([], "", "", None, None, [], []),
             (TEST_CORES, "", None, None, "", [], TEST_CORES),
@@ -95,15 +100,15 @@ class TestCoreServer:
     def test_get_cores(
         self,
         mocker: MockerFixture,
-        dbs: List[str],
+        dbs: list[str],
         prefix: str,
-        build: Optional[int],
-        version: Optional[int],
+        build: int | None,
+        version: int | None,
         dbname_re: str,
-        db_list: List[str],
-        output: List[str],
+        db_list: list[str],
+        output: list[str],
     ) -> None:
-        """Tests the `CoreServer.get_cores()` method.
+        """Test the `CoreServer.get_cores()` method.
 
         Args:
             mocker: Fixture to mock the connection to the server.

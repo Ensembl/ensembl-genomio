@@ -19,7 +19,6 @@ __all__ = ["IdsMapper", "load_list"]
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Dict, List
 
 import ensembl.io.genomio
 from ensembl.io.genomio.events.load import EventCollection
@@ -33,11 +32,12 @@ class IdsMapper:
     def __init__(self, map_file: PathLike) -> None:
         self.map = self._load_mapping(Path(map_file))
 
-    def _load_mapping(self, map_file: Path) -> Dict[str, str]:
+    def _load_mapping(self, map_file: Path) -> dict[str, str]:
         """Return a mapping in a simple dict from a tab file with 2 columns: from_id, to_id.
 
         Args:
             map_file: Tab file path.
+
         """
         mapping = {}
         with map_file.open("r") as map_fh:
@@ -45,7 +45,7 @@ class IdsMapper:
                 if line == "":
                     continue
                 items = line.split("\t")
-                if len(items) < 2:
+                if len(items) < 2:  # noqa: PLR2004
                     raise ValueError(f"Not 2 elements in {line}")
                 from_id, to_id = items[0:2]
                 mapping[from_id] = to_id
@@ -53,13 +53,13 @@ class IdsMapper:
         return mapping
 
 
-def load_list(list_file: Path) -> List[str]:
+def load_list(list_file: Path) -> list[str]:
     """Return a simple list from a file."""
     items = set()
     empty_spaces = re.compile(r"\s+")
     with Path(list_file).open("r") as map_fh:
-        for line in map_fh:
-            line = re.sub(empty_spaces, "", line)
+        for raw_line in map_fh:
+            line = re.sub(empty_spaces, "", raw_line)
             if line == "":
                 continue
             items.add(line)
@@ -68,7 +68,7 @@ def load_list(list_file: Path) -> List[str]:
 
 
 def main() -> None:
-    """Main entrypoint"""
+    """Execute the main script."""
     parser = ArgumentParser(description="Map stable IDs in a file and produce an events file.")
     parser.add_argument_src_path("--input_file", required=True, help="Input file from gene_diff")
     parser.add_argument_src_path(

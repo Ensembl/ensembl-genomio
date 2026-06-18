@@ -19,15 +19,15 @@
 from contextlib import nullcontext as does_not_raise
 import filecmp
 from pathlib import Path
-from typing import ContextManager, Set
+from typing import ContextManager
 
 import pytest
 
-import ensembl.io.genomio.fasta.process as FastaProcessing
+import ensembl.io.genomio.fasta.process as fasta_process
 
 
 @pytest.mark.parametrize(
-    "input_fasta, input_gbff, pep_mode, expected_output_fasta",
+    ("input_fasta", "input_gbff", "pep_mode", "expected_output_fasta"),
     [
         (
             "input.protein.fa.gz",
@@ -59,24 +59,22 @@ def test_fasta_prep(
     pep_mode: bool,
     expected_output_fasta: str,
 ) -> None:
-    """Tests the `process.prep_fasta_data()` function.
+    """Test the `process.prep_fasta_data()` function.
 
     Args:
         tmp_path: Where temporary files will be created.
+        data_dir: Module's test data directory fixture.
         input_fasta: Name of the fasta file with example input, in the test folder.
         input_gbff: Name of the input GBFF example input, in the test folder.
         pep_mode: Boolean flag to set processing in peptide mode.
         expected_output_fasta: Name of the output fasta file with expected output, in the test folder.
-    """
 
+    """
     fasta_input_path = data_dir / input_fasta
-    if input_gbff is not None:
-        gbff_input_path = data_dir / input_gbff
-    else:
-        gbff_input_path = input_gbff
+    gbff_input_path = data_dir / input_gbff if input_gbff is not None else input_gbff
     fasta_output_path = tmp_path / f"{input_fasta}.test.fasta"
 
-    FastaProcessing.prep_fasta_data(
+    fasta_process.prep_fasta_data(
         fasta_infile=fasta_input_path,
         genbank_infile=gbff_input_path,
         fasta_outfile=fasta_output_path,
@@ -89,32 +87,33 @@ def test_fasta_prep(
 
 
 @pytest.mark.parametrize(
-    "input_gbff, excluded_seq_regions, output, expectation",
+    ("input_gbff", "excluded_seq_regions", "output", "expectation"),
     [
         (
             "input.gbff.gz",
-            set(["LR605957.1"]),
-            set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
+            {"LR605957.1"},
+            {"VWP78966.1", "VWP78967.1", "VWP78968.1"},
             does_not_raise(),
         ),
         (
             "input.mod.gbff.gz",
-            set(["LR605957.1"]),
-            set(["VWP78966.1", "VWP78967.1", "VWP78968.1"]),
-            pytest.raises(FastaProcessing.FastaParserError),
+            {"LR605957.1"},
+            {"VWP78966.1", "VWP78967.1", "VWP78968.1"},
+            pytest.raises(fasta_process.FastaParserError),
         ),
     ],
 )
 def test_exclude_seq_regions(
     data_dir: Path,
     input_gbff: str,
-    excluded_seq_regions: Set[str],
-    output: Set[str],
+    excluded_seq_regions: set[str],
+    output: set[str],
     expectation: ContextManager,
 ) -> None:
-    """Tests the `process.get_peptides_to_exclude()` function.
+    """Test the `process.get_peptides_to_exclude()` function.
 
     Args:
+        data_dir: Module's test data directory fixture.
         input_gbff: Name of the input GBFF example input, in the test folder.
         excluded_seq_regions: Set of sequence regions to be excluded.
         output: Set of proteins expected to be excluded given excluded_seq_region
@@ -122,10 +121,7 @@ def test_exclude_seq_regions(
             exception is raised. Use `~contextlib.nullcontext` if no exception is expected.
 
     """
-    if input_gbff is not None:
-        gbff_input_path = data_dir / input_gbff
-    else:
-        gbff_input_path = input_gbff
+    gbff_input_path = data_dir / input_gbff if input_gbff is not None else input_gbff
     with expectation:
-        excluded_proteins = FastaProcessing.get_peptides_to_exclude(gbff_input_path, excluded_seq_regions)
+        excluded_proteins = fasta_process.get_peptides_to_exclude(gbff_input_path, excluded_seq_regions)
         assert set(excluded_proteins) == set(output)

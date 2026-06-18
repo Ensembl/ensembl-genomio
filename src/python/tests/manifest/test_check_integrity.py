@@ -24,7 +24,7 @@ from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, ManifestS
 
 
 @pytest.mark.parametrize(
-    "manifest_file, ignore_false_stops, expected",
+    ("manifest_file", "ignore_false_stops", "expected"),
     [
         ("manifest.json", False, does_not_raise()),
         ("manifest.json", True, does_not_raise()),
@@ -33,7 +33,7 @@ from ensembl.io.genomio.manifest.check_integrity import IntegrityTool, ManifestS
 def test_check_integrity(
     data_dir: Path, manifest_file: str, ignore_false_stops: bool, expected: ContextManager
 ) -> None:
-    """Tests the `IntegrityTool.check_integrity()` method.
+    """Test the `IntegrityTool.check_integrity()` method.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -49,13 +49,13 @@ def test_check_integrity(
 
 
 @pytest.mark.parametrize(
-    "manifest_file, expected",
+    ("manifest_file", "expected"),
     [
         ("manifest.json", does_not_raise()),
     ],
 )
 def test_manifest(data_dir: Path, manifest_file: str, expected: ContextManager) -> None:
-    """Tests the `IntegrityTool.manifest` attribute.
+    """Test the `IntegrityTool.manifest` attribute.
 
     Args:
         data_dir: Module's test data directory fixture.

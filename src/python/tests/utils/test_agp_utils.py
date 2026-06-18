@@ -19,15 +19,14 @@ from pathlib import Path
 from typing import ContextManager
 
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.utils import agp_utils
 
 
 @pytest.mark.parametrize(
-    "test_dir_name, agp_name, allow_revcomp, expectation, check_type, check_data",
+    ("test_dir_name", "agp_name", "allow_revcomp", "expectation", "check_type", "check_data"),
     [
-        param(
+        pytest.param(
             "ignores_comments",
             "comment.agp",
             False,
@@ -36,7 +35,7 @@ from ensembl.io.genomio.utils import agp_utils
             ("obj", "part", "+"),
             id="Comment lines ignored",
         ),
-        param(
+        pytest.param(
             "handles_orientation",
             "minus_strand.agp",
             True,
@@ -45,7 +44,7 @@ from ensembl.io.genomio.utils import agp_utils
             ("obj", "part", "-"),
             id="Reverse strand entry parsed when allowed",
         ),
-        param(
+        pytest.param(
             "handles_orientation",
             "minus_strand.agp",
             False,
@@ -54,7 +53,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Reverse strand entries rejected when disallowed",
         ),
-        param(
+        pytest.param(
             "non_w_component",
             "repeat.agp",
             False,
@@ -63,7 +62,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Ununsupported component type raises error",
         ),
-        param(
+        pytest.param(
             "empty_file",
             "empty.agp",
             False,
@@ -72,7 +71,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Empty AGP file raises error",
         ),
-        param(
+        pytest.param(
             "truncated_line",
             "truncated.agp",
             False,
@@ -81,7 +80,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Truncated AGP line raises error",
         ),
-        param(
+        pytest.param(
             "multiple_objects",
             "multi.agp",
             False,
@@ -93,7 +92,7 @@ from ensembl.io.genomio.utils import agp_utils
             },
             id="Multiple objects with multiple parts parsed correctly",
         ),
-        param(
+        pytest.param(
             "multiple_errors",
             "multi_errors.agp",
             False,
@@ -102,7 +101,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Multiple AGP errors are collected and raised together",
         ),
-        param(
+        pytest.param(
             "invalid_integers",
             "bad_int.agp",
             False,
@@ -111,7 +110,7 @@ from ensembl.io.genomio.utils import agp_utils
             None,
             id="Invalid integer fields raise error",
         ),
-        param(
+        pytest.param(
             "gzipped_file",
             "valid.agp.gz",
             False,
@@ -132,8 +131,7 @@ def test_parse_agp(
     check_type: str | None,
     check_data: tuple[str, str, str] | dict[str, dict] | None,
 ) -> None:
-    """
-    Tests the `agp_utils.parse_agp()` function.
+    """Test the `agp_utils.parse_agp()` function.
 
     Tests both single-object and multi-object AGP files, as well as error conditions.
 
@@ -145,6 +143,7 @@ def test_parse_agp(
         expectation: Context manager for the expected outcome of the test (exception or not).
         check_type: Type of check to perform ("single", "multiple", or `None` for error cases).
         check_data: Data needed for assertions (varies by `check_type`).
+
     """
     test_dir = data_dir / test_dir_name
     agp_file = test_dir / agp_name
@@ -160,7 +159,9 @@ def test_parse_agp(
         assert out[object_id][0].orientation == orientation
 
     elif check_type == "multiple":
-        assert isinstance(check_data, dict) and "keys" in check_data and "parts" in check_data
+        assert isinstance(check_data, dict)
+        assert "keys" in check_data
+        assert "parts" in check_data
         assert set(out.keys()) == check_data["keys"]
         for obj_id, expected_parts in check_data["parts"].items():
             assert len(out[obj_id]) == len(expected_parts)
@@ -170,7 +171,7 @@ def test_parse_agp(
 
 
 def test_build_component_index_groups_by_part_id_and_sorts_within_component() -> None:
-    """Tests that component entries are grouped by component ID and sorted properly."""
+    """Test that component entries are grouped by component ID and sorted properly."""
     e1 = agp_utils.AgpEntry(
         record="objB",
         record_start=50,
@@ -230,14 +231,14 @@ def test_build_component_index_groups_by_part_id_and_sorts_within_component() ->
 
 
 def test_build_component_index_empty_input_returns_empty_dict() -> None:
-    """Tests that `build_component_index()` returns an empty dict for empty input."""
+    """Test that `build_component_index()` returns an empty dict for empty input."""
     assert agp_utils.build_component_index({}) == {}
 
 
 @pytest.mark.parametrize(
-    "start,end,orientation,allow_revcomp,expectation",
+    ("start", "end", "orientation", "allow_revcomp", "expectation"),
     [
-        param(
+        pytest.param(
             1,
             1,
             "+",
@@ -245,7 +246,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             does_not_raise((100, 100)),
             id="Single bp forward strand",
         ),
-        param(
+        pytest.param(
             10,
             20,
             "+",
@@ -253,7 +254,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             does_not_raise((109, 119)),
             id="Range forward strand",
         ),
-        param(
+        pytest.param(
             1,
             1,
             "-",
@@ -261,7 +262,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             does_not_raise((199, 199)),
             id="Single bp reverse strand",
         ),
-        param(
+        pytest.param(
             10,
             20,
             "-",
@@ -269,7 +270,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             does_not_raise((180, 190)),
             id="Range reverse strand",
         ),
-        param(
+        pytest.param(
             5,
             4,
             "+",
@@ -277,7 +278,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             pytest.raises(ValueError, match=r"Range start > end"),
             id="Start > end raises error",
         ),
-        param(
+        pytest.param(
             0,
             1,
             "+",
@@ -285,7 +286,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             pytest.raises(ValueError, match=r"outside component span"),
             id="Start outside component span raises error",
         ),
-        param(
+        pytest.param(
             1,
             101,
             "+",
@@ -293,7 +294,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             pytest.raises(ValueError, match=r"outside component span"),
             id="End outside component span raises error",
         ),
-        param(
+        pytest.param(
             1,
             1,
             "-",
@@ -301,7 +302,7 @@ def test_build_component_index_empty_input_returns_empty_dict() -> None:
             pytest.raises(ValueError, match=r"processing of reverse complement AGP entries is not enabled"),
             id="Reverse strand entry raises error when disallowed",
         ),
-        param(
+        pytest.param(
             1,
             10,
             "?",
@@ -318,8 +319,7 @@ def test_lift_range(
     allow_revcomp: bool,
     expectation: ContextManager,
 ) -> None:
-    """
-    Tests the `agp_utils.lift_range()` function.
+    """Test the `agp_utils.lift_range()` function.
 
     Args:
         start: Start position relative to component.
@@ -327,6 +327,7 @@ def test_lift_range(
         orientation: Orientation of the component in relation to the record (+/-).
         allow_revcomp: Boolean indicating whether minus strand entries are permitted.
         expectation: Context manager for the expected outcome of the test (exception or not).
+
     """
     with expectation as expected:
         part = agp_utils.AgpEntry(

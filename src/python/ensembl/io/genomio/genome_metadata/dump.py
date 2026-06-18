@@ -15,16 +15,16 @@
 """Generates a JSON file representing the genome metadata from a core database."""
 
 __all__ = [
-    "get_genome_metadata",
-    "filter_genome_meta",
     "check_assembly_version",
     "check_genebuild_version",
+    "filter_genome_meta",
+    "get_genome_metadata",
     "metadata_dump_setup",
 ]
 
 import argparse
 import json
-from typing import Any, Type
+from typing import Any
 import logging
 from pydoc import locate
 
@@ -40,7 +40,7 @@ from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils import StrPath
 from ensembl.utils.logging import init_logging_with_args
 
-DEFAULT_FILTER: dict[str, dict[str, Type]] = {
+DEFAULT_FILTER: dict[str, dict[str, type]] = {
     "database": {"name": str},
     "added_seq": {"region_name": str},
     "annotation": {"provider_name": str, "provider_url": str},
@@ -68,11 +68,12 @@ DEFAULT_FILTER: dict[str, dict[str, Type]] = {
 
 
 def get_genome_metadata(session: Session, db_name: str | None) -> dict[str, Any]:
-    """Returns the meta table content from the core database in a nested dictionary.
+    """Return the meta table content from the core database in a nested dictionary.
 
     Args:
         session: Session for the current core.
         db_name: Target database name
+
     """
     genome_metadata: dict[str, Any] = {}
 
@@ -111,14 +112,14 @@ def get_genome_metadata(session: Session, db_name: str | None) -> dict[str, Any]
 def filter_genome_meta(
     genome_metadata: dict[str, Any], metafilter: dict | None, meta_update: bool
 ) -> dict[str, Any]:
-    """Returns a filtered metadata dictionary with only the predefined keys in METADATA_FILTER.
+    """Return a filtered metadata dictionary with only the predefined keys in METADATA_FILTER.
 
     Also converts to expected data types (to follow the genome JSON schema).
 
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
         metafilter: Input JSON containing subset of meta table values to filter on.
-        meta_update: Deactivates additional meta updating.
+        meta_update: Activates additional meta updating.
 
     """
     filtered_metadata: dict[str, Any] = {}
@@ -132,16 +133,10 @@ def filter_genome_meta(
         if key in genome_metadata:
             filtered_metadata[key] = {}
             for subkey, value_type in subfilter.items():
-                if isinstance(value_type, str):
-                    value_type = type(value_type)
-                if isinstance(value_type, int):
-                    value_type = type(value_type)
+                converter = type(value_type) if isinstance(value_type, (str, int)) else value_type
                 if subkey in genome_metadata[key]:
                     value = genome_metadata[key][subkey]
-                    if isinstance(value, list):
-                        value = [value_type(x) for x in value]
-                    else:
-                        value = value_type(value)
+                    value = [converter(x) for x in value] if isinstance(value, list) else converter(value)
                     filtered_metadata[key][subkey] = value
 
     # Optional assembly and genebuild based filtering:
@@ -158,7 +153,8 @@ def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
     """Update the GCA accession to use GCF if it is from RefSeq.
 
     Args:
-        genome_metadata: Nested metadata key values from the core metadata table.
+        gmeta_out: Nested metadata key values from the core metadata table.
+
     """
     assembly = gmeta_out.get("assembly", {})
     if assembly.get("provider_name"):
@@ -168,12 +164,14 @@ def check_assembly_refseq(gmeta_out: dict[str, Any]) -> None:
         else:
             logging.info(f"Meta check 'assembly is RefSeq': Asm provider = {assembly['provider_name']}")
     else:
-        logging.debug("Meta filter update to RefSeq accession not done: user meta filter missing: \
-            'assembly.provider_name'")
+        logging.debug(
+            "Meta filter update to RefSeq accession not done: user meta filter missing: "
+            "'assembly.provider_name'"
+        )
 
 
 def check_assembly_version(genome_metadata: dict[str, Any]) -> None:
-    """Updates the assembly version of the genome metadata provided.
+    """Update the assembly version of the genome metadata provided.
 
     If `version` meta key is not and integer or it is not available, the assembly accession's version
     will be used instead.
@@ -183,6 +181,7 @@ def check_assembly_version(genome_metadata: dict[str, Any]) -> None:
 
     Raises:
         ValueError: If both `version` and the assembly accession's version are not integers or are missing.
+
     """
     assembly = genome_metadata["assembly"]
     version = assembly.get("version")
@@ -199,17 +198,18 @@ def check_assembly_version(genome_metadata: dict[str, Any]) -> None:
             raise ValueError(f"Assembly version is not an integer in {assembly}") from exc
         logging.info(f"Assembly version [v{version}] obtained from assembly accession ({accession}).")
     else:
-        logging.info(f'Located version [v{assembly["version"]}] info from meta data.')
+        logging.info(f"Located version [v{assembly['version']}] info from meta data.")
 
 
 def check_genebuild_version(genome_metadata: dict[str, Any]) -> None:
-    """Updates the genebuild version (if not present) from the genebuild ID, removing the latter.
+    """Update the genebuild version (if not present) from the genebuild ID, removing the latter.
 
     Args:
         genome_metadata: Nested metadata key values from the core metadata table.
 
     Raises:
         ValueError: If there is no genebuild version or ID available.
+
     """
     try:
         genebuild = genome_metadata["genebuild"]
@@ -219,18 +219,18 @@ def check_genebuild_version(genome_metadata: dict[str, Any]) -> None:
         try:
             genebuild_id = genebuild["id"]
         except KeyError:
-            # pylint: disable=raise-missing-from
-            raise ValueError("No genebuild version or ID found")
+            raise ValueError("No genebuild version or ID found") from None
         genome_metadata["genebuild"]["version"] = str(genebuild_id)
     # Drop genebuild ID since there is a genebuild version
     genome_metadata["genebuild"].pop("id", None)
 
 
 def convert_dict(meta_dict: dict) -> dict:
-    """Converts text JSON to add type properties from string
+    """Convert text JSON to add type properties from string.
 
     Args:
         meta_dict: User meta dictionary with literal string typing to be converted.
+
     """
     new_dict = meta_dict.copy()
     for key, value in meta_dict.items():
@@ -244,11 +244,12 @@ def convert_dict(meta_dict: dict) -> dict:
 def metadata_dump_setup(
     db_url: URL, input_filter: StrPath | None, meta_update: bool, append_db: bool
 ) -> dict[str, Any]:
-    """Setup main stages of genome meta dump from user input arguments provided.
+    """Prepare main stages of genome meta dump from user input arguments provided.
+
     Args:
         db_url: Target core database URL.
         input_filter: Input JSON containing subset of meta table values to filter on.
-        no_update: Deactivate additional meta updating.
+        meta_update: Activate additional meta updating.
         append_db: Append target core database name to output JSON.
 
     """
@@ -264,9 +265,7 @@ def metadata_dump_setup(
 
     with dbc.session_scope() as session:
         genome_meta = get_genome_metadata(session, db_name)
-        genome_meta = filter_genome_meta(genome_meta, meta_filter, meta_update)
-
-    return genome_meta
+        return filter_genome_meta(genome_meta, meta_filter, meta_update)
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
@@ -293,10 +292,11 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 
 def main(arg_list: list[str] | None = None) -> None:
-    """Main script entry-point.
+    """Execute the main function.
 
     Args:
         arg_list: Arguments to parse passing list to parse_args().
+
     """
     args = parse_args(arg_list)
     init_logging_with_args(args)

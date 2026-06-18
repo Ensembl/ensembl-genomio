@@ -16,8 +16,8 @@
 
 __all__ = [
     "extract_assembly_metadata",
-    "fetch_datasets_reports",
     "fetch_accessions_from_core_dbs",
+    "fetch_datasets_reports",
     "generate_report_tsv",
     "get_assembly_accessions",
     "singularity_image_setter",
@@ -67,7 +67,7 @@ class ReportStructure:
     assembly_notes: str = "NA"
 
     def to_dict(self) -> dict[str, str]:
-        """Returns a dictionary representation of this object."""
+        """Return a dictionary representation of this object."""
         return {
             "Species Name": self.species_name,
             "Taxon ID": str(self.taxon_id),
@@ -82,17 +82,18 @@ class ReportStructure:
         }
 
     def header(self) -> list[str]:
-        """Returns the dictionary keys matching each of the properties of the report."""
+        """Return the dictionary keys matching each of the properties of the report."""
         return list(self.to_dict().keys())
 
     def values(self) -> list[str]:
-        """Returns the values of each of the properties of the report."""
+        """Return the values of each of the properties of the report."""
         return list(self.to_dict().values())
 
 
 def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str | None) -> Client:
-    """Parse ENV and User specified variables related to `datasets` singularity SIF
-    container and define version and location of container.
+    """Parse ENV and User specified variables related to `datasets` singularity SIF container.
+
+    This function defines the version and location of the container.
 
     Args:
         sif_cache_dir: Path to locate existing, or download new SIF container image.
@@ -100,8 +101,8 @@ def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str |
 
     Returns:
         `spython.main.client` instance of singularity container image housing `datasets`.
-    """
 
+    """
     # Set singularity cache dir from user defined path or use environment
     if sif_cache_dir and sif_cache_dir.is_dir():
         image_dl_path = sif_cache_dir
@@ -129,24 +130,23 @@ def singularity_image_setter(sif_cache_dir: Path | None, datasets_version: str |
         logging.info(f"Using user defined 'ncbi datasets' version '{container_url}'")
 
     # Pull or load pre-existing 'datasets' singularity container image.
-    datasets_image = Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
-
-    return datasets_image
+    return Client.pull(container_url, stream=False, pull_folder=image_dl_path, quiet=True)
 
 
 def get_assembly_accessions(src_file: StrPath) -> list[str]:
-    """Returns the list of assembly accessions found in the provided file.
+    """Return the list of assembly accessions found in the provided file.
 
     Args:
         src_file: Path to file with one line per INSDC assembly accession.
 
     Raises:
         UnsupportedFormatError: If an accession does not match the INSDC assembly accession format.
+
     """
     query_accessions: list[str] = []
     with Path(src_file).open(mode="r") as fin:
-        for line in fin.readlines():
-            line = line.strip()
+        for raw_line in fin:
+            line = raw_line.strip()
             match = re.match(r"^GC[AF]_[0-9]{9}\.[1-9][0-9]*$", line)
             if not match:
                 raise UnsupportedFormatError(f"Could not recognize GCA/GCF accession format: {line}")
@@ -165,14 +165,14 @@ def fetch_accessions_from_core_dbs(src_file: StrPath, server_url: URL) -> dict[s
 
     Returns:
         Dict of core database names (key) and their corresponding INSDC assembly accession (value).
-    """
 
+    """
     core_accn_meta = {}
     database_count = 0
     count_accn_found = 0
 
     with Path(src_file).open("r") as fin:
-        for line in fin.readlines():
+        for line in fin:
             core_db = line.strip()
             database_count += 1
             db_connection_url = server_url.set(database=core_db)
@@ -214,7 +214,7 @@ def fetch_datasets_reports(
         Dictionary of accession source and its associated assembly report.
 
     Raises:
-        ValueError: If result returned by `datasets` is not a string.
+        TypeError: If result returned by `datasets` is not a string.
         RuntimeError: If there was an error raised by `datasets`.
 
     """
@@ -236,12 +236,9 @@ def fetch_datasets_reports(
         ## Test what result we have obtained following execution of sif image and accession value
         # Returned a list, i.e. datasets returned a result to client.execute
         # Returned a str, i.e. no datasets result obtained exited with fatal error
-        if isinstance(raw_result, list):
-            result = raw_result[0]
-        else:
-            result = raw_result
+        result = raw_result[0] if isinstance(raw_result, list) else raw_result
         if not isinstance(result, str):
-            raise ValueError("Result obtained from datasets is not a string")
+            raise TypeError("Result obtained from datasets is not a string")
         if re.search("^FATAL", result):
             raise RuntimeError(f"Singularity image execution failed! -> '{result.strip()}'")
 
@@ -272,6 +269,7 @@ def extract_assembly_metadata(assembly_reports: dict[str, dict]) -> dict[str, Re
 
     Returns:
         Parsed assembly report meta (source, meta).
+
     """
     parsed_meta = {}
 
@@ -329,17 +327,18 @@ def generate_report_tsv(
         query_type: Type of query (either core databases or accessions).
         output_directory: Directory to store report TSV file.
         outfile_name: Name to give to the output TSV file.
+
     """
     tsv_outfile = Path(output_directory, f"{outfile_name}.tsv")
 
     header_list = next(iter(parsed_asm_reports.values())).header()
-    header_list = [query_type.capitalize().replace("_", " ")] + header_list
+    header_list = [query_type.capitalize().replace("_", " "), *header_list]
 
-    with open(tsv_outfile, "w+") as tsv_out:
+    with tsv_outfile.open("w+") as tsv_out:
         writer = csv.writer(tsv_out, delimiter="\t", lineterminator="\n")
         writer.writerow(header_list)
         for core, report_meta in parsed_asm_reports.items():
-            final_asm_report = [core] + report_meta.values()
+            final_asm_report = [core, *report_meta.values()]
             writer.writerow(final_asm_report)
 
 

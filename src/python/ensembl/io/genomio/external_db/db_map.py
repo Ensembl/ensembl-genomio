@@ -49,12 +49,12 @@ def get_external_db_map(map_file: Path) -> dict[str, str]:
     """
     db_map: dict[str, str] = {}
     with map_file.open("r") as map_fh:
-        for line in map_fh:
-            line = line.rstrip()
-            if line.startswith("#") or line.startswith(" ") or line == "":
+        for raw_line in map_fh:
+            line = raw_line.rstrip()
+            if line.startswith(("#", " ")) or line == "":
                 continue
             parts = line.split("\t")
-            if len(parts) < 2:
+            if len(parts) < 2:  # noqa: PLR2004
                 raise MapFormatError(f"External db file is not formatted correctly for: {line}")
             main_name, alt_name = parts[0:2]
             db_map[alt_name] = main_name

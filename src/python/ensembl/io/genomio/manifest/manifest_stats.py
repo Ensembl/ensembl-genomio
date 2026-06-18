@@ -37,7 +37,7 @@ StatsLengths: TypeAlias = dict[str, int]
 
 
 class InvalidIntegrityError(Exception):
-    """When a file integrity check fails"""
+    """When a file integrity check fails."""
 
 
 class ManifestStats:
@@ -83,6 +83,7 @@ class ManifestStats:
 
         Returns:
             Dict: Content of the manifest file.
+
         """
         manifest = Manifest(Path(manifest_path).parent)
         manifest_files = manifest.load()
@@ -102,7 +103,6 @@ class ManifestStats:
 
     def load_seq_regions(self) -> None:
         """Retrieve seq_regions lengths and circular information from the seq_region JSON file."""
-
         if "seq_region" not in self.manifest_files:
             return
         logging.info("Manifest contains seq_region JSON")
@@ -138,7 +138,7 @@ class ManifestStats:
         self.lengths["dna_sequences"] = self._get_fasta_lengths(self.manifest_files["fasta_dna"])
 
     def _get_fasta_lengths(self, fasta_path: StrPath, ignore_final_stops: bool = False) -> dict[str, int]:
-        """Returns every sequence ID and its length from a FASTA file (DNA or peptide).
+        """Return every sequence ID and its length from a FASTA file (DNA or peptide).
 
         An error will be added for every empty id, non-unique id or stop codon found in the FASTA file.
 
@@ -146,8 +146,10 @@ class ManifestStats:
             fasta_path: Path to FASTA file.
             ignore_final_stops: Do not include final stop in the total length.
 
-        """
+        Returns:
+            A dictionary mapping sequence IDs to their lengths.
 
+        """
         data = {}
         non_unique = {}
         non_unique_count = 0
@@ -168,9 +170,9 @@ class ManifestStats:
             # Store sequence id and length
             data[rec.id] = len(rec.seq)
             stops = rec.seq.count("*")
-            if stops >= 1 and not rec.seq.endswith("*"):
-                contains_stop_codon += 1
-            elif rec.seq.endswith("*") and not ignore_final_stops:
+            if (stops >= 1 and not rec.seq.endswith("*")) or (
+                rec.seq.endswith("*") and not ignore_final_stops
+            ):
                 contains_stop_codon += 1
 
         if empty_id_count > 0:
@@ -195,7 +197,7 @@ class ManifestStats:
         logging.info("Manifest contains functional annotation(s)")
 
         # Load the json file
-        with open(self.manifest_files["functional_annotation"]) as json_file:
+        with Path(self.manifest_files["functional_annotation"]).open() as json_file:
             data = json.load(json_file)
 
         # Get gene ids and translation ids
@@ -219,7 +221,9 @@ class ManifestStats:
         self.lengths = {**self.lengths, **stats}
 
     def load_gff3(self) -> None:
-        """A GFF3 parser is used to retrieve information in the GFF3 file such as
+        """Load a GFF3 file.
+
+        A GFF3 parser is used to retrieve information in the GFF3 file such as
         gene and CDS ids and their corresponding lengths.
         """
         if "gff3" not in self.manifest_files:
@@ -293,16 +297,17 @@ class ManifestStats:
                 pep_id = pep_id.replace("CDS:", "")
                 length.setdefault(pep_id, 0)
                 length[pep_id] += abs(feat3.location.end - feat3.location.start)
-            for pep_id, pep_length in length.items():
+            for pep_id, pep_nucleotide_length in length.items():
                 # Store length for translations, add pseudo translations separately
-                pep_length = floor(pep_length / 3) - 1
+                pep_length = floor(pep_nucleotide_length / 3) - 1
                 if feat.type != "pseudogene" and feat2.type in protein_transcripts:
                     peps[pep_id] = pep_length
                 all_peps[pep_id] = pep_length
 
     def load_agp_seq_regions(self, agp_dict: dict | None) -> None:
-        """AGP files describe the assembly of larger sequence objects using smaller objects.
+        """Load sequence regions from AGP files.
 
+        AGP files describe the assembly of larger sequence objects using smaller objects.
         E.g. describes the assembly of scaffolds from contigs.
 
         Args:
@@ -310,6 +315,7 @@ class ManifestStats:
 
         Note:
             AGP file is only used in the older builds, not used for current processing.
+
         """
         if not agp_dict:
             return
@@ -317,7 +323,7 @@ class ManifestStats:
 
         seqr: StatsLengths = {}
         for agp_path in agp_dict.values():
-            with open(agp_path, "r") as agph:
+            with Path(agp_path).open() as agph:
                 for line in agph:
                     (
                         asm_id,
@@ -369,6 +375,7 @@ class ManifestStats:
 
         Raises:
             KeyError: If the name is not supported.
+
         """
         try:
             return bool(self.lengths[name])
@@ -376,13 +383,14 @@ class ManifestStats:
             raise KeyError(f"There is no length record for {name}") from err
 
     def get_lengths(self, name: str) -> dict[str, Any]:
-        """Returns a dict associating IDs with their length from a given file name.
+        """Return a dict associating IDs with their length from a given file name.
 
         Args:
             name: Name for the lengths to get.
 
         Raises:
             KeyError: If the name is not supported.
+
         """
         try:
             return self.lengths[name]
@@ -390,15 +398,16 @@ class ManifestStats:
             raise KeyError(f"There is no length record for {name}") from err
 
     def get_circular(self, name: str) -> dict[str, Any]:
-        """Returns a dict associating IDs with their is_circular flag from a given file name.
+        """Return a dict associating IDs with their is_circular flag from a given file name.
 
         Args:
             name: Name for the circular data to get.
 
         Raises:
             KeyError: If the name is not supported.
+
         """
         try:
             return self.circular[name]
         except KeyError as err:
-            raise KeyError(f"No length available for key {name}") from err
+            raise KeyError(f"No circular data available for key {name}") from err
