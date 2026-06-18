@@ -212,9 +212,7 @@ def test_singularity_image_setter(
         expected_cache_path = Path()
     # Get expected container URL used to pull the container
     expected_container_url = (
-        datasets_version
-        if datasets_version
-        else DATASETS_SINGULARITY["datasets_version_url"]
+        datasets_version if datasets_version else DATASETS_SINGULARITY["datasets_version_url"]
     )
     # Patch the environment variables
     new_env = {}

@@ -26,6 +26,7 @@ import ensembl.io.genomio
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
 
+
 class DownloadError(Exception):
     """In case a download failed."""
 
@@ -69,9 +70,7 @@ def download_genbank(accession: str, output_file: PathLike) -> None:
             gbff.write(response.content)
 
     except requests.exceptions.RequestException as exc:
-        raise DownloadError(
-            f"Could not download the GenBank file for {accession}"
-        ) from exc
+        raise DownloadError(f"Could not download the GenBank file for {accession}") from exc
 
     logging.info(f"GenBank file written to {output_file}")
 
