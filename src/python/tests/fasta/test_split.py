@@ -217,17 +217,13 @@ class TestOutputWriter:
         """
         monkeypatch.setattr("pathlib.Path.open", force_open_failure_for_suffix(suffix))
 
-        def create_and_close() -> None:
-            writer = split.OutputWriter(
+        with pytest.raises(RuntimeError, match=rf"{exc_msg}"):
+            split.OutputWriter(
                 fasta_file=Path("in.fa"),
                 out_dir=tmp_path,
                 write_agp=write_agp,
                 unique_file_names=False,
             )
-            writer.close()
-
-        with pytest.raises(RuntimeError, match=rf"{exc_msg}"):
-            create_and_close()
 
     def test_create_agp_file_no_path(self, tmp_path: Path) -> None:
         """Test the `_create_agp_file()` method when the AGP path is not set.
