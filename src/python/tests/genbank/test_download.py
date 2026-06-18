@@ -23,10 +23,10 @@ Typical usage example::
 """
 
 from pathlib import Path
-from requests.exceptions import HTTPError
 from unittest.mock import Mock, patch
 
 import pytest
+from requests.exceptions import HTTPError
 
 from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
 
