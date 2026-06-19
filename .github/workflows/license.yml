@@ -21,6 +21,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   license_check:
     name: Check missing license headers
