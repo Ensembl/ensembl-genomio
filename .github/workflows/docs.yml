@@ -1,0 +1,96 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Deploy versioned documentation
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version to use
+        required: true
+        type: string
+      tag:
+        description: Release tag to deploy
+        required: true
+        type: string
+
+  workflow_dispatch:
+    inputs:
+      python-version:
+        description: Python version to use
+        required: true
+        type: string
+      tag:
+        description: Release tag to deploy
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/python_build
+        with:
+          python-version: ${{ inputs.python-version }}
+          tags: "[cicd,docs]"
+
+      - name: Generate coverage report
+        run: make coverage
+
+      - name: Build docs
+        run: make docs
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@v7.0.0
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Update switcher.json
+        run: |
+          if [ ! -f "gh-pages/switcher.json" ]; then
+            cp "docs/_build/html/_static/switcher.json" "gh-pages/switcher.json"
+          fi
+          python docs/_scripts/update_switcher.py \
+            --version "${{ inputs.tag }}" \
+            --switcher "gh-pages/switcher.json"
+
+      - name: Copy docs and push
+        run: |
+          cd gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Copy built docs into versioned and latest directories
+          rsync -a --delete ../docs/_build/html/ ./${{ inputs.tag }}/
+          rsync -a --delete ../docs/_build/html/ ./latest/
+          # Ensure Jekyll is disabled
+          touch .nojekyll
+          # Redirect base GitHub Pages URL to latest version
+          echo '<meta http-equiv="refresh" content="0; url=latest/">' > ./index.html
+          git add -f .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Deploy docs for ${{ inputs.tag }}"
+            git push
+          fi

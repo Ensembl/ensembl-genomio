@@ -17,33 +17,19 @@ name: Upload Python package to PyPI when a release is created
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 defaults:
   run:
     working-directory: ./
 
-env:
-  PYTHON_VERSION: "3.10"
-
 jobs:
-  mkdocs:
-    name: Deploy documentation to GitHub Pages
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/python_build
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          tags: "[docs]"
-
-      - name: Run mkdocs
-        run: |
-          mkdocs gh-deploy --force
+  docs:
+    name: Deploy release documentation to GitHub Pages
+    uses: ./.github/workflows/docs.yml
+    with:
+      python-version: "3.10"
+      tag: ${{ github.event.release.tag_name }}
 
   pypi-publish:
     name: Publish release to PyPI
@@ -53,13 +39,14 @@ jobs:
       url: https://pypi.org/p/ensembl-genomio
     permissions:
       id-token: write
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
       - uses: ./.github/actions/python_build
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.10"
           tags: "[build]"
 
       - name: Build package
@@ -67,4 +54,4 @@ jobs:
           python -m build
 
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0

@@ -44,7 +44,7 @@ _FORMAT_CONFIG = {
 }
 
 
-# Add GitLab's "!reference" and mkdocs's "!ENV" tags to yaml.Loader class
+# Add GitLab's "!reference" tag to yaml.Loader class
 def yaml_tag_constructor(loader, node):
     """Default constructor to get the value of new YAML tags."""
     seq = loader.construct_sequence(node)
@@ -52,7 +52,6 @@ def yaml_tag_constructor(loader, node):
 
 
 yaml.Loader.add_constructor("!reference", yaml_tag_constructor)
-yaml.Loader.add_constructor("!ENV", yaml_tag_constructor)
 
 
 def check_flatfile(file_format: str) -> None:

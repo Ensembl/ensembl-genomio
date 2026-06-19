@@ -30,20 +30,24 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
       - name: Update NOTICE file
         run: |
           sed -i "s/$(date +%Y --date='1 year ago')/$(date +%Y)/" NOTICE
 
-      - uses: EndBug/add-and-commit@v9
-        with:
-          new_branch: ${{ env.branch_name }}
-          add: 'NOTICE'
-          message: 'Update NOTICE copyright year'
-
-      - name: Create pull request
+      - name: Commit changes and create pull request
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr create -B main -H $branch_name --title 'Update NOTICE copyright year' --body 'Created by GitHub action'
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${{ env.branch_name }}"
+          git add NOTICE
+          git commit -m "Update NOTICE copyright year"
+          git push origin "${{ env.branch_name }}"
+          gh pr create \
+            -B main \
+            -H "${{ env.branch_name }}" \
+            --title "Update NOTICE copyright year" \
+            --body "Created by GitHub Actions pipeline"
