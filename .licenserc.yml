@@ -19,12 +19,15 @@ header:
   paths-ignore:
     - '**/*.md'
     - '**/*.json'
+    - '**/*.ignore'
     - 'config/**/*'
     - 'containers/**/*'
     - 'data/test/**/*'
+    - 'src/python/ensembl/io/genomio/data/**/*.txt'
     - 'src/python/tests/**/test_*/**/*'
     - '.gitignore'
     - 'LICENSE'
+    - 'MANIFEST.in'
     - 'NOTICE'
 
   comment: on-failure
