@@ -1,0 +1,107 @@
+/* See the NOTICE file distributed with this work for additional information
+  regarding copyright ownership.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Lato&family=IBM+Plex+Mono&display=swap');
+
+/* Fonts */
+:root {
+    --pst-font-family-base: 'Lato', sans-serif;
+    --pst-font-family-monospace: 'IBM Plex Mono', monospace;
+}
+
+/* Brand colours — light mode */
+html[data-theme="light"] {
+    --pst-color-primary: #070707;
+    --pst-color-secondary: #b9d9f1;
+    --pst-color-link: #0099ff;
+    --pst-color-link-hover: #007acc;
+    --pst-color-navbar-link: #ffffff;
+    --pst-color-navbar-link-hover: #0099ff;
+    --pst-color-accent: #007acc;
+}
+
+/* Brand colours — dark mode */
+html[data-theme="dark"] {
+    --pst-color-primary: #070707;
+    --pst-color-secondary: #b9d9f1;
+    --pst-color-link: #0099ff;
+    --pst-color-link-hover: #007acc;
+    --pst-color-navbar-link: #ffffff;
+    --pst-color-navbar-link-hover: #0099ff;
+    --pst-color-accent: #007acc;
+}
+
+/* Main navbar background colour */
+.bd-header {
+    background-color: #1b2c39 !important;
+}
+
+/* Navbar brand link colour on hover */
+.bd-header .navbar-nav .navbar-brand .nav-link:hover {
+    color: #0099ff !important;
+}
+
+/* Force white text on all navbar elements */
+.bd-header .navbar-brand,
+.bd-header .navbar-brand:hover,
+.bd-header .version-switcher__button,
+.bd-header .version-switcher__button:hover,
+.bd-header .version-switcher__button:focus,
+.bd-header .navbar-nav .nav-link,
+.bd-header .navbar-nav .nav-link:hover,
+.bd-header .navbar-item,
+.bd-header span,
+.bd-header p {
+    color: #ffffff !important;
+}
+
+/* Tweak version dropdown items */
+.version-switcher__menu .list-group-item {
+    background-color: #1b2c39 !important;
+}
+
+.version-switcher__menu .list-group-item.active,
+.version-switcher__menu .list-group-item:active {
+    background-color: #1b2c39 !important;
+    border-color: #3b4c59 !important;
+    color: #ffffff !important;
+    box-shadow: inset 3px 0 0 #b9d9f1 !important;
+}
+
+.version-switcher__menu .list-group-item:hover {
+    background-color: #2b3c49 !important;
+    color: #b9d9f1 !important;
+}
+
+/* Tweak search field */
+.search-button-field {
+    background-color: #1b2c39 !important;
+    border: 1px solid #b9d9f1 !important;
+    color: #ffffff !important;
+}
+
+.search-button-field:hover {
+    box-shadow: 0 0 0 2px #b9d9f1 !important;
+}
+
+/* Tweak the article content to take up more width than its default */
+.bd-main .bd-content .bd-article-container {
+  max-width: 95%;
+}
+
+.bd-page-width {
+  max-width: 95%;
+}

@@ -11,7 +11,6 @@ This is a multilanguage (Perl, Python) repo providing eHive pipelines and variou
 
 Bundles themselves consist of genomic data in various formats (e.g. fasta, gff3, json) and should follow the corresponding [specification](https://github.com/Ensembl/ensembl-genomio/blob/main/docs/BRC4_genome_loader.md#input-data).
 
-
 ## Installation and configuration
 
 This repository is publicly available in [PyPI](https://pypi.org), so it can be easily installed with your preferred Python package manager, e.g.:
@@ -27,32 +26,37 @@ Pipelines are intended to be run inside the Ensembl production environment. Plea
 ### Get repo and install
 
 Clone:
-```
+
+```bash
 git clone git@github.com:Ensembl/ensembl-genomio.git
 ```
 
 Install the python part (of the pipelines) and test it:
-```
+
+```bash
 pip install ./ensembl-genomio
 # And test it has been installed correctly
 python -c 'import ensembl.io.genomio'
 ```
 
-Update your perl envs (if you need to)
-```
+Update your perl envs (if you need to):
+
+```bash
 export PERL5LIB=$(pwd)/ensembl-genomio/src/perl:$PERL5LIB
 export PATH=$(pwd)/ensembl-genomio/scripts:$PATH
 ```
 
 ### Optional installation
 
-If you need to install "editable" Python package use '-e' option
-```
+If you need to install "editable" Python package use '-e' option:
+
+```bash
 pip install -e ./ensembl-genomio
 ```
 
 To install additional dependencies (e.g. `[docs]` or `[cicd]`) provide `[<tag>]` string, e.g.:
-```
+
+```bash
 pip install -e ./ensembl-genomio[cicd]
 ```
 
@@ -62,13 +66,13 @@ For the list of tags see `[project.optional-dependencies]` in [pyproject.toml](h
 
 - Install python part with the `[docs]` tag
 - Change into repo dir
-- Run `mkdocs build` command
+- Run `make docs` command
 
-```
+```bash
 git clone git@github.com:Ensembl/ensembl-genomio.git
 cd ./ensembl-genomio
 pip install -e .[docs]
-mkdocs build
+make docs
 ```
 
 ###  Nextflow installation
@@ -88,7 +92,7 @@ And the same perl class prefix used for every pipeline:
 
 N.B. Don't forget to specify `-reg_file` option for the `beekeeper.pl -url $url -reg_file $REG_FILE -loop` command.
 
-```
+```bash
 init_pipeline.pl Bio::EnsEMBL::Pipeline::PipeConfig::BRC4_genome_loader_conf
     $($CMD details script) \
     -hive_force_init 1\
@@ -132,10 +136,9 @@ $LOOP_CMD 2> $OUT_DIR/loop.stderr 1> $OUT_DIR/loop.stdout
 | LoadGFF3 | | | | |
 | LoadGFF3Batch | | | | |
 
-
 ### Scripts
 
-* [trf_split_run.bash](https://github.com/Ensembl/ensembl-genomio/blob/main/scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [docs](https://github.com/Ensembl/ensembl-genomio/blob/main/docs/trf_split_run.md))
+- [trf_split_run.bash](https://github.com/Ensembl/ensembl-genomio/blob/main/scripts/trf_split_run.bash) -- a trf wrapper with chunking support to be used with [ensembl-production-imported DNAFeatures pipeline](https://github.com/Ensembl/ensembl-production-imported/tree/main/src/perl/Bio/EnsEMBL/EGPipeline/PipeConfig/DNAFeatures_conf.pm) (see [docs](https://github.com/Ensembl/ensembl-genomio/blob/main/docs/trf_split_run.md))
 
 ## CI/CD bits
 
@@ -150,18 +153,20 @@ See [docs](https://github.com/Ensembl/ensembl-genomio/blob/main/docs)
 The Python part of the codebase has now unit tests available to test each module. Make sure you have installed this repository's `[cicd]` dependencies (via `pip install ensembl-genomio[cicd]`) before continuing.
 
 Running all the tests in one go is as easy as running `pytest` **from the root of the repository**. If you also want to measure, collect and report the code coverage, you can do:
+
 ```bash
 coverage run -m pytest
 coverage report
 ```
 
 You can also run specific tests by supplying the path to the specific test file/subfolder, e.g.:
+
 ```bash
 pytest lib/python/tests/test_schema.py
 ```
 
 ## Acknowledgements
 
-Some of this code and documentation is inherited from the [EnsemblGenomes](https://github.com/EnsemblGenomes) and other [Ensembl](https://github.com/Ensembl) projects. We appreciate the effort and time spent by developers of the [EnsemblGenomes](https://github.com/EnsemblGenomes) and [Ensembl](https://github.com/Ensembl) projects. 
+Some of this code and documentation is inherited from the [EnsemblGenomes](https://github.com/EnsemblGenomes) and other [Ensembl](https://github.com/Ensembl) projects. We appreciate the effort and time spent by developers of the [EnsemblGenomes](https://github.com/EnsemblGenomes) and [Ensembl](https://github.com/Ensembl) projects.
 
 Thank you!

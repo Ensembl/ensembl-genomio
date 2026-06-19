@@ -21,7 +21,7 @@ dynamic = [
     "version",
 ]
 requires-python = ">= 3.10"
-description = "Ensembl GenomIO -- pipelines to convert basic genomic data into Ensembl cores and back to flatfile"
+description = "Ensembl GenomIO -- turn basic genomic data into formatted Ensembl core databases"
 readme = "README.md"
 authors = [
     {name = "Ensembl", email = "dev@ensembl.org"},
@@ -45,6 +45,9 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -59,6 +62,7 @@ dependencies = [
     "python-redmine >= 2.3.0",
     "requests >= 2.28.0",
     "spython >= 0.3.13",
+    "sqlalchemy >= 1.4.45",
 ]
 
 [project.optional-dependencies]
@@ -84,15 +88,11 @@ cicd = [
     "types-requests",
 ]
 docs = [
-    "mkdocs >= 1.5.3",
-    "mkdocs-autorefs",
-    "mkdocs-gen-files",
-    "mkdocs-literate-nav",
-    "mkdocs-material",
-    "mkdocs-material-extensions",
-    "mkdocs-section-index",
-    "mkdocstrings",
-    "mkdocstrings-python",
+    "myst-parser",
+    "pydata-sphinx-theme",
+    "sphinx >= 7",
+    "sphinx-autodoc-typehints",
+    "sphinx-copybutton",
 ]
 # Database dependencies
 mysql = [
