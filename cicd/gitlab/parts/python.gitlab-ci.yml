@@ -134,12 +134,5 @@ python:coverage:
     - job: python:pytest
       artifacts: true
   script:
-    - coverage html -d $RUN_DIR/coverage
-    - coverage xml -o $RUN_DIR/coverage.xml
-    - genbadge coverage -i $RUN_DIR/coverage.xml -o $RUN_DIR/coverage/coverage-badge.svg
     - coverage report
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
-  artifacts:
-    when: always
-    paths:
-      - $RUN_DIR/coverage
