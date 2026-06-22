@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
+from datetime import datetime, UTC
 import os
 from pathlib import Path
 import sys
@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "python"))
 # Project information
 project = "ensembl-genomio"
 author = "EMBL-European Bioinformatics Institute"
-copyright = f"2016-{datetime.now().year}, EMBL-European Bioinformatics Institute"
+copyright = f"2016-{datetime.now(tz=UTC).year}, EMBL-European Bioinformatics Institute"  # noqa: A001
 
 # General configuration
 extensions = [
