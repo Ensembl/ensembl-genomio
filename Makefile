@@ -17,7 +17,7 @@
 
 apidoc:
 	sphinx-apidoc -o docs/reference/ src/python/ensembl --force --module-first --no-toc --implicit-namespaces
-	rm -f docs/reference/ensembl.rst
+	rm -f docs/reference/ensembl.rst docs/reference/ensembl.io.rst docs/reference/ensembl.brc4*.rst
 
 docs: apidoc
 	sphinx-build -b html docs/ docs/_build/html
