@@ -630,6 +630,7 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
 
     Coordinates are converted from TRF's sequence-relative coordinates to genomic
     coordinates if the header provides a window like:
+
         Sequence: NC_135497.1:379500001-380000000
 
     Returns:
