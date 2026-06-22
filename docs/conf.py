@@ -20,6 +20,7 @@ import sys
 
 import ensembl.utils
 
+sys.path.insert(0, str(Path(__file__).parent / "_ext"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "python"))
 
 # Project information
@@ -37,6 +38,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
+    "entrypoints_table",
 ]
 language = "en"
 

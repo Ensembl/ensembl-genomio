@@ -93,6 +93,7 @@ docs = [
     "sphinx >= 7",
     "sphinx-autodoc-typehints",
     "sphinx-copybutton",
+    "tomli; python_version < '3.11'",
 ]
 # Database dependencies
 mysql = [
