@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 import sys
 
-import ensembl.utils
+import ensembl.io.genomio
 
 sys.path.insert(0, str(Path(__file__).parent / "_ext"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "python"))
@@ -82,7 +82,7 @@ html_js_files = [
 ]
 
 # Define the version and json_url for the version switcher
-release = ensembl.utils.__version__
+release = ensembl.io.genomio.__version__
 version_match = f"v{release}"
 if os.environ.get("READTHEDOCS") or os.environ.get("CI"):
     json_url = "https://ensembl.github.io/ensembl-genomio/switcher.json"
