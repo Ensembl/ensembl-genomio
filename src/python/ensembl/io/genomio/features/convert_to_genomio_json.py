@@ -925,7 +925,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     _add_repeatmasker_common_args(repbase_parser)
     repbase_parser.set_defaults(
-        analysis_logic_name="repeatmask_rmlib",
+        analysis_logic_name="repeatmask_repbase",
         analysis_display_label="Repeats: Repbase",
         analysis_description=(
             'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>, '

@@ -1281,7 +1281,7 @@ def test_parse_args(data_dir: Path, tmp_path: Path, use_repeatmodeler_lib: bool)
 
     if use_repeatmodeler_lib:
         assert args.program_version == "4.1.7"
-        assert args.analysis_logic_name == "repeatmask_rmlib"
+        assert args.analysis_logic_name == "repeatmask_repbase"
         assert args.analysis_display_label == "Repeats: Repbase"
         assert args.analysis_description == (
             'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
@@ -1385,7 +1385,7 @@ def test_main_passes_expected_arguments(
             "input_path": input_path,
             "repeatmasker_consensus_lib_path": consensus_lib,
             "output_path": output_path,
-            "analysis_logic_name": "repeatmask_rmlib",
+            "analysis_logic_name": "repeatmask_repbase",
             "analysis_display_label": "Repeats: Repbase",
             "analysis_description": (
                 'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
