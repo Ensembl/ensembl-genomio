@@ -43,14 +43,33 @@ use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 
 use base ('Bio::EnsEMBL::Pipeline::Runnable::EG::LoadGFF3::Base');
 
+sub param_defaults {
+  my ($self) = @_;
+
+  return {
+    %{$self->SUPER::param_defaults},
+
+    # Not running shift base model correction if skip_fix_models set:
+    #   don't try to shift translation start up to +-2bp
+    #   don't try to move models up to -25 bp
+    #   doesn't affect proteing coding biotype updates
+    skip_fix_models => 1,
+  };
+}
+
 sub run {
   my ($self) = @_;
   my $logic_name         = $self->param_required('logic_name');
   my $protein_fasta_file = $self->param_required('protein_fasta_file');
+  my $skip_fix_models = $self->param('skip_fix_models');
 
   my $dba = $self->get_type_dba();
   
-  $self->fix_models($dba, $logic_name, $protein_fasta_file);
+  if ($skip_fix_models) {
+    $self->log_warning('WARNING: Not running shift based model correction: to run, set skip_fix_models to 0');
+  } else {
+    $self->fix_models($dba, $logic_name, $protein_fasta_file);
+  }
   
   $self->set_protein_coding($dba, $logic_name);
 
