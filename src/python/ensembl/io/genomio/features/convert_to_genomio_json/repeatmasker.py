@@ -327,10 +327,3 @@ def parse_repeatmasker_output(
         raise ValueError(format_parse_errors("RepeatMasker output", input_path, errors))
 
     return features, consensuses_by_key
-
-
-_map_repeatmasker_repeat_consensus_type = map_repeatmasker_repeat_consensus_type
-_parse_repeatmasker_consensus_library = parse_repeatmasker_consensus_library
-_parse_repeatmasker_repeat_class_field = parse_repeatmasker_repeat_class_field
-_parse_repeatmasker_strand_coordinates = parse_repeatmasker_strand_coordinates
-_parse_repeatmasker_row = parse_repeatmasker_row

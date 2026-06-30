@@ -319,9 +319,3 @@ def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]
         raise ValueError(format_parse_errors("TRF output", input_path, errors))
 
     return features, consensuses_by_key
-
-
-_parse_trf_sequence_header = parse_trf_sequence_header
-_parse_trf_parameters = parse_trf_parameters
-_missing_trf_sequence_error = missing_trf_sequence_error
-_parse_trf_data_row = parse_trf_data_row
