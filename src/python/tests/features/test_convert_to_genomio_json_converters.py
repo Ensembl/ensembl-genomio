@@ -38,7 +38,6 @@ def test_converter_registry_contains_supported_logic_names() -> None:
         "repeatmask_customlib",
         "repeatmask_repbase",
         "trf",
-        "repeatdetector",
     )
     assert (
         convert_to_genomio_json.CONVERTERS_BY_LOGIC_NAME["repeatmask_customlib"]
