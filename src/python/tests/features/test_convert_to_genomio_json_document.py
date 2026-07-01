@@ -23,15 +23,17 @@ import pytest
 from ensembl.io.genomio.features import convert_to_genomio_json
 
 
-@patch("ensembl.io.genomio.features.convert_to_genomio_json.document.parse_repeatmasker_output")
+@patch(
+    "ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.RepeatMaskerCustomConverter.parse_features"
+)
 def test_create_genomio_json_uses_repeatmasker_parser_output(
-    mock_parse_repeatmasker_output: Mock,
+    mock_parse_features: Mock,
     tmp_path: Path,
 ) -> None:
     """Test JSON creation assembles mocked RepeatMasker parser output.
 
     Args:
-        mock_parse_repeatmasker_output: Mock for ``convert_to_genomio_json.parse_repeatmasker_output()``.
+        mock_parse_features: Mock for ``RepeatMaskerCustomConverter.parse_features()``.
         tmp_path: Temporary directory provided by pytest.
 
     """
@@ -58,7 +60,7 @@ def test_create_genomio_json_uses_repeatmasker_parser_output(
         repeat_type="Type I Transposons/SINE",
         seq="acgt",
     )
-    mock_parse_repeatmasker_output.return_value = (expected_features, {"consensus-key": expected_consensus})
+    mock_parse_features.return_value = (expected_features, {"consensus-key": expected_consensus})
 
     convert_to_genomio_json.create_genomio_json(
         input_path=input_path,
@@ -74,7 +76,10 @@ def test_create_genomio_json_uses_repeatmasker_parser_output(
         is_primary=False,
     )
 
-    mock_parse_repeatmasker_output.assert_called_once_with(input_path, consensus_lib)
+    mock_parse_features.assert_called_once_with(
+        input_path,
+        convert_to_genomio_json.ConverterOptions(repeatmasker_consensus_lib_path=consensus_lib),
+    )
 
     doc = json.loads(output_path.read_text(encoding="utf-8"))
 
@@ -99,15 +104,15 @@ def test_create_genomio_json_uses_repeatmasker_parser_output(
     ]
 
 
-@patch("ensembl.io.genomio.features.convert_to_genomio_json.document.parse_trf_output")
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.trf.TrfConverter.parse_features")
 def test_create_genomio_json_uses_trf_parser_output(
-    mock_parse_trf_output: Mock,
+    mock_parse_features: Mock,
     tmp_path: Path,
 ) -> None:
     """Test JSON creation assembles mocked TRF parser output.
 
     Args:
-        mock_parse_trf_output: Mock for ``convert_to_genomio_json.parse_trf_output()``.
+        mock_parse_features: Mock for ``TrfConverter.parse_features()``.
         tmp_path: Temporary directory provided by pytest.
 
     """
@@ -133,7 +138,7 @@ def test_create_genomio_json_uses_trf_parser_output(
         repeat_type="Tandem repeats",
         seq="AT",
     )
-    mock_parse_trf_output.return_value = (expected_features, {"trf-key": expected_consensus})
+    mock_parse_features.return_value = (expected_features, {"trf-key": expected_consensus})
 
     convert_to_genomio_json.create_genomio_json(
         input_path=input_path,
@@ -149,7 +154,7 @@ def test_create_genomio_json_uses_trf_parser_output(
         is_primary=False,
     )
 
-    mock_parse_trf_output.assert_called_once_with(input_path)
+    mock_parse_features.assert_called_once_with(input_path, convert_to_genomio_json.ConverterOptions())
 
     doc = json.loads(output_path.read_text(encoding="utf-8"))
 
@@ -196,22 +201,24 @@ def test_create_genomio_json_rejects_unsupported_logic_name(
         )
 
 
-@patch("ensembl.io.genomio.features.convert_to_genomio_json.document.parse_repeatmasker_output")
+@patch(
+    "ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.RepeatMaskerCustomConverter.parse_features"
+)
 def test_create_genomio_json_omits_program_parameters_when_none(
-    mock_parse_repeatmasker_output: Mock,
+    mock_parse_features: Mock,
     tmp_path: Path,
 ) -> None:
     """Test that program parameters are omitted when no value is provided.
 
     Args:
-        mock_parse_repeatmasker_output: Mock for ``convert_to_genomio_json.parse_repeatmasker_output()``.
+        mock_parse_features: Mock for ``RepeatMaskerCustomConverter.parse_features()``.
         tmp_path: Temporary directory provided by pytest.
 
     """
     input_path = tmp_path / "input.out"
     input_path.write_text("parser input", encoding="utf-8")
     output_path = tmp_path / "out.json"
-    mock_parse_repeatmasker_output.return_value = ([], {})
+    mock_parse_features.return_value = ([], {})
 
     convert_to_genomio_json.create_genomio_json(
         input_path=input_path,

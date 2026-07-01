@@ -14,6 +14,7 @@
 # limitations under the License.
 """Parse RepeatMasker output into GenomIO repeat feature records."""
 
+import argparse
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -26,7 +27,14 @@ from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     has_valid_parsed_coordinates,
     parse_token,
 )
+from ensembl.io.genomio.features.convert_to_genomio_json.converters import (
+    ConverterOptions,
+    FeatureConverter,
+    ParseFeaturesResult,
+    _add_common_arguments,
+)
 from ensembl.utils.archive import open_gz_file
+from ensembl.utils.argparse import ArgumentParser
 
 REPEATMASKER_MAPPINGS = [
     (r"^Low_Comp.*$", "Low complexity regions"),
@@ -51,7 +59,10 @@ REPEATMASKER_MAPPINGS = [
 REPEATMASKER_COMPILED_MAPPINGS = [(re.compile(pattern), mapped) for pattern, mapped in REPEATMASKER_MAPPINGS]
 
 __all__ = [
+    "RepeatMaskerConverter",
+    "RepeatMaskerCustomConverter",
     "RepeatMaskerParsedRow",
+    "RepeatMaskerRepbaseConverter",
     "map_repeatmasker_repeat_consensus_type",
     "parse_repeatmasker_consensus_library",
     "parse_repeatmasker_output",
@@ -59,6 +70,92 @@ __all__ = [
     "parse_repeatmasker_row",
     "parse_repeatmasker_strand_coordinates",
 ]
+
+
+def _add_repeatmasker_common_args(subparser: ArgumentParser) -> None:
+    """Add arguments shared by RepeatMasker subcommands."""
+    _add_common_arguments(subparser)
+    subparser.add_argument_src_path(
+        "--consensus-lib",
+        metavar="RM_LIB",
+        default=argparse.SUPPRESS,
+        help="FASTA file containing consensus sequences for the RepeatMasker library used.",
+    )
+
+
+class RepeatMaskerCustomConverter(FeatureConverter):
+    """Converter for RepeatMasker output generated with a custom library."""
+
+    analysis_logic_name = "repeatmask_customlib"
+
+    @classmethod
+    def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
+        """Add the custom-library RepeatMasker mode parser."""
+        custom_parser = subparsers.add_parser(
+            "custom",
+            help="Convert RepeatMasker output generated using a custom library.",
+        )
+        _add_repeatmasker_common_args(custom_parser)
+        custom_parser.set_defaults(
+            analysis_logic_name=cls.analysis_logic_name,
+            analysis_display_label="Repeats: Custom library",
+            analysis_description=(
+                'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>,'
+                " using a custom library of <em>ab initio</em> repeat profiles for this species."
+            ),
+        )
+
+    @classmethod
+    def parse_features(
+        cls,
+        input_path: Path,
+        options: ConverterOptions | None = None,
+    ) -> ParseFeaturesResult:
+        """Parse custom-library RepeatMasker output."""
+        options = options or ConverterOptions()
+        return parse_repeatmasker_output(input_path, options.repeatmasker_consensus_lib_path)
+
+
+class RepeatMaskerRepbaseConverter(RepeatMaskerCustomConverter):
+    """Converter for RepeatMasker output generated with Repbase."""
+
+    analysis_logic_name = "repeatmask_repbase"
+
+    @classmethod
+    def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
+        """Add the Repbase RepeatMasker mode parser."""
+        repbase_parser = subparsers.add_parser(
+            "repbase",
+            help="Convert RepeatMasker output geneterated using Repbase.",
+        )
+        _add_repeatmasker_common_args(repbase_parser)
+        repbase_parser.set_defaults(
+            analysis_logic_name=cls.analysis_logic_name,
+            analysis_display_label="Repeats: Repbase",
+            analysis_description=(
+                'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>,'
+                ' using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of '
+                "repeat profiles."
+            ),
+        )
+
+
+class RepeatMaskerConverter:
+    """Top-level RepeatMasker CLI converter."""
+
+    command = "repeatmasker"
+
+    @classmethod
+    def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
+        """Add the RepeatMasker subcommand parser."""
+        repeatmasker_parser = subparsers.add_parser(
+            cls.command,
+            help="Convert RepeatMasker output to GenomIO JSON.",
+        )
+        repeatmasker_parser.set_defaults(program="RepeatMasker")
+        repeatmasker_subparsers = repeatmasker_parser.add_subparsers(dest="repeatmasker_mode", required=True)
+        RepeatMaskerCustomConverter.add_parser(repeatmasker_subparsers)
+        RepeatMaskerRepbaseConverter.add_parser(repeatmasker_subparsers)
 
 
 @dataclass(frozen=True)
@@ -261,9 +358,7 @@ def parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRow
     )
 
 
-def parse_repeatmasker_output(
-    input_path: Path, consensus_lib_path: Path | None
-) -> tuple[list[dict], dict[str, Consensus]]:
+def parse_repeatmasker_output(input_path: Path, consensus_lib_path: Path | None) -> ParseFeaturesResult:
     """Parse a RepeatMasker .out file into repeat feature dictionaries and consensus records.
 
     If a RepeatMasker consensus library FASTA file is provided, consensus sequences will be

@@ -108,3 +108,44 @@ def test_parse_args(
         assert args.is_primary is False
         assert not hasattr(args, "consensus_lib")
         assert not hasattr(args, "program_parameters")
+
+
+def test_parse_args_trf(convert_to_genomio_json_data_dir: Path, tmp_path: Path) -> None:
+    """Test the ``convert_to_genomio_json.parse_args()`` function for TRF input.
+
+    Args:
+        convert_to_genomio_json_data_dir: Module's test data directory fixture.
+        tmp_path: Temporary directory provided by pytest.
+
+    """
+    input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
+    output_path = tmp_path / "out.json"
+
+    args = convert_to_genomio_json.parse_args(
+        [
+            "trf",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--program-version",
+            "4.10.0",
+        ]
+    )
+
+    assert args.__class__.__name__ == "Namespace"
+    assert args.input == input_path
+    assert args.output == output_path
+    assert args.program_version == "4.10.0"
+    assert args.analysis_logic_name == "trf"
+    assert args.analysis_display_label == "Tandem repeats (TRF)"
+    assert args.analysis_description == (
+        '<a rel="external" href="https://tandem.bu.edu/trf/trf.html">Tandem Repeats Finder</a> '
+        "locates adjacent copies of a pattern of nucleotides."
+    )
+    assert args.program == "trf"
+    assert args.repeatmasker_consensus_lib_path is None
+    assert args.source_provider == "Ensembl"
+    assert args.is_primary is False
+    assert not hasattr(args, "consensus_lib")
+    assert not hasattr(args, "program_parameters")

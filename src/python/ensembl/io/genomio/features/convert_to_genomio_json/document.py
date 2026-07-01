@@ -17,9 +17,9 @@
 import json
 from pathlib import Path
 
-from ensembl.io.genomio.features.convert_to_genomio_json.base import Consensus, file_last_modified_time
-from ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker import parse_repeatmasker_output
-from ensembl.io.genomio.features.convert_to_genomio_json.trf import parse_trf_output
+from ensembl.io.genomio.features.convert_to_genomio_json.base import file_last_modified_time
+from ensembl.io.genomio.features.convert_to_genomio_json.converters import ConverterOptions
+from ensembl.io.genomio.features.convert_to_genomio_json.registry import CONVERTERS_BY_LOGIC_NAME
 
 __all__ = ["create_genomio_json"]
 
@@ -58,15 +58,12 @@ def create_genomio_json(  # noqa: PLR0913
         ValueError: If an unsupported analysis logic name is provided.
 
     """
-    features: list[dict[str, object]] = []
-    consensuses_by_key: dict[str, Consensus] = {}
-
-    if analysis_logic_name.startswith("repeatmask_"):
-        features, consensuses_by_key = parse_repeatmasker_output(input_path, repeatmasker_consensus_lib_path)
-    elif analysis_logic_name == "trf":
-        features, consensuses_by_key = parse_trf_output(input_path)
-    else:
-        raise ValueError(f"Unsupported analysis logic name: {analysis_logic_name}")
+    try:
+        converter = CONVERTERS_BY_LOGIC_NAME[analysis_logic_name]
+    except KeyError:
+        raise ValueError(f"Unsupported analysis logic name: {analysis_logic_name}") from None
+    converter_options = ConverterOptions(repeatmasker_consensus_lib_path=repeatmasker_consensus_lib_path)
+    features, consensuses_by_key = converter.parse_features(input_path, converter_options)
 
     analysis: dict[str, str] = {
         "run_date": file_last_modified_time(input_path),

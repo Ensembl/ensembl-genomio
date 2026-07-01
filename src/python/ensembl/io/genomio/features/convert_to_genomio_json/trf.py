@@ -14,6 +14,7 @@
 # limitations under the License.
 """Parse TRF output into GenomIO repeat feature records."""
 
+import argparse
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -23,6 +24,12 @@ from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     format_parse_errors,
     has_valid_parsed_coordinates,
     parse_token,
+)
+from ensembl.io.genomio.features.convert_to_genomio_json.converters import (
+    ConverterOptions,
+    FeatureConverter,
+    ParseFeaturesResult,
+    _add_common_arguments,
 )
 from ensembl.utils.archive import open_gz_file
 
@@ -34,12 +41,45 @@ TRF_PARAMETERS_RE = re.compile(r"^Parameters:\s+(?P<params>.+)\s*$")
 
 __all__ = [
     "TRFParsedRow",
+    "TrfConverter",
     "missing_trf_sequence_error",
     "parse_trf_data_row",
     "parse_trf_output",
     "parse_trf_parameters",
     "parse_trf_sequence_header",
 ]
+
+
+class TrfConverter(FeatureConverter):
+    """Converter for TRF output."""
+
+    analysis_logic_name = "trf"
+    command = "trf"
+
+    @classmethod
+    def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
+        """Add the TRF subcommand parser."""
+        trf_parser = subparsers.add_parser(cls.command, help="Convert TRF output to GenomIO JSON.")
+        _add_common_arguments(trf_parser)
+        trf_parser.set_defaults(
+            analysis_logic_name=cls.analysis_logic_name,
+            analysis_display_label="Tandem repeats (TRF)",
+            analysis_description=(
+                '<a rel="external" href="https://tandem.bu.edu/trf/trf.html">Tandem Repeats Finder</a> '
+                "locates adjacent copies of a pattern of nucleotides."
+            ),
+            program="trf",
+            repeatmasker_consensus_lib_path=None,
+        )
+
+    @classmethod
+    def parse_features(
+        cls,
+        input_path: Path,
+        _options: ConverterOptions | None = None,
+    ) -> ParseFeaturesResult:
+        """Parse TRF output."""
+        return parse_trf_output(input_path)
 
 
 @dataclass(frozen=True)
@@ -207,7 +247,7 @@ def parse_trf_data_row(
     )
 
 
-def parse_trf_output(input_path: Path) -> tuple[list[dict], dict[str, Consensus]]:  # noqa: PLR0912, PLR0915
+def parse_trf_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR0915
     """Parse a TRF .dat file into repeat feature dictionaries and consensus records.
 
     Coordinates are converted from TRF's sequence-relative coordinates to genomic
