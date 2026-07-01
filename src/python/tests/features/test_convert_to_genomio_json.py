@@ -20,9 +20,6 @@ from ensembl.io.genomio.features.convert_to_genomio_json import (
     converters,
     document,
     registry,
-    red,
-    repeatmasker,
-    trf,
 )
 
 

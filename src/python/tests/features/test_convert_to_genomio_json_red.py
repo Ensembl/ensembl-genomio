@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pytest
 
-from ensembl.io.genomio.features import convert_to_genomio_json
 from ensembl.io.genomio.features.convert_to_genomio_json import red
 
 

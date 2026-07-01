@@ -85,11 +85,7 @@ def test_converter_parse_features_uses_tool_specific_parser(
 
 @patch("ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.parse_output")
 def test_repeatmasker_converter_parse_features_delegates_to_parser(
-<<<<<<< HEAD
-    mock_parse_repeatmasker_output: Mock
-=======
     mock_parse_output: Mock,
->>>>>>> ENSGENOMIO-25
 ) -> None:
     """Test RepeatMasker converters delegate to the RepeatMasker parser."""
     input_path = Path("input.out")
