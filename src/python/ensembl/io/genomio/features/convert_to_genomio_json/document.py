@@ -24,7 +24,7 @@ from ensembl.io.genomio.features.convert_to_genomio_json.registry import CONVERT
 __all__ = ["create_genomio_json"]
 
 
-def create_genomio_json(  # noqa: PLR0913
+def create_genomio_json(  # noqa: PLR0913 -- ignore too many arguments ruff rule
     input_path: Path,
     output_path: Path,
     *,

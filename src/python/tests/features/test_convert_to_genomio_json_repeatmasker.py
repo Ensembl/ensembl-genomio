@@ -107,9 +107,7 @@ def test_parse_repeat_class_field(
         expected: Expected repeat class and raw repeat type.
 
     """
-    output = repeatmasker.parse_repeat_class_field(
-        Path("input.out"), repeat_class_field, "raw line"
-    )
+    output = repeatmasker.parse_repeat_class_field(Path("input.out"), repeat_class_field, "raw line")
     assert output == expected
 
 
@@ -350,7 +348,7 @@ def test_parse_output_success(
 
     """
     out_path = convert_to_genomio_json_data_dir / filename
-    features, consensuses_by_key = convert_to_genomio_json.parse_output(
+    features, consensuses_by_key = repeatmasker.parse_output(
         out_path,
         consensus_lib_path=None,
     )
@@ -378,7 +376,7 @@ def test_parse_output_adds_consensus_from_library(
     )
     expected_consensus_key = expected_consensus.sha256_key()
 
-    features, consensuses_by_key = convert_to_genomio_json.parse_output(
+    features, consensuses_by_key = repeatmasker.parse_output(
         out_path,
         consensus_lib_path=consensus_lib_path,
     )
@@ -477,7 +475,7 @@ def test_parse_output_errors(
     """
     out_path = convert_to_genomio_json_data_dir / filename
     with pytest.raises(ValueError, match=error_pattern):
-        convert_to_genomio_json.parse_output(out_path, None)
+        repeatmasker.parse_output(out_path, None)
 
 
 @pytest.mark.parametrize(
@@ -501,7 +499,7 @@ def test_parse_output_skips_invalid_repeat_coordinates(
     warning_pattern: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Test ``convert_to_genomio_json.parse_output()`` logs a warning and skips invalid records.
+    """Test ``repeatmasker.parse_output()`` logs a warning and skips invalid records.
 
     Args:
         convert_to_genomio_json_data_dir: Module's test data directory fixture.
@@ -513,7 +511,7 @@ def test_parse_output_skips_invalid_repeat_coordinates(
     output_path = convert_to_genomio_json_data_dir / filename
 
     with caplog.at_level("WARNING"):
-        features, consensuses_by_key = convert_to_genomio_json.parse_output(output_path, None)
+        features, consensuses_by_key = repeatmasker.parse_output(output_path, None)
 
     assert not features
     assert not consensuses_by_key
@@ -555,7 +553,7 @@ def test_parse_output_collates_all_errors(
         ValueError,
         match=r"^Found \d+ errors while parsing RepeatMasker output in .*:",
     ) as excinfo:
-        convert_to_genomio_json.parse_output(input_path, None)
+        repeatmasker.parse_output(input_path, None)
 
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:

@@ -257,7 +257,7 @@ def test_parse_output_success(
     """
     trf_path = convert_to_genomio_json_data_dir / filename
 
-    features, consensuses_by_key = convert_to_genomio_json.parse_output(trf_path)
+    features, consensuses_by_key = trf.parse_output(trf_path)
 
     assert features == expected_features
     assert consensuses_by_key == expected_consensuses
@@ -319,7 +319,7 @@ def test_parse_output_collates_all_errors(
         ValueError,
         match=r"^Found \d+ errors while parsing TRF output in .*:",
     ) as excinfo:
-        convert_to_genomio_json.parse_output(input_path)
+        trf.parse_output(input_path)
 
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:

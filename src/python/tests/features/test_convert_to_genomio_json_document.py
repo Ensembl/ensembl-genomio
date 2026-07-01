@@ -24,7 +24,8 @@ from ensembl.io.genomio.features import convert_to_genomio_json
 
 
 @patch(
-    "ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.RepeatMaskerCustomConverter.parse_features"
+    "ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker."
+    "RepeatMaskerCustomConverter.parse_features"
 )
 def test_create_genomio_json_uses_repeatmasker_parser_output(
     mock_parse_features: Mock,
@@ -202,7 +203,8 @@ def test_create_genomio_json_rejects_unsupported_logic_name(
 
 
 @patch(
-    "ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.RepeatMaskerCustomConverter.parse_features"
+    "ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker."
+    "RepeatMaskerCustomConverter.parse_features"
 )
 def test_create_genomio_json_omits_program_parameters_when_none(
     mock_parse_features: Mock,

@@ -42,11 +42,6 @@ TRF_PARAMETERS_RE = re.compile(r"^Parameters:\s+(?P<params>.+)\s*$")
 __all__ = [
     "TRFParsedRow",
     "TrfConverter",
-    "missing_sequence_error",
-    "parse_data_row",
-    "parse_output",
-    "parse_parameters",
-    "parse_sequence_header",
 ]
 
 
@@ -189,7 +184,7 @@ def parse_data_row(
     g_pct = parse_token(float, columns[10], "g_pct", line, input_path)
     t_pct = parse_token(float, columns[11], "t_pct", line, input_path)
     entropy = parse_token(float, columns[12], "entropy", line, input_path)
-    motif = columns[13] if len(columns) >= 14 else ""  # noqa: PLR2004
+    motif = columns[13] if len(columns) >= 14 else ""  # noqa: PLR2004  -- ignore ruff "magic value" rule
 
     if window_start is not None:
         seq_region_start = window_start + start - 1
@@ -247,6 +242,7 @@ def parse_data_row(
     )
 
 
+# Ignore too many branches and too many statements ruff rules
 def parse_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR0915
     """Parse a TRF .dat file into repeat feature dictionaries and consensus records.
 
