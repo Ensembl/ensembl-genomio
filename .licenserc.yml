@@ -24,6 +24,7 @@ header:
     - 'containers/**/*'
     - 'data/test/**/*'
     - 'src/python/ensembl/io/genomio/data/**/*.txt'
+    - 'src/python/ensembl/io/genomio/data/**/*.yml'
     - 'src/python/tests/**/test_*/**/*'
     - '.gitignore'
     - 'LICENSE'
