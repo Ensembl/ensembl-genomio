@@ -134,8 +134,10 @@ def move_cds_to_existing_mrna(gene: GFFSeqFeature) -> None:
 
     This is to fix the case where we have the following structure::
         gene -> [ mRNA, CDSs ]
+
     and change it to::
         gene -> [ mRNA -> [ CDSs ] ]
+
     The mRNA itself might have exons, in which case check that they match the CDS coordinates.
 
     Args:

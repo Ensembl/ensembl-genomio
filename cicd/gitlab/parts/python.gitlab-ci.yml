@@ -21,20 +21,44 @@
 .python:
   stage: test
   image: $PYTHON_IMAGE
+
+.python:code:
+  extends: .python
   rules:
     - changes:
         - cicd/gitlab/parts/python.gitlab-ci.yml
+        - src/python/**/*
         - pyproject.toml
-        - "*.py"
-        - src/python/**/*.py
-        - scripts/**/*.py
+      when: on_success
+    - when: manual
+
+.python:docs:
+  extends: .python
+  rules:
+    - changes:
+        - cicd/gitlab/parts/python.gitlab-ci.yml
+        - docs/**/*
+        - Makefile
+        - pyproject.toml
+      when: on_success
+    - when: manual
+
+.python:all:
+  extends: .python
+  rules:
+    - changes:
+        - cicd/gitlab/parts/python.gitlab-ci.yml
+        - docs/**/*
+        - src/python/**/*
+        - Makefile
+        - pyproject.toml
       when: on_success
     - when: manual
 
 ## Prepare and load the Python virtual environment
 
 python:prepare_venv:
-  extends: .python
+  extends: .python:all
   artifacts:
     paths:
       - $RUN_DIR
@@ -43,11 +67,11 @@ python:prepare_venv:
     - python -m venv $RUN_DIR/venv
     - source $RUN_DIR/venv/bin/activate
   script:
-    - pip install -e .[cicd]
+    - pip install -e .[cicd,docs]
 
 
 .python:test:
-  extends: .python
+  extends: .python:code
   needs:
     # Using `needs` as it allows to depend on jobs from the same stage
     # (https://docs.gitlab.com/ee/ci/yaml/#needs)
@@ -134,12 +158,12 @@ python:coverage:
     - job: python:pytest
       artifacts: true
   script:
-    - coverage html -d $RUN_DIR/coverage
-    - coverage xml -o $RUN_DIR/coverage.xml
-    - genbadge coverage -i $RUN_DIR/coverage.xml -o $RUN_DIR/coverage/coverage-badge.svg
     - coverage report
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
-  artifacts:
-    when: always
-    paths:
-      - $RUN_DIR/coverage
+
+python:docs:
+  extends:
+    - .python:test
+    - .python:docs
+  script:
+    - make docs
