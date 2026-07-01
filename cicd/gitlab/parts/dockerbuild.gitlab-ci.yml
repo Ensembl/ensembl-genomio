@@ -121,5 +121,3 @@ genomio_dockerhub_register:
   - echo "Pushing default 'latest' image to genomio registry:"
   - echo "CMD=docker push $DHUB_REG_URL/$DHUB_DOCKER_IMAGE:latest"
   - docker push "$DHUB_REG_URL/$DHUB_DOCKER_IMAGE:latest"
-
-
