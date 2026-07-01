@@ -20,6 +20,7 @@ from ensembl.io.genomio.features.convert_to_genomio_json import (
     converters,
     document,
     registry,
+    red,
     repeatmasker,
     trf,
 )
@@ -34,3 +35,4 @@ def test_package_modules_expose_expected_entry_points() -> None:
     assert document.create_genomio_json is convert_to_genomio_json.create_genomio_json
     assert repeatmasker.parse_repeatmasker_output is convert_to_genomio_json.parse_repeatmasker_output
     assert trf.parse_trf_output is convert_to_genomio_json.parse_trf_output
+    assert red.parse_red_output is convert_to_genomio_json.parse_red_output

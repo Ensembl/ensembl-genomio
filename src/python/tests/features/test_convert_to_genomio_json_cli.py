@@ -148,3 +148,55 @@ def test_main_reraises_exceptions(
                 "4.1.5",
             ]
         )
+
+
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.cli.create_genomio_json")
+def test_main_passes_expected_red_arguments(
+    mock_create_genomio_json: Mock,
+    convert_to_genomio_json_data_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Test ``convert_to_genomio_json.main()`` passes parsed Red arguments correctly.
+
+    Args:
+        mock_create_genomio_json: Mock for ``convert_to_genomio_json.create_genomio_json()``.
+        convert_to_genomio_json_data_dir: Module's test data directory fixture.
+        tmp_path: Temporary directory provided by pytest.
+
+    """
+    input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
+    output_path = tmp_path / "out.json"
+
+    convert_to_genomio_json.main(
+        [
+            "red",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--program-version",
+            "2.0",
+            "--program-parameters",
+            "-gnm genome.fa",
+            "--source-provider",
+            "Custom",
+            "--is-primary",
+        ]
+    )
+
+    mock_create_genomio_json.assert_called_once_with(
+        input_path=input_path,
+        repeatmasker_consensus_lib_path=None,
+        output_path=output_path,
+        analysis_logic_name="repeatdetector",
+        analysis_display_label="Repeats: Red",
+        analysis_description=(
+            'Repeats detected using <a href="https://bmcbioinformatics.biomedcentral.com/articles'
+            '/10.1186/s12859-015-0654-5">Red (REPeatDetector)</a>'
+        ),
+        program="Red",
+        program_version="2.0",
+        program_parameters="-gnm genome.fa",
+        source_provider="Custom",
+        is_primary=True,
+    )

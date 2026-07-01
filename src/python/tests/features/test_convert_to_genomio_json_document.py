@@ -175,6 +175,75 @@ def test_create_genomio_json_uses_trf_parser_output(
     ]
 
 
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.red.RedConverter.parse_features")
+def test_create_genomio_json_uses_red_parser_output(
+    mock_parse_features: Mock,
+    tmp_path: Path,
+) -> None:
+    """Test JSON creation assembles mocked Red parser output.
+
+    Args:
+        mock_parse_features: Mock for ``RedConverter.parse_features()``.
+        tmp_path: Temporary directory provided by pytest.
+
+    """
+    input_path = tmp_path / "input.rpt"
+    input_path.write_text("parser input", encoding="utf-8")
+    output_path = tmp_path / "out.json"
+    expected_features = [
+        {
+            "seq_region": "chr1",
+            "seq_region_start": 10,
+            "seq_region_end": 20,
+            "seq_region_strand": "+",
+            "repeat_start": 1,
+            "repeat_end": 11,
+            "repeat_consensus": "red-key",
+        }
+    ]
+    expected_consensus = convert_to_genomio_json.Consensus(
+        name="repeatdetector",
+        repeat_class="repeatdetector",
+        repeat_type="repeatdetector",
+        seq="N",
+    )
+    mock_parse_features.return_value = (expected_features, {"red-key": expected_consensus})
+
+    convert_to_genomio_json.create_genomio_json(
+        input_path=input_path,
+        repeatmasker_consensus_lib_path=None,
+        output_path=output_path,
+        analysis_logic_name="repeatdetector",
+        analysis_display_label="Repeats: Red",
+        analysis_description="desc",
+        program="Red",
+        program_version="2.0",
+        program_parameters="-gnm genome.fa",
+        source_provider="Custom",
+        is_primary=True,
+    )
+
+    mock_parse_features.assert_called_once_with(input_path, convert_to_genomio_json.ConverterOptions())
+
+    doc = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert doc["analysis"]["logic_name"] == "repeatdetector"
+    assert doc["analysis"]["program"] == "Red"
+    assert doc["analysis"]["program_version"] == "2.0"
+    assert doc["analysis"]["program_parameters"] == "-gnm genome.fa"
+    assert doc["source"] == {"source_provider": "Custom", "is_primary": True}
+    assert doc["repeat_features"] == expected_features
+    assert doc["repeat_consensus"] == [
+        {
+            "repeat_consensus_key": "red-key",
+            "repeat_name": "repeatdetector",
+            "repeat_class": "repeatdetector",
+            "repeat_type": "repeatdetector",
+            "repeat_consensus": "N",
+        }
+    ]
+
+
 def test_create_genomio_json_rejects_unsupported_logic_name(
     convert_to_genomio_json_data_dir: Path, tmp_path: Path
 ) -> None:

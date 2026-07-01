@@ -49,7 +49,12 @@ def test_converter_registry_contains_supported_logic_names() -> None:
         is convert_to_genomio_json.RepeatMaskerRepbaseConverter
     )
     assert convert_to_genomio_json.CONVERTERS_BY_LOGIC_NAME["trf"] is convert_to_genomio_json.TrfConverter
+    assert (
+        convert_to_genomio_json.CONVERTERS_BY_LOGIC_NAME["repeatdetector"]
+        is convert_to_genomio_json.RedConverter
+    )
     assert convert_to_genomio_json.TrfConverter.__module__.endswith(".trf")
+    assert convert_to_genomio_json.RedConverter.__module__.endswith(".red")
     assert convert_to_genomio_json.RepeatMaskerCustomConverter.__module__.endswith(".repeatmasker")
     assert convert_to_genomio_json.RepeatMaskerRepbaseConverter.__module__.endswith(".repeatmasker")
 
@@ -60,6 +65,7 @@ def test_registered_top_level_converters_are_in_cli_order() -> None:
     assert convert_to_genomio_json.TOP_LEVEL_CONVERTERS == (  # noqa: SIM300
         convert_to_genomio_json.TrfConverter,
         convert_to_genomio_json.RepeatMaskerConverter,
+        convert_to_genomio_json.RedConverter,
     )
 
 
@@ -80,7 +86,7 @@ def test_converter_parse_features_uses_tool_specific_parser(
 
 @patch("ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.parse_repeatmasker_output")
 def test_repeatmasker_converter_parse_features_delegates_to_parser(
-    mock_parse_repeatmasker_output: Mock,
+    mock_parse_repeatmasker_output: Mock
 ) -> None:
     """Test RepeatMasker converters delegate to the RepeatMasker parser."""
     input_path = Path("input.out")
@@ -97,3 +103,15 @@ def test_repeatmasker_converter_parse_features_delegates_to_parser(
         call(input_path, consensus_lib_path),
         call(input_path, consensus_lib_path),
     ]
+
+
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.red.parse_red_output")
+def test_red_converter_parse_features_delegates_to_parser(mock_parse_red_output: Mock) -> None:
+    """Test Red converters delegate to the Red parser."""
+    input_path = Path("input.rpt")
+    options = convert_to_genomio_json.ConverterOptions()
+    expected: converters.ParseFeaturesResult = ([{"seq_region": "chr1"}], {})
+    mock_parse_red_output.return_value = expected
+
+    assert convert_to_genomio_json.RedConverter.parse_features(input_path, options) == expected
+    mock_parse_red_output.assert_called_once_with(input_path)

@@ -110,6 +110,52 @@ def test_parse_args(
         assert not hasattr(args, "program_parameters")
 
 
+def test_parse_args_red(convert_to_genomio_json_data_dir: Path, tmp_path: Path) -> None:
+    """Test the ``convert_to_genomio_json.parse_args()`` function for Red input.
+
+    Args:
+        convert_to_genomio_json_data_dir: Module's test data directory fixture.
+        tmp_path: Temporary directory provided by pytest.
+
+    """
+    input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
+    output_path = tmp_path / "out.json"
+
+    args = convert_to_genomio_json.parse_args(
+        [
+            "red",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--program-version",
+            "2.0",
+            "--program-parameters",
+            "-gnm genome.fa",
+            "--source-provider",
+            "Custom",
+            "--is-primary",
+        ]
+    )
+
+    assert args.__class__.__name__ == "Namespace"
+    assert args.input == input_path
+    assert args.output == output_path
+    assert args.program_version == "2.0"
+    assert args.analysis_logic_name == "repeatdetector"
+    assert args.analysis_display_label == "Repeats: Red"
+    assert args.analysis_description == (
+        'Repeats detected using <a href="https://bmcbioinformatics.biomedcentral.com/articles'
+        '/10.1186/s12859-015-0654-5">Red (REPeatDetector)</a>'
+    )
+    assert args.program == "Red"
+    assert args.repeatmasker_consensus_lib_path is None
+    assert args.source_provider == "Custom"
+    assert args.is_primary is True
+    assert not hasattr(args, "consensus_lib")
+    assert args.program_parameters == "-gnm genome.fa"
+
+
 def test_parse_args_trf(convert_to_genomio_json_data_dir: Path, tmp_path: Path) -> None:
     """Test the ``convert_to_genomio_json.parse_args()`` function for TRF input.
 

@@ -14,6 +14,7 @@
 # limitations under the License.
 """Explicit registry of supported feature output converters."""
 
+from ensembl.io.genomio.features.convert_to_genomio_json.red import RedConverter
 from ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker import (
     RepeatMaskerConverter,
     RepeatMaskerCustomConverter,
@@ -30,9 +31,11 @@ CONVERTERS_BY_LOGIC_NAME = {
     RepeatMaskerCustomConverter.analysis_logic_name: RepeatMaskerCustomConverter,
     RepeatMaskerRepbaseConverter.analysis_logic_name: RepeatMaskerRepbaseConverter,
     TrfConverter.analysis_logic_name: TrfConverter,
+    RedConverter.analysis_logic_name: RedConverter,
 }
 
 TOP_LEVEL_CONVERTERS = (
     TrfConverter,
     RepeatMaskerConverter,
+    RedConverter,
 )
