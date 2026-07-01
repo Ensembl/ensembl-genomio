@@ -75,7 +75,7 @@ def test_parse_output_success(tmp_path: Path) -> None:
     expected_consensus = red.RED_RPT_CONSENSUS
     expected_consensus_key = expected_consensus.sha256_key()
 
-    features, consensuses_by_key = convert_to_genomio_json.parse_output(rpt_path)
+    features, consensuses_by_key = red.parse_output(rpt_path)
 
     assert features == [
         {
@@ -120,7 +120,7 @@ def test_parse_output_collates_all_errors(tmp_path: Path) -> None:
         ValueError,
         match=r"^Found \d+ errors while parsing Red output in .*:",
     ) as excinfo:
-        convert_to_genomio_json.parse_output(rpt_path)
+        red.parse_output(rpt_path)
 
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:

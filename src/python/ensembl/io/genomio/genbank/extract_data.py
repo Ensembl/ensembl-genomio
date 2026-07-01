@@ -351,7 +351,7 @@ class FormattedFilesGenerator:
         gene_id = self.prefix + feat_name
 
         parts = gene_id.split(" ")
-        if len(parts) > 2:  # noqa: PLR2004
+        if len(parts) > 2:  # noqa: PLR2004  -- ignore ruff "magic value" rule
             logging.info(f"Shortening gene_id to {parts[0]}")
             gene_id = parts[0]
         gene_id = self._uniquify_id(gene_id, all_ids)

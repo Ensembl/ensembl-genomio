@@ -46,8 +46,6 @@ RED_RPT_CONSENSUS_KEY = RED_RPT_CONSENSUS.sha256_key()
 __all__ = [
     "RedConverter",
     "RedParsedRow",
-    "parse_row",
-    "parse_output",
 ]
 
 

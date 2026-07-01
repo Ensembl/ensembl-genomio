@@ -63,12 +63,6 @@ __all__ = [
     "RepeatMaskerCustomConverter",
     "RepeatMaskerParsedRow",
     "RepeatMaskerRepbaseConverter",
-    "map_repeatmasker_repeat_consensus_type",
-    "parse_repeatmasker_consensus_library",
-    "parse_output",
-    "parse_repeat_class_field",
-    "parse_row",
-    "parse_strand_coordinates",
 ]
 
 
@@ -309,7 +303,7 @@ def parse_row(input_path: Path, line: str) -> RepeatMaskerParsedRow | None:
     if columns[-1] == "*":
         columns.pop()
 
-    if len(columns) < 14 or len(columns) > 15:  # noqa: PLR2004
+    if len(columns) < 14 or len(columns) > 15:  # noqa: PLR2004  -- ignore ruff "magic value" rule
         raise ValueError(f"Expected 14 or 15 columns in {input_path}, got {len(columns)}: line={line!r}")
 
     score = parse_token(float, columns[0], "score", line, input_path)
