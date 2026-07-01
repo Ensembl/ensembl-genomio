@@ -12,6 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Genome Input/Output (GenomIO) handling library."""
+"""Feature test fixtures."""
 
-__version__ = "1.7.1"
+from pathlib import Path
+
+import pytest
+
+
+@pytest.fixture(name="convert_to_genomio_json_data_dir")
+def fixture_convert_to_genomio_json_data_dir() -> Path:
+    """Return the shared convert-to-GenomIO JSON test data directory."""
+    return Path(__file__).with_name("test_convert_to_genomio_json")

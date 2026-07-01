@@ -275,7 +275,7 @@ def _clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
         logging.info(f"Deleted existing AGP file '{agp_path}'.")
 
 
-def split_fasta(  # noqa: PLR0912, PLR0913
+def split_fasta(  # noqa: PLR0912, PLR0913 -- ignore too many branches and too many arguments ruff rules
     fasta_file: Path,
     out_dir: Path | None = None,
     write_agp: bool = False,
