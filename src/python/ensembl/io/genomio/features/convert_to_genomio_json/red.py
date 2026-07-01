@@ -46,8 +46,8 @@ RED_RPT_CONSENSUS_KEY = RED_RPT_CONSENSUS.sha256_key()
 __all__ = [
     "RedConverter",
     "RedParsedRow",
-    "parse_red_data_row",
-    "parse_red_output",
+    "parse_row",
+    "parse_output",
 ]
 
 
@@ -83,18 +83,18 @@ class RedConverter(FeatureConverter):
         _options: ConverterOptions | None = None,
     ) -> ParseFeaturesResult:
         """Parse Red output."""
-        return parse_red_output(input_path)
+        return parse_output(input_path)
 
 
 @dataclass(frozen=True)
 class RedParsedRow:
-    """Parsed TRF row and its repeat consensus record."""
+    """Parsed Red row and its repeat consensus record."""
 
     feature: dict[str, object]
 
 
-def parse_red_data_row(input_path: Path, line: str) -> RedParsedRow:
-    """Parse a single TRF data row.
+def parse_row(input_path: Path, line: str) -> RedParsedRow:
+    """Parse a single Red data row.
 
     Args:
         input_path: Input Red .rpt output path used for error messages.
@@ -140,7 +140,7 @@ def parse_red_data_row(input_path: Path, line: str) -> RedParsedRow:
     )
 
 
-def parse_red_output(input_path: Path) -> ParseFeaturesResult:
+def parse_output(input_path: Path) -> ParseFeaturesResult:
     """Parse a Red .rpt file into repeat feature dictionaries and consensus records.
 
     Returns:
@@ -149,7 +149,7 @@ def parse_red_output(input_path: Path) -> ParseFeaturesResult:
             - repeat consensus dictionary keyed by consensus SHA256 digest
 
     Raises:
-        ValueError: If the TRF output contains malformed rows or invalid coordinate values.
+        ValueError: If the Red output contains malformed rows or invalid coordinate values.
 
     """
     features: list[dict] = []
@@ -163,7 +163,7 @@ def parse_red_output(input_path: Path) -> ParseFeaturesResult:
                 continue
 
             try:
-                parsed_row = parse_red_data_row(input_path, line)
+                parsed_row = parse_row(input_path, line)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue

@@ -33,6 +33,6 @@ def test_package_modules_expose_expected_entry_points() -> None:
     assert converters.FeatureConverter is convert_to_genomio_json.FeatureConverter
     assert registry.CONVERTERS_BY_LOGIC_NAME is convert_to_genomio_json.CONVERTERS_BY_LOGIC_NAME
     assert document.create_genomio_json is convert_to_genomio_json.create_genomio_json
-    assert repeatmasker.parse_repeatmasker_output is convert_to_genomio_json.parse_repeatmasker_output
-    assert trf.parse_trf_output is convert_to_genomio_json.parse_trf_output
-    assert red.parse_red_output is convert_to_genomio_json.parse_red_output
+    assert red.parse_output is convert_to_genomio_json.parse_output
+    assert repeatmasker.parse_output is convert_to_genomio_json.parse_output
+    assert trf.parse_output is convert_to_genomio_json.parse_output

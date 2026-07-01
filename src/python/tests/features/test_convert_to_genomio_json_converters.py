@@ -38,7 +38,6 @@ def test_converter_registry_contains_supported_logic_names() -> None:
         "repeatmask_customlib",
         "repeatmask_repbase",
         "trf",
-        "repeatdetector",
     )
     assert (
         convert_to_genomio_json.CONVERTERS_BY_LOGIC_NAME["repeatmask_customlib"]
@@ -84,34 +83,38 @@ def test_converter_parse_features_uses_tool_specific_parser(
     assert consensuses_by_key
 
 
-@patch("ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.parse_repeatmasker_output")
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.parse_output")
 def test_repeatmasker_converter_parse_features_delegates_to_parser(
+<<<<<<< HEAD
     mock_parse_repeatmasker_output: Mock
+=======
+    mock_parse_output: Mock,
+>>>>>>> ENSGENOMIO-25
 ) -> None:
     """Test RepeatMasker converters delegate to the RepeatMasker parser."""
     input_path = Path("input.out")
     consensus_lib_path = Path("consensus.fa")
     options = convert_to_genomio_json.ConverterOptions(repeatmasker_consensus_lib_path=consensus_lib_path)
     expected: converters.ParseFeaturesResult = ([{"seq_region": "chr1"}], {})
-    mock_parse_repeatmasker_output.return_value = expected
+    mock_parse_output.return_value = expected
 
     assert convert_to_genomio_json.RepeatMaskerCustomConverter.parse_features(input_path, options) == expected
     assert (
         convert_to_genomio_json.RepeatMaskerRepbaseConverter.parse_features(input_path, options) == expected
     )
-    assert mock_parse_repeatmasker_output.call_args_list == [
+    assert mock_parse_output.call_args_list == [
         call(input_path, consensus_lib_path),
         call(input_path, consensus_lib_path),
     ]
 
 
-@patch("ensembl.io.genomio.features.convert_to_genomio_json.red.parse_red_output")
-def test_red_converter_parse_features_delegates_to_parser(mock_parse_red_output: Mock) -> None:
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.red.parse_output")
+def test_red_converter_parse_features_delegates_to_parser(mock_parse_output: Mock) -> None:
     """Test Red converters delegate to the Red parser."""
     input_path = Path("input.rpt")
     options = convert_to_genomio_json.ConverterOptions()
     expected: converters.ParseFeaturesResult = ([{"seq_region": "chr1"}], {})
-    mock_parse_red_output.return_value = expected
+    mock_parse_output.return_value = expected
 
     assert convert_to_genomio_json.RedConverter.parse_features(input_path, options) == expected
-    mock_parse_red_output.assert_called_once_with(input_path)
+    mock_parse_output.assert_called_once_with(input_path)

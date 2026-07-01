@@ -22,11 +22,11 @@ from ensembl.io.genomio.features import convert_to_genomio_json
 from ensembl.io.genomio.features.convert_to_genomio_json import red
 
 
-def test_parse_red_data_row() -> None:
-    """Test ``red.parse_red_data_row()`` parses one Red data row."""
+def test_parse_row() -> None:
+    """Test ``red.parse_row()`` parses one Red data row."""
     expected_consensus_key = red.RED_RPT_CONSENSUS.sha256_key()
 
-    parsed_row = red.parse_red_data_row(Path("input.rpt"), "chr1 10 20")
+    parsed_row = red.parse_row(Path("input.rpt"), "chr1 10 20")
 
     assert parsed_row.feature == {
         "seq_region": "chr1",
@@ -51,8 +51,8 @@ def test_parse_red_data_row() -> None:
         pytest.param("chr1 20 10", r"seq_region_end < seq_region_start", id="End before start"),
     ],
 )
-def test_parse_red_data_row_errors(line: str, error_pattern: str) -> None:
-    """Test ``red.parse_red_data_row()`` rejects malformed Red data rows.
+def test_parse_row_errors(line: str, error_pattern: str) -> None:
+    """Test ``red.parse_row()`` rejects malformed Red data rows.
 
     Args:
         line: Raw Red data row.
@@ -60,10 +60,10 @@ def test_parse_red_data_row_errors(line: str, error_pattern: str) -> None:
 
     """
     with pytest.raises(ValueError, match=error_pattern):
-        red.parse_red_data_row(Path("input.rpt"), line)
+        red.parse_row(Path("input.rpt"), line)
 
 
-def test_parse_red_output_success(tmp_path: Path) -> None:
+def test_parse_output_success(tmp_path: Path) -> None:
     """Test successful parsing of Red `.rpt` output.
 
     Args:
@@ -75,7 +75,7 @@ def test_parse_red_output_success(tmp_path: Path) -> None:
     expected_consensus = red.RED_RPT_CONSENSUS
     expected_consensus_key = expected_consensus.sha256_key()
 
-    features, consensuses_by_key = convert_to_genomio_json.parse_red_output(rpt_path)
+    features, consensuses_by_key = convert_to_genomio_json.parse_output(rpt_path)
 
     assert features == [
         {
@@ -100,7 +100,7 @@ def test_parse_red_output_success(tmp_path: Path) -> None:
     assert consensuses_by_key == {expected_consensus_key: expected_consensus}
 
 
-def test_parse_red_output_collates_all_errors(tmp_path: Path) -> None:
+def test_parse_output_collates_all_errors(tmp_path: Path) -> None:
     """Test that malformed Red parser rows are collated before raising.
 
     Args:
@@ -120,7 +120,7 @@ def test_parse_red_output_collates_all_errors(tmp_path: Path) -> None:
         ValueError,
         match=r"^Found \d+ errors while parsing Red output in .*:",
     ) as excinfo:
-        convert_to_genomio_json.parse_red_output(rpt_path)
+        convert_to_genomio_json.parse_output(rpt_path)
 
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:

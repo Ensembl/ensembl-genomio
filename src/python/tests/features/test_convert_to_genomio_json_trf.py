@@ -50,15 +50,15 @@ def _sha256_key(name: str, repeat_class: str, repeat_type: str, seq: str) -> str
         pytest.param("Sequence: chrB", ("chrB", None), id="Plain sequence header"),
     ],
 )
-def test_parse_trf_sequence_header(line: str, expected: tuple[str, int | None]) -> None:
-    """Test ``trf.parse_trf_sequence_header()`` extracts sequence ID and window start.
+def test_parse_sequence_header(line: str, expected: tuple[str, int | None]) -> None:
+    """Test ``trf.parse_sequence_header()`` extracts sequence ID and window start.
 
     Args:
         line: TRF sequence header line.
         expected: Expected sequence region and optional window start.
 
     """
-    assert trf.parse_trf_sequence_header(line) == expected
+    assert trf.parse_sequence_header(line) == expected
 
 
 @pytest.mark.parametrize(
@@ -68,20 +68,20 @@ def test_parse_trf_sequence_header(line: str, expected: tuple[str, int | None]) 
         pytest.param("Sequence: chrA", None, id="Different line type"),
     ],
 )
-def test_parse_trf_parameters(line: str, expected: str | None) -> None:
-    """Test ``trf.parse_trf_parameters()`` extracts TRF parameters.
+def test_parse_parameters(line: str, expected: str | None) -> None:
+    """Test ``trf.parse_parameters()`` extracts TRF parameters.
 
     Args:
         line: Raw TRF line.
         expected: Expected parameters string, or ``None`` for non-parameter lines.
 
     """
-    assert trf.parse_trf_parameters(line) == expected
+    assert trf.parse_parameters(line) == expected
 
 
-def test_missing_trf_sequence_error() -> None:
-    """Test ``trf.missing_trf_sequence_error()`` includes skipped block context."""
-    assert trf.missing_trf_sequence_error(Path("input.dat"), 3, 12) == (
+def test_missing_sequence_error() -> None:
+    """Test ``trf.missing_sequence_error()`` includes skipped block context."""
+    assert trf.missing_sequence_error(Path("input.dat"), 3, 12) == (
         "TRF sequence header not found before data lines in input.dat: "
         "unprocessed_entries=3, first_data_line=12"
     )
@@ -135,11 +135,11 @@ def test_missing_trf_sequence_error() -> None:
         ),
     ],
 )
-def test_parse_trf_data_row(
+def test_parse_data_row(
     line: str,
     expectation: ContextManager,
 ) -> None:
-    """Test ``trf.parse_trf_data_row()`` parses or rejects one TRF data row.
+    """Test ``trf.parse_data_row()`` parses or rejects one TRF data row.
 
     Args:
         line: Raw TRF data row.
@@ -147,7 +147,7 @@ def test_parse_trf_data_row(
 
     """
     with expectation as expected:
-        parsed_row = trf.parse_trf_data_row(
+        parsed_row = trf.parse_data_row(
             Path("input.dat"),
             line,
             seq_region="chrA",
@@ -240,7 +240,7 @@ def test_parse_trf_data_row(
         ),
     ],
 )
-def test_parse_trf_output_success(
+def test_parse_output_success(
     convert_to_genomio_json_data_dir: Path,
     filename: str,
     expected_features: list[dict[str, object]],
@@ -257,7 +257,7 @@ def test_parse_trf_output_success(
     """
     trf_path = convert_to_genomio_json_data_dir / filename
 
-    features, consensuses_by_key = convert_to_genomio_json.parse_trf_output(trf_path)
+    features, consensuses_by_key = convert_to_genomio_json.parse_output(trf_path)
 
     assert features == expected_features
     assert consensuses_by_key == expected_consensuses
@@ -300,7 +300,7 @@ def test_parse_trf_output_success(
         ),
     ],
 )
-def test_parse_trf_output_collates_all_errors(
+def test_parse_output_collates_all_errors(
     convert_to_genomio_json_data_dir: Path,
     filename: str,
     expected_fragments: list[str],
@@ -319,7 +319,7 @@ def test_parse_trf_output_collates_all_errors(
         ValueError,
         match=r"^Found \d+ errors while parsing TRF output in .*:",
     ) as excinfo:
-        convert_to_genomio_json.parse_trf_output(input_path)
+        convert_to_genomio_json.parse_output(input_path)
 
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:
