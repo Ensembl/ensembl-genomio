@@ -59,10 +59,11 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
 
     Notes:
         Output layout is controlled by:
+
         - ``max_files_per_directory``: how many FASTA files to write per directory before
-            incrementing the directory index.
+          incrementing the directory index.
         - ``max_dirs_per_directory``: how directory indices are expanded into a multi-level path
-            (base-N style).
+          (base-N style).
         - ``unique_file_names``: whether to include directory index in filenames.
 
     """

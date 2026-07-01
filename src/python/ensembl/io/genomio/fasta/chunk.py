@@ -81,7 +81,7 @@ def check_chunk_size_and_tolerance(
 def split_seq_by_n(seq: str, split_pattern: re.Pattern | None) -> list[int]:
     """Split a string into chunks at the positions where the pattern is found.
 
-    `N`s (pattern) are appended to the chunk on the left. The end point of each chunk will correspond
+    Ns (pattern) are appended to the chunk on the left. The end point of each chunk will correspond
     to the end of the matching part.
 
     Args:
@@ -163,14 +163,14 @@ def chunk_fasta_stream(
         chunk_size: Size of the chunks to split into.
         chunk_size_tolerated: If more flexibility allowed, use this as the maximum size of a chunk.
         output_fasta: Output FASTA TextIOWrapper stream to store the chunks into,
-                if none or False, `open_individual` is used (see below).
+                if none or False, ``open_individual`` is used (see below).
         individual_file_prefix: A file path prefix including dirs and filenames part to use as a
                 first part of the chunk file name.
-        n_sequence_len: Length of the stretch of `N`s to split at; not slitting on `N`s if 0.
+        n_sequence_len: Length of the stretch of Ns to split at; not slitting on Ns if 0.
         chunk_sfx: A string to put between the original sequence name and the chunk suffix.
-        append_offset_to_chunk_name: A flag to append 0-based offset (`_off_{offset}`) to the chunk name.
+        append_offset_to_chunk_name: A flag to append 0-based offset (``_off_{offset}``) to the chunk name.
         open_individual: A callable taking filename as an input to generate the output file for
-                individual contig if out_put FASTA is `false` of `None`, folders should be preexisting.
+                individual contig if out_put FASTA is ``false`` of ``None``, folders should be preexisting.
 
     """
     chunk_size_tolerated = max(chunk_size, chunk_size_tolerated)
@@ -272,11 +272,11 @@ def chunk_fasta(
         chunk_size_tolerated: If more flexibility allowed, use this as the maximum size of a chunk.
         out_file_name: Output FASTA to store the chunks into if no ``individual_file_prefix`` is provided.
         individual_file_prefix: A file path prefix including dirs and filenames part to use as the
-                first part of the chunk file name.
+            first part of the chunk file name.
         agp_output_file: Output AGP file to store the map for the chunking procedure if present and non-empty.
-        n_sequence_len: Length of the stretch of `N`s to split at; not slitting on `N`s if 0.
+        n_sequence_len: Length of the stretch of Ns to split at; not splitting on Ns if 0.
         chunk_sfx: A string to put between the original sequence name and the chunk suffix.
-        append_offset_to_chunk_name: Append 0-based offset in the form of `_off_{offset}` to the chunk name.
+        append_offset_to_chunk_name: Append 0-based offset in the form of ``_off_{offset}`` to the chunk name.
 
     """
     # process input fasta
