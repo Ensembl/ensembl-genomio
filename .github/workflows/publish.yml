@@ -27,6 +27,15 @@ defaults:
     working-directory: ./
 
 jobs:
+  docs:
+    name: Deploy release documentation to GitHub Pages
+    uses: ./.github/workflows/docs.yml
+    permissions:
+      contents: write
+    with:
+      python-version: "3.10"
+      tag: ${{ github.event.release.tag_name }}
+
   pypi-publish:
     name: Publish release to PyPI
     runs-on: ubuntu-latest
