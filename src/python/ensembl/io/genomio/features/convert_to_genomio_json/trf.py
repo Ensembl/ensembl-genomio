@@ -42,11 +42,11 @@ TRF_PARAMETERS_RE = re.compile(r"^Parameters:\s+(?P<params>.+)\s*$")
 __all__ = [
     "TRFParsedRow",
     "TrfConverter",
-    "missing_trf_sequence_error",
-    "parse_trf_data_row",
-    "parse_trf_output",
-    "parse_trf_parameters",
-    "parse_trf_sequence_header",
+    "missing_sequence_error",
+    "parse_data_row",
+    "parse_output",
+    "parse_parameters",
+    "parse_sequence_header",
 ]
 
 
@@ -79,7 +79,7 @@ class TrfConverter(FeatureConverter):
         _options: ConverterOptions | None = None,
     ) -> ParseFeaturesResult:
         """Parse TRF output."""
-        return parse_trf_output(input_path)
+        return parse_output(input_path)
 
 
 @dataclass(frozen=True)
@@ -90,7 +90,7 @@ class TRFParsedRow:
     consensus: Consensus
 
 
-def parse_trf_sequence_header(line: str) -> tuple[str, int | None] | None:
+def parse_sequence_header(line: str) -> tuple[str, int | None] | None:
     """Parse a TRF sequence header line.
 
     Args:
@@ -109,7 +109,7 @@ def parse_trf_sequence_header(line: str) -> tuple[str, int | None] | None:
     return seq_region, window_start
 
 
-def parse_trf_parameters(line: str) -> str | None:
+def parse_parameters(line: str) -> str | None:
     """Parse a TRF parameters line, returning ``None`` if the line is not a parameters line.
 
     Args:
@@ -123,7 +123,7 @@ def parse_trf_parameters(line: str) -> str | None:
     return params_match.group("params") if params_match is not None else None
 
 
-def missing_trf_sequence_error(
+def missing_sequence_error(
     input_path: Path,
     skipped_data_block_entries: int,
     skipped_data_block_first_line: int | None,
@@ -146,7 +146,7 @@ def missing_trf_sequence_error(
     )
 
 
-def parse_trf_data_row(
+def parse_data_row(
     input_path: Path,
     line: str,
     *,
@@ -247,7 +247,7 @@ def parse_trf_data_row(
     )
 
 
-def parse_trf_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR0915
+def parse_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR0915
     """Parse a TRF .dat file into repeat feature dictionaries and consensus records.
 
     Coordinates are converted from TRF's sequence-relative coordinates to genomic
@@ -286,7 +286,7 @@ def parse_trf_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912,
             if in_data_block and len(columns) < MIN_TRF_COLUMNS:
                 if skip_data_block_without_sequence:
                     errors.append(
-                        missing_trf_sequence_error(
+                        missing_sequence_error(
                             input_path,
                             skipped_data_block_entries,
                             skipped_data_block_first_line,
@@ -300,7 +300,7 @@ def parse_trf_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912,
                 skipped_data_block_first_line = None
                 skipped_data_block_entries = 0
 
-            sequence_header = parse_trf_sequence_header(line)
+            sequence_header = parse_sequence_header(line)
             if sequence_header is not None:
                 header_line = False
                 seq_region, window_start = sequence_header
@@ -311,7 +311,7 @@ def parse_trf_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912,
             if header_line:
                 continue
 
-            parsed_parameters = parse_trf_parameters(line)
+            parsed_parameters = parse_parameters(line)
             if parsed_parameters is not None:
                 trf_parameters = parsed_parameters
                 continue
@@ -332,7 +332,7 @@ def parse_trf_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912,
                 continue
 
             try:
-                parsed_row = parse_trf_data_row(
+                parsed_row = parse_data_row(
                     input_path,
                     line,
                     seq_region=seq_region,
@@ -348,7 +348,7 @@ def parse_trf_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912,
 
     if skip_data_block_without_sequence:
         errors.append(
-            missing_trf_sequence_error(
+            missing_sequence_error(
                 input_path,
                 skipped_data_block_entries,
                 skipped_data_block_first_line,

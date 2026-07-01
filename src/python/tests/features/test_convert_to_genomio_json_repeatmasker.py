@@ -96,18 +96,18 @@ def test_parse_repeatmasker_consensus_library(
         pytest.param("Simple_repeat", ("Simple_repeat", "Unknown"), id="Class only"),
     ],
 )
-def test_parse_repeatmasker_repeat_class_field(
+def test_parse_repeat_class_field(
     repeat_class_field: str,
     expected: tuple[str, str],
 ) -> None:
-    """Test ``repeatmasker.parse_repeatmasker_repeat_class_field()`` splits class fields.
+    """Test ``repeatmasker.parse_repeat_class_field()`` splits class fields.
 
     Args:
         repeat_class_field: Raw RepeatMasker repeat class/family field.
         expected: Expected repeat class and raw repeat type.
 
     """
-    output = repeatmasker.parse_repeatmasker_repeat_class_field(
+    output = repeatmasker.parse_repeat_class_field(
         Path("input.out"), repeat_class_field, "raw line"
     )
     assert output == expected
@@ -120,15 +120,15 @@ def test_parse_repeatmasker_repeat_class_field(
         pytest.param("/Alu", id="Missing class"),
     ],
 )
-def test_parse_repeatmasker_repeat_class_field_errors(repeat_class_field: str) -> None:
-    """Test ``repeatmasker.parse_repeatmasker_repeat_class_field()`` rejects malformed fields.
+def test_parse_repeat_class_field_errors(repeat_class_field: str) -> None:
+    """Test ``repeatmasker.parse_repeat_class_field()`` rejects malformed fields.
 
     Args:
         repeat_class_field: Raw RepeatMasker repeat class/family field.
 
     """
     with pytest.raises(ValueError, match=r"Malformed repeat_class/family"):
-        repeatmasker.parse_repeatmasker_repeat_class_field(
+        repeatmasker.parse_repeat_class_field(
             Path("input.out"),
             repeat_class_field,
             "raw line",
@@ -165,11 +165,11 @@ def test_parse_repeatmasker_repeat_class_field_errors(repeat_class_field: str) -
         ),
     ],
 )
-def test_parse_repeatmasker_strand_coordinates(
+def test_parse_strand_coordinates(
     columns: list[str],
     expected: tuple[str, int, int],
 ) -> None:
-    """Test ``repeatmasker.parse_repeatmasker_strand_coordinates()`` parses strand coordinates.
+    """Test ``repeatmasker.parse_strand_coordinates()`` parses strand coordinates.
 
     Args:
         columns: Split RepeatMasker data row columns.
@@ -177,7 +177,7 @@ def test_parse_repeatmasker_strand_coordinates(
 
     """
     assert (
-        repeatmasker.parse_repeatmasker_strand_coordinates(
+        repeatmasker.parse_strand_coordinates(
             Path("input.out"),
             columns,
             "raw line",
@@ -186,11 +186,11 @@ def test_parse_repeatmasker_strand_coordinates(
     )
 
 
-def test_parse_repeatmasker_row() -> None:
-    """Test ``repeatmasker.parse_repeatmasker_row()`` parses one RepeatMasker data row."""
+def test_parse_row() -> None:
+    """Test ``repeatmasker.parse_row()`` parses one RepeatMasker data row."""
     line = "100 1.0 0.0 0.0 chr1 10 20 (0) + Foo SINE/Alu 1 11 (0) *"
 
-    parsed_row = repeatmasker.parse_repeatmasker_row(Path("input.out"), line)
+    parsed_row = repeatmasker.parse_row(Path("input.out"), line)
 
     assert parsed_row is not None
     assert parsed_row.feature == {
@@ -336,7 +336,7 @@ def test_parse_repeatmasker_row() -> None:
         ),
     ],
 )
-def test_parse_repeatmasker_output_success(
+def test_parse_output_success(
     convert_to_genomio_json_data_dir: Path,
     filename: str,
     expected_features: list[dict[str, object]],
@@ -350,7 +350,7 @@ def test_parse_repeatmasker_output_success(
 
     """
     out_path = convert_to_genomio_json_data_dir / filename
-    features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_output(
+    features, consensuses_by_key = convert_to_genomio_json.parse_output(
         out_path,
         consensus_lib_path=None,
     )
@@ -359,7 +359,7 @@ def test_parse_repeatmasker_output_success(
     assert not consensuses_by_key
 
 
-def test_parse_repeatmasker_output_adds_consensus_from_library(
+def test_parse_output_adds_consensus_from_library(
     convert_to_genomio_json_data_dir: Path,
 ) -> None:
     """Test RepeatMasker parsing attaches consensus keys when a matching consensus library is provided.
@@ -378,7 +378,7 @@ def test_parse_repeatmasker_output_adds_consensus_from_library(
     )
     expected_consensus_key = expected_consensus.sha256_key()
 
-    features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_output(
+    features, consensuses_by_key = convert_to_genomio_json.parse_output(
         out_path,
         consensus_lib_path=consensus_lib_path,
     )
@@ -464,7 +464,7 @@ def test_parse_repeatmasker_output_adds_consensus_from_library(
         ),
     ],
 )
-def test_parse_repeatmasker_output_errors(
+def test_parse_output_errors(
     convert_to_genomio_json_data_dir: Path, filename: str, error_pattern: str
 ) -> None:
     """Test that malformed RepeatMasker `.out` rows raise errors.
@@ -477,7 +477,7 @@ def test_parse_repeatmasker_output_errors(
     """
     out_path = convert_to_genomio_json_data_dir / filename
     with pytest.raises(ValueError, match=error_pattern):
-        convert_to_genomio_json.parse_repeatmasker_output(out_path, None)
+        convert_to_genomio_json.parse_output(out_path, None)
 
 
 @pytest.mark.parametrize(
@@ -495,13 +495,13 @@ def test_parse_repeatmasker_output_errors(
         ),
     ],
 )
-def test_parse_repeatmasker_output_skips_invalid_repeat_coordinates(
+def test_parse_output_skips_invalid_repeat_coordinates(
     convert_to_genomio_json_data_dir: Path,
     filename: str,
     warning_pattern: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Test ``convert_to_genomio_json.parse_repeatmasker_output()`` logs a warning and skips invalid records.
+    """Test ``convert_to_genomio_json.parse_output()`` logs a warning and skips invalid records.
 
     Args:
         convert_to_genomio_json_data_dir: Module's test data directory fixture.
@@ -513,7 +513,7 @@ def test_parse_repeatmasker_output_skips_invalid_repeat_coordinates(
     output_path = convert_to_genomio_json_data_dir / filename
 
     with caplog.at_level("WARNING"):
-        features, consensuses_by_key = convert_to_genomio_json.parse_repeatmasker_output(output_path, None)
+        features, consensuses_by_key = convert_to_genomio_json.parse_output(output_path, None)
 
     assert not features
     assert not consensuses_by_key
@@ -536,7 +536,7 @@ def test_parse_repeatmasker_output_skips_invalid_repeat_coordinates(
         ),
     ],
 )
-def test_parse_repeatmasker_output_collates_all_errors(
+def test_parse_output_collates_all_errors(
     convert_to_genomio_json_data_dir: Path,
     filename: str,
     expected_fragments: list[str],
@@ -555,7 +555,7 @@ def test_parse_repeatmasker_output_collates_all_errors(
         ValueError,
         match=r"^Found \d+ errors while parsing RepeatMasker output in .*:",
     ) as excinfo:
-        convert_to_genomio_json.parse_repeatmasker_output(input_path, None)
+        convert_to_genomio_json.parse_output(input_path, None)
 
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:

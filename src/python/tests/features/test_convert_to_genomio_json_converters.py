@@ -77,22 +77,22 @@ def test_converter_parse_features_uses_tool_specific_parser(
     assert consensuses_by_key
 
 
-@patch("ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.parse_repeatmasker_output")
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.parse_output")
 def test_repeatmasker_converter_parse_features_delegates_to_parser(
-    mock_parse_repeatmasker_output: Mock,
+    mock_parse_output: Mock,
 ) -> None:
     """Test RepeatMasker converters delegate to the RepeatMasker parser."""
     input_path = Path("input.out")
     consensus_lib_path = Path("consensus.fa")
     options = convert_to_genomio_json.ConverterOptions(repeatmasker_consensus_lib_path=consensus_lib_path)
     expected: converters.ParseFeaturesResult = ([{"seq_region": "chr1"}], {})
-    mock_parse_repeatmasker_output.return_value = expected
+    mock_parse_output.return_value = expected
 
     assert convert_to_genomio_json.RepeatMaskerCustomConverter.parse_features(input_path, options) == expected
     assert (
         convert_to_genomio_json.RepeatMaskerRepbaseConverter.parse_features(input_path, options) == expected
     )
-    assert mock_parse_repeatmasker_output.call_args_list == [
+    assert mock_parse_output.call_args_list == [
         call(input_path, consensus_lib_path),
         call(input_path, consensus_lib_path),
     ]

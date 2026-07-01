@@ -65,10 +65,10 @@ __all__ = [
     "RepeatMaskerRepbaseConverter",
     "map_repeatmasker_repeat_consensus_type",
     "parse_repeatmasker_consensus_library",
-    "parse_repeatmasker_output",
-    "parse_repeatmasker_repeat_class_field",
-    "parse_repeatmasker_row",
-    "parse_repeatmasker_strand_coordinates",
+    "parse_output",
+    "parse_repeat_class_field",
+    "parse_row",
+    "parse_strand_coordinates",
 ]
 
 
@@ -113,7 +113,7 @@ class RepeatMaskerCustomConverter(FeatureConverter):
     ) -> ParseFeaturesResult:
         """Parse custom-library RepeatMasker output."""
         options = options or ConverterOptions()
-        return parse_repeatmasker_output(input_path, options.repeatmasker_consensus_lib_path)
+        return parse_output(input_path, options.repeatmasker_consensus_lib_path)
 
 
 class RepeatMaskerRepbaseConverter(RepeatMaskerCustomConverter):
@@ -226,7 +226,7 @@ def parse_repeatmasker_consensus_library(
     return consensus_keys_by_triplet, consensuses_by_key
 
 
-def parse_repeatmasker_repeat_class_field(
+def parse_repeat_class_field(
     input_path: Path,
     repeat_class_field: str,
     line: str,
@@ -256,7 +256,7 @@ def parse_repeatmasker_repeat_class_field(
     return repeat_class, repeat_type
 
 
-def parse_repeatmasker_strand_coordinates(
+def parse_strand_coordinates(
     input_path: Path,
     columns: list[str],
     line: str,
@@ -291,7 +291,7 @@ def parse_repeatmasker_strand_coordinates(
     raise ValueError(f"Unexpected strand token in {input_path}: token={strand_token!r}, line={line!r}")
 
 
-def parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRow | None:
+def parse_row(input_path: Path, line: str) -> RepeatMaskerParsedRow | None:
     """Parse a single RepeatMasker data row.
 
     Args:
@@ -320,13 +320,13 @@ def parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRow
     seq_region = columns[4]
     seq_region_start = parse_token(int, columns[5], "seq_region_start", line, input_path)
     seq_region_end = parse_token(int, columns[6], "seq_region_end", line, input_path)
-    seq_region_strand, repeat_start, repeat_end = parse_repeatmasker_strand_coordinates(
+    seq_region_strand, repeat_start, repeat_end = parse_strand_coordinates(
         input_path,
         columns,
         line,
     )
     repeat_name = columns[9]
-    repeat_class, repeat_type = parse_repeatmasker_repeat_class_field(input_path, columns[10], line)
+    repeat_class, repeat_type = parse_repeat_class_field(input_path, columns[10], line)
 
     if not has_valid_parsed_coordinates(
         input_path,
@@ -358,7 +358,7 @@ def parse_repeatmasker_row(input_path: Path, line: str) -> RepeatMaskerParsedRow
     )
 
 
-def parse_repeatmasker_output(input_path: Path, consensus_lib_path: Path | None) -> ParseFeaturesResult:
+def parse_output(input_path: Path, consensus_lib_path: Path | None) -> ParseFeaturesResult:
     """Parse a RepeatMasker .out file into repeat feature dictionaries and consensus records.
 
     If a RepeatMasker consensus library FASTA file is provided, consensus sequences will be
@@ -404,7 +404,7 @@ def parse_repeatmasker_output(input_path: Path, consensus_lib_path: Path | None)
                 continue
 
             try:
-                parsed_row = parse_repeatmasker_row(input_path, line)
+                parsed_row = parse_row(input_path, line)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
