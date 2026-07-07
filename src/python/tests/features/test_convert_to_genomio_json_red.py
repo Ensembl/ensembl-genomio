@@ -27,7 +27,6 @@ def test_parse_row() -> None:
 
     parsed_row = red.parse_row(Path("input.rpt"), "chr1 10 20")
 
-    assert parsed_row is not None
     assert parsed_row.feature == {
         "seq_region": "chr1",
         "seq_region_start": 10,

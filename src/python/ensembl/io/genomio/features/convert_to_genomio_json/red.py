@@ -21,8 +21,8 @@ from pathlib import Path
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
     format_parse_errors,
-    has_valid_parsed_coordinates,
     parse_token,
+    validate_parsed_coordinates,
 )
 from ensembl.io.genomio.features.convert_to_genomio_json.converters import (
     ConverterOptions,
@@ -91,7 +91,7 @@ class RedParsedRow:
     feature: dict[str, object]
 
 
-def parse_row(input_path: Path, line: str) -> RedParsedRow | None:
+def parse_row(input_path: Path, line: str) -> RedParsedRow:
     """Parse a single Red data row.
 
     Args:
@@ -116,15 +116,14 @@ def parse_row(input_path: Path, line: str) -> RedParsedRow | None:
     seq_region_end = parse_token(int, columns[2], "end", line, input_path)
     repeat_length = (seq_region_end - seq_region_start) + 1
 
-    if not has_valid_parsed_coordinates(
+    validate_parsed_coordinates(
         input_path,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
         repeat_start=1,
         repeat_end=repeat_length,
         line=line,
-    ):
-        return None
+    )
 
     return RedParsedRow(
         feature={
@@ -165,9 +164,6 @@ def parse_output(input_path: Path) -> ParseFeaturesResult:
                 parsed_row = parse_row(input_path, line)
             except ValueError as exc:
                 errors.append(str(exc))
-                continue
-
-            if parsed_row is None:
                 continue
 
             features.append(parsed_row.feature)
