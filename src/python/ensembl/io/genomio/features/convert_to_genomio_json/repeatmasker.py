@@ -120,7 +120,7 @@ class RepeatMaskerRepbaseConverter(RepeatMaskerCustomConverter):
         """Add the Repbase RepeatMasker mode parser."""
         repbase_parser = subparsers.add_parser(
             "repbase",
-            help="Convert RepeatMasker output geneterated using Repbase.",
+            help="Convert RepeatMasker output generated using Repbase.",
         )
         _add_repeatmasker_common_args(repbase_parser)
         repbase_parser.set_defaults(
