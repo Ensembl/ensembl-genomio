@@ -27,6 +27,8 @@ __all__ = [
     "TOP_LEVEL_CONVERTERS",
 ]
 
+# Register every concrete converter class that parses a single analysis output,
+# keyed by the analysis.logic_name written to the JSON document.
 CONVERTERS_BY_LOGIC_NAME = {
     RepeatMaskerCustomConverter.analysis_logic_name: RepeatMaskerCustomConverter,
     RepeatMaskerRepbaseConverter.analysis_logic_name: RepeatMaskerRepbaseConverter,
@@ -34,6 +36,11 @@ CONVERTERS_BY_LOGIC_NAME = {
     RedConverter.analysis_logic_name: RedConverter,
 }
 
+# Register only converters that should appear as first-level CLI tool commands
+# under the main parser, for example "trf", "repeatmasker", or "red". A
+# top-level converter may parse records itself, or it may only create nested
+# mode-specific subcommands; RepeatMasker is top-level because users choose
+# "repeatmasker" before selecting "custom" or "repbase".
 TOP_LEVEL_CONVERTERS = (
     TrfConverter,
     RepeatMaskerConverter,
