@@ -24,8 +24,8 @@ from Bio import SeqIO
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
     format_parse_errors,
-    has_valid_parsed_coordinates,
     parse_token,
+    validate_parsed_coordinates,
 )
 from ensembl.io.genomio.features.convert_to_genomio_json.converters import (
     ConverterOptions,
@@ -285,7 +285,7 @@ def parse_strand_coordinates(
     raise ValueError(f"Unexpected strand token in {input_path}: token={strand_token!r}, line={line!r}")
 
 
-def parse_row(input_path: Path, line: str) -> RepeatMaskerParsedRow | None:
+def parse_row(input_path: Path, line: str) -> RepeatMaskerParsedRow:
     """Parse a single RepeatMasker data row.
 
     Args:
@@ -322,15 +322,14 @@ def parse_row(input_path: Path, line: str) -> RepeatMaskerParsedRow | None:
     repeat_name = columns[9]
     repeat_class, repeat_type = parse_repeat_class_field(input_path, columns[10], line)
 
-    if not has_valid_parsed_coordinates(
+    validate_parsed_coordinates(
         input_path,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
         repeat_start=repeat_start,
         repeat_end=repeat_end,
         line=line,
-    ):
-        return None
+    )
 
     return RepeatMaskerParsedRow(
         feature={
@@ -401,9 +400,6 @@ def parse_output(input_path: Path, consensus_lib_path: Path | None) -> ParseFeat
                 parsed_row = parse_row(input_path, line)
             except ValueError as exc:
                 errors.append(str(exc))
-                continue
-
-            if parsed_row is None:
                 continue
 
             if parsed_row.consensus_triplet in consensus_keys_by_triplet:
