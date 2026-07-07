@@ -156,6 +156,7 @@ def test_parse_data_row(
         )
 
         expected_feature, expected_consensus = expected
+        assert parsed_row is not None
         assert parsed_row.feature == expected_feature
         assert parsed_row.consensus == expected_consensus
 
