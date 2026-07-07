@@ -22,8 +22,8 @@ import re
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
     format_parse_errors,
-    has_valid_parsed_coordinates,
     parse_token,
+    validate_parsed_coordinates,
 )
 from ensembl.io.genomio.features.convert_to_genomio_json.converters import (
     ConverterOptions,
@@ -148,7 +148,7 @@ def parse_data_row(
     seq_region: str,
     window_start: int | None,
     trf_parameters: str | None,
-) -> TRFParsedRow | None:
+) -> TRFParsedRow:
     """Parse a single TRF data row.
 
     Args:
@@ -193,15 +193,14 @@ def parse_data_row(
         seq_region_start = start
         seq_region_end = end
 
-    if not has_valid_parsed_coordinates(
+    validate_parsed_coordinates(
         input_path,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
         repeat_start=1,
         repeat_end=period_size,
         line=line,
-    ):
-        return None
+    )
 
     repeat_consensus = Consensus(
         name="trf",
@@ -338,9 +337,6 @@ def parse_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR
                 )
             except ValueError as exc:
                 errors.append(str(exc))
-                continue
-
-            if parsed_row is None:
                 continue
 
             consensuses_by_key[parsed_row.consensus.sha256_key()] = parsed_row.consensus

@@ -17,7 +17,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
-import logging
 from pathlib import Path
 from typing import Callable, TypeVar
 
@@ -27,8 +26,8 @@ __all__ = [
     "Consensus",
     "file_last_modified_time",
     "format_parse_errors",
-    "has_valid_parsed_coordinates",
     "parse_token",
+    "validate_parsed_coordinates",
 ]
 
 
@@ -101,7 +100,7 @@ def file_last_modified_time(file_path: Path) -> str:
     )
 
 
-def has_valid_parsed_coordinates(
+def validate_parsed_coordinates(
     input_path: Path,
     *,
     seq_region_start: int,
@@ -109,7 +108,7 @@ def has_valid_parsed_coordinates(
     repeat_start: int,
     repeat_end: int,
     line: str,
-) -> bool:
+) -> None:
     """Validate parsed coordinate values for a feature.
 
     Args:
@@ -120,11 +119,9 @@ def has_valid_parsed_coordinates(
         repeat_end: End coordinate on the repeat consensus.
         line: Original input line for error reporting.
 
-    Returns:
-        `True` if all coordinates are valid, `False` if invalid but error not raised.
-
     Raises:
-        ValueError: If sequence region coordinate values are invalid (i.e. negative, zero, or end < start).
+        ValueError: If sequence region or repeat coordinate values are invalid (i.e. negative, zero,
+        or end < start).
 
     """
     if seq_region_start < 1 or seq_region_end < 1:
@@ -138,18 +135,13 @@ def has_valid_parsed_coordinates(
             f"start={seq_region_start}, end={seq_region_end}, line={line!r}"
         )
 
-    no_warnings = True
     if repeat_start < 1 or repeat_end < 1:
-        logging.warning(
+        raise ValueError(
             f"Invalid repeat coordinates in {input_path}: "
             f"repeat_start={repeat_start}, repeat_end={repeat_end}, line={line!r}"
         )
-        no_warnings = False
     if repeat_end < repeat_start:
-        logging.warning(
+        raise ValueError(
             f"repeat_end < repeat_start in {input_path}: "
             f"repeat_start={repeat_start}, repeat_end={repeat_end}, line={line!r}"
         )
-        no_warnings = False
-
-    return no_warnings

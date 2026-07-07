@@ -17,7 +17,6 @@
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timezone
 import hashlib
-import logging
 import os
 from pathlib import Path
 from typing import Callable, ContextManager
@@ -127,16 +126,15 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("seq_region_start", "seq_region_end", "repeat_start", "repeat_end", "expectation", "warning_pattern"),
+    ("seq_region_start", "seq_region_end", "repeat_start", "repeat_end", "expectation"),
     [
-        pytest.param(1, 10, 2, 5, does_not_raise(enter_result=True), None, id="Valid coordinates"),
+        pytest.param(1, 10, 2, 5, does_not_raise(), id="Valid coordinates"),
         pytest.param(
             0,
             10,
             1,
             5,
             pytest.raises(ValueError, match=r"Invalid seq_region coordinates"),
-            None,
             id="Non-positive sequence region start",
         ),
         pytest.param(
@@ -145,7 +143,6 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             1,
             5,
             pytest.raises(ValueError, match=r"seq_region_end < seq_region_start"),
-            None,
             id="Sequence region end before start",
         ),
         pytest.param(
@@ -153,8 +150,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             10,
             0,
             5,
-            does_not_raise(enter_result=False),
-            r"Invalid repeat coordinates",
+            pytest.raises(ValueError, match=r"Invalid repeat coordinates"),
             id="Non-positive repeat start",
         ),
         pytest.param(
@@ -162,23 +158,20 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             10,
             5,
             4,
-            does_not_raise(enter_result=False),
-            r"repeat_end < repeat_start",
+            pytest.raises(ValueError, match=r"repeat_end < repeat_start"),
             id="Repeat end before start",
         ),
     ],
 )
-def test_has_valid_parsed_coordinates(
+def test_validate_parsed_coordinates(
     *,
     seq_region_start: int,
     seq_region_end: int,
     repeat_start: int,
     repeat_end: int,
     expectation: ContextManager,
-    warning_pattern: str | None,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Test ``base.has_valid_parsed_coordinates()`` correctly validates coordinates.
+    """Test ``base.validate_parsed_coordinates()`` correctly validates coordinates.
 
     Args:
         seq_region_start: Sequence region start coordinate.
@@ -186,24 +179,14 @@ def test_has_valid_parsed_coordinates(
         repeat_start: Repeat start coordinate.
         repeat_end: Repeat end coordinate.
         expectation: Context manager for the expected result or exception.
-        warning_pattern: Optional substring expected to appear in the logged warning message.
-        caplog: Pytest fixture for capturing log output.
 
     """
-    with caplog.at_level(logging.WARNING), expectation as expected:
-        assert (
-            base.has_valid_parsed_coordinates(
-                Path("input.out"),
-                seq_region_start=seq_region_start,
-                seq_region_end=seq_region_end,
-                repeat_start=repeat_start,
-                repeat_end=repeat_end,
-                line="raw line",
-            )
-            == expected
+    with expectation:
+        base.validate_parsed_coordinates(
+            Path("input.out"),
+            seq_region_start=seq_region_start,
+            seq_region_end=seq_region_end,
+            repeat_start=repeat_start,
+            repeat_end=repeat_end,
+            line="raw line",
         )
-
-    if warning_pattern is None:
-        assert not caplog.records
-    else:
-        assert any(warning_pattern in record.message for record in caplog.records)

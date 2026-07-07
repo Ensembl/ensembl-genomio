@@ -479,47 +479,6 @@ def test_parse_output_errors(
 
 
 @pytest.mark.parametrize(
-    ("filename", "warning_pattern"),
-    [
-        pytest.param(
-            "repeatmasker_out/error_non_positive_repeat_end.out",
-            r"Invalid repeat coordinates",
-            id="Skips non-positive repeat end with warning",
-        ),
-        pytest.param(
-            "repeatmasker_out/error_repeat_end_before_start.out",
-            r"repeat_end < repeat_start",
-            id="Skips repeat end before start with warning",
-        ),
-    ],
-)
-def test_parse_output_skips_invalid_repeat_coordinates(
-    convert_to_genomio_json_data_dir: Path,
-    filename: str,
-    warning_pattern: str,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test ``repeatmasker.parse_output()`` logs a warning and skips invalid records.
-
-    Args:
-        convert_to_genomio_json_data_dir: Module's test data directory fixture.
-        filename: Input RepeatMasker `.out` filename containing invalid coordinates.
-        warning_pattern: Substring expected to appear in the logged warning message.
-        caplog: Pytest fixture for capturing log output.
-
-    """
-    output_path = convert_to_genomio_json_data_dir / filename
-
-    with caplog.at_level("WARNING"):
-        features, consensuses_by_key = repeatmasker.parse_output(output_path, None)
-
-    assert not features
-    assert not consensuses_by_key
-    assert caplog.text
-    assert any(warning_pattern in record.message for record in caplog.records)
-
-
-@pytest.mark.parametrize(
     ("filename", "expected_fragments"),
     [
         pytest.param(
