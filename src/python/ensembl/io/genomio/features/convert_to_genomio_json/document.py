@@ -80,7 +80,7 @@ def create_genomio_json(  # noqa: PLR0913 -- ignore too many arguments ruff rule
         "analysis": analysis,
         "source": {
             "source_provider": source_provider,
-            "is_primary": bool(is_primary),
+            "is_primary": is_primary,
         },
         "repeat_features": features,
     }
