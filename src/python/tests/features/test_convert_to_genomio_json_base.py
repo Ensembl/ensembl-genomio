@@ -17,7 +17,6 @@
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timezone
 import hashlib
-import logging
 import os
 from pathlib import Path
 from typing import Callable, ContextManager
@@ -180,16 +179,14 @@ def test_validate_parsed_coordinates(
         repeat_start: Repeat start coordinate.
         repeat_end: Repeat end coordinate.
         expectation: Context manager for the expected result or exception.
-        warning_pattern: Optional substring expected to appear in the logged warning message.
-        caplog: Pytest fixture for capturing log output.
 
     """
     with expectation:
-        assert base.validate_parsed_coordinates(
+        base.validate_parsed_coordinates(
             Path("input.out"),
             seq_region_start=seq_region_start,
             seq_region_end=seq_region_end,
             repeat_start=repeat_start,
             repeat_end=repeat_end,
             line="raw line",
-        ) is None
+        )
