@@ -293,7 +293,7 @@ def parse_row(input_path: Path, line: str) -> RepeatMaskerParsedRow:
         line: Raw RepeatMasker row without surrounding whitespace.
 
     Returns:
-        Parsed row, or ``None`` if repeat coordinates are invalid and the row should be skipped.
+        Parsed row containing feature data and consensus.
 
     Raises:
         ValueError: If the row is malformed or contains invalid sequence-region coordinates.
