@@ -18,7 +18,9 @@ import argparse
 
 import ensembl.io.genomio
 from ensembl.io.genomio.features.convert_to_genomio_json.registry import TOP_LEVEL_CONVERTERS
+
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.logging import init_logging_with_args
 
 __all__ = ["parse_args"]
 
@@ -41,4 +43,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     for converter in TOP_LEVEL_CONVERTERS:
         converter.add_parser(subparsers)
 
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    init_logging_with_args(args)
+    return args
