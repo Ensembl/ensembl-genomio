@@ -184,7 +184,7 @@ def parse_data_row(
     g_pct = parse_token(float, columns[10], "g_pct", line, input_path)
     t_pct = parse_token(float, columns[11], "t_pct", line, input_path)
     entropy = parse_token(float, columns[12], "entropy", line, input_path)
-    motif = columns[13] if len(columns) >= 14 else ""  # noqa: PLR2004  -- ignore ruff "magic value" rule
+    motif = columns[13] if len(columns) >= 14 else "N"  # noqa: PLR2004  -- ignore ruff "magic value" rule
 
     if window_start is not None:
         seq_region_start = window_start + start - 1

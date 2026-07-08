@@ -212,7 +212,7 @@ def test_parse_data_row(
                     "seq_region_strand": "+",
                     "repeat_start": 1,
                     "repeat_end": 4,
-                    "repeat_consensus": _sha256_key("trf", "trf", "Tandem repeats", ""),
+                    "repeat_consensus": _sha256_key("trf", "trf", "Tandem repeats", "N"),
                     "score": 50.0,
                     "attributes": {
                         "period_size": 4,
@@ -221,7 +221,7 @@ def test_parse_data_row(
                         "perc_match": 100.0,
                         "perc_indel": 0.0,
                         "entropy": 2.0,
-                        "motif": "",
+                        "motif": "N",
                         "a_pct": 25.0,
                         "c_pct": 25.0,
                         "g_pct": 25.0,
@@ -230,11 +230,11 @@ def test_parse_data_row(
                 }
             ],
             {
-                _sha256_key("trf", "trf", "Tandem repeats", ""): convert_to_genomio_json.Consensus(
+                _sha256_key("trf", "trf", "Tandem repeats", "N"): convert_to_genomio_json.Consensus(
                     name="trf",
                     repeat_class="trf",
                     repeat_type="Tandem repeats",
-                    seq="",
+                    seq="N",
                 )
             },
             id="Plain coordinates without parameters or motif",
