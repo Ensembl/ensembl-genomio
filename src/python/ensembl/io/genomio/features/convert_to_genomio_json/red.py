@@ -112,7 +112,7 @@ def parse_row(input_path: Path, line: str) -> RedParsedRow:
         )
 
     seq_region = columns[0]
-    seq_region_start = parse_token(int, columns[1], "start", line, input_path)
+    seq_region_start = parse_token(int, columns[1], "start", line, input_path) + 1
     seq_region_end = parse_token(int, columns[2], "end", line, input_path)
     repeat_length = (seq_region_end - seq_region_start) + 1
 

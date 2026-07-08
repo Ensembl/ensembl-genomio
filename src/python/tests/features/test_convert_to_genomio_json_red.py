@@ -29,11 +29,11 @@ def test_parse_row() -> None:
 
     assert parsed_row.feature == {
         "seq_region": "chr1",
-        "seq_region_start": 10,
+        "seq_region_start": 11,
         "seq_region_end": 20,
         "seq_region_strand": "+",
         "repeat_start": 1,
-        "repeat_end": 11,
+        "repeat_end": 10,
         "repeat_consensus": expected_consensus_key,
     }
 
@@ -45,7 +45,7 @@ def test_parse_row() -> None:
         pytest.param("chr1 10 20 extra", r"Expected 3 columns", id="Too many columns"),
         pytest.param("chr1 start 20", r"Invalid 'start'", id="Invalid start"),
         pytest.param("chr1 10 end", r"Invalid 'end'", id="Invalid end"),
-        pytest.param("chr1 0 20", r"Invalid seq_region coordinates", id="Non-positive start"),
+        pytest.param("chr1 -1 20", r"Invalid seq_region coordinates", id="Non-positive start"),
         pytest.param("chr1 10 0", r"Invalid seq_region coordinates", id="Non-positive end"),
         pytest.param("chr1 20 10", r"seq_region_end < seq_region_start", id="End before start"),
     ],
@@ -70,7 +70,7 @@ def test_parse_output_success(tmp_path: Path) -> None:
 
     """
     rpt_path = tmp_path / "success.rpt"
-    rpt_path.write_text("\nchr1 10 20\n\nchr2 30 30\n", encoding="utf-8")
+    rpt_path.write_text("\nchr1 10 20\n\nchr2 30 31\n", encoding="utf-8")
     expected_consensus = red.RED_RPT_CONSENSUS
     expected_consensus_key = expected_consensus.sha256_key()
 
@@ -79,17 +79,17 @@ def test_parse_output_success(tmp_path: Path) -> None:
     assert features == [
         {
             "seq_region": "chr1",
-            "seq_region_start": 10,
+            "seq_region_start": 11,
             "seq_region_end": 20,
             "seq_region_strand": "+",
             "repeat_start": 1,
-            "repeat_end": 11,
+            "repeat_end": 10,
             "repeat_consensus": expected_consensus_key,
         },
         {
             "seq_region": "chr2",
-            "seq_region_start": 30,
-            "seq_region_end": 30,
+            "seq_region_start": 31,
+            "seq_region_end": 31,
             "seq_region_strand": "+",
             "repeat_start": 1,
             "repeat_end": 1,
