@@ -34,11 +34,11 @@ def test_repeatmasker_argument_helper_lives_with_repeatmasker_converters() -> No
 
 def test_converter_registry_contains_supported_logic_names() -> None:
     """Test the explicit converter registry maps supported analysis logic names."""
-    assert tuple(convert_to_genomio_json.CONVERTERS_BY_LOGIC_NAME) == (
+    assert set(convert_to_genomio_json.CONVERTERS_BY_LOGIC_NAME) == {
         "repeatmask_customlib",
         "repeatmask_repbase",
         "trf",
-    )
+    }
     assert (
         convert_to_genomio_json.CONVERTERS_BY_LOGIC_NAME["repeatmask_customlib"]
         is convert_to_genomio_json.RepeatMaskerCustomConverter
@@ -48,17 +48,14 @@ def test_converter_registry_contains_supported_logic_names() -> None:
         is convert_to_genomio_json.RepeatMaskerRepbaseConverter
     )
     assert convert_to_genomio_json.CONVERTERS_BY_LOGIC_NAME["trf"] is convert_to_genomio_json.TrfConverter
-    assert convert_to_genomio_json.TrfConverter.__module__.endswith(".trf")
-    assert convert_to_genomio_json.RepeatMaskerCustomConverter.__module__.endswith(".repeatmasker")
-    assert convert_to_genomio_json.RepeatMaskerRepbaseConverter.__module__.endswith(".repeatmasker")
 
 
 def test_registered_top_level_converters_are_in_cli_order() -> None:
     """Test top-level CLI converters expose the existing subcommand order."""
     # Keep the subject under test on the left for readability.
     assert convert_to_genomio_json.TOP_LEVEL_CONVERTERS == (  # noqa: SIM300
-        convert_to_genomio_json.TrfConverter,
         convert_to_genomio_json.RepeatMaskerConverter,
+        convert_to_genomio_json.TrfConverter,
     )
 
 

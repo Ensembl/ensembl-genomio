@@ -40,6 +40,6 @@ CONVERTERS_BY_LOGIC_NAME = {
 # mode-specific subcommands; RepeatMasker is top-level because users choose
 # "repeatmasker" before selecting "custom" or "repbase".
 TOP_LEVEL_CONVERTERS = (
-    TrfConverter,
     RepeatMaskerConverter,
+    TrfConverter,
 )
