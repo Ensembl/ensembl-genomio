@@ -1,7 +1,7 @@
 # Ensembl GenomIO
 
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/Ensembl/ensembl-genomio/blob/main/LICENSE)
-[![Coverage](https://ensembl.github.io/ensembl-genomio/latest/coverage-badge.svg)](https://ensembl.github.io/ensembl-genomio/latest/coverage_report.html)
+[![Coverage](https://ensembl.github.io/ensembl-genomio/latest/htmlcov/coverage-badge.svg)](https://ensembl.github.io/ensembl-genomio/latest/coverage_report.html)
 [![CI](https://img.shields.io/github/checks-status/Ensembl/ensembl-genomio/main?label=CI)](https://gitlab.ebi.ac.uk/plantazoa/ensembl-genomio/-/pipelines)
 [![Release](https://img.shields.io/pypi/v/ensembl-genomio)](https://pypi.org/project/ensembl-genomio)
 [![Docs](https://github.com/Ensembl/ensembl-genomio/actions/workflows/docs.yml/badge.svg?branch=main)](https://ensembl.github.io/ensembl-genomio/latest/index.html)
