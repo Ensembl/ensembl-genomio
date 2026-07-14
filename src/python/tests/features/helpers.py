@@ -12,8 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Helper functions for feature tests."""
 
 import hashlib
+
 
 def sha256_key(name: str, repeat_class: str, repeat_type: str, seq: str | None) -> str:
     """Compute the expected SHA-256 repeat consensus key.

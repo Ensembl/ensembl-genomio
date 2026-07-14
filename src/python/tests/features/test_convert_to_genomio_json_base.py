@@ -31,6 +31,7 @@ from ensembl.io.genomio.features.convert_to_genomio_json.base import main, parse
 
 from .helpers import sha256_key
 
+
 def test_consensus_sha256_key_normalises_fields() -> None:
     """Test ``convert_to_genomio_json.Consensus.sha256_key()`` normalises whitespace and sequence case."""
     consensus = convert_to_genomio_json.Consensus(
