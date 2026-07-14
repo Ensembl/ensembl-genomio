@@ -16,7 +16,6 @@
 """Unit testing of TRF GenomIO JSON conversion helpers."""
 
 from contextlib import nullcontext as does_not_raise
-import hashlib
 from pathlib import Path
 from typing import ContextManager
 
@@ -25,22 +24,7 @@ import pytest
 from ensembl.io.genomio.features import convert_to_genomio_json
 from ensembl.io.genomio.features.convert_to_genomio_json import trf
 
-
-def _sha256_key(name: str, repeat_class: str, repeat_type: str, seq: str) -> str:
-    """Compute the expected SHA-256 repeat consensus key.
-
-    Args:
-        name: Repeat name.
-        repeat_class: Repeat class.
-        repeat_type: Repeat type.
-        seq: Consensus sequence.
-
-    Returns:
-        str:Expected SHA-256 digest.
-
-    """
-    payload = f"{name}\t{repeat_class}\t{repeat_type}\t{seq}".encode()
-    return hashlib.sha256(payload).hexdigest()
+from .helpers import sha256_key
 
 
 @pytest.mark.parametrize(
@@ -101,7 +85,7 @@ def test_missing_sequence_error() -> None:
                         "seq_region_strand": "+",
                         "repeat_start": 1,
                         "repeat_end": 2,
-                        "repeat_consensus": _sha256_key("trf", "trf", "Tandem repeats", "AT"),
+                        "repeat_consensus": sha256_key("trf", "trf", "Tandem repeats", "AT"),
                         "score": 42.0,
                         "attributes": {
                             "period_size": 2,
@@ -174,7 +158,7 @@ def test_parse_data_row(
                     "seq_region_strand": "+",
                     "repeat_start": 1,
                     "repeat_end": 2,
-                    "repeat_consensus": _sha256_key("trf", "trf", "Tandem repeats", "AT"),
+                    "repeat_consensus": sha256_key("trf", "trf", "Tandem repeats", "AT"),
                     "score": 42.0,
                     "attributes": {
                         "period_size": 2,
@@ -193,7 +177,7 @@ def test_parse_data_row(
                 }
             ],
             {
-                _sha256_key("trf", "trf", "Tandem repeats", "AT"): convert_to_genomio_json.Consensus(
+                sha256_key("trf", "trf", "Tandem repeats", "AT"): convert_to_genomio_json.Consensus(
                     name="trf",
                     repeat_class="trf",
                     repeat_type="Tandem repeats",
@@ -212,7 +196,7 @@ def test_parse_data_row(
                     "seq_region_strand": "+",
                     "repeat_start": 1,
                     "repeat_end": 4,
-                    "repeat_consensus": _sha256_key("trf", "trf", "Tandem repeats", "N"),
+                    "repeat_consensus": sha256_key("trf", "trf", "Tandem repeats", "N"),
                     "score": 50.0,
                     "attributes": {
                         "period_size": 4,
@@ -230,7 +214,7 @@ def test_parse_data_row(
                 }
             ],
             {
-                _sha256_key("trf", "trf", "Tandem repeats", "N"): convert_to_genomio_json.Consensus(
+                sha256_key("trf", "trf", "Tandem repeats", "N"): convert_to_genomio_json.Consensus(
                     name="trf",
                     repeat_class="trf",
                     repeat_type="Tandem repeats",
@@ -328,3 +312,18 @@ def test_parse_output_collates_all_errors(
             assert expected_fragment.removeprefix("not:") not in error_message
         else:
             assert expected_fragment in error_message
+
+
+def test_trf_converter_parse_features_uses_tool_specific_parser(
+    convert_to_genomio_json_data_dir: Path,
+) -> None:
+    """Test TRF converter class calls the matching tool parser."""
+    input_path = convert_to_genomio_json_data_dir / "trf" / "success_plain_no_params.dat"
+
+    features, consensuses_by_key = convert_to_genomio_json.TRFConverter.parse_features(
+        input_path,
+        convert_to_genomio_json.ConverterOptions(),
+    )
+
+    assert features
+    assert consensuses_by_key

@@ -17,7 +17,6 @@
 """Unit testing of `ensembl.io.genomio.repeats.combine_json` module."""
 
 from contextlib import nullcontext as does_not_raise
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -28,6 +27,8 @@ from deepdiff import DeepDiff
 import pytest
 
 from ensembl.io.genomio.features import combine_json
+
+from .helpers import sha256_key
 
 CHUNK_RE = re.compile(combine_json._CHUNK_RE_STRING)
 
@@ -88,24 +89,6 @@ def _source(provider: str = "prov") -> dict[str, combine_json.JsonValue]:
     return {"source_provider": provider, "is_primary": True}
 
 
-def _sha256_key(rn: str, rc_class: str, rt: str, seq: str | None = None) -> str:
-    """Compute the repeat-consensus SHA-256 key used by the schema.
-
-    Args:
-        rn: Repeat name.
-        rc_class: Repeat class.
-        rt: Repeat type.
-        seq: Optional consensus sequence.
-
-    Returns:
-        SHA-256 hash string.
-
-    """
-    norm = "".join((seq or "").split()).upper()
-    payload = f"{rn}\t{rc_class}\t{rt}\t{norm}"
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-
-
 def _repeat_consensus(
     repeat_name: str = "Alu",
     repeat_class: str = "SINE",
@@ -125,7 +108,7 @@ def _repeat_consensus(
 
     """
     rc: combine_json.RepeatConsensus = {
-        "repeat_consensus_key": _sha256_key(repeat_name, repeat_class, repeat_type, sequence),
+        "repeat_consensus_key": sha256_key(repeat_name, repeat_class, repeat_type, sequence),
         "repeat_name": repeat_name,
         "repeat_class": repeat_class,
         "repeat_type": repeat_type,
@@ -988,8 +971,8 @@ def test_combine_feature_docs(
     ("consensus_key", "valid_consensus_keys", "expectation"),
     [
         pytest.param(
-            _sha256_key("Alu", "SINE", "Alu", "ACGT"),
-            {_sha256_key("Alu", "SINE", "Alu", "ACGT")},
+            sha256_key("Alu", "SINE", "Alu", "ACGT"),
+            {sha256_key("Alu", "SINE", "Alu", "ACGT")},
             does_not_raise(
                 [
                     _repeat_feature(
@@ -997,14 +980,14 @@ def test_combine_feature_docs(
                         start=1,
                         end=10,
                         strand="+",
-                        consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
+                        consensus_key=sha256_key("Alu", "SINE", "Alu", "ACGT"),
                     )
                 ]
             ),
             id="valid_consensus_key_is_accepted",
         ),
         pytest.param(
-            _sha256_key("Alu", "SINE", "Alu", "ACGT"),
+            sha256_key("Alu", "SINE", "Alu", "ACGT"),
             set(),
             pytest.raises(ValueError, match=r"not present in repeat_consensus"),
             id="Missing consensus key raises error",
@@ -1065,14 +1048,14 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
                             start=1,
                             end=3,
                             strand="+",
-                            consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
+                            consensus_key=sha256_key("Alu", "SINE", "Alu", "ACGT"),
                         ),
                         _repeat_feature(
                             seq_region="chr1",
                             start=4,
                             end=5,
                             strand="+",
-                            consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
+                            consensus_key=sha256_key("Alu", "SINE", "Alu", "ACGT"),
                         ),
                     ],
                 }
@@ -1094,7 +1077,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
                             start=109,
                             end=119,
                             strand="+",
-                            consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
+                            consensus_key=sha256_key("Alu", "SINE", "Alu", "ACGT"),
                         ),
                     ],
                 }
@@ -1116,7 +1099,7 @@ def test_combine_feature_docs_validates_repeat_consensus_keys(
                             start=180,
                             end=190,
                             strand="-",
-                            consensus_key=_sha256_key("Alu", "SINE", "Alu", "ACGT"),
+                            consensus_key=sha256_key("Alu", "SINE", "Alu", "ACGT"),
                         ),
                     ],
                 }
