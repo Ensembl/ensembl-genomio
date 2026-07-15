@@ -18,6 +18,7 @@ from contextlib import nullcontext as does_not_raise
 import filecmp
 from io import TextIOWrapper
 from pathlib import Path
+import logging
 import re
 from typing import Any, Callable, ContextManager
 from unittest.mock import Mock, patch
@@ -387,23 +388,54 @@ class TestOutputWriter:
 
 
 @pytest.mark.parametrize(
-    ("extra_args", "expected"),
+    ("extra_args", "expected", "expected_warning"),
     [
-        ({}, "default"),
-        ({"max_seqs_per_file": 1}, "1_seq"),
-        ({"max_seq_length_per_file": 6}, "1_seq"),
-        ({"max_seq_length_per_file": 6, "force_max_seq_length": True}, "6bp_force"),
-        (
+        pytest.param({}, "default", None, id="No extra args"),
+        pytest.param({"max_seqs_per_file": 1}, "1_seq", None, id="Max 1 seq per file"),
+        pytest.param({"max_seq_length_per_file": 20}, "default", None, id="Max seq length 20"),
+        pytest.param(
+            {"max_seq_length_per_file": 6}, "1_seq", "but chunking not enabled", id="Max seq length 6"
+        ),
+        pytest.param(
+            {"max_seq_length_per_file": 6, "force_max_seq_length": True},
+            "6bp_force",
+            None,
+            id="Max seq length 6 with force",
+        ),
+        pytest.param(
             {"max_seq_length_per_file": 6, "force_max_seq_length": True, "min_chunk_length": 4},
             "6bp_force_min_chunk",
+            "lower than min_chunk_length",
+            id="Max seq length 6 with force and min chunk length",
         ),
-        (
+        pytest.param(
             {"max_seq_length_per_file": 4, "force_max_seq_length": True, "min_chunk_length": 4},
             "4bp_force_min_chunk",
+            None,
+            id="Max seq length 4 with force and min chunk length",
+        ),
+        pytest.param(
+            {"max_seq_length_per_file": 8, "force_max_seq_length": True},
+            "8bp_force",
+            None,
+            id="Max seq length 8 with force",
+        ),
+        pytest.param(
+            {"max_seq_length_per_file": 3, "force_max_seq_length": True, "min_chunk_length": 3},
+            "3bp_force_min_chunk",
+            "lower than min_chunk_length",
+            id="Max seq length 3 with force and min chunk length",
         ),
     ],
 )
-def test_split_fasta(tmp_path: Path, data_dir: Path, extra_args: dict[str, Any], expected: str) -> None:
+def test_split_fasta(
+    tmp_path: Path,
+    data_dir: Path,
+    caplog: pytest.LogCaptureFixture,
+    extra_args: dict[str, Any],
+    expected: str,
+    expected_warning: str | None,
+) -> None:
     """Test the `split.split_fasta()` function.
 
     Args:
@@ -416,14 +448,19 @@ def test_split_fasta(tmp_path: Path, data_dir: Path, extra_args: dict[str, Any],
     in_fasta = data_dir / "input.fa"
     out_dir = tmp_path / "out"
     out_dir.mkdir(exist_ok=True)
-    split.split_fasta(in_fasta, out_dir, **extra_args)
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        split.split_fasta(in_fasta, out_dir, **extra_args)
+    if expected_warning is None:
+        assert not caplog.records
+    else:
+        assert expected_warning in caplog.text
     report = filecmp.dircmp(data_dir / expected, out_dir)
     report.subdirs["."] = report
     for diff_report in report.subdirs.values():
         assert diff_report.left_only == []
         assert diff_report.right_only == []
         assert diff_report.diff_files == []
-
 
 def test_split_fasta_empty_file(tmp_path: Path) -> None:
     """Test the `split.split_fasta()` function when an empty input file is provided.
