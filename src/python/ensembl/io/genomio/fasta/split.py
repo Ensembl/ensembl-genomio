@@ -275,7 +275,73 @@ def _clean_previous_output(fasta_file: Path, out_dir: Path) -> None:
         logging.info(f"Deleted existing AGP file '{agp_path}'.")
 
 
-def split_fasta(  # noqa: PLR0912, PLR0913
+def _write_whole_record(writer: OutputWriter, record: SeqRecord) -> None:
+    """Write a whole record to the current output file."""
+    sequence = cast("Seq", record.seq)
+    writer.write_record(record, agp_object_id=record.id, agp_start=1, agp_end=len(sequence), agp_part_nr=1)
+
+
+def _write_chunked_record(
+    writer: OutputWriter, record: SeqRecord, max_seq_length_per_file: int, min_chunk_length: int | None
+) -> None:
+    """Split a record into chunks and write them to output files.
+
+    Args:
+        writer: OutputWriter instance managing output files and AGP writing.
+        record: Sequence record to be chunked and written.
+        max_seq_length_per_file: Maximum cumulative sequence length (in bp) per output FASTA file.
+            If None, no cumulative-length limit is applied.
+        min_chunk_length: Minimum allowed length (in bp) of the final remainder chunk when chunking.
+            If the final chunk would be shorter than this, it is merged into the previous chunk. If
+            None, no minimum is applied.
+
+    """
+    sequence = cast("Seq", record.seq)
+    seq_len = len(sequence)
+
+    # Split the sequence into chunks that fit within max_seq_length_per_file
+    starts = [0]
+    ends = [max_seq_length_per_file - writer.file_len]
+    while ends[-1] < seq_len:
+        starts.append(ends[-1])
+        ends.append(min(ends[-1] + max_seq_length_per_file, seq_len))
+
+    # Merge the last chunk with the previous one if it is shorter than min_chunk_length
+    if min_chunk_length is not None:
+        last_chunk_len = ends[-1] - starts[-1]
+        if last_chunk_len < min_chunk_length:
+            logging.warning(
+                f"Length of last chunk of record '{record.id}' is {last_chunk_len}, "
+                f"lower than min_chunk_length {min_chunk_length}; merging with previous chunk"
+            )
+            ends[-2] = seq_len
+            starts.pop()
+            ends.pop()
+
+            # If there's only one chunk left, write it and continue
+            if len(starts) == 1:
+                _write_whole_record(writer, record)
+                return
+
+    for i, (start, end) in enumerate(zip(starts, ends, strict=True), start=1):
+        chunk_seq = sequence[start:end]
+        chunk_record = SeqRecord(
+            chunk_seq,
+            id=f"{record.id}_chunk_start_{start}",
+            description=seq_description_without_id(record),
+        )
+        if start != 0:
+            writer.open_new_file()
+        writer.write_record(
+            chunk_record,
+            agp_object_id=record.id,
+            agp_start=start + 1,
+            agp_end=end,
+            agp_part_nr=i,
+        )
+
+
+def split_fasta(  # noqa: PLR0913 # pylint: disable=too-many-arguments
     fasta_file: Path,
     out_dir: Path | None = None,
     write_agp: bool = False,
@@ -360,76 +426,32 @@ def split_fasta(  # noqa: PLR0912, PLR0913
 
                 # Write the record to the current file if conditions are met
                 if max_seq_length_per_file is None or writer.file_len + seq_len <= max_seq_length_per_file:
-                    writer.write_record(
-                        record, agp_object_id=record.id, agp_start=1, agp_end=seq_len, agp_part_nr=1
-                    )
+                    _write_whole_record(writer, record)
                     continue
 
                 # Handle records that would exceed max_seq_length_per_file if added to the current file
-                if force_max_seq_length and writer.file_len + seq_len > max_seq_length_per_file:
-                    # If not enough space in current file for the minimum chunk length, open a new file
-                    remaining_space = max_seq_length_per_file - writer.file_len
-                    if remaining_space <= 0 or (min_chunk_length is not None and remaining_space < min_chunk_length):
-                        writer.open_new_file()
-                        # If the sequence fits in a new file, write it
-                        if seq_len <= max_seq_length_per_file:
-                            writer.write_record(
-                                record, agp_object_id=record.id, agp_start=1, agp_end=seq_len, agp_part_nr=1
-                            )
-                            continue
-                    
-                    # Split the sequence into chunks that fit within max_seq_length_per_file
-                    starts = [0]
-                    ends = [max_seq_length_per_file - writer.file_len]
-                    while ends[-1] < seq_len:
-                        starts.append(ends[-1])
-                        ends.append(min(ends[-1] + max_seq_length_per_file, seq_len))
-
-                    # Merge the last chunk with the previous one if it is shorter than min_chunk_length
-                    if min_chunk_length is not None:
-                        last_chunk_len = ends[-1] - starts[-1]
-                        if last_chunk_len < min_chunk_length:
-                            logging.warning(
-                                f"Length of last chunk of record '{record.id}' is {last_chunk_len}, "
-                                f"lower than min_chunk_length {min_chunk_length}; merging with previous chunk"
-                            )
-                            ends[-2] = seq_len
-                            starts.pop()
-                            ends.pop()
-
-                            # If there's only one chunk left, write it and continue
-                            if len(starts) == 1:
-                                writer.write_record(
-                                    record, agp_object_id=record.id, agp_start=1, agp_end=seq_len, agp_part_nr=1
-                                )
-                                continue
-
-                    for i, (start, end) in enumerate(zip(starts, ends, strict=True), start=1):
-                        chunk_seq = record.seq[start:end]
-                        chunk_record = SeqRecord(
-                            chunk_seq,
-                            id=f"{record.id}_chunk_start_{start}",
-                            description=seq_description_without_id(record),
-                        )
-                        if start != 0:
-                            writer.open_new_file()
-                        writer.write_record(
-                            chunk_record,
-                            agp_object_id=record.id,
-                            agp_start=start + 1,
-                            agp_end=end,
-                            agp_part_nr=i,
-                        )
-                else:
+                if not force_max_seq_length:
                     logging.warning(
                         f"Record {record.id} length {seq_len} exceeds max_seq_length_per_file "
                         f"{max_seq_length_per_file} but chunking not enabled"
                     )
                     if writer.record_count > 0:
                         writer.open_new_file()
-                    writer.write_record(
-                        record, agp_object_id=record.id, agp_start=1, agp_end=seq_len, agp_part_nr=1
-                    )
+                    _write_whole_record(writer, record)
+                    continue
+
+                # If not enough space in current file for the minimum chunk length, open a new file
+                remaining_space = max_seq_length_per_file - writer.file_len
+                if remaining_space <= 0 or (
+                    min_chunk_length is not None and remaining_space < min_chunk_length
+                ):
+                    writer.open_new_file()
+                    # If the sequence fits in a new file, write it
+                    if seq_len <= max_seq_length_per_file:
+                        _write_whole_record(writer, record)
+                        continue
+
+                _write_chunked_record(writer, record, max_seq_length_per_file, min_chunk_length)
     finally:
         writer.close()
 
