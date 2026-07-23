@@ -14,22 +14,27 @@
 # limitations under the License.
 """Parse Red repeat detector output into GenomIO repeat feature records."""
 
+__all__ = [
+    "RedConverter",
+    "RedParsedRow",
+]
+
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
-    format_parse_errors,
-    parse_token,
-    validate_parsed_coordinates,
-)
-from ensembl.io.genomio.features.convert_to_genomio_json.converters import (
     ConverterOptions,
     FeatureConverter,
     ParseFeaturesResult,
-    _add_common_arguments,
+    format_parse_errors,
+    parse_token,
+    register_converter,
+    register_top_level_converter,
+    validate_parsed_coordinates,
 )
+
 from ensembl.utils.archive import open_gz_file
 
 RED_RPT_COLUMNS = 3
@@ -43,12 +48,10 @@ RED_RPT_CONSENSUS = Consensus(
 
 RED_RPT_CONSENSUS_KEY = RED_RPT_CONSENSUS.sha256_key()
 
-__all__ = [
-    "RedConverter",
-    "RedParsedRow",
-]
 
 
+@register_top_level_converter
+@register_converter
 class RedConverter(FeatureConverter):
     """Converter for Red output."""
 
@@ -62,7 +65,7 @@ class RedConverter(FeatureConverter):
             cls.command,
             help="Convert Red repeat detector output to GenomIO JSON.",
         )
-        _add_common_arguments(red_parser)
+        cls.add_common_arguments(red_parser)
         red_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
             analysis_display_label="Repeats: Red",
