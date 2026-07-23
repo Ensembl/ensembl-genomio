@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from ensembl.io.genomio.features import convert_to_genomio_json
 from ensembl.io.genomio.features.convert_to_genomio_json import red
 
 
@@ -124,3 +125,18 @@ def test_parse_output_collates_all_errors(tmp_path: Path) -> None:
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:
         assert expected_fragment in error_message
+
+
+def test_red_converter_parse_features_uses_tool_specific_parser(
+    convert_to_genomio_json_data_dir: Path,
+) -> None:
+    """Test Red converter class calls the matching tool parser."""
+    input_path = convert_to_genomio_json_data_dir / "red" / "success.rpt"
+
+    features, consensuses_by_key = convert_to_genomio_json.RedConverter.parse_features(
+        input_path,
+        convert_to_genomio_json.ConverterOptions(),
+    )
+
+    assert features
+    assert consensuses_by_key
