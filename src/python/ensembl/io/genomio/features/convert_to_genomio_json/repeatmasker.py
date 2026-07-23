@@ -14,6 +14,14 @@
 # limitations under the License.
 """Parse RepeatMasker output into GenomIO repeat feature records."""
 
+__all__ = [
+    "RepeatMaskerConverter",
+    "RepeatMaskerCustomConverter",
+    "RepeatMaskerOptions",
+    "RepeatMaskerParsedRow",
+    "RepeatMaskerRepbaseConverter",
+]
+
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,15 +31,14 @@ from Bio import SeqIO
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
-    format_parse_errors,
-    parse_token,
-    validate_parsed_coordinates,
-)
-from ensembl.io.genomio.features.convert_to_genomio_json.converters import (
     ConverterOptions,
     FeatureConverter,
     ParseFeaturesResult,
-    _add_common_arguments,
+    format_parse_errors,
+    parse_token,
+    register_converter,
+    register_top_level_converter,
+    validate_parsed_coordinates,
 )
 from ensembl.utils.archive import open_gz_file
 from ensembl.utils.argparse import ArgumentParser
@@ -58,17 +65,17 @@ REPEATMASKER_MAPPINGS = [
 
 REPEATMASKER_COMPILED_MAPPINGS = [(re.compile(pattern), mapped) for pattern, mapped in REPEATMASKER_MAPPINGS]
 
-__all__ = [
-    "RepeatMaskerConverter",
-    "RepeatMaskerCustomConverter",
-    "RepeatMaskerParsedRow",
-    "RepeatMaskerRepbaseConverter",
-]
+
+@dataclass(frozen=True)
+class RepeatMaskerOptions(ConverterOptions):
+    """Options supplied to RepeatMasker converters."""
+
+    consensus_lib_path: Path | None = None
 
 
 def _add_repeatmasker_common_args(subparser: ArgumentParser) -> None:
     """Add arguments shared by RepeatMasker subcommands."""
-    _add_common_arguments(subparser)
+    FeatureConverter.add_common_arguments(subparser)
     subparser.add_argument_src_path(
         "--consensus-lib",
         metavar="RM_LIB",
@@ -77,10 +84,17 @@ def _add_repeatmasker_common_args(subparser: ArgumentParser) -> None:
     )
 
 
+@register_converter
 class RepeatMaskerCustomConverter(FeatureConverter):
     """Converter for RepeatMasker output generated with a custom library."""
 
     analysis_logic_name = "repeatmask_customlib"
+    analysis_display_label = "Repeats: Custom library"
+    analysis_description = (
+        'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>,'
+        " using a custom library of <em>ab initio</em> repeat profiles for this species."
+    )
+    program = "RepeatMasker"
 
     @classmethod
     def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
@@ -92,12 +106,14 @@ class RepeatMaskerCustomConverter(FeatureConverter):
         _add_repeatmasker_common_args(custom_parser)
         custom_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label="Repeats: Custom library",
-            analysis_description=(
-                'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>,'
-                " using a custom library of <em>ab initio</em> repeat profiles for this species."
-            ),
+            analysis_display_label=cls.analysis_display_label,
+            analysis_description=cls.analysis_description,
         )
+
+    @classmethod
+    def options_from_args(cls, args: argparse.Namespace) -> RepeatMaskerOptions:
+        """Build RepeatMasker options from parsed command-line arguments."""
+        return RepeatMaskerOptions(consensus_lib_path=getattr(args, "consensus_lib", None))
 
     @classmethod
     def parse_features(
@@ -106,14 +122,22 @@ class RepeatMaskerCustomConverter(FeatureConverter):
         options: ConverterOptions | None = None,
     ) -> ParseFeaturesResult:
         """Parse custom-library RepeatMasker output."""
-        options = options or ConverterOptions()
-        return parse_output(input_path, options.repeatmasker_consensus_lib_path)
+        repeatmasker_options = options if isinstance(options, RepeatMaskerOptions) else RepeatMaskerOptions()
+        return parse_output(input_path, repeatmasker_options.consensus_lib_path)
 
 
-class RepeatMaskerRepbaseConverter(RepeatMaskerCustomConverter):
+@register_converter
+class RepeatMaskerRepbaseConverter(FeatureConverter):
     """Converter for RepeatMasker output generated with Repbase."""
 
     analysis_logic_name = "repeatmask_repbase"
+    analysis_display_label = "Repeats: Repbase"
+    analysis_description = (
+        'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>,'
+        ' using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of '
+        "repeat profiles."
+    )
+    program = "RepeatMasker"
 
     @classmethod
     def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
@@ -125,15 +149,27 @@ class RepeatMaskerRepbaseConverter(RepeatMaskerCustomConverter):
         _add_repeatmasker_common_args(repbase_parser)
         repbase_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label="Repeats: Repbase",
-            analysis_description=(
-                'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>,'
-                ' using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of '
-                "repeat profiles."
-            ),
+            analysis_display_label=cls.analysis_display_label,
+            analysis_description=cls.analysis_description,
         )
 
+    @classmethod
+    def options_from_args(cls, args: argparse.Namespace) -> RepeatMaskerOptions:
+        """Build RepeatMasker options from parsed command-line arguments."""
+        return RepeatMaskerOptions(consensus_lib_path=getattr(args, "consensus_lib", None))
 
+    @classmethod
+    def parse_features(
+        cls,
+        input_path: Path,
+        options: ConverterOptions | None = None,
+    ) -> ParseFeaturesResult:
+        """Parse Repbase library RepeatMasker output."""
+        repeatmasker_options = options if isinstance(options, RepeatMaskerOptions) else RepeatMaskerOptions()
+        return parse_output(input_path, repeatmasker_options.consensus_lib_path)
+
+
+@register_top_level_converter
 class RepeatMaskerConverter:
     """Top-level RepeatMasker CLI converter."""
 

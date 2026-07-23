@@ -15,12 +15,15 @@
 # pylint: disable=protected-access
 """Unit testing of RepeatMasker GenomIO JSON conversion helpers."""
 
+import argparse
 from pathlib import Path
+from unittest.mock import Mock, call, patch
 
 import pytest
 
 from ensembl.io.genomio.features import convert_to_genomio_json
-from ensembl.io.genomio.features.convert_to_genomio_json import repeatmasker
+from ensembl.io.genomio.features.convert_to_genomio_json import base, repeatmasker
+from ensembl.io.genomio.features.convert_to_genomio_json.base import main, parse_args
 
 
 @pytest.mark.parametrize(
@@ -517,3 +520,140 @@ def test_parse_output_collates_all_errors(
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:
         assert expected_fragment in error_message
+
+
+def test_converter_builds_repeatmasker_options_from_args() -> None:
+    """Test RepeatMasker converters own conversion of parsed CLI args to RepeatMasker options."""
+    consensus_lib_path = Path("consensus.fa")
+    args = argparse.Namespace(consensus_lib=consensus_lib_path)
+
+    assert convert_to_genomio_json.RepeatMaskerCustomConverter.options_from_args(args) == (
+        repeatmasker.RepeatMaskerOptions(consensus_lib_path=consensus_lib_path)
+    )
+
+
+def test_parse_args_repeatmasker_custom_metadata(
+    convert_to_genomio_json_data_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Test custom-library RepeatMasker parser metadata and tool-specific omissions."""
+    args = parse_args(
+        [
+            "repeatmasker",
+            "custom",
+            "--input",
+            str(convert_to_genomio_json_data_dir / "create_json" / "basic.out"),
+            "--output",
+            str(tmp_path / "out.json"),
+            "--program-version",
+            "4.1.5",
+        ]
+    )
+
+    assert args.analysis_logic_name == "repeatmask_customlib"
+    assert args.analysis_display_label == "Repeats: Custom library"
+    assert args.analysis_description == (
+        'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
+        "</a>, using a custom library of <em>ab initio</em> repeat profiles for this species."
+    )
+    assert args.program == "RepeatMasker"
+    assert not hasattr(args, "consensus_lib")
+
+
+def test_parse_args_repeatmasker_repbase_metadata_and_consensus_lib(
+    convert_to_genomio_json_data_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Test Repbase RepeatMasker parser metadata and consensus-library option."""
+    consensus_lib = convert_to_genomio_json_data_dir / "create_json" / "repeatmodeler_match.fa"
+    args = parse_args(
+        [
+            "repeatmasker",
+            "repbase",
+            "--input",
+            str(convert_to_genomio_json_data_dir / "create_json" / "basic.out"),
+            "--consensus-lib",
+            str(consensus_lib),
+            "--output",
+            str(tmp_path / "out.json"),
+            "--program-version",
+            "4.1.7",
+        ]
+    )
+
+    assert args.analysis_logic_name == "repeatmask_repbase"
+    assert args.analysis_display_label == "Repeats: Repbase"
+    assert args.analysis_description == (
+        'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
+        '</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> '
+        "library of repeat profiles."
+    )
+    assert args.program == "RepeatMasker"
+    assert args.consensus_lib == consensus_lib
+
+
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.base.create_genomio_json")
+def test_main_passes_repeatmasker_consensus_lib_option(
+    mock_create_genomio_json: Mock,
+    convert_to_genomio_json_data_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Test ``main()`` delegates RepeatMasker consensus-library options to the converter config."""
+    input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
+    output_path = tmp_path / "out.json"
+    consensus_lib = convert_to_genomio_json_data_dir / "create_json" / "repeatmodeler_match.fa"
+
+    main(
+        [
+            "repeatmasker",
+            "repbase",
+            "--input",
+            str(input_path),
+            "--consensus-lib",
+            str(consensus_lib),
+            "--output",
+            str(output_path),
+            "--program-version",
+            "4.1.7",
+        ]
+    )
+
+    mock_create_genomio_json.assert_called_once_with(
+        config=convert_to_genomio_json.GenomioJsonConfig(
+            input_path=input_path,
+            output_path=output_path,
+            analysis_logic_name="repeatmask_repbase",
+            analysis_display_label="Repeats: Repbase",
+            analysis_description=(
+                'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
+                '</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> '
+                "library of repeat profiles."
+            ),
+            program="RepeatMasker",
+            program_version="4.1.7",
+            source_provider="Ensembl",
+            is_primary=False,
+            converter_options=repeatmasker.RepeatMaskerOptions(consensus_lib_path=consensus_lib),
+        )
+    )
+
+
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.parse_output")
+def test_repeatmasker_converter_parse_features_delegates_to_parser(
+    mock_parse_output: Mock,
+) -> None:
+    """Test RepeatMasker converters delegate to the RepeatMasker parser."""
+    input_path = Path("input.out")
+    consensus_lib_path = Path("consensus.fa")
+    options = repeatmasker.RepeatMaskerOptions(consensus_lib_path=consensus_lib_path)
+    expected: base.ParseFeaturesResult = ([{"seq_region": "chr1"}], {})
+    mock_parse_output.return_value = expected
+
+    assert convert_to_genomio_json.RepeatMaskerCustomConverter.parse_features(input_path, options) == expected
+    assert (
+        convert_to_genomio_json.RepeatMaskerRepbaseConverter.parse_features(input_path, options) == expected
+    )
+    assert mock_parse_output.call_args_list == [
+        call(input_path, consensus_lib_path),
+        call(input_path, consensus_lib_path),
+    ]

@@ -14,6 +14,11 @@
 # limitations under the License.
 """Parse TRF output into GenomIO repeat feature records."""
 
+__all__ = [
+    "TRFConverter",
+    "TRFParsedRow",
+]
+
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,15 +26,14 @@ import re
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
-    format_parse_errors,
-    parse_token,
-    validate_parsed_coordinates,
-)
-from ensembl.io.genomio.features.convert_to_genomio_json.converters import (
     ConverterOptions,
     FeatureConverter,
     ParseFeaturesResult,
-    _add_common_arguments,
+    format_parse_errors,
+    parse_token,
+    register_converter,
+    register_top_level_converter,
+    validate_parsed_coordinates,
 )
 from ensembl.utils.archive import open_gz_file
 
@@ -39,32 +43,31 @@ TRF_SEQUENCE_RE = re.compile(r"^Sequence:\s+(?P<seq_region>\S+?)(?::(?P<start>\d
 
 TRF_PARAMETERS_RE = re.compile(r"^Parameters:\s+(?P<params>.+)\s*$")
 
-__all__ = [
-    "TRFParsedRow",
-    "TrfConverter",
-]
 
-
-class TrfConverter(FeatureConverter):
+@register_top_level_converter
+@register_converter
+class TRFConverter(FeatureConverter):
     """Converter for TRF output."""
 
     analysis_logic_name = "trf"
+    analysis_display_label = "Tandem repeats (TRF)"
+    analysis_description = (
+        '<a rel="external" href="https://tandem.bu.edu/trf/trf.html">Tandem Repeats Finder</a> '
+        "locates adjacent copies of a pattern of nucleotides."
+    )
     command = "trf"
+    program = "trf"
 
     @classmethod
     def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
         """Add the TRF subcommand parser."""
         trf_parser = subparsers.add_parser(cls.command, help="Convert TRF output to GenomIO JSON.")
-        _add_common_arguments(trf_parser)
+        cls.add_common_arguments(trf_parser)
         trf_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label="Tandem repeats (TRF)",
-            analysis_description=(
-                '<a rel="external" href="https://tandem.bu.edu/trf/trf.html">Tandem Repeats Finder</a> '
-                "locates adjacent copies of a pattern of nucleotides."
-            ),
-            program="trf",
-            repeatmasker_consensus_lib_path=None,
+            analysis_display_label=cls.analysis_display_label,
+            analysis_description=cls.analysis_description,
+            program=cls.program,
         )
 
     @classmethod

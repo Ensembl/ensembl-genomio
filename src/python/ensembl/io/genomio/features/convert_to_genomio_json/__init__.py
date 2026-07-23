@@ -14,12 +14,7 @@
 # limitations under the License.
 """Constructs a GenomIO JSON document from output of feature identification tools."""
 
-from .args import *
 from .base import *
-from .cli import *
-from .converters import *
-from .document import *
 from .red import *
-from .registry import *
 from .repeatmasker import *
 from .trf import *
