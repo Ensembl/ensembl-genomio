@@ -68,7 +68,7 @@ dependencies = [
 [project.optional-dependencies]
 build = [
     "build",
-    "setuptools >= 64",
+    "setuptools >= 83.0.0",
     "setuptools-scm",
     "wheel",
 ]
