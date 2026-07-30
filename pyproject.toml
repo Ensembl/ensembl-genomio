@@ -75,7 +75,7 @@ build = [
 cicd = [
     "black >= 23.11.0",
     "coverage >= 7.3.2",
-    "deepdiff >= 6.7.1",
+    "deepdiff >= 9.1.0",
     "genbadge[coverage]",
     "mypy >= 1.2.0",
     "pylint >= 3.0.2",
