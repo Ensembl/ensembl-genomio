@@ -593,19 +593,23 @@ def combine_feature_json(
     or ncRNA features for a single tool.
 
     Liftover modes:
+
     1) AGP-driven (recommended):
+
         - Treats feature.seq_region as AGP component_id (part_id).
         - Lifts seq_region_start/end into AGP object coordinates (record_start/end).
         - Replaces seq_region with AGP object id (record).
-        - If AGP orientation is '-', flips seq_region_strand (requires --allow-revcomp).
+        - If AGP orientation is '-', flips seq_region_strand (requires ``--allow-revcomp``).
 
     2) Header-driven (no AGP):
+
         - Parses seq_region with ``chunk-id-regex``
         - Replaces seq_region with base id and shift coordinates by (chunk_start - 1).
 
     Merging:
-        - Features are concatenated after lifting.
-        - Top-level metadata must be identical across input files.
+
+    - Features are concatenated after lifting.
+    - Top-level metadata must be identical across input files.
 
     Args:
         json_manifest: Path to a manifest file containing one JSON file path
@@ -623,12 +627,13 @@ def combine_feature_json(
 
     Raises:
         ValueError: If:
-                - the manifest is empty,
-                - mixed load types (repeat vs ncRNA) are detected in the manifest,
-                - required top-level metadata fields differ between inputs,
-                - consensus validation fails (repeat mode),
-                - features reference missing repeat_consensus keys (repeat mode),
-                - feature coordinates are invalid or coordinate lifting is ambiguous.
+
+            - the manifest is empty,
+            - mixed load types (repeat vs ncRNA) are detected in the manifest,
+            - required top-level metadata fields differ between inputs,
+            - consensus validation fails (repeat mode),
+            - features reference missing repeat_consensus keys (repeat mode),
+            - feature coordinates are invalid or coordinate lifting is ambiguous.
         KeyError: If AGP-driven lifting is requested but a feature.seq_region is not present in the
             AGP component index.
 

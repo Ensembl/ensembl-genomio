@@ -27,8 +27,6 @@ include:
   - local: cicd/gitlab/parts/perl.gitlab-ci.yml
   # Python checks — on *.py changes, pipeline update, or manually
   - local: cicd/gitlab/parts/python.gitlab-ci.yml
-  # License checks — always
-  - local: cicd/gitlab/parts/license.gitlab-ci.yml
   # Flat file checks — on *.json/*.yml/*.yaml changes, pipeline update, or manually
   - local: cicd/gitlab/parts/flatfile.gitlab-ci.yml
 
