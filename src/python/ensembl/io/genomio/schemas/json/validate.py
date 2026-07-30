@@ -14,18 +14,13 @@
 # limitations under the License.
 """Validates a JSON file with the provided JSON schema.
 
-Examples:
-    >>> from ensembl.io.genomio.schemas import json
-    >>> json.schema_validator(json_file="functional_annotation.json", json_schema="functional_annotation")
-    >>> json.schema_validator(json_file="functional_annotation.json", json_schema="genome")
-    Traceback (most recent call last):
-      File "<stdin>", line 1, in <module>
-      File "ensembl-genomio/src/python/ensembl/io/genomio/schemas/json/validate.py", line 63,
-      in schema_validator
-        jsonschema.validate(instance=content, schema=schema)
-      File ".venv/dev/lib/python3.10/site-packages/jsonschema/validators.py", line 1306, in validate
-        raise error
-    <list of all the elements from functional_annotation.json that failed validation>
+Examples::
+
+    from ensembl.io.genomio.schemas import json
+    # Valid JSON schema
+    json.schema_validator(json_file="functional_annotation.json", json_schema="functional_annotation")
+    # Incorrect JSON schema raises jsonschema.exceptions.ValidationError
+    json.schema_validator(json_file="functional_annotation.json", json_schema="genome")
 
 """
 
