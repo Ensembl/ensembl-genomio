@@ -93,6 +93,13 @@ docs = [
     "mkdocstrings",
     "mkdocstrings-python",
 ]
+# Literature-based metadata extraction dependencies
+literature = [
+    "sentence-transformers",
+    "rank-bm25",
+    "faiss-cpu",
+    "beautifulsoup4",
+]
 # Database dependencies
 mysql = [
     "ensembl-utils[mysql]",
@@ -119,6 +126,8 @@ fasta_chunk = "ensembl.io.genomio.fasta.chunk:main"
 fasta_compare = "ensembl.io.genomio.fasta.compare:main"
 fasta_process = "ensembl.io.genomio.fasta.process:main"
 fasta_recombine = "ensembl.io.genomio.fasta.recombine:main"
+# Literature
+literature_metadata = "ensembl.io.genomio.literature.pipeline:main"
 # Features
 features_combine_json = "ensembl.io.genomio.features.combine_json:main"
 fasta_split = "ensembl.io.genomio.fasta.split:main"
