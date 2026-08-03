@@ -15,8 +15,8 @@
 """GFF parsing exceptions."""
 
 __all__ = [
-    "GeneSegmentError",
     "GFFParserError",
+    "GeneSegmentError",
     "IgnoredFeatureError",
     "UnsupportedFeatureError",
 ]

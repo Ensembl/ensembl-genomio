@@ -26,7 +26,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from pytest import raises
+from requests.exceptions import HTTPError
 
 from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
 
@@ -39,17 +39,17 @@ from ensembl.io.genomio.genbank.download import download_genbank, DownloadError
 )
 @patch("ensembl.io.genomio.genbank.download.requests.get")
 class TestDownloadGenbank:
-    """Tests for the `download_genbank` class"""
+    """Test for the `download_genbank` class."""
 
     def test_successful_download(self, mock_requests_get: Mock, tmp_path: Path, accession: str) -> None:
-        """Tests the successful download of `download_genbank()` method.
+        """Test the successful download of `download_genbank()` method.
 
         Args:
             mock_requests_get: A mock of `request.get()` method.
             tmp_path: Function-scoped temporary directory fixture.
             accession: Genbank accession to be downloaded.
-        """
 
+        """
         # Set success_code and content as an attribute to the mock object
         mock_requests_get.return_value.status_code = 200
         mock_content = b"The genbank download for the following accession"
@@ -67,22 +67,24 @@ class TestDownloadGenbank:
         )
 
         # Assert that the content was written to the temporary file
-        with open(output_file, "rb") as f:
+        with output_file.open("rb") as f:
             file_content = f.read()
         assert file_content == mock_content
 
     def test_failed_download(self, mock_requests_failed: Mock, tmp_path: Path, accession: str) -> None:
-        """Tests the downloading failure of `download_genbank()` method.
+        """Test the downloading failure of `download_genbank()` method.
 
         Args:
             mock_requests_failed: A mock of `request.get()` method.
             tmp_path: Function-scoped temporary directory fixture.
             accession: Genbank accession to be downloaded.
-        """
 
+        """
         output_file = tmp_path / f"{accession}.gb"
         # Set the mock status code to 404 for request not found
-        mock_requests_failed.return_value.status_code = 404
+        mock_response = mock_requests_failed.return_value
+        mock_response.status_cide = 404
+        mock_response.raise_for_status.side_effect = HTTPError("404 Client Error")
         # Raise an error
-        with raises(DownloadError):
+        with pytest.raises(DownloadError):
             download_genbank(accession, output_file)

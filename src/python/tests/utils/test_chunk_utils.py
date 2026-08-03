@@ -21,45 +21,44 @@ from typing import ContextManager
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import pytest
-from pytest import param
 
 from ensembl.io.genomio.utils import chunk_utils
 
 
 @pytest.mark.parametrize(
-    "test_dir_name, manifest_name, expectation",
+    ("test_dir_name", "manifest_name", "expectation"),
     [
-        param(
+        pytest.param(
             "preserves_order",
             "manifest.txt",
             does_not_raise(["b.txt", "a.txt"]),
             id="Order of entries is preserved",
         ),
-        param(
+        pytest.param(
             "ignores_comments_and_blank_lines",
             "manifest.txt",
             does_not_raise(["a.txt", "b.txt.gz"]),
             id="Comment lines and blank lines are ignored",
         ),
-        param(
+        pytest.param(
             "missing_entry",
             "manifest.txt",
             pytest.raises(FileNotFoundError, match=r"line 2"),
             id="Missing file entry raises error with line number",
         ),
-        param(
+        pytest.param(
             "directory_entry",
             "manifest.txt",
             pytest.raises(ValueError, match=r"Manifest entry.*line 1"),
             id="Directory entry raises error with line number",
         ),
-        param(
+        pytest.param(
             "manifest_is_directory",
             "manifest_dir",
             pytest.raises(ValueError, match="Manifest is not a file"),
             id="Invalid manifest path raises error",
         ),
-        param(
+        pytest.param(
             "empty_manifest",
             "manifest.txt",
             does_not_raise([]),
@@ -73,8 +72,7 @@ def test_get_paths_from_manifest(
     manifest_name: str,
     expectation: ContextManager,
 ) -> None:
-    """
-    Tests the `chunk_utils.get_paths_from_manifest()` function.
+    """Test the `chunk_utils.get_paths_from_manifest()` function.
 
     Args:
         data_dir: Module's test data directory fixture.
@@ -82,6 +80,7 @@ def test_get_paths_from_manifest(
             and its referenced files.
         manifest_name: Name of the manifest file within the test subdirectory.
         expectation: Context manager for the expected outcome of the test (exception or not).
+
     """
     test_dir = data_dir / test_dir_name
     manifest = test_dir / manifest_name
@@ -92,11 +91,11 @@ def test_get_paths_from_manifest(
 
 
 def test_get_paths_from_manifest_absolute_path(tmp_path: Path) -> None:
-    """
-    Tests that `chunk_utils.get_paths_from_manifest()` correctly resolves absolute paths in the manifest file.
+    """Test that `chunk_utils.get_paths_from_manifest()` correctly resolves absolute paths in the manifest.
 
     Args:
         tmp_path: Test's unique temporary directory fixture.
+
     """
     a = tmp_path / "a.txt"
     a.touch()
@@ -109,30 +108,30 @@ def test_get_paths_from_manifest_absolute_path(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "pattern, text, expected_groups, expectation",
+    ("pattern", "text", "expected_groups", "expectation"),
     [
-        param(
+        pytest.param(
             r"^(?P<base>.+)\.part\.(?P<start>\d+)_(?P<end>\d+)$",
             "contigA.part.11_20",
             {"base": "contigA", "start": "11", "end": "20"},
             does_not_raise(),
             id="Valid alternative regex pattern accepted",
         ),
-        param(
+        pytest.param(
             r"^(?P<base>.+)_(?P<start>\d+$",
             None,
             None,
             pytest.raises(ValueError, match="Invalid regex"),
             id="Invalid regex pattern raises error",
         ),
-        param(
+        pytest.param(
             r"^(.+)_(\d+)$",
             None,
             None,
             pytest.raises(ValueError, match="Chunk ID regex must define named capture groups"),
             id="Regex without required named groups raises error",
         ),
-        param(
+        pytest.param(
             r"^(?P<base>.+)_(?P<start>\d+)$",
             "X_12",
             {"base": "X", "start": "12"},
@@ -147,14 +146,14 @@ def test_validate_regex(
     expected_groups: dict[str, str] | None,
     expectation: ContextManager,
 ) -> None:
-    """
-    Tests the `chunk_utils.validate_regex()` function.
+    """Test the `chunk_utils.validate_regex()` function.
 
     Args:
         pattern: The regex pattern to validate.
         text: An optional text to match against the regex to verify the capture groups.
         expected_groups: The expected values of the 'base' and 'start' capture groups if `text` is provided.
         expectation: Context manager for the expected outcome of the test (exception or not).
+
     """
     with expectation:
         chunk_re = chunk_utils.validate_regex(pattern)
@@ -168,7 +167,7 @@ def test_validate_regex(
 
 
 @pytest.mark.parametrize(
-    "seq_id, description, expected",
+    ("seq_id", "description", "expected"),
     [
         ("seq1", "seq1", ""),
         ("seq1", "seq1 some annotation", "some annotation"),
@@ -178,8 +177,7 @@ def test_validate_regex(
     ],
 )
 def test_description_without_id(seq_id: str, description: str, expected: str) -> None:
-    """
-    Tests the `chunk_utils.seq_description_without_id()` function.
+    """Test the `chunk_utils.seq_description_without_id()` function.
 
     Args:
         seq_id: Sequence identifier.

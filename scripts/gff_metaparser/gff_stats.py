@@ -19,7 +19,6 @@ import io
 import json
 import sys
 
-
 # locals
 from gffstruct.statskeeper import StatsKeeper
 from gffstruct.gff3walker import GFF3Walker

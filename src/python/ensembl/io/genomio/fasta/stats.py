@@ -33,18 +33,20 @@ __all__ = [
 
 @dataclass(frozen=True)
 class FastaStats:
+    """Basic FASTA sequence length summary."""
+
     longest: int
     total: int
     n_seqs: int
 
 
 def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
-    """
-    Compute basic FASTA stats in a single streaming pass.
+    """Compute basic FASTA stats in a single streaming pass.
 
     Args:
         fasta_file: Path to raw or compressed input FASTA file.
         output_file: Path to the output stats JSON file (defaults to ``<fasta_file>.stats.json`` if `None`).
+
     """
     longest = 0
     total = 0
@@ -80,14 +82,14 @@ def compute_fasta_stats(fasta_file: Path, output_file: Path | None) -> None:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """
-    Parse command-line arguments.
+    """Parse the command-line arguments.
 
     Args:
         argv: Optional command-line arguments. If `None`, argparse reads from ``sys.argv``.
 
     Returns:
         argparse.Namespace: Parsed command-line arguments.
+
     """
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
@@ -111,11 +113,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """
-    Run the FASTA stats command-line interface.
+    """Run the FASTA stats command-line interface.
 
     Args:
         argv: Optional command-line arguments. If `None`, argparse reads from ``sys.argv``.
+
     """
     args = parse_args(argv)
 

@@ -31,7 +31,7 @@ class PfxTr:
             root.count += 1
 
     def get_max(self):
-        (pfx, max_cnt) = ("", 0)
+        pfx, max_cnt = ("", 0)
         root = self
         while root.letters:
             c = max(root.letters.keys(), key=lambda x: root.letters[x].count)

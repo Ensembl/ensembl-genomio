@@ -167,6 +167,12 @@ sub default_options {
     sequence_data_chunk => 0,
     # coord system name for chunks
     chunk_cs_name => 'ensembl_internal',
+
+    # Not running FixModels shift base model correction if skip_fix_models set:
+    #   don't try to shift translation start up to +-2bp
+    #   don't try to move models up to -25 bp
+    #   doesn't affect proteing coding biotype updates
+    skip_fix_models => 1,
   };
 }
 
@@ -233,6 +239,8 @@ sub pipeline_wide_parameters {
 
     sequence_data_chunk => $self->o('sequence_data_chunk'),
     chunk_cs_name        => $self->o('chunk_cs_name'),
+
+    skip_fix_models      => $self->o('skip_fix_models'),
   };
 }
 
@@ -712,6 +720,7 @@ sub pipeline_analyses {
         db_url          => '#dbsrv_url#' . '#db_name#',
         protein_fasta_file      => '#expr( #manifest_data#->{"fasta_pep"} )expr#',
         log             => $self->o('pipeline_dir') . '/#db_name#/load_gff3/fix_models.log',
+        skip_fix_models      => $self->o('skip_fix_models'),
       },
       -max_retry_count   => 0,
       -rc_name    => '16GB',

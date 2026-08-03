@@ -21,7 +21,7 @@ from ensembl.utils.logging import init_logging_with_args
 
 
 def main() -> None:
-    """Main entrypoint."""
+    """Execute the main function."""
     parser = ArgumentParser(
         description="Compare the genomic data between the files present in a manifest file."
     )

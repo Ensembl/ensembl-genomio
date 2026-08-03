@@ -34,7 +34,7 @@ class GFFSeqFeature(SeqFeature):
         id: str = "<unknown id>",  # pylint: disable=W0622
         qualifiers: dict | None = None,
         sub_features: list[GFFSeqFeature] | None = None,
-    ):
+    ) -> None:
         super().__init__(location, type=type, id=id, qualifiers=qualifiers)
         if sub_features is None:
             sub_features = []

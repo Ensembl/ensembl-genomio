@@ -22,9 +22,14 @@ from pathlib import Path
 
 from ensembl.utils.archive import open_gz_file
 
+MIN_AGP_COLUMNS = 9
+SUPPORTED_COMPONENT_TYPES = {"W"}
+
 
 @dataclass(frozen=True)
 class AgpEntry:
+    """Single AGP component entry used for coordinate liftover."""
+
     record: str
     record_start: int
     record_end: int
@@ -36,28 +41,30 @@ class AgpEntry:
 
 
 def build_component_index(agp_entries: dict[str, list[AgpEntry]]) -> dict[str, list[AgpEntry]]:
-    """
-    Builds an index of component IDs to AGP entries.
+    """Build an index of component IDs to AGP entries.
 
     Args:
         agp_entries: Mapping of object IDs to lists of AGP entries.
 
     Returns:
         A mapping from component ID to sorted lists of AGP entries.
+
     """
     component_index: dict[str, list[AgpEntry]] = defaultdict(list)
-    for _, parts in agp_entries.items():
+    for parts in agp_entries.values():
         for p in parts:
             component_index[p.part_id].append(p)
 
     for key, values in component_index.items():
-        component_index[key] = sorted(values, key=lambda e: (e.record, e.record_start, e.part_number))
+        component_index[key] = sorted(
+            values,
+            key=lambda e: (e.record, e.record_start, e.part_number),
+        )
     return component_index
 
 
 def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tuple[str, int, int]:
-    """
-    Lifts component coordinates into object coordinates.
+    """Lift component coordinates into object coordinates.
 
     Args:
         part: AGP entry describing the component span.
@@ -70,20 +77,23 @@ def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tup
 
     Raises:
         ValueError: If the requested range is invalid or not covered by the component.
+
     """
     if start > end:
         raise ValueError(f"Range start > end: {start} > {end}")
 
     if start < part.part_start or end > part.part_end:
         raise ValueError(
-            f"Range {start}-{end} is outside component span {part.part_start}-{part.part_end} for '{part.part_id}'"
+            f"Range {start}-{end} is outside component span "
+            f"{part.part_start}-{part.part_end} for '{part.part_id}'"
         )
 
     if part.orientation == "+":
         obj_start = part.record_start + (start - part.part_start)
         obj_end = part.record_start + (end - part.part_start)
         return part.record, obj_start, obj_end
-    elif part.orientation == "-":
+
+    if part.orientation == "-":
         if not allow_revcomp:
             raise ValueError(
                 f"AGP contains '-' orientation for component '{part.part_id}' but processing of "
@@ -97,8 +107,7 @@ def lift_range(part: AgpEntry, start: int, end: int, allow_revcomp: bool) -> tup
 
 
 def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
-    """
-    Parses an AGP v2.x file into per-object component entries.
+    """Parse an AGP v2.x file into per-object component entries.
 
     Args:
         agp_file: Path to the input AGP file (optionally gzipped).
@@ -110,28 +119,31 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
     Raises:
         ValueError: If the AGP file is invalid, unsupported, or contains no component lines.
                     All validation errors are collected and raised together.
+
     """
     agp_records: dict[str, list[AgpEntry]] = defaultdict(list)
     errors: list[str] = []
 
     with open_gz_file(agp_file) as fh:
-        for line_nr, line in enumerate(fh, start=1):
-            line = line.strip()
+        for line_nr, raw_line in enumerate(fh, start=1):
+            line = raw_line.strip()
             if not line or line.startswith("#"):
                 continue
             cols = line.split("\t")
-            if len(cols) < 9:
-                errors.append(f"Line {line_nr}: Invalid AGP line (expected >= 9 columns): {line}")
+            if len(cols) < MIN_AGP_COLUMNS:
+                errors.append(
+                    f"Line {line_nr}: Invalid AGP line (expected >= {MIN_AGP_COLUMNS} columns): {line}"
+                )
                 continue
 
-            if cols[4] != "W":
+            if cols[4] not in SUPPORTED_COMPONENT_TYPES:
                 errors.append(f"Line {line_nr}: Unsupported AGP component type '{cols[4]}' in line: {line}")
                 continue
 
             if not allow_revcomp and cols[8] != "+":
                 errors.append(
-                    f"Line {line_nr}: AGP contains '-' orientation for component '{cols[5]}' but processing of "
-                    "reverse complement AGP entries is not enabled."
+                    f"Line {line_nr}: AGP contains '-' orientation for component '{cols[5]}' "
+                    "but processing of reverse complement AGP entries is not enabled."
                 )
                 continue
 
@@ -149,7 +161,7 @@ def parse_agp(agp_file: Path, allow_revcomp: bool) -> dict[str, list[AgpEntry]]:
                     )
                 )
             except ValueError as e:
-                errors.append(f"Line {line_nr}: {str(e)}")
+                errors.append(f"Line {line_nr}: {e!s}")
 
     if errors:
         error_msg = f"AGP file '{agp_file}' had {len(errors)} error(s):\n  - " + "\n  - ".join(errors)

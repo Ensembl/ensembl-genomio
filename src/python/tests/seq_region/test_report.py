@@ -16,7 +16,7 @@
 
 from pathlib import Path
 
-from pytest import raises
+import pytest
 
 from ensembl.io.genomio.seq_region.report import ReportRecord
 
@@ -46,5 +46,5 @@ def test_from_report(data_dir: Path) -> None:
 def test_from_report_error(data_dir: Path) -> None:
     """Test for `ReportRecord` with a file without header."""
     report_file = "report_noheader.txt"
-    with raises(ValueError):
+    with pytest.raises(ValueError, match="Missing header in report"):
         _ = ReportRecord(data_dir / report_file)
