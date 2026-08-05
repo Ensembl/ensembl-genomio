@@ -155,9 +155,8 @@ class MetaConf:
         if not pat:
             return None
         if re.match(pat, line):
-            (_tag, value, *_rest) = line.split(sep=":", maxsplit=1)
-            if normalise:
-                value = self.normalise_asm_name(value)
+            _tag, value, *_rest = line.split(sep=":", maxsplit=1)
+            value = self.normalise_asm_name(value)
             return value
         return None
 

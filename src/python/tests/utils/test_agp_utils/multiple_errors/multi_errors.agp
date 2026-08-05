@@ -1,0 +1,4 @@
+# This file has multiple errors on different lines
+obj	1	100	1	W	part_a	1	100	+
+obj	101	110	2	1	gap	5	110	yes
+obj	111	220	3	W	part_b	1	110	+

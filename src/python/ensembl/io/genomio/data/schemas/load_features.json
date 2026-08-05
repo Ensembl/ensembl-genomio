@@ -191,7 +191,6 @@
         },
         "repeat_features": {
           "type": "array",
-          "minItems": 1,
           "items": { "$ref": "#/definitions/repeat_feature" },
           "description": "Repeat features for this analysis+source."
         }
@@ -213,7 +212,7 @@
           },
           "repeat_consensus": [
             {
-              "repeat_consensus_key": "d41d8cd98f00b204e9800998ecf8427e",
+              "repeat_consensus_key": "d41d8cd98f00b204e9800998ecf8427ed41d8cd98f00b204e9800998ecf8427e",
               "repeat_name": "Alu",
               "repeat_class": "SINE",
               "repeat_type": "Alu",
@@ -225,10 +224,10 @@
               "seq_region": "chr1",
               "seq_region_start": 100,
               "seq_region_end": 200,
-              "seq_region_strand": 1,
+              "seq_region_strand": "+",
               "repeat_start": 1,
               "repeat_end": 101,
-              "repeat_consensus": "d41d8cd98f00b204e9800998ecf8427e",
+              "repeat_consensus": "d41d8cd98f00b2d41d8cd98f00b204e9800998ecf8427ed41d8cd98f00b204e9800998ecf8427e04e9800998ecf8427e",
               "score": 86.9,
               "attributes": {
                 "perc_div": 3.2,
@@ -335,7 +334,7 @@
           "seq_region": "chr1",
           "seq_region_start": 1056,
           "seq_region_end": 1128,
-          "seq_region_strand": 1,
+          "seq_region_strand": "+",
           "biotype": "tRNA",
           "display_label": "tRNA-Phe",
           "score": 74.3,
@@ -412,7 +411,7 @@
           "seq_region": "NC_090874.1",
           "seq_region_start": 3036562,
           "seq_region_end": 3036725,
-          "seq_region_strand": -1,
+          "seq_region_strand": "-",
           "biotype": "miRNA",
           "score": 86.9,
           "evalue": 2.2e-15,
@@ -485,7 +484,7 @@
           "seq_region": "chr3",
           "seq_region_start": 555000,
           "seq_region_end": 555072,
-          "seq_region_strand": 1,
+          "seq_region_strand": "+",
           "biotype": "miRNA",
           "display_label": "ath-miR156a",
           "mirna_name": "ath-miR156a",
@@ -497,7 +496,7 @@
           "seq_region": "chr3",
           "seq_region_start": 555020,
           "seq_region_end": 555041,
-          "seq_region_strand": 1,
+          "seq_region_strand": "+",
           "biotype": "miRNA",
           "display_label": "ath-miR156a-5p",
           "mirna_name": "ath-miR156a-5p",
@@ -536,7 +535,6 @@
         },
         "ncrna_features": {
           "type": "array",
-          "minItems": 1,
           "description": "ncRNA features for this analysis+source."
         }
       },
@@ -578,7 +576,7 @@
               "seq_region": "NC_090874.1",
               "seq_region_start": 3036562,
               "seq_region_end": 3036725,
-              "seq_region_strand": -1,
+              "seq_region_strand": "-",
               "biotype": "miRNA",
               "score": 86.9,
               "evalue": 2.2e-15,

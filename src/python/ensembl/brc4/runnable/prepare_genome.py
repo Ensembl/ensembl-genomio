@@ -111,7 +111,7 @@ class prepare_genome(eHive.BaseRunnable):
             max_prod_length = max_prod_length - len(db_prefix) - 1
         if len(db_prod_name) > max_prod_length:
             print("DB name is too long! Trying to shorten it...")
-            (genus_str, species_str, gca_str) = db_prod_name.split("_")
+            genus_str, species_str, gca_str = db_prod_name.split("_")
             db_prod_name = "_".join([genus_str, "sp", gca_str])
 
             # Still too long? Die

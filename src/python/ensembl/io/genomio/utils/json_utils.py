@@ -24,7 +24,7 @@ from ensembl.utils import StrPath
 
 
 def get_json(src_path: StrPath, **kwargs: Any) -> Any:
-    """Generic data JSON loader.
+    """Load JSON data from a file.
 
     Args:
         src_path: Path to the JSON file to load.
@@ -35,7 +35,7 @@ def get_json(src_path: StrPath, **kwargs: Any) -> Any:
 
 
 def print_json(dst_path: StrPath, data: Any, **kwargs: Any) -> None:
-    """Generic data JSON dumper to a file, with keys sorted and pretty-printed with indent 4 by default.
+    """Dump JSON data to a file, with keys sorted and pretty-printed with indent 4 by default.
 
     Args:
         dst_path: Path to the JSON file to create.

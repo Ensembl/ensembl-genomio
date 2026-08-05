@@ -65,7 +65,7 @@ class compare_fasta(eHive.BaseRunnable):
         seq1 = self.get_fasta(fasta1, map_dna)
         seq2 = self.get_fasta(fasta2, map_dna)
 
-        (stats, diffs, seq_map) = self.compare_seqs(seq1, seq2)
+        stats, diffs, seq_map = self.compare_seqs(seq1, seq2)
         # Print mapping to a file (add report data)
         map_file = output_dir + "/" + species + "_" + name + ".map"
         self.print_map(seq_map, map_file, report, accession)
