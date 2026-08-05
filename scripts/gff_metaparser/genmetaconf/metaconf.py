@@ -149,7 +149,7 @@ class MetaConf:
                         asm_name = self.normalise_asm_name(asm_name)
                         self.update("assembly.name", asm_name)
 
-    def report_meta_value(self, line: str, pat: str) -> Optional[str]:
+    def report_meta_value(self, line: str, pat: str, normalise: bool = True) -> Optional[str]:
         if not line:
             return None
         if not pat:
@@ -160,7 +160,7 @@ class MetaConf:
             return value
         return None
 
-    def update_from_report_meta_value(self, line: str, pat: str, meta_key: str):
+    def update_from_report_meta_value(self, line: str, pat: str, meta_key: str, tech: bool = False):
         if not line:
             return None
         if not pat:
@@ -169,7 +169,7 @@ class MetaConf:
             return None
         value = self.report_meta_value(line, pat)
         if value:
-            self.update(meta_key, value)
+            self.update(meta_key, value, tech)
 
     def merge_from_asm_rep(self, asm_rep_file):
         if not asm_rep_file:
@@ -187,13 +187,16 @@ class MetaConf:
                 self.update_from_report_meta_value(line, r"#\s+Assembly level:", "assembly.level")
                 # GenBank assembly accession: GCA_947086385.1
                 self.update_from_report_meta_value(
-                    line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc"
+                    line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc", tech = True
                 )
                 # RefSeq assembly accession: GCF_947086385.1
                 self.update_from_report_meta_value(
-                    line, r"#\s+RefSeq assembly accession:", "assembly.accession_refseq"
+                    line, r"#\s+RefSeq assembly accession:", "assembly.accession_refseq", tech = True
                 )
-                # RefSeq assembly and GenBank assemblies identical: yes
+                # assembly date: GCA_947086385.1
+                asm_date = self.report_meta_value(line, r"#\s+Date:", normalise=False)
+                if asm_date:
+                    self.update("assembly.date", "-".join(asm_date.strip().split("-")[:2]))
 
     def update_from_dict(self, d, k, tech=False):
         if d is None:
@@ -218,8 +221,8 @@ class MetaConf:
         ann_source = self.get("species.annotation_source", default="").strip()
         ann_source = self.normalise_asm_name(ann_source)
         # picking assembly.alt_accession
-        asm_acc_insdc = self.get("assembly.accession_insdc")
-        asm_acc_refseq = self.get("assembly.accession_refseq")
+        asm_acc_insdc = self.get("assembly.accession_insdc", tech = True)
+        asm_acc_refseq = self.get("assembly.accession_refseq", tech = True)
         if not self.get("assembly.alt_accession"):
             if asm_acc_refseq and asm_acc_insdc:
                 # only if species.annotaion_source is ~ "RefSeq"
@@ -228,6 +231,7 @@ class MetaConf:
                         self.update("assembly.alt_accession", asm_acc_insdc)
                     else:
                         self.update("assembly.alt_accession", asm_acc_refseq)
+
         # species metadata
         _acc = str(asm_acc).replace("_", "").replace(".", "v")
         _sci_name = self.get("species.scientific_name", default="")
@@ -308,8 +312,6 @@ class MetaConf:
             "assembly.provider_url",
             "assembly.accession",
             # not yet supported in genome.json schema
-            # "assembly.accession_insdc",
-            # "assembly.accession_refseq",
             # "assembly.alt_accession",
             # "assembly.level",
             "assembly.name",
